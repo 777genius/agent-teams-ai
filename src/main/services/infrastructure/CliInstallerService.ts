@@ -499,6 +499,10 @@ export class CliInstallerService {
                 providerId: 'gemini',
                 displayName: 'Gemini',
               },
+              {
+                providerId: 'opencode',
+                displayName: 'OpenCode',
+              },
             ] as const
           ).map((provider) => ({
             ...provider,
@@ -510,7 +514,7 @@ export class CliInstallerService {
             statusMessage: 'Checking...',
             models: [],
             modelAvailability: [],
-            canLoginFromUi: true,
+            canLoginFromUi: provider.providerId !== 'opencode',
             capabilities: {
               teamLaunch: false,
               oneShot: false,

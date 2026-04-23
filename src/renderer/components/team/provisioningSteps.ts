@@ -51,43 +51,74 @@ function getSpawnEntry(
   return memberSpawnStatuses[memberName];
 }
 
-export function getLaunchJoinMilestonesFromMembers({
-  members,
-  memberSpawnStatuses,
-  memberSpawnSnapshot,
-}: {
-  members: readonly LaunchJoinMemberLike[];
-  memberSpawnStatuses?: MemberSpawnStatusCollection;
-  memberSpawnSnapshot?: Pick<MemberSpawnStatusesSnapshot, 'expectedMembers' | 'summary'>;
-}): LaunchJoinMilestones {
-  const teammates = members.filter((member) => !member.removedAt && !isLeadMember(member));
-  const expectedTeammateCount = memberSpawnSnapshot?.expectedMembers?.length ?? teammates.length;
-  const snapshotSummary = memberSpawnSnapshot?.summary;
+function parseStatusUpdatedAtMs(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
-  if (snapshotSummary) {
-    return {
-      expectedTeammateCount,
-      heartbeatConfirmedCount: snapshotSummary.confirmedCount,
-      processOnlyAliveCount: snapshotSummary.runtimeAlivePendingCount,
-      pendingSpawnCount: Math.max(
-        0,
-        snapshotSummary.pendingCount - snapshotSummary.runtimeAlivePendingCount
-      ),
-      failedSpawnCount: snapshotSummary.failedCount,
-    };
+function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
+  return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
+}
+
+function shouldPreferSnapshotEntryOverLive(
+  liveEntry: MemberSpawnStatusEntry | undefined,
+  snapshotEntry: MemberSpawnStatusEntry | undefined,
+  snapshotUpdatedAt: string | undefined
+): boolean {
+  if (!liveEntry || !snapshotEntry) {
+    return false;
+  }
+  if (!isFailedSpawnEntry(liveEntry) || isFailedSpawnEntry(snapshotEntry)) {
+    return false;
   }
 
+  const liveUpdatedAtMs = parseStatusUpdatedAtMs(liveEntry.updatedAt);
+  const snapshotUpdatedAtMs =
+    parseStatusUpdatedAtMs(snapshotEntry.updatedAt) ?? parseStatusUpdatedAtMs(snapshotUpdatedAt);
+  return (
+    snapshotUpdatedAtMs != null &&
+    (liveUpdatedAtMs == null || snapshotUpdatedAtMs >= liveUpdatedAtMs)
+  );
+}
+
+function summarizeLiveLaunchJoinMilestones(params: {
+  teammateNames: readonly string[];
+  memberSpawnStatuses?: MemberSpawnStatusCollection;
+  memberSpawnSnapshotStatuses?: MemberSpawnStatusesSnapshot['statuses'];
+  memberSpawnSnapshotUpdatedAt?: string;
+}): Omit<LaunchJoinMilestones, 'expectedTeammateCount'> & {
+  observedTeammateCount: number;
+} {
+  const {
+    teammateNames,
+    memberSpawnStatuses,
+    memberSpawnSnapshotStatuses,
+    memberSpawnSnapshotUpdatedAt,
+  } = params;
   let heartbeatConfirmedCount = 0;
   let processOnlyAliveCount = 0;
   let pendingSpawnCount = 0;
   let failedSpawnCount = 0;
+  let observedTeammateCount = 0;
 
-  for (const member of teammates) {
-    const entry = getSpawnEntry(memberSpawnStatuses, member.name);
+  for (const memberName of teammateNames) {
+    const liveEntry = getSpawnEntry(memberSpawnStatuses, memberName);
+    const snapshotEntry = memberSpawnSnapshotStatuses?.[memberName];
+    const entry = shouldPreferSnapshotEntryOverLive(
+      liveEntry,
+      snapshotEntry,
+      memberSpawnSnapshotUpdatedAt
+    )
+      ? snapshotEntry
+      : liveEntry;
     if (!entry) {
       pendingSpawnCount += 1;
       continue;
     }
+    observedTeammateCount += 1;
     if (entry.launchState === 'failed_to_start') {
       failedSpawnCount += 1;
       continue;
@@ -96,7 +127,10 @@ export function getLaunchJoinMilestonesFromMembers({
       heartbeatConfirmedCount += 1;
       continue;
     }
-    if (entry.launchState === 'runtime_pending_bootstrap') {
+    if (
+      entry.launchState === 'runtime_pending_bootstrap' ||
+      entry.launchState === 'runtime_pending_permission'
+    ) {
       if (entry.runtimeAlive === true) {
         processOnlyAliveCount += 1;
       } else {
@@ -110,11 +144,98 @@ export function getLaunchJoinMilestonesFromMembers({
   }
 
   return {
-    expectedTeammateCount,
     heartbeatConfirmedCount,
     processOnlyAliveCount,
     pendingSpawnCount,
     failedSpawnCount,
+    observedTeammateCount,
+  };
+}
+
+export function getLaunchJoinMilestonesFromMembers({
+  members,
+  memberSpawnStatuses,
+  memberSpawnSnapshot,
+}: {
+  members: readonly LaunchJoinMemberLike[];
+  memberSpawnStatuses?: MemberSpawnStatusCollection;
+  memberSpawnSnapshot?: Pick<
+    MemberSpawnStatusesSnapshot,
+    'expectedMembers' | 'summary' | 'updatedAt'
+  > & {
+    statuses?: MemberSpawnStatusesSnapshot['statuses'];
+  };
+}): LaunchJoinMilestones {
+  const removedTeammateNameSet = new Set(
+    members
+      .filter((member) => member.removedAt && !isLeadMember(member))
+      .map((member) => member.name)
+  );
+  const teammates = members.filter((member) => !member.removedAt && !isLeadMember(member));
+  const activeTeammateNames = teammates.map((member) => member.name);
+  const snapshotExpectedNames = memberSpawnSnapshot?.expectedMembers ?? [];
+  const snapshotStatusNames = Object.keys(memberSpawnSnapshot?.statuses ?? {});
+  const teammateNames =
+    snapshotExpectedNames.length > 0 || snapshotStatusNames.length > 0
+      ? Array.from(
+          new Set([...snapshotExpectedNames, ...snapshotStatusNames, ...activeTeammateNames])
+        ).filter(
+          (memberName) =>
+            memberName.trim().length > 0 &&
+            !isLeadMember({ name: memberName }) &&
+            !removedTeammateNameSet.has(memberName)
+        )
+      : activeTeammateNames;
+  const expectedTeammateCount = teammateNames.length;
+  const snapshotSummary = memberSpawnSnapshot?.summary;
+  const liveSummary = summarizeLiveLaunchJoinMilestones({
+    teammateNames,
+    memberSpawnStatuses,
+    memberSpawnSnapshotStatuses: memberSpawnSnapshot?.statuses,
+    memberSpawnSnapshotUpdatedAt: memberSpawnSnapshot?.updatedAt,
+  });
+
+  if (snapshotSummary) {
+    const snapshotMilestones = {
+      expectedTeammateCount,
+      heartbeatConfirmedCount: snapshotSummary.confirmedCount,
+      processOnlyAliveCount: snapshotSummary.runtimeAlivePendingCount,
+      pendingSpawnCount: Math.max(
+        0,
+        snapshotSummary.pendingCount - snapshotSummary.runtimeAlivePendingCount
+      ),
+      failedSpawnCount: snapshotSummary.failedCount,
+    };
+
+    const snapshotAccountedFor =
+      snapshotMilestones.heartbeatConfirmedCount +
+      snapshotMilestones.processOnlyAliveCount +
+      snapshotMilestones.failedSpawnCount;
+    const liveAccountedFor =
+      liveSummary.heartbeatConfirmedCount +
+      liveSummary.processOnlyAliveCount +
+      liveSummary.failedSpawnCount;
+
+    const liveSummaryIsMoreAdvanced =
+      liveSummary.failedSpawnCount > snapshotMilestones.failedSpawnCount ||
+      liveSummary.heartbeatConfirmedCount > snapshotMilestones.heartbeatConfirmedCount ||
+      liveSummary.processOnlyAliveCount > snapshotMilestones.processOnlyAliveCount ||
+      (snapshotMilestones.failedSpawnCount === 0 &&
+        liveSummary.observedTeammateCount > 0 &&
+        liveSummary.pendingSpawnCount > snapshotMilestones.pendingSpawnCount) ||
+      liveAccountedFor > snapshotAccountedFor;
+
+    return liveSummaryIsMoreAdvanced
+      ? {
+          expectedTeammateCount,
+          ...liveSummary,
+        }
+      : snapshotMilestones;
+  }
+
+  return {
+    expectedTeammateCount,
+    ...liveSummary,
   };
 }
 
@@ -193,6 +314,10 @@ export function getDisplayStepIndex({
 
   if (expectedTeammateCount <= 0) {
     return 3;
+  }
+
+  if (failedSpawnCount > 0) {
+    return 2;
   }
 
   const accountedForTeammates = heartbeatConfirmedCount + processOnlyAliveCount + failedSpawnCount;

@@ -341,6 +341,48 @@ describe('changeReviewSlice task changes', () => {
     expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(2);
   });
 
+  it('does not raise needs_attention for active interval summaries with no observed file edits yet', async () => {
+    const store = createSliceStore();
+    const teamName = 'team-a';
+    const taskId = 'presence-active-no-edits';
+    const cacheKey = buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A);
+    hoisted.getTaskChanges.mockResolvedValue({
+      files: [],
+      totalFiles: 0,
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      teamName,
+      taskId,
+      confidence: 'medium',
+      computedAt: '2026-03-01T12:00:00.000Z',
+      scope: {
+        taskId,
+        memberName: 'echo',
+        startLine: 0,
+        endLine: 0,
+        startTimestamp: '2026-03-01T12:00:00.000Z',
+        endTimestamp: '',
+        toolUseIds: [],
+        filePaths: [],
+        confidence: {
+          tier: 2,
+          label: 'medium',
+          reason: 'Scoped by persisted task workIntervals (timestamp-based)',
+        },
+      },
+      warnings: ['No file edits found within persisted workIntervals.'],
+    });
+
+    await store.getState().checkTaskHasChanges(teamName, taskId, OPTIONS_A);
+
+    expect(store.getState().setSelectedTeamTaskChangePresence).not.toHaveBeenCalledWith(
+      teamName,
+      taskId,
+      'needs_attention'
+    );
+    expect(store.getState().taskChangePresenceByKey[cacheKey]).toBeUndefined();
+  });
+
   it('downgrades stale known presence to unknown for fallback empty summaries', async () => {
     const store = createSliceStore();
     store.setState({

@@ -1,11 +1,13 @@
-import type { TeamProviderId } from '@shared/types';
+import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 export interface MemberDiffInput {
   name: string;
   role?: string;
   workflow?: string;
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
   model?: string;
+  effort?: EffortLevel;
   removedAt?: number | string | null;
 }
 
@@ -14,8 +16,10 @@ export interface ReplaceMembersDiff {
     name: string;
     role?: string;
     workflow?: string;
+    isolation?: 'worktree';
     providerId?: TeamProviderId;
     model?: string;
+    effort?: EffortLevel;
   }[];
   removed: string[];
   updated: {
@@ -67,8 +71,10 @@ export function buildReplaceMembersDiff(
     name: string;
     role?: string;
     workflow?: string;
+    isolation?: 'worktree';
     providerId?: TeamProviderId;
     model?: string;
+    effort?: EffortLevel;
   }[]
 ): ReplaceMembersDiff {
   const previousByName = new Map(
@@ -80,8 +86,10 @@ export function buildReplaceMembersDiff(
           name: member.name.trim(),
           role: normalizeOptionalText(member.role),
           workflow: normalizeOptionalText(member.workflow),
+          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
           providerId: member.providerId,
           model: normalizeOptionalText(member.model),
+          effort: member.effort,
         },
       ])
   );
@@ -94,8 +102,10 @@ export function buildReplaceMembersDiff(
           name: member.name.trim(),
           role: normalizeOptionalText(member.role),
           workflow: normalizeOptionalText(member.workflow),
+          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
           providerId: member.providerId,
           model: normalizeOptionalText(member.model),
+          effort: member.effort,
         },
       ])
   );
@@ -118,6 +128,11 @@ export function buildReplaceMembersDiff(
       const changes = [
         describeRoleChange(previousMember.role, nextMember.role),
         describeWorkflowChange(previousMember.workflow, nextMember.workflow),
+        previousMember.isolation !== nextMember.isolation
+          ? nextMember.isolation === 'worktree'
+            ? 'worktree isolation enabled'
+            : 'worktree isolation disabled'
+          : null,
       ].filter((value): value is string => value !== null);
       if (changes.length === 0) {
         return [];

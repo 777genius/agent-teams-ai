@@ -1,6 +1,7 @@
 import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
 import { WorktreeGrouper } from '@main/services/discovery/WorktreeGrouper';
 import { getProjectsBasePath } from '@main/utils/pathDecoder';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
 import type {
@@ -16,11 +17,15 @@ function selectPreferredWorktree(worktrees: readonly Worktree[]): Worktree | und
 }
 
 function toCandidate(repo: RepositoryGroup): RecentProjectCandidate | null {
-  if (!repo.worktrees.length || !repo.mostRecentSession) {
+  const selectableWorktrees = repo.worktrees.filter(
+    (worktree) => !isEphemeralProjectPath(worktree.path)
+  );
+
+  if (!selectableWorktrees.length || !repo.mostRecentSession) {
     return null;
   }
 
-  const preferredWorktree = selectPreferredWorktree(repo.worktrees);
+  const preferredWorktree = selectPreferredWorktree(selectableWorktrees);
   if (!preferredWorktree) {
     return null;
   }
@@ -29,7 +34,7 @@ function toCandidate(repo: RepositoryGroup): RecentProjectCandidate | null {
     identity: repo.identity?.id ?? `path:${normalizeIdentityPath(preferredWorktree.path)}`,
     displayName: repo.name,
     primaryPath: preferredWorktree.path,
-    associatedPaths: repo.worktrees.map((worktree) => worktree.path),
+    associatedPaths: selectableWorktrees.map((worktree) => worktree.path),
     lastActivityAt: repo.mostRecentSession,
     providerIds: ['anthropic'],
     sourceKind: 'claude',

@@ -72,6 +72,13 @@ function membersToDrafts(members: ResolvedTeamMember[]) {
   return createMemberDraftsFromInputs(filterEditableMemberInputs(members));
 }
 
+function deriveTeammateWorktreeDefault(members: readonly ResolvedTeamMember[]): boolean {
+  const activeTeammates = filterEditableMemberInputs(members).filter((member) => !member.removedAt);
+  return (
+    activeTeammates.length > 0 && activeTeammates.every((member) => member.isolation === 'worktree')
+  );
+}
+
 function useEditTeamErrorReset(
   setError: (value: string | null) => void,
   setSaveOutcomeError: (value: string | null) => void
@@ -146,6 +153,9 @@ export const EditTeamDialog = ({
   const [description, setDescription] = useState(currentDescription);
   const [color, setColor] = useState(currentColor);
   const [members, setMembers] = useState(() => membersToDrafts(currentMembers));
+  const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(() =>
+    deriveTeammateWorktreeDefault(currentMembers)
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveOutcomeError, setSaveOutcomeError] = useState<string | null>(null);
@@ -187,6 +197,7 @@ export const EditTeamDialog = ({
         setDescription(currentDescription);
         setColor(currentColor);
         setMembers(membersToDrafts(currentMembers));
+        setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(currentMembers));
         setError(null);
         setSaveOutcomeError(null);
         setMembersPendingRestartRetry({});
@@ -293,7 +304,7 @@ export const EditTeamDialog = ({
       members.map((member) => [
         member.id,
         restartNames.has(member.name.trim().toLowerCase())
-          ? 'Saving will restart this teammate to apply role, workflow, provider, model, or effort changes.'
+          ? 'Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, or effort changes.'
           : null,
       ])
     );
@@ -380,6 +391,7 @@ export const EditTeamDialog = ({
             providerId: member.providerId,
             model: member.model,
             effort: member.effort,
+            isolation: member.isolation,
           })) as ResolvedTeamMember[],
         });
 
@@ -558,6 +570,9 @@ export const EditTeamDialog = ({
               }
               existingMembers={currentMembers}
               existingMemberColorMap={effectiveResolvedMemberColorMap}
+              showWorktreeIsolationControls
+              teammateWorktreeDefault={teammateWorktreeDefault}
+              onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
               lockProviderModel={false}
               lockExistingMemberIdentity={isTeamAlive}
               identityLockReason={undefined}
@@ -588,7 +603,7 @@ export const EditTeamDialog = ({
             <p className="text-xs text-amber-300">
               Saving will restart{' '}
               {effectiveMembersToRestart.length === 1 ? 'this teammate' : 'these teammates'} to
-              apply role, workflow, provider, model, or effort changes:{' '}
+              apply role, workflow, worktree isolation, provider, model, or effort changes:{' '}
               {effectiveMembersToRestart.join(', ')}.
             </p>
           ) : null}

@@ -4,7 +4,9 @@ import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummar
 
 import type { MemberSpawnStatusEntry, ResolvedTeamMember } from '@shared/types';
 
-function createMember(overrides: Partial<ResolvedTeamMember> = {}): ResolvedTeamMember {
+type TestResolvedTeamMember = ResolvedTeamMember & { providerBackendId?: string };
+
+function createMember(overrides: Partial<TestResolvedTeamMember> = {}): TestResolvedTeamMember {
   return {
     name: 'alice',
     agentId: 'alice@test-team',
@@ -45,8 +47,17 @@ describe('resolveMemberRuntimeSummary', () => {
     );
   });
 
-  it('keeps the loading skeleton when a pending member has no live runtime model yet', () => {
-    const member = createMember();
+  it('keeps the configured summary visible while a pending member waits for the live runtime model', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const spawnEntry = createSpawnEntry();
+
+    expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBe(
+      '5.4 Mini · Medium · Codex'
+    );
+  });
+
+  it('still keeps the loading skeleton when a pending member has neither live nor configured model truth', () => {
+    const member = createMember({ model: undefined });
     const spawnEntry = createSpawnEntry();
 
     expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBeUndefined();
@@ -79,6 +90,23 @@ describe('resolveMemberRuntimeSummary', () => {
     };
 
     expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry)).toBe(
+      '5.4 Mini · Medium · Codex · 256.0 MB'
+    );
+  });
+
+  it('appends runtime memory while a configured member is still pending', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const spawnEntry = createSpawnEntry();
+    const runtimeEntry = {
+      memberName: 'alice',
+      alive: true,
+      restartable: true,
+      pid: 4242,
+      rssBytes: 256 * 1024 * 1024,
+      updatedAt: '2026-04-18T18:00:00.000Z',
+    };
+
+    expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)).toBe(
       '5.4 Mini · Medium · Codex · 256.0 MB'
     );
   });
@@ -117,5 +145,82 @@ describe('resolveMemberRuntimeSummary', () => {
         undefined
       )
     ).toBe('5.4 Mini · Medium · Codex');
+  });
+
+  it('does not leak the lead backend label into OpenCode side-lane members', () => {
+    const member = createMember({
+      providerId: 'opencode',
+      providerBackendId: undefined,
+      model: 'opencode/nemotron-3-super-free',
+      effort: undefined,
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: false,
+        },
+        undefined
+      )
+    ).toBe('nemotron-3-super-free · via OpenCode');
+  });
+
+  it('infers OpenCode from an OpenCode model when member provider metadata is missing', () => {
+    const member = createMember({
+      providerId: undefined,
+      providerBackendId: undefined,
+      model: 'opencode/minimax-m2.5-free',
+      effort: undefined,
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: false,
+        },
+        undefined
+      )
+    ).toBe('minimax-m2.5-free · via OpenCode');
+  });
+
+  it('appends memory for OpenCode side-lane runtime snapshots without adding Codex backend text', () => {
+    const member = createMember({
+      providerId: 'opencode',
+      providerBackendId: undefined,
+      model: 'opencode/minimax-m2.5-free',
+      effort: undefined,
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: false,
+        },
+        undefined,
+        {
+          memberName: 'alice',
+          alive: true,
+          restartable: false,
+          runtimeModel: 'opencode/minimax-m2.5-free',
+          rssBytes: 183.9 * 1024 * 1024,
+          updatedAt: '2026-04-18T18:00:00.000Z',
+        }
+      )
+    ).toBe('minimax-m2.5-free · via OpenCode · 183.9 MB');
   });
 });

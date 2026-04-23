@@ -25,7 +25,16 @@ export interface OpenCodeProductionE2EEvidenceStoreOptions {
 }
 
 export interface OpenCodeProductionE2EEvidenceStoreReadOptions {
+  /**
+   * Preferred exact raw model id when a matching project-scoped proof exists.
+   * Production proof is primarily scoped to the runtime/project integration, not
+   * to a mandatory per-model whitelist.
+   */
   selectedModel?: string | null;
+  projectPathFingerprint?: string | null;
+  opencodeVersion?: string | null;
+  binaryFingerprint?: string | null;
+  capabilitySnapshotId?: string | null;
 }
 
 export class OpenCodeProductionE2EEvidenceStore {
@@ -62,7 +71,7 @@ export class OpenCodeProductionE2EEvidenceStore {
       };
     }
 
-    const selection = selectEvidence(result.data, options.selectedModel);
+    const selection = selectEvidence(result.data, options);
     return {
       ok: true,
       evidence: selection.evidence,
@@ -90,7 +99,7 @@ export class OpenCodeProductionE2EEvidenceStore {
 
 function selectEvidence(
   data: OpenCodeProductionE2EEvidenceStoreData,
-  selectedModel: string | null | undefined
+  options: OpenCodeProductionE2EEvidenceStoreReadOptions
 ): {
   evidence: OpenCodeProductionE2EEvidence | null;
   diagnostics: string[];
@@ -103,17 +112,64 @@ function selectEvidence(
     return { evidence: data, diagnostics: [] };
   }
 
-  const modelId = selectedModel?.trim() ?? '';
-  if (modelId) {
+  const modelId = options.selectedModel?.trim() ?? '';
+  const projectPathFingerprint = options.projectPathFingerprint?.trim() ?? '';
+  const entries = Object.values(data.entriesByModel);
+  const pickBestForRuntime = (
+    candidates: OpenCodeProductionE2EEvidence[]
+  ): OpenCodeProductionE2EEvidence | null => {
+    const runtimeMatched = candidates.filter((entry) => runtimeIdentityMatches(entry, options));
+    return pickNewestEvidence(runtimeMatched.length > 0 ? runtimeMatched : candidates);
+  };
+
+  if (projectPathFingerprint) {
+    const pathEntries = entries.filter(
+      (entry) => entry.projectPathFingerprint === projectPathFingerprint
+    );
+    if (pathEntries.length === 0) {
+      return {
+        evidence: null,
+        diagnostics: [
+          'OpenCode production E2E evidence artifact has no entry for the current working directory',
+        ],
+      };
+    }
+
+    if (modelId) {
+      const exactModelMatch = pickBestForRuntime(
+        pathEntries.filter((entry) => entry.selectedModel === modelId)
+      );
+      if (exactModelMatch) {
+        return {
+          evidence: exactModelMatch,
+          diagnostics: [],
+        };
+      }
+    }
+
     return {
-      evidence: data.entriesByModel[modelId] ?? null,
-      diagnostics: data.entriesByModel[modelId]
-        ? []
-        : [`OpenCode production E2E evidence artifact has no entry for selected model ${modelId}`],
+      evidence: pickBestForRuntime(pathEntries),
+      diagnostics: [],
     };
   }
 
-  const entries = Object.values(data.entriesByModel);
+  if (modelId) {
+    const exactModelEntries = entries.filter((entry) => entry.selectedModel === modelId);
+    if (exactModelEntries.length === 0) {
+      return {
+        evidence: null,
+        diagnostics: [
+          `OpenCode production E2E evidence artifact has no entry for selected model ${modelId}`,
+        ],
+      };
+    }
+
+    return {
+      evidence: pickNewestEvidence(exactModelEntries),
+      diagnostics: [],
+    };
+  }
+
   if (entries.length === 1) {
     return { evidence: entries[0] ?? null, diagnostics: [] };
   }
@@ -140,9 +196,58 @@ function upsertEvidence(
     entriesByModel[current.selectedModel] = current;
   }
 
-  entriesByModel[evidence.selectedModel] = evidence;
+  entriesByModel[buildEvidenceKey(evidence)] = evidence;
   return {
     collectionSchemaVersion: 1,
     entriesByModel,
   };
+}
+
+function buildEvidenceKey(evidence: OpenCodeProductionE2EEvidence): string {
+  return [evidence.selectedModel, evidence.projectPathFingerprint ?? 'global'].join('::');
+}
+
+function runtimeIdentityMatches(
+  evidence: OpenCodeProductionE2EEvidence,
+  options: OpenCodeProductionE2EEvidenceStoreReadOptions
+): boolean {
+  const expectedVersion = options.opencodeVersion?.trim() ?? '';
+  if (expectedVersion && evidence.version !== expectedVersion) {
+    return false;
+  }
+
+  const expectedBinaryFingerprint = options.binaryFingerprint?.trim() ?? '';
+  if (expectedBinaryFingerprint && evidence.binaryFingerprint !== expectedBinaryFingerprint) {
+    return false;
+  }
+
+  const expectedCapabilitySnapshotId = options.capabilitySnapshotId?.trim() ?? '';
+  if (
+    expectedCapabilitySnapshotId &&
+    evidence.capabilitySnapshotId !== expectedCapabilitySnapshotId
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function pickNewestEvidence(
+  entries: OpenCodeProductionE2EEvidence[]
+): OpenCodeProductionE2EEvidence | null {
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return entries.slice(1).reduce<OpenCodeProductionE2EEvidence>((latest, entry) => {
+    const latestAt = Date.parse(latest.createdAt);
+    const entryAt = Date.parse(entry.createdAt);
+    if (!Number.isFinite(entryAt)) {
+      return latest;
+    }
+    if (!Number.isFinite(latestAt) || entryAt >= latestAt) {
+      return entry;
+    }
+    return latest;
+  }, entries[0]!);
 }

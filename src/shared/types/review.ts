@@ -51,6 +51,10 @@ export interface SnippetDiff {
     linesAdded?: number;
     linesRemoved?: number;
     textAvailability?: 'patch-text' | 'full-text' | 'unavailable';
+    worktreePath?: string;
+    worktreeBranch?: string;
+    baseWorkspaceRoot?: string;
+    dirtyLeaderWarning?: string;
   };
 }
 
@@ -96,6 +100,10 @@ export interface FileChangeSummary {
     agentIds?: string[];
     memberNames?: string[];
     executionSeqRange?: { start: number; end: number };
+    worktreePath?: string;
+    worktreeBranch?: string;
+    baseWorkspaceRoot?: string;
+    dirtyLeaderWarning?: string;
   };
   /** Edit timeline for this file (Phase 4) */
   timeline?: FileEditTimeline;
@@ -261,6 +269,10 @@ export interface TaskChangeScope {
     firstTimestamp: string;
     lastTimestamp: string;
   }>;
+  worktreePaths?: string[];
+  worktreeBranches?: string[];
+  baseWorkspaceRoots?: string[];
+  dirtyLeaderWarnings?: string[];
 }
 
 /** Результат парсинга всех границ задач из JSONL файла */

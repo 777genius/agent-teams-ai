@@ -9,6 +9,7 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.launchTeam'
   | 'opencode.reconcileTeam'
   | 'opencode.stopTeam'
+  | 'opencode.sendMessage'
   | 'opencode.answerPermission'
   | 'opencode.listRuntimePermissions'
   | 'opencode.getRuntimeTranscript'
@@ -49,6 +50,7 @@ export interface OpenCodeTeamLaunchMemberCommandSpec {
 export interface OpenCodeLaunchTeamCommandBody {
   mode: OpenCodeTeamLaunchMode;
   runId: string;
+  laneId: string;
   teamId: string;
   teamName: string;
   projectPath: string;
@@ -62,7 +64,10 @@ export interface OpenCodeLaunchTeamCommandBody {
 export interface OpenCodeTeamMemberLaunchCommandData {
   sessionId: string;
   launchState: OpenCodeTeamMemberLaunchBridgeState;
+  pendingPermissionRequestIds?: string[];
+  diagnostics?: string[];
   model: string;
+  runtimePid?: number;
   evidence: Array<{ kind: string; observedAt: string }>;
 }
 
@@ -80,6 +85,7 @@ export interface OpenCodeLaunchTeamCommandData {
 
 export interface OpenCodeReconcileTeamCommandBody {
   runId: string;
+  laneId: string;
   teamId: string;
   teamName: string;
   projectPath?: string;
@@ -92,6 +98,7 @@ export interface OpenCodeReconcileTeamCommandBody {
 
 export interface OpenCodeStopTeamCommandBody {
   runId: string;
+  laneId: string;
   teamId: string;
   teamName: string;
   projectPath?: string;
@@ -110,6 +117,27 @@ export interface OpenCodeStopTeamCommandData {
   idempotencyKey?: string;
   manifestHighWatermark?: number | null;
   runtimeStoreManifestHighWatermark?: number | null;
+}
+
+export interface OpenCodeSendMessageCommandBody {
+  runId?: string;
+  laneId: string;
+  teamId: string;
+  teamName: string;
+  projectPath: string;
+  memberName: string;
+  text: string;
+  messageId?: string;
+  agent?: string;
+  noReply?: boolean;
+}
+
+export interface OpenCodeSendMessageCommandData {
+  accepted: boolean;
+  sessionId?: string;
+  memberName: string;
+  runtimePid?: number;
+  diagnostics: OpenCodeTeamBridgeDiagnostic[];
 }
 
 export type OpenCodeBridgePeerName = 'claude_team' | 'agent_teams_orchestrator';
@@ -223,6 +251,7 @@ export interface OpenCodeBridgeHandshake {
 
 export interface OpenCodeBridgeCommandPreconditions {
   handshakeIdentityHash: string;
+  laneId: string | null;
   expectedRunId: string | null;
   expectedCapabilitySnapshotId: string | null;
   expectedBehaviorFingerprint: string | null;
@@ -251,6 +280,7 @@ const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
   'opencode.launchTeam',
   'opencode.reconcileTeam',
   'opencode.stopTeam',
+  'opencode.sendMessage',
   'opencode.answerPermission',
   'opencode.listRuntimePermissions',
   'opencode.getRuntimeTranscript',
@@ -486,6 +516,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
 export function createOpenCodeBridgeIdempotencyKey(input: {
   command: OpenCodeBridgeCommandName;
   teamName: string;
+  laneId?: string | null;
   runId: string | null;
   body: unknown;
 }): string {
@@ -493,6 +524,7 @@ export function createOpenCodeBridgeIdempotencyKey(input: {
     'opencode',
     sanitizeKeyPart(input.command),
     sanitizeKeyPart(input.teamName),
+    sanitizeKeyPart(input.laneId ?? 'no-lane'),
     sanitizeKeyPart(input.runId ?? 'no-run'),
   ].join(':');
   return `${scope}:${stableHash(input).slice(0, 32)}`;

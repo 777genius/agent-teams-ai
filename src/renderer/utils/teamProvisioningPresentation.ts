@@ -32,6 +32,100 @@ interface FailedSpawnDetail {
   reason: string | null;
 }
 
+function parseStatusUpdatedAtMs(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
+  return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
+}
+
+function shouldPreferSnapshotEntryOverLive(params: {
+  liveEntry: MemberSpawnStatusEntry | undefined;
+  snapshotEntry: MemberSpawnStatusEntry | undefined;
+  snapshotUpdatedAt?: string;
+}): boolean {
+  const { liveEntry, snapshotEntry, snapshotUpdatedAt } = params;
+  if (!liveEntry || !snapshotEntry) {
+    return false;
+  }
+  if (!isFailedSpawnEntry(liveEntry) || isFailedSpawnEntry(snapshotEntry)) {
+    return false;
+  }
+
+  const liveUpdatedAtMs = parseStatusUpdatedAtMs(liveEntry.updatedAt);
+  const snapshotUpdatedAtMs =
+    parseStatusUpdatedAtMs(snapshotEntry.updatedAt) ?? parseStatusUpdatedAtMs(snapshotUpdatedAt);
+  return (
+    snapshotUpdatedAtMs != null &&
+    (liveUpdatedAtMs == null || snapshotUpdatedAtMs >= liveUpdatedAtMs)
+  );
+}
+
+function getPreferredSpawnEntry(params: {
+  liveEntry: MemberSpawnStatusEntry | undefined;
+  snapshotEntry: MemberSpawnStatusEntry | undefined;
+  snapshotUpdatedAt?: string;
+}): MemberSpawnStatusEntry | undefined {
+  return shouldPreferSnapshotEntryOverLive(params)
+    ? params.snapshotEntry
+    : (params.liveEntry ?? params.snapshotEntry);
+}
+
+function countPermissionBlockedMembers(params: {
+  memberSpawnStatuses: MemberSpawnStatusCollection;
+  memberSpawnSnapshotStatuses?: MemberSpawnStatusesSnapshot['statuses'];
+  memberSpawnSnapshotUpdatedAt?: string;
+}): number {
+  const names = new Set<string>();
+  if (params.memberSpawnStatuses instanceof Map) {
+    for (const name of params.memberSpawnStatuses.keys()) {
+      names.add(name);
+    }
+  } else if (params.memberSpawnStatuses) {
+    for (const name of Object.keys(params.memberSpawnStatuses)) {
+      names.add(name);
+    }
+  }
+  for (const name of Object.keys(params.memberSpawnSnapshotStatuses ?? {})) {
+    names.add(name);
+  }
+
+  let count = 0;
+  for (const name of names) {
+    const liveEntry =
+      params.memberSpawnStatuses instanceof Map
+        ? params.memberSpawnStatuses.get(name)
+        : params.memberSpawnStatuses?.[name];
+    const snapshotEntry = params.memberSpawnSnapshotStatuses?.[name];
+    const entry = getPreferredSpawnEntry({
+      liveEntry,
+      snapshotEntry,
+      snapshotUpdatedAt: params.memberSpawnSnapshotUpdatedAt,
+    });
+    if (!entry) {
+      continue;
+    }
+    if (
+      entry.launchState === 'runtime_pending_permission' ||
+      (entry.pendingPermissionRequestIds?.length ?? 0) > 0
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function buildAwaitingPermissionPhrase(count: number): string {
+  return count === 1
+    ? '1 teammate awaiting permission approval'
+    : `${count} teammates awaiting permission approval`;
+}
+
 const ACTIVE_PROVISIONING_STATES = new Set([
   'validating',
   'spawning',
@@ -41,25 +135,54 @@ const ACTIVE_PROVISIONING_STATES = new Set([
   'verifying',
 ]);
 
-function getFailedSpawnDetails(
-  memberSpawnStatuses: MemberSpawnStatusCollection
-): FailedSpawnDetail[] {
-  if (!memberSpawnStatuses) {
+function getFailedSpawnDetails(params: {
+  memberSpawnStatuses: MemberSpawnStatusCollection;
+  memberSpawnSnapshotStatuses?: MemberSpawnStatusesSnapshot['statuses'];
+  memberSpawnSnapshotUpdatedAt?: string;
+}): FailedSpawnDetail[] {
+  const names = new Set<string>();
+  if (params.memberSpawnStatuses instanceof Map) {
+    for (const name of params.memberSpawnStatuses.keys()) {
+      names.add(name);
+    }
+  } else if (params.memberSpawnStatuses) {
+    for (const name of Object.keys(params.memberSpawnStatuses)) {
+      names.add(name);
+    }
+  }
+  for (const name of Object.keys(params.memberSpawnSnapshotStatuses ?? {})) {
+    names.add(name);
+  }
+
+  if (names.size === 0) {
     return [];
   }
-  const entries =
-    memberSpawnStatuses instanceof Map
-      ? [...memberSpawnStatuses.entries()]
-      : Object.entries(memberSpawnStatuses);
 
-  return entries
-    .filter(([, entry]) => entry.launchState === 'failed_to_start' || entry.status === 'error')
+  return [...names]
+    .map((name) => {
+      const liveEntry =
+        params.memberSpawnStatuses instanceof Map
+          ? params.memberSpawnStatuses.get(name)
+          : params.memberSpawnStatuses?.[name];
+      const snapshotEntry = params.memberSpawnSnapshotStatuses?.[name];
+      return [
+        name,
+        getPreferredSpawnEntry({
+          liveEntry,
+          snapshotEntry,
+          snapshotUpdatedAt: params.memberSpawnSnapshotUpdatedAt,
+        }),
+      ] as const;
+    })
+    .filter(
+      ([, entry]) => entry && (entry.launchState === 'failed_to_start' || entry.status === 'error')
+    )
     .map(([name, entry]) => ({
       name,
       reason:
-        typeof entry.hardFailureReason === 'string' && entry.hardFailureReason.trim().length > 0
+        typeof entry?.hardFailureReason === 'string' && entry.hardFailureReason.trim().length > 0
           ? entry.hardFailureReason.trim()
-          : typeof entry.error === 'string' && entry.error.trim().length > 0
+          : typeof entry?.error === 'string' && entry.error.trim().length > 0
             ? entry.error.trim()
             : null,
     }))
@@ -108,6 +231,19 @@ function buildFailedSpawnCompactDetail(
   return `${failedSpawnDetails.length} teammates failed to start`;
 }
 
+function buildGenericFailedSpawnPanelMessage(
+  failedSpawnCount: number,
+  expectedTeammateCount: number
+): string | null {
+  if (failedSpawnCount <= 0) {
+    return null;
+  }
+  if (failedSpawnCount === 1) {
+    return '1 teammate failed to start';
+  }
+  return `${failedSpawnCount}/${Math.max(expectedTeammateCount, failedSpawnCount)} teammates failed to start`;
+}
+
 export interface TeamProvisioningPresentation {
   progress: TeamProvisioningProgress;
   isActive: boolean;
@@ -150,7 +286,12 @@ export function buildTeamProvisioningPresentation({
   progress: TeamProvisioningProgress | null | undefined;
   members: readonly ProvisioningMemberLike[];
   memberSpawnStatuses?: MemberSpawnStatusCollection;
-  memberSpawnSnapshot?: Pick<MemberSpawnStatusesSnapshot, 'expectedMembers' | 'summary'>;
+  memberSpawnSnapshot?: Pick<
+    MemberSpawnStatusesSnapshot,
+    'expectedMembers' | 'summary' | 'updatedAt'
+  > & {
+    statuses?: MemberSpawnStatusesSnapshot['statuses'];
+  };
 }): TeamProvisioningPresentation | null {
   if (!progress) {
     return null;
@@ -181,9 +322,22 @@ export function buildTeamProvisioningPresentation({
     memberSpawnStatuses,
     memberSpawnSnapshot,
   });
-  const failedSpawnDetails = getFailedSpawnDetails(memberSpawnStatuses);
+  const failedSpawnDetails = getFailedSpawnDetails({
+    memberSpawnStatuses,
+    memberSpawnSnapshotStatuses: memberSpawnSnapshot?.statuses,
+    memberSpawnSnapshotUpdatedAt: memberSpawnSnapshot?.updatedAt,
+  });
   const failedSpawnPanelMessage = buildFailedSpawnPanelMessage(failedSpawnDetails);
   const failedSpawnCompactDetail = buildFailedSpawnCompactDetail(failedSpawnDetails);
+  const genericFailedSpawnPanelMessage = buildGenericFailedSpawnPanelMessage(
+    failedSpawnCount,
+    expectedTeammateCount
+  );
+  const permissionBlockedCount = countPermissionBlockedMembers({
+    memberSpawnStatuses,
+    memberSpawnSnapshotStatuses: memberSpawnSnapshot?.statuses,
+    memberSpawnSnapshotUpdatedAt: memberSpawnSnapshot?.updatedAt,
+  });
 
   const { allTeammatesConfirmedAlive, hasMembersStillJoining, remainingJoinCount } =
     getLaunchJoinState({
@@ -220,7 +374,7 @@ export function buildTeamProvisioningPresentation({
       hasMembersStillJoining,
       remainingJoinCount,
       panelTitle: 'Launch failed',
-      panelMessage: progress.error ?? failedSpawnPanelMessage ?? null,
+      panelMessage: progress.error ?? failedSpawnPanelMessage ?? genericFailedSpawnPanelMessage,
       panelTone: 'error',
       defaultLiveOutputOpen: true,
       compactTitle: 'Launch failed',
@@ -234,24 +388,31 @@ export function buildTeamProvisioningPresentation({
       remainingJoinCount === 1
         ? '1 teammate still joining'
         : `${remainingJoinCount} teammates still joining`;
+    const pendingMembersAwaitApproval =
+      failedSpawnCount === 0 &&
+      permissionBlockedCount > 0 &&
+      permissionBlockedCount === remainingJoinCount;
+    const pendingDetailPhrase = pendingMembersAwaitApproval
+      ? buildAwaitingPermissionPhrase(permissionBlockedCount)
+      : joiningPhrase;
     const readyCompactDetail =
       failedSpawnCount > 0
         ? (failedSpawnCompactDetail ??
           `${failedSpawnCount} teammate${failedSpawnCount === 1 ? '' : 's'} failed to start`)
         : hasMembersStillJoining
-          ? joiningPhrase
+          ? pendingDetailPhrase
           : expectedTeammateCount === 0
             ? 'Lead online'
             : `All ${expectedTeammateCount} teammates joined`;
     const readyDetailMessage =
       failedSpawnCount > 0
-        ? (failedSpawnPanelMessage ?? progress.message)
+        ? (failedSpawnPanelMessage ?? genericFailedSpawnPanelMessage ?? progress.message)
         : expectedTeammateCount === 0
           ? 'Team provisioned - lead online'
           : allTeammatesConfirmedAlive
             ? `Team provisioned - all ${expectedTeammateCount} teammates joined`
             : hasMembersStillJoining
-              ? joiningPhrase
+              ? pendingDetailPhrase
               : 'Team provisioned - teammates are still joining';
     const readyDetailSeverity =
       failedSpawnCount > 0 ? 'warning' : hasMembersStillJoining ? 'info' : undefined;
@@ -270,7 +431,6 @@ export function buildTeamProvisioningPresentation({
       isReady: true,
       isFailed: false,
       canCancel: false,
-      currentStepIndex: hasMembersStillJoining ? 2 : DISPLAY_COMPLETE_STEP_INDEX,
       expectedTeammateCount,
       heartbeatConfirmedCount,
       processOnlyAliveCount,
@@ -295,10 +455,23 @@ export function buildTeamProvisioningPresentation({
       compactDetail: readyCompactDetail,
       compactTone:
         failedSpawnCount > 0 ? 'warning' : hasMembersStillJoining ? 'default' : 'success',
+      currentStepIndex:
+        failedSpawnCount > 0 ? 2 : hasMembersStillJoining ? 2 : DISPLAY_COMPLETE_STEP_INDEX,
     };
   }
 
   if (isActive) {
+    const activeJoiningPhrase =
+      remainingJoinCount === 1
+        ? '1 teammate still joining'
+        : `${remainingJoinCount} teammates still joining`;
+    const activePendingDetailPhrase =
+      failedSpawnCount === 0 &&
+      hasMembersStillJoining &&
+      permissionBlockedCount > 0 &&
+      permissionBlockedCount === remainingJoinCount
+        ? buildAwaitingPermissionPhrase(permissionBlockedCount)
+        : activeJoiningPhrase;
     return {
       progress,
       isActive: true,
@@ -316,7 +489,13 @@ export function buildTeamProvisioningPresentation({
       remainingJoinCount,
       panelTitle: 'Launching team',
       panelMessage:
-        failedSpawnCount > 0 ? (failedSpawnPanelMessage ?? progress.message) : progress.message,
+        failedSpawnCount > 0
+          ? (failedSpawnPanelMessage ?? genericFailedSpawnPanelMessage ?? progress.message)
+          : hasMembersStillJoining &&
+              permissionBlockedCount > 0 &&
+              permissionBlockedCount === remainingJoinCount
+            ? activePendingDetailPhrase
+            : progress.message,
       panelMessageSeverity: failedSpawnCount > 0 ? 'warning' : progress.messageSeverity,
       defaultLiveOutputOpen: false,
       compactTitle: 'Launching team',
@@ -324,9 +503,13 @@ export function buildTeamProvisioningPresentation({
         failedSpawnCount > 0
           ? (failedSpawnCompactDetail ??
             `${failedSpawnCount} teammate${failedSpawnCount === 1 ? '' : 's'} failed to start`)
-          : expectedTeammateCount > 0 && progressStepIndex >= 2
-            ? `${heartbeatConfirmedCount}/${expectedTeammateCount} teammates confirmed`
-            : progress.message,
+          : hasMembersStillJoining && failedSpawnCount === 0 && permissionBlockedCount > 0
+            ? permissionBlockedCount === remainingJoinCount
+              ? buildAwaitingPermissionPhrase(permissionBlockedCount)
+              : `${heartbeatConfirmedCount}/${expectedTeammateCount} teammates confirmed`
+            : expectedTeammateCount > 0 && progressStepIndex >= 2
+              ? `${heartbeatConfirmedCount}/${expectedTeammateCount} teammates confirmed`
+              : progress.message,
       compactTone: failedSpawnCount > 0 ? 'warning' : 'default',
     };
   }

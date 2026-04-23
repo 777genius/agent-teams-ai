@@ -12,6 +12,7 @@ import type {
 function normalizeRestartSensitiveMemberContract(member: {
   role?: string;
   workflow?: string;
+  isolation?: string;
   providerId?: string;
   model?: string;
   effort?: string;
@@ -21,13 +22,15 @@ function normalizeRestartSensitiveMemberContract(member: {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  isolation?: 'worktree';
 } {
   const role = member.role?.trim() || undefined;
   const workflow = member.workflow?.trim() || undefined;
   const providerId = normalizeOptionalTeamProviderId(member.providerId);
   const model = member.model?.trim() || undefined;
   const effort = isTeamEffortLevel(member.effort) ? member.effort : undefined;
-  return { role, workflow, providerId, model, effort };
+  const isolation = member.isolation === 'worktree' ? 'worktree' : undefined;
+  return { role, workflow, providerId, model, effort, isolation };
 }
 
 export function getMemberRuntimeContractKey(member: {
@@ -36,6 +39,7 @@ export function getMemberRuntimeContractKey(member: {
   providerId?: string;
   model?: string;
   effort?: string;
+  isolation?: string;
 }): string {
   return JSON.stringify(normalizeRestartSensitiveMemberContract(member));
 }
@@ -68,7 +72,8 @@ export function getMembersRequiringRuntimeRestart(params: {
       previousRuntime.workflow !== nextRuntime.workflow ||
       previousRuntime.providerId !== nextRuntime.providerId ||
       previousRuntime.model !== nextRuntime.model ||
-      previousRuntime.effort !== nextRuntime.effort
+      previousRuntime.effort !== nextRuntime.effort ||
+      previousRuntime.isolation !== nextRuntime.isolation
     ) {
       membersToRestart.push(previousMember.name);
     }
@@ -124,6 +129,7 @@ function normalizeEditableMemberSnapshot(member: {
   providerId?: string;
   model?: string;
   effort?: string;
+  isolation?: string;
   removedAt?: number | string | null;
 }): {
   name: string;
@@ -132,6 +138,7 @@ function normalizeEditableMemberSnapshot(member: {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  isolation?: 'worktree';
 } | null {
   if (member.removedAt) {
     return null;

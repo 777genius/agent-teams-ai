@@ -4,6 +4,9 @@ import {
   getAvailableTeamProviderModelOptions,
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
+  GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
+  GPT_5_2_CODEX_UI_DISABLED_REASON,
+  GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
   normalizeTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
@@ -181,11 +184,69 @@ describe('teamModelAvailability', () => {
     expect(getTeamModelSelectionError('codex', 'gpt-5.4', providerStatus)).toBeNull();
   });
 
-  it('waits for the runtime model list before validating explicit Codex selections', () => {
-    expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toContain(
-      'waiting for Codex runtime verification'
-    );
+  it('does not raise a hard validation error while explicit Codex models are still loading', () => {
+    expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toBeNull();
     expect(getTeamModelSelectionError('codex', '')).toBeNull();
+  });
+
+  it('keeps known Codex selections stable while the runtime is still on placeholder checking state', () => {
+    const providerStatus = createCodexProviderStatus([], {
+      authMethod: null,
+      backend: null,
+      authenticated: false,
+      supported: false,
+      verificationState: 'unknown',
+      modelVerificationState: 'idle',
+      statusMessage: 'Checking...',
+    });
+
+    expect(normalizeTeamModelForUi('codex', 'gpt-5.4', providerStatus)).toBe('gpt-5.4');
+    expect(getTeamModelSelectionError('codex', 'gpt-5.4', providerStatus)).toBeNull();
+    expect(getAvailableTeamProviderModelOptions('codex', providerStatus)).toEqual([
+      { value: '', label: 'Default', badgeLabel: 'Default' },
+      { value: 'gpt-5.4', label: '5.4', badgeLabel: '5.4' },
+      { value: 'gpt-5.4-mini', label: '5.4 Mini', badgeLabel: '5.4-mini' },
+      { value: 'gpt-5.3-codex', label: '5.3 Codex', badgeLabel: '5.3-codex' },
+      {
+        value: 'gpt-5.3-codex-spark',
+        label: '5.3 Codex Spark',
+        badgeLabel: '5.3-codex-spark',
+        uiDisabledReason: GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
+      },
+      { value: 'gpt-5.2', label: '5.2', badgeLabel: '5.2' },
+      {
+        value: 'gpt-5.2-codex',
+        label: '5.2 Codex',
+        badgeLabel: '5.2-codex',
+        uiDisabledReason: GPT_5_2_CODEX_UI_DISABLED_REASON,
+      },
+      {
+        value: 'gpt-5.1-codex-mini',
+        label: '5.1 Codex Mini',
+        badgeLabel: '5.1-codex-mini',
+        uiDisabledReason: GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
+      },
+      { value: 'gpt-5.1-codex-max', label: '5.1 Codex Max', badgeLabel: '5.1-codex-max' },
+    ]);
+  });
+
+  it('keeps known Codex selections stable while Codex native account truth is loaded before the runtime model catalog', () => {
+    const providerStatus = createCodexProviderStatus([], {
+      authMethod: 'chatgpt',
+      backend: {
+        kind: 'codex-native',
+        label: 'Codex native',
+        endpointLabel: 'codex exec --json',
+      },
+      authenticated: true,
+      supported: true,
+      verificationState: 'verified',
+      modelVerificationState: 'idle',
+      statusMessage: 'ChatGPT account ready',
+    });
+
+    expect(normalizeTeamModelForUi('codex', 'gpt-5.4', providerStatus)).toBe('gpt-5.4');
+    expect(getTeamModelSelectionError('codex', 'gpt-5.4', providerStatus)).toBeNull();
   });
 
   it('keeps runtime models selectable without per-model verification state', () => {

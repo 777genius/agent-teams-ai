@@ -77,6 +77,7 @@ import type {
   TeamLaunchResponse,
   TeamMemberActivityMeta,
   TeamMessageNotificationData,
+  TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -445,7 +446,8 @@ export interface TeamsAPI {
     providerId?: TeamLaunchRequest['providerId'],
     providerIds?: TeamLaunchRequest['providerId'][],
     selectedModels?: string[],
-    limitContext?: boolean
+    limitContext?: boolean,
+    modelVerificationMode?: TeamProvisioningModelVerificationMode
   ) => Promise<TeamProvisioningPrepareResult>;
   createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;

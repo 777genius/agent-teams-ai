@@ -7,6 +7,7 @@ import {
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { getWorktreeNavigationState } from '@renderer/store/utils/stateResetHelpers';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -44,8 +45,16 @@ export function useOpenRecentProject(): {
   const openSyntheticPath = useCallback(
     async (path: string, associatedPaths: readonly string[]): Promise<void> => {
       const candidatePaths = associatedPaths.length > 0 ? associatedPaths : [path];
+      const selectableCandidatePaths = candidatePaths.filter(
+        (candidatePath) => !isEphemeralProjectPath(candidatePath)
+      );
 
-      const initialMatch = findMatchingWorktree(repositoryGroups, candidatePaths);
+      if (selectableCandidatePaths.length === 0) {
+        logger.warn('Skipped ephemeral recent project path', { path });
+        return;
+      }
+
+      const initialMatch = findMatchingWorktree(repositoryGroups, selectableCandidatePaths);
       if (initialMatch) {
         navigateToMatch(initialMatch);
         return;
@@ -53,9 +62,14 @@ export function useOpenRecentProject(): {
 
       await fetchRepositoryGroups();
       const refreshedGroups = useStore.getState().repositoryGroups;
-      const refreshedMatch = findMatchingWorktree(refreshedGroups, candidatePaths);
+      const refreshedMatch = findMatchingWorktree(refreshedGroups, selectableCandidatePaths);
       if (refreshedMatch) {
         navigateToMatch(refreshedMatch);
+        return;
+      }
+
+      if (isEphemeralProjectPath(path)) {
+        logger.warn('Skipped adding ephemeral recent project path', { path });
         return;
       }
 

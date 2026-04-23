@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getOpenCodeMixedProviderProvisioningError,
   shouldWarnOnMissingRegisteredMember,
   shouldWarnOnUnreadableMemberAuditConfig,
 } from '@main/services/team/TeamProvisioningService';
@@ -68,5 +69,14 @@ describe('TeamProvisioningService audit warning policy', () => {
         graceExpired: true,
       })
     ).toBe(true);
+  });
+
+  it('surfaces a specific error for mixed-provider teams that include OpenCode', () => {
+    expect(getOpenCodeMixedProviderProvisioningError()).toContain(
+      'outside the current support scope'
+    );
+    expect(getOpenCodeMixedProviderProvisioningError()).toContain(
+      'OpenCode-led mixed teams still remain blocked in this phase'
+    );
   });
 });

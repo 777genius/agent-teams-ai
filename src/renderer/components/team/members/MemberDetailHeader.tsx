@@ -82,8 +82,18 @@ export const MemberDetailHeader = ({
     leadActivity,
   });
   const presenceLabel = launchPresentation.presenceLabel;
+  const launchVisualState = launchPresentation.launchVisualState;
+  const launchStatusLabel = launchPresentation.launchStatusLabel;
   const dotClass = launchPresentation.dotClass;
+  const runtimeAdvisoryLabel = launchPresentation.runtimeAdvisoryLabel;
   const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
+  const runtimeAdvisoryTone = launchPresentation.runtimeAdvisoryTone;
+  const badgeLabel =
+    runtimeAdvisoryTone === 'error' && runtimeAdvisoryLabel
+      ? runtimeAdvisoryLabel
+      : launchVisualState === 'runtime_pending' || launchVisualState === 'permission_pending'
+        ? (launchStatusLabel ?? presenceLabel)
+        : presenceLabel;
 
   const canEditRole =
     !isLeadMember(member) && !member.removedAt && !isTeamProvisioning && !!onUpdateRole;
@@ -99,7 +109,7 @@ export const MemberDetailHeader = ({
         />
         <span
           className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--color-surface)] ${dotClass}`}
-          aria-label={presenceLabel}
+          aria-label={badgeLabel}
         />
       </div>
       <div className="min-w-0 flex-1">
@@ -141,10 +151,14 @@ export const MemberDetailHeader = ({
               <>
                 <Badge
                   variant="secondary"
-                  className="px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
+                  className={`px-1.5 py-0.5 text-[10px] font-normal leading-none ${
+                    runtimeAdvisoryTone === 'error'
+                      ? 'bg-red-500/15 text-red-300'
+                      : 'text-[var(--color-text-muted)]'
+                  }`}
                   title={runtimeAdvisoryTitle}
                 >
-                  {presenceLabel}
+                  {badgeLabel}
                 </Badge>
                 {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
               </>

@@ -137,6 +137,9 @@ function isLaunchStillStarting(
   if (spawnLaunchState === 'failed_to_start') {
     return false;
   }
+  if (spawnLaunchState === 'runtime_pending_permission') {
+    return false;
+  }
   if (spawnLaunchState === 'runtime_pending_bootstrap') {
     if (runtimeAlive !== true) {
       return true;
@@ -166,6 +169,9 @@ export function getSpawnAwareDotClass(
   }
   if (spawnLaunchState === 'failed_to_start' || spawnStatus === 'error') {
     return SPAWN_DOT_COLORS.error;
+  }
+  if (spawnLaunchState === 'runtime_pending_permission') {
+    return 'bg-amber-400 animate-pulse';
   }
   if (
     isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive, keepLaunchSettlingVisuals)
@@ -211,6 +217,9 @@ export function getSpawnAwarePresenceLabel(
   if (spawnLaunchState === 'failed_to_start' || spawnStatus === 'error') {
     return SPAWN_PRESENCE_LABELS.error;
   }
+  if (spawnLaunchState === 'runtime_pending_permission') {
+    return 'connecting';
+  }
   if (
     isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive, keepLaunchSettlingVisuals)
   ) {
@@ -247,6 +256,9 @@ export function getSpawnCardClass(
   if (
     isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive, keepLaunchSettlingVisuals)
   ) {
+    return 'member-waiting-shimmer';
+  }
+  if (spawnLaunchState === 'runtime_pending_permission') {
     return 'member-waiting-shimmer';
   }
   switch (spawnStatus) {
@@ -300,6 +312,26 @@ function formatRuntimeAdvisoryBaseLabel(
   providerId: TeamProviderId | undefined
 ): string {
   const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
+  if (advisory.kind === 'api_error') {
+    switch (advisory.reasonCode) {
+      case 'quota_exhausted':
+        return providerLabel ? `${providerLabel} quota error` : 'Quota error';
+      case 'rate_limited':
+        return providerLabel ? `${providerLabel} rate limit` : 'Rate limit';
+      case 'auth_error':
+        return providerLabel ? `${providerLabel} auth error` : 'Auth error';
+      case 'network_error':
+        return 'Network error';
+      case 'provider_overloaded':
+        return providerLabel ? `${providerLabel} overload` : 'Provider overload';
+      case 'backend_error':
+      case 'unknown':
+        return providerLabel ? `${providerLabel} API error` : 'API error';
+      default:
+        return 'API error';
+    }
+  }
+
   switch (advisory.reasonCode) {
     case 'quota_exhausted':
       return providerLabel ? `${providerLabel} quota retry` : 'Quota retry';
@@ -324,6 +356,41 @@ function formatRuntimeAdvisoryTitle(
   providerId: TeamProviderId | undefined
 ): string {
   const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
+  if (advisory.kind === 'api_error') {
+    switch (advisory.reasonCode) {
+      case 'quota_exhausted':
+        return appendRuntimeAdvisoryRawMessage(
+          `${providerLabel ?? 'Provider'} quota exhausted.`,
+          advisory.message
+        );
+      case 'rate_limited':
+        return appendRuntimeAdvisoryRawMessage(
+          `${providerLabel ?? 'Provider'} rate limited the request.`,
+          advisory.message
+        );
+      case 'auth_error':
+        return appendRuntimeAdvisoryRawMessage(
+          `${providerLabel ?? 'Provider'} authentication error.`,
+          advisory.message
+        );
+      case 'network_error':
+        return appendRuntimeAdvisoryRawMessage('Network or connectivity error.', advisory.message);
+      case 'provider_overloaded':
+        return appendRuntimeAdvisoryRawMessage(
+          'Provider is temporarily overloaded.',
+          advisory.message
+        );
+      case 'backend_error':
+      case 'unknown':
+        return appendRuntimeAdvisoryRawMessage(
+          `${providerLabel ?? 'Provider'} API error.`,
+          advisory.message
+        );
+      default:
+        return advisory.message?.trim() || 'Provider API error.';
+    }
+  }
+
   switch (advisory.reasonCode) {
     case 'quota_exhausted':
       return appendRuntimeAdvisoryRawMessage(
@@ -369,11 +436,17 @@ export function getMemberRuntimeAdvisoryLabel(
   providerId?: TeamProviderId,
   nowMs = Date.now()
 ): string | null {
-  if (advisory?.kind !== 'sdk_retrying') {
+  if (!advisory) {
     return null;
   }
   const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId);
-  const retryUntilMs = Date.parse(advisory.retryUntil);
+  if (advisory.kind === 'api_error') {
+    return baseLabel;
+  }
+  if (advisory.kind !== 'sdk_retrying') {
+    return null;
+  }
+  const retryUntilMs = advisory.retryUntil ? Date.parse(advisory.retryUntil) : Number.NaN;
   if (!Number.isFinite(retryUntilMs)) {
     return baseLabel;
   }
@@ -388,10 +461,19 @@ export function getMemberRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory | undefined,
   providerId?: TeamProviderId
 ): string | undefined {
-  if (advisory?.kind !== 'sdk_retrying') {
+  if (!advisory || (advisory.kind !== 'sdk_retrying' && advisory.kind !== 'api_error')) {
     return undefined;
   }
   return formatRuntimeAdvisoryTitle(advisory, providerId);
+}
+
+export function getMemberRuntimeAdvisoryTone(
+  advisory: MemberRuntimeAdvisory | undefined
+): 'error' | 'warning' | null {
+  if (!advisory) {
+    return null;
+  }
+  return advisory.kind === 'api_error' ? 'error' : 'warning';
 }
 
 export function getLaunchAwarePresenceLabel(
@@ -433,6 +515,7 @@ export function getLaunchAwarePresenceLabel(
 export type MemberLaunchVisualState =
   | 'waiting'
   | 'spawning'
+  | 'permission_pending'
   | 'runtime_pending'
   | 'settling'
   | 'error'
@@ -444,6 +527,7 @@ export interface MemberLaunchPresentation {
   cardClass: string;
   runtimeAdvisoryLabel: string | null;
   runtimeAdvisoryTitle?: string;
+  runtimeAdvisoryTone: 'error' | 'warning' | null;
   launchVisualState: MemberLaunchVisualState;
   launchStatusLabel: string | null;
   spawnBadgeLabel: string | null;
@@ -455,6 +539,8 @@ export function getMemberLaunchStatusLabel(visualState: MemberLaunchVisualState)
       return 'waiting to start';
     case 'spawning':
       return 'starting';
+    case 'permission_pending':
+      return 'awaiting permission';
     case 'runtime_pending':
       return 'connecting';
     case 'settling':
@@ -521,12 +607,15 @@ export function buildMemberLaunchPresentation({
   );
   const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
   const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(runtimeAdvisory, member.providerId);
+  const runtimeAdvisoryTone = getMemberRuntimeAdvisoryTone(runtimeAdvisory);
   const keepLaunchSettlingVisuals = isTeamProvisioning === true || isLaunchSettling;
 
   let launchVisualState: MemberLaunchVisualState = null;
   if (isTeamAlive !== false || isTeamProvisioning) {
     if (spawnLaunchState === 'failed_to_start' || spawnStatus === 'error') {
       launchVisualState = 'error';
+    } else if (spawnLaunchState === 'runtime_pending_permission') {
+      launchVisualState = 'permission_pending';
     } else if (
       spawnLaunchState === 'runtime_pending_bootstrap' &&
       spawnStatus === 'online' &&
@@ -561,10 +650,11 @@ export function buildMemberLaunchPresentation({
 
   return {
     presenceLabel,
-    dotClass,
+    dotClass: runtimeAdvisoryTone === 'error' ? STATUS_DOT_COLORS.terminated : dotClass,
     cardClass,
     runtimeAdvisoryLabel,
     runtimeAdvisoryTitle,
+    runtimeAdvisoryTone,
     launchVisualState,
     launchStatusLabel,
     spawnBadgeLabel,

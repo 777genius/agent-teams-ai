@@ -92,6 +92,29 @@ describe('members editor editable input filtering', () => {
     ]);
   });
 
+  it('preserves worktree isolation when importing and exporting member drafts', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'developer',
+          isolation: 'worktree',
+        },
+        {
+          name: 'bob',
+          agentType: 'reviewer',
+        },
+      ] satisfies Array<Pick<ResolvedTeamMember, 'name' | 'agentType' | 'isolation'>>)
+    );
+
+    const exported = buildMembersFromDrafts(drafts);
+
+    expect(drafts[0]).toMatchObject({ name: 'alice', isolation: 'worktree' });
+    expect(exported[0]).toMatchObject({ name: 'alice', isolation: 'worktree' });
+    expect(exported[1]).toMatchObject({ name: 'bob' });
+    expect(exported[1]).not.toHaveProperty('isolation');
+  });
+
   it('reuses existing member colors for matching draft names', () => {
     const existingMembers = [{ name: 'alice' }, { name: 'tom' }, { name: 'bob' }];
     const drafts = existingMembers.map((member) => createMemberDraft({ name: member.name }));

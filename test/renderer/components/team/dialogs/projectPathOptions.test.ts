@@ -65,4 +65,27 @@ describe('buildProjectPathOptions', () => {
       },
     ]);
   });
+
+  it('excludes generated ephemeral project paths', () => {
+    const options = buildProjectPathOptions([
+      createProject({
+        id: 'project-temp',
+        name: 'codex-agent-teams-appstyle-zudek6i9',
+        path: '/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9',
+      }),
+      createProject({
+        id: 'project-real',
+        name: 'claude_team',
+        path: '/Users/belief/dev/projects/claude/claude_team',
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/claude/claude_team',
+        label: 'claude_team',
+        description: '/Users/belief/dev/projects/claude/claude_team',
+      },
+    ]);
+  });
 });

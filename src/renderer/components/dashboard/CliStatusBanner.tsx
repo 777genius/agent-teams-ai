@@ -36,6 +36,10 @@ import { SettingsToggle } from '@renderer/components/settings/components';
 import { TerminalLogPanel } from '@renderer/components/terminal/TerminalLogPanel';
 import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
+import {
+  loadDashboardCliStatusBannerCollapsed,
+  saveDashboardCliStatusBannerCollapsed,
+} from '@renderer/services/dashboardCliStatusBannerPreference';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { formatBytes } from '@renderer/utils/formatters';
@@ -47,6 +51,7 @@ import {
   AlertTriangle,
   CheckCircle,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Download,
   HelpCircle,
@@ -258,16 +263,20 @@ interface InstalledBannerProps {
   cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   codexSnapshotPending: boolean;
   cliStatusError: string | null;
+  providersCollapsed: boolean;
   isBusy: boolean;
   multimodelEnabled: boolean;
   multimodelBusy: boolean;
   onInstall: () => void;
   onRefresh: () => void;
   onMultimodelToggle: (enabled: boolean) => void;
+  onToggleProvidersCollapsed: () => void;
   onProviderLogin: (providerId: CliProviderId) => void;
   onProviderLogout: (providerId: CliProviderId) => void;
   onProviderManage: (providerId: CliProviderId) => void;
   onProviderRefresh: (providerId: CliProviderId) => void;
+  onCodexReconnect: () => void;
+  codexReconnectBusy: boolean;
   variant: BannerVariant;
 }
 
@@ -547,16 +556,20 @@ const InstalledBanner = ({
   cliProviderStatusLoading,
   codexSnapshotPending,
   cliStatusError,
+  providersCollapsed,
   isBusy,
   multimodelEnabled,
   multimodelBusy,
   onInstall,
   onRefresh,
   onMultimodelToggle,
+  onToggleProvidersCollapsed,
   onProviderLogin,
   onProviderLogout,
   onProviderManage,
   onProviderRefresh,
+  onCodexReconnect,
+  codexReconnectBusy,
   variant,
 }: InstalledBannerProps): React.JSX.Element => {
   const openExtensionsTab = useStore((s) => s.openExtensionsTab);
@@ -568,14 +581,37 @@ const InstalledBanner = ({
   const canOpenExtensions = cliStatus.installed;
   const runtimeLabel = formatRuntimeLabel(cliStatus);
   const runtimeAuthSummary = formatRuntimeAuthSummary(cliStatus, visibleProviders);
+  const showCollapseControl = visibleProviders.length > 0;
+  const showExpandedContent = !providersCollapsed;
 
   return (
     <div
-      className={`mb-6 rounded-lg border-l-4 px-4 py-3 ${BANNER_MIN_H}`}
+      className={`mb-6 rounded-lg border-l-4 px-4 ${
+        showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'
+      }`}
       style={{ borderColor: styles.border, backgroundColor: styles.bg }}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {showCollapseControl && (
+            <button
+              type="button"
+              onClick={onToggleProvidersCollapsed}
+              className="flex items-center justify-center rounded-md p-1 transition-colors hover:bg-white/5"
+              style={{ color: 'var(--color-text-muted)' }}
+              aria-label={
+                providersCollapsed ? 'Expand provider details' : 'Collapse provider details'
+              }
+              aria-expanded={!providersCollapsed}
+              title={providersCollapsed ? 'Expand provider details' : 'Collapse provider details'}
+            >
+              {providersCollapsed ? (
+                <ChevronRight className="size-4 shrink-0" />
+              ) : (
+                <ChevronDown className="size-4 shrink-0" />
+              )}
+            </button>
+          )}
           <Terminal className="size-4 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -663,12 +699,12 @@ const InstalledBanner = ({
           )}
         </div>
       </div>
-      {cliStatusError && !cliStatusLoading && (
+      {showExpandedContent && cliStatusError && !cliStatusLoading && (
         <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
           Failed to check for updates. Check your network connection and try again.
         </p>
       )}
-      {visibleProviders.length > 0 && (
+      {showExpandedContent && visibleProviders.length > 0 && (
         <div
           className="mt-3 space-y-2 border-t pt-3"
           style={{ borderColor: 'var(--color-border-subtle)' }}
@@ -682,6 +718,12 @@ const InstalledBanner = ({
             const credentialSummary = getProviderCredentialSummary(provider);
             const codexDashboardRateLimits = getCodexDashboardRateLimits(provider);
             const codexDashboardHint = getCodexDashboardHint(provider);
+            const codexNeedsReconnect =
+              provider.providerId === 'codex' &&
+              Boolean(provider.connection?.codex?.localActiveChatgptAccountPresent) &&
+              provider.connection?.codex?.launchAllowed !== true &&
+              provider.connection?.codex?.login.status !== 'starting' &&
+              provider.connection?.codex?.login.status !== 'pending';
             const disconnectAction = getProviderDisconnectAction(provider);
             const providerLoading = cliProviderStatusLoading[provider.providerId] === true;
             const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
@@ -842,7 +884,24 @@ const InstalledBanner = ({
                           color: 'var(--color-text-secondary)',
                         }}
                       >
-                        {codexDashboardHint}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="min-w-0 flex-1">{codexDashboardHint}</span>
+                          {codexNeedsReconnect ? (
+                            <button
+                              type="button"
+                              onClick={onCodexReconnect}
+                              disabled={codexReconnectBusy || actionDisabled}
+                              className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+                              style={{
+                                borderColor: 'rgba(245, 158, 11, 0.28)',
+                                backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                                color: '#fbbf24',
+                              }}
+                            >
+                              Reconnect ChatGPT
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -960,6 +1019,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [isSwitchingFlavor, setIsSwitchingFlavor] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
+  const [providersCollapsed, setProvidersCollapsed] = useState(() =>
+    loadDashboardCliStatusBannerCollapsed()
+  );
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
   const loadingCliStatus = useMemo(
     () =>
@@ -1047,6 +1109,27 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
       fetchCliStatus,
     });
   }, [bootstrapCliStatus, fetchCliStatus, multimodelEnabled]);
+
+  const handleToggleProvidersCollapsed = useCallback(() => {
+    setProvidersCollapsed((current) => {
+      const next = !current;
+      saveDashboardCliStatusBannerCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  const handleCodexDashboardLogin = useCallback(() => {
+    void (async () => {
+      const success = await codexAccount.startChatgptLogin();
+      if (success) {
+        await refreshCliStatusForCurrentMode({
+          multimodelEnabled,
+          bootstrapCliStatus,
+          fetchCliStatus,
+        });
+      }
+    })();
+  }, [bootstrapCliStatus, codexAccount, fetchCliStatus, multimodelEnabled]);
 
   const handleMultimodelToggle = useCallback(
     async (enabled: boolean) => {
@@ -1321,16 +1404,20 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           cliProviderStatusLoading={cliProviderStatusLoading}
           codexSnapshotPending={codexSnapshotPending}
           cliStatusError={cliStatusError ?? null}
+          providersCollapsed={providersCollapsed}
           isBusy={isBusy}
           multimodelEnabled={multimodelEnabled}
           multimodelBusy={isSwitchingFlavor}
           onInstall={handleInstall}
           onRefresh={handleRefresh}
           onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
+          onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
           onProviderLogout={handleProviderLogout}
           onProviderManage={handleProviderManage}
           onProviderRefresh={handleProviderRefresh}
+          onCodexReconnect={handleCodexDashboardLogin}
+          codexReconnectBusy={codexAccount.loading}
           variant="info"
         />
       );
@@ -1545,16 +1632,20 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             cliProviderStatusLoading={cliProviderStatusLoading}
             codexSnapshotPending={codexSnapshotPending}
             cliStatusError={cliStatusError ?? null}
+            providersCollapsed={providersCollapsed}
             isBusy={isBusy}
             multimodelEnabled={multimodelEnabled}
             multimodelBusy={isSwitchingFlavor}
             onInstall={handleInstall}
             onRefresh={handleRefresh}
             onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
+            onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
             onProviderLogin={handleProviderLogin}
             onProviderLogout={handleProviderLogout}
             onProviderManage={handleProviderManage}
             onProviderRefresh={handleProviderRefresh}
+            onCodexReconnect={handleCodexDashboardLogin}
+            codexReconnectBusy={codexAccount.loading}
             variant={variant}
           />
           {installedAuxiliaryUi}
@@ -1603,16 +1694,20 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           cliProviderStatusLoading={cliProviderStatusLoading}
           codexSnapshotPending={codexSnapshotPending}
           cliStatusError={cliStatusError ?? null}
+          providersCollapsed={providersCollapsed}
           isBusy={isBusy}
           multimodelEnabled={multimodelEnabled}
           multimodelBusy={isSwitchingFlavor}
           onInstall={handleInstall}
           onRefresh={handleRefresh}
           onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
+          onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
           onProviderLogout={handleProviderLogout}
           onProviderManage={handleProviderManage}
           onProviderRefresh={handleProviderRefresh}
+          onCodexReconnect={handleCodexDashboardLogin}
+          codexReconnectBusy={codexAccount.loading}
           variant={variant}
         />
         <div
@@ -1821,16 +1916,20 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         cliProviderStatusLoading={cliProviderStatusLoading}
         codexSnapshotPending={codexSnapshotPending}
         cliStatusError={cliStatusError ?? null}
+        providersCollapsed={providersCollapsed}
         isBusy={isBusy}
         multimodelEnabled={multimodelEnabled}
         multimodelBusy={isSwitchingFlavor}
         onInstall={handleInstall}
         onRefresh={handleRefresh}
         onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
+        onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
         onProviderLogin={handleProviderLogin}
         onProviderLogout={handleProviderLogout}
         onProviderManage={handleProviderManage}
         onProviderRefresh={handleProviderRefresh}
+        onCodexReconnect={handleCodexDashboardLogin}
+        codexReconnectBusy={codexAccount.loading}
         variant={variant}
       />
       {installedAuxiliaryUi}

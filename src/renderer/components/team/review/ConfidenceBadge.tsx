@@ -3,6 +3,7 @@ import type { TaskScopeConfidence } from '@shared/types';
 interface ConfidenceBadgeProps {
   confidence: TaskScopeConfidence;
   showTooltip?: boolean;
+  label?: string;
 }
 
 const TIER_COLORS: Record<number, string> = {
@@ -19,13 +20,17 @@ const TIER_LABELS: Record<number, string> = {
   4: 'Best effort',
 };
 
-export const ConfidenceBadge = ({ confidence, showTooltip = true }: ConfidenceBadgeProps) => {
+export const ConfidenceBadge = ({
+  confidence,
+  showTooltip = true,
+  label,
+}: ConfidenceBadgeProps) => {
   return (
     <span
       className={`inline-flex items-center rounded border px-2 py-0.5 text-xs ${TIER_COLORS[confidence.tier] ?? TIER_COLORS[4]}`}
       title={showTooltip ? confidence.reason : undefined}
     >
-      {TIER_LABELS[confidence.tier] ?? TIER_LABELS[4]}
+      {label ?? TIER_LABELS[confidence.tier] ?? TIER_LABELS[4]}
     </span>
   );
 };

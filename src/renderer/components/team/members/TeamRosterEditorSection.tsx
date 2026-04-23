@@ -50,6 +50,9 @@ interface TeamRosterEditorSectionProps {
   disableGeminiOption?: boolean;
   leadModelIssueText?: string | null;
   memberModelIssueById?: Record<string, string | null | undefined>;
+  showWorktreeIsolationControls?: boolean;
+  teammateWorktreeDefault?: boolean;
+  onTeammateWorktreeDefaultChange?: (enabled: boolean) => void;
 }
 
 export const TeamRosterEditorSection = ({
@@ -95,6 +98,9 @@ export const TeamRosterEditorSection = ({
   disableGeminiOption = false,
   leadModelIssueText,
   memberModelIssueById,
+  showWorktreeIsolationControls = false,
+  teammateWorktreeDefault = false,
+  onTeammateWorktreeDefaultChange,
 }: TeamRosterEditorSectionProps): React.JSX.Element => {
   return (
     <MembersEditorSection
@@ -122,6 +128,9 @@ export const TeamRosterEditorSection = ({
       softDeleteMembers={softDeleteMembers}
       disableGeminiOption={disableGeminiOption}
       memberModelIssueById={memberModelIssueById}
+      showWorktreeIsolationControls={showWorktreeIsolationControls}
+      teammateWorktreeDefault={teammateWorktreeDefault}
+      onTeammateWorktreeDefaultChange={onTeammateWorktreeDefaultChange}
       headerExtra={
         <div className="space-y-3">
           {headerTop}

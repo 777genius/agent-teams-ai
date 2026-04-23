@@ -1,13 +1,13 @@
 import React from 'react';
 
-import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
+import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
-import type { TeamProviderId } from '@shared/types';
-import type { CliProviderStatus } from '@shared/types';
+import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
+export type ProvisioningPrepareState = 'idle' | 'loading' | 'ready' | 'failed';
 
 export interface ProvisioningProviderCheck {
   providerId: TeamProviderId;
@@ -139,12 +139,33 @@ type ProvisioningDetailSummary =
   | 'Authentication required'
   | 'Runtime provider is not configured'
   | 'CLI preflight failed'
+  | 'Selected model compatibility pending'
+  | 'Selected model available'
   | 'Selected model verified'
   | 'Selected model unavailable'
   | 'Selected model verification timed out'
   | 'Selected model check failed'
   | 'Ready with notes'
   | 'Needs attention';
+
+function isSelectedModelDetail(lower: string): boolean {
+  return lower.includes('selected model');
+}
+
+function isFormattedModelDetail(lower: string): boolean {
+  return (
+    lower.includes(' - checking...') ||
+    lower.includes(' - verified') ||
+    lower.includes(' - available for launch') ||
+    lower.includes(' - compatible, deep verification pending') ||
+    lower.includes(' - unavailable') ||
+    lower.includes(' - check failed')
+  );
+}
+
+function isModelDetail(lower: string): boolean {
+  return isSelectedModelDetail(lower) || isFormattedModelDetail(lower);
+}
 
 function getStatusLabel(status: ProvisioningProviderCheckStatus): string {
   switch (status) {
@@ -197,29 +218,38 @@ function summarizeDetail(
   if (lower.includes('claude cli preflight check failed')) {
     return 'CLI preflight failed';
   }
-  if (lower.includes('selected model') && lower.includes('verified for launch')) {
+  if (isModelDetail(lower) && lower.includes('compatible, deep verification pending')) {
+    return 'Selected model compatibility pending';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('verified for launch')) {
     return 'Selected model verified';
   }
-  if (lower.includes('selected model') && lower.includes('is unavailable')) {
+  if (isSelectedModelDetail(lower) && lower.includes('available for launch')) {
+    return 'Selected model available';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('is unavailable')) {
     return 'Selected model unavailable';
   }
   if (
-    lower.includes('selected model') &&
+    isSelectedModelDetail(lower) &&
     lower.includes('could not be verified') &&
     lower.includes('timed out')
   ) {
     return 'Selected model verification timed out';
   }
-  if (lower.includes('selected model') && lower.includes('could not be verified')) {
+  if (isSelectedModelDetail(lower) && lower.includes('could not be verified')) {
     return 'Selected model check failed';
   }
   if (lower.includes(' - verified')) {
     return 'Selected model verified';
   }
+  if (lower.includes(' - available for launch')) {
+    return 'Selected model available';
+  }
   if (lower.includes(' - unavailable -')) {
     return 'Selected model unavailable';
   }
-  if (lower.includes('timed out')) {
+  if (lower.includes(' - check failed') && lower.includes('timed out')) {
     return 'Selected model verification timed out';
   }
   if (lower.includes(' - check failed -')) {
@@ -236,6 +266,8 @@ function summarizeDetail(
 }
 
 function getModelDetailSummary(details: string[]): string | null {
+  let compatibilityPendingCount = 0;
+  let availableCount = 0;
   let verifiedCount = 0;
   let unavailableCount = 0;
   let timedOutCount = 0;
@@ -244,19 +276,46 @@ function getModelDetailSummary(details: string[]): string | null {
 
   for (const detail of details) {
     const lower = detail.toLowerCase();
-    if (lower.includes(' - verified')) {
+    if (!isModelDetail(lower)) {
+      continue;
+    }
+    if (lower.includes('compatible, deep verification pending')) {
+      compatibilityPendingCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - available for launch') ||
+      (isSelectedModelDetail(lower) && lower.includes('is available for launch'))
+    ) {
+      availableCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - verified') ||
+      (isSelectedModelDetail(lower) && lower.includes('verified for launch'))
+    ) {
       verifiedCount += 1;
       continue;
     }
-    if (lower.includes(' - unavailable -')) {
+    if (
+      lower.includes(' - unavailable -') ||
+      (isSelectedModelDetail(lower) && lower.includes('is unavailable'))
+    ) {
       unavailableCount += 1;
       continue;
     }
-    if (lower.includes('timed out')) {
+    if (
+      lower.includes('timed out') &&
+      (lower.includes('check failed') ||
+        (isSelectedModelDetail(lower) && lower.includes('could not be verified')))
+    ) {
       timedOutCount += 1;
       continue;
     }
-    if (lower.includes(' - check failed -')) {
+    if (
+      lower.includes(' - check failed -') ||
+      (isSelectedModelDetail(lower) && lower.includes('could not be verified'))
+    ) {
       checkFailedCount += 1;
       continue;
     }
@@ -275,14 +334,28 @@ function getModelDetailSummary(details: string[]): string | null {
   if (timedOutCount > 0) {
     parts.push(`${timedOutCount} model${timedOutCount === 1 ? '' : 's'} timed out`);
   }
+  if (compatibilityPendingCount > 0) {
+    parts.push(`${compatibilityPendingCount} compatible, deep verification pending`);
+  }
   if (checkingCount > 0) {
     parts.push(`${checkingCount} checking`);
+  }
+  if (availableCount > 0) {
+    parts.push(`${availableCount} available`);
   }
   if (verifiedCount > 0) {
     parts.push(`${verifiedCount} verified`);
   }
 
   return parts.length > 0 ? `Selected model checks - ${parts.join(', ')}` : null;
+}
+
+function hasCompatibilityPendingDetails(checks: ProvisioningProviderCheck[]): boolean {
+  return checks.some((check) =>
+    check.details.some((detail) =>
+      detail.toLowerCase().includes('compatible, deep verification pending')
+    )
+  );
 }
 
 function getDisplayStatusText(check: ProvisioningProviderCheck): string {
@@ -316,7 +389,7 @@ function getDetailTone(
   status: ProvisioningProviderCheckStatus
 ): 'success' | 'failure' | 'checking' | 'neutral' {
   const summary = summarizeDetail(detail, status);
-  if (summary === 'Selected model verified') {
+  if (summary === 'Selected model verified' || summary === 'Selected model available') {
     return 'success';
   }
   if (summary === 'Selected model verification timed out') {
@@ -400,6 +473,64 @@ export function getPrimaryProvisioningFailureDetail(
   }
 
   return null;
+}
+
+export function deriveEffectiveProvisioningPrepareState(params: {
+  state: ProvisioningPrepareState;
+  message: string | null;
+  warnings: string[];
+  checks: ProvisioningProviderCheck[];
+}): { state: ProvisioningPrepareState; message: string | null } {
+  if (params.state !== 'loading') {
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  if (params.checks.length === 0) {
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  const hasPendingChecks = params.checks.some(
+    (check) => check.status === 'pending' || check.status === 'checking'
+  );
+  if (hasPendingChecks) {
+    if (hasCompatibilityPendingDetails(params.checks)) {
+      return {
+        state: params.state,
+        message:
+          'Deep verification is still running. OpenCode free models may take around 20 seconds.',
+      };
+    }
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  if (params.checks.some((check) => check.status === 'failed')) {
+    return {
+      state: 'failed',
+      message:
+        getPrimaryProvisioningFailureDetail(params.checks) ??
+        params.message ??
+        'Some selected providers need attention.',
+    };
+  }
+
+  const hasNotes =
+    params.warnings.length > 0 || params.checks.some((check) => check.status === 'notes');
+
+  return {
+    state: 'ready',
+    message: hasNotes
+      ? 'Selected providers are ready with notes.'
+      : 'Selected providers are ready.',
+  };
 }
 
 export function shouldHideProvisioningProviderStatusList(

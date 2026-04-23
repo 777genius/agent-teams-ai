@@ -1,3 +1,5 @@
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
+
 import type { DashboardRecentProject } from '@features/recent-projects/contracts';
 
 const RECENT_PROJECT_OPEN_HISTORY_KEY = 'recent-projects:open-history';
@@ -22,6 +24,9 @@ function canUseLocalStorage(): boolean {
 function normalizeHistoryPath(projectPath: string): string | null {
   let normalizedPath = projectPath.trim().replace(/\\/g, '/');
   if (!normalizedPath) {
+    return null;
+  }
+  if (isEphemeralProjectPath(normalizedPath)) {
     return null;
   }
   if (normalizedPath !== '/' && !/^[A-Za-z]:\/$/.test(normalizedPath)) {

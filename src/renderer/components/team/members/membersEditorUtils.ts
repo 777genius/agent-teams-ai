@@ -32,6 +32,7 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
     roleSelection: initial?.roleSelection ?? '',
     customRole: initial?.customRole ?? '',
     workflow: initial?.workflow,
+    isolation: initial?.isolation === 'worktree' ? 'worktree' : undefined,
     providerId,
     model: normalizeExplicitTeamModelForUi(providerId, initial?.model ?? ''),
     effort: initial?.effort,
@@ -48,6 +49,7 @@ export function createMemberDraftsFromInputs(
     providerId?: TeamProviderId;
     model?: string;
     effort?: EffortLevel;
+    isolation?: 'worktree';
     removedAt?: number | string | null;
   }[]
 ): MemberDraft[] {
@@ -63,6 +65,7 @@ export function createMemberDraftsFromInputs(
         roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
         customRole: role && !isPreset ? role : '',
         workflow: member.workflow,
+        isolation: member.isolation === 'worktree' ? 'worktree' : undefined,
         providerId: normalizeOptionalTeamProviderId(member.providerId),
         model: member.model ?? '',
         effort: normalizeDraftEffort(member.effort),
@@ -237,6 +240,7 @@ export function buildMembersFromDrafts(members: MemberDraft[]): TeamProvisioning
       const result: TeamProvisioningMemberInput = { name, role };
       const workflow = getWorkflowForExport(member);
       if (workflow) result.workflow = workflow;
+      if (member.isolation === 'worktree') result.isolation = 'worktree';
       const providerId = normalizeOptionalTeamProviderId(member.providerId);
       if (providerId) {
         result.providerId = providerId;

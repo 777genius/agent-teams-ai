@@ -20,6 +20,7 @@ export type GraphNodeState =
 export type GraphLaunchVisualState =
   | 'waiting'
   | 'spawning'
+  | 'permission_pending'
   | 'runtime_pending'
   | 'settling'
   | 'error';

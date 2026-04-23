@@ -28,6 +28,7 @@ import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
 import { nameColorSet } from '@renderer/utils/projectColor';
+import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   CheckCircle,
@@ -981,7 +982,13 @@ export const TeamListView = (): React.JSX.Element => {
                   {team.teamLaunchState === 'partial_pending' ? (
                     <p className="mt-2 text-[11px] text-amber-300">
                       {team.runtimeAlivePendingCount && team.runtimeAlivePendingCount > 0
-                        ? `Last launch is still reconciling — ${team.confirmedCount ?? 0}/${team.expectedMemberCount ?? team.memberCount} teammates confirmed alive, ${team.runtimeAlivePendingCount} runtime${team.runtimeAlivePendingCount === 1 ? '' : 's'} pending bootstrap.`
+                        ? buildPendingRuntimeSummaryCopy({
+                            confirmedCount: team.confirmedCount,
+                            expectedMemberCount: team.expectedMemberCount,
+                            memberCount: team.memberCount,
+                            runtimeAlivePendingCount: team.runtimeAlivePendingCount,
+                            includePeriod: true,
+                          })
                         : 'Last launch is still reconciling.'}
                     </p>
                   ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (

@@ -110,7 +110,9 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         expectedBehaviorFingerprint: 'behavior-1',
         expectedManifestHighWatermark: 10,
         commandLeaseId: 'lease-1',
-        idempotencyKey: expect.stringMatching(/^opencode:opencode.launchTeam:team-a:run-1:/),
+        idempotencyKey: expect.stringMatching(
+          /^opencode:opencode\.launchTeam:team-a:no-lane:run-1:/
+        ),
       },
     });
     await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))

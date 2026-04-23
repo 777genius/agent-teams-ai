@@ -120,7 +120,10 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
         JSON.stringify({
           timestamp: nowIso,
           type: 'user',
-          message: { role: 'user', content: 'You are alice, a reviewer on team "signal-ops" (signal-ops).' },
+          message: {
+            role: 'user',
+            content: 'You are alice, a reviewer on team "signal-ops" (signal-ops).',
+          },
         }),
         JSON.stringify({
           timestamp: nowIso,
@@ -152,7 +155,10 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
 
   it.each([
     ['rate_limited', 'Provider returned 429 rate limit for this request.'],
-    ['rate_limited', 'All credentials for model claude-opus-4-6 are cooling down via provider claude.'],
+    [
+      'rate_limited',
+      'All credentials for model claude-opus-4-6 are cooling down via provider claude.',
+    ],
     ['auth_error', 'Authentication failed due to invalid API key.'],
     ['network_error', 'Fetch failed because the network connection timed out.'],
     ['provider_overloaded', 'Service unavailable: provider temporarily unavailable (503).'],
@@ -190,6 +196,61 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
     ) as MemberRuntimeAdvisory | null;
 
     expect(advisory?.reasonCode).toBe('unknown');
+  });
+
+  it('keeps terminal API errors visible after retries stop', () => {
+    const service = new TeamMemberRuntimeAdvisoryService({} as never);
+    const observedAt = '2099-04-09T10:00:00.000Z';
+    const advisory = (service as any).extractApiErrorAdvisory(
+      JSON.stringify({
+        type: 'assistant',
+        timestamp: observedAt,
+        isApiErrorMessage: true,
+        error: 'unknown',
+        message: {
+          content: [
+            {
+              type: 'text',
+              text: 'API Error: 500 {"error":{"message":"auth_unavailable: no auth available","type":"server_error"}}',
+            },
+          ],
+        },
+      }),
+      Date.parse(observedAt)
+    ) as MemberRuntimeAdvisory | null;
+
+    expect(advisory).toMatchObject({
+      kind: 'api_error',
+      reasonCode: 'auth_error',
+      statusCode: 500,
+    });
+    expect(advisory?.retryUntil).toBeUndefined();
+    expect(advisory?.message).toContain('auth_unavailable');
+  });
+
+  it('treats Claude Code account access failures as auth errors', () => {
+    const service = new TeamMemberRuntimeAdvisoryService({} as never);
+    const observedAt = '2099-04-09T10:00:00.000Z';
+    const advisory = (service as any).extractApiErrorAdvisory(
+      JSON.stringify({
+        type: 'assistant',
+        timestamp: observedAt,
+        isApiErrorMessage: true,
+        error: 'authentication_failed',
+        message: {
+          content: [
+            {
+              type: 'text',
+              text: 'Your account does not have access to Claude Code. Please run /login.',
+            },
+          ],
+        },
+      }),
+      Date.parse(observedAt)
+    ) as MemberRuntimeAdvisory | null;
+
+    expect(advisory?.kind).toBe('api_error');
+    expect(advisory?.reasonCode).toBe('auth_error');
   });
 
   it('ignores expired retry advisories', async () => {
@@ -234,7 +295,10 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
         JSON.stringify({
           timestamp: new Date(Date.now() - 60_000).toISOString(),
           type: 'user',
-          message: { role: 'user', content: 'You are alice, a reviewer on team "signal-ops" (signal-ops).' },
+          message: {
+            role: 'user',
+            content: 'You are alice, a reviewer on team "signal-ops" (signal-ops).',
+          },
         }),
         JSON.stringify({
           timestamp: new Date(Date.now() - 60_000).toISOString(),

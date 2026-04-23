@@ -7,9 +7,13 @@ export interface TeamMember {
   role?: string;
   /** Per-agent workflow/instructions injected into spawn prompt. */
   workflow?: string;
+  /** Opt-in runtime isolation for persistent teammates. Omitted means shared workspace. */
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
   color?: string;
   joinedAt?: number;
   cwd?: string;
@@ -583,6 +587,8 @@ export interface InboxMessage {
   timestamp: string;
   read: boolean;
   taskRefs?: TaskRef[];
+  /** Authoritative task comment id attached by runtime-authored task notifications. */
+  commentId?: string;
   summary?: string;
   color?: string;
   messageId?: string;
@@ -634,6 +640,7 @@ export interface SendMessageRequest {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
+  commentId?: string;
   actionMode?: AgentActionMode;
   summary?: string;
   from?: string;
@@ -675,6 +682,7 @@ export type MemberSpawnStatus = 'offline' | 'waiting' | 'spawning' | 'online' | 
 export type MemberLaunchState =
   | 'starting'
   | 'runtime_pending_bootstrap'
+  | 'runtime_pending_permission'
   | 'confirmed_alive'
   | 'failed_to_start';
 export type TeamLaunchAggregateState = 'clean_success' | 'partial_pending' | 'partial_failure';
@@ -714,6 +722,7 @@ export interface ResolvedTeamMember {
   agentType?: string;
   role?: string;
   workflow?: string;
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
@@ -725,10 +734,10 @@ export interface ResolvedTeamMember {
 }
 
 export interface MemberRuntimeAdvisory {
-  kind: 'sdk_retrying';
+  kind: 'sdk_retrying' | 'api_error';
   observedAt: string;
-  retryUntil: string;
-  retryDelayMs: number;
+  retryUntil?: string;
+  retryDelayMs?: number;
   reasonCode?:
     | 'quota_exhausted'
     | 'rate_limited'
@@ -738,6 +747,7 @@ export interface MemberRuntimeAdvisory {
     | 'backend_error'
     | 'unknown';
   message?: string;
+  statusCode?: number;
 }
 
 export interface TeamProcess {
@@ -762,9 +772,16 @@ export interface TeamMemberSnapshot {
   agentType?: string;
   role?: string;
   workflow?: string;
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
+  laneOwnerProviderId?: TeamProviderId;
   cwd?: string;
   /** Set only when member's git branch differs from the lead's branch. */
   gitBranch?: string;
@@ -905,12 +922,24 @@ export interface PersistedTeamLaunchMemberSources {
 
 export interface PersistedTeamLaunchMemberState {
   name: string;
+  providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
+  model?: string;
+  effort?: EffortLevel;
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
+  laneOwnerProviderId?: TeamProviderId;
+  launchIdentity?: ProviderModelLaunchIdentity;
   launchState: MemberLaunchState;
   agentToolAccepted: boolean;
   runtimeAlive: boolean;
   bootstrapConfirmed: boolean;
   hardFailure: boolean;
   hardFailureReason?: string;
+  pendingPermissionRequestIds?: string[];
+  runtimePid?: number;
   firstSpawnAcceptedAt?: string;
   lastHeartbeatAt?: string;
   lastRuntimeAliveAt?: string;
@@ -933,6 +962,7 @@ export interface PersistedTeamLaunchSnapshot {
   leadSessionId?: string;
   launchPhase: PersistedTeamLaunchPhase;
   expectedMembers: string[];
+  bootstrapExpectedMembers?: string[];
   members: Record<string, PersistedTeamLaunchMemberState>;
   summary: PersistedTeamLaunchSummary;
   teamLaunchState: TeamLaunchAggregateState;
@@ -958,6 +988,10 @@ export interface TeamAgentRuntimeEntry {
   alive: boolean;
   restartable: boolean;
   backendType?: TeamAgentRuntimeBackendType;
+  providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
   pid?: number;
   runtimeModel?: string;
   rssBytes?: number;
@@ -1019,6 +1053,8 @@ export interface MemberSpawnStatusEntry {
   bootstrapConfirmed?: boolean;
   /** Hard failure observed from spawn/bootstrap/runtime evidence. */
   hardFailure?: boolean;
+  /** Pending runtime permission request ids currently blocking bootstrap. */
+  pendingPermissionRequestIds?: string[];
   /** ISO timestamp of the first accepted teammate spawn for this member. */
   firstSpawnAcceptedAt?: string;
   /** ISO timestamp of the latest confirmed heartbeat/bootstrap message. */
@@ -1065,9 +1101,13 @@ export interface TeamProvisioningMemberInput {
   role?: string;
   /** Per-agent workflow/instructions injected into spawn prompt. */
   workflow?: string;
+  /** Opt-in: run this teammate in its own git worktree. */
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
 }
 
 export interface TeamCreateRequest {
@@ -1107,6 +1147,8 @@ export interface TeamCreateConfigRequest {
 export interface TeamCreateResponse {
   runId: string;
 }
+
+export type TeamProvisioningModelVerificationMode = 'compatibility' | 'deep';
 
 export interface TeamProvisioningPrepareResult {
   ready: boolean;
@@ -1228,6 +1270,7 @@ export interface AddMemberRequest {
   name: string;
   role?: string;
   workflow?: string;
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;

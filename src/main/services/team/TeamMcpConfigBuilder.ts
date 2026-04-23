@@ -15,6 +15,7 @@ export interface McpLaunchSpec {
 const MCP_SERVER_NAME = 'agent-teams';
 const logger = createLogger('Service:TeamMcpConfigBuilder');
 const MCP_CONFIG_PREFIX = 'agent-teams-mcp-';
+const MCP_CONFIG_REMOVE_RETRY_DELAYS_MS = [25, 75, 150] as const;
 /**
  * Stale configs older than this are removed on startup (best-effort).
  * 7 days is intentionally long: respawnAfterAuthFailure() reuses saved
@@ -83,6 +84,14 @@ async function pathExists(targetPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function shouldRetryMcpConfigRemoval(error: NodeJS.ErrnoException): boolean {
+  return error.code === 'EPERM' || error.code === 'EBUSY';
+}
+
+async function waitForRetry(delayMs: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 /** Check that both index.js and package.json exist in a directory. */
@@ -284,12 +293,28 @@ export class TeamMcpConfigBuilder {
 
   /** Delete a single MCP config file (best-effort). */
   async removeConfigFile(configPath: string): Promise<void> {
-    try {
-      await fs.promises.unlink(configPath);
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (err.code !== 'ENOENT') {
+    for (let attempt = 0; attempt <= MCP_CONFIG_REMOVE_RETRY_DELAYS_MS.length; attempt += 1) {
+      try {
+        await fs.promises.unlink(configPath);
+        return;
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err.code === 'ENOENT') {
+          return;
+        }
+        if (
+          shouldRetryMcpConfigRemoval(err) &&
+          attempt < MCP_CONFIG_REMOVE_RETRY_DELAYS_MS.length
+        ) {
+          await waitForRetry(MCP_CONFIG_REMOVE_RETRY_DELAYS_MS[attempt]);
+          continue;
+        }
+        if (shouldRetryMcpConfigRemoval(err)) {
+          logger.debug(`Deferred MCP config cleanup for ${configPath}: ${err.message}`);
+          return;
+        }
         logger.warn(`Failed to remove MCP config ${configPath}: ${err.message}`);
+        return;
       }
     }
   }

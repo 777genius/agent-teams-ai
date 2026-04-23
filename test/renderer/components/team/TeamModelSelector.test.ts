@@ -119,8 +119,8 @@ describe('formatTeamModelSummary', () => {
     expect(normalizeTeamModelForUi('codex', 'gpt-5.4', codexProviderStatus)).toBe('gpt-5.4');
   });
 
-  it('waits for the runtime model list before validating explicit Codex selections', () => {
-    expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toContain('waiting for Codex runtime verification');
+  it('does not raise a hard validation error while explicit Codex models are still loading', () => {
+    expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toBeNull();
     expect(getTeamModelSelectionError('codex', '')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-7')).toBeNull();

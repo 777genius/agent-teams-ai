@@ -112,6 +112,36 @@ describe('getMembersRequiringRuntimeRestart', () => {
     expect(result).toEqual([]);
   });
 
+  it('returns existing teammates whose worktree isolation changed', () => {
+    const result = getMembersRequiringRuntimeRestart({
+      previousMembers: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          isolation: undefined,
+        } as any,
+        {
+          name: 'bob',
+          role: 'Developer',
+          isolation: 'worktree',
+        } as any,
+      ],
+      nextMembers: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          isolation: 'worktree',
+        },
+        {
+          name: 'bob',
+          role: 'Developer',
+        },
+      ],
+    });
+
+    expect(result).toEqual(['alice', 'bob']);
+  });
+
   it('reports live rename and remove of existing teammates separately from runtime restarts', () => {
     const result = getLiveRosterIdentityChanges({
       previousMembers: [
@@ -177,5 +207,37 @@ describe('getMembersRequiringRuntimeRestart', () => {
     });
 
     expect(refreshed).toBe(base);
+  });
+
+  it('keeps worktree isolation in the edit source snapshot', () => {
+    const sharedWorkspace = buildEditTeamSourceSnapshot({
+      name: 'Team A',
+      description: 'desc',
+      color: 'blue',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+        } as any,
+      ],
+    });
+
+    const isolatedWorkspace = buildEditTeamSourceSnapshot({
+      name: 'Team A',
+      description: 'desc',
+      color: 'blue',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          isolation: 'worktree',
+        } as any,
+      ],
+    });
+
+    expect(isolatedWorkspace).not.toBe(sharedWorkspace);
+    expect(JSON.parse(isolatedWorkspace).members[0]).toMatchObject({
+      isolation: 'worktree',
+    });
   });
 });

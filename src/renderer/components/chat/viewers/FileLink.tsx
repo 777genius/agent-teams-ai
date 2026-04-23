@@ -10,6 +10,7 @@ import React from 'react';
 
 import { PROSE_LINK } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
+import { resolveFilePath } from '@renderer/store/utils/pathResolution';
 import { Check, FileCode } from 'lucide-react';
 
 import type { AppState } from '@renderer/store/types';
@@ -31,7 +32,10 @@ export function parsePathWithLine(href: string): { filePath: string; line: numbe
   return { filePath: decoded, line: null };
 }
 
-/** Check if a URL is relative (not a protocol, not a hash, not data/mailto) */
+/**
+ * Check if an href should be treated as a local file path rather than an external URL.
+ * This includes repo-relative paths and absolute filesystem paths like `/Users/me/file.ts`.
+ */
 export function isRelativeUrl(url: string): boolean {
   return (
     !!url &&
@@ -46,18 +50,49 @@ export function isRelativeUrl(url: string): boolean {
 // Internal helpers
 // =============================================================================
 
-function resolveRelativePath(relativeSrc: string, baseDir: string): string {
-  const parts = `${baseDir}/${relativeSrc}`.split('/');
-  const resolved: string[] = [];
-  for (const part of parts) {
-    if (part === '.' || part === '') continue;
-    if (part === '..') {
-      resolved.pop();
-    } else {
-      resolved.push(part);
-    }
+export function resolveFileLinkPath(filePath: string, projectPath: string): string {
+  return normalizePathSegments(resolveFilePath(projectPath, filePath));
+}
+
+function normalizePathSegments(filePath: string): string {
+  const hasBackslash = filePath.includes('\\') && !filePath.includes('/');
+  const separator = hasBackslash ? '\\' : '/';
+  const normalized = filePath.replace(/[/\\]+/g, separator);
+
+  let prefix = '';
+  let body = normalized;
+
+  const driveMatch = /^([A-Za-z]:)[\\/]/.exec(normalized);
+  if (driveMatch) {
+    prefix = `${driveMatch[1]}${separator}`;
+    body = normalized.slice(prefix.length);
+  } else if (normalized.startsWith(`${separator}${separator}`)) {
+    prefix = `${separator}${separator}`;
+    body = normalized.slice(2);
+  } else if (normalized.startsWith(separator)) {
+    prefix = separator;
+    body = normalized.slice(1);
   }
-  return '/' + resolved.join('/');
+
+  const segments: string[] = [];
+  for (const segment of body.split(/[\\/]/)) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      if (segments.length > 0 && segments[segments.length - 1] !== '..') {
+        segments.pop();
+      } else if (!prefix) {
+        segments.push(segment);
+      }
+      continue;
+    }
+    segments.push(segment);
+  }
+
+  if (segments.length === 0) {
+    return prefix || '.';
+  }
+
+  return `${prefix}${segments.join(separator)}`;
 }
 
 /** Project path based on active tab context (avoids stale cross-tab state) */
@@ -105,8 +140,8 @@ export const FileLink = React.memo(function FileLink({
     );
   }
 
-  const { filePath: relativePath, line } = parsePathWithLine(href);
-  const absolutePath = resolveRelativePath(relativePath, projectPath);
+  const { filePath, line } = parsePathWithLine(href);
+  const absolutePath = resolveFileLinkPath(filePath, projectPath);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();

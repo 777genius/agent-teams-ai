@@ -55,6 +55,29 @@ function matchField(text: string, pattern: RegExp): string | undefined {
   return value ? value : undefined;
 }
 
+function matchOverrideField(
+  text: string,
+  fieldName: 'Provider override' | 'Model override' | 'Effort override'
+): string | undefined {
+  const fieldPattern = new RegExp(`${fieldName}(?: for this teammate)?:\\s*`, 'i');
+  const fieldMatch = fieldPattern.exec(text);
+  if (!fieldMatch) {
+    return undefined;
+  }
+
+  const rest = text.slice(fieldMatch.index + fieldMatch[0].length);
+  const nextOverrideMatch =
+    /\.\s+(?:Provider override|Model override|Effort override)(?: for this teammate)?:/i.exec(rest);
+  const newlineIndex = rest.indexOf('\n');
+  const stopCandidates = [
+    nextOverrideMatch?.index,
+    newlineIndex >= 0 ? newlineIndex : undefined,
+  ].filter((index): index is number => typeof index === 'number' && index >= 0);
+  const end = stopCandidates.length > 0 ? Math.min(...stopCandidates) : rest.length;
+  const value = rest.slice(0, end).trim().replace(/\.$/, '').trim();
+  return value ? value : undefined;
+}
+
 function buildRuntimeSummary(
   providerId: TeamProviderId | null,
   model: string | undefined,
@@ -63,7 +86,7 @@ function buildRuntimeSummary(
   if (providerId) {
     const providerLabel = getTeamProviderLabel(providerId) ?? 'Anthropic';
     const modelLabel = model ? (getTeamModelLabel(model) ?? model) : 'Default';
-    const effortLabel = getTeamEffortLabel(effort);
+    const effortLabel = effort ? getTeamEffortLabel(effort) : undefined;
     const modelAlreadyCarriesProviderBrand = doesTeamModelCarryProviderBrand(
       providerId,
       modelLabel
@@ -117,11 +140,9 @@ export function getBootstrapPromptDisplay(
     matchField(text, /^You are\s+([^,\n]+),/m) ??
     (typeof message.to === 'string' ? message.to.trim() : undefined);
   const teamName = matchField(text, /on team "([^"]+)"/);
-  const providerId = parseProviderId(
-    matchField(text, /Provider override(?: for this teammate)?:\s*([^\.\n]+)/i)
-  );
-  const model = matchField(text, /Model override(?: for this teammate)?:\s*([^\.\n]+)/i);
-  const effort = matchField(text, /Effort override(?: for this teammate)?:\s*([^\.\n]+)/i);
+  const providerId = parseProviderId(matchOverrideField(text, 'Provider override'));
+  const model = matchOverrideField(text, 'Model override');
+  const effort = matchOverrideField(text, 'Effort override');
   const runtime = buildRuntimeSummary(providerId, model, effort);
   const displayName = teammateName ? displayMemberName(teammateName) : 'teammate';
   const summary = `Starting ${displayName}`;

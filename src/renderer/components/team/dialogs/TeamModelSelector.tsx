@@ -19,6 +19,7 @@ import {
 } from '@renderer/utils/geminiUiFreeze';
 import {
   getAvailableTeamProviderModelOptions,
+  isTeamProviderModelVerificationPending,
   getTeamModelUiDisabledReason,
   normalizeTeamModelForUi,
   TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
@@ -259,8 +260,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   };
   const shouldAwaitRuntimeModelList =
     effectiveProviderId !== 'anthropic' &&
-    (effectiveCliStatus == null || effectiveCliStatusLoading) &&
-    runtimeProviderStatus == null;
+    (runtimeProviderStatus == null ||
+      isTeamProviderModelVerificationPending(effectiveProviderId, runtimeProviderStatus));
   const normalizedValue = normalizeTeamModelForUi(
     effectiveProviderId,
     value,

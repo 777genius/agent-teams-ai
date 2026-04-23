@@ -1,4 +1,5 @@
 import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import path from 'path';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
@@ -186,7 +187,7 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
 
   async #toCandidate(thread: CodexThreadSummary): Promise<RecentProjectCandidate | null> {
     const cwd = thread.cwd?.trim();
-    if (!cwd) {
+    if (!cwd || isEphemeralProjectPath(cwd)) {
       return null;
     }
 

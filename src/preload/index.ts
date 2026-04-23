@@ -305,6 +305,7 @@ import type {
   TeamLaunchResponse,
   TeamMemberActivityMeta,
   TeamMessageNotificationData,
+  TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -875,7 +876,8 @@ const electronAPI: ElectronAPI = {
       providerId?: TeamLaunchRequest['providerId'],
       providerIds?: TeamLaunchRequest['providerId'][],
       selectedModels?: string[],
-      limitContext?: boolean
+      limitContext?: boolean,
+      modelVerificationMode?: TeamProvisioningModelVerificationMode
     ) => {
       return invokeIpcWithResult<TeamProvisioningPrepareResult>(
         TEAM_PREPARE_PROVISIONING,
@@ -883,7 +885,8 @@ const electronAPI: ElectronAPI = {
         providerId,
         providerIds,
         selectedModels,
-        limitContext
+        limitContext,
+        modelVerificationMode
       );
     },
     createTeam: async (request: TeamCreateRequest) => {

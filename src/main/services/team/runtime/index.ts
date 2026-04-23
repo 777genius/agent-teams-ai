@@ -1,6 +1,8 @@
 export { OpenCodeTeamRuntimeAdapter } from './OpenCodeTeamRuntimeAdapter';
 export type {
   OpenCodeTeamLaunchMode,
+  OpenCodeTeamRuntimeMessageInput,
+  OpenCodeTeamRuntimeMessageResult,
   OpenCodeTeamRuntimeAdapterOptions,
   OpenCodeTeamRuntimeBridgePort,
 } from './OpenCodeTeamRuntimeAdapter';

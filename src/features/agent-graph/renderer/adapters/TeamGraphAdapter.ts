@@ -518,7 +518,7 @@ export class TeamGraphAdapter {
         label: member.name,
         state: hasRunningTool
           ? 'tool_calling'
-          : TeamGraphAdapter.#mapMemberStatus(member.status, spawn?.status),
+          : TeamGraphAdapter.#mapMemberStatus(member.status, spawn),
         color: member.color ?? undefined,
         role: member.role ?? undefined,
         runtimeLabel: TeamGraphAdapter.#getRuntimeLabel(
@@ -642,8 +642,7 @@ export class TeamGraphAdapter {
         reviewerName: isReviewCycle ? reviewerName : null,
         reviewMode: isReviewCycle ? (reviewerName ? 'assigned' : 'manual') : undefined,
         reviewerColor: reviewerName ? memberColorByName.get(reviewerName) : undefined,
-        changePresence:
-          task.changePresence === 'needs_attention' ? 'has_changes' : task.changePresence,
+        changePresence: task.changePresence === 'needs_attention' ? 'unknown' : task.changePresence,
         displayId: task.displayId ?? undefined,
         ownerId: ownerMemberId,
         needsClarification: task.needsClarification ?? null,
@@ -1128,7 +1127,7 @@ export class TeamGraphAdapter {
     if (spawn?.launchState === 'failed_to_start' || spawn?.status === 'error') {
       return { exceptionTone: 'error', exceptionLabel: 'spawn failed' };
     }
-    if (pendingApproval) {
+    if (pendingApproval || spawn?.launchState === 'runtime_pending_permission') {
       return { exceptionTone: 'warning', exceptionLabel: 'awaiting approval' };
     }
     if (spawn?.status === 'waiting' || spawn?.status === 'spawning') {
@@ -1144,10 +1143,11 @@ export class TeamGraphAdapter {
     return undefined;
   }
 
-  static #mapMemberStatus(status: string, spawnStatus?: string): GraphNodeState {
-    if (spawnStatus === 'spawning') return 'thinking';
-    if (spawnStatus === 'error') return 'error';
-    if (spawnStatus === 'waiting') return 'waiting';
+  static #mapMemberStatus(status: string, spawn?: MemberSpawnStatusEntry): GraphNodeState {
+    if (spawn?.launchState === 'runtime_pending_permission') return 'waiting';
+    if (spawn?.status === 'spawning') return 'thinking';
+    if (spawn?.status === 'error') return 'error';
+    if (spawn?.status === 'waiting') return 'waiting';
     switch (status) {
       case 'active':
         return 'active';

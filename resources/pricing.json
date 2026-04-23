@@ -454,6 +454,20 @@
     "tool_use_system_prompt_tokens": 346,
     "supports_native_structured_output": true
   },
+  "anthropic.claude-mythos-preview": {
+    "input_cost_per_token": 0,
+    "output_cost_per_token": 0,
+    "litellm_provider": "bedrock",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "supports_function_calling": true,
+    "supports_vision": true,
+    "supports_prompt_caching": false,
+    "supports_reasoning": true,
+    "supports_tool_choice": true
+  },
   "global.anthropic.claude-opus-4-7": {
     "cache_creation_input_token_cost": 0.00000625,
     "cache_read_input_token_cost": 5e-7,
@@ -3300,6 +3314,28 @@
     "supports_reasoning": true,
     "supports_tool_choice": true,
     "supports_vision": true,
+    "tool_use_system_prompt_tokens": 346
+  },
+  "openrouter/anthropic/claude-opus-4.7": {
+    "cache_creation_input_token_cost": 0.00000625,
+    "cache_read_input_token_cost": 5e-7,
+    "input_cost_per_token": 0.000005,
+    "litellm_provider": "openrouter",
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 128000,
+    "max_tokens": 128000,
+    "mode": "chat",
+    "output_cost_per_token": 0.000025,
+    "supports_assistant_prefill": false,
+    "supports_computer_use": true,
+    "supports_function_calling": true,
+    "supports_pdf_input": true,
+    "supports_prompt_caching": true,
+    "supports_reasoning": true,
+    "supports_response_schema": true,
+    "supports_tool_choice": true,
+    "supports_vision": true,
+    "supports_xhigh_reasoning_effort": true,
     "tool_use_system_prompt_tokens": 346
   },
   "replicate/anthropic/claude-4.5-haiku": {

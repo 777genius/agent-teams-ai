@@ -9,9 +9,7 @@ import {
 
 import type { DashboardRecentProject } from '@features/recent-projects/contracts';
 
-function makeProject(
-  overrides: Partial<DashboardRecentProject> = {}
-): DashboardRecentProject {
+function makeProject(overrides: Partial<DashboardRecentProject> = {}): DashboardRecentProject {
   return {
     id: 'repo:alpha',
     name: 'alpha',
@@ -129,5 +127,29 @@ describe('recentProjectOpenHistory', () => {
         })
       )
     ).toBe(0);
+  });
+
+  it('does not record generated ephemeral project paths', () => {
+    recordRecentProjectOpenPaths(
+      ['/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9', '/workspace/opened'],
+      10_000
+    );
+
+    expect(
+      getRecentProjectLastOpenedAt(
+        makeProject({
+          primaryPath: '/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9',
+          associatedPaths: ['/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9'],
+        })
+      )
+    ).toBe(0);
+    expect(
+      getRecentProjectLastOpenedAt(
+        makeProject({
+          primaryPath: '/workspace/opened',
+          associatedPaths: ['/workspace/opened'],
+        })
+      )
+    ).toBe(10_000);
   });
 });

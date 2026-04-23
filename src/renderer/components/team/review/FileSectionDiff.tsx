@@ -117,6 +117,7 @@ export const FileSectionDiff = ({
 
   const resolvedOriginal = fileContent?.originalFullContent ?? null;
   const isMissingOnDisk = fileContent ? fileContent.modifiedFullContent == null : false;
+  const isContentUnavailable = fileContent?.contentSource === 'unavailable';
   const hasLedgerManualAction = file.snippets.some(
     (snippet) =>
       !!snippet.ledger &&
@@ -143,11 +144,13 @@ export const FileSectionDiff = ({
       <div className="overflow-auto">
         <OversizedDiffNotice
           message={
-            canRenderCodeMirror && !canRenderSnippetPreview
-              ? 'Full diff skipped because it is large enough to risk a renderer out-of-memory crash.'
-              : canRenderCodeMirror
-                ? 'Large diff opened in safe preview mode to avoid a renderer out-of-memory crash.'
-                : 'Diff preview skipped because the available change data is too large to render safely.'
+            hasLedgerManualAction || isContentUnavailable
+              ? 'No text diff is available for this ledger change. Binary, large, or metadata-only content requires manual review.'
+              : canRenderCodeMirror && !canRenderSnippetPreview
+                ? 'Full diff skipped because it is large enough to risk a renderer out-of-memory crash.'
+                : canRenderCodeMirror
+                  ? 'Large diff opened in safe preview mode to avoid a renderer out-of-memory crash.'
+                  : 'Diff preview skipped because the available change data is too large to render safely.'
           }
         />
         {canRenderSnippetPreview ? <ReviewDiffContent file={file} /> : null}

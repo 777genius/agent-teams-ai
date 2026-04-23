@@ -63,6 +63,7 @@ import type {
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMemberActivityMeta,
+  TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamsAPI,
@@ -748,7 +749,8 @@ export class HttpAPIClient implements ElectronAPI {
       _providerId?: TeamLaunchRequest['providerId'],
       _providerIds?: TeamLaunchRequest['providerId'][],
       _selectedModels?: string[],
-      _limitContext?: boolean
+      _limitContext?: boolean,
+      _modelVerificationMode?: TeamProvisioningModelVerificationMode
     ): Promise<TeamProvisioningPrepareResult> => {
       throw new Error('Team provisioning is not available in browser mode');
     },

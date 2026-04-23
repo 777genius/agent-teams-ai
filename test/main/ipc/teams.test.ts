@@ -32,6 +32,10 @@ const { mockAddTeamNotification } = vi.hoisted(() => ({
 const { mockGetMembersMeta } = vi.hoisted(() => ({
   mockGetMembersMeta: vi.fn(),
 }));
+const { mockGetMembersMetaFile, mockWriteMembersMeta } = vi.hoisted(() => ({
+  mockGetMembersMetaFile: vi.fn(),
+  mockWriteMembersMeta: vi.fn(),
+}));
 const { mockTeamDataWorkerClient } = vi.hoisted(() => ({
   mockTeamDataWorkerClient: {
     isAvailable: vi.fn(),
@@ -51,6 +55,8 @@ vi.mock('@main/services/infrastructure/NotificationManager', () => ({
 vi.mock('@main/services/team/TeamMembersMetaStore', () => ({
   TeamMembersMetaStore: vi.fn().mockImplementation(() => ({
     getMembers: mockGetMembersMeta,
+    getMeta: mockGetMembersMetaFile,
+    writeMembers: mockWriteMembersMeta,
   })),
 }));
 vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
@@ -229,6 +235,8 @@ describe('ipc teams handlers', () => {
     getAliveTeams: vi.fn(() => ['my-team']),
     getLeadActivityState: vi.fn(() => 'idle'),
     stopTeam: vi.fn(() => undefined),
+    reattachOpenCodeOwnedMemberLane: vi.fn(async () => undefined),
+    detachOpenCodeOwnedMemberLane: vi.fn(async () => undefined),
   };
   const boardTaskActivityService = {
     getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(async () => []),
@@ -259,6 +267,14 @@ describe('ipc teams handlers', () => {
     vi.clearAllMocks();
     mockGetMembersMeta.mockReset();
     mockGetMembersMeta.mockResolvedValue([]);
+    mockGetMembersMetaFile.mockReset();
+    mockGetMembersMetaFile.mockResolvedValue({
+      version: 1,
+      providerBackendId: undefined,
+      members: [],
+    });
+    mockWriteMembersMeta.mockReset();
+    mockWriteMembersMeta.mockResolvedValue(undefined);
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(false);
     mockTeamDataWorkerClient.getTeamData.mockReset();
     mockTeamDataWorkerClient.getMessagesPage.mockReset();
@@ -1731,6 +1747,135 @@ describe('ipc teams handlers', () => {
       const result = (await handler({} as never, 'my-team', null)) as { success: boolean };
       expect(result.success).toBe(false);
     });
+
+    it('blocks live addMember for a running OpenCode-led team before metadata is written', async () => {
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'opencode',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'opencode',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('running OpenCode-led team');
+      expect(service.addMember).not.toHaveBeenCalled();
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('rolls back live OpenCode addMember metadata when controlled reattach fails', async () => {
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          {
+            name: 'bob',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-bob',
+          },
+        ],
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'bob',
+            providerId: 'codex',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.reattachOpenCodeOwnedMemberLane.mockRejectedValueOnce(
+        new Error('reattach failed')
+      );
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('reattach failed');
+      expect(service.addMember).toHaveBeenCalledWith('my-team', {
+        name: 'alice',
+        role: 'developer',
+        workflow: undefined,
+        isolation: undefined,
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+        effort: undefined,
+      });
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+      expect(mockWriteMembersMeta).toHaveBeenCalledWith(
+        'my-team',
+        [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          {
+            name: 'bob',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-bob',
+          },
+        ],
+        { providerBackendId: 'codex-native' }
+      );
+      expect(provisioningService.detachOpenCodeOwnedMemberLane).toHaveBeenCalledWith(
+        'my-team',
+        'alice'
+      );
+      vi.mocked(console.error).mockClear();
+    });
   });
 
   describe('updateConfig', () => {
@@ -1792,6 +1937,418 @@ describe('ipc teams handlers', () => {
       const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
       const result = (await handler({} as never, 'my-team', '../bad')) as { success: boolean };
       expect(result.success).toBe(false);
+    });
+
+    it('blocks live removeMember for a running OpenCode-led team before metadata is changed', async () => {
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'opencode',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('running OpenCode-led team');
+      expect(service.removeMember).not.toHaveBeenCalled();
+      expect(provisioningService.detachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('rolls back live OpenCode removeMember metadata when lane detach fails', async () => {
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: undefined,
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-alice',
+          },
+        ],
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.detachOpenCodeOwnedMemberLane.mockRejectedValueOnce(
+        new Error('detach failed')
+      );
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('detach failed');
+      expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+      expect(mockWriteMembersMeta).toHaveBeenCalledWith(
+        'my-team',
+        [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-alice',
+          },
+        ],
+        { providerBackendId: undefined }
+      );
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).toHaveBeenCalledWith(
+        'my-team',
+        'alice',
+        { reason: 'member_updated' }
+      );
+      vi.mocked(console.error).mockClear();
+    });
+  });
+
+  describe('replaceMembers', () => {
+    it('blocks live replaceMembers for a running OpenCode-led team before metadata is changed', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'opencode',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', {
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('running OpenCode-led team');
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      expect(provisioningService.detachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('rolls back live OpenCode replaceMembers metadata when lane reattach fails', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      mockGetMembersMetaFile.mockResolvedValueOnce({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-alice',
+          },
+          {
+            name: 'bob',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-bob',
+          },
+        ],
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'bob',
+            providerId: 'codex',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.reattachOpenCodeOwnedMemberLane.mockRejectedValueOnce(
+        new Error('reattach failed')
+      );
+
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+          },
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'codex',
+          },
+        ],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('reattach failed');
+      expect(service.replaceMembers).toHaveBeenNthCalledWith(1, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            workflow: undefined,
+            isolation: undefined,
+            providerId: 'opencode',
+            providerBackendId: undefined,
+            model: 'minimax-m2.5-free',
+            effort: undefined,
+            fastMode: undefined,
+          },
+          {
+            name: 'bob',
+            role: 'Developer',
+            workflow: undefined,
+            isolation: undefined,
+            providerId: 'codex',
+            providerBackendId: undefined,
+            model: undefined,
+            effort: undefined,
+            fastMode: undefined,
+          },
+        ],
+      });
+      expect(service.replaceMembers).toHaveBeenCalledTimes(1);
+      expect(mockWriteMembersMeta).toHaveBeenCalledWith(
+        'my-team',
+        [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Team Lead',
+            agentType: 'team-lead',
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-alice',
+          },
+          {
+            name: 'bob',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            role: 'Developer',
+            agentType: 'general-purpose',
+            agentId: 'agent-bob',
+          },
+        ],
+        { providerBackendId: 'codex-native' }
+      );
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).toHaveBeenNthCalledWith(
+        1,
+        'my-team',
+        'alice',
+        { reason: 'member_updated' }
+      );
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).toHaveBeenNthCalledWith(
+        2,
+        'my-team',
+        'alice',
+        { reason: 'member_updated' }
+      );
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('blocks live replaceMembers when a member migrates from primary runtime ownership to OpenCode', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'codex',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+          },
+        ],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Live member migration between OpenCode and the primary runtime owner');
+      expect(result.error).toContain('alice');
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      expect(provisioningService.detachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+
+    it('blocks live replaceMembers when a member migrates from OpenCode to primary runtime ownership', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'codex',
+          },
+        ],
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Live member migration between OpenCode and the primary runtime owner');
+      expect(result.error).toContain('alice');
+      expect(service.replaceMembers).not.toHaveBeenCalled();
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      expect(provisioningService.detachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
     });
   });
 

@@ -60,6 +60,14 @@ function normalizeResponse(response: BoardTaskLogStreamResponse): BoardTaskLogSt
   };
 }
 
+function buildStableSegmentRenderKey(segment: BoardTaskLogSegment): string {
+  const firstChunkId = segment.chunks[0]?.id;
+  if (firstChunkId) {
+    return `${segment.participantKey}:${firstChunkId}`;
+  }
+  return `${segment.participantKey}:${segment.startTimestamp}`;
+}
+
 function describeStreamSource(stream: BoardTaskLogStreamResponse | null): string {
   if (stream?.source === 'opencode_runtime_attribution') {
     return 'Task-scoped OpenCode runtime logs projected from explicit task attribution into the same execution-log components used in Logs.';
@@ -357,7 +365,11 @@ export const TaskLogStreamSection = ({
       ) : (
         <div className="space-y-6">
           {visibleSegments.map((segment) => (
-            <SegmentBlock key={segment.id} segment={segment} showHeader={showSegmentHeaders} />
+            <SegmentBlock
+              key={buildStableSegmentRenderKey(segment)}
+              segment={segment}
+              showHeader={showSegmentHeaders}
+            />
           ))}
         </div>
       )}

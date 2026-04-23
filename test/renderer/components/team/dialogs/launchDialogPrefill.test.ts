@@ -235,6 +235,36 @@ describe('resolveLaunchDialogPrefill', () => {
     });
   });
 
+  it('preserves OpenCode relaunch runtime instead of collapsing it to Anthropic', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [],
+      savedRequest: null,
+      previousLaunchParams: {
+        providerId: 'opencode',
+        model: 'openrouter/moonshotai/kimi-k2',
+        effort: 'medium',
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'anthropic',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: false,
+      getStoredModel: createStoredModelGetter({
+        anthropic: 'haiku',
+        opencode: 'openai/gpt-5.4',
+      }),
+    });
+
+    expect(result).toEqual({
+      providerId: 'opencode',
+      providerBackendId: undefined,
+      model: 'openrouter/moonshotai/kimi-k2',
+      effort: 'medium',
+      fastMode: 'inherit',
+      limitContext: false,
+    });
+  });
+
   it('prefers per-team launch params for limitContext over stale global storage', () => {
     const result = resolveLaunchDialogPrefill({
       members: [],

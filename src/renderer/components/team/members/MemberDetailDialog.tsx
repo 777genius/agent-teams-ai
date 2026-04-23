@@ -130,7 +130,8 @@ export const MemberDetailDialog = ({
   );
   const restartInFlight =
     spawnEntry?.launchState === 'starting' ||
-    spawnEntry?.launchState === 'runtime_pending_bootstrap';
+    spawnEntry?.launchState === 'runtime_pending_bootstrap' ||
+    spawnEntry?.launchState === 'runtime_pending_permission';
 
   useEffect(() => {
     if (!open || !member) {

@@ -732,6 +732,8 @@ function getLaunchStatusColor(visualState: GraphNode['launchVisualState']): stri
       return hexWithAlpha('#d4d4d8', 0.8);
     case 'spawning':
       return hexWithAlpha('#f59e0b', 0.9);
+    case 'permission_pending':
+      return hexWithAlpha('#f59e0b', 0.92);
     case 'runtime_pending':
       return hexWithAlpha('#67e8f9', 0.9);
     case 'settling':

@@ -69,6 +69,7 @@ import {
   normalizeExplicitTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
@@ -104,8 +105,18 @@ import {
   type ProviderPrepareDiagnosticsModelResult,
   runProviderPrepareDiagnostics,
 } from './providerPrepareDiagnostics';
+import {
+  buildProviderPrepareModelChecksSignature,
+  buildProviderPrepareRequestSignature,
+  buildProviderPrepareRuntimeStatusSignature,
+} from './providerPrepareRequestSignature';
+import {
+  getShortLivedProviderPrepareModelResults,
+  storeShortLivedProviderPrepareModelResults,
+} from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
 import {
+  deriveEffectiveProvisioningPrepareState,
   failIncompleteProviderChecks,
   getPrimaryProvisioningFailureDetail,
   getProvisioningFailureHint,
@@ -219,11 +230,7 @@ function getLocalTimezone(): string {
 
 function getStoredTeamProvider(): TeamProviderId {
   const stored = localStorage.getItem('team:lastSelectedProvider');
-  // return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
-  return normalizeCreateLaunchProviderForUi(
-    stored === 'codex' || stored === 'gemini' ? stored : 'anthropic',
-    true
-  );
+  return normalizeCreateLaunchProviderForUi(normalizeOptionalTeamProviderId(stored), true);
 }
 
 function getStoredTeamModel(providerId: TeamProviderId): string {
@@ -267,6 +274,21 @@ function resolveResolvedMemberRuntime(
     model: member.model?.trim() || inheritedModel,
     effort: member.effort ?? inheritedEffort,
   };
+}
+
+function deriveTeammateWorktreeDefault(
+  members: readonly {
+    name: string;
+    isolation?: 'worktree';
+    removedAt?: number | string | null;
+  }[]
+): boolean {
+  const activeTeammates = members.filter(
+    (member) => !member.removedAt && member.name.trim().toLowerCase() !== 'team-lead'
+  );
+  return (
+    activeTeammates.length > 0 && activeTeammates.every((member) => member.isolation === 'worktree')
+  );
 }
 
 // =============================================================================
@@ -359,6 +381,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     getStoredTeamModel(getStoredTeamProvider())
   );
   const [membersDrafts, setMembersDrafts] = useState<MemberDraft[]>([]);
+  const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(false);
   const [syncModelsWithLead, setSyncModelsWithLead] = useState(false);
   const [skipPermissions, setSkipPermissionsRaw] = useState(
     () => localStorage.getItem('team:lastSkipPermissions') !== 'false'
@@ -431,7 +454,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             new Set([
               selectedProviderId,
               ...effectiveMemberDrafts.flatMap((member) =>
-                isTeamProviderId(member.providerId) ? [member.providerId] : []
+                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
               ),
             ])
           ),
@@ -455,6 +478,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const prepareModelResultsCacheRef = useRef(
     new Map<string, Record<string, ProviderPrepareDiagnosticsModelResult>>()
   );
+  const lastPrepareRequestSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
@@ -464,7 +488,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [prepareChecks]);
   useEffect(() => {
     if (!open) {
-      prepareModelResultsCacheRef.current.clear();
+      lastPrepareRequestSignatureRef.current = null;
     }
   }, [open]);
   const runtimeProviderStatusById = useMemo(
@@ -478,6 +502,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     setMembersDrafts((prev) => {
       const sanitized = clearInheritedMemberModelsUnavailableForProvider({
         members: prev,
@@ -486,7 +514,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       });
       return sanitized.changed ? sanitized.members : prev;
     });
-  }, [runtimeProviderStatusById, selectedProviderId]);
+  }, [membersDrafts, open, runtimeProviderStatusById, selectedProviderId]);
 
   useEffect(() => {
     if (multimodelEnabled) {
@@ -722,12 +750,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             : [];
       const editableMembersSource = filterEditableMemberInputs(nextMembersSource);
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
-      const savedProviderId =
-        savedRequest?.providerId === 'codex' || savedRequest?.providerId === 'gemini'
-          ? savedRequest.providerId
-          : savedRequest?.providerId === 'anthropic'
-            ? 'anthropic'
-            : null;
+      const savedProviderId = normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null;
       const savedProviderBackendId =
         typeof savedRequest?.providerBackendId === 'string' &&
         savedRequest.providerBackendId.trim().length > 0
@@ -755,6 +778,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           normalizeMemberDraftForProviderMode(member, multimodelEnabled)
         )
       );
+      setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(editableMembersSource));
       setSyncModelsWithLead(
         !editableMembersSource.some((member) => member.providerId || member.model || member.effort)
       );
@@ -778,15 +802,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!isLaunchMode) {
       return null;
     }
-    const fromLaunchParams = previousLaunchParams?.providerId;
-    if (
-      fromLaunchParams === 'anthropic' ||
-      fromLaunchParams === 'codex' ||
-      fromLaunchParams === 'gemini'
-    ) {
-      return fromLaunchParams;
-    }
-    return savedLaunchProviderId;
+    return (
+      normalizeOptionalTeamProviderId(previousLaunchParams?.providerId) ?? savedLaunchProviderId
+    );
   }, [isLaunchMode, previousLaunchParams?.providerId, savedLaunchProviderId]);
 
   const providerChangeForcesFreshLeadContext = useMemo(() => {
@@ -1100,19 +1118,35 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (
         previousProvider === currentProviderId &&
         previousModel === currentModel &&
-        (previousEffort ?? '') === (currentEffort ?? '')
+        (previousEffort ?? '') === (currentEffort ?? '') &&
+        (previousMember.isolation ?? '') === (member.isolation ?? '')
       ) {
         continue;
       }
 
+      const runtimeMessage =
+        previousProvider !== currentProviderId ||
+        previousModel !== currentModel ||
+        (previousEffort ?? '') !== (currentEffort ?? '')
+          ? `${formatTeamModelSummary(
+              currentProviderId,
+              currentModel,
+              currentEffort
+            )} instead of ${formatTeamModelSummary(previousProvider, previousModel, previousEffort)}`
+          : null;
+      const isolationMessage =
+        previousMember.isolation !== member.isolation
+          ? `${member.isolation === 'worktree' ? 'separate worktree' : 'shared workspace'} instead of ${
+              previousMember.isolation === 'worktree' ? 'separate worktree' : 'shared workspace'
+            }`
+          : null;
+
       notes.push({
         key: `member:${name.toLowerCase()}`,
         memberName: name,
-        message: `${formatTeamModelSummary(
-          currentProviderId,
-          currentModel,
-          currentEffort
-        )} instead of ${formatTeamModelSummary(previousProvider, previousModel, previousEffort)}`,
+        message: [runtimeMessage, isolationMessage]
+          .filter((part): part is string => Boolean(part))
+          .join('; '),
       });
     }
 
@@ -1173,7 +1207,43 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Launch-only effects
   // ---------------------------------------------------------------------------
 
-  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+  const selectedProjectCwd = isEphemeralProjectPath(selectedProjectPath)
+    ? ''
+    : selectedProjectPath.trim();
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
+  const prepareRuntimeStatusSignature = useMemo(
+    () =>
+      buildProviderPrepareRuntimeStatusSignature(
+        selectedMemberProviders,
+        runtimeProviderStatusById
+      ),
+    [runtimeProviderStatusById, selectedMemberProviders]
+  );
+  const selectedModelChecksByProviderSignature = useMemo(
+    () => buildProviderPrepareModelChecksSignature(selectedModelChecksByProvider),
+    [selectedModelChecksByProvider]
+  );
+  const prepareRequestSignature = useMemo(
+    () =>
+      buildProviderPrepareRequestSignature({
+        cwd: effectiveCwd,
+        selectedProviderId,
+        selectedModel,
+        selectedMemberProviders,
+        limitContext,
+        runtimeStatusSignature: prepareRuntimeStatusSignature,
+        modelChecksSignature: selectedModelChecksByProviderSignature,
+      }),
+    [
+      effectiveCwd,
+      limitContext,
+      prepareRuntimeStatusSignature,
+      selectedMemberProviders,
+      selectedModel,
+      selectedModelChecksByProviderSignature,
+      selectedProviderId,
+    ]
+  );
 
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
@@ -1184,9 +1254,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
-    if (!open || !isLaunchMode) return;
+    if (!open || !isLaunchMode) {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
+      return;
+    }
 
     if (typeof api.teams.prepareProvisioning !== 'function') {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       setPrepareState('failed');
       setPrepareWarnings([]);
       setPrepareChecks([]);
@@ -1197,6 +1273,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
 
     if (!effectiveCwd) {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       setPrepareState('idle');
       setPrepareWarnings([]);
       setPrepareChecks([]);
@@ -1204,7 +1282,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    let cancelled = false;
+    if (lastPrepareRequestSignatureRef.current === prepareRequestSignature) {
+      return;
+    }
+    lastPrepareRequestSignatureRef.current = prepareRequestSignature;
+
     const requestSeq = ++prepareRequestSeqRef.current;
     const initialChecks = alignProvisioningChecks(
       prepareChecksRef.current,
@@ -1225,8 +1307,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           providerId,
           backendSummary,
           limitContext,
+          runtimeStatusSignature: prepareRuntimeStatusSignature,
         });
-        const cachedModelResultsById = prepareModelResultsCacheRef.current.get(cacheKey) ?? {};
+        const cachedModelResultsById = {
+          ...getShortLivedProviderPrepareModelResults({
+            providerId,
+            cacheKey,
+          }),
+          ...(prepareModelResultsCacheRef.current.get(cacheKey) ?? {}),
+        };
         const cachedSnapshot = getProviderPrepareCachedSnapshot({
           providerId,
           selectedModelIds: selectedModelChecks,
@@ -1250,7 +1339,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             details: plan.cachedSnapshot.details,
           });
         }
-        if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+        if (prepareRequestSeqRef.current === requestSeq) {
           setPrepareChecks(checks);
         }
         const providerResults = await Promise.all(
@@ -1262,13 +1351,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               prepareProvisioning: api.teams.prepareProvisioning,
               limitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
-              onModelProgress: ({ details }) => {
+              onModelProgress: ({ status, details }) => {
                 checks = updateProviderCheck(checks, plan.providerId, {
-                  status: 'checking',
+                  status,
                   backendSummary: plan.backendSummary,
                   details,
                 });
-                if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+                if (prepareRequestSeqRef.current === requestSeq) {
                   setPrepareChecks(checks);
                 }
               },
@@ -1293,20 +1382,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           } else if (plan.prepResult.status === 'notes') {
             anyNotes = true;
           }
-          prepareModelResultsCacheRef.current.set(
-            plan.cacheKey,
-            buildReusableProviderPrepareModelResults(plan.prepResult.modelResultsById)
-          );
+          if (prepareRequestSeqRef.current === requestSeq) {
+            const reusableModelResults = buildReusableProviderPrepareModelResults(
+              plan.prepResult.modelResultsById
+            );
+            prepareModelResultsCacheRef.current.set(plan.cacheKey, reusableModelResults);
+            storeShortLivedProviderPrepareModelResults({
+              providerId: plan.providerId,
+              cacheKey: plan.cacheKey,
+              modelResultsById: plan.prepResult.modelResultsById,
+            });
+          }
           checks = updateProviderCheck(checks, plan.providerId, {
             status: plan.prepResult.status,
             backendSummary: plan.backendSummary,
             details: plan.prepResult.details,
           });
         }
-        if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+        if (prepareRequestSeqRef.current === requestSeq) {
           setPrepareChecks(checks);
         }
-        if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
+        if (prepareRequestSeqRef.current !== requestSeq) return;
         const failureMessage =
           getPrimaryProvisioningFailureDetail(checks) ?? 'Some selected providers need attention.';
         setPrepareState(anyFailure ? 'failed' : 'ready');
@@ -1319,7 +1415,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         );
         setPrepareWarnings(collectedWarnings);
       } catch (error) {
-        if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
+        if (prepareRequestSeqRef.current !== requestSeq) return;
         const failureMessage =
           error instanceof Error ? error.message : 'Failed to warm up Claude CLI environment';
         setPrepareState('failed');
@@ -1328,14 +1424,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         setPrepareMessage(failureMessage);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [
     open,
     isLaunchMode,
     effectiveCwd,
+    prepareRequestSignature,
     selectedProviderId,
     selectedMemberProviders,
     selectedModelChecksByProvider,
@@ -1356,14 +1449,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     let cancelled = false;
     void (async () => {
       try {
-        const apiProjects = await api.getProjects();
+        const apiProjects = (await api.getProjects()).filter(
+          (project) => !isEphemeralProjectPath(project.path)
+        );
         if (cancelled) return;
 
         const pathSet = new Set(apiProjects.map((p) => p.path));
         const extras: Project[] = [];
         for (const repo of repositoryGroups) {
           for (const wt of repo.worktrees) {
-            if (!pathSet.has(wt.path)) {
+            if (!isEphemeralProjectPath(wt.path) && !pathSet.has(wt.path)) {
               pathSet.add(wt.path);
               extras.push({
                 id: wt.id,
@@ -1396,16 +1491,31 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
 
   useEffect(() => {
-    if (!open || cwdMode !== 'project' || selectedProjectPath || projects.length === 0) return;
-    if (defaultProjectPath) {
-      const match = projects.find((p) => p.path === defaultProjectPath);
+    if (!open || cwdMode !== 'project' || selectedProjectPath) return;
+    const selectableProjects = projects.filter((project) => !isEphemeralProjectPath(project.path));
+    if (selectableProjects.length === 0) return;
+    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
+      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+      const match = selectableProjects.find(
+        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
+      );
       if (match) {
         setSelectedProjectPath(match.path);
         return;
       }
     }
-    setSelectedProjectPath(projects[0].path);
+    setSelectedProjectPath(selectableProjects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
+
+  useEffect(() => {
+    if (!open || cwdMode !== 'project' || !selectedProjectPath) {
+      return;
+    }
+    if (!isEphemeralProjectPath(selectedProjectPath)) {
+      return;
+    }
+    setSelectedProjectPath('');
+  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
 
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);
@@ -1497,6 +1607,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
     const summary: string[] = [];
     if (promptDraft.value.trim()) summary.push('Lead prompt');
+    const worktreeMemberCount = effectiveMemberDrafts.filter(
+      (member) => !member.removedAt && member.isolation === 'worktree'
+    ).length;
+    if (worktreeMemberCount > 0) {
+      summary.push(
+        `${worktreeMemberCount} teammate worktree${worktreeMemberCount === 1 ? '' : 's'}`
+      );
+    }
     summary.push(`Provider: ${getProviderLabel(selectedProviderId)}`);
     if (selectedModel) summary.push(`Model: ${selectedModel}`);
     if (selectedEffort) summary.push(`Effort: ${selectedEffort}`);
@@ -1513,6 +1631,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return summary;
   }, [
     isLaunchMode,
+    effectiveMemberDrafts,
     promptDraft.value,
     selectedModel,
     selectedProviderId,
@@ -1641,6 +1760,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const provisioningError = isLaunchMode ? props.provisioningError : null;
   const activeError = localError ?? modelValidationError ?? provisioningError;
+  const effectivePrepare = useMemo(
+    () =>
+      deriveEffectiveProvisioningPrepareState({
+        state: prepareState,
+        message: prepareMessage,
+        warnings: prepareWarnings,
+        checks: prepareChecks,
+      }),
+    [prepareChecks, prepareMessage, prepareState, prepareWarnings]
+  );
   const launchInFlight = useStore((s) =>
     isLaunchMode && effectiveTeamName ? isTeamProvisioningActive(s, effectiveTeamName) : false
   );
@@ -2166,6 +2295,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onLimitContextChange={setLimitContext}
                   syncModelsWithTeammates={syncModelsWithLead}
                   onSyncModelsWithTeammatesChange={setSyncModelsWithLead}
+                  showWorktreeIsolationControls
+                  teammateWorktreeDefault={teammateWorktreeDefault}
+                  onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
                   leadWarningText={leadRuntimeWarningText}
                   leadFastModeNotice={anthropicRuntimeNotice}
                   memberWarningById={memberRuntimeWarningById}
@@ -2431,14 +2563,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           {/* Launch-only: CLI warm-up status */}
           {isLaunchMode ? (
             <div className="min-w-0">
-              {prepareState === 'idle' || prepareState === 'loading' ? (
+              {effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading' ? (
                 <>
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     <div>
                       <span>
-                        {prepareMessage ??
-                          (prepareState === 'idle'
+                        {effectivePrepare.message ??
+                          (effectivePrepare.state === 'idle'
                             ? 'Warming up CLI environment...'
                             : 'Preparing environment...')}
                       </span>
@@ -2454,7 +2586,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </>
               ) : null}
 
-              {prepareState === 'ready' ? (
+              {effectivePrepare.state === 'ready' ? (
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
                     <CheckCircle2 className="size-3.5 shrink-0" />
@@ -2465,9 +2597,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                         : 'CLI environment ready'}
                     </span>
                   </div>
-                  {prepareMessage ? (
+                  {effectivePrepare.message ? (
                     <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
-                      {prepareMessage}
+                      {effectivePrepare.message}
                     </p>
                   ) : null}
                   <ProvisioningProviderStatusList checks={prepareChecks} className="mt-1" />
@@ -2483,7 +2615,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </div>
               ) : null}
 
-              {prepareState === 'failed' ? (
+              {effectivePrepare.state === 'failed' ? (
                 <div className="text-xs">
                   <div className="flex items-start gap-2 text-red-300">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -2493,18 +2625,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                         blocked
                       </p>
                       <p className="mt-0.5 text-red-300/80">
-                        {prepareMessage ?? 'Failed to prepare environment'}
+                        {effectivePrepare.message ?? 'Failed to prepare environment'}
                       </p>
                       <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
                         Pre-flight check to catch errors before {isRelaunch ? 'relaunch' : 'launch'}
                       </p>
                     </div>
                   </div>
-                  {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
+                  {!shouldHideProvisioningProviderStatusList(
+                    prepareChecks,
+                    effectivePrepare.message
+                  ) ? (
                     <ProvisioningProviderStatusList
                       checks={prepareChecks}
                       className="mt-2"
-                      suppressDetailsMatching={prepareMessage}
+                      suppressDetailsMatching={effectivePrepare.message}
                     />
                   ) : null}
                   {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
@@ -2522,9 +2657,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   ) : null}
                   <div className="mt-1 flex items-center gap-2 pl-6">
                     <p className="text-[11px] text-[var(--color-text-muted)]">
-                      {getProvisioningFailureHint(prepareMessage, prepareChecks)}
+                      {getProvisioningFailureHint(effectivePrepare.message, prepareChecks)}
                     </p>
-                    {(prepareMessage ?? '').toLowerCase().includes('spawn ') ||
+                    {(effectivePrepare.message ?? '').toLowerCase().includes('spawn ') ||
                     prepareChecks.some((check) =>
                       check.details.some((detail) => detail.toLowerCase().includes('spawn '))
                     ) ? (

@@ -33,12 +33,25 @@ vi.mock('@renderer/components/team/members/MemberExecutionLog', () => ({
   }: {
     memberName?: string;
     chunks: { id: string }[];
-  }) =>
-    React.createElement(
+  }) => {
+    const [expanded, setExpanded] = React.useState(true);
+    return React.createElement(
       'div',
-      { 'data-testid': 'member-execution-log' },
-      `${memberName ?? 'lead'}:${chunks.length}`
-    ),
+      {
+        'data-testid': 'member-execution-log',
+        'data-expanded': expanded ? 'true' : 'false',
+      },
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': `member-execution-log-toggle:${memberName ?? 'lead'}`,
+          onClick: () => setExpanded((prev) => !prev),
+        },
+        `${memberName ?? 'lead'}:${chunks.length}`
+      )
+    );
+  },
 }));
 
 import { TaskLogStreamSection } from '@renderer/components/team/taskLogs/TaskLogStreamSection';
@@ -63,7 +76,9 @@ function buildSegment(args: {
   memberName: string;
   startTimestamp: string;
   endTimestamp: string;
+  chunkIds?: string[];
 }) {
+  const chunkIds = args.chunkIds ?? [`chunk-${args.id}`];
   return {
     id: args.id,
     participantKey: args.participantKey,
@@ -76,7 +91,11 @@ function buildSegment(args: {
     },
     startTimestamp: args.startTimestamp,
     endTimestamp: args.endTimestamp,
-    chunks: [{ id: `chunk-${args.id}`, chunkType: 'user', rawMessages: [] }] as never,
+    chunks: chunkIds.map((chunkId) => ({
+      id: chunkId,
+      chunkType: 'user',
+      rawMessages: [],
+    })) as never,
   };
 }
 
@@ -492,6 +511,90 @@ describe('TaskLogStreamSection', () => {
     });
 
     expect(apiState.getTaskLogStream).toHaveBeenCalledTimes(3);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('preserves expanded state when a live refresh extends the current segment tail', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+
+    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
+    apiState.onTeamChange.mockImplementation((callback) => {
+      handler = callback;
+      return () => {
+        handler = null;
+      };
+    });
+
+    apiState.getTaskLogStream
+      .mockResolvedValueOnce({
+        participants: [buildParticipant('member:alice', 'alice')],
+        defaultFilter: 'all',
+        segments: [
+          buildSegment({
+            id: 'member:alice:chunk-start:chunk-start',
+            participantKey: 'member:alice',
+            memberName: 'alice',
+            startTimestamp: '2026-04-24T10:00:00.000Z',
+            endTimestamp: '2026-04-24T10:01:00.000Z',
+            chunkIds: ['chunk-start'],
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        participants: [buildParticipant('member:alice', 'alice')],
+        defaultFilter: 'all',
+        segments: [
+          buildSegment({
+            id: 'member:alice:chunk-start:chunk-next',
+            participantKey: 'member:alice',
+            memberName: 'alice',
+            startTimestamp: '2026-04-24T10:00:00.000Z',
+            endTimestamp: '2026-04-24T10:02:00.000Z',
+            chunkIds: ['chunk-start', 'chunk-next'],
+          }),
+        ],
+      });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      await flushMicrotasks();
+    });
+
+    const logNodeBefore = host.querySelector('[data-testid="member-execution-log"]');
+    const toggle = host.querySelector(
+      '[data-testid="member-execution-log-toggle:alice"]'
+    ) as HTMLButtonElement | null;
+    expect(logNodeBefore?.getAttribute('data-expanded')).toBe('true');
+    expect(toggle).not.toBeNull();
+
+    await act(async () => {
+      toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(
+      host.querySelector('[data-testid="member-execution-log"]')?.getAttribute('data-expanded')
+    ).toBe('false');
+
+    await act(async () => {
+      handler?.(null, { teamName: 'demo', type: 'task-log-change', taskId: 'task-a' });
+      vi.advanceTimersByTime(400);
+      await flushMicrotasks();
+    });
+
+    const logNodeAfter = host.querySelector('[data-testid="member-execution-log"]');
+    expect(apiState.getTaskLogStream).toHaveBeenCalledTimes(2);
+    expect(logNodeAfter?.getAttribute('data-expanded')).toBe('false');
+    expect(logNodeAfter?.textContent).toBe('alice:2');
 
     await act(async () => {
       root.unmount();

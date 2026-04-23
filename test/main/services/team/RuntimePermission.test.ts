@@ -203,6 +203,32 @@ describe('RuntimePermissionRequestStore and services', () => {
       answerOrigin: 'provider_side_effect_projection',
     });
     expect(launchState.members.get('alice')).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      pendingPermissionRequestIds: [],
+    });
+  });
+
+  it('keeps confirmed_alive after answering the last pending permission', async () => {
+    await store.upsertPending(permissionRecord());
+    launchState.members.set('alice', {
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      pendingPermissionRequestIds: ['opencode:run-1:perm_1'],
+    });
+
+    await expect(
+      answerService().answer({
+        appRequestId: 'opencode:run-1:perm_1',
+        runId: 'run-1',
+        decision: 'once',
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      diagnostics: [],
+    });
+
+    expect(launchState.members.get('alice')).toMatchObject({
+      launchState: 'confirmed_alive',
       pendingPermissionRequestIds: [],
     });
   });
@@ -349,6 +375,11 @@ describe('RuntimePermissionRequestStore and services', () => {
 
   it('expires local pending requests that disappeared from provider', async () => {
     await store.upsertPending(permissionRecord());
+    await launchState.updateMember('team-a', 'alice', (member) => ({
+      ...member,
+      launchState: 'runtime_pending_permission',
+      pendingPermissionRequestIds: ['opencode:run-1:perm_1'],
+    }));
     client.pending = [];
     const reconciler = new RuntimePermissionReconciler(
       client,
@@ -367,6 +398,10 @@ describe('RuntimePermissionRequestStore and services', () => {
     await expect(store.get('opencode:run-1:perm_1')).resolves.toMatchObject({
       state: 'provider_missing',
       lastError: 'Provider no longer lists this permission request',
+    });
+    expect(launchState.members.get('alice')).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      pendingPermissionRequestIds: [],
     });
     expect(diagnostics.append).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -32,6 +32,7 @@ export interface SerializedMemberDraft {
   roleSelection: string;
   customRole: string;
   workflow?: string;
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
@@ -42,6 +43,7 @@ export interface CreateTeamDraftSnapshot {
   teamName: string;
   members: SerializedMemberDraft[];
   syncModelsWithLead?: boolean;
+  teammateWorktreeDefault?: boolean;
   cwdMode: 'project' | 'custom';
   selectedProjectPath: string;
   customCwd: string;
@@ -69,6 +71,7 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
     typeof obj.name === 'string' &&
     typeof obj.roleSelection === 'string' &&
     typeof obj.customRole === 'string' &&
+    (obj.isolation === undefined || obj.isolation === 'worktree') &&
     (obj.providerId === undefined || isTeamProviderId(obj.providerId)) &&
     (obj.model === undefined || typeof obj.model === 'string') &&
     (obj.effort === undefined || isTeamEffortLevel(obj.effort))
@@ -85,6 +88,8 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
     Array.isArray(obj.members) &&
     obj.members.every(isValidMember) &&
     (obj.syncModelsWithLead === undefined || typeof obj.syncModelsWithLead === 'boolean') &&
+    (obj.teammateWorktreeDefault === undefined ||
+      typeof obj.teammateWorktreeDefault === 'boolean') &&
     (obj.cwdMode === 'project' || obj.cwdMode === 'custom') &&
     typeof obj.selectedProjectPath === 'string' &&
     typeof obj.customCwd === 'string' &&
@@ -170,6 +175,7 @@ function emptySnapshot(): CreateTeamDraftSnapshot {
     teamName: '',
     members: [],
     syncModelsWithLead: true,
+    teammateWorktreeDefault: false,
     cwdMode: 'project',
     selectedProjectPath: '',
     customCwd: '',

@@ -9,6 +9,7 @@ export interface MemberDraft {
   customRole: string;
   workflow?: string;
   workflowChips?: InlineChip[];
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;

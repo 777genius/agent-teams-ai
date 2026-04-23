@@ -1,6 +1,7 @@
 import type { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -127,7 +128,13 @@ import {
 import { getTeamBootstrapStatePath } from '@main/services/team/TeamBootstrapStateReader';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import { getTeamLaunchStatePath } from '@main/services/team/TeamLaunchStateStore';
+import {
+  getOpenCodeLaneScopedRuntimeFilePath,
+  readOpenCodeRuntimeLaneIndex,
+  upsertOpenCodeRuntimeLaneIndexEntry,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import { spawnCli } from '@main/utils/childProcess';
 import { killProcessByPid } from '@main/utils/processKill';
 import { encodePath } from '@main/utils/pathDecoder';
@@ -252,6 +259,51 @@ function writeBootstrapState(
         teamName,
         updatedAt,
         phase: 'completed',
+        members,
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
+function writeTeamMeta(teamName: string, overrides: Record<string, unknown> = {}): void {
+  const teamDir = path.join(tempTeamsBase, teamName);
+  fs.mkdirSync(teamDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(teamDir, 'team.meta.json'),
+    `${JSON.stringify(
+      {
+        version: 1,
+        cwd: '/Users/test/proj',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4',
+        effort: 'medium',
+        createdAt: Date.now(),
+        ...overrides,
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
+function writeMembersMeta(
+  teamName: string,
+  members: Record<string, unknown>[],
+  providerBackendId = 'codex-native'
+): void {
+  const teamDir = path.join(tempTeamsBase, teamName);
+  fs.mkdirSync(teamDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(teamDir, 'members.meta.json'),
+    `${JSON.stringify(
+      {
+        version: 1,
+        providerBackendId,
         members,
       },
       null,
@@ -719,6 +771,438 @@ describe('TeamProvisioningService', () => {
         rssBytes: 456_000_000,
       });
     });
+
+    it('excludes removed meta members from runtime snapshot candidate members', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            removedAt: Date.now(),
+          },
+        ]),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => null),
+      };
+      vi.mocked(pidusage).mockResolvedValueOnce({} as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(snapshot.members.alice).toBeUndefined();
+    });
+
+    it('keeps pure OpenCode launch members alive from confirmed launch snapshot while runtime adapter is tracked', async () => {
+      const teamName = 'pure-opencode-runtime-team';
+      const projectPath = '/Users/test/project';
+      writeLaunchConfig(teamName, projectPath, 'lead-session', ['alice']);
+      writeLaunchState(teamName, 'lead-session', {
+        alice: {
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          hardFailureReason: undefined,
+        },
+      });
+
+      const svc = new TeamProvisioningService();
+      (svc as any).runtimeAdapterRunByTeam.set(teamName, {
+        runId: 'opencode-runtime-run',
+        providerId: 'opencode',
+        cwd: projectPath,
+      });
+      (svc as any).aliveRunByTeam.set(teamName, 'opencode-runtime-run');
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+
+      expect(snapshot.members.alice).toMatchObject({
+        alive: true,
+        providerId: 'opencode',
+        runtimeModel: 'opencode/big-pickle',
+      });
+    });
+
+    it('excludes removed meta members from live runtime metadata resolution', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            agentId: 'alice@runtime-team',
+            removedAt: Date.now(),
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@runtime-team',
+          backendType: 'tmux',
+          tmuxPaneId: '%1',
+        },
+      ]);
+
+      const metadata = await (svc as any).getLiveTeamAgentRuntimeMetadata('runtime-team');
+
+      expect(metadata.has('alice')).toBe(false);
+    });
+
+    it('uses config runtime identity to detect live codex teammates when no persisted launch snapshot exists', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            {
+              name: 'alice',
+              providerId: 'codex',
+              model: 'gpt-5.4-mini',
+              agentId: 'alice@signal-ops-6',
+              backendType: 'tmux',
+              tmuxPaneId: '%0',
+            },
+            {
+              name: 'atlas',
+              providerId: 'codex',
+              model: 'gpt-5.3-codex',
+              agentId: 'atlas@signal-ops-6',
+              backendType: 'tmux',
+              tmuxPaneId: '%1',
+            },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            providerId: 'codex',
+            model: 'gpt-5.4-mini',
+          },
+          {
+            name: 'atlas',
+            providerId: 'codex',
+            model: 'gpt-5.3-codex',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).findLiveProcessPidByAgentId = vi.fn(
+        () =>
+          new Map([
+            ['alice@signal-ops-6', 17527],
+            ['atlas@signal-ops-6', 17528],
+          ])
+      );
+      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map());
+
+      const metadata = await (svc as any).getLiveTeamAgentRuntimeMetadata('signal-ops-6');
+
+      expect(metadata.get('alice')).toMatchObject({
+        alive: true,
+        agentId: 'alice@signal-ops-6',
+        backendType: 'tmux',
+        tmuxPaneId: '%0',
+        pid: 17527,
+        model: 'gpt-5.4-mini',
+      });
+      expect(metadata.get('atlas')).toMatchObject({
+        alive: true,
+        agentId: 'atlas@signal-ops-6',
+        backendType: 'tmux',
+        tmuxPaneId: '%1',
+        pid: 17528,
+        model: 'gpt-5.3-codex',
+      });
+    });
+
+    it('does not let removed base member metadata hide an active suffixed member', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice-2', providerId: 'codex', model: 'gpt-5.4-mini' },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            removedAt: Date.now(),
+          },
+        ]),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => null),
+      };
+      vi.mocked(pidusage).mockResolvedValueOnce({} as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(snapshot.members['alice-2']).toMatchObject({
+        memberName: 'alice-2',
+        runtimeModel: 'gpt-5.4-mini',
+      });
+      expect(snapshot.members.alice).toBeUndefined();
+    });
+
+    it('includes persisted launch members that only exist in launchSnapshot.members when expectedMembers is stale', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => []),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => null),
+      };
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () =>
+          createPersistedLaunchSnapshot({
+            teamName: 'runtime-team',
+            leadSessionId: 'lead-session',
+            launchPhase: 'active',
+            expectedMembers: ['alice'],
+            members: {
+              bob: {
+                name: 'bob',
+                providerId: 'codex',
+                providerBackendId: 'codex-native',
+                model: 'gpt-5.4-mini',
+                effort: 'high',
+                launchState: 'runtime_pending_bootstrap',
+                agentToolAccepted: true,
+                runtimeAlive: false,
+                bootstrapConfirmed: false,
+                hardFailure: false,
+                lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+              },
+            },
+            updatedAt: '2026-04-23T10:00:00.000Z',
+          })
+        ),
+      };
+      vi.mocked(pidusage).mockResolvedValueOnce({} as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(snapshot.members.bob).toMatchObject({
+        memberName: 'bob',
+        runtimeModel: 'gpt-5.4-mini',
+        providerBackendId: 'codex-native',
+      });
+    });
+
+    it('shows RSS for OpenCode secondary lanes through the shared runtime host without exposing a member pid', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', providerId: 'codex', model: 'gpt-5.4-mini' },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+      const run = createMemberSpawnRun({
+        runId: 'run-1',
+        teamName: 'runtime-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.request = { providerId: 'codex', model: 'gpt-5.4', members: [] };
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+          runId: 'secondary-run-1',
+          state: 'finished',
+          result: {
+            runId: 'secondary-run-1',
+            teamName: 'runtime-team',
+            launchPhase: 'active',
+            teamLaunchState: 'partial_pending',
+            members: {
+              bob: {
+                memberName: 'bob',
+                providerId: 'opencode',
+                launchState: 'runtime_pending_bootstrap',
+                agentToolAccepted: true,
+                runtimeAlive: true,
+                bootstrapConfirmed: false,
+                hardFailure: false,
+                runtimePid: 333,
+                diagnostics: [],
+              },
+            },
+            warnings: [],
+            diagnostics: [],
+          },
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+      (svc as any).aliveRunByTeam.set('runtime-team', 'run-1');
+      (svc as any).runs.set('run-1', run);
+      vi.mocked(pidusage).mockReset();
+      vi.mocked(pidusage).mockImplementation(
+        async (target: number | string | Array<number | string>) => {
+          if (Array.isArray(target)) {
+            return {
+              '111': createPidusageStat(111, 123_000_000),
+            } as any;
+          }
+          if (target === 333) {
+            return createPidusageStat(333, 456_000_000) as any;
+          }
+          if (target === 111) {
+            return createPidusageStat(111, 123_000_000) as any;
+          }
+          throw new Error(`Unexpected pidusage target: ${String(target)}`);
+        }
+      );
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(pidusage).toHaveBeenCalledWith([111, 333], { maxage: 0 });
+      expect(pidusage).toHaveBeenCalledWith(333, { maxage: 0 });
+      expect(snapshot.members.bob).toMatchObject({
+        memberName: 'bob',
+        alive: true,
+        restartable: false,
+        pid: 333,
+        runtimeModel: 'opencode/minimax-m2.5-free',
+        rssBytes: 456_000_000,
+      });
+    });
+
+    it('shows RSS for persisted OpenCode secondary lane runtime pids after the launch run is gone', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () =>
+          createPersistedLaunchSnapshot({
+            teamName: 'runtime-team',
+            expectedMembers: ['bob'],
+            launchPhase: 'finished',
+            members: {
+              bob: {
+                name: 'bob',
+                providerId: 'opencode',
+                model: 'opencode/minimax-m2.5-free',
+                laneId: 'secondary:opencode:bob',
+                laneKind: 'secondary',
+                laneOwnerProviderId: 'opencode',
+                launchState: 'confirmed_alive',
+                agentToolAccepted: true,
+                runtimeAlive: true,
+                bootstrapConfirmed: true,
+                hardFailure: false,
+                runtimePid: 333,
+                lastEvaluatedAt: '2026-04-23T12:26:31.563Z',
+              },
+            },
+            updatedAt: '2026-04-23T12:26:31.563Z',
+          })
+        ),
+      };
+      vi.mocked(pidusage).mockReset();
+      vi.mocked(pidusage).mockImplementation(
+        async (target: number | string | Array<number | string>) => {
+          if (Array.isArray(target)) {
+            return {
+              '333': createPidusageStat(333, 456_000_000),
+            } as any;
+          }
+          if (target === 333) {
+            return createPidusageStat(333, 456_000_000) as any;
+          }
+          throw new Error(`Unexpected pidusage target: ${String(target)}`);
+        }
+      );
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(pidusage).toHaveBeenCalledWith([333], { maxage: 0 });
+      expect(snapshot.members.bob).toMatchObject({
+        memberName: 'bob',
+        alive: true,
+        restartable: false,
+        pid: 333,
+        providerId: 'opencode',
+        runtimeModel: 'opencode/minimax-m2.5-free',
+        rssBytes: 456_000_000,
+      });
+    });
   });
 
   describe('restartMember', () => {
@@ -863,6 +1347,204 @@ describe('TeamProvisioningService', () => {
       expect(restartMessage).toContain('effort="medium"');
       expect(restartMessage).toContain('with role "Approver"');
       expect(restartMessage).toContain('Their workflow: Use the updated checklist');
+    });
+
+    it('does not let removed base-member metadata override a suffixed teammate during restart', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'edited-team',
+        expectedMembers: ['alice-2'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice-2',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              livenessSource: 'heartbeat',
+              firstSpawnAcceptedAt: new Date().toISOString(),
+              lastHeartbeatAt: new Date().toISOString(),
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+
+      const sendMessageToRun = vi.fn(async () => {});
+      (svc as any).sendMessageToRun = sendMessageToRun;
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Edited Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            removedAt: Date.now(),
+          },
+          {
+            name: 'alice-2',
+            role: 'Reviewer',
+            providerId: 'codex',
+            model: 'gpt-5.4-mini',
+            effort: 'high',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('edited-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('edited-team', 'alice-2');
+
+      expect(sendMessageToRun).toHaveBeenCalledTimes(1);
+      const restartCall = sendMessageToRun.mock.calls[0] as unknown as
+        | [unknown, string]
+        | undefined;
+      const restartMessage = restartCall?.[1] ?? '';
+      expect(restartMessage).toContain('provider="codex"');
+      expect(restartMessage).toContain('model="gpt-5.4-mini"');
+      expect(restartMessage).toContain('effort="high"');
+      expect(restartMessage).not.toContain('nemotron-3-super-free');
+    });
+
+    it('requires the OpenCode runtime adapter before restarting a secondary-lane teammate', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:alice',
+          providerId: 'opencode',
+          member: {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: 'opencode-run-1',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Mixed Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({ providerId: 'codex' })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('mixed-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await expect(svc.restartMember('mixed-team', 'alice')).rejects.toThrow(
+        'OpenCode runtime adapter is not available for controlled lane reattach.'
+      );
+    });
+
+    it('still allows restarting a primary-lane teammate when another mixed secondary lane exists', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: 'opencode-run-1',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      const sendMessageToRun = vi.fn(async () => {});
+      (svc as any).sendMessageToRun = sendMessageToRun;
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Mixed Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            role: 'Reviewer',
+            providerId: 'codex',
+            model: 'gpt-5.4',
+            effort: 'high',
+            agentType: 'general-purpose',
+          },
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({ providerId: 'codex' })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('mixed-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('mixed-team', 'alice');
+
+      expect(sendMessageToRun).toHaveBeenCalledTimes(1);
+      expect(run.pendingMemberRestarts.has('alice')).toBe(true);
     });
 
     it('aborts restart if the teammate is removed before respawn is requested', async () => {
@@ -1297,6 +1979,1748 @@ describe('TeamProvisioningService', () => {
       await restartPromise;
 
       expect(sendMessageToRun).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses secondary-lane pending copy instead of bootstrap-only pending copy for mixed teams', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+      });
+      run.isLaunch = true;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: 'opencode-run-1',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        {
+          version: 2,
+          teamName: 'mixed-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              providerId: 'opencode',
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'starting',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 0,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch - waiting for secondary runtime lane: bob');
+    });
+
+    it('treats missing secondary-lane snapshot members as still pending', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+      });
+      run.isLaunch = true;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: 'opencode-run-1',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        {
+          version: 2,
+          teamName: 'mixed-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 0,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch - waiting for secondary runtime lane: bob');
+    });
+
+    it('uses permission-pending copy when the remaining mixed-team member is awaiting approval', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+      });
+      run.isLaunch = true;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: 'opencode-run-1',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        {
+          version: 2,
+          teamName: 'mixed-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              providerId: 'opencode',
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_permission',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['perm-1'],
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+    });
+
+    it('keeps launch pending when the only remaining teammate is permission-blocked but already online', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'runtime_pending_permission',
+              runtimeAlive: true,
+              agentToolAccepted: true,
+              bootstrapConfirmed: false,
+              pendingPermissionRequestIds: ['perm-1'],
+            }),
+          ],
+        ]),
+      });
+      const launchSummary = (svc as any).getMemberLaunchSummary(run);
+
+      expect((svc as any).hasPendingLaunchMembers(run, launchSummary, null)).toBe(true);
+      expect(
+        (svc as any).buildPendingBootstrapStatusMessage('Finishing launch', run, launchSummary)
+      ).toBe('Finishing launch — 1 teammate awaiting permission approval');
+    });
+
+    it('trusts persisted snapshot permission state for pure teams when live run statuses are absent', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'pure-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        {
+          version: 2,
+          teamName: 'pure-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'opencode',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['perm-1'],
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 0,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+    });
+
+    it('uses persisted expected member count instead of stale run expected members for pure launch copy', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'pure-team',
+        expectedMembers: [],
+        memberSpawnStatuses: new Map(),
+      });
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        {
+          version: 2,
+          teamName: 'pure-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'opencode',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 0,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch — teammates online');
+      expect(message).not.toContain('/0');
+    });
+
+    it('uses the union of persisted expected members and persisted member entries for pending launch copy', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'pure-team',
+        expectedMembers: [],
+        memberSpawnStatuses: new Map(),
+      });
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        {
+          version: 2,
+          teamName: 'pure-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: [],
+          bootstrapExpectedMembers: [],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'opencode',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_permission',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['perm-1'],
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 0,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+    });
+
+    it('launches the OpenCode secondary lane with side-lane provider and member runtime identity', async () => {
+      const svc = new TeamProvisioningService();
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        launchPhase: 'finished',
+        teamLaunchState: 'clean_success',
+        members: {
+          bob: {
+            memberName: 'bob',
+            providerId: 'opencode',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            diagnostics: [],
+          },
+        },
+        warnings: [],
+        diagnostics: [],
+      }));
+
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: adapterLaunch,
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => null),
+        write: vi.fn(async () => {}),
+        clear: vi.fn(async () => {}),
+      };
+
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+      });
+      run.isLaunch = true;
+      run.request = {
+        teamName: 'mixed-team',
+        cwd: '/tmp/mixed-team',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        effort: 'high',
+        skipPermissions: true,
+      };
+      run.effectiveMembers = [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.4',
+          effort: 'high',
+        },
+      ];
+      run.detectedSessionId = 'lead-session-1';
+      run.launchIdentity = null;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: null,
+          state: 'queued',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      await vi.waitFor(() => {
+        expect(adapterLaunch).toHaveBeenCalledTimes(1);
+      });
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          effort: 'medium',
+          cwd: '/tmp/mixed-team',
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+              effort: 'medium',
+              cwd: '/tmp/mixed-team',
+            }),
+          ],
+        })
+      );
+    });
+
+    it('delivers direct messages to OpenCode secondary lanes through the runtime adapter', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePid: 456,
+        diagnostics: [],
+      }));
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+          sendMessageToMember,
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).getTrackedRunId = vi.fn(() => 'run-1');
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          projectPath: '/repo',
+          members: [
+            { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
+            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({
+          launchIdentity: { providerId: 'codex' },
+          providerId: 'codex',
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-1',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+      expect(sendMessageToMember).toHaveBeenCalledWith({
+        runId: 'run-1',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/repo',
+        text: 'hello bob',
+        messageId: 'msg-1',
+      });
+    });
+
+    it('marks an OpenCode secondary lane degraded when readiness fails before runtime materializes', async () => {
+      const teamName = 'mixed-prelaunch-failure';
+      const svc = new TeamProvisioningService();
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {
+          bob: {
+            memberName: 'bob',
+            providerId: 'opencode',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'unknown_error',
+            diagnostics: [
+              'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
+              'opencode_bridge_unknown_outcome: OpenCode bridge command timed out',
+            ],
+          },
+        },
+        warnings: [],
+        diagnostics: [
+          'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
+        ],
+      }));
+
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: adapterLaunch,
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => null),
+        write: vi.fn(async () => {}),
+        clear: vi.fn(async () => {}),
+      };
+
+      const run = createMemberSpawnRun({
+        teamName,
+        expectedMembers: ['alice'],
+      });
+      run.isLaunch = true;
+      run.request = {
+        teamName,
+        cwd: '/tmp/mixed-prelaunch-failure',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        effort: 'high',
+        skipPermissions: true,
+      };
+      run.effectiveMembers = [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.4',
+          effort: 'high',
+        },
+      ];
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: null,
+          state: 'queued',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      await vi.waitFor(async () => {
+        expect(adapterLaunch).toHaveBeenCalledTimes(1);
+        await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+          lanes: {
+            'secondary:opencode:bob': {
+              state: 'degraded',
+              diagnostics: expect.arrayContaining([
+                'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
+              ]),
+            },
+          },
+        });
+      });
+    });
+
+    it('starts all queued OpenCode secondary lanes without letting the first in-flight lane block its siblings', async () => {
+      const svc = new TeamProvisioningService();
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      const persistLaunchStateSnapshot = vi
+        .spyOn(svc as any, 'persistLaunchStateSnapshot')
+        .mockResolvedValue(null);
+
+      let resolveFirstLaunch: () => void = () => {};
+      const firstLaunch = new Promise<void>((resolve) => {
+        resolveFirstLaunch = resolve;
+      });
+      const launchSingleMixedSecondaryLane = vi
+        .spyOn(svc as any, 'launchSingleMixedSecondaryLane')
+        .mockImplementationOnce(async () => {
+          await firstLaunch;
+        })
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+      });
+      run.isLaunch = true;
+      run.request = {
+        teamName: 'mixed-team',
+        cwd: '/tmp/mixed-team',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        effort: 'high',
+        skipPermissions: true,
+      };
+      run.effectiveMembers = [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.4',
+          effort: 'high',
+        },
+      ];
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:tom',
+          providerId: 'opencode',
+          member: {
+            name: 'tom',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            effort: 'medium',
+          },
+          runId: null,
+          state: 'queued',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: null,
+          state: 'queued',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+        {
+          laneId: 'secondary:opencode:jack',
+          providerId: 'opencode',
+          member: {
+            name: 'jack',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'ling-2.6-flash-free',
+            effort: 'medium',
+          },
+          runId: null,
+          state: 'queued',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      const resultPromise = (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(3);
+      expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
+        'launching',
+        'launching',
+        'launching',
+      ]);
+
+      await expect(resultPromise).resolves.toBeNull();
+      expect(persistLaunchStateSnapshot).toHaveBeenCalledTimes(1);
+
+      resolveFirstLaunch();
+      await Promise.resolve();
+    });
+
+    it('preserves mixed lane metadata when OpenCode runtime liveness updates a secondary lane member', async () => {
+      const svc = new TeamProvisioningService();
+      const previousSnapshot = {
+        version: 2 as const,
+        teamName: 'mixed-team',
+        updatedAt: '2026-04-22T12:00:00.000Z',
+        launchPhase: 'active' as const,
+        expectedMembers: ['alice', 'bob'],
+        bootstrapExpectedMembers: ['alice'],
+        members: {
+          alice: {
+            name: 'alice',
+            providerId: 'codex' as const,
+            laneId: 'primary',
+            laneKind: 'primary' as const,
+            laneOwnerProviderId: 'codex' as const,
+            launchState: 'confirmed_alive' as const,
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+          },
+          bob: {
+            name: 'bob',
+            providerId: 'opencode' as const,
+            model: 'minimax-m2.5-free',
+            effort: 'medium' as const,
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary' as const,
+            laneOwnerProviderId: 'opencode' as const,
+            launchIdentity: {
+              providerId: 'opencode' as const,
+              providerBackendId: null,
+              selectedModel: 'minimax-m2.5-free',
+              selectedModelKind: 'explicit' as const,
+              resolvedLaunchModel: 'minimax-m2.5-free',
+              catalogId: 'minimax-m2.5-free',
+              catalogSource: 'runtime' as const,
+              catalogFetchedAt: '2026-04-22T12:00:00.000Z',
+              selectedEffort: 'medium' as const,
+              resolvedEffort: 'medium' as const,
+              selectedFastMode: null,
+              resolvedFastMode: null,
+              fastResolutionReason: null,
+            },
+            launchState: 'runtime_pending_bootstrap' as const,
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        teamLaunchState: 'partial_pending' as const,
+      };
+      const write = vi.fn(async () => {});
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => previousSnapshot),
+        write,
+      };
+
+      await (svc as any).updateOpenCodeRuntimeMemberLiveness({
+        teamName: 'mixed-team',
+        runId: 'run-member-spawn-1',
+        memberName: 'bob',
+        runtimeSessionId: 'session-bob',
+        observedAt: '2026-04-22T12:05:00.000Z',
+        diagnostics: ['native heartbeat'],
+        reason: 'OpenCode runtime heartbeat accepted',
+      });
+
+      expect(write).toHaveBeenCalledTimes(1);
+      const writtenSnapshot = (
+        write.mock.calls[0] as unknown as [string, Record<string, unknown>] | undefined
+      )?.[1] as { members?: Record<string, unknown> } | undefined;
+      expect(writtenSnapshot?.members?.bob).toMatchObject({
+        name: 'bob',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+        effort: 'medium',
+        laneId: 'secondary:opencode:bob',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+        launchIdentity: {
+          providerId: 'opencode',
+          selectedModel: 'minimax-m2.5-free',
+          resolvedLaunchModel: 'minimax-m2.5-free',
+        },
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+      });
+    });
+
+    it('preserves richer persisted expectedMembers when OpenCode runtime liveness updates a stale snapshot', async () => {
+      const svc = new TeamProvisioningService();
+      const previousSnapshot = {
+        version: 2 as const,
+        teamName: 'mixed-team',
+        updatedAt: '2026-04-22T12:00:00.000Z',
+        launchPhase: 'active' as const,
+        expectedMembers: ['bob'],
+        members: {
+          alice: {
+            name: 'alice',
+            launchState: 'confirmed_alive' as const,
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+          },
+          bob: {
+            name: 'bob',
+            providerId: 'opencode' as const,
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary' as const,
+            laneOwnerProviderId: 'opencode' as const,
+            launchState: 'runtime_pending_bootstrap' as const,
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        teamLaunchState: 'partial_pending' as const,
+      };
+      const write = vi.fn(async () => {});
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => previousSnapshot),
+        write,
+      };
+
+      await (svc as any).updateOpenCodeRuntimeMemberLiveness({
+        teamName: 'mixed-team',
+        runId: 'run-member-spawn-1',
+        memberName: 'bob',
+        runtimeSessionId: 'session-bob',
+        observedAt: '2026-04-22T12:05:00.000Z',
+        diagnostics: ['native heartbeat'],
+        reason: 'OpenCode runtime heartbeat accepted',
+      });
+
+      expect(write).toHaveBeenCalledTimes(1);
+      const writtenSnapshot = (
+        write.mock.calls[0] as unknown as [string, Record<string, unknown>] | undefined
+      )?.[1] as { expectedMembers?: string[] } | undefined;
+      expect(writtenSnapshot?.expectedMembers).toEqual(['bob', 'alice']);
+    });
+
+    it('accepts secondary OpenCode lane evidence using the lane run id instead of the lead run id', async () => {
+      const svc = new TeamProvisioningService();
+
+      (svc as any).aliveRunByTeam.set('mixed-team', 'lead-run');
+      (svc as any).runs.set('lead-run', {
+        runId: 'lead-run',
+        teamName: 'mixed-team',
+        request: {
+          providerId: 'codex',
+        },
+      });
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: 'mixed-team',
+        runId: 'opencode-run-1',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/tmp/mixed-team',
+      });
+
+      await expect(
+        (svc as any).assertOpenCodeRuntimeEvidenceAccepted({
+          teamName: 'mixed-team',
+          runId: 'opencode-run-1',
+          laneId: 'secondary:opencode:bob',
+          evidenceKind: 'heartbeat',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    it('uses the secondary lane run id for OpenCode runtime delivery journal acceptance', async () => {
+      const svc = new TeamProvisioningService();
+      const delivered = new Map<
+        string,
+        { kind: 'member_inbox'; teamName: string; memberName: string; messageId: string }
+      >();
+
+      (svc as any).aliveRunByTeam.set('mixed-team', 'lead-run');
+      (svc as any).runs.set('lead-run', {
+        runId: 'lead-run',
+        teamName: 'mixed-team',
+        request: {
+          providerId: 'codex',
+        },
+      });
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: 'mixed-team',
+        runId: 'opencode-run-1',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/tmp/mixed-team',
+      });
+      (svc as any).createOpenCodeRuntimeDeliveryPorts = vi.fn(() => [
+        {
+          kind: 'member_inbox',
+          write: vi.fn(async ({ envelope, destinationMessageId }) => {
+            const location = {
+              kind: 'member_inbox' as const,
+              teamName: envelope.teamName,
+              memberName:
+                typeof envelope.to === 'object' && 'memberName' in envelope.to
+                  ? envelope.to.memberName
+                  : 'unknown',
+              messageId: destinationMessageId,
+            };
+            delivered.set(destinationMessageId, location);
+            return location;
+          }),
+          verify: vi.fn(async ({ destinationMessageId }) => {
+            const location = delivered.get(destinationMessageId) ?? null;
+            return {
+              found: location !== null,
+              location,
+              diagnostics: [],
+            };
+          }),
+          buildChangeEvent: vi.fn(() => null),
+        },
+      ]);
+
+      const delivery = (svc as any).createOpenCodeRuntimeDeliveryService(
+        'mixed-team',
+        'secondary:opencode:bob'
+      );
+      const ack = await delivery.deliver({
+        idempotencyKey: 'delivery-1',
+        runId: 'opencode-run-1',
+        teamName: 'mixed-team',
+        fromMemberName: 'bob',
+        providerId: 'opencode',
+        runtimeSessionId: 'session-bob',
+        to: { memberName: 'alice' },
+        text: 'hi',
+        createdAt: '2026-04-22T12:05:00.000Z',
+      });
+
+      expect(ack).toMatchObject({
+        ok: true,
+        delivered: true,
+        reason: null,
+      });
+    });
+
+    it('recovers OpenCode delivery journals from canonical launch snapshot when lane index is missing', async () => {
+      const svc = new TeamProvisioningService();
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => ({
+          version: 2,
+          teamName: 'mixed-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob', 'tom'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              providerId: 'opencode',
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+            tom: {
+              name: 'tom',
+              providerId: 'opencode',
+              laneId: 'secondary:opencode:tom',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 2,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        })),
+      };
+
+      await expect(
+        (svc as any).getOpenCodeRuntimeRecoveryLaneIds('mixed-team', {})
+      ).resolves.toEqual(['secondary:opencode:bob', 'secondary:opencode:tom']);
+    });
+
+    it('routes runtime deliveries to the persisted secondary OpenCode lane after in-memory tracking is lost', async () => {
+      const svc = new TeamProvisioningService();
+      const observedLaneIds: string[] = [];
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => ({
+          version: 2,
+          teamName: 'mixed-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              providerId: 'opencode',
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 2,
+            pendingCount: 0,
+            failedCount: 0,
+            runtimeAlivePendingCount: 0,
+          },
+          teamLaunchState: 'ready',
+        })),
+      };
+      (svc as any).assertOpenCodeRuntimeEvidenceAccepted = vi.fn(async ({ laneId }) => {
+        observedLaneIds.push(`evidence:${laneId}`);
+      });
+      (svc as any).createOpenCodeRuntimeDeliveryService = vi.fn((_teamName, laneId) => {
+        observedLaneIds.push(`delivery:${laneId}`);
+        return {
+          deliver: vi.fn(async () => ({
+            ok: true,
+            delivered: true,
+            idempotencyKey: 'delivery-1',
+            location: {
+              kind: 'member_inbox' as const,
+              teamName: 'mixed-team',
+              memberName: 'alice',
+              messageId: 'msg-1',
+            },
+            reason: null,
+          })),
+        };
+      });
+
+      const ack = await svc.deliverOpenCodeRuntimeMessage({
+        idempotencyKey: 'delivery-1',
+        teamName: 'mixed-team',
+        runId: 'opencode-run-1',
+        fromMemberName: 'bob',
+        runtimeSessionId: 'session-bob',
+        to: { memberName: 'alice' },
+        text: 'hi',
+        createdAt: '2026-04-22T12:05:00.000Z',
+      });
+
+      expect(ack).toMatchObject({
+        ok: true,
+        state: 'delivered',
+        teamName: 'mixed-team',
+        runId: 'opencode-run-1',
+      });
+      expect(observedLaneIds).toEqual([
+        'evidence:secondary:opencode:bob',
+        'delivery:secondary:opencode:bob',
+      ]);
+    });
+
+    it('removes lane index entries when mixed secondary lanes are stopped without an OpenCode adapter', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'mixed-team';
+
+      (svc as any).setSecondaryRuntimeRun({
+        teamName,
+        runId: 'opencode-run-1',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/tmp/mixed-team',
+      });
+      (svc as any).setSecondaryRuntimeRun({
+        teamName,
+        runId: 'opencode-run-2',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:tom',
+        memberName: 'tom',
+        cwd: '/tmp/mixed-team',
+      });
+
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:bob',
+        state: 'active',
+      });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'secondary:opencode:tom',
+        state: 'active',
+      });
+      await fsPromises.mkdir(
+        path.dirname(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'secondary:opencode:bob',
+            fileName: 'opencode-delivery-journal.json',
+          })
+        ),
+        { recursive: true }
+      );
+      await fsPromises.writeFile(
+        getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath: tempTeamsBase,
+          teamName,
+          laneId: 'secondary:opencode:bob',
+          fileName: 'opencode-delivery-journal.json',
+        }),
+        '{"records":[]}\n',
+        'utf8'
+      );
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => null),
+      };
+
+      await (svc as any).stopMixedSecondaryRuntimeLanes(teamName);
+
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {},
+      });
+      await expect(
+        fsPromises.stat(
+          path.dirname(
+            getOpenCodeLaneScopedRuntimeFilePath({
+              teamsBasePath: tempTeamsBase,
+              teamName,
+              laneId: 'secondary:opencode:bob',
+              fileName: 'opencode-delivery-journal.json',
+            })
+          )
+        )
+      ).rejects.toThrow();
+    });
+
+    it('clears provider-local lane storage when a single mixed secondary lane is stopped during controlled reattach', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+      });
+      run.request = {
+        providerId: 'codex',
+        cwd: '/tmp/mixed-team',
+        members: [],
+      };
+      const lane = {
+        laneId: 'secondary:opencode:bob',
+        providerId: 'opencode' as const,
+        member: {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+        },
+        runId: 'opencode-run-1',
+        state: 'active',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      };
+
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName: run.teamName,
+        laneId: lane.laneId,
+        state: 'active',
+      });
+      await fsPromises.mkdir(
+        path.dirname(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName: run.teamName,
+            laneId: lane.laneId,
+            fileName: 'opencode-permissions.json',
+          })
+        ),
+        { recursive: true }
+      );
+      await fsPromises.writeFile(
+        getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath: tempTeamsBase,
+          teamName: run.teamName,
+          laneId: lane.laneId,
+          fileName: 'opencode-permissions.json',
+        }),
+        '{"requests":[]}\n',
+        'utf8'
+      );
+
+      await (svc as any).stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch');
+
+      await expect(
+        readOpenCodeRuntimeLaneIndex(tempTeamsBase, run.teamName)
+      ).resolves.toMatchObject({
+        lanes: {},
+      });
+      await expect(
+        fsPromises.stat(
+          path.dirname(
+            getOpenCodeLaneScopedRuntimeFilePath({
+              teamsBasePath: tempTeamsBase,
+              teamName: run.teamName,
+              laneId: lane.laneId,
+              fileName: 'opencode-permissions.json',
+            })
+          )
+        )
+      ).rejects.toThrow();
+      expect(lane.runId).toBeNull();
+      expect(lane.state).toBe('finished');
+    });
+
+    it('removes the primary lane index entry when a pure OpenCode team is stopped without an adapter', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-team';
+
+      (svc as any).runtimeAdapterRunByTeam.set(teamName, {
+        runId: 'opencode-run-1',
+        providerId: 'opencode',
+        cwd: '/tmp/opencode-team',
+      });
+      (svc as any).aliveRunByTeam.set(teamName, 'opencode-run-1');
+      (svc as any).provisioningRunByTeam.set(teamName, 'opencode-run-1');
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => null),
+      };
+
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        state: 'active',
+      });
+      await fsPromises.mkdir(
+        path.dirname(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-delivery-journal.json',
+          })
+        ),
+        { recursive: true }
+      );
+      await fsPromises.writeFile(
+        getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath: tempTeamsBase,
+          teamName,
+          laneId: 'primary',
+          fileName: 'opencode-delivery-journal.json',
+        }),
+        '{"records":[]}\n',
+        'utf8'
+      );
+
+      await (svc as any).stopOpenCodeRuntimeAdapterTeam(teamName, 'opencode-run-1');
+
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {},
+      });
+      await expect(
+        fsPromises.stat(
+          path.dirname(
+            getOpenCodeLaneScopedRuntimeFilePath({
+              teamsBasePath: tempTeamsBase,
+              teamName,
+              laneId: 'primary',
+              fileName: 'opencode-delivery-journal.json',
+            })
+          )
+        )
+      ).rejects.toThrow();
+      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(false);
+      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
+    });
+
+    it('clears primary lane storage when OpenCode runtime adapter launch fails', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-team';
+      const adapterLaunch = vi.fn(async () => {
+        throw new Error('launch boom');
+      });
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          } as any,
+        ])
+      );
+
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        state: 'active',
+      });
+      await fsPromises.mkdir(
+        path.dirname(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-launch-transaction.json',
+          })
+        ),
+        { recursive: true }
+      );
+      await fsPromises.writeFile(
+        getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath: tempTeamsBase,
+          teamName,
+          laneId: 'primary',
+          fileName: 'opencode-launch-transaction.json',
+        }),
+        '{"transactionId":"tx-1"}\n',
+        'utf8'
+      );
+
+      await expect(
+        (svc as any).runOpenCodeTeamRuntimeAdapterLaunch({
+          request: {
+            teamName,
+            cwd: '/tmp/opencode-team',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+            skipPermissions: true,
+          },
+          members: [
+            {
+              name: 'alice',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+              effort: 'medium',
+            },
+          ],
+          prompt: 'Launch team',
+          onProgress: vi.fn(),
+        })
+      ).rejects.toThrow('launch boom');
+
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {},
+      });
+      await expect(
+        fsPromises.stat(
+          path.dirname(
+            getOpenCodeLaneScopedRuntimeFilePath({
+              teamsBasePath: tempTeamsBase,
+              teamName,
+              laneId: 'primary',
+              fileName: 'opencode-launch-transaction.json',
+            })
+          )
+        )
+      ).rejects.toThrow();
+      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
+    });
+
+    it('does not keep a pure OpenCode team alive when the runtime adapter returns partial_failure', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'opencode-team';
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {
+          alice: {
+            memberName: 'alice',
+            providerId: 'opencode',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            diagnostics: ['launch failed'],
+          },
+        },
+        warnings: [],
+        diagnostics: ['launch failed'],
+      }));
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          } as any,
+        ])
+      );
+
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        state: 'active',
+      });
+      await fsPromises.mkdir(
+        path.dirname(
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-diagnostics.json',
+          })
+        ),
+        { recursive: true }
+      );
+      await fsPromises.writeFile(
+        getOpenCodeLaneScopedRuntimeFilePath({
+          teamsBasePath: tempTeamsBase,
+          teamName,
+          laneId: 'primary',
+          fileName: 'opencode-diagnostics.json',
+        }),
+        '{"events":[]}\n',
+        'utf8'
+      );
+
+      const response = await (svc as any).runOpenCodeTeamRuntimeAdapterLaunch({
+        request: {
+          teamName,
+          cwd: '/tmp/opencode-team',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          effort: 'medium',
+          skipPermissions: true,
+        },
+        members: [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+        ],
+        prompt: 'Launch team',
+        onProgress: vi.fn(),
+      });
+
+      expect(response).toMatchObject({
+        runId: expect.any(String),
+      });
+      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(false);
+      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
+      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+        lanes: {},
+      });
+      await expect(
+        fsPromises.stat(
+          path.dirname(
+            getOpenCodeLaneScopedRuntimeFilePath({
+              teamsBasePath: tempTeamsBase,
+              teamName,
+              laneId: 'primary',
+              fileName: 'opencode-diagnostics.json',
+            })
+          )
+        )
+      ).rejects.toThrow();
+    });
+
+    it('preserves pending permission request ids for pure OpenCode launch-state members', () => {
+      const svc = new TeamProvisioningService();
+
+      const member = (svc as any).toOpenCodePersistedLaunchMember(
+        {
+          name: 'alice',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          effort: 'medium',
+        },
+        {
+          launchState: 'runtime_pending_permission',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          hardFailureReason: undefined,
+          pendingPermissionRequestIds: [
+            'opencode:run-1:perm-1',
+            'opencode:run-1:perm-1',
+            'opencode:run-1:perm-2',
+          ],
+          diagnostics: ['waiting for permission approval'],
+        }
+      );
+
+      expect(member).toMatchObject({
+        name: 'alice',
+        providerId: 'opencode',
+        launchState: 'runtime_pending_permission',
+        pendingPermissionRequestIds: ['opencode:run-1:perm-1', 'opencode:run-1:perm-2'],
+        diagnostics: ['waiting for permission approval'],
+      });
     });
 
     it('fails early when the previous tmux pane does not exit before restart', async () => {
@@ -1993,6 +4417,498 @@ describe('TeamProvisioningService', () => {
     expect(launchArgs).toEqual(
       expect.arrayContaining(['-c', 'service_tier="fast"', '-c', 'features.fast_mode=true'])
     );
+  });
+
+  describe('safe app launch matrix', () => {
+    function createSafeLaunchService() {
+      const mcpConfigBuilder = {
+        writeConfigFile: vi.fn(async () => path.join(tempClaudeRoot, 'mcp-config.json')),
+        removeConfigFile: vi.fn(async () => {}),
+      };
+      const membersMetaStore = {
+        writeMembers: vi.fn(async () => {}),
+        getMembers: vi.fn(async () => []),
+        getMeta: vi.fn(async () => null),
+      };
+      const teamMetaStore = {
+        writeMeta: vi.fn(async () => {}),
+        deleteMeta: vi.fn(async () => {}),
+        getMeta: vi.fn(async () => null),
+      };
+      const svc = new TeamProvisioningService(
+        undefined,
+        undefined,
+        membersMetaStore as any,
+        undefined,
+        mcpConfigBuilder as any,
+        teamMetaStore as any
+      );
+
+      (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+        env: { CODEX_API_KEY: 'test' },
+        authSource: 'codex_runtime',
+      }));
+      (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+      (svc as any).pathExists = vi.fn(async () => false);
+      (svc as any).startFilesystemMonitor = vi.fn();
+      (svc as any).stopFilesystemMonitor = vi.fn();
+      (svc as any).startStallWatchdog = vi.fn();
+      (svc as any).stopStallWatchdog = vi.fn();
+      (svc as any).attachStdoutHandler = vi.fn();
+      (svc as any).attachStderrHandler = vi.fn();
+      (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        selectedModel: 'gpt-5.4',
+        selectedModelKind: 'explicit',
+        resolvedLaunchModel: 'gpt-5.4',
+        catalogId: 'gpt-5.4',
+        catalogSource: 'test',
+        catalogFetchedAt: '2026-04-23T00:00:00.000Z',
+        selectedEffort: 'medium',
+        resolvedEffort: 'medium',
+        selectedFastMode: null,
+        resolvedFastMode: null,
+        fastResolutionReason: null,
+      }));
+
+      return { svc, mcpConfigBuilder, membersMetaStore, teamMetaStore };
+    }
+
+    function readBootstrapSpecFromSpawnArgs(spawnArgs: string[]) {
+      const specIdx = spawnArgs.indexOf('--team-bootstrap-spec');
+      expect(specIdx).toBeGreaterThanOrEqual(0);
+      return JSON.parse(fs.readFileSync(spawnArgs[specIdx + 1], 'utf8')) as {
+        mode: string;
+        team: { name: string; cwd: string };
+        members: Array<{
+          name: string;
+          provider?: string;
+          model?: string;
+          effort?: string;
+          role?: string;
+        }>;
+      };
+    }
+
+    it('starts a pure Codex team through the app createTeam path without a real CLI process', async () => {
+      allowConsoleLogs();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+      vi.mocked(spawnCli).mockReturnValue(createRunningChild() as any);
+
+      const { svc, membersMetaStore } = createSafeLaunchService();
+      const progress: string[] = [];
+      const { runId } = await svc.createTeam(
+        {
+          teamName: 'safe-codex-only-launch',
+          cwd: tempClaudeRoot,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          members: [
+            {
+              name: 'alice',
+              role: 'Reviewer',
+              providerId: 'codex',
+              model: 'gpt-5.4-mini',
+              effort: 'low',
+            },
+            {
+              name: 'bob',
+              role: 'Developer',
+              providerId: 'codex',
+              model: 'gpt-5.4-mini',
+              effort: 'medium',
+            },
+          ],
+        },
+        (event) => progress.push(event.state)
+      );
+
+      const spawnCall = vi.mocked(spawnCli).mock.calls[0];
+      expect(spawnCall?.[0]).toBe('/mock/claude');
+      expect(spawnCall?.[2]).toMatchObject({
+        cwd: tempClaudeRoot,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      const spawnArgs = spawnCall?.[1] as string[];
+      expect(spawnArgs).toEqual(
+        expect.arrayContaining(['--model', 'gpt-5.4', '--effort', 'medium'])
+      );
+
+      const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
+      expect(bootstrapSpec).toMatchObject({
+        mode: 'create',
+        team: { name: 'safe-codex-only-launch', cwd: tempClaudeRoot },
+      });
+      expect(bootstrapSpec.members).toEqual([
+        expect.objectContaining({
+          name: 'alice',
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          effort: 'low',
+          role: 'Reviewer',
+        }),
+        expect.objectContaining({
+          name: 'bob',
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          effort: 'medium',
+          role: 'Developer',
+        }),
+      ]);
+
+      const run = (svc as any).runs.get(runId);
+      expect(run.expectedMembers).toEqual(['alice', 'bob']);
+      expect(run.allEffectiveMembers.map((member: { name: string }) => member.name)).toEqual([
+        'alice',
+        'bob',
+      ]);
+      expect(run.mixedSecondaryLanes).toEqual([]);
+      expect(membersMetaStore.writeMembers).toHaveBeenCalledWith(
+        'safe-codex-only-launch',
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'alice', providerId: 'codex' }),
+          expect.objectContaining({ name: 'bob', providerId: 'codex' }),
+        ]),
+        expect.objectContaining({ providerBackendId: 'codex-native' })
+      );
+      expect(progress).toEqual(expect.arrayContaining(['validating', 'spawning', 'configuring']));
+
+      await svc.cancelProvisioning(runId);
+    });
+
+    it('routes a pure OpenCode team directly through the runtime adapter without spawning the CLI lane', async () => {
+      allowConsoleLogs();
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        return {
+          runId: String(input.runId),
+          teamName: String(input.teamName),
+          launchPhase: 'finished',
+          teamLaunchState: 'clean_success',
+          leadSessionId: 'opencode-lead-session',
+          members: Object.fromEntries(
+            expectedMembers.map((member) => [
+              member.name,
+              {
+                memberName: member.name,
+                providerId: 'opencode',
+                launchState: 'confirmed_alive',
+                agentToolAccepted: true,
+                runtimeAlive: true,
+                bootstrapConfirmed: true,
+                hardFailure: false,
+                diagnostics: [],
+              },
+            ])
+          ),
+          warnings: [],
+          diagnostics: [],
+        };
+      });
+
+      const { svc, membersMetaStore } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          } as any,
+        ])
+      );
+      const progress: string[] = [];
+
+      const { runId } = await svc.createTeam(
+        {
+          teamName: 'safe-opencode-only-launch',
+          cwd: tempClaudeRoot,
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'big-pickle',
+          effort: 'medium',
+          members: [
+            {
+              name: 'bob',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            },
+            {
+              name: 'tom',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'nemotron-3-super-free',
+            },
+          ],
+        },
+        (event) => progress.push(event.state)
+      );
+
+      expect(runId).toEqual(expect.any(String));
+      expect(spawnCli).not.toHaveBeenCalled();
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'primary',
+          providerId: 'opencode',
+          model: 'big-pickle',
+          effort: 'medium',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            }),
+            expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              model: 'nemotron-3-super-free',
+            }),
+          ],
+        })
+      );
+      expect(membersMetaStore.writeMembers).toHaveBeenCalledWith(
+        'safe-opencode-only-launch',
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'bob', providerId: 'opencode' }),
+          expect.objectContaining({ name: 'tom', providerId: 'opencode' }),
+        ]),
+        expect.objectContaining({ providerBackendId: 'adapter' })
+      );
+
+      const config = JSON.parse(
+        fs.readFileSync(
+          path.join(tempTeamsBase, 'safe-opencode-only-launch', 'config.json'),
+          'utf8'
+        )
+      ) as { members: Array<{ name: string; providerId?: string; model?: string }> };
+      expect(config.members).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'team-lead',
+            providerId: 'opencode',
+            model: 'big-pickle',
+          }),
+          expect.objectContaining({
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+          }),
+          expect.objectContaining({
+            name: 'tom',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+          }),
+        ])
+      );
+
+      const publicStatuses = await svc.getMemberSpawnStatuses('safe-opencode-only-launch');
+      expect(publicStatuses.statuses.bob).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(publicStatuses.statuses.tom).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(publicStatuses.teamLaunchState).toBe('clean_success');
+      expect(progress).toEqual(expect.arrayContaining(['validating', 'spawning', 'ready']));
+    });
+
+    it('keeps Codex in the primary CLI lane and starts OpenCode teammates as secondary runtime lanes', async () => {
+      allowConsoleLogs();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+      vi.mocked(spawnCli).mockReturnValue(createRunningChild() as any);
+
+      const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
+        const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const memberName = expectedMembers[0]?.name ?? 'unknown';
+        return {
+          runId: String(input.runId),
+          teamName: String(input.teamName),
+          launchPhase: 'finished',
+          teamLaunchState: 'clean_success',
+          members: {
+            [memberName]: {
+              memberName,
+              providerId: 'opencode',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              diagnostics: [],
+            },
+          },
+          warnings: [],
+          diagnostics: [],
+        };
+      });
+      const adapterStop = vi.fn(async () => {});
+
+      const { svc, membersMetaStore } = createSafeLaunchService();
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: adapterLaunch,
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as any,
+        ])
+      );
+
+      const { runId } = await svc.createTeam(
+        {
+          teamName: 'safe-mixed-codex-opencode-launch',
+          cwd: tempClaudeRoot,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          members: [
+            {
+              name: 'alice',
+              role: 'Reviewer',
+              providerId: 'codex',
+              model: 'gpt-5.4-mini',
+              effort: 'low',
+            },
+            {
+              name: 'bob',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            },
+            {
+              name: 'tom',
+              role: 'Developer',
+              providerId: 'opencode',
+              model: 'nemotron-3-super-free',
+            },
+          ],
+        },
+        () => {}
+      );
+
+      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
+      expect(bootstrapSpec.members).toEqual([
+        expect.objectContaining({
+          name: 'alice',
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+        }),
+      ]);
+
+      const run = (svc as any).runs.get(runId);
+      expect(run.expectedMembers).toEqual(['alice']);
+      expect(run.effectiveMembers.map((member: { name: string }) => member.name)).toEqual([
+        'alice',
+      ]);
+      expect(run.allEffectiveMembers.map((member: { name: string }) => member.name)).toEqual([
+        'alice',
+        'bob',
+        'tom',
+      ]);
+      expect(run.mixedSecondaryLanes).toEqual([
+        expect.objectContaining({
+          laneId: 'secondary:opencode:bob',
+          state: 'queued',
+          member: expect.objectContaining({
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+          }),
+        }),
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          state: 'queued',
+          member: expect.objectContaining({
+            name: 'tom',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+          }),
+        }),
+      ]);
+      expect(membersMetaStore.writeMembers).toHaveBeenCalledWith(
+        'safe-mixed-codex-opencode-launch',
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'alice', providerId: 'codex' }),
+          expect.objectContaining({ name: 'bob', providerId: 'opencode' }),
+          expect.objectContaining({ name: 'tom', providerId: 'opencode' }),
+        ]),
+        expect.objectContaining({ providerBackendId: 'codex-native' })
+      );
+
+      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      await vi.waitFor(() => expect(adapterLaunch).toHaveBeenCalledTimes(2));
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            }),
+          ],
+        })
+      );
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          providerId: 'opencode',
+          model: 'nemotron-3-super-free',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              model: 'nemotron-3-super-free',
+            }),
+          ],
+        })
+      );
+      await vi.waitFor(() => {
+        expect(run.mixedSecondaryLanes).toEqual([
+          expect.objectContaining({
+            laneId: 'secondary:opencode:bob',
+            state: 'finished',
+            result: expect.objectContaining({ teamLaunchState: 'clean_success' }),
+          }),
+          expect.objectContaining({
+            laneId: 'secondary:opencode:tom',
+            state: 'finished',
+            result: expect.objectContaining({ teamLaunchState: 'clean_success' }),
+          }),
+        ]);
+      });
+      const publicStatuses = await svc.getMemberSpawnStatuses('safe-mixed-codex-opencode-launch');
+      expect(publicStatuses.statuses.bob).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(publicStatuses.statuses.tom).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(publicStatuses.expectedMembers).toEqual(
+        expect.arrayContaining(['alice', 'bob', 'tom'])
+      );
+
+      await svc.cancelProvisioning(runId);
+    });
   });
 
   it('removes generated MCP config when launchTeam spawn fails synchronously', async () => {
@@ -2699,6 +5615,97 @@ describe('TeamProvisioningService', () => {
     expect(result.teamLaunchState).toBe('partial_failure');
   });
 
+  it('marks persisted bootstrap as confirmed when member transcript shows successful member_briefing', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-bootstrap-transcript-success';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'alice-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice', 'bob']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+        firstSpawnAcceptedAt: acceptedAt,
+      },
+      bob: {
+        launchState: 'starting',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+      },
+    });
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      `${JSON.stringify({
+        timestamp: new Date(Date.now() - 10_000).toISOString(),
+        teamName,
+        type: 'user',
+        message: { role: 'user', content: 'Lead bootstrap context' },
+      })}\n`,
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "alice".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: 'item_1',
+                content: `Member briefing for alice on team "${teamName}" (${teamName}).\nTask briefing for alice:\nNo actionable tasks.`,
+                is_error: false,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentNames = vi.fn(() => new Set(['alice']));
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+    });
+    expect(result.statuses.alice?.error).toBeUndefined();
+  });
+
   it('marks an online teammate bootstrap as failed when transcript shows model unavailability', async () => {
     allowConsoleLogs();
     const teamName = 'zz-live-bootstrap-model-unavailable';
@@ -2792,6 +5799,184 @@ describe('TeamProvisioningService', () => {
       'requested model is not available'
     );
     expect(run.provisioningOutputParts.join('\n')).toContain('requested model is not available');
+  });
+
+  it('marks a live teammate bootstrap as confirmed when transcript shows successful member_briefing', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-live-bootstrap-transcript-success';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'alice-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "alice".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'alice',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: `Bootstrap выполнен для \`alice\` в команде \`${teamName}\`.`,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const run = {
+      runId: 'run-live-success-1',
+      teamName,
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+      request: {
+        members: [],
+      },
+      expectedMembers: ['alice'],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          {
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            error: undefined,
+            updatedAt: acceptedAt,
+            runtimeAlive: true,
+            livenessSource: 'process',
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            agentToolAccepted: true,
+            firstSpawnAcceptedAt: acceptedAt,
+            lastHeartbeatAt: undefined,
+          },
+        ],
+      ]),
+      provisioningOutputParts: [],
+      activeToolCalls: new Map(),
+      isLaunch: false,
+    } as any;
+
+    await (svc as any).reconcileBootstrapTranscriptSuccesses(run);
+
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+    expect(run.provisioningOutputParts.join('\n')).toContain('bootstrap confirmed via transcript');
+  });
+
+  it('marks a live teammate bootstrap as confirmed from transcript even when runtime discovery is stale', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-live-bootstrap-transcript-success-without-runtime';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'atlas-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['atlas']);
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'atlas',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "atlas".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'atlas',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: `Bootstrap выполнен для \`atlas\` в команде \`${teamName}\`.`,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const run = {
+      runId: 'run-live-success-2',
+      teamName,
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+      request: {
+        members: [],
+      },
+      expectedMembers: ['atlas'],
+      memberSpawnStatuses: new Map([
+        [
+          'atlas',
+          {
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            error: undefined,
+            updatedAt: acceptedAt,
+            runtimeAlive: false,
+            livenessSource: undefined,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            agentToolAccepted: true,
+            firstSpawnAcceptedAt: acceptedAt,
+            lastHeartbeatAt: undefined,
+          },
+        ],
+      ]),
+      provisioningOutputParts: [],
+      activeToolCalls: new Map(),
+      isLaunch: false,
+    } as any;
+
+    await (svc as any).reconcileBootstrapTranscriptSuccesses(run);
+
+    expect(run.memberSpawnStatuses.get('atlas')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: false,
+      bootstrapConfirmed: true,
+    });
+    expect(run.provisioningOutputParts.join('\n')).toContain('bootstrap confirmed via transcript');
   });
 
   it('marks a persisted online teammate bootstrap as failed when transcript shows model unavailability', async () => {
@@ -2934,6 +6119,37 @@ describe('TeamProvisioningService', () => {
     expect(run.memberSpawnLeadInboxCursorByMember.get('alice')).toEqual({
       timestamp: '2026-04-16T10:00:00.000Z',
       messageId: 'msg-1',
+    });
+  });
+
+  it('maps suffixed teammate heartbeats back onto the expected member during live refresh', async () => {
+    const svc = new TeamProvisioningService();
+    const run = createMemberSpawnRun({
+      startedAt: '2026-04-16T09:00:00.000Z',
+      expectedMembers: ['alice'],
+    });
+
+    vi.spyOn((svc as any).inboxReader, 'getMessagesFor').mockResolvedValue([
+      {
+        from: 'alice-2',
+        text: '{"type":"heartbeat","timestamp":"2026-04-16T10:00:00.000Z"}',
+        timestamp: '2026-04-16T10:00:00.000Z',
+        messageId: 'msg-suffixed',
+        read: false,
+      },
+    ]);
+
+    await (svc as any).refreshMemberSpawnStatusesFromLeadInbox(run);
+
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      lastHeartbeatAt: '2026-04-16T10:00:00.000Z',
+    });
+    expect(run.memberSpawnLeadInboxCursorByMember.get('alice')).toEqual({
+      timestamp: '2026-04-16T10:00:00.000Z',
+      messageId: 'msg-suffixed',
     });
   });
 
@@ -3380,6 +6596,43 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('maps suffixed live runtime metadata keys back onto canonical spawn statuses', async () => {
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'bob-2',
+            {
+              alive: true,
+              model: 'gpt-5.2',
+            },
+          ],
+        ])
+    );
+
+    const result = await (svc as any).attachLiveRuntimeMetadataToStatuses('beacon-desk-4', {
+      bob: createMemberSpawnStatusEntry({
+        status: 'error',
+        launchState: 'failed_to_start',
+        error: 'Teammate did not join within the launch grace window.',
+        hardFailure: true,
+        hardFailureReason: 'Teammate did not join within the launch grace window.',
+      }),
+    });
+
+    expect(result.bob).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      runtimeModel: 'gpt-5.2',
+      livenessSource: 'process',
+    });
+  });
+
   it('does not clear an explicit restart failure just because the old runtime is still alive', async () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
@@ -3643,5 +6896,863 @@ describe('TeamProvisioningService', () => {
       hardFailureReason: undefined,
       agentToolAccepted: true,
     });
+  });
+
+  it('reconciles extra persisted launch members when bootstrap state proves they were registered', async () => {
+    const teamName = 'registered-bootstrap-extra-member-team';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify(
+        createPersistedLaunchSnapshot({
+          teamName,
+          leadSessionId: 'lead-session',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob'],
+          members: {
+            alice: {
+              name: 'alice',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: new Date().toISOString(),
+            },
+            bob: {
+              name: 'bob',
+              launchState: 'failed_to_start',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: 'Teammate was never spawned during launch.',
+              lastEvaluatedAt: new Date().toISOString(),
+            },
+          },
+          updatedAt: new Date().toISOString(),
+        })
+      ),
+      'utf8'
+    );
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'bob',
+          status: 'registered',
+          lastAttemptAt: Date.now() - 60_000,
+          lastObservedAt: Date.now() - 60_000,
+        },
+      ],
+      new Date(Date.now() - 30_000).toISOString()
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.expectedMembers).toEqual(['alice', 'bob']);
+    expect(result.statuses.bob).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_bootstrap',
+      hardFailure: false,
+      hardFailureReason: undefined,
+      agentToolAccepted: true,
+    });
+  });
+
+  it('treats suffixed live runtime names as alive during persisted launch reconcile', async () => {
+    const teamName = 'suffixed-live-runtime-team';
+    const leadSessionId = 'lead-session';
+    writeLaunchConfig(teamName, '/Users/test/proj', leadSessionId, ['alice']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+        firstSpawnAcceptedAt: new Date(Date.now() - 5_000).toISOString(),
+      },
+    });
+
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentNames = vi.fn(async () => new Set(['alice-2']));
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+    });
+  });
+
+  it('treats suffixed persisted heartbeat senders as the expected member during reconcile', async () => {
+    const teamName = 'suffixed-heartbeat-reconcile-team';
+    const svc = new TeamProvisioningService();
+    (svc as any).launchStateStore = {
+      read: vi.fn(async () =>
+        createPersistedLaunchSnapshot({
+          teamName,
+          leadSessionId: 'lead-session',
+          launchPhase: 'active',
+          expectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              hardFailureReason: undefined,
+              firstSpawnAcceptedAt: '2026-04-16T09:55:00.000Z',
+              lastEvaluatedAt: '2026-04-16T09:55:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              launchState: 'starting',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-16T09:55:00.000Z',
+            },
+          },
+          updatedAt: '2026-04-16T09:55:00.000Z',
+        })
+      ),
+      write: vi.fn(async () => {}),
+      clear: vi.fn(async () => {}),
+    };
+    fs.mkdirSync(path.join(tempTeamsBase, teamName, 'inboxes'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tempTeamsBase, teamName, 'inboxes', 'team-lead.json'),
+      JSON.stringify(
+        [
+          {
+            from: 'alice-2',
+            text: 'heartbeat',
+            timestamp: '2026-04-16T10:00:00.000Z',
+            messageId: 'msg-suffixed-reconcile',
+            read: false,
+          },
+        ],
+        null,
+        2
+      )
+    );
+    (svc as any).getLiveTeamAgentNames = vi.fn(async () => new Set<string>());
+
+    const result = await (svc as any).reconcilePersistedLaunchState(teamName);
+
+    expect(result.snapshot.members.alice).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      lastHeartbeatAt: '2026-04-16T10:00:00.000Z',
+    });
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+  });
+
+  it('returns persisted expectedMembers as the union of expected and materialized launch members', async () => {
+    const teamName = 'persisted-union-member-spawn-team';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify(
+        createPersistedLaunchSnapshot({
+          teamName,
+          leadSessionId: 'lead-session',
+          launchPhase: 'active',
+          expectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              launchState: 'runtime_pending_permission',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['perm-bob'],
+              lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+            },
+          },
+          updatedAt: '2026-04-23T10:00:00.000Z',
+        })
+      ),
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.expectedMembers).toEqual(['alice', 'bob']);
+    expect(result.statuses.bob).toMatchObject({
+      launchState: 'runtime_pending_permission',
+    });
+  });
+
+  it('recovers stale mixed secondary lanes when lanes.json says active but lane state is missing', async () => {
+    const teamName = 'signal-ops-6212';
+    writeTeamMeta(teamName, {
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+    });
+    writeMembersMeta(teamName, [
+      {
+        name: 'atlas',
+        providerId: 'opencode',
+        model: 'opencode/nemotron-3-super-free',
+      },
+      {
+        name: 'bob',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+      {
+        name: 'nova',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+      {
+        name: 'tom',
+        providerId: 'opencode',
+        model: 'opencode/minimax-m2.5-free',
+      },
+    ]);
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['bob', 'nova']);
+    writeBootstrapState(teamName, [
+      { name: 'bob', status: 'registered' },
+      { name: 'nova', status: 'registered' },
+    ]);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:atlas',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:tom',
+      state: 'active',
+    });
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.launchPhase).toBe('reconciled');
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['atlas', 'bob', 'nova', 'tom']));
+    expect(result.statuses.atlas).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      error: expect.stringContaining('no lane state exists on disk'),
+    });
+    expect(result.statuses.tom).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      error: expect.stringContaining('no lane state exists on disk'),
+    });
+    await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:atlas': {
+          state: 'degraded',
+        },
+        'secondary:opencode:tom': {
+          state: 'degraded',
+        },
+      },
+    });
+    await expect(fsPromises.readFile(getTeamLaunchStatePath(teamName), 'utf8')).resolves.toContain(
+      '"secondary:opencode:atlas"'
+    );
+  });
+
+  it('recovers stale mixed secondary lanes from live OpenCode runtime reconcile before degrading them', async () => {
+    const teamName = 'relay-works-7';
+    writeTeamMeta(teamName, {
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+    });
+    writeMembersMeta(teamName, [
+      {
+        name: 'atlas',
+        providerId: 'opencode',
+        model: 'opencode/nemotron-3-super-free',
+      },
+      {
+        name: 'bob',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+      {
+        name: 'nova',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+      {
+        name: 'tom',
+        providerId: 'opencode',
+        model: 'opencode/minimax-m2.5-free',
+      },
+    ]);
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['bob', 'nova']);
+    writeBootstrapState(teamName, [
+      { name: 'bob', status: 'registered' },
+      { name: 'nova', status: 'registered' },
+    ]);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:atlas',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:tom',
+      state: 'active',
+    });
+
+    const adapterReconcile = vi.fn(async (input: Record<string, unknown>) => {
+      const member = (input.expectedMembers as Array<{ name: string }>)[0]?.name;
+      return {
+        runId: String(input.runId),
+        teamName,
+        launchPhase: 'reconciled',
+        teamLaunchState: 'clean_success',
+        members: member
+          ? {
+              [member]: {
+                memberName: member,
+                providerId: 'opencode',
+                launchState: 'confirmed_alive',
+                agentToolAccepted: true,
+                runtimeAlive: true,
+                bootstrapConfirmed: true,
+                hardFailure: false,
+                diagnostics: ['bootstrap confirmed'],
+              },
+            }
+          : {},
+        snapshot: null,
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: adapterReconcile,
+          stop: vi.fn(),
+        } as any,
+      ])
+    );
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(adapterReconcile).toHaveBeenCalledTimes(2);
+    expect(adapterReconcile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        laneId: 'secondary:opencode:atlas',
+        reason: 'startup_recovery',
+        expectedMembers: [
+          expect.objectContaining({
+            name: 'atlas',
+            providerId: 'opencode',
+            cwd: '/Users/test/proj',
+          }),
+        ],
+      })
+    );
+    expect(adapterReconcile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        laneId: 'secondary:opencode:tom',
+        reason: 'startup_recovery',
+        expectedMembers: [
+          expect.objectContaining({
+            name: 'tom',
+            providerId: 'opencode',
+            cwd: '/Users/test/proj',
+          }),
+        ],
+      })
+    );
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['atlas', 'bob', 'nova', 'tom']));
+    expect(result.statuses.atlas).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(result.statuses.tom).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:atlas': {
+          state: 'active',
+        },
+        'secondary:opencode:tom': {
+          state: 'active',
+        },
+      },
+    });
+  });
+
+  it('reconciles stale persisted mixed pending OpenCode lanes instead of keeping them pending forever', async () => {
+    const teamName = 'signal-ops-7';
+    writeTeamMeta(teamName, {
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+    });
+    writeMembersMeta(teamName, [
+      {
+        name: 'alice',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+      },
+      {
+        name: 'jack',
+        providerId: 'opencode',
+        model: 'opencode/ling-2.6-flash-free',
+      },
+    ]);
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['alice']);
+    writeBootstrapState(teamName, [{ name: 'alice', status: 'registered' }]);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:jack',
+      state: 'active',
+    });
+
+    fs.writeFileSync(
+      getTeamLaunchStatePath(teamName),
+      `${JSON.stringify(
+        {
+          version: 2,
+          teamName,
+          updatedAt: '2026-04-23T10:00:00.000Z',
+          expectedMembers: ['alice', 'jack'],
+          bootstrapExpectedMembers: ['alice'],
+          leadSessionId: 'lead-session',
+          launchPhase: 'finished',
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+            },
+            jack: {
+              name: 'jack',
+              providerId: 'opencode',
+              model: 'opencode/ling-2.6-flash-free',
+              laneId: 'secondary:opencode:jack',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'starting',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+              diagnostics: ['Launching through OpenCode secondary lane.'],
+            },
+          },
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 0,
+          },
+          teamLaunchState: 'partial_pending',
+        },
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.statuses.jack).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      error: expect.stringContaining('no lane state exists on disk'),
+    });
+    await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:jack': {
+          state: 'degraded',
+        },
+      },
+    });
+  });
+
+  it('includes queued OpenCode secondary lanes in live spawn statuses before the final mixed snapshot settles', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'refreshMemberSpawnStatusesFromLeadInbox').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'maybeAuditMemberSpawnStatuses').mockResolvedValue(undefined);
+
+    const run = createMemberSpawnRun({
+      teamName: 'mixed-live-team',
+      runId: 'run-mixed-live-1',
+      expectedMembers: ['bob'],
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          createMemberSpawnStatusEntry({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            livenessSource: 'heartbeat',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = true;
+    run.request = {
+      teamName: 'mixed-live-team',
+      cwd: '/tmp/mixed-live-team',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+      members: [],
+    };
+    run.effectiveMembers = [
+      {
+        name: 'bob',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+    ];
+    run.mixedSecondaryLanes = [
+      {
+        laneId: 'secondary:opencode:atlas',
+        providerId: 'opencode',
+        member: {
+          name: 'atlas',
+          providerId: 'opencode',
+          model: 'opencode/nemotron-3-super-free',
+        },
+        runId: null,
+        state: 'queued',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      },
+    ];
+    run.detectedSessionId = 'lead-session';
+
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    const result = await svc.getMemberSpawnStatuses(run.teamName);
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['bob', 'atlas']));
+    expect(result.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(result.statuses.atlas).toMatchObject({
+      status: 'spawning',
+      launchState: 'starting',
+    });
+  });
+
+  it('keeps finished OpenCode secondary lanes pending when runtime evidence has not materialized yet', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'refreshMemberSpawnStatusesFromLeadInbox').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'maybeAuditMemberSpawnStatuses').mockResolvedValue(undefined);
+
+    const run = createMemberSpawnRun({
+      teamName: 'mixed-live-finished-no-evidence',
+      runId: 'run-mixed-live-2',
+      expectedMembers: ['bob'],
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          createMemberSpawnStatusEntry({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            livenessSource: 'heartbeat',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = true;
+    run.request = {
+      teamName: 'mixed-live-finished-no-evidence',
+      cwd: '/tmp/mixed-live-finished-no-evidence',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+      members: [],
+    };
+    run.effectiveMembers = [
+      {
+        name: 'bob',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+    ];
+    run.mixedSecondaryLanes = [
+      {
+        laneId: 'secondary:opencode:atlas',
+        providerId: 'opencode',
+        member: {
+          name: 'atlas',
+          providerId: 'opencode',
+          model: 'opencode/nemotron-3-super-free',
+        },
+        runId: 'lane-run-atlas',
+        state: 'finished',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      },
+    ];
+    run.detectedSessionId = 'lead-session';
+
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    const result = await svc.getMemberSpawnStatuses(run.teamName);
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['bob', 'atlas']));
+    expect(result.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(result.statuses.atlas).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_bootstrap',
+      hardFailure: false,
+      hardFailureReason: undefined,
+    });
+  });
+
+  it('includes queued OpenCode secondary lanes in live spawn statuses during createTeam runs', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'refreshMemberSpawnStatusesFromLeadInbox').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'maybeAuditMemberSpawnStatuses').mockResolvedValue(undefined);
+
+    const run = createMemberSpawnRun({
+      teamName: 'mixed-create-team',
+      runId: 'run-mixed-create-1',
+      expectedMembers: ['alice'],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          createMemberSpawnStatusEntry({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            livenessSource: 'heartbeat',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = false;
+    run.request = {
+      teamName: 'mixed-create-team',
+      cwd: '/tmp/mixed-create-team',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+      members: [],
+    };
+    run.effectiveMembers = [
+      {
+        name: 'alice',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+      },
+    ];
+    run.mixedSecondaryLanes = [
+      {
+        laneId: 'secondary:opencode:bob',
+        providerId: 'opencode',
+        member: {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+        },
+        runId: null,
+        state: 'queued',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      },
+      {
+        laneId: 'secondary:opencode:tom',
+        providerId: 'opencode',
+        member: {
+          name: 'tom',
+          providerId: 'opencode',
+          model: 'opencode/minimax-m2.5-free',
+        },
+        runId: null,
+        state: 'queued',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      },
+    ];
+    run.detectedSessionId = 'lead-session';
+
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    const result = await svc.getMemberSpawnStatuses(run.teamName);
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['alice', 'bob', 'tom']));
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(result.statuses.bob).toMatchObject({
+      status: 'spawning',
+      launchState: 'starting',
+    });
+    expect(result.statuses.tom).toMatchObject({
+      status: 'spawning',
+      launchState: 'starting',
+    });
+  });
+
+  it('syncs stale live mixed-lane failures from a healthier persisted snapshot', async () => {
+    const svc = new TeamProvisioningService();
+    const run = createMemberSpawnRun({
+      teamName: 'forge-labs-4',
+      runId: 'run-mixed-sync-1',
+      expectedMembers: ['alice', 'jack'],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          createMemberSpawnStatusEntry({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+          }),
+        ],
+        [
+          'jack',
+          createMemberSpawnStatusEntry({
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            error: 'Teammate was never spawned during launch.',
+            hardFailureReason: 'Teammate was never spawned during launch.',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = true;
+
+    const snapshot = createPersistedLaunchSnapshot({
+      teamName: 'forge-labs-4',
+      leadSessionId: 'lead-session',
+      launchPhase: 'finished',
+      expectedMembers: ['alice', 'jack'],
+      members: {
+        alice: {
+          name: 'alice',
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          lastEvaluatedAt: '2026-04-23T08:08:27.067Z',
+        },
+        jack: {
+          name: 'jack',
+          providerId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastEvaluatedAt: '2026-04-23T08:08:27.067Z',
+        },
+      },
+      updatedAt: '2026-04-23T08:08:27.067Z',
+    });
+
+    vi.spyOn(svc as any, 'persistLaunchStateSnapshot').mockResolvedValue(snapshot);
+    vi.spyOn(svc as any, 'isCurrentTrackedRun').mockReturnValue(true);
+
+    await (svc as any).publishMixedSecondaryLaneStatusChange(run, {
+      laneId: 'secondary:opencode:jack',
+      providerId: 'opencode',
+      member: {
+        name: 'jack',
+        providerId: 'opencode',
+        model: 'opencode/ling-2.6-flash-free',
+      },
+      runId: 'lane-run-jack',
+      state: 'finished',
+      result: null,
+      warnings: [],
+      diagnostics: [],
+    });
+
+    expect(run.memberSpawnStatuses.get('jack')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+    });
+    expect(run.expectedMembers).toEqual(['alice', 'jack']);
   });
 });

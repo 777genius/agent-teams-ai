@@ -17,7 +17,12 @@ import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { create } from 'zustand';
 
 import { createChangeReviewSlice } from './slices/changeReviewSlice';
-import { createCliInstallerSlice } from './slices/cliInstallerSlice';
+import {
+  createCliInstallerSlice,
+  getIncompleteMultimodelProviderIds,
+  getModelOnlyFallbackProviderIds,
+  mergeCliStatusPreservingHydratedProviders,
+} from './slices/cliInstallerSlice';
 import { createConfigSlice } from './slices/configSlice';
 import { createConnectionSlice } from './slices/connectionSlice';
 import { createContextSlice } from './slices/contextSlice';
@@ -50,6 +55,7 @@ import type { AppState } from './types';
 import type {
   ActiveToolCall,
   CliInstallerProgress,
+  CliProviderId,
   LeadContextUsage,
   ScheduleChangeEvent,
   TeamChangeEvent,
@@ -1456,7 +1462,31 @@ export function initializeNotificationListeners(): () => void {
           break;
         case 'status':
           if (progress.status) {
-            useStore.setState({ cliStatus: progress.status });
+            let modelOnlyFallbackProviderIds: CliProviderId[] = [];
+            useStore.setState((state) => {
+              const nextStatus = mergeCliStatusPreservingHydratedProviders(
+                state.cliStatus,
+                progress.status!
+              );
+              const incompleteProviderIds = getIncompleteMultimodelProviderIds(nextStatus);
+              modelOnlyFallbackProviderIds = getModelOnlyFallbackProviderIds(nextStatus);
+
+              return {
+                cliStatus: nextStatus,
+                cliProviderStatusLoading:
+                  incompleteProviderIds.length > 0
+                    ? {
+                        ...state.cliProviderStatusLoading,
+                        ...Object.fromEntries(
+                          incompleteProviderIds.map((providerId) => [providerId, true])
+                        ),
+                      }
+                    : state.cliProviderStatusLoading,
+              };
+            });
+            for (const providerId of modelOnlyFallbackProviderIds) {
+              void useStore.getState().fetchCliProviderStatus(providerId, { silent: false });
+            }
           }
           break;
       }

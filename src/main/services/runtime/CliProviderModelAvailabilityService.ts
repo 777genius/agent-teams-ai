@@ -44,7 +44,7 @@ interface ProviderModelAvailabilityCacheEntry {
   providerId: CliProviderId;
   signature: string;
   snapshot: ProviderModelAvailabilitySnapshot;
-  envPromise: Promise<NodeJS.ProcessEnv>;
+  cliEnvPromise: Promise<{ env: NodeJS.ProcessEnv; providerArgs: string[] }>;
 }
 
 type ProviderAvailabilityUpdateHandler = (
@@ -190,10 +190,13 @@ export class CliProviderModelAvailabilityService {
       providerId: context.provider.providerId,
       signature,
       snapshot: createCheckingSnapshot(signature, visibleModels),
-      envPromise: buildProviderAwareCliEnv({
+      cliEnvPromise: buildProviderAwareCliEnv({
         binaryPath: context.binaryPath,
         providerId: context.provider.providerId,
-      }).then((result) => result.env),
+      }).then((result) => ({
+        env: result.env,
+        providerArgs: result.providerArgs ?? [],
+      })),
     };
     this.cache.set(signature, entry);
     this.startProbes(context, entry);
@@ -268,11 +271,15 @@ export class CliProviderModelAvailabilityService {
     modelId: string
   ): Promise<Pick<CliProviderModelAvailability, 'status' | 'reason'>> {
     try {
-      const env = await entry.envPromise;
-      const { stdout } = await execCli(context.binaryPath, buildProviderModelProbeArgs(modelId), {
-        timeout: getProviderModelProbeTimeoutMs(context.provider.providerId),
-        env,
-      });
+      const { env, providerArgs } = await entry.cliEnvPromise;
+      const { stdout } = await execCli(
+        context.binaryPath,
+        [...providerArgs, ...buildProviderModelProbeArgs(modelId)],
+        {
+          timeout: getProviderModelProbeTimeoutMs(context.provider.providerId),
+          env,
+        }
+      );
       const output = stdout.trim();
       if (isProviderModelProbeSuccessOutput(output)) {
         return {

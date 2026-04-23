@@ -57,7 +57,7 @@ export const FullDiffLoadingBanner = ({
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sidebar px-2 py-1 text-[11px] text-text-secondary">
                 <FileDiff className="size-3.5" strokeWidth={1.8} />
-                {snippetCount} snippet{snippetCount === 1 ? '' : 's'} ready
+                {snippetCount} preview{snippetCount === 1 ? '' : 's'} ready
               </span>
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sidebar px-2 py-1 text-[11px] text-text-secondary">
                 <Clock3 className="size-3.5" strokeWidth={1.8} />
@@ -91,8 +91,8 @@ export const FullDiffLoadingBanner = ({
           </div>
           <p className="mt-2 text-[11px] text-text-muted">
             {showFileProgress
-              ? `${readyFilesCount} ready, ${loadingFilesCount} still loading. Snippet previews stay visible below while the remaining baselines are reconstructed.`
-              : 'Snippet previews stay visible below while the exact baseline is reconstructed.'}
+              ? `${readyFilesCount} ready, ${loadingFilesCount} still loading. Preview diffs stay visible below while the remaining baselines are resolved.`
+              : 'Preview diffs stay visible below while the exact baseline is resolved.'}
           </p>
         </div>
       </div>

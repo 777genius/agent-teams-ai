@@ -17,6 +17,18 @@ const REAL_FIXTURE_PATH = path.resolve(
   process.cwd(),
   'test/fixtures/team/task-log-stream-fallback-real.jsonl',
 );
+const ANNOTATED_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-annotated-real.jsonl',
+);
+const ANNOTATED_MULTI_TASK_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-annotated-multi-task-real.jsonl',
+);
+const HISTORICAL_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-historical-board-mcp-real.jsonl',
+);
 
 function createTask(overrides: Partial<TeamTask> = {}): TeamTask {
   return {
@@ -35,6 +47,7 @@ function createAssistantEntry(args: {
   agentName?: string;
   sessionId?: string;
   requestId?: string;
+  model?: string;
 }): Record<string, unknown> {
   return {
     type: 'assistant',
@@ -48,7 +61,7 @@ function createAssistantEntry(args: {
     message: {
       id: `${args.uuid}-msg`,
       role: 'assistant',
-      model: 'claude-test',
+      model: args.model ?? 'claude-test',
       type: 'message',
       stop_reason: 'tool_use',
       stop_sequence: null,
@@ -380,6 +393,171 @@ describe('BoardTaskLogStreamService integration', () => {
 
     expect(response.segments).toHaveLength(1);
     expect(commentResult).toBeUndefined();
+  });
+
+  it('reconstructs board MCP task history when historical transcript rows lack task links', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-historical-board-mcp-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const task = createTask({ owner: 'tom' });
+
+    const lines = [
+      createAssistantEntry({
+        uuid: 'a-start-historical',
+        timestamp: '2026-04-12T18:35:00.000Z',
+        requestId: 'req-start-historical',
+        model: '<synthetic>',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-start-historical',
+            name: 'mcp__agent-teams__task_start',
+            input: {
+              teamName: TEAM_NAME,
+              taskId: TASK_ID,
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-start-historical',
+        timestamp: '2026-04-12T18:35:00.100Z',
+        sourceToolAssistantUUID: 'a-start-historical',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-start-historical',
+            content: 'ok',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-start-historical',
+          id: TASK_ID,
+          displayId: 'c414cd52',
+        },
+      }),
+      createAssistantEntry({
+        uuid: 'a-comment-historical',
+        timestamp: '2026-04-12T18:35:02.000Z',
+        requestId: 'req-comment-historical',
+        model: '<synthetic>',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-comment-historical',
+            name: 'mcp__agent-teams__task_add_comment',
+            input: {
+              teamName: TEAM_NAME,
+              taskId: TASK_ID,
+              text: 'Done',
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-comment-historical',
+        timestamp: '2026-04-12T18:35:02.100Z',
+        sourceToolAssistantUUID: 'a-comment-historical',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-comment-historical',
+            content: 'comment added',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-comment-historical',
+          commentId: 'comment-1',
+          task: {
+            id: TASK_ID,
+            displayId: 'c414cd52',
+          },
+        },
+      }),
+      createAssistantEntry({
+        uuid: 'a-complete-historical',
+        timestamp: '2026-04-12T18:35:04.000Z',
+        requestId: 'req-complete-historical',
+        model: '<synthetic>',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-complete-historical',
+            name: 'mcp__agent-teams__task_complete',
+            input: {
+              teamName: TEAM_NAME,
+              taskId: TASK_ID,
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-complete-historical',
+        timestamp: '2026-04-12T18:35:04.100Z',
+        sourceToolAssistantUUID: 'a-complete-historical',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-complete-historical',
+            content: 'ok',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-complete-historical',
+          id: TASK_ID,
+          displayId: 'c414cd52',
+        },
+      }),
+    ];
+
+    await writeFile(
+      transcriptPath,
+      `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`,
+      'utf8',
+    );
+
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      getContext: async () =>
+        ({
+          transcriptFiles: [transcriptPath],
+          config: {
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        }) as never,
+    };
+
+    const service = new BoardTaskLogStreamService(
+      recordSource as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      taskReader as never,
+      transcriptSourceLocator as never,
+    );
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const toolNames = rawMessages.flatMap((message) =>
+      message.toolCalls.map((toolCall) => toolCall.name),
+    );
+
+    expect(response.source).toBe('transcript');
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(response.defaultFilter).toBe('member:tom');
+    expect(response.segments).toHaveLength(1);
+    expect(toolNames).toContain('mcp__agent-teams__task_start');
+    expect(toolNames).toContain('mcp__agent-teams__task_add_comment');
+    expect(toolNames).toContain('mcp__agent-teams__task_complete');
+    await expect(service.getTaskLogStreamSummary(TEAM_NAME, task.id)).resolves.toEqual({
+      segmentCount: 1,
+    });
   });
 
   it('falls back to task time-window worker logs when explicit execution links are missing', async () => {
@@ -826,6 +1004,122 @@ describe('BoardTaskLogStreamService integration', () => {
     expect(bashCommands).not.toContain('echo alien');
     expect(rawMessages.some((message) => message.uuid === 'u-bash-alice-real')).toBe(false);
   });
+
+  it('reads a real-format annotated transcript fixture and surfaces explicit task-linked logs without fallback windows', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-annotated-real-fixture-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(ANNOTATED_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    const task = createTask();
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+
+    const service = new BoardTaskLogStreamService(recordSource as never);
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const toolNames = rawMessages.flatMap((message) =>
+      message.toolCalls.map((toolCall) => toolCall.name),
+    );
+
+    expect(response.source).toBe('transcript');
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(response.defaultFilter).toBe('member:tom');
+    expect(response.segments).toHaveLength(1);
+    expect(rawMessages.some((message) => message.uuid === 'a-note-annotated-real')).toBe(true);
+    expect(toolNames).toContain('Bash');
+    expect(toolNames).toContain('mcp__agent-teams__task_complete');
+    await expect(service.getTaskLogStreamSummary(TEAM_NAME, task.id)).resolves.toEqual({
+      segmentCount: 1,
+    });
+  });
+
+  it('reads a real-format annotated multi-task fixture and excludes other exact-linked task activity from the same session', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-annotated-multi-task-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(ANNOTATED_MULTI_TASK_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    const task = createTask();
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+
+    const service = new BoardTaskLogStreamService(recordSource as never);
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const toolInputs = rawMessages.flatMap((message) =>
+      message.toolCalls.map((toolCall) => String(toolCall.input.command ?? toolCall.input.text ?? '')),
+    );
+    const serializedContents = rawMessages.map((message) => JSON.stringify(message.content));
+
+    expect(response.source).toBe('transcript');
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(response.defaultFilter).toBe('member:tom');
+    expect(rawMessages.some((message) => message.uuid === 'a-note-target-multi-real')).toBe(true);
+    expect(rawMessages.some((message) => message.uuid === 'a-note-other-multi-real')).toBe(false);
+    expect(toolInputs).toContain('pnpm vitest run reviewer-plan.spec.ts');
+    expect(toolInputs).not.toContain('echo unrelated-task');
+    expect(serializedContents.join(' ')).toContain('Working through the reviewer-plan task now.');
+    expect(serializedContents.join(' ')).not.toContain('unrelated deployment checklist');
+  });
+
+  it('reads a real-format historical board MCP fixture and reconstructs the task stream from tool calls', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-historical-real-fixture-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(HISTORICAL_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    const task = createTask({ owner: 'tom' });
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      getContext: async () =>
+        ({
+          transcriptFiles: [transcriptPath],
+          config: {
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        }) as never,
+    };
+
+    const service = new BoardTaskLogStreamService(
+      recordSource as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      taskReader as never,
+      transcriptSourceLocator as never,
+    );
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const toolNames = rawMessages.flatMap((message) =>
+      message.toolCalls.map((toolCall) => toolCall.name),
+    );
+
+    expect(response.source).toBe('transcript');
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(response.defaultFilter).toBe('member:tom');
+    expect(response.segments).toHaveLength(1);
+    expect(toolNames).toContain('mcp__agent-teams__task_start');
+    expect(toolNames).toContain('mcp__agent-teams__task_add_comment');
+    expect(toolNames).toContain('mcp__agent-teams__task_complete');
+    expect(rawMessages.some((message) => message.uuid === 'a-start-other-historical-real')).toBe(false);
+    await expect(service.getTaskLogStreamSummary(TEAM_NAME, task.id)).resolves.toEqual({
+      segmentCount: 1,
+    });
+  });
+
   it('falls back to createdAt/updatedAt time window when workIntervals are missing', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-created-window-'));
     tempDirs.push(dir);

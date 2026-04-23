@@ -346,6 +346,28 @@ describe('TeamMcpConfigBuilder', () => {
     await builder.removeConfigFile(bogusPath);
   });
 
+  it('removeConfigFile defers Windows locked temp config cleanup without warning', async () => {
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = path.join(
+      tempAppData,
+      'mcp-configs',
+      `agent-teams-mcp-${process.pid}-locked.json`
+    );
+    const originalUnlink = fs.promises.unlink.bind(fs.promises);
+    const unlinkSpy = vi.spyOn(fs.promises, 'unlink').mockImplementation(async (targetPath) => {
+      if (targetPath === configPath) {
+        const error = new Error('EPERM: operation not permitted, unlink') as NodeJS.ErrnoException;
+        error.code = 'EPERM';
+        throw error;
+      }
+      await originalUnlink(targetPath);
+    });
+
+    await builder.removeConfigFile(configPath);
+
+    expect(unlinkSpy).toHaveBeenCalledTimes(4);
+  });
+
   // ── Cleanup: gcOwnConfigs ──
 
   it('gcOwnConfigs removes only files owned by current pid', async () => {

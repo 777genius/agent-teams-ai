@@ -10,7 +10,9 @@ import {
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
+import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -20,7 +22,15 @@ import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { getMemberColorByName } from '@shared/constants/memberColors';
-import { AlertTriangle, ChevronDown, ChevronRight, Info, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  GitBranch,
+  Info,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
@@ -65,6 +75,8 @@ interface MemberDraftRowProps {
   warningText?: string | null;
   disableGeminiOption?: boolean;
   modelIssueText?: string | null;
+  showWorktreeIsolationControls?: boolean;
+  onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
   lockedModelAction?: {
     label: string;
     description?: string;
@@ -111,6 +123,8 @@ export const MemberDraftRow = ({
   warningText,
   disableGeminiOption = false,
   modelIssueText,
+  showWorktreeIsolationControls = false,
+  onWorktreeIsolationChange,
   lockedModelAction,
 }: MemberDraftRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
@@ -201,7 +215,9 @@ export const MemberDraftRow = ({
   const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
   const modelTooltipText = forceInheritedModelSettings
     ? 'Provider, model, and effort are inherited from the lead while sync is enabled.'
-    : (lockedModelAction?.description ?? modelLockReason);
+    : lockProviderModel
+      ? (lockedModelAction?.description ?? modelLockReason)
+      : undefined;
   const hasModelIssue = Boolean(modelIssueText);
   const runtimeSummary = formatTeamModelSummary(
     effectiveProviderId,
@@ -327,6 +343,41 @@ export const MemberDraftRow = ({
               ) : null}
             </Tooltip>
           </div>
+          {showWorktreeIsolationControls ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    'flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 text-xs text-[var(--color-text-secondary)]',
+                    isRemoved && 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <Checkbox
+                    id={`member-${member.id}-worktree-isolation`}
+                    checked={member.isolation === 'worktree'}
+                    disabled={isRemoved}
+                    onCheckedChange={(checked) =>
+                      onWorktreeIsolationChange?.(member.id, checked === true)
+                    }
+                  />
+                  <Label
+                    htmlFor={`member-${member.id}-worktree-isolation`}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-1.5 text-xs font-normal',
+                      isRemoved && 'cursor-not-allowed'
+                    )}
+                  >
+                    <GitBranch className="size-3.5 shrink-0" />
+                    <span>Worktree</span>
+                  </Label>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-64 text-xs leading-relaxed">
+                Run this teammate in a separate git worktree. Apply/reject changes targets that
+                worktree, not the lead workspace.
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
           {hideActionButton ? null : isRemoved ? (
             <Button
               variant="outline"

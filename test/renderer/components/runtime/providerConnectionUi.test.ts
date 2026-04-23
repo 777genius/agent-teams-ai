@@ -5,6 +5,7 @@ import {
   getProviderConnectionModeSummary,
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
+  isProviderInventoryOnlyFallback,
   isConnectionManagedRuntimeProvider,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
@@ -131,6 +132,41 @@ function createCodexProvider(
         ...overrides?.codex,
       },
     },
+  };
+}
+
+function createOpenCodeProvider(
+  overrides?: Partial<CliProviderStatus>
+): CliProviderStatus {
+  return {
+    providerId: 'opencode',
+    displayName: 'OpenCode',
+    supported: true,
+    authenticated: true,
+    authMethod: 'opencode_managed',
+    verificationState: 'verified',
+    statusMessage: null,
+    detailMessage: null,
+    models: ['opencode/minimax-m2.5-free'],
+    modelAvailability: [],
+    modelVerificationState: 'idle',
+    canLoginFromUi: false,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: false,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    externalRuntimeDiagnostics: [],
+    backend: {
+      kind: 'opencode-cli',
+      label: 'OpenCode CLI',
+      authMethodDetail: 'ok',
+    },
+    connection: null,
+    ...overrides,
   };
 }
 
@@ -295,6 +331,34 @@ describe('providerConnectionUi', () => {
     });
 
     expect(formatProviderStatusText(provider)).toBe('Codex native ready');
+  });
+
+  it('treats OpenCode inventory-only fallback as still loading', () => {
+    const provider = createOpenCodeProvider({
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage: null,
+      models: ['opencode/minimax-m2.5-free'],
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
+        extensions: createDefaultCliExtensionCapabilities(),
+      },
+      backend: null,
+      connection: {
+        supportsOAuth: false,
+        supportsApiKey: false,
+        configurableAuthModes: [],
+        configuredAuthMode: null,
+        apiKeyConfigured: false,
+        apiKeySource: null,
+      },
+    });
+
+    expect(isProviderInventoryOnlyFallback(provider)).toBe(true);
+    expect(formatProviderStatusText(provider)).toBe('Checking...');
   });
 
   it('surfaces degraded ChatGPT verification warnings instead of flattening them to ready', () => {

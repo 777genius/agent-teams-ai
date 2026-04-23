@@ -1,132 +1,310 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/png" href="./favicon.png" />
-  <title>Agent Teams UI</title>
-  <style>
-    /* Splash: animated gradient background */
-    #splash {
-      position: fixed; inset: 0; z-index: 9999;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: linear-gradient(
-        180deg,
-        #0c0d13 0%,
-        #1a1535 20%,
-        #1e1245 35%,
-        #231740 50%,
-        #1a1535 65%,
-        #151230 80%,
-        #0c0d13 100%
-      );
-      background-size: 100% 300%;
-      animation: splash-bg 6s ease infinite;
-      transition: opacity 0.3s ease-out;
-    }
-    @keyframes splash-bg {
-      0% { background-position: 50% 0%; }
-      50% { background-position: 50% 100%; }
-      100% { background-position: 50% 0%; }
-    }
-    #splash-noise {
-      position: absolute; inset: 0; width: 100%; height: 100%;
-      opacity: 0.03; pointer-events: none;
-    }
-    #splash-logo {
-      margin-bottom: 18px;
-      animation: splash-breathe 3s ease-in-out infinite, splash-glow 3s ease-in-out infinite;
-    }
-    @keyframes splash-breathe {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-    }
-    @keyframes splash-glow {
-      0%, 100% { filter: drop-shadow(0 0 12px rgba(129,140,248,0.4)) drop-shadow(0 0 28px rgba(167,139,250,0.18)); }
-      50% { filter: drop-shadow(0 0 20px rgba(129,140,248,0.6)) drop-shadow(0 0 42px rgba(167,139,250,0.3)); }
-    }
-    #splash-text {
-      font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-      font-size: 15px; font-weight: 500; letter-spacing: 0.05em;
-      color: #a1a1aa;
-    }
-
-    /* Logo node breathing — cycles through 3 agent nodes */
-    @keyframes splash-node {
-      0%, 100% { opacity: 0.18; }
-      12%, 28% { opacity: 1; }
-      45% { opacity: 0.18; }
-    }
-    .splash-node {
-      animation: splash-node 3s cubic-bezier(0.4, 0, 0.2, 1) infinite both;
-    }
-    .splash-edge { transition: opacity 0.3s; }
-
-    /* Light theme splash overrides */
-    :root.light #splash {
-      background: linear-gradient(
-        180deg,
-        #e0e7ff 0%,
-        #c7d2fe 18%,
-        #ddd6fe 36%,
-        #f0abfc 50%,
-        #ddd6fe 64%,
-        #c7d2fe 82%,
-        #e0e7ff 100%
-      );
-      background-size: 100% 300%;
-    }
-    :root.light #splash-text { color: #52525b; }
-    :root.light #splash-noise { opacity: 0.02; }
-    :root.light #splash-logo {
-      animation: splash-breathe 3s ease-in-out infinite, splash-glow-light 3s ease-in-out infinite;
-    }
-    @keyframes splash-glow-light {
-      0%, 100% { filter: drop-shadow(0 0 10px rgba(79,70,229,0.3)) drop-shadow(0 0 24px rgba(139,92,246,0.15)); }
-      50% { filter: drop-shadow(0 0 16px rgba(79,70,229,0.45)) drop-shadow(0 0 36px rgba(139,92,246,0.25)); }
-    }
-  </style>
-  <script>
-    // Flash prevention: Apply cached theme before React loads
-    (function() {
-      try {
-        var theme = localStorage.getItem('claude-devtools-theme-cache');
-        if (theme === 'light') {
-          document.documentElement.classList.add('light');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <title>Agent Teams UI</title>
+    <style>
+      /* Splash: animated gradient background */
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        isolation: isolate;
+        background: linear-gradient(
+          180deg,
+          #0c0d13 0%,
+          #1a1535 20%,
+          #1e1245 35%,
+          #231740 50%,
+          #1a1535 65%,
+          #151230 80%,
+          #0c0d13 100%
+        );
+        background-size: 100% 300%;
+        animation: splash-bg 6s ease infinite;
+        transition:
+          opacity 0.42s ease-out,
+          filter 0.42s ease-out;
+      }
+      #splash.splash-exiting {
+        opacity: 0;
+        filter: blur(8px);
+      }
+      @keyframes splash-bg {
+        0% {
+          background-position: 50% 0%;
         }
-      } catch(e) {}
-    })();
-  </script>
-</head>
-<body>
-  <div id="splash">
-    <!-- SVG noise texture — matte paper grain -->
-    <svg id="splash-noise" xmlns="http://www.w3.org/2000/svg">
-      <filter id="noiseFilter">
-        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
-      </filter>
-      <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
-    </svg>
-    <!-- Logo with animated agent nodes -->
-    <svg id="splash-logo" viewBox="0 0 56 56" width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect class="splash-logo-bg" width="56" height="56" rx="14" fill="#151620"/>
-      <!-- Edges connecting nodes -->
-      <line class="splash-edge" x1="19" y1="19" x2="37" y2="19" stroke="#818cf8" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
-      <line class="splash-edge" x1="37" y1="19" x2="28" y2="37" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
-      <line class="splash-edge" x1="28" y1="37" x2="19" y2="19" stroke="#c084fc" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
-      <!-- Agent nodes -->
-      <circle class="splash-node splash-node-fill" style="animation-delay:0s" cx="19" cy="19" r="5.5" fill="#818cf8"/>
-      <circle class="splash-node splash-node-fill" style="animation-delay:1s" cx="37" cy="19" r="5.5" fill="#a78bfa"/>
-      <circle class="splash-node splash-node-fill" style="animation-delay:2s" cx="28" cy="37" r="6" fill="#c084fc"/>
-      <!-- Core highlights -->
-      <circle class="splash-node splash-core-fill" style="animation-delay:0s" cx="19" cy="19" r="2" fill="#e0e7ff"/>
-      <circle class="splash-node splash-core-fill" style="animation-delay:1s" cx="37" cy="19" r="2" fill="#ede9fe"/>
-      <circle class="splash-node splash-core-fill" style="animation-delay:2s" cx="28" cy="37" r="2.2" fill="#f3e8ff"/>
-    </svg>
-    <div id="splash-text">Agent Teams UI</div>
-  </div>
-  <div id="root"></div>
-  <script type="module" src="./main.tsx"></script>
-</body>
+        50% {
+          background-position: 50% 100%;
+        }
+        100% {
+          background-position: 50% 0%;
+        }
+      }
+      #splash-noise {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.03;
+        pointer-events: none;
+        z-index: 0;
+      }
+      #splash-enhanced-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 1;
+      }
+      #splash-logo,
+      #splash-text {
+        position: relative;
+        z-index: 3;
+      }
+      #splash-logo {
+        margin-bottom: 18px;
+        animation:
+          splash-breathe 3s ease-in-out infinite,
+          splash-glow 3s ease-in-out infinite;
+      }
+      @keyframes splash-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
+      }
+      @keyframes splash-glow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 12px rgba(129, 140, 248, 0.4))
+            drop-shadow(0 0 28px rgba(167, 139, 250, 0.18));
+        }
+        50% {
+          filter: drop-shadow(0 0 20px rgba(129, 140, 248, 0.6))
+            drop-shadow(0 0 42px rgba(167, 139, 250, 0.3));
+        }
+      }
+      #splash-text {
+        font-family:
+          ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+        font-size: 15px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        color: #a1a1aa;
+        text-shadow: 0 0 22px rgba(129, 140, 248, 0.26);
+      }
+
+      /* Logo node breathing — cycles through 3 agent nodes */
+      @keyframes splash-node {
+        0%,
+        100% {
+          opacity: 0.18;
+        }
+        12%,
+        28% {
+          opacity: 1;
+        }
+        45% {
+          opacity: 0.18;
+        }
+      }
+      .splash-node {
+        animation: splash-node 3s cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+      }
+      .splash-edge {
+        transition: opacity 0.3s;
+      }
+
+      /* Light theme splash overrides */
+      :root.light #splash {
+        background: linear-gradient(
+          180deg,
+          #e0e7ff 0%,
+          #c7d2fe 18%,
+          #ddd6fe 36%,
+          #f0abfc 50%,
+          #ddd6fe 64%,
+          #c7d2fe 82%,
+          #e0e7ff 100%
+        );
+        background-size: 100% 300%;
+      }
+      :root.light #splash-text {
+        color: #52525b;
+      }
+      :root.light #splash-noise {
+        opacity: 0.02;
+      }
+      :root.light #splash-logo {
+        animation:
+          splash-breathe 3s ease-in-out infinite,
+          splash-glow-light 3s ease-in-out infinite;
+      }
+      @keyframes splash-glow-light {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.3))
+            drop-shadow(0 0 24px rgba(139, 92, 246, 0.15));
+        }
+        50% {
+          filter: drop-shadow(0 0 16px rgba(79, 70, 229, 0.45))
+            drop-shadow(0 0 36px rgba(139, 92, 246, 0.25));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash,
+        #splash-logo,
+        .splash-node {
+          animation: none !important;
+        }
+      }
+    </style>
+    <script>
+      // Flash prevention: Apply cached theme before React loads
+      (function () {
+        try {
+          window.__claudeTeamsSplashStartedAt = performance.now();
+          var theme = localStorage.getItem('claude-devtools-theme-cache');
+          if (theme === 'light') {
+            document.documentElement.classList.add('light');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="splash">
+      <!-- SVG noise texture — matte paper grain -->
+      <svg id="splash-noise" xmlns="http://www.w3.org/2000/svg">
+        <filter id="noiseFilter">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.65"
+            numOctaves="3"
+            stitchTiles="stitch"
+          />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+      </svg>
+      <!-- Logo with animated agent nodes -->
+      <svg
+        id="splash-logo"
+        viewBox="0 0 56 56"
+        width="56"
+        height="56"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect class="splash-logo-bg" width="56" height="56" rx="14" fill="#151620" />
+        <!-- Edges connecting nodes -->
+        <line
+          class="splash-edge"
+          x1="19"
+          y1="19"
+          x2="37"
+          y2="19"
+          stroke="#818cf8"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <line
+          class="splash-edge"
+          x1="37"
+          y1="19"
+          x2="28"
+          y2="37"
+          stroke="#a78bfa"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <line
+          class="splash-edge"
+          x1="28"
+          y1="37"
+          x2="19"
+          y2="19"
+          stroke="#c084fc"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <!-- Agent nodes -->
+        <circle
+          class="splash-node splash-node-fill"
+          style="animation-delay: 0s"
+          cx="19"
+          cy="19"
+          r="5.5"
+          fill="#818cf8"
+        />
+        <circle
+          class="splash-node splash-node-fill"
+          style="animation-delay: 1s"
+          cx="37"
+          cy="19"
+          r="5.5"
+          fill="#a78bfa"
+        />
+        <circle
+          class="splash-node splash-node-fill"
+          style="animation-delay: 2s"
+          cx="28"
+          cy="37"
+          r="6"
+          fill="#c084fc"
+        />
+        <!-- Core highlights -->
+        <circle
+          class="splash-node splash-core-fill"
+          style="animation-delay: 0s"
+          cx="19"
+          cy="19"
+          r="2"
+          fill="#e0e7ff"
+        />
+        <circle
+          class="splash-node splash-core-fill"
+          style="animation-delay: 1s"
+          cx="37"
+          cy="19"
+          r="2"
+          fill="#ede9fe"
+        />
+        <circle
+          class="splash-node splash-core-fill"
+          style="animation-delay: 2s"
+          cx="28"
+          cy="37"
+          r="2.2"
+          fill="#f3e8ff"
+        />
+      </svg>
+      <div id="splash-text">Agent Teams UI</div>
+    </div>
+    <div id="root"></div>
+    <script type="module">
+      import { startSplashScene } from './components/splash/splashScene.ts';
+
+      const splash = document.getElementById('splash');
+      if (splash && !window.__claudeTeamsSplashScene) {
+        window.__claudeTeamsSplashScene = startSplashScene(splash);
+      }
+    </script>
+    <script type="module" src="./main.tsx"></script>
+  </body>
 </html>

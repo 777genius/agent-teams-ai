@@ -332,6 +332,42 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
+  it('createTeam bootstrap spec includes worktree isolation only for selected teammates', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'worktree-mixed-team',
+        cwd: process.cwd(),
+        members: [
+          { name: 'alice', role: 'developer', isolation: 'worktree' },
+          { name: 'bob', role: 'reviewer' },
+        ],
+      },
+      () => {}
+    );
+
+    const bootstrapSpec = extractBootstrapSpec();
+    expect(bootstrapSpec.members?.[0]).toEqual(
+      expect.objectContaining({ name: 'alice', isolation: 'worktree' })
+    );
+    expect(bootstrapSpec.members?.[1]).toEqual(expect.objectContaining({ name: 'bob' }));
+    expect(bootstrapSpec.members?.[1]).not.toHaveProperty('isolation');
+
+    await svc.cancelProvisioning(runId);
+  });
+
   it('forwards codex provider launch overrides into createTeam runtime args', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
     const { child } = createFakeChild();
@@ -450,6 +486,24 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(message).toContain(
       'If it returns duplicate_skipped with reason already_running, do not report success - it means the previous runtime still appears active and the restart may not have applied.'
     );
+  });
+
+  it('add and restart teammate prompts include worktree isolation only when selected', () => {
+    const addMessage = buildAddMemberSpawnMessage('forge-labs', 'Forge Labs', 'lead', {
+      name: 'alice',
+      isolation: 'worktree',
+    });
+    const normalAddMessage = buildAddMemberSpawnMessage('forge-labs', 'Forge Labs', 'lead', {
+      name: 'bob',
+    });
+    const restartMessage = buildRestartMemberSpawnMessage('forge-labs', 'Forge Labs', 'lead', {
+      name: 'alice',
+      isolation: 'worktree',
+    });
+
+    expect(addMessage).toContain('isolation="worktree"');
+    expect(restartMessage).toContain('isolation="worktree"');
+    expect(normalAddMessage).not.toContain('isolation="worktree"');
   });
 
   it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {
@@ -746,7 +800,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [{ name: 'alice', role: 'developer', providerId: 'codex' }],
+      members: [{ name: 'alice', role: 'developer', providerId: 'codex', isolation: 'worktree' }],
       source: 'config-fallback',
       warning: undefined,
     }));
@@ -810,7 +864,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
-      members: [{ name: 'alice', role: 'developer', providerId: 'codex' }],
+      members: [{ name: 'alice', role: 'developer', providerId: 'codex', isolation: 'worktree' }],
       source: 'config-fallback',
       warning: undefined,
     }));
@@ -831,6 +885,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
     expect(launchArgs).toEqual(
       expect.arrayContaining(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'])
+    );
+    expect(extractBootstrapSpec().members?.[0]).toEqual(
+      expect.objectContaining({
+        name: 'alice',
+        provider: 'codex',
+        isolation: 'worktree',
+      })
     );
 
     await svc.cancelProvisioning(runId);

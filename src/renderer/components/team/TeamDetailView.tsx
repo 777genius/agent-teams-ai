@@ -40,7 +40,12 @@ import {
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import {
+  hasUnresolvedMemberSpawnStatus,
+  MEMBER_SPAWN_STATUS_REFRESH_MS,
+} from '@renderer/utils/memberSpawnStatusPolling';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
+import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
@@ -263,7 +268,12 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
   const message =
     summary?.teamLaunchState === 'partial_pending'
       ? summary.runtimeAlivePendingCount != null && summary.runtimeAlivePendingCount > 0
-        ? `Last launch is still reconciling - ${summary.confirmedCount ?? 0}/${summary.expectedMemberCount ?? summary.memberCount} teammates confirmed alive, ${summary.runtimeAlivePendingCount} runtime${summary.runtimeAlivePendingCount === 1 ? '' : 's'} pending bootstrap`
+        ? buildPendingRuntimeSummaryCopy({
+            confirmedCount: summary.confirmedCount,
+            expectedMemberCount: summary.expectedMemberCount,
+            memberCount: summary.memberCount,
+            runtimeAlivePendingCount: summary.runtimeAlivePendingCount,
+          })
         : 'Last launch is still reconciling'
       : summary?.partialLaunchFailure
         ? summary.missingMemberCount > 0
@@ -368,27 +378,46 @@ const TeamSpawnStatusWatcher = memo(function TeamSpawnStatusWatcher({
   isTeamProvisioning: boolean;
   isTeamAlive?: boolean;
 }): null {
-  const { leadActivity, memberSpawnStatuses, fetchMemberSpawnStatuses } = useStore(
-    useShallow((s) => ({
-      leadActivity: s.leadActivityByTeam[teamName],
-      memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
-      fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
-    }))
-  );
+  const { leadActivity, memberSpawnStatuses, memberSpawnSnapshot, fetchMemberSpawnStatuses } =
+    useStore(
+      useShallow((s) => ({
+        leadActivity: s.leadActivityByTeam[teamName],
+        memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
+        memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
+        fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
+      }))
+    );
 
   useEffect(() => {
+    const hasUnresolvedSpawn = hasUnresolvedMemberSpawnStatus(
+      memberSpawnStatuses,
+      memberSpawnSnapshot
+    );
     const shouldFetchSpawnStatuses =
       isTeamProvisioning ||
+      hasUnresolvedSpawn ||
       (memberSpawnStatuses == null &&
         (isTeamAlive === true || leadActivity === 'active' || leadActivity === 'idle'));
     if (shouldFetchSpawnStatuses) {
       void fetchMemberSpawnStatuses(teamName);
     }
+
+    if (!isTeamProvisioning && !hasUnresolvedSpawn) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void fetchMemberSpawnStatuses(teamName);
+    }, MEMBER_SPAWN_STATUS_REFRESH_MS);
+    return () => {
+      window.clearInterval(interval);
+    };
   }, [
     fetchMemberSpawnStatuses,
     isTeamAlive,
     isTeamProvisioning,
     leadActivity,
+    memberSpawnSnapshot,
     memberSpawnStatuses,
     teamName,
   ]);
@@ -2839,6 +2868,7 @@ export const TeamDetailView = ({
                           name: entry.name,
                           role: entry.role,
                           workflow: entry.workflow,
+                          isolation: entry.isolation,
                           providerId: entry.providerId,
                           model: entry.model,
                           effort: entry.effort,

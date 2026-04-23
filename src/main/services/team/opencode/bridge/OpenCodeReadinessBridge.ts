@@ -1,5 +1,6 @@
 import {
   assertOpenCodeProductionE2EArtifactGate,
+  buildOpenCodeProjectPathFingerprint,
   type OpenCodeProductionE2EEvidence,
 } from '../e2e/OpenCodeProductionE2EEvidence';
 import {
@@ -21,6 +22,8 @@ import type {
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
   OpenCodeReconcileTeamCommandBody,
+  OpenCodeSendMessageCommandBody,
+  OpenCodeSendMessageCommandData,
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
   OpenCodeTeamLaunchMode,
@@ -45,13 +48,20 @@ export interface OpenCodeReadinessBridgeOptions {
   timeoutMs?: number;
   launchTimeoutMs?: number;
   reconcileTimeoutMs?: number;
+  sendTimeoutMs?: number;
   stopTimeoutMs?: number;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
   productionE2eEvidence?: OpenCodeProductionE2EEvidenceReadPort;
 }
 
 export interface OpenCodeProductionE2EEvidenceReadPort {
-  read(input?: { selectedModel?: string | null }): Promise<{
+  read(input?: {
+    selectedModel?: string | null;
+    projectPathFingerprint?: string | null;
+    opencodeVersion?: string | null;
+    binaryFingerprint?: string | null;
+    capabilitySnapshotId?: string | null;
+  }): Promise<{
     ok: boolean;
     evidence: OpenCodeProductionE2EEvidence | null;
     artifactPath: string;
@@ -69,6 +79,7 @@ export interface OpenCodeReadinessBridgeCommandBody {
 const DEFAULT_READINESS_TIMEOUT_MS = 120_000;
 const DEFAULT_LAUNCH_TIMEOUT_MS = 120_000;
 const DEFAULT_RECONCILE_TIMEOUT_MS = 30_000;
+const DEFAULT_SEND_TIMEOUT_MS = 30_000;
 const DEFAULT_STOP_TIMEOUT_MS = 30_000;
 
 export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
@@ -128,8 +139,15 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     }
 
     const expectedModel = input.readiness.modelId ?? input.input.selectedModel;
+    const projectPathFingerprint = buildOpenCodeProjectPathFingerprint(input.input.projectPath);
     const evidenceRead = this.options.productionE2eEvidence
-      ? await this.options.productionE2eEvidence.read({ selectedModel: expectedModel })
+      ? await this.options.productionE2eEvidence.read({
+          selectedModel: expectedModel,
+          projectPathFingerprint,
+          opencodeVersion: input.runtime.version,
+          binaryFingerprint: input.runtime.binaryFingerprint,
+          capabilitySnapshotId: input.runtime.capabilitySnapshotId,
+        })
       : {
           ok: false,
           evidence: null,
@@ -145,6 +163,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
             binaryFingerprint: input.runtime.binaryFingerprint,
             capabilitySnapshotId: input.runtime.capabilitySnapshotId,
             selectedModel: expectedModel,
+            projectPathFingerprint,
             requiredMcpTools: REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
               buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
             ),
@@ -198,6 +217,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeLaunchTeamCommandData
     >('opencode.launchTeam', input, {
       teamName: input.teamName,
+      laneId: input.laneId,
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId,
       cwd: input.projectPath,
@@ -215,6 +235,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeLaunchTeamCommandData
     >('opencode.reconcileTeam', input, {
       teamName: input.teamName,
+      laneId: input.laneId,
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
@@ -230,6 +251,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeStopTeamCommandData
     >('opencode.stopTeam', input, {
       teamName: input.teamName,
+      laneId: input.laneId,
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
@@ -258,11 +280,43 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     };
   }
 
+  async sendOpenCodeTeamMessage(
+    input: OpenCodeSendMessageCommandBody
+  ): Promise<OpenCodeSendMessageCommandData> {
+    const result = await this.bridge.execute<
+      OpenCodeSendMessageCommandBody,
+      OpenCodeSendMessageCommandData
+    >('opencode.sendMessage', input, {
+      cwd: input.projectPath,
+      timeoutMs: this.options.sendTimeoutMs ?? DEFAULT_SEND_TIMEOUT_MS,
+    });
+    if (result.ok) {
+      return result.data;
+    }
+    return {
+      accepted: false,
+      memberName: input.memberName,
+      diagnostics: [
+        {
+          code: result.error.kind,
+          severity: 'error',
+          message: `OpenCode message bridge failed: ${result.error.message}`,
+        },
+        ...result.diagnostics.map((event) => ({
+          code: event.type,
+          severity: event.severity,
+          message: event.message,
+        })),
+      ],
+    };
+  }
+
   private async executeStateChangingCommand<TBody, TData>(
     command: OpenCodeStateChangingTeamCommandName,
     body: TBody,
     input: {
       teamName: string;
+      laneId: string;
       runId: string;
       capabilitySnapshotId: string | null;
       cwd: string;
@@ -274,6 +328,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         return await this.options.stateChangingCommands.execute<TBody, TData>({
           command,
           teamName: input.teamName,
+          laneId: input.laneId,
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
           behaviorFingerprint: null,
@@ -335,6 +390,7 @@ function blockedReadiness(input: {
     state: input.state,
     launchAllowed: false,
     modelId: input.modelId,
+    availableModels: [],
     opencodeVersion: null,
     installMethod: null,
     binaryPath: null,

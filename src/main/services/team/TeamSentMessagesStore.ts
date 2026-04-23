@@ -73,6 +73,7 @@ export class TeamSentMessagesStore {
         timestamp: row.timestamp,
         read: typeof row.read === 'boolean' ? row.read : true,
         taskRefs: Array.isArray(row.taskRefs) ? row.taskRefs : undefined,
+        commentId: typeof row.commentId === 'string' ? row.commentId : undefined,
         summary: typeof row.summary === 'string' ? row.summary : undefined,
         messageId: row.messageId,
         relayOfMessageId:

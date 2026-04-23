@@ -148,9 +148,15 @@ function areMemberSpawnStatusesEquivalent(
       leftEntry.status !== rightEntry?.status ||
       leftEntry.launchState !== rightEntry.launchState ||
       leftEntry.error !== rightEntry.error ||
+      leftEntry.hardFailure !== rightEntry.hardFailure ||
+      leftEntry.hardFailureReason !== rightEntry.hardFailureReason ||
       leftEntry.livenessSource !== rightEntry.livenessSource ||
       leftEntry.runtimeModel !== rightEntry.runtimeModel ||
-      leftEntry.runtimeAlive !== rightEntry.runtimeAlive
+      leftEntry.runtimeAlive !== rightEntry.runtimeAlive ||
+      leftEntry.bootstrapConfirmed !== rightEntry.bootstrapConfirmed ||
+      leftEntry.agentToolAccepted !== rightEntry.agentToolAccepted ||
+      (leftEntry.pendingPermissionRequestIds ?? []).join('\0') !==
+        (rightEntry.pendingPermissionRequestIds ?? []).join('\0')
     ) {
       return false;
     }
@@ -327,7 +333,7 @@ export const MemberList = memo(function MemberList({
           isRemoved ? undefined : runtimeEntry
         )}
         spawnStatus={isRemoved ? undefined : spawnEntry?.status}
-        spawnError={isRemoved ? undefined : spawnEntry?.error}
+        spawnError={isRemoved ? undefined : (spawnEntry?.error ?? spawnEntry?.hardFailureReason)}
         spawnLivenessSource={isRemoved ? undefined : spawnEntry?.livenessSource}
         spawnLaunchState={isRemoved ? undefined : spawnEntry?.launchState}
         spawnRuntimeAlive={isRemoved ? undefined : spawnEntry?.runtimeAlive}

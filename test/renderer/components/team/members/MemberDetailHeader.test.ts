@@ -100,6 +100,37 @@ describe('MemberDetailHeader spawn-aware presence', () => {
     });
   });
 
+  it('shows connecting while the runtime is online but bootstrap is still pending', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailHeader, {
+          member,
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'online',
+          spawnLaunchState: 'runtime_pending_bootstrap',
+          spawnRuntimeAlive: true,
+          spawnLivenessSource: 'process',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('connecting');
+    expect(host.textContent).not.toContain('online');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows runtime retry text after the teammate has already joined', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

@@ -375,8 +375,8 @@ export class RuntimePermissionRequestStore {
     teamName: string;
     visibleProviderRequestIds: Set<string>;
     now: string;
-  }): Promise<string[]> {
-    const expired: string[] = [];
+  }): Promise<Array<Pick<RuntimePermissionRequestRecord, 'appRequestId' | 'memberName'>>> {
+    const expired: Array<Pick<RuntimePermissionRequestRecord, 'appRequestId' | 'memberName'>> = [];
     await this.store.updateLocked((records) =>
       records.map((record) => {
         if (
@@ -387,7 +387,7 @@ export class RuntimePermissionRequestStore {
         ) {
           return record;
         }
-        expired.push(record.appRequestId);
+        expired.push({ appRequestId: record.appRequestId, memberName: record.memberName });
         return {
           ...record,
           state: 'provider_missing' as const,
@@ -536,6 +536,14 @@ export class RuntimePermissionAnswerService {
         .map((pendingRecord) => pendingRecord.appRequestId);
       await this.launchStateStore.updateMember(record.teamName, record.memberName, (member) => ({
         ...member,
+        launchState:
+          remainingMemberPendingIds.length > 0
+            ? 'runtime_pending_permission'
+            : member.launchState === 'confirmed_alive'
+              ? member.launchState
+              : member.bootstrapConfirmed
+                ? 'confirmed_alive'
+                : 'runtime_pending_bootstrap',
         pendingPermissionRequestIds: remainingMemberPendingIds,
         lastRuntimeEventAt: answeredAt,
       }));
@@ -646,6 +654,26 @@ export class RuntimePermissionReconciler {
         data: { expiredCount: expired.length },
         createdAt: now,
       });
+    }
+
+    const clearedMembers = new Set(
+      expired
+        .map((record) => record.memberName)
+        .filter((memberName) => memberName.trim().length > 0)
+        .filter((memberName) => !pendingByMember.has(memberName))
+    );
+    for (const memberName of clearedMembers) {
+      await this.launchStateStore.updateMember(input.teamName, memberName, (member) => ({
+        ...member,
+        launchState:
+          member.launchState === 'confirmed_alive'
+            ? member.launchState
+            : member.bootstrapConfirmed
+              ? 'confirmed_alive'
+              : 'runtime_pending_bootstrap',
+        pendingPermissionRequestIds: [],
+        lastRuntimeEventAt: now,
+      }));
     }
 
     for (const [memberName, requestIds] of pendingByMember) {

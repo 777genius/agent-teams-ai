@@ -1,4 +1,6 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type {
   MemberLaunchState,
@@ -9,6 +11,7 @@ import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
   PersistedTeamLaunchSummary,
+  ProviderModelLaunchIdentity,
   TeamLaunchAggregateState,
 } from '@shared/types';
 
@@ -33,10 +36,28 @@ type RuntimeMemberSpawnState = Pick<
   | 'runtimeAlive'
   | 'bootstrapConfirmed'
   | 'hardFailure'
+  | 'pendingPermissionRequestIds'
   | 'firstSpawnAcceptedAt'
   | 'lastHeartbeatAt'
   | 'updatedAt'
 >;
+
+function normalizePendingPermissionRequestIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const normalized = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+}
+
+function normalizeRuntimePid(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : undefined;
+}
 
 function normalizeMemberName(name: string): string {
   return name.trim();
@@ -45,15 +66,23 @@ function normalizeMemberName(name: string): string {
 function buildDiagnostics(
   member: Pick<
     PersistedTeamLaunchMemberState,
-    'agentToolAccepted' | 'runtimeAlive' | 'bootstrapConfirmed' | 'hardFailureReason' | 'sources'
+    | 'agentToolAccepted'
+    | 'runtimeAlive'
+    | 'bootstrapConfirmed'
+    | 'hardFailureReason'
+    | 'sources'
+    | 'pendingPermissionRequestIds'
   >
 ): string[] {
   const diagnostics: string[] = [];
   if (member.agentToolAccepted) diagnostics.push('spawn accepted');
   if (member.runtimeAlive) diagnostics.push('runtime alive');
   if (member.bootstrapConfirmed) diagnostics.push('late heartbeat received');
-  if (member.runtimeAlive && !member.bootstrapConfirmed)
+  if ((member.pendingPermissionRequestIds?.length ?? 0) > 0) {
+    diagnostics.push('waiting for permission approval');
+  } else if (member.runtimeAlive && !member.bootstrapConfirmed) {
     diagnostics.push('waiting for teammate check-in');
+  }
   if (member.hardFailureReason)
     diagnostics.push(`hard failure reason: ${member.hardFailureReason}`);
   if (member.sources?.duplicateRespawnBlocked) diagnostics.push('respawn blocked as duplicate');
@@ -82,8 +111,14 @@ export function summarizePersistedLaunchMembers(
   let failedCount = 0;
   let runtimeAlivePendingCount = 0;
   const normalizedExpected = expectedMembers.map(normalizeMemberName).filter(Boolean);
+  const memberNames = Array.from(
+    new Set([
+      ...normalizedExpected,
+      ...Object.keys(members).map(normalizeMemberName).filter(Boolean),
+    ])
+  );
 
-  for (const memberName of normalizedExpected) {
+  for (const memberName of memberNames) {
     const entry = members[memberName];
     if (!entry) {
       pendingCount += 1;
@@ -106,10 +141,35 @@ export function summarizePersistedLaunchMembers(
   return { confirmedCount, pendingCount, failedCount, runtimeAlivePendingCount };
 }
 
+export function hasMixedPersistedLaunchMetadata(
+  snapshot: PersistedTeamLaunchSnapshot | null | undefined
+): boolean {
+  if (!snapshot) {
+    return false;
+  }
+  if (
+    Array.isArray(snapshot.bootstrapExpectedMembers) &&
+    snapshot.bootstrapExpectedMembers.join('\u0000') !== snapshot.expectedMembers.join('\u0000')
+  ) {
+    return true;
+  }
+  return Object.values(snapshot.members).some(
+    (member) =>
+      Boolean(member?.laneId) ||
+      Boolean(member?.laneKind) ||
+      Boolean(member?.laneOwnerProviderId) ||
+      Boolean(member?.launchIdentity)
+  );
+}
+
 function deriveMemberLaunchState(
   member: Pick<
     PersistedTeamLaunchMemberState,
-    'hardFailure' | 'bootstrapConfirmed' | 'runtimeAlive' | 'agentToolAccepted'
+    | 'hardFailure'
+    | 'bootstrapConfirmed'
+    | 'runtimeAlive'
+    | 'agentToolAccepted'
+    | 'pendingPermissionRequestIds'
   >
 ): MemberLaunchState {
   if (member.hardFailure) {
@@ -117,6 +177,9 @@ function deriveMemberLaunchState(
   }
   if (member.bootstrapConfirmed) {
     return 'confirmed_alive';
+  }
+  if ((member.pendingPermissionRequestIds?.length ?? 0) > 0) {
+    return 'runtime_pending_permission';
   }
   if (member.runtimeAlive || member.agentToolAccepted) {
     return 'runtime_pending_bootstrap';
@@ -126,6 +189,83 @@ function deriveMemberLaunchState(
 
 function toBoolean(value: unknown): boolean {
   return value === true;
+}
+
+function normalizeFastMode(value: unknown): PersistedTeamLaunchMemberState['selectedFastMode'] {
+  return value === 'inherit' || value === 'on' || value === 'off' ? value : undefined;
+}
+
+function normalizeLaunchIdentity(
+  value: unknown,
+  fallbackProviderId?: PersistedTeamLaunchMemberState['providerId']
+): ProviderModelLaunchIdentity | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  const providerId =
+    normalizeOptionalTeamProviderId(raw.providerId) ??
+    normalizeOptionalTeamProviderId(fallbackProviderId);
+  if (!providerId) {
+    return undefined;
+  }
+  const selectedModelKind =
+    raw.selectedModelKind === 'explicit' || raw.selectedModelKind === 'default'
+      ? raw.selectedModelKind
+      : 'default';
+  const catalogSource =
+    raw.catalogSource === 'anthropic-models-api' ||
+    raw.catalogSource === 'app-server' ||
+    raw.catalogSource === 'static-fallback' ||
+    raw.catalogSource === 'runtime' ||
+    raw.catalogSource === 'unavailable'
+      ? raw.catalogSource
+      : 'unavailable';
+  return {
+    providerId,
+    providerBackendId:
+      migrateProviderBackendId(
+        providerId,
+        typeof raw.providerBackendId === 'string' ? raw.providerBackendId : undefined
+      ) ?? null,
+    selectedModel: typeof raw.selectedModel === 'string' ? raw.selectedModel.trim() || null : null,
+    selectedModelKind,
+    resolvedLaunchModel:
+      typeof raw.resolvedLaunchModel === 'string' ? raw.resolvedLaunchModel.trim() || null : null,
+    catalogId: typeof raw.catalogId === 'string' ? raw.catalogId.trim() || null : null,
+    catalogSource,
+    catalogFetchedAt:
+      typeof raw.catalogFetchedAt === 'string' ? raw.catalogFetchedAt.trim() || null : null,
+    selectedEffort:
+      raw.selectedEffort === 'none' ||
+      raw.selectedEffort === 'minimal' ||
+      raw.selectedEffort === 'low' ||
+      raw.selectedEffort === 'medium' ||
+      raw.selectedEffort === 'high' ||
+      raw.selectedEffort === 'xhigh' ||
+      raw.selectedEffort === 'max'
+        ? raw.selectedEffort
+        : null,
+    resolvedEffort:
+      raw.resolvedEffort === 'none' ||
+      raw.resolvedEffort === 'minimal' ||
+      raw.resolvedEffort === 'low' ||
+      raw.resolvedEffort === 'medium' ||
+      raw.resolvedEffort === 'high' ||
+      raw.resolvedEffort === 'xhigh' ||
+      raw.resolvedEffort === 'max'
+        ? raw.resolvedEffort
+        : null,
+    selectedFastMode:
+      raw.selectedFastMode === 'inherit' ||
+      raw.selectedFastMode === 'on' ||
+      raw.selectedFastMode === 'off'
+        ? raw.selectedFastMode
+        : null,
+    resolvedFastMode: typeof raw.resolvedFastMode === 'boolean' ? raw.resolvedFastMode : null,
+    fastResolutionReason:
+      typeof raw.fastResolutionReason === 'string' ? raw.fastResolutionReason.trim() || null : null,
+  };
 }
 
 function normalizeSources(value: unknown): PersistedTeamLaunchMemberSources | undefined {
@@ -158,8 +298,35 @@ function normalizePersistedMemberState(
   if (!normalizedName || normalizedName === 'user' || isLeadMember({ name: normalizedName })) {
     return null;
   }
+  const providerId = normalizeOptionalTeamProviderId(parsed.providerId);
   const next: PersistedTeamLaunchMemberState = {
     name: normalizedName,
+    providerId,
+    providerBackendId: migrateProviderBackendId(
+      providerId,
+      typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined
+    ),
+    model: typeof parsed.model === 'string' ? parsed.model.trim() || undefined : undefined,
+    effort:
+      parsed.effort === 'none' ||
+      parsed.effort === 'minimal' ||
+      parsed.effort === 'low' ||
+      parsed.effort === 'medium' ||
+      parsed.effort === 'high' ||
+      parsed.effort === 'xhigh' ||
+      parsed.effort === 'max'
+        ? parsed.effort
+        : undefined,
+    selectedFastMode: normalizeFastMode(parsed.selectedFastMode),
+    resolvedFastMode:
+      typeof parsed.resolvedFastMode === 'boolean' ? parsed.resolvedFastMode : undefined,
+    laneId: typeof parsed.laneId === 'string' ? parsed.laneId.trim() || undefined : undefined,
+    laneKind:
+      parsed.laneKind === 'primary' || parsed.laneKind === 'secondary'
+        ? parsed.laneKind
+        : undefined,
+    laneOwnerProviderId: normalizeOptionalTeamProviderId(parsed.laneOwnerProviderId),
+    launchIdentity: normalizeLaunchIdentity(parsed.launchIdentity, providerId),
     launchState: 'starting',
     agentToolAccepted: toBoolean(parsed.agentToolAccepted),
     runtimeAlive: toBoolean(parsed.runtimeAlive),
@@ -169,6 +336,10 @@ function normalizePersistedMemberState(
       typeof parsed.hardFailureReason === 'string' && parsed.hardFailureReason.trim().length > 0
         ? parsed.hardFailureReason.trim()
         : undefined,
+    pendingPermissionRequestIds: normalizePendingPermissionRequestIds(
+      parsed.pendingPermissionRequestIds
+    ),
+    runtimePid: normalizeRuntimePid(parsed.runtimePid),
     firstSpawnAcceptedAt:
       typeof parsed.firstSpawnAcceptedAt === 'string' ? parsed.firstSpawnAcceptedAt : undefined,
     lastHeartbeatAt:
@@ -187,6 +358,7 @@ function normalizePersistedMemberState(
   const launchState =
     parsed.launchState === 'starting' ||
     parsed.launchState === 'runtime_pending_bootstrap' ||
+    parsed.launchState === 'runtime_pending_permission' ||
     parsed.launchState === 'confirmed_alive' ||
     parsed.launchState === 'failed_to_start'
       ? parsed.launchState
@@ -199,6 +371,7 @@ function normalizePersistedMemberState(
 export function createPersistedLaunchSnapshot(params: {
   teamName: string;
   expectedMembers: readonly string[];
+  bootstrapExpectedMembers?: readonly string[];
   leadSessionId?: string;
   launchPhase?: PersistedTeamLaunchPhase;
   members?: Record<string, PersistedTeamLaunchMemberState>;
@@ -212,8 +385,31 @@ export function createPersistedLaunchSnapshot(params: {
         .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }))
     )
   );
+  const bootstrapExpectedMembers = Array.from(
+    new Set(
+      (params.bootstrapExpectedMembers ?? expectedMembers)
+        .map(normalizeMemberName)
+        .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }))
+    )
+  );
   const members = params.members ?? {};
   const launchPhase = params.launchPhase ?? 'active';
+
+  for (const name of expectedMembers) {
+    if (members[name]) {
+      continue;
+    }
+    members[name] = {
+      name,
+      launchState: 'starting',
+      agentToolAccepted: false,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      lastEvaluatedAt: updatedAt,
+      diagnostics: [],
+    };
+  }
 
   // When the launch is over (finished/reconciled), members still in 'starting' state
   // (never spawned — agentToolAccepted is false) are unreachable and should be marked
@@ -222,12 +418,18 @@ export function createPersistedLaunchSnapshot(params: {
   if (launchPhase !== 'active') {
     for (const name of expectedMembers) {
       const member = members[name];
+      const isRecoverableOpenCodeSecondaryLane =
+        member?.laneKind === 'secondary' &&
+        member.laneOwnerProviderId === 'opencode' &&
+        typeof member.laneId === 'string' &&
+        member.laneId.trim().length > 0;
       if (
         member?.launchState === 'starting' &&
         !member.agentToolAccepted &&
         !member.runtimeAlive &&
         !member.bootstrapConfirmed &&
-        !member.hardFailure
+        !member.hardFailure &&
+        !isRecoverableOpenCodeSecondaryLane
       ) {
         member.hardFailure = true;
         member.hardFailureReason =
@@ -246,6 +448,10 @@ export function createPersistedLaunchSnapshot(params: {
     ...(params.leadSessionId ? { leadSessionId: params.leadSessionId } : {}),
     launchPhase,
     expectedMembers,
+    ...(bootstrapExpectedMembers.length > 0 &&
+    bootstrapExpectedMembers.join('\u0000') !== expectedMembers.join('\u0000')
+      ? { bootstrapExpectedMembers }
+      : {}),
     members,
     summary,
     teamLaunchState: deriveTeamLaunchAggregateState(summary),
@@ -283,6 +489,9 @@ export function snapshotFromRuntimeMemberStatuses(params: {
       bootstrapConfirmed: runtime?.bootstrapConfirmed === true,
       hardFailure: runtime?.hardFailure === true || runtime?.launchState === 'failed_to_start',
       hardFailureReason: runtime?.hardFailureReason ?? runtime?.error,
+      pendingPermissionRequestIds: runtime?.pendingPermissionRequestIds?.length
+        ? [...new Set(runtime.pendingPermissionRequestIds)]
+        : undefined,
       firstSpawnAcceptedAt: runtime?.firstSpawnAcceptedAt,
       lastHeartbeatAt: runtime?.lastHeartbeatAt,
       lastRuntimeAliveAt: runtime?.runtimeAlive ? updatedAt : undefined,
@@ -310,7 +519,13 @@ export function snapshotToMemberSpawnStatuses(
 ): Record<string, MemberSpawnStatusEntry> {
   if (!snapshot) return {};
   const statuses: Record<string, MemberSpawnStatusEntry> = {};
-  for (const memberName of snapshot.expectedMembers) {
+  const memberNames = Array.from(
+    new Set([
+      ...snapshot.expectedMembers.map(normalizeMemberName).filter(Boolean),
+      ...Object.keys(snapshot.members).map(normalizeMemberName).filter(Boolean),
+    ])
+  );
+  for (const memberName of memberNames) {
     const entry = snapshot.members[memberName];
     if (!entry) continue;
     let status: MemberSpawnStatusEntry['status'] = 'offline';
@@ -320,7 +535,10 @@ export function snapshotToMemberSpawnStatuses(
     } else if (entry.launchState === 'confirmed_alive') {
       status = 'online';
       livenessSource = 'heartbeat';
-    } else if (entry.launchState === 'runtime_pending_bootstrap') {
+    } else if (
+      entry.launchState === 'runtime_pending_permission' ||
+      entry.launchState === 'runtime_pending_bootstrap'
+    ) {
       status = entry.runtimeAlive ? 'online' : 'waiting';
       livenessSource = entry.runtimeAlive ? 'process' : undefined;
     } else {
@@ -336,6 +554,7 @@ export function snapshotToMemberSpawnStatuses(
       runtimeAlive: entry.runtimeAlive,
       bootstrapConfirmed: entry.bootstrapConfirmed,
       hardFailure: entry.hardFailure,
+      pendingPermissionRequestIds: entry.pendingPermissionRequestIds,
       firstSpawnAcceptedAt: entry.firstSpawnAcceptedAt,
       lastHeartbeatAt: entry.lastHeartbeatAt,
       updatedAt: entry.lastEvaluatedAt,
@@ -382,7 +601,7 @@ export function normalizePersistedLaunchSnapshot(
         name,
         launchState: failed ? 'failed_to_start' : confirmed ? 'confirmed_alive' : 'starting',
         agentToolAccepted: true,
-        runtimeAlive: confirmed,
+        runtimeAlive: false,
         bootstrapConfirmed: confirmed,
         hardFailure: failed,
         hardFailureReason: failed
@@ -401,7 +620,7 @@ export function normalizePersistedLaunchSnapshot(
         typeof maybeLegacy.leadSessionId === 'string' && maybeLegacy.leadSessionId.trim().length > 0
           ? maybeLegacy.leadSessionId.trim()
           : undefined,
-      launchPhase: 'finished',
+      launchPhase: 'reconciled',
       members,
       updatedAt,
     });
@@ -416,6 +635,11 @@ export function normalizePersistedLaunchSnapshot(
         (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
       )
     : [];
+  const bootstrapExpectedMembers = Array.isArray(record.bootstrapExpectedMembers)
+    ? record.bootstrapExpectedMembers.filter(
+        (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
+      )
+    : undefined;
   const updatedAt =
     typeof record.updatedAt === 'string' && record.updatedAt.trim().length > 0
       ? record.updatedAt
@@ -446,6 +670,7 @@ export function normalizePersistedLaunchSnapshot(
       record.launchPhase === 'reconciled'
         ? record.launchPhase
         : 'finished',
+    bootstrapExpectedMembers,
     members: normalizedMembers,
     updatedAt,
   });

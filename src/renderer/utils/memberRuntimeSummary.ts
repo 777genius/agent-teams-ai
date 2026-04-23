@@ -34,6 +34,7 @@ function isMemberLaunchPending(spawnEntry: MemberSpawnStatusEntry | undefined): 
   return (
     spawnEntry.launchState === 'starting' ||
     spawnEntry.launchState === 'runtime_pending_bootstrap' ||
+    spawnEntry.launchState === 'runtime_pending_permission' ||
     spawnEntry.status === 'waiting' ||
     spawnEntry.status === 'spawning'
   );
@@ -45,14 +46,29 @@ export function resolveMemberRuntimeSummary(
   spawnEntry: MemberSpawnStatusEntry | undefined,
   runtimeEntry?: TeamAgentRuntimeEntry
 ): string | undefined {
-  const configuredProvider: TeamProviderId =
-    member.providerId ?? launchParams?.providerId ?? 'anthropic';
-  const configuredModel = member.model?.trim() || launchParams?.model?.trim() || '';
-  const configuredEffort = member.effort ?? launchParams?.effort;
+  const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
+    .providerBackendId;
+  const memberModel = member.model?.trim() || '';
   const runtimeModel = spawnEntry?.runtimeModel?.trim() || runtimeEntry?.runtimeModel?.trim();
+  const inferredMemberProvider =
+    inferTeamProviderIdFromModel(memberModel) ?? inferTeamProviderIdFromModel(runtimeModel);
+  const configuredProvider: TeamProviderId =
+    member.providerId ?? inferredMemberProvider ?? launchParams?.providerId ?? 'anthropic';
+  const memberProviderForInheritance = member.providerId ?? inferredMemberProvider;
+  const inheritsLeadRuntimeDefaults =
+    memberProviderForInheritance == null ||
+    launchParams?.providerId == null ||
+    memberProviderForInheritance === launchParams.providerId;
+  const configuredModel =
+    memberModel || (inheritsLeadRuntimeDefaults ? launchParams?.model?.trim() || '' : '');
+  const configuredEffort =
+    member.effort ?? (inheritsLeadRuntimeDefaults ? launchParams?.effort : undefined);
+  const configuredProviderBackendId =
+    memberProviderBackendId ??
+    (inheritsLeadRuntimeDefaults ? launchParams?.providerBackendId : undefined);
   const backendLabel = normalizeMemberBackendLabel(
     configuredProvider,
-    formatTeamProviderBackendLabel(configuredProvider, launchParams?.providerBackendId)
+    formatTeamProviderBackendLabel(configuredProvider, configuredProviderBackendId)
   );
   const memorySuffix =
     typeof runtimeEntry?.rssBytes === 'number' && runtimeEntry.rssBytes > 0
@@ -66,7 +82,11 @@ export function resolveMemberRuntimeSummary(
   }
 
   if (isMemberLaunchPending(spawnEntry)) {
-    return undefined;
+    if (!configuredModel.length && !memorySuffix) {
+      return undefined;
+    }
+    const summary = formatTeamModelSummary(configuredProvider, configuredModel, configuredEffort);
+    return `${summary}${backendLabel ? ` · ${backendLabel}` : ''}${memorySuffix}`;
   }
 
   const summary = formatTeamModelSummary(configuredProvider, configuredModel, configuredEffort);

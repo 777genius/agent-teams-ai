@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import {
+  getMixedLaunchFallbackRecoveryError,
+  TeamProvisioningService,
+} from '@main/services/team/TeamProvisioningService';
 
 describe('TeamProvisioningService (launch roster discovery)', () => {
   it('inbox fallback keeps -1 names but drops auto-suffixed -2+ when base exists', async () => {
@@ -115,5 +118,41 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
     const result = await (svc as unknown as any).resolveLaunchExpectedMembers('t', configRaw);
     expect(result.source).toBe('config-fallback');
     expect(result.members.map((m: { name: string }) => m.name)).toEqual(['bob']);
+  });
+
+  it('rejects inbox fallback when it would reconstruct a mixed OpenCode side lane without members.meta truth', async () => {
+    const svc = new TeamProvisioningService(
+      {} as never,
+      { listInboxNames: vi.fn(async () => ['tom']) } as never,
+      { getMembers: vi.fn(async () => []) } as never,
+      {} as never
+    );
+
+    const configRaw = JSON.stringify({
+      name: 't',
+      members: [{ name: 'tom', role: 'developer', provider: 'opencode', model: 'minimax-m2.5-free' }],
+    });
+
+    await expect(
+      (svc as unknown as any).resolveLaunchExpectedMembers('t', configRaw, 'codex')
+    ).rejects.toThrow(getMixedLaunchFallbackRecoveryError());
+  });
+
+  it('rejects config fallback when it would reconstruct a mixed OpenCode side lane without members.meta truth', async () => {
+    const svc = new TeamProvisioningService(
+      {} as never,
+      { listInboxNames: vi.fn(async () => []) } as never,
+      { getMembers: vi.fn(async () => []) } as never,
+      {} as never
+    );
+
+    const configRaw = JSON.stringify({
+      name: 't',
+      members: [{ name: 'tom', role: 'developer', provider: 'opencode', model: 'minimax-m2.5-free' }],
+    });
+
+    await expect(
+      (svc as unknown as any).resolveLaunchExpectedMembers('t', configRaw, 'codex')
+    ).rejects.toThrow(getMixedLaunchFallbackRecoveryError());
   });
 });

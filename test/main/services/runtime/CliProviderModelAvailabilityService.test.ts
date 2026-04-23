@@ -152,4 +152,38 @@ describe('CliProviderModelAvailabilityService', () => {
       expect(execCliMock).toHaveBeenCalledTimes(3);
     });
   });
+
+  it('passes provider launch args before codex model probe flags', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+      connectionIssues: {},
+    });
+    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+
+    const service = new CliProviderModelAvailabilityService();
+    service.getSnapshot(createContext(['gpt-5.4']));
+
+    await vi.waitFor(() => {
+      expect(execCliMock).toHaveBeenCalledWith(
+        '/usr/local/bin/claude',
+        [
+          '--settings',
+          '{"codex":{"forced_login_method":"chatgpt"}}',
+          '-p',
+          'Output only the single word PONG.',
+          '--output-format',
+          'text',
+          '--model',
+          'gpt-5.4',
+          '--max-turns',
+          '1',
+          '--no-session-persistence',
+        ],
+        expect.objectContaining({
+          env: { HOME: '/Users/tester' },
+        })
+      );
+    });
+  });
 });

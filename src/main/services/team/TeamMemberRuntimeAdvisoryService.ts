@@ -23,11 +23,16 @@ const RATE_LIMITED_TOKENS = [
   'cooling down',
 ];
 const AUTH_ERROR_TOKENS = [
+  'auth_unavailable',
+  'no auth available',
+  'authentication_failed',
   'unauthorized',
   'forbidden',
   'invalid api key',
   'authentication',
   'api key',
+  'does not have access',
+  'please run /login',
 ];
 const NETWORK_ERROR_TOKENS = [
   'timeout',
@@ -295,8 +300,11 @@ export class TeamMemberRuntimeAdvisoryService {
       if (start > 0) {
         lines.shift();
       }
+      const now = Date.now();
       for (let index = lines.length - 1; index >= 0; index -= 1) {
-        const advisory = this.extractApiRetryAdvisory(lines[index]?.trim() ?? '');
+        const line = lines[index]?.trim() ?? '';
+        const advisory =
+          this.extractApiRetryAdvisory(line, now) ?? this.extractApiErrorAdvisory(line, now);
         if (advisory) {
           return advisory;
         }
@@ -309,7 +317,7 @@ export class TeamMemberRuntimeAdvisoryService {
     }
   }
 
-  private extractApiRetryAdvisory(line: string): MemberRuntimeAdvisory | null {
+  private extractApiRetryAdvisory(line: string, now = Date.now()): MemberRuntimeAdvisory | null {
     if (
       !line ||
       (!line.includes('"subtype":"api_error"') && !line.includes('"subtype": "api_error"'))
@@ -351,7 +359,7 @@ export class TeamMemberRuntimeAdvisoryService {
       }
 
       const retryUntil = observedAt + retryInMs;
-      if (retryUntil <= Date.now()) {
+      if (retryUntil <= now) {
         return null;
       }
 
@@ -372,5 +380,72 @@ export class TeamMemberRuntimeAdvisoryService {
     } catch {
       return null;
     }
+  }
+
+  private extractApiErrorAdvisory(line: string, now = Date.now()): MemberRuntimeAdvisory | null {
+    if (
+      !line ||
+      (!line.includes('"isApiErrorMessage":true') &&
+        !line.includes('"isApiErrorMessage": true') &&
+        !line.includes('"error":"authentication_failed"') &&
+        !line.includes('"error": "authentication_failed"'))
+    ) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(line) as {
+        type?: string;
+        timestamp?: string;
+        error?: string;
+        isApiErrorMessage?: boolean;
+        message?: {
+          content?: Array<{ type?: string; text?: string }>;
+        };
+      };
+
+      if (parsed.type !== 'assistant') {
+        return null;
+      }
+
+      const observedAt =
+        typeof parsed.timestamp === 'string' ? Date.parse(parsed.timestamp) : Number.NaN;
+      if (!Number.isFinite(observedAt) || observedAt < now - LOOKBACK_MS) {
+        return null;
+      }
+
+      const message = this.extractAssistantText(parsed.message?.content);
+      if (!parsed.isApiErrorMessage && parsed.error !== 'authentication_failed') {
+        return null;
+      }
+      if (!message && parsed.error !== 'authentication_failed') {
+        return null;
+      }
+
+      const statusMatch = /^API Error:\s*(\d{3})/.exec(message);
+      return {
+        kind: 'api_error',
+        observedAt: new Date(observedAt).toISOString(),
+        reasonCode: classifyRetryReason(message || parsed.error),
+        ...(message ? { message } : {}),
+        ...(statusMatch ? { statusCode: Number(statusMatch[1]) } : {}),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private extractAssistantText(
+    content: Array<{ type?: string; text?: string }> | undefined
+  ): string {
+    if (!Array.isArray(content)) {
+      return '';
+    }
+    return content
+      .filter((item) => item.type === 'text' && typeof item.text === 'string')
+      .map((item) => item.text?.trim())
+      .filter(Boolean)
+      .join('\n')
+      .trim();
   }
 }

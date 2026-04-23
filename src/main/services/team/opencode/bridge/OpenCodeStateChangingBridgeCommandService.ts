@@ -44,7 +44,7 @@ export interface OpenCodeBridgeHandshakePort {
 }
 
 export interface RuntimeStoreManifestReader {
-  read(teamName: string): Promise<RuntimeStoreManifestEvidence>;
+  read(teamName: string, laneId?: string | null): Promise<RuntimeStoreManifestEvidence>;
 }
 
 export interface OpenCodeStateChangingBridgeDiagnosticsSink {
@@ -93,6 +93,7 @@ export class OpenCodeStateChangingBridgeCommandService {
   async execute<TBody, TData>(input: {
     command: OpenCodeBridgeCommandName;
     teamName: string;
+    laneId?: string | null;
     runId: string | null;
     capabilitySnapshotId: string | null;
     behaviorFingerprint: string | null;
@@ -100,7 +101,8 @@ export class OpenCodeStateChangingBridgeCommandService {
     cwd: string;
     timeoutMs: number;
   }): Promise<OpenCodeBridgeResult<TData>> {
-    const manifest = await this.manifestReader.read(input.teamName);
+    const normalizedLaneId = input.laneId ?? null;
+    const manifest = await this.manifestReader.read(input.teamName, normalizedLaneId);
     const handshake = await this.handshakePort.handshake({
       requiredCommand: input.command,
       expectedRunId: input.runId,
@@ -124,12 +126,14 @@ export class OpenCodeStateChangingBridgeCommandService {
     const idempotencyKey = createOpenCodeBridgeIdempotencyKey({
       command: input.command,
       teamName: input.teamName,
+      laneId: normalizedLaneId,
       runId: input.runId,
       body: input.body,
     });
     const commandRequestId = this.requestIdFactory();
     const lease = await this.leaseStore.acquire({
       teamName: input.teamName,
+      laneId: normalizedLaneId,
       runId: input.runId,
       command: input.command,
       ttlMs: input.timeoutMs + 5_000,
@@ -138,6 +142,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     try {
       const bodyWithPreconditions = attachBridgePreconditions(input.body, {
         handshakeIdentityHash: handshake.identityHash,
+        laneId: normalizedLaneId,
         expectedRunId: input.runId,
         expectedCapabilitySnapshotId: input.capabilitySnapshotId,
         expectedBehaviorFingerprint: input.behaviorFingerprint,
@@ -151,10 +156,12 @@ export class OpenCodeStateChangingBridgeCommandService {
         requestId: commandRequestId,
         command: input.command,
         teamName: input.teamName,
+        laneId: input.laneId,
         runId: input.runId,
         requestHash: stableHash({
           command: input.command,
           teamName: input.teamName,
+          laneId: normalizedLaneId,
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
           behaviorFingerprint: input.behaviorFingerprint,
@@ -186,6 +193,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           await this.appendUnknownOutcomeDiagnostic({
             result,
             teamName: input.teamName,
+            laneId: normalizedLaneId,
             runId: input.runId,
             command: input.command,
             idempotencyKey,
@@ -233,6 +241,7 @@ export class OpenCodeStateChangingBridgeCommandService {
   private async appendUnknownOutcomeDiagnostic(input: {
     result: OpenCodeBridgeResult<unknown>;
     teamName: string;
+    laneId: string | null;
     runId: string | null;
     command: OpenCodeBridgeCommandName;
     idempotencyKey: string;
@@ -244,14 +253,25 @@ export class OpenCodeStateChangingBridgeCommandService {
       type: 'opencode_bridge_unknown_outcome',
       providerId: 'opencode',
       teamName: input.teamName,
+      ...(input.laneId
+        ? {
+            data: {
+              laneId: input.laneId,
+              command: input.command,
+              idempotencyKey: input.idempotencyKey,
+              leaseId: input.leaseId,
+            },
+          }
+        : {
+            data: {
+              command: input.command,
+              idempotencyKey: input.idempotencyKey,
+              leaseId: input.leaseId,
+            },
+          }),
       runId: input.runId ?? extractRunId(input.result) ?? undefined,
       severity: 'warning',
       message: 'OpenCode bridge command timed out; outcome must be reconciled before retry',
-      data: {
-        command: input.command,
-        idempotencyKey: input.idempotencyKey,
-        leaseId: input.leaseId,
-      },
       createdAt: completedAt,
     });
   }

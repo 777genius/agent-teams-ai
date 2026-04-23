@@ -144,7 +144,7 @@ describe('MemberHoverCard spawn-aware presence', () => {
     });
   });
 
-  it('keeps runtime-pending members in starting state while launch is still settling', async () => {
+  it('shows connecting for runtime-pending members while launch is still settling', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.progress = {
       runId: 'run-1',
@@ -188,8 +188,45 @@ describe('MemberHoverCard spawn-aware presence', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('starting');
+    expect(host.textContent).toContain('connecting');
     expect(host.textContent).not.toContain('online');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows connecting while runtime is online but bootstrap is still pending outside launch settling', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = null;
+    storeState.memberSpawnStatusesByTeam['northstar-core'].alice = {
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      runtimeAlive: true,
+      livenessSource: 'process',
+    };
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = undefined;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberHoverCard, {
+          name: 'alice',
+          children: React.createElement('button', { type: 'button' }, 'alice'),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('connecting');
+    expect(host.textContent).not.toContain('online');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();

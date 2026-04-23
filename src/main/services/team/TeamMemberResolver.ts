@@ -1,16 +1,20 @@
+import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import { getMemberColorByName } from '@shared/constants/memberColors';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
 } from '@shared/utils/teamMemberName';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
-import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
 
 import type {
+  PersistedTeamLaunchSnapshot,
   TeamConfig,
   TeamMember,
   TeamMemberSnapshot,
+  TeamProviderBackendId,
   TeamProviderId,
   TeamTaskWithKanban,
 } from '@shared/types';
@@ -65,7 +69,14 @@ export class TeamMemberResolver {
     config: TeamConfig,
     metaMembers: TeamConfig['members'],
     inboxNames: string[],
-    tasks: TeamTaskWithKanban[]
+    tasks: TeamTaskWithKanban[],
+    options?: {
+      launchSnapshot?: PersistedTeamLaunchSnapshot | null;
+      leadProviderId?: TeamProviderId;
+      leadProviderBackendId?: TeamProviderBackendId | null;
+      leadFastMode?: TeamMember['fastMode'];
+      leadResolvedFastMode?: boolean | null;
+    }
   ): TeamMemberSnapshot[] {
     const names = new Set<string>();
     const explicitNames = new Set<string>();
@@ -99,6 +110,22 @@ export class TeamMemberResolver {
       }
     }
 
+    const launchSnapshot = options?.launchSnapshot;
+    if (launchSnapshot) {
+      for (const name of launchSnapshot.expectedMembers) {
+        const trimmed = name.trim();
+        if (!trimmed) continue;
+        addName(trimmed);
+        explicitNames.add(trimmed.toLowerCase());
+      }
+      for (const name of Object.keys(launchSnapshot.members)) {
+        const trimmed = name.trim();
+        if (!trimmed) continue;
+        addName(trimmed);
+        explicitNames.add(trimmed.toLowerCase());
+      }
+    }
+
     for (const inboxName of inboxNames) {
       if (typeof inboxName === 'string' && inboxName.trim() !== '') {
         const trimmed = inboxName.trim();
@@ -128,9 +155,12 @@ export class TeamMemberResolver {
         agentType?: string;
         role?: string;
         workflow?: string;
+        isolation?: 'worktree';
         providerId?: TeamProviderId;
+        providerBackendId?: TeamProviderBackendId;
         model?: string;
         effort?: TeamMember['effort'];
+        fastMode?: TeamMember['fastMode'];
         color?: string;
         cwd?: string;
       }
@@ -147,9 +177,17 @@ export class TeamMemberResolver {
             agentType: configMember.agentType,
             role: configMember.role,
             workflow: configMember.workflow,
+            isolation: configMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
             providerId,
+            providerBackendId: migrateProviderBackendId(providerId, configMember.providerBackendId),
             model: configMember.model,
             effort: configMember.effort,
+            fastMode:
+              configMember.fastMode === 'inherit' ||
+              configMember.fastMode === 'on' ||
+              configMember.fastMode === 'off'
+                ? configMember.fastMode
+                : undefined,
             color: configMember.color,
             cwd: configMember.cwd,
           });
@@ -164,10 +202,14 @@ export class TeamMemberResolver {
         agentType?: string;
         role?: string;
         workflow?: string;
+        isolation?: 'worktree';
         providerId?: TeamProviderId;
+        providerBackendId?: TeamProviderBackendId;
         model?: string;
         effort?: TeamMember['effort'];
+        fastMode?: TeamMember['fastMode'];
         color?: string;
+        cwd?: string;
         removedAt?: number;
       }
     >();
@@ -179,12 +221,34 @@ export class TeamMemberResolver {
             agentType: member.agentType,
             role: member.role,
             workflow: member.workflow,
+            isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
             providerId: member.providerId,
+            providerBackendId: migrateProviderBackendId(
+              member.providerId,
+              member.providerBackendId
+            ),
             model: member.model,
             effort: member.effort,
+            fastMode:
+              member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
+                ? member.fastMode
+                : undefined,
             color: member.color,
+            cwd: member.cwd,
             removedAt: member.removedAt,
           });
+        }
+      }
+    }
+
+    const launchMemberMap = new Map<
+      string,
+      NonNullable<NonNullable<typeof launchSnapshot>['members'][string]>
+    >();
+    if (launchSnapshot) {
+      for (const [memberName, member] of Object.entries(launchSnapshot.members)) {
+        if (typeof memberName === 'string' && memberName.trim().length > 0 && member) {
+          launchMemberMap.set(memberName.trim(), member);
         }
       }
     }
@@ -200,8 +264,13 @@ export class TeamMemberResolver {
       names.delete('lead');
     }
 
-    // Defense: hide CLI auto-suffixed duplicates (alice-2) when base name (alice) exists.
-    const keepName = createCliAutoSuffixNameGuard(names);
+    // Defense: hide CLI auto-suffixed duplicates (alice-2) only when the base
+    // name still exists as an active member. Removed base members must not hide
+    // active suffixed teammates after live mutation / rollback flows.
+    const activeNamesForAutoSuffix = Array.from(names).filter((name) => {
+      return !metaMemberMap.get(name)?.removedAt;
+    });
+    const keepName = createCliAutoSuffixNameGuard(activeNamesForAutoSuffix);
     // Defense: hide CLI provisioner artifacts (alice-provisioner) when base name (alice) exists.
     const keepProvisioner = createCliProvisionerNameGuard(names);
     for (const name of Array.from(names)) {
@@ -222,6 +291,26 @@ export class TeamMemberResolver {
         ) ?? null;
       const configMember = configMemberMap.get(name);
       const metaMember = metaMemberMap.get(name);
+      const launchMember = launchMemberMap.get(name);
+      const effectiveProviderId =
+        launchMember?.providerId ??
+        configMember?.providerId ??
+        metaMember?.providerId ??
+        options?.leadProviderId;
+      const plannedLane = buildPlannedMemberLaneIdentity({
+        leadProviderId: options?.leadProviderId,
+        member: {
+          name,
+          providerId: effectiveProviderId,
+        },
+      });
+      const providerBackendId =
+        launchMember?.providerBackendId ??
+        configMember?.providerBackendId ??
+        metaMember?.providerBackendId ??
+        (effectiveProviderId === options?.leadProviderId
+          ? (options?.leadProviderBackendId ?? undefined)
+          : undefined);
       const agentId = configMember?.agentId ?? metaMember?.agentId;
       members.push({
         name,
@@ -232,10 +321,28 @@ export class TeamMemberResolver {
         agentType: configMember?.agentType ?? metaMember?.agentType,
         role: configMember?.role ?? metaMember?.role,
         workflow: configMember?.workflow ?? metaMember?.workflow,
-        providerId: configMember?.providerId ?? metaMember?.providerId,
-        model: configMember?.model ?? metaMember?.model,
-        effort: configMember?.effort ?? metaMember?.effort,
-        cwd: configMember?.cwd,
+        isolation: configMember?.isolation ?? metaMember?.isolation,
+        providerId: effectiveProviderId,
+        providerBackendId,
+        model: launchMember?.model ?? configMember?.model ?? metaMember?.model,
+        effort: launchMember?.effort ?? configMember?.effort ?? metaMember?.effort,
+        selectedFastMode:
+          launchMember?.selectedFastMode ??
+          configMember?.fastMode ??
+          metaMember?.fastMode ??
+          (effectiveProviderId === options?.leadProviderId
+            ? (options?.leadFastMode ?? undefined)
+            : undefined),
+        resolvedFastMode:
+          typeof launchMember?.resolvedFastMode === 'boolean'
+            ? launchMember.resolvedFastMode
+            : effectiveProviderId === options?.leadProviderId
+              ? (options?.leadResolvedFastMode ?? undefined)
+              : undefined,
+        laneId: launchMember?.laneId ?? plannedLane.laneId,
+        laneKind: launchMember?.laneKind ?? plannedLane.laneKind,
+        laneOwnerProviderId: launchMember?.laneOwnerProviderId ?? plannedLane.laneOwnerProviderId,
+        cwd: configMember?.cwd ?? metaMember?.cwd,
         removedAt: metaMember?.removedAt,
       });
     }

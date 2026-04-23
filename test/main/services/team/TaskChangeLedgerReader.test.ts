@@ -254,6 +254,288 @@ describe('TaskChangeLedgerReader', () => {
     expect(result?.files[0]?.linesRemoved).toBe(2);
   });
 
+  it('preserves v2 worktree metadata from centralized ledger summaries', async () => {
+    tmpDir = await fsTempDir();
+    const bundleDir = path.join(tmpDir, '.board-task-changes', 'bundles');
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(
+      path.join(bundleDir, `${encodeURIComponent(TASK_ID)}.json`),
+      JSON.stringify({
+        schemaVersion: 2,
+        source: 'task-change-ledger',
+        bundleKind: 'summary',
+        taskId: TASK_ID,
+        generatedAt: '2026-03-01T10:00:00.000Z',
+        journalStamp: {},
+        integrity: 'ok',
+        eventCount: 1,
+        noticeCount: 0,
+        scope: {
+          confidence: { tier: 1, label: 'high', reason: 'bundle' },
+          memberName: 'alice',
+          agentIds: ['alice@team'],
+          startTimestamp: '2026-03-01T10:00:00.000Z',
+          endTimestamp: '2026-03-01T10:00:00.000Z',
+          toolUseIds: ['tool-1'],
+          toolUseCount: 1,
+          phaseSet: ['work'],
+          visibleFileCount: 1,
+          contributors: [],
+          worktreePaths: ['/repo/.claude/worktrees/team-atlas-alice-12345678'],
+          worktreeBranches: ['worktree-team-atlas-alice-12345678'],
+          baseWorkspaceRoots: ['/repo'],
+          dirtyLeaderWarnings: ['Leader workspace had uncommitted changes.'],
+        },
+        files: [
+          {
+            changeKey: 'path:/repo/.claude/worktrees/team-atlas-alice-12345678/src/a.ts',
+            filePath: '/repo/.claude/worktrees/team-atlas-alice-12345678/src/a.ts',
+            relativePath: 'src/a.ts',
+            linesAdded: 1,
+            linesRemoved: 0,
+            diffStatKnown: true,
+            eventCount: 1,
+            firstTimestamp: '2026-03-01T10:00:00.000Z',
+            lastTimestamp: '2026-03-01T10:00:00.000Z',
+            latestOperation: 'modify',
+            createdInTask: false,
+            deletedInTask: false,
+            latestBeforeHash: null,
+            latestAfterHash: null,
+            contentAvailability: 'full-text',
+            reviewability: 'full-text',
+            agentIds: ['alice@team'],
+            worktreePath: '/repo/.claude/worktrees/team-atlas-alice-12345678',
+            worktreeBranch: 'worktree-team-atlas-alice-12345678',
+            baseWorkspaceRoot: '/repo',
+            dirtyLeaderWarning: 'Leader workspace had uncommitted changes.',
+          },
+        ],
+        totalLinesAdded: 1,
+        totalLinesRemoved: 0,
+        diffStatCompleteness: 'complete',
+        totalFiles: 1,
+        confidence: 'high',
+        warningCount: 0,
+        warnings: [],
+      }),
+      'utf8'
+    );
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result?.scope.worktreePaths).toEqual([
+      '/repo/.claude/worktrees/team-atlas-alice-12345678',
+    ]);
+    expect(result?.files[0]?.ledgerSummary?.worktreePath).toBe(
+      '/repo/.claude/worktrees/team-atlas-alice-12345678'
+    );
+    expect(result?.files[0]?.ledgerSummary?.worktreeBranch).toBe(
+      'worktree-team-atlas-alice-12345678'
+    );
+    expect(result?.files[0]?.filePath).toBe(
+      '/repo/.claude/worktrees/team-atlas-alice-12345678/src/a.ts'
+    );
+  });
+
+  it('keeps identical relative rename relations isolated by worktree path', async () => {
+    tmpDir = await fsTempDir();
+    const bundleDir = path.join(tmpDir, '.board-task-changes', 'bundles');
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(
+      path.join(bundleDir, `${encodeURIComponent(TASK_ID)}.json`),
+      JSON.stringify({
+        schemaVersion: 2,
+        source: 'task-change-ledger',
+        bundleKind: 'summary',
+        taskId: TASK_ID,
+        generatedAt: '2026-03-01T10:00:00.000Z',
+        journalStamp: {},
+        integrity: 'ok',
+        eventCount: 2,
+        noticeCount: 0,
+        scope: {
+          confidence: { tier: 1, label: 'high', reason: 'bundle' },
+          memberName: 'alice',
+          agentIds: ['alice@team', 'bob@team'],
+          startTimestamp: '2026-03-01T10:00:00.000Z',
+          endTimestamp: '2026-03-01T10:01:00.000Z',
+          toolUseIds: ['tool-1', 'tool-2'],
+          toolUseCount: 2,
+          phaseSet: ['work'],
+          visibleFileCount: 2,
+          contributors: [],
+          worktreePaths: ['/repo/.claude/worktrees/team-a', '/repo/.claude/worktrees/team-b'],
+        },
+        files: [
+          {
+            changeKey: 'rename:/repo/.claude/worktrees/team-a:src/old.ts->src/new.ts',
+            filePath: '/repo/.claude/worktrees/team-a/src/new.ts',
+            relativePath: 'src/new.ts',
+            displayPath: 'src/new.ts',
+            linesAdded: 0,
+            linesRemoved: 0,
+            diffStatKnown: true,
+            eventCount: 1,
+            firstTimestamp: '2026-03-01T10:00:00.000Z',
+            lastTimestamp: '2026-03-01T10:00:00.000Z',
+            latestOperation: 'modify',
+            createdInTask: false,
+            deletedInTask: false,
+            latestBeforeHash: null,
+            latestAfterHash: null,
+            contentAvailability: 'full-text',
+            reviewability: 'full-text',
+            agentIds: ['alice@team'],
+            relation: { kind: 'rename', oldPath: 'src/old.ts', newPath: 'src/new.ts' },
+            worktreePath: '/repo/.claude/worktrees/team-a',
+          },
+          {
+            changeKey: 'rename:/repo/.claude/worktrees/team-b:src/old.ts->src/new.ts',
+            filePath: '/repo/.claude/worktrees/team-b/src/new.ts',
+            relativePath: 'src/new.ts',
+            displayPath: 'src/new.ts',
+            linesAdded: 0,
+            linesRemoved: 0,
+            diffStatKnown: true,
+            eventCount: 1,
+            firstTimestamp: '2026-03-01T10:01:00.000Z',
+            lastTimestamp: '2026-03-01T10:01:00.000Z',
+            latestOperation: 'modify',
+            createdInTask: false,
+            deletedInTask: false,
+            latestBeforeHash: null,
+            latestAfterHash: null,
+            contentAvailability: 'full-text',
+            reviewability: 'full-text',
+            agentIds: ['bob@team'],
+            relation: { kind: 'rename', oldPath: 'src/old.ts', newPath: 'src/new.ts' },
+            worktreePath: '/repo/.claude/worktrees/team-b',
+          },
+        ],
+        totalLinesAdded: 0,
+        totalLinesRemoved: 0,
+        diffStatCompleteness: 'complete',
+        totalFiles: 2,
+        confidence: 'high',
+        warningCount: 0,
+        warnings: [],
+      }),
+      'utf8'
+    );
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result?.files).toHaveLength(2);
+    expect(new Set(result?.files.map((file) => file.changeKey))).toEqual(
+      new Set([
+        'rename:/repo/.claude/worktrees/team-a:src/old.ts->src/new.ts',
+        'rename:/repo/.claude/worktrees/team-b:src/old.ts->src/new.ts',
+      ])
+    );
+  });
+
+  it('keeps worktree relation keys isolated when rebuilding directly from journal events', async () => {
+    tmpDir = await fsTempDir();
+    const eventsDir = path.join(tmpDir, '.board-task-changes', 'events');
+    await mkdir(eventsDir, { recursive: true });
+    await writeFile(
+      path.join(eventsDir, `${encodeURIComponent(TASK_ID)}.jsonl`),
+      [
+        {
+          schemaVersion: 1,
+          eventId: 'event-a',
+          taskId: TASK_ID,
+          taskRef: TASK_ID,
+          taskRefKind: 'canonical',
+          phase: 'work',
+          executionSeq: 1,
+          sessionId: 'session-a',
+          agentId: 'alice@team',
+          toolUseId: 'tool-a',
+          source: 'shell_snapshot',
+          operation: 'modify',
+          confidence: 'high',
+          workspaceRoot: '/repo/.claude/worktrees/team-a',
+          worktreePath: '/repo/.claude/worktrees/team-a',
+          filePath: '/repo/.claude/worktrees/team-a/src/new.ts',
+          relativePath: 'src/new.ts',
+          timestamp: '2026-03-01T10:00:00.000Z',
+          toolStatus: 'succeeded',
+          before: null,
+          after: null,
+          oldString: 'export const a = 1;\n',
+          newString: 'export const a = 2;\n',
+          relation: { kind: 'rename', oldPath: 'src/old.ts', newPath: 'src/new.ts' },
+          linesAdded: 1,
+          linesRemoved: 1,
+        },
+        {
+          schemaVersion: 1,
+          eventId: 'event-b',
+          taskId: TASK_ID,
+          taskRef: TASK_ID,
+          taskRefKind: 'canonical',
+          phase: 'work',
+          executionSeq: 2,
+          sessionId: 'session-b',
+          agentId: 'bob@team',
+          toolUseId: 'tool-b',
+          source: 'shell_snapshot',
+          operation: 'modify',
+          confidence: 'high',
+          workspaceRoot: '/repo/.claude/worktrees/team-b',
+          worktreePath: '/repo/.claude/worktrees/team-b',
+          filePath: '/repo/.claude/worktrees/team-b/src/new.ts',
+          relativePath: 'src/new.ts',
+          timestamp: '2026-03-01T10:01:00.000Z',
+          toolStatus: 'succeeded',
+          before: null,
+          after: null,
+          oldString: 'export const b = 1;\n',
+          newString: 'export const b = 2;\n',
+          relation: { kind: 'rename', oldPath: 'src/old.ts', newPath: 'src/new.ts' },
+          linesAdded: 1,
+          linesRemoved: 1,
+        },
+      ]
+        .map((entry) => JSON.stringify(entry))
+        .join('\n') + '\n',
+      'utf8'
+    );
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result?.files).toHaveLength(2);
+    expect(new Set(result?.files.map((file) => file.changeKey))).toEqual(
+      new Set([
+        'rename:/repo/.claude/worktrees/team-a:src/old.ts->src/new.ts',
+        'rename:/repo/.claude/worktrees/team-b:src/old.ts->src/new.ts',
+      ])
+    );
+  });
+
   it('falls back to journal summary when bundle and freshness describe different generations', async () => {
     tmpDir = await fsTempDir();
     const bundleDir = path.join(tmpDir, '.board-task-changes', 'bundles');

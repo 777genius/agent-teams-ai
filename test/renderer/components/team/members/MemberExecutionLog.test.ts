@@ -36,6 +36,22 @@ vi.mock('@renderer/components/chat/LastOutputDisplay', () => ({
   },
 }));
 
+vi.mock('@renderer/components/chat/DisplayItemList', () => ({
+  DisplayItemList: ({ items }: { items: Array<{ type: string }> }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'display-items' },
+      items.map((item) => item.type).join(',')
+    ),
+}));
+
+vi.mock('@renderer/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  TooltipContent: () => null,
+}));
+
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 
 function flushMicrotasks(): Promise<void> {
@@ -63,11 +79,18 @@ describe('MemberExecutionLog', () => {
     enhanceState.value = null;
   });
 
-  it('suppresses duplicated last tool_result banners in execution-log mode', async () => {
+  it('suppresses duplicated last tool_result banners when display items already cover the group', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     setSingleAiGroup();
     enhanceState.value = {
-      displayItems: [],
+      displayItems: [
+        {
+          type: 'tool',
+          id: 'tool-1',
+          toolName: 'Read',
+          timestamp: new Date('2026-04-18T13:23:11.000Z'),
+        },
+      ],
       itemsSummary: '1 tool',
       lastOutput: {
         type: 'tool_result',
@@ -89,6 +112,40 @@ describe('MemberExecutionLog', () => {
 
     expect(host.querySelector('[data-testid="last-output"]')).toBeNull();
     expect(host.textContent).not.toContain('raw file body');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('keeps a lone tool_result visible so execution logs do not render blank', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    setSingleAiGroup();
+    enhanceState.value = {
+      displayItems: [],
+      itemsSummary: 'No items',
+      lastOutput: {
+        type: 'tool_result',
+        toolName: 'SendMessage',
+        toolResult: 'deliveredToInbox: true',
+        isError: false,
+        timestamp: new Date('2026-04-18T13:23:12.982Z'),
+      },
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(MemberExecutionLog, { chunks: [] }));
+      await flushMicrotasks();
+    });
+
+    expect(host.querySelector('[data-testid="last-output"]')).not.toBeNull();
+    expect(host.textContent).toContain('SendMessage');
+    expect(host.textContent).toContain('deliveredToInbox: true');
 
     await act(async () => {
       root.unmount();

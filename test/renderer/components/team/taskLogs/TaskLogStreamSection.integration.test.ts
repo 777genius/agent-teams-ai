@@ -18,6 +18,18 @@ const REAL_FIXTURE_PATH = path.resolve(
   process.cwd(),
   'test/fixtures/team/task-log-stream-fallback-real.jsonl',
 );
+const ANNOTATED_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-annotated-real.jsonl',
+);
+const ANNOTATED_MULTI_TASK_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-annotated-multi-task-real.jsonl',
+);
+const HISTORICAL_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-historical-board-mcp-real.jsonl',
+);
 
 const apiState = {
   getTaskLogStream: vi.fn(),
@@ -618,6 +630,134 @@ describe('TaskLogStreamSection integration', () => {
     expect(text).toContain('Run targeted tests');
     expect(text).not.toContain('echo alien');
     expect(text).not.toContain('alice');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('renders a real-format annotated transcript fixture via exact task links', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-render-annotated-real-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(ANNOTATED_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    apiState.getTaskLogStream.mockResolvedValueOnce(await buildStreamResponse(transcriptPath));
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          TooltipProvider,
+          null,
+          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
+        ),
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text).toContain('Task Log Stream');
+    expect(text).toContain('Investigating the reviewer-plan task path now.');
+    expect(text).toContain('Bash');
+    expect(text).toContain('Run focused regression checks');
+    expect(text).not.toContain('No task log stream yet');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('renders only the requested task from a real-format annotated multi-task fixture', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-render-multi-task-real-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(ANNOTATED_MULTI_TASK_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    apiState.getTaskLogStream.mockResolvedValueOnce(await buildStreamResponse(transcriptPath));
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          TooltipProvider,
+          null,
+          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
+        ),
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text).toContain('Task Log Stream');
+    expect(text).toContain('Working through the reviewer-plan task now.');
+    expect(text).toContain('Run reviewer plan checks');
+    expect(text).not.toContain('Investigating unrelated deployment checklist task.');
+    expect(text).not.toContain('Run unrelated check');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('renders a real-format historical board MCP fixture through transcript recovery', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-render-historical-real-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(HISTORICAL_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    apiState.getTaskLogStream.mockResolvedValueOnce(
+      await buildStreamResponse(
+        transcriptPath,
+        createTask({
+          owner: 'tom',
+        }),
+      ),
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          TooltipProvider,
+          null,
+          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
+        ),
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text).toContain('Task Log Stream');
+    expect(text).toContain('mcp__agent-teams__task_start');
+    expect(text).toContain('mcp__agent-teams__task_add_comment');
+    expect(text).toContain('mcp__agent-teams__task_complete');
+    expect(text).not.toContain('alice');
+    expect(text).not.toContain('No task log stream yet');
 
     await act(async () => {
       root.unmount();

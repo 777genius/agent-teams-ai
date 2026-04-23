@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNextSuggestedMemberName } from '@renderer/components/team/members/memberNameSets';
 import {
@@ -25,6 +25,7 @@ export interface AddMemberEntry {
   name: string;
   role?: string;
   workflow?: string;
+  isolation?: 'worktree';
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
@@ -41,14 +42,36 @@ interface AddMemberDialogProps {
   /** Project path for @file mentions in workflow field. */
   projectPath?: string | null;
   /** Existing team members with their colors — used so new drafts get the next available color */
-  existingMembers?: readonly { name: string; color?: string; removedAt?: number | string | null }[];
+  existingMembers?: readonly {
+    name: string;
+    color?: string;
+    isolation?: 'worktree';
+    removedAt?: number | string | null;
+  }[];
 }
 
 const DIALOG_WIDTH = 'w-[720px]';
 
-function buildInitialDrafts(existingNames: string[]): MemberDraft[] {
+function deriveExistingWorktreeDefault(
+  existingMembers: AddMemberDialogProps['existingMembers']
+): boolean {
+  const activeTeammates =
+    existingMembers?.filter(
+      (member) => !member.removedAt && member.name.trim().toLowerCase() !== 'team-lead'
+    ) ?? [];
+  return (
+    activeTeammates.length > 0 && activeTeammates.every((member) => member.isolation === 'worktree')
+  );
+}
+
+function buildInitialDrafts(existingNames: string[], worktreeDefault = false): MemberDraft[] {
   const suggestedName = getNextSuggestedMemberName(existingNames);
-  return [createMemberDraft({ name: suggestedName })];
+  return [
+    createMemberDraft({
+      name: suggestedName,
+      isolation: worktreeDefault ? 'worktree' : undefined,
+    }),
+  ];
 }
 
 export const AddMemberDialog = ({
@@ -61,8 +84,13 @@ export const AddMemberDialog = ({
   projectPath,
   existingMembers,
 }: AddMemberDialogProps): React.JSX.Element => {
-  const [members, setMembers] = useState<MemberDraft[]>(() => buildInitialDrafts(existingNames));
+  const existingWorktreeDefault = deriveExistingWorktreeDefault(existingMembers);
+  const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(existingWorktreeDefault);
+  const [members, setMembers] = useState<MemberDraft[]>(() =>
+    buildInitialDrafts(existingNames, existingWorktreeDefault)
+  );
   const [error, setError] = useState<string | null>(null);
+  const wasOpenRef = useRef(open);
 
   // Combine existing names + names already in the draft list for duplicate validation
   const allNames = useMemo(() => {
@@ -120,6 +148,7 @@ export const AddMemberDialog = ({
         name: m.name,
         role: m.role,
         workflow: m.workflow,
+        isolation: m.isolation,
         providerId: m.providerId,
         model: m.model,
         effort: m.effort,
@@ -129,24 +158,21 @@ export const AddMemberDialog = ({
 
   const handleOpenChange = (nextOpen: boolean): void => {
     if (!nextOpen) {
-      setMembers(buildInitialDrafts(existingNames));
+      setMembers(buildInitialDrafts(existingNames, teammateWorktreeDefault));
       setError(null);
       onClose();
     }
   };
 
-  // Re-initialize drafts when the dialog opens with fresh suggested name
-  // (existingNames may have changed since last close)
   useEffect(() => {
-    if (!open) return;
-    setMembers((prev) => {
-      const allEmpty = prev.every((m) => !m.name.trim());
-      if (prev.length === 0 || allEmpty) {
-        return buildInitialDrafts(existingNames);
-      }
-      return prev;
-    });
-  }, [open, existingNames]);
+    const wasOpen = wasOpenRef.current;
+    if (open && !wasOpen) {
+      setTeammateWorktreeDefault(existingWorktreeDefault);
+      setMembers(buildInitialDrafts(existingNames, existingWorktreeDefault));
+      setError(null);
+    }
+    wasOpenRef.current = open;
+  }, [existingNames, existingWorktreeDefault, open]);
 
   const memberCount = members.filter((m) => m.name.trim() && !validateName(m.name)).length;
 
@@ -169,6 +195,9 @@ export const AddMemberDialog = ({
             draftKeyPrefix={`addMember:${teamName}`}
             projectPath={projectPath}
             existingMembers={existingMembers}
+            showWorktreeIsolationControls
+            teammateWorktreeDefault={teammateWorktreeDefault}
+            onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
           />
         </div>
 

@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { Plus } from 'lucide-react';
+import { GitBranch, Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
@@ -34,6 +35,7 @@ function membersToJsonText(drafts: MemberDraft[]): string {
       if (role) obj.role = role;
       const workflow = getWorkflowForExport(d);
       if (workflow) obj.workflow = workflow;
+      if (d.isolation === 'worktree') obj.isolation = 'worktree';
       if (d.providerId) obj.providerId = d.providerId;
       if (d.model?.trim()) obj.model = d.model.trim();
       if (d.effort) obj.effort = d.effort;
@@ -49,6 +51,7 @@ function parseJsonToDrafts(text: string): MemberDraft[] {
     const name = typeof item.name === 'string' ? item.name : '';
     const role = typeof item.role === 'string' ? item.role.trim() : '';
     const workflow = typeof item.workflow === 'string' ? item.workflow.trim() : '';
+    const isolation = item.isolation === 'worktree' ? 'worktree' : undefined;
     const providerId = normalizeOptionalTeamProviderId(item.providerId);
     const model = typeof item.model === 'string' ? item.model.trim() : '';
     const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort)
@@ -61,6 +64,7 @@ function parseJsonToDrafts(text: string): MemberDraft[] {
       roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
       customRole: role && !isPreset ? role : '',
       workflow: workflow || undefined,
+      isolation,
       providerId,
       model,
       effort,
@@ -111,6 +115,9 @@ export interface MembersEditorSectionProps {
   memberModelIssueById?: Record<string, string | null | undefined>;
   disableAddMember?: boolean;
   addMemberLockReason?: string;
+  showWorktreeIsolationControls?: boolean;
+  teammateWorktreeDefault?: boolean;
+  onTeammateWorktreeDefaultChange?: (enabled: boolean) => void;
 }
 
 export const MembersEditorSection = ({
@@ -145,6 +152,9 @@ export const MembersEditorSection = ({
   memberModelIssueById,
   disableAddMember = false,
   addMemberLockReason,
+  showWorktreeIsolationControls = false,
+  teammateWorktreeDefault = false,
+  onTeammateWorktreeDefaultChange,
 }: MembersEditorSectionProps): React.JSX.Element => {
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
@@ -236,6 +246,23 @@ export const MembersEditorSection = ({
     );
   };
 
+  const updateMemberIsolation = (memberId: string, enabled: boolean): void => {
+    onChange(
+      members.map((c) =>
+        c.id === memberId ? { ...c, isolation: enabled ? 'worktree' : undefined } : c
+      )
+    );
+  };
+
+  const updateTeammateWorktreeDefault = (enabled: boolean): void => {
+    onTeammateWorktreeDefaultChange?.(enabled);
+    onChange(
+      members.map((member) =>
+        member.removedAt ? member : { ...member, isolation: enabled ? 'worktree' : undefined }
+      )
+    );
+  };
+
   const removeMember = (memberId: string): void => {
     if (!softDeleteMembers) {
       onChange(members.filter((c) => c.id !== memberId));
@@ -260,8 +287,15 @@ export const MembersEditorSection = ({
       ...members,
       createMemberDraft(
         inheritModelSettingsByDefault
-          ? { name: suggestedName }
-          : { name: suggestedName, providerId: defaultProviderId }
+          ? {
+              name: suggestedName,
+              isolation: teammateWorktreeDefault ? 'worktree' : undefined,
+            }
+          : {
+              name: suggestedName,
+              providerId: defaultProviderId,
+              isolation: teammateWorktreeDefault ? 'worktree' : undefined,
+            }
       ),
     ]);
   };
@@ -273,6 +307,11 @@ export const MembersEditorSection = ({
   const memberColorMap = useMemo(
     () => buildMemberDraftColorMap(members, existingMembers, existingMemberColorMap),
     [members, existingMembers, existingMemberColorMap]
+  );
+  const worktreeDefaultControlId = useMemo(
+    () =>
+      `teammate-worktree-default-${(draftKeyPrefix ?? 'default').replace(/[^a-zA-Z0-9_-]/g, '-')}`,
+    [draftKeyPrefix]
   );
 
   const mentionSuggestions = useMemo(
@@ -308,6 +347,22 @@ export const MembersEditorSection = ({
       {headerExtra}
       {!hideContent && (
         <>
+          {showWorktreeIsolationControls ? (
+            <div className="flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-2">
+              <Checkbox
+                id={worktreeDefaultControlId}
+                checked={teammateWorktreeDefault}
+                onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+              />
+              <Label
+                htmlFor={worktreeDefaultControlId}
+                className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+              >
+                <GitBranch className="size-3.5 shrink-0" />
+                <span className="truncate">Run teammates in separate worktrees</span>
+              </Label>
+            </div>
+          ) : null}
           {disableAddMember && addMemberLockReason ? (
             <p className="text-[11px] text-[var(--color-text-muted)]">{addMemberLockReason}</p>
           ) : null}
@@ -330,6 +385,8 @@ export const MembersEditorSection = ({
                 onProviderChange={updateMemberProvider}
                 onModelChange={updateMemberModel}
                 onEffortChange={updateMemberEffort}
+                showWorktreeIsolationControls={showWorktreeIsolationControls}
+                onWorktreeIsolationChange={updateMemberIsolation}
                 inheritedProviderId={inheritedProviderId}
                 inheritedModel={inheritedModel}
                 inheritedEffort={inheritedEffort}
@@ -374,6 +431,8 @@ export const MembersEditorSection = ({
                       onProviderChange={updateMemberProvider}
                       onModelChange={updateMemberModel}
                       onEffortChange={updateMemberEffort}
+                      showWorktreeIsolationControls={showWorktreeIsolationControls}
+                      onWorktreeIsolationChange={updateMemberIsolation}
                       inheritedProviderId={inheritedProviderId}
                       inheritedModel={inheritedModel}
                       inheritedEffort={inheritedEffort}

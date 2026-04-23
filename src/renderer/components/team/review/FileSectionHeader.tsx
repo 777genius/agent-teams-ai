@@ -3,19 +3,19 @@ import React from 'react';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
-import { ChevronDown, ChevronRight, FilePlus, Loader2, Save, Undo2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, FilePlus, GitBranch, Loader2, Save, Undo2 } from 'lucide-react';
 
 import type { FileChangeWithContent, HunkDecision } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
 
 const CONTENT_SOURCE_LABELS: Record<string, string> = {
-  'ledger-exact': 'Ledger Exact',
+  'ledger-exact': 'Task Ledger',
   'ledger-snapshot': 'Ledger Snapshot',
   'file-history': 'File History',
   'snippet-reconstruction': 'Reconstructed',
   'disk-current': 'Current Disk',
   'git-fallback': 'Git Fallback',
-  unavailable: 'Missing on disk',
+  unavailable: 'Content unavailable',
 };
 
 interface FileSectionHeaderProps {
@@ -58,7 +58,8 @@ export const FileSectionHeader = ({
   onRejectFile,
 }: FileSectionHeaderProps): React.ReactElement => {
   const isMissingOnDisk = fileContent ? fileContent.modifiedFullContent == null : false;
-  const isPreviewOnly = isMissingOnDisk || fileContent?.contentSource === 'unavailable';
+  const isContentUnavailable = fileContent?.contentSource === 'unavailable';
+  const isPreviewOnly = isMissingOnDisk || isContentUnavailable;
   const requiresManualLedgerReview = file.snippets.some(
     (snippet) =>
       !!snippet.ledger &&
@@ -76,7 +77,12 @@ export const FileSectionHeader = ({
       if (writeSnippets.length === 0) return null;
       return writeSnippets[writeSnippets.length - 1].newString;
     })();
-  const canRestore = !!onRestoreMissingFile && isPreviewOnly && !hasEdits && restoreContent != null;
+  const canRestore =
+    !!onRestoreMissingFile &&
+    isMissingOnDisk &&
+    !isContentUnavailable &&
+    !hasEdits &&
+    restoreContent != null;
   const externalChangeLabel =
     externalChange?.type === 'unlink'
       ? 'Deleted on disk'
@@ -147,13 +153,26 @@ export const FileSectionHeader = ({
                 isPreviewOnly ? 'bg-red-500/20 text-red-300' : 'bg-surface-raised text-text-muted',
               ].join(' ')}
             >
-              {isPreviewOnly
-                ? 'Missing on disk'
-                : (CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource)}
+              {isContentUnavailable
+                ? 'Content unavailable'
+                : isMissingOnDisk
+                  ? 'Missing on disk'
+                  : (CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource)}
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
-            {isPreviewOnly ? (
+            {isContentUnavailable ? (
+              <div className="space-y-1">
+                <div className="font-medium text-text">Text content is unavailable</div>
+                <div className="text-text-muted">
+                  The ledger recorded metadata for this change, but full text content is not
+                  available. This usually means binary, large, or hash-only content.
+                </div>
+                <div className="text-text-muted">
+                  Automatic accept/reject is disabled for this file to avoid unsafe disk writes.
+                </div>
+              </div>
+            ) : isMissingOnDisk ? (
               <div className="space-y-1">
                 <div className="font-medium text-text">File is missing on disk</div>
                 <div className="text-text-muted">
@@ -175,6 +194,28 @@ export const FileSectionHeader = ({
                 {CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource}
               </span>
             )}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
+      {file.ledgerSummary?.worktreePath && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-300">
+              <GitBranch className="size-3" />
+              WORKTREE
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-sm">
+            <div className="space-y-1">
+              <div className="font-medium text-text">
+                {file.ledgerSummary.worktreeBranch ?? 'Isolated worktree'}
+              </div>
+              <div className="break-all text-text-muted">{file.ledgerSummary.worktreePath}</div>
+              {file.ledgerSummary.dirtyLeaderWarning && (
+                <div className="text-amber-300">{file.ledgerSummary.dirtyLeaderWarning}</div>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       )}
@@ -247,7 +288,9 @@ export const FileSectionHeader = ({
                 </TooltipTrigger>
                 {isPreviewOnly && (
                   <TooltipContent side="bottom">
-                    Accept/Reject is disabled while the file is missing on disk.
+                    {isContentUnavailable
+                      ? 'Accept/Reject is disabled because full text content is unavailable.'
+                      : 'Accept/Reject is disabled while the file is missing on disk.'}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -274,7 +317,9 @@ export const FileSectionHeader = ({
                   <TooltipContent side="bottom">
                     {requiresManualLedgerReview
                       ? 'Reject is disabled because this ledger change has binary, large, or unavailable content.'
-                      : 'Accept/Reject is disabled while the file is missing on disk.'}
+                      : isContentUnavailable
+                        ? 'Reject is disabled because full text content is unavailable.'
+                        : 'Accept/Reject is disabled while the file is missing on disk.'}
                   </TooltipContent>
                 )}
               </Tooltip>

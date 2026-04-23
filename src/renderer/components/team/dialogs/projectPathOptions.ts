@@ -1,4 +1,5 @@
 import { normalizePath } from '@renderer/utils/pathNormalize';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
 import type { Project } from '@shared/types';
@@ -24,6 +25,10 @@ export function buildProjectPathOptions(
   const normalizedPreferredPath = preferredPath ? normalizePath(preferredPath) : null;
 
   for (const project of projects) {
+    if (isEphemeralProjectPath(project.path)) {
+      continue;
+    }
+
     const normalizedProjectPath = normalizePath(project.path);
     const existingIndex = optionIndexByNormalizedPath.get(normalizedProjectPath);
 

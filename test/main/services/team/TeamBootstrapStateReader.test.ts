@@ -477,4 +477,130 @@ describe('TeamBootstrapStateReader', () => {
       kind: 'launch',
     });
   });
+
+  it('ignores stale terminal bootstrap-only pending snapshots when canonical launch state is missing', () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-04-22T15:00:00.000Z'));
+
+    const preferred = choosePreferredLaunchSnapshot(
+      {
+        version: 2,
+        teamName: 'atlas-hq-2',
+        updatedAt: '2026-04-09T20:35:57.962Z',
+        launchPhase: 'finished',
+        expectedMembers: ['alice', 'jack'],
+        members: {
+          alice: {
+            name: 'alice',
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-09T20:35:57.962Z',
+          },
+          jack: {
+            name: 'jack',
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-09T20:35:57.962Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 2,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_pending',
+      },
+      null
+    );
+
+    expect(preferred).toBeNull();
+    nowSpy.mockRestore();
+  });
+
+  it('prefers richer canonical launch snapshots when persisted members outgrow stale expectedMembers', () => {
+    const preferred = choosePreferredLaunchSnapshot(
+      {
+        version: 2,
+        teamName: 'demo',
+        updatedAt: '2026-04-23T10:05:00.000Z',
+        launchPhase: 'running',
+        expectedMembers: ['alice', 'bob'],
+        members: {
+          alice: {
+            name: 'alice',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-23T10:05:00.000Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_pending',
+      },
+      {
+        version: 2,
+        teamName: 'demo',
+        updatedAt: '2026-04-23T10:00:00.000Z',
+        launchPhase: 'running',
+        expectedMembers: ['alice'],
+        members: {
+          alice: {
+            name: 'alice',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+            launchIdentity: {
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              source: 'codex-runtime',
+            },
+          },
+          bob: {
+            name: 'bob',
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary',
+            laneOwnerProviderId: 'opencode',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_pending',
+      }
+    );
+
+    expect(preferred).toMatchObject({
+      updatedAt: '2026-04-23T10:00:00.000Z',
+      members: {
+        bob: {
+          laneId: 'secondary:opencode:bob',
+        },
+      },
+    });
+  });
 });

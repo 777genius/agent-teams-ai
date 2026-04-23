@@ -50,12 +50,27 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
+import {
+  applyStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamEffort,
+  getStoredCreateTeamFastMode as getStoredTeamFastMode,
+  getStoredCreateTeamLimitContext,
+  getStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamModel as getStoredTeamModel,
+  getStoredCreateTeamProvider as getStoredTeamProvider,
+  getStoredCreateTeamSkipPermissions,
+  migrateLegacyCreateTeamPreferences,
+  setStoredCreateTeamEffort,
+  setStoredCreateTeamFastMode,
+  setStoredCreateTeamLimitContext,
+  setStoredCreateTeamMemberRuntimePreferences,
+  setStoredCreateTeamModel,
+  setStoredCreateTeamProvider,
+  setStoredCreateTeamSkipPermissions,
+} from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
-import {
-  isGeminiUiFrozen,
-  normalizeCreateLaunchProviderForUi,
-} from '@renderer/utils/geminiUiFreeze';
+import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
@@ -64,6 +79,7 @@ import {
   normalizeExplicitTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
@@ -83,8 +99,18 @@ import {
   type ProviderPrepareDiagnosticsModelResult,
   runProviderPrepareDiagnostics,
 } from './providerPrepareDiagnostics';
+import {
+  buildProviderPrepareMembersSignature,
+  buildProviderPrepareRequestSignature,
+  buildProviderPrepareRuntimeStatusSignature,
+} from './providerPrepareRequestSignature';
+import {
+  getShortLivedProviderPrepareModelResults,
+  storeShortLivedProviderPrepareModelResults,
+} from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
 import {
+  deriveEffectiveProvisioningPrepareState,
   failIncompleteProviderChecks,
   getPrimaryProvisioningFailureDetail,
   getProvisioningFailureHint,
@@ -97,6 +123,8 @@ import {
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+
+import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 
 const TEAM_COLOR_NAMES = [
   'blue',
@@ -119,37 +147,6 @@ import type {
   TeamProviderId,
   TeamProvisioningMemberInput,
 } from '@shared/types';
-
-function getStoredTeamProvider(): TeamProviderId {
-  const stored = localStorage.getItem('team:lastSelectedProvider');
-  // return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
-  return normalizeCreateLaunchProviderForUi(
-    stored === 'codex' || stored === 'gemini' ? stored : 'anthropic',
-    true
-  );
-}
-
-function getStoredTeamModel(providerId: TeamProviderId): string {
-  const stored = localStorage.getItem(`team:lastSelectedModel:${providerId}`);
-  if (stored === null) {
-    return providerId === 'anthropic' ? 'opus' : '';
-  }
-  return normalizeExplicitTeamModelForUi(providerId, stored === '__default__' ? '' : stored);
-}
-
-function getStoredTeamFastMode(): TeamFastMode {
-  const stored = localStorage.getItem('team:lastSelectedFastMode');
-  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'inherit';
-}
-
-function isEphemeralRenderedProjectPath(projectPath: string | null | undefined): boolean {
-  const normalized = normalizePath(projectPath ?? '').toLowerCase();
-  return (
-    normalized.includes('rendered_mcp_') ||
-    normalized.includes('rendered_mcp_config') ||
-    normalized.includes('/portable-mcp-live')
-  );
-}
 
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
@@ -367,6 +364,8 @@ export const CreateTeamDialog = ({
     setMembers,
     syncModelsWithLead,
     setSyncModelsWithLead,
+    teammateWorktreeDefault,
+    setTeammateWorktreeDefault,
     cwdMode,
     setCwdMode,
     selectedProjectPath,
@@ -410,16 +409,9 @@ export const CreateTeamDialog = ({
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(getStoredTeamProvider())
   );
-  const [limitContext, setLimitContextRaw] = useState(
-    () => localStorage.getItem('team:lastLimitContext') === 'true'
-  );
-  const [skipPermissions, setSkipPermissionsRaw] = useState(
-    () => localStorage.getItem('team:lastSkipPermissions') !== 'false'
-  );
-  const [selectedEffort, setSelectedEffortRaw] = useState(() => {
-    const stored = localStorage.getItem('team:lastSelectedEffort');
-    return stored === null ? 'medium' : stored;
-  });
+  const [limitContext, setLimitContextRaw] = useState(getStoredCreateTeamLimitContext);
+  const [skipPermissions, setSkipPermissionsRaw] = useState(getStoredCreateTeamSkipPermissions);
+  const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
 
@@ -430,14 +422,7 @@ export const CreateTeamDialog = ({
   const [customArgs, setCustomArgsRaw] = useState('');
 
   useEffect(() => {
-    const legacyTeamModel = localStorage.getItem('team:lastSelectedModel');
-    if (
-      legacyTeamModel != null &&
-      localStorage.getItem('team:lastSelectedModel:anthropic') == null
-    ) {
-      localStorage.setItem('team:lastSelectedModel:anthropic', legacyTeamModel);
-    }
-    localStorage.removeItem('team:lastSelectedModel');
+    migrateLegacyCreateTeamPreferences();
   }, []);
 
   // Re-read localStorage when advancedKey changes
@@ -453,38 +438,38 @@ export const CreateTeamDialog = ({
   const setSelectedModel = (value: string): void => {
     const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
     setSelectedModelRaw(normalizedValue);
-    localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, normalizedValue);
+    setStoredCreateTeamModel(selectedProviderId, normalizedValue);
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
     const normalizedValue = normalizeProviderForMode(value, multimodelEnabled);
     setSelectedProviderIdRaw(normalizedValue);
-    localStorage.setItem('team:lastSelectedProvider', normalizedValue);
+    setStoredCreateTeamProvider(normalizedValue);
     if (normalizedValue !== 'anthropic') {
       setLimitContextRaw(false);
-      localStorage.setItem('team:lastLimitContext', 'false');
+      setStoredCreateTeamLimitContext(false);
     }
     setSelectedModelRaw(getStoredTeamModel(normalizedValue));
   };
 
   const setLimitContext = (value: boolean): void => {
     setLimitContextRaw(value);
-    localStorage.setItem('team:lastLimitContext', String(value));
+    setStoredCreateTeamLimitContext(value);
   };
 
   const setSkipPermissions = (value: boolean): void => {
     setSkipPermissionsRaw(value);
-    localStorage.setItem('team:lastSkipPermissions', String(value));
+    setStoredCreateTeamSkipPermissions(value);
   };
 
   const setSelectedEffort = (value: string): void => {
     setSelectedEffortRaw(value);
-    localStorage.setItem('team:lastSelectedEffort', value);
+    setStoredCreateTeamEffort(value);
   };
 
   const setSelectedFastMode = (value: TeamFastMode): void => {
     setSelectedFastModeRaw(value);
-    localStorage.setItem('team:lastSelectedFastMode', value);
+    setStoredCreateTeamFastMode(value);
   };
 
   const setWorktreeEnabled = (value: boolean): void => {
@@ -524,7 +509,17 @@ export const CreateTeamDialog = ({
     resetUIState();
   };
 
-  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+  const persistCurrentMemberRuntimePreferences = useCallback(
+    (nextMembers: readonly MemberDraft[] = members): void => {
+      setStoredCreateTeamMemberRuntimePreferences(nextMembers);
+    },
+    [members]
+  );
+
+  const selectedProjectCwd = isEphemeralProjectPath(selectedProjectPath)
+    ? ''
+    : selectedProjectPath.trim();
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
   /** All taken names: existing teams + teams currently being provisioned. */
   const allTakenTeamNames = useMemo(
@@ -556,7 +551,7 @@ export const CreateTeamDialog = ({
       new Set([
         selectedProviderId,
         ...members.flatMap((member) =>
-          isTeamProviderId(member.providerId) ? [member.providerId] : []
+          !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
         ),
       ])
     );
@@ -588,6 +583,7 @@ export const CreateTeamDialog = ({
   const prepareModelResultsCacheRef = useRef(
     new Map<string, Record<string, ProviderPrepareDiagnosticsModelResult>>()
   );
+  const lastPrepareRequestSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
@@ -610,9 +606,43 @@ export const CreateTeamDialog = ({
 
   useEffect(() => {
     if (!open) {
-      prepareModelResultsCacheRef.current.clear();
+      lastPrepareRequestSignatureRef.current = null;
     }
   }, [open]);
+
+  const prepareRuntimeStatusSignature = useMemo(
+    () =>
+      buildProviderPrepareRuntimeStatusSignature(
+        selectedMemberProviders,
+        runtimeProviderStatusById
+      ),
+    [runtimeProviderStatusById, selectedMemberProviders]
+  );
+  const prepareMembersSignature = useMemo(
+    () => buildProviderPrepareMembersSignature(effectiveMemberDrafts),
+    [effectiveMemberDrafts]
+  );
+  const prepareRequestSignature = useMemo(
+    () =>
+      buildProviderPrepareRequestSignature({
+        cwd: effectiveCwd,
+        selectedProviderId,
+        selectedModel,
+        selectedMemberProviders,
+        limitContext,
+        runtimeStatusSignature: prepareRuntimeStatusSignature,
+        membersSignature: prepareMembersSignature,
+      }),
+    [
+      effectiveCwd,
+      limitContext,
+      prepareMembersSignature,
+      prepareRuntimeStatusSignature,
+      selectedMemberProviders,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
 
   useEffect(() => {
     if (multimodelEnabled) {
@@ -642,10 +672,14 @@ export const CreateTeamDialog = ({
 
   useEffect(() => {
     if (!open || !canCreate || !launchTeam) {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       return;
     }
 
     if (typeof api.teams.prepareProvisioning !== 'function') {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       setPrepareState('failed');
       setPrepareWarnings([]);
       setPrepareChecks([]);
@@ -656,6 +690,8 @@ export const CreateTeamDialog = ({
     }
 
     if (!effectiveCwd) {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       setPrepareState('idle');
       setPrepareWarnings([]);
       setPrepareChecks([]);
@@ -663,7 +699,11 @@ export const CreateTeamDialog = ({
       return;
     }
 
-    let cancelled = false;
+    if (lastPrepareRequestSignatureRef.current === prepareRequestSignature) {
+      return;
+    }
+    lastPrepareRequestSignatureRef.current = prepareRequestSignature;
+
     const requestSeq = ++prepareRequestSeqRef.current;
     const initialChecks = alignProvisioningChecks(
       prepareChecksRef.current,
@@ -674,170 +714,176 @@ export const CreateTeamDialog = ({
     setPrepareWarnings([]);
     setPrepareChecks(initialChecks);
 
-    // Defer so file list fetch (triggered by project select) can run first
-    const timer = setTimeout(() => {
-      void (async () => {
-        let checks = initialChecks;
-        const providerPlans = selectedMemberProviders.map((providerId) => {
-          const selectedModelChecks = (() => {
-            const next = new Set<string>();
-            let hasDefaultSelection = false;
-            const supportsProviderDefaultCheck =
-              providerId === 'codex' ||
-              providerId === 'gemini' ||
-              (providerId === 'anthropic' && selectedProviderId === 'anthropic');
-            const leadModel = computeEffectiveTeamModel(
-              selectedModel,
-              limitContext,
-              selectedProviderId
-            );
-            if (selectedProviderId === providerId && selectedModel.trim()) {
-              if (leadModel?.trim()) {
-                next.add(leadModel.trim());
-              }
-            } else if (selectedProviderId === providerId && supportsProviderDefaultCheck) {
+    void (async () => {
+      await Promise.resolve();
+      let checks = initialChecks;
+      const providerPlans = selectedMemberProviders.map((providerId) => {
+        const selectedModelChecks = (() => {
+          const next = new Set<string>();
+          let hasDefaultSelection = false;
+          const supportsProviderDefaultCheck =
+            providerId === 'codex' ||
+            providerId === 'gemini' ||
+            (providerId === 'anthropic' && selectedProviderId === 'anthropic');
+          const leadModel = computeEffectiveTeamModel(
+            selectedModel,
+            limitContext,
+            selectedProviderId
+          );
+          if (selectedProviderId === providerId && selectedModel.trim()) {
+            if (leadModel?.trim()) {
+              next.add(leadModel.trim());
+            }
+          } else if (selectedProviderId === providerId && supportsProviderDefaultCheck) {
+            hasDefaultSelection = true;
+          }
+          for (const member of effectiveMemberDrafts) {
+            if (member.removedAt) {
+              continue;
+            }
+            const scopedModel = resolveProviderScopedMemberModel({
+              memberProviderId: member.providerId,
+              memberModel: member.model,
+              selectedProviderId,
+              runtimeProviderStatusById,
+            });
+            if (scopedModel.providerId !== providerId) {
+              continue;
+            }
+            if (scopedModel.model) {
+              next.add(scopedModel.model);
+            } else if (supportsProviderDefaultCheck) {
               hasDefaultSelection = true;
             }
-            for (const member of effectiveMemberDrafts) {
-              if (member.removedAt) {
-                continue;
-              }
-              const scopedModel = resolveProviderScopedMemberModel({
-                memberProviderId: member.providerId,
-                memberModel: member.model,
-                selectedProviderId,
-                runtimeProviderStatusById,
-              });
-              if (scopedModel.providerId !== providerId) {
-                continue;
-              }
-              if (scopedModel.model) {
-                next.add(scopedModel.model);
-              } else if (supportsProviderDefaultCheck) {
-                hasDefaultSelection = true;
-              }
-            }
-            if (supportsProviderDefaultCheck && hasDefaultSelection) {
-              next.add(DEFAULT_PROVIDER_MODEL_SELECTION);
-            }
-            return Array.from(next);
-          })();
-          const backendSummary = runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null;
-          const cacheKey = buildProviderPrepareModelCacheKey({
-            cwd: effectiveCwd,
-            providerId,
-            backendSummary,
-            limitContext,
-          });
-          const cachedModelResultsById = prepareModelResultsCacheRef.current.get(cacheKey) ?? {};
-          const cachedSnapshot = getProviderPrepareCachedSnapshot({
-            providerId,
-            selectedModelIds: selectedModelChecks,
-            cachedModelResultsById,
-          });
-          return {
-            providerId,
-            selectedModelChecks,
-            backendSummary,
-            cacheKey,
-            cachedModelResultsById,
-            cachedSnapshot,
-          };
+          }
+          if (supportsProviderDefaultCheck && hasDefaultSelection) {
+            next.add(DEFAULT_PROVIDER_MODEL_SELECTION);
+          }
+          return Array.from(next);
+        })();
+        const backendSummary = runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null;
+        const cacheKey = buildProviderPrepareModelCacheKey({
+          cwd: effectiveCwd,
+          providerId,
+          backendSummary,
+          limitContext,
+          runtimeStatusSignature: prepareRuntimeStatusSignature,
         });
+        const cachedModelResultsById = {
+          ...getShortLivedProviderPrepareModelResults({
+            providerId,
+            cacheKey,
+          }),
+          ...(prepareModelResultsCacheRef.current.get(cacheKey) ?? {}),
+        };
+        const cachedSnapshot = getProviderPrepareCachedSnapshot({
+          providerId,
+          selectedModelIds: selectedModelChecks,
+          cachedModelResultsById,
+        });
+        return {
+          providerId,
+          selectedModelChecks,
+          backendSummary,
+          cacheKey,
+          cachedModelResultsById,
+          cachedSnapshot,
+        };
+      });
 
-        try {
-          for (const plan of providerPlans) {
-            checks = updateProviderCheck(checks, plan.providerId, {
-              status: plan.selectedModelChecks.length > 0 ? plan.cachedSnapshot.status : 'checking',
-              backendSummary: plan.backendSummary,
-              details: plan.cachedSnapshot.details,
-            });
-          }
-          if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
-            setPrepareChecks(checks);
-          }
-          const providerResults = await Promise.all(
-            providerPlans.map(async (plan) => {
-              const prepResult = await runProviderPrepareDiagnostics({
-                cwd: effectiveCwd,
-                providerId: plan.providerId,
-                selectedModelIds: plan.selectedModelChecks,
-                prepareProvisioning: api.teams.prepareProvisioning,
-                limitContext,
-                cachedModelResultsById: plan.cachedModelResultsById,
-                onModelProgress: ({ details }) => {
-                  checks = updateProviderCheck(checks, plan.providerId, {
-                    status: 'checking',
-                    backendSummary: plan.backendSummary,
-                    details,
-                  });
-                  if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
-                    setPrepareChecks(checks);
-                  }
-                },
-              });
-              return { ...plan, prepResult };
-            })
-          );
-          let anyFailure = false;
-          let anyNotes = false;
-          const collectedWarnings: string[] = [];
-          for (const plan of providerResults) {
-            if (plan.prepResult.warnings.length > 0) {
-              anyNotes = true;
-              collectedWarnings.push(
-                ...plan.prepResult.warnings.map(
-                  (warning) => `${getProviderLabel(plan.providerId)}: ${warning}`
-                )
-              );
-            }
-            if (plan.prepResult.status === 'failed') {
-              anyFailure = true;
-            } else if (plan.prepResult.status === 'notes') {
-              anyNotes = true;
-            }
-            prepareModelResultsCacheRef.current.set(
-              plan.cacheKey,
-              buildReusableProviderPrepareModelResults(plan.prepResult.modelResultsById)
-            );
-            checks = updateProviderCheck(checks, plan.providerId, {
-              status: plan.prepResult.status,
-              backendSummary: plan.backendSummary,
-              details: plan.prepResult.details,
-            });
-          }
-          if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
-            setPrepareChecks(checks);
-          }
-          if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
-          const failureMessage =
-            getPrimaryProvisioningFailureDetail(checks) ??
-            'Some selected providers need attention.';
-          setPrepareState(anyFailure ? 'failed' : 'ready');
-          setPrepareMessage(
-            anyFailure
-              ? failureMessage
-              : anyNotes
-                ? 'Selected providers are ready with notes.'
-                : 'Selected providers are ready.'
-          );
-          setPrepareWarnings(collectedWarnings);
-        } catch (error) {
-          if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
-          const failureMessage =
-            error instanceof Error ? error.message : 'Failed to warm up Claude CLI environment';
-          setPrepareState('failed');
-          setPrepareWarnings([]);
-          setPrepareChecks(failIncompleteProviderChecks(checks, failureMessage));
-          setPrepareMessage(failureMessage);
+      try {
+        for (const plan of providerPlans) {
+          checks = updateProviderCheck(checks, plan.providerId, {
+            status: plan.selectedModelChecks.length > 0 ? plan.cachedSnapshot.status : 'checking',
+            backendSummary: plan.backendSummary,
+            details: plan.cachedSnapshot.details,
+          });
         }
-      })();
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+        if (prepareRequestSeqRef.current === requestSeq) {
+          setPrepareChecks(checks);
+        }
+        const providerResults = await Promise.all(
+          providerPlans.map(async (plan) => {
+            const prepResult = await runProviderPrepareDiagnostics({
+              cwd: effectiveCwd,
+              providerId: plan.providerId,
+              selectedModelIds: plan.selectedModelChecks,
+              prepareProvisioning: api.teams.prepareProvisioning,
+              limitContext,
+              cachedModelResultsById: plan.cachedModelResultsById,
+              onModelProgress: ({ status, details }) => {
+                checks = updateProviderCheck(checks, plan.providerId, {
+                  status,
+                  backendSummary: plan.backendSummary,
+                  details,
+                });
+                if (prepareRequestSeqRef.current === requestSeq) {
+                  setPrepareChecks(checks);
+                }
+              },
+            });
+            return { ...plan, prepResult };
+          })
+        );
+        let anyFailure = false;
+        let anyNotes = false;
+        const collectedWarnings: string[] = [];
+        for (const plan of providerResults) {
+          if (plan.prepResult.warnings.length > 0) {
+            anyNotes = true;
+            collectedWarnings.push(
+              ...plan.prepResult.warnings.map(
+                (warning) => `${getProviderLabel(plan.providerId)}: ${warning}`
+              )
+            );
+          }
+          if (plan.prepResult.status === 'failed') {
+            anyFailure = true;
+          } else if (plan.prepResult.status === 'notes') {
+            anyNotes = true;
+          }
+          if (prepareRequestSeqRef.current === requestSeq) {
+            const reusableModelResults = buildReusableProviderPrepareModelResults(
+              plan.prepResult.modelResultsById
+            );
+            prepareModelResultsCacheRef.current.set(plan.cacheKey, reusableModelResults);
+            storeShortLivedProviderPrepareModelResults({
+              providerId: plan.providerId,
+              cacheKey: plan.cacheKey,
+              modelResultsById: plan.prepResult.modelResultsById,
+            });
+          }
+          checks = updateProviderCheck(checks, plan.providerId, {
+            status: plan.prepResult.status,
+            backendSummary: plan.backendSummary,
+            details: plan.prepResult.details,
+          });
+        }
+        if (prepareRequestSeqRef.current === requestSeq) {
+          setPrepareChecks(checks);
+        }
+        if (prepareRequestSeqRef.current !== requestSeq) return;
+        const failureMessage =
+          getPrimaryProvisioningFailureDetail(checks) ?? 'Some selected providers need attention.';
+        setPrepareState(anyFailure ? 'failed' : 'ready');
+        setPrepareMessage(
+          anyFailure
+            ? failureMessage
+            : anyNotes
+              ? 'Selected providers are ready with notes.'
+              : 'Selected providers are ready.'
+        );
+        setPrepareWarnings(collectedWarnings);
+      } catch (error) {
+        if (prepareRequestSeqRef.current !== requestSeq) return;
+        const failureMessage =
+          error instanceof Error ? error.message : 'Failed to warm up Claude CLI environment';
+        setPrepareState('failed');
+        setPrepareWarnings([]);
+        setPrepareChecks(failIncompleteProviderChecks(checks, failureMessage));
+        setPrepareMessage(failureMessage);
+      }
+    })();
   }, [
     open,
     canCreate,
@@ -845,6 +891,7 @@ export const CreateTeamDialog = ({
     effectiveCwd,
     effectiveMemberDrafts,
     limitContext,
+    prepareRequestSignature,
     runtimeProviderStatusById,
     selectedModel,
     selectedProviderId,
@@ -862,7 +909,9 @@ export const CreateTeamDialog = ({
     let cancelled = false;
     void (async () => {
       try {
-        const nextProjects = await api.getProjects();
+        const nextProjects = (await api.getProjects()).filter(
+          (project) => !isEphemeralProjectPath(project.path)
+        );
         if (cancelled) {
           return;
         }
@@ -870,10 +919,14 @@ export const CreateTeamDialog = ({
         // If defaultProjectPath is set but not in the fetched list (e.g. new project
         // without Claude sessions), add it as a synthetic entry so the Combobox can
         // display and select it.
+        const normalizedDefaultProjectPath = defaultProjectPath
+          ? normalizePath(defaultProjectPath)
+          : null;
         if (
           defaultProjectPath &&
-          !isEphemeralRenderedProjectPath(defaultProjectPath) &&
-          !nextProjects.some((p) => normalizePath(p.path) === defaultProjectPath)
+          normalizedDefaultProjectPath &&
+          !isEphemeralProjectPath(defaultProjectPath) &&
+          !nextProjects.some((p) => normalizePath(p.path) === normalizedDefaultProjectPath)
         ) {
           const folderName =
             defaultProjectPath.split(/[/\\]/).filter(Boolean).pop() ?? defaultProjectPath;
@@ -911,6 +964,9 @@ export const CreateTeamDialog = ({
     }
 
     if (initialData) {
+      const nextSyncModelsWithLead = !initialData.members.some(
+        (member) => member.providerId || member.model || member.effort
+      );
       setTeamName(initialData.teamName);
       descriptionDraft.setValue(initialData.description ?? '');
       setTeamColor(initialData.color ?? '');
@@ -925,6 +981,7 @@ export const CreateTeamDialog = ({
               roleSelection: isCustom ? CUSTOM_ROLE : (m.role ?? ''),
               customRole: isCustom ? m.role : '',
               workflow: m.workflow,
+              isolation: m.isolation === 'worktree' ? 'worktree' : undefined,
               providerId: normalizeOptionalTeamProviderId(m.providerId),
               model: m.model ?? '',
               effort: m.effort,
@@ -933,9 +990,11 @@ export const CreateTeamDialog = ({
           );
         })
       );
-      setSyncModelsWithLead(
-        !initialData.members.some((member) => member.providerId || member.model || member.effort)
+      setTeammateWorktreeDefault(
+        initialData.members.length > 0 &&
+          initialData.members.every((member) => member.isolation === 'worktree')
       );
+      setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
       return;
     }
 
@@ -943,17 +1002,34 @@ export const CreateTeamDialog = ({
       return;
     }
 
+    const nextDefaultMembers = DEFAULT_MEMBERS.map((member) =>
+      createMemberDraft({
+        name: member.name,
+        roleSelection: member.roleSelection,
+        workflow: member.workflow,
+      })
+    );
     setMembers(
-      DEFAULT_MEMBERS.map((member) =>
-        createMemberDraft({
-          name: member.name,
-          roleSelection: member.roleSelection,
-          workflow: member.workflow,
-        })
-      )
+      syncModelsWithLead
+        ? nextDefaultMembers
+        : applyStoredCreateTeamMemberRuntimePreferences(nextDefaultMembers)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open/draftLoaded
   }, [open, draftLoaded]);
+
+  useEffect(() => {
+    if (!open || !draftLoaded || initialData || syncModelsWithLead || members.length === 0) {
+      return;
+    }
+    persistCurrentMemberRuntimePreferences(members);
+  }, [
+    draftLoaded,
+    initialData,
+    members,
+    open,
+    persistCurrentMemberRuntimePreferences,
+    syncModelsWithLead,
+  ]);
 
   useEffect(() => {
     if (!open || initialData || !draftLoaded) {
@@ -992,24 +1068,31 @@ export const CreateTeamDialog = ({
     if (cwdMode !== 'project') {
       return;
     }
-    if (selectedProjectPath || projects.length === 0) {
+    if (selectedProjectPath) {
       return;
     }
-    if (defaultProjectPath && !isEphemeralRenderedProjectPath(defaultProjectPath)) {
-      const match = projects.find((p) => normalizePath(p.path) === defaultProjectPath);
+    const selectableProjects = projects.filter((project) => !isEphemeralProjectPath(project.path));
+    if (selectableProjects.length === 0) {
+      return;
+    }
+    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
+      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+      const match = selectableProjects.find(
+        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
+      );
       if (match) {
         setSelectedProjectPath(match.path);
         return;
       }
     }
-    setSelectedProjectPath(projects[0].path);
+    setSelectedProjectPath(selectableProjects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
 
   useEffect(() => {
     if (!open || cwdMode !== 'project' || !selectedProjectPath) {
       return;
     }
-    if (!isEphemeralRenderedProjectPath(selectedProjectPath)) {
+    if (!isEphemeralProjectPath(selectedProjectPath)) {
       return;
     }
     setSelectedProjectPath('');
@@ -1152,14 +1235,14 @@ export const CreateTeamDialog = ({
     const notices: string[] = [];
     if (reconciliation.nextEffort !== selectedEffort) {
       setSelectedEffortRaw(reconciliation.nextEffort);
-      localStorage.setItem('team:lastSelectedEffort', reconciliation.nextEffort);
+      setStoredCreateTeamEffort(reconciliation.nextEffort);
       if (reconciliation.effortResetReason) {
         notices.push(reconciliation.effortResetReason);
       }
     }
     if (reconciliation.nextFastMode !== selectedFastMode) {
       setSelectedFastModeRaw(reconciliation.nextFastMode);
-      localStorage.setItem('team:lastSelectedFastMode', reconciliation.nextFastMode);
+      setStoredCreateTeamFastMode(reconciliation.nextFastMode);
       if (reconciliation.fastModeResetReason) {
         notices.push(reconciliation.fastModeResetReason);
       }
@@ -1368,14 +1451,43 @@ export const CreateTeamDialog = ({
     (checked: boolean): void => {
       setSyncModelsWithLead(checked);
       if (checked) {
+        persistCurrentMemberRuntimePreferences(members);
         setMembers(members.map(clearMemberModelOverrides));
+        return;
+      }
+
+      if (getStoredCreateTeamMemberRuntimePreferences().length === 0) {
+        return;
+      }
+
+      const nextMembers = applyStoredCreateTeamMemberRuntimePreferences(members);
+      const hasRuntimeChanges = nextMembers.some((member, index) => {
+        const previousMember = members[index];
+        return (
+          member.providerId !== previousMember?.providerId ||
+          member.model !== previousMember?.model ||
+          member.effort !== previousMember?.effort
+        );
+      });
+      if (hasRuntimeChanges) {
+        setMembers(nextMembers);
       }
     },
-    [members, setMembers, setSyncModelsWithLead]
+    [members, persistCurrentMemberRuntimePreferences, setMembers, setSyncModelsWithLead]
   );
 
   const activeError =
     localError ?? modelValidationError ?? provisioningErrorsByTeam[request.teamName] ?? null;
+  const effectivePrepare = useMemo(
+    () =>
+      deriveEffectiveProvisioningPrepareState({
+        state: prepareState,
+        message: prepareMessage,
+        warnings: prepareWarnings,
+        checks: prepareChecks,
+      }),
+    [prepareChecks, prepareMessage, prepareState, prepareWarnings]
+  );
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 
@@ -1417,6 +1529,9 @@ export const CreateTeamDialog = ({
     if (!launchTeam) {
       void (async () => {
         try {
+          if (!syncModelsWithLead) {
+            persistCurrentMemberRuntimePreferences(members);
+          }
           await api.teams.createConfig({
             teamName: request.teamName,
             displayName: request.displayName,
@@ -1441,6 +1556,9 @@ export const CreateTeamDialog = ({
 
     void (async () => {
       try {
+        if (!syncModelsWithLead) {
+          persistCurrentMemberRuntimePreferences(members);
+        }
         await onCreate(request);
         onOpenTeam(request.teamName, effectiveCwd || undefined);
         resetFormState();
@@ -1609,6 +1727,9 @@ export const CreateTeamDialog = ({
               onLimitContextChange={setLimitContext}
               syncModelsWithTeammates={syncModelsWithLead}
               onSyncModelsWithTeammatesChange={handleSyncModelsWithLeadChange}
+              showWorktreeIsolationControls={!soloTeam}
+              teammateWorktreeDefault={teammateWorktreeDefault}
+              onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
               disableGeminiOption={isGeminiUiFrozen()}
               leadModelIssueText={leadModelIssueText}
               leadFastModeNotice={anthropicRuntimeNotice}
@@ -1823,14 +1944,16 @@ export const CreateTeamDialog = ({
 
         <DialogFooter className="pt-4 sm:justify-between">
           <div className="min-w-0">
-            {canCreate && launchTeam && (prepareState === 'idle' || prepareState === 'loading') ? (
+            {canCreate &&
+            launchTeam &&
+            (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
               <>
                 <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                   <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   <div>
                     <span>
-                      {prepareMessage ??
-                        (prepareState === 'idle'
+                      {effectivePrepare.message ??
+                        (effectivePrepare.state === 'idle'
                           ? 'Warming up CLI environment...'
                           : 'Preparing environment...')}
                     </span>
@@ -1843,7 +1966,7 @@ export const CreateTeamDialog = ({
               </>
             ) : null}
 
-            {canCreate && launchTeam && prepareState === 'ready' ? (
+            {canCreate && launchTeam && effectivePrepare.state === 'ready' ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
                   <CheckCircle2 className="size-3.5 shrink-0" />
@@ -1854,9 +1977,9 @@ export const CreateTeamDialog = ({
                       : 'CLI environment ready'}
                   </span>
                 </div>
-                {prepareMessage ? (
+                {effectivePrepare.message ? (
                   <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
-                    {prepareMessage}
+                    {effectivePrepare.message}
                   </p>
                 ) : null}
                 <ProvisioningProviderStatusList checks={prepareChecks} className="mt-1" />
@@ -1872,7 +1995,7 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
 
-            {canCreate && launchTeam && prepareState === 'failed' ? (
+            {canCreate && launchTeam && effectivePrepare.state === 'failed' ? (
               <div className="text-xs">
                 <div className="flex items-start gap-2 text-red-300">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -1881,7 +2004,7 @@ export const CreateTeamDialog = ({
                       CLI environment is not available - launch is blocked
                     </p>
                     <p className="mt-0.5 text-red-300/80">
-                      {prepareMessage ?? 'Failed to prepare environment'}
+                      {effectivePrepare.message ?? 'Failed to prepare environment'}
                     </p>
                     <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
                       Pre-flight check to catch errors before launch
@@ -1909,7 +2032,7 @@ export const CreateTeamDialog = ({
                   </div>
                 ) : null}
                 <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
-                  {getProvisioningFailureHint(prepareMessage, prepareChecks)}
+                  {getProvisioningFailureHint(effectivePrepare.message, prepareChecks)}
                 </p>
               </div>
             ) : null}
@@ -1941,7 +2064,8 @@ export const CreateTeamDialog = ({
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />
                   Creating...
                 </>
-              ) : launchTeam && (prepareState === 'idle' || prepareState === 'loading') ? (
+              ) : launchTeam &&
+                (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
                 'Skip preflight and create'
               ) : (
                 'Create'

@@ -133,6 +133,33 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
+  it('shows a full loading badge for connecting teammates during provisioning', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          isTeamAlive: false,
+          isTeamProvisioning: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('connecting');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps runtime retry visible even while the teammate already has an active task', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -174,6 +201,41 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
+  it('keeps runtime-pending accessibility copy honest even when launch badge is hidden by an active task', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member: {
+            ...member,
+            currentTaskId: currentTask.id,
+          },
+          memberColor: 'blue',
+          currentTask,
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'online',
+          spawnLaunchState: 'runtime_pending_bootstrap',
+          spawnRuntimeAlive: true,
+          spawnLivenessSource: 'process',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('online');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps the starting treatment and runtime summary visible while a runtime is still joining', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -202,6 +264,69 @@ describe('MemberCard starting-state visuals', () => {
     expect(host.textContent).not.toContain('online');
     expect(host.querySelector('.member-waiting-shimmer')).not.toBeNull();
     expect(host.querySelectorAll('.skeleton-shimmer').length).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows an awaiting permission badge for teammates blocked on runtime permissions', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'online',
+          spawnLaunchState: 'runtime_pending_permission',
+          spawnRuntimeAlive: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('awaiting permission');
+    expect(host.querySelector('[aria-label="awaiting permission"]')).not.toBeNull();
+    expect(host.querySelector('.member-waiting-shimmer')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows a connecting badge while runtime bootstrap is still pending after the process comes online', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          runtimeSummary: 'Gemini · flash · Medium',
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'online',
+          spawnLaunchState: 'runtime_pending_bootstrap',
+          spawnRuntimeAlive: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('connecting');
+    expect(host.textContent).not.toContain('ready');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();

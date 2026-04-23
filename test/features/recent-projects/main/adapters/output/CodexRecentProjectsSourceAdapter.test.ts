@@ -133,9 +133,12 @@ describe('CodexRecentProjectsSourceAdapter', () => {
 
     expect(appServerClient.listRecentThreads).toHaveBeenCalledTimes(1);
     expect(appServerClient.listRecentLiveThreads).toHaveBeenCalledTimes(1);
-    expect(logger.info).toHaveBeenCalledWith('codex recent-projects recovered with live-only fallback', {
-      liveCount: 1,
-    });
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex recent-projects recovered with live-only fallback',
+      {
+        liveCount: 1,
+      }
+    );
   });
 
   it('does not spend extra time on live-only fallback after a full session timeout', async () => {
@@ -164,5 +167,46 @@ describe('CodexRecentProjectsSourceAdapter', () => {
       degraded: true,
     });
     expect(appServerClient.listRecentLiveThreads).not.toHaveBeenCalled();
+  });
+
+  it('drops Codex appstyle temp workspaces from dashboard candidates', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi.fn().mockResolvedValue({
+        live: {
+          threads: [
+            {
+              id: 'thread-temp',
+              cwd: '/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9',
+              source: 'cli',
+              updatedAt: 1_700_000_000,
+            },
+          ],
+        },
+        archived: {
+          threads: [],
+        },
+      }),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn(),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: false,
+    });
+
+    expect(identityResolver.resolve).not.toHaveBeenCalled();
   });
 });

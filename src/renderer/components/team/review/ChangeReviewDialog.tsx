@@ -21,7 +21,7 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
-import { ChevronDown, Clock, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, FileSearch, X } from 'lucide-react';
 
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import { acceptAllChunks, computeChunkIndexAtPos, rejectAllChunks } from './CodeMirrorDiffUtils';
@@ -66,6 +66,41 @@ interface ChangeReviewDialogProps {
 function isTaskChangeSetV2(cs: { teamName: string }): cs is TaskChangeSetV2 {
   return 'scope' in cs;
 }
+
+const TaskChangesEmptyState = ({
+  changeSet,
+}: {
+  changeSet: TaskChangeSetV2 | null;
+}): React.ReactElement => {
+  const warnings = changeSet?.warnings ?? [];
+  const hasWarnings = warnings.length > 0;
+  const Icon = hasWarnings ? AlertTriangle : FileSearch;
+
+  return (
+    <div className="flex w-full items-center justify-center px-6">
+      <div className="max-w-xl rounded-lg border border-border bg-surface-sidebar px-5 py-4 text-center">
+        <Icon
+          className={cn('mx-auto mb-2 size-5', hasWarnings ? 'text-amber-300' : 'text-text-muted')}
+        />
+        <div className="text-sm font-medium text-text">
+          {hasWarnings ? 'No reviewable file changes' : 'No file changes recorded'}
+        </div>
+        <p className="mt-1 text-xs leading-5 text-text-muted">
+          {hasWarnings
+            ? 'The task ledger did not expose any safe file diff for this task. The diagnostics below explain why.'
+            : 'The task ledger has no file events for this task.'}
+        </p>
+        {warnings.length > 0 && (
+          <div className="mt-3 space-y-1 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-left text-xs text-amber-200">
+            {warnings.map((warning, index) => (
+              <div key={`${warning}:${index}`}>{warning}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const ChangeReviewDialog = ({
   open,
@@ -1213,6 +1248,16 @@ export const ChangeReviewDialog = ({
     resetAllReviewState,
   ]);
 
+  const taskChangeSet =
+    activeChangeSet && isTaskChangeSetV2(activeChangeSet) ? activeChangeSet : null;
+  const hasReviewFiles = (activeChangeSet?.files.length ?? 0) > 0;
+  const shouldShowScopeBanner =
+    mode === 'task' &&
+    !!taskChangeSet &&
+    (taskChangeSet.provenance?.sourceKind !== 'ledger' ||
+      taskChangeSet.warnings.length > 0 ||
+      taskChangeSet.scope.confidence.tier > 1);
+
   // Active file for timeline (derived from scroll-spy)
   const activeFile = useMemo(() => {
     if (!activeChangeSet || !activeFilePath) return null;
@@ -1224,7 +1269,7 @@ export const ChangeReviewDialog = ({
     const task = taskId ? globalTasks.find((t) => t.id === taskId) : undefined;
     const shortId = task?.displayId ?? taskId?.slice(0, 8) ?? '?';
     const subject = task?.subject;
-    return subject ? `Changes for task #${shortId} — ${subject}` : `Changes for task #${shortId}`;
+    return subject ? `Changes for task #${shortId} - ${subject}` : `Changes for task #${shortId}`;
   }, [mode, memberName, taskId, globalTasks]);
 
   const isMacElectron =
@@ -1272,33 +1317,31 @@ export const ChangeReviewDialog = ({
       />
 
       {/* Review toolbar */}
-      {!changeSetLoading &&
-        !changeSetError &&
-        activeChangeSet &&
-        activeChangeSet.files.length > 0 && (
-          <ReviewToolbar
-            stats={reviewStats}
-            changeStats={changeStats}
-            collapseUnchanged={collapseUnchanged}
-            applying={applying}
-            autoViewed={autoViewed}
-            onAutoViewedChange={setAutoViewed}
-            onAcceptAll={handleAcceptAll}
-            onRejectAll={handleRejectAll}
-            onApply={handleApply}
-            onCollapseUnchangedChange={setCollapseUnchanged}
-            instantApply={REVIEW_INSTANT_APPLY}
-            editedCount={editedCount}
-            canUndo={reviewUndoStack.length > 0}
-            onUndo={handleUndoBulk}
-          />
-        )}
+      {!changeSetLoading && !changeSetError && activeChangeSet && hasReviewFiles && (
+        <ReviewToolbar
+          stats={reviewStats}
+          changeStats={changeStats}
+          collapseUnchanged={collapseUnchanged}
+          applying={applying}
+          autoViewed={autoViewed}
+          onAutoViewedChange={setAutoViewed}
+          onAcceptAll={handleAcceptAll}
+          onRejectAll={handleRejectAll}
+          onApply={handleApply}
+          onCollapseUnchangedChange={setCollapseUnchanged}
+          instantApply={REVIEW_INSTANT_APPLY}
+          editedCount={editedCount}
+          canUndo={reviewUndoStack.length > 0}
+          onUndo={handleUndoBulk}
+        />
+      )}
 
       {/* Scope info / warnings + confidence badge */}
-      {mode === 'task' && activeChangeSet && isTaskChangeSetV2(activeChangeSet) && (
+      {shouldShowScopeBanner && taskChangeSet && (
         <ScopeWarningBanner
-          warnings={activeChangeSet.warnings}
-          confidence={activeChangeSet.scope.confidence}
+          warnings={taskChangeSet.warnings}
+          confidence={taskChangeSet.scope.confidence}
+          sourceKind={taskChangeSet.provenance?.sourceKind}
         />
       )}
 
@@ -1319,7 +1362,7 @@ export const ChangeReviewDialog = ({
           </div>
         )}
 
-        {!changeSetLoading && !changeSetError && activeChangeSet && (
+        {!changeSetLoading && !changeSetError && activeChangeSet && hasReviewFiles && (
           <>
             {/* File tree */}
             <div className="w-64 shrink-0 overflow-y-auto border-r border-border bg-surface-sidebar">
@@ -1425,10 +1468,8 @@ export const ChangeReviewDialog = ({
           </>
         )}
 
-        {!changeSetLoading && !changeSetError && activeChangeSet?.files.length === 0 && (
-          <div className="flex w-full items-center justify-center text-sm text-text-muted">
-            No file changes detected
-          </div>
+        {!changeSetLoading && !changeSetError && activeChangeSet && !hasReviewFiles && (
+          <TaskChangesEmptyState changeSet={taskChangeSet} />
         )}
       </div>
     </div>

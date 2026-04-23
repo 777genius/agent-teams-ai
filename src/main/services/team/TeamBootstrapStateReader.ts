@@ -19,6 +19,7 @@ const MAX_BOOTSTRAP_STATE_BYTES = 256 * 1024;
 const MAX_BOOTSTRAP_JOURNAL_BYTES = 256 * 1024;
 const MAX_BOOTSTRAP_LOCK_METADATA_BYTES = 64 * 1024;
 const ACTIVE_BOOTSTRAP_STUCK_CLASSIFICATION_MS = 3 * 60 * 1000;
+const TERMINAL_BOOTSTRAP_ONLY_PENDING_GRACE_MS = 5 * 60 * 1000;
 
 interface RawBootstrapMemberState {
   name?: unknown;
@@ -810,12 +811,84 @@ export async function clearBootstrapState(teamName: string): Promise<void> {
   }
 }
 
+function isLaunchSnapshotLike(value: unknown): value is PersistedTeamLaunchSnapshot {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    Array.isArray((value as PersistedTeamLaunchSnapshot).expectedMembers) &&
+    typeof (value as PersistedTeamLaunchSnapshot).members === 'object' &&
+    (value as PersistedTeamLaunchSnapshot).members !== null
+  );
+}
+
+function getLaunchSnapshotRichness(snapshot: PersistedTeamLaunchSnapshot): number {
+  const persistedMemberCount = getPersistedLaunchMemberNames(snapshot).length;
+  let metadataScore = 0;
+  for (const member of Object.values(snapshot.members)) {
+    if (!member || typeof member !== 'object') continue;
+    if (member.providerId) metadataScore += 3;
+    if (member.providerBackendId) metadataScore += 3;
+    if (member.selectedFastMode) metadataScore += 2;
+    if (typeof member.resolvedFastMode === 'boolean') metadataScore += 2;
+    if (member.laneId) metadataScore += 4;
+    if (member.laneKind) metadataScore += 4;
+    if (member.laneOwnerProviderId) metadataScore += 3;
+    if (member.launchIdentity) metadataScore += 6;
+  }
+  return (
+    persistedMemberCount * 10 +
+    Object.keys(snapshot.members).length * 5 +
+    metadataScore +
+    (snapshot.bootstrapExpectedMembers?.length ? 20 : 0)
+  );
+}
+
+function getPersistedLaunchMemberNames(snapshot: PersistedTeamLaunchSnapshot): string[] {
+  return Array.from(new Set([...snapshot.expectedMembers, ...Object.keys(snapshot.members)]));
+}
+
+export function shouldIgnoreTerminalBootstrapOnlyPendingSnapshot(
+  snapshot: Pick<PersistedTeamLaunchSnapshot, 'launchPhase' | 'teamLaunchState' | 'updatedAt'>,
+  nowMs: number = Date.now()
+): boolean {
+  if (snapshot.launchPhase !== 'finished' || snapshot.teamLaunchState !== 'partial_pending') {
+    return false;
+  }
+
+  const updatedAtMs = Date.parse(snapshot.updatedAt);
+  if (!Number.isFinite(updatedAtMs)) {
+    return false;
+  }
+
+  return nowMs - updatedAtMs >= TERMINAL_BOOTSTRAP_ONLY_PENDING_GRACE_MS;
+}
+
 export function choosePreferredLaunchSnapshot<T extends { updatedAt?: string }>(
   bootstrapSnapshot: T | null,
   launchSnapshot: T | null
 ): T | null {
   if (!bootstrapSnapshot) return launchSnapshot;
+  if (
+    !launchSnapshot &&
+    isLaunchSnapshotLike(bootstrapSnapshot) &&
+    shouldIgnoreTerminalBootstrapOnlyPendingSnapshot(bootstrapSnapshot)
+  ) {
+    return null;
+  }
   if (!launchSnapshot) return bootstrapSnapshot;
+
+  if (isLaunchSnapshotLike(bootstrapSnapshot) && isLaunchSnapshotLike(launchSnapshot)) {
+    const bootstrapRichness = getLaunchSnapshotRichness(bootstrapSnapshot);
+    const launchRichness = getLaunchSnapshotRichness(launchSnapshot);
+    const bootstrapMemberCount = getPersistedLaunchMemberNames(bootstrapSnapshot).length;
+    const launchMemberCount = getPersistedLaunchMemberNames(launchSnapshot).length;
+    if (launchRichness > bootstrapRichness && launchMemberCount >= bootstrapMemberCount) {
+      return launchSnapshot as T;
+    }
+    if (bootstrapRichness > launchRichness && bootstrapMemberCount >= launchMemberCount) {
+      return bootstrapSnapshot as T;
+    }
+  }
 
   const bootstrapMs = Date.parse(bootstrapSnapshot.updatedAt ?? '');
   const launchMs = Date.parse(launchSnapshot.updatedAt ?? '');

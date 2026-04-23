@@ -98,6 +98,10 @@ interface LedgerEvent {
   operation: 'create' | 'modify' | 'delete';
   confidence: LedgerConfidence;
   workspaceRoot: string;
+  worktreePath?: string;
+  worktreeBranch?: string;
+  baseWorkspaceRoot?: string;
+  dirtyLeaderWarning?: string;
   filePath: string;
   relativePath: string;
   timestamp: string;
@@ -192,6 +196,10 @@ interface LedgerSummaryScopeV2 {
   confidenceBreakdown?: TaskChangeScope['confidenceBreakdown'];
   visibleFileCount: number;
   contributors: LedgerSummaryContributorV2[];
+  worktreePaths?: string[];
+  worktreeBranches?: string[];
+  baseWorkspaceRoots?: string[];
+  dirtyLeaderWarnings?: string[];
 }
 
 interface LedgerSummaryFileV2 {
@@ -217,6 +225,10 @@ interface LedgerSummaryFileV2 {
   contentAvailability: 'full-text' | 'hash-only' | 'metadata-only';
   reviewability: 'full-text' | 'partial-text' | 'metadata-only';
   relation?: LedgerChangeRelation;
+  worktreePath?: string;
+  worktreeBranch?: string;
+  baseWorkspaceRoot?: string;
+  dirtyLeaderWarning?: string;
   primaryActorKey?: string;
   agentIds: string[];
   memberNames?: string[];
@@ -785,7 +797,11 @@ export class TaskChangeLedgerReader {
 
     if (params.bundle) {
       files = params.bundle.files.map((file) => {
-        const groupKey = this.groupKeyForFileSummary(file.filePath, file.relation);
+        const groupKey = this.groupKeyForFileSummary(
+          file.filePath,
+          file.relation,
+          file.worktreePath
+        );
         const entry = groupedSnippets.get(groupKey);
         return {
           ...this.mapV2SummaryFile(file, params.projectPath),
@@ -968,13 +984,17 @@ export class TaskChangeLedgerReader {
         ...(file.agentIds.length > 0 ? { agentIds: file.agentIds } : {}),
         ...(file.memberNames ? { memberNames: file.memberNames } : {}),
         ...(file.executionSeqRange ? { executionSeqRange: file.executionSeqRange } : {}),
+        ...(file.worktreePath ? { worktreePath: file.worktreePath } : {}),
+        ...(file.worktreeBranch ? { worktreeBranch: file.worktreeBranch } : {}),
+        ...(file.baseWorkspaceRoot ? { baseWorkspaceRoot: file.baseWorkspaceRoot } : {}),
+        ...(file.dirtyLeaderWarning ? { dirtyLeaderWarning: file.dirtyLeaderWarning } : {}),
       },
     };
   }
 
   private normalizeSummaryChangeKey(file: LedgerSummaryFileV2): string {
     if (file.relation) {
-      return `${file.relation.kind}:${normalizePathForComparison(file.relation.oldPath)}->${normalizePathForComparison(file.relation.newPath)}`;
+      return this.relationChangeKey(file.relation, file.worktreePath);
     }
     const slashNormalized = file.changeKey.replace(/\\/g, '/');
     const pathKeyMatch = /^(path|create|delete):(.+)$/.exec(slashNormalized);
@@ -1015,6 +1035,10 @@ export class TaskChangeLedgerReader {
       ...(scope.executionSeqRange ? { executionSeqRange: scope.executionSeqRange } : {}),
       ...(scope.confidenceBreakdown ? { confidenceBreakdown: scope.confidenceBreakdown } : {}),
       ...(scope.contributors ? { contributors: scope.contributors } : {}),
+      ...(scope.worktreePaths ? { worktreePaths: scope.worktreePaths } : {}),
+      ...(scope.worktreeBranches ? { worktreeBranches: scope.worktreeBranches } : {}),
+      ...(scope.baseWorkspaceRoots ? { baseWorkspaceRoots: scope.baseWorkspaceRoots } : {}),
+      ...(scope.dirtyLeaderWarnings ? { dirtyLeaderWarnings: scope.dirtyLeaderWarnings } : {}),
     };
   }
 
@@ -1076,6 +1100,10 @@ export class TaskChangeLedgerReader {
         executionSeq: event.executionSeq,
         linesAdded: event.linesAdded,
         linesRemoved: event.linesRemoved,
+        worktreePath: event.worktreePath,
+        worktreeBranch: event.worktreeBranch,
+        baseWorkspaceRoot: event.baseWorkspaceRoot,
+        dirtyLeaderWarning: event.dirtyLeaderWarning,
         textAvailability:
           beforeContent !== null && afterContent !== null
             ? 'full-text'
@@ -1169,6 +1197,7 @@ export class TaskChangeLedgerReader {
         linesRemoved += removed;
       }
       const displayPath = this.resolveGroupedDisplayPath(entry.filePath, relation, entry.snippets);
+      const worktreeLedger = entry.snippets.find((snippet) => snippet.ledger?.worktreePath)?.ledger;
       files.push({
         filePath: displayPath,
         relativePath: this.relativePath(displayPath, projectPath),
@@ -1181,7 +1210,7 @@ export class TaskChangeLedgerReader {
             (snippet) => snippet.type === 'write-new' || snippet.ledger?.operation === 'create'
           ),
         changeKey: relation
-          ? `${relation.kind}:${normalizePathForComparison(relation.oldPath)}->${normalizePathForComparison(relation.newPath)}`
+          ? this.relationChangeKey(relation, worktreeLedger?.worktreePath)
           : `path:${normalizePathForComparison(displayPath)}`,
         diffStatKnown: true,
         ledgerSummary: {
@@ -1189,6 +1218,16 @@ export class TaskChangeLedgerReader {
           latestOperation:
             entry.snippets[entry.snippets.length - 1]?.ledger?.operation ??
             (entry.snippets[entry.snippets.length - 1]?.type === 'write-new' ? 'create' : 'modify'),
+          ...(worktreeLedger?.worktreePath ? { worktreePath: worktreeLedger.worktreePath } : {}),
+          ...(worktreeLedger?.worktreeBranch
+            ? { worktreeBranch: worktreeLedger.worktreeBranch }
+            : {}),
+          ...(worktreeLedger?.baseWorkspaceRoot
+            ? { baseWorkspaceRoot: worktreeLedger.baseWorkspaceRoot }
+            : {}),
+          ...(worktreeLedger?.dirtyLeaderWarning
+            ? { dirtyLeaderWarning: worktreeLedger.dirtyLeaderWarning }
+            : {}),
         },
         timeline: this.buildTimeline(displayPath, entry.snippets),
       });
@@ -1206,6 +1245,22 @@ export class TaskChangeLedgerReader {
   ): TaskChangeScope {
     const primaryMemberName = events.find((event) => event.memberName)?.memberName;
     const primaryAgentId = events.find((event) => event.agentId)?.agentId;
+    const worktreePaths = [
+      ...new Set(events.flatMap((event) => (event.worktreePath ? [event.worktreePath] : []))),
+    ].sort();
+    const worktreeBranches = [
+      ...new Set(events.flatMap((event) => (event.worktreeBranch ? [event.worktreeBranch] : []))),
+    ].sort();
+    const baseWorkspaceRoots = [
+      ...new Set(
+        events.flatMap((event) => (event.baseWorkspaceRoot ? [event.baseWorkspaceRoot] : []))
+      ),
+    ].sort();
+    const dirtyLeaderWarnings = [
+      ...new Set(
+        events.flatMap((event) => (event.dirtyLeaderWarning ? [event.dirtyLeaderWarning] : []))
+      ),
+    ].sort();
     return {
       taskId,
       memberName: primaryMemberName ?? primaryAgentId ?? '',
@@ -1240,6 +1295,10 @@ export class TaskChangeLedgerReader {
             },
           }
         : {}),
+      ...(worktreePaths.length > 0 ? { worktreePaths } : {}),
+      ...(worktreeBranches.length > 0 ? { worktreeBranches } : {}),
+      ...(baseWorkspaceRoots.length > 0 ? { baseWorkspaceRoots } : {}),
+      ...(dirtyLeaderWarnings.length > 0 ? { dirtyLeaderWarnings } : {}),
     };
   }
 
@@ -1310,14 +1369,29 @@ export class TaskChangeLedgerReader {
   }
 
   private groupKeyForSnippet(snippet: SnippetDiff): string {
-    return this.groupKeyForFileSummary(snippet.filePath, snippet.ledger?.relation);
+    return this.groupKeyForFileSummary(
+      snippet.filePath,
+      snippet.ledger?.relation,
+      snippet.ledger?.worktreePath
+    );
   }
 
-  private groupKeyForFileSummary(filePath: string, relation?: LedgerChangeRelation): string {
+  private groupKeyForFileSummary(
+    filePath: string,
+    relation?: LedgerChangeRelation,
+    worktreePath?: string
+  ): string {
     if (relation) {
-      return `${relation.kind}:${normalizePathForComparison(relation.oldPath)}->${normalizePathForComparison(relation.newPath)}`;
+      return this.relationChangeKey(relation, worktreePath);
     }
     return `path:${normalizePathForComparison(filePath)}`;
+  }
+
+  private relationChangeKey(relation: LedgerChangeRelation, worktreePath?: string): string {
+    const pathPart = `${normalizePathForComparison(relation.oldPath)}->${normalizePathForComparison(relation.newPath)}`;
+    return worktreePath
+      ? `${relation.kind}:${normalizePathForComparison(worktreePath)}:${pathPart}`
+      : `${relation.kind}:${pathPart}`;
   }
 
   private relationForSnippets(snippets: SnippetDiff[]): LedgerChangeRelation | undefined {

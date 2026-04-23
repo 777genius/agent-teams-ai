@@ -727,17 +727,22 @@ function areMemberSpawnStatusEntriesEqual(
 ): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
+  const leftPendingPermissionIds = [...(left.pendingPermissionRequestIds ?? [])].sort();
+  const rightPendingPermissionIds = [...(right.pendingPermissionRequestIds ?? [])].sort();
   // Renderer equality intentionally ignores raw timing fields that do not change
   // visible member status. This suppresses heartbeat-only churn in TeamDetailView.
   return (
     left.status === right.status &&
     left.launchState === right.launchState &&
     left.error === right.error &&
+    left.hardFailureReason === right.hardFailureReason &&
     left.livenessSource === right.livenessSource &&
     left.runtimeAlive === right.runtimeAlive &&
     left.runtimeModel === right.runtimeModel &&
     left.bootstrapConfirmed === right.bootstrapConfirmed &&
-    left.hardFailure === right.hardFailure
+    left.hardFailure === right.hardFailure &&
+    leftPendingPermissionIds.length === rightPendingPermissionIds.length &&
+    leftPendingPermissionIds.every((value, index) => value === rightPendingPermissionIds[index])
   );
 }
 

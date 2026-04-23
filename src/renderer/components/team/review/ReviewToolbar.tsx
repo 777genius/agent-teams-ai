@@ -157,7 +157,7 @@ export const ReviewToolbar = ({
         </Tooltip>
       )}
 
-      {/* Actions — hidden when all hunks are already decided */}
+      {/* Actions hidden when all hunks are already decided */}
       {stats.pending > 0 && (
         <>
           <Tooltip>
@@ -206,10 +206,12 @@ export const ReviewToolbar = ({
               ) : (
                 <GitMerge className="size-3" />
               )}
-              {applying ? 'Applying...' : 'Apply All Changes'}
+              {applying ? 'Applying...' : 'Apply Rejections'}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Apply review decisions across all files</TooltipContent>
+          <TooltipContent side="bottom">
+            Apply rejected hunks to disk; accepted changes are kept as-is
+          </TooltipContent>
         </Tooltip>
       )}
     </div>
