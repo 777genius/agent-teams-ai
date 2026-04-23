@@ -12639,8 +12639,9 @@ export class TeamProvisioningService {
 
     const liveAgentNames = await this.getLiveTeamAgentNames(teamName);
     const nextMembers = { ...persisted.members };
+    const persistedMemberNames = this.getPersistedLaunchMemberNames(persisted);
     const now = nowIso();
-    for (const expected of persisted.expectedMembers) {
+    for (const expected of persistedMemberNames) {
       const bootstrapMember = bootstrapSnapshot?.members[expected];
       const current = nextMembers[expected] ?? {
         name: expected,
@@ -12772,7 +12773,7 @@ export class TeamProvisioningService {
 
     const reconciled = createPersistedLaunchSnapshot({
       teamName,
-      expectedMembers: persisted.expectedMembers,
+      expectedMembers: persistedMemberNames,
       leadSessionId: persisted.leadSessionId,
       launchPhase: persisted.launchPhase === 'active' ? 'active' : 'reconciled',
       members: nextMembers,

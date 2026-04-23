@@ -5738,6 +5738,70 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('reconciles extra persisted launch members when bootstrap state proves they were registered', async () => {
+    const teamName = 'registered-bootstrap-extra-member-team';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify(
+        createPersistedLaunchSnapshot({
+          teamName,
+          leadSessionId: 'lead-session',
+          launchPhase: 'active',
+          expectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: new Date().toISOString(),
+            },
+            bob: {
+              name: 'bob',
+              launchState: 'failed_to_start',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: 'Teammate was never spawned during launch.',
+              lastEvaluatedAt: new Date().toISOString(),
+            },
+          },
+          updatedAt: new Date().toISOString(),
+        })
+      ),
+      'utf8'
+    );
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'bob',
+          status: 'registered',
+          lastAttemptAt: Date.now() - 60_000,
+          lastObservedAt: Date.now() - 60_000,
+        },
+      ],
+      new Date(Date.now() - 30_000).toISOString()
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.expectedMembers).toEqual(['alice', 'bob']);
+    expect(result.statuses.bob).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_bootstrap',
+      hardFailure: false,
+      hardFailureReason: undefined,
+      agentToolAccepted: true,
+    });
+  });
+
   it('returns persisted expectedMembers as the union of expected and materialized launch members', async () => {
     const teamName = 'persisted-union-member-spawn-team';
     const teamDir = path.join(tempTeamsBase, teamName);
