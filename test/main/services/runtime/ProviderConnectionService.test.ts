@@ -126,6 +126,59 @@ describe('ProviderConnectionService', () => {
     expect(issue).toContain('ANTHROPIC_API_KEY');
   });
 
+  it('treats a stored Anthropic API key as configured even when env is empty', async () => {
+    const lookupPreferred = vi.fn().mockResolvedValue({
+      envVarName: 'ANTHROPIC_API_KEY',
+      value: 'stored-key',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const issue = await service.getConfiguredConnectionIssue({}, 'anthropic');
+
+    expect(lookupPreferred).toHaveBeenCalledWith('ANTHROPIC_API_KEY');
+    expect(issue).toBeNull();
+  });
+
+  it('can swap to the shared API key service after construction', async () => {
+    const staleApiKeyService = {
+      lookupPreferred: vi.fn().mockResolvedValue(null),
+    };
+    const sharedApiKeyService = {
+      lookupPreferred: vi.fn().mockResolvedValue({
+        envVarName: 'ANTHROPIC_API_KEY',
+        value: 'shared-key',
+      }),
+    };
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      staleApiKeyService as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    expect(await service.getConfiguredConnectionIssue({}, 'anthropic')).toContain(
+      'Anthropic API key mode is enabled'
+    );
+
+    service.setApiKeyService(sharedApiKeyService as never);
+
+    expect(await service.getConfiguredConnectionIssue({}, 'anthropic')).toBeNull();
+    expect(sharedApiKeyService.lookupPreferred).toHaveBeenCalledWith('ANTHROPIC_API_KEY');
+  });
+
   it('prefers stored API key status over environment detection for Anthropic', async () => {
     getCachedShellEnvMock.mockReturnValue({
       ANTHROPIC_API_KEY: 'shell-key',

@@ -1016,6 +1016,7 @@ async function initializeServices(): Promise<void> {
   );
   const mcpInstallService = new McpInstallService(mcpAggregator, extensionsRuntimeAdapter);
   const apiKeyService = new ApiKeyService();
+  providerConnectionService.setApiKeyService(apiKeyService);
   await apiKeyService.syncProcessEnv(RUNTIME_MANAGED_API_KEY_ENV_VARS);
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.

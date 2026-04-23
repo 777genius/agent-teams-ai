@@ -88,7 +88,7 @@ export class ProviderConnectionService {
     null;
 
   constructor(
-    private readonly apiKeyService = new ApiKeyService(),
+    private apiKeyService = new ApiKeyService(),
     private readonly configManager = ConfigManager.getInstance()
   ) {}
 
@@ -105,6 +105,10 @@ export class ProviderConnectionService {
     feature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null
   ): void {
     this.codexModelCatalogFeature = feature;
+  }
+
+  setApiKeyService(apiKeyService: ApiKeyService): void {
+    this.apiKeyService = apiKeyService;
   }
 
   getConfiguredAuthMode(providerId: CliProviderId): CliProviderAuthMode | null {
@@ -260,6 +264,11 @@ export class ProviderConnectionService {
       }
 
       if (typeof env.ANTHROPIC_API_KEY === 'string' && env.ANTHROPIC_API_KEY.trim()) {
+        return null;
+      }
+
+      const storedKey = await this.apiKeyService.lookupPreferred('ANTHROPIC_API_KEY');
+      if (storedKey?.value.trim()) {
         return null;
       }
 
