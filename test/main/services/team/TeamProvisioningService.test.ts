@@ -943,6 +943,56 @@ describe('TeamProvisioningService', () => {
       expect(snapshot.members.alice).toBeUndefined();
     });
 
+    it('includes persisted launch members that only exist in launchSnapshot.members when expectedMembers is stale', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => []),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => null),
+      };
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () =>
+          createPersistedLaunchSnapshot({
+            teamName: 'runtime-team',
+            leadSessionId: 'lead-session',
+            launchPhase: 'active',
+            expectedMembers: ['alice'],
+            members: {
+              bob: {
+                name: 'bob',
+                providerId: 'codex',
+                providerBackendId: 'codex-native',
+                model: 'gpt-5.4-mini',
+                effort: 'high',
+                launchState: 'runtime_pending_bootstrap',
+                agentToolAccepted: true,
+                runtimeAlive: false,
+                bootstrapConfirmed: false,
+                hardFailure: false,
+                lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+              },
+            },
+            updatedAt: '2026-04-23T10:00:00.000Z',
+          })
+        ),
+      };
+      vi.mocked(pidusage).mockResolvedValueOnce({} as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(snapshot.members.bob).toMatchObject({
+        memberName: 'bob',
+        runtimeModel: 'gpt-5.4-mini',
+        providerBackendId: 'codex-native',
+      });
+    });
+
     it('shows RSS for OpenCode secondary lanes through the shared runtime host without exposing a member pid', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {

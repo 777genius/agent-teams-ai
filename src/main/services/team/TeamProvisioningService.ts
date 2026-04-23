@@ -6273,7 +6273,9 @@ export class TeamProvisioningService {
       if (!memberName || member.removedAt || candidateMembers.has(memberName)) continue;
       candidateMembers.set(memberName, member);
     }
-    for (const memberName of launchSnapshot?.expectedMembers ?? []) {
+    for (const memberName of launchSnapshot
+      ? this.getPersistedLaunchMemberNames(launchSnapshot)
+      : []) {
       if (candidateMembers.has(memberName) || this.isMemberRemovedInMeta(metaMembers, memberName)) {
         continue;
       }
