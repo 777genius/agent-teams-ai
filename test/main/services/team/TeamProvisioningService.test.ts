@@ -6299,4 +6299,96 @@ describe('TeamProvisioningService', () => {
       launchState: 'starting',
     });
   });
+
+  it('syncs stale live mixed-lane failures from a healthier persisted snapshot', async () => {
+    const svc = new TeamProvisioningService();
+    const run = createMemberSpawnRun({
+      teamName: 'forge-labs-4',
+      runId: 'run-mixed-sync-1',
+      expectedMembers: ['alice', 'jack'],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          createMemberSpawnStatusEntry({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+          }),
+        ],
+        [
+          'jack',
+          createMemberSpawnStatusEntry({
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            error: 'Teammate was never spawned during launch.',
+            hardFailureReason: 'Teammate was never spawned during launch.',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = true;
+
+    const snapshot = createPersistedLaunchSnapshot({
+      teamName: 'forge-labs-4',
+      leadSessionId: 'lead-session',
+      launchPhase: 'finished',
+      expectedMembers: ['alice', 'jack'],
+      members: {
+        alice: {
+          name: 'alice',
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          lastEvaluatedAt: '2026-04-23T08:08:27.067Z',
+        },
+        jack: {
+          name: 'jack',
+          providerId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastEvaluatedAt: '2026-04-23T08:08:27.067Z',
+        },
+      },
+      updatedAt: '2026-04-23T08:08:27.067Z',
+    });
+
+    vi.spyOn(svc as any, 'persistLaunchStateSnapshot').mockResolvedValue(snapshot);
+    vi.spyOn(svc as any, 'isCurrentTrackedRun').mockReturnValue(true);
+
+    await (svc as any).publishMixedSecondaryLaneStatusChange(run, {
+      laneId: 'secondary:opencode:jack',
+      providerId: 'opencode',
+      member: {
+        name: 'jack',
+        providerId: 'opencode',
+        model: 'opencode/ling-2.6-flash-free',
+      },
+      runId: 'lane-run-jack',
+      state: 'finished',
+      result: null,
+      warnings: [],
+      diagnostics: [],
+    });
+
+    expect(run.memberSpawnStatuses.get('jack')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+    });
+    expect(run.expectedMembers).toEqual(['alice', 'jack']);
+  });
 });

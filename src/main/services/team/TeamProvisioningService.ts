@@ -6175,6 +6175,9 @@ export class TeamProvisioningService {
     await this.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
 
     const persisted = await this.launchStateStore.read(teamName);
+    if (persisted) {
+      this.syncRunMemberSpawnStatusesFromSnapshot(run, persisted);
+    }
     const liveSnapshot =
       this.buildLiveLaunchSnapshotForRun(run, run.provisioningComplete ? 'finished' : 'active') ??
       snapshotFromRuntimeMemberStatuses({
@@ -12005,6 +12008,21 @@ export class TeamProvisioningService {
     return statuses;
   }
 
+  private syncRunMemberSpawnStatusesFromSnapshot(
+    run: ProvisioningRun,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): void {
+    const memberNames = this.getPersistedLaunchMemberNames(snapshot);
+    const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
+    run.expectedMembers = memberNames;
+    for (const memberName of memberNames) {
+      const entry = snapshotStatuses[memberName];
+      if (entry) {
+        run.memberSpawnStatuses.set(memberName, entry);
+      }
+    }
+  }
+
   private countRunPermissionPendingMembers(run: ProvisioningRun): number {
     let count = 0;
     for (const expected of run.expectedMembers ?? []) {
@@ -12088,8 +12106,12 @@ export class TeamProvisioningService {
     run: ProvisioningRun,
     lane: MixedSecondaryRuntimeLaneState
   ): Promise<void> {
+    let snapshot: PersistedTeamLaunchSnapshot | null = null;
     if (run.isLaunch) {
-      await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
+      snapshot = await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
+    }
+    if (snapshot) {
+      this.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot);
     }
     if (!this.isCurrentTrackedRun(run)) {
       return;
