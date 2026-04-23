@@ -1,8 +1,4 @@
 import {
-  killTmuxPaneForCurrentPlatformSync,
-  listTmuxPanePidsForCurrentPlatform,
-} from '@features/tmux-installer/main';
-import {
   resolveAnthropicFastMode,
   resolveAnthropicRuntimeSelection,
 } from '@features/anthropic-runtime-profile/main';
@@ -16,8 +12,12 @@ import {
   fromProvisioningMembers,
   isMixedOpenCodeSideLanePlan,
   type TeamRuntimeLanePlan,
-} from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
-import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main/composition/createTeamRuntimeLaneCoordinator';
+} from '@features/team-runtime-lanes';
+import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
+import {
+  killTmuxPaneForCurrentPlatformSync,
+  listTmuxPanePidsForCurrentPlatform,
+} from '@features/tmux-installer/main';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { getAppIconPath } from '@main/utils/appIcon';
@@ -53,8 +53,8 @@ import {
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
-import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
+import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { deriveContextMetrics, inferContextWindowTokens } from '@shared/utils/contextMetrics';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
@@ -111,6 +111,29 @@ import {
 } from '../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
 
+import { createRuntimeDeliveryJournalStore } from './opencode/delivery/RuntimeDeliveryJournal';
+import {
+  type RuntimeDeliveryDestinationPort,
+  RuntimeDeliveryDestinationRegistry,
+  RuntimeDeliveryReconciler,
+  RuntimeDeliveryService,
+} from './opencode/delivery/RuntimeDeliveryService';
+import {
+  clearOpenCodeRuntimeLaneStorage,
+  getOpenCodeLaneScopedRuntimeFilePath,
+  getOpenCodeRuntimeRunTombstonesPath,
+  getOpenCodeTeamRuntimeDirectory,
+  migrateLegacyOpenCodeRuntimeState,
+  readOpenCodeRuntimeLaneIndex,
+  recoverStaleOpenCodeRuntimeLaneIndexEntry,
+  removeOpenCodeRuntimeLaneIndexEntry,
+  upsertOpenCodeRuntimeLaneIndexEntry,
+} from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  createRuntimeRunTombstoneStore,
+  type RuntimeEvidenceKind,
+} from './opencode/store/RuntimeRunTombstoneStore';
+import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { buildActionModeProtocol } from './actionModeInstructions';
 import { atomicWriteAsync } from './atomicWrite';
 import { peekAutoResumeService } from './AutoResumeService';
@@ -147,43 +170,21 @@ import { TeamMcpConfigBuilder } from './TeamMcpConfigBuilder';
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
-import {
-  TeamRuntimeAdapterRegistry,
-  type TeamLaunchRuntimeAdapter,
-  type OpenCodeTeamRuntimeMessageInput,
-  type OpenCodeTeamRuntimeMessageResult,
-  type TeamRuntimeLaunchInput,
-  type TeamRuntimeLaunchResult,
-  type TeamRuntimeMemberLaunchEvidence,
-  type TeamRuntimePrepareResult,
-  type TeamRuntimeStopInput,
-} from './runtime';
-import {
-  RuntimeDeliveryDestinationRegistry,
-  RuntimeDeliveryReconciler,
-  RuntimeDeliveryService,
-  type RuntimeDeliveryDestinationPort,
-} from './opencode/delivery/RuntimeDeliveryService';
-import { createRuntimeDeliveryJournalStore } from './opencode/delivery/RuntimeDeliveryJournal';
-import {
-  clearOpenCodeRuntimeLaneStorage,
-  getOpenCodeLaneScopedRuntimeFilePath,
-  getOpenCodeRuntimeRunTombstonesPath,
-  getOpenCodeTeamRuntimeDirectory,
-  migrateLegacyOpenCodeRuntimeState,
-  readOpenCodeRuntimeLaneIndex,
-  recoverStaleOpenCodeRuntimeLaneIndexEntry,
-  removeOpenCodeRuntimeLaneIndexEntry,
-  upsertOpenCodeRuntimeLaneIndexEntry,
-} from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import {
-  createRuntimeRunTombstoneStore,
-  type RuntimeEvidenceKind,
-} from './opencode/store/RuntimeRunTombstoneStore';
-import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
+
+import type {
+  OpenCodeTeamRuntimeMessageInput,
+  OpenCodeTeamRuntimeMessageResult,
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+  TeamRuntimeLaunchInput,
+  TeamRuntimeLaunchResult,
+  TeamRuntimeMemberLaunchEvidence,
+  TeamRuntimePrepareResult,
+  TeamRuntimeStopInput,
+} from './runtime';
 
 /**
  * Kill a team CLI process using SIGKILL (uncatchable).
@@ -240,10 +241,10 @@ interface OpenCodeRuntimeControlAck {
 }
 
 import type {
-  CliProviderModelCatalog,
-  CliProviderStatus,
   ActiveToolCall,
+  CliProviderModelCatalog,
   CliProviderRuntimeCapabilities,
+  CliProviderStatus,
   CrossTeamSendResult,
   EffortLevel,
   InboxMessage,
@@ -254,9 +255,9 @@ import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchPhase,
+  PersistedTeamLaunchSnapshot,
   PersistedTeamLaunchSummary,
   ProviderModelLaunchIdentity,
-  PersistedTeamLaunchSnapshot,
   TeamAgentRuntimeBackendType,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeSnapshot,
@@ -4171,13 +4172,13 @@ export class TeamProvisioningService {
     return Boolean(runs && runs.size > 0);
   }
 
-  private getSecondaryRuntimeRuns(teamName: string): Array<{
+  private getSecondaryRuntimeRuns(teamName: string): {
     runId: string;
     providerId: 'opencode';
     laneId: string;
     memberName: string;
     cwd?: string;
-  }> {
+  }[] {
     return Array.from(this.secondaryRuntimeRunByTeam.get(teamName)?.values() ?? []);
   }
 
@@ -4312,7 +4313,7 @@ export class TeamProvisioningService {
         color: getMemberColorByName(member.name.trim()),
         joinedAt:
           typeof (member as { joinedAt?: unknown }).joinedAt === 'number'
-            ? ((member as { joinedAt?: number }).joinedAt as number)
+            ? (member as { joinedAt?: number }).joinedAt!
             : Date.now(),
       }))
     );
@@ -4355,8 +4356,7 @@ export class TeamProvisioningService {
 
     const cached = this.persistedTranscriptClaudeLogsCache.get(teamName);
     if (
-      cached &&
-      cached.transcriptPath === transcriptPath &&
+      cached?.transcriptPath === transcriptPath &&
       cached.mtimeMs === stat.mtimeMs &&
       cached.size === stat.size
     ) {
@@ -7866,13 +7866,13 @@ export class TeamProvisioningService {
       { kind: 'ready' | 'warning' | 'unavailable'; reason?: string }
     >();
     let resolvedDefaultModelId: string | null | undefined;
-    const plannedModels: Array<
+    const plannedModels: (
       | { requestedModelId: string; targetModelId: string }
       | {
           requestedModelId: string;
           immediateOutcome: { kind: 'ready' | 'warning' | 'unavailable'; reason?: string };
         }
-    > = [];
+    )[] = [];
 
     const recordOutcome = (
       requestedModelId: string,
@@ -13045,7 +13045,7 @@ export class TeamProvisioningService {
       launchIdentity: teamMeta?.launchIdentity ?? null,
     };
     const primaryMembers: TeamMember[] = [];
-    const secondaryMembers: Array<{
+    const secondaryMembers: {
       laneId: string;
       member: TeamMember;
       leadDefaults: typeof leadDefaults;
@@ -13061,7 +13061,7 @@ export class TeamProvisioningService {
         diagnostics?: string[];
       };
       pendingReason?: string;
-    }> = [];
+    }[] = [];
     let recoveredAny = false;
 
     for (const member of activeMembers) {

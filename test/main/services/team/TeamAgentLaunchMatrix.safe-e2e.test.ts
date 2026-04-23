@@ -391,6 +391,102 @@ describe('Team agent launch matrix safe e2e', () => {
     });
   });
 
+  it('recovers mixed Anthropic/OpenCode launch truth from persisted state after service restart', async () => {
+    const teamName = 'mixed-persisted-anthropic-opencode-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    await writeMixedTeamLaunchState({
+      teamName,
+      members: {
+        alice: mixedMemberState({
+          providerId: 'anthropic',
+          model: 'haiku',
+          laneId: 'primary',
+          laneKind: 'primary',
+          laneOwnerProviderId: 'anthropic',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        }),
+        bob: mixedMemberState({
+          providerId: 'opencode',
+          model: 'opencode/minimax-m2.5-free',
+          laneId: 'secondary:opencode:bob',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        }),
+        tom: mixedMemberState({
+          providerId: 'opencode',
+          model: 'opencode/nemotron-3-super-free',
+          laneId: 'secondary:opencode:tom',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+        }),
+      },
+    });
+
+    const restartedService = new TeamProvisioningService();
+    const statuses = await restartedService.getMemberSpawnStatuses(teamName);
+
+    expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
+    expect(statuses.teamLaunchState).toBe('partial_pending');
+    expect(statuses.summary).toMatchObject({
+      confirmedCount: 2,
+      pendingCount: 1,
+      failedCount: 0,
+      runtimeAlivePendingCount: 1,
+    });
+    expect(statuses.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+    });
+    expect(statuses.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+    });
+    expect(statuses.statuses.tom).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+
+    const runtimeSnapshot = await restartedService.getTeamAgentRuntimeSnapshot(teamName);
+    expect(runtimeSnapshot.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      laneKind: 'primary',
+      runtimeModel: 'haiku',
+    });
+    expect(runtimeSnapshot.members.bob).toMatchObject({
+      providerId: 'opencode',
+      laneId: 'secondary:opencode:bob',
+      laneKind: 'secondary',
+      runtimeModel: 'opencode/minimax-m2.5-free',
+    });
+    expect(runtimeSnapshot.members.tom).toMatchObject({
+      providerId: 'opencode',
+      laneId: 'secondary:opencode:tom',
+      laneKind: 'secondary',
+      runtimeModel: 'opencode/nemotron-3-super-free',
+    });
+  });
+
   it('recovers mixed Gemini failure and split OpenCode lane truth after service restart', async () => {
     const teamName = 'mixed-persisted-gemini-failure-opencode-split-safe-e2e';
     await writeMixedTeamConfig({ teamName, projectPath, includeGeminiPrimary: true });
@@ -663,6 +759,106 @@ describe('Team agent launch matrix safe e2e', () => {
       laneKind: 'primary',
       alive: false,
       runtimeModel: 'gemini-2.5-flash',
+    });
+    expect(runtimeSnapshot.members.bob).toMatchObject({
+      providerId: 'opencode',
+      laneId: 'secondary:opencode:bob',
+      laneKind: 'secondary',
+      alive: true,
+      restartable: false,
+      pid: sharedHostPid,
+      runtimeModel: 'opencode/minimax-m2.5-free',
+      rssBytes: sharedRssBytes,
+    });
+    expect(runtimeSnapshot.members.tom).toMatchObject({
+      providerId: 'opencode',
+      laneId: 'secondary:opencode:tom',
+      laneKind: 'secondary',
+      alive: true,
+      restartable: false,
+      pid: sharedHostPid,
+      runtimeModel: 'opencode/nemotron-3-super-free',
+      rssBytes: sharedRssBytes,
+    });
+  });
+
+  it('keeps OpenCode side-lane pid and memory visible after Anthropic mixed recovery', async () => {
+    const teamName = 'mixed-anthropic-opencode-memory-safe-e2e';
+    const sharedHostPid = 41_414;
+    const sharedRssBytes = 207.6 * 1024 * 1024;
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    await writeMixedTeamLaunchState({
+      teamName,
+      members: {
+        alice: mixedMemberState({
+          providerId: 'anthropic',
+          model: 'haiku',
+          laneId: 'primary',
+          laneKind: 'primary',
+          laneOwnerProviderId: 'anthropic',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        }),
+        bob: mixedMemberState({
+          providerId: 'opencode',
+          model: 'opencode/minimax-m2.5-free',
+          laneId: 'secondary:opencode:bob',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        }),
+        tom: mixedMemberState({
+          providerId: 'opencode',
+          model: 'opencode/nemotron-3-super-free',
+          laneId: 'secondary:opencode:tom',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+          launchState: 'runtime_pending_permission',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          pendingPermissionRequestIds: ['perm-tom'],
+        }),
+      },
+    });
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'bob',
+          {
+            alive: true,
+            metricsPid: sharedHostPid,
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ],
+        [
+          'tom',
+          {
+            alive: true,
+            metricsPid: sharedHostPid,
+            model: 'opencode/nemotron-3-super-free',
+          },
+        ],
+      ]);
+    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+
+    const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+
+    expect(runtimeSnapshot.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      laneKind: 'primary',
+      runtimeModel: 'haiku',
     });
     expect(runtimeSnapshot.members.bob).toMatchObject({
       providerId: 'opencode',
@@ -1087,6 +1283,77 @@ describe('Team agent launch matrix safe e2e', () => {
       launchState: 'confirmed_alive',
       runtimeAlive: true,
       bootstrapConfirmed: true,
+    });
+  });
+
+  it('keeps Anthropic primary online while mixed OpenCode lanes split ready and bootstrap pending', async () => {
+    const teamName = 'mixed-anthropic-opencode-split-bootstrap-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', {
+      bob: 'confirmed',
+      tom: 'launching',
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    trackLiveRun(svc, run);
+
+    await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+    await waitForCondition(() => adapter.launchInputs.length === 2);
+    await waitForCondition(() =>
+      run.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
+    );
+    await waitForCondition(() => run.memberSpawnStatuses.get('bob')?.launchState === 'confirmed_alive');
+    await waitForCondition(
+      () => run.memberSpawnStatuses.get('tom')?.launchState === 'runtime_pending_bootstrap'
+    );
+
+    const statuses = await svc.getMemberSpawnStatuses(teamName);
+    expect(statuses.teamLaunchState).toBe('partial_pending');
+    expect(statuses.summary).toMatchObject({
+      confirmedCount: 2,
+      pendingCount: 1,
+      failedCount: 0,
+      runtimeAlivePendingCount: 1,
+    });
+    expect(statuses.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+    });
+    expect(statuses.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+    });
+    expect(statuses.statuses.tom).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+
+    const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(runtimeSnapshot.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      laneKind: 'primary',
+      alive: true,
+      runtimeModel: 'haiku',
+    });
+    expect(runtimeSnapshot.members.bob).toMatchObject({
+      providerId: 'opencode',
+      laneKind: 'secondary',
+      alive: true,
+      runtimeModel: 'opencode/minimax-m2.5-free',
+    });
+    expect(runtimeSnapshot.members.tom).toMatchObject({
+      providerId: 'opencode',
+      laneKind: 'secondary',
+      alive: true,
+      runtimeModel: 'opencode/nemotron-3-super-free',
     });
   });
 
@@ -2111,6 +2378,7 @@ describe('Team agent launch matrix safe e2e', () => {
 });
 
 type FakeMemberOutcome = 'confirmed' | 'permission' | 'launching' | 'failed';
+type MixedPrimaryProviderId = 'anthropic' | 'codex';
 
 class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
@@ -2298,7 +2566,7 @@ class RejectingBlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter
 
 async function waitForCondition(assertion: () => boolean): Promise<void> {
   const startedAt = Date.now();
-  while (Date.now() - startedAt < 2_000) {
+  while (Date.now() - startedAt < 5_000) {
     if (assertion()) {
       return;
     }
@@ -2321,8 +2589,13 @@ async function removeTempDirWithRetries(dir: string): Promise<void> {
   throw lastError;
 }
 
-function createMixedLiveRun(input: { teamName: string; projectPath: string }): any {
+function createMixedLiveRun(input: {
+  teamName: string;
+  projectPath: string;
+  primaryProviderId?: MixedPrimaryProviderId;
+}): any {
   const now = '2026-04-23T10:00:00.000Z';
+  const primary = getMixedPrimaryFixture(input.primaryProviderId);
   return {
     runId: `run-${input.teamName}`,
     teamName: input.teamName,
@@ -2335,9 +2608,9 @@ function createMixedLiveRun(input: { teamName: string; projectPath: string }): a
     request: {
       teamName: input.teamName,
       cwd: input.projectPath,
-      providerId: 'codex',
-      providerBackendId: 'codex-native',
-      model: 'gpt-5.4',
+      providerId: primary.providerId,
+      providerBackendId: primary.providerBackendId,
+      model: primary.leadModel,
       skipPermissions: false,
       members: [],
     },
@@ -2349,12 +2622,12 @@ function createMixedLiveRun(input: { teamName: string; projectPath: string }): a
     },
     onProgress: () => undefined,
     launchIdentity: {
-      providerId: 'codex',
-      providerBackendId: 'codex-native',
-      selectedModel: 'gpt-5.4',
+      providerId: primary.providerId,
+      providerBackendId: primary.providerBackendId ?? null,
+      selectedModel: primary.leadModel,
       selectedModelKind: 'explicit',
-      resolvedLaunchModel: 'gpt-5.4',
-      catalogId: 'gpt-5.4',
+      resolvedLaunchModel: primary.leadModel,
+      catalogId: primary.leadModel,
       catalogSource: 'bundled',
       catalogFetchedAt: now,
       selectedEffort: 'medium',
@@ -2368,18 +2641,18 @@ function createMixedLiveRun(input: { teamName: string; projectPath: string }): a
       {
         name: 'alice',
         role: 'Reviewer',
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.4-mini',
+        providerId: primary.providerId,
+        providerBackendId: primary.providerBackendId,
+        model: primary.memberModel,
       },
     ],
     allEffectiveMembers: [
       {
         name: 'alice',
         role: 'Reviewer',
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.4-mini',
+        providerId: primary.providerId,
+        providerBackendId: primary.providerBackendId,
+        model: primary.memberModel,
       },
       {
         name: 'bob',
@@ -2506,8 +2779,10 @@ async function writeMixedTeamConfig(input: {
   teamName: string;
   projectPath: string;
   includeGeminiPrimary?: boolean;
+  primaryProviderId?: MixedPrimaryProviderId;
 }): Promise<void> {
   const teamDir = path.join(getTeamsBasePath(), input.teamName);
+  const primary = getMixedPrimaryFixture(input.primaryProviderId);
   await fs.mkdir(teamDir, { recursive: true });
   await fs.writeFile(
     path.join(teamDir, 'config.json'),
@@ -2515,23 +2790,29 @@ async function writeMixedTeamConfig(input: {
       {
         name: input.teamName,
         projectPath: input.projectPath,
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.4',
+        providerId: primary.providerId,
+        ...(primary.providerBackendId
+          ? { providerBackendId: primary.providerBackendId }
+          : {}),
+        model: primary.leadModel,
         members: [
           {
             name: 'team-lead',
             agentType: 'team-lead',
-            providerId: 'codex',
-            providerBackendId: 'codex-native',
-            model: 'gpt-5.4',
+            providerId: primary.providerId,
+            ...(primary.providerBackendId
+              ? { providerBackendId: primary.providerBackendId }
+              : {}),
+            model: primary.leadModel,
           },
           {
             name: 'alice',
             role: 'Reviewer',
-            providerId: 'codex',
-            providerBackendId: 'codex-native',
-            model: 'gpt-5.4-mini',
+            providerId: primary.providerId,
+            ...(primary.providerBackendId
+              ? { providerBackendId: primary.providerBackendId }
+              : {}),
+            model: primary.memberModel,
           },
           ...(input.includeGeminiPrimary
             ? [
@@ -2642,8 +2923,37 @@ function mixedMemberState(overrides: Record<string, unknown>): Record<string, un
   };
 }
 
-async function writeTeamMeta(teamName: string, projectPath: string): Promise<void> {
+function getMixedPrimaryFixture(
+  providerId: MixedPrimaryProviderId = 'codex'
+): {
+  providerId: MixedPrimaryProviderId;
+  providerBackendId?: string;
+  leadModel: string;
+  memberModel: string;
+} {
+  if (providerId === 'anthropic') {
+    return {
+      providerId,
+      leadModel: 'sonnet',
+      memberModel: 'haiku',
+    };
+  }
+
+  return {
+    providerId,
+    providerBackendId: 'codex-native',
+    leadModel: 'gpt-5.4',
+    memberModel: 'gpt-5.4-mini',
+  };
+}
+
+async function writeTeamMeta(
+  teamName: string,
+  projectPath: string,
+  options: { primaryProviderId?: MixedPrimaryProviderId } = {}
+): Promise<void> {
   const teamDir = path.join(getTeamsBasePath(), teamName);
+  const primary = getMixedPrimaryFixture(options.primaryProviderId);
   await fs.mkdir(teamDir, { recursive: true });
   await fs.writeFile(
     path.join(teamDir, 'team.meta.json'),
@@ -2651,9 +2961,11 @@ async function writeTeamMeta(teamName: string, projectPath: string): Promise<voi
       {
         version: 1,
         cwd: projectPath,
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.4',
+        providerId: primary.providerId,
+        ...(primary.providerBackendId
+          ? { providerBackendId: primary.providerBackendId }
+          : {}),
+        model: primary.leadModel,
         effort: 'medium',
         createdAt: Date.now(),
       },
@@ -2666,22 +2978,25 @@ async function writeTeamMeta(teamName: string, projectPath: string): Promise<voi
 
 async function writeMembersMeta(
   teamName: string,
-  options: { includeGeminiPrimary?: boolean } = {}
+  options: { includeGeminiPrimary?: boolean; primaryProviderId?: MixedPrimaryProviderId } = {}
 ): Promise<void> {
   const teamDir = path.join(getTeamsBasePath(), teamName);
+  const primary = getMixedPrimaryFixture(options.primaryProviderId);
   await fs.mkdir(teamDir, { recursive: true });
   await fs.writeFile(
     path.join(teamDir, 'members.meta.json'),
     `${JSON.stringify(
       {
         version: 1,
-        providerBackendId: 'codex-native',
+        ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
         members: [
           {
             name: 'alice',
-            providerId: 'codex',
-            providerBackendId: 'codex-native',
-            model: 'gpt-5.4-mini',
+            providerId: primary.providerId,
+            ...(primary.providerBackendId
+              ? { providerBackendId: primary.providerBackendId }
+              : {}),
+            model: primary.memberModel,
           },
           ...(options.includeGeminiPrimary
             ? [

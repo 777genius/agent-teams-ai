@@ -1,10 +1,7 @@
+import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
-import {
-  fromProvisioningMembers,
-  isMixedOpenCodeSideLanePlan,
-} from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
@@ -18,9 +15,9 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
@@ -45,11 +42,11 @@ import {
   mergeLiveLeadProcessMessages,
 } from './mergeLiveLeadProcessMessages';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
-import { TeamConfigReader } from './TeamConfigReader';
 import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
+import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -69,6 +66,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
+import type { TeamMetaFile } from './TeamMetaStore';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -88,8 +86,8 @@ import type {
   TeamConfig,
   TeamCreateConfigRequest,
   TeamMember,
-  TeamMemberSnapshot,
   TeamMemberActivityMeta,
+  TeamMemberSnapshot,
   TeamProcess,
   TeamProviderId,
   TeamSummary,
@@ -101,7 +99,6 @@ import type {
   UpdateKanbanPatch,
 } from '@shared/types';
 import type { AgentTeamsController } from 'agent-teams-controller';
-import type { TeamMetaFile } from './TeamMetaStore';
 
 const { createController } = agentTeamsControllerModule;
 
@@ -308,7 +305,7 @@ function toProvisioningMemberShape(
     | 'fastMode'
     | 'removedAt'
   >[]
-): Array<{
+): {
   name: string;
   role?: string;
   workflow?: string;
@@ -318,7 +315,7 @@ function toProvisioningMemberShape(
   model?: string;
   effort?: TeamMember['effort'];
   fastMode?: TeamMember['fastMode'];
-}> {
+}[] {
   return members
     .filter((member) => !member.removedAt)
     .filter((member) => {

@@ -11,7 +11,7 @@ export function buildProviderPrepareModelCacheKey({
   providerId: TeamProviderId;
   backendSummary: string | null | undefined;
   limitContext: boolean;
-  runtimeStatusSignature?: string | null | undefined;
+  runtimeStatusSignature?: string | null;
 }): string {
   return [
     cwd,

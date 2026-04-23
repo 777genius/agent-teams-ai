@@ -1,17 +1,17 @@
+import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import { getMemberColorByName } from '@shared/constants/memberColors';
-import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
 } from '@shared/utils/teamMemberName';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
-import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
 
 import type {
-  TeamConfig,
   PersistedTeamLaunchSnapshot,
+  TeamConfig,
   TeamMember,
   TeamMemberSnapshot,
   TeamProviderBackendId,

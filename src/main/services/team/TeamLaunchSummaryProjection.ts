@@ -1,10 +1,8 @@
-import {
-  isMixedOpenCodeSideLanePlan,
-  planTeamRuntimeLanes,
-} from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
+import { isMixedOpenCodeSideLanePlan, planTeamRuntimeLanes } from '@features/team-runtime-lanes';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+
 import { shouldIgnoreTerminalBootstrapOnlyPendingSnapshot } from './TeamBootstrapStateReader';
 import { hasMixedPersistedLaunchMetadata } from './TeamLaunchStateEvaluator';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { PersistedTeamLaunchSnapshot, TeamProviderId, TeamSummary } from '@shared/types';
 

@@ -6,12 +6,12 @@ import type {
   MemberLaunchState,
   MemberSpawnLivenessSource,
   MemberSpawnStatusEntry,
-  ProviderModelLaunchIdentity,
   PersistedTeamLaunchMemberSources,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
   PersistedTeamLaunchSummary,
+  ProviderModelLaunchIdentity,
   TeamLaunchAggregateState,
 } from '@shared/types';
 
@@ -519,10 +519,10 @@ export function snapshotToMemberSpawnStatuses(
     } else if (entry.launchState === 'confirmed_alive') {
       status = 'online';
       livenessSource = 'heartbeat';
-    } else if (entry.launchState === 'runtime_pending_permission') {
-      status = entry.runtimeAlive ? 'online' : 'waiting';
-      livenessSource = entry.runtimeAlive ? 'process' : undefined;
-    } else if (entry.launchState === 'runtime_pending_bootstrap') {
+    } else if (
+      entry.launchState === 'runtime_pending_permission' ||
+      entry.launchState === 'runtime_pending_bootstrap'
+    ) {
       status = entry.runtimeAlive ? 'online' : 'waiting';
       livenessSource = entry.runtimeAlive ? 'process' : undefined;
     } else {
