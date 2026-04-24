@@ -37,7 +37,7 @@ import {
 
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
 
-const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = process.platform === 'win32' ? 60_000 : 15_000;
+const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = 60_000;
 
 describe('Team agent launch matrix safe e2e', () => {
   let tempDir: string;

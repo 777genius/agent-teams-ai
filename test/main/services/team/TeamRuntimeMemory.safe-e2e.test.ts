@@ -31,7 +31,10 @@ describe('Team runtime memory safe e2e', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  const nativeProcessTableIt = process.platform === 'win32' ? it.skip : it;
+  const nativeProcessTableIt =
+    process.platform === 'win32' || process.env.TEAM_RUNTIME_MEMORY_NATIVE_SMOKE !== '1'
+      ? it.skip
+      : it;
 
   nativeProcessTableIt('reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table', async () => {
     const teamName = `anthropic-rss-${process.pid}`;

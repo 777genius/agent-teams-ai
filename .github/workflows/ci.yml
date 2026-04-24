@@ -71,7 +71,7 @@ jobs:
         run: npx eslint src/ --fix --no-cache || true
 
       - name: Validate workspace truth gate
-        run: pnpm check
+        run: pnpm check:ci
 
   test:
     strategy:
@@ -97,7 +97,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Test
-        run: pnpm test:workspace
+        run: pnpm test:workspace:ci
 
   task-change-ledger-windows:
     name: Task change ledger Windows smoke
