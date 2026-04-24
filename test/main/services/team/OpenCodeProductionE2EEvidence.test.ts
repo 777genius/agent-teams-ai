@@ -14,8 +14,7 @@ import {
 } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
 import { OpenCodeProductionE2EEvidenceStore } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
 import {
-  buildOpenCodeCanonicalMcpToolId,
-  REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
+  REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
 } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 describe('OpenCodeProductionE2EEvidence', () => {
@@ -45,12 +44,44 @@ describe('OpenCodeProductionE2EEvidence', () => {
           capabilitySnapshotId: 'cap-1',
           selectedModel: 'openai/gpt-5.4-mini',
           projectPathFingerprint: 'project-a',
-          requiredMcpTools: ['agent-teams_runtime_deliver_message'],
+          requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
         },
       })
     ).toEqual({
       ok: true,
       diagnostics: [],
+    });
+  });
+
+  it('rejects stale runtime-only evidence when production expects full app MCP tools', () => {
+    const runtimeOnlyToolIds = ['agent-teams_runtime_deliver_message'];
+    const evidence = passingEvidence({
+      mcpTools: {
+        requiredTools: runtimeOnlyToolIds,
+        observedTools: runtimeOnlyToolIds,
+      },
+    });
+
+    expect(
+      assertOpenCodeProductionE2EArtifactGate({
+        evidence,
+        artifactPath: '/tmp/opencode-e2e',
+        now,
+        expected: {
+          opencodeVersion: '1.14.19',
+          binaryFingerprint: 'version:1.14.19',
+          capabilitySnapshotId: 'cap-1',
+          selectedModel: 'openai/gpt-5.4-mini',
+          projectPathFingerprint: 'project-a',
+          requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
+        },
+      })
+    ).toMatchObject({
+      ok: false,
+      diagnostics: expect.arrayContaining([
+        expect.stringContaining('agent-teams_message_send'),
+        expect.stringContaining('agent-teams_member_briefing'),
+      ]),
     });
   });
 
@@ -308,9 +339,7 @@ function passingEvidence(
 ): OpenCodeProductionE2EEvidence {
   const createdAt = '2026-04-21T12:00:00.000Z';
   const sessionId = 'session-1';
-  const requiredToolIds = REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-    buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-  );
+  const requiredToolIds = REQUIRED_AGENT_TEAMS_APP_TOOL_IDS;
 
   return {
     schemaVersion: 1,

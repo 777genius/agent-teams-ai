@@ -20,6 +20,8 @@ vi.mock('@renderer/components/team/dialogs/LimitContextCheckbox', () => ({
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   getProviderScopedTeamModelLabel: (_providerId: string, model: string) => model || 'Default',
   getTeamProviderLabel: (providerId: string) => providerId,
+  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'not teamlead',
+  OPENCODE_TEAM_LEAD_DISABLED_REASON: 'OpenCode is not available for team lead.',
   TeamModelSelector: () => React.createElement('div', null, 'team-model-selector'),
 }));
 

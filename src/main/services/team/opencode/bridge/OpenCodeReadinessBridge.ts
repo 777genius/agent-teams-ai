@@ -3,10 +3,7 @@ import {
   buildOpenCodeProjectPathFingerprint,
   type OpenCodeProductionE2EEvidence,
 } from '../e2e/OpenCodeProductionE2EEvidence';
-import {
-  buildOpenCodeCanonicalMcpToolId,
-  REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
-} from '../mcp/OpenCodeMcpToolAvailability';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../mcp/OpenCodeMcpToolAvailability';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -164,9 +161,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
             capabilitySnapshotId: input.runtime.capabilitySnapshotId,
             selectedModel: expectedModel,
             projectPathFingerprint,
-            requiredMcpTools: REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-              buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-            ),
+            requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
           },
         })
       : {

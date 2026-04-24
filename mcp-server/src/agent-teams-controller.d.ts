@@ -27,7 +27,10 @@ declare module 'agent-teams-controller' {
     setNeedsClarification(taskId: string, value: string | null): unknown;
     linkTask(taskId: string, targetId: string, linkType: string): unknown;
     unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
-    memberBriefing(memberName: string): Promise<string>;
+    memberBriefing(
+      memberName: string,
+      options?: { runtimeProvider?: 'native' | 'opencode' }
+    ): Promise<string>;
     leadBriefing(): Promise<string>;
     taskBriefing(memberName: string): Promise<string>;
   }
@@ -52,7 +55,7 @@ declare module 'agent-teams-controller' {
   export interface ControllerMessageApi {
     appendSentMessage(flags: Record<string, unknown>): unknown;
     sendMessage(flags: Record<string, unknown>): unknown;
-    lookupMessage(messageId: string): { message: Record<string, unknown> };
+    lookupMessage(messageId: string): { message: Record<string, unknown>; store: string };
   }
 
   export interface ControllerProcessApi {

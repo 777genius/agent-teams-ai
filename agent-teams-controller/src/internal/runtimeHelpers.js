@@ -85,6 +85,10 @@ function looksLikeCrossTeamToolRecipient(name) {
   return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(String(name || '').trim());
 }
 
+function looksLikeCrossTeamRecipient(name) {
+  return looksLikeQualifiedExternalRecipient(name) || looksLikeCrossTeamPseudoRecipient(name);
+}
+
 function getHomeDir() {
   if (process.env.HOME) return process.env.HOME;
   if (process.env.USERPROFILE) return process.env.USERPROFILE;
@@ -270,6 +274,10 @@ function normalizeMemberRecord(member) {
   if (!member || typeof member !== 'object') return null;
   const name = typeof member.name === 'string' ? member.name.trim() : '';
   if (!name) return null;
+  const copyTrimmedString = (key) =>
+    typeof member[key] === 'string' && member[key].trim()
+      ? { [key]: member[key].trim() }
+      : {};
   return {
     name,
     ...(typeof member.role === 'string' && member.role.trim() ? { role: member.role.trim() } : {}),
@@ -281,6 +289,12 @@ function normalizeMemberRecord(member) {
       : {}),
     ...(typeof member.color === 'string' && member.color.trim() ? { color: member.color.trim() } : {}),
     ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
+    ...copyTrimmedString('providerId'),
+    ...copyTrimmedString('providerBackendId'),
+    ...copyTrimmedString('provider'),
+    ...copyTrimmedString('model'),
+    ...copyTrimmedString('effort'),
+    ...copyTrimmedString('fastMode'),
     ...(typeof member.removedAt === 'number' ? { removedAt: member.removedAt } : {}),
   };
 }
@@ -295,6 +309,12 @@ function mergeResolvedMember(target, source) {
     ...(source.agentType ? { agentType: source.agentType } : {}),
     ...(source.color ? { color: source.color } : {}),
     ...(source.cwd ? { cwd: source.cwd } : {}),
+    ...(source.providerId ? { providerId: source.providerId } : {}),
+    ...(source.providerBackendId ? { providerBackendId: source.providerBackendId } : {}),
+    ...(source.provider ? { provider: source.provider } : {}),
+    ...(source.model ? { model: source.model } : {}),
+    ...(source.effort ? { effort: source.effort } : {}),
+    ...(source.fastMode ? { fastMode: source.fastMode } : {}),
     ...(source.removedAt != null ? { removedAt: source.removedAt } : {}),
   };
 }
@@ -600,6 +620,8 @@ module.exports = {
   getPaths,
   inferLeadName,
   isCanonicalLeadMember,
+  looksLikeCrossTeamRecipient,
+  looksLikeCrossTeamToolRecipient,
   isProcessAlive,
   listInboxMemberNames,
   readMembersMeta,

@@ -212,6 +212,7 @@ import type {
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
+const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 12_000;
 
 /**
  * In-memory set of rate-limit message keys already processed.
@@ -220,6 +221,27 @@ const logger = createLogger('IPC:teams');
  */
 const seenRateLimitKeys = new Set<string>();
 const SEEN_RATE_LIMIT_KEYS_MAX = 500;
+
+async function withTimeoutValue<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutValue: T
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(timeoutValue), timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
 
 function noteHeavyTeamDataWorkerFallback(operation: string): void {
   if (!app.isPackaged) {
@@ -2538,16 +2560,24 @@ async function handleSendMessage(
 
     // Inbox path: offline lead or regular members (no attachment support)
     const baseText = payload.text!.trim();
+    const replyRecipient =
+      typeof payload.from === 'string' && payload.from.trim().length > 0
+        ? payload.from.trim()
+        : 'user';
+    const isOpenCodeRecipient =
+      !isLeadRecipient && (await provisioning.isOpenCodeRuntimeRecipient(tn, memberName));
     const memberDeliveryText = buildMessageDeliveryText(baseText, {
       actionMode,
       isLeadRecipient,
-      replyRecipient: typeof payload.from === 'string' ? payload.from : 'user',
+      replyRecipient,
     });
+    const inboxText = isOpenCodeRecipient ? baseText : memberDeliveryText;
     const result = await getTeamDataService().sendMessage(tn, {
       member: memberName,
-      text: memberDeliveryText,
+      text: inboxText,
       summary: payload.summary,
       from: payload.from,
+      actionMode,
       source: 'user_sent',
       taskRefs: validatedTaskRefs.value,
     });
@@ -2570,28 +2600,63 @@ async function handleSendMessage(
     //     logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
     //   }
     // }
-    if (!isLeadRecipient && isAlive) {
-      void provisioning
-        .deliverOpenCodeMemberMessage(tn, {
-          memberName,
-          text: memberDeliveryText,
-          messageId: result.messageId,
-        })
-        .then((delivery) => {
-          if (delivery.delivered || delivery.reason === 'recipient_is_not_opencode') {
-            return;
+    if (isOpenCodeRecipient) {
+      try {
+        const relay = await withTimeoutValue(
+          provisioning.relayOpenCodeMemberInboxMessages(tn, memberName, {
+            onlyMessageId: result.messageId,
+            source: 'ui-send',
+            deliveryMetadata: {
+              replyRecipient,
+              actionMode,
+              taskRefs: validatedTaskRefs.value,
+            },
+          }),
+          OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS,
+          {
+            relayed: 0,
+            attempted: 1,
+            delivered: 0,
+            failed: 1,
+            lastDelivery: {
+              delivered: false,
+              reason: 'opencode_runtime_delivery_timeout',
+              diagnostics: ['opencode_runtime_delivery_timeout'],
+            },
           }
+        );
+        const delivery = relay.lastDelivery ?? {
+          delivered: relay.relayed > 0,
+          reason: relay.relayed > 0 ? undefined : 'opencode_message_delivery_not_attempted',
+          diagnostics: undefined,
+        };
+        result.runtimeDelivery = {
+          providerId: 'opencode',
+          attempted: true,
+          delivered: delivery.delivered,
+          reason: delivery.reason,
+          diagnostics: delivery.diagnostics,
+        };
+        if (!delivery.delivered && delivery.reason !== 'recipient_is_not_opencode') {
           logger.warn(
             `OpenCode runtime delivery after sendMessage failed for teammate "${memberName}": ${
               delivery.reason ?? 'unknown error'
             }`
           );
-        })
-        .catch((e: unknown) =>
-          logger.warn(
-            `OpenCode runtime delivery after sendMessage crashed for teammate "${memberName}": ${String(e)}`
-          )
+        }
+      } catch (e: unknown) {
+        const reason = e instanceof Error ? e.message : String(e);
+        result.runtimeDelivery = {
+          providerId: 'opencode',
+          attempted: true,
+          delivered: false,
+          reason,
+          diagnostics: [reason],
+        };
+        logger.warn(
+          `OpenCode runtime delivery after sendMessage crashed for teammate "${memberName}": ${reason}`
         );
+      }
     }
 
     // Best-effort relay for lead via inbox

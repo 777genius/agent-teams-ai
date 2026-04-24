@@ -12,8 +12,7 @@ import {
   type OpenCodeProductionE2EEvidence,
 } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
 import {
-  buildOpenCodeCanonicalMcpToolId,
-  REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
+  REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
 } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
@@ -373,7 +372,7 @@ function readiness(
     evidence: {
       capabilitiesReady: true,
       mcpToolProofRoute: '/experimental/tool/ids',
-      observedMcpTools: ['agent-teams_runtime_deliver_message'],
+      observedMcpTools: [...REQUIRED_AGENT_TEAMS_APP_TOOL_IDS],
       runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
     },
     ...overrides,
@@ -385,9 +384,7 @@ function productionEvidence(
 ): OpenCodeProductionE2EEvidence {
   const createdAt = new Date().toISOString();
   const sessionId = 'session-1';
-  const requiredToolIds = REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-    buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-  );
+  const requiredToolIds = REQUIRED_AGENT_TEAMS_APP_TOOL_IDS;
   return {
     schemaVersion: 1,
     evidenceId: 'e2e-1',

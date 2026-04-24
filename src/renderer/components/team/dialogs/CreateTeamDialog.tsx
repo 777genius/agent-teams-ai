@@ -22,6 +22,7 @@ import {
   buildMembersFromDrafts,
   clearMemberModelOverrides,
   createMemberDraft,
+  normalizeLeadProviderForMode,
   normalizeMemberDraftForProviderMode,
   normalizeProviderForMode,
   validateMemberNameInline,
@@ -404,10 +405,11 @@ export const CreateTeamDialog = ({
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [conflictDismissed, setConflictDismissed] = useState(false);
-  const [selectedProviderId, setSelectedProviderIdRaw] =
-    useState<TeamProviderId>(getStoredTeamProvider);
+  const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
+    normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+  );
   const [selectedModel, setSelectedModelRaw] = useState(() =>
-    getStoredTeamModel(getStoredTeamProvider())
+    getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
   const [limitContext, setLimitContextRaw] = useState(getStoredCreateTeamLimitContext);
   const [skipPermissions, setSkipPermissionsRaw] = useState(getStoredCreateTeamSkipPermissions);
@@ -442,7 +444,7 @@ export const CreateTeamDialog = ({
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
-    const normalizedValue = normalizeProviderForMode(value, multimodelEnabled);
+    const normalizedValue = normalizeLeadProviderForMode(value, multimodelEnabled);
     setSelectedProviderIdRaw(normalizedValue);
     setStoredCreateTeamProvider(normalizedValue);
     if (normalizedValue !== 'anthropic') {

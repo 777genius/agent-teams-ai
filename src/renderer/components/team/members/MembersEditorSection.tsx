@@ -488,6 +488,7 @@ export {
   createMemberDraftsFromInputs,
   filterEditableMemberInputs,
   getMemberDraftRole,
+  normalizeLeadProviderForMode,
   normalizeMemberDraftForProviderMode,
   normalizeProviderForMode,
   validateMemberNameInline,

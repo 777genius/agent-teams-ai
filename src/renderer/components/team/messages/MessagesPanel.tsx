@@ -190,6 +190,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     sendCrossTeamMessage,
     sendingMessage,
     sendMessageError,
+    sendMessageWarning,
     lastSendMessageResult,
     teams,
     openTeamTab,
@@ -203,6 +204,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       sendCrossTeamMessage: s.sendCrossTeamMessage,
       sendingMessage: s.sendingMessage,
       sendMessageError: s.sendMessageError,
+      sendMessageWarning: s.sendMessageWarning,
       lastSendMessageResult: s.lastSendMessageResult,
       teams: s.teams,
       openTeamTab: s.openTeamTab,
@@ -515,14 +517,28 @@ export const MessagesPanel = memo(function MessagesPanel({
         attachments,
         actionMode,
         taskRefs,
-      }).catch(() => {
-        onPendingReplyChange((prev) => {
-          if (prev[member] !== sentAtMs) return prev;
-          const next = { ...prev };
-          delete next[member];
-          return next;
+      })
+        .then((result) => {
+          if (
+            result?.runtimeDelivery?.attempted === true &&
+            result.runtimeDelivery.delivered === false
+          ) {
+            onPendingReplyChange((prev) => {
+              if (prev[member] !== sentAtMs) return prev;
+              const next = { ...prev };
+              delete next[member];
+              return next;
+            });
+          }
+        })
+        .catch(() => {
+          onPendingReplyChange((prev) => {
+            if (prev[member] !== sentAtMs) return prev;
+            const next = { ...prev };
+            delete next[member];
+            return next;
+          });
         });
-      });
     },
     [teamName, sendTeamMessage, onPendingReplyChange]
   );
@@ -670,6 +686,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         isTeamAlive={isTeamAlive}
         sending={sendingMessage}
         sendError={sendMessageError}
+        sendWarning={sendMessageWarning}
         lastResult={lastSendMessageResult}
         textareaRef={composerTextareaRef}
         onSend={handleSend}
@@ -855,6 +872,7 @@ export const MessagesPanel = memo(function MessagesPanel({
               isTeamAlive={isTeamAlive}
               sending={sendingMessage}
               sendError={sendMessageError}
+              sendWarning={sendMessageWarning}
               lastResult={lastSendMessageResult}
               textareaRef={composerTextareaRef}
               onSend={handleSend}
@@ -1139,6 +1157,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                     isTeamAlive={isTeamAlive}
                     sending={sendingMessage}
                     sendError={sendMessageError}
+                    sendWarning={sendMessageWarning}
                     lastResult={lastSendMessageResult}
                     textareaRef={composerTextareaRef}
                     onSend={handleSend}

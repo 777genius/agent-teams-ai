@@ -129,7 +129,8 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'runtime_deliver_message',
-    description: 'Deliver an OpenCode runtime message to the app-owned team journal and destination',
+    description:
+      'Low-level OpenCode runtime delivery journal tool. Use only when the runtime/app prompt explicitly provides runId, runtimeSessionId, idempotencyKey, and asks for runtime delivery. For normal visible replies, use message_send.',
     parameters: z.object({
       ...toolContextSchema,
       idempotencyKey: z.string().min(1),

@@ -26,6 +26,28 @@ const { createController } = agentTeamsControllerModule;
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
+function normalizeMemberKey(value: unknown): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim().toLowerCase() : '';
+}
+
+function resolveCrossTeamFromMember(config: TeamConfig, rawFromMember: string): string {
+  const members = Array.isArray(config.members) ? config.members : [];
+  const rawKey = normalizeMemberKey(rawFromMember);
+  const direct = members.find((member) => normalizeMemberKey(member.name) === rawKey);
+  if (direct?.name?.trim()) {
+    return direct.name.trim();
+  }
+
+  const lead = members.find((member) => isLeadMember(member)) ?? members[0];
+  const leadName = lead?.name?.trim();
+  const leadKey = normalizeMemberKey(leadName);
+  if (leadName && (rawKey === 'lead' || rawKey === 'team-lead' || rawKey === leadKey)) {
+    return leadName;
+  }
+
+  throw new Error(`Unknown fromMember: ${rawFromMember}. Use a configured team member name.`);
+}
+
 export interface CrossTeamTarget {
   teamName: string;
   displayName: string;
@@ -48,7 +70,8 @@ export class CrossTeamService {
   ) {}
 
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
-    const { fromTeam, fromMember, toTeam, text, taskRefs, summary, actionMode } = request;
+    const { fromTeam, toTeam, text, taskRefs, summary, actionMode } = request;
+    const rawFromMember = request.fromMember;
     const chainDepth = request.chainDepth ?? 0;
     const messageId = request.messageId?.trim() || randomUUID();
     const timestamp = request.timestamp ?? new Date().toISOString();
@@ -76,12 +99,18 @@ export class CrossTeamService {
     if (fromTeam === toTeam) {
       throw new Error('Cannot send cross-team message to the same team');
     }
-    if (!fromMember || typeof fromMember !== 'string' || fromMember.trim().length === 0) {
+    if (!rawFromMember || typeof rawFromMember !== 'string' || rawFromMember.trim().length === 0) {
       throw new Error('fromMember is required');
     }
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       throw new Error('Message text is required');
     }
+
+    const sourceConfig = await this.configReader.getConfig(fromTeam);
+    if (!sourceConfig || sourceConfig.deletedAt) {
+      throw new Error(`Source team not found: ${fromTeam}`);
+    }
+    const fromMember = resolveCrossTeamFromMember(sourceConfig, rawFromMember.trim());
 
     const targetConfig = await this.configReader.getConfig(toTeam);
     if (!targetConfig || targetConfig.deletedAt) {

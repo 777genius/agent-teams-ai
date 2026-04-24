@@ -142,6 +142,43 @@ function writeMcpConfig(
   return configPath;
 }
 
+const REQUIRED_MOCK_AGENT_TEAMS_TOOLS = [
+  'cross_team_get_outbox',
+  'cross_team_list_targets',
+  'cross_team_send',
+  'lead_briefing',
+  'member_briefing',
+  'message_send',
+  'process_list',
+  'process_register',
+  'process_stop',
+  'process_unregister',
+  'review_approve',
+  'review_request',
+  'review_request_changes',
+  'review_start',
+  'runtime_bootstrap_checkin',
+  'runtime_deliver_message',
+  'runtime_task_event',
+  'runtime_heartbeat',
+  'task_add_comment',
+  'task_attach_comment_file',
+  'task_attach_file',
+  'task_briefing',
+  'task_complete',
+  'task_create',
+  'task_create_from_message',
+  'task_get',
+  'task_get_comment',
+  'task_link',
+  'task_list',
+  'task_set_clarification',
+  'task_set_owner',
+  'task_set_status',
+  'task_start',
+  'task_unlink',
+] as const;
+
 function writeMockMcpServer(
   targetDir: string,
   variant:
@@ -151,12 +188,10 @@ function writeMockMcpServer(
     | 'lead-briefing-error'
 ): string {
   const scriptPath = path.join(targetDir, `mock-mcp-${variant}.js`);
-  const tools =
-    variant === 'missing-member-briefing'
-      ? [{ name: 'lead_briefing' }]
-      : variant === 'missing-lead-briefing'
-        ? [{ name: 'member_briefing' }]
-        : [{ name: 'member_briefing' }, { name: 'lead_briefing' }];
+  const tools = REQUIRED_MOCK_AGENT_TEAMS_TOOLS
+    .filter((name) => variant !== 'missing-member-briefing' || name !== 'member_briefing')
+    .filter((name) => variant !== 'missing-lead-briefing' || name !== 'lead_briefing')
+    .map((name) => ({ name }));
 
   fs.writeFileSync(
     scriptPath,
@@ -2319,7 +2354,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     await expect(
       (svc as any).validateAgentTeamsMcpRuntime('/fake/claude', tempRoot, process.env, configPath)
-    ).rejects.toThrow('tools/list did not include member_briefing');
+    ).rejects.toThrow('required tool(s): member_briefing');
   });
 
   it('fails validation when tools/list does not include lead_briefing', async () => {
@@ -2334,7 +2369,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     await expect(
       (svc as any).validateAgentTeamsMcpRuntime('/fake/claude', tempRoot, process.env, configPath)
-    ).rejects.toThrow('tools/list did not include lead_briefing');
+    ).rejects.toThrow('required tool(s): lead_briefing');
   });
 
   it('fails validation when member_briefing itself returns an MCP error', async () => {

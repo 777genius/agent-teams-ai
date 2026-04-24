@@ -8,6 +8,8 @@ import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitCon
 import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
+  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL,
+  OPENCODE_TEAM_LEAD_DISABLED_REASON,
   TeamModelSelector,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -159,6 +161,8 @@ export const LeadModelRow = ({
             onValueChange={onModelChange}
             id="lead-model"
             disableGeminiOption={disableGeminiOption}
+            providerDisabledReasonById={{ opencode: OPENCODE_TEAM_LEAD_DISABLED_REASON }}
+            providerDisabledBadgeLabelById={{ opencode: OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL }}
             modelIssueReasonByValue={model.trim() ? { [model.trim()]: modelIssueText } : undefined}
           />
           <EffortLevelSelector

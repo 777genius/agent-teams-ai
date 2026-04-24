@@ -130,9 +130,11 @@ import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchSta
 import { getTeamLaunchStatePath } from '@main/services/team/TeamLaunchStateStore';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
+  getOpenCodeRuntimeManifestPath,
   readOpenCodeRuntimeLaneIndex,
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { createDefaultRuntimeStoreManifest } from '@main/services/team/opencode/store/RuntimeStoreManifest';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import { spawnCli } from '@main/utils/childProcess';
@@ -2551,7 +2553,7 @@ describe('TeamProvisioningService', () => {
       );
     });
 
-    it('delivers direct messages to OpenCode secondary lanes through the runtime adapter', async () => {
+    it('delivers direct messages to OpenCode secondary lanes with the lane run id', async () => {
       const svc = new TeamProvisioningService();
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
         ok: true,
@@ -2575,6 +2577,14 @@ describe('TeamProvisioningService', () => {
 
       (svc as any).getTrackedRunId = vi.fn(() => 'run-1');
       (svc as any).provisioningRunByTeam.set('team-a', 'run-1');
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: 'team-a',
+        runId: 'opencode-run-bob',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/repo',
+      });
       (svc as any).configReader = {
         getConfig: vi.fn(async () => ({
           projectPath: '/repo',
@@ -2611,7 +2621,7 @@ describe('TeamProvisioningService', () => {
         diagnostics: [],
       });
       expect(sendMessageToMember).toHaveBeenCalledWith({
-        runId: 'run-1',
+        runId: 'opencode-run-bob',
         teamName: 'team-a',
         laneId: 'secondary:opencode:bob',
         memberName: 'bob',
@@ -2619,6 +2629,192 @@ describe('TeamProvisioningService', () => {
         text: 'hello bob',
         messageId: 'msg-1',
       });
+    });
+
+    it('uses lane-scoped manifest activeRunId for OpenCode member delivery after restart', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'team-a';
+      const laneId = 'secondary:opencode:bob';
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        diagnostics: [],
+      }));
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+          sendMessageToMember,
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          projectPath: '/repo',
+          members: [
+            { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
+            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({
+          launchIdentity: { providerId: 'codex' },
+          providerId: 'codex',
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId,
+        state: 'active',
+      });
+      const manifestPath = getOpenCodeRuntimeManifestPath(tempTeamsBase, teamName, laneId);
+      await fsPromises.mkdir(path.dirname(manifestPath), { recursive: true });
+      await fsPromises.writeFile(
+        manifestPath,
+        `${JSON.stringify(
+          {
+            ...createDefaultRuntimeStoreManifest(teamName, '2026-04-22T12:00:00.000Z'),
+            activeRunId: 'opencode-run-durable',
+          },
+          null,
+          2
+        )}\n`,
+        'utf8'
+      );
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'bob',
+          text: 'hello after restart',
+          messageId: 'msg-after-restart',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+      expect(sendMessageToMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: 'opencode-run-durable',
+          teamName,
+          laneId,
+          memberName: 'bob',
+          cwd: '/repo',
+          text: 'hello after restart',
+          messageId: 'msg-after-restart',
+        })
+      );
+    });
+
+    it('falls back to lane manifest when a tracked primary run lacks the secondary lane snapshot', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'team-a';
+      const laneId = 'secondary:opencode:bob';
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        diagnostics: [],
+      }));
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+          sendMessageToMember,
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).resolveDeliverableTrackedRuntimeRunId = vi.fn(() => 'run-1');
+      (svc as any).runs.set('run-1', {
+        mixedSecondaryLanes: [],
+      });
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          projectPath: '/repo',
+          members: [
+            { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
+            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({
+          launchIdentity: { providerId: 'codex' },
+          providerId: 'codex',
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId,
+        state: 'active',
+      });
+      const manifestPath = getOpenCodeRuntimeManifestPath(tempTeamsBase, teamName, laneId);
+      await fsPromises.mkdir(path.dirname(manifestPath), { recursive: true });
+      await fsPromises.writeFile(
+        manifestPath,
+        `${JSON.stringify(
+          {
+            ...createDefaultRuntimeStoreManifest(teamName, '2026-04-22T12:00:00.000Z'),
+            activeRunId: 'opencode-run-from-manifest',
+          },
+          null,
+          2
+        )}\n`,
+        'utf8'
+      );
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'bob',
+          text: 'hello via manifest fallback',
+          messageId: 'msg-manifest-fallback',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+      expect(sendMessageToMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: 'opencode-run-from-manifest',
+          teamName,
+          laneId,
+          memberName: 'bob',
+          cwd: '/repo',
+          text: 'hello via manifest fallback',
+          messageId: 'msg-manifest-fallback',
+        })
+      );
     });
 
     it('marks an OpenCode secondary lane degraded when readiness fails before runtime materializes', async () => {
@@ -3113,6 +3309,94 @@ describe('TeamProvisioningService', () => {
         delivered: true,
         reason: null,
       });
+    });
+
+    it('maps runtime delivery local data.detail to public TeamChangeEvent.detail', async () => {
+      const svc = new TeamProvisioningService();
+      const emitted: Array<Record<string, unknown>> = [];
+      const delivered = new Map<
+        string,
+        {
+          kind: 'member_inbox';
+          teamName: string;
+          memberName: string;
+          messageId: string;
+        }
+      >();
+
+      svc.setTeamChangeEmitter((event) => {
+        emitted.push(event as unknown as Record<string, unknown>);
+      });
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: 'mixed-team',
+        runId: 'opencode-run-1',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/tmp/mixed-team',
+      });
+      (svc as any).createOpenCodeRuntimeDeliveryPorts = vi.fn(() => [
+        {
+          kind: 'member_inbox',
+          write: vi.fn(async ({ envelope, destinationMessageId }) => {
+            const location = {
+              kind: 'member_inbox' as const,
+              teamName: envelope.teamName,
+              memberName:
+                typeof envelope.to === 'object' && 'memberName' in envelope.to
+                  ? envelope.to.memberName
+                  : 'unknown',
+              messageId: destinationMessageId,
+            };
+            delivered.set(destinationMessageId, location);
+            return location;
+          }),
+          verify: vi.fn(async ({ destinationMessageId }) => {
+            const location = delivered.get(destinationMessageId) ?? null;
+            return {
+              found: location !== null,
+              location,
+              diagnostics: [],
+            };
+          }),
+          buildChangeEvent: vi.fn(({ teamName, location }) => ({
+            type: 'inbox',
+            teamName,
+            data: {
+              detail:
+                location.kind === 'member_inbox'
+                  ? `inboxes/${location.memberName}.json`
+                  : 'inboxes',
+            },
+          })),
+        },
+      ]);
+
+      const delivery = (svc as any).createOpenCodeRuntimeDeliveryService(
+        'mixed-team',
+        'secondary:opencode:bob'
+      );
+      const ack = await delivery.deliver({
+        idempotencyKey: 'delivery-event-shape-1',
+        runId: 'opencode-run-1',
+        teamName: 'mixed-team',
+        fromMemberName: 'bob',
+        providerId: 'opencode',
+        runtimeSessionId: 'session-bob',
+        to: { memberName: 'alice' },
+        text: 'hi',
+        createdAt: '2026-04-22T12:05:00.000Z',
+      });
+
+      expect(ack).toMatchObject({ ok: true, delivered: true });
+      expect(emitted).toContainEqual(
+        expect.objectContaining({
+          type: 'inbox',
+          teamName: 'mixed-team',
+          detail: 'inboxes/alice.json',
+        })
+      );
+      expect(emitted[0]).not.toHaveProperty('data');
     });
 
     it('recovers OpenCode delivery journals from canonical launch snapshot when lane index is missing', async () => {

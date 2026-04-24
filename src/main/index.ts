@@ -135,7 +135,12 @@ import {
 } from './services/team/TeamReconcileDrainScheduler';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
-import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
+import {
+  getClaudeBasePath,
+  getProjectsBasePath,
+  getTeamsBasePath,
+  getTodosBasePath,
+} from './utils/pathDecoder';
 import {
   clearRendererAvailability,
   markRendererReady,
@@ -227,6 +232,7 @@ async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapte
   }
 
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
+  bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   try {
     const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
     const mcpEntry = mcpLaunchSpec.args[0];
@@ -768,22 +774,19 @@ function wireFileWatcherEvents(context: ServiceContext): void {
         }
 
         // Relay inbox changes into active runtime recipients.
-        if (teamProvisioningService.isTeamAlive(teamName) && detail.startsWith('inboxes/')) {
+        if (detail.startsWith('inboxes/')) {
           const match = /^inboxes\/(.+)\.json$/.exec(detail);
-          if (match && teamDataService) {
+          if (match) {
             const inboxName = match[1];
 
-            void teamDataService
-              .getLeadMemberName(teamName)
-              .then((leadName) => {
-                if (!leadName) return;
-                if (inboxName === leadName) {
-                  return teamProvisioningService.relayLeadInboxMessages(teamName);
+            void teamProvisioningService
+              .relayInboxFileToLiveRecipient(teamName, inboxName)
+              .then((relay) => {
+                if (relay.diagnostics?.length) {
+                  logger.warn(
+                    `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}: ${relay.diagnostics.join('; ')}`
+                  );
                 }
-                // Teammate inbox relay DISABLED (2026-03-23): teammates read their own
-                // inbox files directly via fs.watch. See teams.ts handleSendMessage for details.
-                // Lead relay is still needed (lead reads stdin only, not inbox files).
-                return undefined;
               })
               .catch((e: unknown) =>
                 logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)

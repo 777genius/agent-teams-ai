@@ -24,6 +24,7 @@ import {
   clearMemberModelOverrides,
   createMemberDraftsFromInputs,
   filterEditableMemberInputs,
+  normalizeLeadProviderForMode,
   normalizeMemberDraftForProviderMode,
   normalizeProviderForMode,
   validateMemberNameInline,
@@ -129,6 +130,8 @@ import {
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
+  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL,
+  OPENCODE_TEAM_LEAD_DISABLED_REASON,
   TeamModelSelector,
 } from './TeamModelSelector';
 
@@ -375,10 +378,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [selectedProviderId, setSelectedProviderIdRaw] =
-    useState<TeamProviderId>(getStoredTeamProvider);
+  const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
+    normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+  );
   const [selectedModel, setSelectedModelRaw] = useState(() =>
-    getStoredTeamModel(getStoredTeamProvider())
+    getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
   const [membersDrafts, setMembersDrafts] = useState<MemberDraft[]>([]);
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(false);
@@ -572,7 +576,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
-    const normalizedValue = normalizeProviderForMode(value, multimodelEnabled);
+    const normalizedValue = normalizeLeadProviderForMode(value, multimodelEnabled);
     setSelectedProviderIdRaw(normalizedValue);
     localStorage.setItem('team:lastSelectedProvider', normalizedValue);
     if (normalizedValue !== 'anthropic') {
@@ -685,14 +689,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       promptDraft.setValue(schedule.launchConfig.prompt);
       setCustomCwd(schedule.launchConfig.cwd);
       setCwdMode('custom');
-      const scheduleProviderId = normalizeProviderForMode(
+      const scheduleProviderId = normalizeLeadProviderForMode(
         schedule.launchConfig.providerId,
         multimodelEnabled
       );
       setSelectedProviderIdRaw(scheduleProviderId);
       setSelectedModelRaw(
         schedule.launchConfig.providerId !== 'gemini' &&
-          scheduleProviderId === normalizeProviderForMode(schedule.launchConfig.providerId, true)
+          scheduleProviderId ===
+            normalizeLeadProviderForMode(schedule.launchConfig.providerId, true)
           ? (schedule.launchConfig.model ?? '')
           : getStoredTeamModel('anthropic')
       );
@@ -713,7 +718,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setCwdMode('project');
       setSelectedProjectPath('');
       setCustomCwd('');
-      const storedProviderId = normalizeProviderForMode(getStoredTeamProvider(), multimodelEnabled);
+      const storedProviderId = normalizeLeadProviderForMode(
+        getStoredTeamProvider(),
+        multimodelEnabled
+      );
       setSelectedProviderIdRaw(storedProviderId);
       setSelectedModelRaw(getStoredTeamModel(storedProviderId));
       setSelectedEffortRaw('medium');
@@ -756,7 +764,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         savedRequest.providerBackendId.trim().length > 0
           ? savedRequest.providerBackendId.trim()
           : null;
-      const storedProviderId = normalizeProviderForMode(getStoredTeamProvider(), multimodelEnabled);
+      const storedProviderId = normalizeLeadProviderForMode(
+        getStoredTeamProvider(),
+        multimodelEnabled
+      );
       const launchPrefill = resolveLaunchDialogPrefill({
         members,
         savedRequest,
@@ -782,8 +793,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSyncModelsWithLead(
         !editableMembersSource.some((member) => member.providerId || member.model || member.effort)
       );
-      setSelectedProviderIdRaw(launchPrefill.providerId);
-      setSelectedModelRaw(launchPrefill.model);
+      const leadProviderId = normalizeLeadProviderForMode(
+        launchPrefill.providerId,
+        multimodelEnabled
+      );
+      setSelectedProviderIdRaw(leadProviderId);
+      setSelectedModelRaw(leadProviderId === launchPrefill.providerId ? launchPrefill.model : '');
       setSelectedEffortRaw(launchPrefill.effort);
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
@@ -2445,6 +2460,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onValueChange={setSelectedModel}
                   id="dialog-model"
                   disableGeminiOption={isGeminiUiFrozen()}
+                  providerDisabledReasonById={{
+                    opencode: OPENCODE_TEAM_LEAD_DISABLED_REASON,
+                  }}
+                  providerDisabledBadgeLabelById={{
+                    opencode: OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL,
+                  }}
                 />
                 <EffortLevelSelector
                   value={selectedEffort}

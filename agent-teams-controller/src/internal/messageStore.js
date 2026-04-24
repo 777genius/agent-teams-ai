@@ -71,6 +71,48 @@ function normalizeTaskRefs(taskRefs) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function normalizeMessageKind(messageKind) {
+  return messageKind === 'default' ||
+    messageKind === 'slash_command' ||
+    messageKind === 'slash_command_result' ||
+    messageKind === 'task_comment_notification'
+    ? messageKind
+    : undefined;
+}
+
+function normalizeSlashCommand(slashCommand) {
+  if (!slashCommand || typeof slashCommand !== 'object') {
+    return undefined;
+  }
+  const name = String(slashCommand.name || '').trim();
+  const command = String(slashCommand.command || '').trim();
+  if (!name || !command) {
+    return undefined;
+  }
+  return {
+    name,
+    command,
+    ...(typeof slashCommand.args === 'string' ? { args: slashCommand.args } : {}),
+    ...(typeof slashCommand.knownDescription === 'string'
+      ? { knownDescription: slashCommand.knownDescription }
+      : {}),
+  };
+}
+
+function normalizeCommandOutput(commandOutput) {
+  if (!commandOutput || typeof commandOutput !== 'object') {
+    return undefined;
+  }
+  const stream = commandOutput.stream === 'stdout' || commandOutput.stream === 'stderr'
+    ? commandOutput.stream
+    : undefined;
+  const commandLabel = String(commandOutput.commandLabel || '').trim();
+  if (!stream || !commandLabel) {
+    return undefined;
+  }
+  return { stream, commandLabel };
+}
+
 function buildMessage(flags, defaults) {
   const timestamp =
     typeof flags.timestamp === 'string' && flags.timestamp.trim() ? flags.timestamp.trim() : nowIso();
@@ -80,6 +122,9 @@ function buildMessage(flags, defaults) {
       : crypto.randomUUID();
   const attachments = normalizeAttachments(flags.attachments);
   const taskRefs = normalizeTaskRefs(flags.taskRefs);
+  const messageKind = normalizeMessageKind(flags.messageKind);
+  const slashCommand = normalizeSlashCommand(flags.slashCommand);
+  const commandOutput = normalizeCommandOutput(flags.commandOutput);
 
   return {
     from:
@@ -91,8 +136,14 @@ function buildMessage(flags, defaults) {
     timestamp,
     read: defaults.read,
     ...(taskRefs ? { taskRefs } : {}),
+    ...(flags.actionMode === 'do' || flags.actionMode === 'ask' || flags.actionMode === 'delegate'
+      ? { actionMode: flags.actionMode }
+      : {}),
     ...(typeof flags.summary === 'string' && flags.summary.trim()
       ? { summary: flags.summary.trim() }
+      : {}),
+    ...(typeof flags.commentId === 'string' && flags.commentId.trim()
+      ? { commentId: flags.commentId.trim() }
       : {}),
     ...(typeof flags.relayOfMessageId === 'string' && flags.relayOfMessageId.trim()
       ? { relayOfMessageId: flags.relayOfMessageId.trim() }
@@ -121,6 +172,9 @@ function buildMessage(flags, defaults) {
             })),
         }
       : {}),
+    ...(messageKind ? { messageKind } : {}),
+    ...(slashCommand ? { slashCommand } : {}),
+    ...(commandOutput ? { commandOutput } : {}),
     ...(attachments ? { attachments } : {}),
     messageId,
   };
@@ -235,4 +289,3 @@ module.exports = {
   lookupMessage,
   sendInboxMessage,
 };
-

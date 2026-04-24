@@ -105,10 +105,10 @@ describe('CrossTeamService', () => {
       expect(teamName).toBe('team-b');
       expect(req.member).toBe('team-lead');
       expect(req.source).toBe(CROSS_TEAM_SOURCE);
-      expect(req.from).toBe('team-a.lead');
+      expect(req.from).toBe('team-a.team-lead');
       expect(req.text).toContain('Hello from team-a');
       const prefix = parseCrossTeamPrefix(req.text);
-      expect(prefix?.from).toBe('team-a.lead');
+      expect(prefix?.from).toBe('team-a.team-lead');
       expect(prefix?.chainDepth).toBe(0);
       expect(prefix?.conversationId).toBeTruthy();
     });
@@ -130,7 +130,7 @@ describe('CrossTeamService', () => {
       const raw = fs.readFileSync(sentMessagesPath, 'utf8');
       const sentRows = JSON.parse(raw) as Array<Record<string, unknown>>;
       expect(sentRows).toHaveLength(1);
-      expect(sentRows[0]?.from).toBe('lead');
+      expect(sentRows[0]?.from).toBe('team-lead');
       expect(sentRows[0]?.source).toBe(CROSS_TEAM_SENT_SOURCE);
       expect(sentRows[0]?.to).toBe('team-b.team-lead');
       expect(sentRows[0]?.text).toBe('Hello from team-a');
@@ -248,13 +248,38 @@ describe('CrossTeamService', () => {
     });
 
     it('rejects when target not found', async () => {
-      configReader.getConfig.mockResolvedValue(null);
+      configReader.getConfig.mockImplementation(async (teamName: string) =>
+        teamName === 'team-b' ? null : makeConfig()
+      );
       await expect(service.send(makeRequest())).rejects.toThrow('Target team not found');
     });
 
     it('rejects when target is deleted', async () => {
-      configReader.getConfig.mockResolvedValue(makeConfig({ deletedAt: '2024-01-01T00:00:00Z' }));
-      await expect(service.send(makeRequest())).rejects.toThrow('Target team not found');
+      configReader.getConfig.mockImplementation(async (teamName: string) =>
+        teamName === 'to-be-deleted'
+          ? makeConfig({ name: 'to-be-deleted', deletedAt: '2024-01-01T00:00:00Z' })
+          : makeConfig()
+      );
+      await expect(service.send(makeRequest({ toTeam: 'to-be-deleted' }))).rejects.toThrow(
+        'Target team not found'
+      );
+    });
+
+    it('rejects unknown source fromMember', async () => {
+      await expect(service.send(makeRequest({ fromMember: 'researcher' }))).rejects.toThrow(
+        'Unknown fromMember'
+      );
+    });
+
+    it('rejects when source is deleted', async () => {
+      configReader.getConfig.mockImplementation(async (teamName: string) =>
+        teamName === 'deleted-source'
+          ? makeConfig({ name: 'deleted-source', deletedAt: '2024-01-01T00:00:00Z' })
+          : makeConfig()
+      );
+      await expect(service.send(makeRequest({ fromTeam: 'deleted-source' }))).rejects.toThrow(
+        'Source team not found'
+      );
     });
 
     it('rejects excessive chain depth', async () => {
@@ -282,6 +307,11 @@ describe('CrossTeamService', () => {
     });
 
     it('uses from format "team.member"', async () => {
+      configReader.getConfig.mockImplementation(async (teamName: string) =>
+        teamName === 'alpha'
+          ? makeConfig({ name: 'alpha', members: [{ name: 'researcher' }] })
+          : makeConfig()
+      );
       await service.send(makeRequest({ fromTeam: 'alpha', fromMember: 'researcher' }));
 
       const [, req] = inboxWriter.sendMessage.mock.calls[0];

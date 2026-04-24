@@ -26,8 +26,7 @@ import {
 } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
 import { OpenCodeProductionE2EEvidenceStore } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
 import {
-  buildOpenCodeCanonicalMcpToolId,
-  REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
+  REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
 } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
 import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
@@ -225,6 +224,10 @@ liveDescribe('OpenCode production gate live e2e', () => {
         staleRunRejected,
         appMcpToolsVisible: readiness.requiredToolsPresent,
       });
+      const missingObservedAppToolIds = REQUIRED_AGENT_TEAMS_APP_TOOL_IDS.filter(
+        (toolId) => !readiness.evidence.observedMcpTools.includes(toolId)
+      );
+      expect(missingObservedAppToolIds).toEqual([]);
       const gate = assertOpenCodeProductionE2EArtifactGate({
         evidence: candidate,
         artifactPath: candidate.artifactPath,
@@ -234,9 +237,7 @@ liveDescribe('OpenCode production gate live e2e', () => {
           capabilitySnapshotId: finalRuntime.capabilitySnapshotId ?? null,
           selectedModel,
           projectPathFingerprint: buildOpenCodeProjectPathFingerprint(PROJECT_PATH),
-          requiredMcpTools: REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-            buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-          ),
+          requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
         },
       });
 
@@ -408,9 +409,7 @@ function buildCandidateEvidence(input: {
       stale_run_rejected: input.staleRunRejected,
     } as OpenCodeProductionE2EEvidence['requiredSignals'],
     mcpTools: {
-      requiredTools: REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-        buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-      ),
+      requiredTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
       observedTools: input.readinessObservedTools,
     },
     launch: {

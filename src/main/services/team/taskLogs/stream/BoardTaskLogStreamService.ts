@@ -11,6 +11,7 @@ import { BoardTaskExactLogStrictParser } from '../exact/BoardTaskExactLogStrictP
 import { BoardTaskExactLogSummarySelector } from '../exact/BoardTaskExactLogSummarySelector';
 import { isBoardTaskExactLogsReadEnabled } from '../exact/featureGates';
 import { getBoardTaskExactLogFileVersions } from '../exact/fileVersions';
+import { canonicalizeAgentTeamsToolName } from '../../agentTeamsToolNames';
 
 import { OpenCodeTaskLogStreamSource } from './OpenCodeTaskLogStreamSource';
 
@@ -57,7 +58,6 @@ interface StreamLayout {
   visibleSlices: StreamSlice[];
 }
 
-const BOARD_MCP_TOOL_PREFIXES = ['mcp__agent-teams__', 'mcp__agent_teams__'] as const;
 const INFERRED_WINDOW_GRACE_BEFORE_MS = 30_000;
 const INFERRED_WINDOW_GRACE_AFTER_MS = 15_000;
 const INFERRED_RECORD_RANGE_BEFORE_MS = 5 * 60_000;
@@ -104,18 +104,17 @@ function normalizeMemberName(value: string): string {
 
 function isBoardMcpToolName(toolName: string | undefined): boolean {
   if (!toolName) return false;
-  const normalized = toolName.trim().toLowerCase();
-  return BOARD_MCP_TOOL_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  const canonical = canonicalizeBoardToolName(toolName);
+  return (
+    canonical !== null &&
+    (HISTORICAL_BOARD_LIFECYCLE_TOOL_NAMES.has(canonical) ||
+      HISTORICAL_BOARD_ACTION_TOOL_NAMES.has(canonical))
+  );
 }
 
 function canonicalizeBoardToolName(toolName: string | undefined): string | null {
   if (!toolName) return null;
-  const normalized = toolName.trim().toLowerCase();
-  for (const prefix of BOARD_MCP_TOOL_PREFIXES) {
-    if (normalized.startsWith(prefix)) {
-      return normalized.slice(prefix.length);
-    }
-  }
+  const normalized = canonicalizeAgentTeamsToolName(toolName).trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
 }
 

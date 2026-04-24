@@ -9,6 +9,7 @@ import {
 import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { OpenCodeLaunchTeamCommandData } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type { PersistedTeamLaunchSnapshot } from '../../../../src/shared/types';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 describe('OpenCodeTeamRuntimeAdapter', () => {
   it('maps readiness failures to a structured prepare block', async () => {
@@ -344,6 +345,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         cwd: '/repo',
         text: 'hello bob',
         messageId: 'msg-1',
+        replyRecipient: 'alice',
+        actionMode: 'delegate',
+        taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
       })
     ).resolves.toEqual({
       ok: true,
@@ -366,7 +370,42 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
     const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
     expect(sentText).toContain('hello bob');
-    expect(sentText).toContain('Do not import, require, create, or run a SendMessage script');
+    expect(sentText).toContain('Use teamName="team-a", to="alice", from="bob", text, and summary.');
+    expect(sentText).toContain('Action mode for this message: delegate.');
+    expect(sentText).toContain(
+      'If your reply is about these tasks, include taskRefs exactly: [{"taskId":"task-1","displayId":"abcd1234","teamName":"team-a"}]'
+    );
+    expect(sentText).toContain('Do not use SendMessage or runtime_deliver_message');
+  });
+
+  it('does not parse legacy native SendMessage wording to infer OpenCode reply recipient', async () => {
+    const sendOpenCodeTeamMessage = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
+    >(async () => ({
+      accepted: true,
+      sessionId: 'oc-session-bob',
+      memberName: 'bob',
+      diagnostics: [],
+    }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+        sendOpenCodeTeamMessage,
+      })
+    );
+
+    await adapter.sendMessageToMember({
+      runId: 'run-1',
+      teamName: 'team-a',
+      laneId: 'secondary:opencode:bob',
+      memberName: 'bob',
+      cwd: '/repo',
+      text: 'CRITICAL: The destination must be exactly to="alice". Please reply back to recipient "alice".',
+      messageId: 'msg-legacy-native',
+    });
+
+    const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
+    expect(sentText).toContain('Use teamName="team-a", to="user", from="bob", text, and summary.');
+    expect(sentText).not.toContain('Use teamName="team-a", to="alice", from="bob", text, and summary.');
   });
 
   it('keeps missing bridge members pending while reconcile is still launching', async () => {
@@ -640,7 +679,7 @@ function readiness(
     evidence: {
       capabilitiesReady: true,
       mcpToolProofRoute: '/experimental/tool/ids',
-      observedMcpTools: ['agent-teams_runtime_deliver_message'],
+      observedMcpTools: [...REQUIRED_AGENT_TEAMS_APP_TOOL_IDS],
       runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
     },
     ...overrides,

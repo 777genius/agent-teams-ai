@@ -108,6 +108,10 @@ export class TeamInboxReader {
         timestamp: row.timestamp,
         read: typeof row.read === 'boolean' ? row.read : false,
         taskRefs: Array.isArray(row.taskRefs) ? row.taskRefs : undefined,
+        actionMode:
+          row.actionMode === 'do' || row.actionMode === 'ask' || row.actionMode === 'delegate'
+            ? row.actionMode
+            : undefined,
         commentId: typeof row.commentId === 'string' ? row.commentId : undefined,
         summary: typeof row.summary === 'string' ? row.summary : undefined,
         color: typeof row.color === 'string' ? row.color : undefined,

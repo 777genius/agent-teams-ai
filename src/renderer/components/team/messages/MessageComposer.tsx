@@ -51,6 +51,7 @@ interface MessageComposerProps {
   isTeamAlive?: boolean;
   sending: boolean;
   sendError: string | null;
+  sendWarning?: string | null;
   lastResult?: SendMessageResult | null;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
@@ -78,6 +79,7 @@ export const MessageComposer = ({
   isTeamAlive,
   sending,
   sendError,
+  sendWarning,
   lastResult,
   textareaRef: externalTextareaRef,
   onSend,
@@ -481,6 +483,11 @@ export const MessageComposer = ({
     <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
       <AlertCircle size={10} className="shrink-0" />
       {sendError}
+    </span>
+  ) : sendWarning ? (
+    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+      <AlertCircle size={10} className="shrink-0" />
+      {sendWarning}
     </span>
   ) : lastResult?.deduplicated ? (
     <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">

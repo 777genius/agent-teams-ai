@@ -9,6 +9,7 @@ const storeState = {
   sendCrossTeamMessage: vi.fn().mockResolvedValue(undefined),
   sendingMessage: false,
   sendMessageError: null,
+  sendMessageWarning: null,
   lastSendMessageResult: null,
   teams: [],
   openTeamTab: vi.fn(),

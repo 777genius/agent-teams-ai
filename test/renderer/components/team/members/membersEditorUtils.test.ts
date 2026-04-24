@@ -6,12 +6,20 @@ import {
   createMemberDraft,
   createMemberDraftsFromInputs,
   filterEditableMemberInputs,
+  normalizeLeadProviderForMode,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import type { ResolvedTeamMember } from '@shared/types';
 
 describe('members editor editable input filtering', () => {
+  it('normalizes OpenCode away from the team lead while keeping other multimodel providers', () => {
+    expect(normalizeLeadProviderForMode('opencode', true)).toBe('anthropic');
+    expect(normalizeLeadProviderForMode('codex', true)).toBe('codex');
+    expect(normalizeLeadProviderForMode('anthropic', true)).toBe('anthropic');
+    expect(normalizeLeadProviderForMode('opencode', false)).toBe('anthropic');
+  });
+
   it('filters the canonical team lead out of editable member inputs', () => {
     const members = [
       {
@@ -28,7 +36,7 @@ describe('members editor editable input filtering', () => {
       },
     ] satisfies Array<Pick<ResolvedTeamMember, 'name' | 'agentType'>>;
 
-    expect(filterEditableMemberInputs(members).map(member => member.name)).toEqual([
+    expect(filterEditableMemberInputs(members).map((member) => member.name)).toEqual([
       'alice',
       'bob',
     ]);
@@ -50,10 +58,7 @@ describe('members editor editable input filtering', () => {
         effort: 'medium',
       },
     ] satisfies Array<
-      Pick<
-        ResolvedTeamMember,
-        'name' | 'agentType' | 'providerId' | 'model' | 'effort'
-      >
+      Pick<ResolvedTeamMember, 'name' | 'agentType' | 'providerId' | 'model' | 'effort'>
     >;
 
     const drafts = createMemberDraftsFromInputs(filterEditableMemberInputs(members));
@@ -179,7 +184,10 @@ describe('members editor editable input filtering', () => {
   });
 
   it('prefers an explicit resolved member color map from the team screen', () => {
-    const existingMembers = [{ name: 'alice', color: 'brick' }, { name: 'tom', color: 'forest' }];
+    const existingMembers = [
+      { name: 'alice', color: 'brick' },
+      { name: 'tom', color: 'forest' },
+    ];
     const drafts = existingMembers.map((member) => createMemberDraft({ name: member.name }));
     const resolvedColorMap = new Map<string, string>([
       ['alice', 'blue'],
@@ -193,7 +201,10 @@ describe('members editor editable input filtering', () => {
   });
 
   it('keeps an existing teammate color stable while the name is being edited', () => {
-    const existingMembers = [{ name: 'alice', color: 'blue' }, { name: 'tom', color: 'saffron' }];
+    const existingMembers = [
+      { name: 'alice', color: 'blue' },
+      { name: 'tom', color: 'saffron' },
+    ];
     const renamedAliceDraft = createMemberDraft({
       id: 'draft-alice',
       name: 'alice-renamed',

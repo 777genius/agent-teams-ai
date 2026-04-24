@@ -96,6 +96,14 @@ export function normalizeProviderForMode(
   return normalizeCreateLaunchProviderForUi(providerId, multimodelEnabled);
 }
 
+export function normalizeLeadProviderForMode(
+  providerId: TeamProviderId | undefined,
+  multimodelEnabled: boolean
+): TeamProviderId {
+  const normalizedProviderId = normalizeProviderForMode(providerId, multimodelEnabled);
+  return normalizedProviderId === 'opencode' ? 'anthropic' : normalizedProviderId;
+}
+
 export function normalizeMemberDraftForProviderMode(
   member: MemberDraft,
   multimodelEnabled: boolean

@@ -2128,6 +2128,8 @@ export class TeamDataService {
       slashCommand: enrichedRequest.slashCommand,
       commandOutput: enrichedRequest.commandOutput,
       taskRefs: enrichedRequest.taskRefs,
+      actionMode: enrichedRequest.actionMode,
+      commentId: enrichedRequest.commentId,
       summary: enrichedRequest.summary,
       source: enrichedRequest.source,
       leadSessionId: enrichedRequest.leadSessionId,

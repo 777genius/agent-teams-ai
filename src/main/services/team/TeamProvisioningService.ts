@@ -127,6 +127,7 @@ import {
   getOpenCodeRuntimeRunTombstonesPath,
   getOpenCodeTeamRuntimeDirectory,
   migrateLegacyOpenCodeRuntimeState,
+  OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
   removeOpenCodeRuntimeLaneIndexEntry,
@@ -138,6 +139,7 @@ import {
 } from './opencode/store/RuntimeRunTombstoneStore';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { buildActionModeProtocol } from './actionModeInstructions';
+import { isAgentTeamsToolUse } from './agentTeamsToolNames';
 import { atomicWriteAsync } from './atomicWrite';
 import { peekAutoResumeService } from './AutoResumeService';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
@@ -256,6 +258,7 @@ type BootstrapTranscriptOutcome =
 
 import type {
   ActiveToolCall,
+  AgentActionMode,
   CliProviderModelCatalog,
   CliProviderRuntimeCapabilities,
   CliProviderStatus,
@@ -292,6 +295,7 @@ import type {
   TeamProvisioningState,
   TeamRuntimeState,
   TeamTask,
+  TaskRef,
   ToolActivityEventPayload,
   ToolApprovalAutoResolved,
   ToolApprovalEvent,
@@ -319,6 +323,7 @@ function appendPreflightDebugLog(event: string, data: Record<string, unknown>): 
   }
 }
 const {
+  AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   createController,
@@ -371,6 +376,29 @@ function runtimeTaskRefs(teamName: string, value: unknown): InboxMessage['taskRe
         displayId: ref,
       }))
     : undefined;
+}
+
+function structuredTaskRefs(value: unknown): TaskRef[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const refs = value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({
+      taskId: typeof item.taskId === 'string' ? item.taskId.trim() : '',
+      displayId: typeof item.displayId === 'string' ? item.displayId.trim() : '',
+      teamName: typeof item.teamName === 'string' ? item.teamName.trim() : '',
+    }))
+    .filter(
+      (item) => item.taskId.length > 0 && item.displayId.length > 0 && item.teamName.length > 0
+    );
+
+  return refs.length > 0 ? refs : undefined;
+}
+
+function teamToolTaskRefs(teamName: string, value: unknown): TaskRef[] | undefined {
+  return structuredTaskRefs(value) ?? runtimeTaskRefs(teamName, value);
 }
 
 // TODO(team-result-notification-v2): The safest long-term design is a runtime-authored
@@ -3478,6 +3506,43 @@ interface NativeSameTeamFingerprint {
   seenAt: number;
 }
 
+interface OpenCodeMemberInboxDelivery {
+  delivered: boolean;
+  reason?: string;
+  diagnostics?: string[];
+}
+
+interface OpenCodeMemberInboxRelayResult {
+  relayed: number;
+  attempted: number;
+  delivered: number;
+  failed: number;
+  lastDelivery?: OpenCodeMemberInboxDelivery;
+  diagnostics?: string[];
+}
+
+interface LiveInboxRelayResult {
+  kind:
+    | 'ignored'
+    | 'native_lead'
+    | 'native_member_noop'
+    | 'opencode_member'
+    | 'opencode_lead_unsupported';
+  relayed: number;
+  diagnostics?: string[];
+  lastDelivery?: OpenCodeMemberInboxDelivery;
+}
+
+interface OpenCodeMemberInboxRelayOptions {
+  onlyMessageId?: string;
+  source?: 'watcher' | 'ui-send' | 'manual';
+  deliveryMetadata?: {
+    replyRecipient?: string;
+    actionMode?: AgentActionMode;
+    taskRefs?: TaskRef[];
+  };
+}
+
 function normalizeSameTeamText(text: string): string {
   return text.trim().replace(/\r\n/g, '\n');
 }
@@ -3525,6 +3590,10 @@ export class TeamProvisioningService {
   private readonly leadInboxRelayInFlight = new Map<string, Promise<number>>();
   private readonly relayedLeadInboxMessageIds = new Map<string, Set<string>>();
   private readonly memberInboxRelayInFlight = new Map<string, Promise<number>>();
+  private readonly openCodeMemberInboxRelayInFlight = new Map<
+    string,
+    Promise<OpenCodeMemberInboxRelayResult>
+  >();
   private readonly relayedMemberInboxMessageIds = new Map<string, Set<string>>();
   private readonly pendingCrossTeamFirstReplies = new Map<string, Map<string, number>>();
   private readonly recentCrossTeamLeadDeliveryMessageIds = new Map<string, Map<string, number>>();
@@ -4126,12 +4195,46 @@ export class TeamProvisioningService {
     };
   }
 
+  async isOpenCodeRuntimeRecipient(teamName: string, memberName: string): Promise<boolean> {
+    const normalizedMemberName = memberName.trim().toLowerCase();
+    if (!normalizedMemberName) {
+      return false;
+    }
+
+    const [config, metaMembers] = await Promise.all([
+      this.configReader.getConfig(teamName).catch(() => null),
+      this.membersMetaStore.getMembers(teamName).catch(() => []),
+    ]);
+    const configMember = config?.members?.find(
+      (member) => member.name?.trim().toLowerCase() === normalizedMemberName
+    );
+    const metaMember = metaMembers.find(
+      (member) => member.name?.trim().toLowerCase() === normalizedMemberName
+    );
+    const configProvider = (configMember as { provider?: unknown } | undefined)?.provider;
+    const metaProvider = (metaMember as { provider?: unknown } | undefined)?.provider;
+    const normalizeProviderLike = (value: unknown) =>
+      normalizeOptionalTeamProviderId(
+        typeof value === 'string' ? value.trim().toLowerCase() : value
+      );
+    const providerId =
+      normalizeProviderLike(metaMember?.providerId) ??
+      normalizeProviderLike(metaProvider) ??
+      normalizeProviderLike(configMember?.providerId) ??
+      normalizeProviderLike(configProvider) ??
+      inferTeamProviderIdFromModel(metaMember?.model ?? configMember?.model);
+    return providerId === 'opencode';
+  }
+
   async deliverOpenCodeMemberMessage(
     teamName: string,
     input: {
       memberName: string;
       text: string;
       messageId?: string;
+      replyRecipient?: string;
+      actionMode?: AgentActionMode;
+      taskRefs?: TaskRef[];
     }
   ): Promise<{ delivered: boolean; reason?: string; diagnostics?: string[] }> {
     const adapter = this.getOpenCodeRuntimeMessageAdapter();
@@ -4151,9 +4254,17 @@ export class TeamProvisioningService {
     const metaMember = metaMembers.find(
       (member) => member.name?.trim().toLowerCase() === normalizedMemberName.toLowerCase()
     );
+    const configProvider = (configMember as { provider?: unknown } | undefined)?.provider;
+    const metaProvider = (metaMember as { provider?: unknown } | undefined)?.provider;
+    const normalizeProviderLike = (value: unknown) =>
+      normalizeOptionalTeamProviderId(
+        typeof value === 'string' ? value.trim().toLowerCase() : value
+      );
     const providerId =
-      normalizeOptionalTeamProviderId(metaMember?.providerId) ??
-      normalizeOptionalTeamProviderId(configMember?.providerId) ??
+      normalizeProviderLike(metaMember?.providerId) ??
+      normalizeProviderLike(metaProvider) ??
+      normalizeProviderLike(configMember?.providerId) ??
+      normalizeProviderLike(configProvider) ??
       inferTeamProviderIdFromModel(metaMember?.model ?? configMember?.model);
     if (providerId !== 'opencode') {
       return { delivered: false, reason: 'recipient_is_not_opencode' };
@@ -4198,6 +4309,7 @@ export class TeamProvisioningService {
 
     const trackedRunId = this.resolveDeliverableTrackedRuntimeRunId(teamName);
     const trackedRun = trackedRunId ? this.runs.get(trackedRunId) : null;
+    let liveSecondaryLaneRunId: string | null = null;
     if (
       trackedRun &&
       laneIdentity.laneKind === 'secondary' &&
@@ -4208,27 +4320,29 @@ export class TeamProvisioningService {
           lane.laneId === laneIdentity.laneId ||
           lane.member.name.trim().toLowerCase() === normalizedMemberName.toLowerCase()
       );
-      if (!liveLane) {
-        return { delivered: false, reason: 'opencode_runtime_not_active' };
-      }
+      liveSecondaryLaneRunId = liveLane?.runId?.trim() || null;
     }
-    if (!trackedRunId) {
-      const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
-        () => null
-      );
-      if (laneIndex?.lanes[laneIdentity.laneId]?.state !== 'active') {
-        return { delivered: false, reason: 'opencode_runtime_not_active' };
-      }
+    const runtimeRunId =
+      laneIdentity.laneKind === 'secondary' && laneIdentity.laneOwnerProviderId === 'opencode'
+        ? (liveSecondaryLaneRunId ??
+          (await this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)))
+        : (trackedRunId ??
+          (await this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)));
+    if (!runtimeRunId) {
+      return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
 
     const result = await adapter.sendMessageToMember({
-      ...(trackedRunId ? { runId: trackedRunId } : {}),
+      ...(runtimeRunId ? { runId: runtimeRunId } : {}),
       teamName,
       laneId: laneIdentity.laneId,
       memberName: canonicalMemberName,
       cwd,
       text: input.text,
       messageId: input.messageId,
+      replyRecipient: input.replyRecipient,
+      actionMode: input.actionMode,
+      taskRefs: input.taskRefs,
     });
     return {
       delivered: result.ok,
@@ -4404,6 +4518,31 @@ export class TeamProvisioningService {
 
     const secondaryLaneRun = this.secondaryRuntimeRunByTeam.get(teamName)?.get(laneId);
     return secondaryLaneRun?.runId ?? null;
+  }
+
+  private async resolveCurrentOpenCodeRuntimeRunId(
+    teamName: string,
+    laneId: string
+  ): Promise<string | null> {
+    const inMemoryRunId = this.getCurrentOpenCodeRuntimeRunId(teamName, laneId);
+    if (inMemoryRunId) {
+      return inMemoryRunId;
+    }
+
+    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
+      () => null
+    );
+    if (laneIndex?.lanes[laneId]?.state !== 'active') {
+      return null;
+    }
+
+    const evidence = await new OpenCodeRuntimeManifestEvidenceReader({
+      teamsBasePath: getTeamsBasePath(),
+    })
+      .read(teamName, laneId)
+      .catch(() => null);
+    const durableRunId = evidence?.activeRunId?.trim();
+    return durableRunId || null;
   }
 
   private async resolveOpenCodeRuntimeLaneId(params: {
@@ -4603,6 +4742,11 @@ export class TeamProvisioningService {
     for (const key of Array.from(this.memberInboxRelayInFlight.keys())) {
       if (key.startsWith(`${teamName}:`)) {
         this.memberInboxRelayInFlight.delete(key);
+      }
+    }
+    for (const key of Array.from(this.openCodeMemberInboxRelayInFlight.keys())) {
+      if (key.startsWith(`opencode:${teamName}:`)) {
+        this.openCodeMemberInboxRelayInFlight.delete(key);
       }
     }
     for (const key of Array.from(this.relayedMemberInboxMessageIds.keys())) {
@@ -4924,20 +5068,48 @@ export class TeamProvisioningService {
     return Array.isArray(innerContent) ? (innerContent as Record<string, unknown>[]) : [];
   }
 
-  private hasCapturedVisibleSendMessage(content: Record<string, unknown>[]): boolean {
+  private hasCapturedVisibleSendMessage(
+    content: Record<string, unknown>[],
+    teamName: string
+  ): boolean {
     return content.some((part) => {
       if (!part || typeof part !== 'object') return false;
       if (part.type !== 'tool_use' || typeof part.name !== 'string') return false;
 
-      if (part.name !== 'SendMessage') return false;
-
       const input = part.input;
       if (!input || typeof input !== 'object') return false;
       const inp = input as Record<string, unknown>;
-      const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim();
-      const text = (typeof inp.content === 'string' ? inp.content : '').trim();
 
-      return target.length > 0 && text.length > 0;
+      if (part.name === 'SendMessage') {
+        const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim();
+        const text = (typeof inp.content === 'string' ? inp.content : '').trim();
+        return target.length > 0 && text.length > 0;
+      }
+
+      const isTeamMessageSendTool = isAgentTeamsToolUse({
+        rawName: part.name,
+        canonicalName: 'message_send',
+        toolInput: inp,
+        currentTeamName: teamName,
+      });
+      const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
+        rawName: part.name,
+        canonicalName: 'cross_team_send',
+        toolInput: inp,
+        currentTeamName: teamName,
+      });
+      if (!isTeamMessageSendTool && !isDirectCrossTeamSendTool) return false;
+
+      const target = isTeamMessageSendTool
+        ? typeof inp.to === 'string'
+          ? inp.to
+          : ''
+        : typeof inp.toTeam === 'string'
+          ? inp.toTeam
+          : '';
+      const text = typeof inp.text === 'string' ? inp.text : '';
+
+      return target.trim().length > 0 && text.trim().length > 0;
     });
   }
 
@@ -5279,6 +5451,10 @@ export class TeamProvisioningService {
 
   private getMemberRelayKey(teamName: string, memberName: string): string {
     return `${teamName}:${memberName.trim()}`;
+  }
+
+  private getOpenCodeMemberRelayKey(teamName: string, memberName: string): string {
+    return `opencode:${this.getMemberRelayKey(teamName, memberName)}`;
   }
 
   private normalizeRelayCandidateText(text: string): string {
@@ -5650,7 +5826,7 @@ export class TeamProvisioningService {
     await store.assertEvidenceAccepted({
       teamName: input.teamName,
       runId: input.runId,
-      currentRunId: this.getCurrentOpenCodeRuntimeRunId(input.teamName, input.laneId),
+      currentRunId: await this.resolveCurrentOpenCodeRuntimeRunId(input.teamName, input.laneId),
       evidenceKind: input.evidenceKind,
     });
   }
@@ -5804,7 +5980,7 @@ export class TeamProvisioningService {
     return new RuntimeDeliveryService(
       {
         getCurrentRunId: async (candidateTeamName) =>
-          this.getCurrentOpenCodeRuntimeRunId(candidateTeamName, laneId),
+          this.resolveCurrentOpenCodeRuntimeRunId(candidateTeamName, laneId),
       },
       journal,
       new RuntimeDeliveryDestinationRegistry(this.createOpenCodeRuntimeDeliveryPorts()),
@@ -5939,12 +6115,14 @@ export class TeamProvisioningService {
         if (!this.crossTeamSender) {
           throw new Error('Cross-team sender is not configured');
         }
+        const taskRefs = runtimeTaskRefs(envelope.teamName, envelope.taskRefs);
         await this.crossTeamSender({
           fromTeam: envelope.teamName,
           fromMember: envelope.fromMemberName,
           toTeam: envelope.to.teamName,
           text: envelope.text,
           summary: envelope.summary ?? undefined,
+          ...(taskRefs ? { taskRefs } : {}),
           messageId: destinationMessageId,
           timestamp: envelope.createdAt,
           conversationId: envelope.idempotencyKey,
@@ -11134,6 +11312,233 @@ export class TeamProvisioningService {
     }
   }
 
+  async relayInboxFileToLiveRecipient(
+    teamName: string,
+    inboxName: string,
+    options: OpenCodeMemberInboxRelayOptions = {}
+  ): Promise<LiveInboxRelayResult> {
+    if (
+      this.isCrossTeamPseudoRecipientName(inboxName) ||
+      this.isCrossTeamToolRecipientName(inboxName)
+    ) {
+      return { kind: 'ignored', relayed: 0 };
+    }
+
+    const leadName = await this.configReader
+      .getConfig(teamName)
+      .then(
+        (config) => config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null
+      )
+      .catch(() => null);
+    if (leadName && inboxName.trim().toLowerCase() === leadName.toLowerCase()) {
+      if (await this.isOpenCodeRuntimeRecipient(teamName, inboxName)) {
+        const diagnostic =
+          'opencode_lead_runtime_session_missing: OpenCode lead inbox relay is unsupported in v1; leaving inbox unread for durable retry/diagnostics.';
+        logger.warn(`[${teamName}] ${diagnostic} inbox=${inboxName}`);
+        return {
+          kind: 'opencode_lead_unsupported',
+          relayed: 0,
+          diagnostics: [diagnostic],
+        };
+      }
+      return {
+        kind: 'native_lead',
+        relayed: this.isTeamAlive(teamName) ? await this.relayLeadInboxMessages(teamName) : 0,
+      };
+    }
+
+    if (await this.isOpenCodeRuntimeRecipient(teamName, inboxName)) {
+      const relayOptions: OpenCodeMemberInboxRelayOptions = {
+        source: options.source ?? 'watcher',
+        ...(options.onlyMessageId ? { onlyMessageId: options.onlyMessageId } : {}),
+        ...(options.deliveryMetadata ? { deliveryMetadata: options.deliveryMetadata } : {}),
+      };
+      const relay = await this.relayOpenCodeMemberInboxMessages(teamName, inboxName, relayOptions);
+      return {
+        kind: 'opencode_member',
+        relayed: relay.relayed,
+        diagnostics: relay.diagnostics,
+        lastDelivery: relay.lastDelivery,
+      };
+    }
+
+    return { kind: 'native_member_noop', relayed: 0 };
+  }
+
+  async relayOpenCodeMemberInboxMessages(
+    teamName: string,
+    memberName: string,
+    options: OpenCodeMemberInboxRelayOptions = {}
+  ): Promise<OpenCodeMemberInboxRelayResult> {
+    const relayKey = this.getOpenCodeMemberRelayKey(teamName, memberName);
+    const existing = this.openCodeMemberInboxRelayInFlight.get(relayKey);
+    if (existing) {
+      const existingResult = await existing;
+      const onlyMessageId = options.onlyMessageId?.trim();
+      if (!onlyMessageId) {
+        return existingResult;
+      }
+      const inboxMessages = await this.inboxReader
+        .getMessagesFor(teamName, memberName)
+        .catch(() => []);
+      const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
+      if (targetMessage?.read) {
+        return {
+          relayed: 0,
+          attempted: 1,
+          delivered: 1,
+          failed: 0,
+          lastDelivery: { delivered: true },
+          diagnostics: existingResult.diagnostics,
+        };
+      }
+      if (!targetMessage) {
+        const diagnostic = `opencode_inbox_message_missing_after_inflight_relay: ${onlyMessageId}`;
+        return {
+          relayed: 0,
+          attempted: 1,
+          delivered: 0,
+          failed: 1,
+          lastDelivery: {
+            delivered: false,
+            reason: 'opencode_inbox_message_missing_after_inflight_relay',
+            diagnostics: [diagnostic],
+          },
+          diagnostics: [diagnostic],
+        };
+      }
+    }
+
+    const work = (async (): Promise<OpenCodeMemberInboxRelayResult> => {
+      const result: OpenCodeMemberInboxRelayResult = {
+        relayed: 0,
+        attempted: 0,
+        delivered: 0,
+        failed: 0,
+      };
+      if (!(await this.isOpenCodeRuntimeRecipient(teamName, memberName))) {
+        result.lastDelivery = { delivered: false, reason: 'recipient_is_not_opencode' };
+        return result;
+      }
+
+      let inboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>> = [];
+      try {
+        inboxMessages = await this.inboxReader.getMessagesFor(teamName, memberName);
+      } catch (error) {
+        const diagnostic = `opencode_inbox_read_failed: ${getErrorMessage(error)}`;
+        result.lastDelivery = {
+          delivered: false,
+          reason: 'opencode_inbox_read_failed',
+          diagnostics: [diagnostic],
+        };
+        result.diagnostics = [diagnostic];
+        return result;
+      }
+
+      const onlyMessageId = options.onlyMessageId?.trim();
+      if (onlyMessageId) {
+        const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
+        if (targetMessage?.read) {
+          return {
+            relayed: 0,
+            attempted: 1,
+            delivered: 1,
+            failed: 0,
+            lastDelivery: { delivered: true },
+          };
+        }
+        if (!targetMessage) {
+          const diagnostic = `opencode_inbox_message_missing: ${onlyMessageId}`;
+          return {
+            relayed: 0,
+            attempted: 1,
+            delivered: 0,
+            failed: 1,
+            lastDelivery: {
+              delivered: false,
+              reason: 'opencode_inbox_message_missing',
+              diagnostics: [diagnostic],
+            },
+            diagnostics: [diagnostic],
+          };
+        }
+      }
+      const unread = inboxMessages
+        .filter((message): message is InboxMessage & { messageId: string } => {
+          if (message.read) return false;
+          if (onlyMessageId && message.messageId !== onlyMessageId) return false;
+          if (typeof message.text !== 'string' || message.text.trim().length === 0) return false;
+          return this.hasStableMessageId(message);
+        })
+        .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+        .slice(0, 10);
+
+      for (const message of unread) {
+        const fallbackReplyRecipient =
+          typeof message.from === 'string' &&
+          message.from.trim() &&
+          message.from.trim().toLowerCase() !== memberName.trim().toLowerCase()
+            ? message.from.trim()
+            : 'user';
+        result.attempted += 1;
+        const delivery = await this.deliverOpenCodeMemberMessage(teamName, {
+          memberName,
+          text: message.text,
+          messageId: message.messageId,
+          replyRecipient: options.deliveryMetadata?.replyRecipient ?? fallbackReplyRecipient,
+          actionMode: options.deliveryMetadata?.actionMode ?? message.actionMode,
+          taskRefs: options.deliveryMetadata?.taskRefs ?? message.taskRefs,
+        });
+        result.lastDelivery = delivery;
+        if (!delivery.delivered) {
+          result.failed += 1;
+          result.diagnostics = [
+            ...(result.diagnostics ?? []),
+            ...(delivery.diagnostics ?? [delivery.reason ?? 'opencode_message_delivery_failed']),
+          ];
+          logger.warn(
+            `[${teamName}] OpenCode inbox relay failed for ${memberName}/${message.messageId}: ${
+              delivery.reason ?? 'unknown error'
+            }`
+          );
+          break;
+        }
+        try {
+          await this.markInboxMessagesRead(teamName, memberName, [message]);
+        } catch (error) {
+          const diagnostic = `opencode_inbox_mark_read_failed_after_delivery: ${getErrorMessage(
+            error
+          )}`;
+          result.failed += 1;
+          result.lastDelivery = {
+            delivered: false,
+            reason: 'opencode_inbox_mark_read_failed_after_delivery',
+            diagnostics: [diagnostic],
+          };
+          result.diagnostics = [...(result.diagnostics ?? []), diagnostic];
+          logger.warn(`[${teamName}] ${diagnostic}`);
+          break;
+        }
+        result.delivered += 1;
+        result.relayed += 1;
+      }
+
+      if (result.diagnostics?.length) {
+        result.diagnostics = [...new Set(result.diagnostics)];
+      }
+      return result;
+    })();
+
+    this.openCodeMemberInboxRelayInFlight.set(relayKey, work);
+    try {
+      return await work;
+    } finally {
+      if (this.openCodeMemberInboxRelayInFlight.get(relayKey) === work) {
+        this.openCodeMemberInboxRelayInFlight.delete(relayKey);
+      }
+    }
+  }
+
   /**
    * Relay unread inbox messages addressed to the team lead into the live lead process.
    *
@@ -14286,13 +14691,22 @@ export class TeamProvisioningService {
     for (const part of content) {
       if (part.type !== 'tool_use' || typeof part.name !== 'string') continue;
       const isNativeSendMessage = part.name === 'SendMessage';
-      const isTeamMessageSendTool = part.name === 'mcp__agent-teams__message_send';
-      const isDirectCrossTeamSendTool =
-        part.name === 'mcp__agent-teams__cross_team_send' || part.name === 'cross_team_send';
-      if (!isNativeSendMessage && !isTeamMessageSendTool && !isDirectCrossTeamSendTool) continue;
       const input = part.input;
       if (!input || typeof input !== 'object') continue;
       const inp = input as Record<string, unknown>;
+      const isTeamMessageSendTool = isAgentTeamsToolUse({
+        rawName: part.name,
+        canonicalName: 'message_send',
+        toolInput: inp,
+        currentTeamName: run.teamName,
+      });
+      const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
+        rawName: part.name,
+        canonicalName: 'cross_team_send',
+        toolInput: inp,
+        currentTeamName: run.teamName,
+      });
+      if (!isNativeSendMessage && !isTeamMessageSendTool && !isDirectCrossTeamSendTool) continue;
 
       if (isDirectCrossTeamSendTool) {
         const toTeam = typeof inp.toTeam === 'string' ? inp.toTeam.trim() : '';
@@ -14356,6 +14770,7 @@ export class TeamProvisioningService {
         const replyMeta = inferredReplyMeta;
         const timestamp = nowIso();
         const messageId = `lead-sendmsg-${run.runId}-${Date.now()}`;
+        const taskRefs = teamToolTaskRefs(run.teamName, inp.taskRefs);
 
         void this.crossTeamSender({
           fromTeam: run.teamName,
@@ -14363,6 +14778,7 @@ export class TeamProvisioningService {
           toTeam: crossTeamRecipient.teamName,
           text: strippedCrossTeamContent,
           summary,
+          ...(taskRefs ? { taskRefs } : {}),
           messageId,
           timestamp,
           conversationId: crossTeamMeta?.conversationId ?? replyMeta?.conversationId,
@@ -14402,6 +14818,7 @@ export class TeamProvisioningService {
                 replyMeta?.replyToConversationId ??
                 crossTeamMeta?.conversationId ??
                 replyMeta?.conversationId,
+              ...(taskRefs ? { taskRefs } : {}),
             };
             this.pushLiveLeadProcessMessage(run.teamName, msg);
             this.teamChangeEmitter?.({
@@ -15341,7 +15758,10 @@ export class TeamProvisioningService {
     if (msg.type === 'assistant') {
       const content = this.extractStreamContentBlocks(msg);
 
-      const hasCapturedVisibleSendMessage = this.hasCapturedVisibleSendMessage(content);
+      const hasCapturedVisibleSendMessage = this.hasCapturedVisibleSendMessage(
+        content,
+        run.teamName
+      );
 
       const textParts = content
         .filter((part) => part.type === 'text' && typeof part.text === 'string')
@@ -17637,6 +18057,11 @@ export class TeamProvisioningService {
       for (const key of Array.from(this.memberInboxRelayInFlight.keys())) {
         if (key.startsWith(`${run.teamName}:`)) {
           this.memberInboxRelayInFlight.delete(key);
+        }
+      }
+      for (const key of Array.from(this.openCodeMemberInboxRelayInFlight.keys())) {
+        if (key.startsWith(`opencode:${run.teamName}:`)) {
+          this.openCodeMemberInboxRelayInFlight.delete(key);
         }
       }
       for (const key of Array.from(this.relayedMemberInboxMessageIds.keys())) {
@@ -20002,17 +20427,24 @@ export class TeamProvisioningService {
 
       const toolsList = await request<McpToolsListResult>('tools/list', {});
       throwIfCancelled();
-      const memberBriefingTool = (toolsList.tools ?? []).find(
-        (tool) => tool.name === 'member_briefing'
+      const availableTools = new Set((toolsList.tools ?? []).map((tool) => tool.name));
+      const requiredTools = Array.from(
+        new Set([
+          ...AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
+          'lead_briefing',
+          'runtime_bootstrap_checkin',
+          'runtime_deliver_message',
+          'runtime_task_event',
+          'runtime_heartbeat',
+        ])
       );
-      if (!memberBriefingTool) {
-        throw new Error('agent-teams MCP started but tools/list did not include member_briefing');
-      }
-      const leadBriefingTool = (toolsList.tools ?? []).find(
-        (tool) => tool.name === 'lead_briefing'
-      );
-      if (!leadBriefingTool) {
-        throw new Error('agent-teams MCP started but tools/list did not include lead_briefing');
+      const missingTools = requiredTools.filter((toolName) => !availableTools.has(toolName));
+      if (missingTools.length > 0) {
+        throw new Error(
+          `agent-teams MCP started but tools/list did not include required tool(s): ${missingTools.join(
+            ', '
+          )}`
+        );
       }
 
       const memberBriefing = await request<McpToolCallResult>('tools/call', {
@@ -20021,6 +20453,7 @@ export class TeamProvisioningService {
           claudeDir: fixture.claudeDir,
           teamName: fixture.teamName,
           memberName: fixture.memberName,
+          runtimeProvider: 'opencode',
         },
       });
       throwIfCancelled();

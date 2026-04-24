@@ -52,8 +52,8 @@ export interface OpenCodeProductionE2EEvidence {
   projectPathFingerprint: string | null;
   requiredSignals: Record<OpenCodeProductionE2ERequiredSignal, boolean>;
   mcpTools: {
-    requiredTools: string[];
-    observedTools: string[];
+    requiredTools: readonly string[];
+    observedTools: readonly string[];
   };
   launch: {
     runId: string;
@@ -100,7 +100,7 @@ export interface OpenCodeProductionE2EGateExpectation {
    */
   selectedModel: string | null;
   projectPathFingerprint?: string | null;
-  requiredMcpTools?: string[];
+  requiredMcpTools?: readonly string[];
 }
 
 export interface OpenCodeProductionE2EGateResult {

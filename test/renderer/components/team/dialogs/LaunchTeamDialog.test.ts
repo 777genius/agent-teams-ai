@@ -101,6 +101,8 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       effort: member.effort,
     })),
   filterEditableMemberInputs: (members: unknown) => members,
+  normalizeLeadProviderForMode: (providerId: unknown) =>
+    providerId === 'opencode' ? 'anthropic' : providerId,
   normalizeMemberDraftForProviderMode: (member: unknown) => member,
   normalizeProviderForMode: (providerId: unknown) => providerId,
   validateMemberNameInline: () => null,
@@ -311,6 +313,8 @@ vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   computeEffectiveTeamModel: (model: string) => model || undefined,
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
+  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'not teamlead',
+  OPENCODE_TEAM_LEAD_DISABLED_REASON: 'OpenCode is not available for team lead.',
 }));
 
 vi.mock('@renderer/components/team/dialogs/EffortLevelSelector', () => ({
@@ -496,7 +500,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('clears stale inherited member models after saved launch hydration for OpenCode', async () => {
+  it('normalizes saved OpenCode lead hydration away from the unsupported lead path', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
@@ -533,9 +537,9 @@ describe('LaunchTeamDialog', () => {
       ],
     } as any);
 
-    const onLaunch = vi.fn<
-      (request: { providerId?: string; model?: string }) => Promise<void>
-    >(async () => {});
+    const onLaunch = vi.fn<(request: { providerId?: string; model?: string }) => Promise<void>>(
+      async () => {}
+    );
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -563,9 +567,7 @@ describe('LaunchTeamDialog', () => {
     const opencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
-    expect(opencodePrepareCalls.at(-1)?.[0]?.selectedModelIds).toEqual([
-      'opencode/minimax-m2.5-free',
-    ]);
+    expect(opencodePrepareCalls).toHaveLength(0);
 
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
@@ -589,15 +591,13 @@ describe('LaunchTeamDialog', () => {
       ],
     });
     expect(onLaunch).toHaveBeenCalledTimes(1);
-    const launchRequest = (onLaunch.mock.calls as Array<
-      [{ providerId?: string; model?: string }]
-    >)[0]?.[0] as
-      | { providerId?: string; model?: string }
-      | undefined;
+    const launchRequest = (
+      onLaunch.mock.calls as Array<[{ providerId?: string; model?: string }]>
+    )[0]?.[0] as { providerId?: string; model?: string } | undefined;
     expect(launchRequest).toMatchObject({
-      providerId: 'opencode',
-      model: 'opencode/minimax-m2.5-free',
+      providerId: 'anthropic',
     });
+    expect(launchRequest?.model).not.toBe('opencode/minimax-m2.5-free');
 
     await act(async () => {
       root.unmount();
@@ -1142,7 +1142,10 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+    const inFlightOpencodePrepareCalls = vi
+      .mocked(runProviderPrepareDiagnostics)
+      .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
+    expect(inFlightOpencodePrepareCalls).toHaveLength(1);
     expect(host.textContent).toContain('Selected providers are ready.');
 
     await act(async () => {

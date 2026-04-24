@@ -1235,6 +1235,7 @@ export const TeamDetailView = ({
     closeTab,
     sendingMessage,
     sendMessageError,
+    sendMessageWarning,
     lastSendMessageResult,
     reviewActionError,
     addMember,
@@ -1284,6 +1285,7 @@ export const TeamDetailView = ({
       closeTab: s.closeTab,
       sendingMessage: s.sendingMessage,
       sendMessageError: s.sendMessageError,
+      sendMessageWarning: s.sendMessageWarning,
       lastSendMessageResult: s.lastSendMessageResult,
       reviewActionError: s.reviewActionError,
       addMember: s.addMember,
@@ -2963,21 +2965,24 @@ export const TeamDetailView = ({
                 isTeamAlive={data.isAlive}
                 sending={sendingMessage}
                 sendError={sendMessageError}
+                sendWarning={sendMessageWarning}
                 lastResult={lastSendMessageResult}
-                onSend={(member, text, summary, attachments, actionMode, taskRefs) => {
-                  void (async () => {
-                    const sentAtMs = Date.now();
-                    setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
-                    try {
-                      await sendTeamMessage(teamName, {
-                        member,
-                        text,
-                        summary,
-                        attachments,
-                        actionMode,
-                        taskRefs,
-                      });
-                    } catch {
+                onSend={async (member, text, summary, attachments, actionMode, taskRefs) => {
+                  const sentAtMs = Date.now();
+                  setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
+                  try {
+                    const result = await sendTeamMessage(teamName, {
+                      member,
+                      text,
+                      summary,
+                      attachments,
+                      actionMode,
+                      taskRefs,
+                    });
+                    if (
+                      result?.runtimeDelivery?.attempted === true &&
+                      result.runtimeDelivery.delivered === false
+                    ) {
                       setPendingRepliesByMember((prev) => {
                         if (prev[member] !== sentAtMs) return prev;
                         const next = { ...prev };
@@ -2985,7 +2990,16 @@ export const TeamDetailView = ({
                         return next;
                       });
                     }
-                  })();
+                    return result;
+                  } catch (error) {
+                    setPendingRepliesByMember((prev) => {
+                      if (prev[member] !== sentAtMs) return prev;
+                      const next = { ...prev };
+                      delete next[member];
+                      return next;
+                    });
+                    throw error;
+                  }
                 }}
                 onClose={() => {
                   setSendDialogOpen(false);

@@ -151,6 +151,68 @@ describe('agent-teams-controller API', () => {
     expect(briefing).toContain(
       'Awareness items are watch-only context and do not authorize you to start work unless the lead reroutes the task or you become the actionOwner.'
     );
+    expect(briefing).toContain('After task_complete, notify your team lead via SendMessage.');
+    expect(briefing).toContain('Full details in task comment e5f6a7b8');
+    expect(briefing).not.toContain('task_get_comment {');
+  });
+
+  it('uses OpenCode-native visible-message wording for OpenCode member briefing', async () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer', providerId: 'opencode', model: 'openrouter/test-model' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const briefing = await controller.tasks.memberBriefing('bob');
+
+    expect(briefing).toContain(
+      'After task_complete, notify your team lead via MCP tool agent-teams_message_send.'
+    );
+    expect(briefing).toContain('OpenCode visible messaging rule: call agent-teams_message_send');
+    expect(briefing).toContain(
+      'agent-teams_message_send { teamName: "my-team", to: "alice", from: "bob"'
+    );
+    expect(briefing).toContain('Full details in task comment e5f6a7b8');
+    expect(briefing).not.toContain('task_get_comment {');
+    expect(briefing).not.toContain('notify your team lead via SendMessage');
+  });
+
+  it('does not infer OpenCode briefing from a generic provider-scoped model alone', async () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer', model: 'openai/gpt-5.4-mini' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const briefing = await controller.tasks.memberBriefing('bob');
+
+    expect(briefing).toContain('After task_complete, notify your team lead via SendMessage.');
+    expect(briefing).not.toContain('agent-teams_message_send');
+  });
+
+  it('keeps explicit native provider metadata stronger than OpenCode-looking model labels', async () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer', providerId: 'codex', model: 'opencode/minimax-m2.5-free' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const briefing = await controller.tasks.memberBriefing('bob');
+
+    expect(briefing).toContain('After task_complete, notify your team lead via SendMessage.');
+    expect(briefing).not.toContain('agent-teams_message_send');
   });
 
   it('resolves member briefing from members.meta.json when config members are missing', async () => {
@@ -801,8 +863,10 @@ describe('agent-teams-controller API', () => {
       from: 'team-lead',
       text: 'Need your review',
       summary: 'Review request',
+      commentId: 'comment-123',
       relayOfMessageId: 'm-original-1',
       source: 'system_notification',
+      messageKind: 'task_comment_notification',
       leadSessionId: 'session-42',
       attachments: [{ id: 'a1', filename: 'note.txt', mimeType: 'text/plain', size: 7 }],
     });
@@ -814,9 +878,111 @@ describe('agent-teams-controller API', () => {
     const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
     expect(rows).toHaveLength(1);
     expect(rows[0].source).toBe('system_notification');
+    expect(rows[0].messageKind).toBe('task_comment_notification');
+    expect(rows[0].commentId).toBe('comment-123');
     expect(rows[0].relayOfMessageId).toBe('m-original-1');
     expect(rows[0].leadSessionId).toBe('session-42');
     expect(rows[0].attachments[0].filename).toBe('note.txt');
+  });
+
+  it('persists slash command metadata through controller messages.appendSentMessage', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    controller.messages.appendSentMessage({
+      from: 'user',
+      to: 'alice',
+      text: '/compact keep only kanban context',
+      messageKind: 'slash_command',
+      slashCommand: {
+        name: 'compact',
+        command: '/compact',
+        args: 'keep only kanban context',
+        knownDescription: 'Compact the active context',
+      },
+    });
+
+    controller.messages.appendSentMessage({
+      from: 'alice',
+      to: 'user',
+      text: 'Compacted context.',
+      messageKind: 'slash_command_result',
+      commandOutput: {
+        stream: 'stdout',
+        commandLabel: '/compact',
+      },
+    });
+
+    const sentPath = path.join(claudeDir, 'teams', 'my-team', 'sentMessages.json');
+    const rows = JSON.parse(fs.readFileSync(sentPath, 'utf8'));
+    expect(rows).toHaveLength(2);
+    expect(rows[0].messageKind).toBe('slash_command');
+    expect(rows[0].slashCommand).toMatchObject({
+      name: 'compact',
+      command: '/compact',
+      args: 'keep only kanban context',
+    });
+    expect(rows[1].messageKind).toBe('slash_command_result');
+    expect(rows[1].commandOutput).toEqual({
+      stream: 'stdout',
+      commandLabel: '/compact',
+    });
+  });
+
+  it('canonicalizes local message recipients and guards user-directed sender identity', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    controller.messages.sendMessage({
+      to: 'team-lead',
+      from: 'bob',
+      text: 'Need lead input',
+      summary: 'Lead input',
+      actionMode: 'ask',
+    });
+
+    const leadInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const leadRows = JSON.parse(fs.readFileSync(leadInboxPath, 'utf8'));
+    expect(leadRows).toHaveLength(1);
+    expect(leadRows[0].to).toBe('alice');
+    expect(leadRows[0].from).toBe('bob');
+    expect(leadRows[0].actionMode).toBe('ask');
+
+    controller.messages.sendMessage({
+      to: 'user',
+      from: 'lead',
+      text: 'Visible user reply',
+      summary: 'Reply',
+    });
+
+    const userInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json');
+    const userRows = JSON.parse(fs.readFileSync(userInboxPath, 'utf8'));
+    expect(userRows).toHaveLength(1);
+    expect(userRows[0].to).toBe('user');
+    expect(userRows[0].from).toBe('alice');
+
+    expect(() =>
+      controller.messages.sendMessage({
+        to: 'user',
+        text: 'Missing sender',
+      })
+    ).toThrow('message_send to user requires from to be the responding team member name');
+
+    expect(() =>
+      controller.messages.sendMessage({
+        to: 'other-team.alice',
+        from: 'bob',
+        text: 'Wrong transport',
+      })
+    ).toThrow('message_send cannot target another team. Use cross_team_send with toTeam.');
+
+    expect(() =>
+      controller.messages.sendMessage({
+        to: 'cross_team_send',
+        from: 'bob',
+        text: 'Wrong transport',
+      })
+    ).toThrow('message_send cannot target cross_team_send. Use cross_team_send with toTeam.');
   });
 
   it('wakes task owner on regular comment from another member', () => {
@@ -887,10 +1053,11 @@ describe('agent-teams-controller API', () => {
       text: 'Need your decision here.',
     });
 
-    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'team-lead.json');
+    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
     const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
     expect(rows).toHaveLength(1);
     expect(rows[0].from).toBe('bob');
+    expect(rows[0].to).toBe('alice');
     expect(rows[0].text).toContain('Need your decision here.');
   });
 

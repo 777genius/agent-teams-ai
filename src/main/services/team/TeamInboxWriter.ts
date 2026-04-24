@@ -28,6 +28,7 @@ export class TeamInboxWriter {
       timestamp: request.timestamp ?? new Date().toISOString(),
       read: false,
       taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
+      actionMode: request.actionMode,
       commentId: typeof request.commentId === 'string' ? request.commentId : undefined,
       summary: request.summary,
       messageId,

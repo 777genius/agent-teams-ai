@@ -8,6 +8,7 @@ import type {
   BoardTaskExactLogSummariesResponse,
   InboxMessage,
   MessagesPage,
+  SendMessageResult,
   TeamViewSnapshot,
   TeamCreateRequest,
   TeamProvisioningProgress,
@@ -230,6 +231,16 @@ describe('ipc teams handlers', () => {
     pushLiveLeadProcessMessage: vi.fn(),
     relayLeadInboxMessages: vi.fn(async () => 0),
     relayMemberInboxMessages: vi.fn(async () => 0),
+    isOpenCodeRuntimeRecipient: vi.fn(async () => false),
+    relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
+      relayed: 0,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: undefined as
+        | { delivered: boolean; reason?: string; diagnostics?: string[] }
+        | undefined,
+    })),
     getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
     getCurrentLeadSessionId: vi.fn(() => null as string | null),
     getAliveTeams: vi.fn(() => ['my-team']),
@@ -539,6 +550,94 @@ describe('ipc teams handlers', () => {
       text: 'hi',
     })) as { success: boolean };
     expect(result.success).toBe(false);
+  });
+
+  it('stores base text and returns runtimeDelivery success for OpenCode teammate sends', async () => {
+    provisioningService.isOpenCodeRuntimeRecipient.mockResolvedValueOnce(true);
+    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 1,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: { delivered: true },
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Can you check this?',
+      actionMode: 'ask',
+      taskRefs: [{ teamName: 'my-team', taskId: 'task-1', displayId: 'abcd1234' }],
+    })) as { success: boolean; data?: SendMessageResult };
+
+    expect(result.success).toBe(true);
+    expect(service.sendMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        member: 'bob',
+        text: 'Can you check this?',
+      })
+    );
+    expect(service.sendMessage).not.toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        text: expect.stringContaining('SendMessage'),
+      })
+    );
+    expect(provisioningService.relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith(
+      'my-team',
+      'bob',
+      expect.objectContaining({
+        onlyMessageId: 'm1',
+        source: 'ui-send',
+        deliveryMetadata: expect.objectContaining({
+          replyRecipient: 'user',
+          actionMode: 'ask',
+          taskRefs: [{ teamName: 'my-team', taskId: 'task-1', displayId: 'abcd1234' }],
+        }),
+      })
+    );
+    expect(result.data?.runtimeDelivery).toMatchObject({
+      providerId: 'opencode',
+      attempted: true,
+      delivered: true,
+    });
+  });
+
+  it('returns runtimeDelivery failure without hiding the persisted OpenCode message', async () => {
+    provisioningService.isOpenCodeRuntimeRecipient.mockResolvedValueOnce(true);
+    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 0,
+      attempted: 1,
+      delivered: 0,
+      failed: 1,
+      lastDelivery: {
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+        diagnostics: ['opencode_runtime_not_active'],
+      },
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Ping bob',
+    })) as { success: boolean; data?: SendMessageResult };
+
+    expect(result.success).toBe(true);
+    expect(result.data?.deliveredToInbox).toBe(true);
+    expect(result.data?.runtimeDelivery).toMatchObject({
+      providerId: 'opencode',
+      attempted: true,
+      delivered: false,
+      reason: 'opencode_runtime_not_active',
+    });
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'OpenCode runtime delivery after sendMessage failed for teammate "bob"'
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('passes hidden ask-mode instructions to a live lead without exposing them in stored text', async () => {

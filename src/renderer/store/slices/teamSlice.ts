@@ -950,10 +950,13 @@ function areInboxMessageArraysEquivalent(
       leftItem.text !== rightItem.text ||
       leftItem.summary !== rightItem.summary ||
       leftItem.read !== rightItem.read ||
+      leftItem.actionMode !== rightItem.actionMode ||
+      leftItem.commentId !== rightItem.commentId ||
       leftItem.relayOfMessageId !== rightItem.relayOfMessageId ||
       leftItem.source !== rightItem.source ||
       leftItem.leadSessionId !== rightItem.leadSessionId ||
-      leftItem.messageKind !== rightItem.messageKind
+      leftItem.messageKind !== rightItem.messageKind ||
+      JSON.stringify(leftItem.taskRefs ?? null) !== JSON.stringify(rightItem.taskRefs ?? null)
     ) {
       return false;
     }
@@ -2008,6 +2011,7 @@ export interface TeamSlice {
   selectedTeamError: string | null;
   sendingMessage: boolean;
   sendMessageError: string | null;
+  sendMessageWarning: string | null;
   lastSendMessageResult: SendMessageResult | null;
   reviewActionError: string | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
@@ -2091,7 +2095,7 @@ export interface TeamSlice {
     enabled: boolean,
     delayMs?: number
   ) => void;
-  sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<void>;
+  sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
   crossTeamTargets: {
     teamName: string;
     displayName: string;
@@ -2341,6 +2345,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   selectedTeamError: null,
   sendingMessage: false,
   sendMessageError: null,
+  sendMessageWarning: null,
   lastSendMessageResult: null,
   crossTeamTargets: [],
   crossTeamTargetsLoading: false,
@@ -3976,11 +3981,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   sendTeamMessage: async (teamName: string, request: SendMessageRequest) => {
-    set({ sendingMessage: true, sendMessageError: null, lastSendMessageResult: null });
+    set({
+      sendingMessage: true,
+      sendMessageError: null,
+      sendMessageWarning: null,
+      lastSendMessageResult: null,
+    });
     try {
       const result = await unwrapIpc('team:sendMessage', () =>
         api.teams.sendMessage(teamName, request)
       );
+      const runtimeDeliveryFailed =
+        result.runtimeDelivery?.attempted === true && result.runtimeDelivery.delivered === false;
+      const runtimeDeliveryWarning = runtimeDeliveryFailed
+        ? `OpenCode runtime delivery failed: ${
+            result.runtimeDelivery?.reason ??
+            result.runtimeDelivery?.diagnostics?.[0] ??
+            'message was saved to inbox but not delivered live'
+          }`
+        : null;
       const optimisticMessage: InboxMessage = {
         from: request.from ?? 'user',
         to: request.to ?? request.member,
@@ -3988,6 +4007,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         timestamp: request.timestamp ?? nowIso(),
         read: true,
         taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
+        actionMode: request.actionMode,
         summary: request.summary,
         color: request.color,
         messageId: result.messageId,
@@ -4006,7 +4026,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set((state) => ({
         sendingMessage: false,
         sendMessageError: null,
-        lastSendMessageResult: result,
+        sendMessageWarning: runtimeDeliveryWarning,
+        lastSendMessageResult: runtimeDeliveryFailed ? null : result,
         teamMessagesByName: {
           ...state.teamMessagesByName,
           [teamName]: upsertOptimisticTeamMessage(
@@ -4016,12 +4037,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         },
       }));
       await get().refreshTeamMessagesHead(teamName);
+      return result;
     } catch (error) {
       set({
         sendingMessage: false,
         lastSendMessageResult: null,
+        sendMessageWarning: null,
         sendMessageError: mapSendMessageError(error),
       });
+      throw error;
     }
   },
 
@@ -4037,12 +4061,18 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   sendCrossTeamMessage: async (request: CrossTeamSendRequest) => {
-    set({ sendingMessage: true, sendMessageError: null, lastSendMessageResult: null });
+    set({
+      sendingMessage: true,
+      sendMessageError: null,
+      sendMessageWarning: null,
+      lastSendMessageResult: null,
+    });
     try {
       const result = await api.crossTeam.send(request);
       set({
         sendingMessage: false,
         sendMessageError: null,
+        sendMessageWarning: null,
         lastSendMessageResult: {
           messageId: result.messageId,
           deliveredToInbox: result.deliveredToInbox,
@@ -4054,6 +4084,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set({
         sendingMessage: false,
         lastSendMessageResult: null,
+        sendMessageWarning: null,
         sendMessageError: mapSendMessageError(error),
       });
     }

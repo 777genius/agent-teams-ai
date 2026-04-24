@@ -1,11 +1,30 @@
-export const REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS = [
+import * as agentTeamsControllerModule from 'agent-teams-controller';
+
+export const REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS = [
   'runtime_bootstrap_checkin',
   'runtime_deliver_message',
   'runtime_task_event',
   'runtime_heartbeat',
 ] as const;
 
-export type RequiredAgentTeamsRuntimeTool = (typeof REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS)[number];
+export const REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS = REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS;
+
+export type RequiredAgentTeamsRuntimeTool =
+  (typeof REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS)[number];
+
+export const REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS: readonly string[] = [
+  ...agentTeamsControllerModule.AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
+];
+
+export const REQUIRED_AGENT_TEAMS_APP_TOOLS: readonly string[] = [
+  ...REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS,
+  ...REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS,
+];
+
+export const REQUIRED_AGENT_TEAMS_APP_TOOL_IDS: readonly string[] =
+  REQUIRED_AGENT_TEAMS_APP_TOOLS.map((tool) =>
+    buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
+  );
 
 export interface OpenCodeToolListItem {
   id: string;
@@ -365,7 +384,7 @@ function mergeFailedToolProofs(input: {
     diagnostics: [
       ...input.idsProof.diagnostics,
       ...input.definitionsProof.diagnostics,
-      'OpenCode app-owned MCP server is connected but required runtime tools were not proven available',
+      'OpenCode app-owned MCP server is connected but required app tools were not proven available',
     ],
   };
 }

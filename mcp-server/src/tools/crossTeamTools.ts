@@ -9,6 +9,12 @@ const toolContextSchema = {
   claudeDir: z.string().min(1).optional(),
 };
 
+const taskRefSchema = z.object({
+  taskId: z.string().min(1),
+  displayId: z.string().min(1),
+  teamName: z.string().min(1),
+});
+
 export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'cross_team_send',
@@ -22,6 +28,7 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
       summary: z.string().optional(),
       conversationId: z.string().optional(),
       replyToConversationId: z.string().optional(),
+      taskRefs: z.array(taskRefSchema).optional(),
       chainDepth: z.number().int().nonnegative().optional(),
     }),
     execute: async ({
@@ -33,6 +40,7 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
       summary,
       conversationId,
       replyToConversationId,
+      taskRefs,
       chainDepth,
     }) =>
       await Promise.resolve(
@@ -44,6 +52,7 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
             ...(summary ? { summary } : {}),
             ...(conversationId ? { conversationId } : {}),
             ...(replyToConversationId ? { replyToConversationId } : {}),
+            ...(taskRefs?.length ? { taskRefs } : {}),
             ...(chainDepth !== undefined ? { chainDepth } : {}),
           })
         )

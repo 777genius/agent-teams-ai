@@ -239,11 +239,37 @@ describe('teamSlice actions', () => {
     const store = createSliceStore();
     hoisted.sendMessage.mockRejectedValue(new Error('Failed to verify inbox write'));
 
-    await store.getState().sendTeamMessage('my-team', { member: 'alice', text: 'hello' });
+    await expect(
+      store.getState().sendTeamMessage('my-team', { member: 'alice', text: 'hello' })
+    ).rejects.toThrow('Failed to verify inbox write');
 
     expect(store.getState().sendMessageError).toBe(
       'Message was written but not verified (race). Please try again.'
     );
+  });
+
+  it('keeps send dialog result non-terminal when OpenCode runtime delivery fails after inbox persistence', async () => {
+    const store = createSliceStore();
+    hoisted.sendMessage.mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'm-opencode-1',
+      runtimeDelivery: {
+        providerId: 'opencode',
+        attempted: true,
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+      },
+    });
+
+    const result = await store.getState().sendTeamMessage('my-team', {
+      member: 'bob',
+      text: 'hello',
+    });
+
+    expect(result.messageId).toBe('m-opencode-1');
+    expect(store.getState().lastSendMessageResult).toBeNull();
+    expect(store.getState().sendMessageError).toBeNull();
+    expect(store.getState().sendMessageWarning).toContain('OpenCode runtime delivery failed');
   });
 
   it('maps task status verify failure in updateKanban and rethrows', async () => {

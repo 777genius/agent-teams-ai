@@ -587,6 +587,8 @@ export interface InboxMessage {
   timestamp: string;
   read: boolean;
   taskRefs?: TaskRef[];
+  /** Durable delivery intent used by OpenCode inbox retry. */
+  actionMode?: AgentActionMode;
   /** Authoritative task comment id attached by runtime-authored task notifications. */
   commentId?: string;
   summary?: string;
@@ -668,6 +670,13 @@ export interface SendMessageResult {
   deliveredViaStdin?: boolean;
   messageId: string;
   deduplicated?: boolean;
+  runtimeDelivery?: {
+    providerId: 'opencode';
+    attempted: boolean;
+    delivered: boolean;
+    reason?: string;
+    diagnostics?: string[];
+  };
 }
 
 export interface AddTaskCommentRequest {

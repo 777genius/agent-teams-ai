@@ -59,6 +59,8 @@ const PROVIDERS: ProviderDef[] = [
 ];
 
 const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
+export const OPENCODE_TEAM_LEAD_DISABLED_REASON = 'OpenCode is not available for team lead.';
+export const OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL = 'not teamlead';
 
 export function getTeamModelLabel(model: string): string {
   return getCatalogTeamModelLabel(model) ?? model;
@@ -142,6 +144,8 @@ export interface TeamModelSelectorProps {
   onValueChange: (value: string) => void;
   id?: string;
   disableGeminiOption?: boolean;
+  providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
+  providerDisabledBadgeLabelById?: Partial<Record<TeamProviderId, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
 }
 
@@ -152,6 +156,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onValueChange,
   id,
   disableGeminiOption = false,
+  providerDisabledReasonById,
+  providerDisabledBadgeLabelById,
   modelIssueReasonByValue,
 }) => {
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -192,6 +198,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return 'Uses the runtime default for the selected provider.';
   }, [effectiveProviderId, runtimeProviderStatus]);
   const getProviderDisabledReason = (candidateProviderId: string): string | null => {
+    if (isTeamProviderId(candidateProviderId)) {
+      const overrideReason = providerDisabledReasonById?.[candidateProviderId]?.trim();
+      if (overrideReason) {
+        return overrideReason;
+      }
+    }
+
     if (candidateProviderId === 'opencode') {
       const providerStatus = runtimeProviderStatusById.get('opencode') ?? null;
       if (!providerStatus) {
@@ -232,6 +245,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     (multimodelAvailable || candidateProviderId === 'anthropic');
   const activeProviderSelectable = isProviderSelectable(effectiveProviderId);
   const getProviderStatusBadge = (candidateProviderId: string): string | null => {
+    if (isTeamProviderId(candidateProviderId)) {
+      const overrideReason = providerDisabledReasonById?.[candidateProviderId]?.trim();
+      const overrideBadge = providerDisabledBadgeLabelById?.[candidateProviderId]?.trim();
+      if (overrideReason && overrideBadge) {
+        return overrideBadge;
+      }
+    }
+
     if (candidateProviderId === 'opencode') {
       return getProviderDisabledReason(candidateProviderId) ? 'Gated' : null;
     }

@@ -119,6 +119,7 @@ describe('agent-teams-mcp tools', () => {
       text: 'Reply',
       conversationId: 'conv-1',
       replyToConversationId: 'conv-1',
+      taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'alpha' }],
     });
 
     expect(parsed?.success).toBe(true);
@@ -555,6 +556,22 @@ describe('agent-teams-mcp tools', () => {
       'Use task_list only to search/browse inventory rows, not as your working queue.'
     );
     expect(memberBriefingText).toContain('Review MCP adapter');
+    expect(memberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    expect(memberBriefingText).not.toContain('task_get_comment {');
+
+    const openCodeMemberBriefing = await getTool('member_briefing').execute({
+      claudeDir,
+      teamName,
+      memberName: 'alice',
+      runtimeProvider: 'opencode',
+    });
+    const openCodeMemberBriefingText = (
+      openCodeMemberBriefing as { content: Array<{ text: string }> }
+    ).content[0]?.text;
+    expect(openCodeMemberBriefingText).toContain('agent-teams_message_send');
+    expect(openCodeMemberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    expect(openCodeMemberBriefingText).not.toContain('task_get_comment {');
+    expect(openCodeMemberBriefingText).not.toContain('notify your team lead via SendMessage');
   });
 
   it('keeps owner-backed MCP tasks pending by default, supports explicit startImmediately, sends owner notifications, and returns compact task_briefing output', async () => {
@@ -1132,6 +1149,12 @@ describe('agent-teams-mcp tools', () => {
   it('persists full message metadata through message_send', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'gamma';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
 
     const sent = parseJsonToolResult(
       await getTool('message_send').execute({
@@ -1144,6 +1167,7 @@ describe('agent-teams-mcp tools', () => {
         source: 'system_notification',
         leadSessionId: 'session-42',
         attachments: [{ id: 'att-1', filename: 'note.txt', mimeType: 'text/plain', size: 4 }],
+        taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName }],
       })
     );
 
@@ -1153,6 +1177,49 @@ describe('agent-teams-mcp tools', () => {
     expect(rows[0].source).toBe('system_notification');
     expect(rows[0].leadSessionId).toBe('session-42');
     expect(rows[0].attachments[0].filename).toBe('note.txt');
+    expect(rows[0].taskRefs).toEqual([{ taskId: 'task-1', displayId: 'abcd1234', teamName }]);
+  });
+
+  it('uses forced app claude dir over model-supplied claudeDir when configured', async () => {
+    const forcedClaudeDir = makeClaudeDir();
+    const wrongClaudeDir = makeClaudeDir();
+    const teamName = 'forced-root';
+    writeTeamConfig(forcedClaudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'bob', role: 'developer' },
+      ],
+    });
+
+    const previousForcedDir = process.env.AGENT_TEAMS_MCP_CLAUDE_DIR;
+    process.env.AGENT_TEAMS_MCP_CLAUDE_DIR = forcedClaudeDir;
+    try {
+      const sent = parseJsonToolResult(
+        await getTool('message_send').execute({
+          claudeDir: wrongClaudeDir,
+          teamName,
+          to: 'user',
+          text: 'Forced root reply',
+          from: 'bob',
+        })
+      );
+
+      expect(sent.deliveredToInbox).toBe(true);
+      const forcedInboxPath = path.join(forcedClaudeDir, 'teams', teamName, 'inboxes', 'user.json');
+      const wrongInboxPath = path.join(wrongClaudeDir, 'teams', teamName, 'inboxes', 'user.json');
+      expect(JSON.parse(fs.readFileSync(forcedInboxPath, 'utf8'))[0]).toMatchObject({
+        from: 'bob',
+        to: 'user',
+        text: 'Forced root reply',
+      });
+      expect(fs.existsSync(wrongInboxPath)).toBe(false);
+    } finally {
+      if (previousForcedDir === undefined) {
+        delete process.env.AGENT_TEAMS_MCP_CLAUDE_DIR;
+      } else {
+        process.env.AGENT_TEAMS_MCP_CLAUDE_DIR = previousForcedDir;
+      }
+    }
   });
 
   it('exposes zod schemas that reject obviously invalid payloads', () => {

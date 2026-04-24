@@ -1441,6 +1441,8 @@ describe('TeamDataService', () => {
       member: 'alice',
       text: 'hello',
       summary: 'ping',
+      actionMode: 'ask',
+      commentId: 'comment-1',
     });
 
     expect(result).toEqual({ deliveredToInbox: true, messageId: 'm-1' });
@@ -1449,6 +1451,8 @@ describe('TeamDataService', () => {
         member: 'alice',
         text: 'hello',
         summary: 'ping',
+        actionMode: 'ask',
+        commentId: 'comment-1',
         leadSessionId: 'lead-1',
       })
     );

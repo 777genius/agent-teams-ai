@@ -59,8 +59,8 @@ describe('crossTeam module', () => {
       const inbox = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
       expect(inbox).toHaveLength(1);
       expect(inbox[0].source).toBe(CROSS_TEAM_SOURCE);
-      expect(inbox[0].from).toBe('team-a.lead');
-      expect(inbox[0].text).toContain(`<${CROSS_TEAM_TAG_NAME} from="team-a.lead" depth="0"`);
+      expect(inbox[0].from).toBe('team-a.team-lead');
+      expect(inbox[0].text).toContain(`<${CROSS_TEAM_TAG_NAME} from="team-a.team-lead" depth="0"`);
       expect(inbox[0].conversationId).toBeTruthy();
       expect(inbox[0].text).toContain(`conversationId="${inbox[0].conversationId}"`);
     });
@@ -96,6 +96,60 @@ describe('crossTeam module', () => {
       expect(sentMessages[0].text).toBe('Hello');
       expect(sentMessages[0].source).toBe('cross_team_sent');
       expect(sentMessages[0].messageId).toBe(outbox[0].messageId);
+    });
+
+    it('preserves taskRefs in target inbox, sender copy and outbox', () => {
+      const claudeDir = makeClaudeDir({
+        'team-a': {
+          name: 'team-a',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        },
+        'team-b': {
+          name: 'team-b',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        },
+      });
+      const taskRefs = [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }];
+
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      controller.crossTeam.sendCrossTeamMessage({
+        toTeam: 'team-b',
+        text: 'Please review the linked task',
+        taskRefs,
+      });
+
+      const inboxPath = path.join(claudeDir, 'teams', 'team-b', 'inboxes', 'team-lead.json');
+      const inbox = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
+      expect(inbox[0].taskRefs).toEqual(taskRefs);
+
+      const sentMessagesPath = path.join(claudeDir, 'teams', 'team-a', 'sentMessages.json');
+      const sentMessages = JSON.parse(fs.readFileSync(sentMessagesPath, 'utf8'));
+      expect(sentMessages[0].taskRefs).toEqual(taskRefs);
+
+      const outbox = controller.crossTeam.getCrossTeamOutbox();
+      expect(outbox[0].taskRefs).toEqual(taskRefs);
+    });
+
+    it('rejects unknown source fromMember', () => {
+      const claudeDir = makeClaudeDir({
+        'team-a': {
+          name: 'team-a',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        },
+        'team-b': {
+          name: 'team-b',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        },
+      });
+
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      expect(() =>
+        controller.crossTeam.sendCrossTeamMessage({
+          toTeam: 'team-b',
+          fromMember: 'ghost',
+          text: 'Hello from nowhere',
+        })
+      ).toThrow('Unknown fromMember');
     });
 
     it('preserves reply conversation metadata for explicit replies', () => {

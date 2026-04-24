@@ -15,6 +15,10 @@ function normalizeForDedupe(value: string | undefined): string {
     .toLowerCase();
 }
 
+function normalizeTaskRefsForDedupe(message: CrossTeamMessage): string {
+  return message.taskRefs?.length ? JSON.stringify(message.taskRefs) : '';
+}
+
 function buildCrossTeamDedupeKey(message: CrossTeamMessage): string {
   return [
     normalizeForDedupe(message.fromTeam),
@@ -22,6 +26,7 @@ function buildCrossTeamDedupeKey(message: CrossTeamMessage): string {
     normalizeForDedupe(message.toTeam),
     normalizeForDedupe(message.summary),
     normalizeForDedupe(message.text),
+    normalizeTaskRefsForDedupe(message),
   ].join('||');
 }
 

@@ -64,6 +64,7 @@ interface SendMessageDialogProps {
   isTeamAlive?: boolean;
   sending: boolean;
   sendError: string | null;
+  sendWarning?: string | null;
   lastResult: SendMessageResult | null;
   onSend: (
     member: string,
@@ -72,7 +73,7 @@ interface SendMessageDialogProps {
     attachments?: AttachmentPayload[],
     actionMode?: ActionMode,
     taskRefs?: TaskRef[]
-  ) => void;
+  ) => void | Promise<SendMessageResult | void>;
   onClose: () => void;
 }
 
@@ -91,6 +92,7 @@ export const SendMessageDialog = ({
   isTeamAlive,
   sending,
   sendError,
+  sendWarning,
   lastResult,
   onSend,
   onClose,
@@ -263,17 +265,24 @@ export const SendMessageDialog = ({
   const handleSubmit = (): void => {
     if (!canSend) return;
     const taskRefs = extractTaskRefsFromText(textDraft.value, taskSuggestions);
-    onSend(
-      member.trim(),
-      finalText,
-      trimmedText,
-      attachments.length > 0 ? attachments : undefined,
-      actionMode,
-      taskRefs
-    );
-    textDraft.clearDraft();
-    chipDraft.clearChipDraft();
-    clearAttachments();
+    void Promise.resolve(
+      onSend(
+        member.trim(),
+        finalText,
+        trimmedText,
+        attachments.length > 0 ? attachments : undefined,
+        actionMode,
+        taskRefs
+      )
+    )
+      .then(() => {
+        textDraft.clearDraft();
+        chipDraft.clearChipDraft();
+        clearAttachments();
+      })
+      .catch(() => {
+        // The store owns the visible send error; keep the draft intact for retry.
+      });
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -531,6 +540,11 @@ export const SendMessageDialog = ({
                       <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
                         <AlertCircle size={10} className="shrink-0" />
                         {sendError}
+                      </span>
+                    ) : sendWarning ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+                        <AlertCircle size={10} className="shrink-0" />
+                        {sendWarning}
                       </span>
                     ) : null}
                     {remaining < 200 ? (

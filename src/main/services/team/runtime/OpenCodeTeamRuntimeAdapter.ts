@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 
+import type { AgentActionMode, TaskRef } from '@shared/types/team';
+
 import type {
   OpenCodeBridgeRuntimeSnapshot,
   OpenCodeLaunchTeamCommandBody,
@@ -60,6 +62,9 @@ export interface OpenCodeTeamRuntimeMessageInput {
   cwd: string;
   text: string;
   messageId?: string;
+  replyRecipient?: string;
+  actionMode?: AgentActionMode;
+  taskRefs?: TaskRef[];
 }
 
 export interface OpenCodeTeamRuntimeMessageResult {
@@ -601,8 +606,9 @@ function buildMemberBootstrapPrompt(
     '',
     'This OpenCode session is already attached by the desktop app. Do NOT create local team files, run join scripts, or search the project for a fake team registry.',
     'Use the app MCP tools exposed by the "agent-teams" server for team communication and task state.',
-    'If available, your first app-team action is to call MCP tool agent-teams_member_briefing (or mcp__agent-teams__member_briefing if that is the exposed name) with:',
-    `{ "teamName": "${input.teamName}", "memberName": "${member.name}" }`,
+    'The desktop bridge may prepend runtime identity and bootstrap instructions. Follow those first.',
+    'After runtime identity check-in, if you have not already done so, call MCP tool agent-teams_member_briefing (or mcp__agent-teams__member_briefing if that is the exposed name) with:',
+    `{ "teamName": "${input.teamName}", "memberName": "${member.name}", "runtimeProvider": "opencode" }`,
     'If that tool is not available, stay idle and wait for app-delivered instructions. Do not improvise a replacement workflow.',
     '',
     'When you need to message the human user, team lead, or another teammate, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.',
@@ -614,18 +620,18 @@ function buildMemberBootstrapPrompt(
 }
 
 function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput): string {
-  const replyRecipient = extractRequestedReplyRecipient(input.text);
-  const replyLine = replyRecipient
-    ? `For this message, if you reply, call agent-teams_message_send with to="${replyRecipient}" and from="${input.memberName}".`
-    : `If you reply, call agent-teams_message_send with the requested recipient and from="${input.memberName}".`;
+  const replyRecipient = input.replyRecipient?.trim() || 'user';
+  const taskRefs = input.taskRefs?.length ? JSON.stringify(input.taskRefs) : null;
 
   return [
     '<opencode_app_message_delivery>',
     'You are running in OpenCode, not Claude Code or Codex native.',
-    'If the incoming message below mentions SendMessage, treat that as a UI abstraction for other runtimes. Do not import, require, create, or run a SendMessage script.',
     'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
-    `Use teamName="${input.teamName}". ${replyLine}`,
-    'Pass your human-readable reply as text and a short summary as summary. Do not answer only with plain assistant text when the tool is available.',
+    `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
+    'Do not answer only with plain assistant text when agent-teams_message_send is available.',
+    'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',
+    input.actionMode ? `Action mode for this message: ${input.actionMode}.` : null,
+    taskRefs ? `If your reply is about these tasks, include taskRefs exactly: ${taskRefs}` : null,
     input.messageId
       ? `The inbound app messageId is "${input.messageId}"; keep it only as context unless a tool explicitly asks for provenance.`
       : null,
@@ -635,18 +641,6 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
   ]
     .filter((line): line is string => line !== null)
     .join('\n');
-}
-
-function extractRequestedReplyRecipient(text: string): string | null {
-  const replyRecipientMatch = /reply back to recipient "([^"]+)"/i.exec(text);
-  if (replyRecipientMatch?.[1]?.trim()) {
-    return replyRecipientMatch[1].trim();
-  }
-  const destinationMatch = /destination must be exactly to="([^"]+)"/i.exec(text);
-  if (destinationMatch?.[1]?.trim()) {
-    return destinationMatch[1].trim();
-  }
-  return null;
 }
 
 function validateOpenCodeRuntimeMembers(

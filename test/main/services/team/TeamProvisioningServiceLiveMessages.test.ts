@@ -95,6 +95,7 @@ vi.mock('../../../../src/main/utils/fsRead', async (importOriginal) => {
 });
 
 vi.mock('agent-teams-controller', () => ({
+  AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES: [] as readonly string[],
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   createController: ({ teamName }: { teamName: string }) => ({
@@ -466,6 +467,63 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(hoisted.appendSentMessage).toHaveBeenCalledTimes(1);
   });
 
+  it('suppresses duplicate assistant thought text when Agent Teams message_send is already visible', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        { type: 'text', text: 'Sending this through the Agent Teams MCP tool now.' },
+        {
+          type: 'tool_use',
+          name: 'mcp__agent-teams__message_send',
+          input: {
+            teamName: 'my-team',
+            to: 'user',
+            text: 'Task completed through MCP.',
+            from: 'team-lead',
+            summary: 'Done',
+          },
+        },
+      ],
+    });
+
+    // The MCP controller owns persistence for agent-teams_message_send. The stream
+    // capture path must not show the assistant narration as a second "thought".
+    expect(service.getLiveLeadProcessMessages('my-team')).toHaveLength(0);
+    expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
+  });
+
+  it('keeps assistant thought text when Agent Teams message_send payload is incomplete', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        { type: 'text', text: 'I need to retry this because the tool input is incomplete.' },
+        {
+          type: 'tool_use',
+          name: 'mcp__agent-teams__message_send',
+          input: {
+            teamName: 'my-team',
+            to: 'user',
+            from: 'team-lead',
+            summary: 'Incomplete',
+          },
+        },
+      ],
+    });
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].text).toBe('I need to retry this because the tool input is incomplete.');
+    expect(live[0].source).toBe('lead_process');
+  });
+
   it('post-ready path also uses the unified helper', () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
@@ -742,6 +800,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     service.setCrossTeamSender(crossTeamSender);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
     run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-mcp-1' }];
+    const taskRefs = [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }];
 
     callHandleStreamJsonMessage(service, run, {
       type: 'assistant',
@@ -755,6 +814,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
             text: 'Ответ через MCP.',
             from: 'team-lead',
             summary: 'MCP reply',
+            taskRefs,
           },
         },
       ],
@@ -772,6 +832,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
         text: 'Ответ через MCP.',
         conversationId: 'conv-mcp-1',
         replyToConversationId: 'conv-mcp-1',
+        taskRefs,
       })
     );
 
@@ -780,6 +841,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(live[0].from).toBe('team-lead');
     expect(live[0].source).toBe('cross_team_sent');
     expect(live[0].to).toBe('cross-team:team-best');
+    expect(live[0].taskRefs).toEqual(taskRefs);
     expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
   });
 

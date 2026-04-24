@@ -6,6 +6,10 @@ import {
   buildOpenCodeCanonicalMcpToolId,
   matchRequiredOpenCodeTools,
   OpenCodeMcpToolAvailabilityProbe,
+  REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
+  REQUIRED_AGENT_TEAMS_APP_TOOLS,
+  REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS,
+  REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS,
   REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
   sanitizeOpenCodeMcpToolPart,
   verifyAppMcpRuntimeToolContracts,
@@ -19,6 +23,20 @@ describe('OpenCode MCP tool availability', () => {
     expect(buildOpenCodeCanonicalMcpToolId('agent-teams', 'runtime_deliver_message')).toBe(
       'agent-teams_runtime_deliver_message'
     );
+  });
+
+  it('loads launch-visible teammate-operational tools from the controller catalog', () => {
+    expect(REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS).toContain('message_send');
+    expect(REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS).toContain('cross_team_send');
+    expect(REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS).toContain('task_start');
+    expect(REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS).not.toContain('lead_briefing');
+    expect(REQUIRED_AGENT_TEAMS_APP_TOOLS).toEqual([
+      ...REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS,
+      ...REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS,
+    ]);
+    expect(REQUIRED_AGENT_TEAMS_APP_TOOL_IDS).toContain('agent-teams_message_send');
+    expect(REQUIRED_AGENT_TEAMS_APP_TOOL_IDS).toContain('agent-teams_member_briefing');
+    expect(REQUIRED_AGENT_TEAMS_APP_TOOL_IDS).toContain('agent-teams_cross_team_send');
   });
 
   it('fails production proof when only alias ids are observed', () => {
@@ -117,7 +135,7 @@ describe('OpenCode MCP tool availability', () => {
       expect.arrayContaining(['runtime_deliver_message', 'runtime_task_event', 'runtime_heartbeat'])
     );
     expect(proof.diagnostics).toContain(
-      'OpenCode app-owned MCP server is connected but required runtime tools were not proven available'
+      'OpenCode app-owned MCP server is connected but required app tools were not proven available'
     );
   });
 
@@ -139,6 +157,16 @@ describe('OpenCode MCP tool availability', () => {
       ],
       diagnostics: [],
     });
+  });
+
+  it('keeps runtime schema validation scoped to runtime proof tools', () => {
+    expect(APP_MCP_RUNTIME_TOOL_CONTRACTS.map((contract) => contract.name)).toEqual(
+      REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS
+    );
+    expect(REQUIRED_AGENT_TEAMS_APP_TOOLS).toContain('message_send');
+    expect(APP_MCP_RUNTIME_TOOL_CONTRACTS.map((contract) => contract.name)).not.toContain(
+      'message_send'
+    );
   });
 
   it('fails direct app MCP preflight when delivery schema misses idempotencyKey', () => {

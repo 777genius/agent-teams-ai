@@ -6,7 +6,10 @@ import * as path from 'path';
 
 import { withFileLock } from '../../fileLock';
 
-import { createRuntimeStoreManifestStore } from './RuntimeStoreManifest';
+import {
+  createDefaultRuntimeStoreManifest,
+  validateRuntimeStoreManifest,
+} from './RuntimeStoreManifest';
 
 import type { RuntimeStoreManifestEvidence } from '../bridge/OpenCodeBridgeCommandContract';
 import type { RuntimeStoreManifestReader } from '../bridge/OpenCodeStateChangingBridgeCommandService';
@@ -168,11 +171,7 @@ export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManife
     const manifestPath = normalizedLaneId
       ? await resolveOpenCodeRuntimeManifestReadPath(this.teamsBasePath, teamName, normalizedLaneId)
       : getOpenCodeRuntimeManifestPath(this.teamsBasePath, teamName);
-    const manifest = await createRuntimeStoreManifestStore({
-      filePath: manifestPath,
-      teamName,
-      clock: this.clock,
-    }).read();
+    const manifest = await readRuntimeStoreManifestEvidenceData(manifestPath, teamName, this.clock);
 
     return {
       highWatermark: manifest.highWatermark,
@@ -180,6 +179,33 @@ export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManife
       capabilitySnapshotId: manifest.activeCapabilitySnapshotId,
     };
   }
+}
+
+async function readRuntimeStoreManifestEvidenceData(
+  manifestPath: string,
+  teamName: string,
+  clock: () => Date
+) {
+  let raw: string;
+  try {
+    raw = await readFile(manifestPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return createDefaultRuntimeStoreManifest(teamName, clock().toISOString());
+    }
+    throw error;
+  }
+
+  const parsed = JSON.parse(raw) as unknown;
+  const maybeRecord =
+    parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  const manifestData =
+    maybeRecord && Object.prototype.hasOwnProperty.call(maybeRecord, 'data')
+      ? maybeRecord.data
+      : parsed;
+  return validateRuntimeStoreManifest(manifestData);
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
