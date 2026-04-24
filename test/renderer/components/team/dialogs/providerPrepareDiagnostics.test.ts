@@ -289,9 +289,11 @@ describe('runProviderPrepareDiagnostics', () => {
 
     expect(result.status).toBe('notes');
     expect(result.details).toEqual([
+      projectEvidenceNote,
       'minimax-m2.5-free - verified',
       'ling-2.6-flash-free - verified',
     ]);
+    expect(result.details.filter((detail) => detail === projectEvidenceNote)).toHaveLength(1);
     expect(result.warnings).toEqual([projectEvidenceNote]);
     expect(result.modelResultsById).toEqual({
       'opencode/minimax-m2.5-free': {

@@ -580,7 +580,7 @@ function isOpenCodeProjectEvidenceMissingDiagnostic(value: string): boolean {
 
 function isOpenCodeProjectEvidenceMissingPrepareFailure(
   prepare: TeamRuntimePrepareResult
-): prepare is TeamRuntimePrepareResult & { ok: false } {
+): boolean {
   if (prepare.ok || prepare.reason !== 'e2e_missing') {
     return false;
   }
