@@ -174,10 +174,99 @@ async function selectLegacyNotificationData(): Promise<LegacyNotificationData | 
 }
 
 function isNotificationHistoryJson(data: string): boolean {
+  return parseNotificationHistory(data) !== null;
+}
+
+interface NotificationHistoryParseResult {
+  notifications: StoredNotification[];
+  recovered: boolean;
+}
+
+function parseNotificationHistory(data: string): NotificationHistoryParseResult | null {
+  const parsed = parseNotificationHistoryArray(data);
+  if (parsed) {
+    return { notifications: parsed, recovered: false };
+  }
+
+  const firstArrayEnd = findFirstJsonArrayEnd(data);
+  if (firstArrayEnd === null) {
+    return null;
+  }
+
+  const recovered = parseNotificationHistoryArray(data.slice(0, firstArrayEnd));
+  return recovered ? { notifications: recovered, recovered: true } : null;
+}
+
+function parseNotificationHistoryArray(data: string): StoredNotification[] | null {
   try {
-    return Array.isArray(JSON.parse(data));
+    const parsed = JSON.parse(data) as unknown;
+    return Array.isArray(parsed) ? (parsed as StoredNotification[]) : null;
   } catch {
-    return false;
+    return null;
+  }
+}
+
+function findFirstJsonArrayEnd(data: string): number | null {
+  const start = data.search(/\S/u);
+  if (start === -1 || data[start] !== '[') {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < data.length; index++) {
+    const char = data[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '[') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === ']') {
+      depth -= 1;
+      if (depth === 0) {
+        return index + 1;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function writeNotificationsFileAtomically(filePath: string, data: string): Promise<void> {
+  const dir = path.dirname(filePath);
+  const tempPath = path.join(
+    dir,
+    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
+      .toString(16)
+      .slice(2)}.tmp`
+  );
+
+  try {
+    await fsp.mkdir(dir, { recursive: true });
+    await fsp.writeFile(tempPath, data, 'utf8');
+    await fsp.rename(tempPath, filePath);
+  } catch (error) {
+    await fsp.rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
   }
 }
 
@@ -204,6 +293,7 @@ export class NotificationManager extends EventEmitter {
    *  before writing, preventing a race where save overwrites unloaded data. */
   private initPromise: Promise<void> | null = null;
   private notificationsPath = NOTIFICATIONS_PATH;
+  private saveChain: Promise<void> = Promise.resolve();
 
   constructor(configManager?: ConfigManager) {
     super();
@@ -281,13 +371,18 @@ export class NotificationManager extends EventEmitter {
   private async loadNotifications(): Promise<void> {
     try {
       const data = await fsp.readFile(this.notificationsPath, 'utf8');
-      const parsed = JSON.parse(data) as unknown;
+      const parsed = parseNotificationHistory(data);
 
-      if (Array.isArray(parsed)) {
-        this.notifications = parsed as StoredNotification[];
-      } else {
+      if (!parsed) {
         logger.warn('Invalid notifications file format, starting fresh');
         this.notifications = [];
+        return;
+      }
+
+      this.notifications = parsed.notifications;
+      if (parsed.recovered) {
+        logger.info('Recovered notifications from a corrupted history file, compacting storage');
+        this.saveNotifications();
       }
     } catch (error) {
       // ENOENT is expected on first run — no file to load
@@ -305,11 +400,11 @@ export class NotificationManager extends EventEmitter {
    */
   private saveNotifications(): void {
     const data = JSON.stringify(this.notifications, null, 2);
-    const dir = path.dirname(this.notificationsPath);
+    const notificationsPath = this.notificationsPath;
 
-    fsp
-      .mkdir(dir, { recursive: true })
-      .then(() => fsp.writeFile(this.notificationsPath, data, 'utf8'))
+    this.saveChain = this.saveChain
+      .catch(() => undefined)
+      .then(() => writeNotificationsFileAtomically(notificationsPath, data))
       .catch((error) => {
         logger.error('Error saving notifications:', error);
       });

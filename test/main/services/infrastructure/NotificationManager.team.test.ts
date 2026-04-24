@@ -28,6 +28,8 @@ vi.mock('electron', () => ({
 vi.mock('fs/promises', () => ({
   readFile: vi.fn().mockRejectedValue({ code: 'ENOENT' }),
   writeFile: vi.fn().mockResolvedValue(undefined),
+  rename: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
   mkdir: vi.fn().mockResolvedValue(undefined),
 }));
 
