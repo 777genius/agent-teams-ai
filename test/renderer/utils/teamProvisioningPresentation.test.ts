@@ -91,6 +91,62 @@ describe('buildTeamProvisioningPresentation', () => {
     expect(presentation?.defaultLiveOutputOpen).toBe(false);
   });
 
+  it('does not truncate long failed teammate reasons in the panel message', () => {
+    const reason =
+      'You are bootstrapping into team "relay-works-10" as member "alice". Your first action is to call the MCP tool member_briefing on the agent-teams server with teamName="relay-works-10" and memberName="alice". If tool search shows only the prefixed MCP name, use mcp__agent-teams__member_briefing.';
+    const presentation = buildTeamProvisioningPresentation({
+      progress: {
+        runId: 'run-long-failure',
+        teamName: 'relay-works-10',
+        state: 'ready',
+        startedAt: '2026-04-13T10:00:00.000Z',
+        updatedAt: '2026-04-13T10:00:08.000Z',
+        message: 'Launch completed with teammate errors',
+        messageSeverity: 'warning',
+        pid: 4321,
+        cliLogsTail: '',
+        assistantOutput: '',
+      },
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+        },
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          status: 'unknown',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+        },
+      ],
+      memberSpawnStatuses: {
+        alice: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          error: reason,
+          hardFailureReason: reason,
+          updatedAt: '2026-04-13T10:00:03.000Z',
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          agentToolAccepted: true,
+          firstSpawnAcceptedAt: '2026-04-13T10:00:01.000Z',
+        },
+      },
+      memberSpawnSnapshot: undefined,
+    });
+
+    expect(presentation?.panelMessage).toBe(`alice failed to start - ${reason}`);
+  });
+
   it('surfaces the failed teammate reason after launch completes with errors', () => {
     const presentation = buildTeamProvisioningPresentation({
       progress: {

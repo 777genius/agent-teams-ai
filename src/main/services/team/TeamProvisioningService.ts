@@ -1560,7 +1560,10 @@ function isConfigRegistrationFailureReason(reason?: string): boolean {
 
 function isTmuxNoServerRunningError(error: unknown): boolean {
   const text = error instanceof Error ? error.message : String(error ?? '');
-  return /no server running on /i.test(text);
+  return (
+    /no server running on /i.test(text) ||
+    /error connecting to .*no such file or directory/i.test(text)
+  );
 }
 
 function isAutoClearableLaunchFailureReason(reason?: string): boolean {
@@ -2194,6 +2197,7 @@ function extractHeartbeatTimestamp(text: string, fallback?: string): string | un
 function extractBootstrapFailureReason(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
+  if (isBootstrapInstructionPrompt(trimmed)) return null;
   const lower = trimmed.toLowerCase();
   const looksLikeBootstrapFailure =
     lower.includes('bootstrap failed') ||
@@ -2239,6 +2243,17 @@ function extractBootstrapFailureReason(text: string): string | null {
     lower.includes('please check the provided tool list');
   if (!looksLikeBootstrapFailure) return null;
   return trimmed.slice(0, 280);
+}
+
+function isBootstrapInstructionPrompt(text: string): boolean {
+  const normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!normalized.startsWith('you are bootstrapping into team ')) {
+    return false;
+  }
+  return (
+    normalized.includes('your first action is to call the mcp tool') &&
+    (normalized.includes('member_briefing') || normalized.includes('lead_briefing'))
+  );
 }
 
 function isBootstrapTranscriptSuccessText(
@@ -14942,7 +14957,7 @@ export class TeamProvisioningService {
     const expectedMembers = this.getPersistedLaunchMemberNames(snapshot);
     for (const expected of expectedMembers) {
       const current = snapshot.members[expected];
-      if (!current || current.bootstrapConfirmed || current.hardFailure) {
+      if (!current || current.bootstrapConfirmed) {
         continue;
       }
       const acceptedAtMs =
@@ -15128,7 +15143,7 @@ export class TeamProvisioningService {
         current.hardFailure = false;
         current.hardFailureReason = undefined;
       }
-      if (!current.bootstrapConfirmed && !current.hardFailure) {
+      if (!current.bootstrapConfirmed) {
         const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
           teamName,
           expected,
@@ -15139,7 +15154,10 @@ export class TeamProvisioningService {
           current.lastHeartbeatAt = current.lastHeartbeatAt ?? transcriptOutcome.observedAt;
           current.hardFailure = false;
           current.hardFailureReason = undefined;
-        } else if (transcriptOutcome?.kind === 'failure') {
+          if (current.sources) {
+            current.sources.hardFailureSignal = undefined;
+          }
+        } else if (transcriptOutcome?.kind === 'failure' && !current.hardFailure) {
           current.hardFailure = true;
           current.hardFailureReason = transcriptOutcome.reason;
           current.sources.hardFailureSignal = true;

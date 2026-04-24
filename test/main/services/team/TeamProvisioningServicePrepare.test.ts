@@ -172,6 +172,7 @@ const REQUIRED_MOCK_AGENT_TEAMS_TOOLS = [
   'task_get_comment',
   'task_link',
   'task_list',
+  'task_restore',
   'task_set_clarification',
   'task_set_owner',
   'task_set_status',

@@ -4747,7 +4747,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).runs.set(run.runId, run);
 
       vi.mocked(listTmuxPanePidsForCurrentPlatform).mockRejectedValue(
-        new Error('no server running on /private/tmp/tmux-501/default')
+        new Error('error connecting to /private/tmp/tmux-501/default (No such file or directory)')
       );
 
       await svc.restartMember('tmux-team', 'forge');
@@ -6558,12 +6558,13 @@ describe('TeamProvisioningService', () => {
         firstSpawnAcceptedAt: acceptedAt,
       },
       bob: {
-        launchState: 'starting',
-        agentToolAccepted: false,
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
         runtimeAlive: false,
         bootstrapConfirmed: false,
         hardFailure: false,
         hardFailureReason: undefined,
+        firstSpawnAcceptedAt: acceptedAt,
       },
     });
 
@@ -6637,6 +6638,124 @@ describe('TeamProvisioningService', () => {
       runtimeAlive: true,
     });
     expect(result.statuses.alice?.error).toBeUndefined();
+  });
+
+  it('does not classify the bootstrap instruction prompt as a member launch failure', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-bootstrap-prompt-not-failure';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'alice-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      `${JSON.stringify({
+        timestamp: acceptedAt,
+        teamName,
+        agentName: 'alice',
+        type: 'user',
+        message: {
+          role: 'user',
+          content: `You are bootstrapping into team "${teamName}" as member "alice".\nYour first action is to call the MCP tool member_briefing on the agent-teams server with teamName="${teamName}" and memberName="alice".\nIf member_briefing is still unavailable after that one retry, send exactly one short SendMessage to "team-lead" with the exact error text, then stop this turn and wait.`,
+        },
+      })}\n`,
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const reason = await (svc as any).findBootstrapTranscriptFailureReason(
+      teamName,
+      'alice',
+      Date.parse(acceptedAt) - 1
+    );
+
+    expect(reason).toBeNull();
+  });
+
+  it('clears a stale persisted bootstrap-prompt failure when member_briefing later succeeds', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-bootstrap-stale-prompt-failure';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'alice-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+    const staleReason = `You are bootstrapping into team "${teamName}" as member "alice".\nYour first action is to call the MCP tool member_briefing on the agent-teams server with teamName="${teamName}" and memberName="alice".\nIf tool search shows only the prefixed MCP name, use mcp__agent-teams__member_briefing.`;
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice', 'bob']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'failed_to_start',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: staleReason,
+        firstSpawnAcceptedAt: acceptedAt,
+      },
+      bob: {
+        launchState: 'starting',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+      },
+    });
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: staleReason,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: 'item_1',
+                content: `Member briefing for alice on team "${teamName}" (${teamName}).\nTask briefing for alice:\nNo actionable tasks.`,
+                is_error: false,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      hardFailure: false,
+    });
+    expect(result.statuses.alice?.hardFailureReason).toBeUndefined();
   });
 
   it('marks an online teammate bootstrap as failed when transcript shows model unavailability', async () => {

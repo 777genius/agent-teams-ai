@@ -390,12 +390,8 @@ function getSkippedSpawnDetails(params: {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function truncateFailureReason(reason: string, maxLength = 160): string {
-  const normalized = reason.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+function normalizeFailureReason(reason: string): string {
+  return reason.replace(/\s+/g, ' ').trim();
 }
 
 function buildFailedSpawnPanelMessage(
@@ -407,13 +403,13 @@ function buildFailedSpawnPanelMessage(
   if (failedSpawnDetails.length === 1) {
     const [failed] = failedSpawnDetails;
     return failed.reason
-      ? `${failed.name} failed to start - ${truncateFailureReason(failed.reason, 220)}`
+      ? `${failed.name} failed to start - ${normalizeFailureReason(failed.reason)}`
       : `${failed.name} failed to start`;
   }
   const listedFailures = failedSpawnDetails
     .slice(0, 2)
     .map((failed) =>
-      failed.reason ? `${failed.name} - ${truncateFailureReason(failed.reason, 120)}` : failed.name
+      failed.reason ? `${failed.name} - ${normalizeFailureReason(failed.reason)}` : failed.name
     )
     .join('; ');
   const remainingCount = failedSpawnDetails.length - Math.min(failedSpawnDetails.length, 2);
@@ -454,15 +450,13 @@ function buildSkippedSpawnPanelMessage(
   if (skippedSpawnDetails.length === 1) {
     const [skipped] = skippedSpawnDetails;
     return skipped.reason
-      ? `${skipped.name} skipped for this launch - ${truncateFailureReason(skipped.reason, 220)}`
+      ? `${skipped.name} skipped for this launch - ${normalizeFailureReason(skipped.reason)}`
       : `${skipped.name} skipped for this launch`;
   }
   const listedSkipped = skippedSpawnDetails
     .slice(0, 3)
     .map((skipped) =>
-      skipped.reason
-        ? `${skipped.name} - ${truncateFailureReason(skipped.reason, 100)}`
-        : skipped.name
+      skipped.reason ? `${skipped.name} - ${normalizeFailureReason(skipped.reason)}` : skipped.name
     )
     .join('; ');
   const remainingCount = skippedSpawnDetails.length - Math.min(skippedSpawnDetails.length, 3);
