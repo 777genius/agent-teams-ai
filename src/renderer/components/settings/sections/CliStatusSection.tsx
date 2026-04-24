@@ -27,7 +27,6 @@ import {
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
 import { getProviderRuntimeBackendSummary } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import { ProviderRuntimeSettingsDialog } from '@renderer/components/runtime/ProviderRuntimeSettingsDialog';
-import { SettingsToggle } from '@renderer/components/settings/components';
 import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { useStore } from '@renderer/store';
@@ -211,7 +210,6 @@ export const CliStatusSection = (): React.JSX.Element | null => {
   } | null>(null);
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('gemini');
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [isSwitchingFlavor, setIsSwitchingFlavor] = useState(false);
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
   const loadingCliStatus =
     !cliStatus && cliStatusLoading && multimodelEnabled
@@ -323,37 +321,6 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     })();
   }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
 
-  const handleMultimodelToggle = useCallback(
-    async (enabled: boolean) => {
-      setIsSwitchingFlavor(true);
-      let nextMultimodelEnabled = multimodelEnabled;
-      try {
-        useStore.setState({
-          cliStatus: enabled ? createLoadingMultimodelCliStatus() : null,
-          cliStatusLoading: true,
-          cliStatusError: null,
-        });
-        await updateConfig('general', { multimodelEnabled: enabled });
-        nextMultimodelEnabled = enabled;
-        await invalidateCliStatus();
-        if (enabled) {
-          await bootstrapCliStatus({ multimodelEnabled: true });
-        } else {
-          await fetchCliStatus();
-        }
-      } catch {
-        if (nextMultimodelEnabled) {
-          await bootstrapCliStatus({ multimodelEnabled: true });
-        } else {
-          await fetchCliStatus();
-        }
-      } finally {
-        setIsSwitchingFlavor(false);
-      }
-    },
-    [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled, updateConfig]
-  );
-
   const handleRuntimeBackendChange = useCallback(
     async (providerId: CliProviderId, backendId: string) => {
       const currentBackends = appConfig?.runtime?.providerBackends ?? {
@@ -440,23 +407,6 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                     >
                       Multimodel
                     </span>
-                    {multimodelEnabled && (
-                      <span
-                        className="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]"
-                        style={{
-                          borderColor: 'rgba(245, 158, 11, 0.35)',
-                          backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                          color: '#fbbf24',
-                        }}
-                      >
-                        Beta
-                      </span>
-                    )}
-                    <SettingsToggle
-                      enabled={multimodelEnabled}
-                      onChange={(value) => void handleMultimodelToggle(value)}
-                      disabled={isBusy || cliStatusLoading || isSwitchingFlavor}
-                    />
                   </div>
                   {/* Inline action buttons */}
                   {effectiveCliStatus.supportsSelfUpdate && effectiveCliStatus.updateAvailable ? (

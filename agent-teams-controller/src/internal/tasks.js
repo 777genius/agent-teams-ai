@@ -215,19 +215,23 @@ function maybeNotifyTaskOwnerOnComment(context, task, comment, options = {}) {
 }
 
 function createTask(context, input) {
+    let taskInput = input;
     if (input && typeof input.owner === 'string' && input.owner.trim()) {
-        assertKnownTaskActor(context, input.owner, 'task owner');
+        taskInput = {
+            ...input,
+            owner: assertKnownTaskActor(context, input.owner, 'task owner'),
+        };
     }
-    const task = withTeamBoardLock(context.paths, () => taskStore.createTask(context.paths, input));
-    if (input && input.notifyOwner !== false) {
+    const task = withTeamBoardLock(context.paths, () => taskStore.createTask(context.paths, taskInput));
+    if (taskInput && taskInput.notifyOwner !== false) {
         maybeNotifyAssignedOwner(context, task, {
-            description: input.description,
-            prompt: input.prompt,
+            description: taskInput.description,
+            prompt: taskInput.prompt,
             taskRefs: [
-                ...(Array.isArray(input.descriptionTaskRefs) ? input.descriptionTaskRefs : []),
-                ...(Array.isArray(input.promptTaskRefs) ? input.promptTaskRefs : []),
+                ...(Array.isArray(taskInput.descriptionTaskRefs) ? taskInput.descriptionTaskRefs : []),
+                ...(Array.isArray(taskInput.promptTaskRefs) ? taskInput.promptTaskRefs : []),
             ],
-            from: input.from,
+            from: taskInput.from,
         });
     }
     return task;
@@ -410,6 +414,10 @@ function softDeleteTask(context, taskId, actor) {
 
 function restoreTask(context, taskId, actor) {
     return withTeamBoardLock(context.paths, () => {
+        const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
+        if (before.status !== 'deleted') {
+            throw new Error(`Task #${before.displayId || before.id} is not deleted; task_restore only restores deleted tasks`);
+        }
         let task = taskStore.setTaskStatus(context.paths, taskId, 'pending', actor || 'user');
         const state = kanbanStore.readKanbanState(context.paths, context.teamName);
         if (hasKanbanReference(state, task.id)) {
@@ -431,7 +439,7 @@ function setTaskOwner(context, taskId, owner) {
         const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
         const nextOwner = isClearOwnerValue(owner)
             ? owner
-            : (assertKnownTaskActor(context, owner, 'task owner'), owner);
+            : assertKnownTaskActor(context, owner, 'task owner');
         const after = taskStore.setTaskOwner(context.paths, taskId, nextOwner);
         return {
             previousTask: before,

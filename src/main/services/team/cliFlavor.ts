@@ -1,5 +1,3 @@
-import { configManager } from '../infrastructure/ConfigManager';
-
 import type { CliFlavor, CliFlavorUiOptions } from '@shared/types';
 
 export const DEFAULT_CLI_FLAVOR: CliFlavor = 'agent_teams_orchestrator';
@@ -18,8 +16,7 @@ export function getConfiguredCliFlavor(): CliFlavor {
     return envOverride;
   }
 
-  const multimodelEnabled = configManager.getConfig().general.multimodelEnabled;
-  return multimodelEnabled ? 'agent_teams_orchestrator' : 'claude';
+  return DEFAULT_CLI_FLAVOR;
 }
 
 export function getCliFlavorUiOptions(flavor: CliFlavor): CliFlavorUiOptions {

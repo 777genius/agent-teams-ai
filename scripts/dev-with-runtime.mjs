@@ -19,6 +19,7 @@ const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
   ? path.resolve(process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT.trim())
   : defaultRuntimeCacheRoot;
 const shouldPrintRuntimePath = process.argv.includes('--print-runtime-path');
+const runtimeDisplayName = 'teams orchestrator';
 const WINDOWS_SHELL_COMMANDS = new Set(['pnpm', 'npm', 'npx', 'yarn', 'yarnpkg', 'corepack']);
 
 function shouldUseWindowsShell(cmd) {
@@ -108,9 +109,10 @@ function getPlatformAssetKey() {
 }
 
 function getReleaseAssetUrl(runtimeLock, asset) {
-  const releaseTag = typeof runtimeLock.releaseTag === 'string' && runtimeLock.releaseTag.trim().length > 0
-    ? runtimeLock.releaseTag.trim()
-    : runtimeLock.sourceRef;
+  const releaseTag =
+    typeof runtimeLock.releaseTag === 'string' && runtimeLock.releaseTag.trim().length > 0
+      ? runtimeLock.releaseTag.trim()
+      : runtimeLock.sourceRef;
   return `https://github.com/${runtimeLock.releaseRepository}/releases/download/${releaseTag}/${encodeURIComponent(asset.file)}`;
 }
 
@@ -152,9 +154,7 @@ function truncateMiddle(value, maxLength) {
 
 function buildProgressBar(progressRatio, width) {
   const safeWidth = Math.max(10, width);
-  const clampedRatio = Number.isFinite(progressRatio)
-    ? Math.min(1, Math.max(0, progressRatio))
-    : 0;
+  const clampedRatio = Number.isFinite(progressRatio) ? Math.min(1, Math.max(0, progressRatio)) : 0;
   const filledWidth = Math.round(safeWidth * clampedRatio);
   return `${'='.repeat(filledWidth)}${'-'.repeat(safeWidth - filledWidth)}`;
 }
@@ -164,7 +164,8 @@ function supportsProgressRedraw() {
 }
 
 function formatProgressLine(label, writtenBytes, totalBytes, hasTotal) {
-  const columns = process.stdout.columns && process.stdout.columns > 0 ? process.stdout.columns : 100;
+  const columns =
+    process.stdout.columns && process.stdout.columns > 0 ? process.stdout.columns : 100;
   const ratio = hasTotal ? writtenBytes / totalBytes : 0;
   const percentText = hasTotal ? ` ${Math.floor(ratio * 100)}%` : '';
   const bytesText = hasTotal
@@ -194,6 +195,16 @@ function sleep(ms) {
 
 function readBinaryVersion(binaryPath) {
   return runAndCapture(binaryPath, ['--version']);
+}
+
+function formatRuntimeVersionForDisplay(versionText) {
+  const trimmed = versionText.trim();
+  if (!trimmed) {
+    return runtimeDisplayName;
+  }
+
+  const versionOnly = trimmed.replace(/\s*\([^)]*\)\s*$/, '');
+  return `${versionOnly} (${runtimeDisplayName})`;
 }
 
 function isExecutable(filePath) {
@@ -305,7 +316,10 @@ async function downloadWithProgress(url, destinationPath) {
     readline.clearLine(process.stdout, 0);
     readline.cursorTo(process.stdout, 0);
     process.stdout.write(`${formatProgressLine(label, writtenBytes, totalBytes, hasTotal)}\n`);
-  } else if ((hasTotal && lastLoggedPercent < 100) || (!hasTotal && writtenBytes !== lastLoggedBytes)) {
+  } else if (
+    (hasTotal && lastLoggedPercent < 100) ||
+    (!hasTotal && writtenBytes !== lastLoggedBytes)
+  ) {
     process.stdout.write(`${formatProgressSummary(writtenBytes, totalBytes, hasTotal)}\n`);
   }
 }
@@ -511,7 +525,9 @@ async function main() {
   if ('cacheDir' in resolvedRuntime && resolvedRuntime.cacheDir) {
     process.stdout.write(`Runtime cache: ${resolvedRuntime.cacheDir}\n`);
   }
-  process.stdout.write(`Runtime version: ${resolvedRuntime.versionText}\n`);
+  process.stdout.write(
+    `Runtime version: ${formatRuntimeVersionForDisplay(resolvedRuntime.versionText)}\n`
+  );
 
   const uiEnv = {
     ...process.env,

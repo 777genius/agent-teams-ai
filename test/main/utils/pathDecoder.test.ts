@@ -52,7 +52,7 @@ describe('pathDecoder', () => {
     });
 
     it('should encode a Windows-style absolute path', () => {
-      expect(encodePath('C:\\Users\\username\\projectname')).toBe('-C:-Users-username-projectname');
+      expect(encodePath('C:\\Users\\username\\projectname')).toBe('C--Users-username-projectname');
     });
 
     it('should handle empty string', () => {
@@ -177,6 +177,10 @@ describe('pathDecoder', () => {
     });
 
     it('should return true for valid Windows-style encoded path', () => {
+      expect(isValidEncodedPath('C--Users-username-projectname')).toBe(true);
+    });
+
+    it('should return true for old colon Windows-style encoded path', () => {
       expect(isValidEncodedPath('-C:-Users-username-projectname')).toBe(true);
     });
 

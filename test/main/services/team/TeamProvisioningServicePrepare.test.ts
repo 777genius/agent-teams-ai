@@ -508,11 +508,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         return {
           ok: false as const,
           providerId: 'opencode' as const,
-          reason: 'e2e_missing',
+          reason: 'model_unavailable',
           retryable: false,
-          diagnostics: [
-            'OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free',
-          ],
+          diagnostics: ['Selected model opencode/nemotron-3-super-free is not available'],
           warnings: [],
         };
       }
@@ -564,7 +562,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       'Selected model opencode/minimax-m2.5-free verified for launch.'
     );
     expect(result.message).toBe(
-      'Selected model opencode/nemotron-3-super-free is unavailable. OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free'
+      'Selected model opencode/nemotron-3-super-free is unavailable. Selected model opencode/nemotron-3-super-free is not available'
     );
   });
 

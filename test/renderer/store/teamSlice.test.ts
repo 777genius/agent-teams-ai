@@ -29,6 +29,7 @@ const hoisted = vi.hoisted(() => ({
   permanentlyDeleteTeam: vi.fn(),
   sendMessage: vi.fn(),
   restartMember: vi.fn(),
+  skipMemberForLaunch: vi.fn(),
   requestReview: vi.fn(),
   updateKanban: vi.fn(),
   invalidateTaskChangeSummaries: vi.fn(),
@@ -53,6 +54,7 @@ vi.mock('@renderer/api', () => ({
       permanentlyDeleteTeam: hoisted.permanentlyDeleteTeam,
       sendMessage: hoisted.sendMessage,
       restartMember: hoisted.restartMember,
+      skipMemberForLaunch: hoisted.skipMemberForLaunch,
       requestReview: hoisted.requestReview,
       updateKanban: hoisted.updateKanban,
       onProvisioningProgress: hoisted.onProvisioningProgress,
@@ -103,9 +105,7 @@ function createSliceStore() {
   }));
 }
 
-function createTeamSnapshot(
-  overrides: Record<string, unknown> = {}
-): {
+function createTeamSnapshot(overrides: Record<string, unknown> = {}): {
   teamName: string;
   config: { name: string; members?: unknown[]; projectPath?: string };
   tasks: unknown[];
@@ -227,12 +227,15 @@ describe('teamSlice actions', () => {
       updatedAt: new Date().toISOString(),
     });
     hoisted.getMemberSpawnStatuses.mockResolvedValue({ statuses: {}, runId: null });
-    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot({ runId: null, members: {} }));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(
+      createRuntimeSnapshot({ runId: null, members: {} })
+    );
     hoisted.cancelProvisioning.mockResolvedValue(undefined);
     hoisted.deleteTeam.mockResolvedValue(undefined);
     hoisted.restoreTeam.mockResolvedValue(undefined);
     hoisted.permanentlyDeleteTeam.mockResolvedValue(undefined);
     hoisted.restartMember.mockResolvedValue(undefined);
+    hoisted.skipMemberForLaunch.mockResolvedValue(undefined);
   });
 
   it('maps inbox verify failure to user-friendly text', async () => {
@@ -326,13 +329,15 @@ describe('teamSlice actions', () => {
   it('commits owner slot drops in the current session while persistence is disabled', () => {
     const store = createSliceStore();
 
-    store.getState().commitTeamGraphOwnerSlotDrop(
-      'my-team',
-      'agent-alice',
-      { ringIndex: 0, sectorIndex: 2 },
-      'agent-bob',
-      { ringIndex: 0, sectorIndex: 1 }
-    );
+    store
+      .getState()
+      .commitTeamGraphOwnerSlotDrop(
+        'my-team',
+        'agent-alice',
+        { ringIndex: 0, sectorIndex: 2 },
+        'agent-bob',
+        { ringIndex: 0, sectorIndex: 1 }
+      );
 
     expect(store.getState().slotAssignmentsByTeam['my-team']).toEqual({
       'agent-alice': { ringIndex: 0, sectorIndex: 2 },
@@ -467,9 +472,9 @@ describe('teamSlice actions', () => {
       },
     });
 
-    store.getState().ensureTeamGraphSlotAssignments('my-team', [
-      { name: 'alice', agentId: 'agent-alice' },
-    ]);
+    store
+      .getState()
+      .ensureTeamGraphSlotAssignments('my-team', [{ name: 'alice', agentId: 'agent-alice' }]);
 
     expect(store.getState().slotLayoutVersion).toBe('stable-slots-v1');
     expect(store.getState().slotAssignmentsByTeam).toEqual({
@@ -491,9 +496,9 @@ describe('teamSlice actions', () => {
       },
     });
 
-    store.getState().ensureTeamGraphSlotAssignments('my-team', [
-      { name: 'visible', agentId: 'agent-visible' },
-    ]);
+    store
+      .getState()
+      .ensureTeamGraphSlotAssignments('my-team', [{ name: 'visible', agentId: 'agent-visible' }]);
 
     expect(store.getState().slotAssignmentsByTeam['my-team']).toEqual({
       'agent-visible': { ringIndex: 0, sectorIndex: 0 },
@@ -585,13 +590,15 @@ describe('teamSlice actions', () => {
       { name: 'jack', agentId: 'agent-jack' },
     ]);
 
-    store.getState().commitTeamGraphOwnerSlotDrop(
-      'my-team',
-      'agent-alice',
-      { ringIndex: 0, sectorIndex: 2 },
-      'agent-jack',
-      { ringIndex: 0, sectorIndex: 0 }
-    );
+    store
+      .getState()
+      .commitTeamGraphOwnerSlotDrop(
+        'my-team',
+        'agent-alice',
+        { ringIndex: 0, sectorIndex: 2 },
+        'agent-jack',
+        { ringIndex: 0, sectorIndex: 0 }
+      );
 
     store.getState().resetTeamGraphSlotAssignmentsToDefaults('my-team');
 
@@ -830,13 +837,7 @@ describe('teamSlice actions', () => {
     });
     expect(
       nextEntry?.canonicalMessages.map((message: { messageId?: string }) => message.messageId)
-    ).toEqual([
-      'msg-5',
-      'msg-4',
-      'msg-3',
-      'msg-2',
-      'msg-1',
-    ]);
+    ).toEqual(['msg-5', 'msg-4', 'msg-3', 'msg-2', 'msg-1']);
     expect(nextEntry?.nextCursor).toBe('cursor-tail');
     expect(nextEntry?.hasMore).toBe(true);
   });
@@ -1038,9 +1039,9 @@ describe('teamSlice actions', () => {
     expect(
       store
         .getState()
-        .teamMessagesByName['my-team']?.canonicalMessages.map(
-          (message: { messageId?: string }) => message.messageId
-        )
+        .teamMessagesByName[
+          'my-team'
+        ]?.canonicalMessages.map((message: { messageId?: string }) => message.messageId)
     ).toEqual(['msg-4', 'msg-3', 'msg-2', 'msg-1']);
   });
 
@@ -2428,6 +2429,106 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
   });
 
+  it('updates runtime snapshots when liveness diagnostics change', async () => {
+    const store = createSliceStore();
+    const snapshot = createRuntimeSnapshot();
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const nextSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          alive: false,
+          livenessKind: 'shell_only',
+          pidSource: 'tmux_pane',
+          runtimeDiagnostic: 'tmux pane foreground command is zsh',
+          runtimeDiagnosticSeverity: 'warning',
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(nextSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).not.toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
+  });
+
+  it('updates runtime snapshots when copy-diagnostics details change', async () => {
+    const store = createSliceStore();
+    const snapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          memberName: 'alice',
+          alive: false,
+          restartable: true,
+          backendType: 'tmux',
+          pid: 42,
+          livenessKind: 'shell_only',
+          pidSource: 'tmux_pane',
+          paneId: '%42',
+          panePid: 42,
+          paneCurrentCommand: 'zsh',
+          runtimeDiagnostic: 'tmux pane foreground command is zsh',
+          diagnostics: ['tmux pane foreground command is zsh'],
+          updatedAt: '2026-03-12T10:00:00.000Z',
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const nextSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          processCommand: 'node runtime --token [redacted]',
+          runtimeSessionId: 'session-alice',
+          diagnostics: [
+            'tmux pane foreground command is zsh',
+            'no verified runtime descendant process was found',
+          ],
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(nextSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).not.toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
+  });
+
+  it('updates runtime snapshots when historical bootstrap state changes', async () => {
+    const store = createSliceStore();
+    const snapshot = createRuntimeSnapshot();
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const nextSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          alive: false,
+          historicalBootstrapConfirmed: true,
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(nextSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).not.toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
+  });
+
   it('restartMember refreshes spawn statuses and runtime snapshot', async () => {
     const store = createSliceStore();
     hoisted.getMemberSpawnStatuses.mockResolvedValue({
@@ -2457,10 +2558,63 @@ describe('teamSlice actions', () => {
     });
     hoisted.restartMember.mockRejectedValueOnce(new Error('restart failed'));
 
-    await expect(store.getState().restartMember('my-team', 'alice')).rejects.toThrow('restart failed');
+    await expect(store.getState().restartMember('my-team', 'alice')).rejects.toThrow(
+      'restart failed'
+    );
 
     expect(refreshSpawnStatuses).toHaveBeenCalledWith('my-team');
     expect(refreshRuntimeSnapshot).toHaveBeenCalledWith('my-team');
+  });
+
+  it('skipMemberForLaunch refreshes spawn statuses, runtime snapshot, and team list', async () => {
+    const store = createSliceStore();
+    const refreshTeams = vi.fn(async () => undefined);
+    store.setState({ fetchTeams: refreshTeams });
+    hoisted.getMemberSpawnStatuses.mockResolvedValue({
+      statuses: {
+        alice: createMemberSpawnStatus({
+          status: 'skipped',
+          launchState: 'skipped_for_launch',
+          skippedForLaunch: true,
+        }),
+      },
+      runId: 'runtime-run',
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot());
+
+    await store.getState().skipMemberForLaunch('my-team', 'alice');
+
+    expect(hoisted.skipMemberForLaunch).toHaveBeenCalledWith('my-team', 'alice');
+    expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
+      alice: expect.objectContaining({
+        status: 'skipped',
+        launchState: 'skipped_for_launch',
+        skippedForLaunch: true,
+      }),
+    });
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(createRuntimeSnapshot());
+    expect(refreshTeams).toHaveBeenCalled();
+  });
+
+  it('skipMemberForLaunch refreshes launch data even when skip fails', async () => {
+    const store = createSliceStore();
+    const refreshSpawnStatuses = vi.fn(async (_teamName: string) => undefined);
+    const refreshRuntimeSnapshot = vi.fn(async (_teamName: string) => undefined);
+    const refreshTeams = vi.fn(async () => undefined);
+    store.setState({
+      fetchMemberSpawnStatuses: refreshSpawnStatuses,
+      fetchTeamAgentRuntime: refreshRuntimeSnapshot,
+      fetchTeams: refreshTeams,
+    });
+    hoisted.skipMemberForLaunch.mockRejectedValueOnce(new Error('skip failed'));
+
+    await expect(store.getState().skipMemberForLaunch('my-team', 'alice')).rejects.toThrow(
+      'skip failed'
+    );
+
+    expect(refreshSpawnStatuses).toHaveBeenCalledWith('my-team');
+    expect(refreshRuntimeSnapshot).toHaveBeenCalledWith('my-team');
+    expect(refreshTeams).toHaveBeenCalled();
   });
 
   it('clears stale runtime snapshots on delete', async () => {
@@ -2528,7 +2682,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().selectedTeamData).toEqual(existingData);
     });
 
-  it('reuses the existing selectedTeamData ref on a semantic no-op refresh', async () => {
+    it('reuses the existing selectedTeamData ref on a semantic no-op refresh', async () => {
       const store = createSliceStore();
       const existingData = createTeamSnapshot({
         tasks: [
@@ -2575,78 +2729,78 @@ describe('teamSlice actions', () => {
       expect(store.getState().selectedTeamData).toBe(existingData);
       expect(store.getState().teamDataCacheByName['my-team']).toBe(existingData);
       expect(store.getState().selectedTeamError).toBeNull();
-  });
+    });
 
-  it('memoizes focused resolved member selection against unrelated member activity churn', () => {
-    const aliceSnapshot = {
-      name: 'alice',
-      currentTaskId: null,
-      taskCount: 0,
-      role: 'Reviewer',
-    };
-    const bobSnapshot = {
-      name: 'bob',
-      currentTaskId: null,
-      taskCount: 0,
-      role: 'Builder',
-    };
-    const baseState = {
-      selectedTeamName: 'my-team',
-      selectedTeamData: null,
-      teamDataCacheByName: {
-        'my-team': createTeamSnapshot({
-          members: [aliceSnapshot, bobSnapshot],
-        }),
-      },
-      memberActivityMetaByTeam: {
-        'my-team': {
-          teamName: 'my-team',
-          computedAt: '2026-03-12T10:00:00.000Z',
-          feedRevision: 'rev-1',
-          members: {
-            alice: {
-              memberName: 'alice',
-              lastAuthoredMessageAt: '2026-03-12T10:00:00.000Z',
-              messageCountExact: 3,
-              latestAuthoredMessageSignalsTermination: false,
-            },
-            bob: {
-              memberName: 'bob',
-              lastAuthoredMessageAt: '2026-03-12T10:01:00.000Z',
-              messageCountExact: 1,
-              latestAuthoredMessageSignalsTermination: false,
+    it('memoizes focused resolved member selection against unrelated member activity churn', () => {
+      const aliceSnapshot = {
+        name: 'alice',
+        currentTaskId: null,
+        taskCount: 0,
+        role: 'Reviewer',
+      };
+      const bobSnapshot = {
+        name: 'bob',
+        currentTaskId: null,
+        taskCount: 0,
+        role: 'Builder',
+      };
+      const baseState = {
+        selectedTeamName: 'my-team',
+        selectedTeamData: null,
+        teamDataCacheByName: {
+          'my-team': createTeamSnapshot({
+            members: [aliceSnapshot, bobSnapshot],
+          }),
+        },
+        memberActivityMetaByTeam: {
+          'my-team': {
+            teamName: 'my-team',
+            computedAt: '2026-03-12T10:00:00.000Z',
+            feedRevision: 'rev-1',
+            members: {
+              alice: {
+                memberName: 'alice',
+                lastAuthoredMessageAt: '2026-03-12T10:00:00.000Z',
+                messageCountExact: 3,
+                latestAuthoredMessageSignalsTermination: false,
+              },
+              bob: {
+                memberName: 'bob',
+                lastAuthoredMessageAt: '2026-03-12T10:01:00.000Z',
+                messageCountExact: 1,
+                latestAuthoredMessageSignalsTermination: false,
+              },
             },
           },
         },
-      },
-    };
+      };
 
-    const firstAlice = selectResolvedMemberForTeamName(baseState as never, 'my-team', 'alice');
-    const nextState = {
-      ...baseState,
-      memberActivityMetaByTeam: {
-        'my-team': {
-          ...baseState.memberActivityMetaByTeam['my-team'],
-          computedAt: '2026-03-12T10:02:00.000Z',
-          feedRevision: 'rev-2',
-          members: {
-            ...baseState.memberActivityMetaByTeam['my-team'].members,
-            bob: {
-              ...baseState.memberActivityMetaByTeam['my-team'].members.bob,
-              messageCountExact: 2,
+      const firstAlice = selectResolvedMemberForTeamName(baseState as never, 'my-team', 'alice');
+      const nextState = {
+        ...baseState,
+        memberActivityMetaByTeam: {
+          'my-team': {
+            ...baseState.memberActivityMetaByTeam['my-team'],
+            computedAt: '2026-03-12T10:02:00.000Z',
+            feedRevision: 'rev-2',
+            members: {
+              ...baseState.memberActivityMetaByTeam['my-team'].members,
+              bob: {
+                ...baseState.memberActivityMetaByTeam['my-team'].members.bob,
+                messageCountExact: 2,
+              },
             },
           },
         },
-      },
-    };
+      };
 
-    const secondAlice = selectResolvedMemberForTeamName(nextState as never, 'my-team', 'alice');
+      const secondAlice = selectResolvedMemberForTeamName(nextState as never, 'my-team', 'alice');
 
-    expect(firstAlice).not.toBeNull();
-    expect(secondAlice).toBe(firstAlice);
-  });
+      expect(firstAlice).not.toBeNull();
+      expect(secondAlice).toBe(firstAlice);
+    });
 
-  it('re-canonicalizes selectedTeamData into the cache on a no-op refresh', async () => {
+    it('re-canonicalizes selectedTeamData into the cache on a no-op refresh', async () => {
       const store = createSliceStore();
       const existingData = createTeamSnapshot({
         tasks: [

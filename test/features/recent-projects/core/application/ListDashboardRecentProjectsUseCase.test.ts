@@ -155,7 +155,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
         }),
       ],
     });
-    expect(cache.set).toHaveBeenCalledWith('recent-projects:fresh', result, 1_500);
+    expect(cache.set).toHaveBeenCalledWith('recent-projects:fresh', result, 30_000);
     expect(logger.warn).toHaveBeenCalledWith('recent-projects source failed', {
       sourceId: 'source-1',
       sourceIndex: 1,
@@ -165,7 +165,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
       cacheKey: 'recent-projects:fresh',
       count: 1,
       degradedSources: 1,
-      cacheTtlMs: 1_500,
+      cacheTtlMs: 30_000,
       durationMs: 250,
     });
   });
@@ -242,7 +242,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
       expect(cache.set).toHaveBeenCalledWith(
         'recent-projects:timeout',
         { ids: ['repo:fast'], sources: ['claude'] },
-        1_500
+        30_000
       );
     } finally {
       vi.useRealTimers();
@@ -311,13 +311,13 @@ describe('ListDashboardRecentProjectsUseCase', () => {
     expect(cache.set).toHaveBeenCalledWith(
       'recent-projects:stale',
       { ids: ['repo:fresh'], sources: ['claude'] },
-      1_500
+      30_000
     );
     expect(logger.info).toHaveBeenCalledWith('recent-projects loaded', {
       cacheKey: 'recent-projects:stale',
       count: 1,
       degradedSources: 1,
-      cacheTtlMs: 1_500,
+      cacheTtlMs: 30_000,
       durationMs: 200,
     });
   });
@@ -364,11 +364,11 @@ describe('ListDashboardRecentProjectsUseCase', () => {
 
     await expect(useCase.execute('recent-projects:stale')).resolves.toEqual(stale);
     expect(output.present).not.toHaveBeenCalled();
-    expect(cache.set).toHaveBeenCalledWith('recent-projects:stale', stale, 1_500);
+    expect(cache.set).toHaveBeenCalledWith('recent-projects:stale', stale, 30_000);
     expect(logger.info).toHaveBeenCalledWith('recent-projects served stale cache', {
       cacheKey: 'recent-projects:stale',
       degradedSources: 1,
-      cacheTtlMs: 1_500,
+      cacheTtlMs: 30_000,
       durationMs: 200,
     });
   });
@@ -431,13 +431,13 @@ describe('ListDashboardRecentProjectsUseCase', () => {
     expect(cache.set).toHaveBeenCalledWith(
       'recent-projects:explicit-degraded',
       { ids: ['repo:alpha'], sources: ['claude'] },
-      1_500
+      30_000
     );
     expect(logger.info).toHaveBeenCalledWith('recent-projects loaded', {
       cacheKey: 'recent-projects:explicit-degraded',
       count: 1,
       degradedSources: 1,
-      cacheTtlMs: 1_500,
+      cacheTtlMs: 30_000,
       durationMs: 0,
     });
   });

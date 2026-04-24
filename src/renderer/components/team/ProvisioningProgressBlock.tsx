@@ -19,6 +19,7 @@ import { DISPLAY_STEPS } from './provisioningSteps';
 import { StepProgressBar } from './StepProgressBar';
 
 import type { StepProgressBarStep } from './StepProgressBar';
+import type { TeamLaunchDiagnosticItem } from '@shared/types';
 
 /** Pre-built step definitions for the provisioning stepper. */
 const PROVISIONING_STEPS: StepProgressBarStep[] = DISPLAY_STEPS.map((s) => ({
@@ -61,6 +62,8 @@ export interface ProvisioningProgressBlockProps {
   cliLogsTail?: string;
   /** Accumulated assistant text output for live preview */
   assistantOutput?: string;
+  /** Bounded structured launch diagnostics */
+  launchDiagnostics?: TeamLaunchDiagnosticItem[];
   /** Visual surface chrome for the outer block */
   surface?: 'raised' | 'flat';
   className?: string;
@@ -153,15 +156,20 @@ export const ProvisioningProgressBlock = ({
   pid,
   cliLogsTail,
   assistantOutput,
+  launchDiagnostics,
   surface = 'raised',
   className,
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
   const elapsed = useElapsedTimer(startedAt, loading);
   const [logsOpen, setLogsOpen] = useState(() => defaultLogsOpen ?? false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [liveOutputOpen, setLiveOutputOpen] = useState(defaultLiveOutputOpen);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
   const displayAssistantOutput = sanitizeAssistantOutput(assistantOutput, isError);
+  const visibleLaunchDiagnostics =
+    launchDiagnostics?.filter((item) => item.severity === 'warning' || item.severity === 'error') ??
+    [];
 
   // Auto-scroll assistant output
   useEffect(() => {
@@ -293,6 +301,42 @@ export const ProvisioningProgressBlock = ({
           errorIndex={errorStepIndex}
         />
       </div>
+      {visibleLaunchDiagnostics.length > 0 ? (
+        <div className="mt-2">
+          <button
+            type="button"
+            className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            onClick={() => setDiagnosticsOpen((v) => !v)}
+          >
+            {diagnosticsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            Diagnostics
+          </button>
+          {diagnosticsOpen ? (
+            <div className="mt-1 space-y-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+              {visibleLaunchDiagnostics.map((item) => (
+                <div key={item.id} className="text-[11px]">
+                  <div
+                    className={cn(
+                      item.severity === 'error'
+                        ? 'text-red-400'
+                        : item.severity === 'warning'
+                          ? 'text-amber-400'
+                          : 'text-[var(--color-text-secondary)]'
+                    )}
+                  >
+                    {item.label}
+                  </div>
+                  {item.detail ? (
+                    <div className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">
+                      {item.detail}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mt-2">
         <button
           type="button"

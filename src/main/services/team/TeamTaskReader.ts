@@ -170,6 +170,11 @@ export class TeamTaskReader {
                 completedAt: i.completedAt,
               }))
           : undefined;
+        const status = (['pending', 'in_progress', 'completed', 'deleted'] as const).includes(
+          parsed.status as TeamTask['status']
+        )
+          ? (parsed.status as TeamTask['status'])
+          : 'pending';
         const task: TeamTask = {
           id:
             typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
@@ -192,11 +197,7 @@ export class TeamTaskReader {
           promptTaskRefs: normalizeTaskRefs(parsed.promptTaskRefs),
           owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
           createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
-          status: (['pending', 'in_progress', 'completed', 'deleted'] as const).includes(
-            parsed.status as TeamTask['status']
-          )
-            ? (parsed.status as TeamTask['status'])
-            : 'pending',
+          status,
           workIntervals,
           historyEvents,
           blocks: Array.isArray(parsed.blocks)
@@ -299,6 +300,7 @@ export class TeamTaskReader {
           reviewState: getReviewStateFromTask({
             historyEvents,
             reviewState: parsed.reviewState as TeamTask['reviewState'],
+            status,
           }),
           sourceMessageId:
             typeof parsed.sourceMessageId === 'string' && parsed.sourceMessageId.trim()
@@ -413,6 +415,7 @@ export class TeamTaskReader {
           createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
           reviewState: getReviewStateFromTask({
             reviewState: parsed.reviewState as TeamTask['reviewState'],
+            status: 'deleted',
           }),
         };
 

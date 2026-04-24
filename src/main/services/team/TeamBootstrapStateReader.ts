@@ -337,10 +337,11 @@ function normalizeBootstrapMemberState(
   const status = typeof raw.status === 'string' ? raw.status : 'pending';
   const hardFailure = status === 'failed';
   const bootstrapConfirmed = status === 'bootstrap_confirmed';
-  const runtimeAlive = bootstrapConfirmed || status === 'runtime_alive';
+  const bootstrapReportedRuntimeAlive = status === 'runtime_alive';
+  const runtimeAlive = bootstrapConfirmed;
   const agentToolAccepted =
     bootstrapConfirmed ||
-    runtimeAlive ||
+    bootstrapReportedRuntimeAlive ||
     status === 'registered' ||
     status === 'spawn_started' ||
     hardFailure;
@@ -351,7 +352,7 @@ function normalizeBootstrapMemberState(
       ? 'failed_to_start'
       : bootstrapConfirmed
         ? 'confirmed_alive'
-        : runtimeAlive || agentToolAccepted
+        : agentToolAccepted
           ? 'runtime_pending_bootstrap'
           : 'starting',
     agentToolAccepted,
@@ -381,13 +382,13 @@ function normalizeBootstrapMemberState(
             ? raw.failureReason.trim()
             : 'deterministic bootstrap failed',
         ]
-      : runtimeAlive
-        ? bootstrapConfirmed
-          ? ['late heartbeat received']
-          : ['runtime alive', 'waiting for teammate check-in']
-        : agentToolAccepted
-          ? ['spawn accepted']
-          : undefined,
+      : bootstrapConfirmed
+        ? ['late heartbeat received']
+        : bootstrapReportedRuntimeAlive
+          ? ['runtime alive reported by bootstrap state', 'waiting for strict live verification']
+          : agentToolAccepted
+            ? ['spawn accepted']
+            : undefined,
   };
 }
 

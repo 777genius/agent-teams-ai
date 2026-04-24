@@ -492,6 +492,20 @@ function resolveModelResultFromCompatibilityBatch(
     ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message))
     : null;
 
+  const hasVerifiedLine = modelScopedEntries.some((entry) =>
+    /selected model .* verified for launch\./i.test(entry)
+  );
+  if (hasVerifiedLine) {
+    return {
+      kind: 'terminal',
+      result: {
+        status: 'ready',
+        line: buildModelSuccessLine(providerId, modelId),
+        warningLine: null,
+      },
+    };
+  }
+
   const hasCompatibilityLine = modelScopedEntries.some((entry) =>
     /selected model .* is compatible\. deep verification pending\./i.test(entry)
   );

@@ -11,6 +11,7 @@ const AGENT_TEAMS_TASK_TOOL_NAMES = [
   'task_get_comment',
   'task_link',
   'task_list',
+  'task_restore',
   'task_set_clarification',
   'task_set_owner',
   'task_set_status',

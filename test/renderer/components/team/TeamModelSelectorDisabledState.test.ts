@@ -746,7 +746,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           supported: true,
           authenticated: true,
           statusMessage: 'OpenCode team launch is gated',
-          detailMessage: 'OpenCode production E2E evidence is missing',
+          detailMessage: 'OpenCode runtime store needs recovery',
           capabilities: { teamLaunch: false },
           models: [],
         },
@@ -773,7 +773,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(openCodeButton?.hasAttribute('disabled')).toBe(true);
     expect(openCodeButton?.getAttribute('title')).toContain(
-      'OpenCode production E2E evidence is missing'
+      'OpenCode runtime store needs recovery'
     );
     expect(openCodeButton?.textContent).toContain('Gate');
 

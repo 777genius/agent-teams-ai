@@ -1,6 +1,4 @@
 export type {
-  OpenCodeTeamLaunchMode,
-  OpenCodeTeamRuntimeAdapterOptions,
   OpenCodeTeamRuntimeBridgePort,
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,

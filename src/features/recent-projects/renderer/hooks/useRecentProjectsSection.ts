@@ -25,8 +25,8 @@ import type { TeamSummary } from '@shared/types';
 
 const INITIAL_RECENT_PROJECTS = 11;
 const LOAD_MORE_STEP = 8;
-const DEGRADED_RECENT_PROJECTS_FAST_RETRY_DELAY_MS = 1_500;
-const DEGRADED_RECENT_PROJECTS_STEADY_RETRY_DELAY_MS = 5_000;
+const DEGRADED_RECENT_PROJECTS_FAST_RETRY_DELAY_MS = 30_000;
+const DEGRADED_RECENT_PROJECTS_STEADY_RETRY_DELAY_MS = 120_000;
 const DEGRADED_RECENT_PROJECTS_FAST_RETRY_LIMIT = 3;
 
 function matchesSearch(project: DashboardRecentProject, query: string): boolean {

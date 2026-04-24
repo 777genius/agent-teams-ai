@@ -115,6 +115,7 @@ describe('reviewState utils', () => {
     expect(
       getReviewStateFromTask({
         reviewState: 'approved',
+        status: 'completed',
         historyEvents: [
           {
             id: '1',
@@ -125,5 +126,17 @@ describe('reviewState utils', () => {
         ],
       })
     ).toBe('approved');
+  });
+
+  it('ignores stale terminal review fallback on active or deleted statuses', () => {
+    expect(getReviewStateFromTask({ reviewState: 'approved', status: 'pending' })).toBe('none');
+    expect(getReviewStateFromTask({ reviewState: 'review', status: 'in_progress' })).toBe('none');
+    expect(getReviewStateFromTask({ kanbanColumn: 'approved', status: 'deleted' })).toBe('none');
+  });
+
+  it('keeps legacy pending needsFix as actionable fallback', () => {
+    expect(getReviewStateFromTask({ reviewState: 'needsFix', status: 'pending' })).toBe(
+      'needsFix'
+    );
   });
 });

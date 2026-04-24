@@ -88,7 +88,9 @@ describe('agent-teams-mcp tools', () => {
           res.end(JSON.stringify(result.body));
         } catch (error) {
           res.writeHead(500, { 'content-type': 'application/json' });
-          res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+          res.end(
+            JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
+          );
         }
       });
     });
@@ -126,6 +128,10 @@ describe('agent-teams-mcp tools', () => {
   });
 
   it('launches and stops teams through the runtime MCP tools', async () => {
+    const claudeDir = makeClaudeDir();
+    writeTeamConfig(claudeDir, 'alpha', {
+      members: [{ name: 'lead', role: 'team-lead' }],
+    });
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
     const server = await startControlServer(async ({ method, url, body }) => {
       calls.push({ method, url, body });
@@ -172,6 +178,7 @@ describe('agent-teams-mcp tools', () => {
     try {
       const launched = parseJsonToolResult(
         await getTool('team_launch').execute({
+          claudeDir,
           teamName: 'alpha',
           cwd: '/tmp/project',
           controlUrl: server.baseUrl,
@@ -183,6 +190,7 @@ describe('agent-teams-mcp tools', () => {
 
       const stopped = parseJsonToolResult(
         await getTool('team_stop').execute({
+          claudeDir,
           teamName: 'alpha',
           controlUrl: server.baseUrl,
         })
@@ -217,6 +225,13 @@ describe('agent-teams-mcp tools', () => {
   });
 
   it('forwards OpenCode runtime MCP tools through the runtime control bridge', async () => {
+    const claudeDir = makeClaudeDir();
+    writeTeamConfig(claudeDir, 'alpha', {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
     const server = await startControlServer(async ({ method, url, body }) => {
       calls.push({ method, url, body });
@@ -225,6 +240,7 @@ describe('agent-teams-mcp tools', () => {
 
     try {
       await getTool('runtime_bootstrap_checkin').execute({
+        claudeDir,
         teamName: 'alpha',
         controlUrl: server.baseUrl,
         runId: 'run-oc',
@@ -232,6 +248,7 @@ describe('agent-teams-mcp tools', () => {
         runtimeSessionId: 'ses-1',
       });
       await getTool('runtime_deliver_message').execute({
+        claudeDir,
         teamName: 'alpha',
         controlUrl: server.baseUrl,
         idempotencyKey: 'idem-1',
@@ -242,6 +259,7 @@ describe('agent-teams-mcp tools', () => {
         text: 'hello',
       });
       await getTool('runtime_task_event').execute({
+        claudeDir,
         teamName: 'alpha',
         controlUrl: server.baseUrl,
         idempotencyKey: 'idem-task-1',
@@ -252,6 +270,7 @@ describe('agent-teams-mcp tools', () => {
         event: 'started',
       });
       await getTool('runtime_heartbeat').execute({
+        claudeDir,
         teamName: 'alpha',
         controlUrl: server.baseUrl,
         runId: 'run-oc',
@@ -281,6 +300,9 @@ describe('agent-teams-mcp tools', () => {
 
   it('discovers the control endpoint from the published state file', async () => {
     const claudeDir = makeClaudeDir();
+    writeTeamConfig(claudeDir, 'alpha', {
+      members: [{ name: 'lead', role: 'team-lead' }],
+    });
     const statePath = path.join(claudeDir, 'team-control-api.json');
 
     const server = await startControlServer(async ({ method, url }) => {
@@ -665,12 +687,16 @@ describe('agent-teams-mcp tools', () => {
     expect(ownerInbox[0].text).toContain('task_start');
     expect(ownerInbox[0].text).toContain('task_add_comment');
     expect(ownerInbox[0].text).toContain('Read the plan before starting.');
-    expect(ownerInbox[0].text).toContain('If you are idle and this task is ready to start, start it now.');
+    expect(ownerInbox[0].text).toContain(
+      'If you are idle and this task is ready to start, start it now.'
+    );
     expect(ownerInbox[0].text).toContain(
       'If you are busy, blocked, or still need more context, immediately add a short task comment'
     );
     expect(ownerInbox[3].summary).toContain(`#${unassignedTask.displayId}`);
-    expect(ownerInbox[3].text).toContain('If you are idle and this task is ready to start, start it now.');
+    expect(ownerInbox[3].text).toContain(
+      'If you are idle and this task is ready to start, start it now.'
+    );
     expect(ownerInbox[3].text).toContain('task_add_comment');
 
     const briefing = (await getTool('task_briefing').execute({
@@ -712,14 +738,22 @@ describe('agent-teams-mcp tools', () => {
     expect(memberBriefingText).toContain(
       'Awareness items are watch-only context and do not authorize you to start work unless the lead reroutes the task or you become the actionOwner.'
     );
-    expect(memberBriefingText).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
+    expect(memberBriefingText).toContain(
+      'TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):'
+    );
     expect(memberBriefingText).toContain('Task briefing for alice:');
     expect(memberBriefingText).toContain(`#${activeTask.displayId}`);
 
     fs.mkdirSync(path.join(claudeDir, 'teams', teamName, 'inboxes'), { recursive: true });
     fs.writeFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'carol.json'), '[]');
-    fs.writeFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'cross_team_send.json'), '[]');
-    fs.writeFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'other-team.alice.json'), '[]');
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', teamName, 'inboxes', 'cross_team_send.json'),
+      '[]'
+    );
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', teamName, 'inboxes', 'other-team.alice.json'),
+      '[]'
+    );
 
     const inboxResolvedBriefing = (await getTool('member_briefing').execute({
       claudeDir,
@@ -727,7 +761,9 @@ describe('agent-teams-mcp tools', () => {
       memberName: 'carol',
     })) as { content: Array<{ text: string }> };
     const inboxResolvedBriefingText = inboxResolvedBriefing.content[0]?.text ?? '';
-    expect(inboxResolvedBriefingText).toContain('Member briefing for carol on team "gamma" (gamma).');
+    expect(inboxResolvedBriefingText).toContain(
+      'Member briefing for carol on team "gamma" (gamma).'
+    );
     expect(inboxResolvedBriefingText).toContain('Role: team member.');
 
     await expect(
@@ -914,9 +950,9 @@ describe('agent-teams-mcp tools', () => {
         teamName,
       })
     );
-    expect(listedTasks.find((task: { id: string }) => task.id === createdTask.id)?.reviewState).toBe(
-      'needsFix'
-    );
+    expect(
+      listedTasks.find((task: { id: string }) => task.id === createdTask.id)?.reviewState
+    ).toBe('needsFix');
 
     const kanbanCleared = parseJsonToolResult(
       await getTool('kanban_clear').execute({
@@ -1061,6 +1097,26 @@ describe('agent-teams-mcp tools', () => {
     );
     expect(kanbanState.tasks[reviewTask.id]).toBeUndefined();
     expect(JSON.stringify(kanbanState.columnOrder ?? {})).not.toContain(reviewTask.id);
+
+    const restored = parseJsonToolResult(
+      await getTool('task_restore').execute({
+        claudeDir,
+        teamName,
+        taskId: reviewTask.id,
+        actor: 'lead',
+      })
+    );
+    expect(restored.status).toBe('pending');
+    expect(restored.reviewState).toBe('none');
+
+    await expect(
+      getTool('task_restore').execute({
+        claudeDir,
+        teamName,
+        taskId: reviewTask.id,
+        actor: 'lead',
+      })
+    ).rejects.toThrow('task_restore only restores deleted tasks');
   });
 
   it('only notifies the owner on review_approve when notifyOwner is explicit', async () => {
@@ -1222,6 +1278,41 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('rejects non-configured teams before MCP side-effect writes', async () => {
+    const claudeDir = makeClaudeDir();
+    writeTeamConfig(claudeDir, 'real-team', {
+      members: [{ name: 'lead', role: 'team-lead' }],
+    });
+
+    await expect(
+      getTool('message_send').execute({
+        claudeDir,
+        teamName: 'typo-team',
+        to: 'alice',
+        text: 'Should not create inbox',
+      })
+    ).rejects.toThrow('Unknown team "typo-team"');
+    await expect(
+      getTool('process_register').execute({
+        claudeDir,
+        teamName: 'typo-team',
+        pid: process.pid,
+        label: 'watcher',
+      })
+    ).rejects.toThrow('Unknown team "typo-team"');
+    await expect(
+      getTool('cross_team_send').execute({
+        claudeDir,
+        teamName: 'typo-team',
+        toTeam: 'real-team',
+        text: 'Should not deliver',
+      })
+    ).rejects.toThrow('Unknown team "typo-team"');
+
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'typo-team'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'real-team', 'inboxes', 'lead.json'))).toBe(false);
+  });
+
   it('exposes zod schemas that reject obviously invalid payloads', () => {
     expect(
       getTool('task_create').parameters?.safeParse({
@@ -1370,9 +1461,7 @@ describe('agent-teams-mcp tools', () => {
     expect(completed.comments).toBeUndefined();
 
     // task_list: explicit inventory shape only
-    const listed = parseJsonToolResult(
-      await getTool('task_list').execute({ claudeDir, teamName })
-    );
+    const listed = parseJsonToolResult(await getTool('task_list').execute({ claudeDir, teamName }));
     const listedTask = listed.find((t: { id: string }) => t.id === task.id);
     expect(listedTask).toBeDefined();
     expect(listedTask).toEqual({
@@ -1412,9 +1501,7 @@ describe('agent-teams-mcp tools', () => {
       const sentPath = path.join(claudeDir, 'teams', teamName, 'sentMessages.json');
       const teamDir = path.join(claudeDir, 'teams', teamName);
       fs.mkdirSync(teamDir, { recursive: true });
-      const existing = fs.existsSync(sentPath)
-        ? JSON.parse(fs.readFileSync(sentPath, 'utf8'))
-        : [];
+      const existing = fs.existsSync(sentPath) ? JSON.parse(fs.readFileSync(sentPath, 'utf8')) : [];
       existing.push(message);
       fs.writeFileSync(sentPath, JSON.stringify(existing, null, 2));
     }
@@ -1760,9 +1847,7 @@ describe('agent-teams-mcp tools', () => {
         text: 'Roundtrip test message',
         timestamp: '2026-03-15T16:00:00.000Z',
         source: 'user_sent',
-        attachments: [
-          { id: 'att-rt', filename: 'data.csv', mimeType: 'text/csv', size: 1024 },
-        ],
+        attachments: [{ id: 'att-rt', filename: 'data.csv', mimeType: 'text/csv', size: 1024 }],
       });
 
       const created = parseJsonToolResult(
@@ -1879,5 +1964,21 @@ describe('agent-teams-mcp tools', () => {
     ).rejects.toThrow(
       'Unknown team "team-lead". Board tools require an existing configured team with config.json.'
     );
+  });
+
+  it('fails closed for primary queue and inventory tools when team config does not exist', async () => {
+    const claudeDir = makeClaudeDir();
+    const params = { claudeDir, teamName: 'team-lead' };
+    const expected =
+      'Unknown team "team-lead". Board tools require an existing configured team with config.json.';
+
+    await expect(getTool('lead_briefing').execute(params)).rejects.toThrow(expected);
+    await expect(
+      getTool('task_briefing').execute({
+        ...params,
+        memberName: 'alice',
+      })
+    ).rejects.toThrow(expected);
+    await expect(getTool('task_list').execute(params)).rejects.toThrow(expected);
   });
 });

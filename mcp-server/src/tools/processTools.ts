@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getController } from '../controller';
 import { jsonTextContent } from '../utils/format';
+import { assertConfiguredTeam } from '../utils/teamConfig';
 
 const toolContextSchema = {
   teamName: z.string().min(1),
@@ -34,8 +35,9 @@ export function registerProcessTools(server: Pick<FastMCP, 'addTool'>) {
       port,
       url,
       claudeProcessId,
-    }) =>
-      await Promise.resolve(
+    }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           getController(teamName, claudeDir).processes.registerProcess({
           pid,
@@ -47,7 +49,8 @@ export function registerProcessTools(server: Pick<FastMCP, 'addTool'>) {
           ...(claudeProcessId ? { 'claude-process-id': claudeProcessId } : {}),
           })
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -57,10 +60,12 @@ export function registerProcessTools(server: Pick<FastMCP, 'addTool'>) {
     parameters: z.object({
       ...toolContextSchema,
     }),
-    execute: async ({ teamName, claudeDir }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(getController(teamName, claudeDir).processes.listProcesses())
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -71,10 +76,12 @@ export function registerProcessTools(server: Pick<FastMCP, 'addTool'>) {
       ...toolContextSchema,
       pid: z.number().int().positive(),
     }),
-    execute: async ({ teamName, claudeDir, pid }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, pid }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(getController(teamName, claudeDir).processes.unregisterProcess({ pid }))
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -85,9 +92,11 @@ export function registerProcessTools(server: Pick<FastMCP, 'addTool'>) {
       ...toolContextSchema,
       pid: z.number().int().positive(),
     }),
-    execute: async ({ teamName, claudeDir, pid }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, pid }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(getController(teamName, claudeDir).processes.stopProcess({ pid }))
-      ),
+      );
+    },
   });
 }

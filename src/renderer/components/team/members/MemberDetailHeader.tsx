@@ -23,11 +23,13 @@ import type {
   MemberSpawnLivenessSource,
   MemberSpawnStatus,
   ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
 } from '@shared/types';
 
 interface MemberDetailHeaderProps {
   member: ResolvedTeamMember;
   runtimeSummary?: string;
+  runtimeEntry?: TeamAgentRuntimeEntry;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
@@ -43,6 +45,7 @@ interface MemberDetailHeaderProps {
 export const MemberDetailHeader = ({
   member,
   runtimeSummary,
+  runtimeEntry,
   isTeamAlive,
   isTeamProvisioning,
   leadActivity,
@@ -75,6 +78,7 @@ export const MemberDetailHeader = ({
     spawnLaunchState,
     spawnLivenessSource,
     spawnRuntimeAlive,
+    runtimeEntry,
     runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
     isTeamAlive,
@@ -91,7 +95,12 @@ export const MemberDetailHeader = ({
   const badgeLabel =
     runtimeAdvisoryTone === 'error' && runtimeAdvisoryLabel
       ? runtimeAdvisoryLabel
-      : launchVisualState === 'runtime_pending' || launchVisualState === 'permission_pending'
+      : launchVisualState === 'runtime_pending' ||
+          launchVisualState === 'permission_pending' ||
+          launchVisualState === 'shell_only' ||
+          launchVisualState === 'runtime_candidate' ||
+          launchVisualState === 'registered_only' ||
+          launchVisualState === 'stale_runtime'
         ? (launchStatusLabel ?? presenceLabel)
         : presenceLabel;
 

@@ -279,7 +279,13 @@ function drawLaunchStage(
       for (let index = 0; index < 3; index += 1) {
         const angle = time * 1.2 + (Math.PI * 2 * index) / 3;
         ctx.beginPath();
-        ctx.arc(x + Math.cos(angle) * dotOrbit, y + Math.sin(angle) * dotOrbit, 1.7, 0, Math.PI * 2);
+        ctx.arc(
+          x + Math.cos(angle) * dotOrbit,
+          y + Math.sin(angle) * dotOrbit,
+          1.7,
+          0,
+          Math.PI * 2
+        );
         ctx.fillStyle = hexWithAlpha('#e4e4e7', 0.72);
         ctx.fill();
       }
@@ -736,6 +742,13 @@ function getLaunchStatusColor(visualState: GraphNode['launchVisualState']): stri
       return hexWithAlpha('#f59e0b', 0.92);
     case 'runtime_pending':
       return hexWithAlpha('#67e8f9', 0.9);
+    case 'shell_only':
+    case 'runtime_candidate':
+      return hexWithAlpha('#f97316', 0.9);
+    case 'registered_only':
+      return hexWithAlpha('#a1a1aa', 0.82);
+    case 'stale_runtime':
+      return hexWithAlpha('#ef4444', 0.82);
     case 'settling':
       return hexWithAlpha('#22c55e', 0.9);
     case 'error':

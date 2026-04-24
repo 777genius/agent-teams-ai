@@ -2,12 +2,10 @@ import {
   evaluateOpenCodeSupport,
   OPENCODE_TEAM_LAUNCH_VERSION_POLICY,
   type OpenCodeInstallMethod,
-  type OpenCodeProductionE2EEvidence,
   type OpenCodeSupportedVersionPolicy,
   type OpenCodeSupportLevel,
 } from '../version/OpenCodeVersionPolicy';
 
-import type { OpenCodeTeamLaunchMode } from '../bridge/OpenCodeBridgeCommandContract';
 import type { OpenCodeApiCapabilities } from '../capabilities/OpenCodeApiCapabilities';
 import type { OpenCodeMcpToolProof } from '../mcp/OpenCodeMcpToolAvailability';
 import type { RuntimeStoreReadinessCheck } from '../store/RuntimeStoreManifest';
@@ -18,7 +16,6 @@ export type OpenCodeTeamLaunchReadinessState =
   | 'not_authenticated'
   | 'unsupported_version'
   | 'capabilities_missing'
-  | 'e2e_missing'
   | 'runtime_store_blocked'
   | 'mcp_unavailable'
   | 'model_unavailable'
@@ -98,21 +95,8 @@ export interface OpenCodeModelExecutionProbePort {
   }): Promise<OpenCodeModelExecutionProbeResult>;
 }
 
-export interface OpenCodeProductionE2EEvidencePort {
-  read(input: {
-    projectPath: string;
-    inventory: OpenCodeRuntimeInventory;
-    capabilities: OpenCodeApiCapabilities;
-  }): Promise<OpenCodeProductionE2EEvidence | null>;
-}
-
 export interface OpenCodeTeamLaunchReadinessServiceOptions {
   versionPolicy?: OpenCodeSupportedVersionPolicy;
-  launchMode?: OpenCodeTeamLaunchMode;
-  /**
-   * @deprecated Use launchMode. Kept for callers that still pass a boolean feature gate.
-   */
-  adapterEnabled?: boolean;
 }
 
 export class OpenCodeTeamLaunchReadinessService {
@@ -122,7 +106,6 @@ export class OpenCodeTeamLaunchReadinessService {
     private readonly mcpTools: OpenCodeMcpToolProofPort,
     private readonly runtimeStores: OpenCodeRuntimeStoreReadinessPort,
     private readonly modelExecution: OpenCodeModelExecutionProbePort,
-    private readonly e2eEvidence: OpenCodeProductionE2EEvidencePort,
     private readonly options: OpenCodeTeamLaunchReadinessServiceOptions = {}
   ) {}
 
@@ -130,21 +113,8 @@ export class OpenCodeTeamLaunchReadinessService {
     projectPath: string;
     selectedModel: string | null;
     requireExecutionProbe: boolean;
-    launchMode?: OpenCodeTeamLaunchMode;
   }): Promise<OpenCodeTeamLaunchReadiness> {
-    const launchMode = resolveReadinessLaunchMode(input.launchMode, this.options);
     const policy = this.options.versionPolicy ?? OPENCODE_TEAM_LAUNCH_VERSION_POLICY;
-    const dogfoodWarnings: string[] = [];
-
-    if (launchMode === 'disabled') {
-      return readiness({
-        state: 'adapter_disabled',
-        inventory: null,
-        modelId: input.selectedModel,
-        missing: ['OpenCode team launch adapter is disabled by feature gate'],
-        diagnostics: ['OpenCode team launch adapter is disabled by feature gate'],
-      });
-    }
 
     try {
       const inventory = await this.inventory.probe({ projectPath: input.projectPath });
@@ -184,34 +154,22 @@ export class OpenCodeTeamLaunchReadinessService {
         projectPath: input.projectPath,
         inventory,
       });
-      const evidence = await this.e2eEvidence.read({
-        projectPath: input.projectPath,
-        inventory,
-        capabilities,
-      });
       const support = evaluateOpenCodeSupport({
         version: inventory.version ?? '0.0.0',
         capabilities,
-        evidence,
         policy,
       });
 
       if (!support.supported) {
-        if (launchMode === 'dogfood' && support.supportLevel === 'supported_e2e_pending') {
-          dogfoodWarnings.push(
-            'OpenCode production E2E evidence is missing; dogfood launch remains allowed after runtime checks.'
-          );
-        } else {
-          return readiness({
-            state: mapSupportLevelToReadinessState(support.supportLevel),
-            inventory,
-            modelId,
-            capabilities,
-            supportLevel: support.supportLevel,
-            missing: support.diagnostics,
-            diagnostics: appendDiagnostics(inventory.diagnostics, support.diagnostics),
-          });
-        }
+        return readiness({
+          state: mapSupportLevelToReadinessState(support.supportLevel),
+          inventory,
+          modelId,
+          capabilities,
+          supportLevel: support.supportLevel,
+          missing: support.diagnostics,
+          diagnostics: appendDiagnostics(inventory.diagnostics, support.diagnostics),
+        });
       }
 
       const runtimeStoreReadiness = await this.runtimeStores.check({
@@ -280,7 +238,7 @@ export class OpenCodeTeamLaunchReadinessService {
         runtimeStoreReadiness,
         supportLevel: support.supportLevel,
         launchAllowed: true,
-        diagnostics: appendDiagnostics(inventory.diagnostics, dogfoodWarnings),
+        diagnostics: inventory.diagnostics,
       });
     } catch (error) {
       return readiness({
@@ -291,22 +249,6 @@ export class OpenCodeTeamLaunchReadinessService {
       });
     }
   }
-}
-
-function resolveReadinessLaunchMode(
-  requested: OpenCodeTeamLaunchMode | undefined,
-  options: OpenCodeTeamLaunchReadinessServiceOptions
-): OpenCodeTeamLaunchMode {
-  if (requested) {
-    return requested;
-  }
-  if (options.launchMode) {
-    return options.launchMode;
-  }
-  if (options.adapterEnabled === true) {
-    return 'production';
-  }
-  return 'disabled';
 }
 
 function readiness(input: {
@@ -361,8 +303,6 @@ function mapSupportLevelToReadinessState(
       return 'unsupported_version';
     case 'supported_capabilities_pending':
       return 'capabilities_missing';
-    case 'supported_e2e_pending':
-      return 'e2e_missing';
     case 'production_supported':
       return 'ready';
   }

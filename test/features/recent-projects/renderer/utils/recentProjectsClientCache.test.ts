@@ -103,7 +103,7 @@ describe('recentProjectsClientCache', () => {
     await expect(second).resolves.toEqual(payload('alpha'));
   });
 
-  it('marks degraded payload snapshots stale faster than healthy payloads', async () => {
+  it('keeps degraded payload snapshots fresh long enough to avoid hot retry loops', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-14T12:00:00.000Z'));
 
@@ -121,7 +121,13 @@ describe('recentProjectsClientCache', () => {
       isStale: false,
     });
 
-    vi.setSystemTime(new Date('2026-04-14T12:00:02.000Z'));
+    vi.setSystemTime(new Date('2026-04-14T12:00:20.000Z'));
+    expect(getRecentProjectsClientSnapshot()).toMatchObject({
+      payload: payload('alpha', { degraded: true }),
+      isStale: false,
+    });
+
+    vi.setSystemTime(new Date('2026-04-14T12:00:31.000Z'));
     expect(getRecentProjectsClientSnapshot()).toMatchObject({
       payload: payload('alpha', { degraded: true }),
       isStale: true,
@@ -129,7 +135,9 @@ describe('recentProjectsClientCache', () => {
   });
 
   it('normalizes legacy array responses from the loader during mixed-version dev reloads', async () => {
-    const loader = vi.fn<() => Promise<DashboardRecentProject[]>>().mockResolvedValue([project('alpha')]);
+    const loader = vi
+      .fn<() => Promise<DashboardRecentProject[]>>()
+      .mockResolvedValue([project('alpha')]);
 
     await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual(payload('alpha'));
     expect(getRecentProjectsClientSnapshot()?.payload).toEqual(payload('alpha'));

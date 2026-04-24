@@ -959,6 +959,9 @@ export class HttpAPIClient implements ElectronAPI {
     restartMember: async (): Promise<void> => {
       throw new Error('Member restart is not available in browser mode');
     },
+    skipMemberForLaunch: async (): Promise<void> => {
+      throw new Error('Member launch skip is not available in browser mode');
+    },
     softDeleteTask: async (_teamName: string, _taskId: string): Promise<void> => {
       // Not available via HTTP client — no-op
     },

@@ -167,7 +167,10 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       cliLogsTail: '',
       assistantOutput: '',
     };
-    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = undefined as unknown as Record<string, unknown>;
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = undefined as unknown as Record<
+      string,
+      unknown
+    >;
     storeState.memberSpawnStatusesByTeam['northstar-core'] = {
       alice: { status: 'waiting', launchState: 'starting' },
       bob: { status: 'waiting', launchState: 'starting' },
@@ -281,6 +284,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
         pendingCount: 3,
         failedCount: 0,
         runtimeAlivePendingCount: 3,
+        runtimeProcessPendingCount: 3,
       },
       source: 'merged',
     };

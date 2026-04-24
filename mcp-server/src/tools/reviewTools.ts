@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getController } from '../controller';
 import { jsonTextContent, slimTask } from '../utils/format';
+import { assertConfiguredTeam } from '../utils/teamConfig';
 
 const toolContextSchema = {
   teamName: z.string().min(1),
@@ -20,8 +21,9 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       reviewer: z.string().optional(),
       leadSessionId: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from, reviewer, leadSessionId }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, from, reviewer, leadSessionId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           slimTask(
             getController(teamName, claudeDir).review.requestReview(taskId, {
@@ -31,7 +33,8 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
             }) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -42,14 +45,16 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       from: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, from }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           getController(teamName, claudeDir).review.startReview(taskId, {
             ...(from ? { from } : {}),
           }) as Record<string, unknown>
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -63,8 +68,9 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       notifyOwner: z.boolean().optional(),
       leadSessionId: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from, note, notifyOwner, leadSessionId }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, from, note, notifyOwner, leadSessionId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           slimTask(
             getController(teamName, claudeDir).review.approveReview(taskId, {
@@ -75,7 +81,8 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
             }) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -88,8 +95,9 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       comment: z.string().optional(),
       leadSessionId: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from, comment, leadSessionId }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, from, comment, leadSessionId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           slimTask(
             getController(teamName, claudeDir).review.requestChanges(taskId, {
@@ -99,6 +107,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
             }) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 }

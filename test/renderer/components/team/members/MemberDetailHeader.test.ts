@@ -10,7 +10,8 @@ vi.mock('@renderer/components/ui/badge', () => ({
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
-  DialogTitle: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+  DialogTitle: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
   DialogDescription: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
 }));
@@ -100,7 +101,7 @@ describe('MemberDetailHeader spawn-aware presence', () => {
     });
   });
 
-  it('shows connecting while the runtime is online but bootstrap is still pending', async () => {
+  it('shows waiting for bootstrap while the runtime is online but bootstrap is still pending', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -121,9 +122,9 @@ describe('MemberDetailHeader spawn-aware presence', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('connecting');
+    expect(host.textContent).toContain('waiting for bootstrap');
     expect(host.textContent).not.toContain('online');
-    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="waiting for bootstrap"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();

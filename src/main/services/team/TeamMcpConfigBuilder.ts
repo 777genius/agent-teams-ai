@@ -227,17 +227,7 @@ export async function resolveAgentTeamsMcpLaunchSpec(): Promise<McpLaunchSpec> {
     logger.warn(`Packaged MCP entry not found at ${packagedEntry}, falling back to workspace`);
   }
 
-  // 2. Dev mode — prefer built dist for reliable direct execution
-  const builtEntry = getBuiltServerEntry();
-  checked.push(builtEntry);
-  if (await pathExists(builtEntry)) {
-    return {
-      command: await resolveNodePath(),
-      args: [builtEntry],
-    };
-  }
-
-  // 3. Dev mode fallback — run source directly through a local tsx binary
+  // 2. Dev mode — prefer source so pnpm dev always sees current MCP tools
   const sourceEntry = getSourceServerEntry();
   checked.push(sourceEntry);
   if (await pathExists(sourceEntry)) {
@@ -250,6 +240,16 @@ export async function resolveAgentTeamsMcpLaunchSpec(): Promise<McpLaunchSpec> {
         };
       }
     }
+  }
+
+  // 3. Dev mode fallback — use built dist when source execution is unavailable
+  const builtEntry = getBuiltServerEntry();
+  checked.push(builtEntry);
+  if (await pathExists(builtEntry)) {
+    return {
+      command: await resolveNodePath(),
+      args: [builtEntry],
+    };
   }
 
   throw new Error(

@@ -62,6 +62,7 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
       pid={presentation.progress.pid}
       cliLogsTail={presentation.progress.cliLogsTail}
       assistantOutput={presentation.progress.assistantOutput}
+      launchDiagnostics={presentation.progress.launchDiagnostics}
       defaultLiveOutputOpen={presentation.defaultLiveOutputOpen}
       defaultLogsOpen={defaultLogsOpen}
       onCancel={

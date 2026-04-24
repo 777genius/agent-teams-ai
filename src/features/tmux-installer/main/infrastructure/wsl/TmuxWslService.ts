@@ -268,6 +268,23 @@ export class TmuxWslService {
     return this.#run(['-d', distroName, '-e', 'tmux', ...args], timeout);
   }
 
+  async execInPreferredDistro(
+    args: string[],
+    preferredDistroName?: string | null,
+    timeout = 5_000
+  ): Promise<ExecWslResult> {
+    const distroName = preferredDistroName ?? (await this.probe()).preference?.preferredDistroName;
+    if (!distroName) {
+      return {
+        exitCode: 1,
+        stdout: '',
+        stderr: 'No WSL distribution is available.',
+      };
+    }
+
+    return this.#run(['-d', distroName, '-e', ...args], timeout);
+  }
+
   getPersistedPreferredDistroSync(): string | null {
     return this.#preferenceStore.getPreferredDistroSync();
   }

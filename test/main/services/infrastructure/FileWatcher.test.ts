@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import type * as FsType from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@shared/utils/logger', () => ({
@@ -497,6 +498,69 @@ describe('FileWatcher', () => {
       expect(watcherAny.activeSessionFiles.has(filePath)).toBe(false);
       expect(watcherAny.lastProcessedSize.has(filePath)).toBe(false);
       expect(watcherAny.lastProcessedLineCount.has(filePath)).toBe(false);
+
+      watcher.stop();
+    });
+
+    it('retires catch-up files after repeated stat timeouts', async () => {
+      vi.useRealTimers();
+      vi.mocked(errorDetector.detectErrors).mockClear();
+
+      const fsProvider = {
+        type: 'local' as const,
+        exists: vi.fn().mockResolvedValue(true),
+        readFile: vi.fn().mockResolvedValue(''),
+        stat: vi.fn().mockRejectedValue(new Error('stat timeout')),
+        readdir: vi.fn().mockResolvedValue([]),
+        createReadStream: vi.fn(() => Readable.from([])),
+        dispose: vi.fn(),
+      };
+
+      const dataCache = new DataCache(50, 10, false);
+      const notificationManager = createMockNotificationManager();
+      const watcher = new FileWatcher(
+        dataCache,
+        '/watch-root/projects',
+        '/watch-root/todos',
+        fsProvider
+      );
+      watcher.setNotificationManager(notificationManager);
+
+      const filePath = '/watch-root/projects/test-project/session-timeout.jsonl';
+      const watcherAny = watcher as unknown as {
+        isWatching: boolean;
+        activeSessionFiles: Map<
+          string,
+          { projectId: string; sessionId: string; lastObservedAt: number }
+        >;
+        catchUpStatFailures: Map<string, number>;
+        lastProcessedSize: Map<string, number>;
+        lastProcessedLineCount: Map<string, number>;
+        runCatchUpScan: () => Promise<void>;
+      };
+      watcherAny.isWatching = true;
+      watcherAny.activeSessionFiles.set(filePath, {
+        projectId: 'test-project',
+        sessionId: 'session-timeout',
+        lastObservedAt: Date.now(),
+      });
+      watcherAny.lastProcessedSize.set(filePath, 100);
+      watcherAny.lastProcessedLineCount.set(filePath, 5);
+
+      await watcherAny.runCatchUpScan();
+      expect(watcherAny.activeSessionFiles.has(filePath)).toBe(true);
+      expect(watcherAny.catchUpStatFailures.get(filePath)).toBe(1);
+
+      await watcherAny.runCatchUpScan();
+      expect(watcherAny.activeSessionFiles.has(filePath)).toBe(true);
+      expect(watcherAny.catchUpStatFailures.get(filePath)).toBe(2);
+
+      await watcherAny.runCatchUpScan();
+      expect(watcherAny.activeSessionFiles.has(filePath)).toBe(false);
+      expect(watcherAny.catchUpStatFailures.has(filePath)).toBe(false);
+      expect(watcherAny.lastProcessedSize.get(filePath)).toBe(100);
+      expect(watcherAny.lastProcessedLineCount.get(filePath)).toBe(5);
+      expect(errorDetector.detectErrors).not.toHaveBeenCalled();
 
       watcher.stop();
     });

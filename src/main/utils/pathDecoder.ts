@@ -31,6 +31,10 @@ export function encodePath(absolutePath: string): string {
   }
 
   const encoded = absolutePath.replace(/[/\\]/g, '-');
+  const windowsDriveMatch = /^([a-zA-Z]):-(.*)$/.exec(encoded);
+  if (windowsDriveMatch) {
+    return `${windowsDriveMatch[1].toUpperCase()}--${windowsDriveMatch[2]}`;
+  }
 
   // Ensure leading dash for absolute paths
   return encoded.startsWith('-') ? encoded : `-${encoded}`;
@@ -50,7 +54,7 @@ export function decodePath(encodedName: string): string {
 
   // Legacy Windows format observed in some Claude installs: "C--Users-name-project"
   // (no leading dash, drive separator encoded as "--").
-  const legacyWindowsRegex = /^([a-zA-Z])--(.+)$/;
+  const legacyWindowsRegex = /^([a-zA-Z])--(.*)$/;
   const legacyWindowsMatch = legacyWindowsRegex.exec(encodedName);
   if (legacyWindowsMatch) {
     const drive = legacyWindowsMatch[1].toUpperCase();

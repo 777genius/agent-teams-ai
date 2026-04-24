@@ -5,7 +5,7 @@ import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { EffortLevel, TeamFastMode, TeamProviderId } from '@shared/types';
+import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 interface TeamRosterEditorSectionProps {
   members: MemberDraft[];
@@ -31,13 +31,10 @@ interface TeamRosterEditorSectionProps {
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
-  fastMode?: TeamFastMode;
-  providerFastModeDefault?: boolean;
   limitContext: boolean;
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
-  onFastModeChange?: (fastMode: TeamFastMode) => void;
   onLimitContextChange: (value: boolean) => void;
   syncModelsWithTeammates: boolean;
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
@@ -45,7 +42,6 @@ interface TeamRosterEditorSectionProps {
   headerBottom?: React.ReactNode;
   softDeleteMembers?: boolean;
   leadWarningText?: string | null;
-  leadFastModeNotice?: string | null;
   memberWarningById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   leadModelIssueText?: string | null;
@@ -79,13 +75,10 @@ export const TeamRosterEditorSection = ({
   providerId,
   model,
   effort,
-  fastMode,
-  providerFastModeDefault,
   limitContext,
   onProviderChange,
   onModelChange,
   onEffortChange,
-  onFastModeChange,
   onLimitContextChange,
   syncModelsWithTeammates,
   onSyncModelsWithTeammatesChange,
@@ -93,7 +86,6 @@ export const TeamRosterEditorSection = ({
   headerBottom,
   softDeleteMembers = false,
   leadWarningText,
-  leadFastModeNotice,
   memberWarningById,
   disableGeminiOption = false,
   leadModelIssueText,
@@ -138,18 +130,14 @@ export const TeamRosterEditorSection = ({
             providerId={providerId}
             model={model}
             effort={effort}
-            fastMode={fastMode}
-            providerFastModeDefault={providerFastModeDefault}
             limitContext={limitContext}
             onProviderChange={onProviderChange}
             onModelChange={onModelChange}
             onEffortChange={onEffortChange}
-            onFastModeChange={onFastModeChange}
             onLimitContextChange={onLimitContextChange}
             syncModelsWithTeammates={syncModelsWithTeammates}
             onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
             warningText={leadWarningText}
-            fastModeNotice={leadFastModeNotice}
             disableGeminiOption={disableGeminiOption}
             modelIssueText={leadModelIssueText}
           />

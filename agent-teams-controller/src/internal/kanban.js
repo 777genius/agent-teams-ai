@@ -101,12 +101,12 @@ function listReviewers(context) {
 
 function addReviewer(context, reviewer) {
   return withTeamBoardLock(context.paths, () => {
-    runtimeHelpers.assertExplicitTeamMemberName(context.paths, reviewer, 'reviewer', {
+    const resolvedReviewer = runtimeHelpers.assertExplicitTeamMemberName(context.paths, reviewer, 'reviewer', {
       allowLeadAliases: true,
     });
     const state = getKanbanState(context);
     const next = new Set(state.reviewers);
-    next.add(String(reviewer));
+    next.add(String(resolvedReviewer));
     kanbanStore.writeKanbanState(context.paths, context.teamName, {
       ...state,
       reviewers: [...next],
@@ -118,7 +118,13 @@ function addReviewer(context, reviewer) {
 function removeReviewer(context, reviewer) {
   return withTeamBoardLock(context.paths, () => {
     const state = getKanbanState(context);
-    const next = state.reviewers.filter((entry) => entry !== reviewer);
+    const resolvedReviewer = runtimeHelpers.resolveExplicitTeamMemberName(context.paths, reviewer, {
+      allowLeadAliases: true,
+    });
+    const reviewerNames = new Set(
+      [reviewer, resolvedReviewer].filter((entry) => typeof entry === 'string' && entry.trim())
+    );
+    const next = state.reviewers.filter((entry) => !reviewerNames.has(entry));
     kanbanStore.writeKanbanState(context.paths, context.teamName, {
       ...state,
       reviewers: next,

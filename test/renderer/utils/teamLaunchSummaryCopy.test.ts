@@ -8,7 +8,7 @@ describe('buildPendingRuntimeSummaryCopy', () => {
       buildPendingRuntimeSummaryCopy({
         confirmedCount: 2,
         expectedMemberCount: 4,
-        runtimeAlivePendingCount: 2,
+        runtimeProcessPendingCount: 2,
       })
     ).toBe(
       'Last launch is still reconciling - 2/4 teammates confirmed alive, 2 runtimes still awaiting confirmation'
@@ -20,11 +20,23 @@ describe('buildPendingRuntimeSummaryCopy', () => {
       buildPendingRuntimeSummaryCopy({
         confirmedCount: 1,
         expectedMemberCount: 3,
-        runtimeAlivePendingCount: 1,
+        runtimeProcessPendingCount: 1,
         includePeriod: true,
       })
     ).toBe(
       'Last launch is still reconciling - 1/3 teammates confirmed alive, 1 runtime still awaiting confirmation.'
     );
+  });
+
+  it('does not trust legacy runtimeAlivePendingCount as process evidence', () => {
+    expect(
+      buildPendingRuntimeSummaryCopy({
+        confirmedCount: 0,
+        expectedMemberCount: 3,
+        runtimeAlivePendingCount: 3,
+      } as Parameters<typeof buildPendingRuntimeSummaryCopy>[0] & {
+        runtimeAlivePendingCount: number;
+      })
+    ).toBe('Last launch is still reconciling');
   });
 });

@@ -74,10 +74,7 @@ export class CodexAppServerClient {
     }
   ): Promise<CodexThreadSegmentResult> {
     const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-    const initializeTimeoutMs = Math.max(
-      options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS,
-      requestTimeoutMs
-    );
+    const initializeTimeoutMs = options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS;
     const totalTimeoutMs = Math.max(
       options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS,
       initializeTimeoutMs + requestTimeoutMs + MIN_SESSION_OVERHEAD_TIMEOUT_MS
@@ -122,13 +119,13 @@ export class CodexAppServerClient {
     const liveRequestTimeoutMs = options.liveRequestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     const archivedRequestTimeoutMs = options.archivedRequestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     const sessionRequestTimeoutMs = Math.max(liveRequestTimeoutMs, archivedRequestTimeoutMs);
-    const initializeTimeoutMs = Math.max(
-      options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS,
-      sessionRequestTimeoutMs
-    );
+    const initializeTimeoutMs = options.initializeTimeoutMs ?? DEFAULT_INITIALIZE_TIMEOUT_MS;
     const totalTimeoutMs = Math.max(
       options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS,
-      initializeTimeoutMs + sessionRequestTimeoutMs + MIN_SESSION_OVERHEAD_TIMEOUT_MS
+      initializeTimeoutMs +
+        liveRequestTimeoutMs +
+        archivedRequestTimeoutMs +
+        MIN_SESSION_OVERHEAD_TIMEOUT_MS
     );
 
     return this.#withThreadListSession(
@@ -140,48 +137,53 @@ export class CodexAppServerClient {
         label: 'codex app-server thread/list',
       },
       async (session) => {
-        const [live, archived] = await Promise.allSettled([
-          session.request<ThreadListResponse>(
-            'thread/list',
-            {
-              archived: false,
-              limit: options.limit,
-              sortKey: 'updated_at',
-            },
-            liveRequestTimeoutMs
-          ),
-          session.request<ThreadListResponse>(
-            'thread/list',
-            {
-              archived: true,
-              limit: options.limit,
-              sortKey: 'updated_at',
-            },
-            archivedRequestTimeoutMs
-          ),
-        ]);
+        const live = await this.#requestThreadListSegment(session, {
+          archived: false,
+          limit: options.limit,
+          timeoutMs: liveRequestTimeoutMs,
+        });
+        const archived = await this.#requestThreadListSegment(session, {
+          archived: true,
+          limit: options.limit,
+          timeoutMs: archivedRequestTimeoutMs,
+        });
 
         return {
-          live:
-            live.status === 'fulfilled'
-              ? { threads: live.value.data ?? [] }
-              : {
-                  threads: [],
-                  error: live.reason instanceof Error ? live.reason.message : String(live.reason),
-                },
-          archived:
-            archived.status === 'fulfilled'
-              ? { threads: archived.value.data ?? [] }
-              : {
-                  threads: [],
-                  error:
-                    archived.reason instanceof Error
-                      ? archived.reason.message
-                      : String(archived.reason),
-                },
+          live,
+          archived,
         };
       }
     );
+  }
+
+  async #requestThreadListSegment(
+    session: JsonRpcSession,
+    options: {
+      archived: boolean;
+      limit: number;
+      timeoutMs: number;
+    }
+  ): Promise<CodexThreadSegmentResult> {
+    try {
+      const response = await session.request<ThreadListResponse>(
+        'thread/list',
+        {
+          archived: options.archived,
+          limit: options.limit,
+          sortKey: 'updated_at',
+        },
+        options.timeoutMs
+      );
+
+      return {
+        threads: response.data ?? [],
+      };
+    } catch (error) {
+      return {
+        threads: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   async #withThreadListSession<T>(

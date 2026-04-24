@@ -22,8 +22,6 @@ export type {
 export { OpenCodeReadinessBridge } from './opencode/bridge/OpenCodeReadinessBridge';
 export { ReviewApplierService } from './ReviewApplierService';
 export type {
-  OpenCodeTeamLaunchMode,
-  OpenCodeTeamRuntimeAdapterOptions,
   OpenCodeTeamRuntimeBridgePort,
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,

@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const TASK_ATTACHMENTS_DIR = 'task-attachments';
 const MAX_TASK_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+const LEAD_AGENT_TYPES = new Set(['team-lead', 'lead', 'orchestrator']);
 const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
   'cross_team_send',
   'cross_team_list_targets',
@@ -134,7 +135,7 @@ function isCanonicalLeadMember(member) {
   const role = typeof member.role === 'string' ? member.role.trim().toLowerCase() : '';
   const name = typeof member.name === 'string' ? member.name.trim().toLowerCase() : '';
   return (
-    agentType === 'team-lead' ||
+    LEAD_AGENT_TYPES.has(agentType) ||
     name === 'team-lead' ||
     role === 'team-lead' ||
     role === 'team lead' ||
@@ -179,12 +180,10 @@ function inferLeadName(paths) {
   const resolved = resolveTeamMembers(paths);
   const members = resolved.members || [];
   const lead =
-    members.find(
-      (member) =>
-        member &&
-        typeof member.agentType === 'string' &&
-        member.agentType.trim().toLowerCase() === 'team-lead'
-    ) ||
+    members.find((member) => {
+      const agentType = typeof member?.agentType === 'string' ? member.agentType.trim().toLowerCase() : '';
+      return LEAD_AGENT_TYPES.has(agentType);
+    }) ||
     members.find((member) => String((member && member.name) || '').trim().toLowerCase() === 'team-lead') ||
     members.find(
       (member) => {

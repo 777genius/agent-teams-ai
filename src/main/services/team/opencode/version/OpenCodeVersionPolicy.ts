@@ -1,11 +1,6 @@
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 
-import {
-  assertOpenCodeProductionE2EEvidenceBasics,
-  type OpenCodeProductionE2EEvidence,
-} from '../e2e/OpenCodeProductionE2EEvidence';
-
 import type {
   OpenCodeApiCapabilities,
   OpenCodeApiEndpointKey,
@@ -14,18 +9,14 @@ import type {
 
 export interface OpenCodeSupportedVersionPolicy {
   minimumVersion: string;
-  testedVersion: string;
   allowedPrerelease: boolean;
   requireCapabilities: boolean;
-  requireE2EArtifactsForTestedVersion: boolean;
 }
 
 export const OPENCODE_TEAM_LAUNCH_VERSION_POLICY: OpenCodeSupportedVersionPolicy = {
   minimumVersion: '1.14.19',
-  testedVersion: '1.14.19',
   allowedPrerelease: false,
   requireCapabilities: true,
-  requireE2EArtifactsForTestedVersion: true,
 };
 
 export type OpenCodeInstallMethod = 'brew' | 'npm' | 'bun' | 'manual' | 'unknown';
@@ -41,10 +32,7 @@ export type OpenCodeSupportLevel =
   | 'unsupported_too_old'
   | 'unsupported_prerelease'
   | 'supported_capabilities_pending'
-  | 'supported_e2e_pending'
   | 'production_supported';
-
-export { type OpenCodeProductionE2EEvidence } from '../e2e/OpenCodeProductionE2EEvidence';
 
 export interface OpenCodeCompatibilitySnapshot {
   schemaVersion: 1;
@@ -57,7 +45,6 @@ export interface OpenCodeCompatibilitySnapshot {
   supported: boolean;
   supportLevel: OpenCodeSupportLevel;
   apiCapabilities: OpenCodeApiCapabilities;
-  testedEvidencePath: string | null;
   diagnostics: string[];
 }
 
@@ -121,7 +108,6 @@ export function shouldReuseCompatibilitySnapshot(input: {
 export function evaluateOpenCodeSupport(input: {
   version: string;
   capabilities: OpenCodeApiCapabilities;
-  evidence: OpenCodeProductionE2EEvidence | null;
   policy?: OpenCodeSupportedVersionPolicy;
 }): OpenCodeSupportDecision {
   const policy = input.policy ?? OPENCODE_TEAM_LAUNCH_VERSION_POLICY;
@@ -157,35 +143,12 @@ export function evaluateOpenCodeSupport(input: {
     };
   }
 
-  if (policy.requireE2EArtifactsForTestedVersion) {
-    const evidenceDecision = assertOpenCodeProductionE2EGate({
-      evidence: input.evidence,
-      testedVersion: policy.testedVersion,
-    });
-    if (!evidenceDecision.ok) {
-      return {
-        supported: false,
-        supportLevel: 'supported_e2e_pending',
-        semver: parsed,
-        diagnostics: evidenceDecision.diagnostics,
-      };
-    }
-  }
-
   return {
     supported: true,
     supportLevel: 'production_supported',
     semver: parsed,
     diagnostics: [],
   };
-}
-
-export function assertOpenCodeProductionE2EGate(input: {
-  evidence: OpenCodeProductionE2EEvidence | null;
-  testedVersion: string;
-  now?: Date;
-}): { ok: boolean; diagnostics: string[] } {
-  return assertOpenCodeProductionE2EEvidenceBasics(input);
 }
 
 export function selectPermissionReplyRouteFromCache(

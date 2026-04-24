@@ -1,6 +1,6 @@
-import { getDerivedReviewState } from './taskHistory';
+import { getReviewStateFromTask } from './reviewState';
 
-import type { TaskHistoryEvent, TeamReviewState } from '@shared/types';
+import type { TeamReviewState } from '@shared/types';
 
 export type TaskChangeStateBucket = 'approved' | 'review' | 'completed' | 'active';
 
@@ -11,25 +11,8 @@ interface TaskChangeStateLike {
   kanbanColumn?: 'review' | 'approved' | null;
 }
 
-function normalizeReviewState(value: unknown): TeamReviewState {
-  return value === 'review' || value === 'needsFix' || value === 'approved' ? value : 'none';
-}
-
 function getEffectiveReviewState(task: TaskChangeStateLike): TeamReviewState {
-  if (Array.isArray(task.historyEvents) && task.historyEvents.length > 0) {
-    return getDerivedReviewState({ historyEvents: task.historyEvents as TaskHistoryEvent[] });
-  }
-
-  const explicit = normalizeReviewState(task.reviewState);
-  if (explicit !== 'none') {
-    return explicit;
-  }
-
-  if (task.kanbanColumn === 'review' || task.kanbanColumn === 'approved') {
-    return task.kanbanColumn;
-  }
-
-  return 'none';
+  return getReviewStateFromTask(task);
 }
 
 export function getTaskChangeStateBucket(task: TaskChangeStateLike): TaskChangeStateBucket {

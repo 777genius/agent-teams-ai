@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PROGRESS_LOG_TAIL_LINES,
   PROGRESS_OUTPUT_TAIL_PARTS,
+  boundLaunchDiagnostics,
   buildProgressAssistantOutput,
   buildProgressLogsTail,
 } from '../../../../src/main/services/team/progressPayload';
@@ -73,5 +74,34 @@ describe('buildProgressAssistantOutput', () => {
     const result = buildProgressAssistantOutput(parts);
     expect(result).toBeDefined();
     expect(result!.split('\n\n')).toHaveLength(PROGRESS_OUTPUT_TAIL_PARTS);
+  });
+});
+
+describe('boundLaunchDiagnostics', () => {
+  it('redacts secret CLI flags and caps diagnostic payload size', () => {
+    const longDetail = `node runtime --token super-secret ${'x'.repeat(800)}`;
+    const result = boundLaunchDiagnostics([
+      {
+        id: 'bob:tmux_shell_only',
+        memberName: 'bob',
+        severity: 'warning',
+        code: 'tmux_shell_only',
+        label: 'bob - shell only --api-key abc123',
+        detail: longDetail,
+        observedAt: '2026-04-24T12:00:00.000Z',
+      },
+    ]);
+
+    expect(result).toBeDefined();
+    expect(result).toHaveLength(1);
+    const first = result?.[0];
+    expect(first).toBeDefined();
+    if (!first) {
+      throw new Error('Expected one bounded launch diagnostic');
+    }
+    expect(first.label).toContain('--api-key [redacted]');
+    expect(first.detail).toContain('--token [redacted]');
+    expect(first.detail).not.toContain('super-secret');
+    expect(first.detail?.length).toBeLessThanOrEqual(500);
   });
 });

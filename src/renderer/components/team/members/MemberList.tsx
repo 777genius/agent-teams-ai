@@ -23,6 +23,7 @@ interface MemberListProps {
   pendingRepliesByMember?: Record<string, number>;
   memberSpawnStatuses?: Map<string, MemberSpawnStatusEntry>;
   memberRuntimeEntries?: Map<string, TeamAgentRuntimeEntry>;
+  runtimeRunId?: string | null;
   isLaunchSettling?: boolean;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
@@ -32,6 +33,8 @@ interface MemberListProps {
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
   onOpenTask?: (taskId: string) => void;
+  onRestartMember?: (memberName: string) => Promise<void> | void;
+  onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
 }
 
 function areResolvedMembersEquivalent(
@@ -150,7 +153,13 @@ function areMemberSpawnStatusesEquivalent(
       leftEntry.error !== rightEntry.error ||
       leftEntry.hardFailure !== rightEntry.hardFailure ||
       leftEntry.hardFailureReason !== rightEntry.hardFailureReason ||
+      leftEntry.skippedForLaunch !== rightEntry.skippedForLaunch ||
+      leftEntry.skipReason !== rightEntry.skipReason ||
+      leftEntry.skippedAt !== rightEntry.skippedAt ||
       leftEntry.livenessSource !== rightEntry.livenessSource ||
+      leftEntry.livenessKind !== rightEntry.livenessKind ||
+      leftEntry.runtimeDiagnostic !== rightEntry.runtimeDiagnostic ||
+      leftEntry.runtimeDiagnosticSeverity !== rightEntry.runtimeDiagnosticSeverity ||
       leftEntry.runtimeModel !== rightEntry.runtimeModel ||
       leftEntry.runtimeAlive !== rightEntry.runtimeAlive ||
       leftEntry.bootstrapConfirmed !== rightEntry.bootstrapConfirmed ||
@@ -189,14 +198,34 @@ function areMemberRuntimeEntriesEquivalent(
   if (left.size !== right.size) return false;
   for (const [key, leftEntry] of left) {
     const rightEntry = right.get(key);
+    const leftDiagnostics = leftEntry.diagnostics ?? [];
+    const rightDiagnostics = rightEntry?.diagnostics ?? [];
     if (
       leftEntry.memberName !== rightEntry?.memberName ||
       leftEntry.alive !== rightEntry?.alive ||
       leftEntry.restartable !== rightEntry?.restartable ||
       leftEntry.backendType !== rightEntry?.backendType ||
+      leftEntry.providerId !== rightEntry?.providerId ||
+      leftEntry.providerBackendId !== rightEntry?.providerBackendId ||
+      leftEntry.laneId !== rightEntry?.laneId ||
+      leftEntry.laneKind !== rightEntry?.laneKind ||
       leftEntry.pid !== rightEntry?.pid ||
       leftEntry.runtimeModel !== rightEntry?.runtimeModel ||
-      leftEntry.rssBytes !== rightEntry?.rssBytes
+      leftEntry.rssBytes !== rightEntry?.rssBytes ||
+      leftEntry.livenessKind !== rightEntry?.livenessKind ||
+      leftEntry.pidSource !== rightEntry?.pidSource ||
+      leftEntry.processCommand !== rightEntry?.processCommand ||
+      leftEntry.paneId !== rightEntry?.paneId ||
+      leftEntry.panePid !== rightEntry?.panePid ||
+      leftEntry.paneCurrentCommand !== rightEntry?.paneCurrentCommand ||
+      leftEntry.runtimePid !== rightEntry?.runtimePid ||
+      leftEntry.runtimeSessionId !== rightEntry?.runtimeSessionId ||
+      leftEntry.runtimeDiagnostic !== rightEntry?.runtimeDiagnostic ||
+      leftEntry.runtimeDiagnosticSeverity !== rightEntry?.runtimeDiagnosticSeverity ||
+      leftEntry.runtimeLastSeenAt !== rightEntry?.runtimeLastSeenAt ||
+      leftEntry.historicalBootstrapConfirmed !== rightEntry?.historicalBootstrapConfirmed ||
+      leftDiagnostics.length !== rightDiagnostics.length ||
+      !leftDiagnostics.every((value, index) => value === rightDiagnostics[index])
     ) {
       return false;
     }
@@ -215,10 +244,13 @@ function areMemberListPropsEqual(
     arePendingRepliesEquivalent(prev.pendingRepliesByMember, next.pendingRepliesByMember) &&
     areMemberSpawnStatusesEquivalent(prev.memberSpawnStatuses, next.memberSpawnStatuses) &&
     areMemberRuntimeEntriesEquivalent(prev.memberRuntimeEntries, next.memberRuntimeEntries) &&
+    prev.runtimeRunId === next.runtimeRunId &&
     prev.isLaunchSettling === next.isLaunchSettling &&
     prev.isTeamAlive === next.isTeamAlive &&
     prev.isTeamProvisioning === next.isTeamProvisioning &&
     prev.leadActivity === next.leadActivity &&
+    prev.onRestartMember === next.onRestartMember &&
+    prev.onSkipMemberForLaunch === next.onSkipMemberForLaunch &&
     areLaunchParamsEquivalent(prev.launchParams, next.launchParams)
   );
 }
@@ -230,6 +262,7 @@ export const MemberList = memo(function MemberList({
   pendingRepliesByMember,
   memberSpawnStatuses,
   memberRuntimeEntries,
+  runtimeRunId,
   isLaunchSettling,
   isTeamAlive,
   isTeamProvisioning,
@@ -239,6 +272,8 @@ export const MemberList = memo(function MemberList({
   onSendMessage,
   onAssignTask,
   onOpenTask,
+  onRestartMember,
+  onSkipMemberForLaunch,
 }: MemberListProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isWide, setIsWide] = useState(false);
@@ -332,7 +367,10 @@ export const MemberList = memo(function MemberList({
           isRemoved ? undefined : spawnEntry,
           isRemoved ? undefined : runtimeEntry
         )}
+        runtimeEntry={isRemoved ? undefined : runtimeEntry}
+        runtimeRunId={isRemoved ? undefined : runtimeRunId}
         spawnStatus={isRemoved ? undefined : spawnEntry?.status}
+        spawnEntry={isRemoved ? undefined : spawnEntry}
         spawnError={isRemoved ? undefined : (spawnEntry?.error ?? spawnEntry?.hardFailureReason)}
         spawnLivenessSource={isRemoved ? undefined : spawnEntry?.livenessSource}
         spawnLaunchState={isRemoved ? undefined : spawnEntry?.launchState}
@@ -343,6 +381,8 @@ export const MemberList = memo(function MemberList({
         onClick={() => onMemberClick?.(member)}
         onSendMessage={() => onSendMessage?.(member)}
         onAssignTask={() => onAssignTask?.(member)}
+        onRestartMember={isRemoved ? undefined : onRestartMember}
+        onSkipMemberForLaunch={isRemoved ? undefined : onSkipMemberForLaunch}
       />
     );
   };

@@ -279,6 +279,39 @@ describe('TeamBootstrapStateReader', () => {
     await expect(readBootstrapRuntimeState('demo')).resolves.toBeNull();
   });
 
+  it('does not promote bootstrap-state runtime_alive to strict runtimeAlive', async () => {
+    hoisted.files.set('/mock/teams/demo/bootstrap-state.json', {
+      contents: JSON.stringify({
+        version: 1,
+        runId: 'run-123',
+        teamName: 'demo',
+        startedAt: 1700000000000,
+        updatedAt: 1700000000500,
+        phase: 'spawning_members',
+        members: [{ name: 'alice', status: 'runtime_alive', lastObservedAt: 1700000000400 }],
+      }),
+    });
+
+    await expect(readBootstrapLaunchSnapshot('demo')).resolves.toMatchObject({
+      launchPhase: 'active',
+      members: {
+        alice: {
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          sources: {
+            configRegistered: true,
+          },
+          diagnostics: [
+            'runtime alive reported by bootstrap state',
+            'waiting for strict live verification',
+          ],
+        },
+      },
+    });
+  });
+
   it('reads persisted real-task submission state', async () => {
     hoisted.files.set('/mock/teams/demo/bootstrap-state.json', {
       contents: JSON.stringify({

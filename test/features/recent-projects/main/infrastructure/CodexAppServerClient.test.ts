@@ -21,8 +21,9 @@ function createSession(
 
 describe('CodexAppServerClient', () => {
   it('loads live and archived threads in a single app-server session', async () => {
-    const session = createSession(
-      vi.fn().mockImplementation((method: string, params?: { archived?: boolean }) => {
+    const request = vi
+      .fn()
+      .mockImplementation((method: string, params?: { archived?: boolean }) => {
         if (method === 'initialize') {
           return Promise.resolve({});
         }
@@ -40,8 +41,8 @@ describe('CodexAppServerClient', () => {
         }
 
         return Promise.reject(new Error(`Unexpected method: ${method}`));
-      })
-    );
+      });
+    const session = createSession(request);
 
     const withSession = vi.fn().mockImplementation((_options, handler) => handler(session));
     const client = new CodexAppServerClient({ withSession } as unknown as JsonRpcStdioClient);
@@ -58,11 +59,23 @@ describe('CodexAppServerClient', () => {
       expect.objectContaining({
         binaryPath: '/usr/local/bin/codex',
         requestTimeoutMs: 4500,
-        totalTimeoutMs: 12000,
+        totalTimeoutMs: 14500,
       }),
       expect.any(Function)
     );
     expect(session.notify).toHaveBeenCalledWith('initialized');
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      'thread/list',
+      expect.objectContaining({ archived: false }),
+      4500
+    );
+    expect(request).toHaveBeenNthCalledWith(
+      3,
+      'thread/list',
+      expect.objectContaining({ archived: true }),
+      2500
+    );
     expect(result).toEqual({
       live: {
         threads: [{ id: 'live-1', cwd: '/Users/test/live-project', source: 'cli' }],
@@ -113,7 +126,7 @@ describe('CodexAppServerClient', () => {
     });
   });
 
-  it('raises the session timeout budget above the longest request timeout', async () => {
+  it('raises the session timeout budget above sequential request timeouts', async () => {
     const session = createSession(
       vi.fn().mockImplementation((method: string, params?: { archived?: boolean }) => {
         if (method === 'initialize') {
@@ -140,7 +153,7 @@ describe('CodexAppServerClient', () => {
 
     expect(withSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        totalTimeoutMs: 12000,
+        totalTimeoutMs: 14500,
       }),
       expect.any(Function)
     );
@@ -187,18 +200,20 @@ describe('CodexAppServerClient', () => {
   });
 
   it('uses the longer initialize timeout for app-server startup', async () => {
-    const request = vi.fn().mockImplementation((method: string, _params?: unknown, timeoutMs?: number) => {
-      if (method === 'initialize') {
-        expect(timeoutMs).toBe(6000);
-        return Promise.resolve({});
-      }
+    const request = vi
+      .fn()
+      .mockImplementation((method: string, _params?: unknown, timeoutMs?: number) => {
+        if (method === 'initialize') {
+          expect(timeoutMs).toBe(6000);
+          return Promise.resolve({});
+        }
 
-      if (method === 'thread/list') {
-        return Promise.resolve({ data: [] });
-      }
+        if (method === 'thread/list') {
+          return Promise.resolve({ data: [] });
+        }
 
-      return Promise.reject(new Error(`Unexpected method: ${method}`));
-    });
+        return Promise.reject(new Error(`Unexpected method: ${method}`));
+      });
 
     const session = createSession(request);
     const withSession = vi.fn().mockImplementation((_options, handler) => handler(session));

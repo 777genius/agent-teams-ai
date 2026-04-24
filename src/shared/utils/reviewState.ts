@@ -24,13 +24,28 @@ export function getReviewStateFromTask(task: ReviewStateLike): TeamReviewState {
     }
   }
 
-  const explicit = normalizeReviewState(task.reviewState);
-  if (explicit !== 'none') {
+  const fallbackStatus = typeof task.status === 'string' ? task.status : null;
+  const normalizeFallback = (value: unknown): TeamReviewState | null => {
+    const explicit = normalizeReviewState(value);
+    if (explicit === 'none') return null;
+
+    if (fallbackStatus === 'in_progress' || fallbackStatus === 'deleted') {
+      return 'none';
+    }
+    if (fallbackStatus === 'pending') {
+      return explicit === 'needsFix' ? 'needsFix' : 'none';
+    }
+    if (fallbackStatus === 'completed') {
+      return explicit === 'review' || explicit === 'approved' ? explicit : 'none';
+    }
     return explicit;
-  }
+  };
+
+  const explicit = normalizeFallback(task.reviewState);
+  if (explicit) return explicit;
 
   if (task.kanbanColumn === 'review' || task.kanbanColumn === 'approved') {
-    return task.kanbanColumn;
+    return normalizeFallback(task.kanbanColumn) ?? 'none';
   }
 
   return 'none';

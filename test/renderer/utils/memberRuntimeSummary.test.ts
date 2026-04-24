@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
+import {
+  getRuntimeMemorySourceLabel,
+  resolveMemberRuntimeSummary,
+} from '@renderer/utils/memberRuntimeSummary';
 
 import type { MemberSpawnStatusEntry, ResolvedTeamMember } from '@shared/types';
 
@@ -222,5 +225,50 @@ describe('resolveMemberRuntimeSummary', () => {
         }
       )
     ).toBe('minimax-m2.5-free · via OpenCode · 183.9 MB');
+  });
+});
+
+describe('getRuntimeMemorySourceLabel', () => {
+  it('explains when RSS comes from a tmux pane shell', () => {
+    expect(
+      getRuntimeMemorySourceLabel({
+        memberName: 'alice',
+        alive: false,
+        restartable: true,
+        pid: 26676,
+        pidSource: 'tmux_pane',
+        rssBytes: 2 * 1024 * 1024,
+        updatedAt: '2026-04-24T12:00:00.000Z',
+      })
+    ).toBe('RSS source: tmux pane shell');
+  });
+
+  it('explains shared OpenCode host memory separately from member-owned runtime memory', () => {
+    expect(
+      getRuntimeMemorySourceLabel({
+        memberName: 'alice',
+        alive: true,
+        restartable: false,
+        providerId: 'opencode',
+        pid: 333,
+        pidSource: 'opencode_bridge',
+        rssBytes: 183.9 * 1024 * 1024,
+        updatedAt: '2026-04-24T12:00:00.000Z',
+      })
+    ).toBe('RSS source: shared OpenCode host');
+  });
+
+  it('labels verified runtime child memory as runtime process memory', () => {
+    expect(
+      getRuntimeMemorySourceLabel({
+        memberName: 'alice',
+        alive: true,
+        restartable: true,
+        pid: 4242,
+        pidSource: 'tmux_child',
+        rssBytes: 256 * 1024 * 1024,
+        updatedAt: '2026-04-24T12:00:00.000Z',
+      })
+    ).toBe('RSS source: runtime process');
   });
 });

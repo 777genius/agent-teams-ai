@@ -374,6 +374,19 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   set,
   get
 ) => {
+  const addMatchingReviewPathAliases = (
+    aliases: Set<string>,
+    filePath: string,
+    canonicalFilePath: string,
+    record: Record<string, unknown>
+  ): void => {
+    for (const key of Object.keys(record)) {
+      if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, canonicalFilePath)) {
+        aliases.add(key);
+      }
+    }
+  };
+
   const buildResolvedFileInvalidation = (
     s: ChangeReviewSlice,
     filePath: string
@@ -388,17 +401,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     const existing = findReviewFileByPath(s.activeChangeSet?.files, filePath);
     const canonicalFilePath = existing?.filePath ?? filePath;
     const aliases = new Set([filePath, canonicalFilePath]);
-    const addMatchingAliases = (record: Record<string, unknown>): void => {
-      for (const key of Object.keys(record)) {
-        if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, canonicalFilePath)) {
-          aliases.add(key);
-        }
-      }
-    };
-    addMatchingAliases(s.fileChunkCounts);
-    addMatchingAliases(s.fileContents);
-    addMatchingAliases(s.fileContentsLoading);
-    addMatchingAliases(s.fileContentVersionByPath);
+    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
+    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
+    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContentsLoading);
+    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContentVersionByPath);
     const nextFileChunkCounts = { ...s.fileChunkCounts };
     for (const alias of aliases) delete nextFileChunkCounts[alias];
 
@@ -1461,18 +1467,21 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         await api.review.saveEditedFile(canonicalFilePath, content, projectPath);
         set((s) => {
           const aliases = new Set([filePath, canonicalFilePath]);
-          const addMatchingAliases = (record: Record<string, unknown>): void => {
-            for (const key of Object.keys(record)) {
-              if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, canonicalFilePath)) {
-                aliases.add(key);
-              }
-            }
-          };
-          addMatchingAliases(s.editedContents);
-          addMatchingAliases(s.fileChunkCounts);
-          addMatchingAliases(s.hunkContextHashesByFile);
-          addMatchingAliases(s.reviewExternalChangesByFile);
-          addMatchingAliases(s.fileContents);
+          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.editedContents);
+          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
+          addMatchingReviewPathAliases(
+            aliases,
+            filePath,
+            canonicalFilePath,
+            s.hunkContextHashesByFile
+          );
+          addMatchingReviewPathAliases(
+            aliases,
+            filePath,
+            canonicalFilePath,
+            s.reviewExternalChangesByFile
+          );
+          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
 
           const nextEdited = { ...s.editedContents };
           for (const alias of aliases) delete nextEdited[alias];

@@ -12,6 +12,9 @@ import type {
   PersistedTeamLaunchSnapshot,
   PersistedTeamLaunchSummary,
   ProviderModelLaunchIdentity,
+  TeamAgentRuntimeDiagnosticSeverity,
+  TeamAgentRuntimeLivenessKind,
+  TeamAgentRuntimePidSource,
   TeamLaunchAggregateState,
 } from '@shared/types';
 
@@ -36,9 +39,17 @@ type RuntimeMemberSpawnState = Pick<
   | 'runtimeAlive'
   | 'bootstrapConfirmed'
   | 'hardFailure'
+  | 'skippedForLaunch'
+  | 'skipReason'
+  | 'skippedAt'
   | 'pendingPermissionRequestIds'
+  | 'livenessKind'
+  | 'runtimeDiagnostic'
+  | 'runtimeDiagnosticSeverity'
+  | 'livenessLastCheckedAt'
   | 'firstSpawnAcceptedAt'
   | 'lastHeartbeatAt'
+  | 'runtimeModel'
   | 'updatedAt'
 >;
 
@@ -59,6 +70,58 @@ function normalizeRuntimePid(value: unknown): number | undefined {
     : undefined;
 }
 
+function normalizeLivenessKind(value: unknown): TeamAgentRuntimeLivenessKind | undefined {
+  return value === 'confirmed_bootstrap' ||
+    value === 'runtime_process' ||
+    value === 'runtime_process_candidate' ||
+    value === 'permission_blocked' ||
+    value === 'shell_only' ||
+    value === 'registered_only' ||
+    value === 'stale_metadata' ||
+    value === 'not_found'
+    ? value
+    : undefined;
+}
+
+function preservesStrongRuntimeAlive(
+  value:
+    | {
+        runtimeAlive?: boolean;
+        bootstrapConfirmed?: boolean;
+        livenessKind?: TeamAgentRuntimeLivenessKind;
+      }
+    | undefined
+): boolean {
+  return (
+    value?.runtimeAlive === true &&
+    (value.bootstrapConfirmed === true ||
+      value.livenessKind === 'confirmed_bootstrap' ||
+      value.livenessKind === 'runtime_process')
+  );
+}
+
+function normalizePidSource(value: unknown): TeamAgentRuntimePidSource | undefined {
+  return value === 'lead_process' ||
+    value === 'tmux_pane' ||
+    value === 'tmux_child' ||
+    value === 'agent_process_table' ||
+    value === 'opencode_bridge' ||
+    value === 'runtime_bootstrap' ||
+    value === 'persisted_metadata'
+    ? value
+    : undefined;
+}
+
+function normalizeDiagnosticSeverity(
+  value: unknown
+): TeamAgentRuntimeDiagnosticSeverity | undefined {
+  return value === 'info' || value === 'warning' || value === 'error' ? value : undefined;
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
 function normalizeMemberName(name: string): string {
   return name.trim();
 }
@@ -70,6 +133,8 @@ function buildDiagnostics(
     | 'runtimeAlive'
     | 'bootstrapConfirmed'
     | 'hardFailureReason'
+    | 'skippedForLaunch'
+    | 'skipReason'
     | 'sources'
     | 'pendingPermissionRequestIds'
   >
@@ -85,6 +150,13 @@ function buildDiagnostics(
   }
   if (member.hardFailureReason)
     diagnostics.push(`hard failure reason: ${member.hardFailureReason}`);
+  if (member.skippedForLaunch) {
+    diagnostics.push(
+      member.skipReason
+        ? `skipped for this launch: ${member.skipReason}`
+        : 'skipped for this launch'
+    );
+  }
   if (member.sources?.duplicateRespawnBlocked) diagnostics.push('respawn blocked as duplicate');
   if (member.sources?.configDrift) diagnostics.push('config drift detected');
   return diagnostics;
@@ -99,6 +171,9 @@ export function deriveTeamLaunchAggregateState(
   if (summary.pendingCount > 0) {
     return 'partial_pending';
   }
+  if ((summary.skippedCount ?? 0) > 0) {
+    return 'partial_skipped';
+  }
   return 'clean_success';
 }
 
@@ -109,7 +184,13 @@ export function summarizePersistedLaunchMembers(
   let confirmedCount = 0;
   let pendingCount = 0;
   let failedCount = 0;
+  let skippedCount = 0;
   let runtimeAlivePendingCount = 0;
+  let shellOnlyPendingCount = 0;
+  let runtimeProcessPendingCount = 0;
+  let runtimeCandidatePendingCount = 0;
+  let noRuntimePendingCount = 0;
+  let permissionPendingCount = 0;
   const normalizedExpected = expectedMembers.map(normalizeMemberName).filter(Boolean);
   const memberNames = Array.from(
     new Set([
@@ -128,17 +209,48 @@ export function summarizePersistedLaunchMembers(
       confirmedCount += 1;
       continue;
     }
+    if (entry.launchState === 'skipped_for_launch' || entry.skippedForLaunch === true) {
+      skippedCount += 1;
+      continue;
+    }
     if (entry.launchState === 'failed_to_start') {
       failedCount += 1;
       continue;
     }
     pendingCount += 1;
-    if (entry.runtimeAlive) {
+    if (preservesStrongRuntimeAlive(entry)) {
       runtimeAlivePendingCount += 1;
+    }
+    if (entry.launchState === 'runtime_pending_permission') {
+      permissionPendingCount += 1;
+    }
+    if (entry.livenessKind === 'shell_only') {
+      shellOnlyPendingCount += 1;
+    } else if (entry.livenessKind === 'runtime_process') {
+      runtimeProcessPendingCount += 1;
+    } else if (entry.livenessKind === 'runtime_process_candidate') {
+      runtimeCandidatePendingCount += 1;
+    } else if (
+      entry.livenessKind === 'not_found' ||
+      entry.livenessKind === 'stale_metadata' ||
+      entry.livenessKind === 'registered_only'
+    ) {
+      noRuntimePendingCount += 1;
     }
   }
 
-  return { confirmedCount, pendingCount, failedCount, runtimeAlivePendingCount };
+  return {
+    confirmedCount,
+    pendingCount,
+    failedCount,
+    skippedCount,
+    runtimeAlivePendingCount,
+    shellOnlyPendingCount,
+    runtimeProcessPendingCount,
+    runtimeCandidatePendingCount,
+    noRuntimePendingCount,
+    permissionPendingCount,
+  };
 }
 
 export function hasMixedPersistedLaunchMetadata(
@@ -169,9 +281,13 @@ function deriveMemberLaunchState(
     | 'bootstrapConfirmed'
     | 'runtimeAlive'
     | 'agentToolAccepted'
+    | 'skippedForLaunch'
     | 'pendingPermissionRequestIds'
   >
 ): MemberLaunchState {
+  if (member.skippedForLaunch) {
+    return 'skipped_for_launch';
+  }
   if (member.hardFailure) {
     return 'failed_to_start';
   }
@@ -299,6 +415,23 @@ function normalizePersistedMemberState(
     return null;
   }
   const providerId = normalizeOptionalTeamProviderId(parsed.providerId);
+  const skippedForLaunch =
+    toBoolean(parsed.skippedForLaunch) || parsed.launchState === 'skipped_for_launch';
+  const bootstrapConfirmed =
+    !skippedForLaunch &&
+    (toBoolean(parsed.bootstrapConfirmed) || parsed.launchState === 'confirmed_alive');
+  const livenessKind = normalizeLivenessKind(parsed.livenessKind);
+  const runtimeAlive = skippedForLaunch
+    ? false
+    : preservesStrongRuntimeAlive({
+        runtimeAlive: toBoolean(parsed.runtimeAlive),
+        bootstrapConfirmed,
+        livenessKind,
+      });
+  const sources = normalizeSources(parsed.sources) ?? {};
+  if (!runtimeAlive) {
+    sources.processAlive = undefined;
+  }
   const next: PersistedTeamLaunchMemberState = {
     name: normalizedName,
     providerId,
@@ -328,18 +461,28 @@ function normalizePersistedMemberState(
     laneOwnerProviderId: normalizeOptionalTeamProviderId(parsed.laneOwnerProviderId),
     launchIdentity: normalizeLaunchIdentity(parsed.launchIdentity, providerId),
     launchState: 'starting',
-    agentToolAccepted: toBoolean(parsed.agentToolAccepted),
-    runtimeAlive: toBoolean(parsed.runtimeAlive),
-    bootstrapConfirmed: toBoolean(parsed.bootstrapConfirmed),
-    hardFailure: toBoolean(parsed.hardFailure),
-    hardFailureReason:
-      typeof parsed.hardFailureReason === 'string' && parsed.hardFailureReason.trim().length > 0
+    skippedForLaunch,
+    skipReason: normalizeOptionalString(parsed.skipReason),
+    skippedAt: normalizeOptionalString(parsed.skippedAt),
+    agentToolAccepted: skippedForLaunch ? false : toBoolean(parsed.agentToolAccepted),
+    runtimeAlive,
+    bootstrapConfirmed,
+    hardFailure: skippedForLaunch ? false : toBoolean(parsed.hardFailure),
+    hardFailureReason: skippedForLaunch
+      ? undefined
+      : typeof parsed.hardFailureReason === 'string' && parsed.hardFailureReason.trim().length > 0
         ? parsed.hardFailureReason.trim()
         : undefined,
     pendingPermissionRequestIds: normalizePendingPermissionRequestIds(
       parsed.pendingPermissionRequestIds
     ),
     runtimePid: normalizeRuntimePid(parsed.runtimePid),
+    runtimeSessionId: normalizeOptionalString(parsed.runtimeSessionId),
+    livenessKind,
+    pidSource: normalizePidSource(parsed.pidSource),
+    runtimeDiagnostic: normalizeOptionalString(parsed.runtimeDiagnostic),
+    runtimeDiagnosticSeverity: normalizeDiagnosticSeverity(parsed.runtimeDiagnosticSeverity),
+    runtimeLastSeenAt: normalizeOptionalString(parsed.runtimeLastSeenAt),
     firstSpawnAcceptedAt:
       typeof parsed.firstSpawnAcceptedAt === 'string' ? parsed.firstSpawnAcceptedAt : undefined,
     lastHeartbeatAt:
@@ -348,7 +491,7 @@ function normalizePersistedMemberState(
       typeof parsed.lastRuntimeAliveAt === 'string' ? parsed.lastRuntimeAliveAt : undefined,
     lastEvaluatedAt:
       typeof parsed.lastEvaluatedAt === 'string' ? parsed.lastEvaluatedAt : updatedAtFallback,
-    sources: normalizeSources(parsed.sources),
+    sources: Object.values(sources).some(Boolean) ? sources : undefined,
     diagnostics: Array.isArray(parsed.diagnostics)
       ? parsed.diagnostics.filter(
           (item): item is string => typeof item === 'string' && item.trim().length > 0
@@ -360,7 +503,8 @@ function normalizePersistedMemberState(
     parsed.launchState === 'runtime_pending_bootstrap' ||
     parsed.launchState === 'runtime_pending_permission' ||
     parsed.launchState === 'confirmed_alive' ||
-    parsed.launchState === 'failed_to_start'
+    parsed.launchState === 'failed_to_start' ||
+    parsed.launchState === 'skipped_for_launch'
       ? parsed.launchState
       : deriveMemberLaunchState(next);
   next.launchState = launchState;
@@ -402,6 +546,7 @@ export function createPersistedLaunchSnapshot(params: {
     members[name] = {
       name,
       launchState: 'starting',
+      skippedForLaunch: false,
       agentToolAccepted: false,
       runtimeAlive: false,
       bootstrapConfirmed: false,
@@ -478,23 +623,39 @@ export function snapshotFromRuntimeMemberStatuses(params: {
       sources.nativeHeartbeat = true;
       sources.inboxHeartbeat = true;
     }
-    if (runtime?.livenessSource === 'process' || runtime?.runtimeAlive) {
+    const skippedForLaunch =
+      runtime?.skippedForLaunch === true || runtime?.launchState === 'skipped_for_launch';
+    const runtimeAlive = skippedForLaunch ? false : preservesStrongRuntimeAlive(runtime);
+    if (runtime?.livenessSource === 'process' && runtimeAlive) {
       sources.processAlive = true;
     }
     const entry: PersistedTeamLaunchMemberState = {
       name,
       launchState: runtime?.launchState ?? 'starting',
-      agentToolAccepted: runtime?.agentToolAccepted === true,
-      runtimeAlive: runtime?.runtimeAlive === true,
-      bootstrapConfirmed: runtime?.bootstrapConfirmed === true,
-      hardFailure: runtime?.hardFailure === true || runtime?.launchState === 'failed_to_start',
-      hardFailureReason: runtime?.hardFailureReason ?? runtime?.error,
+      skippedForLaunch,
+      skipReason: runtime?.skipReason,
+      skippedAt: runtime?.skippedAt,
+      agentToolAccepted: skippedForLaunch ? false : runtime?.agentToolAccepted === true,
+      runtimeAlive,
+      bootstrapConfirmed: skippedForLaunch ? false : runtime?.bootstrapConfirmed === true,
+      hardFailure:
+        runtime?.launchState === 'skipped_for_launch'
+          ? false
+          : runtime?.hardFailure === true || runtime?.launchState === 'failed_to_start',
+      hardFailureReason:
+        runtime?.launchState === 'skipped_for_launch'
+          ? undefined
+          : (runtime?.hardFailureReason ?? runtime?.error),
       pendingPermissionRequestIds: runtime?.pendingPermissionRequestIds?.length
         ? [...new Set(runtime.pendingPermissionRequestIds)]
         : undefined,
+      livenessKind: runtime?.livenessKind,
+      runtimeDiagnostic: runtime?.runtimeDiagnostic,
+      runtimeDiagnosticSeverity: runtime?.runtimeDiagnosticSeverity,
+      runtimeLastSeenAt: runtime?.livenessLastCheckedAt,
       firstSpawnAcceptedAt: runtime?.firstSpawnAcceptedAt,
       lastHeartbeatAt: runtime?.lastHeartbeatAt,
-      lastRuntimeAliveAt: runtime?.runtimeAlive ? updatedAt : undefined,
+      lastRuntimeAliveAt: runtimeAlive ? updatedAt : undefined,
       lastEvaluatedAt: runtime?.updatedAt ?? updatedAt,
       sources: Object.values(sources).some(Boolean) ? sources : undefined,
       diagnostics: undefined,
@@ -530,8 +691,13 @@ export function snapshotToMemberSpawnStatuses(
     if (!entry) continue;
     let status: MemberSpawnStatusEntry['status'] = 'offline';
     let livenessSource: MemberSpawnLivenessSource | undefined;
+    const skippedForLaunch =
+      entry.launchState === 'skipped_for_launch' || entry.skippedForLaunch === true;
+    const runtimeAlive = skippedForLaunch ? false : preservesStrongRuntimeAlive(entry);
     if (entry.launchState === 'failed_to_start') {
       status = 'error';
+    } else if (entry.launchState === 'skipped_for_launch') {
+      status = 'skipped';
     } else if (entry.launchState === 'confirmed_alive') {
       status = 'online';
       livenessSource = 'heartbeat';
@@ -539,8 +705,8 @@ export function snapshotToMemberSpawnStatuses(
       entry.launchState === 'runtime_pending_permission' ||
       entry.launchState === 'runtime_pending_bootstrap'
     ) {
-      status = entry.runtimeAlive ? 'online' : 'waiting';
-      livenessSource = entry.runtimeAlive ? 'process' : undefined;
+      status = runtimeAlive ? 'online' : 'waiting';
+      livenessSource = runtimeAlive ? 'process' : undefined;
     } else {
       status = entry.agentToolAccepted ? 'waiting' : 'spawning';
     }
@@ -549,12 +715,19 @@ export function snapshotToMemberSpawnStatuses(
       launchState: entry.launchState,
       error: entry.hardFailure ? entry.hardFailureReason : undefined,
       hardFailureReason: entry.hardFailureReason,
+      skippedForLaunch: entry.skippedForLaunch,
+      skipReason: entry.skipReason,
+      skippedAt: entry.skippedAt,
       livenessSource,
-      agentToolAccepted: entry.agentToolAccepted,
-      runtimeAlive: entry.runtimeAlive,
-      bootstrapConfirmed: entry.bootstrapConfirmed,
-      hardFailure: entry.hardFailure,
+      agentToolAccepted: skippedForLaunch ? false : entry.agentToolAccepted,
+      runtimeAlive,
+      bootstrapConfirmed: skippedForLaunch ? false : entry.bootstrapConfirmed,
+      hardFailure: skippedForLaunch ? false : entry.hardFailure,
       pendingPermissionRequestIds: entry.pendingPermissionRequestIds,
+      livenessKind: entry.livenessKind,
+      runtimeDiagnostic: entry.runtimeDiagnostic,
+      runtimeDiagnosticSeverity: entry.runtimeDiagnosticSeverity,
+      livenessLastCheckedAt: entry.runtimeLastSeenAt ?? entry.lastEvaluatedAt,
       firstSpawnAcceptedAt: entry.firstSpawnAcceptedAt,
       lastHeartbeatAt: entry.lastHeartbeatAt,
       updatedAt: entry.lastEvaluatedAt,

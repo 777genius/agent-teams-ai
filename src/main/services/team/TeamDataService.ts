@@ -14,7 +14,7 @@ import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSema
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
+import { getKanbanColumnFromReviewState, getReviewStateFromTask } from '@shared/utils/reviewState';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
@@ -265,6 +265,11 @@ function extractPassiveUserPeerSummaryBody(text: string): string | null {
   return body.length > 0 ? body : null;
 }
 
+function isExplicitLeadRole(role: string | undefined): boolean {
+  const normalized = role?.trim().toLowerCase();
+  return normalized === 'lead' || normalized === 'team lead' || normalized === 'team-lead';
+}
+
 function hasVisibleLeadMember(members: readonly TeamMemberSnapshot[]): boolean {
   return members.some((member) => {
     if (isLeadMember(member)) {
@@ -274,7 +279,7 @@ function hasVisibleLeadMember(members: readonly TeamMemberSnapshot[]): boolean {
     if (normalizedName === 'lead') {
       return true;
     }
-    return member.role?.toLowerCase().includes('lead') === true;
+    return isExplicitLeadRole(member.role);
   });
 }
 
@@ -287,7 +292,7 @@ function hasExplicitLeadInConfig(config: TeamConfig): boolean {
     if (normalizedName === 'lead') {
       return true;
     }
-    return member.role?.toLowerCase().includes('lead') === true;
+    return isExplicitLeadRole(member.role);
   });
 }
 
@@ -530,16 +535,22 @@ export class TeamDataService {
   }
 
   private resolveTaskReviewState(
-    task: Pick<TeamTask, 'reviewState'>
+    task: Pick<TeamTask, 'reviewState' | 'historyEvents' | 'status'>,
+    kanbanTaskState?: KanbanState['tasks'][string]
   ): 'none' | 'review' | 'needsFix' | 'approved' {
-    return normalizeReviewState(task.reviewState);
+    return getReviewStateFromTask({
+      historyEvents: task.historyEvents,
+      reviewState: task.reviewState,
+      status: task.status,
+      kanbanColumn: kanbanTaskState?.column,
+    });
   }
 
   private attachKanbanCompatibility(
     task: TeamTask,
     kanbanTaskState?: KanbanState['tasks'][string]
   ): TeamTaskWithKanban {
-    const reviewState = this.resolveTaskReviewState(task);
+    const reviewState = this.resolveTaskReviewState(task, kanbanTaskState);
     const reviewer = this.resolveReviewerFromHistory(task, kanbanTaskState, reviewState) ?? null;
     return {
       ...task,
@@ -557,8 +568,15 @@ export class TeamDataService {
   private resolveReviewerFromHistory(
     task: TeamTask,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = this.resolveTaskReviewState(task)
+    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = this.resolveTaskReviewState(
+      task,
+      kanbanTaskState
+    )
   ): string | null {
+    if (reviewState !== 'review') {
+      return null;
+    }
+
     if (task.historyEvents?.length) {
       for (let i = task.historyEvents.length - 1; i >= 0; i--) {
         const event = task.historyEvents[i];
@@ -571,7 +589,10 @@ export class TeamDataService {
         if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
           break;
         }
-        if (event.type === 'status_changed' && event.to === 'in_progress') {
+        if (
+          event.type === 'status_changed' &&
+          (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted')
+        ) {
           break;
         }
         if (event.type === 'task_created') {
@@ -894,7 +915,8 @@ export class TeamDataService {
         continue;
       }
       const info = teamInfoMap.get(task.teamName)!;
-      const reviewState = this.resolveTaskReviewState(task);
+      const kanbanTaskState = kanbanByTeam.get(task.teamName)?.tasks[task.id];
+      const reviewState = this.resolveTaskReviewState(task, kanbanTaskState);
       const kanbanColumn = getKanbanColumnFromReviewState(reviewState);
 
       // IPC payload safety: GlobalTask lists can be enormous (especially comments and large nested fields).
@@ -2158,7 +2180,11 @@ export class TeamDataService {
 
   private resolveLeadNameFromConfig(config: TeamConfig | null): string {
     if (!config) return 'team-lead';
-    const lead = config.members?.find((m) => m.role?.toLowerCase().includes('lead'));
+    const members = config.members ?? [];
+    const lead =
+      members.find((member) => isLeadMember(member)) ??
+      members.find((member) => member.name?.trim().toLowerCase() === 'lead') ??
+      members.find((member) => isExplicitLeadRole(member.role));
     return lead?.name ?? config.members?.[0]?.name ?? 'team-lead';
   }
 
@@ -2731,9 +2757,9 @@ export class TeamDataService {
   }
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
-    const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+    const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
     this.getController(teamName).review.requestReview(taskId, {
-      from: 'user',
+      from: leadName,
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }
@@ -3196,15 +3222,15 @@ export class TeamDataService {
 
     if (patch.op === 'set_column') {
       if (patch.column === 'review') {
-        const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+        const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
         controller.review.requestReview(taskId, {
-          from: 'user',
+          from: leadName,
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
-        const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+        const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
         controller.review.approveReview(taskId, {
-          from: 'user',
+          from: leadName,
           suppressTaskComment: true,
           'notify-owner': true,
           ...(leadSessionId ? { leadSessionId } : {}),
@@ -3213,9 +3239,9 @@ export class TeamDataService {
       return;
     }
 
-    const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+    const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
     controller.review.requestChanges(taskId, {
-      from: 'user',
+      from: leadName,
       comment: patch.comment?.trim() || 'Reviewer requested changes.',
       ...(patch.op === 'request_changes' && patch.taskRefs?.length
         ? { taskRefs: patch.taskRefs }

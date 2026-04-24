@@ -87,6 +87,8 @@ import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
+import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
+import { CodexFastModeSelector } from './CodexFastModeSelector';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   resolveProviderScopedMemberModel,
@@ -1423,10 +1425,12 @@ export const CreateTeamDialog = ({
     const summary: string[] = [];
     if (prompt.trim()) summary.push('Lead prompt');
     if (skipPermissions) summary.push('Auto-approve tools');
-    if (selectedProviderId === 'anthropic') {
+    if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
       if (selectedFastMode === 'on') summary.push('Fast mode');
       else if (selectedFastMode === 'off') summary.push('Fast disabled');
-      else if (anthropicProviderFastModeDefault) summary.push('Fast default');
+      else if (selectedProviderId === 'anthropic' && anthropicProviderFastModeDefault) {
+        summary.push('Fast default');
+      }
     }
     if (worktreeEnabled && worktreeName.trim()) summary.push(`Worktree: ${worktreeName.trim()}`);
     if (customArgs.trim()) summary.push('Custom CLI args');
@@ -1723,9 +1727,6 @@ export const CreateTeamDialog = ({
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}
               onEffortChange={setSelectedEffort}
-              fastMode={selectedFastMode}
-              providerFastModeDefault={anthropicProviderFastModeDefault}
-              onFastModeChange={setSelectedFastMode}
               onLimitContextChange={setLimitContext}
               syncModelsWithTeammates={syncModelsWithLead}
               onSyncModelsWithTeammatesChange={handleSyncModelsWithLeadChange}
@@ -1734,7 +1735,6 @@ export const CreateTeamDialog = ({
               onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
               disableGeminiOption={isGeminiUiFrozen()}
               leadModelIssueText={leadModelIssueText}
-              leadFastModeNotice={anthropicRuntimeNotice}
               memberModelIssueById={memberModelIssueById}
               headerTop={
                 <div className="flex items-center gap-2">
@@ -1820,6 +1820,47 @@ export const CreateTeamDialog = ({
                   summary={launchOptionalSummary}
                 >
                   <div className="space-y-4">
+                    {selectedProviderId === 'anthropic' ? (
+                      <div className="space-y-2">
+                        <AnthropicFastModeSelector
+                          value={selectedFastMode}
+                          onValueChange={setSelectedFastMode}
+                          providerFastModeDefault={anthropicProviderFastModeDefault}
+                          model={selectedModel}
+                          limitContext={limitContext}
+                          id="create-fast-mode"
+                        />
+                        {anthropicRuntimeNotice ? (
+                          <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                            <p>{anthropicRuntimeNotice}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {selectedProviderId === 'codex' ? (
+                      <div className="space-y-2">
+                        <CodexFastModeSelector
+                          value={selectedFastMode}
+                          onValueChange={setSelectedFastMode}
+                          model={selectedModel}
+                          providerBackendId={
+                            resolveUiOwnedProviderBackendId(
+                              'codex',
+                              runtimeProviderStatusById.get('codex')
+                            ) ?? undefined
+                          }
+                          id="create-fast-mode"
+                        />
+                        {anthropicRuntimeNotice ? (
+                          <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                            <p>{anthropicRuntimeNotice}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     <div className="space-y-1.5">
                       <Label htmlFor="team-prompt" className="label-optional">
                         Prompt for team lead (optional)

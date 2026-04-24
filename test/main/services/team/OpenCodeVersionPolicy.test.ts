@@ -10,7 +10,6 @@ import {
   type OpenCodeApiEndpointKey,
 } from '../../../../src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities';
 import {
-  assertOpenCodeProductionE2EGate,
   buildOpenCodeBinaryFingerprint,
   evaluateOpenCodeSupport,
   parseOpenCodeSemver,
@@ -19,12 +18,6 @@ import {
   type OpenCodeCompatibilitySnapshot,
   type OpenCodeRouteCompatibilityCache,
 } from '../../../../src/main/services/team/opencode/version/OpenCodeVersionPolicy';
-import {
-  OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS,
-  OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS,
-  type OpenCodeProductionE2EEvidence,
-} from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
-import { REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 describe('OpenCodeVersionPolicy', () => {
   let tempDir: string;
@@ -58,7 +51,6 @@ describe('OpenCodeVersionPolicy', () => {
       evaluateOpenCodeSupport({
         version: '1.4.0',
         capabilities: readyCapabilities(),
-        evidence: passingEvidence(),
       })
     ).toMatchObject({
       supported: false,
@@ -70,7 +62,6 @@ describe('OpenCodeVersionPolicy', () => {
       evaluateOpenCodeSupport({
         version: '1.14.19-beta.1',
         capabilities: readyCapabilities(),
-        evidence: passingEvidence(),
       })
     ).toMatchObject({
       supported: false,
@@ -79,12 +70,11 @@ describe('OpenCodeVersionPolicy', () => {
     });
   });
 
-  it('requires capabilities and production E2E evidence before production support', () => {
+  it('requires capabilities before support', () => {
     expect(
       evaluateOpenCodeSupport({
         version: '1.14.19',
         capabilities: missingCapabilities(['POST permission reply route']),
-        evidence: passingEvidence(),
       })
     ).toMatchObject({
       supported: false,
@@ -96,23 +86,6 @@ describe('OpenCodeVersionPolicy', () => {
       evaluateOpenCodeSupport({
         version: '1.14.19',
         capabilities: readyCapabilities(),
-        evidence: null,
-      })
-    ).toMatchObject({
-      supported: false,
-      supportLevel: 'supported_e2e_pending',
-      diagnostics: [
-        'OpenCode version is capability-compatible but production E2E evidence is missing',
-      ],
-    });
-  });
-
-  it('accepts supported version only when capabilities and E2E evidence pass', () => {
-    expect(
-      evaluateOpenCodeSupport({
-        version: '1.14.19',
-        capabilities: readyCapabilities(),
-        evidence: passingEvidence(),
       })
     ).toMatchObject({
       supported: true,
@@ -121,31 +94,16 @@ describe('OpenCodeVersionPolicy', () => {
     });
   });
 
-  it('rejects stale or incomplete production E2E evidence', () => {
+  it('accepts supported version when capabilities pass', () => {
     expect(
-      assertOpenCodeProductionE2EGate({
-        evidence: passingEvidence({ version: '1.14.18' }),
-        testedVersion: '1.14.19',
+      evaluateOpenCodeSupport({
+        version: '1.14.19',
+        capabilities: readyCapabilities(),
       })
     ).toMatchObject({
-      ok: false,
-      diagnostics: expect.arrayContaining([
-        'OpenCode production E2E evidence version 1.14.18 does not match tested version 1.14.19',
-      ]),
-    });
-
-    expect(
-      assertOpenCodeProductionE2EGate({
-        evidence: passingEvidence({
-          requiredSignals: requiredSignals({ canonical_log_projection_observed: false }),
-        }),
-        testedVersion: '1.14.19',
-      })
-    ).toMatchObject({
-      ok: false,
-      diagnostics: expect.arrayContaining([
-        'OpenCode production E2E evidence is missing signals: canonical_log_projection_observed',
-      ]),
+      supported: true,
+      supportLevel: 'production_supported',
+      diagnostics: [],
     });
   });
 
@@ -260,76 +218,6 @@ function missingCapabilities(missing: string[]) {
   };
 }
 
-function passingEvidence(
-  overrides: Partial<OpenCodeProductionE2EEvidence> = {}
-): OpenCodeProductionE2EEvidence {
-  const createdAt = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 60_000).toISOString();
-  const requiredToolIds = REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) => `agent_teams_${tool}`);
-  const durableCheckpoints = OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS.map((name) => ({
-    name,
-    observedAt: createdAt,
-  }));
-
-  return {
-    schemaVersion: 1,
-    evidenceId: 'e2e-1',
-    createdAt,
-    expiresAt,
-    version: '1.14.19',
-    passed: true,
-    artifactPath: '/tmp/opencode-e2e',
-    binaryFingerprint: 'version:1.14.19',
-    capabilitySnapshotId: 'cap-1',
-    selectedModel: 'openai/gpt-5.4-mini',
-    projectPathFingerprint: 'project-a',
-    requiredSignals: requiredSignals(),
-    mcpTools: {
-      requiredTools: requiredToolIds,
-      observedTools: requiredToolIds,
-    },
-    launch: {
-      runId: 'run-1',
-      teamId: 'team-a',
-      teamLaunchState: 'ready',
-      memberCount: 1,
-      sessions: [
-        {
-          memberName: 'Dev',
-          sessionId: 'ses-1',
-          launchState: 'confirmed_alive',
-        },
-      ],
-      durableCheckpoints,
-    },
-    reconcile: {
-      runId: 'run-1',
-      teamLaunchState: 'ready',
-      memberCount: 1,
-    },
-    stop: {
-      runId: 'run-1',
-      stopped: true,
-      stoppedSessionIds: ['ses-1'],
-    },
-    logProjection: {
-      observed: true,
-      projectedMessageCount: 1,
-    },
-    ...overrides,
-  };
-}
-
-function requiredSignals(
-  overrides: Partial<
-    Record<(typeof OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS)[number], boolean>
-  > = {}
-) {
-  return Object.fromEntries(
-    OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS.map((signal) => [signal, overrides[signal] ?? true])
-  ) as OpenCodeProductionE2EEvidence['requiredSignals'];
-}
-
 function compatibilitySnapshot(
   overrides: Partial<OpenCodeCompatibilitySnapshot>
 ): OpenCodeCompatibilitySnapshot {
@@ -349,7 +237,6 @@ function compatibilitySnapshot(
     supported: true,
     supportLevel: 'production_supported',
     apiCapabilities: readyCapabilities(),
-    testedEvidencePath: '/tmp/opencode-e2e',
     diagnostics: [],
     ...overrides,
   };

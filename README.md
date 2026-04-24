@@ -320,6 +320,7 @@ pnpm dist            # macOS + Windows + Linux
 - [ ] Run terminal commands
 - [ ] Monitor agents processes/stats
 - [ ] Reusable agents with SOUL.md
+- [ ] Сommunicate via messenger
 
 ---
 

@@ -21,7 +21,7 @@ export {
 type SupportedProviderId = CliProviderId | TeamProviderId;
 type RuntimeAwareProviderStatus = Pick<
   CliProviderStatus,
-  'providerId' | 'authMethod' | 'backend' | 'modelCatalog' | 'runtimeCapabilities'
+  'providerId' | 'authMethod' | 'backend' | 'modelCatalog'
 >;
 
 export interface TeamProviderModelOption {
@@ -40,8 +40,6 @@ export const GPT_5_2_CODEX_UI_DISABLED_REASON =
   'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.';
 export const GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON =
   'Temporarily disabled for team agents - this model has been less reliable with bootstrap, task, and reply tool contracts.';
-export const CODEX_DYNAMIC_MODEL_REQUIRES_RUNTIME_SUPPORT_REASON =
-  'Available in Codex, waiting for Agent Teams runtime support.';
 
 const TEAM_PROVIDER_LABELS: Record<SupportedProviderId, string> = {
   anthropic: 'Anthropic',
@@ -164,13 +162,6 @@ function getKnownTeamProviderModelOption(
     return undefined;
   }
   return TEAM_PROVIDER_MODEL_OPTIONS[providerId].find((option) => option.value === trimmed);
-}
-
-function isKnownTeamProviderModel(
-  providerId: SupportedProviderId | undefined,
-  model: string | undefined
-): boolean {
-  return Boolean(getKnownTeamProviderModelOption(providerId, model));
 }
 
 export function getTeamProviderModelOptions(
@@ -469,18 +460,6 @@ export function getRuntimeAwareTeamModelUiDisabledReason(
   const trimmed = model?.trim();
   if (!providerId || !trimmed) {
     return null;
-  }
-
-  if (
-    providerId === 'codex' &&
-    providerStatus?.modelCatalog?.providerId === 'codex' &&
-    providerStatus.modelCatalog.models.some(
-      (item) => item.launchModel === trimmed || item.id === trimmed
-    ) &&
-    !isKnownTeamProviderModel(providerId, trimmed) &&
-    providerStatus.runtimeCapabilities?.modelCatalog?.dynamic !== true
-  ) {
-    return CODEX_DYNAMIC_MODEL_REQUIRES_RUNTIME_SUPPORT_REASON;
   }
 
   return isRuntimeHiddenTeamModel(providerId, trimmed, providerStatus)

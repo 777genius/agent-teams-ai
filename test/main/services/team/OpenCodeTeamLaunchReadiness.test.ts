@@ -1,17 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createEmptyEndpointMap } from '../../../../src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities';
-import {
-  OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS,
-  OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS,
-} from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
 import { REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import {
   OpenCodeTeamLaunchReadinessService,
   type OpenCodeApiCapabilityPort,
   type OpenCodeModelExecutionProbePort,
   type OpenCodeMcpToolProofPort,
-  type OpenCodeProductionE2EEvidencePort,
   type OpenCodeRuntimeInventory,
   type OpenCodeRuntimeInventoryPort,
   type OpenCodeRuntimeStoreReadinessPort,
@@ -23,7 +18,6 @@ import type {
 } from '../../../../src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities';
 import type { OpenCodeMcpToolProof } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import type { RuntimeStoreReadinessCheck } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
-import type { OpenCodeProductionE2EEvidence } from '../../../../src/main/services/team/opencode/version/OpenCodeVersionPolicy';
 
 describe('OpenCodeTeamLaunchReadinessService', () => {
   it('returns not_installed before probing deeper runtime dependencies', async () => {
@@ -84,16 +78,13 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
     });
   });
 
-  it('blocks capability-compatible versions until production E2E evidence exists', async () => {
-    const ports = createPorts({
-      evidence: null,
-    });
+  it('does not require project-specific E2E evidence before runtime readiness checks', async () => {
+    const ports = createPorts();
 
     await expect(service(ports).check(readinessInput())).resolves.toMatchObject({
-      state: 'e2e_missing',
-      launchAllowed: false,
-      supportLevel: 'supported_e2e_pending',
-      missing: ['OpenCode version is capability-compatible but production E2E evidence is missing'],
+      state: 'ready',
+      launchAllowed: true,
+      supportLevel: 'production_supported',
     });
   });
 
@@ -159,46 +150,10 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
     });
   });
 
-  it('fails closed behind adapter feature gate after all runtime evidence is healthy', async () => {
+  it('allows launch when inventory, capabilities, stores, MCP and model probe are healthy', async () => {
     const ports = createPorts();
 
-    await expect(
-      service(ports, { adapterEnabled: false }).check(readinessInput())
-    ).resolves.toMatchObject({
-      state: 'adapter_disabled',
-      launchAllowed: false,
-      missing: ['OpenCode team launch adapter is disabled by feature gate'],
-    });
-    expect(ports.inventory.probe).not.toHaveBeenCalled();
-  });
-
-  it('allows dogfood launch to continue without production E2E evidence after runtime checks pass', async () => {
-    const ports = createPorts({ evidence: null });
-
-    await expect(
-      service(ports, { launchMode: 'dogfood' }).check(
-        readinessInput({ requireExecutionProbe: true })
-      )
-    ).resolves.toMatchObject({
-      state: 'ready',
-      launchAllowed: true,
-      supportLevel: 'supported_e2e_pending',
-      requiredToolsPresent: true,
-      runtimeStoresReady: true,
-      diagnostics: [
-        'OpenCode production E2E evidence is missing; dogfood launch remains allowed after runtime checks.',
-      ],
-    });
-    expect(ports.mcpTools.prove).toHaveBeenCalled();
-    expect(ports.modelExecution.verify).toHaveBeenCalled();
-  });
-
-  it('allows launch only when inventory, capabilities, E2E, stores, MCP and model probe are healthy', async () => {
-    const ports = createPorts();
-
-    await expect(
-      service(ports, { adapterEnabled: true }).check(readinessInput())
-    ).resolves.toMatchObject({
+    await expect(service(ports).check(readinessInput())).resolves.toMatchObject({
       state: 'ready',
       launchAllowed: true,
       modelId: 'openai/gpt-5.4-mini',
@@ -218,20 +173,13 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
   });
 });
 
-function service(
-  ports: ReturnType<typeof createPorts>,
-  options: { adapterEnabled?: boolean; launchMode?: 'disabled' | 'dogfood' | 'production' } = {}
-): OpenCodeTeamLaunchReadinessService {
+function service(ports: ReturnType<typeof createPorts>): OpenCodeTeamLaunchReadinessService {
   return new OpenCodeTeamLaunchReadinessService(
     ports.inventory,
     ports.capabilities,
     ports.mcpTools,
     ports.runtimeStores,
-    ports.modelExecution,
-    ports.e2eEvidence,
-    options.launchMode
-      ? { launchMode: options.launchMode }
-      : { adapterEnabled: options.adapterEnabled ?? true }
+    ports.modelExecution
   );
 }
 
@@ -261,7 +209,6 @@ function createPorts(
       reason: string | null;
       diagnostics: string[];
     };
-    evidence?: OpenCodeProductionE2EEvidence | null;
   } = {}
 ): {
   inventory: OpenCodeRuntimeInventoryPort & { probe: ReturnType<typeof vi.fn> };
@@ -269,7 +216,6 @@ function createPorts(
   mcpTools: OpenCodeMcpToolProofPort & { prove: ReturnType<typeof vi.fn> };
   runtimeStores: OpenCodeRuntimeStoreReadinessPort & { check: ReturnType<typeof vi.fn> };
   modelExecution: OpenCodeModelExecutionProbePort & { verify: ReturnType<typeof vi.fn> };
-  e2eEvidence: OpenCodeProductionE2EEvidencePort & { read: ReturnType<typeof vi.fn> };
 } {
   return {
     inventory: {
@@ -286,9 +232,6 @@ function createPorts(
     },
     modelExecution: {
       verify: vi.fn(async () => overrides.modelProbe ?? modelProbe()),
-    },
-    e2eEvidence: {
-      read: vi.fn(async () => (overrides.evidence === undefined ? evidence() : overrides.evidence)),
     },
   };
 }
@@ -371,62 +314,5 @@ function modelProbe() {
     outcome: 'available' as const,
     reason: null,
     diagnostics: [],
-  };
-}
-
-function evidence(): OpenCodeProductionE2EEvidence {
-  const createdAt = new Date().toISOString();
-  const sessionId = 'session-1';
-  const requiredToolIds = REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) => `agent_teams_${tool}`);
-  return {
-    schemaVersion: 1,
-    evidenceId: 'e2e-1',
-    createdAt,
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    version: '1.14.19',
-    passed: true,
-    artifactPath: '/tmp/opencode-e2e',
-    binaryFingerprint: 'version:1.14.19',
-    capabilitySnapshotId: 'cap-1',
-    selectedModel: 'openai/gpt-5.4-mini',
-    projectPathFingerprint: 'project-a',
-    requiredSignals: Object.fromEntries(
-      OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS.map((signal) => [signal, true])
-    ) as OpenCodeProductionE2EEvidence['requiredSignals'],
-    mcpTools: {
-      requiredTools: requiredToolIds,
-      observedTools: requiredToolIds,
-    },
-    launch: {
-      runId: 'run-1',
-      teamId: 'team-a',
-      teamLaunchState: 'ready',
-      memberCount: 1,
-      sessions: [
-        {
-          memberName: 'Dev',
-          sessionId,
-          launchState: 'confirmed_alive',
-        },
-      ],
-      durableCheckpoints: OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS.map((name) => ({
-        name,
-        observedAt: createdAt,
-      })),
-    },
-    reconcile: {
-      runId: 'run-1',
-      teamLaunchState: 'ready',
-      memberCount: 1,
-    },
-    stop: {
-      runId: 'run-1',
-      stopped: true,
-      stoppedSessionIds: [sessionId],
-    },
-    logProjection: {
-      observed: true,
-      projectedMessageCount: 1,
-    },
   };
 }

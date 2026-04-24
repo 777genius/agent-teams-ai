@@ -1,4 +1,3 @@
-import { once } from 'node:events';
 import readline from 'node:readline';
 
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
@@ -49,6 +48,9 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;
+const DEFAULT_STDIN_CLOSE_TIMEOUT_MS = 250;
+const DEFAULT_CLOSE_TIMEOUT_MS = 1_000;
+const DEFAULT_FORCE_CLOSE_TIMEOUT_MS = 1_000;
 
 export class JsonRpcRequestError extends Error {
   readonly code: number | null;
@@ -76,6 +78,9 @@ export class JsonRpcStdioClient {
       env?: NodeJS.ProcessEnv;
       requestTimeoutMs?: number;
       totalTimeoutMs?: number;
+      stdinCloseTimeoutMs?: number;
+      closeTimeoutMs?: number;
+      forceCloseTimeoutMs?: number;
       label: string;
     },
     handler: (session: JsonRpcSession) => Promise<T>
@@ -95,8 +100,14 @@ export class JsonRpcStdioClient {
     args: string[];
     env?: NodeJS.ProcessEnv;
     requestTimeoutMs?: number;
+    stdinCloseTimeoutMs?: number;
+    closeTimeoutMs?: number;
+    forceCloseTimeoutMs?: number;
   }): Promise<JsonRpcSession> {
     const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const stdinCloseTimeoutMs = options.stdinCloseTimeoutMs ?? DEFAULT_STDIN_CLOSE_TIMEOUT_MS;
+    const closeTimeoutMs = options.closeTimeoutMs ?? DEFAULT_CLOSE_TIMEOUT_MS;
+    const forceCloseTimeoutMs = options.forceCloseTimeoutMs ?? DEFAULT_FORCE_CLOSE_TIMEOUT_MS;
     const child = spawnCli(options.binaryPath, options.args, {
       env: options.env,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -194,6 +205,58 @@ export class JsonRpcStdioClient {
       );
     });
 
+    const waitForChildClose = (timeoutMs: number): Promise<boolean> => {
+      if (child.exitCode !== null || child.signalCode !== null) {
+        return Promise.resolve(true);
+      }
+
+      return new Promise<boolean>((resolve) => {
+        let settled = false;
+        const finish = (closedByEvent: boolean): void => {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+          clearTimeout(timeoutId);
+          child.off('close', onClose);
+          resolve(closedByEvent);
+        };
+        const onClose = (): void => finish(true);
+        const timeoutId = setTimeout(() => finish(false), timeoutMs);
+        timeoutId.unref?.();
+
+        child.once('close', onClose);
+      });
+    };
+
+    const closeStdin = async (): Promise<void> => {
+      if (!child.stdin || child.stdin.destroyed || child.stdin.writableEnded) {
+        return;
+      }
+
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = (): void => {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+          clearTimeout(timeoutId);
+          resolve();
+        };
+        const timeoutId = setTimeout(finish, stdinCloseTimeoutMs);
+        timeoutId.unref?.();
+
+        try {
+          child.stdin!.end(() => finish());
+        } catch {
+          finish();
+        }
+      });
+    };
+
     const close = async (): Promise<void> => {
       if (closed) {
         return;
@@ -204,21 +267,26 @@ export class JsonRpcStdioClient {
       notificationListeners.clear();
       lineReader.close();
 
-      if (child.stdin && !child.stdin.destroyed && !child.stdin.writableEnded) {
-        await new Promise<void>((resolve) => {
-          try {
-            child.stdin!.end(() => resolve());
-          } catch {
-            resolve();
-          }
-        });
+      await closeStdin();
+
+      const gracefulClose = waitForChildClose(closeTimeoutMs);
+      killProcessTree(child, 'SIGTERM');
+      if (await gracefulClose) {
+        return;
       }
 
-      killProcessTree(child);
-      try {
-        await once(child, 'close');
-      } catch {
-        this.logger.warn('json-rpc close wait failed');
+      this.logger.warn('json-rpc close timed out; force killing process', {
+        pid: child.pid,
+        timeoutMs: closeTimeoutMs,
+      });
+
+      const forcedClose = waitForChildClose(forceCloseTimeoutMs);
+      killProcessTree(child, 'SIGKILL');
+      if (!(await forcedClose)) {
+        this.logger.warn('json-rpc force close timed out', {
+          pid: child.pid,
+          timeoutMs: forceCloseTimeoutMs,
+        });
       }
     };
 

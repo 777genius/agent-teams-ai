@@ -6,7 +6,7 @@ import type {
 } from '@features/recent-projects/contracts';
 
 const RECENT_PROJECTS_CLIENT_CACHE_TTL_MS = 15_000;
-const RECENT_PROJECTS_CLIENT_DEGRADED_CACHE_TTL_MS = 1_500;
+const RECENT_PROJECTS_CLIENT_DEGRADED_CACHE_TTL_MS = 30_000;
 
 let cachedPayload: DashboardRecentProjectsPayloadLike = null;
 let cachedAt = 0;

@@ -171,6 +171,7 @@ import {
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SKIP_MEMBER_FOR_LAUNCH,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
   TEAM_START_TASK_BY_USER,
@@ -1092,6 +1093,9 @@ const electronAPI: ElectronAPI = {
     },
     restartMember: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<void>(TEAM_RESTART_MEMBER, teamName, memberName);
+    },
+    skipMemberForLaunch: async (teamName: string, memberName: string) => {
+      return invokeIpcWithResult<void>(TEAM_SKIP_MEMBER_FOR_LAUNCH, teamName, memberName);
     },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);

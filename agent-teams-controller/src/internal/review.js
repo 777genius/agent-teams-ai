@@ -69,10 +69,9 @@ function normalizeActorKey(value) {
 function resolveKnownActorName(context, value, label) {
   const actor = typeof value === 'string' && value.trim() ? value.trim() : '';
   if (!actor) return null;
-  runtimeHelpers.assertExplicitTeamMemberName(context.paths, actor, label, {
+  return runtimeHelpers.assertExplicitTeamMemberName(context.paths, actor, label, {
     allowLeadAliases: true,
   });
-  return actor;
 }
 
 function tryResolveKnownActorName(context, value, label) {
@@ -301,9 +300,10 @@ function requestReview(context, taskId, flags = {}) {
     }
 
     const nextFrom =
-      resolveKnownActorName(context, flags.from, 'review requester') || 'team-lead';
+      resolveKnownActorName(context, flags.from, 'review requester') ||
+      resolveKnownActorName(context, 'team-lead', 'review requester');
     const rawReviewer = getReviewer(context, flags);
-    const nextReviewer = rawReviewer ? (resolveKnownActorName(context, rawReviewer, 'reviewer'), rawReviewer) : null;
+    const nextReviewer = rawReviewer ? resolveKnownActorName(context, rawReviewer, 'reviewer') : null;
     const prevReviewState = getEffectiveReviewState(context, currentTask);
     if (prevReviewState === 'approved') {
       throw new Error(`Task #${currentTask.displayId || currentTask.id} is already approved; reopen work before requesting another review`);

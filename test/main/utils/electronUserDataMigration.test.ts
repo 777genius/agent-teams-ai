@@ -99,7 +99,6 @@ describe('electron userData migration', () => {
       ['mcp-server/1.3.0/package.json', '{"type":"module"}'],
       ['opencode-bridge/command-ledger.json', '{"commands":[]}'],
       ['opencode-bridge/command-leases.json', '{"leases":[]}'],
-      ['opencode-bridge/production-e2e-evidence.json', '{"ok":true}'],
       ['logs/claude-cli-auth-diag.ndjson', '{"event":"auth"}\n'],
       ['Local Storage/leveldb/000003.log', 'renderer localStorage bytes'],
       ['future-feature/state.json', '{"kept":true}'],

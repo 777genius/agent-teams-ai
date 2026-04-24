@@ -6,7 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/u
 import { useMemberStats } from '@renderer/hooks/useMemberStats';
 import { useStore } from '@renderer/store';
 import { selectMemberMessagesForTeamMember } from '@renderer/store/slices/teamSlice';
-import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
+import {
+  buildMemberLaunchDiagnosticsPayload,
+  getMemberLaunchDiagnosticsErrorMessage,
+  hasMemberLaunchDiagnosticsDetails,
+  hasMemberLaunchDiagnosticsError,
+} from '@renderer/utils/memberLaunchDiagnostics';
+import {
+  getRuntimeMemorySourceLabel,
+  resolveMemberRuntimeSummary,
+} from '@renderer/utils/memberRuntimeSummary';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   BarChart3,
@@ -22,6 +31,7 @@ import { buildMemberActivityEntries } from './memberActivityEntries';
 import { MemberDetailHeader } from './MemberDetailHeader';
 import { MemberDetailStats } from './MemberDetailStats';
 import { type MemberActivityFilter, type MemberDetailTab } from './memberDetailTypes';
+import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
 import { MemberLogsTab } from './MemberLogsTab';
 import { MemberMessagesTab } from './MemberMessagesTab';
 import { MemberStatsTab } from './MemberStatsTab';
@@ -50,6 +60,7 @@ interface MemberDetailDialogProps {
   leadActivity?: LeadActivityState;
   spawnEntry?: MemberSpawnStatusEntry;
   runtimeEntry?: TeamAgentRuntimeEntry;
+  runtimeRunId?: string | null;
   launchParams?: TeamLaunchParams;
   onClose: () => void;
   onSendMessage: () => void;
@@ -76,6 +87,7 @@ export const MemberDetailDialog = ({
   leadActivity,
   spawnEntry,
   runtimeEntry,
+  runtimeRunId,
   launchParams,
   onClose,
   onSendMessage,
@@ -128,10 +140,31 @@ export const MemberDetailDialog = ({
         : undefined,
     [launchParams, member, runtimeEntry, spawnEntry]
   );
+  const memorySourceLabel = getRuntimeMemorySourceLabel(runtimeEntry);
   const restartInFlight =
     spawnEntry?.launchState === 'starting' ||
     spawnEntry?.launchState === 'runtime_pending_bootstrap' ||
     spawnEntry?.launchState === 'runtime_pending_permission';
+  const launchDiagnosticsPayload = useMemo(
+    () =>
+      member
+        ? buildMemberLaunchDiagnosticsPayload({
+            teamName,
+            runId: runtimeRunId,
+            memberName: member.name,
+            spawnEntry,
+            runtimeEntry,
+          })
+        : null,
+    [member, runtimeEntry, runtimeRunId, spawnEntry, teamName]
+  );
+  const showCopyDiagnostics =
+    launchDiagnosticsPayload != null &&
+    hasMemberLaunchDiagnosticsError(launchDiagnosticsPayload) &&
+    hasMemberLaunchDiagnosticsDetails(launchDiagnosticsPayload);
+  const launchErrorMessage = launchDiagnosticsPayload
+    ? getMemberLaunchDiagnosticsErrorMessage(launchDiagnosticsPayload)
+    : undefined;
 
   useEffect(() => {
     if (!open || !member) {
@@ -167,6 +200,7 @@ export const MemberDetailDialog = ({
               spawnLaunchState={spawnEntry?.launchState}
               spawnLivenessSource={spawnEntry?.livenessSource}
               spawnRuntimeAlive={spawnEntry?.runtimeAlive}
+              runtimeEntry={runtimeEntry}
               isLaunchSettling={isLaunchSettling}
               onUpdateRole={
                 onUpdateRole ? (newRole) => onUpdateRole(member.name, newRole) : undefined
@@ -250,9 +284,23 @@ export const MemberDetailDialog = ({
         <DialogFooter>
           {restartError ? (
             <div className="mr-auto text-xs text-red-400">{restartError}</div>
+          ) : launchErrorMessage ? (
+            <div className="mr-auto flex min-w-0 items-center gap-2 text-xs text-red-400">
+              <span className="min-w-0 truncate" title={launchErrorMessage}>
+                {launchErrorMessage}
+              </span>
+              {launchDiagnosticsPayload && showCopyDiagnostics ? (
+                <MemberLaunchDiagnosticsButton
+                  payload={launchDiagnosticsPayload}
+                  label="Copy diagnostics"
+                  className="h-auto shrink-0 gap-1.5 px-2 py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                />
+              ) : null}
+            </div>
           ) : runtimeEntry?.pid ? (
             <div className="mr-auto text-xs text-[var(--color-text-muted)]">
               PID {runtimeEntry.pid}
+              {memorySourceLabel ? ` · ${memorySourceLabel}` : ''}
             </div>
           ) : (
             <div className="mr-auto" />

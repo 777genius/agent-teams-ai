@@ -21,7 +21,6 @@
     "dev": "node ./scripts/dev-with-runtime.mjs",
     "dev:web": "node ./scripts/dev-web.mjs",
     "dev:kill": "node bin/kill-dev.js",
-    "opencode:prove-production": "node ./scripts/prove-opencode-production.mjs",
     "opencode:prove-mixed-recovery": "node ./scripts/prove-opencode-mixed-recovery.mjs",
     "opencode:prove-team-provisioning": "node ./scripts/prove-opencode-team-provisioning.mjs",
     "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers 1 --minWorkers 1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",

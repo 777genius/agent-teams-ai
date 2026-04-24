@@ -15,8 +15,6 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.getRuntimeTranscript'
   | 'opencode.recoverDeliveryJournal';
 
-export type OpenCodeTeamLaunchMode = 'disabled' | 'dogfood' | 'production';
-
 export type OpenCodeTeamLaunchBridgeState =
   | 'blocked'
   | 'launching'
@@ -48,7 +46,6 @@ export interface OpenCodeTeamLaunchMemberCommandSpec {
 }
 
 export interface OpenCodeLaunchTeamCommandBody {
-  mode: OpenCodeTeamLaunchMode;
   runId: string;
   laneId: string;
   teamId: string;

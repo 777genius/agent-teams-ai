@@ -211,9 +211,9 @@ describe('Team agent launch matrix safe e2e', () => {
     const statuses = await svc.getMemberSpawnStatuses('permission-opencode-safe-e2e');
     expect(statuses.teamLaunchState).toBe('partial_pending');
     expect(statuses.statuses.alice).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
-      runtimeAlive: true,
+      runtimeAlive: false,
       pendingPermissionRequestIds: ['perm-alice'],
     });
     expect(statuses.summary?.pendingCount).toBe(1);
@@ -255,9 +255,9 @@ describe('Team agent launch matrix safe e2e', () => {
       bootstrapConfirmed: true,
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
-      runtimeAlive: true,
+      runtimeAlive: false,
       pendingPermissionRequestIds: ['perm-bob'],
     });
     expect(statuses.statuses.tom).toMatchObject({
@@ -2300,7 +2300,7 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 2,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.alice).toMatchObject({
       status: 'online',
@@ -2313,9 +2313,9 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -2909,7 +2909,7 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 1,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.alice).toMatchObject({
       status: 'online',
@@ -2917,9 +2917,9 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -2972,12 +2972,12 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 1,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
-      runtimeAlive: true,
+      runtimeAlive: false,
       pendingPermissionRequestIds: ['perm-bob'],
       hardFailure: false,
     });
@@ -3301,13 +3301,13 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 1,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
       agentToolAccepted: true,
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -3361,13 +3361,13 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 1,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       agentToolAccepted: true,
-      runtimeAlive: true,
+      runtimeAlive: false,
       pendingPermissionRequestIds: ['perm-bob'],
       hardFailure: false,
     });
@@ -3469,7 +3469,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       pendingPermissionRequestIds: ['perm-tom'],
@@ -3588,7 +3588,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       pendingPermissionRequestIds: ['perm-tom'],
@@ -4129,6 +4129,7 @@ describe('Team agent launch matrix safe e2e', () => {
           {
             alive: true,
             model: 'opencode/minimax-m2.5-free',
+            livenessKind: 'runtime_process',
           },
         ],
       ]);
@@ -4196,6 +4197,7 @@ describe('Team agent launch matrix safe e2e', () => {
           {
             alive: true,
             model: 'opencode/minimax-m2.5-free',
+            livenessKind: 'runtime_process',
           },
         ],
       ]);
@@ -4364,9 +4366,9 @@ describe('Team agent launch matrix safe e2e', () => {
       bootstrapConfirmed: true,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
-      runtimeAlive: true,
+      runtimeAlive: false,
       pendingPermissionRequestIds: ['perm-tom'],
     });
   });
@@ -4537,12 +4539,12 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 2,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.alice).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       pendingPermissionRequestIds: ['perm-alice'],
       hardFailure: false,
@@ -4591,7 +4593,7 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 2,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.alice).toMatchObject({
       status: 'online',
@@ -4606,9 +4608,9 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -4629,7 +4631,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runtimeSnapshot.members.tom).toMatchObject({
       providerId: 'opencode',
       laneKind: 'secondary',
-      alive: true,
+      alive: false,
       runtimeModel: 'opencode/nemotron-3-super-free',
     });
   });
@@ -4694,7 +4696,7 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 2,
       pendingCount: 1,
       failedCount: 1,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.alice).toMatchObject({
       status: 'online',
@@ -4715,9 +4717,9 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -4744,7 +4746,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runtimeSnapshot.members.tom).toMatchObject({
       providerId: 'opencode',
       laneKind: 'secondary',
-      alive: true,
+      alive: false,
       runtimeModel: 'opencode/nemotron-3-super-free',
     });
   });
@@ -4934,7 +4936,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       pendingPermissionRequestIds: ['perm-tom'],
@@ -5392,8 +5394,8 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
       new Map([
-        ['alice', { alive: true, model: 'haiku' }],
-        ['bob-2', { alive: true, model: 'sonnet' }],
+        ['alice', { alive: true, model: 'haiku', livenessKind: 'confirmed_bootstrap' }],
+        ['bob-2', { alive: true, model: 'sonnet', livenessKind: 'runtime_process' }],
       ]);
 
     const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -5458,8 +5460,15 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
       new Map([
-        ['alice', { alive: true, model: 'haiku' }],
-        ['bob-2', { alive: true, model: 'opencode/minimax-m2.5-free' }],
+        ['alice', { alive: true, model: 'haiku', livenessKind: 'confirmed_bootstrap' }],
+        [
+          'bob-2',
+          {
+            alive: true,
+            model: 'opencode/minimax-m2.5-free',
+            livenessKind: 'runtime_process',
+          },
+        ],
       ]);
 
     const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -6832,8 +6841,8 @@ describe('Team agent launch matrix safe e2e', () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
       new Map([
-        ['alice', { alive: true, model: 'haiku' }],
-        ['bob-2', { alive: true, model: 'sonnet' }],
+        ['alice', { alive: true, model: 'haiku', livenessKind: 'confirmed_bootstrap' }],
+        ['bob-2', { alive: true, model: 'sonnet', livenessKind: 'runtime_process' }],
       ]);
 
     const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -6966,7 +6975,7 @@ describe('Team agent launch matrix safe e2e', () => {
     });
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
-      new Map([['alice', { alive: true, model: 'haiku' }]]);
+      new Map([['alice', { alive: true, model: 'haiku', livenessKind: 'runtime_process' }]]);
 
     const statuses = await svc.getMemberSpawnStatuses(teamName);
 
@@ -13102,7 +13111,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailureReason: 'Gemini pane failed to start',
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       pendingPermissionRequestIds: ['perm-bob'],
       hardFailure: false,
@@ -13238,7 +13247,7 @@ describe('Team agent launch matrix safe e2e', () => {
       launchState: 'confirmed_alive',
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       pendingPermissionRequestIds: ['perm-bob'],
       hardFailure: false,
@@ -13291,7 +13300,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       pendingPermissionRequestIds: ['perm-bob'],
       hardFailure: false,
@@ -13375,7 +13384,7 @@ describe('Team agent launch matrix safe e2e', () => {
     });
     expect(secondStatuses.teamLaunchState).toBe('partial_pending');
     expect(secondStatuses.statuses.bob).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       pendingPermissionRequestIds: ['perm-bob'],
       hardFailure: false,
@@ -15570,7 +15579,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       pendingPermissionRequestIds: ['perm-tom'],
@@ -15622,7 +15631,7 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 1,
       pendingCount: 2,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.statuses.bob).toMatchObject({
       status: 'online',
@@ -15630,9 +15639,9 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -15703,7 +15712,7 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       pendingPermissionRequestIds: ['perm-tom'],
@@ -15763,7 +15772,7 @@ describe('Team agent launch matrix safe e2e', () => {
       confirmedCount: 1,
       pendingCount: 3,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
     });
     expect(statuses.expectedMembers).toEqual(
       expect.arrayContaining(['alice', 'reviewer', 'bob', 'tom'])
@@ -15776,9 +15785,9 @@ describe('Team agent launch matrix safe e2e', () => {
       hardFailure: false,
     });
     expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
       bootstrapConfirmed: false,
       hardFailure: false,
     });
@@ -16058,6 +16067,18 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const failed = outcome === 'failed';
     const permissionPending = outcome === 'permission';
     const bootstrapPending = outcome === 'launching';
+    const livenessKind = failed
+      ? 'not_found'
+      : permissionPending
+        ? 'permission_blocked'
+        : bootstrapPending
+          ? 'runtime_process_candidate'
+          : 'confirmed_bootstrap';
+    const runtimeDiagnostic = permissionPending
+      ? 'OpenCode runtime is waiting for permission approval'
+      : bootstrapPending
+        ? 'OpenCode runtime pid reported by bridge without local process verification'
+        : undefined;
     return {
       memberName: member.name,
       providerId: 'opencode',
@@ -16069,12 +16090,15 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             ? 'runtime_pending_bootstrap'
             : 'confirmed_alive',
       agentToolAccepted: !failed,
-      runtimeAlive: !failed,
+      runtimeAlive: !failed && !permissionPending && !bootstrapPending,
       bootstrapConfirmed: !failed && !permissionPending && !bootstrapPending,
       hardFailure: failed,
       hardFailureReason: failed ? 'fake_open_code_launch_failure' : undefined,
       pendingPermissionRequestIds: permissionPending ? [`perm-${member.name}`] : undefined,
       runtimePid: failed ? undefined : 10_000 + index,
+      livenessKind,
+      pidSource: failed ? undefined : 'opencode_bridge',
+      runtimeDiagnostic,
       diagnostics: failed
         ? ['fake OpenCode launch failure']
         : permissionPending

@@ -385,6 +385,9 @@ export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
 /** Restart a specific teammate runtime */
 export const TEAM_RESTART_MEMBER = 'team:restartMember';
 
+/** Skip a failed teammate for the current launch */
+export const TEAM_SKIP_MEMBER_FOR_LAUNCH = 'team:skipMemberForLaunch';
+
 /** Soft-delete a task (set status to 'deleted' with deletedAt timestamp) */
 export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
 

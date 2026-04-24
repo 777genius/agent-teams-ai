@@ -82,6 +82,7 @@ type TeamStatus =
   | 'provisioning'
   | 'offline'
   | 'partial_failure'
+  | 'partial_skipped'
   | 'partial_pending';
 
 function getRecentProjects(team: TeamSummary): string[] {
@@ -206,6 +207,9 @@ function resolveTeamStatus(
   if (team.teamLaunchState === 'partial_pending') {
     return 'partial_pending';
   }
+  if (team.teamLaunchState === 'partial_skipped') {
+    return 'partial_skipped';
+  }
   if (team.partialLaunchFailure || team.teamLaunchState === 'partial_failure') {
     return 'partial_failure';
   }
@@ -247,6 +251,13 @@ const StatusBadge = ({ status }: { status: TeamStatus }): React.JSX.Element => {
         <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
           <span className="size-1.5 rounded-full bg-amber-400" />
           Launch failed partway
+        </span>
+      );
+    case 'partial_skipped':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-300">
+          <span className="size-1.5 rounded-full bg-sky-300" />
+          Launch skipped member
         </span>
       );
     case 'partial_pending':
@@ -905,6 +916,7 @@ export const TeamListView = (): React.JSX.Element => {
                     <div className="flex shrink-0 gap-1">
                       {(status === 'offline' ||
                         status === 'partial_failure' ||
+                        status === 'partial_skipped' ||
                         status === 'partial_pending') &&
                         team.projectPath && (
                           <Tooltip>
@@ -981,12 +993,12 @@ export const TeamListView = (): React.JSX.Element => {
                   </div>
                   {team.teamLaunchState === 'partial_pending' ? (
                     <p className="mt-2 text-[11px] text-amber-300">
-                      {team.runtimeAlivePendingCount && team.runtimeAlivePendingCount > 0
+                      {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
                         ? buildPendingRuntimeSummaryCopy({
                             confirmedCount: team.confirmedCount,
                             expectedMemberCount: team.expectedMemberCount,
                             memberCount: team.memberCount,
-                            runtimeAlivePendingCount: team.runtimeAlivePendingCount,
+                            runtimeProcessPendingCount: team.runtimeProcessPendingCount,
                             includePeriod: true,
                           })
                         : 'Last launch is still reconciling.'}
@@ -996,6 +1008,12 @@ export const TeamListView = (): React.JSX.Element => {
                       {team.missingMembers?.length
                         ? `Last launch stopped before ${team.missingMembers.length}/${team.expectedMemberCount ?? team.missingMembers.length} teammate${team.missingMembers.length === 1 ? '' : 's'} joined.`
                         : 'Last launch stopped before all teammates joined.'}
+                    </p>
+                  ) : team.teamLaunchState === 'partial_skipped' ? (
+                    <p className="mt-2 text-[11px] text-sky-300">
+                      {team.skippedMembers?.length
+                        ? `Last launch skipped ${team.skippedMembers.length}/${team.expectedMemberCount ?? team.skippedMembers.length} teammate${team.skippedMembers.length === 1 ? '' : 's'}.`
+                        : 'Last launch has skipped teammates.'}
                     </p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">

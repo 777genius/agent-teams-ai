@@ -22,6 +22,12 @@ import {
   buildMemberLaunchPresentation,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
+import {
+  buildMemberLaunchDiagnosticsPayload,
+  getMemberLaunchDiagnosticsErrorMessage,
+  hasMemberLaunchDiagnosticsDetails,
+  hasMemberLaunchDiagnosticsError,
+} from '@renderer/utils/memberLaunchDiagnostics';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -29,6 +35,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from '../provisioningSteps';
 
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
+import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
 
 import type { LeadActivityState, TeamTaskWithKanban } from '@shared/types';
 
@@ -68,6 +75,8 @@ export const MemberHoverCard = ({
     memberSpawnSnapshot,
     memberSpawnStatuses,
     spawnEntry,
+    runtimeRunId,
+    runtimeEntry,
     leadActivity,
   } = useStore(
     useShallow((s) => ({
@@ -88,6 +97,12 @@ export const MemberHoverCard = ({
         : undefined,
       spawnEntry: effectiveTeamName
         ? s.memberSpawnStatusesByTeam[effectiveTeamName]?.[name]
+        : undefined,
+      runtimeRunId: effectiveTeamName
+        ? s.teamAgentRuntimeByTeam?.[effectiveTeamName]?.runId
+        : undefined,
+      runtimeEntry: effectiveTeamName
+        ? s.teamAgentRuntimeByTeam?.[effectiveTeamName]?.members[name]
         : undefined,
       leadActivity: effectiveTeamName ? s.leadActivityByTeam[effectiveTeamName] : undefined,
     }))
@@ -114,6 +129,7 @@ export const MemberHoverCard = ({
     spawnLaunchState: spawnEntry?.launchState,
     spawnLivenessSource: spawnEntry?.livenessSource,
     spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+    runtimeEntry,
     runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
     isTeamAlive,
@@ -130,9 +146,25 @@ export const MemberHoverCard = ({
   const badgeLabel =
     runtimeAdvisoryTone === 'error' && runtimeAdvisoryLabel
       ? runtimeAdvisoryLabel
-      : launchVisualState === 'runtime_pending' || launchVisualState === 'permission_pending'
+      : launchVisualState === 'runtime_pending' ||
+          launchVisualState === 'permission_pending' ||
+          launchVisualState === 'shell_only' ||
+          launchVisualState === 'runtime_candidate' ||
+          launchVisualState === 'registered_only' ||
+          launchVisualState === 'stale_runtime'
         ? (launchStatusLabel ?? presenceLabel)
         : presenceLabel;
+  const launchDiagnosticsPayload = buildMemberLaunchDiagnosticsPayload({
+    teamName: effectiveTeamName,
+    runId: runtimeRunId ?? memberSpawnSnapshot?.runId ?? progress?.runId,
+    memberName: member.name,
+    spawnEntry,
+    runtimeEntry,
+  });
+  const launchErrorMessage = getMemberLaunchDiagnosticsErrorMessage(launchDiagnosticsPayload);
+  const showCopyDiagnostics =
+    hasMemberLaunchDiagnosticsError(launchDiagnosticsPayload) &&
+    hasMemberLaunchDiagnosticsDetails(launchDiagnosticsPayload);
   const currentTask: TeamTaskWithKanban | null = member.currentTaskId
     ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
     : null;
@@ -226,18 +258,33 @@ export const MemberHoverCard = ({
             </div>
           )}
 
-          {/* Open profile button */}
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-1.5 rounded border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-            onClick={(e) => {
-              e.stopPropagation();
-              openMemberProfile(member.name);
-            }}
-          >
-            <ExternalLink size={12} />
-            Open profile
-          </button>
+          {launchErrorMessage ? (
+            <div className="flex items-center gap-2 rounded border border-red-500/25 bg-red-500/10 px-2 py-1.5 text-xs text-red-300">
+              <span className="min-w-0 flex-1 truncate" title={launchErrorMessage}>
+                {launchErrorMessage}
+              </span>
+              {showCopyDiagnostics ? (
+                <MemberLaunchDiagnosticsButton
+                  payload={launchDiagnosticsPayload}
+                  className="h-auto shrink-0 rounded px-1.5 py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+              onClick={(e) => {
+                e.stopPropagation();
+                openMemberProfile(member.name);
+              }}
+            >
+              <ExternalLink size={12} />
+              Open profile
+            </button>
+          </div>
         </div>
       </HoverCardContent>
     </HoverCard>

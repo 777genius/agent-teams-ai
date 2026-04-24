@@ -1,9 +1,8 @@
 import type { FastMCP } from 'fastmcp';
-import fs from 'node:fs';
-import path from 'node:path';
 import { z } from 'zod';
 
 import { agentBlocks, getController } from '../controller';
+import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
 
 /** stripAgentBlocks from canonical agentBlocks module — single source of truth for the tag format. */
@@ -68,42 +67,6 @@ function buildCreateTaskPayload(params: {
     ...(params.sourceMessageId ? { sourceMessageId: params.sourceMessageId } : {}),
     ...(params.sourceMessage ? { sourceMessage: params.sourceMessage } : {}),
   };
-}
-
-function resolveConfigPath(teamName: string, claudeDir?: string): string {
-  const controller = getController(teamName, claudeDir) as {
-    context?: { paths?: { teamDir?: string } };
-  };
-  const teamDir = controller.context?.paths?.teamDir;
-  if (typeof teamDir !== 'string' || teamDir.trim().length === 0) {
-    throw new Error(
-      `Unknown team "${teamName}". Board tools require an existing configured team with config.json. Use the real board teamName from durable team context - never use a member or lead name as teamName.`
-    );
-  }
-  return path.join(teamDir, 'config.json');
-}
-
-function assertConfiguredTeam(teamName: string, claudeDir?: string): void {
-  const configPath = resolveConfigPath(teamName, claudeDir);
-  let raw = '';
-  try {
-    raw = fs.readFileSync(configPath, 'utf8');
-  } catch {
-    throw new Error(
-      `Unknown team "${teamName}". Board tools require an existing configured team with config.json. Use the real board teamName from durable team context - never use a member or lead name as teamName.`
-    );
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as { name?: unknown };
-    if (typeof parsed?.name !== 'string' || parsed.name.trim().length === 0) {
-      throw new Error('invalid');
-    }
-  } catch {
-    throw new Error(
-      `Unknown team "${teamName}". Board tools require an existing configured team with config.json. Use the real board teamName from durable team context - never use a member or lead name as teamName.`
-    );
-  }
 }
 
 export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
@@ -288,8 +251,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       ...toolContextSchema,
       taskId: z.string().min(1),
     }),
-    execute: async ({ teamName, claudeDir, taskId }) =>
-      await Promise.resolve(jsonTextContent(getController(teamName, claudeDir).tasks.getTask(taskId))),
+    execute: async ({ teamName, claudeDir, taskId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(getController(teamName, claudeDir).tasks.getTask(taskId))
+      );
+    },
   });
 
   server.addTool({
@@ -301,12 +268,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       commentId: z.string().min(1),
     }),
-    execute: async ({ teamName, claudeDir, taskId, commentId }) =>
-      await Promise.resolve(
-        jsonTextContent(
-          getController(teamName, claudeDir).tasks.getTaskComment(taskId, commentId)
-        )
-      ),
+    execute: async ({ teamName, claudeDir, taskId, commentId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(getController(teamName, claudeDir).tasks.getTaskComment(taskId, commentId))
+      );
+    },
   });
 
   server.addTool({
@@ -333,8 +300,9 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       relatedTo,
       blockedBy,
       limit,
-    }) =>
-      await Promise.resolve(
+    }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           getController(teamName, claudeDir).tasks.listTaskInventory({
             ...(owner ? { owner } : {}),
@@ -346,7 +314,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
             limit: normalizeTaskListLimit(limit),
           })
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -358,10 +327,42 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       status: z.enum(['pending', 'in_progress', 'completed', 'deleted']),
       actor: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, status, actor }) =>
-      await Promise.resolve(
-        jsonTextContent(slimTask(getController(teamName, claudeDir).tasks.setTaskStatus(taskId, status, actor) as Record<string, unknown>))
-      ),
+    execute: async ({ teamName, claudeDir, taskId, status, actor }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          slimTask(
+            getController(teamName, claudeDir).tasks.setTaskStatus(taskId, status, actor) as Record<
+              string,
+              unknown
+            >
+          )
+        )
+      );
+    },
+  });
+
+  server.addTool({
+    name: 'task_restore',
+    description: 'Restore a deleted task back to pending work state',
+    parameters: z.object({
+      ...toolContextSchema,
+      taskId: z.string().min(1),
+      actor: z.string().optional(),
+    }),
+    execute: async ({ teamName, claudeDir, taskId, actor }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          slimTask(
+            getController(teamName, claudeDir).tasks.restoreTask(taskId, actor) as Record<
+              string,
+              unknown
+            >
+          )
+        )
+      );
+    },
   });
 
   server.addTool({
@@ -372,8 +373,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       actor: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, actor }) =>
-      await Promise.resolve(jsonTextContent(slimTask(getController(teamName, claudeDir).tasks.startTask(taskId, actor) as Record<string, unknown>))),
+    execute: async ({ teamName, claudeDir, taskId, actor }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          slimTask(
+            getController(teamName, claudeDir).tasks.startTask(taskId, actor) as Record<
+              string,
+              unknown
+            >
+          )
+        )
+      );
+    },
   });
 
   server.addTool({
@@ -384,10 +396,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       actor: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, actor }) =>
-      await Promise.resolve(
-        jsonTextContent(slimTask(getController(teamName, claudeDir).tasks.completeTask(taskId, actor) as Record<string, unknown>))
-      ),
+    execute: async ({ teamName, claudeDir, taskId, actor }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          slimTask(
+            getController(teamName, claudeDir).tasks.completeTask(taskId, actor) as Record<
+              string,
+              unknown
+            >
+          )
+        )
+      );
+    },
   });
 
   server.addTool({
@@ -398,10 +419,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       owner: z.string().nullable(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, owner }) =>
-      await Promise.resolve(
-        jsonTextContent(slimTask(getController(teamName, claudeDir).tasks.setTaskOwner(taskId, owner) as Record<string, unknown>))
-      ),
+    execute: async ({ teamName, claudeDir, taskId, owner }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          slimTask(
+            getController(teamName, claudeDir).tasks.setTaskOwner(taskId, owner) as Record<
+              string,
+              unknown
+            >
+          )
+        )
+      );
+    },
   });
 
   server.addTool({
@@ -413,17 +443,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       text: z.string().min(1),
       from: z.string().optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, text, from }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, text, from }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           taskWriteResult(
             getController(teamName, claudeDir).tasks.addTaskComment(taskId, {
-            text,
-            ...(from ? { from } : {}),
+              text,
+              ...(from ? { from } : {}),
             }) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -448,20 +480,22 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       filename,
       mimeType,
       noFallback,
-    }) =>
-      await Promise.resolve(
+    }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           taskWriteResult(
             getController(teamName, claudeDir).tasks.attachTaskFile(taskId, {
-            file: filePath,
-            ...(mode ? { mode } : {}),
-            ...(filename ? { filename } : {}),
-            ...(mimeType ? { 'mime-type': mimeType } : {}),
-            ...(noFallback ? { 'no-fallback': true } : {}),
+              file: filePath,
+              ...(mode ? { mode } : {}),
+              ...(filename ? { filename } : {}),
+              ...(mimeType ? { 'mime-type': mimeType } : {}),
+              ...(noFallback ? { 'no-fallback': true } : {}),
             }) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -488,20 +522,22 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       filename,
       mimeType,
       noFallback,
-    }) =>
-      await Promise.resolve(
+    }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           taskWriteResult(
             getController(teamName, claudeDir).tasks.attachCommentFile(taskId, commentId, {
-            file: filePath,
-            ...(mode ? { mode } : {}),
-            ...(filename ? { filename } : {}),
-            ...(mimeType ? { 'mime-type': mimeType } : {}),
-            ...(noFallback ? { 'no-fallback': true } : {}),
+              file: filePath,
+              ...(mode ? { mode } : {}),
+              ...(filename ? { filename } : {}),
+              ...(mimeType ? { 'mime-type': mimeType } : {}),
+              ...(noFallback ? { 'no-fallback': true } : {}),
             }) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -512,17 +548,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       value: z.enum(['lead', 'user', 'clear']),
     }),
-    execute: async ({ teamName, claudeDir, taskId, value }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, value }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
           slimTask(
             getController(teamName, claudeDir).tasks.setNeedsClarification(
-            taskId,
-            value === 'clear' ? null : value
+              taskId,
+              value === 'clear' ? null : value
             ) as Record<string, unknown>
           )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -534,10 +572,20 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       targetId: z.string().min(1),
       relationship: relationshipTypeSchema,
     }),
-    execute: async ({ teamName, claudeDir, taskId, targetId, relationship }) =>
-      await Promise.resolve(
-        jsonTextContent(slimTask(getController(teamName, claudeDir).tasks.linkTask(taskId, targetId, relationship) as Record<string, unknown>))
-      ),
+    execute: async ({ teamName, claudeDir, taskId, targetId, relationship }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          slimTask(
+            getController(teamName, claudeDir).tasks.linkTask(
+              taskId,
+              targetId,
+              relationship
+            ) as Record<string, unknown>
+          )
+        )
+      );
+    },
   });
 
   server.addTool({
@@ -549,12 +597,20 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       targetId: z.string().min(1),
       relationship: relationshipTypeSchema,
     }),
-    execute: async ({ teamName, claudeDir, taskId, targetId, relationship }) =>
-      await Promise.resolve(
+    execute: async ({ teamName, claudeDir, taskId, targetId, relationship }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
         jsonTextContent(
-          slimTask(getController(teamName, claudeDir).tasks.unlinkTask(taskId, targetId, relationship) as Record<string, unknown>)
+          slimTask(
+            getController(teamName, claudeDir).tasks.unlinkTask(
+              taskId,
+              targetId,
+              relationship
+            ) as Record<string, unknown>
+          )
         )
-      ),
+      );
+    },
   });
 
   server.addTool({
@@ -566,16 +622,19 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       memberName: z.string().min(1),
       runtimeProvider: z.enum(['native', 'opencode']).optional(),
     }),
-    execute: async ({ teamName, claudeDir, memberName, runtimeProvider }) => ({
-      content: [
-        {
-          type: 'text' as const,
-          text: await getController(teamName, claudeDir).tasks.memberBriefing(memberName, {
-            ...(runtimeProvider ? { runtimeProvider } : {}),
-          }),
-        },
-      ],
-    }),
+    execute: async ({ teamName, claudeDir, memberName, runtimeProvider }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: await getController(teamName, claudeDir).tasks.memberBriefing(memberName, {
+              ...(runtimeProvider ? { runtimeProvider } : {}),
+            }),
+          },
+        ],
+      };
+    },
   });
 
   server.addTool({
@@ -585,13 +644,16 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       ...toolContextSchema,
       memberName: z.string().min(1),
     }),
-    execute: async ({ teamName, claudeDir, memberName }) => ({
-      content: [
-        {
-          type: 'text' as const,
-          text: await getController(teamName, claudeDir).tasks.taskBriefing(memberName),
-        },
-      ],
-    }),
+    execute: async ({ teamName, claudeDir, memberName }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: await getController(teamName, claudeDir).tasks.taskBriefing(memberName),
+          },
+        ],
+      };
+    },
   });
 }

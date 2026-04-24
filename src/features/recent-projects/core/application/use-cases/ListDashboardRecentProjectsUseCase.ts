@@ -13,7 +13,7 @@ import type {
 } from '../ports/RecentProjectsSourcePort';
 
 const DEFAULT_CACHE_TTL_MS = 10_000;
-const DEFAULT_DEGRADED_CACHE_TTL_MS = 1_500;
+const DEFAULT_DEGRADED_CACHE_TTL_MS = 30_000;
 
 interface SourceLoadResult {
   candidates: RecentProjectCandidate[];
@@ -99,9 +99,7 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
     }
 
     const viewModel = this.deps.output.present(response);
-    const cacheTtlMs = hasDegradedSources
-      ? Math.min(this.#cacheTtlMs, this.#degradedCacheTtlMs)
-      : this.#cacheTtlMs;
+    const cacheTtlMs = hasDegradedSources ? this.#degradedCacheTtlMs : this.#cacheTtlMs;
 
     await this.deps.cache.set(cacheKey, viewModel, cacheTtlMs);
     this.deps.logger.info('recent-projects loaded', {

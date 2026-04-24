@@ -32,7 +32,6 @@ import {
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
 import { getProviderRuntimeBackendSummary } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import { ProviderRuntimeSettingsDialog } from '@renderer/components/runtime/ProviderRuntimeSettingsDialog';
-import { SettingsToggle } from '@renderer/components/settings/components';
 import { TerminalLogPanel } from '@renderer/components/terminal/TerminalLogPanel';
 import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
@@ -265,11 +264,8 @@ interface InstalledBannerProps {
   cliStatusError: string | null;
   providersCollapsed: boolean;
   isBusy: boolean;
-  multimodelEnabled: boolean;
-  multimodelBusy: boolean;
   onInstall: () => void;
   onRefresh: () => void;
-  onMultimodelToggle: (enabled: boolean) => void;
   onToggleProvidersCollapsed: () => void;
   onProviderLogin: (providerId: CliProviderId) => void;
   onProviderLogout: (providerId: CliProviderId) => void;
@@ -573,11 +569,8 @@ const InstalledBanner = ({
   cliStatusError,
   providersCollapsed,
   isBusy,
-  multimodelEnabled,
-  multimodelBusy,
   onInstall,
   onRefresh,
-  onMultimodelToggle,
   onToggleProvidersCollapsed,
   onProviderLogin,
   onProviderLogout,
@@ -683,23 +676,6 @@ const InstalledBanner = ({
             <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
               Multimodel
             </span>
-            {multimodelEnabled && (
-              <span
-                className="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]"
-                style={{
-                  borderColor: 'rgba(245, 158, 11, 0.35)',
-                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                  color: '#fbbf24',
-                }}
-              >
-                Beta
-              </span>
-            )}
-            <SettingsToggle
-              enabled={multimodelEnabled}
-              onChange={onMultimodelToggle}
-              disabled={isBusy || cliStatusLoading || multimodelBusy}
-            />
           </div>
           {/* Extensions button — available whenever the runtime is installed */}
           {canOpenExtensions && (
@@ -1033,7 +1009,6 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
-  const [isSwitchingFlavor, setIsSwitchingFlavor] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const [providersCollapsed, setProvidersCollapsed] = useState(() =>
     loadDashboardCliStatusBannerCollapsed()
@@ -1146,37 +1121,6 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
       }
     })();
   }, [bootstrapCliStatus, codexAccount, fetchCliStatus, multimodelEnabled]);
-
-  const handleMultimodelToggle = useCallback(
-    async (enabled: boolean) => {
-      setIsSwitchingFlavor(true);
-      let nextMultimodelEnabled = multimodelEnabled;
-      try {
-        useStore.setState({
-          cliStatus: enabled ? createLoadingMultimodelCliStatus() : null,
-          cliStatusLoading: true,
-          cliStatusError: null,
-        });
-        await updateConfig('general', { multimodelEnabled: enabled });
-        nextMultimodelEnabled = enabled;
-        await invalidateCliStatus();
-        if (enabled) {
-          await bootstrapCliStatus({ multimodelEnabled: true });
-        } else {
-          await fetchCliStatus();
-        }
-      } catch {
-        if (nextMultimodelEnabled) {
-          await bootstrapCliStatus({ multimodelEnabled: true });
-        } else {
-          await fetchCliStatus();
-        }
-      } finally {
-        setIsSwitchingFlavor(false);
-      }
-    },
-    [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled, updateConfig]
-  );
 
   const recheckAuthState = useCallback(() => {
     setIsVerifyingAuth(true);
@@ -1422,11 +1366,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           cliStatusError={cliStatusError ?? null}
           providersCollapsed={providersCollapsed}
           isBusy={isBusy}
-          multimodelEnabled={multimodelEnabled}
-          multimodelBusy={isSwitchingFlavor}
           onInstall={handleInstall}
           onRefresh={handleRefresh}
-          onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
           onProviderLogout={handleProviderLogout}
@@ -1650,11 +1591,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             cliStatusError={cliStatusError ?? null}
             providersCollapsed={providersCollapsed}
             isBusy={isBusy}
-            multimodelEnabled={multimodelEnabled}
-            multimodelBusy={isSwitchingFlavor}
             onInstall={handleInstall}
             onRefresh={handleRefresh}
-            onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
             onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
             onProviderLogin={handleProviderLogin}
             onProviderLogout={handleProviderLogout}
@@ -1712,11 +1650,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           cliStatusError={cliStatusError ?? null}
           providersCollapsed={providersCollapsed}
           isBusy={isBusy}
-          multimodelEnabled={multimodelEnabled}
-          multimodelBusy={isSwitchingFlavor}
           onInstall={handleInstall}
           onRefresh={handleRefresh}
-          onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
           onProviderLogout={handleProviderLogout}
@@ -1934,11 +1869,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         cliStatusError={cliStatusError ?? null}
         providersCollapsed={providersCollapsed}
         isBusy={isBusy}
-        multimodelEnabled={multimodelEnabled}
-        multimodelBusy={isSwitchingFlavor}
         onInstall={handleInstall}
         onRefresh={handleRefresh}
-        onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
         onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
         onProviderLogin={handleProviderLogin}
         onProviderLogout={handleProviderLogout}

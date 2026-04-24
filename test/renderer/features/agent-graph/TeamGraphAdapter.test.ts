@@ -1136,8 +1136,8 @@ describe('TeamGraphAdapter particles', () => {
     );
 
     expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
-      launchVisualState: 'runtime_pending',
-      launchStatusLabel: 'connecting',
+      launchVisualState: 'waiting',
+      launchStatusLabel: 'waiting to start',
     });
   });
 

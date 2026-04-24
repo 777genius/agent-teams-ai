@@ -4,6 +4,8 @@ import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
   TeamAgentRuntimeBackendType,
+  TeamAgentRuntimeLivenessKind,
+  TeamAgentRuntimePidSource,
   TeamLaunchAggregateState,
 } from '@shared/types';
 
@@ -73,6 +75,9 @@ export interface TeamRuntimeMemberLaunchEvidence {
   sessionId?: string;
   backendType?: TeamAgentRuntimeBackendType;
   runtimePid?: number;
+  livenessKind?: TeamAgentRuntimeLivenessKind;
+  pidSource?: TeamAgentRuntimePidSource;
+  runtimeDiagnostic?: string;
   diagnostics: string[];
 }
 

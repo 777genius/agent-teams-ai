@@ -71,14 +71,7 @@ const logger = createLogger('teamSlice');
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
 const TEAM_FETCH_TIMEOUT_MS = 30_000;
 const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
-const TEAM_DATA_IPC_WARN_MS = 350;
-const TEAM_DATA_SET_WARN_MS = 12;
-const TEAM_DATA_POST_WARN_MS = 24;
-const TEAM_DATA_LARGE_MESSAGES = 150;
-const TEAM_DATA_LARGE_TASKS = 80;
 const TEAM_REFRESH_BURST_WINDOW_MS = 4_000;
-const TEAM_REFRESH_BURST_WARN_COUNT = 5;
-const TEAM_REFRESH_WARN_THROTTLE_MS = 2_000;
 const MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS = 2_000;
 const inFlightTeamDataRequests = new Map<string, Promise<TeamViewSnapshot>>();
 const inFlightRefreshTeamDataCalls = new Map<string, Set<symbol>>();
@@ -567,45 +560,6 @@ function fetchTeamDataFresh(teamName: string): Promise<TeamViewSnapshot> {
   );
 }
 
-function summarizeTeamDataCounts(data: TeamViewSnapshot | null | undefined): {
-  tasks: number;
-  members: number;
-  activeMembers: number;
-  processes: number;
-} {
-  if (!data) {
-    return { tasks: 0, members: 0, activeMembers: 0, processes: 0 };
-  }
-
-  return {
-    tasks: data.tasks.length,
-    members: data.members.length,
-    activeMembers: data.members.filter((member) => !member.removedAt).length,
-    processes: data.processes.length,
-  };
-}
-
-function estimateTeamPayloadWeight(data: TeamViewSnapshot): {
-  taskComments: number;
-  taskHistoryEvents: number;
-  taskDescriptionChars: number;
-} {
-  let taskComments = 0;
-  let taskHistoryEvents = 0;
-  let taskDescriptionChars = 0;
-  for (const task of data.tasks) {
-    taskComments += task.comments?.length ?? 0;
-    taskHistoryEvents += task.historyEvents?.length ?? 0;
-    taskDescriptionChars += task.description?.length ?? 0;
-  }
-
-  return {
-    taskComments,
-    taskHistoryEvents,
-    taskDescriptionChars,
-  };
-}
-
 function noteTeamRefreshBurst(teamName: string): number {
   const now = Date.now();
   const diagnostic = teamRefreshBurstDiagnostics.get(teamName) ?? {
@@ -621,75 +575,8 @@ function noteTeamRefreshBurst(teamName: string): number {
 
   diagnostic.count += 1;
 
-  if (
-    diagnostic.count >= TEAM_REFRESH_BURST_WARN_COUNT &&
-    now - diagnostic.lastWarnAt >= TEAM_REFRESH_WARN_THROTTLE_MS
-  ) {
-    diagnostic.lastWarnAt = now;
-    logger.warn(
-      `[perf] refreshTeamData burst team=${teamName} count=${diagnostic.count} windowMs=${
-        now - diagnostic.windowStartedAt
-      }`
-    );
-  }
-
   teamRefreshBurstDiagnostics.set(teamName, diagnostic);
   return diagnostic.count;
-}
-
-function maybeLogTeamDataPerf(params: {
-  phase: 'selectTeam' | 'refreshTeamData';
-  teamName: string;
-  ipcMs: number;
-  setMs: number;
-  postMs: number;
-  totalMs: number;
-  previousData: TeamViewSnapshot | null | undefined;
-  nextData: TeamViewSnapshot;
-  deduped: boolean;
-  reusedInFlightRequest: boolean;
-  burstCount?: number;
-}): void {
-  const {
-    phase,
-    teamName,
-    ipcMs,
-    setMs,
-    postMs,
-    totalMs,
-    previousData,
-    nextData,
-    deduped,
-    reusedInFlightRequest,
-    burstCount,
-  } = params;
-
-  const nextCounts = summarizeTeamDataCounts(nextData);
-  const previousCounts = summarizeTeamDataCounts(previousData);
-  const largePayload = nextCounts.tasks >= TEAM_DATA_LARGE_TASKS;
-  const slow =
-    ipcMs >= TEAM_DATA_IPC_WARN_MS ||
-    setMs >= TEAM_DATA_SET_WARN_MS ||
-    postMs >= TEAM_DATA_POST_WARN_MS;
-
-  if (!slow && !largePayload && !reusedInFlightRequest) {
-    return;
-  }
-
-  const payloadWeight = estimateTeamPayloadWeight(nextData);
-  logger.warn(
-    `[perf] ${phase} team=${teamName} ipc=${ipcMs.toFixed(1)}ms set=${setMs.toFixed(
-      1
-    )}ms post=${postMs.toFixed(1)}ms total=${totalMs.toFixed(1)}ms deduped=${deduped} reusedInFlight=${
-      reusedInFlightRequest ? 'yes' : 'no'
-    } burst=${burstCount ?? 1} counts=tasks:${previousCounts.tasks}->${nextCounts.tasks},members:${
-      previousCounts.members
-    }->${nextCounts.members},activeMembers:${
-      previousCounts.activeMembers
-    }->${nextCounts.activeMembers},processes:${previousCounts.processes}->${nextCounts.processes} payload=textChars:${
-      payloadWeight.taskDescriptionChars
-    },taskComments=${payloadWeight.taskComments},historyEvents=${payloadWeight.taskHistoryEvents}`
-  );
 }
 
 function areLaunchSummaryCountsEqual(
@@ -702,7 +589,13 @@ function areLaunchSummaryCountsEqual(
     left.confirmedCount === right.confirmedCount &&
     left.pendingCount === right.pendingCount &&
     left.failedCount === right.failedCount &&
-    left.runtimeAlivePendingCount === right.runtimeAlivePendingCount
+    left.skippedCount === right.skippedCount &&
+    left.runtimeAlivePendingCount === right.runtimeAlivePendingCount &&
+    left.shellOnlyPendingCount === right.shellOnlyPendingCount &&
+    left.runtimeProcessPendingCount === right.runtimeProcessPendingCount &&
+    left.runtimeCandidatePendingCount === right.runtimeCandidatePendingCount &&
+    left.noRuntimePendingCount === right.noRuntimePendingCount &&
+    left.permissionPendingCount === right.permissionPendingCount
   );
 }
 
@@ -736,9 +629,15 @@ function areMemberSpawnStatusEntriesEqual(
     left.launchState === right.launchState &&
     left.error === right.error &&
     left.hardFailureReason === right.hardFailureReason &&
+    left.skippedForLaunch === right.skippedForLaunch &&
+    left.skipReason === right.skipReason &&
+    left.skippedAt === right.skippedAt &&
     left.livenessSource === right.livenessSource &&
     left.runtimeAlive === right.runtimeAlive &&
     left.runtimeModel === right.runtimeModel &&
+    left.livenessKind === right.livenessKind &&
+    left.runtimeDiagnostic === right.runtimeDiagnostic &&
+    left.runtimeDiagnosticSeverity === right.runtimeDiagnosticSeverity &&
     left.bootstrapConfirmed === right.bootstrapConfirmed &&
     left.hardFailure === right.hardFailure &&
     leftPendingPermissionIds.length === rightPendingPermissionIds.length &&
@@ -802,14 +701,34 @@ function areTeamAgentRuntimeEntriesEqual(
 ): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
+  const leftDiagnostics = left.diagnostics ?? [];
+  const rightDiagnostics = right.diagnostics ?? [];
   return (
     left.memberName === right.memberName &&
     left.alive === right.alive &&
     left.restartable === right.restartable &&
     left.backendType === right.backendType &&
+    left.providerId === right.providerId &&
+    left.providerBackendId === right.providerBackendId &&
+    left.laneId === right.laneId &&
+    left.laneKind === right.laneKind &&
     left.pid === right.pid &&
     left.runtimeModel === right.runtimeModel &&
-    left.rssBytes === right.rssBytes
+    left.rssBytes === right.rssBytes &&
+    left.livenessKind === right.livenessKind &&
+    left.pidSource === right.pidSource &&
+    left.processCommand === right.processCommand &&
+    left.paneId === right.paneId &&
+    left.panePid === right.panePid &&
+    left.paneCurrentCommand === right.paneCurrentCommand &&
+    left.runtimePid === right.runtimePid &&
+    left.runtimeSessionId === right.runtimeSessionId &&
+    left.runtimeDiagnostic === right.runtimeDiagnostic &&
+    left.runtimeDiagnosticSeverity === right.runtimeDiagnosticSeverity &&
+    left.runtimeLastSeenAt === right.runtimeLastSeenAt &&
+    left.historicalBootstrapConfirmed === right.historicalBootstrapConfirmed &&
+    leftDiagnostics.length === rightDiagnostics.length &&
+    leftDiagnostics.every((value, index) => value === rightDiagnostics[index])
   );
 }
 
@@ -2134,6 +2053,7 @@ export interface TeamSlice {
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   restartMember: (teamName: string, memberName: string) => Promise<void>;
+  skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
   updateMemberRole: (
     teamName: string,
@@ -3211,7 +3131,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   selectTeam: async (teamName: string, opts) => {
-    const startedAt = performance.now();
     const teamStateEpoch = captureTeamLocalStateEpoch(teamName);
     const allowReloadWhileProvisioning = opts?.allowReloadWhileProvisioning === true;
     // Guard: prevent duplicate in-flight fetches for the same team.
@@ -3244,7 +3163,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (!isTeamLocalStateEpochCurrent(teamName, teamStateEpoch)) {
         return;
       }
-      const ipcMs = performance.now() - startedAt;
       // Stale check: user may have switched to another team during the async call
       if (get().selectedTeamName !== teamName || get().selectedTeamLoadNonce !== requestNonce) {
         return;
@@ -3276,7 +3194,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         : data;
       const nextTeamData = structurallyShareTeamSnapshot(previousData, projectedTeamData);
-      const setStartedAt = performance.now();
       set((state) => {
         const nextCache =
           state.teamDataCacheByName[teamName] === nextTeamData
@@ -3295,8 +3212,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         };
       });
       lastResolvedTeamDataRefreshAtByTeam.set(teamName, Date.now());
-      const setMs = performance.now() - setStartedAt;
-      const postStartedAt = performance.now();
       const invalidationState = previousData
         ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
         : { cacheKeys: [], taskIds: [] };
@@ -3306,19 +3221,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (invalidationState.taskIds.length > 0) {
         await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
       }
-      const postMs = performance.now() - postStartedAt;
-      maybeLogTeamDataPerf({
-        phase: 'selectTeam',
-        teamName,
-        ipcMs,
-        setMs,
-        postMs,
-        totalMs: performance.now() - startedAt,
-        previousData,
-        nextData: nextTeamData,
-        deduped: true,
-        reusedInFlightRequest: false,
-      });
       // Sync tab label with the team's display name from config
       const displayName = data.config.name || teamName;
       const allTabs = get().getAllPaneTabs();
@@ -3422,19 +3324,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   refreshTeamData: async (teamName: string, opts?: RefreshTeamDataOptions) => {
-    const startedAt = performance.now();
     const teamStateEpoch = captureTeamLocalStateEpoch(teamName);
     const refreshToken = beginInFlightTeamDataRefresh(teamName);
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     const reusedInFlightRequest =
       opts?.withDedup === true && inFlightTeamDataRequests.has(teamName);
-    const burstCount = noteTeamRefreshBurst(teamName);
+    noteTeamRefreshBurst(teamName);
     if (reusedInFlightRequest) {
       pendingFreshTeamDataRefreshes.add(teamName);
-      logger.warn(
-        `[perf] refreshTeamData queued-fresh team=${teamName} burst=${burstCount} reason=inFlightDedup`
-      );
     }
     try {
       const previousData = selectTeamDataForName(get(), teamName);
@@ -3444,7 +3342,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (!isTeamLocalStateEpochCurrent(teamName, teamStateEpoch)) {
         return;
       }
-      const ipcMs = performance.now() - startedAt;
       const projectedTeamData = previousData
         ? {
             ...data,
@@ -3452,7 +3349,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         : data;
       const nextTeamData = structurallyShareTeamSnapshot(previousData, projectedTeamData);
-      const setStartedAt = performance.now();
       set((state) => {
         const nextCache =
           state.teamDataCacheByName[teamName] === nextTeamData
@@ -3484,8 +3380,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         };
       });
       lastResolvedTeamDataRefreshAtByTeam.set(teamName, Date.now());
-      const setMs = performance.now() - setStartedAt;
-      const postStartedAt = performance.now();
       const invalidationState = previousData
         ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
         : { cacheKeys: [], taskIds: [] };
@@ -3495,20 +3389,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (invalidationState.taskIds.length > 0) {
         await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
       }
-      const postMs = performance.now() - postStartedAt;
-      maybeLogTeamDataPerf({
-        phase: 'refreshTeamData',
-        teamName,
-        ipcMs,
-        setMs,
-        postMs,
-        totalMs: performance.now() - startedAt,
-        previousData,
-        nextData: nextTeamData,
-        deduped: opts?.withDedup === true,
-        reusedInFlightRequest,
-        burstCount,
-      });
     } catch (error) {
       if (!isTeamLocalStateEpochCurrent(teamName, teamStateEpoch)) {
         return;
@@ -4223,6 +4103,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       await Promise.allSettled([
         get().fetchMemberSpawnStatuses(teamName),
         get().fetchTeamAgentRuntime(teamName),
+      ]);
+    }
+  },
+
+  skipMemberForLaunch: async (teamName: string, memberName: string) => {
+    try {
+      await unwrapIpc('team:skipMemberForLaunch', () =>
+        api.teams.skipMemberForLaunch(teamName, memberName)
+      );
+    } finally {
+      await Promise.allSettled([
+        get().fetchMemberSpawnStatuses(teamName),
+        get().fetchTeamAgentRuntime(teamName),
+        get().fetchTeams(),
       ]);
     }
   },

@@ -1,7 +1,7 @@
 # OpenCode Native Semantic Messaging Plan
 
-Status: planning document  
-Scope: `claude_team` + `agent_teams_orchestrator`  
+Status: planning document
+Scope: `claude_team` + `agent_teams_orchestrator`
 Goal: make OpenCode teammates use the correct app MCP messaging protocol without breaking Codex/Claude native teammates.
 
 ## Problem
@@ -30,13 +30,13 @@ This can make OpenCode teammates look started but not answer through the Message
 
 Chosen approach: OpenCode-native semantic messaging seam.
 
-Option 1: frontend-only display patch - 🎯 2   🛡️ 2   🧠 2, about 50-120 LOC  
+Option 1: frontend-only display patch - 🎯 2 🛡️ 2 🧠 2, about 50-120 LOC
 This hides symptoms only. It does not fix the wrong tool instructions sent to OpenCode.
 
-Option 2: orchestrator-only patch - 🎯 6   🛡️ 6   🧠 4, about 180-320 LOC  
+Option 2: orchestrator-only patch - 🎯 6 🛡️ 6 🧠 4, about 180-320 LOC
 This is necessary for runtime identity and MCP proof, but not sufficient because `member_briefing` and task assignment messages are produced in `claude_team`.
 
-Option 3: orchestrator + `claude_team` controller/MCP semantic seam - 🎯 9   🛡️ 9   🧠 7, about 1300-2200 LOC with tests  
+Option 3: orchestrator + `claude_team` controller/MCP semantic seam - 🎯 9 🛡️ 9 🧠 7, about 1300-2200 LOC with tests
 This fixes the actual contract. Orchestrator owns OpenCode session identity. `claude_team` owns team protocol text and MCP tool schemas.
 
 ## Extra Research Corrections
@@ -54,11 +54,9 @@ This section records the higher-risk places that were checked after the first dr
 - The required app-tool proof must cover all teammate-operational tools that `member_briefing` can instruct, not just `message_send` and four task tools.
 - `claude_team` already exports `AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES` from `agent-teams-controller`; app-side required tools should derive from that instead of duplicating a second list.
 - Orchestrator direct `mcp:tools/list` proof sees plain MCP names like `message_send`, not OpenCode canonical ids. Do not compare direct stdio results against `agent_teams_message_send` or `agent-teams_message_send`.
-- However, orchestrator readiness currently exposes `toolProof.observedTools` through `readiness.evidence.observedMcpTools`, and the production live evidence builder reuses that field as `evidence.mcpTools.observedTools`. So direct proof should match plain names internally, but should still emit canonical OpenCode ids for public bridge/evidence output, or add a separate explicit `observedDirectToolNames` field. Do not silently change `observedMcpTools` to plain names.
+- However, orchestrator readiness currently exposes `toolProof.observedTools` through `readiness.evidence.observedMcpTools`. Direct proof should match plain names internally, but bridge output should keep a clearly named field if canonical OpenCode ids are needed later. Do not silently change `observedMcpTools` semantics.
 - `agent_teams_orchestrator` does not currently depend on `agent-teams-controller`. Do not import the controller catalog into the orchestrator in v1 unless intentionally adding a new cross-repo/package dependency.
-- `OpenCodeReadinessBridge.applyProductionE2EGate()` still builds `requiredMcpTools` from runtime-only tools. If app-side readiness starts requiring teammate-operational tools, the production E2E gate must be moved to the same app tool contract or it will validate a weaker/stale artifact.
-- `assertOpenCodeProductionE2EArtifactGate()` compares expected tool ids against `evidence.mcpTools.observedTools` exactly. Stale evidence generated before this change should fail production mode clearly instead of silently pretending the stronger proof exists.
-- `scripts/prove-opencode-production.mjs` is only a launcher. The production evidence JSON is built in `test/main/services/team/OpenCodeProductionGate.live.test.ts` inside `buildCandidateEvidence()`. Updating the script alone does nothing; update the live test builder and gate expectations.
+- The old project-proof gate was removed from OpenCode launch readiness. Do not reintroduce project-scoped launch blocking for selected models; runtime readiness should be based on inventory, capabilities, runtime stores, app MCP tool proof, and the execution probe.
 - Current controller teammate-operational catalog includes more than the obvious message/task-start tools: `task_attach_comment_file`, `task_attach_file`, `task_create`, `task_create_from_message`, `task_link`, and `task_unlink` are also teammate-operational and must be included in any explicit orchestrator v1 list.
 - `mcp-server/src/agent-teams-controller.d.ts` and `src/types/agent-teams-controller.d.ts` mirror controller signatures and must be updated when `memberBriefing(memberName, options)` is added.
 - `agent-teams-controller` is CommonJS and existing TS code imports it as `import * as agentTeamsControllerModule from 'agent-teams-controller'`; use that pattern in new app-side imports instead of assuming a default ESM export.
@@ -190,13 +188,10 @@ Implementation rule:
 - `/Users/belief/dev/projects/claude/claude_team/src/types/agent-teams-controller.d.ts`
 - `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability.ts`
 - `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts`
-- `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence.ts`
 - `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/delivery/RuntimeDeliveryService.ts`
 - `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader.ts`
 - `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource.ts`
 - `/Users/belief/dev/projects/claude/claude_team/src/main/services/team/taskLogs/stream/BoardTaskLogStreamService.ts`
-- `/Users/belief/dev/projects/claude/claude_team/test/main/services/team/OpenCodeProductionGate.live.test.ts`
-- `/Users/belief/dev/projects/claude/claude_team/scripts/prove-opencode-production.mjs`
 
 `agent_teams_orchestrator` files:
 
@@ -222,7 +217,9 @@ Example:
 
 ```js
 function normalizeRuntimeProvider(value) {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   return normalized === 'opencode' ? 'opencode' : 'native';
 }
 
@@ -267,7 +264,9 @@ function createMemberMessagingProtocol(runtimeProvider) {
 }
 
 function isOpenCodeMember(member) {
-  const provider = String(member?.providerId || member?.provider || '').trim().toLowerCase();
+  const provider = String(member?.providerId || member?.provider || '')
+    .trim()
+    .toLowerCase();
   return provider === 'opencode';
 }
 
@@ -302,9 +301,7 @@ Edit pattern:
 
 ```js
 function copyTrimmedString(member, key) {
-  return typeof member[key] === 'string' && member[key].trim()
-    ? { [key]: member[key].trim() }
-    : {};
+  return typeof member[key] === 'string' && member[key].trim() ? { [key]: member[key].trim() } : {};
 }
 ```
 
@@ -314,9 +311,15 @@ Then preserve fields:
 return {
   name,
   ...(typeof member.role === 'string' && member.role.trim() ? { role: member.role.trim() } : {}),
-  ...(typeof member.workflow === 'string' && member.workflow.trim() ? { workflow: member.workflow.trim() } : {}),
-  ...(typeof member.agentType === 'string' && member.agentType.trim() ? { agentType: member.agentType.trim() } : {}),
-  ...(typeof member.color === 'string' && member.color.trim() ? { color: member.color.trim() } : {}),
+  ...(typeof member.workflow === 'string' && member.workflow.trim()
+    ? { workflow: member.workflow.trim() }
+    : {}),
+  ...(typeof member.agentType === 'string' && member.agentType.trim()
+    ? { agentType: member.agentType.trim() }
+    : {}),
+  ...(typeof member.color === 'string' && member.color.trim()
+    ? { color: member.color.trim() }
+    : {}),
   ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
   ...copyTrimmedString(member, 'providerId'),
   ...copyTrimmedString(member, 'providerBackendId'),
@@ -398,7 +401,8 @@ Inside the function:
 
 ```js
 const explicitRuntimeProvider = options.runtimeProvider;
-const inferredRuntimeProvider = explicitRuntimeProvider || (isOpenCodeMember(effectiveMember) ? 'opencode' : 'native');
+const inferredRuntimeProvider =
+  explicitRuntimeProvider || (isOpenCodeMember(effectiveMember) ? 'opencode' : 'native');
 const messagingProtocol = createMemberMessagingProtocol(inferredRuntimeProvider);
 ```
 
@@ -702,13 +706,11 @@ Do not hide `runtime_deliver_message` from readiness or app tool availability pr
 Instead, make tool descriptions and OpenCode prompts explicitly route normal replies:
 
 ```ts
-description:
-  'Send a visible team/user message. OpenCode teammates should use this for normal replies to the human user, lead, or same-team teammates. When to is "user", from is required and must be your configured teammate name.'
+description: 'Send a visible team/user message. OpenCode teammates should use this for normal replies to the human user, lead, or same-team teammates. When to is "user", from is required and must be your configured teammate name.';
 ```
 
 ```ts
-description:
-  'Low-level OpenCode runtime delivery journal tool. Use only when the runtime/app prompt explicitly provides runId, runtimeSessionId, idempotencyKey, and asks for runtime delivery. For normal visible replies, use message_send.'
+description: 'Low-level OpenCode runtime delivery journal tool. Use only when the runtime/app prompt explicitly provides runId, runtimeSessionId, idempotencyKey, and asks for runtime delivery. For normal visible replies, use message_send.';
 ```
 
 OpenCode-specific prompt wording should avoid generic "deliver message" language:
@@ -778,7 +780,9 @@ function normalizeMessageSendFlags(context, flags) {
       throw new Error('message_send cannot target another team. Use cross_team_send with toTeam.');
     }
     if (!resolvedTo && runtimeHelpers.looksLikeCrossTeamToolRecipient?.(rawTo)) {
-      throw new Error('message_send cannot target cross_team_send. Use cross_team_send with toTeam.');
+      throw new Error(
+        'message_send cannot target cross_team_send. Use cross_team_send with toTeam.'
+      );
     }
     if (!resolvedTo) {
       throw new Error(`Unknown to: ${rawTo}. Use a configured team member name.`);
@@ -837,13 +841,13 @@ Current fact:
 
 Options:
 
-Option A: keep cross-team `taskRefs` out of v1 prompts - 🎯 8   🛡️ 8   🧠 2, about 0-25 LOC  
+Option A: keep cross-team `taskRefs` out of v1 prompts - 🎯 8 🛡️ 8 🧠 2, about 0-25 LOC
 Safest if we want the smallest messaging seam. The helper must not accept or render `taskRefs` for `buildCrossTeamMessageExample()` yet.
 
-Option B: wire cross-team `taskRefs` end-to-end now - 🎯 8   🛡️ 9   🧠 4, about 70-150 LOC  
+Option B: wire cross-team `taskRefs` end-to-end now - 🎯 8 🛡️ 9 🧠 4, about 70-150 LOC
 Best if the helper is meant to be a real semantic messaging seam with uniform traceability. Add `taskRefs` to `cross_team_send` schema, normalize it in controller, store it in target inbox row, append it to sent message, and persist it in `sent-cross-team.json`.
 
-Chosen for v1 if Step 1 helper has a generic `taskRefs` option: Option B.  
+Chosen for v1 if Step 1 helper has a generic `taskRefs` option: Option B.
 Chosen for v1 if Step 1 helper only renders static examples: Option A.
 
 Implementation for Option B:
@@ -903,7 +907,7 @@ Current risk:
 `TeamProvisioningService.captureSendMessages()` recognizes only:
 
 ```ts
-part.name === 'mcp__agent-teams__message_send'
+part.name === 'mcp__agent-teams__message_send';
 ```
 
 But OpenCode and MCP tooling can expose names as:
@@ -957,8 +961,7 @@ export function isAgentTeamsToolUse(input: {
   }
 
   const hasKnownPrefix =
-    rawName !== canonical ||
-    AGENT_TEAMS_PREFIXES.some((prefix) => rawName.startsWith(prefix));
+    rawName !== canonical || AGENT_TEAMS_PREFIXES.some((prefix) => rawName.startsWith(prefix));
   if (hasKnownPrefix) {
     return true;
   }
@@ -1078,23 +1081,23 @@ Add a helper:
 
 ```ts
 function buildOpenCodeRuntimeIdentityBlock(input: {
-  teamName: string
-  memberName: string
-  runId: string
-  runtimeSessionId: string
+  teamName: string;
+  memberName: string;
+  runId: string;
+  runtimeSessionId: string;
 }): string {
   const checkinPayload = {
     teamName: input.teamName,
     runId: input.runId,
     memberName: input.memberName,
     runtimeSessionId: input.runtimeSessionId,
-  }
+  };
 
   const briefingPayload = {
     teamName: input.teamName,
     memberName: input.memberName,
     runtimeProvider: 'opencode',
-  }
+  };
 
   return [
     '<opencode_runtime_identity>',
@@ -1105,7 +1108,7 @@ function buildOpenCodeRuntimeIdentityBlock(input: {
     `Call the exposed Agent Teams member_briefing tool, usually agent-teams_member_briefing or mcp__agent-teams__member_briefing, with: ${JSON.stringify(briefingPayload)}`,
     'For visible team/app messages, use the exposed Agent Teams message_send tool, usually agent-teams_message_send or mcp__agent-teams__message_send. Do not use SendMessage.',
     '</opencode_runtime_identity>',
-  ].join('\n')
+  ].join('\n');
 }
 ```
 
@@ -1117,12 +1120,12 @@ const runtimeIdentityBlock = buildOpenCodeRuntimeIdentityBlock({
   memberName: name,
   runId,
   runtimeSessionId: record.opencodeSessionId,
-})
+});
 
 await openCodeSessionBridge.promptAsync(record, {
   text: `${runtimeIdentityBlock}\n\n${prompt}`,
   agent: 'teammate',
-})
+});
 ```
 
 Then add a bounded launch-settle helper before mapping the member as final `created`/`confirmed_alive`.
@@ -1135,13 +1138,13 @@ Do not add this as a serial wait inside the existing member loop.
 
 Options:
 
-Option A: serial settle inside the existing loop - 🎯 4   🛡️ 5   🧠 2, about 30-60 LOC  
+Option A: serial settle inside the existing loop - 🎯 4 🛡️ 5 🧠 2, about 30-60 LOC
 Easy, but bad for UX. Three OpenCode teammates with an 8 second preview cap can add 24 seconds of launch latency.
 
-Option B: two-phase launch with bounded concurrent settle - 🎯 8   🛡️ 8   🧠 5, about 140-260 LOC  
+Option B: two-phase launch with bounded concurrent settle - 🎯 8 🛡️ 8 🧠 5, about 140-260 LOC
 First ensure sessions and enqueue prompts for all members. Then run bounded preview/reconcile concurrently per prompted member with a small local concurrency cap. This fixes early false `created` without multiplying wait time by teammate count or opening one preview stream per teammate in large teams.
 
-Option C: no settle, rely only on later reconcile - 🎯 5   🛡️ 6   🧠 1, about 0-20 LOC  
+Option C: no settle, rely only on later reconcile - 🎯 5 🛡️ 6 🧠 1, about 0-20 LOC
 Avoids launch delay, but keeps the stale/early UI state that caused OpenCode teammates to look unspawned or stuck.
 
 Chosen for v1: Option B with a local cap of 3 concurrent settle observers. Do not add a dependency just for this; use a tiny local mapper/helper in the orchestrator testable unit.
@@ -1419,13 +1422,13 @@ Risk:
 
 Options:
 
-Option A: keep current text parsing - 🎯 4   🛡️ 5   🧠 1, about 0-15 LOC  
+Option A: keep current text parsing - 🎯 4 🛡️ 5 🧠 1, about 0-15 LOC
 Smallest, but fragile and contradicts the semantic seam goal.
 
-Option B: pass explicit metadata while still sending the native stored text to OpenCode - 🎯 7   🛡️ 7   🧠 3, about 50-100 LOC  
+Option B: pass explicit metadata while still sending the native stored text to OpenCode - 🎯 7 🛡️ 7 🧠 3, about 50-100 LOC
 Better recipient reliability, but still leaves confusing `SendMessage` wording inside the OpenCode prompt.
 
-Option C: keep native inbox text only for native recipients, persist base text for OpenCode recipients, and deliver an OpenCode-native runtime message - 🎯 9   🛡️ 9   🧠 6, about 180-320 LOC with tests  
+Option C: keep native inbox text only for native recipients, persist base text for OpenCode recipients, and deliver an OpenCode-native runtime message - 🎯 9 🛡️ 9 🧠 6, about 180-320 LOC with tests
 Best shape. Codex/Claude keep the existing persisted inbox text because they read inbox files directly. OpenCode inbox rows stay clean/retryable with base user text, while OpenCode receives explicit runtime delivery metadata through the adapter/relay.
 
 Chosen for v1: Option C.
@@ -1512,7 +1515,9 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
     '</opencode_app_message_delivery>',
     '',
     input.text,
-  ].filter((line): line is string => line !== null).join('\n');
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n');
 }
 ```
 
@@ -1569,13 +1574,13 @@ Risk:
 
 Options:
 
-Option A: keep fire-and-forget and add more logs - 🎯 5   🛡️ 5   🧠 1, about 10-30 LOC  
+Option A: keep fire-and-forget and add more logs - 🎯 5 🛡️ 5 🧠 1, about 10-30 LOC
 This helps debugging but keeps the user-facing contract dishonest.
 
-Option B: await OpenCode runtime relay for live OpenCode non-lead sends, return additive delivery status, and fix renderer action result/error propagation - 🎯 9   🛡️ 9   🧠 5, about 160-300 LOC with tests  
+Option B: await OpenCode runtime relay for live OpenCode non-lead sends, return additive delivery status, and fix renderer action result/error propagation - 🎯 9 🛡️ 9 🧠 5, about 160-300 LOC with tests
 This keeps native persistence behavior unchanged, makes OpenCode failure visible, keeps retry routing in one OpenCode inbox relay path, and fixes the existing dead caller catch path that controls pending-reply cleanup.
 
-Option C: add a durable OpenCode delivery queue with retries and UI retry state - 🎯 8   🛡️ 10   🧠 8, about 350-700 LOC  
+Option C: add a durable OpenCode delivery queue with retries and UI retry state - 🎯 8 🛡️ 10 🧠 8, about 350-700 LOC
 This is the best long-term reliability shape, but it is too much to bundle into the semantic messaging seam unless delivery reliability remains flaky after v1.
 
 Chosen for v1: Option B.
@@ -1672,7 +1677,7 @@ sendTeamMessage: async (teamName, request) => {
     });
     throw error;
   }
-}
+};
 ```
 
 Update call sites so pending-reply state reflects actual delivery truth:
@@ -1730,13 +1735,13 @@ Risk examples:
 
 Options:
 
-Option A: only support UI direct-send to OpenCode in v1 - 🎯 5   🛡️ 5   🧠 2, about 0-40 LOC  
+Option A: only support UI direct-send to OpenCode in v1 - 🎯 5 🛡️ 5 🧠 2, about 0-40 LOC
 This leaves OpenCode-to-OpenCode and system notification routes unreliable. It is not enough for a real team messaging seam.
 
-Option B: add OpenCode-targeted inbox runtime relay with messageId dedupe/read marking, plus explicit unsupported-lead diagnostics - 🎯 9   🛡️ 9   🧠 6, about 240-440 LOC with tests  
+Option B: add OpenCode-targeted inbox runtime relay with messageId dedupe/read marking, plus explicit unsupported-lead diagnostics - 🎯 9 🛡️ 9 🧠 6, about 240-440 LOC with tests
 This preserves native behavior, routes only recipients whose provider is OpenCode, and makes any persisted inbox row deliverable to live OpenCode lanes.
 
-Option C: replace both native and OpenCode inbox handling with a new durable delivery queue - 🎯 8   🛡️ 10   🧠 9, about 600-1200 LOC  
+Option C: replace both native and OpenCode inbox handling with a new durable delivery queue - 🎯 8 🛡️ 10 🧠 9, about 600-1200 LOC
 Architecturally clean long-term, but too large for this seam and risky with existing native watchers.
 
 Chosen for v1: Option B.
@@ -1873,13 +1878,13 @@ File:
 
 First decide how the required teammate-operational tool list is owned.
 
-Option A: import `agent-teams-controller` into `agent_teams_orchestrator` - 🎯 5   🛡️ 6   🧠 6, about 80-160 LOC  
+Option A: import `agent-teams-controller` into `agent_teams_orchestrator` - 🎯 5 🛡️ 6 🧠 6, about 80-160 LOC
 This removes list duplication, but it adds a new package dependency from the runtime/orchestrator repo into the app controller package. That is a larger architecture decision than this fix needs.
 
-Option B: keep an explicit direct-MCP required list in orchestrator v1 - 🎯 8   🛡️ 8   🧠 3, about 60-140 LOC  
+Option B: keep an explicit direct-MCP required list in orchestrator v1 - 🎯 8 🛡️ 8 🧠 3, about 60-140 LOC
 This matches the current repo boundary. The orchestrator only needs plain MCP names for direct `Client.listTools()` proof. Add tests that fail when critical teammate tools like `message_send`, `member_briefing`, `task_start`, or `cross_team_send` are missing.
 
-Option C: generate a shared protocol contract artifact consumed by both repos - 🎯 8   🛡️ 9   🧠 7, about 250-450 LOC  
+Option C: generate a shared protocol contract artifact consumed by both repos - 🎯 8 🛡️ 9 🧠 7, about 250-450 LOC
 This is the best long-term shape, but it needs generation, publishing, and CI checks. Treat it as a follow-up after v1 proves the semantic seam.
 
 Chosen for v1: Option B. Do not import `agent-teams-controller` into `agent_teams_orchestrator` in this change.
@@ -1904,7 +1909,7 @@ const REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS = [
   'runtime_deliver_message',
   'runtime_task_event',
   'runtime_heartbeat',
-] as const
+] as const;
 ```
 
 Change to route-specific direct MCP names.
@@ -1913,10 +1918,10 @@ Important:
 
 - `Client.listTools()` returns plain names such as `message_send`.
 - Do not prefix direct stdio results with `agent-teams_`.
-- Only OpenCode app/API tool-id proof and production E2E evidence should deal with canonical ids like `agent-teams_message_send`.
+- Only OpenCode app/API tool-id proof should deal with canonical ids like `agent-teams_message_send`.
 - `agent_teams_message_send` is an accepted alias, not the canonical id produced by `buildOpenCodeCanonicalMcpToolId('agent-teams', 'message_send')`.
 - The orchestrator explicit list should be treated as a boundary adapter, not as the source of truth for app-side UI/readiness.
-- `readiness.evidence.observedMcpTools` is already consumed by production evidence as OpenCode tool ids. Keep that public field canonical. If direct proof needs plain diagnostics, add a second private/internal field such as `observedDirectToolNames`.
+- Keep `readiness.evidence.observedMcpTools` canonical if it is exposed through the bridge. If direct proof needs plain diagnostics, add a second private/internal field such as `observedDirectToolNames`.
 
 ```ts
 const REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS = [
@@ -1924,7 +1929,7 @@ const REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS = [
   'runtime_deliver_message',
   'runtime_task_event',
   'runtime_heartbeat',
-] as const
+] as const;
 
 const REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS = [
   'member_briefing',
@@ -1956,20 +1961,20 @@ const REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS = [
   'cross_team_send',
   'cross_team_list_targets',
   'cross_team_get_outbox',
-] as const
+] as const;
 
 const REQUIRED_AGENT_TEAMS_DIRECT_MCP_TOOL_NAMES = [
   ...REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS,
   ...REQUIRED_AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOLS,
-] as const
+] as const;
 ```
 
 Update direct listTools mapping:
 
 ```ts
 return (result.tools ?? [])
-  .map(tool => tool.name)
-  .filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+  .map((tool) => tool.name)
+  .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
 ```
 
 Compare plain names internally:
@@ -1988,14 +1993,14 @@ But emit canonical ids for bridge readiness/evidence:
 
 ```ts
 function buildOpenCodeCanonicalMcpToolId(toolName: string): string {
-  return `${OPEN_CODE_APP_MCP_SERVER_NAME}_${toolName}`
+  return `${OPEN_CODE_APP_MCP_SERVER_NAME}_${toolName}`;
 }
 
 function matchAppMcpTools(observedDirectToolNames: string[], route: string): AppMcpToolProof {
-  const observedDirect = new Set(observedDirectToolNames)
+  const observedDirect = new Set(observedDirectToolNames);
   const missingTools = REQUIRED_AGENT_TEAMS_DIRECT_MCP_TOOL_NAMES.filter(
-    tool => !observedDirect.has(tool)
-  )
+    (tool) => !observedDirect.has(tool)
+  );
 
   return {
     ok: missingTools.length === 0,
@@ -2004,11 +2009,12 @@ function matchAppMcpTools(observedDirectToolNames: string[], route: string): App
     ),
     observedDirectToolNames: uniqueSortedStrings(observedDirectToolNames),
     missingTools,
-    diagnostics: missingTools.length === 0
-      ? []
-      : [`OpenCode app MCP tools missing from ${route}: ${missingTools.join(', ')}`],
+    diagnostics:
+      missingTools.length === 0
+        ? []
+        : [`OpenCode app MCP tools missing from ${route}: ${missingTools.join(', ')}`],
     route,
-  }
+  };
 }
 ```
 
@@ -2093,96 +2099,26 @@ Acceptance:
 - Existing callers that truly mean runtime schema tools should use `REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS`, not the full app list.
 - Existing callers that mean launch-visible app tools should use `REQUIRED_AGENT_TEAMS_APP_TOOLS` or `REQUIRED_AGENT_TEAMS_APP_TOOL_IDS`.
 
-### Step 12 - Update production E2E gate to prove the same app tools
+### Step 12 - Keep app tool proof in readiness only
 
 Files:
 
 ```text
 /Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts
-/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence.ts
-/Users/belief/dev/projects/claude/claude_team/test/main/services/team/OpenCodeProductionGate.live.test.ts
-/Users/belief/dev/projects/claude/claude_team/scripts/prove-opencode-production.mjs
+/Users/belief/dev/projects/claude/claude_team/src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability.ts
 ```
 
-Current risk:
+Current rule:
 
-```ts
-requiredMcpTools: REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-  buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-)
-```
-
-That is weaker than the planned app-tool readiness proof. It can create two bad states:
-
-- Production gate passes an artifact that proves runtime tools only, while OpenCode can still miss `message_send` or `member_briefing`.
-- Production gate fails confusingly after the required list changes because old evidence was generated with the weaker runtime-only set.
-
-Change `OpenCodeReadinessBridge.applyProductionE2EGate()` to use the full app tool id list:
-
-```ts
-import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../mcp/OpenCodeMcpToolAvailability';
-
-// ...
-requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-```
-
-Update the live evidence builder in `OpenCodeProductionGate.live.test.ts`.
-
-Current builder path:
-
-```ts
-mcpTools: {
-  requiredTools: REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS.map((tool) =>
-    buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
-  ),
-  observedTools: input.readinessObservedTools,
-},
-```
-
-Change it to:
-
-```ts
-mcpTools: {
-  requiredTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-  observedTools: input.readinessObservedTools,
-},
-```
-
-Guard the shape explicitly because `input.readinessObservedTools` comes from the orchestrator bridge:
-
-```ts
-const missingObservedAppToolIds = REQUIRED_AGENT_TEAMS_APP_TOOL_IDS.filter(
-  (toolId) => !input.readinessObservedTools.includes(toolId)
-);
-expect(missingObservedAppToolIds).toEqual([]);
-```
-
-If that assertion fails after Step 10, the orchestrator is probably returning plain direct tool names in `readiness.evidence.observedMcpTools`. Fix the bridge output instead of weakening production evidence.
-
-Keep the evidence validator exact:
-
-```ts
-const observedTools = new Set(evidence.mcpTools.observedTools);
-const missingTools = requiredTools.filter((tool) => !observedTools.has(tool));
-```
-
-Do not add alias fallback here. Evidence should prove the canonical OpenCode app ids that production readiness expects. Alias tolerance belongs in transcript/capture parsing, not in production artifact gating.
-
-Update live/evidence test fixtures:
-
-```ts
-const requiredToolIds = REQUIRED_AGENT_TEAMS_APP_TOOL_IDS;
-```
-
-`scripts/prove-opencode-production.mjs` should not need evidence JSON logic changes because it only launches the live test. Do update its console copy only if it refers to runtime-only proof. The real acceptance point is the artifact written by `OpenCodeProductionGate.live.test.ts`.
+- OpenCode launch readiness should not require a project-scoped proof artifact.
+- App tool proof belongs in the live readiness path through capability, runtime-store, MCP tool, and execution checks.
+- If tool requirements change, update `OpenCodeMcpToolAvailability` and readiness tests directly.
 
 Acceptance:
 
-- Production evidence must include canonical ids for runtime and teammate-operational tools.
-- `message_send`, `member_briefing`, `task_start`, and `cross_team_send` are explicitly covered by tests.
-- Old runtime-only evidence fails production mode with a clear diagnostic listing missing app MCP tools.
-- Dogfood mode can still warn instead of blocking if current policy already allows degraded evidence there.
-- No schema validation is added for all operational tools in this step. That would be a separate hardening pass.
+- `message_send`, `member_briefing`, `task_start`, and `cross_team_send` are covered by readiness tests.
+- Missing app MCP tools fails readiness directly with a clear diagnostic.
+- No project-specific artifact is required to create or launch a team.
 
 ### Step 13 - Resolve secondary lane current-run evidence from lane manifest
 
@@ -2268,10 +2204,7 @@ currentRunId: this.getCurrentOpenCodeRuntimeRunId(input.teamName, input.laneId),
 Change to async durable resolution:
 
 ```ts
-const currentRunId = await this.resolveDurableOpenCodeRuntimeRunId(
-  input.teamName,
-  input.laneId
-);
+const currentRunId = await this.resolveDurableOpenCodeRuntimeRunId(input.teamName, input.laneId);
 
 await store.assertEvidenceAccepted({
   teamName: input.teamName,
@@ -2384,7 +2317,7 @@ emit: (event) => {
     teamName: event.teamName,
     detail: typeof event.data?.detail === 'string' ? event.data.detail : undefined,
   });
-}
+};
 ```
 
 Reason:
@@ -2421,62 +2354,62 @@ Do not add a frontend fake "agent answered" path. Frontend may show "message sav
 
 These are the places most likely to produce regressions if implemented casually.
 
-1. Canonical OpenCode MCP id spelling - 🎯 8   🛡️ 8   🧠 3, about 20-50 LOC in tests  
-`buildOpenCodeCanonicalMcpToolId('agent-teams', 'message_send')` keeps the dash in `agent-teams_message_send`. Direct MCP stdio proof uses plain `message_send`. Transcript parsing accepts aliases. Production E2E evidence should use the canonical dash form only. Add tests for all three contexts so nobody normalizes everything to underscore by accident.
+1. Canonical OpenCode MCP id spelling - 🎯 8 🛡️ 8 🧠 3, about 20-50 LOC in tests
+   `buildOpenCodeCanonicalMcpToolId('agent-teams', 'message_send')` keeps the dash in `agent-teams_message_send`. Direct MCP stdio proof uses plain `message_send`. Transcript parsing accepts aliases. Add tests for these contexts so nobody normalizes everything to underscore by accident.
 
-2. Orchestrator explicit teammate tool list drift - 🎯 7   🛡️ 7   🧠 4, about 40-90 LOC in tests  
-The v1 orchestrator list is duplicated by design to avoid adding a dependency. This is acceptable only if tests cover the current controller teammate-operational catalog snapshot, including attachment/link/create/cross-team tools. If this fails repeatedly, move to Option C from Step 10: generated shared protocol contract.
+2. Orchestrator explicit teammate tool list drift - 🎯 7 🛡️ 7 🧠 4, about 40-90 LOC in tests
+   The v1 orchestrator list is duplicated by design to avoid adding a dependency. This is acceptable only if tests cover the current controller teammate-operational catalog snapshot, including attachment/link/create/cross-team tools. If this fails repeatedly, move to Option C from Step 10: generated shared protocol contract.
 
-3. Runtime provider inference - 🎯 7   🛡️ 8   🧠 4, about 60-120 LOC with tests  
-`runtimeProvider: "opencode"` is the most reliable signal and should be sent by orchestrator. Provider metadata inference is a fallback for controller-generated messages and manual briefing calls. Native fallback must remain default when neither explicit runtimeProvider nor OpenCode metadata is present.
+3. Runtime provider inference - 🎯 7 🛡️ 8 🧠 4, about 60-120 LOC with tests
+   `runtimeProvider: "opencode"` is the most reliable signal and should be sent by orchestrator. Provider metadata inference is a fallback for controller-generated messages and manual briefing calls. Native fallback must remain default when neither explicit runtimeProvider nor OpenCode metadata is present.
 
-4. Production evidence freshness - 🎯 8   🛡️ 9   🧠 3, about 30-80 LOC in tests  
-Old evidence that proves runtime tools only must fail production gate after this change. This is intentional. The diagnostic must explain which app MCP tools are missing so regeneration is obvious.
+4. Production evidence freshness - 🎯 8 🛡️ 9 🧠 3, about 30-80 LOC in tests
+   Old evidence that proves runtime tools only must fail production gate after this change. This is intentional. The diagnostic must explain which app MCP tools are missing so regeneration is obvious.
 
-5. Model compliance versus protocol availability - 🎯 6   🛡️ 8   🧠 5, about 80-180 LOC with event tests  
-The protocol can make the correct tools visible and instruct the model correctly, but the model may still answer in plain text. The reliable app truth should be: runtime check-in proves the lane is alive, `message_send` proves visible user/team response, and tool-only assistant events still count as `latestAssistantMessageId` for launch liveness.
+5. Model compliance versus protocol availability - 🎯 6 🛡️ 8 🧠 5, about 80-180 LOC with event tests
+   The protocol can make the correct tools visible and instruct the model correctly, but the model may still answer in plain text. The reliable app truth should be: runtime check-in proves the lane is alive, `message_send` proves visible user/team response, and tool-only assistant events still count as `latestAssistantMessageId` for launch liveness.
 
-6. OpenCode send-message command durability - 🎯 7   🛡️ 7   🧠 4, about 40-120 LOC if kept direct, 140-260 LOC if moved into the state-changing bridge  
-`OpenCodeReadinessBridge.sendOpenCodeTeamMessage()` currently executes `opencode.sendMessage` directly, while launch/reconcile/stop go through `OpenCodeStateChangingBridgeCommandService`. For this seam, do not expand scope unless needed: keep direct send, require adapter callers to pass `runId`, and use the runId only for identity reminder/recovery. Treat `promptAsync()` success as delivery acceptance; post-send reconcile failure is a warning, not a false delivery failure. If stale-send bugs continue, promote `opencode.sendMessage` into the state-changing command service as a separate reliability pass.
+6. OpenCode send-message command durability - 🎯 7 🛡️ 7 🧠 4, about 40-120 LOC if kept direct, 140-260 LOC if moved into the state-changing bridge
+   `OpenCodeReadinessBridge.sendOpenCodeTeamMessage()` currently executes `opencode.sendMessage` directly, while launch/reconcile/stop go through `OpenCodeStateChangingBridgeCommandService`. For this seam, do not expand scope unless needed: keep direct send, require adapter callers to pass `runId`, and use the runId only for identity reminder/recovery. Treat `promptAsync()` success as delivery acceptance; post-send reconcile failure is a warning, not a false delivery failure. If stale-send bugs continue, promote `opencode.sendMessage` into the state-changing command service as a separate reliability pass.
 
-7. Cross-team transport split - 🎯 8   🛡️ 9   🧠 4, about 50-120 LOC in prompt helper/tests  
-OpenCode needs two visible messaging transports: `message_send` for local user/lead/member messages, and `cross_team_send` for remote teams. Collapsing both into `message_send` would resurrect the exact bug existing prompts warn about: treating `cross_team_send` as a recipient. The helper should expose both phrases/examples, but implementation remains narrow because it only affects wording and tests.
+7. Cross-team transport split - 🎯 8 🛡️ 9 🧠 4, about 50-120 LOC in prompt helper/tests
+   OpenCode needs two visible messaging transports: `message_send` for local user/lead/member messages, and `cross_team_send` for remote teams. Collapsing both into `message_send` would resurrect the exact bug existing prompts warn about: treating `cross_team_send` as a recipient. The helper should expose both phrases/examples, but implementation remains narrow because it only affects wording and tests.
 
-8. Direct-proof output shape - 🎯 8   🛡️ 9   🧠 4, about 40-100 LOC in orchestrator/tests  
-The orchestrator direct MCP proof must match plain names from `Client.listTools()`, but `readiness.evidence.observedMcpTools` should remain canonical ids because production evidence consumes it. This is a boundary-shape risk, not a model behavior risk. Add tests that plain direct names pass matching while public bridge evidence contains `agent-teams_message_send`.
+8. Direct-proof output shape - 🎯 8 🛡️ 9 🧠 4, about 40-100 LOC in orchestrator/tests
+   The orchestrator direct MCP proof must match plain names from `Client.listTools()`, but `readiness.evidence.observedMcpTools` should remain canonical ids because production evidence consumes it. This is a boundary-shape risk, not a model behavior risk. Add tests that plain direct names pass matching while public bridge evidence contains `agent-teams_message_send`.
 
-8.1 Plain tool-name false positives - 🎯 8   🛡️ 8   🧠 3, about 25-70 LOC with tests  
+8.1 Plain tool-name false positives - 🎯 8 🛡️ 8 🧠 3, about 25-70 LOC with tests
 Alias parsing must accept plain `message_send` for OpenCode direct MCP proof/capture, but a plain name alone is not enough in arbitrary transcripts. For capture/log paths, require Agent Teams payload shape and current team match before treating a plain short name as our tool. Canonical/prefixed names remain accepted directly.
 
-9. Durable run id consumption - 🎯 9   🛡️ 9   🧠 5, about 90-180 LOC with tests  
-`activeRunId` already lives in the lane-scoped `RuntimeStoreManifest`; `lanes.json` only proves lane state. Bootstrap evidence acceptance, runtime delivery journaling, and message delivery must read the manifest when in-memory run maps are empty after app restart. Without this, OpenCode lanes can be active in `lanes.json` but still reject check-in or send messages without identity recovery. Do not add a duplicate run id field to `lanes.json` in v1.
+9. Durable run id consumption - 🎯 9 🛡️ 9 🧠 5, about 90-180 LOC with tests
+   `activeRunId` already lives in the lane-scoped `RuntimeStoreManifest`; `lanes.json` only proves lane state. Bootstrap evidence acceptance, runtime delivery journaling, and message delivery must read the manifest when in-memory run maps are empty after app restart. Without this, OpenCode lanes can be active in `lanes.json` but still reject check-in or send messages without identity recovery. Do not add a duplicate run id field to `lanes.json` in v1.
 
-10. Cross-team taskRefs mismatch - 🎯 7   🛡️ 8   🧠 4, about 0-25 LOC if forbidden in v1, 70-150 LOC if wired end-to-end  
-Shared types already include `taskRefs` for cross-team messages, but `cross_team_send` schema/controller do not persist them. The semantic helper must not generate unsupported fields. Either explicitly forbid cross-team taskRefs in v1 helper examples or wire schema/storage/tests now.
+10. Cross-team taskRefs mismatch - 🎯 7 🛡️ 8 🧠 4, about 0-25 LOC if forbidden in v1, 70-150 LOC if wired end-to-end
+    Shared types already include `taskRefs` for cross-team messages, but `cross_team_send` schema/controller do not persist them. The semantic helper must not generate unsupported fields. Either explicitly forbid cross-team taskRefs in v1 helper examples or wire schema/storage/tests now.
 
-11. OpenCode direct-message metadata - 🎯 9   🛡️ 9   🧠 5, about 120-220 LOC with tests  
-OpenCode runtime delivery should not parse native `SendMessage` prompt text to discover the reply recipient. Pass `replyRecipient`, `actionMode`, and `taskRefs` as explicit adapter metadata, and build a separate OpenCode-native delivery prompt. This lowers model confusion and removes regex coupling to `buildMessageDeliveryText()`.
+11. OpenCode direct-message metadata - 🎯 9 🛡️ 9 🧠 5, about 120-220 LOC with tests
+    OpenCode runtime delivery should not parse native `SendMessage` prompt text to discover the reply recipient. Pass `replyRecipient`, `actionMode`, and `taskRefs` as explicit adapter metadata, and build a separate OpenCode-native delivery prompt. This lowers model confusion and removes regex coupling to `buildMessageDeliveryText()`.
 
-12. Runtime delivery event adapter shape - 🎯 9   🛡️ 9   🧠 3, about 20-60 LOC in tests  
-`RuntimeDeliveryService` uses a local `data.detail` envelope, but the app uses `TeamChangeEvent.detail`. The existing adapter maps it correctly. Test this so a future refactor does not bypass the adapter and make OpenCode replies visible in some UI paths while relay/notification/detail-sensitive paths silently miss the change.
+12. Runtime delivery event adapter shape - 🎯 9 🛡️ 9 🧠 3, about 20-60 LOC in tests
+    `RuntimeDeliveryService` uses a local `data.detail` envelope, but the app uses `TeamChangeEvent.detail`. The existing adapter maps it correctly. Test this so a future refactor does not bypass the adapter and make OpenCode replies visible in some UI paths while relay/notification/detail-sensitive paths silently miss the change.
 
-13. User-directed `message_send` sender identity - 🎯 9   🛡️ 9   🧠 3, about 35-90 LOC with tests  
-The protocol cannot rely only on prompt text saying "include from". If `from` is absent for `to: "user"`, the controller currently creates a durable user-to-user row. Add a narrow guard that rejects missing/invalid sender only for user-directed MCP messages, while keeping legacy user-to-member `message_send` defaults intact.
+13. User-directed `message_send` sender identity - 🎯 9 🛡️ 9 🧠 3, about 35-90 LOC with tests
+    The protocol cannot rely only on prompt text saying "include from". If `from` is absent for `to: "user"`, the controller currently creates a durable user-to-user row. Add a narrow guard that rejects missing/invalid sender only for user-directed MCP messages, while keeping legacy user-to-member `message_send` defaults intact.
 
-14. OpenCode direct-message delivery acknowledgement - 🎯 9   🛡️ 9   🧠 5, about 130-260 LOC with tests  
-The send-message IPC path currently treats inbox persistence as success and starts OpenCode runtime delivery asynchronously. That is okay for native teammates because they watch/read inbox files, but not for OpenCode lanes. Add an additive runtime delivery result and fix the renderer store action to return/rethrow, so UI can distinguish "message saved" from "OpenCode runtime actually received the prompt" and pending replies do not hang on hidden failures.
+14. OpenCode direct-message delivery acknowledgement - 🎯 9 🛡️ 9 🧠 5, about 130-260 LOC with tests
+    The send-message IPC path currently treats inbox persistence as success and starts OpenCode runtime delivery asynchronously. That is okay for native teammates because they watch/read inbox files, but not for OpenCode lanes. Add an additive runtime delivery result and fix the renderer store action to return/rethrow, so UI can distinguish "message saved" from "OpenCode runtime actually received the prompt" and pending replies do not hang on hidden failures.
 
-15. Runtime delivery tool ambiguity - 🎯 8   🛡️ 8   🧠 3, about 25-70 LOC with tests  
-`runtime_deliver_message` can write real destinations, so it is not safe to rely on the name alone and hope the model chooses `message_send`. V1 should keep it available for runtime evidence but make descriptions/prompts explicit that normal visible replies use `message_send`, while runtime delivery is a low-level idempotent path only when explicitly requested.
+15. Runtime delivery tool ambiguity - 🎯 8 🛡️ 8 🧠 3, about 25-70 LOC with tests
+    `runtime_deliver_message` can write real destinations, so it is not safe to rely on the name alone and hope the model chooses `message_send`. V1 should keep it available for runtime evidence but make descriptions/prompts explicit that normal visible replies use `message_send`, while runtime delivery is a low-level idempotent path only when explicitly requested.
 
-16. OpenCode-targeted inbox relay - 🎯 9   🛡️ 9   🧠 6, about 240-440 LOC with tests  
-The app currently has special relay for native lead inboxes and native teammate file-watch behavior, but OpenCode teammates do not watch `inboxes/<member>.json`. Any plan that only fixes UI direct-send still leaves OpenCode-to-OpenCode and system notification routes unreliable. Add recipient-provider-aware runtime relay with at-least-once semantics, read-flag commit, duplicate-event dedupe, and explicit unsupported OpenCode lead diagnostics. Do not reuse native `relayMemberInboxMessages()`.
+16. OpenCode-targeted inbox relay - 🎯 9 🛡️ 9 🧠 6, about 240-440 LOC with tests
+    The app currently has special relay for native lead inboxes and native teammate file-watch behavior, but OpenCode teammates do not watch `inboxes/<member>.json`. Any plan that only fixes UI direct-send still leaves OpenCode-to-OpenCode and system notification routes unreliable. Add recipient-provider-aware runtime relay with at-least-once semantics, read-flag commit, duplicate-event dedupe, and explicit unsupported OpenCode lead diagnostics. Do not reuse native `relayMemberInboxMessages()`.
 
-17. `message_send` recipient canonicalization - 🎯 9   🛡️ 9   🧠 4, about 70-150 LOC with tests  
-Raw recipient names currently become inbox filenames. This is fragile because prompts and tests use lead aliases like `team-lead` while teams can have a custom lead name. Resolve `to` and `from` against configured members before persistence, with `user` as the only special local destination and cross-team tool names rejected clearly.
+17. `message_send` recipient canonicalization - 🎯 9 🛡️ 9 🧠 4, about 70-150 LOC with tests
+    Raw recipient names currently become inbox filenames. This is fragile because prompts and tests use lead aliases like `team-lead` while teams can have a custom lead name. Resolve `to` and `from` against configured members before persistence, with `user` as the only special local destination and cross-team tool names rejected clearly.
 
-18. OpenCode lead runtime session gap - 🎯 8   🛡️ 9   🧠 5, about 60-140 LOC for v1 diagnostics, 300-700 LOC if adding a real lead lane  
-The app-side OpenCode adapter passes `leadPrompt`, but the orchestrator launch handler currently creates sessions from `body.members` only. `relayLeadInboxMessages()` also requires native `run.child`. V1 must not pretend pure OpenCode lead inbox delivery works. Either route to an existing stored `team-lead` OpenCode session if one is later introduced, or leave rows unread with an explicit diagnostic. Creating a real OpenCode lead lane is a separate feature, not a hidden side effect of this messaging seam.
+18. OpenCode lead runtime session gap - 🎯 8 🛡️ 9 🧠 5, about 60-140 LOC for v1 diagnostics, 300-700 LOC if adding a real lead lane
+    The app-side OpenCode adapter passes `leadPrompt`, but the orchestrator launch handler currently creates sessions from `body.members` only. `relayLeadInboxMessages()` also requires native `run.child`. V1 must not pretend pure OpenCode lead inbox delivery works. Either route to an existing stored `team-lead` OpenCode session if one is later introduced, or leave rows unread with an explicit diagnostic. Creating a real OpenCode lead lane is a separate feature, not a hidden side effect of this messaging seam.
 
 ## Tests
 
@@ -2547,7 +2480,9 @@ it('persists taskRefs through message_send', async () => {
     taskRefs: [{ teamName, taskId: 'task-1', displayId: 'abcd1234' }],
   });
 
-  const rows = JSON.parse(fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'user.json'), 'utf8'));
+  const rows = JSON.parse(
+    fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'user.json'), 'utf8')
+  );
   expect(rows[0].taskRefs).toEqual([{ teamName, taskId: 'task-1', displayId: 'abcd1234' }]);
 });
 ```
@@ -2574,7 +2509,9 @@ it('keeps legacy user-to-member message_send valid without from', async () => {
     text: 'Please check this',
   });
 
-  const rows = JSON.parse(fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json'), 'utf8'));
+  const rows = JSON.parse(
+    fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json'), 'utf8')
+  );
   expect(rows.at(-1)).toMatchObject({
     from: 'user',
     to: 'alice',
@@ -2609,7 +2546,9 @@ it('canonicalizes message_send lead aliases before writing inbox files', async (
   });
 
   expect(fs.existsSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'lead.json'))).toBe(true);
-  expect(fs.existsSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'team-lead.json'))).toBe(false);
+  expect(fs.existsSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'team-lead.json'))).toBe(
+    false
+  );
 });
 ```
 
@@ -2624,7 +2563,9 @@ it('canonicalizes message_send sender aliases before persistence', async () => {
     text: 'Please review',
   });
 
-  const rows = JSON.parse(fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json'), 'utf8'));
+  const rows = JSON.parse(
+    fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json'), 'utf8')
+  );
   expect(rows.at(-1)).toMatchObject({ from: 'lead', to: 'alice' });
 });
 ```
@@ -2682,7 +2623,9 @@ it('keeps configured dotted local members valid before applying cross-team heuri
     text: 'Local dotted member',
   });
 
-  expect(fs.existsSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'qa.bot.json'))).toBe(true);
+  expect(fs.existsSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'qa.bot.json'))).toBe(
+    true
+  );
 });
 ```
 
@@ -2717,11 +2660,18 @@ it('persists taskRefs through cross_team_send when enabled', async () => {
   });
 
   const targetInbox = JSON.parse(
-    fs.readFileSync(path.join(claudeDir, 'teams', 'review-team', 'inboxes', 'team-lead.json'), 'utf8')
+    fs.readFileSync(
+      path.join(claudeDir, 'teams', 'review-team', 'inboxes', 'team-lead.json'),
+      'utf8'
+    )
   );
-  expect(targetInbox.at(-1).taskRefs).toEqual([{ teamName, taskId: 'task-1', displayId: 'abcd1234' }]);
+  expect(targetInbox.at(-1).taskRefs).toEqual([
+    { teamName, taskId: 'task-1', displayId: 'abcd1234' },
+  ]);
 
-  const outbox = JSON.parse(fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'sent-cross-team.json'), 'utf8'));
+  const outbox = JSON.parse(
+    fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'sent-cross-team.json'), 'utf8')
+  );
   expect(outbox.at(-1).taskRefs).toEqual([{ teamName, taskId: 'task-1', displayId: 'abcd1234' }]);
 });
 ```
@@ -2812,70 +2762,19 @@ it('does not classify unrelated plain message_send tool_use without Agent Teams 
 });
 ```
 
-Add app-side OpenCode readiness/evidence tests:
+Add app-side OpenCode readiness tests:
 
 ```ts
-it('uses full app tool ids for OpenCode production E2E gate expectations', async () => {
-  const evidence = buildEvidence({
-    observedTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-  });
-
+it('uses full app tool ids for OpenCode readiness expectations', async () => {
   const result = await bridge.runReadiness({
-    launchMode: 'production',
     selectedModel: 'minimax-m2.5-free',
     // ...
   });
 
   expect(result.supportLevel).toBe('production_supported');
-  expect(productionE2eEvidence.read).toHaveBeenCalled();
-});
-```
-
-```ts
-it('rejects stale runtime-only OpenCode production evidence', async () => {
-  const runtimeOnlyToolIds = REQUIRED_AGENT_TEAMS_RUNTIME_PROOF_TOOLS.map((tool) =>
-    buildOpenCodeCanonicalMcpToolId('agent-teams', tool)
+  expect(result.evidence.observedMcpTools).toEqual(
+    expect.arrayContaining(REQUIRED_AGENT_TEAMS_APP_TOOL_IDS)
   );
-  const evidence = buildEvidence({
-    observedTools: runtimeOnlyToolIds,
-    requiredTools: runtimeOnlyToolIds,
-  });
-
-  const gate = assertOpenCodeProductionE2EArtifactGate({
-    evidence,
-    artifactPath: '/tmp/opencode-e2e.json',
-    expected: {
-      requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-    },
-  });
-
-  expect(gate.ok).toBe(false);
-  expect(gate.diagnostics.join('\n')).toContain('agent-teams_message_send');
-  expect(gate.diagnostics.join('\n')).toContain('agent-teams_member_briefing');
-});
-```
-
-```ts
-it('live production evidence builder writes full app tool ids', () => {
-  const evidence = buildCandidateEvidence({
-    readinessObservedTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-    // other required live-test fields
-  });
-
-  expect(evidence.mcpTools.requiredTools).toEqual(REQUIRED_AGENT_TEAMS_APP_TOOL_IDS);
-  expect(evidence.mcpTools.observedTools).toContain('agent-teams_message_send');
-  expect(evidence.mcpTools.observedTools).toContain('agent-teams_cross_team_send');
-});
-```
-
-```ts
-it('live production evidence builder rejects plain direct tool names for artifact output', () => {
-  expect(() =>
-    buildCandidateEvidence({
-      readinessObservedTools: ['message_send', 'member_briefing'],
-      // other required live-test fields
-    })
-  ).toThrow(/agent-teams_message_send/);
 });
 ```
 
@@ -3437,7 +3336,7 @@ Run targeted tests first:
 cd /Users/belief/dev/projects/claude/claude_team
 pnpm --filter agent-teams-controller test -- test/controller.test.js
 pnpm --filter agent-teams-mcp test -- test/tools.test.ts
-pnpm vitest run test/main/services/team/OpenCodeTeamRuntimeAdapter.test.ts test/main/services/team/TeamProvisioningService.test.ts test/main/services/team/TeamProvisioningServiceRelay.test.ts test/main/services/team/TeamProvisioningServiceLiveMessages.test.ts test/main/ipc/teams.test.ts test/main/services/team/OpenCodeMcpToolAvailability.test.ts test/main/services/team/OpenCodeReadinessBridge.test.ts test/main/services/team/OpenCodeProductionE2EEvidence.test.ts test/renderer/store/teamChangeThrottle.test.ts test/renderer/store/teamSlice.test.ts test/renderer/components/team/messages/MessagesPanel.test.ts test/renderer/components/team/dialogs/SendMessageDialog.test.tsx
+pnpm vitest run test/main/services/team/OpenCodeTeamRuntimeAdapter.test.ts test/main/services/team/TeamProvisioningService.test.ts test/main/services/team/TeamProvisioningServiceRelay.test.ts test/main/services/team/TeamProvisioningServiceLiveMessages.test.ts test/main/ipc/teams.test.ts test/main/services/team/OpenCodeMcpToolAvailability.test.ts test/main/services/team/OpenCodeReadinessBridge.test.ts test/renderer/store/teamChangeThrottle.test.ts test/renderer/store/teamSlice.test.ts test/renderer/components/team/messages/MessagesPanel.test.ts test/renderer/components/team/dialogs/SendMessageDialog.test.tsx
 ```
 
 ```bash
@@ -3499,7 +3398,7 @@ Avoid heavy E2E until targeted tests pass.
 19. Add OpenCode-targeted inbox runtime relay with dedupe/read marking.
 20. Expand orchestrator direct MCP proof with the explicit plain-name adapter list while keeping public observed evidence as canonical OpenCode ids.
 21. Expand app-side OpenCode MCP availability proof from controller catalog.
-22. Update production E2E gate and evidence fixtures to require the full app tool id list.
+22. Keep OpenCode readiness requiring the full app tool id list without project-scoped artifacts.
 23. Add lane-scoped manifest `activeRunId` recovery and consume it in evidence acceptance/message delivery/runtime delivery service.
 24. Add runtime delivery `TeamChangeEvent.detail` adapter guard tests.
 25. Add tests.
@@ -3534,9 +3433,7 @@ Avoid heavy E2E until targeted tests pass.
 - Readiness passes while `message_send` is missing. This means proof list is still incomplete.
 - Readiness passes while review/process/task-set tools are missing. This means proof only checked a small subset instead of all teammate-operational briefing tools.
 - Direct MCP readiness fails even though `tools/list` contains `message_send`. This usually means direct stdio proof is incorrectly comparing plain names against OpenCode canonical ids.
-- Production live evidence fails after direct MCP proof succeeds. This usually means the orchestrator started exposing plain names in `readiness.evidence.observedMcpTools`; keep plain names internal and expose canonical `agent-teams_*` ids there.
-- Production mode passes with runtime-only evidence. This means `OpenCodeReadinessBridge` still uses `REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS` instead of the full app tool id list.
-- Production mode blocks with stale evidence after this change. That is expected until the OpenCode production E2E artifact is regenerated, but the diagnostic must list the missing app tools clearly.
+- Readiness passes with runtime-only app tool coverage. This means `OpenCodeMcpToolAvailability` still uses only runtime tools instead of the full app tool id list.
 - App-side and orchestrator required tool lists drift. For v1, this is controlled by tests and explicit comments. If drift keeps recurring, move to a generated shared contract artifact.
 - OpenCode member stays `created` even though the prompt was accepted. This usually means `promptAsync()` was reconciled too early; use the bounded launch-settle helper before final launch mapping.
 - Preview observation times out and marks a teammate failed. That is wrong. Preview timeout should only fall back to reconcile and keep the member pending.
@@ -3557,7 +3454,6 @@ Avoid heavy E2E until targeted tests pass.
 - OpenCode launch, briefing, assignment, completion, and clarification instructions consistently use `agent-teams_message_send`.
 - OpenCode cross-team instructions consistently use `agent-teams_cross_team_send`, not `message_send`.
 - OpenCode readiness fails if required app MCP tools are absent.
-- OpenCode production E2E gate proves the same app MCP tools that readiness requires.
 - Orchestrator direct proof matches plain MCP names internally and emits canonical OpenCode ids in readiness evidence.
 - Runtime tool descriptions make `message_send` the normal visible reply API and keep `runtime_deliver_message` scoped to explicit low-level runtime delivery flows.
 - OpenCode can prove liveness through `runtime_bootstrap_checkin`.

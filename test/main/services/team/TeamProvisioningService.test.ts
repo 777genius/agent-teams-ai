@@ -27,7 +27,9 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 
 vi.mock('@features/tmux-installer/main', () => ({
   killTmuxPaneForCurrentPlatformSync: vi.fn(),
+  listRuntimeProcessesForCurrentTmuxPlatform: vi.fn(async () => []),
   listTmuxPanePidsForCurrentPlatform: vi.fn(async () => new Map()),
+  listTmuxPaneRuntimeInfoForCurrentPlatform: vi.fn(async () => new Map()),
   isTmuxRuntimeReadyForCurrentPlatform: vi.fn(async () => true),
 }));
 
@@ -146,7 +148,9 @@ import {
 } from 'agent-teams-controller';
 import {
   killTmuxPaneForCurrentPlatformSync,
+  listRuntimeProcessesForCurrentTmuxPlatform,
   listTmuxPanePidsForCurrentPlatform,
+  listTmuxPaneRuntimeInfoForCurrentPlatform,
 } from '@features/tmux-installer/main';
 import pidusage from 'pidusage';
 
@@ -411,6 +415,13 @@ function createClaudeLogsRun(overrides: Record<string, unknown> = {}) {
 describe('TeamProvisioningService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(killTmuxPaneForCurrentPlatformSync).mockReset();
+    vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockReset();
+    vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValue([]);
+    vi.mocked(listTmuxPanePidsForCurrentPlatform).mockReset();
+    vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValue(new Map());
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockReset();
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(new Map());
     tempClaudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-provisioning-'));
     tempTeamsBase = path.join(tempClaudeRoot, 'teams');
     tempTasksBase = path.join(tempClaudeRoot, 'tasks');
@@ -559,7 +570,18 @@ describe('TeamProvisioningService', () => {
         cancelRequested: false,
         spawnContext: null,
       });
-      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map([['%1', 222]]));
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
+        new Map([
+          [
+            '%1',
+            {
+              paneId: '%1',
+              panePid: 222,
+              currentCommand: 'codex',
+            },
+          ],
+        ])
+      );
 
       vi.mocked(pidusage).mockResolvedValueOnce({
         '111': createPidusageStat(111, 123_000_000),
@@ -652,7 +674,18 @@ describe('TeamProvisioningService', () => {
         cancelRequested: false,
         spawnContext: null,
       });
-      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map([['%1', 222]]));
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValueOnce(
+        new Map([
+          [
+            '%1',
+            {
+              paneId: '%1',
+              panePid: 222,
+              currentCommand: 'codex',
+            },
+          ],
+        ])
+      );
 
       vi.mocked(pidusage)
         .mockRejectedValueOnce(new Error('ps: process exited'))
@@ -695,14 +728,14 @@ describe('TeamProvisioningService', () => {
         cancelRequested: false,
         spawnContext: null,
       });
-      (svc as any).readUnixProcessTableRows = vi.fn(() => [
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
         {
           pid: 333,
+          ppid: 1,
           command:
             '/Users/belief/.bun/bin/bun cli.js --agent-id alice@nice-team --agent-name alice --team-name nice-team --model gpt-5.2',
         },
       ]);
-      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map());
       vi.mocked(pidusage).mockResolvedValueOnce({
         '111': createPidusageStat(111, 123_000_000),
         '333': createPidusageStat(333, 456_000_000),
@@ -718,6 +751,71 @@ describe('TeamProvisioningService', () => {
         pid: 333,
         rssBytes: 456_000_000,
         runtimeModel: 'gpt-5.2',
+      });
+    });
+
+    it('keeps RSS visible for bootstrap-confirmed Anthropic teammates with a verified process', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', providerId: 'anthropic', model: 'claude-sonnet-4-6' },
+          ],
+        })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@nice-team',
+          backendType: 'tmux',
+        },
+      ]);
+      const run = createMemberSpawnRun({
+        teamName: 'nice-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              lastHeartbeatAt: '2026-04-24T12:00:00.000Z',
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.request = { model: 'claude-opus-4-6' };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      (svc as any).aliveRunByTeam.set('nice-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
+        {
+          pid: 333,
+          ppid: 1,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --agent-id alice@nice-team --agent-name alice --team-name nice-team --model claude-sonnet-4-6',
+        },
+      ]);
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '111': createPidusageStat(111, 123_000_000),
+        '333': createPidusageStat(333, 456_000_000),
+      } as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('nice-team');
+
+      expect(pidusage).toHaveBeenCalledWith([111, 333], { maxage: 0 });
+      expect(snapshot.members.alice).toMatchObject({
+        alive: true,
+        providerId: 'anthropic',
+        pid: 333,
+        pidSource: 'agent_process_table',
+        rssBytes: 456_000_000,
+        runtimeModel: 'claude-sonnet-4-6',
       });
     });
 
@@ -748,19 +846,20 @@ describe('TeamProvisioningService', () => {
         cancelRequested: false,
         spawnContext: null,
       });
-      (svc as any).readUnixProcessTableRows = vi.fn(() => [
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
         {
           pid: 222,
+          ppid: 1,
           command:
             '/Users/belief/.bun/bin/bun cli.js --agent-id alice@nice-team --agent-name alice --team-name nice-team --model gpt-5.2',
         },
         {
           pid: 333,
+          ppid: 1,
           command:
             '/Users/belief/.bun/bin/bun cli.js --team-name nice-team --agent-id alice@nice-team --agent-name alice --model gpt-5.2',
         },
       ]);
-      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map());
       vi.mocked(pidusage).mockResolvedValueOnce({
         '111': createPidusageStat(111, 123_000_000),
         '333': createPidusageStat(333, 456_000_000),
@@ -804,8 +903,8 @@ describe('TeamProvisioningService', () => {
       expect(snapshot.members.alice).toBeUndefined();
     });
 
-    it('keeps pure OpenCode launch members alive from confirmed launch snapshot while runtime adapter is tracked', async () => {
-      const teamName = 'pure-opencode-runtime-team';
+    it('keeps historical bootstrap separate from current runtime liveness', async () => {
+      const teamName = 'pure-opencode-runtime-team-strict';
       const projectPath = '/Users/test/project';
       writeLaunchConfig(teamName, projectPath, 'lead-session', ['alice']);
       writeLaunchState(teamName, 'lead-session', {
@@ -832,10 +931,100 @@ describe('TeamProvisioningService', () => {
       const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
       expect(snapshot.members.alice).toMatchObject({
-        alive: true,
+        alive: false,
+        historicalBootstrapConfirmed: true,
         providerId: 'opencode',
         runtimeModel: 'opencode/big-pickle',
       });
+    });
+
+    it('does not treat a reused OpenCode runtime pid as live', async () => {
+      const teamName = 'pure-opencode-reused-pid-team';
+      const projectPath = '/Users/test/project';
+      writeLaunchConfig(teamName, projectPath, 'lead-session', ['alice']);
+      writeLaunchState(teamName, 'lead-session', {
+        alice: {
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          hardFailureReason: undefined,
+          runtimePid: 333,
+          runtimeSessionId: 'session-alice',
+        },
+      });
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
+        { pid: 333, ppid: 1, command: 'node unrelated-worker.js' },
+      ]);
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '333': createPidusageStat(333, 456_000_000),
+      } as any);
+
+      const svc = new TeamProvisioningService();
+      (svc as any).runtimeAdapterRunByTeam.set(teamName, {
+        runId: 'opencode-runtime-run',
+        providerId: 'opencode',
+        cwd: projectPath,
+      });
+      (svc as any).aliveRunByTeam.set(teamName, 'opencode-runtime-run');
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+
+      expect(snapshot.members.alice).toMatchObject({
+        alive: false,
+        livenessKind: 'runtime_process_candidate',
+        pidSource: 'opencode_bridge',
+        runtimeDiagnostic: 'OpenCode runtime pid is alive, but process identity is unverified',
+        pid: 333,
+        providerId: 'opencode',
+      });
+    });
+
+    it('does not carry stale persisted runtimeAlive through launch-state reconcile', async () => {
+      const teamName = 'persisted-stale-runtime-status-team';
+      const projectPath = '/Users/test/project';
+      const acceptedAt = new Date(Date.now() - 120_000).toISOString();
+      writeLaunchConfig(teamName, projectPath, 'lead-session', ['alice']);
+      writeLaunchState(teamName, 'lead-session', {
+        alice: {
+          providerId: 'codex',
+          model: 'gpt-5.4',
+          launchState: 'runtime_pending_bootstrap',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          hardFailureReason: undefined,
+          firstSpawnAcceptedAt: acceptedAt,
+          runtimePid: 333,
+          livenessKind: 'runtime_process',
+          pidSource: 'agent_process_table',
+        },
+      });
+
+      const svc = new TeamProvisioningService();
+
+      const result = await svc.getMemberSpawnStatuses(teamName);
+      const persisted = JSON.parse(fs.readFileSync(getTeamLaunchStatePath(teamName), 'utf8'));
+
+      expect(result.statuses.alice).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+        runtimeAlive: false,
+        livenessSource: undefined,
+        livenessKind: 'stale_metadata',
+        hardFailure: true,
+        hardFailureReason: 'Teammate did not join within the launch grace window.',
+      });
+      expect(result.summary).toMatchObject({
+        failedCount: 1,
+        runtimeAlivePendingCount: 0,
+      });
+      expect(persisted.members.alice.runtimeAlive).toBe(false);
+      expect(persisted.members.alice.sources?.processAlive).toBeUndefined();
     });
 
     it('excludes removed meta members from live runtime metadata resolution', async () => {
@@ -913,14 +1102,20 @@ describe('TeamProvisioningService', () => {
         ]),
       };
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
-      (svc as any).findLiveProcessPidByAgentId = vi.fn(
-        () =>
-          new Map([
-            ['alice@signal-ops-6', 17527],
-            ['atlas@signal-ops-6', 17528],
-          ])
-      );
-      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map());
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
+        {
+          pid: 17527,
+          ppid: 1,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --agent-id alice@signal-ops-6 --agent-name alice --team-name signal-ops-6 --model gpt-5.4-mini',
+        },
+        {
+          pid: 17528,
+          ppid: 1,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --agent-id atlas@signal-ops-6 --agent-name atlas --team-name signal-ops-6 --model gpt-5.3-codex',
+        },
+      ]);
 
       const metadata = await (svc as any).getLiveTeamAgentRuntimeMetadata('signal-ops-6');
 
@@ -1102,6 +1297,9 @@ describe('TeamProvisioningService', () => {
       ];
       (svc as any).aliveRunByTeam.set('runtime-team', 'run-1');
       (svc as any).runs.set('run-1', run);
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValue([
+        { pid: 333, ppid: 1, command: 'opencode runtime host' },
+      ]);
       vi.mocked(pidusage).mockReset();
       vi.mocked(pidusage).mockImplementation(
         async (target: number | string | Array<number | string>) => {
@@ -1178,6 +1376,9 @@ describe('TeamProvisioningService', () => {
         ),
       };
       vi.mocked(pidusage).mockReset();
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValue([
+        { pid: 333, ppid: 1, command: 'opencode runtime host' },
+      ]);
       vi.mocked(pidusage).mockImplementation(
         async (target: number | string | Array<number | string>) => {
           if (Array.isArray(target)) {
@@ -1349,6 +1550,191 @@ describe('TeamProvisioningService', () => {
       expect(restartMessage).toContain('effort="medium"');
       expect(restartMessage).toContain('with role "Approver"');
       expect(restartMessage).toContain('Their workflow: Use the updated checklist');
+    });
+
+    it('retries a failed teammate without live runtime by resetting spawn status to spawning', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map([
+          [
+            'bob',
+            createMemberSpawnStatusEntry({
+              status: 'error',
+              launchState: 'failed_to_start',
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: 'Teammate "bob" failed to start: spawn failed',
+              error: 'Teammate "bob" failed to start: spawn failed',
+              agentToolAccepted: false,
+              firstSpawnAcceptedAt: undefined,
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+
+      const sendMessageToRun = vi.fn(async () => {});
+      (svc as any).sendMessageToRun = sendMessageToRun;
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'codex',
+            model: 'gpt-5.2',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('codex-team', 'bob');
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'spawning',
+        launchState: 'starting',
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+        error: undefined,
+        agentToolAccepted: false,
+      });
+      expect(run.pendingMemberRestarts.has('bob')).toBe(true);
+      expect(sendMessageToRun).toHaveBeenCalledTimes(1);
+      expect(sendMessageToRun).toHaveBeenCalledWith(
+        run,
+        expect.stringContaining('Teammate "bob" with role "Developer" was restarted from the UI.')
+      );
+    });
+
+    it('skips a failed teammate for the current launch without marking it alive', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map([
+          [
+            'bob',
+            createMemberSpawnStatusEntry({
+              status: 'error',
+              launchState: 'failed_to_start',
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              hardFailureReason: 'Teammate "bob" failed to start: spawn failed',
+              error: 'Teammate "bob" failed to start: spawn failed',
+              agentToolAccepted: false,
+              firstSpawnAcceptedAt: undefined,
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.isLaunch = true;
+
+      const sendMessageToRun = vi.fn(async () => {});
+      (svc as any).sendMessageToRun = sendMessageToRun;
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'codex',
+            model: 'gpt-5.2',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.skipMemberForLaunch('codex-team', 'bob');
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'skipped',
+        launchState: 'skipped_for_launch',
+        skippedForLaunch: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+        error: undefined,
+        agentToolAccepted: false,
+      });
+      expect(run.pendingMemberRestarts.has('bob')).toBe(false);
+      expect(sendMessageToRun).toHaveBeenCalledWith(
+        run,
+        expect.stringContaining('Teammate "bob" was skipped for this launch')
+      );
+    });
+
+    it('rejects skipping a failed teammate while a retry is already in progress', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map([
+          [
+            'bob',
+            createMemberSpawnStatusEntry({
+              status: 'error',
+              launchState: 'failed_to_start',
+              hardFailure: true,
+              hardFailureReason: 'spawn failed',
+              error: 'spawn failed',
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.pendingMemberRestarts.set('bob', {
+        requestedAt: new Date().toISOString(),
+        desired: { name: 'bob', role: 'Developer' },
+      });
+
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'bob', role: 'Developer' },
+          ],
+        })),
+      };
+      (svc as any).membersMetaStore = { getMembers: vi.fn(async () => []) };
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await expect(svc.skipMemberForLaunch('codex-team', 'bob')).rejects.toThrow(
+        'already in progress'
+      );
     });
 
     it('does not let removed base-member metadata override a suffixed teammate during restart', async () => {
@@ -2200,6 +2586,7 @@ describe('TeamProvisioningService', () => {
           pendingCount: 1,
           failedCount: 0,
           runtimeAlivePendingCount: 1,
+          runtimeProcessPendingCount: 1,
         },
         {
           version: 2,
@@ -2276,6 +2663,37 @@ describe('TeamProvisioningService', () => {
       ).toBe('Finishing launch — 1 teammate awaiting permission approval');
     });
 
+    it('counts registered-only liveness as no-runtime pending in launch summaries', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'waiting',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              livenessKind: 'registered_only',
+              runtimeDiagnostic: 'registered runtime metadata without live process',
+            }),
+          ],
+        ]),
+      });
+
+      const launchSummary = (svc as any).getMemberLaunchSummary(run);
+
+      expect(launchSummary).toMatchObject({
+        pendingCount: 1,
+        noRuntimePendingCount: 1,
+      });
+      expect(
+        (svc as any).buildPendingBootstrapStatusMessage('Finishing launch', run, launchSummary)
+      ).toContain('1 no runtime found');
+    });
+
     it('trusts persisted snapshot permission state for pure teams when live run statuses are absent', () => {
       const svc = new TeamProvisioningService();
       const run = createMemberSpawnRun({
@@ -2292,6 +2710,7 @@ describe('TeamProvisioningService', () => {
           pendingCount: 1,
           failedCount: 0,
           runtimeAlivePendingCount: 1,
+          runtimeProcessPendingCount: 1,
         },
         {
           version: 2,
@@ -2345,6 +2764,7 @@ describe('TeamProvisioningService', () => {
           pendingCount: 1,
           failedCount: 0,
           runtimeAlivePendingCount: 1,
+          runtimeProcessPendingCount: 1,
         },
         {
           version: 2,
@@ -2365,6 +2785,7 @@ describe('TeamProvisioningService', () => {
               runtimeAlive: true,
               bootstrapConfirmed: false,
               hardFailure: false,
+              livenessKind: 'runtime_process',
               lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
             },
           },
@@ -2373,6 +2794,7 @@ describe('TeamProvisioningService', () => {
             pendingCount: 1,
             failedCount: 0,
             runtimeAlivePendingCount: 1,
+            runtimeProcessPendingCount: 1,
           },
           teamLaunchState: 'partial_pending',
         }
@@ -2380,6 +2802,24 @@ describe('TeamProvisioningService', () => {
 
       expect(message).toBe('Finishing launch — teammates online');
       expect(message).not.toContain('/0');
+    });
+
+    it('does not use legacy runtimeAlivePendingCount as online launch copy evidence', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'pure-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage('Finishing launch', run, {
+        confirmedCount: 0,
+        pendingCount: 1,
+        failedCount: 0,
+        runtimeAlivePendingCount: 1,
+      });
+
+      expect(message).toBe('Finishing launch — teammates are still starting');
     });
 
     it('uses the union of persisted expected members and persisted member entries for pending launch copy', () => {
@@ -3141,6 +3581,82 @@ describe('TeamProvisioningService', () => {
         runtimeAlive: true,
         bootstrapConfirmed: true,
       });
+    });
+
+    it('persists sanitized runtime tool metadata diagnostics on OpenCode liveness updates', async () => {
+      const svc = new TeamProvisioningService();
+      const previousSnapshot = {
+        version: 2 as const,
+        teamName: 'mixed-team',
+        updatedAt: '2026-04-22T12:00:00.000Z',
+        launchPhase: 'active' as const,
+        expectedMembers: ['bob'],
+        members: {
+          bob: {
+            name: 'bob',
+            providerId: 'opencode' as const,
+            laneId: 'secondary:opencode:bob',
+            laneKind: 'secondary' as const,
+            laneOwnerProviderId: 'opencode' as const,
+            launchState: 'runtime_pending_bootstrap' as const,
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            diagnostics: ['existing diagnostic'],
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        teamLaunchState: 'partial_pending' as const,
+      };
+      const write = vi.fn(async () => {});
+
+      (svc as any).launchStateStore = {
+        read: vi.fn(async () => previousSnapshot),
+        write,
+      };
+
+      await (svc as any).updateOpenCodeRuntimeMemberLiveness({
+        teamName: 'mixed-team',
+        runId: 'run-member-spawn-1',
+        memberName: 'bob',
+        runtimeSessionId: 'session-bob',
+        observedAt: '2026-04-22T12:05:00.000Z',
+        diagnostics: ['native heartbeat'],
+        metadata: {
+          runtimePid: 4321,
+          processCommand: 'opencode runtime --token super-secret --safe ok',
+          runtimeVersion: '1.2.3',
+          hostPid: 987,
+          cwd: '/tmp/project',
+        },
+        reason: 'OpenCode runtime heartbeat accepted',
+      });
+
+      expect(write).toHaveBeenCalledTimes(1);
+      const writtenSnapshot = (
+        write.mock.calls[0] as unknown as [string, Record<string, unknown>] | undefined
+      )?.[1] as { members?: Record<string, { diagnostics?: string[] }> } | undefined;
+      const diagnostics = writtenSnapshot?.members?.bob?.diagnostics ?? [];
+      expect(diagnostics).toEqual(
+        expect.arrayContaining([
+          'existing diagnostic',
+          'native heartbeat',
+          'runtime pid: 4321',
+          'runtime process command: opencode runtime --token [redacted] --safe ok',
+          'runtime version: 1.2.3',
+          'runtime host pid: 987',
+          'runtime cwd: /tmp/project',
+          'OpenCode runtime heartbeat accepted',
+        ])
+      );
+      expect(diagnostics.join('\n')).not.toContain('super-secret');
     });
 
     it('preserves richer persisted expectedMembers when OpenCode runtime liveness updates a stale snapshot', async () => {
@@ -4293,6 +4809,9 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('process-team', 'forge')).rejects.toThrow(
         `Restart for teammate "forge" is still waiting for the previous process to exit (${process.pid}).`
       );
+      await vi.waitFor(() => {
+        expect(vi.mocked(killProcessByPid)).toHaveBeenCalledWith(process.pid);
+      });
       await vi.advanceTimersByTimeAsync(1_500);
       await restartPromise;
 
@@ -4340,9 +4859,14 @@ describe('TeamProvisioningService', () => {
           backendType: 'process',
         },
       ]);
-      (svc as any).findLiveProcessPidByAgentId = vi.fn(
-        () => new Map([['forge@process-team', process.pid]])
-      );
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
+        {
+          pid: process.pid,
+          ppid: 1,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --team-name process-team --agent-id forge@process-team --agent-name forge --model gpt-5.4',
+        },
+      ]);
       (svc as any).liveTeamAgentRuntimeMetadataCache.set('process-team', {
         expiresAtMs: Date.now() + 60_000,
         metadata: new Map([
@@ -4362,6 +4886,9 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('process-team', 'forge')).rejects.toThrow(
         `Restart for teammate "forge" is still waiting for the previous process to exit (${process.pid}).`
       );
+      await vi.waitFor(() => {
+        expect(vi.mocked(killProcessByPid)).toHaveBeenCalledWith(process.pid);
+      });
       await vi.advanceTimersByTimeAsync(1_500);
       await restartPromise;
 
@@ -4404,15 +4931,23 @@ describe('TeamProvisioningService', () => {
         ]),
       };
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
-      (svc as any).findLiveProcessPidByAgentId = vi.fn(
-        () => new Map([['forge@process-team', process.pid]])
-      );
+      vi.mocked(listRuntimeProcessesForCurrentTmuxPlatform).mockResolvedValueOnce([
+        {
+          pid: process.pid,
+          ppid: 1,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --team-name process-team --agent-id forge@process-team --agent-name forge --model gpt-5.4',
+        },
+      ]);
       (svc as any).aliveRunByTeam.set('process-team', run.runId);
       (svc as any).runs.set(run.runId, run);
 
       const restartPromise = expect(svc.restartMember('process-team', 'forge')).rejects.toThrow(
         `Restart for teammate "forge" is still waiting for the previous process to exit (${process.pid}).`
       );
+      await vi.waitFor(() => {
+        expect(vi.mocked(killProcessByPid)).toHaveBeenCalledWith(process.pid);
+      });
       await vi.advanceTimersByTimeAsync(1_500);
       await restartPromise;
 
@@ -4580,6 +5115,107 @@ describe('TeamProvisioningService', () => {
         hardFailureReason: 'Teammate "bob" did not rejoin within the restart grace window.',
       });
       expect(run.pendingMemberRestarts.has('bob')).toBe(false);
+    });
+
+    it('does not let stale runtimeAlive bypass launch timeout when live metadata is weak', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map([
+          [
+            'bob',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              livenessSource: 'process',
+              bootstrapConfirmed: false,
+              firstSpawnAcceptedAt: new Date(Date.now() - 120_000).toISOString(),
+            }),
+          ],
+        ]),
+      });
+      (svc as any).refreshMemberSpawnStatusesFromLeadInbox = vi.fn(async () => {});
+      (svc as any).maybeAuditMemberSpawnStatuses = vi.fn(async () => {});
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+        async () =>
+          new Map([
+            [
+              'bob',
+              {
+                alive: false,
+                livenessKind: 'shell_only',
+                runtimeDiagnostic: 'tmux pane foreground command is zsh',
+                runtimeDiagnosticSeverity: 'warning',
+              },
+            ],
+          ])
+      );
+
+      await (svc as any).reevaluateMemberLaunchStatus(run, 'bob');
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+        runtimeAlive: false,
+        livenessSource: undefined,
+        bootstrapConfirmed: false,
+        livenessKind: 'shell_only',
+        runtimeDiagnostic: 'tmux pane foreground command is zsh',
+        error: 'tmux pane foreground command is zsh',
+      });
+    });
+
+    it('keeps verified runtime pending with a warning after the bootstrap stall window', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map([
+          [
+            'bob',
+            createMemberSpawnStatusEntry({
+              status: 'waiting',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              firstSpawnAcceptedAt: new Date(Date.now() - 6 * 60_000).toISOString(),
+            }),
+          ],
+        ]),
+      });
+      (svc as any).refreshMemberSpawnStatusesFromLeadInbox = vi.fn(async () => {});
+      (svc as any).maybeAuditMemberSpawnStatuses = vi.fn(async () => {});
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+        async () =>
+          new Map([
+            [
+              'bob',
+              {
+                alive: true,
+                livenessKind: 'runtime_process',
+                runtimeDiagnostic: 'verified runtime process detected',
+              },
+            ],
+          ])
+      );
+
+      await (svc as any).reevaluateMemberLaunchStatus(run, 'bob');
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'online',
+        launchState: 'runtime_pending_bootstrap',
+        runtimeAlive: true,
+        bootstrapConfirmed: false,
+        livenessSource: 'process',
+        livenessKind: 'runtime_process',
+        runtimeDiagnostic: 'Runtime process is alive, but no bootstrap check-in after 5 min.',
+        runtimeDiagnosticSeverity: 'warning',
+        hardFailure: false,
+      });
     });
   });
 
@@ -5978,7 +6614,19 @@ describe('TeamProvisioningService', () => {
     );
 
     const svc = new TeamProvisioningService();
-    (svc as any).getLiveTeamAgentNames = vi.fn(() => new Set(['alice']));
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'alice',
+            {
+              alive: true,
+              livenessKind: 'runtime_process',
+              runtimeDiagnostic: 'verified runtime process detected',
+            },
+          ],
+        ])
+    );
 
     const result = await svc.getMemberSpawnStatuses(teamName);
 
@@ -6323,14 +6971,12 @@ describe('TeamProvisioningService', () => {
     );
 
     const svc = new TeamProvisioningService();
-    (svc as any).getLiveTeamAgentNames = vi.fn(() => new Set(['jack']));
 
     const result = await svc.getMemberSpawnStatuses(teamName);
 
     expect(result.statuses.jack).toMatchObject({
       status: 'error',
       launchState: 'failed_to_start',
-      runtimeAlive: true,
     });
     expect(result.statuses.jack?.error).toContain('requested model is not available');
     expect(result.statuses.jack?.hardFailureReason).toContain('requested model is not available');
@@ -6674,7 +7320,7 @@ describe('TeamProvisioningService', () => {
     expect(run.memberSpawnStatuses.get('alice')).toBe(existingEntry);
   });
 
-  it('treats duplicate_skipped already_running as process-confirmed online', () => {
+  it('keeps duplicate_skipped already_running pending without strong evidence', () => {
     const run = createMemberSpawnRun();
     run.activeToolCalls.set('tool-agent-1', {
       memberName: 'alice',
@@ -6702,10 +7348,9 @@ describe('TeamProvisioningService', () => {
     );
 
     expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
-      livenessSource: 'process',
+      runtimeAlive: false,
       hardFailure: false,
     });
   });
@@ -6854,6 +7499,7 @@ describe('TeamProvisioningService', () => {
             {
               alive: true,
               model: 'gpt-5.2',
+              livenessKind: 'runtime_process',
             },
           ],
         ])
@@ -6891,6 +7537,7 @@ describe('TeamProvisioningService', () => {
             {
               alive: true,
               model: 'gpt-5.2',
+              livenessKind: 'runtime_process',
             },
           ],
         ])
@@ -6916,6 +7563,131 @@ describe('TeamProvisioningService', () => {
       runtimeModel: 'gpt-5.2',
       livenessSource: 'process',
     });
+  });
+
+  it('downgrades stale process liveness to pending when live metadata is weak', async () => {
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'bob',
+            {
+              alive: false,
+              livenessKind: 'runtime_process_candidate',
+              runtimeDiagnostic:
+                'OpenCode runtime pid is alive, but process identity is unverified',
+              runtimeDiagnosticSeverity: 'warning',
+            },
+          ],
+        ])
+    );
+
+    const result = await (svc as any).attachLiveRuntimeMetadataToStatuses('beacon-desk-4', {
+      bob: createMemberSpawnStatusEntry({
+        status: 'online',
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        livenessSource: 'process',
+        bootstrapConfirmed: false,
+        hardFailure: false,
+      }),
+    });
+
+    expect(result.bob).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: false,
+      livenessSource: undefined,
+      livenessKind: 'runtime_process_candidate',
+      runtimeDiagnostic: 'OpenCode runtime pid is alive, but process identity is unverified',
+      runtimeDiagnosticSeverity: 'warning',
+    });
+  });
+
+  it('keeps process table diagnostics visible when live metadata has no primary diagnostic', async () => {
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'bob',
+            {
+              alive: false,
+              livenessKind: 'not_found',
+              runtimeDiagnosticSeverity: 'warning',
+              diagnostics: ['process table is unavailable'],
+            },
+          ],
+        ])
+    );
+
+    const result = await (svc as any).attachLiveRuntimeMetadataToStatuses('beacon-desk-4', {
+      bob: createMemberSpawnStatusEntry({
+        status: 'waiting',
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+      }),
+    });
+
+    expect(result.bob).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: false,
+      livenessKind: 'not_found',
+      runtimeDiagnostic: 'process table unavailable',
+      runtimeDiagnosticSeverity: 'warning',
+    });
+  });
+
+  it('classifies process table unavailable launch diagnostics with natural wording', () => {
+    const svc = new TeamProvisioningService();
+    const onProgress = vi.fn();
+    const run = createMemberSpawnRun({
+      expectedMembers: ['bob'],
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          createMemberSpawnStatusEntry({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            livenessKind: 'shell_only',
+            runtimeDiagnostic: 'tmux pane foreground command is zsh; process table is unavailable',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = true;
+    run.progress = {
+      runId: run.runId,
+      teamName: run.teamName,
+      status: 'running',
+      updatedAt: '2026-04-22T12:00:00.000Z',
+    };
+    run.onProgress = onProgress;
+
+    (svc as any).setMemberSpawnStatus(run, 'bob', 'online', undefined, 'process');
+
+    expect(run.progress.launchDiagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          memberName: 'bob',
+          code: 'process_table_unavailable',
+          severity: 'warning',
+          detail: 'tmux pane foreground command is zsh; process table is unavailable',
+        }),
+      ])
+    );
+    expect(onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        launchDiagnostics: expect.arrayContaining([
+          expect.objectContaining({ code: 'process_table_unavailable' }),
+        ]),
+      })
+    );
   });
 
   it('does not clear an explicit restart failure just because the old runtime is still alive', async () => {
@@ -7028,11 +7800,121 @@ describe('TeamProvisioningService', () => {
     expect(result.bob).toMatchObject({
       status: 'error',
       launchState: 'failed_to_start',
-      runtimeAlive: true,
       hardFailure: true,
       hardFailureReason: 'Teammate did not join within the launch grace window.',
       error: 'Teammate did not join within the launch grace window.',
       runtimeModel: 'gpt-5.3-codex',
+    });
+  });
+
+  it('does not resurrect a skipped teammate when live runtime metadata is strong', async () => {
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'bob',
+            {
+              alive: true,
+              livenessKind: 'runtime_process',
+              pid: 123,
+              providerId: 'codex',
+            },
+          ],
+        ])
+    );
+
+    const result = await (svc as any).attachLiveRuntimeMetadataToStatuses('codex-team', {
+      bob: createMemberSpawnStatusEntry({
+        status: 'skipped',
+        launchState: 'skipped_for_launch',
+        skippedForLaunch: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        agentToolAccepted: false,
+        skipReason: 'Skipped by user after launch failure: spawn failed',
+      }),
+    });
+
+    expect(result.bob).toMatchObject({
+      status: 'skipped',
+      launchState: 'skipped_for_launch',
+      skippedForLaunch: true,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      error: undefined,
+      livenessSource: undefined,
+    });
+  });
+
+  it('does not resurrect a skipped teammate during spawn status audit', async () => {
+    const run = createMemberSpawnRun({
+      expectedMembers: ['bob'],
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          createMemberSpawnStatusEntry({
+            status: 'skipped',
+            launchState: 'skipped_for_launch',
+            skippedForLaunch: true,
+            skipReason: 'Skipped by user after launch failure: spawn failed',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            firstSpawnAcceptedAt: undefined,
+          }),
+        ],
+      ]),
+    });
+    const svc = new TeamProvisioningService();
+    (svc as any).getRegisteredTeamMemberNames = vi.fn(async () => new Set(['bob']));
+    (svc as any).getLiveTeamAgentNames = vi.fn(async () => new Set(['bob']));
+
+    await (svc as any).auditMemberSpawnStatuses(run);
+
+    expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+      status: 'skipped',
+      launchState: 'skipped_for_launch',
+      skippedForLaunch: true,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+  });
+
+  it('does not convert a skipped teammate to failed during final missing-member reconciliation', async () => {
+    const run = createMemberSpawnRun({
+      expectedMembers: ['bob'],
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          createMemberSpawnStatusEntry({
+            status: 'skipped',
+            launchState: 'skipped_for_launch',
+            skippedForLaunch: true,
+            skipReason: 'Skipped by user after launch failure: spawn failed',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            firstSpawnAcceptedAt: undefined,
+          }),
+        ],
+      ]),
+    });
+    const svc = new TeamProvisioningService();
+    (svc as any).getRegisteredTeamMemberNames = vi.fn(async () => new Set());
+
+    await (svc as any).finalizeMissingRegisteredMembersAsFailed(run);
+
+    expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+      status: 'skipped',
+      launchState: 'skipped_for_launch',
+      skippedForLaunch: true,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
     });
   });
 
@@ -7247,7 +8129,7 @@ describe('TeamProvisioningService', () => {
     });
   });
 
-  it('treats suffixed live runtime names as alive during persisted launch reconcile', async () => {
+  it('keeps suffixed weak runtime metadata pending during persisted launch reconcile', async () => {
     const teamName = 'suffixed-live-runtime-team';
     const leadSessionId = 'lead-session';
     writeLaunchConfig(teamName, '/Users/test/proj', leadSessionId, ['alice']);
@@ -7264,14 +8146,26 @@ describe('TeamProvisioningService', () => {
     });
 
     const svc = new TeamProvisioningService();
-    (svc as any).getLiveTeamAgentNames = vi.fn(async () => new Set(['alice-2']));
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'alice-2',
+            {
+              alive: false,
+              livenessKind: 'registered_only',
+              runtimeDiagnostic: 'registered runtime metadata without live process',
+            },
+          ],
+        ])
+    );
 
     const result = await svc.getMemberSpawnStatuses(teamName);
 
     expect(result.statuses.alice).toMatchObject({
-      status: 'online',
+      status: 'waiting',
       launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
+      runtimeAlive: false,
     });
   });
 
@@ -7330,7 +8224,7 @@ describe('TeamProvisioningService', () => {
         2
       )
     );
-    (svc as any).getLiveTeamAgentNames = vi.fn(async () => new Set<string>());
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
 
     const result = await (svc as any).reconcilePersistedLaunchState(teamName);
 

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
-import { AnthropicFastModeSelector } from '@renderer/components/team/dialogs/AnthropicFastModeSelector';
-import { CodexFastModeSelector } from '@renderer/components/team/dialogs/CodexFastModeSelector';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
 import {
@@ -24,24 +22,20 @@ import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import { Button } from '../../ui/button';
 
-import type { EffortLevel, TeamFastMode, TeamProviderId } from '@shared/types';
+import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 interface LeadModelRowProps {
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
-  fastMode?: TeamFastMode;
-  providerFastModeDefault?: boolean;
   limitContext: boolean;
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
-  onFastModeChange?: (fastMode: TeamFastMode) => void;
   onLimitContextChange: (value: boolean) => void;
   syncModelsWithTeammates: boolean;
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
   warningText?: string | null;
-  fastModeNotice?: string | null;
   disableGeminiOption?: boolean;
   modelIssueText?: string | null;
 }
@@ -50,18 +44,14 @@ export const LeadModelRow = ({
   providerId,
   model,
   effort,
-  fastMode = 'inherit',
-  providerFastModeDefault = false,
   limitContext,
   onProviderChange,
   onModelChange,
   onEffortChange,
-  onFastModeChange,
   onLimitContextChange,
   syncModelsWithTeammates,
   onSyncModelsWithTeammatesChange,
   warningText,
-  fastModeNotice,
   disableGeminiOption = false,
   modelIssueText,
 }: LeadModelRowProps): React.JSX.Element => {
@@ -173,24 +163,6 @@ export const LeadModelRow = ({
             model={model}
             limitContext={limitContext}
           />
-          {providerId === 'anthropic' && onFastModeChange ? (
-            <AnthropicFastModeSelector
-              value={fastMode}
-              onValueChange={onFastModeChange}
-              providerFastModeDefault={providerFastModeDefault}
-              model={model}
-              limitContext={limitContext}
-              id="lead-fast-mode"
-            />
-          ) : null}
-          {providerId === 'codex' && onFastModeChange ? (
-            <CodexFastModeSelector
-              value={fastMode}
-              onValueChange={onFastModeChange}
-              model={model}
-              id="lead-fast-mode"
-            />
-          ) : null}
           {providerId === 'anthropic' ? (
             <LimitContextCheckbox
               id="lead-limit-context"
@@ -198,12 +170,6 @@ export const LeadModelRow = ({
               onCheckedChange={onLimitContextChange}
               disabled={isAnthropicHaikuTeamModel(model)}
             />
-          ) : null}
-          {fastModeNotice ? (
-            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-              <p>{fastModeNotice}</p>
-            </div>
           ) : null}
           <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
             <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />

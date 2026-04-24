@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { getController } from '../controller';
+import { assertConfiguredTeam } from '../utils/teamConfig';
 
 const toolContextSchema = {
   teamName: z.string().min(1),
@@ -20,13 +21,16 @@ export function registerLeadTools(server: Pick<FastMCP, 'addTool'>) {
     parameters: z.object({
       ...toolContextSchema,
     }),
-    execute: async ({ teamName, claudeDir }) => ({
-      content: [
-        {
-          type: 'text' as const,
-          text: await getController(teamName, claudeDir).tasks.leadBriefing(),
-        },
-      ],
-    }),
+    execute: async ({ teamName, claudeDir }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: await getController(teamName, claudeDir).tasks.leadBriefing(),
+          },
+        ],
+      };
+    },
   });
 }

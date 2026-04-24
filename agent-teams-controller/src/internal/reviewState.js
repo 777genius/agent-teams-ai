@@ -80,19 +80,46 @@ function getEffectiveReviewState(task, kanbanEntry) {
     return historyState;
   }
 
+  const status = typeof task?.status === 'string' ? task.status.trim() : '';
+  const normalizeFallback = (state, source) => {
+    const normalized = normalizeReviewState(state);
+    if (normalized === 'none') {
+      return null;
+    }
+
+    if (status === 'in_progress' || status === 'deleted') {
+      return {
+        state: 'none',
+        source: `${source}_status_reset`,
+      };
+    }
+
+    if (status === 'pending') {
+      return normalized === 'needsFix'
+        ? { state: 'needsFix', source: `${source}_pending_needs_fix` }
+        : { state: 'none', source: `${source}_pending_reset` };
+    }
+
+    if (status === 'completed') {
+      return normalized === 'review' || normalized === 'approved'
+        ? { state: normalized, source }
+        : { state: 'none', source: `${source}_completed_reset` };
+    }
+
+    return { state: normalized, source };
+  };
+
   const persisted = normalizeReviewState(task && task.reviewState);
-  if (persisted !== 'none') {
-    return {
-      state: persisted,
-      source: 'task_review_state',
-    };
+  const persistedFallback = normalizeFallback(persisted, 'task_review_state');
+  if (persistedFallback) {
+    return persistedFallback;
   }
 
   if (kanbanEntry && REVIEW_COLUMNS.has(kanbanEntry.column)) {
-    return {
-      state: normalizeReviewState(kanbanEntry.column),
-      source: 'kanban_column',
-    };
+    const kanbanFallback = normalizeFallback(kanbanEntry.column, 'kanban_column');
+    if (kanbanFallback) {
+      return kanbanFallback;
+    }
   }
 
   return {

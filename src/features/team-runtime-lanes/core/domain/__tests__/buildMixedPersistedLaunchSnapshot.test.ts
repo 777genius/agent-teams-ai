@@ -76,6 +76,11 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       pendingCount: 1,
       failedCount: 0,
       runtimeAlivePendingCount: 0,
+      shellOnlyPendingCount: 0,
+      runtimeProcessPendingCount: 0,
+      runtimeCandidatePendingCount: 0,
+      noRuntimePendingCount: 0,
+      permissionPendingCount: 0,
     });
     expect(snapshot.teamLaunchState).toBe('partial_pending');
   });
@@ -130,6 +135,11 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
             bootstrapConfirmed: true,
             hardFailure: false,
             runtimePid: 333,
+            runtimeSessionId: 'session-bob',
+            livenessKind: 'confirmed_bootstrap',
+            pidSource: 'runtime_bootstrap',
+            runtimeDiagnostic: 'OpenCode runtime bootstrap check-in accepted',
+            runtimeDiagnosticSeverity: 'info',
             diagnostics: ['spawn accepted', 'late heartbeat received'],
           },
         },
@@ -145,12 +155,22 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       runtimeAlive: true,
       bootstrapConfirmed: true,
       runtimePid: 333,
+      runtimeSessionId: 'session-bob',
+      livenessKind: 'confirmed_bootstrap',
+      pidSource: 'runtime_bootstrap',
+      runtimeDiagnostic: 'OpenCode runtime bootstrap check-in accepted',
+      runtimeDiagnosticSeverity: 'info',
     });
     expect(snapshot.summary).toEqual({
       confirmedCount: 2,
       pendingCount: 0,
       failedCount: 0,
       runtimeAlivePendingCount: 0,
+      shellOnlyPendingCount: 0,
+      runtimeProcessPendingCount: 0,
+      runtimeCandidatePendingCount: 0,
+      noRuntimePendingCount: 0,
+      permissionPendingCount: 0,
     });
     expect(snapshot.teamLaunchState).toBe('clean_success');
   });
@@ -229,6 +249,11 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       pendingCount: 0,
       failedCount: 1,
       runtimeAlivePendingCount: 0,
+      shellOnlyPendingCount: 0,
+      runtimeProcessPendingCount: 0,
+      runtimeCandidatePendingCount: 0,
+      noRuntimePendingCount: 0,
+      permissionPendingCount: 0,
     });
     expect(snapshot.teamLaunchState).toBe('partial_failure');
   });
@@ -279,9 +304,12 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
           evidence: {
             launchState: 'runtime_pending_permission',
             agentToolAccepted: true,
-            runtimeAlive: true,
+            runtimeAlive: false,
             bootstrapConfirmed: false,
             hardFailure: false,
+            livenessKind: 'permission_blocked',
+            runtimeDiagnostic: 'OpenCode runtime is waiting for permission approval',
+            runtimeDiagnosticSeverity: 'warning',
             pendingPermissionRequestIds: ['opencode:run-1:perm_1'],
           },
         },
@@ -292,9 +320,12 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       laneKind: 'secondary',
       laneOwnerProviderId: 'opencode',
       launchState: 'runtime_pending_permission',
-      runtimeAlive: true,
+      runtimeAlive: false,
       agentToolAccepted: true,
       bootstrapConfirmed: false,
+      livenessKind: 'permission_blocked',
+      runtimeDiagnostic: 'OpenCode runtime is waiting for permission approval',
+      runtimeDiagnosticSeverity: 'warning',
       pendingPermissionRequestIds: ['opencode:run-1:perm_1'],
       hardFailure: false,
     });
@@ -303,7 +334,12 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       confirmedCount: 1,
       pendingCount: 1,
       failedCount: 0,
-      runtimeAlivePendingCount: 1,
+      runtimeAlivePendingCount: 0,
+      shellOnlyPendingCount: 0,
+      runtimeProcessPendingCount: 0,
+      runtimeCandidatePendingCount: 0,
+      noRuntimePendingCount: 0,
+      permissionPendingCount: 1,
     });
     expect(snapshot.teamLaunchState).toBe('partial_pending');
   });

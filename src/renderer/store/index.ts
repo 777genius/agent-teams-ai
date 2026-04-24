@@ -242,6 +242,7 @@ export function initializeNotificationListeners(): () => void {
   let teamMessageRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamPresenceRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let memberSpawnRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let teamAgentRuntimeRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let toolActivityTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let inProgressChangePresencePollInFlight = false;
   let teamMessageFallbackPollInFlight = false;
@@ -285,6 +286,19 @@ export function initializeNotificationListeners(): () => void {
       void useStore.getState().fetchMemberSpawnStatuses(teamName);
     }, TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS);
     memberSpawnRefreshTimers.set(teamName, timer);
+  };
+  const scheduleTeamAgentRuntimeRefresh = (teamName: string | null | undefined): void => {
+    if (!teamName || !isTeamVisibleInAnyPane(teamName)) {
+      return;
+    }
+    if (teamAgentRuntimeRefreshTimers.has(teamName)) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      teamAgentRuntimeRefreshTimers.delete(teamName);
+      void useStore.getState().fetchTeamAgentRuntime(teamName);
+    }, TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS);
+    teamAgentRuntimeRefreshTimers.set(teamName, timer);
   };
   const scheduleTrackedTeamMessageRefresh = (teamName: string | null | undefined): void => {
     if (!teamName || !shouldRefreshTeamMessages(teamName)) {
@@ -1194,6 +1208,7 @@ export function initializeNotificationListeners(): () => void {
         }
         seedCurrentRunIdIfMissing();
         scheduleMemberSpawnStatusesRefresh(event.teamName);
+        scheduleTeamAgentRuntimeRefresh(event.teamName);
         return;
       }
 
@@ -1276,6 +1291,8 @@ export function initializeNotificationListeners(): () => void {
         teamPresenceRefreshTimers = new Map();
         for (const t of memberSpawnRefreshTimers.values()) clearTimeout(t);
         memberSpawnRefreshTimers = new Map();
+        for (const t of teamAgentRuntimeRefreshTimers.values()) clearTimeout(t);
+        teamAgentRuntimeRefreshTimers = new Map();
         for (const t of toolActivityTimers.values()) clearTimeout(t);
         toolActivityTimers = new Map();
         teamLastRelevantActivityAt.clear();

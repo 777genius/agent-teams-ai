@@ -11,6 +11,9 @@ import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
   ProviderModelLaunchIdentity,
+  TeamAgentRuntimeDiagnosticSeverity,
+  TeamAgentRuntimeLivenessKind,
+  TeamAgentRuntimePidSource,
   TeamFastMode,
   TeamProviderBackendId,
   TeamProviderId,
@@ -38,6 +41,12 @@ export interface MixedSecondaryLaneMemberStateInput {
     hardFailureReason?: string;
     pendingPermissionRequestIds?: string[];
     runtimePid?: number;
+    runtimeSessionId?: string;
+    sessionId?: string;
+    livenessKind?: TeamAgentRuntimeLivenessKind;
+    pidSource?: TeamAgentRuntimePidSource;
+    runtimeDiagnostic?: string;
+    runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
     diagnostics?: string[];
   } | null;
   pendingReason?: string;
@@ -63,6 +72,19 @@ function deriveMemberLaunchState(params: {
     return 'runtime_pending_bootstrap';
   }
   return 'starting';
+}
+
+function preservesStrongRuntimeAlive(value: {
+  runtimeAlive?: boolean;
+  bootstrapConfirmed?: boolean;
+  livenessKind?: TeamAgentRuntimeLivenessKind;
+}): boolean {
+  return (
+    value.runtimeAlive === true &&
+    (value.bootstrapConfirmed === true ||
+      value.livenessKind === 'confirmed_bootstrap' ||
+      value.livenessKind === 'runtime_process')
+  );
 }
 
 function buildDiagnostics(
@@ -93,14 +115,17 @@ function buildDiagnostics(
 }
 
 function createSourcesFromStatus(
-  status: Pick<MemberSpawnStatusEntry, 'livenessSource' | 'runtimeAlive'>
+  status: Pick<
+    MemberSpawnStatusEntry,
+    'livenessSource' | 'runtimeAlive' | 'bootstrapConfirmed' | 'livenessKind'
+  >
 ): PersistedTeamLaunchMemberSources | undefined {
   const sources: PersistedTeamLaunchMemberSources = {};
   if (status.livenessSource === 'heartbeat') {
     sources.nativeHeartbeat = true;
     sources.inboxHeartbeat = true;
   }
-  if (status.livenessSource === 'process' || status.runtimeAlive) {
+  if (status.livenessSource === 'process' && preservesStrongRuntimeAlive(status)) {
     sources.processAlive = true;
   }
   return Object.values(sources).some(Boolean) ? sources : undefined;
@@ -119,6 +144,7 @@ function createPrimaryLaneMemberState(params: {
   const providerId =
     normalizeOptionalTeamProviderId(params.member.providerId) ?? params.leadDefaults.providerId;
   const runtime = params.status;
+  const strongRuntimeAlive = preservesStrongRuntimeAlive(runtime ?? {});
   const sources = runtime ? createSourcesFromStatus(runtime) : undefined;
   const base: PersistedTeamLaunchMemberState = {
     name: params.member.name.trim(),
@@ -151,21 +177,25 @@ function createPrimaryLaneMemberState(params: {
       deriveMemberLaunchState({
         hardFailure: runtime?.hardFailure,
         bootstrapConfirmed: runtime?.bootstrapConfirmed,
-        runtimeAlive: runtime?.runtimeAlive,
+        runtimeAlive: strongRuntimeAlive,
         agentToolAccepted: runtime?.agentToolAccepted,
         pendingPermissionRequestIds: runtime?.pendingPermissionRequestIds,
       }),
     agentToolAccepted: runtime?.agentToolAccepted === true,
-    runtimeAlive: runtime?.runtimeAlive === true,
+    runtimeAlive: strongRuntimeAlive,
     bootstrapConfirmed: runtime?.bootstrapConfirmed === true,
     hardFailure: runtime?.hardFailure === true || runtime?.launchState === 'failed_to_start',
     hardFailureReason: runtime?.hardFailureReason ?? runtime?.error,
     pendingPermissionRequestIds: runtime?.pendingPermissionRequestIds?.length
       ? [...new Set(runtime.pendingPermissionRequestIds)]
       : undefined,
+    livenessKind: runtime?.livenessKind,
+    runtimeDiagnostic: runtime?.runtimeDiagnostic,
+    runtimeDiagnosticSeverity: runtime?.runtimeDiagnosticSeverity,
     firstSpawnAcceptedAt: runtime?.firstSpawnAcceptedAt,
     lastHeartbeatAt: runtime?.lastHeartbeatAt,
-    lastRuntimeAliveAt: runtime?.runtimeAlive ? params.updatedAt : undefined,
+    runtimeLastSeenAt: runtime?.livenessLastCheckedAt,
+    lastRuntimeAliveAt: preservesStrongRuntimeAlive(runtime ?? {}) ? params.updatedAt : undefined,
     lastEvaluatedAt: runtime?.updatedAt ?? params.updatedAt,
     sources,
     diagnostics: undefined,
@@ -180,13 +210,14 @@ function createSecondaryLaneMemberState(
   const providerId =
     normalizeOptionalTeamProviderId(params.member.providerId) ?? params.leadDefaults.providerId;
   const evidence = params.evidence;
+  const strongRuntimeAlive = preservesStrongRuntimeAlive(evidence ?? {});
   const hardFailureReason = evidence?.hardFailureReason;
   const launchState =
     evidence?.launchState ??
     deriveMemberLaunchState({
       hardFailure: evidence?.hardFailure,
       bootstrapConfirmed: evidence?.bootstrapConfirmed,
-      runtimeAlive: evidence?.runtimeAlive,
+      runtimeAlive: strongRuntimeAlive,
       agentToolAccepted: evidence?.agentToolAccepted,
       pendingPermissionRequestIds: evidence?.pendingPermissionRequestIds,
     });
@@ -214,7 +245,7 @@ function createSecondaryLaneMemberState(
     laneOwnerProviderId: providerId,
     launchState,
     agentToolAccepted: evidence?.agentToolAccepted === true,
-    runtimeAlive: evidence?.runtimeAlive === true,
+    runtimeAlive: strongRuntimeAlive,
     bootstrapConfirmed: evidence?.bootstrapConfirmed === true,
     hardFailure: evidence?.hardFailure === true || launchState === 'failed_to_start',
     hardFailureReason,
@@ -227,15 +258,21 @@ function createSecondaryLaneMemberState(
       evidence.runtimePid > 0
         ? Math.trunc(evidence.runtimePid)
         : undefined,
+    runtimeSessionId: evidence?.runtimeSessionId ?? evidence?.sessionId,
+    livenessKind: evidence?.livenessKind,
+    pidSource: evidence?.pidSource,
+    runtimeDiagnostic: evidence?.runtimeDiagnostic,
+    runtimeDiagnosticSeverity: evidence?.runtimeDiagnosticSeverity,
     firstSpawnAcceptedAt: evidence?.agentToolAccepted ? params.updatedAt : undefined,
     lastHeartbeatAt: evidence?.bootstrapConfirmed ? params.updatedAt : undefined,
-    lastRuntimeAliveAt: evidence?.runtimeAlive ? params.updatedAt : undefined,
+    runtimeLastSeenAt: strongRuntimeAlive ? params.updatedAt : undefined,
+    lastRuntimeAliveAt: strongRuntimeAlive ? params.updatedAt : undefined,
     lastEvaluatedAt: params.updatedAt,
-    sources: evidence?.runtimeAlive
+    sources: strongRuntimeAlive
       ? {
           processAlive: true,
-          nativeHeartbeat: evidence.bootstrapConfirmed === true || undefined,
-          inboxHeartbeat: evidence.bootstrapConfirmed === true || undefined,
+          nativeHeartbeat: evidence?.bootstrapConfirmed === true || undefined,
+          inboxHeartbeat: evidence?.bootstrapConfirmed === true || undefined,
         }
       : undefined,
     diagnostics: evidence?.diagnostics?.length
@@ -256,6 +293,11 @@ function summarizeMembers(
   let pendingCount = 0;
   let failedCount = 0;
   let runtimeAlivePendingCount = 0;
+  let shellOnlyPendingCount = 0;
+  let runtimeProcessPendingCount = 0;
+  let runtimeCandidatePendingCount = 0;
+  let noRuntimePendingCount = 0;
+  let permissionPendingCount = 0;
 
   for (const memberName of expectedMembers) {
     const entry = members[memberName];
@@ -275,6 +317,22 @@ function summarizeMembers(
     if (entry.runtimeAlive) {
       runtimeAlivePendingCount += 1;
     }
+    if (entry.launchState === 'runtime_pending_permission') {
+      permissionPendingCount += 1;
+    }
+    if (entry.livenessKind === 'shell_only') {
+      shellOnlyPendingCount += 1;
+    } else if (entry.livenessKind === 'runtime_process') {
+      runtimeProcessPendingCount += 1;
+    } else if (entry.livenessKind === 'runtime_process_candidate') {
+      runtimeCandidatePendingCount += 1;
+    } else if (
+      entry.livenessKind === 'not_found' ||
+      entry.livenessKind === 'stale_metadata' ||
+      entry.livenessKind === 'registered_only'
+    ) {
+      noRuntimePendingCount += 1;
+    }
   }
 
   return {
@@ -282,6 +340,11 @@ function summarizeMembers(
     pendingCount,
     failedCount,
     runtimeAlivePendingCount,
+    shellOnlyPendingCount,
+    runtimeProcessPendingCount,
+    runtimeCandidatePendingCount,
+    noRuntimePendingCount,
+    permissionPendingCount,
   };
 }
 

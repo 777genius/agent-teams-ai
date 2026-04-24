@@ -11,7 +11,6 @@ import type {
   OpenCodeSendMessageCommandData,
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
-  OpenCodeTeamLaunchMode,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
@@ -33,7 +32,6 @@ export interface OpenCodeTeamRuntimeBridgePort {
     projectPath: string;
     selectedModel: string | null;
     requireExecutionProbe: boolean;
-    launchMode?: OpenCodeTeamLaunchMode;
   }): Promise<OpenCodeTeamLaunchReadiness>;
   getLastOpenCodeRuntimeSnapshot?(projectPath: string): OpenCodeBridgeRuntimeSnapshot | null;
   launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
@@ -44,14 +42,6 @@ export interface OpenCodeTeamRuntimeBridgePort {
   sendOpenCodeTeamMessage?(
     input: OpenCodeSendMessageCommandBody
   ): Promise<OpenCodeSendMessageCommandData>;
-}
-
-export interface OpenCodeTeamRuntimeAdapterOptions {
-  launchMode?: OpenCodeTeamLaunchMode;
-  /**
-   * @deprecated Use launchMode. Kept for older tests/callers until the production gate is fully wired.
-   */
-  launchEnabled?: boolean;
 }
 
 export interface OpenCodeTeamRuntimeMessageInput {
@@ -76,8 +66,6 @@ export interface OpenCodeTeamRuntimeMessageResult {
   diagnostics: string[];
 }
 
-export { type OpenCodeTeamLaunchMode } from '../opencode/bridge/OpenCodeBridgeCommandContract';
-
 const REQUIRED_READY_CHECKPOINTS = new Set([
   'required_tools_proven',
   'delivery_ready',
@@ -90,32 +78,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   private readonly lastProjectPathByTeamName = new Map<string, string>();
   private readonly lastReadinessByProjectPath = new Map<string, OpenCodeTeamLaunchReadiness>();
 
-  constructor(
-    private readonly bridge: OpenCodeTeamRuntimeBridgePort,
-    private readonly options: OpenCodeTeamRuntimeAdapterOptions = {}
-  ) {}
+  constructor(private readonly bridge: OpenCodeTeamRuntimeBridgePort) {}
 
   async prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult> {
-    const configuredLaunchMode = resolveOpenCodeTeamLaunchMode(this.options);
-    if (configuredLaunchMode === 'disabled') {
-      return {
-        ok: false,
-        providerId: this.providerId,
-        reason: 'opencode_team_launch_disabled',
-        retryable: false,
-        diagnostics: [
-          'OpenCode team launch mode is disabled. Set CLAUDE_TEAM_OPENCODE_LAUNCH_MODE=dogfood for local dogfood testing or production after strict readiness evidence exists.',
-        ],
-        warnings: [],
-      };
-    }
-
     const runtimeOnly = input.runtimeOnly === true;
     const readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness({
       projectPath: input.cwd,
       selectedModel: input.model ?? null,
       requireExecutionProbe: !runtimeOnly,
-      launchMode: runtimeOnly ? undefined : configuredLaunchMode,
     });
     this.lastReadinessByProjectPath.set(input.cwd, readiness);
 
@@ -130,36 +100,12 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       };
     }
 
-    const warnings =
-      configuredLaunchMode === 'dogfood' && !runtimeOnly
-        ? [
-            'OpenCode dogfood launch mode is active. This is local test mode and may run without production E2E evidence.',
-          ]
-        : [];
-
-    if (
-      !runtimeOnly &&
-      configuredLaunchMode === 'production' &&
-      readiness.supportLevel !== 'production_supported'
-    ) {
-      return {
-        ok: false,
-        providerId: this.providerId,
-        reason: 'opencode_production_e2e_evidence_missing',
-        retryable: false,
-        diagnostics: [
-          'OpenCode production launch requires strict production E2E evidence before enabling team launch.',
-        ],
-        warnings,
-      };
-    }
-
     return {
       ok: true,
       providerId: this.providerId,
       modelId: readiness.modelId,
       diagnostics: readiness.diagnostics,
-      warnings,
+      warnings: [],
     };
   }
 
@@ -177,7 +123,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       );
     }
 
-    const configuredLaunchMode = resolveOpenCodeTeamLaunchMode(this.options);
     const prepared = await this.prepare(input);
     if (!prepared.ok) {
       return blockedLaunchResult(input, prepared.reason, prepared.diagnostics, prepared.warnings);
@@ -199,7 +144,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const runtimeSnapshot = this.bridge.getLastOpenCodeRuntimeSnapshot?.(input.cwd) ?? null;
     this.lastProjectPathByTeamName.set(input.teamName, input.cwd);
     const data = await this.bridge.launchOpenCodeTeam({
-      mode: configuredLaunchMode,
       runId: input.runId,
       laneId: input.laneId?.trim() || 'primary',
       teamId: input.teamName,
@@ -307,7 +251,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             providerId: this.providerId,
             launchState: member.launchState,
             agentToolAccepted: member.agentToolAccepted,
-            runtimeAlive: member.runtimeAlive,
+            runtimeAlive: member.bootstrapConfirmed === true,
             bootstrapConfirmed: member.bootstrapConfirmed,
             hardFailure: member.hardFailure,
             hardFailureReason: member.hardFailureReason,
@@ -425,18 +369,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   }
 }
 
-export function resolveOpenCodeTeamLaunchMode(
-  options: OpenCodeTeamRuntimeAdapterOptions = {}
-): OpenCodeTeamLaunchMode {
-  if (options.launchMode) {
-    return options.launchMode;
-  }
-  if (options.launchEnabled === true) {
-    return 'production';
-  }
-  return 'disabled';
-}
-
 function mapOpenCodeLaunchDataToRuntimeResult(
   input: TeamRuntimeLaunchInput,
   data: OpenCodeLaunchTeamCommandData,
@@ -549,9 +481,26 @@ function mapBridgeMemberToRuntimeEvidence(
   diagnostics: string[]
 ): TeamRuntimeMemberLaunchEvidence {
   const confirmed = launchState === 'confirmed_alive';
-  const createdOrBlocked = launchState === 'created' || launchState === 'permission_blocked';
   const failed = launchState === 'failed';
-  const pendingRuntimeObserved = createdOrBlocked && runtimeMaterialized;
+  const hasRuntimePid =
+    typeof runtimePid === 'number' && Number.isFinite(runtimePid) && runtimePid > 0;
+  const pendingRuntimeObserved = launchState === 'created' && hasRuntimePid;
+  const livenessKind = confirmed
+    ? 'confirmed_bootstrap'
+    : pendingRuntimeObserved
+      ? 'runtime_process_candidate'
+      : launchState === 'permission_blocked'
+        ? 'permission_blocked'
+        : runtimeMaterialized || sessionId
+          ? 'runtime_process_candidate'
+          : 'registered_only';
+  const runtimeDiagnostic = pendingRuntimeObserved
+    ? 'OpenCode runtime pid reported by bridge without local process verification'
+    : launchState === 'permission_blocked'
+      ? 'OpenCode runtime is waiting for permission approval'
+      : runtimeMaterialized || sessionId
+        ? 'OpenCode session exists without verified runtime pid'
+        : undefined;
   return {
     memberName,
     providerId: 'opencode',
@@ -562,8 +511,13 @@ function mapBridgeMemberToRuntimeEvidence(
         : launchState === 'permission_blocked'
           ? 'runtime_pending_permission'
           : 'runtime_pending_bootstrap',
-    agentToolAccepted: confirmed || pendingRuntimeObserved,
-    runtimeAlive: confirmed || pendingRuntimeObserved,
+    agentToolAccepted:
+      confirmed ||
+      pendingRuntimeObserved ||
+      launchState === 'permission_blocked' ||
+      runtimeMaterialized ||
+      Boolean(sessionId),
+    runtimeAlive: confirmed,
     bootstrapConfirmed: confirmed,
     hardFailure: failed,
     hardFailureReason: failed ? 'OpenCode bridge reported member launch failure' : undefined,
@@ -572,9 +526,10 @@ function mapBridgeMemberToRuntimeEvidence(
         ? [...new Set(pendingPermissionRequestIds)]
         : undefined,
     sessionId,
-    ...(typeof runtimePid === 'number' && Number.isFinite(runtimePid) && runtimePid > 0
-      ? { runtimePid }
-      : {}),
+    ...(hasRuntimePid ? { runtimePid } : {}),
+    livenessKind,
+    ...(hasRuntimePid ? { pidSource: 'opencode_bridge' as const } : {}),
+    ...(runtimeDiagnostic ? { runtimeDiagnostic } : {}),
     diagnostics,
   };
 }
@@ -709,7 +664,6 @@ function isRetryableReadinessState(state: OpenCodeTeamLaunchReadiness['state']):
   return (
     state === 'not_installed' ||
     state === 'not_authenticated' ||
-    state === 'e2e_missing' ||
     state === 'runtime_store_blocked' ||
     state === 'mcp_unavailable' ||
     state === 'model_unavailable' ||

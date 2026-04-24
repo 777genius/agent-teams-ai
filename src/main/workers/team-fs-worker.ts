@@ -97,6 +97,13 @@ interface TaskReadDiag {
 
 const MAX_LAUNCH_STATE_BYTES = 32 * 1024;
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
+const REVIEW_LIFECYCLE_EVENTS = new Set([
+  'review_requested',
+  'review_changes_requested',
+  'review_approved',
+  'review_started',
+]);
+const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
 
 // ---------------------------------------------------------------------------
 // Parsed JSON types (loose shapes from disk)
@@ -743,26 +750,64 @@ function normalizeHistoryEvents(parsed: ParsedTask): RawHistoryEvent[] | undefin
     .map((i) => ({ ...i }));
 }
 
-/** Derive review state from historyEvents (inline reducer for worker isolation). */
-function deriveReviewStateFromEvents(events: RawHistoryEvent[] | undefined): string {
-  if (!Array.isArray(events) || events.length === 0) return 'none';
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
-    const t = e.type;
-    if (
-      t === 'review_requested' ||
-      t === 'review_changes_requested' ||
-      t === 'review_approved' ||
-      t === 'review_started'
-    ) {
-      const to = typeof e.to === 'string' ? e.to : 'none';
-      return to === 'review' || to === 'needsFix' || to === 'approved' ? to : 'none';
+function normalizeReviewState(value: unknown): string {
+  return value === 'review' || value === 'needsFix' || value === 'approved' ? value : 'none';
+}
+
+function normalizeFallbackReviewState(value: unknown, status: string): string {
+  const reviewState = normalizeReviewState(value);
+  if (reviewState === 'none') return 'none';
+  if (status === 'in_progress' || status === 'deleted') return 'none';
+  if (status === 'pending') return reviewState === 'needsFix' ? 'needsFix' : 'none';
+  if (status === 'completed') {
+    return reviewState === 'review' || reviewState === 'approved' ? reviewState : 'none';
+  }
+  return reviewState;
+}
+
+function eventReviewState(event: RawHistoryEvent): string | null {
+  const type = typeof event.type === 'string' ? event.type : '';
+  if (!REVIEW_LIFECYCLE_EVENTS.has(type)) {
+    return null;
+  }
+  return normalizeReviewState(event.to);
+}
+
+function derivePendingReviewState(events: RawHistoryEvent[], startIndex: number): string {
+  for (let i = startIndex - 1; i >= 0; i--) {
+    const previous = events[i];
+    const reviewState = eventReviewState(previous);
+    if (reviewState) {
+      return reviewState === 'needsFix' ? 'needsFix' : 'none';
     }
-    if (t === 'status_changed' && e.to === 'in_progress') {
+    if (
+      previous.type === 'task_created' ||
+      (previous.type === 'status_changed' &&
+        (REVIEW_RESET_STATUSES.has(String(previous.to || '')) || previous.to === 'pending'))
+    ) {
       return 'none';
     }
   }
   return 'none';
+}
+
+/** Derive review state from historyEvents (inline reducer for worker isolation). */
+function deriveReviewStateFromEvents(events: RawHistoryEvent[] | undefined): string | null {
+  if (!Array.isArray(events) || events.length === 0) return null;
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    const reviewState = eventReviewState(e);
+    if (reviewState) {
+      return reviewState;
+    }
+    if (e.type === 'status_changed' && REVIEW_RESET_STATUSES.has(String(e.to || ''))) {
+      return 'none';
+    }
+    if (e.type === 'status_changed' && e.to === 'pending') {
+      return derivePendingReviewState(events, i);
+    }
+  }
+  return null;
 }
 
 function normalizeComments(parsed: ParsedTask): unknown[] | undefined {
@@ -869,7 +914,16 @@ async function readTasksDirForTeam(
           ? (parsed.needsClarification as string)
           : undefined;
       const historyEvents = normalizeHistoryEvents(parsed);
-      const reviewState = deriveReviewStateFromEvents(historyEvents);
+      const status =
+        parsed.status === 'pending' ||
+        parsed.status === 'in_progress' ||
+        parsed.status === 'completed' ||
+        parsed.status === 'deleted'
+          ? (parsed.status as string)
+          : 'pending';
+      const reviewState =
+        deriveReviewStateFromEvents(historyEvents) ??
+        normalizeFallbackReviewState(parsed.reviewState, status);
 
       tasks.push({
         id: typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
@@ -896,13 +950,7 @@ async function readTasksDirForTeam(
           : undefined,
         owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
         createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
-        status:
-          parsed.status === 'pending' ||
-          parsed.status === 'in_progress' ||
-          parsed.status === 'completed' ||
-          parsed.status === 'deleted'
-            ? (parsed.status as string)
-            : 'pending',
+        status,
         workIntervals: normalizeWorkIntervals(parsed),
         historyEvents: normalizeHistoryEvents(parsed),
         blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as unknown[]) : undefined,

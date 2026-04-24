@@ -3,14 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
-  type OpenCodeProductionE2EEvidenceReadPort,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
-import {
-  OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS,
-  OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS,
-  buildOpenCodeProjectPathFingerprint,
-  type OpenCodeProductionE2EEvidence,
-} from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
 import {
   REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
 } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
@@ -92,114 +85,6 @@ describe('OpenCodeReadinessBridge', () => {
     expect(bridge.getLastOpenCodeRuntimeSnapshot('/repo')).toBeNull();
   });
 
-  it('blocks production readiness when strict production E2E evidence is missing', async () => {
-    const executor = fakeExecutor(
-      bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
-    );
-    const evidence = fakeEvidenceStore(null);
-    const bridge = new OpenCodeReadinessBridge(executor, { productionE2eEvidence: evidence });
-
-    await expect(
-      bridge.checkOpenCodeTeamLaunchReadiness({
-        projectPath: '/repo',
-        selectedModel: 'openai/gpt-5.4-mini',
-        requireExecutionProbe: true,
-        launchMode: 'production',
-      })
-    ).resolves.toMatchObject({
-      state: 'e2e_missing',
-      launchAllowed: false,
-      supportLevel: 'supported_e2e_pending',
-      missing: ['OpenCode production launch requires a current production E2E evidence artifact'],
-      diagnostics: [
-        'OpenCode production launch requires a current production E2E evidence artifact',
-      ],
-    });
-    expect(evidence.read).toHaveBeenCalledOnce();
-  });
-
-  it('allows dogfood readiness while surfacing missing production E2E evidence diagnostics', async () => {
-    const executor = fakeExecutor(
-      bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
-    );
-    const bridge = new OpenCodeReadinessBridge(executor, {
-      productionE2eEvidence: fakeEvidenceStore(null),
-    });
-
-    await expect(
-      bridge.checkOpenCodeTeamLaunchReadiness({
-        projectPath: '/repo',
-        selectedModel: 'openai/gpt-5.4-mini',
-        requireExecutionProbe: true,
-        launchMode: 'dogfood',
-      })
-    ).resolves.toMatchObject({
-      state: 'ready',
-      launchAllowed: true,
-      supportLevel: 'supported_e2e_pending',
-      diagnostics: [
-        'OpenCode production launch requires a current production E2E evidence artifact',
-      ],
-    });
-  });
-
-  it('keeps production readiness open when evidence matches runtime identity and project context', async () => {
-    const executor = fakeExecutor(
-      bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
-    );
-    const evidence = fakeEvidenceStore(productionEvidence());
-    const bridge = new OpenCodeReadinessBridge(executor, {
-      productionE2eEvidence: evidence,
-    });
-
-    await expect(
-      bridge.checkOpenCodeTeamLaunchReadiness({
-        projectPath: '/repo',
-        selectedModel: 'openai/gpt-5.4-mini',
-        requireExecutionProbe: true,
-        launchMode: 'production',
-      })
-    ).resolves.toMatchObject({
-      state: 'ready',
-      launchAllowed: true,
-      supportLevel: 'production_supported',
-      diagnostics: [],
-    });
-    expect(evidence.read).toHaveBeenCalledWith({
-      selectedModel: 'openai/gpt-5.4-mini',
-      projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo'),
-      opencodeVersion: '1.14.19',
-      binaryFingerprint: 'bin-1',
-      capabilitySnapshotId: 'cap-1',
-    });
-  });
-
-  it('accepts production evidence recorded with a different OpenCode model when runtime identity matches', async () => {
-    const executor = fakeExecutor(
-      bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
-    );
-    const evidence = fakeEvidenceStore(
-      productionEvidence({ selectedModel: 'opencode/minimax-m2.5-free' })
-    );
-    const bridge = new OpenCodeReadinessBridge(executor, {
-      productionE2eEvidence: evidence,
-    });
-
-    await expect(
-      bridge.checkOpenCodeTeamLaunchReadiness({
-        projectPath: '/repo',
-        selectedModel: 'opencode/nemotron-3-super-free',
-        requireExecutionProbe: true,
-        launchMode: 'production',
-      })
-    ).resolves.toMatchObject({
-      state: 'ready',
-      launchAllowed: true,
-      supportLevel: 'production_supported',
-      diagnostics: [],
-    });
-  });
-
   it('routes state-changing launch commands through the guarded command service when configured', async () => {
     const executor = fakeExecutor(
       bridgeFailure('internal_error', 'direct bridge must not run', [])
@@ -230,7 +115,6 @@ describe('OpenCodeReadinessBridge', () => {
 
     await expect(
       bridge.launchOpenCodeTeam({
-        mode: 'dogfood',
         runId: 'run-1',
         laneId: 'primary',
         teamId: 'team-a',
@@ -267,19 +151,6 @@ function fakeExecutor(
 ): OpenCodeReadinessBridgeCommandExecutor {
   return {
     execute: vi.fn(async () => result) as OpenCodeReadinessBridgeCommandExecutor['execute'],
-  };
-}
-
-function fakeEvidenceStore(
-  evidence: OpenCodeProductionE2EEvidence | null
-): OpenCodeProductionE2EEvidenceReadPort & { read: ReturnType<typeof vi.fn> } {
-  return {
-    read: vi.fn(async () => ({
-      ok: true,
-      evidence,
-      artifactPath: '/tmp/opencode-production-e2e.json',
-      diagnostics: [],
-    })),
   };
 }
 
@@ -374,66 +245,6 @@ function readiness(
       mcpToolProofRoute: '/experimental/tool/ids',
       observedMcpTools: [...REQUIRED_AGENT_TEAMS_APP_TOOL_IDS],
       runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
-    },
-    ...overrides,
-  };
-}
-
-function productionEvidence(
-  overrides: Partial<OpenCodeProductionE2EEvidence> = {}
-): OpenCodeProductionE2EEvidence {
-  const createdAt = new Date().toISOString();
-  const sessionId = 'session-1';
-  const requiredToolIds = REQUIRED_AGENT_TEAMS_APP_TOOL_IDS;
-  return {
-    schemaVersion: 1,
-    evidenceId: 'e2e-1',
-    createdAt,
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    version: '1.14.19',
-    passed: true,
-    artifactPath: '/tmp/opencode-production-e2e.json',
-    binaryFingerprint: 'bin-1',
-    capabilitySnapshotId: 'cap-1',
-    selectedModel: 'openai/gpt-5.4-mini',
-    projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo'),
-    requiredSignals: Object.fromEntries(
-      OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS.map((signal) => [signal, true])
-    ) as OpenCodeProductionE2EEvidence['requiredSignals'],
-    mcpTools: {
-      requiredTools: requiredToolIds,
-      observedTools: requiredToolIds,
-    },
-    launch: {
-      runId: 'run-1',
-      teamId: 'team-a',
-      teamLaunchState: 'ready',
-      memberCount: 1,
-      sessions: [
-        {
-          memberName: 'Dev',
-          sessionId,
-          launchState: 'confirmed_alive',
-        },
-      ],
-      durableCheckpoints: OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS.map((name) => ({
-        name,
-        observedAt: createdAt,
-      })),
-    },
-    reconcile: {
-      runId: 'run-1',
-      teamLaunchState: 'ready',
-      memberCount: 1,
-    },
-    stop: {
-      runId: 'run-1',
-      stopped: true,
-      stoppedSessionIds: [sessionId],
-    },
-    logProjection: {
-      observed: true,
-      projectedMessageCount: 1,
     },
     ...overrides,
   };

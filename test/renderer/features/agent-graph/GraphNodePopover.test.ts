@@ -60,13 +60,16 @@ function makeOverflowNode(): GraphNode {
 }
 
 describe('GraphNodePopover spawn badge labels', () => {
-  afterEach(() => {
+  afterEach(async () => {
+    await act(async () => {
+      useStore.setState({
+        selectedTeamName: null,
+        selectedTeamData: null,
+        teamDataCacheByName: {},
+      } as never);
+      await Promise.resolve();
+    });
     document.body.innerHTML = '';
-    useStore.setState({
-      selectedTeamName: null,
-      selectedTeamData: null,
-      teamDataCacheByName: {},
-    } as never);
     vi.unstubAllGlobals();
   });
 
@@ -138,45 +141,48 @@ describe('GraphNodePopover spawn badge labels', () => {
 
   it('reuses launch-aware presence semantics from cached team data', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    useStore.setState({
-      teamDataCacheByName: {
-        'northstar-core': {
-          teamName: 'northstar-core',
-          config: { name: 'Northstar', members: [], projectPath: '/repo' },
-          members: [
-            {
-              name: 'alice',
-              status: 'active',
-              currentTaskId: null,
-              taskCount: 0,
-              lastActiveAt: null,
-              messageCount: 0,
-              agentType: 'reviewer',
-              providerId: 'codex',
-            },
-          ],
-          tasks: [],
-          messages: [],
-          kanbanState: { teamName: 'northstar-core', reviewers: [], tasks: {} },
-          processes: [],
-          isAlive: true,
-        },
-      },
-      memberSpawnStatusesByTeam: {
-        'northstar-core': {
-          alice: {
-            status: 'online',
-            launchState: 'runtime_pending_bootstrap',
-            livenessSource: 'process',
-            runtimeAlive: true,
+    await act(async () => {
+      useStore.setState({
+        teamDataCacheByName: {
+          'northstar-core': {
+            teamName: 'northstar-core',
+            config: { name: 'Northstar', members: [], projectPath: '/repo' },
+            members: [
+              {
+                name: 'alice',
+                status: 'active',
+                currentTaskId: null,
+                taskCount: 0,
+                lastActiveAt: null,
+                messageCount: 0,
+                agentType: 'reviewer',
+                providerId: 'codex',
+              },
+            ],
+            tasks: [],
+            messages: [],
+            kanbanState: { teamName: 'northstar-core', reviewers: [], tasks: {} },
+            processes: [],
+            isAlive: true,
           },
         },
-      },
-      memberSpawnSnapshotsByTeam: {},
-      currentProvisioningRunIdByTeam: {},
-      provisioningRuns: {},
-      leadActivityByTeam: {},
-    } as never);
+        memberSpawnStatusesByTeam: {
+          'northstar-core': {
+            alice: {
+              status: 'online',
+              launchState: 'runtime_pending_bootstrap',
+              livenessSource: 'process',
+              runtimeAlive: true,
+            },
+          },
+        },
+        memberSpawnSnapshotsByTeam: {},
+        currentProvisioningRunIdByTeam: {},
+        provisioningRuns: {},
+        leadActivityByTeam: {},
+      } as never);
+      await Promise.resolve();
+    });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -193,7 +199,7 @@ describe('GraphNodePopover spawn badge labels', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('connecting');
+    expect(host.textContent).toContain('waiting for bootstrap');
     expect(host.textContent).not.toContain('Idle');
 
     await act(async () => {
@@ -204,48 +210,10 @@ describe('GraphNodePopover spawn badge labels', () => {
 
   it('renders overflow stack contents instead of the task card and opens task detail from the list', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    useStore.setState({
-      selectedTeamName: 'northstar-core',
-      selectedTeamData: {
-        teamName: 'northstar-core',
-        config: { name: 'Northstar', members: [], projectPath: '/repo' },
-        tasks: [
-          {
-            id: 'task-1',
-            displayId: '#1',
-            subject: 'Tighten rollout checklist',
-            owner: 'alice',
-            reviewer: 'bob',
-            status: 'in_progress',
-            reviewState: 'review',
-            kanbanColumn: 'review',
-          },
-          {
-            id: 'task-2',
-            displayId: '#2',
-            subject: 'Patch release notes',
-            owner: 'alice',
-            status: 'pending',
-            reviewState: 'none',
-          },
-        ],
-        members: [],
-        messages: [],
-        kanbanState: {
-          teamName: 'northstar-core',
-          reviewers: [],
-          tasks: {
-            'task-1': {
-              column: 'review',
-              reviewer: 'bob',
-              movedAt: '2026-04-12T18:00:00.000Z',
-            },
-          },
-        },
-        processes: [],
-      },
-      teamDataCacheByName: {
-        'northstar-core': {
+    await act(async () => {
+      useStore.setState({
+        selectedTeamName: 'northstar-core',
+        selectedTeamData: {
           teamName: 'northstar-core',
           config: { name: 'Northstar', members: [], projectPath: '/repo' },
           tasks: [
@@ -283,8 +251,49 @@ describe('GraphNodePopover spawn badge labels', () => {
           },
           processes: [],
         },
-      },
-    } as never);
+        teamDataCacheByName: {
+          'northstar-core': {
+            teamName: 'northstar-core',
+            config: { name: 'Northstar', members: [], projectPath: '/repo' },
+            tasks: [
+              {
+                id: 'task-1',
+                displayId: '#1',
+                subject: 'Tighten rollout checklist',
+                owner: 'alice',
+                reviewer: 'bob',
+                status: 'in_progress',
+                reviewState: 'review',
+                kanbanColumn: 'review',
+              },
+              {
+                id: 'task-2',
+                displayId: '#2',
+                subject: 'Patch release notes',
+                owner: 'alice',
+                status: 'pending',
+                reviewState: 'none',
+              },
+            ],
+            members: [],
+            messages: [],
+            kanbanState: {
+              teamName: 'northstar-core',
+              reviewers: [],
+              tasks: {
+                'task-1': {
+                  column: 'review',
+                  reviewer: 'bob',
+                  movedAt: '2026-04-12T18:00:00.000Z',
+                },
+              },
+            },
+            processes: [],
+          },
+        },
+      } as never);
+      await Promise.resolve();
+    });
 
     const onOpenTaskDetail = vi.fn();
     const host = document.createElement('div');

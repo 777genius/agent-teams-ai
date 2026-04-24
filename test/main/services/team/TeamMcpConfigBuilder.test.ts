@@ -75,7 +75,9 @@ describe('TeamMcpConfigBuilder', () => {
     return dir;
   }
 
-  function readGeneratedServer(configPath: string): { command?: string; args?: string[] } | undefined {
+  function readGeneratedServer(
+    configPath: string
+  ): { command?: string; args?: string[] } | undefined {
     const raw = fs.readFileSync(configPath, 'utf8');
     const parsed = JSON.parse(raw) as {
       mcpServers?: Record<string, { command?: string; args?: string[] }>;
@@ -83,26 +85,72 @@ describe('TeamMcpConfigBuilder', () => {
     return parsed.mcpServers?.['agent-teams'];
   }
 
-  function expectNodeEntry(server: { command?: string; args?: string[] } | undefined, entry: string): void {
+  function expectNodeEntry(
+    server: { command?: string; args?: string[] } | undefined,
+    entry: string
+  ): void {
     expect(server?.args).toEqual([entry]);
     expect(server?.command).toMatch(/(^node$|[\\/]node(?:\.exe)?$)/);
   }
 
-  function mockPathExists(existingPaths: string[]): void {
+  function expectTsxEntry(
+    server: { command?: string; args?: string[] } | undefined,
+    entry: string
+  ): void {
+    expect(server?.args).toEqual([entry]);
+    expect(server?.command).toMatch(/[\\/]tsx(?:\.cmd)?$/);
+  }
+
+  function getBuiltWorkspaceEntry(): string {
+    return path.join(process.cwd(), 'mcp-server', 'dist', 'index.js');
+  }
+
+  function getSourceWorkspaceEntry(): string {
+    return path.join(process.cwd(), 'mcp-server', 'src', 'index.ts');
+  }
+
+  function getWorkspaceTsxBin(): string {
+    return path.join(process.cwd(), 'mcp-server', 'node_modules', '.bin', 'tsx');
+  }
+
+  function mockPathExists(existingPaths: string[], options: { strict?: boolean } = {}): void {
     const originalAccess = fs.promises.access.bind(fs.promises);
     vi.spyOn(fs.promises, 'access').mockImplementation(async (targetPath, mode) => {
       const normalizedPath =
-        typeof targetPath === 'string' ? targetPath : Buffer.isBuffer(targetPath) ? targetPath.toString() : `${targetPath}`;
+        typeof targetPath === 'string'
+          ? targetPath
+          : Buffer.isBuffer(targetPath)
+            ? targetPath.toString()
+            : `${targetPath}`;
       if (existingPaths.includes(normalizedPath)) {
         return;
+      }
+      if (options.strict) {
+        const error = new Error(
+          `ENOENT: no such file or directory, access '${normalizedPath}'`
+        ) as NodeJS.ErrnoException;
+        error.code = 'ENOENT';
+        throw error;
       }
       await originalAccess(targetPath, mode);
     });
   }
 
+  function mockSourceWorkspaceEntryAvailable(): {
+    sourceEntry: string;
+    tsxBin: string;
+    builtEntry: string;
+  } {
+    const sourceEntry = getSourceWorkspaceEntry();
+    const tsxBin = getWorkspaceTsxBin();
+    const builtEntry = getBuiltWorkspaceEntry();
+    mockPathExists([sourceEntry, tsxBin, builtEntry], { strict: true });
+    return { sourceEntry, tsxBin, builtEntry };
+  }
+
   function mockBuiltWorkspaceEntryAvailable(): string {
-    const builtEntry = path.join(process.cwd(), 'mcp-server', 'dist', 'index.js');
-    mockPathExists([builtEntry]);
+    const builtEntry = getBuiltWorkspaceEntry();
+    mockPathExists([builtEntry], { strict: true });
     return builtEntry;
   }
 
@@ -172,12 +220,26 @@ describe('TeamMcpConfigBuilder', () => {
     createdPaths.push(configPath);
 
     const filename = path.basename(configPath);
-    expect(filename).toMatch(
-      new RegExp(`^agent-teams-mcp-${process.pid}-\\d+-[0-9a-f-]+\\.json$`)
-    );
+    expect(filename).toMatch(new RegExp(`^agent-teams-mcp-${process.pid}-\\d+-[0-9a-f-]+\\.json$`));
   });
 
-  it('prefers the built workspace MCP entry when available', async () => {
+  it('prefers the source workspace MCP entry in dev mode when available', async () => {
+    const { sourceEntry } = mockSourceWorkspaceEntryAvailable();
+    const builder = new TeamMcpConfigBuilder();
+
+    const configPath = await builder.writeConfigFile();
+    createdPaths.push(configPath);
+
+    const raw = fs.readFileSync(configPath, 'utf8');
+    const parsed = JSON.parse(raw) as {
+      mcpServers?: Record<string, { command?: string; args?: string[] }>;
+    };
+
+    const server = parsed.mcpServers?.['agent-teams'];
+    expectTsxEntry(server, sourceEntry);
+  });
+
+  it('falls back to the built workspace MCP entry when source execution is unavailable', async () => {
     const builtEntry = mockBuiltWorkspaceEntryAvailable();
     const builder = new TeamMcpConfigBuilder();
 
@@ -232,7 +294,10 @@ describe('TeamMcpConfigBuilder', () => {
     createdPaths.push(configPath);
 
     const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      mcpServers: Record<string, { command?: string; args?: string[]; type?: string; url?: string }>;
+      mcpServers: Record<
+        string,
+        { command?: string; args?: string[]; type?: string; url?: string }
+      >;
     };
 
     expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
@@ -246,7 +311,10 @@ describe('TeamMcpConfigBuilder', () => {
     createdDirs.push(homeDir, projectDir);
     mockHomeDir = homeDir;
 
-    fs.writeFileSync(path.join(homeDir, '.claude.json'), JSON.stringify({ mcpServers: {} }, null, 2));
+    fs.writeFileSync(
+      path.join(homeDir, '.claude.json'),
+      JSON.stringify({ mcpServers: {} }, null, 2)
+    );
     fs.writeFileSync(
       path.join(projectDir, '.mcp.json'),
       JSON.stringify(
@@ -273,7 +341,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('generated agent-teams server ignores same-named user MCP entry', async () => {
-    const builtEntry = mockBuiltWorkspaceEntryAvailable();
+    const { sourceEntry } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
     createdDirs.push(homeDir);
     mockHomeDir = homeDir;
@@ -299,7 +367,7 @@ describe('TeamMcpConfigBuilder', () => {
       mcpServers: Record<string, { command?: string; args?: string[] }>;
     };
 
-    expectNodeEntry(parsed.mcpServers['agent-teams'], builtEntry);
+    expectTsxEntry(parsed.mcpServers['agent-teams'], sourceEntry);
   });
 
   it('ignores malformed user MCP file', async () => {
@@ -494,7 +562,10 @@ describe('TeamMcpConfigBuilder', () => {
     const configPath = await builder.writeConfigFile();
     createdPaths.push(configPath);
 
-    expectNodeEntry(readGeneratedServer(configPath), path.join(resourcesDir, 'mcp-server', 'index.js'));
+    expectNodeEntry(
+      readGeneratedServer(configPath),
+      path.join(resourcesDir, 'mcp-server', 'index.js')
+    );
   });
 
   it('packaged mode uses the winner stable copy when atomic rename loses the race', async () => {
@@ -526,8 +597,8 @@ describe('TeamMcpConfigBuilder', () => {
     expectNodeEntry(readGeneratedServer(configPath), path.join(stableDir, 'index.js'));
   });
 
-  it('packaged mode falls back to the built workspace MCP entry when resourcesPath bundle is missing', async () => {
-    const builtEntry = mockBuiltWorkspaceEntryAvailable();
+  it('packaged mode falls back to the source workspace MCP entry when resourcesPath bundle is missing', async () => {
+    const { sourceEntry } = mockSourceWorkspaceEntryAvailable();
     setPackagedMode(true, '6.0.0');
     const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
     createdDirs.push(resourcesDir);
@@ -537,6 +608,6 @@ describe('TeamMcpConfigBuilder', () => {
     const configPath = await builder.writeConfigFile();
     createdPaths.push(configPath);
 
-    expectNodeEntry(readGeneratedServer(configPath), builtEntry);
+    expectTsxEntry(readGeneratedServer(configPath), sourceEntry);
   });
 });

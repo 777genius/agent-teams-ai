@@ -52,6 +52,8 @@ const CATCH_UP_SESSION_RETENTION_MS = 20 * 60 * 1000; // 20 minutes
 const CATCH_UP_SUBAGENT_RETENTION_MS = 5 * 60 * 1000; // 5 minutes
 /** Bound best-effort catch-up work per tick so it cannot monopolize the event loop. */
 const CATCH_UP_SCAN_BUDGET = 24;
+/** Retire one file from catch-up after repeated local stat timeouts. */
+const CATCH_UP_STAT_TIMEOUT_RETIRE_COUNT = 3;
 
 interface AppendedParseResult {
   messages: ParsedMessage[];
@@ -93,6 +95,8 @@ export class FileWatcher extends EventEmitter {
   private catchUpInProgress = false;
   /** Round-robin cursor so catch-up work is spread across tracked files. */
   private catchUpCursor = 0;
+  /** Consecutive catch-up stat timeouts per file. */
+  private catchUpStatFailures = new Map<string, number>();
   /** Timer for SSH polling mode (replaces fs.watch) */
   private pollingTimer: NodeJS.Timeout | null = null;
   /** Polling interval for SSH mode */
@@ -232,6 +236,7 @@ export class FileWatcher extends EventEmitter {
     this.lastProcessedLineCount.clear();
     this.lastProcessedSize.clear();
     this.activeSessionFiles.clear();
+    this.catchUpStatFailures.clear();
     this.processingInProgress.clear();
     this.pendingReprocess.clear();
 
@@ -284,6 +289,7 @@ export class FileWatcher extends EventEmitter {
     this.lastProcessedLineCount.clear();
     this.lastProcessedSize.clear();
     this.activeSessionFiles.clear();
+    this.catchUpStatFailures.clear();
     this.polledFileSizes.clear();
     this.processingInProgress.clear();
     this.pendingReprocess.clear();
@@ -867,6 +873,7 @@ export class FileWatcher extends EventEmitter {
     this.lastProcessedLineCount.delete(filePath);
     this.lastProcessedSize.delete(filePath);
     this.activeSessionFiles.delete(filePath);
+    this.catchUpStatFailures.delete(filePath);
   }
 
   /**
@@ -876,6 +883,7 @@ export class FileWatcher extends EventEmitter {
     this.lastProcessedLineCount.clear();
     this.lastProcessedSize.clear();
     this.activeSessionFiles.clear();
+    this.catchUpStatFailures.clear();
     this.catchUpCursor = 0;
     this.catchUpInProgress = false;
   }
@@ -1119,6 +1127,7 @@ export class FileWatcher extends EventEmitter {
           }
 
           const stats = await this.fsProvider.stat(filePath);
+          this.catchUpStatFailures.delete(filePath);
 
           // Skip files not modified recently
           if (now - stats.mtimeMs > CATCH_UP_MAX_AGE_MS) {
@@ -1145,6 +1154,8 @@ export class FileWatcher extends EventEmitter {
           // File may have been deleted between iterations
           if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
             this.clearErrorTracking(filePath);
+          } else if (this.isStatTimeoutError(err)) {
+            this.handleCatchUpStatTimeout(filePath);
           } else {
             logger.error(`FileWatcher: Error during catch-up stat for ${filePath}:`, err);
           }
@@ -1154,6 +1165,32 @@ export class FileWatcher extends EventEmitter {
     } finally {
       this.catchUpInProgress = false;
     }
+  }
+
+  private isStatTimeoutError(err: unknown): boolean {
+    return err instanceof Error && err.message === 'stat timeout';
+  }
+
+  private handleCatchUpStatTimeout(filePath: string): void {
+    const failures = (this.catchUpStatFailures.get(filePath) ?? 0) + 1;
+
+    if (failures >= CATCH_UP_STAT_TIMEOUT_RETIRE_COUNT) {
+      logger.warn(
+        `FileWatcher: Retiring ${filePath} from catch-up after ${failures} stat timeouts`
+      );
+      this.retireCatchUpFile(filePath);
+      return;
+    }
+
+    this.catchUpStatFailures.set(filePath, failures);
+    logger.debug(
+      `FileWatcher: Catch-up stat timeout for ${filePath} (${failures}/${CATCH_UP_STAT_TIMEOUT_RETIRE_COUNT})`
+    );
+  }
+
+  private retireCatchUpFile(filePath: string): void {
+    this.activeSessionFiles.delete(filePath);
+    this.catchUpStatFailures.delete(filePath);
   }
 
   // ===========================================================================

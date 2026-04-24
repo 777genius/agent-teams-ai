@@ -48,25 +48,19 @@ function normalizeMetaMembers(rawMembers) {
 }
 
 function resolveTargetLead(paths, config) {
-  // 1. config.members — agentType check
+  // 1. config.members - canonical lead detection shared with queue routing
   if (config && config.members && config.members.length) {
-    const lead = config.members.find((m) => m && m.agentType === 'team-lead');
+    const lead = config.members.find((m) => runtimeHelpers.isCanonicalLeadMember(m));
     if (lead && lead.name) return String(lead.name).trim();
-
-    // 2. config.members — name check
-    const namedLead = config.members.find((m) => m && m.name === 'team-lead');
-    if (namedLead && namedLead.name) return String(namedLead.name).trim();
   }
 
-  // 3. members.meta.json — WITH normalization (trim + dedup)
+  // 2. members.meta.json - WITH normalization (trim + dedup)
   const metaPath = path.join(paths.teamDir, 'members.meta.json');
   try {
     const raw = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
     const members = normalizeMetaMembers(raw && raw.members);
     if (members.length > 0) {
-      const metaLead = members.find(
-        (m) => m.agentType === 'team-lead' || m.name === 'team-lead'
-      );
+      const metaLead = members.find((m) => runtimeHelpers.isCanonicalLeadMember(m));
       if (metaLead && metaLead.name) return metaLead.name;
       return members[0].name;
     }
@@ -74,13 +68,8 @@ function resolveTargetLead(paths, config) {
     /* ENOENT or parse error */
   }
 
-  // 4. role-based (legacy compat)
+  // 3. First configured member
   if (config && config.members && config.members.length) {
-    const roleLead = config.members.find(
-      (m) => m && m.role && String(m.role).toLowerCase().includes('lead')
-    );
-    if (roleLead && roleLead.name) return String(roleLead.name).trim();
-    // 5. First member
     if (config.members[0] && config.members[0].name) return String(config.members[0].name).trim();
   }
 
@@ -165,7 +154,7 @@ function findRecentDuplicate(outboxList, dedupeKey) {
 function sendCrossTeamMessage(context, flags) {
   const fromTeam = context.teamName;
   const toTeam = typeof flags.toTeam === 'string' ? flags.toTeam.trim() : '';
-  const rawFromMember = typeof flags.fromMember === 'string' ? flags.fromMember.trim() : 'team-lead';
+  const rawFromMember = typeof flags.fromMember === 'string' ? flags.fromMember.trim() : '';
   const replyToConversationId =
     typeof flags.replyToConversationId === 'string' ? flags.replyToConversationId.trim() : '';
   const conversationId =
@@ -181,6 +170,10 @@ function sendCrossTeamMessage(context, flags) {
   if (!TEAM_NAME_PATTERN.test(fromTeam)) {
     throw new Error(`Invalid fromTeam: ${fromTeam}`);
   }
+  const sourceConfig = runtimeHelpers.readTeamConfig(context.paths);
+  if (!sourceConfig || sourceConfig.deletedAt) {
+    throw new Error(`Source team not found: ${fromTeam}`);
+  }
   if (!TEAM_NAME_PATTERN.test(toTeam)) {
     throw new Error(`Invalid toTeam: ${toTeam}`);
   }
@@ -190,14 +183,11 @@ function sendCrossTeamMessage(context, flags) {
   if (!text || text.trim().length === 0) {
     throw new Error('Message text is required');
   }
-  const fromMember = runtimeHelpers.assertExplicitTeamMemberName(
-    context.paths,
-    rawFromMember,
-    'fromMember',
-    {
-      allowLeadAliases: true,
-    }
-  );
+  const fromMember = rawFromMember
+    ? runtimeHelpers.assertExplicitTeamMemberName(context.paths, rawFromMember, 'cross-team sender', {
+        allowLeadAliases: true,
+      })
+    : runtimeHelpers.inferLeadName(context.paths);
 
   // Target context + config
   const targetContext = createTargetContext(context, toTeam);

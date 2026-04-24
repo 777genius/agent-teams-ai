@@ -325,7 +325,7 @@ describe('CLI status visibility during completed install state', () => {
     window.localStorage.clear();
   });
 
-  it('keeps the Multimodel toggle visible and enabled on the dashboard while login is still required', async () => {
+  it('shows multimodel status without exposing the legacy runtime toggle', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -340,8 +340,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('Login');
 
     const toggle = host.querySelector('[data-testid="multimodel-toggle"]');
-    expect(toggle).not.toBeNull();
-    expect(toggle?.hasAttribute('disabled')).toBe(false);
+    expect(toggle).toBeNull();
 
     await act(async () => {
       root.unmount();

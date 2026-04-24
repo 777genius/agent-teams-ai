@@ -56,7 +56,6 @@ import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummar
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { deriveContextMetrics } from '@shared/utils/contextMetrics';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
-import { createLogger } from '@shared/utils/logger';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   AlertTriangle,
@@ -158,11 +157,6 @@ interface CreateTaskDialogState {
   defaultChip?: InlineChip;
 }
 
-const logger = createLogger('Component:TeamDetailView');
-const TEAM_DETAIL_COMMIT_WARN_MS = 32;
-const TEAM_DETAIL_RENDER_BURST_WINDOW_MS = 4_000;
-const TEAM_DETAIL_RENDER_BURST_WARN_COUNT = 8;
-const TEAM_DETAIL_RENDER_WARN_THROTTLE_MS = 2_000;
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
 
 function areResolvedMembersEqual(
@@ -257,7 +251,7 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
         memberCount: team.memberCount,
         expectedMemberCount: team.expectedMemberCount,
         confirmedCount: team.confirmedCount,
-        runtimeAlivePendingCount: team.runtimeAlivePendingCount,
+        runtimeProcessPendingCount: team.runtimeProcessPendingCount,
         teamLaunchState: team.teamLaunchState,
         partialLaunchFailure: team.partialLaunchFailure,
         missingMemberCount: team.missingMembers?.length ?? 0,
@@ -267,12 +261,12 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
 
   const message =
     summary?.teamLaunchState === 'partial_pending'
-      ? summary.runtimeAlivePendingCount != null && summary.runtimeAlivePendingCount > 0
+      ? summary.runtimeProcessPendingCount != null && summary.runtimeProcessPendingCount > 0
         ? buildPendingRuntimeSummaryCopy({
             confirmedCount: summary.confirmedCount,
             expectedMemberCount: summary.expectedMemberCount,
             memberCount: summary.memberCount,
-            runtimeAlivePendingCount: summary.runtimeAlivePendingCount,
+            runtimeProcessPendingCount: summary.runtimeProcessPendingCount,
           })
         : 'Last launch is still reconciling'
       : summary?.partialLaunchFailure
@@ -809,6 +803,7 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
     () => buildTeamAgentRuntimeMap(runtimeSnapshot?.members),
     [runtimeSnapshot?.members]
   );
+  const runtimeRunId = runtimeSnapshot?.runId ?? memberSpawnSnapshot?.runId ?? progress?.runId;
   const isLaunchSettling = useMemo(() => {
     if (progress?.state !== 'ready') {
       return false;
@@ -828,6 +823,7 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
       leadActivity={leadActivity}
       memberSpawnStatuses={memberSpawnStatusMap}
       memberRuntimeEntries={memberRuntimeMap}
+      runtimeRunId={runtimeRunId}
       isLaunchSettling={isLaunchSettling}
     />
   );
@@ -889,6 +885,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     memberSpawnStatuses,
     memberSpawnSnapshot,
     spawnEntry,
+    runtimeRunId,
     runtimeEntry,
   } = useStore(
     useShallow((s) => ({
@@ -899,6 +896,10 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
       spawnEntry: member ? s.memberSpawnStatusesByTeam[teamName]?.[member.name] : undefined,
+      runtimeRunId:
+        s.teamAgentRuntimeByTeam[teamName]?.runId ??
+        s.memberSpawnSnapshotsByTeam[teamName]?.runId ??
+        getCurrentProvisioningProgressForTeam(s, teamName)?.runId,
       runtimeEntry: member ? s.teamAgentRuntimeByTeam[teamName]?.members[member.name] : undefined,
     }))
   );
@@ -924,6 +925,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
       leadActivity={leadActivity}
       spawnEntry={spawnEntry}
       runtimeEntry={runtimeEntry}
+      runtimeRunId={runtimeRunId}
     />
   );
 });
@@ -932,13 +934,6 @@ export const TeamDetailView = ({
   teamName,
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element => {
-  const renderStartedAtRef = useRef(performance.now());
-  const renderDiagnosticsRef = useRef({
-    windowStartedAt: Date.now(),
-    count: 0,
-    lastWarnAt: 0,
-  });
-  renderStartedAtRef.current = performance.now();
   const { isLight } = useTheme();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
@@ -1240,6 +1235,7 @@ export const TeamDetailView = ({
     reviewActionError,
     addMember,
     restartMember,
+    skipMemberForLaunch,
     removeMember,
     updateMemberRole,
     launchTeam,
@@ -1290,6 +1286,7 @@ export const TeamDetailView = ({
       reviewActionError: s.reviewActionError,
       addMember: s.addMember,
       restartMember: s.restartMember,
+      skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
       updateMemberRole: s.updateMemberRole,
       launchTeam: s.launchTeam,
@@ -1327,38 +1324,6 @@ export const TeamDetailView = ({
   const activeTabId = useStore((s) => s.activeTabId);
   const isThisTabActive = tabId ? activeTabId === tabId : false;
   const wasInteractiveRef = useRef(false);
-
-  useEffect(() => {
-    const now = Date.now();
-    const diagnostic = renderDiagnosticsRef.current;
-    if (now - diagnostic.windowStartedAt > TEAM_DETAIL_RENDER_BURST_WINDOW_MS) {
-      diagnostic.windowStartedAt = now;
-      diagnostic.count = 0;
-    }
-    diagnostic.count += 1;
-
-    const commitMs = performance.now() - renderStartedAtRef.current;
-    const tasksCount = data?.tasks.length ?? 0;
-    const membersCount = members.length;
-    const processesCount = data?.processes.length ?? 0;
-    const shouldWarnSlow = commitMs >= TEAM_DETAIL_COMMIT_WARN_MS;
-    const shouldWarnBurst = diagnostic.count >= TEAM_DETAIL_RENDER_BURST_WARN_COUNT;
-    const shouldWarnLarge = tasksCount >= 80;
-
-    if (
-      (shouldWarnSlow || shouldWarnBurst || shouldWarnLarge) &&
-      now - diagnostic.lastWarnAt >= TEAM_DETAIL_RENDER_WARN_THROTTLE_MS
-    ) {
-      diagnostic.lastWarnAt = now;
-      logger.warn(
-        `[perf] commit team=${teamName} ms=${commitMs.toFixed(1)} renders=${diagnostic.count} windowMs=${
-          now - diagnostic.windowStartedAt
-        } activeTab=${isThisTabActive ? 'yes' : 'no'} paneFocused=${isPaneFocused ? 'yes' : 'no'} loading=${
-          loading ? 'yes' : 'no'
-        } tasks=${tasksCount} members=${membersCount} processes=${processesCount} panel=${messagesPanelMode}`
-      );
-    }
-  });
 
   // Messages panel resize
   const { isResizing: isMessagesPanelResizing, handleProps: messagesPanelHandleProps } =
@@ -1794,6 +1759,20 @@ export const TeamDetailView = ({
     setEditDialogOpen(false);
     openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch');
   }, [data?.isAlive, isTeamProvisioning, openLaunchDialog]);
+
+  const handleRestartMember = useCallback(
+    async (memberName: string): Promise<void> => {
+      await restartMember(teamName, memberName);
+    },
+    [restartMember, teamName]
+  );
+
+  const handleSkipMemberForLaunch = useCallback(
+    async (memberName: string): Promise<void> => {
+      await skipMemberForLaunch(teamName, memberName);
+    },
+    [skipMemberForLaunch, teamName]
+  );
 
   const handleSelectMember = useCallback((member: ResolvedTeamMember) => {
     setSelectedMember(member);
@@ -2484,6 +2463,8 @@ export const TeamDetailView = ({
                   onSendMessage={handleSendMessageToMember}
                   onAssignTask={handleAssignTaskToMember}
                   onOpenTask={handleOpenTaskById}
+                  onRestartMember={handleRestartMember}
+                  onSkipMemberForLaunch={handleSkipMemberForLaunch}
                 />
               </CollapsibleTeamSection>
 
@@ -2783,7 +2764,7 @@ export const TeamDetailView = ({
                   closeSelectedMemberDialog();
                   openCreateTaskDialog('', '', name);
                 }}
-                onRestartMember={(memberName) => restartMember(teamName, memberName)}
+                onRestartMember={handleRestartMember}
                 onTaskClick={(task) => {
                   closeSelectedMemberDialog();
                   setSelectedTask(task);

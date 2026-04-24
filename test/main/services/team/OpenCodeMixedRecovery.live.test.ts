@@ -15,9 +15,7 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import {
-  getTeamBootstrapStatePath,
-} from '../../../../src/main/services/team/TeamBootstrapStateReader';
+import { getTeamBootstrapStatePath } from '../../../../src/main/services/team/TeamBootstrapStateReader';
 import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
@@ -68,112 +66,106 @@ liveDescribe('OpenCode mixed recovery live e2e', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  it(
-    'recovers active mixed OpenCode side lanes from live runtime reconcile instead of marking them never spawned',
-    async () => {
-      const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL;
-      const orchestratorCli =
-        process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
-      await assertExecutable(orchestratorCli);
+  it('recovers active mixed OpenCode side lanes from live runtime reconcile instead of marking them never spawned', async () => {
+    const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL;
+    const orchestratorCli =
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
+    await assertExecutable(orchestratorCli);
 
-      const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
-      const bridgeEnv = {
-        ...createStableBridgeEnv(),
-        PATH: withBunOnPath(process.env.PATH ?? ''),
-        XDG_DATA_HOME: path.join(tempDir, 'xdg-data-single'),
-        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
-        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
-      };
-      const bridgeClient = new OpenCodeBridgeCommandClient({
-        binaryPath: orchestratorCli,
-        tempDirectory: path.join(tempDir, 'bridge-input'),
-        env: bridgeEnv,
-      });
-      const stateChangingCommands = createStateChangingCommands({
-        bridge: bridgeClient,
-        controlDir: path.join(tempDir, 'control'),
-      });
-      const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
-        stateChangingCommands,
-        timeoutMs: 180_000,
-        launchTimeoutMs: 180_000,
-        reconcileTimeoutMs: 90_000,
-        stopTimeoutMs: 90_000,
-      });
-      const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, {
-        launchMode: 'dogfood',
-      });
-      const svc = new TeamProvisioningService();
-      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
+    const bridgeEnv = {
+      ...createStableBridgeEnv(),
+      PATH: withBunOnPath(process.env.PATH ?? ''),
+      XDG_DATA_HOME: path.join(tempDir, 'xdg-data-single'),
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
+    };
+    const bridgeClient = new OpenCodeBridgeCommandClient({
+      binaryPath: orchestratorCli,
+      tempDirectory: path.join(tempDir, 'bridge-input'),
+      env: bridgeEnv,
+    });
+    const stateChangingCommands = createStateChangingCommands({
+      bridge: bridgeClient,
+      controlDir: path.join(tempDir, 'control'),
+    });
+    const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
+      stateChangingCommands,
+      timeoutMs: 180_000,
+      launchTimeoutMs: 180_000,
+      reconcileTimeoutMs: 90_000,
+      stopTimeoutMs: 90_000,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-      const teamName = `mixed-opencode-recovery-${Date.now()}`;
-      const launchedLanes: TeamRuntimeLaunchInput[] = [];
+    const teamName = `mixed-opencode-recovery-${Date.now()}`;
+    const launchedLanes: TeamRuntimeLaunchInput[] = [];
 
-      await writeMixedRecoveryFixtures({
+    await writeMixedRecoveryFixtures({
+      teamName,
+      projectPath: PROJECT_PATH,
+      secondaryMembers: ['bob'],
+    });
+
+    try {
+      const launchInput = createSecondaryLaneLaunchInput({
         teamName,
-        projectPath: PROJECT_PATH,
-        secondaryMembers: ['bob'],
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        selectedModel,
+      });
+      launchedLanes.push(launchInput);
+      const launchResult = await adapter.launch(launchInput);
+      expect(launchResult.teamLaunchState).toBe('clean_success');
+      expect(launchResult.members.bob).toMatchObject({
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
       });
 
-      try {
-        const launchInput = createSecondaryLaneLaunchInput({
-          teamName,
-          laneId: 'secondary:opencode:bob',
-          memberName: 'bob',
-          selectedModel,
-        });
-        launchedLanes.push(launchInput);
-        const launchResult = await adapter.launch(launchInput);
-        expect(launchResult.teamLaunchState).toBe('clean_success');
-        expect(launchResult.members.bob).toMatchObject({
-          launchState: 'confirmed_alive',
-          runtimeAlive: true,
-          bootstrapConfirmed: true,
-        });
+      await upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: launchInput.laneId ?? 'secondary:opencode:bob',
+        state: 'active',
+      });
 
-        await upsertOpenCodeRuntimeLaneIndexEntry({
-          teamsBasePath: getTeamsBasePath(),
-          teamName,
-          laneId: launchInput.laneId ?? 'secondary:opencode:bob',
-          state: 'active',
-        });
+      const result = await svc.getMemberSpawnStatuses(teamName);
 
-        const result = await svc.getMemberSpawnStatuses(teamName);
-
-        expect(result.expectedMembers).toEqual(expect.arrayContaining(['alice', 'bob']));
-        expect(result.statuses.bob).toMatchObject({
-          status: 'online',
-          launchState: 'confirmed_alive',
-        });
-        expect(result.statuses.bob.error).toBeUndefined();
-        await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject(
-          {
-            lanes: {
-              [launchInput.laneId ?? 'secondary:opencode:bob']: {
-                state: 'active',
-              },
-            },
-          }
-        );
-      } finally {
-        for (const launchInput of launchedLanes) {
-          await adapter
-            .stop({
-              runId: launchInput.runId,
-              laneId: launchInput.laneId,
-              teamName,
-              cwd: PROJECT_PATH,
-              providerId: 'opencode',
-              reason: 'cleanup',
-              previousLaunchState: null,
-              force: true,
-            } satisfies TeamRuntimeStopInput)
-            .catch(() => undefined);
-        }
+      expect(result.expectedMembers).toEqual(expect.arrayContaining(['alice', 'bob']));
+      expect(result.statuses.bob).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+      });
+      expect(result.statuses.bob.error).toBeUndefined();
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+      ).resolves.toMatchObject({
+        lanes: {
+          [launchInput.laneId ?? 'secondary:opencode:bob']: {
+            state: 'active',
+          },
+        },
+      });
+    } finally {
+      for (const launchInput of launchedLanes) {
+        await adapter
+          .stop({
+            runId: launchInput.runId,
+            laneId: launchInput.laneId,
+            teamName,
+            cwd: PROJECT_PATH,
+            providerId: 'opencode',
+            reason: 'cleanup',
+            previousLaunchState: null,
+            force: true,
+          } satisfies TeamRuntimeStopInput)
+          .catch(() => undefined);
       }
-    },
-    240_000
-  );
+    }
+  }, 240_000);
 
   liveMultiLaneIt(
     'recovers multiple active mixed OpenCode side lanes from live runtime reconcile',
@@ -207,9 +199,7 @@ liveDescribe('OpenCode mixed recovery live e2e', () => {
         reconcileTimeoutMs: 90_000,
         stopTimeoutMs: 90_000,
       });
-      const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, {
-        launchMode: 'dogfood',
-      });
+      const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge);
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
@@ -259,16 +249,16 @@ liveDescribe('OpenCode mixed recovery live e2e', () => {
           });
           expect(result.statuses[memberName]?.error).toBeUndefined();
         }
-        await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject(
-          {
-            lanes: Object.fromEntries(
-              sideMembers.map((memberName) => [
-                `secondary:opencode:${memberName}`,
-                { state: 'active' },
-              ])
-            ),
-          }
-        );
+        await expect(
+          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+        ).resolves.toMatchObject({
+          lanes: Object.fromEntries(
+            sideMembers.map((memberName) => [
+              `secondary:opencode:${memberName}`,
+              { state: 'active' },
+            ])
+          ),
+        });
       } finally {
         for (const launchInput of launchedLanes) {
           await adapter
@@ -360,10 +350,7 @@ async function writeMixedRecoveryFixtures(input: {
         name: input.teamName,
         projectPath: input.projectPath,
         leadSessionId: 'lead-session',
-        members: [
-          { name: 'team-lead', agentType: 'team-lead' },
-          { name: 'alice' },
-        ],
+        members: [{ name: 'team-lead', agentType: 'team-lead' }, { name: 'alice' }],
       },
       null,
       2

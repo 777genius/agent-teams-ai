@@ -1,10 +1,3 @@
-import {
-  assertOpenCodeProductionE2EArtifactGate,
-  buildOpenCodeProjectPathFingerprint,
-  type OpenCodeProductionE2EEvidence,
-} from '../e2e/OpenCodeProductionE2EEvidence';
-import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../mcp/OpenCodeMcpToolAvailability';
-
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
   OpenCodeTeamLaunchReadiness,
@@ -23,7 +16,6 @@ import type {
   OpenCodeSendMessageCommandData,
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
-  OpenCodeTeamLaunchMode,
 } from './OpenCodeBridgeCommandContract';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
@@ -48,29 +40,12 @@ export interface OpenCodeReadinessBridgeOptions {
   sendTimeoutMs?: number;
   stopTimeoutMs?: number;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
-  productionE2eEvidence?: OpenCodeProductionE2EEvidenceReadPort;
-}
-
-export interface OpenCodeProductionE2EEvidenceReadPort {
-  read(input?: {
-    selectedModel?: string | null;
-    projectPathFingerprint?: string | null;
-    opencodeVersion?: string | null;
-    binaryFingerprint?: string | null;
-    capabilitySnapshotId?: string | null;
-  }): Promise<{
-    ok: boolean;
-    evidence: OpenCodeProductionE2EEvidence | null;
-    artifactPath: string;
-    diagnostics: string[];
-  }>;
 }
 
 export interface OpenCodeReadinessBridgeCommandBody {
   projectPath: string;
   selectedModel: string | null;
   requireExecutionProbe: boolean;
-  launchMode?: OpenCodeTeamLaunchMode;
 }
 
 const DEFAULT_READINESS_TIMEOUT_MS = 120_000;
@@ -103,11 +78,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
 
     if (result.ok) {
       this.lastRuntimeSnapshotsByProjectPath.set(input.projectPath, result.runtime);
-      return this.applyProductionE2EGate({
-        input,
-        readiness: result.data,
-        runtime: result.runtime,
-      });
+      return result.data;
     }
 
     this.lastRuntimeSnapshotsByProjectPath.delete(input.projectPath);
@@ -120,84 +91,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       ],
       missing: [result.error.message],
     });
-  }
-
-  private async applyProductionE2EGate(input: {
-    input: OpenCodeReadinessBridgeCommandBody;
-    readiness: OpenCodeTeamLaunchReadiness;
-    runtime: OpenCodeBridgeRuntimeSnapshot;
-  }): Promise<OpenCodeTeamLaunchReadiness> {
-    const launchMode = input.input.launchMode;
-    if (launchMode !== 'production' && launchMode !== 'dogfood') {
-      return input.readiness;
-    }
-    if (!input.readiness.launchAllowed) {
-      return input.readiness;
-    }
-
-    const expectedModel = input.readiness.modelId ?? input.input.selectedModel;
-    const projectPathFingerprint = buildOpenCodeProjectPathFingerprint(input.input.projectPath);
-    const evidenceRead = this.options.productionE2eEvidence
-      ? await this.options.productionE2eEvidence.read({
-          selectedModel: expectedModel,
-          projectPathFingerprint,
-          opencodeVersion: input.runtime.version,
-          binaryFingerprint: input.runtime.binaryFingerprint,
-          capabilitySnapshotId: input.runtime.capabilitySnapshotId,
-        })
-      : {
-          ok: false,
-          evidence: null,
-          artifactPath: '',
-          diagnostics: ['OpenCode production E2E evidence store is not configured'],
-        };
-    const gate = evidenceRead.ok
-      ? assertOpenCodeProductionE2EArtifactGate({
-          evidence: evidenceRead.evidence,
-          artifactPath: evidenceRead.artifactPath,
-          expected: {
-            opencodeVersion: input.runtime.version,
-            binaryFingerprint: input.runtime.binaryFingerprint,
-            capabilitySnapshotId: input.runtime.capabilitySnapshotId,
-            selectedModel: expectedModel,
-            projectPathFingerprint,
-            requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-          },
-        })
-      : {
-          ok: false,
-          diagnostics: evidenceRead.diagnostics,
-        };
-
-    if (gate.ok) {
-      return {
-        ...input.readiness,
-        diagnostics: dedupe([...input.readiness.diagnostics, ...evidenceRead.diagnostics]),
-        supportLevel: 'production_supported',
-      };
-    }
-
-    const diagnostics = dedupe([
-      ...input.readiness.diagnostics,
-      ...evidenceRead.diagnostics,
-      ...gate.diagnostics,
-    ]);
-    if (launchMode === 'dogfood') {
-      return {
-        ...input.readiness,
-        supportLevel: 'supported_e2e_pending',
-        diagnostics,
-      };
-    }
-
-    return {
-      ...input.readiness,
-      state: 'e2e_missing',
-      launchAllowed: false,
-      supportLevel: 'supported_e2e_pending',
-      missing: dedupe([...input.readiness.missing, ...gate.diagnostics]),
-      diagnostics,
-    };
   }
 
   getLastOpenCodeRuntimeSnapshot(projectPath: string): OpenCodeBridgeRuntimeSnapshot | null {

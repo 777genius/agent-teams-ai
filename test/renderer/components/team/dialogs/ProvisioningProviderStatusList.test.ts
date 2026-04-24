@@ -327,16 +327,13 @@ describe('ProvisioningProviderStatusList', () => {
           {
             providerId: 'opencode',
             status: 'failed',
-            details: [
-              'nemotron-3-super-free - unavailable - OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free',
-            ],
+            details: ['nemotron-3-super-free - unavailable - selected model is not available'],
           },
         ],
       })
     ).toEqual({
       state: 'failed',
-      message:
-        'nemotron-3-super-free - unavailable - OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free',
+      message: 'nemotron-3-super-free - unavailable - selected model is not available',
     });
   });
 

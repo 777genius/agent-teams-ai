@@ -447,6 +447,31 @@ describe('agent-teams-controller API', () => {
     expect(briefing).toContain('Counters: actionable=4, awareness=3');
   });
 
+  it('treats stale legacy terminal reviewState on pending tasks as owner-ready work', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const staleTask = controller.tasks.createTask({
+      subject: 'Legacy stale approved task',
+      owner: 'bob',
+      status: 'pending',
+      reviewState: 'approved',
+      notifyOwner: false,
+    });
+
+    const briefing = await controller.tasks.taskBriefing('bob');
+    const staleLine = briefing.split('\n').find((line) => line.includes(`#${staleTask.displayId}`));
+    expect(staleLine).toContain('[status=pending]');
+    expect(staleLine).not.toContain('review=');
+    expect(staleLine).toContain('reason=owner_ready');
+
+    const rows = controller.tasks.listTaskInventory({ owner: 'bob' });
+    expect(rows.find((row) => row.id === staleTask.id)).toMatchObject({
+      status: 'pending',
+      reviewState: 'none',
+    });
+  });
+
   it('reconciles stale kanban rows and linked inbox comments idempotently', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -1281,6 +1306,82 @@ describe('agent-teams-controller API', () => {
     expect(leadBriefing).not.toContain(`#${task.displayId}`);
   });
 
+  it('recognizes lead and orchestrator agent types as canonical team leads', async () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          name: 'my-team',
+          leadSessionId: 'lead-session-1',
+          members: [
+            { name: 'alice', role: 'developer' },
+            { name: 'leadbot', agentType: 'lead' },
+            { name: 'opsbot', agentType: 'orchestrator' },
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const aliceTask = controller.tasks.createTask({ subject: 'Alice owns this', owner: 'alice' });
+    const leadTask = controller.tasks.createTask({ subject: 'Lead owns this', owner: 'leadbot' });
+    const aliceBriefing = await controller.tasks.taskBriefing('alice');
+    const leadBriefing = await controller.tasks.leadBriefing();
+
+    expect(aliceBriefing).toContain(`#${aliceTask.displayId}`);
+    expect(aliceBriefing).toContain('actionOwner=@alice');
+    expect(aliceBriefing).not.toContain(`#${leadTask.displayId}`);
+    expect(leadBriefing).toContain(`#${leadTask.displayId}`);
+    expect(leadBriefing).not.toContain(`#${aliceTask.displayId}`);
+  });
+
+  it('stores canonical member names for lead aliases in owners, reviewers, and reviewer config', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          name: 'my-team',
+          members: [
+            { name: 'leadbot', agentType: 'lead' },
+            { name: 'alice', role: 'reviewer' },
+            { name: 'bob', role: 'developer' },
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const leadOwnedTask = controller.tasks.createTask({ subject: 'Lead alias owner', owner: 'lead' });
+    expect(leadOwnedTask.owner).toBe('leadbot');
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'lead.json'))).toBe(false);
+
+    const reassignedTask = controller.tasks.createTask({ subject: 'Reassign alias owner', owner: 'bob' });
+    expect(controller.tasks.setTaskOwner(reassignedTask.id, 'team-lead').owner).toBe('leadbot');
+
+    controller.kanban.addReviewer('lead');
+    expect(controller.kanban.listReviewers()).toEqual(['leadbot']);
+
+    const reviewTask = controller.tasks.createTask({ subject: 'Review alias', owner: 'bob' });
+    controller.tasks.completeTask(reviewTask.id, 'bob');
+    controller.review.requestReview(reviewTask.id, { from: 'alice', reviewer: 'lead' });
+
+    const requested = controller.tasks
+      .getTask(reviewTask.id)
+      .historyEvents.filter((event) => event.type === 'review_requested')
+      .at(-1);
+    expect(requested.reviewer).toBe('leadbot');
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'leadbot.json'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'lead.json'))).toBe(false);
+  });
+
   it('rejects task_briefing for unknown members', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -1470,6 +1571,22 @@ describe('agent-teams-controller API', () => {
     const restored = controller.tasks.restoreTask(task.id, 'alice');
     expect(restored.status).toBe('pending');
     expect(restored.reviewState).toBe('none');
+  });
+
+  it('rejects task_restore for non-deleted tasks', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Approved task must stay approved', owner: 'bob' });
+
+    controller.tasks.completeTask(task.id, 'bob');
+    controller.review.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    controller.review.approveReview(task.id, { from: 'alice' });
+
+    expect(() => controller.tasks.restoreTask(task.id, 'alice')).toThrow(
+      'task_restore only restores deleted tasks'
+    );
+    expect(controller.tasks.getTask(task.id).status).toBe('completed');
+    expect(controller.tasks.getTask(task.id).reviewState).toBe('approved');
   });
 
   it('uses actual kanban overlay for kanbanColumn inventory filters', () => {

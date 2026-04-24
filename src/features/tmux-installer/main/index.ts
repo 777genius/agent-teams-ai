@@ -9,5 +9,12 @@ export {
   isTmuxRuntimeReadyForCurrentPlatform,
   killTmuxPaneForCurrentPlatform,
   killTmuxPaneForCurrentPlatformSync,
+  listRuntimeProcessesForCurrentTmuxPlatform,
   listTmuxPanePidsForCurrentPlatform,
+  listTmuxPaneRuntimeInfoForCurrentPlatform,
 } from './composition/runtimeSupport';
+export type {
+  RuntimeProcessTableRow,
+  TmuxPaneRuntimeInfo,
+} from './infrastructure/runtime/TmuxPlatformCommandExecutor';
+export { parseRuntimeProcessTable } from './infrastructure/runtime/TmuxPlatformCommandExecutor';

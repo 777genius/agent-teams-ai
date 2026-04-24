@@ -191,7 +191,7 @@ describe('memberHelpers spawn-aware presence', () => {
     });
 
     expect(runtimePending.launchVisualState).toBe('runtime_pending');
-    expect(runtimePending.launchStatusLabel).toBe('connecting');
+    expect(runtimePending.launchStatusLabel).toBe('waiting for bootstrap');
     expect(settling.launchVisualState).toBe('settling');
     expect(settling.launchStatusLabel).toBe('joining team');
   });
@@ -209,11 +209,40 @@ describe('memberHelpers spawn-aware presence', () => {
       isTeamProvisioning: false,
     });
 
-    expect(permissionPending.presenceLabel).toBe('connecting');
+    expect(permissionPending.presenceLabel).toBe('awaiting permission');
     expect(permissionPending.launchVisualState).toBe('permission_pending');
     expect(permissionPending.launchStatusLabel).toBe('awaiting permission');
     expect(permissionPending.dotClass).toContain('bg-amber-400');
     expect(permissionPending.cardClass).toContain('member-waiting-shimmer');
+  });
+
+  it('surfaces strict runtime liveness diagnostics as launch labels', () => {
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: 'waiting',
+        spawnLaunchState: 'runtime_pending_bootstrap',
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: false,
+        runtimeEntry: {
+          memberName: 'alice',
+          alive: false,
+          restartable: true,
+          livenessKind: 'shell_only',
+          pidSource: 'tmux_pane',
+          runtimeDiagnostic: 'tmux pane foreground command is zsh',
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        runtimeAdvisory: undefined,
+        isLaunchSettling: false,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      })
+    ).toMatchObject({
+      presenceLabel: 'shell only',
+      launchVisualState: 'shell_only',
+      launchStatusLabel: 'shell only',
+    });
   });
 
   it('returns shared launch status labels without changing generic presence labels', () => {

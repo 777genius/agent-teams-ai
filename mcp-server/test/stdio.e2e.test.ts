@@ -487,6 +487,52 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   });
 
+  it('fails closed for primary queue and inventory tools when team config is missing over stdio', async () => {
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const expected =
+      'Unknown team "team-lead". Board tools require an existing configured team with config.json.';
+
+    try {
+      await client.initialize();
+
+      const leadBriefing = (await client.callTool(
+        'lead_briefing',
+        {
+          claudeDir,
+          teamName: 'team-lead',
+        },
+        40
+      )) as { result?: { isError?: boolean; content?: Array<{ text?: string }> } };
+      expect(leadBriefing.result?.isError).toBe(true);
+      expect(leadBriefing.result?.content?.[0]?.text).toContain(expected);
+
+      const taskBriefing = (await client.callTool(
+        'task_briefing',
+        {
+          claudeDir,
+          teamName: 'team-lead',
+          memberName: 'alice',
+        },
+        41
+      )) as { result?: { isError?: boolean; content?: Array<{ text?: string }> } };
+      expect(taskBriefing.result?.isError).toBe(true);
+      expect(taskBriefing.result?.content?.[0]?.text).toContain(expected);
+
+      const taskList = (await client.callTool(
+        'task_list',
+        {
+          claudeDir,
+          teamName: 'team-lead',
+        },
+        42
+      )) as { result?: { isError?: boolean; content?: Array<{ text?: string }> } };
+      expect(taskList.result?.isError).toBe(true);
+      expect(taskList.result?.content?.[0]?.text).toContain(expected);
+    } finally {
+      await client.close();
+    }
+  });
+
   it('caps high-volume task_list inventory over stdio and keeps rows compact', async () => {
     await writeTeamConfig(claudeDir, 'bulk-inventory-team');
     await writeBulkTaskRows(claudeDir, 'bulk-inventory-team', 225);
@@ -1909,6 +1955,38 @@ describe('agent-teams-mcp stdio e2e', () => {
       const startDeletedErrorText =
         startDeletedResponse.error?.message ?? (startDeletedResponse.result?.content?.[0]?.text ?? '');
       expect(startDeletedErrorText).toContain('use task_restore before starting work');
+
+      const restoreResult = await client.callTool(
+        'task_restore',
+        {
+          claudeDir,
+          teamName: 'stdio-hardening-team',
+          taskId: task.id,
+          actor: 'team-lead',
+        },
+        110
+      );
+      const restored = parseJsonToolResult((restoreResult as { result: unknown }).result);
+      expect(restored.status).toBe('pending');
+      expect(restored.reviewState).toBe('none');
+
+      const restoreAgainResult = await client.callTool(
+        'task_restore',
+        {
+          claudeDir,
+          teamName: 'stdio-hardening-team',
+          taskId: task.id,
+          actor: 'team-lead',
+        },
+        111
+      );
+      const restoreAgainResponse = restoreAgainResult as {
+        error?: { message?: string };
+        result?: { content?: Array<{ text?: string }> };
+      };
+      const restoreAgainErrorText =
+        restoreAgainResponse.error?.message ?? (restoreAgainResponse.result?.content?.[0]?.text ?? '');
+      expect(restoreAgainErrorText).toContain('task_restore only restores deleted tasks');
     } finally {
       await client.close();
     }

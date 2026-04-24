@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  CODEX_DYNAMIC_MODEL_REQUIRES_RUNTIME_SUPPORT_REASON,
   getAvailableTeamProviderModelOptions,
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
@@ -151,7 +150,7 @@ describe('team model availability Codex catalog integration', () => {
     ]);
   });
 
-  it('shows app-server future models but blocks launch until runtime declares dynamic support', () => {
+  it('allows app-server catalog models even when the runtime does not declare dynamic model launch', () => {
     const providerStatus = createCodexProviderStatus([
       {
         id: 'gpt-5.5',
@@ -168,16 +167,14 @@ describe('team model availability Codex catalog integration', () => {
       },
     ]);
 
-    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual([]);
+    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-5.5']);
     expect(getAvailableTeamProviderModelOptions('codex', providerStatus)[1]).toMatchObject({
       value: 'gpt-5.5',
       label: '5.5',
       badgeLabel: 'New',
-      availabilityStatus: null,
+      availabilityStatus: 'available',
     });
-    expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toContain(
-      CODEX_DYNAMIC_MODEL_REQUIRES_RUNTIME_SUPPORT_REASON
-    );
+    expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toBeNull();
   });
 
   it('keeps existing disabled model policy on top of the dynamic catalog', () => {
