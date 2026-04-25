@@ -11,7 +11,12 @@
 
 import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
 import { extractCwd } from '@main/utils/jsonl';
-import { decodePath, extractBaseDir, getProjectsBasePath } from '@main/utils/pathDecoder';
+import {
+  decodePath,
+  extractBaseDir,
+  getProjectDirNameCandidates,
+  getProjectsBasePath,
+} from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
@@ -109,20 +114,24 @@ export class ProjectPathResolver {
   }
 
   private async listSessionPaths(projectId: string): Promise<string[]> {
-    const projectDir = path.join(this.projectsDir, extractBaseDir(projectId));
-    if (!(await this.fsProvider.exists(projectDir))) {
-      return [];
+    for (const dirName of getProjectDirNameCandidates(projectId)) {
+      const projectDir = path.join(this.projectsDir, dirName);
+      if (!(await this.fsProvider.exists(projectDir))) {
+        continue;
+      }
+
+      try {
+        const entries = await this.fsProvider.readdir(projectDir);
+        return entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
+          .map((entry) => path.join(projectDir, entry.name));
+      } catch (error) {
+        logger.error(`Failed to read session files for ${projectId}:`, error);
+        return [];
+      }
     }
 
-    try {
-      const entries = await this.fsProvider.readdir(projectDir);
-      return entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
-        .map((entry) => path.join(projectDir, entry.name));
-    } catch (error) {
-      logger.error(`Failed to read session files for ${projectId}:`, error);
-      return [];
-    }
+    return [];
   }
 }
 

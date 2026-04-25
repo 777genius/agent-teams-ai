@@ -75,4 +75,11 @@ describe('ipc guards', () => {
     expect(validateMemberName('alice bob').valid).toBe(false);
     expect(validateFromField('../../etc').valid).toBe(false);
   });
+
+  it('rejects Windows reserved device names for filesystem-backed fields', () => {
+    expect(validateTeamName('con').valid).toBe(false);
+    expect(validateTaskId('NUL').valid).toBe(false);
+    expect(validateMemberName('com1').valid).toBe(false);
+    expect(validateMemberName('lpt9.txt').valid).toBe(false);
+  });
 });

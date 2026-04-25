@@ -47,6 +47,7 @@ import {
   extractBaseDir,
   extractProjectName,
   extractSessionId,
+  getProjectDirNameCandidates,
   getProjectsBasePath,
   getTodosBasePath,
   isValidEncodedPath,
@@ -76,6 +77,10 @@ const SEARCH_PROJECT_CACHE_TTL_MS = 30_000;
 // for lookups and navigation; a small cap preserves that behavior without huge payloads.
 const MAX_SESSION_IDS_EXPORTED = 200;
 
+function splitPathSegments(value: string): string[] {
+  return value.split(/[/\\]+/).filter(Boolean);
+}
+
 /**
  * Fast, zero-I/O worktree detection based on path patterns only.
  * Used by scanWithWorktreeGrouping to provide accurate worktree metadata
@@ -85,7 +90,7 @@ function detectWorktreeFromPath(projectPath: string): {
   isWorktree: boolean;
   source: WorktreeSource;
 } {
-  const parts = projectPath.split(path.sep).filter(Boolean);
+  const parts = splitPathSegments(projectPath);
 
   if (parts.includes(VIBE_KANBAN_DIR) && parts.includes(WORKTREES_DIR)) {
     return { isWorktree: true, source: 'vibe-kanban' };
@@ -601,12 +606,12 @@ export class ProjectScanner {
    * Handles composite IDs by scanning the base directory and finding the matching subproject.
    */
   async getProject(projectId: string): Promise<Project | null> {
-    const baseDir = extractBaseDir(projectId);
-    const projectPath = path.join(this.projectsDir, baseDir);
+    const projectPath = await this.resolveProjectStorageDir(projectId);
 
-    if (!(await this.fsProvider.exists(projectPath))) {
+    if (!projectPath) {
       return null;
     }
+    const baseDir = path.basename(projectPath);
 
     // For composite IDs, scan and find the matching subproject
     if (subprojectRegistry.isComposite(projectId)) {
@@ -1214,11 +1219,10 @@ export class ProjectScanner {
    */
   async listSessionFiles(projectId: string): Promise<string[]> {
     try {
-      const baseDir = extractBaseDir(projectId);
-      const projectPath = path.join(this.projectsDir, baseDir);
+      const projectPath = await this.resolveProjectStorageDir(projectId);
       const sessionFilter = await this.getSessionFilterForProject(projectId);
 
-      if (!(await this.fsProvider.exists(projectPath))) {
+      if (!projectPath) {
         return [];
       }
 
@@ -1235,6 +1239,16 @@ export class ProjectScanner {
       logger.error(`Error listing session files for project ${projectId}:`, error);
       return [];
     }
+  }
+
+  private async resolveProjectStorageDir(projectId: string): Promise<string | null> {
+    for (const dirName of getProjectDirNameCandidates(projectId)) {
+      const projectPath = path.join(this.projectsDir, dirName);
+      if (await this.fsProvider.exists(projectPath)) {
+        return projectPath;
+      }
+    }
+    return null;
   }
 
   /**

@@ -45,12 +45,22 @@ export function removeValidationHandlers(ipcMain: IpcMain): void {
  * Prevents path traversal attacks (e.g., ../../etc/passwd).
  */
 function isPathContained(fullPath: string, basePath: string): boolean {
-  const normalizedFull = path.normalize(fullPath);
-  const normalizedBase = path.normalize(basePath);
+  const normalizedFull = normalizeForContainment(fullPath);
+  const normalizedBase = normalizeForContainment(basePath);
+  const relative = path.relative(normalizedBase, normalizedFull);
 
-  // Ensure the full path starts with the base path followed by a separator
-  // or is exactly the base path
-  return normalizedFull === normalizedBase || normalizedFull.startsWith(normalizedBase + path.sep);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function normalizeForContainment(value: string): string {
+  const resolved = path.resolve(path.normalize(value));
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function resolveProjectPath(projectPath: string, requestedPath: string): string {
+  return path.isAbsolute(requestedPath)
+    ? path.resolve(path.normalize(requestedPath))
+    : path.resolve(projectPath, requestedPath);
 }
 
 // =============================================================================
@@ -67,7 +77,7 @@ async function handleValidatePath(
   projectPath: string
 ): Promise<{ exists: boolean; isDirectory?: boolean }> {
   try {
-    const fullPath = path.join(projectPath, relativePath);
+    const fullPath = resolveProjectPath(projectPath, relativePath);
 
     // Security: Ensure path doesn't escape project directory
     if (!isPathContained(fullPath, projectPath)) {
@@ -100,7 +110,7 @@ async function handleValidateMentions(
   // (was sequential sync existsSync — blocked main thread per mention)
   const entries = await Promise.all(
     mentions.map(async (mention) => {
-      const fullPath = path.join(projectPath, mention.value);
+      const fullPath = resolveProjectPath(projectPath, mention.value);
 
       // Security: Skip paths that escape project directory
       if (!isPathContained(fullPath, projectPath)) {

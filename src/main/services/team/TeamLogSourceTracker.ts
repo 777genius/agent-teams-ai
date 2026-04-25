@@ -52,16 +52,13 @@ function isOpaqueSafeTaskIdSegment(segment: string): boolean {
   return /^task-id-[0-9a-f]{32}$/.test(segment);
 }
 
-export function shouldIgnoreLogSourceWatcherPath(
-  projectDir: string,
-  watchedPath: string
-): boolean {
+export function shouldIgnoreLogSourceWatcherPath(projectDir: string, watchedPath: string): boolean {
   const relativePath = path.relative(projectDir, watchedPath);
   if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return false;
   }
 
-  const parts = relativePath.split(path.sep).filter(Boolean);
+  const parts = relativePath.split(/[/\\]+/).filter(Boolean);
   return parts[0] === BOARD_TASK_CHANGES_DIRNAME;
 }
 
@@ -399,9 +396,7 @@ export class TeamLogSourceTracker {
 
     try {
       const taskId = decodeURIComponent(encodedTaskId);
-      return taskId.trim().length > 0
-        ? { kind: 'task-id', taskId }
-        : { kind: 'invalid' };
+      return taskId.trim().length > 0 ? { kind: 'task-id', taskId } : { kind: 'invalid' };
     } catch {
       return { kind: 'invalid' };
     }

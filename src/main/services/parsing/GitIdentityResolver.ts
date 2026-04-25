@@ -51,6 +51,10 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+function splitPathSegments(value: string): string[] {
+  return value.split(/[/\\]+/).filter(Boolean);
+}
+
 class GitIdentityResolver {
   private identityCache = new Map<string, CacheEntry<RepositoryIdentity | null>>();
   private branchCache = new Map<string, CacheEntry<string | null>>();
@@ -195,7 +199,7 @@ class GitIdentityResolver {
    * - Default: last path component
    */
   private extractRepoNameFromPath(projectPath: string): string | null {
-    const parts = projectPath.split(path.sep).filter(Boolean);
+    const parts = splitPathSegments(projectPath);
 
     if (parts.length === 0) {
       return null;
@@ -271,7 +275,7 @@ class GitIdentityResolver {
    */
   async isWorktree(projectPath: string): Promise<boolean> {
     // First, try path-based heuristics (works for deleted worktrees)
-    const parts = projectPath.split(path.sep).filter(Boolean);
+    const parts = splitPathSegments(projectPath);
 
     // Check for known worktree patterns - these are ALWAYS worktrees
     if (parts.includes(CURSOR_DIR) && parts.includes(WORKTREES_DIR)) {
@@ -326,7 +330,7 @@ class GitIdentityResolver {
   private extractMainGitDir(worktreeGitDir: string): string {
     // worktreeGitDir is typically: /path/to/main/.git/worktrees/<worktree-name>
     // We need to go up two levels to get to .git
-    const parts = worktreeGitDir.split(path.sep);
+    const parts = splitPathSegments(worktreeGitDir);
     const worktreesIndex = parts.lastIndexOf(WORKTREES_DIR);
 
     if (worktreesIndex > 0) {
@@ -551,7 +555,7 @@ class GitIdentityResolver {
    * @returns WorktreeSource identifier
    */
   async detectWorktreeSource(projectPath: string): Promise<WorktreeSource> {
-    const parts = projectPath.split(path.sep).filter(Boolean);
+    const parts = splitPathSegments(projectPath);
 
     // Pattern: vibe-kanban
     // /tmp/vibe-kanban/worktrees/{issue-branch}/{repo}
@@ -626,7 +630,7 @@ class GitIdentityResolver {
     branch: string | null,
     isMainWorktree: boolean
   ): Promise<string> {
-    const parts = projectPath.split(path.sep).filter(Boolean);
+    const parts = splitPathSegments(projectPath);
 
     switch (source) {
       case 'vibe-kanban': {
@@ -754,7 +758,7 @@ class GitIdentityResolver {
       if (!match) return null;
 
       // gitdir: /main/.git/worktrees/my-worktree-name
-      const gitdirParts = match[1].trim().split(path.sep);
+      const gitdirParts = splitPathSegments(match[1].trim());
       const worktreesIdx = gitdirParts.lastIndexOf(WORKTREES_DIR);
       if (worktreesIdx >= 0 && gitdirParts[worktreesIdx + 1]) {
         return gitdirParts[worktreesIdx + 1];

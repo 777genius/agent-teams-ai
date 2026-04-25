@@ -22,7 +22,8 @@ const logger = createLogger('HTTP:validation');
 function isPathContained(fullPath: string, basePath: string): boolean {
   const normalizedFull = normalizeForContainment(fullPath);
   const normalizedBase = normalizeForContainment(basePath);
-  return normalizedFull === normalizedBase || normalizedFull.startsWith(normalizedBase + path.sep);
+  const relative = path.relative(normalizedBase, normalizedFull);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 function normalizeForContainment(value: string): string {
@@ -31,7 +32,9 @@ function normalizeForContainment(value: string): string {
 }
 
 function resolveProjectPath(projectPath: string, requestedPath: string): string {
-  return path.isAbsolute(requestedPath) ? requestedPath : path.join(projectPath, requestedPath);
+  return path.isAbsolute(requestedPath)
+    ? path.resolve(path.normalize(requestedPath))
+    : path.resolve(projectPath, requestedPath);
 }
 
 export function registerValidationRoutes(app: FastifyInstance): void {

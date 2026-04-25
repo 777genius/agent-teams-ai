@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { ProjectScanner } from '../../../../src/main/services/discovery/ProjectScanner';
 import { subprojectRegistry } from '../../../../src/main/services/discovery/SubprojectRegistry';
+import { encodePathPortable } from '../../../../src/main/utils/pathDecoder';
 
 function createSessionLine(opts: { cwd?: string; type?: string }): string {
   return JSON.stringify({
@@ -101,5 +102,43 @@ describe('ProjectScanner cwd split logic', () => {
     for (const proj of myProjects) {
       expect(proj.id).toContain('::');
     }
+  });
+
+  it('finds sessions stored with the orchestrator Windows project codec', async () => {
+    const projectsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scanner-'));
+    tempDirs.push(projectsDir);
+
+    const projectPath = 'C:\\Users\\User\\PROJECT_IT\\сlaude_team';
+    const uiEncodedName = 'C--Users-User-PROJECT_IT-сlaude_team';
+    const orchestratorEncodedName = encodePathPortable(projectPath);
+    const projectDir = path.join(projectsDir, orchestratorEncodedName);
+    fs.mkdirSync(projectDir);
+
+    const sessionPath = path.join(projectDir, 'session-orchestrator.jsonl');
+    fs.writeFileSync(sessionPath, createSessionLine({ cwd: projectPath }) + '\n');
+
+    const scanner = new ProjectScanner(projectsDir);
+    await expect(scanner.listSessionFiles(uiEncodedName)).resolves.toEqual([sessionPath]);
+  });
+
+  it('detects Windows forward-slash worktree paths', async () => {
+    const projectsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scanner-'));
+    tempDirs.push(projectsDir);
+
+    const encodedName = 'c--users-test--claude-worktrees-myrepo-feature';
+    const projectDir = path.join(projectsDir, encodedName);
+    fs.mkdirSync(projectDir);
+
+    fs.writeFileSync(
+      path.join(projectDir, 'session-worktree.jsonl'),
+      createSessionLine({ cwd: 'C:/Users/test/.claude-worktrees/myrepo/feature' }) + '\n'
+    );
+
+    const scanner = new ProjectScanner(projectsDir);
+    const groups = await scanner.scanWithWorktreeGrouping();
+    const worktree = groups.find((group) => group.id === encodedName)?.worktrees[0];
+
+    expect(worktree?.isMainWorktree).toBe(false);
+    expect(worktree?.source).toBe('claude-desktop');
   });
 });

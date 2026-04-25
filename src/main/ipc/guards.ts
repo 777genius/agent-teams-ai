@@ -7,6 +7,7 @@
  */
 
 import { isValidProjectId } from '@main/utils/pathDecoder';
+import { isWindowsReservedFileName } from '@main/utils/pathValidation';
 
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
@@ -49,6 +50,12 @@ function validateString(
   }
 
   return { valid: true, value: trimmed };
+}
+
+function rejectWindowsReserved(value: string, fieldName: string): ValidationResult<never> | null {
+  return isWindowsReservedFileName(value)
+    ? { valid: false, error: `${fieldName} is reserved on Windows` }
+    : null;
 }
 
 export function validateProjectId(projectId: unknown): ValidationResult<string> {
@@ -126,6 +133,11 @@ export function validateTeamName(teamName: unknown): ValidationResult<string> {
     return { valid: false, error: 'teamName contains invalid characters' };
   }
 
+  const reserved = rejectWindowsReserved(basic.value!, 'teamName');
+  if (reserved) {
+    return reserved;
+  }
+
   return { valid: true, value: basic.value };
 }
 
@@ -139,6 +151,11 @@ export function validateTaskId(taskId: unknown): ValidationResult<string> {
     return { valid: false, error: 'taskId contains invalid characters' };
   }
 
+  const reserved = rejectWindowsReserved(basic.value!, 'taskId');
+  if (reserved) {
+    return reserved;
+  }
+
   return { valid: true, value: basic.value };
 }
 
@@ -150,6 +167,11 @@ export function validateMemberName(memberName: unknown): ValidationResult<string
 
   if (!MEMBER_NAME_PATTERN.test(basic.value!)) {
     return { valid: false, error: 'member contains invalid characters' };
+  }
+
+  const windowsReserved = rejectWindowsReserved(basic.value!, 'member');
+  if (windowsReserved) {
+    return windowsReserved;
   }
 
   const lower = basic.value!.toLowerCase();
