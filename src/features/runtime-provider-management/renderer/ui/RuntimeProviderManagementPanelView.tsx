@@ -1100,6 +1100,8 @@ export function RuntimeProviderManagementPanelView({
   )
     ? state.selectedProviderId
     : (filteredProviders[0]?.providerId ?? state.selectedProviderId ?? null);
+  const canSearchDirectory =
+    state.directorySupported && providerQuery.length >= 2 && filteredProviders.length === 0;
 
   return (
     <div className="space-y-3">
@@ -1138,7 +1140,32 @@ export function RuntimeProviderManagementPanelView({
         </div>
       ) : null}
 
-      {state.providers.length > 0 ? (
+      {state.directoryOpen ? (
+        <ProviderDirectoryPanel state={state} actions={actions} disabled={disabled} />
+      ) : null}
+
+      {!state.directoryOpen && state.directorySupported ? (
+        <button
+          type="button"
+          className="w-full rounded-lg border px-3 py-2.5 text-left transition-colors hover:border-sky-300/55 hover:bg-sky-400/[0.07]"
+          style={{
+            borderColor: 'var(--color-border-subtle)',
+            color: 'var(--color-text-secondary)',
+          }}
+          onClick={actions.openDirectory}
+        >
+          <div className="text-sm font-medium text-[var(--color-text)]">
+            Browse all OpenCode providers
+          </div>
+          <div className="mt-0.5 text-xs">
+            {state.directoryTotalCount === null
+              ? 'Load the dynamic provider catalog from OpenCode'
+              : `${state.directoryTotalCount} providers available from OpenCode`}
+          </div>
+        </button>
+      ) : null}
+
+      {!state.directoryOpen && state.providers.length > 0 ? (
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <Input
@@ -1146,6 +1173,11 @@ export function RuntimeProviderManagementPanelView({
             value={state.providerQuery}
             disabled={disabled || state.loading}
             onChange={(event) => actions.setProviderQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && state.providerQuery.trim().length >= 2) {
+                actions.searchAllProviders(state.providerQuery.trim());
+              }
+            }}
             placeholder="Search providers"
             className="h-9 pr-3 text-sm"
             style={{ paddingLeft: 40 }}
@@ -1153,26 +1185,45 @@ export function RuntimeProviderManagementPanelView({
         </div>
       ) : null}
 
-      <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
-        {state.loading && state.providers.length === 0 ? (
-          <RuntimeProviderLoadingPlaceholder />
-        ) : null}
-        {filteredProviders.map((provider) => (
-          <ProviderRow
-            key={provider.providerId}
-            provider={provider}
-            state={state}
-            active={provider.providerId === selectedProviderId}
-            formOpen={state.activeFormProviderId === provider.providerId}
-            apiKeyValue={state.apiKeyValue}
-            busy={state.savingProviderId === provider.providerId}
-            disabled={disabled || state.loading}
-            actions={actions}
-          />
-        ))}
-      </div>
+      {!state.directoryOpen && canSearchDirectory ? (
+        <button
+          type="button"
+          className="w-full rounded-md border px-3 py-2 text-left text-sm transition-colors hover:border-sky-300/55 hover:bg-sky-400/[0.07]"
+          style={{
+            borderColor: 'var(--color-border-subtle)',
+            color: 'var(--color-text)',
+          }}
+          onClick={() => actions.searchAllProviders(state.providerQuery.trim())}
+        >
+          Search all OpenCode providers for "{state.providerQuery.trim()}"
+        </button>
+      ) : null}
 
-      {!state.loading && state.providers.length > 0 && filteredProviders.length === 0 ? (
+      {!state.directoryOpen ? (
+        <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
+          {state.loading && state.providers.length === 0 ? (
+            <RuntimeProviderLoadingPlaceholder />
+          ) : null}
+          {filteredProviders.map((provider) => (
+            <ProviderRow
+              key={provider.providerId}
+              provider={provider}
+              state={state}
+              active={provider.providerId === selectedProviderId}
+              formOpen={state.activeFormProviderId === provider.providerId}
+              apiKeyValue={state.apiKeyValue}
+              busy={state.savingProviderId === provider.providerId}
+              disabled={disabled || state.loading}
+              actions={actions}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {!state.directoryOpen &&
+      !state.loading &&
+      state.providers.length > 0 &&
+      filteredProviders.length === 0 ? (
         <div
           className="rounded-lg border p-3 text-sm"
           style={{
@@ -1184,7 +1235,7 @@ export function RuntimeProviderManagementPanelView({
         </div>
       ) : null}
 
-      {!state.loading && state.providers.length === 0 ? (
+      {!state.directoryOpen && !state.loading && state.providers.length === 0 ? (
         <div
           className="rounded-lg border p-3 text-sm"
           style={{
