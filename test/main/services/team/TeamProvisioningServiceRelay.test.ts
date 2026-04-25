@@ -1,3 +1,5 @@
+import { promises as fsPromises } from 'fs';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -36,11 +38,13 @@ const hoisted = vi.hoisted(() => {
     }
     files.set(norm(filePath), data);
   });
+  const mkdir = vi.fn(async () => undefined);
 
   return {
     files,
     stat,
     readFile,
+    mkdir,
     atomicWrite,
     appendSentMessage: vi.fn((teamName: string, message: Record<string, unknown>) => {
       const sentMessagesPath = `/mock/teams/${teamName}/sentMessages.json`;
@@ -80,7 +84,18 @@ vi.mock('fs', async (importOriginal) => {
       ...actual.promises,
       stat: hoisted.stat,
       readFile: hoisted.readFile,
+      mkdir: hoisted.mkdir,
     },
+  };
+});
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    stat: hoisted.stat,
+    readFile: hoisted.readFile,
+    mkdir: hoisted.mkdir,
   };
 });
 
@@ -236,11 +251,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
   beforeEach(() => {
     hoisted.files.clear();
     hoisted.readFile.mockClear();
+    hoisted.mkdir.mockClear();
     hoisted.atomicWrite.mockClear();
     hoisted.setAtomicWriteShouldFail(false);
     hoisted.appendSentMessage.mockClear();
     hoisted.sendInboxMessage.mockClear();
     hoisted.setAtomicWriteShouldFail(false);
+    vi.spyOn(fsPromises, 'mkdir').mockImplementation(hoisted.mkdir as never);
   });
 
   it('relays unread lead inbox messages into stdin', async () => {
@@ -1669,6 +1686,366 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]'
     );
     expect(rows[0].read).toBe(true);
+  });
+
+  it('keeps OpenCode member inbox rows unread while runtime response is pending', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'Please answer this.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-response-pending-1',
+        actionMode: 'ask',
+      },
+    ]);
+    vi.spyOn(service, 'deliverOpenCodeMemberMessage').mockResolvedValue({
+      delivered: true,
+      accepted: true,
+      responsePending: true,
+      responseState: 'pending',
+      diagnostics: ['opencode_delivery_response_pending'],
+    });
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+
+    expect(relay).toMatchObject({
+      relayed: 0,
+      attempted: 1,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: { delivered: true, responsePending: true },
+    });
+    const rows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]'
+    );
+    expect(rows[0].read).toBe(false);
+  });
+
+  it('reuses existing OpenCode prompt ledger metadata during watchdog relay retries', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const taskRefs = [{ teamName, taskId: 'task-1', displayId: 'abcd1234' }];
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'Please answer the app user.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-ledger-metadata-1',
+        actionMode: 'ask',
+      },
+    ]);
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getByInboxMessage: vi.fn(async () => ({
+        id: 'record-1',
+        status: 'retry_scheduled',
+        replyRecipient: 'user',
+        actionMode: 'delegate',
+        taskRefs,
+        source: 'manual',
+      })),
+    });
+    const deliverSpy = vi.spyOn(service, 'deliverOpenCodeMemberMessage').mockResolvedValue({
+      delivered: true,
+      accepted: true,
+      responsePending: true,
+      responseState: 'pending',
+      diagnostics: ['opencode_delivery_response_pending'],
+    });
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack', {
+      onlyMessageId: 'opencode-ledger-metadata-1',
+      source: 'watchdog',
+    });
+
+    expect(relay).toMatchObject({
+      attempted: 1,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: { delivered: true, responsePending: true },
+    });
+    expect(deliverSpy).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({
+        messageId: 'opencode-ledger-metadata-1',
+        replyRecipient: 'user',
+        actionMode: 'delegate',
+        taskRefs,
+        source: 'manual',
+      })
+    );
+  });
+
+  it('skips failed-terminal OpenCode rows without blocking newer unread rows', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+    expect(identity.ok).toBe(true);
+    const failedRecord = {
+      id: 'ledger-terminal-old',
+      status: 'failed_terminal',
+      inboxMessageId: 'opencode-terminal-old',
+      lastReason: 'opencode_attachments_not_supported_for_secondary_runtime',
+      diagnostics: ['opencode_attachments_not_supported_for_secondary_runtime'],
+    };
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getByInboxMessage: vi.fn(async (input: { inboxMessageId: string }) =>
+        input.inboxMessageId === 'opencode-terminal-old' ? failedRecord : null
+      ),
+    });
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'Old terminal row.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-terminal-old',
+      },
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'New deliverable row.',
+        timestamp: '2026-02-23T17:00:02.000Z',
+        read: false,
+        messageId: 'opencode-terminal-new',
+      },
+    ]);
+    const deliverSpy = vi
+      .spyOn(service, 'deliverOpenCodeMemberMessage')
+      .mockResolvedValue({ delivered: true, diagnostics: [] });
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+
+    expect(relay).toMatchObject({ relayed: 1, attempted: 1, delivered: 1, failed: 0 });
+    expect(relay.diagnostics?.join('\n')).toContain(
+      'opencode_attachments_not_supported_for_secondary_runtime'
+    );
+    expect(deliverSpy).toHaveBeenCalledTimes(1);
+    expect(deliverSpy).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({ messageId: 'opencode-terminal-new' })
+    );
+    const rows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]'
+    );
+    expect(rows.map((row: { read?: boolean }) => row.read)).toEqual([false, true]);
+  });
+
+  it('fails OpenCode secondary rows with attachments terminally without text-only delivery', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+    expect(identity.ok).toBe(true);
+    const records: any[] = [];
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getByInboxMessage: vi.fn(async () => null),
+      ensurePending: vi.fn(async (input: Record<string, unknown>) => {
+        const record = {
+          id: 'ledger-attachment-1',
+          status: 'pending',
+          responseState: 'not_observed',
+          diagnostics: [] as string[],
+          ...input,
+        };
+        records.push(record);
+        return record;
+      }),
+      markFailedTerminal: vi.fn(async (input: { id: string; reason: string; failedAt: string }) => {
+        const record = records.find((candidate) => candidate.id === input.id);
+        Object.assign(record, {
+          status: 'failed_terminal',
+          failedAt: input.failedAt,
+          lastReason: input.reason,
+          diagnostics: [input.reason],
+        });
+        return record;
+      }),
+      list: vi.fn(async () => records),
+    });
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'Please inspect the attachment.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-attachment-1',
+        attachments: [
+          {
+            id: 'att-1',
+            filename: 'trace.log',
+            mimeType: 'text/plain',
+            size: 128,
+            addedAt: '2026-02-23T17:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+    const deliverSpy = vi.spyOn(service, 'deliverOpenCodeMemberMessage');
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+
+    expect(relay).toMatchObject({
+      relayed: 0,
+      attempted: 1,
+      delivered: 0,
+      failed: 1,
+      lastDelivery: {
+        delivered: false,
+        reason: 'opencode_attachments_not_supported_for_secondary_runtime',
+      },
+    });
+    expect(deliverSpy).not.toHaveBeenCalled();
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'opencode_attachments_not_supported_for_secondary_runtime'
+    );
+    vi.mocked(console.warn).mockClear();
+    const rows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]'
+    );
+    expect(rows[0].read).toBe(false);
+    expect(records[0]).toMatchObject({
+      inboxMessageId: 'opencode-attachment-1',
+      status: 'failed_terminal',
+      lastReason: 'opencode_attachments_not_supported_for_secondary_runtime',
+    });
+  });
+
+  it('rebuilds missing OpenCode prompt ledger rows from unread inbox on startup scan', async () => {
+    vi.useFakeTimers();
+    try {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      hoisted.files.set(
+        `/mock/teams/${teamName}/config.json`,
+        JSON.stringify({
+          name: teamName,
+          projectPath: '/tmp/my-team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+          ],
+        })
+      );
+      const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+      expect(identity.ok).toBe(true);
+      const laneId = identity.laneId;
+      const records: any[] = [];
+      vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+        pruneTerminalRecords: vi.fn(async () => ({ pruned: 0, remaining: records.length })),
+        list: vi.fn(async () => records),
+        getByInboxMessage: vi.fn(async () => null),
+        ensurePending: vi.fn(async (input: Record<string, unknown>) => {
+          const record = {
+            id: 'ledger-rebuild-1',
+            status: 'pending',
+            responseState: 'not_observed',
+            acceptanceUnknown: false,
+            diagnostics: [] as string[],
+            ...input,
+          };
+          records.push(record);
+          return record;
+        }),
+        markAcceptanceUnknown: vi.fn(
+          async (input: { id: string; reason: string; nextAttemptAt: string; markedAt: string }) => {
+            const record = records.find((candidate) => candidate.id === input.id);
+            Object.assign(record, {
+              status: 'failed_retryable',
+              acceptanceUnknown: true,
+              nextAttemptAt: input.nextAttemptAt,
+              lastReason: input.reason,
+              updatedAt: input.markedAt,
+            });
+            return record;
+          }
+        ),
+        markFailedTerminal: vi.fn(async (input: { id: string; reason: string }) => {
+          const record = records.find((candidate) => candidate.id === input.id);
+          Object.assign(record, {
+            status: 'failed_terminal',
+            lastReason: input.reason,
+            diagnostics: [input.reason],
+          });
+          return record;
+        }),
+      });
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Recover this delivery.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-rebuild-1',
+        },
+      ]);
+
+      const scheduled = await (service as any).scanOpenCodePromptDeliveryWatchdogForActiveLanes(
+        teamName,
+        [laneId]
+      );
+
+      expect(scheduled).toBe(1);
+      expect(records[0]).toMatchObject({
+        inboxMessageId: 'opencode-rebuild-1',
+        status: 'failed_retryable',
+        acceptanceUnknown: true,
+        lastReason: 'opencode_prompt_delivery_ledger_rebuilt_from_unread_inbox',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not let an older in-flight OpenCode relay mask a specific UI-send message', async () => {

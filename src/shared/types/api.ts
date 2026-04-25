@@ -95,6 +95,7 @@ import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
+import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type {
   ConversationGroup,
   FileChangeEvent,
@@ -867,6 +868,9 @@ export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElec
 
   // CLI Installer API
   cliInstaller: CliInstallerAPI;
+
+  // Runtime nested provider management API
+  runtimeProviderManagement: RuntimeProviderManagementApi;
 
   // tmux runtime diagnostics API
   tmux: TmuxAPI;

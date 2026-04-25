@@ -180,6 +180,62 @@ describe('CodexRecentProjectsSourceAdapter', () => {
     );
   });
 
+  it('treats archived skip after live timeout as one full failure', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi.fn().mockResolvedValue({
+        live: {
+          threads: [],
+          error: 'JSON-RPC request timed out: thread/list',
+        },
+        archived: {
+          threads: [],
+          error:
+            'Skipped archived thread/list after live thread/list failed: JSON-RPC request timed out: thread/list',
+          skipped: true,
+        },
+      }),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn(),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
+
+    expect(appServerClient.listRecentThreads).toHaveBeenCalledTimes(1);
+    expect(appServerClient.listRecentLiveThreads).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith('codex recent-projects thread list failed', {
+      segment: 'live',
+      error: 'JSON-RPC request timed out: thread/list',
+    });
+    expect(logger.warn).not.toHaveBeenCalledWith('codex recent-projects thread list failed', {
+      segment: 'archived',
+      error:
+        'Skipped archived thread/list after live thread/list failed: JSON-RPC request timed out: thread/list',
+    });
+    expect(logger.info).toHaveBeenCalledWith('codex recent-projects source cooldown active', {
+      retryAfterMs: expect.any(Number),
+      reason: 'JSON-RPC request timed out: thread/list',
+    });
+  });
+
   it('drops Codex appstyle temp workspaces from dashboard candidates', async () => {
     const logger = createLogger();
     const appServerClient = {

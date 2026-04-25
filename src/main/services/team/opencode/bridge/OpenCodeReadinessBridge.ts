@@ -13,6 +13,8 @@ import type {
   OpenCodeCleanupHostsCommandData,
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
+  OpenCodeObserveMessageDeliveryCommandBody,
+  OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
   OpenCodeSendMessageCommandBody,
   OpenCodeSendMessageCommandData,
@@ -40,6 +42,7 @@ export interface OpenCodeReadinessBridgeOptions {
   launchTimeoutMs?: number;
   reconcileTimeoutMs?: number;
   sendTimeoutMs?: number;
+  observeTimeoutMs?: number;
   stopTimeoutMs?: number;
   cleanupTimeoutMs?: number;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
@@ -55,6 +58,7 @@ const DEFAULT_READINESS_TIMEOUT_MS = 120_000;
 const DEFAULT_LAUNCH_TIMEOUT_MS = 120_000;
 const DEFAULT_RECONCILE_TIMEOUT_MS = 30_000;
 const DEFAULT_SEND_TIMEOUT_MS = 30_000;
+const DEFAULT_OBSERVE_TIMEOUT_MS = 8_000;
 const DEFAULT_STOP_TIMEOUT_MS = 30_000;
 const DEFAULT_CLEANUP_TIMEOUT_MS = 10_000;
 
@@ -218,6 +222,48 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           code: result.error.kind,
           severity: 'error',
           message: `OpenCode message bridge failed: ${result.error.message}`,
+        },
+        ...result.diagnostics.map((event) => ({
+          code: event.type,
+          severity: event.severity,
+          message: event.message,
+        })),
+      ],
+    };
+  }
+
+  async observeOpenCodeTeamMessageDelivery(
+    input: OpenCodeObserveMessageDeliveryCommandBody
+  ): Promise<OpenCodeObserveMessageDeliveryCommandData> {
+    const result = await this.bridge.execute<
+      OpenCodeObserveMessageDeliveryCommandBody,
+      OpenCodeObserveMessageDeliveryCommandData
+    >('opencode.observeMessageDelivery', input, {
+      cwd: input.projectPath,
+      timeoutMs: this.options.observeTimeoutMs ?? DEFAULT_OBSERVE_TIMEOUT_MS,
+    });
+    if (result.ok) {
+      return result.data;
+    }
+    return {
+      observed: false,
+      memberName: input.memberName,
+      responseObservation: {
+        state: 'reconcile_failed',
+        deliveredUserMessageId: null,
+        assistantMessageId: null,
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: null,
+        reason: result.error.message,
+      },
+      diagnostics: [
+        {
+          code: result.error.kind,
+          severity: 'error',
+          message: `OpenCode message delivery observe bridge failed: ${result.error.message}`,
         },
         ...result.diagnostics.map((event) => ({
           code: event.type,

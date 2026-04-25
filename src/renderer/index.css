@@ -419,6 +419,36 @@
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
 }
 
+/* Provider logos - keep verified brand marks legible on dark provider cards */
+
+.runtime-provider-brand-icon {
+  background-color: var(
+    --runtime-provider-brand-background,
+    var(--runtime-provider-brand-fallback-background, rgba(148, 163, 184, 0.12))
+  );
+  border-color: var(
+    --runtime-provider-brand-border,
+    var(--runtime-provider-brand-fallback-border, rgba(148, 163, 184, 0.28))
+  );
+  color: var(--runtime-provider-brand-fallback-color, inherit);
+}
+
+.runtime-provider-brand-icon > img {
+  filter: var(--runtime-provider-brand-image-filter, none);
+}
+
+:root:not(.light) .runtime-provider-brand-icon {
+  --runtime-provider-brand-background: rgba(15, 23, 42, 0.72);
+  --runtime-provider-brand-border: rgba(226, 232, 240, 0.2);
+  --runtime-provider-brand-mark: #f8fafc;
+  --runtime-provider-brand-image-filter: invert(1);
+  color: var(--runtime-provider-brand-mark);
+}
+
+:root.light .runtime-provider-brand-icon {
+  --runtime-provider-brand-image-filter: none;
+}
+
 /* Light theme overrides - Warm neutral palette for eye comfort */
 
 :root.light {
@@ -787,6 +817,20 @@ body.theme-transitioning {
 .sidebar-header button,
 .sidebar-header input,
 .sidebar-header .no-drag {
+  -webkit-app-region: no-drag;
+}
+
+button,
+input,
+textarea,
+select,
+a[href],
+[role='button'],
+[role='combobox'],
+[role='menuitem'],
+[role='tab'],
+[role='textbox'],
+[contenteditable='true'] {
   -webkit-app-region: no-drag;
 }
 

@@ -11,6 +11,19 @@
 
 import { splitPath } from '@shared/utils/platformPath';
 
+function isWindowsAbsolutePath(input: string): boolean {
+  return /^[A-Za-z]:[/\\]/.test(input) || input.startsWith('\\\\') || input.startsWith('//');
+}
+
+function pathSeparatorFor(root: string): '/' | '\\' {
+  return root.includes('\\') && !root.includes('/') ? '\\' : '/';
+}
+
+function joinDisplayPath(root: string, child: string): string {
+  const sep = pathSeparatorFor(root);
+  return root.replace(/[/\\]$/, '') + sep + child.replace(/[/\\]/g, sep);
+}
+
 /**
  * Shorten a file path for display in compact UI elements.
  * Full path should still be available via tooltip (title attribute).
@@ -26,7 +39,13 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
   // 1. Make relative to project root
   if (projectRoot) {
     const root = projectRoot.replace(/[/\\]$/, '');
-    if (p.startsWith(root + '/') || p.startsWith(root + '\\')) {
+    const caseInsensitive = isWindowsAbsolutePath(p) || isWindowsAbsolutePath(root);
+    const pathForCompare = caseInsensitive ? p.toLowerCase() : p;
+    const rootForCompare = caseInsensitive ? root.toLowerCase() : root;
+    if (
+      pathForCompare.startsWith(rootForCompare + '/') ||
+      pathForCompare.startsWith(rootForCompare + '\\')
+    ) {
       p = p.slice(root.length + 1);
     }
   }
@@ -35,7 +54,7 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
   p = p
     .replace(/^\/Users\/[^/]+/, '~')
     .replace(/^\/home\/[^/]+/, '~')
-    .replace(/^[A-Z]:\\Users\\[^\\]+/, '~');
+    .replace(/^[A-Z]:\\Users\\[^\\]+/i, '~');
 
   // 3. If short enough, return as-is
   if (p.length <= maxLength) return p;
@@ -65,7 +84,7 @@ function inferHomeDir(projectRoot: string): string | null {
   const match =
     /^(\/Users\/[^/]+)/.exec(projectRoot) ??
     /^(\/home\/[^/]+)/.exec(projectRoot) ??
-    /^([A-Z]:\\Users\\[^\\]+)/.exec(projectRoot);
+    /^([A-Z]:\\Users\\[^\\]+)/i.exec(projectRoot);
   return match?.[1] ?? null;
 }
 
@@ -107,23 +126,23 @@ function isWindowsUserPath(input: string): boolean {
   const drive = input.charCodeAt(0);
   const hasDriveLetter =
     ((drive >= 65 && drive <= 90) || (drive >= 97 && drive <= 122)) && input[1] === ':';
-  return hasDriveLetter && input.startsWith('\\Users\\', 2);
+  return hasDriveLetter && input.slice(2, 9).toLowerCase() === '\\users\\';
 }
 
 export function resolveAbsolutePath(filePath: string, projectRoot?: string): string {
   let p = filePath;
 
   // Resolve ~ using home dir inferred from projectRoot
-  if (p.startsWith('~/') && projectRoot) {
+  if ((p.startsWith('~/') || p.startsWith('~\\')) && projectRoot) {
     const homeDir = inferHomeDir(projectRoot);
     if (homeDir) {
-      p = homeDir + p.slice(1);
+      p = joinDisplayPath(homeDir, p.slice(2));
     }
   }
 
   // Make relative paths absolute by prepending projectRoot
-  if (projectRoot && !p.startsWith('/') && !p.startsWith('~') && !/^[A-Z]:[/\\]/.test(p)) {
-    p = projectRoot.replace(/[/\\]$/, '') + '/' + p;
+  if (projectRoot && !p.startsWith('/') && !p.startsWith('~') && !isWindowsAbsolutePath(p)) {
+    p = joinDisplayPath(projectRoot, p);
   }
 
   return p;

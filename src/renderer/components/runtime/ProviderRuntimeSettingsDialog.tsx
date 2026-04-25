@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   formatCodexCreditsValue,
@@ -19,6 +19,7 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
+import { RuntimeProviderManagementPanel } from '@features/runtime-provider-management/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -71,6 +72,7 @@ interface Props {
   readonly onOpenChange: (open: boolean) => void;
   readonly providers: CliProviderStatus[];
   readonly initialProviderId: CliProviderId;
+  readonly projectPath?: string | null;
   readonly providerStatusLoading?: Partial<Record<CliProviderId, boolean>>;
   readonly disabled?: boolean;
   readonly onSelectBackend: (providerId: CliProviderId, backendId: string) => Promise<void> | void;
@@ -542,6 +544,7 @@ export const ProviderRuntimeSettingsDialog = ({
   onOpenChange,
   providers,
   initialProviderId,
+  projectPath = null,
   providerStatusLoading = {},
   disabled = false,
   onSelectBackend,
@@ -560,6 +563,7 @@ export const ProviderRuntimeSettingsDialog = ({
   const [runtimeSaving, setRuntimeSaving] = useState(false);
   const [pendingConnectionAction, setPendingConnectionAction] =
     useState<PendingConnectionAction>(null);
+  const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
   const apiKeys = useStore((s) => s.apiKeys);
   const apiKeysLoading = useStore((s) => s.apiKeysLoading);
@@ -712,8 +716,10 @@ export const ProviderRuntimeSettingsDialog = ({
   const connectionManagedRuntime = selectedProvider
     ? isConnectionManagedRuntimeProvider(selectedProvider)
     : false;
+  const showRuntimeProviderManagement = selectedProvider?.providerId === 'opencode';
   const hideConnectionMethodMeta = showConnectionMethodCards;
   const canConfigureRuntime =
+    !showRuntimeProviderManagement &&
     !connectionManagedRuntime &&
     (selectedProvider
       ? getVisibleProviderRuntimeBackendOptions(selectedProvider).length > 1
@@ -796,6 +802,19 @@ export const ProviderRuntimeSettingsDialog = ({
     configuredAuthMode !== 'api_key' &&
     selectedProvider.statusMessage !== 'Checking...' &&
     (!selectedProvider?.authenticated || hasSubscriptionSession || configuredAuthMode === 'oauth');
+
+  useEffect(() => {
+    if (!showApiKeyForm) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      apiKeyInputRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedProvider?.providerId, showApiKeyForm]);
+
   let connectionStatusLabel: string | null = null;
   if (selectedProvider) {
     if (!hideConnectionMethodMeta && selectedProvider.authenticated) {
@@ -1051,7 +1070,7 @@ export const ProviderRuntimeSettingsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-[min(96vw,980px)] max-w-[min(96vw,980px)]">
         <DialogHeader>
           <DialogTitle>Provider Settings</DialogTitle>
           <DialogDescription>
@@ -1161,323 +1180,304 @@ export const ProviderRuntimeSettingsDialog = ({
           ) : null}
 
           {selectedProvider ? (
-            <div
-              className="space-y-3 rounded-lg border p-3"
-              style={{
-                borderColor: 'var(--color-border-subtle)',
-                backgroundColor: 'rgba(255, 255, 255, 0.025)',
-              }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Connection
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    {getConnectionDescription(selectedProvider)}
-                  </div>
-                  {connectionProgressMessage ? (
-                    <div
-                      className="mt-2 inline-flex items-center gap-1.5 text-[11px]"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      <Loader2 className="size-3 animate-spin" />
-                      <span>{connectionProgressMessage}</span>
+            showRuntimeProviderManagement ? (
+              <RuntimeProviderManagementPanel
+                runtimeId="opencode"
+                open={open}
+                projectPath={projectPath}
+                disabled={disabled || selectedProviderLoading}
+                onProviderChanged={() => onRefreshProvider?.('opencode')}
+              />
+            ) : (
+              <div
+                className="space-y-3 rounded-lg border p-3"
+                style={{
+                  borderColor: 'var(--color-border-subtle)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.025)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Connection
                     </div>
-                  ) : null}
-                </div>
-                {canRequestSubscriptionLogin ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={connectionBusy}
-                    onClick={() => onRequestLogin?.(selectedProvider.providerId)}
-                  >
-                    <Link2 className="mr-1 size-3.5" />
-                    {selectedProvider.authenticated &&
-                    (selectedProvider.authMethod === 'oauth_token' ||
-                      selectedProvider.authMethod === 'claude.ai')
-                      ? 'Reconnect Anthropic'
-                      : getProviderConnectLabel(selectedProvider)}
-                  </Button>
-                ) : null}
-              </div>
-
-              {showConnectionMethodCards ? (
-                <div className="space-y-2">
-                  <Label className="text-xs">Connection method</Label>
-                  <ConnectionMethodCards
-                    options={connectionMethodCardOptions}
-                    selectedAuthMode={configuredAuthMode}
-                    disabled={connectionBusy}
-                    connectionSaving={connectionSaving}
-                    pendingConnectionAction={pendingConnectionAction}
-                    onSelect={(authMode) => void handleAuthModeChange(authMode)}
-                  />
-                  {connectionMethodCardsHint ? (
-                    <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                      {connectionMethodCardsHint}
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {getConnectionDescription(selectedProvider)}
                     </div>
-                  ) : null}
-                </div>
-              ) : configurableAuthModes.length > 0 && configuredAuthMode ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">
-                    {selectedProvider.providerId === 'codex'
-                      ? 'Connection method'
-                      : 'Authentication method'}
-                  </Label>
-                  <Select
-                    value={configuredAuthMode}
-                    disabled={connectionBusy}
-                    onValueChange={(value) => void handleAuthModeChange(value)}
-                  >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {configurableAuthModes.map((authMode) => (
-                        <SelectItem key={authMode} value={authMode}>
-                          {formatProviderAuthModeLabelForProvider(
-                            selectedProvider.providerId,
-                            authMode
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                    {getAuthModeDescription(selectedProvider.providerId, configuredAuthMode)}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                {configuredAuthMode && !hideConnectionMethodMeta ? (
-                  <span
-                    className="rounded-full px-2 py-0.5"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    }}
-                  >
-                    Mode:{' '}
-                    {formatProviderAuthModeLabelForProvider(
-                      selectedProvider.providerId,
-                      configuredAuthMode
-                    )}
-                  </span>
-                ) : null}
-                {connectionStatusLabel ? (
-                  <span
-                    className="rounded-full px-2 py-0.5"
-                    style={{
-                      color: selectedProvider.authenticated ? '#86efac' : 'var(--color-text-muted)',
-                      backgroundColor: selectedProvider.authenticated
-                        ? 'rgba(74, 222, 128, 0.14)'
-                        : 'rgba(255, 255, 255, 0.05)',
-                    }}
-                  >
-                    {connectionStatusLabel}
-                  </span>
-                ) : null}
-                {selectedProvider.connection?.apiKeyConfigured && !showApiKeySection ? (
-                  <span style={{ color: 'var(--color-text-secondary)' }}>
-                    {selectedProvider.connection.apiKeySourceLabel}
-                  </span>
-                ) : null}
-              </div>
-
-              {selectedProvider.providerId === 'anthropic' ? (
-                <div
-                  className="space-y-2 rounded-md border p-3"
-                  style={{ borderColor: 'var(--color-border-subtle)' }}
-                >
-                  <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Fast mode default
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    Apply Claude Code Fast mode by default for new Anthropic team launches when the
-                    resolved model and runtime allow it.
-                  </div>
-                  {anthropicFastModeSupported ? (
-                    <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-                      {[
-                        { enabled: false, label: 'Default Off' },
-                        { enabled: true, label: 'Prefer Fast' },
-                      ].map((option) => (
-                        <button
-                          key={option.label}
-                          type="button"
-                          className={`rounded-[3px] px-3 py-1 text-xs font-medium transition-colors ${
-                            anthropicFastModeEnabled === option.enabled
-                              ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-                          }`}
-                          disabled={connectionBusy || !anthropicFastModeAvailable}
-                          onClick={() => void handleAnthropicFastModeDefaultChange(option.enabled)}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                    {anthropicFastModeSupported && anthropicFastModeAvailable
-                      ? anthropicFastModeEnabled
-                        ? 'New Anthropic launches will request Fast mode by default when the resolved model supports it.'
-                        : 'New Anthropic launches stay on normal speed unless a team explicitly enables Fast mode.'
-                      : anthropicFastModeDisabledReason}
-                  </div>
-                </div>
-              ) : null}
-
-              {selectedProvider.providerId === 'codex' ? (
-                <div
-                  className="space-y-3 rounded-md border p-3"
-                  style={{ borderColor: 'var(--color-border-subtle)' }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                        ChatGPT account
-                      </div>
-                      <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        Manage the local Codex app-server account session that powers
-                        subscription-backed native launches.
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={codexActionBusy}
-                        onClick={() => void handleCodexAccountRefresh()}
+                    {connectionProgressMessage ? (
+                      <div
+                        className="mt-2 inline-flex items-center gap-1.5 text-[11px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        Refresh
-                      </Button>
-                      {codexLoginPending ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={codexActionBusy}
-                          onClick={() => void handleCodexCancelLogin()}
-                        >
-                          Cancel login
-                        </Button>
-                      ) : codexHasActiveChatgptSession ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={codexActionBusy}
-                          onClick={() => void handleCodexLogout()}
-                        >
-                          Disconnect account
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={codexActionBusy}
-                          onClick={() => void handleCodexStartLogin()}
-                        >
-                          <Link2 className="mr-1 size-3.5" />
-                          {codexNeedsReconnect ? 'Reconnect ChatGPT' : 'Connect ChatGPT'}
-                        </Button>
-                      )}
+                        <Loader2 className="size-3 animate-spin" />
+                        <span>{connectionProgressMessage}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                  {canRequestSubscriptionLogin ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={connectionBusy}
+                      onClick={() => onRequestLogin?.(selectedProvider.providerId)}
+                    >
+                      <Link2 className="mr-1 size-3.5" />
+                      {selectedProvider.authenticated &&
+                      (selectedProvider.authMethod === 'oauth_token' ||
+                        selectedProvider.authMethod === 'claude.ai')
+                        ? 'Reconnect Anthropic'
+                        : getProviderConnectLabel(selectedProvider)}
+                    </Button>
+                  ) : null}
+                </div>
+
+                {showConnectionMethodCards ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Connection method</Label>
+                    <ConnectionMethodCards
+                      options={connectionMethodCardOptions}
+                      selectedAuthMode={configuredAuthMode}
+                      disabled={connectionBusy}
+                      connectionSaving={connectionSaving}
+                      pendingConnectionAction={pendingConnectionAction}
+                      onSelect={(authMode) => void handleAuthModeChange(authMode)}
+                    />
+                    {connectionMethodCardsHint ? (
+                      <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                        {connectionMethodCardsHint}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : configurableAuthModes.length > 0 && configuredAuthMode ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">
+                      {selectedProvider.providerId === 'codex'
+                        ? 'Connection method'
+                        : 'Authentication method'}
+                    </Label>
+                    <Select
+                      value={configuredAuthMode}
+                      disabled={connectionBusy}
+                      onValueChange={(value) => void handleAuthModeChange(value)}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {configurableAuthModes.map((authMode) => (
+                          <SelectItem key={authMode} value={authMode}>
+                            {formatProviderAuthModeLabelForProvider(
+                              selectedProvider.providerId,
+                              authMode
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                      {getAuthModeDescription(selectedProvider.providerId, configuredAuthMode)}
                     </div>
                   </div>
+                ) : null}
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {configuredAuthMode && !hideConnectionMethodMeta ? (
                     <span
                       className="rounded-full px-2 py-0.5"
                       style={{
-                        color: codexHasActiveChatgptSession
-                          ? '#86efac'
-                          : codexNeedsReconnect
-                            ? '#fbbf24'
-                            : 'var(--color-text-muted)',
-                        backgroundColor: codexHasActiveChatgptSession
-                          ? 'rgba(74, 222, 128, 0.14)'
-                          : codexNeedsReconnect
-                            ? 'rgba(245, 158, 11, 0.14)'
-                            : 'rgba(255, 255, 255, 0.05)',
+                        color: 'var(--color-text-secondary)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
                       }}
                     >
-                      {codexHasActiveChatgptSession
-                        ? 'Connected'
-                        : codexNeedsReconnect
-                          ? 'Reconnect required'
-                          : codexLoginPending
-                            ? 'Login in progress'
-                            : 'Not connected'}
+                      Mode:{' '}
+                      {formatProviderAuthModeLabelForProvider(
+                        selectedProvider.providerId,
+                        configuredAuthMode
+                      )}
                     </span>
-                    {codexConnection ? (
+                  ) : null}
+                  {connectionStatusLabel ? (
+                    <span
+                      className="rounded-full px-2 py-0.5"
+                      style={{
+                        color: selectedProvider.authenticated
+                          ? '#86efac'
+                          : 'var(--color-text-muted)',
+                        backgroundColor: selectedProvider.authenticated
+                          ? 'rgba(74, 222, 128, 0.14)'
+                          : 'rgba(255, 255, 255, 0.05)',
+                      }}
+                    >
+                      {connectionStatusLabel}
+                    </span>
+                  ) : null}
+                  {selectedProvider.connection?.apiKeyConfigured && !showApiKeySection ? (
+                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                      {selectedProvider.connection.apiKeySourceLabel}
+                    </span>
+                  ) : null}
+                </div>
+
+                {selectedProvider.providerId === 'anthropic' ? (
+                  <div
+                    className="space-y-2 rounded-md border p-3"
+                    style={{ borderColor: 'var(--color-border-subtle)' }}
+                  >
+                    <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Fast mode default
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      Apply Claude Code Fast mode by default for new Anthropic team launches when
+                      the resolved model and runtime allow it.
+                    </div>
+                    {anthropicFastModeSupported ? (
+                      <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
+                        {[
+                          { enabled: false, label: 'Default Off' },
+                          { enabled: true, label: 'Prefer Fast' },
+                        ].map((option) => (
+                          <button
+                            key={option.label}
+                            type="button"
+                            className={`rounded-[3px] px-3 py-1 text-xs font-medium transition-colors ${
+                              anthropicFastModeEnabled === option.enabled
+                                ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                            }`}
+                            disabled={connectionBusy || !anthropicFastModeAvailable}
+                            onClick={() =>
+                              void handleAnthropicFastModeDefaultChange(option.enabled)
+                            }
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                      {anthropicFastModeSupported && anthropicFastModeAvailable
+                        ? anthropicFastModeEnabled
+                          ? 'New Anthropic launches will request Fast mode by default when the resolved model supports it.'
+                          : 'New Anthropic launches stay on normal speed unless a team explicitly enables Fast mode.'
+                        : anthropicFastModeDisabledReason}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedProvider.providerId === 'codex' ? (
+                  <div
+                    className="space-y-3 rounded-md border p-3"
+                    style={{ borderColor: 'var(--color-border-subtle)' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                          ChatGPT account
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          Manage the local Codex app-server account session that powers
+                          subscription-backed native launches.
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={codexActionBusy}
+                          onClick={() => void handleCodexAccountRefresh()}
+                        >
+                          Refresh
+                        </Button>
+                        {codexLoginPending ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={codexActionBusy}
+                            onClick={() => void handleCodexCancelLogin()}
+                          >
+                            Cancel login
+                          </Button>
+                        ) : codexHasActiveChatgptSession ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={codexActionBusy}
+                            onClick={() => void handleCodexLogout()}
+                          >
+                            Disconnect account
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={codexActionBusy}
+                            onClick={() => void handleCodexStartLogin()}
+                          >
+                            <Link2 className="mr-1 size-3.5" />
+                            {codexNeedsReconnect ? 'Reconnect ChatGPT' : 'Connect ChatGPT'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span
                         className="rounded-full px-2 py-0.5"
                         style={{
-                          color:
-                            codexConnection.appServerState === 'healthy'
-                              ? '#86efac'
-                              : codexConnection.appServerState === 'degraded'
-                                ? '#fbbf24'
-                                : '#fca5a5',
-                          backgroundColor:
-                            codexConnection.appServerState === 'healthy'
-                              ? 'rgba(74, 222, 128, 0.14)'
-                              : codexConnection.appServerState === 'degraded'
-                                ? 'rgba(245, 158, 11, 0.12)'
-                                : 'rgba(248, 113, 113, 0.08)',
+                          color: codexHasActiveChatgptSession
+                            ? '#86efac'
+                            : codexNeedsReconnect
+                              ? '#fbbf24'
+                              : 'var(--color-text-muted)',
+                          backgroundColor: codexHasActiveChatgptSession
+                            ? 'rgba(74, 222, 128, 0.14)'
+                            : codexNeedsReconnect
+                              ? 'rgba(245, 158, 11, 0.14)'
+                              : 'rgba(255, 255, 255, 0.05)',
                         }}
                       >
-                        App-server: {codexConnection.appServerState}
+                        {codexHasActiveChatgptSession
+                          ? 'Connected'
+                          : codexNeedsReconnect
+                            ? 'Reconnect required'
+                            : codexLoginPending
+                              ? 'Login in progress'
+                              : 'Not connected'}
                       </span>
-                    ) : null}
-                    {codexConnection?.managedAccount?.planType ? (
-                      <span style={{ color: 'var(--color-text-secondary)' }}>
-                        Plan: {codexConnection.managedAccount.planType}
-                      </span>
-                    ) : null}
-                    {codexConnection?.managedAccount?.email ? (
-                      <span style={{ color: 'var(--color-text-secondary)' }}>
-                        {codexConnection.managedAccount.email}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {codexAccountPanelHint ? (
-                    <div
-                      className="rounded-md border px-3 py-2 text-xs"
-                      style={{
-                        borderColor: 'var(--color-border-subtle)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      {codexAccountPanelHint}
+                      {codexConnection ? (
+                        <span
+                          className="rounded-full px-2 py-0.5"
+                          style={{
+                            color:
+                              codexConnection.appServerState === 'healthy'
+                                ? '#86efac'
+                                : codexConnection.appServerState === 'degraded'
+                                  ? '#fbbf24'
+                                  : '#fca5a5',
+                            backgroundColor:
+                              codexConnection.appServerState === 'healthy'
+                                ? 'rgba(74, 222, 128, 0.14)'
+                                : codexConnection.appServerState === 'degraded'
+                                  ? 'rgba(245, 158, 11, 0.12)'
+                                  : 'rgba(248, 113, 113, 0.08)',
+                          }}
+                        >
+                          App-server: {codexConnection.appServerState}
+                        </span>
+                      ) : null}
+                      {codexConnection?.managedAccount?.planType ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          Plan: {codexConnection.managedAccount.planType}
+                        </span>
+                      ) : null}
+                      {codexConnection?.managedAccount?.email ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {codexConnection.managedAccount.email}
+                        </span>
+                      ) : null}
                     </div>
-                  ) : null}
 
-                  {codexFastCapabilityHint ? (
-                    <div
-                      className="rounded-md border px-3 py-2 text-xs"
-                      style={{
-                        borderColor: codexFastCapability?.selectable
-                          ? 'rgba(34, 197, 94, 0.28)'
-                          : 'var(--color-border-subtle)',
-                        color: codexFastCapability?.selectable
-                          ? '#86efac'
-                          : 'var(--color-text-secondary)',
-                        backgroundColor: codexFastCapability?.selectable
-                          ? 'rgba(34, 197, 94, 0.08)'
-                          : 'transparent',
-                      }}
-                    >
-                      {codexFastCapabilityHint}
-                    </div>
-                  ) : null}
-
-                  {codexConnection?.rateLimits ? (
-                    <div className="space-y-2">
+                    {codexAccountPanelHint ? (
                       <div
                         className="rounded-md border px-3 py-2 text-xs"
                         style={{
@@ -1485,352 +1485,389 @@ export const ProviderRuntimeSettingsDialog = ({
                           color: 'var(--color-text-secondary)',
                         }}
                       >
-                        These percentages show used quota, not remaining quota.{' '}
-                        {formatCodexUsageExplanation(
-                          codexConnection.rateLimits.primary?.usedPercent,
-                          codexConnection.rateLimits.primary?.windowDurationMins
-                        )}
-                        {codexConnection.rateLimits.secondary
-                          ? ` Weekly limits are shown separately in the ${
-                              formatCodexWindowDurationLong(
-                                codexConnection.rateLimits.secondary.windowDurationMins
-                              ) ?? 'secondary'
-                            } window.`
-                          : ''}
+                        {codexAccountPanelHint}
                       </div>
-
-                      <div className="space-y-3">
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <CodexRateLimitWindowCard
-                            title="Primary window"
-                            usedLabel={formatCodexUsageWindowLabel(
-                              'Primary used',
-                              codexConnection.rateLimits.primary?.windowDurationMins
-                            )}
-                            usedValue={formatCodexUsagePercent(
-                              codexConnection.rateLimits.primary?.usedPercent
-                            )}
-                            remainingValue={
-                              formatCodexRemainingPercent(
-                                codexConnection.rateLimits.primary?.usedPercent
-                              ) ?? 'Remaining unknown'
-                            }
-                            resetLabel={formatCodexResetWindowLabel(
-                              'Primary reset',
-                              codexConnection.rateLimits.primary?.windowDurationMins
-                            )}
-                            resetValue={formatCodexResetDateTime(
-                              codexConnection.rateLimits.primary?.resetsAt
-                            )}
-                            accent="primary"
-                          />
-
-                          {codexConnection.rateLimits.secondary ? (
-                            <CodexRateLimitWindowCard
-                              title={
-                                codexConnection.rateLimits.secondary.windowDurationMins === 10_080
-                                  ? 'Weekly window'
-                                  : 'Secondary window'
-                              }
-                              usedLabel={formatCodexUsageWindowLabel(
-                                codexConnection.rateLimits.secondary.windowDurationMins === 10_080
-                                  ? 'Weekly used'
-                                  : 'Secondary used',
-                                codexConnection.rateLimits.secondary.windowDurationMins
-                              )}
-                              usedValue={formatCodexUsagePercent(
-                                codexConnection.rateLimits.secondary.usedPercent
-                              )}
-                              remainingValue={
-                                formatCodexRemainingPercent(
-                                  codexConnection.rateLimits.secondary.usedPercent
-                                ) ?? 'Remaining unknown'
-                              }
-                              resetLabel={formatCodexResetWindowLabel(
-                                codexConnection.rateLimits.secondary.windowDurationMins === 10_080
-                                  ? 'Weekly reset'
-                                  : 'Secondary reset',
-                                codexConnection.rateLimits.secondary.windowDurationMins
-                              )}
-                              resetValue={formatCodexResetDateTime(
-                                codexConnection.rateLimits.secondary.resetsAt
-                              )}
-                              accent="secondary"
-                            />
-                          ) : (
-                            <div
-                              className="rounded-lg border px-4 py-3"
-                              style={{
-                                borderColor: 'var(--color-border-subtle)',
-                                backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                              }}
-                            >
-                              <div
-                                className="text-sm font-medium"
-                                style={{ color: 'var(--color-text)' }}
-                              >
-                                Weekly window
-                              </div>
-                              <div
-                                className="mt-3 text-[11px]"
-                                style={{ color: 'var(--color-text-muted)' }}
-                              >
-                                Weekly used (1w)
-                              </div>
-                              <div
-                                className="mt-1 text-sm font-medium"
-                                style={{ color: 'var(--color-text)' }}
-                              >
-                                Not reported
-                              </div>
-                              <div
-                                className="mt-1 text-[11px]"
-                                style={{ color: 'var(--color-text-secondary)' }}
-                              >
-                                Codex did not return a secondary window for this account snapshot.
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div
-                          className="rounded-lg border px-4 py-3"
-                          style={{
-                            borderColor: 'var(--color-border-subtle)',
-                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                          }}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <div
-                                className="text-[11px]"
-                                style={{ color: 'var(--color-text-muted)' }}
-                              >
-                                Credits
-                              </div>
-                              <div
-                                className="mt-1 text-sm font-medium"
-                                style={{ color: 'var(--color-text)' }}
-                              >
-                                {formatCodexCreditsValue(codexConnection.rateLimits.credits)}
-                              </div>
-                            </div>
-                            <div
-                              className="max-w-md text-[11px]"
-                              style={{ color: 'var(--color-text-secondary)' }}
-                            >
-                              Credits are shown separately from window-based subscription usage and
-                              may be unavailable for plan-backed ChatGPT sessions.
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {showApiKeySection && apiKeyConfig ? (
-                <div
-                  className="space-y-3 rounded-md border p-3"
-                  style={{ borderColor: 'var(--color-border-subtle)' }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div
-                          data-testid="provider-api-key-icon"
-                          className="flex size-8 shrink-0 items-center justify-center rounded-md border"
-                          style={{
-                            borderColor: 'var(--color-border-subtle)',
-                            backgroundColor: 'rgba(255,255,255,0.03)',
-                          }}
-                        >
-                          <Key className="size-3.5" style={{ color: 'var(--color-text-muted)' }} />
-                        </div>
-                        <div>
-                          <div
-                            className="text-sm font-medium"
-                            style={{ color: 'var(--color-text)' }}
-                          >
-                            {apiKeyConfig.title}
-                          </div>
-                          <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                            {apiKeyConfig.description}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {!showApiKeyForm ? (
-                      <Button size="sm" variant="outline" onClick={handleStartApiKeyEdit}>
-                        {selectedApiKey ? 'Replace key' : 'Set API key'}
-                      </Button>
                     ) : null}
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span
-                      className="rounded-full px-2 py-0.5"
-                      style={{
-                        color:
-                          selectedProvider.connection?.apiKeyConfigured || selectedApiKey
+                    {codexFastCapabilityHint ? (
+                      <div
+                        className="rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: codexFastCapability?.selectable
+                            ? 'rgba(34, 197, 94, 0.28)'
+                            : 'var(--color-border-subtle)',
+                          color: codexFastCapability?.selectable
                             ? '#86efac'
-                            : 'var(--color-text-muted)',
-                        backgroundColor:
-                          selectedProvider.connection?.apiKeyConfigured || selectedApiKey
-                            ? 'rgba(74, 222, 128, 0.14)'
-                            : 'rgba(255, 255, 255, 0.05)',
-                      }}
-                    >
-                      {selectedProvider.connection?.apiKeyConfigured || selectedApiKey
-                        ? 'Configured'
-                        : 'Not configured'}
-                    </span>
-                    {selectedApiKey ? (
-                      <span style={{ color: 'var(--color-text-secondary)' }}>
-                        {selectedApiKey.maskedValue} · {selectedApiKey.scope}
-                      </span>
-                    ) : selectedProvider.connection?.apiKeySource === 'environment' ? (
-                      <span style={{ color: 'var(--color-text-secondary)' }}>
-                        {selectedProvider.connection.apiKeySourceLabel}
-                      </span>
-                    ) : null}
-                    {apiKeyStorageStatus && selectedApiKey ? (
-                      <span style={{ color: 'var(--color-text-muted)' }}>
-                        Stored in {apiKeyStorageStatus.backend}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {showApiKeyForm ? (
-                    <div
-                      className="space-y-3 rounded-md border p-3"
-                      style={{ borderColor: 'var(--color-border-subtle)' }}
-                    >
-                      <div className="space-y-1.5">
-                        <Label
-                          htmlFor={`${selectedProvider.providerId}-api-key`}
-                          className="text-xs"
-                        >
-                          {apiKeyConfig.name}
-                        </Label>
-                        <Input
-                          id={`${selectedProvider.providerId}-api-key`}
-                          type="password"
-                          value={apiKeyValue}
-                          onChange={(e) => setApiKeyValue(e.target.value)}
-                          placeholder={apiKeyConfig.placeholder}
-                          className="h-9 text-sm"
-                          autoFocus
-                        />
+                            : 'var(--color-text-secondary)',
+                          backgroundColor: codexFastCapability?.selectable
+                            ? 'rgba(34, 197, 94, 0.08)'
+                            : 'transparent',
+                        }}
+                      >
+                        {codexFastCapabilityHint}
                       </div>
+                    ) : null}
 
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Scope</Label>
-                        <Select
-                          value={apiKeyScope}
-                          onValueChange={(value) => setApiKeyScope(value as 'user' | 'project')}
-                        >
-                          <SelectTrigger className="h-9 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="project">Project</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {(apiKeyError || apiKeysError) && (
+                    {codexConnection?.rateLimits ? (
+                      <div className="space-y-2">
                         <div
                           className="rounded-md border px-3 py-2 text-xs"
                           style={{
-                            borderColor: 'rgba(248, 113, 113, 0.25)',
-                            backgroundColor: 'rgba(248, 113, 113, 0.06)',
-                            color: '#fca5a5',
+                            borderColor: 'var(--color-border-subtle)',
+                            color: 'var(--color-text-secondary)',
                           }}
                         >
-                          {apiKeyError ?? apiKeysError}
+                          These percentages show used quota, not remaining quota.{' '}
+                          {formatCodexUsageExplanation(
+                            codexConnection.rateLimits.primary?.usedPercent,
+                            codexConnection.rateLimits.primary?.windowDurationMins
+                          )}
+                          {codexConnection.rateLimits.secondary
+                            ? ` Weekly limits are shown separately in the ${
+                                formatCodexWindowDurationLong(
+                                  codexConnection.rateLimits.secondary.windowDurationMins
+                                ) ?? 'secondary'
+                              } window.`
+                            : ''}
                         </div>
-                      )}
 
-                      <div className="flex justify-between gap-2">
-                        {selectedApiKey ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void handleDeleteApiKey()}
-                            disabled={apiKeySaving}
+                        <div className="space-y-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <CodexRateLimitWindowCard
+                              title="Primary window"
+                              usedLabel={formatCodexUsageWindowLabel(
+                                'Primary used',
+                                codexConnection.rateLimits.primary?.windowDurationMins
+                              )}
+                              usedValue={formatCodexUsagePercent(
+                                codexConnection.rateLimits.primary?.usedPercent
+                              )}
+                              remainingValue={
+                                formatCodexRemainingPercent(
+                                  codexConnection.rateLimits.primary?.usedPercent
+                                ) ?? 'Remaining unknown'
+                              }
+                              resetLabel={formatCodexResetWindowLabel(
+                                'Primary reset',
+                                codexConnection.rateLimits.primary?.windowDurationMins
+                              )}
+                              resetValue={formatCodexResetDateTime(
+                                codexConnection.rateLimits.primary?.resetsAt
+                              )}
+                              accent="primary"
+                            />
+
+                            {codexConnection.rateLimits.secondary ? (
+                              <CodexRateLimitWindowCard
+                                title={
+                                  codexConnection.rateLimits.secondary.windowDurationMins === 10_080
+                                    ? 'Weekly window'
+                                    : 'Secondary window'
+                                }
+                                usedLabel={formatCodexUsageWindowLabel(
+                                  codexConnection.rateLimits.secondary.windowDurationMins === 10_080
+                                    ? 'Weekly used'
+                                    : 'Secondary used',
+                                  codexConnection.rateLimits.secondary.windowDurationMins
+                                )}
+                                usedValue={formatCodexUsagePercent(
+                                  codexConnection.rateLimits.secondary.usedPercent
+                                )}
+                                remainingValue={
+                                  formatCodexRemainingPercent(
+                                    codexConnection.rateLimits.secondary.usedPercent
+                                  ) ?? 'Remaining unknown'
+                                }
+                                resetLabel={formatCodexResetWindowLabel(
+                                  codexConnection.rateLimits.secondary.windowDurationMins === 10_080
+                                    ? 'Weekly reset'
+                                    : 'Secondary reset',
+                                  codexConnection.rateLimits.secondary.windowDurationMins
+                                )}
+                                resetValue={formatCodexResetDateTime(
+                                  codexConnection.rateLimits.secondary.resetsAt
+                                )}
+                                accent="secondary"
+                              />
+                            ) : (
+                              <div
+                                className="rounded-lg border px-4 py-3"
+                                style={{
+                                  borderColor: 'var(--color-border-subtle)',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                }}
+                              >
+                                <div
+                                  className="text-sm font-medium"
+                                  style={{ color: 'var(--color-text)' }}
+                                >
+                                  Weekly window
+                                </div>
+                                <div
+                                  className="mt-3 text-[11px]"
+                                  style={{ color: 'var(--color-text-muted)' }}
+                                >
+                                  Weekly used (1w)
+                                </div>
+                                <div
+                                  className="mt-1 text-sm font-medium"
+                                  style={{ color: 'var(--color-text)' }}
+                                >
+                                  Not reported
+                                </div>
+                                <div
+                                  className="mt-1 text-[11px]"
+                                  style={{ color: 'var(--color-text-secondary)' }}
+                                >
+                                  Codex did not return a secondary window for this account snapshot.
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div
+                            className="rounded-lg border px-4 py-3"
+                            style={{
+                              borderColor: 'var(--color-border-subtle)',
+                              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                            }}
                           >
-                            <Trash2 className="mr-1 size-3.5" />
-                            Delete
-                          </Button>
-                        ) : (
-                          <span />
-                        )}
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleCancelApiKeyEdit}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => void handleSaveApiKey()}
-                            disabled={apiKeySaving || !apiKeyValue.trim()}
-                          >
-                            {apiKeySaving
-                              ? 'Saving...'
-                              : selectedApiKey
-                                ? 'Update key'
-                                : 'Save key'}
-                          </Button>
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <div
+                                  className="text-[11px]"
+                                  style={{ color: 'var(--color-text-muted)' }}
+                                >
+                                  Credits
+                                </div>
+                                <div
+                                  className="mt-1 text-sm font-medium"
+                                  style={{ color: 'var(--color-text)' }}
+                                >
+                                  {formatCodexCreditsValue(codexConnection.rateLimits.credits)}
+                                </div>
+                              </div>
+                              <div
+                                className="max-w-md text-[11px]"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
+                                Credits are shown separately from window-based subscription usage
+                                and may be unavailable for plan-backed ChatGPT sessions.
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {showApiKeySection && apiKeyConfig ? (
+                  <div
+                    className="space-y-3 rounded-md border p-3"
+                    style={{ borderColor: 'var(--color-border-subtle)' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div
+                            data-testid="provider-api-key-icon"
+                            className="flex size-8 shrink-0 items-center justify-center rounded-md border"
+                            style={{
+                              borderColor: 'var(--color-border-subtle)',
+                              backgroundColor: 'rgba(255,255,255,0.03)',
+                            }}
+                          >
+                            <Key
+                              className="size-3.5"
+                              style={{ color: 'var(--color-text-muted)' }}
+                            />
+                          </div>
+                          <div>
+                            <div
+                              className="text-sm font-medium"
+                              style={{ color: 'var(--color-text)' }}
+                            >
+                              {apiKeyConfig.title}
+                            </div>
+                            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                              {apiKeyConfig.description}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {!showApiKeyForm ? (
+                        <Button size="sm" variant="outline" onClick={handleStartApiKeyEdit}>
+                          {selectedApiKey ? 'Replace key' : 'Set API key'}
+                        </Button>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-              ) : null}
 
-              {connectionError ? (
-                <div
-                  className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
-                  style={{
-                    borderColor: 'rgba(248, 113, 113, 0.25)',
-                    backgroundColor: 'rgba(248, 113, 113, 0.06)',
-                    color: '#fca5a5',
-                  }}
-                >
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  <span>{connectionError}</span>
-                </div>
-              ) : null}
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span
+                        className="rounded-full px-2 py-0.5"
+                        style={{
+                          color:
+                            selectedProvider.connection?.apiKeyConfigured || selectedApiKey
+                              ? '#86efac'
+                              : 'var(--color-text-muted)',
+                          backgroundColor:
+                            selectedProvider.connection?.apiKeyConfigured || selectedApiKey
+                              ? 'rgba(74, 222, 128, 0.14)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                        }}
+                      >
+                        {selectedProvider.connection?.apiKeyConfigured || selectedApiKey
+                          ? 'Configured'
+                          : 'Not configured'}
+                      </span>
+                      {selectedApiKey ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {selectedApiKey.maskedValue} · {selectedApiKey.scope}
+                        </span>
+                      ) : selectedProvider.connection?.apiKeySource === 'environment' ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {selectedProvider.connection.apiKeySourceLabel}
+                        </span>
+                      ) : null}
+                      {apiKeyStorageStatus && selectedApiKey ? (
+                        <span style={{ color: 'var(--color-text-muted)' }}>
+                          Stored in {apiKeyStorageStatus.backend}
+                        </span>
+                      ) : null}
+                    </div>
 
-              {connectionAlert ? (
-                <div
-                  className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
-                  style={{
-                    borderColor: 'rgba(245, 158, 11, 0.25)',
-                    backgroundColor: 'rgba(245, 158, 11, 0.06)',
-                    color: '#fbbf24',
-                  }}
-                >
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  <span>{connectionAlert}</span>
-                </div>
-              ) : null}
+                    {showApiKeyForm ? (
+                      <div
+                        className="space-y-3 rounded-md border p-3"
+                        style={{ borderColor: 'var(--color-border-subtle)' }}
+                      >
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor={`${selectedProvider.providerId}-api-key`}
+                            className="text-xs"
+                          >
+                            {apiKeyConfig.name}
+                          </Label>
+                          <Input
+                            ref={apiKeyInputRef}
+                            id={`${selectedProvider.providerId}-api-key`}
+                            type="password"
+                            value={apiKeyValue}
+                            onChange={(e) => setApiKeyValue(e.target.value)}
+                            placeholder={apiKeyConfig.placeholder}
+                            className="h-9 text-sm"
+                            autoFocus
+                          />
+                        </div>
 
-              {apiKeysLoading && !selectedApiKey ? (
-                <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  Loading stored credentials...
-                </div>
-              ) : null}
-            </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Scope</Label>
+                          <Select
+                            value={apiKeyScope}
+                            onValueChange={(value) => setApiKeyScope(value as 'user' | 'project')}
+                          >
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="project">Project</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {(apiKeyError || apiKeysError) && (
+                          <div
+                            className="rounded-md border px-3 py-2 text-xs"
+                            style={{
+                              borderColor: 'rgba(248, 113, 113, 0.25)',
+                              backgroundColor: 'rgba(248, 113, 113, 0.06)',
+                              color: '#fca5a5',
+                            }}
+                          >
+                            {apiKeyError ?? apiKeysError}
+                          </div>
+                        )}
+
+                        <div className="flex justify-between gap-2">
+                          {selectedApiKey ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void handleDeleteApiKey()}
+                              disabled={apiKeySaving}
+                            >
+                              <Trash2 className="mr-1 size-3.5" />
+                              Delete
+                            </Button>
+                          ) : (
+                            <span />
+                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCancelApiKeyEdit}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => void handleSaveApiKey()}
+                              disabled={apiKeySaving || !apiKeyValue.trim()}
+                            >
+                              {apiKeySaving
+                                ? 'Saving...'
+                                : selectedApiKey
+                                  ? 'Update key'
+                                  : 'Save key'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {connectionError ? (
+                  <div
+                    className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                    style={{
+                      borderColor: 'rgba(248, 113, 113, 0.25)',
+                      backgroundColor: 'rgba(248, 113, 113, 0.06)',
+                      color: '#fca5a5',
+                    }}
+                  >
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{connectionError}</span>
+                  </div>
+                ) : null}
+
+                {connectionAlert ? (
+                  <div
+                    className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                    style={{
+                      borderColor: 'rgba(245, 158, 11, 0.25)',
+                      backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                      color: '#fbbf24',
+                    }}
+                  >
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{connectionAlert}</span>
+                  </div>
+                ) : null}
+
+                {apiKeysLoading && !selectedApiKey ? (
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    Loading stored credentials...
+                  </div>
+                ) : null}
+              </div>
+            )
           ) : null}
 
           {selectedProvider && canConfigureRuntime ? (

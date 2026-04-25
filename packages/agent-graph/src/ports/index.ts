@@ -13,5 +13,6 @@ export type {
   GraphDomainRef,
   GraphOwnerSlotAssignment,
   GraphLayoutPort,
+  GraphLayoutMode,
   GraphLayoutVersion,
 } from './types';

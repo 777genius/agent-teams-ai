@@ -30,7 +30,33 @@ const hoisted = vi.hoisted(() => ({
     effects: [],
     time: 0,
   },
+  setNodePosition: vi.fn(),
+  clearNodePosition: vi.fn(),
   clearTransientOwnerPositions: vi.fn(),
+  resolveNearestOwnerSlot: vi.fn<
+    (
+      nodeId: string,
+      x: number,
+      y: number
+    ) => {
+      assignment: { ringIndex: number; sectorIndex: number };
+      displacedOwnerId?: string;
+      displacedAssignment?: { ringIndex: number; sectorIndex: number };
+      previewOwnerX: number;
+      previewOwnerY: number;
+    } | null
+  >(() => null),
+  resolveNearestOwnerGridTarget: vi.fn<
+    (
+      nodeId: string,
+      x: number,
+      y: number
+    ) => {
+      targetOwnerId: string;
+      previewOwnerX: number;
+      previewOwnerY: number;
+    } | null
+  >(() => null),
   graphControlsProps: null as null | Record<string, unknown>,
 }));
 
@@ -62,10 +88,11 @@ vi.mock('../../../../packages/agent-graph/src/hooks/useGraphSimulation', () => (
     getExtraWorldBounds: vi.fn(() => []),
     getLaunchAnchorWorldPosition: vi.fn(() => null),
     getActivityWorldRect: vi.fn(() => null),
-    resolveNearestOwnerSlot: vi.fn(() => null),
-    clearNodePosition: vi.fn(),
+    resolveNearestOwnerSlot: hoisted.resolveNearestOwnerSlot,
+    resolveNearestOwnerGridTarget: hoisted.resolveNearestOwnerGridTarget,
+    clearNodePosition: hoisted.clearNodePosition,
     clearTransientOwnerPositions: hoisted.clearTransientOwnerPositions,
-    setNodePosition: vi.fn(),
+    setNodePosition: hoisted.setNodePosition,
   }),
 }));
 
@@ -99,6 +126,12 @@ describe('GraphView pan interactions', () => {
     hoisted.interaction.isDragging.current = false;
     hoisted.simulationState.nodes = [];
     hoisted.simulationState.edges = [];
+    hoisted.interaction.handleMouseDown.mockImplementation(() => undefined);
+    hoisted.interaction.handleMouseMove.mockImplementation(() => undefined);
+    hoisted.interaction.handleMouseUp.mockImplementation(() => null);
+    hoisted.interaction.handleDoubleClick.mockImplementation(() => null);
+    hoisted.resolveNearestOwnerSlot.mockImplementation(() => null);
+    hoisted.resolveNearestOwnerGridTarget.mockImplementation(() => null);
     hoisted.graphControlsProps = null;
     vi.stubGlobal(
       'ResizeObserver',
@@ -107,7 +140,10 @@ describe('GraphView pan interactions', () => {
         disconnect(): void {}
       }
     );
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn(() => 1)
+    );
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -155,10 +191,13 @@ describe('GraphView pan interactions', () => {
     hoisted.simulationState.nodes = [source, target];
     hoisted.simulationState.edges = [edge];
 
-    const midpoint = getEdgeMidpoint(edge, new Map([
-      [source.id, source],
-      [target.id, target],
-    ]));
+    const midpoint = getEdgeMidpoint(
+      edge,
+      new Map([
+        [source.id, source],
+        [target.id, target],
+      ])
+    );
     expect(midpoint).not.toBeNull();
 
     await act(async () => {
@@ -403,6 +442,77 @@ describe('GraphView pan interactions', () => {
     expect(hoisted.clearTransientOwnerPositions).toHaveBeenCalledTimes(1);
   });
 
+  it('commits grid owner order drops without using radial slot drops', async () => {
+    const source: GraphNode = {
+      id: 'member:demo-team:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      x: 80,
+      y: 80,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'alice' },
+    };
+    const target: GraphNode = {
+      id: 'member:demo-team:bob',
+      kind: 'member',
+      label: 'bob',
+      state: 'idle',
+      x: 160,
+      y: 80,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'bob' },
+    };
+    const onOwnerSlotDrop = vi.fn();
+    const onOwnerGridOrderDrop = vi.fn();
+    hoisted.simulationState.nodes = [source, target];
+    hoisted.simulationState.edges = [];
+    hoisted.interaction.dragNodeId.current = source.id;
+    hoisted.interaction.isDragging.current = true;
+    hoisted.resolveNearestOwnerGridTarget.mockReturnValue({
+      targetOwnerId: target.id,
+      previewOwnerX: target.x!,
+      previewOwnerY: target.y!,
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [source, target],
+            edges: [],
+            particles: [],
+            layout: {
+              version: 'stable-slots-v1',
+              mode: 'grid-under-lead',
+              ownerOrder: [source.id, target.id],
+              slotAssignments: {},
+            },
+          },
+          config: { animationEnabled: false },
+          onOwnerSlotDrop,
+          onOwnerGridOrderDrop,
+        })
+      );
+    });
+
+    await act(async () => {
+      window.dispatchEvent(
+        new MouseEvent('mouseup', {
+          bubbles: true,
+          button: 0,
+          clientX: 160,
+          clientY: 80,
+        })
+      );
+    });
+
+    expect(onOwnerGridOrderDrop).toHaveBeenCalledWith({
+      nodeId: source.id,
+      targetNodeId: target.id,
+    });
+    expect(onOwnerSlotDrop).not.toHaveBeenCalled();
+  });
+
   it('passes activity filter state to renderHud and updates it through graph controls', async () => {
     const renderHud = vi.fn(() => null);
 
@@ -433,24 +543,22 @@ describe('GraphView pan interactions', () => {
       })
     );
 
-    const controlsProps = hoisted.graphControlsProps as
-      | {
-          filters: {
-            showActivity: boolean;
-            showTasks: boolean;
-            showProcesses: boolean;
-            showEdges: boolean;
-            paused: boolean;
-          };
-          onFiltersChange: (filters: {
-            showActivity: boolean;
-            showTasks: boolean;
-            showProcesses: boolean;
-            showEdges: boolean;
-            paused: boolean;
-          }) => void;
-        }
-      | null;
+    const controlsProps = hoisted.graphControlsProps as {
+      filters: {
+        showActivity: boolean;
+        showTasks: boolean;
+        showProcesses: boolean;
+        showEdges: boolean;
+        paused: boolean;
+      };
+      onFiltersChange: (filters: {
+        showActivity: boolean;
+        showTasks: boolean;
+        showProcesses: boolean;
+        showEdges: boolean;
+        paused: boolean;
+      }) => void;
+    } | null;
     expect(controlsProps).not.toBeNull();
 
     await act(async () => {

@@ -7,6 +7,7 @@ import {
   spawn,
   type SpawnOptions,
 } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
 /**
@@ -28,11 +29,15 @@ function execFileAsync(
     child = execFile(cmd, args, options, (err, stdout, stderr) => {
       settled = true;
       cleanup();
-      if (err)
-        reject(
-          err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error')
-        );
-      else resolve({ stdout: String(stdout), stderr: String(stderr) });
+      if (err) {
+        const normalizedError =
+          err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error');
+        Object.assign(normalizedError, {
+          stdout: String(stdout),
+          stderr: String(stderr),
+        });
+        reject(normalizedError);
+      } else resolve({ stdout: String(stdout), stderr: String(stderr) });
     });
     if (!settled) {
       trackCliProcess(child);
@@ -79,14 +84,96 @@ function containsNonAscii(str: string): boolean {
 }
 
 /**
- * On Windows, creating a process whose *path* contains non-ASCII
- * characters will often fail with `spawn EINVAL`.  Detect that case so
- * callers can automatically fall back to launching via a shell.
+ * On Windows, batch launchers need cmd.exe, and creating a process whose
+ * path contains non-ASCII characters will often fail with `spawn EINVAL`.
+ * Detect both cases so callers can launch through a shell when needed.
  */
 function needsShell(binaryPath: string): boolean {
   if (process.platform !== 'win32') return false;
   if (!binaryPath) return false;
-  return containsNonAscii(binaryPath);
+  const extension = path.extname(binaryPath).toLowerCase();
+  return extension === '.cmd' || extension === '.bat' || containsNonAscii(binaryPath);
+}
+
+interface DirectWindowsLauncher {
+  command: string;
+  argsPrefix: string[];
+}
+
+function isWindowsBatchLauncher(binaryPath: string): boolean {
+  const extension = path.extname(binaryPath).toLowerCase();
+  return extension === '.cmd' || extension === '.bat';
+}
+
+function resolveCmdPathTemplate(template: string, launcherDir: string): string {
+  const dirWithSep = launcherDir.endsWith(path.sep) ? launcherDir : `${launcherDir}${path.sep}`;
+  return path.resolve(
+    template
+      .replace(/%SCRIPT_DIR%/gi, dirWithSep)
+      .replace(/%~dp0/gi, dirWithSep)
+      .replace(/%dp0%/gi, dirWithSep)
+      .replace(/\\/g, path.sep)
+  );
+}
+
+function resolveGeneratedBunLauncher(
+  content: string,
+  launcherDir: string
+): DirectWindowsLauncher | null {
+  if (!/\bbun\s+"%TARGET%"\s+%\*/i.test(content)) {
+    return null;
+  }
+  const targetMatch = /set\s+"TARGET=([^"]+)"/i.exec(content);
+  const targetTemplate = targetMatch?.[1];
+  if (!targetTemplate) {
+    return null;
+  }
+
+  const target = resolveCmdPathTemplate(targetTemplate, launcherDir);
+  if (!existsSync(target)) {
+    return null;
+  }
+  return { command: 'bun', argsPrefix: [target] };
+}
+
+function resolveNpmNodeShim(content: string, launcherDir: string): DirectWindowsLauncher | null {
+  const scriptMatch = /"%_prog%"\s+"([^"]+\.(?:cjs|mjs|js))"\s+%\*/i.exec(content);
+  const scriptTemplate = scriptMatch?.[1];
+  if (!scriptTemplate) {
+    return null;
+  }
+
+  const scriptPath = resolveCmdPathTemplate(scriptTemplate, launcherDir);
+  if (!existsSync(scriptPath)) {
+    return null;
+  }
+
+  const localNode = path.join(launcherDir, 'node.exe');
+  return {
+    command: existsSync(localNode) ? localNode : 'node',
+    argsPrefix: [scriptPath],
+  };
+}
+
+/**
+ * Some Windows launchers are thin wrappers around a real JS entrypoint.
+ * Running that entrypoint directly with an argv array avoids cmd.exe's
+ * percent expansion, which cannot safely represent args like `%PATH%`.
+ */
+function resolveDirectWindowsLauncher(binaryPath: string): DirectWindowsLauncher | null {
+  if (process.platform !== 'win32' || !isWindowsBatchLauncher(binaryPath)) {
+    return null;
+  }
+
+  try {
+    const content = readFileSync(binaryPath, 'utf8');
+    const launcherDir = path.dirname(binaryPath);
+    return (
+      resolveGeneratedBunLauncher(content, launcherDir) ?? resolveNpmNodeShim(content, launcherDir)
+    );
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -94,19 +181,31 @@ function needsShell(binaryPath: string): boolean {
  *
  * cmd.exe rules:
  * - Double-quote args containing spaces or special characters
- * - Inside double quotes, escape literal `"` as `""`
- * - `%` is expanded as env var even inside double quotes — escape as `%%`
+ * - Inside double quotes, escape literal `"` as `\"` for the target argv parser
+ * - Double trailing backslashes so they do not escape the closing quote
+ * - `%` is expanded as env var even inside double quotes. Keep it outside
+ *   quoted chunks and escape it as `^%`.
  * - `^`, `&`, `|`, `<`, `>` are safe inside double quotes
  *
  * Our callers only pass controlled strings (binary paths, CLI flags),
  * NOT arbitrary user input.
  */
-function quoteArg(arg: string): string {
+function quoteCmdChunk(chunk: string): string {
+  const escaped = chunk
+    .replace(/(\\*)"/g, (_match, backslashes: string) => `${backslashes}${backslashes}\\"`)
+    .replace(/(\\+)$/g, '$1$1');
+  return `"${escaped}"`;
+}
+
+export function quoteWindowsCmdArg(arg: string): string {
   if (/[^A-Za-z0-9_\-/.]/.test(arg)) {
-    const escaped = arg.replace(/%/g, '%%').replace(/"/g, '""');
-    return `"${escaped}"`;
+    return arg.split('%').map(quoteCmdChunk).join('^%');
   }
   return arg;
+}
+
+function quoteArg(arg: string): string {
+  return quoteWindowsCmdArg(arg);
 }
 
 /** Env vars injected into every spawned Claude CLI process. */
@@ -172,6 +271,15 @@ export async function execCli(
   }
   const target = binaryPath;
   const opts = withCliEnv(options);
+  const directLauncher = resolveDirectWindowsLauncher(target);
+  if (directLauncher) {
+    const result = await execFileAsync(
+      directLauncher.command,
+      [...directLauncher.argsPrefix, ...args],
+      opts
+    );
+    return { stdout: String(result.stdout), stderr: String(result.stderr) };
+  }
 
   // attempt the normal execFile path first
   if (!needsShell(target)) {
@@ -209,6 +317,14 @@ export function spawnCli(
   options: SpawnOptions = {}
 ): ReturnType<typeof spawn> {
   const opts = withCliEnv(options);
+  const directLauncher = resolveDirectWindowsLauncher(binaryPath);
+  if (directLauncher) {
+    const directOpts = { ...opts };
+    delete directOpts.shell;
+    return trackCliProcess(
+      spawn(directLauncher.command, [...directLauncher.argsPrefix, ...args], directOpts)
+    );
+  }
 
   if (process.platform === 'win32' && needsShell(binaryPath)) {
     const cmd = [binaryPath, ...args].map(quoteArg).join(' ');

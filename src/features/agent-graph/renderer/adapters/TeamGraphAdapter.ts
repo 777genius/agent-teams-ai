@@ -47,6 +47,7 @@ import {
 import type {
   GraphDataPort,
   GraphEdge,
+  GraphLayoutMode,
   GraphLayoutPort,
   GraphNode,
   GraphNodeState,
@@ -109,7 +110,9 @@ export class TeamGraphAdapter {
     commentReadState?: Record<string, unknown>,
     provisioningProgress?: TeamProvisioningProgress | null,
     memberSpawnSnapshot?: MemberSpawnStatusesSnapshot,
-    slotAssignments?: Record<string, GraphOwnerSlotAssignment>
+    slotAssignments?: Record<string, GraphOwnerSlotAssignment>,
+    layoutMode: GraphLayoutMode = 'radial',
+    gridOwnerOrder?: readonly string[]
   ): GraphDataPort {
     if (teamData?.teamName !== teamName) {
       return TeamGraphAdapter.#emptyResult(teamName);
@@ -225,7 +228,13 @@ export class TeamGraphAdapter {
       teamName,
       teamColor: teamData.config.color ?? undefined,
       isAlive: teamData.isAlive,
-      layout: TeamGraphAdapter.#buildLayoutPort(teamData, teamName, slotAssignments),
+      layout: TeamGraphAdapter.#buildLayoutPort(
+        teamData,
+        teamName,
+        slotAssignments,
+        layoutMode,
+        gridOwnerOrder
+      ),
     };
   }
 
@@ -258,7 +267,9 @@ export class TeamGraphAdapter {
   static #buildLayoutPort(
     data: TeamGraphData,
     teamName: string,
-    slotAssignments?: Record<string, GraphOwnerSlotAssignment>
+    slotAssignments?: Record<string, GraphOwnerSlotAssignment>,
+    mode: GraphLayoutMode = 'radial',
+    gridOwnerOrder?: readonly string[]
   ): GraphLayoutPort {
     const ownerOrder: string[] = [];
     const seenOwnerNodeIds = new Set<string>();
@@ -286,26 +297,44 @@ export class TeamGraphAdapter {
       ownerOrder.push(nodeId);
     };
 
-    for (const stableOwnerId of canonicalVisibleOwnerIds) {
-      const visibleMember = visibleMemberByStableOwnerId.get(stableOwnerId);
-      if (!visibleMember) {
-        continue;
+    if (mode === 'grid-under-lead') {
+      const seenStableOwnerIds = new Set<string>();
+      for (const stableOwnerId of gridOwnerOrder ?? []) {
+        if (seenStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        seenStableOwnerIds.add(stableOwnerId);
+        pushMember(visibleMemberByStableOwnerId.get(stableOwnerId));
       }
-      if (!assignedStableOwnerIds.has(stableOwnerId)) {
-        continue;
-      }
-      pushMember(visibleMember);
-    }
 
-    for (const stableOwnerId of canonicalVisibleOwnerIds) {
-      const visibleMember = visibleMemberByStableOwnerId.get(stableOwnerId);
-      if (!visibleMember) {
-        continue;
+      for (const stableOwnerId of canonicalVisibleOwnerIds) {
+        if (seenStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        pushMember(visibleMemberByStableOwnerId.get(stableOwnerId));
       }
-      if (assignedStableOwnerIds.has(stableOwnerId)) {
-        continue;
+    } else {
+      for (const stableOwnerId of canonicalVisibleOwnerIds) {
+        const visibleMember = visibleMemberByStableOwnerId.get(stableOwnerId);
+        if (!visibleMember) {
+          continue;
+        }
+        if (!assignedStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        pushMember(visibleMember);
       }
-      pushMember(visibleMember);
+
+      for (const stableOwnerId of canonicalVisibleOwnerIds) {
+        const visibleMember = visibleMemberByStableOwnerId.get(stableOwnerId);
+        if (!visibleMember) {
+          continue;
+        }
+        if (assignedStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        pushMember(visibleMember);
+      }
     }
 
     const normalizedAssignments: Record<string, GraphOwnerSlotAssignment> = {};
@@ -320,6 +349,7 @@ export class TeamGraphAdapter {
 
     return {
       version: GRAPH_STABLE_SLOT_LAYOUT_VERSION,
+      mode,
       ownerOrder,
       slotAssignments: normalizedAssignments,
     };

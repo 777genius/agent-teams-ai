@@ -8,6 +8,7 @@ import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
+import { extractFileReferenceTokens } from '@renderer/utils/groupTransformer';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
@@ -33,9 +34,6 @@ import type { UserGroup } from '@renderer/types/groups';
 
 const logger = createLogger('Component:UserChatGroup');
 
-// Pattern for @paths only (file references)
-const PATH_PATTERN = /@([^\s,)}\]]+)/g;
-
 interface UserChatGroupProps {
   userGroup: UserGroup;
 }
@@ -46,24 +44,22 @@ interface UserChatGroupProps {
  */
 // eslint-disable-next-line sonarjs/function-return-type -- React child manipulation inherently returns mixed node types
 function highlightTextNode(text: string, validatedPaths: Record<string, boolean>): React.ReactNode {
-  const pathPattern = /@[^\s,)}\]]+/g;
+  const pathReferences = extractFileReferenceTokens(text);
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  let match;
 
-  pathPattern.lastIndex = 0;
-  while ((match = pathPattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+  for (const reference of pathReferences) {
+    if (reference.startIndex > lastIndex) {
+      parts.push(text.slice(lastIndex, reference.startIndex));
     }
 
-    const fullMatch = match[0];
+    const fullMatch = reference.raw;
     const isValid = validatedPaths[fullMatch] === true;
 
     if (isValid) {
       parts.push(
         <span
-          key={match.index}
+          key={reference.startIndex}
           style={{
             backgroundColor: 'var(--chat-user-tag-bg)',
             color: 'var(--chat-user-tag-text)',
@@ -81,7 +77,7 @@ function highlightTextNode(text: string, validatedPaths: Record<string, boolean>
       parts.push(fullMatch);
     }
 
-    lastIndex = match.index + fullMatch.length;
+    lastIndex = reference.endIndex;
   }
 
   if (lastIndex < text.length) {
@@ -456,13 +452,10 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
   // Extract @path mentions from text
   const pathMentions = useMemo(() => {
     if (!textContent) return [];
-    const result: { value: string; raw: string }[] = [];
-    const pathPattern = new RegExp(PATH_PATTERN.source, PATH_PATTERN.flags);
-    let match;
-    while ((match = pathPattern.exec(textContent)) !== null) {
-      result.push({ value: match[1], raw: match[0] });
-    }
-    return result;
+    return extractFileReferenceTokens(textContent).map((reference) => ({
+      value: reference.path,
+      raw: reference.raw,
+    }));
   }, [textContent]);
 
   // Validate @path mentions via IPC
@@ -475,7 +468,11 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
         const toValidate = pathMentions.map((m) => ({ type: 'path' as const, value: m.value }));
         const results = await api.validateMentions(toValidate, projectPath);
         if (isCurrent) {
-          setValidatedPaths(results);
+          setValidatedPaths(
+            Object.fromEntries(
+              pathMentions.map((mention) => [mention.raw, results[`@${mention.value}`] === true])
+            )
+          );
         }
       } catch (err) {
         logger.error('Path validation failed:', err);

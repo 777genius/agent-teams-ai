@@ -353,17 +353,21 @@ const KNOWN_DIRS = new Set([
   'node_modules',
 ]);
 
-/**
- * Simple pattern for detecting @ mentions that could be file paths.
- * The filtering logic in extractFileReferences determines validity.
- */
-const FILE_REF_PATTERN = /@([~a-zA-Z0-9._/-]+)/g;
+export type FileReferenceToken = FileReference & {
+  startIndex: number;
+  endIndex: number;
+};
+
+const UNQUOTED_FILE_REF_STOP = /[\s,)}\]]/;
 
 /**
  * Checks if a path looks like a valid file reference.
  * Must start with known dir, contain /, or start with ./ or ../
  */
 function isValidFileRef(path: string): boolean {
+  if (/^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\')) {
+    return true;
+  }
   // Check for relative path indicators
   if (isRelativePath(path)) {
     return true;
@@ -385,6 +389,58 @@ function isValidFileRef(path: string): boolean {
   return false;
 }
 
+function readFileRefAt(text: string, atIndex: number): FileReferenceToken | null {
+  const valueStart = atIndex + 1;
+  const firstChar = text[valueStart];
+  if (!firstChar) return null;
+
+  let path = '';
+  let endIndex = valueStart;
+
+  if (firstChar === '"' || firstChar === "'") {
+    const quote = firstChar;
+    const quotedStart = valueStart + 1;
+    const quotedEnd = text.indexOf(quote, quotedStart);
+    if (quotedEnd < 0) return null;
+    path = text.slice(quotedStart, quotedEnd);
+    endIndex = quotedEnd + 1;
+  } else {
+    while (endIndex < text.length && !UNQUOTED_FILE_REF_STOP.test(text[endIndex])) {
+      endIndex += 1;
+    }
+    path = text.slice(valueStart, endIndex);
+  }
+
+  if (!path || !isValidFileRef(path)) return null;
+  return {
+    path,
+    raw: text.slice(atIndex, endIndex),
+    startIndex: atIndex,
+    endIndex,
+  };
+}
+
+export function extractFileReferenceTokens(text: string): FileReferenceToken[] {
+  if (!text) return [];
+
+  const references: FileReferenceToken[] = [];
+  let index = 0;
+  while (index < text.length) {
+    const atIndex = text.indexOf('@', index);
+    if (atIndex < 0) break;
+
+    const reference = readFileRefAt(text, atIndex);
+    if (reference) {
+      references.push(reference);
+      index = reference.endIndex;
+    } else {
+      index = atIndex + 1;
+    }
+  }
+
+  return references;
+}
+
 /**
  * Extracts file references (@file.ts) from text.
  *
@@ -392,25 +448,7 @@ function isValidFileRef(path: string): boolean {
  * @returns Array of FileReference objects
  */
 export function extractFileReferences(text: string): FileReference[] {
-  if (!text) return [];
-
-  const references: FileReference[] = [];
-  // Reset regex state before use
-  FILE_REF_PATTERN.lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = FILE_REF_PATTERN.exec(text)) !== null) {
-    const [fullMatch, path] = match;
-    // Only include if it looks like a valid file reference
-    if (isValidFileRef(path)) {
-      references.push({
-        path,
-        raw: fullMatch,
-      });
-    }
-  }
-
-  return references;
+  return extractFileReferenceTokens(text).map(({ path, raw }) => ({ path, raw }));
 }
 
 // =============================================================================

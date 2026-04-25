@@ -191,6 +191,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     sendingMessage,
     sendMessageError,
     sendMessageWarning,
+    sendMessageDebugDetails,
     lastSendMessageResult,
     teams,
     openTeamTab,
@@ -205,6 +206,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       sendingMessage: s.sendingMessage,
       sendMessageError: s.sendMessageError,
       sendMessageWarning: s.sendMessageWarning,
+      sendMessageDebugDetails: s.sendMessageDebugDetails,
       lastSendMessageResult: s.lastSendMessageResult,
       teams: s.teams,
       openTeamTab: s.openTeamTab,
@@ -687,6 +689,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         sending={sendingMessage}
         sendError={sendMessageError}
         sendWarning={sendMessageWarning}
+        sendDebugDetails={sendMessageDebugDetails}
         lastResult={lastSendMessageResult}
         textareaRef={composerTextareaRef}
         onSend={handleSend}
@@ -873,6 +876,7 @@ export const MessagesPanel = memo(function MessagesPanel({
               sending={sendingMessage}
               sendError={sendMessageError}
               sendWarning={sendMessageWarning}
+              sendDebugDetails={sendMessageDebugDetails}
               lastResult={lastSendMessageResult}
               textareaRef={composerTextareaRef}
               onSend={handleSend}
@@ -1158,6 +1162,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                     sending={sendingMessage}
                     sendError={sendMessageError}
                     sendWarning={sendMessageWarning}
+                    sendDebugDetails={sendMessageDebugDetails}
                     lastResult={lastSendMessageResult}
                     textareaRef={composerTextareaRef}
                     onSend={handleSend}

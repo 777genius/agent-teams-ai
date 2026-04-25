@@ -4,6 +4,7 @@ import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
+import { OpenCodeDeliveryWarning } from '@renderer/components/team/messages/OpenCodeDeliveryWarning';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import {
   extractTaskRefsFromText,
   stripEncodedTaskReferenceMetadata,
@@ -65,6 +67,7 @@ interface SendMessageDialogProps {
   sending: boolean;
   sendError: string | null;
   sendWarning?: string | null;
+  sendDebugDetails?: OpenCodeRuntimeDeliveryDebugDetails | null;
   lastResult: SendMessageResult | null;
   onSend: (
     member: string,
@@ -93,6 +96,7 @@ export const SendMessageDialog = ({
   sending,
   sendError,
   sendWarning,
+  sendDebugDetails,
   lastResult,
   onSend,
   onClose,
@@ -275,7 +279,13 @@ export const SendMessageDialog = ({
         taskRefs
       )
     )
-      .then(() => {
+      .then((result) => {
+        if (
+          result?.runtimeDelivery?.attempted === true &&
+          result.runtimeDelivery.delivered === false
+        ) {
+          return;
+        }
         textDraft.clearDraft();
         chipDraft.clearChipDraft();
         clearAttachments();
@@ -542,10 +552,10 @@ export const SendMessageDialog = ({
                         {sendError}
                       </span>
                     ) : sendWarning ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                        <AlertCircle size={10} className="shrink-0" />
-                        {sendWarning}
-                      </span>
+                      <OpenCodeDeliveryWarning
+                        warning={sendWarning}
+                        debugDetails={sendDebugDetails}
+                      />
                     ) : null}
                     {remaining < 200 ? (
                       <span

@@ -18,8 +18,8 @@ import type { ServiceContext } from '@main/services';
 
 const CODEX_THREAD_LIMIT = 20;
 const CODEX_INITIALIZE_TIMEOUT_MS = 6_000;
-const CODEX_LIVE_FETCH_TIMEOUT_MS = 12_000;
-const CODEX_ARCHIVED_FETCH_TIMEOUT_MS = 4_000;
+const CODEX_LIVE_FETCH_TIMEOUT_MS = 18_000;
+const CODEX_ARCHIVED_FETCH_TIMEOUT_MS = 6_000;
 const CODEX_SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
 const CODEX_TOTAL_FETCH_TIMEOUT_MS =
   CODEX_INITIALIZE_TIMEOUT_MS +
@@ -58,6 +58,10 @@ function getFullFailureReason(result: CodexRecentThreadsResult): string | null {
   }
 
   if (result.live.error === result.archived.error) {
+    return result.live.error;
+  }
+
+  if (result.archived.skipped) {
     return result.live.error;
   }
 
@@ -224,6 +228,14 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
   #logSegmentFailure(result: CodexRecentThreadsResult, segment: 'live' | 'archived'): void {
     const error = result[segment].error;
     if (!error) {
+      return;
+    }
+
+    if (result[segment].skipped) {
+      this.deps.logger.info('codex recent-projects thread list skipped', {
+        segment,
+        reason: error,
+      });
       return;
     }
 

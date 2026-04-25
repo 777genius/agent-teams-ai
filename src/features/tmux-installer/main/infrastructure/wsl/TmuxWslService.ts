@@ -34,6 +34,11 @@ interface WindowsOptionalFeatureProbe {
   hasConfiguredWslFeature: boolean;
 }
 
+interface WslDistroGroups {
+  userDistros: string[];
+  serviceDistros: string[];
+}
+
 type ExecFileCallback = (
   error: Error | null,
   stdout: string | Buffer,
@@ -64,6 +69,13 @@ const POWERSHELL_FEATURE_QUERY = [
   '$features = Get-WindowsOptionalFeature -Online -FeatureName "Microsoft-Windows-Subsystem-Linux","VirtualMachinePlatform"',
   '$features | Select-Object FeatureName, State, RestartRequired | ConvertTo-Json -Compress',
 ].join('; ');
+const SERVICE_WSL_DISTRO_EXACT_NAMES = new Set([
+  'docker-desktop',
+  'docker-desktop-data',
+  'rancher-desktop',
+  'rancher-desktop-data',
+]);
+const SERVICE_WSL_DISTRO_PREFIXES = ['podman-machine-'];
 
 export class TmuxWslService {
   readonly #execFile: ExecFileLike;
@@ -139,10 +151,35 @@ export class TmuxWslService {
       };
     }
 
+    const distroGroups = this.#groupWslDistros(distros);
+    if (distroGroups.userDistros.length === 0) {
+      if (persistedPreferredDistro) {
+        await this.#preferenceStore.clearPreferredDistro();
+      }
+      return {
+        preference: null,
+        status: {
+          wslInstalled: true,
+          rebootRequired,
+          distroName: null,
+          distroVersion: null,
+          distroBootstrapped: false,
+          innerPackageManager: null,
+          tmuxAvailableInsideWsl: false,
+          tmuxVersion: null,
+          tmuxBinaryPath: null,
+          statusDetail: this.#buildNoUserDistroDetail({
+            rebootRequired,
+            serviceDistros: distroGroups.serviceDistros,
+          }),
+        },
+      };
+    }
+
     const verboseProbe = await this.#run(['--list', '--verbose'], 4_000);
     const verboseEntries = this.#parseVerboseDistroEntries(verboseProbe.stdout, distros);
     const preferredDistro = this.#resolvePreferredDistro({
-      distros,
+      userDistros: distroGroups.userDistros,
       verboseEntries,
       persistedPreferredDistro,
     });
@@ -158,7 +195,7 @@ export class TmuxWslService {
       return {
         preference: {
           preferredDistroName: null,
-          source: usingPersistedPreference ? 'persisted' : null,
+          source: null,
         },
         status: {
           wslInstalled: true,
@@ -171,18 +208,19 @@ export class TmuxWslService {
           tmuxVersion: null,
           tmuxBinaryPath: null,
           statusDetail:
-            distros.length > 1
-              ? 'WSL has multiple Linux distributions, but no default or saved distro target is configured yet.'
+            distroGroups.userDistros.length > 1
+              ? 'WSL has multiple user Linux distributions, but no default or saved distro target is configured yet.'
               : 'WSL is available, but the app could not determine which Linux distribution to target.',
         },
       };
     }
 
+    const preferredEntry = verboseEntries.find((entry) => entry.name === preferredDistro);
     const preference: TmuxWslPreference = {
       preferredDistroName: preferredDistro,
       source: usingPersistedPreference
         ? 'persisted'
-        : verboseEntries.some((entry) => entry.isDefault)
+        : preferredEntry?.isDefault
           ? 'default'
           : 'manual',
     };
@@ -452,25 +490,93 @@ export class TmuxWslService {
     return entries;
   }
 
+  #groupWslDistros(distros: string[]): WslDistroGroups {
+    const userDistros: string[] = [];
+    const serviceDistros: string[] = [];
+
+    for (const distro of distros) {
+      if (this.#isServiceWslDistro(distro)) {
+        serviceDistros.push(distro);
+      } else {
+        userDistros.push(distro);
+      }
+    }
+
+    return { userDistros, serviceDistros };
+  }
+
+  #isServiceWslDistro(distro: string): boolean {
+    const normalized = distro.trim().toLowerCase();
+    return (
+      SERVICE_WSL_DISTRO_EXACT_NAMES.has(normalized) ||
+      SERVICE_WSL_DISTRO_PREFIXES.some((prefix) => normalized.startsWith(prefix))
+    );
+  }
+
   #resolvePreferredDistro(input: {
-    distros: string[];
+    userDistros: string[];
     verboseEntries: WslVerboseDistroEntry[];
     persistedPreferredDistro: string | null;
   }): string | null {
-    if (input.persistedPreferredDistro && input.distros.includes(input.persistedPreferredDistro)) {
+    if (
+      input.persistedPreferredDistro &&
+      input.userDistros.includes(input.persistedPreferredDistro)
+    ) {
       return input.persistedPreferredDistro;
     }
 
-    const defaultDistro = input.verboseEntries.find((entry) => entry.isDefault)?.name ?? null;
+    const defaultDistro =
+      input.verboseEntries.find(
+        (entry) => entry.isDefault && input.userDistros.includes(entry.name)
+      )?.name ?? null;
     if (defaultDistro) {
       return defaultDistro;
     }
 
-    if (input.distros.length === 1) {
-      return input.distros[0] ?? null;
+    if (input.userDistros.length === 1) {
+      return input.userDistros[0] ?? null;
     }
 
-    return null;
+    return this.#findRecommendedUserDistro(input.userDistros);
+  }
+
+  #findRecommendedUserDistro(userDistros: string[]): string | null {
+    const exactPriority = ['ubuntu', 'ubuntu-24.04', 'ubuntu-22.04', 'debian'];
+    for (const preferredName of exactPriority) {
+      const matched = userDistros.find((distro) => distro.toLowerCase() === preferredName);
+      if (matched) {
+        return matched;
+      }
+    }
+
+    return userDistros.find((distro) => this.#looksLikeVersionedUbuntuDistro(distro)) ?? null;
+  }
+
+  #looksLikeVersionedUbuntuDistro(distro: string): boolean {
+    const normalized = distro.toLowerCase();
+    if (!normalized.startsWith('ubuntu-')) {
+      return false;
+    }
+
+    const versionSuffix = normalized.slice('ubuntu-'.length);
+    return (
+      versionSuffix.length > 0 &&
+      [...versionSuffix].every((character) => {
+        return (character >= '0' && character <= '9') || character === '.';
+      })
+    );
+  }
+
+  #buildNoUserDistroDetail(input: { rebootRequired: boolean; serviceDistros: string[] }): string {
+    if (input.rebootRequired) {
+      return 'WSL was installed, but Windows still needs a restart before a Linux distro can be configured.';
+    }
+
+    if (input.serviceDistros.length > 0) {
+      return `WSL is available, but only service distributions are installed (${input.serviceDistros.join(', ')}). Install Ubuntu or another user Linux distro before setting up tmux.`;
+    }
+
+    return 'WSL is available, but no Linux distribution is installed yet.';
   }
 
   #looksLikeRestartRequired(output: string): boolean {

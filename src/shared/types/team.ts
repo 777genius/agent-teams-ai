@@ -608,6 +608,7 @@ export interface InboxMessage {
     | 'inbox'
     | 'lead_session'
     | 'lead_process'
+    | 'runtime_delivery'
     | 'user_sent'
     | 'system_notification'
     | 'cross_team'
@@ -682,6 +683,37 @@ export interface SendMessageResult {
     providerId: 'opencode';
     attempted: boolean;
     delivered: boolean;
+    responsePending?: boolean;
+    responseState?:
+      | 'not_observed'
+      | 'pending'
+      | 'prompt_not_indexed'
+      | 'responded_tool_call'
+      | 'responded_visible_message'
+      | 'responded_non_visible_tool'
+      | 'responded_plain_text'
+      | 'permission_blocked'
+      | 'tool_error'
+      | 'empty_assistant_turn'
+      | 'session_stale'
+      | 'session_error'
+      | 'reconcile_failed';
+    ledgerStatus?:
+      | 'pending'
+      | 'accepted'
+      | 'responded'
+      | 'unanswered'
+      | 'retry_scheduled'
+      | 'retried'
+      | 'failed_retryable'
+      | 'failed_terminal';
+    visibleReplyMessageId?: string;
+    visibleReplyCorrelation?:
+      | 'relayOfMessageId'
+      | 'direct_child_message_send'
+      | 'plain_assistant_text';
+    acceptanceUnknown?: boolean;
+    queuedBehindMessageId?: string;
     reason?: string;
     diagnostics?: string[];
   };

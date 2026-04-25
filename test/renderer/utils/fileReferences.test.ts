@@ -82,6 +82,27 @@ describe('extractFileReferences', () => {
       expect(refs).toHaveLength(1);
       expect(refs[0].path).toBe('~/projects/foo');
     });
+
+    it('accepts Windows backslash paths', () => {
+      const refs = extractFileReferences('Check @src\\components\\App.tsx');
+      expect(refs).toHaveLength(1);
+      expect(refs[0].path).toBe('src\\components\\App.tsx');
+    });
+
+    it('accepts Windows drive absolute paths', () => {
+      const refs = extractFileReferences('Open @C:\\Users\\Alice\\project\\src\\App.tsx');
+      expect(refs).toHaveLength(1);
+      expect(refs[0].path).toBe('C:\\Users\\Alice\\project\\src\\App.tsx');
+    });
+
+    it('accepts quoted paths with spaces', () => {
+      const refs = extractFileReferences('Open @"src/My Component/App.tsx" now');
+      expect(refs).toHaveLength(1);
+      expect(refs[0]).toEqual({
+        path: 'src/My Component/App.tsx',
+        raw: '@"src/My Component/App.tsx"',
+      });
+    });
   });
 
   describe('rejects npm scoped packages', () => {

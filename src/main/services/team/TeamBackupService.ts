@@ -71,6 +71,8 @@ const TEAM_ROOT_FILES = [
 // Subdirs under ~/.claude/teams/{teamName}/
 const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
 const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime'];
+const ATOMIC_WRITE_TEMP_FILE_PREFIX = '.tmp.';
+const QUARANTINED_OPENCODE_LANE_INDEX_RE = /^lanes\.invalid\.\d+\.json$/;
 // Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
 const APP_DATA_SUBDIRS = ['attachments'];
 const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
@@ -105,6 +107,18 @@ function isValidConfig(content: string): boolean {
   }
 }
 
+function shouldCollectRecursiveBackupFile(relPath: string): boolean {
+  const fileName = path.basename(relPath);
+  if (fileName.startsWith(ATOMIC_WRITE_TEMP_FILE_PREFIX)) {
+    return false;
+  }
+  // Runtime quarantine files are diagnostic snapshots of invalid JSON.
+  if (QUARANTINED_OPENCODE_LANE_INDEX_RE.test(fileName)) {
+    return false;
+  }
+  return true;
+}
+
 async function collectRecursiveFiles(
   rootDir: string,
   relPrefix: string
@@ -120,6 +134,9 @@ async function collectRecursiveFiles(
         continue;
       }
       if (entry.isFile()) {
+        if (!shouldCollectRecursiveBackupFile(relPath)) {
+          continue;
+        }
         files.push({
           sourcePath,
           relPath: relPrefix ? `${relPrefix}/${relPath}` : relPath,
@@ -144,6 +161,9 @@ function collectRecursiveFilesSync(rootDir: string, relPrefix: string): BackupFi
         continue;
       }
       if (entry.isFile()) {
+        if (!shouldCollectRecursiveBackupFile(relPath)) {
+          continue;
+        }
         files.push({
           sourcePath,
           relPath: relPrefix ? `${relPrefix}/${relPath}` : relPath,

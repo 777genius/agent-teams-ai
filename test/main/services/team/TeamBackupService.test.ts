@@ -230,4 +230,89 @@ describe('TeamBackupService', () => {
     expect(restoredRuntimeLaneIndex.lanes['secondary:opencode:tom'].state).toBe('active');
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
   });
+
+  it('skips quarantined and temporary OpenCode runtime files during backup', async () => {
+    const service = new TeamBackupService();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const teamName = 'runtime-quarantine-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const runtimeDir = path.join(teamDir, '.opencode-runtime');
+    const runtimeLaneIndex = {
+      version: 1,
+      updatedAt: '2026-04-22T12:00:00.000Z',
+      lanes: {
+        'secondary:opencode:tom': {
+          laneId: 'secondary:opencode:tom',
+          state: 'active',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+        },
+      },
+    };
+
+    try {
+      await fs.mkdir(runtimeDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: 'Runtime Quarantine Team' }),
+        'utf8'
+      );
+      await fs.writeFile(
+        path.join(runtimeDir, 'lanes.json'),
+        JSON.stringify(runtimeLaneIndex),
+        'utf8'
+      );
+      await fs.writeFile(
+        path.join(runtimeDir, 'lanes.invalid.123.json'),
+        '{"version":1}\n}',
+        'utf8'
+      );
+      await fs.writeFile(path.join(runtimeDir, '.tmp.deadbeef'), '{"partial":', 'utf8');
+
+      await service.initialize();
+      await service.backupTeam(teamName);
+
+      const backupRuntimeDir = path.join(
+        hoisted.backupsBase,
+        'teams',
+        teamName,
+        '.opencode-runtime'
+      );
+      await expect(fs.readFile(path.join(backupRuntimeDir, 'lanes.json'), 'utf8')).resolves.toBe(
+        JSON.stringify(runtimeLaneIndex)
+      );
+      await expect(
+        fs.stat(path.join(backupRuntimeDir, 'lanes.invalid.123.json'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(fs.stat(path.join(backupRuntimeDir, '.tmp.deadbeef'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+
+      const manifest = JSON.parse(
+        await fs.readFile(
+          path.join(hoisted.backupsBase, 'teams', teamName, 'manifest.json'),
+          'utf8'
+        )
+      ) as { fileStats: Record<string, unknown> };
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          manifest.fileStats,
+          '.opencode-runtime/lanes.invalid.123.json'
+        )
+      ).toBe(false);
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          manifest.fileStats,
+          '.opencode-runtime/.tmp.deadbeef'
+        )
+      ).toBe(false);
+      expect(
+        warnSpy.mock.calls.some((args) =>
+          args.some((arg) => String(arg).includes('Skipping invalid JSON'))
+        )
+      ).toBe(false);
+    } finally {
+      service.dispose();
+      warnSpy.mockRestore();
+    }
+  });
 });

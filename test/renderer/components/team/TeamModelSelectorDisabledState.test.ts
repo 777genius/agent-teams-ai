@@ -231,6 +231,157 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          authMethod: 'api_key',
+          backend: {
+            kind: 'opencode-cli',
+            label: 'OpenCode CLI',
+            endpointLabel: 'opencode',
+          },
+          authenticated: true,
+          supported: true,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: [
+            'openrouter/openai/gpt-oss-20b:free',
+            'openrouter/qwen/qwen3-coder-plus',
+            'opencode/big-pickle',
+            'openrouter/openai/gpt-oss-120b:free',
+            'openrouter/qwen/qwen3-coder-flash',
+          ],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Recommended only');
+    expect(host.textContent).toContain('qwen/qwen3-coder-flash');
+    expect(host.textContent).toContain('Recommended');
+    expect(host.textContent).toContain('openai/gpt-oss-120b:free');
+    expect(host.textContent).toContain('Recommended with limits');
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('qwen/qwen3-coder-plus');
+    expect(host.textContent).toContain('Unavailable in OpenCode');
+    expect(host.textContent).toContain('openai/gpt-oss-20b:free');
+    expect(host.textContent).toContain('Not recommended');
+
+    const buttonTexts = Array.from(host.querySelectorAll('button')).map(
+      (button) => button.textContent ?? ''
+    );
+    const recommendedIndex = buttonTexts.findIndex((text) =>
+      text.includes('qwen/qwen3-coder-flash')
+    );
+    const neutralIndex = buttonTexts.findIndex((text) => text.includes('big-pickle'));
+    const limitedIndex = buttonTexts.findIndex((text) =>
+      text.includes('openai/gpt-oss-120b:free')
+    );
+    const notRecommendedIndex = buttonTexts.findIndex((text) =>
+      text.includes('openai/gpt-oss-20b:free')
+    );
+    const unavailableIndex = buttonTexts.findIndex((text) =>
+      text.includes('qwen/qwen3-coder-plus')
+    );
+    expect(recommendedIndex).toBeGreaterThanOrEqual(0);
+    expect(limitedIndex).toBeGreaterThan(recommendedIndex);
+    expect(neutralIndex).toBeGreaterThan(limitedIndex);
+    expect(unavailableIndex).toBeGreaterThan(neutralIndex);
+    expect(notRecommendedIndex).toBeGreaterThan(unavailableIndex);
+
+    await act(async () => {
+      const checkbox = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.getAttribute('role') === 'checkbox'
+      );
+      checkbox?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('qwen/qwen3-coder-flash');
+    expect(host.textContent).toContain('openai/gpt-oss-120b:free');
+    expect(host.textContent).not.toContain('big-pickle');
+    expect(host.textContent).not.toContain('qwen/qwen3-coder-plus');
+    expect(host.textContent).not.toContain('openai/gpt-oss-20b:free');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('constrains long runtime model lists so the selector scrolls', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'codex',
+          models: [
+            'gpt-5.4',
+            'gpt-5.4-mini',
+            'gpt-5.3-codex',
+            'gpt-5.3-codex-spark',
+            'gpt-5.2',
+            'gpt-5.1-codex',
+            'gpt-5.1-codex-mini',
+            'gpt-5',
+            'gpt-4.1',
+          ],
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const modelGrid = host.querySelector(
+      '[data-testid="team-model-selector-model-grid"]'
+    ) as HTMLElement | null;
+
+    expect(modelGrid).toBeTruthy();
+    expect(modelGrid?.style.maxHeight).toBe('400px');
+    expect(modelGrid?.className).toContain('overflow-y-auto');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps the runtime-reported Codex model list visible during a background refresh', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -813,10 +964,11 @@ describe('TeamModelSelector disabled Codex models', () => {
           value: '',
           onValueChange: () => undefined,
           providerDisabledReasonById: {
-            opencode: 'OpenCode is not available for team lead.',
+            opencode:
+              'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.',
           },
           providerDisabledBadgeLabelById: {
-            opencode: 'not teamlead',
+            opencode: 'side lane',
           },
         })
       );
@@ -827,8 +979,10 @@ describe('TeamModelSelector disabled Codex models', () => {
       button.textContent?.includes('OpenCode')
     );
     expect(openCodeButton?.hasAttribute('disabled')).toBe(true);
-    expect(openCodeButton?.getAttribute('title')).toBe('OpenCode is not available for team lead.');
-    expect(openCodeButton?.textContent).toContain('not teamlead');
+    expect(openCodeButton?.getAttribute('title')).toBe(
+      'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.'
+    );
+    expect(openCodeButton?.textContent).toContain('side lane');
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

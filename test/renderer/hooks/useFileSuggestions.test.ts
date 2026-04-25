@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterFileSuggestions } from '@renderer/hooks/useFileSuggestions';
+import { filterFileSuggestions, formatFileMentionPath } from '@renderer/hooks/useFileSuggestions';
 
 import type { QuickOpenFile } from '@shared/types/editor';
 
@@ -43,6 +43,7 @@ describe('filterFileSuggestions', () => {
     expect(results[0].type).toBe('file');
     expect(results[0].filePath).toBe('/project/src/test.ts');
     expect(results[0].relativePath).toBe('src/test.ts');
+    expect(results[0].insertText).toBe('src/test.ts');
   });
 
   it('filters by relative path', () => {
@@ -93,5 +94,11 @@ describe('filterFileSuggestions', () => {
   it('returns results in file list order', () => {
     const results = filterFileSuggestions(FILES, '.ts');
     expect(results[0].name).toBe('index.ts');
+  });
+
+  it('quotes inserted paths that contain spaces', () => {
+    expect(formatFileMentionPath('src/My Component/App.tsx')).toBe(
+      '"src/My Component/App.tsx"'
+    );
   });
 });

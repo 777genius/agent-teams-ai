@@ -4,6 +4,7 @@ import { ANIM_SPEED, NODE } from '../constants/canvas-constants';
 import { getStateColor } from '../constants/colors';
 import {
   buildStableSlotLayoutSnapshot,
+  resolveNearestGridOwnerTarget,
   resolveNearestSlotAssignment,
   snapshotToWorldBounds,
   translateSlotFrame,
@@ -14,7 +15,13 @@ import {
 } from '../layout/stableSlots';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
 
-import type { GraphEdge, GraphLayoutPort, GraphNode, GraphOwnerSlotAssignment, GraphParticle } from '../ports/types';
+import type {
+  GraphEdge,
+  GraphLayoutPort,
+  GraphNode,
+  GraphOwnerSlotAssignment,
+  GraphParticle,
+} from '../ports/types';
 import type { WorldBounds } from '../layout/launchAnchor';
 import { createCompleteEffect, createSpawnEffect, type VisualEffect } from '../canvas/draw-effects';
 
@@ -47,6 +54,15 @@ export interface UseGraphSimulationResult {
     assignment: GraphOwnerSlotAssignment;
     displacedOwnerId?: string;
     displacedAssignment?: GraphOwnerSlotAssignment;
+    previewOwnerX: number;
+    previewOwnerY: number;
+  } | null;
+  resolveNearestOwnerGridTarget: (
+    nodeId: string,
+    x: number,
+    y: number
+  ) => {
+    targetOwnerId: string;
     previewOwnerX: number;
     previewOwnerY: number;
   } | null;
@@ -145,7 +161,12 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       layoutRef.current = layout;
 
       preserveReusableNodePositions(nodes, state.nodes);
-      recordNodeLifecycleEffects(state.effects, nodes, prevNodeStatesRef.current, allKnownNodeIdsRef.current);
+      recordNodeLifecycleEffects(
+        state.effects,
+        nodes,
+        prevNodeStatesRef.current,
+        allKnownNodeIdsRef.current
+      );
       prevNodeIdsRef.current = new Set(nodes.map((node) => node.id));
       prevNodeStatesRef.current = new Map(nodes.map((node) => [node.id, node.state]));
 
@@ -210,23 +231,33 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     applyCurrentLayout();
   }, [applyCurrentLayout]);
 
-  const resolveNearestOwnerSlot = useCallback(
-    (nodeId: string, x: number, y: number) => {
-      const snapshot = layoutSnapshotRef.current;
-      if (!snapshot) {
-        return null;
-      }
-      return resolveNearestSlotAssignment({
-        ownerId: nodeId,
-        ownerX: x,
-        ownerY: y,
-        nodes: stateRef.current.nodes,
-        snapshot,
-        layout: layoutRef.current,
-      });
-    },
-    []
-  );
+  const resolveNearestOwnerSlot = useCallback((nodeId: string, x: number, y: number) => {
+    const snapshot = layoutSnapshotRef.current;
+    if (!snapshot) {
+      return null;
+    }
+    return resolveNearestSlotAssignment({
+      ownerId: nodeId,
+      ownerX: x,
+      ownerY: y,
+      nodes: stateRef.current.nodes,
+      snapshot,
+      layout: layoutRef.current,
+    });
+  }, []);
+
+  const resolveNearestOwnerGridTarget = useCallback((nodeId: string, x: number, y: number) => {
+    const snapshot = layoutSnapshotRef.current;
+    if (!snapshot || layoutRef.current?.mode !== 'grid-under-lead') {
+      return null;
+    }
+    return resolveNearestGridOwnerTarget({
+      ownerId: nodeId,
+      ownerX: x,
+      ownerY: y,
+      snapshot,
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -248,6 +279,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       clearNodePosition,
       clearTransientOwnerPositions,
       resolveNearestOwnerSlot,
+      resolveNearestOwnerGridTarget,
       getLaunchAnchorWorldPosition: (leadNodeId: string) =>
         launchAnchorPositionsRef.current.get(leadNodeId) ?? null,
       getActivityWorldRect: (nodeId: string) => activityRectByNodeIdRef.current.get(nodeId) ?? null,
@@ -260,6 +292,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       clearNodePosition,
       clearTransientOwnerPositions,
       resolveNearestOwnerSlot,
+      resolveNearestOwnerGridTarget,
     ]
   );
 }
@@ -381,17 +414,13 @@ function resetToFallbackLayout(args: {
   KanbanLayoutEngine.layout(nodes);
 }
 
-function preserveReusableNodePositions(
-  nodes: GraphNode[],
-  previousNodes: GraphNode[]
-): void {
+function preserveReusableNodePositions(nodes: GraphNode[], previousNodes: GraphNode[]): void {
   const previousPositionById = new Map(
     previousNodes
       .filter((node) => node.x != null && node.y != null)
-      .map((node) => [
-        node.id,
-        { x: node.x!, y: node.y!, vx: node.vx ?? 0, vy: node.vy ?? 0 },
-      ] as const)
+      .map(
+        (node) => [node.id, { x: node.x!, y: node.y!, vx: node.vx ?? 0, vy: node.vy ?? 0 }] as const
+      )
   );
 
   for (const node of nodes) {
@@ -498,7 +527,10 @@ function positionProcessNodes(nodes: GraphNode[], frames: readonly SlotFrame[]):
   }
 }
 
-function positionCrossTeamNodes(nodes: GraphNode[], fitBounds: StableSlotLayoutSnapshot['fitBounds']): void {
+function positionCrossTeamNodes(
+  nodes: GraphNode[],
+  fitBounds: StableSlotLayoutSnapshot['fitBounds']
+): void {
   const crossTeamNodes = nodes.filter((node) => node.kind === 'crossteam');
   if (crossTeamNodes.length === 0) {
     return;
@@ -515,8 +547,7 @@ function positionCrossTeamNodes(nodes: GraphNode[], fitBounds: StableSlotLayoutS
   const endAngle = (150 * Math.PI) / 180;
 
   crossTeamNodes.forEach((node, index) => {
-    const t =
-      crossTeamNodes.length === 1 ? 0.5 : index / Math.max(crossTeamNodes.length - 1, 1);
+    const t = crossTeamNodes.length === 1 ? 0.5 : index / Math.max(crossTeamNodes.length - 1, 1);
     const angle = startAngle + (endAngle - startAngle) * t;
     const x = Math.cos(angle) * radius;
     const y = Math.sin(angle) * radius;

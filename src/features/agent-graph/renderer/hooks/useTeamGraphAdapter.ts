@@ -38,6 +38,8 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
     toolHistory,
     provisioningProgress,
     memberSpawnSnapshot,
+    graphLayoutMode,
+    gridOwnerOrder,
     slotAssignments,
     graphLayoutSession,
     ensureTeamGraphSlotAssignments,
@@ -55,6 +57,8 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
       toolHistory: teamName ? s.toolHistoryByTeam[teamName] : undefined,
       provisioningProgress: teamName ? getCurrentProvisioningProgressForTeam(s, teamName) : null,
       memberSpawnSnapshot: teamName ? s.memberSpawnSnapshotsByTeam[teamName] : undefined,
+      graphLayoutMode: teamName ? s.graphLayoutModeByTeam[teamName] : undefined,
+      gridOwnerOrder: teamName ? s.gridOwnerOrderByTeam[teamName] : undefined,
       slotAssignments: teamName ? s.slotAssignmentsByTeam[teamName] : undefined,
       graphLayoutSession: teamName ? s.graphLayoutSessionByTeam[teamName] : undefined,
       ensureTeamGraphSlotAssignments: s.ensureTeamGraphSlotAssignments,
@@ -144,7 +148,9 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
         commentReadState,
         provisioningProgress,
         memberSpawnSnapshot,
-        effectiveSlotAssignments
+        effectiveSlotAssignments,
+        graphLayoutMode ?? 'radial',
+        gridOwnerOrder
       ),
     [
       teamData,
@@ -160,6 +166,8 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
       provisioningProgress,
       memberSpawnSnapshot,
       effectiveSlotAssignments,
+      graphLayoutMode,
+      gridOwnerOrder,
     ]
   );
 }

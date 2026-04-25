@@ -238,7 +238,16 @@ describe('ipc teams handlers', () => {
       delivered: 0,
       failed: 0,
       lastDelivery: undefined as
-        | { delivered: boolean; reason?: string; diagnostics?: string[] }
+        | {
+            delivered: boolean;
+            accepted?: boolean;
+            responsePending?: boolean;
+            acceptanceUnknown?: boolean;
+            responseState?: NonNullable<SendMessageResult['runtimeDelivery']>['responseState'];
+            ledgerStatus?: NonNullable<SendMessageResult['runtimeDelivery']>['ledgerStatus'];
+            reason?: string;
+            diagnostics?: string[];
+          }
         | undefined,
     })),
     getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
@@ -638,6 +647,77 @@ describe('ipc teams handlers', () => {
       'OpenCode runtime delivery after sendMessage failed for teammate "bob"'
     );
     vi.mocked(console.warn).mockClear();
+  });
+
+  it('returns runtimeDelivery acceptanceUnknown for OpenCode observe-pending timeout sends', async () => {
+    provisioningService.isOpenCodeRuntimeRecipient.mockResolvedValueOnce(true);
+    provisioningService.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 0,
+      attempted: 1,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: {
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        acceptanceUnknown: true,
+        responseState: 'not_observed',
+        ledgerStatus: 'failed_retryable',
+        reason: 'opencode_prompt_acceptance_unknown_after_bridge_timeout',
+        diagnostics: ['opencode_prompt_acceptance_unknown_after_bridge_timeout'],
+      },
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Ping bob',
+    })) as { success: boolean; data?: SendMessageResult };
+
+    expect(result.success).toBe(true);
+    expect(result.data?.runtimeDelivery).toMatchObject({
+      providerId: 'opencode',
+      attempted: true,
+      delivered: true,
+      responsePending: true,
+      acceptanceUnknown: true,
+      ledgerStatus: 'failed_retryable',
+      reason: 'opencode_prompt_acceptance_unknown_after_bridge_timeout',
+    });
+  });
+
+  it('maps OpenCode UI relay timeout to pending acceptance-unknown delivery', async () => {
+    vi.useFakeTimers();
+    try {
+      provisioningService.isOpenCodeRuntimeRecipient.mockResolvedValueOnce(true);
+      provisioningService.relayOpenCodeMemberInboxMessages.mockReturnValueOnce(
+        new Promise(() => undefined)
+      );
+      const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+      expect(sendHandler).toBeDefined();
+
+      const resultPromise = sendHandler!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Ping bob',
+      }) as Promise<{ success: boolean; data?: SendMessageResult }>;
+
+      await vi.advanceTimersByTimeAsync(12_000);
+      const result = await resultPromise;
+
+      expect(result.success).toBe(true);
+      expect(result.data?.runtimeDelivery).toMatchObject({
+        providerId: 'opencode',
+        attempted: true,
+        delivered: true,
+        responsePending: true,
+        acceptanceUnknown: true,
+        responseState: 'not_observed',
+        reason: 'opencode_runtime_delivery_ui_timeout_pending',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('passes hidden ask-mode instructions to a live lead without exposing them in stored text', async () => {

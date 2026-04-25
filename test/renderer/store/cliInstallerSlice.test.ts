@@ -189,12 +189,14 @@ describe('cliInstallerSlice', () => {
 
       const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
 
-      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject({
-        supported: true,
-        authenticated: true,
-        authMethod: 'opencode_managed',
-        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
-      });
+      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
+        {
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        }
+      );
     });
 
     it('classifies model-only OpenCode fallback as incomplete for progress events', () => {
@@ -283,12 +285,14 @@ describe('cliInstallerSlice', () => {
 
       const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
 
-      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject({
-        supported: false,
-        authenticated: false,
-        verificationState: 'error',
-        statusMessage: 'Runtime not found.',
-      });
+      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
+        {
+          supported: false,
+          authenticated: false,
+          verificationState: 'error',
+          statusMessage: 'Runtime not found.',
+        }
+      );
     });
   });
 
@@ -487,12 +491,12 @@ describe('cliInstallerSlice', () => {
     });
 
     it('drops global loading once metadata is ready and keeps only unresolved providers loading', async () => {
-      let resolveCodexStatus!: (
-        value: CliInstallationStatus['providers'][number]
-      ) => void;
-      const pendingCodexStatus = new Promise<CliInstallationStatus['providers'][number]>((resolve) => {
-        resolveCodexStatus = resolve;
-      });
+      let resolveCodexStatus!: (value: CliInstallationStatus['providers'][number]) => void;
+      const pendingCodexStatus = new Promise<CliInstallationStatus['providers'][number]>(
+        (resolve) => {
+          resolveCodexStatus = resolve;
+        }
+      );
       const mockStatus: CliInstallationStatus = {
         flavor: 'agent_teams_orchestrator',
         displayName: 'Multimodel runtime',
@@ -583,11 +587,12 @@ describe('cliInstallerSlice', () => {
         gemini: false,
         opencode: false,
       });
-      expect(useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex'))
-        .toMatchObject({
-          authenticated: true,
-          statusMessage: 'ChatGPT account ready',
-        });
+      expect(
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+      ).toMatchObject({
+        authenticated: true,
+        statusMessage: 'ChatGPT account ready',
+      });
     });
 
     it('refreshes OpenCode when bootstrap metadata only has fallback models', async () => {
@@ -670,13 +675,16 @@ describe('cliInstallerSlice', () => {
         gemini: false,
         opencode: false,
       });
-      expect(useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'opencode'))
-        .toMatchObject({
-          supported: true,
-          authenticated: true,
-          authMethod: 'opencode_managed',
-          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
-        });
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'opencode')
+      ).toMatchObject({
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      });
     });
   });
 
@@ -738,7 +746,9 @@ describe('cliInstallerSlice', () => {
       });
       expect(useStore.getState().cliStatusError).toBe('Failed to refresh anthropic status');
       expect(
-        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
       ).toMatchObject({
         displayName: 'Anthropic',
         authenticated: false,
@@ -751,9 +761,11 @@ describe('cliInstallerSlice', () => {
 
     it('marks authStatusChecking true while a multimodel provider refresh is in flight and clears it on success', async () => {
       let resolveProviderStatus!: (value: CliInstallationStatus['providers'][number]) => void;
-      const pendingProviderStatus = new Promise<CliInstallationStatus['providers'][number]>((resolve) => {
-        resolveProviderStatus = resolve;
-      });
+      const pendingProviderStatus = new Promise<CliInstallationStatus['providers'][number]>(
+        (resolve) => {
+          resolveProviderStatus = resolve;
+        }
+      );
 
       useStore.setState({
         cliStatus: createMultimodelStatus([
@@ -799,6 +811,53 @@ describe('cliInstallerSlice', () => {
         anthropic: false,
       });
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
+    });
+
+    it('keeps OpenCode refresh status-only even when model verification is requested', async () => {
+      const nextProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        canLoginFromUi: false,
+        models: ['openrouter/openai/gpt-oss-20b:free'],
+        modelAvailability: [],
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      });
+
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            authenticated: true,
+            authMethod: 'opencode_managed',
+            canLoginFromUi: false,
+            models: ['openrouter/openai/gpt-oss-20b:free'],
+            modelAvailability: [
+              {
+                modelId: 'openrouter/openai/gpt-oss-20b:free',
+                status: 'unknown',
+                reason: 'old bulk check failed',
+                checkedAt: '2026-04-25T00:00:00.000Z',
+              },
+            ],
+            backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(nextProvider);
+
+      await useStore.getState().fetchCliProviderStatus('opencode', { verifyModels: true });
+
+      expect(api.cliInstaller.verifyProviderModels).not.toHaveBeenCalled();
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('opencode');
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'opencode')
+          ?.modelAvailability
+      ).toEqual([]);
     });
   });
 

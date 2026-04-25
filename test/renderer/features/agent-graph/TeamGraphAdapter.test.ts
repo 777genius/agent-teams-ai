@@ -131,6 +131,121 @@ describe('TeamGraphAdapter particles', () => {
     ]);
   });
 
+  it('includes the requested graph layout mode in the layout port', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData(),
+      'my-team',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'grid-under-lead'
+    );
+
+    expect(graph.layout?.mode).toBe('grid-under-lead');
+  });
+
+  it('applies saved grid owner order only in grid-under-lead mode', () => {
+    const adapter = TeamGraphAdapter.create();
+    const teamData = createBaseTeamData({
+      config: {
+        name: 'My Team',
+        members: [
+          { name: 'team-lead', agentId: 'lead-agent' },
+          { name: 'alice', agentId: 'agent-alice' },
+          { name: 'bob', agentId: 'agent-bob' },
+        ],
+        projectPath: '/repo',
+      },
+      members: [
+        {
+          name: 'team-lead',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+          agentType: 'team-lead',
+          agentId: 'lead-agent',
+        },
+        {
+          name: 'alice',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 1,
+          lastActiveAt: null,
+          messageCount: 0,
+          agentId: 'agent-alice',
+        },
+        {
+          name: 'bob',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 1,
+          lastActiveAt: null,
+          messageCount: 0,
+          agentId: 'agent-bob',
+        },
+      ],
+    });
+    const slotAssignments = {
+      'agent-alice': { ringIndex: 0, sectorIndex: 2 },
+    };
+    const gridOwnerOrder = ['agent-bob', 'agent-alice'];
+
+    const gridGraph = adapter.adapt(
+      teamData,
+      'my-team',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      slotAssignments,
+      'grid-under-lead',
+      gridOwnerOrder
+    );
+    const radialGraph = adapter.adapt(
+      teamData,
+      'my-team',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      slotAssignments,
+      'radial',
+      gridOwnerOrder
+    );
+
+    expect(gridGraph.layout?.ownerOrder).toEqual([
+      'member:my-team:agent-bob',
+      'member:my-team:agent-alice',
+    ]);
+    expect(radialGraph.layout?.ownerOrder).toEqual([
+      'member:my-team:agent-alice',
+      'member:my-team:agent-bob',
+    ]);
+  });
+
   it('creates a message particle for a new incoming message from the newest message set', () => {
     const adapter = TeamGraphAdapter.create();
     const baseline = createBaseTeamData();
@@ -711,10 +826,9 @@ describe('TeamGraphAdapter particles', () => {
     const graph = adapter.adapt(next, 'my-team');
 
     expect(graph.particles).toHaveLength(2);
-    expect(graph.particles.map((particle) => particle.kind).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'inbox_message',
-      'task_comment',
-    ]);
+    expect(
+      graph.particles.map((particle) => particle.kind).toSorted((a, b) => a.localeCompare(b))
+    ).toEqual(['inbox_message', 'task_comment']);
   });
 
   it('maps lead-owned tasks onto the lead board without routing unknown owners to lead', () => {
@@ -924,8 +1038,7 @@ describe('TeamGraphAdapter particles', () => {
     expect(
       graph.edges.some(
         (edge) =>
-          edge.id ===
-          'edge:own:member:my-team:agent-alice:task:my-team:task-owned-by-stable-id'
+          edge.id === 'edge:own:member:my-team:agent-alice:task:my-team:task-owned-by-stable-id'
       )
     ).toBe(true);
   });
@@ -1535,7 +1648,8 @@ describe('TeamGraphAdapter particles', () => {
     );
 
     const overflowNode = graph.nodes.find(
-      (node) => node.kind === 'task' && node.isOverflowStack && node.ownerId === 'member:my-team:alice'
+      (node) =>
+        node.kind === 'task' && node.isOverflowStack && node.ownerId === 'member:my-team:alice'
     );
     const blockingEdges = graph.edges.filter((edge) => edge.type === 'blocking');
 

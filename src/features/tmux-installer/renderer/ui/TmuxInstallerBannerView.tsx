@@ -77,10 +77,11 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
   const manualHintsVisible =
     viewModel.manualHints.length > 0 && (!viewModel.manualHintsCollapsible || manualHintsExpanded);
   const primaryGuideUrl = viewModel.primaryGuideUrl;
+  const bannerPaddingClass = expanded ? `py-3 ${BANNER_MIN_H}` : 'py-2.5';
 
   return (
     <div
-      className={`mb-6 rounded-lg border-l-4 px-3 ${expanded ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
+      className={`mb-6 rounded-lg border-l-4 px-3 ${bannerPaddingClass}`}
       style={{
         borderLeftColor: viewModel.error ? '#ef4444' : '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.08)',
@@ -93,19 +94,29 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
         onClick={() => setExpanded((current) => !current)}
         className="group flex w-full items-center justify-between gap-3 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-white/[0.03]"
       >
-        <span className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex shrink-0 items-center justify-center">
+        <span className="flex min-w-0 flex-1 items-start gap-2.5">
+          <span className="inline-flex shrink-0 items-center justify-center pt-[3px]">
             {viewModel.error ? (
               <AlertTriangle className="size-3.5 text-red-300" />
             ) : (
               <Wrench className="size-3.5 text-amber-300" />
             )}
           </span>
-          <span
-            className="truncate text-xs font-medium leading-5"
-            style={{ color: 'var(--color-text)' }}
-          >
-            {SUMMARY_TITLE}
+          <span className="min-w-0">
+            <span
+              className="block truncate text-xs font-medium leading-5"
+              style={{ color: 'var(--color-text)' }}
+            >
+              {SUMMARY_TITLE}
+            </span>
+            {!expanded && viewModel.benefitsBody && (
+              <span
+                className="mt-0.5 block max-w-4xl text-[11px] leading-4"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {viewModel.benefitsBody}
+              </span>
+            )}
           </span>
         </span>
         <span

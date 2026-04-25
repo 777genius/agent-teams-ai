@@ -44,6 +44,44 @@ vi.mock('@renderer/api', () => ({
       replaceMembers: vi.fn(async () => {}),
       prepareProvisioning: vi.fn(async () => ({})),
     },
+    tmux: {
+      getStatus: vi.fn(() =>
+        Promise.resolve({
+          platform: 'win32',
+          nativeSupported: false,
+          checkedAt: '2026-04-25T00:00:00.000Z',
+          host: {
+            available: false,
+            version: null,
+            binaryPath: null,
+            error: null,
+          },
+          effective: {
+            available: true,
+            location: 'wsl',
+            version: '3.4',
+            binaryPath: '/usr/bin/tmux',
+            runtimeReady: true,
+            detail: 'tmux is ready',
+          },
+          error: null,
+          autoInstall: {
+            supported: false,
+            strategy: 'manual',
+            packageManagerLabel: null,
+            requiresTerminalInput: false,
+            requiresAdmin: false,
+            requiresRestart: false,
+            mayOpenExternalWindow: false,
+            reasonIfUnsupported: null,
+            manualHints: [],
+          },
+          wsl: null,
+          wslPreference: null,
+        })
+      ),
+      onProgress: vi.fn(() => vi.fn()),
+    },
   },
 }));
 
@@ -313,8 +351,9 @@ vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   computeEffectiveTeamModel: (model: string) => model || undefined,
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
-  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'not teamlead',
-  OPENCODE_TEAM_LEAD_DISABLED_REASON: 'OpenCode is not available for team lead.',
+  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'side lane',
+  OPENCODE_TEAM_LEAD_DISABLED_REASON:
+    'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.',
 }));
 
 vi.mock('@renderer/components/team/dialogs/EffortLevelSelector', () => ({

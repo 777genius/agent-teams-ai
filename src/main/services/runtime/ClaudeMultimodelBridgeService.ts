@@ -5,7 +5,6 @@ import {
   createDefaultCliExtensionCapabilities,
   createLegacyRuntimeFallbackCliExtensionCapabilities,
 } from '@shared/utils/providerExtensionCapabilities';
-import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -14,18 +13,12 @@ import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
 import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
-import type {
-  CliProviderId,
-  CliProviderModelAvailability,
-  CliProviderReasoningEffort,
-  CliProviderStatus,
-} from '@shared/types';
+import type { CliProviderId, CliProviderReasoningEffort, CliProviderStatus } from '@shared/types';
 
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
 const PROVIDER_STATUS_TIMEOUT_MS = 10_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 10_000;
-const OPENCODE_MODEL_VERIFY_TIMEOUT_MS = 60_000;
 
 interface RuntimeExtensionCapabilityResponse {
   status?: 'supported' | 'read-only' | 'unsupported';
@@ -301,16 +294,6 @@ export interface OpenCodeRuntimeTranscriptLogMessage {
   level?: string;
 }
 
-interface OpenCodeRuntimeVerifyModelResponse {
-  schemaVersion?: number;
-  providerId?: 'opencode';
-  result?: {
-    modelId?: string;
-    outcome?: 'available' | 'unavailable' | 'unknown';
-    reason?: string | null;
-  } | null;
-}
-
 const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'];
 
 function getProviderDisplayName(providerId: CliProviderId): string {
@@ -322,7 +305,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode';
+      return 'OpenCode (75+ LLM providers)';
   }
 }
 
@@ -371,18 +354,28 @@ function createDefaultProviderStatus(providerId: CliProviderId): CliProviderStat
 }
 
 function mapRuntimeExtensionCapabilities(
+  providerId: CliProviderId,
   capabilities?: RuntimeExtensionCapabilitiesResponse
 ): CliProviderStatus['capabilities']['extensions'] {
   const defaults = capabilities
     ? createDefaultCliExtensionCapabilities()
     : createLegacyRuntimeFallbackCliExtensionCapabilities();
+  const pluginStatus =
+    providerId === 'opencode'
+      ? 'unsupported'
+      : (capabilities?.plugins?.status ?? defaults.plugins.status);
+  const pluginReason =
+    providerId === 'opencode'
+      ? (capabilities?.plugins?.reason ??
+        'OpenCode does not support plugin management from Agent Teams.')
+      : (capabilities?.plugins?.reason ?? defaults.plugins.reason);
 
   return {
     plugins: {
       ...defaults.plugins,
-      status: capabilities?.plugins?.status ?? defaults.plugins.status,
+      status: pluginStatus,
       ownership: capabilities?.plugins?.ownership ?? defaults.plugins.ownership,
-      reason: capabilities?.plugins?.reason ?? defaults.plugins.reason,
+      reason: pluginReason,
     },
     mcp: {
       ...defaults.mcp,
@@ -578,7 +571,10 @@ export class ClaudeMultimodelBridgeService {
       capabilities: {
         teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
         oneShot: runtimeStatus.capabilities?.oneShot === true,
-        extensions: mapRuntimeExtensionCapabilities(runtimeStatus.capabilities?.extensions),
+        extensions: mapRuntimeExtensionCapabilities(
+          providerId,
+          runtimeStatus.capabilities?.extensions
+        ),
       },
       selectedBackendId: runtimeStatus.selectedBackendId ?? null,
       resolvedBackendId: runtimeStatus.resolvedBackendId ?? null,
@@ -868,72 +864,14 @@ export class ClaudeMultimodelBridgeService {
     }
   }
 
-  private async verifyOpenCodeModel(
-    binaryPath: string,
-    modelId: string
-  ): Promise<CliProviderModelAvailability> {
-    const { env } = await this.buildCliEnv(binaryPath);
-    try {
-      const { stdout } = await execCli(
-        binaryPath,
-        ['runtime', 'verify-model', '--json', '--provider', 'opencode', '--model', modelId],
-        {
-          timeout: OPENCODE_MODEL_VERIFY_TIMEOUT_MS,
-          env,
-        }
-      );
-      const parsed = extractJsonObject<OpenCodeRuntimeVerifyModelResponse>(stdout);
-      const outcome = parsed.providerId === 'opencode' ? parsed.result?.outcome : undefined;
-      const reason = parsed.providerId === 'opencode' ? (parsed.result?.reason ?? null) : null;
-
-      return {
-        modelId,
-        status:
-          outcome === 'available'
-            ? 'available'
-            : outcome === 'unavailable'
-              ? 'unavailable'
-              : 'unknown',
-        reason,
-        checkedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      return {
-        modelId,
-        status: 'unknown',
-        reason: error instanceof Error ? error.message : String(error),
-        checkedAt: new Date().toISOString(),
-      };
-    }
-  }
-
   async verifyOpenCodeModels(
-    binaryPath: string,
+    _binaryPath: string,
     provider: CliProviderStatus
   ): Promise<CliProviderStatus> {
-    const visibleModels = filterVisibleProviderRuntimeModels(provider.providerId, provider.models);
-    if (
-      provider.providerId !== 'opencode' ||
-      provider.supported !== true ||
-      provider.authenticated !== true ||
-      visibleModels.length === 0
-    ) {
-      return {
-        ...provider,
-        modelVerificationState: 'idle',
-        modelAvailability: [],
-      };
-    }
-
-    const modelAvailability: CliProviderModelAvailability[] = [];
-    for (const modelId of visibleModels) {
-      modelAvailability.push(await this.verifyOpenCodeModel(binaryPath, modelId));
-    }
-
     return {
       ...provider,
-      modelVerificationState: 'verified',
-      modelAvailability,
+      modelVerificationState: 'idle',
+      modelAvailability: [],
     };
   }
 
@@ -1063,7 +1001,10 @@ export class ClaudeMultimodelBridgeService {
             capabilities: {
               teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
               oneShot: runtimeStatus.capabilities?.oneShot === true,
-              extensions: mapRuntimeExtensionCapabilities(runtimeStatus.capabilities?.extensions),
+              extensions: mapRuntimeExtensionCapabilities(
+                providerId,
+                runtimeStatus.capabilities?.extensions
+              ),
             },
             backend: runtimeStatus.backend?.kind
               ? {

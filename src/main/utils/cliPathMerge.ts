@@ -38,6 +38,9 @@ export function buildMergedCliPath(binaryPath?: string | null): string {
   if (cachedEnv?.PATH) {
     extraDirs.push(...cachedEnv.PATH.split(sep).filter(Boolean));
     extraDirs.push(vendorBinDir);
+    if (process.platform !== 'win32') {
+      extraDirs.push(pathPosix.join(home, '.bun', 'bin'));
+    }
   } else if (process.platform === 'win32') {
     extraDirs.push(
       vendorBinDir,
@@ -53,6 +56,7 @@ export function buildMergedCliPath(binaryPath?: string | null): string {
   } else {
     extraDirs.push(
       vendorBinDir,
+      pathPosix.join(home, '.bun', 'bin'),
       pathPosix.join(home, '.local', 'bin'),
       pathPosix.join(home, '.npm-global', 'bin'),
       pathPosix.join(home, '.npm', 'bin'),

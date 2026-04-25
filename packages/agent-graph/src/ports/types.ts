@@ -55,6 +55,7 @@ export interface GraphActivityItem {
 }
 
 export type GraphLayoutVersion = 'stable-slots-v1';
+export type GraphLayoutMode = 'radial' | 'grid-under-lead';
 
 export interface GraphOwnerSlotAssignment {
   ringIndex: number;
@@ -63,6 +64,8 @@ export interface GraphOwnerSlotAssignment {
 
 export interface GraphLayoutPort {
   version: GraphLayoutVersion;
+  mode?: GraphLayoutMode;
+  showActivity?: boolean;
   ownerOrder: string[];
   slotAssignments: Record<string, GraphOwnerSlotAssignment>;
 }

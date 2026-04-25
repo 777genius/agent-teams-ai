@@ -21,7 +21,7 @@ const baseViewModel: TmuxInstallerBannerViewModel = {
   title: 'tmux is not installed',
   body: 'WSL is available, but no Linux distribution is installed yet.',
   benefitsBody:
-    'Optional, but recommended. The app works without tmux. With tmux in WSL, teammates are more reliable.',
+    'Optional, but recommended. The app works without tmux. With tmux in WSL, teammates are more reliable. Without tmux, creating multi-agent teams that mix providers may be blocked.',
   error: null,
   platformLabel: 'Windows',
   locationLabel: null,
@@ -94,6 +94,8 @@ describe('TmuxInstallerBannerView', () => {
     const { host, root } = renderBanner(baseViewModel);
 
     expect(host.textContent).toContain('tmux is not installed');
+    expect(host.textContent).toContain('Optional, but recommended');
+    expect(host.textContent).toContain('multi-agent teams that mix providers');
     expect(host.textContent).not.toContain(
       'WSL is available, but no Linux distribution is installed yet.'
     );

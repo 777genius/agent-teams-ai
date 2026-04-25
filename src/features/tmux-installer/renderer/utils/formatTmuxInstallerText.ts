@@ -67,9 +67,12 @@ export function formatTmuxOptionalBenefits(platform: TmuxPlatform | null): strin
     return null;
   }
 
+  const mixedProviderLimit =
+    'Without tmux, creating multi-agent teams that mix providers may be blocked.';
+
   if (platform === 'win32') {
-    return 'Optional, but recommended. The app works without tmux. With tmux in WSL, teammates are more reliable for long-running work, restarts are cleaner, and recovery after reconnects is better.';
+    return `Optional, but recommended. The app works without tmux. With tmux in WSL, teammates are more reliable for long-running work, restarts are cleaner, and recovery after reconnects is better. ${mixedProviderLimit}`;
   }
 
-  return 'Optional, but recommended. The app works without tmux. With tmux, teammates are more reliable for long-running work, restarts are cleaner, and recovery after reconnects is better.';
+  return `Optional, but recommended. The app works without tmux. With tmux, teammates are more reliable for long-running work, restarts are cleaner, and recovery after reconnects is better. ${mixedProviderLimit}`;
 }

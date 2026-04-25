@@ -591,6 +591,8 @@ describe('agent-teams-mcp tools', () => {
       openCodeMemberBriefing as { content: Array<{ text: string }> }
     ).content[0]?.text;
     expect(openCodeMemberBriefingText).toContain('agent-teams_message_send');
+    expect(openCodeMemberBriefingText).toContain('OpenCode bootstrap silence rule');
+    expect(openCodeMemberBriefingText).toContain('stop and wait silently');
     expect(openCodeMemberBriefingText).toContain('Full details in task comment e5f6a7b8');
     expect(openCodeMemberBriefingText).toContain(
       'Never invent placeholder task refs such as #00000000'
@@ -1224,6 +1226,7 @@ describe('agent-teams-mcp tools', () => {
         from: 'lead',
         summary: 'Metadata test',
         source: 'system_notification',
+        relayOfMessageId: 'msg-original-1',
         leadSessionId: 'session-42',
         attachments: [{ id: 'att-1', filename: 'note.txt', mimeType: 'text/plain', size: 4 }],
         taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName }],
@@ -1234,6 +1237,7 @@ describe('agent-teams-mcp tools', () => {
     const inboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json');
     const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
     expect(rows[0].source).toBe('system_notification');
+    expect(rows[0].relayOfMessageId).toBe('msg-original-1');
     expect(rows[0].leadSessionId).toBe('session-42');
     expect(rows[0].attachments[0].filename).toBe('note.txt');
     expect(rows[0].taskRefs).toEqual([{ taskId: 'task-1', displayId: 'abcd1234', teamName }]);

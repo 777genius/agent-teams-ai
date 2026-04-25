@@ -5,6 +5,7 @@ import { AttachmentPreviewList } from '@renderer/components/team/attachments/Att
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
+import { OpenCodeDeliveryWarning } from '@renderer/components/team/messages/OpenCodeDeliveryWarning';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -18,6 +19,7 @@ import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { getSuggestedSlashCommandsForProvider } from '@renderer/utils/providerSlashCommands';
 import { buildSlashCommandSuggestions } from '@renderer/utils/skillCommandSuggestions';
@@ -52,6 +54,7 @@ interface MessageComposerProps {
   sending: boolean;
   sendError: string | null;
   sendWarning?: string | null;
+  sendDebugDetails?: OpenCodeRuntimeDeliveryDebugDetails | null;
   lastResult?: SendMessageResult | null;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
@@ -80,6 +83,7 @@ export const MessageComposer = ({
   sending,
   sendError,
   sendWarning,
+  sendDebugDetails,
   lastResult,
   textareaRef: externalTextareaRef,
   onSend,
@@ -382,11 +386,11 @@ export const MessageComposer = ({
   useEffect(() => {
     if (!sending && pendingSendRef.current) {
       pendingSendRef.current = false;
-      if (!sendError) {
+      if (!sendError && sendDebugDetails?.delivered !== false) {
         draft.clearDraft();
       }
     }
-  }, [sending, sendError, draft]);
+  }, [sending, sendError, sendDebugDetails, draft]);
 
   const { addFiles: draftAddFiles } = draft;
   const handleFileInputChange = useCallback(
@@ -485,10 +489,7 @@ export const MessageComposer = ({
       {sendError}
     </span>
   ) : sendWarning ? (
-    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-      <AlertCircle size={10} className="shrink-0" />
-      {sendWarning}
-    </span>
+    <OpenCodeDeliveryWarning warning={sendWarning} debugDetails={sendDebugDetails} />
   ) : lastResult?.deduplicated ? (
     <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
       <Check size={10} className="shrink-0" />

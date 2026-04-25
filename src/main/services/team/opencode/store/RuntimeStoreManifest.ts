@@ -13,6 +13,7 @@ export type RuntimeStoreSchemaName =
   | 'opencode.sessionStore'
   | 'opencode.launchTransaction'
   | 'opencode.deliveryJournal'
+  | 'opencode.promptDeliveryLedger'
   | 'opencode.permissionRequests'
   | 'opencode.hostLeases'
   | 'opencode.compatibilitySnapshot'
@@ -201,6 +202,14 @@ export const OPENCODE_RUNTIME_STORE_DESCRIPTORS: RuntimeStoreDescriptor[] = [
     schemaName: 'opencode.deliveryJournal',
     schemaVersion: 1,
     relativePath: 'opencode-delivery-journal.json',
+    criticality: 'rebuildable_from_canonical_destination',
+    owner: 'delivery',
+    rebuildStrategy: 'verify_canonical_destinations',
+  },
+  {
+    schemaName: 'opencode.promptDeliveryLedger',
+    schemaVersion: 1,
+    relativePath: 'opencode-prompt-delivery-ledger.json',
     criticality: 'rebuildable_from_canonical_destination',
     owner: 'delivery',
     rebuildStrategy: 'verify_canonical_destinations',
@@ -1087,6 +1096,7 @@ function isRuntimeStoreSchemaName(value: unknown): value is RuntimeStoreSchemaNa
     value === 'opencode.sessionStore' ||
     value === 'opencode.launchTransaction' ||
     value === 'opencode.deliveryJournal' ||
+    value === 'opencode.promptDeliveryLedger' ||
     value === 'opencode.permissionRequests' ||
     value === 'opencode.hostLeases' ||
     value === 'opencode.compatibilitySnapshot' ||

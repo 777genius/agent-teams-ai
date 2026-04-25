@@ -20,8 +20,9 @@ vi.mock('@renderer/components/team/dialogs/LimitContextCheckbox', () => ({
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   getProviderScopedTeamModelLabel: (_providerId: string, model: string) => model || 'Default',
   getTeamProviderLabel: (providerId: string) => providerId,
-  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'not teamlead',
-  OPENCODE_TEAM_LEAD_DISABLED_REASON: 'OpenCode is not available for team lead.',
+  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'side lane',
+  OPENCODE_TEAM_LEAD_DISABLED_REASON:
+    'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.',
   TeamModelSelector: () => React.createElement('div', null, 'team-model-selector'),
 }));
 

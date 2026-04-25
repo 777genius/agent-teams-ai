@@ -10,6 +10,7 @@ import {
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
+import { buildOpenCodeRuntimeDeliveryDiagnostics } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -22,8 +23,9 @@ import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
-import type { GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
+import type { GraphLayoutMode, GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
 import type { AppConfig } from '@renderer/types/data';
+import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type {
   ActiveToolCall,
@@ -1848,6 +1850,33 @@ function pruneTeamGraphSlotAssignmentsForVisibleOwners(
   return Object.keys(normalizedAssignments).length > 0 ? normalizedAssignments : undefined;
 }
 
+function normalizeTeamGraphGridOwnerOrder(
+  order: readonly string[] | undefined,
+  visibleOwnerIds: readonly string[]
+): string[] {
+  const visibleOwnerIdSet = new Set(visibleOwnerIds);
+  const normalizedOrder: string[] = [];
+  const seenOwnerIds = new Set<string>();
+
+  for (const stableOwnerId of order ?? []) {
+    if (!visibleOwnerIdSet.has(stableOwnerId) || seenOwnerIds.has(stableOwnerId)) {
+      continue;
+    }
+    normalizedOrder.push(stableOwnerId);
+    seenOwnerIds.add(stableOwnerId);
+  }
+
+  for (const stableOwnerId of visibleOwnerIds) {
+    if (seenOwnerIds.has(stableOwnerId)) {
+      continue;
+    }
+    normalizedOrder.push(stableOwnerId);
+    seenOwnerIds.add(stableOwnerId);
+  }
+
+  return normalizedOrder;
+}
+
 export function getDefaultTeamGraphSlotAssignmentsForMembers(
   members: readonly TeamGraphMemberSeedInput[],
   configMembers: readonly TeamGraphConfigMemberSeedInput[] = []
@@ -1921,6 +1950,8 @@ export interface TeamSlice {
   /** Team-scoped detailed cache used by multi-pane views like agent graph. */
   teamDataCacheByName: Record<string, TeamViewSnapshot>;
   slotLayoutVersion: string;
+  graphLayoutModeByTeam: Record<string, GraphLayoutMode>;
+  gridOwnerOrderByTeam: Record<string, string[]>;
   slotAssignmentsByTeam: Record<string, TeamGraphSlotAssignments>;
   teamMessagesByName: Record<string, TeamMessagesCacheEntry>;
   memberActivityMetaByTeam: Record<string, TeamMemberActivityMeta>;
@@ -1931,6 +1962,7 @@ export interface TeamSlice {
   sendingMessage: boolean;
   sendMessageError: string | null;
   sendMessageWarning: string | null;
+  sendMessageDebugDetails: OpenCodeRuntimeDeliveryDebugDetails | null;
   lastSendMessageResult: SendMessageResult | null;
   reviewActionError: string | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
@@ -1986,6 +2018,12 @@ export interface TeamSlice {
     assignment: GraphOwnerSlotAssignment,
     displacedStableOwnerId?: string,
     displacedAssignment?: GraphOwnerSlotAssignment
+  ) => void;
+  setTeamGraphLayoutMode: (teamName: string, mode: GraphLayoutMode) => void;
+  swapTeamGraphGridOwners: (
+    teamName: string,
+    stableOwnerId: string,
+    targetStableOwnerId: string
   ) => void;
   swapTeamGraphOwnerSlots: (
     teamName: string,
@@ -2256,6 +2294,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   selectedTeamData: null,
   teamDataCacheByName: {},
   slotLayoutVersion: GRAPH_STABLE_SLOT_LAYOUT_VERSION,
+  graphLayoutModeByTeam: {},
+  gridOwnerOrderByTeam: {},
   slotAssignmentsByTeam: {},
   teamMessagesByName: {},
   memberActivityMetaByTeam: {},
@@ -2266,6 +2306,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   sendingMessage: false,
   sendMessageError: null,
   sendMessageWarning: null,
+  sendMessageDebugDetails: null,
   lastSendMessageResult: null,
   crossTeamTargets: [],
   crossTeamTargetsLoading: false,
@@ -2907,6 +2948,62 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             mode: 'manual',
             signature: state.graphLayoutSessionByTeam[teamName]?.signature ?? null,
           },
+        },
+      };
+    });
+  },
+
+  setTeamGraphLayoutMode: (teamName, mode) => {
+    set((state) => {
+      if ((state.graphLayoutModeByTeam[teamName] ?? 'radial') === mode) {
+        return {};
+      }
+
+      return {
+        graphLayoutModeByTeam: {
+          ...state.graphLayoutModeByTeam,
+          [teamName]: mode,
+        },
+      };
+    });
+  },
+
+  swapTeamGraphGridOwners: (teamName, stableOwnerId, targetStableOwnerId) => {
+    if (stableOwnerId === targetStableOwnerId) {
+      return;
+    }
+
+    set((state) => {
+      const teamData = selectTeamDataForName(state, teamName);
+      const fallbackVisibleOwnerIds = [...(state.gridOwnerOrderByTeam[teamName] ?? [])];
+      for (const ownerId of [stableOwnerId, targetStableOwnerId]) {
+        if (!fallbackVisibleOwnerIds.includes(ownerId)) {
+          fallbackVisibleOwnerIds.push(ownerId);
+        }
+      }
+      const visibleOwnerIds = teamData
+        ? buildTeamGraphDefaultLayoutSeed(teamData.members, teamData.config.members ?? [])
+            .orderedVisibleOwnerIds
+        : fallbackVisibleOwnerIds;
+      const normalizedOrder = normalizeTeamGraphGridOwnerOrder(
+        state.gridOwnerOrderByTeam[teamName],
+        visibleOwnerIds
+      );
+      const stableOwnerIndex = normalizedOrder.indexOf(stableOwnerId);
+      const targetOwnerIndex = normalizedOrder.indexOf(targetStableOwnerId);
+
+      if (stableOwnerIndex < 0 || targetOwnerIndex < 0) {
+        return {};
+      }
+
+      const nextOrder = [...normalizedOrder];
+      nextOrder[stableOwnerIndex] = targetStableOwnerId;
+      nextOrder[targetOwnerIndex] = stableOwnerId;
+
+      return {
+        gridOwnerOrderByTeam: {
+          ...state.gridOwnerOrderByTeam,
+          [teamName]: nextOrder,
         },
       };
     });
@@ -3865,6 +3962,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       sendingMessage: true,
       sendMessageError: null,
       sendMessageWarning: null,
+      sendMessageDebugDetails: null,
       lastSendMessageResult: null,
     });
     try {
@@ -3873,13 +3971,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       );
       const runtimeDeliveryFailed =
         result.runtimeDelivery?.attempted === true && result.runtimeDelivery.delivered === false;
-      const runtimeDeliveryWarning = runtimeDeliveryFailed
-        ? `OpenCode runtime delivery failed: ${
-            result.runtimeDelivery?.reason ??
-            result.runtimeDelivery?.diagnostics?.[0] ??
-            'message was saved to inbox but not delivered live'
-          }`
-        : null;
+      const runtimeDeliveryDiagnostics = buildOpenCodeRuntimeDeliveryDiagnostics(result);
       const optimisticMessage: InboxMessage = {
         from: request.from ?? 'user',
         to: request.to ?? request.member,
@@ -3906,7 +3998,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set((state) => ({
         sendingMessage: false,
         sendMessageError: null,
-        sendMessageWarning: runtimeDeliveryWarning,
+        sendMessageWarning: runtimeDeliveryDiagnostics.warning,
+        sendMessageDebugDetails: runtimeDeliveryDiagnostics.debugDetails,
         lastSendMessageResult: runtimeDeliveryFailed ? null : result,
         teamMessagesByName: {
           ...state.teamMessagesByName,
@@ -3923,6 +4016,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         sendingMessage: false,
         lastSendMessageResult: null,
         sendMessageWarning: null,
+        sendMessageDebugDetails: null,
         sendMessageError: mapSendMessageError(error),
       });
       throw error;
@@ -3945,6 +4039,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       sendingMessage: true,
       sendMessageError: null,
       sendMessageWarning: null,
+      sendMessageDebugDetails: null,
       lastSendMessageResult: null,
     });
     try {
@@ -3953,6 +4048,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         sendingMessage: false,
         sendMessageError: null,
         sendMessageWarning: null,
+        sendMessageDebugDetails: null,
         lastSendMessageResult: {
           messageId: result.messageId,
           deliveredToInbox: result.deliveredToInbox,
@@ -3965,6 +4061,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         sendingMessage: false,
         lastSendMessageResult: null,
         sendMessageWarning: null,
+        sendMessageDebugDetails: null,
         sendMessageError: mapSendMessageError(error),
       });
     }

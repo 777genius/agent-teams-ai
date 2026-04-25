@@ -280,6 +280,8 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain(
       'The REVIEW column is for the same task #X moving through review. It is NOT a signal to create another task for review.'
     );
+    expect(prompt).toContain('Task reference formatting (CRITICAL)');
+    expect(prompt).toContain('Do NOT manually write [#abcd1234](task://...) in visible text');
     expect(prompt).toContain('task_create_from_message');
     expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
@@ -590,6 +592,27 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain(
       'If you are the reviewer for task #X, call review_start on #X first, then review_approve or review_request_changes on #X itself.'
     );
+  });
+
+  it('teammate spawn prompts forbid manual task markdown links in visible messages', () => {
+    const addPrompt = buildAddMemberSpawnMessage('my-team', 'My Team', 'team-lead', {
+      name: 'alice',
+      role: 'developer',
+    });
+    const restartPrompt = buildRestartMemberSpawnMessage('my-team', 'My Team', 'team-lead', {
+      name: 'alice',
+      role: 'developer',
+    });
+
+    for (const prompt of [addPrompt, restartPrompt]) {
+      expect(prompt).toContain('Task reference formatting (CRITICAL)');
+      expect(prompt).toContain('write task refs as plain #<short-id> text');
+      expect(prompt).toContain(
+        'Never wrap task refs or Markdown task links in backticks/code spans'
+      );
+      expect(prompt).toContain('Do NOT manually write [#abcd1234](task://...) in visible text');
+      expect(prompt).toContain('include structured taskRefs metadata');
+    }
   });
 
   it('add-member spawn prompt explicitly forbids no-task bootstrap chatter', () => {

@@ -129,6 +129,11 @@ import {
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
 import {
+  analyzeTeammateRuntimeCompatibility,
+  useTmuxRuntimeReadiness,
+} from './teammateRuntimeCompatibility';
+import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
+import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
   OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL,
@@ -451,6 +456,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     () => (syncModelsWithLead ? membersDrafts.map(clearMemberModelOverrides) : membersDrafts),
     [membersDrafts, syncModelsWithLead]
   );
+  const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const selectedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
       !multimodelEnabled
@@ -842,6 +848,46 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       ) ?? '',
     [limitContext, runtimeProviderStatusById, selectedModel, selectedProviderId]
   );
+  const selectedProviderBackendId = useMemo(
+    () =>
+      resolveUiOwnedProviderBackendId(
+        selectedProviderId,
+        runtimeProviderStatusById.get(selectedProviderId)
+      ) ??
+      migrateProviderBackendId(
+        selectedProviderId,
+        previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+      ) ??
+      undefined,
+    [
+      previousLaunchParams?.providerBackendId,
+      runtimeProviderStatusById,
+      savedLaunchProviderBackendId,
+      selectedProviderId,
+    ]
+  );
+  const teammateRuntimeCompatibility = useMemo(
+    () =>
+      analyzeTeammateRuntimeCompatibility({
+        leadProviderId: selectedProviderId,
+        leadProviderBackendId: selectedProviderBackendId,
+        members: isLaunchMode ? effectiveMemberDrafts : [],
+        extraCliArgs: isLaunchMode ? customArgs : undefined,
+        tmuxStatus: tmuxRuntime.status,
+        tmuxStatusLoading: tmuxRuntime.loading,
+        tmuxStatusError: tmuxRuntime.error,
+      }),
+    [
+      customArgs,
+      effectiveMemberDrafts,
+      isLaunchMode,
+      selectedProviderBackendId,
+      selectedProviderId,
+      tmuxRuntime.error,
+      tmuxRuntime.loading,
+      tmuxRuntime.status,
+    ]
+  );
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
@@ -1218,6 +1264,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
     return warnings;
   }, [effectiveMemberDrafts, runtimeChangeNoteByKey]);
+  const combinedMemberRuntimeWarningById = useMemo(() => {
+    const warnings: Record<string, string> = { ...memberRuntimeWarningById };
+    for (const [memberId, warning] of Object.entries(
+      teammateRuntimeCompatibility.memberWarningById
+    )) {
+      warnings[memberId] = warnings[memberId] ? `${warnings[memberId]} ${warning}` : warning;
+    }
+    return warnings;
+  }, [memberRuntimeWarningById, teammateRuntimeCompatibility.memberWarningById]);
 
   // ---------------------------------------------------------------------------
   // Launch-only effects
@@ -1823,6 +1878,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
+    if (isLaunchMode && teammateRuntimeCompatibility.blocksSubmission) {
+      setLocalError(teammateRuntimeCompatibility.message);
+      return;
+    }
     if (isLaunchMode && !effectiveCwd) {
       setLocalError('Select working directory (cwd)');
       return;
@@ -1862,10 +1921,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 selectedProviderId,
                 runtimeProviderStatusById.get(selectedProviderId)
               ) ??
-              migrateProviderBackendId(
-                selectedProviderId,
-                previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-              ) ??
+              selectedProviderBackendId ??
               undefined,
             model: computeEffectiveTeamModel(
               selectedModel,
@@ -1902,10 +1958,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedProviderId,
               runtimeProviderStatusById.get(selectedProviderId)
             ) ??
-            migrateProviderBackendId(
-              selectedProviderId,
-              previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-            ) ??
+            selectedProviderBackendId ??
             undefined;
           const scheduleModel = computeEffectiveTeamModel(
             selectedModel,
@@ -2000,7 +2053,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       validationErrors.length > 0 ||
       !!modelValidationError ||
       hasInvalidLaunchMemberNames ||
-      hasDuplicateLaunchMemberNames
+      hasDuplicateLaunchMemberNames ||
+      teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
 
   // ---------------------------------------------------------------------------
@@ -2128,6 +2182,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               </button>
             </div>
           </div>
+        ) : null}
+
+        {isLaunchMode ? (
+          <TeammateRuntimeCompatibilityNotice
+            analysis={teammateRuntimeCompatibility}
+            onOpenDashboard={() => {
+              closeDialog();
+              openDashboard();
+            }}
+          />
         ) : null}
 
         <div className="space-y-4">
@@ -2360,7 +2424,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   teammateWorktreeDefault={teammateWorktreeDefault}
                   onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
                   leadWarningText={leadRuntimeWarningText}
-                  memberWarningById={memberRuntimeWarningById}
+                  memberWarningById={combinedMemberRuntimeWarningById}
                   leadModelIssueText={leadModelIssueText}
                   memberModelIssueById={memberModelIssueById}
                   softDeleteMembers

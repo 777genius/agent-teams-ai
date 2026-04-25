@@ -1,5 +1,6 @@
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
@@ -465,6 +466,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getProjects: () => ipcRenderer.invoke('get-projects'),
   getSessions: (projectId: string) => ipcRenderer.invoke('get-sessions', projectId),

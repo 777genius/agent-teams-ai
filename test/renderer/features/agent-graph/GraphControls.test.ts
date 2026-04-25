@@ -172,4 +172,48 @@ describe('GraphControls', () => {
       await Promise.resolve();
     });
   });
+
+  it('switches layout mode from the top toolbar', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onLayoutModeChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphControls, {
+          filters: {
+            showActivity: true,
+            showTasks: true,
+            showProcesses: true,
+            showEdges: true,
+            paused: false,
+          },
+          onFiltersChange: vi.fn(),
+          onZoomIn: vi.fn(),
+          onZoomOut: vi.fn(),
+          onZoomToFit: vi.fn(),
+          layoutMode: 'radial',
+          onLayoutModeChange,
+          teamName: 'demo-team',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const rowsButton = host.querySelector('button[aria-label="Switch to rows layout"]');
+    expect(rowsButton).not.toBeNull();
+
+    await act(async () => {
+      rowsButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

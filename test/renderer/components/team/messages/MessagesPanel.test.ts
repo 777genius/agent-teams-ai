@@ -10,6 +10,7 @@ const storeState = {
   sendingMessage: false,
   sendMessageError: null,
   sendMessageWarning: null,
+  sendMessageDebugDetails: null,
   lastSendMessageResult: null,
   teams: [],
   openTeamTab: vi.fn(),

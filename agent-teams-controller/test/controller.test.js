@@ -173,6 +173,10 @@ describe('agent-teams-controller API', () => {
       'After task_complete, notify your team lead via MCP tool agent-teams_message_send.'
     );
     expect(briefing).toContain('OpenCode visible messaging rule: call agent-teams_message_send');
+    expect(briefing).toContain('OpenCode bootstrap silence rule');
+    expect(briefing).toContain(
+      'If it shows no actionable tasks, stop and wait silently.'
+    );
     expect(briefing).toContain(
       'agent-teams_message_send { teamName: "my-team", to: "alice", from: "bob"'
     );
@@ -180,6 +184,54 @@ describe('agent-teams-controller API', () => {
     expect(briefing).toContain('Never invent placeholder task refs such as #00000000');
     expect(briefing).not.toContain('task_get_comment {');
     expect(briefing).not.toContain('notify your team lead via SendMessage');
+  });
+
+  it('rejects OpenCode idle acknowledgements without explicit delivery context', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer', providerId: 'opencode', model: 'opencode/test-model' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    expect(() =>
+      controller.messages.sendMessage({
+        to: 'user',
+        from: 'bob',
+        text: 'Понял.',
+      })
+    ).toThrow('OpenCode idle/ack-only message_send was not delivered');
+
+    expect(() =>
+      controller.messages.sendMessage({
+        to: 'team-lead',
+        from: 'bob',
+        text: 'Нет назначенных задач.',
+      })
+    ).toThrow('OpenCode idle/ack-only message_send was not delivered');
+
+    expect(() =>
+      controller.messages.sendMessage({
+        to: 'user',
+        from: 'bob',
+        text: 'Понял.',
+        source: 'runtime_delivery',
+      })
+    ).toThrow('OpenCode idle/ack-only message_send was not delivered');
+
+    const delivered = controller.messages.sendMessage({
+      to: 'user',
+      from: 'bob',
+      text: 'Понял.',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'msg-inbound-1',
+    });
+
+    expect(delivered.deliveredToInbox).toBe(true);
   });
 
   it('strips hallucinated zero task placeholder prefixes from visible messages', () => {
@@ -1045,6 +1097,26 @@ describe('agent-teams-controller API', () => {
     expect(rows[0].summary).toContain(`#${task.displayId}`);
     expect(rows[0].text).toContain('I found the root cause.');
     expect(rows[0].leadSessionId).toBe('lead-session-1');
+  });
+
+  it('includes the assigned task ref in owner assignment notifications', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const task = controller.tasks.createTask({
+      subject: 'Implement runtime handoff',
+      owner: 'bob',
+      descriptionTaskRefs: [{ taskId: 'related-task', displayId: 'rel12345', teamName: 'my-team' }],
+    });
+
+    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].summary).toBe(`New task #${task.displayId} assigned`);
+    expect(rows[0].taskRefs).toEqual([
+      { taskId: task.id, displayId: task.displayId, teamName: 'my-team' },
+      { taskId: 'related-task', displayId: 'rel12345', teamName: 'my-team' },
+    ]);
   });
 
   it('does not wake owner for self-comments and keeps user clarification sticky until explicitly cleared', () => {

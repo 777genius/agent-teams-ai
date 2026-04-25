@@ -124,6 +124,11 @@ import {
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
+import {
+  analyzeTeammateRuntimeCompatibility,
+  useTmuxRuntimeReadiness,
+} from './teammateRuntimeCompatibility';
+import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
 
@@ -341,6 +346,7 @@ export const CreateTeamDialog = ({
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const bootstrapCliStatus = useStore((s) => s.bootstrapCliStatus);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
+  const openDashboard = useStore((s) => s.openDashboard);
   const loadingCliStatus = useMemo(
     () =>
       !cliStatus && cliStatusLoading && multimodelEnabled
@@ -543,6 +549,7 @@ export const CreateTeamDialog = ({
     () => (syncModelsWithLead ? members.map(clearMemberModelOverrides) : members),
     [members, syncModelsWithLead]
   );
+  const tmuxRuntime = useTmuxRuntimeReadiness(open && canCreate);
 
   const selectedMemberProviders = useMemo<TeamProviderId[]>(() => {
     if (!multimodelEnabled) {
@@ -581,6 +588,14 @@ export const CreateTeamDialog = ({
         )
       ),
     [effectiveCliStatus?.providers]
+  );
+  const selectedProviderBackendId = useMemo(
+    () =>
+      resolveUiOwnedProviderBackendId(
+        selectedProviderId,
+        runtimeProviderStatusById.get(selectedProviderId)
+      ),
+    [runtimeProviderStatusById, selectedProviderId]
   );
   const runtimeBackendSummaryByProviderRef = useRef(runtimeBackendSummaryByProvider);
   const prepareChecksRef = useRef<ProvisioningProviderCheck[]>([]);
@@ -1136,6 +1151,31 @@ export const CreateTeamDialog = ({
       ),
     [limitContext, runtimeProviderStatusById, selectedModel, selectedProviderId]
   );
+  const teammateRuntimeCompatibility = useMemo(
+    () =>
+      analyzeTeammateRuntimeCompatibility({
+        leadProviderId: selectedProviderId,
+        leadProviderBackendId: selectedProviderBackendId,
+        members: effectiveMemberDrafts,
+        soloTeam: soloTeam || !canCreate,
+        extraCliArgs: launchTeam ? customArgs : undefined,
+        tmuxStatus: tmuxRuntime.status,
+        tmuxStatusLoading: tmuxRuntime.loading,
+        tmuxStatusError: tmuxRuntime.error,
+      }),
+    [
+      customArgs,
+      effectiveMemberDrafts,
+      launchTeam,
+      canCreate,
+      selectedProviderBackendId,
+      selectedProviderId,
+      soloTeam,
+      tmuxRuntime.error,
+      tmuxRuntime.loading,
+      tmuxRuntime.status,
+    ]
+  );
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
@@ -1279,11 +1319,7 @@ export const CreateTeamDialog = ({
       cwd: effectiveCwd,
       prompt: prompt.trim() || undefined,
       providerId: selectedProviderId,
-      providerBackendId:
-        resolveUiOwnedProviderBackendId(
-          selectedProviderId,
-          runtimeProviderStatusById.get(selectedProviderId)
-        ) ?? undefined,
+      providerBackendId: selectedProviderBackendId ?? undefined,
       model: effectiveModel,
       effort: (selectedEffort as EffortLevel) || undefined,
       fastMode:
@@ -1304,7 +1340,7 @@ export const CreateTeamDialog = ({
       effectiveCwd,
       prompt,
       selectedProviderId,
-      runtimeProviderStatusById,
+      selectedProviderBackendId,
       effectiveModel,
       selectedEffort,
       selectedFastMode,
@@ -1388,7 +1424,8 @@ export const CreateTeamDialog = ({
     isNameTakenByExistingTeam ||
     isNameProvisioning ||
     !requestValidation.valid ||
-    !!modelValidationError;
+    !!modelValidationError ||
+    teammateRuntimeCompatibility.blocksSubmission;
 
   const internalArgs = useMemo(() => {
     const args: string[] = [];
@@ -1528,6 +1565,10 @@ export const CreateTeamDialog = ({
       setLocalError(modelValidationError);
       return;
     }
+    if (teammateRuntimeCompatibility.blocksSubmission) {
+      setLocalError(teammateRuntimeCompatibility.message);
+      return;
+    }
     setFieldErrors({});
     setLocalError(null);
     setIsSubmitting(true);
@@ -1661,6 +1702,14 @@ export const CreateTeamDialog = ({
           </p>
         ) : null}
 
+        <TeammateRuntimeCompatibilityNotice
+          analysis={teammateRuntimeCompatibility}
+          onOpenDashboard={() => {
+            onClose();
+            openDashboard();
+          }}
+        />
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
             <Label htmlFor="team-name">Team name</Label>
@@ -1735,6 +1784,7 @@ export const CreateTeamDialog = ({
               onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
               disableGeminiOption={isGeminiUiFrozen()}
               leadModelIssueText={leadModelIssueText}
+              memberWarningById={teammateRuntimeCompatibility.memberWarningById}
               memberModelIssueById={memberModelIssueById}
               headerTop={
                 <div className="flex items-center gap-2">

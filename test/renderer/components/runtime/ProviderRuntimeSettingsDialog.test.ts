@@ -62,6 +62,31 @@ vi.mock('@features/codex-account/renderer', async (importOriginal) => {
   };
 });
 
+vi.mock('@features/runtime-provider-management/renderer', () => ({
+  RuntimeProviderManagementPanel: ({
+    runtimeId,
+    open,
+    disabled,
+    projectPath,
+  }: {
+    runtimeId: string;
+    open: boolean;
+    disabled?: boolean;
+    projectPath?: string | null;
+  }) =>
+    React.createElement(
+      'section',
+      {
+        'data-testid': 'runtime-provider-management-panel',
+        'data-runtime-id': runtimeId,
+        'data-open': String(open),
+        'data-disabled': String(Boolean(disabled)),
+        'data-project-path': projectPath ?? '',
+      },
+      `Runtime provider management: ${runtimeId}`
+    ),
+}));
+
 vi.mock('@renderer/components/ui/button', () => ({
   Button: ({
     children,
@@ -89,15 +114,17 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     open ? React.createElement('div', { 'data-testid': 'dialog' }, children) : null,
   DialogContent: ({ children }: React.PropsWithChildren) =>
     React.createElement('div', { 'data-testid': 'dialog-content' }, children),
-  DialogHeader: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  DialogHeader: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   DialogTitle: ({ children }: React.PropsWithChildren) => React.createElement('h2', null, children),
   DialogDescription: ({ children }: React.PropsWithChildren) =>
     React.createElement('p', null, children),
 }));
 
 vi.mock('@renderer/components/ui/input', () => ({
-  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) =>
-    React.createElement('input', props),
+  Input: React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+    (props, ref) => React.createElement('input', { ...props, ref })
+  ),
 }));
 
 vi.mock('@renderer/components/ui/label', () => ({
@@ -109,7 +136,8 @@ vi.mock('@renderer/components/ui/select', () => ({
   SelectTrigger: ({ children }: React.PropsWithChildren) =>
     React.createElement('button', { type: 'button' }, children),
   SelectValue: () => React.createElement('span', null, 'select-value'),
-  SelectContent: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  SelectContent: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   SelectItem: ({ children }: React.PropsWithChildren<{ value: string }>) =>
     React.createElement('button', { type: 'button' }, children),
 }));
@@ -120,7 +148,11 @@ vi.mock('@renderer/components/ui/tabs', () => ({
     value,
     onValueChange,
   }: React.PropsWithChildren<{ value: string; onValueChange: (value: string) => void }>) =>
-    React.createElement('div', { 'data-value': value, 'data-on-change': Boolean(onValueChange) }, children),
+    React.createElement(
+      'div',
+      { 'data-value': value, 'data-on-change': Boolean(onValueChange) },
+      children
+    ),
   TabsList: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
   TabsTrigger: ({
     children,
@@ -198,21 +230,19 @@ function createCodexProvider(
     },
     selectedBackendId: overrides?.selectedBackendId ?? 'codex-native',
     resolvedBackendId: overrides?.resolvedBackendId ?? 'codex-native',
-    availableBackends:
-      overrides?.availableBackends ??
-      [
-        {
-          id: 'codex-native',
-          label: 'Codex native',
-          description: 'Use the local codex exec JSON seam.',
-          selectable: true,
-          recommended: true,
-          available: true,
-          state: 'ready',
-          audience: 'general',
-          statusMessage: 'Codex native ready',
-        },
-      ],
+    availableBackends: overrides?.availableBackends ?? [
+      {
+        id: 'codex-native',
+        label: 'Codex native',
+        description: 'Use the local codex exec JSON seam.',
+        selectable: true,
+        recommended: true,
+        available: true,
+        state: 'ready',
+        audience: 'general',
+        statusMessage: 'Codex native ready',
+      },
+    ],
     externalRuntimeDiagnostics: [],
     backend: {
       kind: 'codex-native',
@@ -239,7 +269,8 @@ function createCodexProvider(
           startedAt: null,
         },
         rateLimits: null,
-        launchAllowed: Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured),
+        launchAllowed:
+          Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured),
         launchIssueMessage: null,
         launchReadinessState:
           Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured)
@@ -411,6 +442,16 @@ function findButtonByText(container: HTMLElement, text: string): HTMLButtonEleme
   return button;
 }
 
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  if (!setter) {
+    throw new Error('HTMLInputElement value setter not found');
+  }
+
+  setter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 describe('ProviderRuntimeSettingsDialog', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -442,7 +483,9 @@ describe('ProviderRuntimeSettingsDialog', () => {
     storeState.deleteApiKey = vi.fn(() => Promise.resolve(undefined));
     storeState.updateConfig = vi.fn((section: string, data: Record<string, unknown>) => {
       if (section === 'providerConnections') {
-        const nextProviderConnections = data as Partial<StoreState['appConfig']['providerConnections']>;
+        const nextProviderConnections = data as Partial<
+          StoreState['appConfig']['providerConnections']
+        >;
         storeState.appConfig = {
           ...storeState.appConfig,
           providerConnections: {
@@ -534,6 +577,65 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
   });
 
+  it('accepts and saves a typed Anthropic API key from provider settings', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createAnthropicProvider({
+              authenticated: false,
+              authMethod: null,
+              apiKeyConfigured: false,
+              apiKeySource: null,
+              apiKeySourceLabel: null,
+            }),
+          ],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findButtonByText(host, 'Set API key').click();
+      await Promise.resolve();
+    });
+
+    const input = host.querySelector('#anthropic-api-key') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(input!, 'sk-ant-test-key');
+      await Promise.resolve();
+    });
+
+    expect(input!.value).toBe('sk-ant-test-key');
+
+    await act(async () => {
+      findButtonByText(host, 'Save key').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.saveApiKey).toHaveBeenCalledWith(
+      expect.objectContaining({
+        envVarName: 'ANTHROPIC_API_KEY',
+        name: 'Anthropic API Key',
+        scope: 'user',
+        value: 'sk-ant-test-key',
+      })
+    );
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
+  });
+
   it('shows native-only Codex connection copy and API-key management without login actions', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -567,9 +669,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
     );
     expect(host.textContent).toContain('Connection method');
     expect(host.textContent).toContain('ChatGPT account');
-    expect(host.textContent).toContain(
-      'Use an OpenAI API key as a secondary Codex auth path.'
-    );
+    expect(host.textContent).toContain('Use an OpenAI API key as a secondary Codex auth path.');
     expect(host.textContent).toContain('Set API key');
     expect(host.textContent).toContain('Connect ChatGPT');
   });
@@ -800,7 +900,8 @@ describe('ProviderRuntimeSettingsDialog', () => {
                 },
                 rateLimits: null,
                 launchAllowed: false,
-                launchIssueMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+                launchIssueMessage:
+                  'Reconnect ChatGPT to refresh the current Codex subscription session.',
                 launchReadinessState: 'missing_auth',
               },
             }),
@@ -1220,22 +1321,16 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('77%');
     expect(host.textContent).toContain('23% left');
     expect(host.textContent).toContain('Primary reset (5h)');
-    expect(host.textContent).toContain(
-      new Date(1_776_678_034_000).toLocaleString()
-    );
+    expect(host.textContent).toContain(new Date(1_776_678_034_000).toLocaleString());
     expect(host.textContent).toContain('Weekly used (1w)');
     expect(host.textContent).toContain('45%');
     expect(host.textContent).toContain('55% left');
     expect(host.textContent).toContain('Weekly reset (1w)');
-    expect(host.textContent).toContain(
-      new Date(1_776_999_999_000).toLocaleString()
-    );
+    expect(host.textContent).toContain(new Date(1_776_999_999_000).toLocaleString());
     expect(host.textContent).toContain('Credits');
     expect(host.textContent).toContain('42');
     expect(host.textContent).toContain('These percentages show used quota, not remaining quota.');
-    expect(host.textContent).toContain(
-      '77% used - about 23% left in the current 5-hour window.'
-    );
+    expect(host.textContent).toContain('77% used - about 23% left in the current 5-hour window.');
   });
 
   it('shows truthful Codex rate-limit fallbacks instead of misleading zero values', async () => {
@@ -1306,7 +1401,9 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('Credits');
     expect(host.textContent).toContain('Not available');
     expect(host.textContent).not.toContain('0%');
-    expect(host.textContent).toContain('Shows used quota in the current 5-hour window, not remaining quota.');
+    expect(host.textContent).toContain(
+      'Shows used quota in the current 5-hour window, not remaining quota.'
+    );
   });
 
   it('keeps the API key icon container square', async () => {
@@ -1417,7 +1514,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('Runtime updated, but failed to refresh provider status.');
   });
 
-  it('shows OpenCode live runtime detail and bounded diagnostics in the provider summary', async () => {
+  it('renders the OpenCode runtime provider management feature panel', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1429,6 +1526,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
           onOpenChange: vi.fn(),
           providers: [createOpenCodeProvider()],
           initialProviderId: 'opencode',
+          projectPath: '/tmp/project-a',
           onSelectBackend: vi.fn(),
           onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
         })
@@ -1436,15 +1534,12 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode');
-    expect(host.textContent).toContain('version 1.4.0 - live resolved-fin - managed teammate agent');
-    expect(host.textContent).toContain('OpenCode live host: Healthy - resolved resolved-fin');
-    expect(host.textContent).toContain(
-      'OpenCode managed runtime: Managed runtime verified - managed teammate agent'
-    );
-    expect(host.textContent).toContain(
-      'OpenCode behavior: Behavior fingerprint stable - behavior abc123'
-    );
-    expect(host.textContent).not.toContain('Should be hidden');
+    const panel = host.querySelector('[data-testid="runtime-provider-management-panel"]');
+    expect(panel).not.toBeNull();
+    expect(panel?.getAttribute('data-runtime-id')).toBe('opencode');
+    expect(panel?.getAttribute('data-open')).toBe('true');
+    expect(panel?.getAttribute('data-project-path')).toBe('/tmp/project-a');
+    expect(host.textContent).toContain('Runtime provider management: opencode');
+    expect(host.textContent).not.toContain('Desktop currently exposes status only.');
   });
 });

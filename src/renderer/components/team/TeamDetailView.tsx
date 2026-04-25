@@ -1231,6 +1231,7 @@ export const TeamDetailView = ({
     sendingMessage,
     sendMessageError,
     sendMessageWarning,
+    sendMessageDebugDetails,
     lastSendMessageResult,
     reviewActionError,
     addMember,
@@ -1282,6 +1283,7 @@ export const TeamDetailView = ({
       sendingMessage: s.sendingMessage,
       sendMessageError: s.sendMessageError,
       sendMessageWarning: s.sendMessageWarning,
+      sendMessageDebugDetails: s.sendMessageDebugDetails,
       lastSendMessageResult: s.lastSendMessageResult,
       reviewActionError: s.reviewActionError,
       addMember: s.addMember,
@@ -2947,6 +2949,7 @@ export const TeamDetailView = ({
                 sending={sendingMessage}
                 sendError={sendMessageError}
                 sendWarning={sendMessageWarning}
+                sendDebugDetails={sendMessageDebugDetails}
                 lastResult={lastSendMessageResult}
                 onSend={async (member, text, summary, attachments, actionMode, taskRefs) => {
                   const sentAtMs = Date.now();

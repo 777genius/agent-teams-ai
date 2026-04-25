@@ -14,7 +14,7 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'message_send',
     description:
-      'Send a visible team/user message into team inbox. OpenCode teammates should use this for normal replies to the human user, lead, or same-team teammates. When to is "user", from is required and must be your configured teammate name. Do not invent placeholder task refs. If the message is not about a real board task, omit # task labels; never use #00000000.',
+      'Send a visible team/user message into team inbox. OpenCode teammates should use this for normal replies to the human user, lead, or same-team teammates. When replying to an app-delivered OpenCode runtime message, include source="runtime_delivery" and relayOfMessageId with the inbound app messageId. When to is "user", from is required and must be your configured teammate name. Do not invent placeholder task refs. If the message is not about a real board task, omit # task labels; never use #00000000.',
     parameters: z.object({
       ...toolContextSchema,
       to: z.string().min(1),
@@ -22,6 +22,7 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
       from: z.string().optional(),
       summary: z.string().optional(),
       source: z.string().optional(),
+      relayOfMessageId: z.string().optional(),
       leadSessionId: z.string().optional(),
       attachments: z
         .array(
@@ -51,6 +52,7 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
       from,
       summary,
       source,
+      relayOfMessageId,
       leadSessionId,
       attachments,
       taskRefs,
@@ -64,6 +66,7 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
             ...(from ? { from } : {}),
             ...(summary ? { summary } : {}),
             ...(source ? { source } : {}),
+            ...(relayOfMessageId ? { relayOfMessageId } : {}),
             ...(leadSessionId ? { leadSessionId } : {}),
             ...(attachments?.length ? { attachments } : {}),
             ...(taskRefs?.length ? { taskRefs } : {}),

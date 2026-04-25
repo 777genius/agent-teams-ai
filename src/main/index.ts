@@ -36,6 +36,12 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import {
+  createRuntimeProviderManagementFeature,
+  registerRuntimeProviderManagementIpc,
+  removeRuntimeProviderManagementIpc,
+  type RuntimeProviderManagementFeatureFacade,
+} from '@features/runtime-provider-management/main';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
@@ -550,6 +556,7 @@ let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
+let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
 let cliInstallerService: CliInstallerService;
@@ -1166,6 +1173,18 @@ async function initializeServices(): Promise<void> {
   teamLogSourceTracker.onLogSourceChange((teamName) => {
     teammateToolTracker?.handleLogSourceChange(teamName);
   });
+  void teamDataService
+    .listTeams()
+    .then(async (teams) => {
+      await Promise.all(
+        teams.map((team) =>
+          teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(team.teamName)
+        )
+      );
+    })
+    .catch((error: unknown) =>
+      logger.warn(`[Init] OpenCode prompt delivery watchdog recovery failed: ${String(error)}`)
+    );
   teamTaskStallMonitor.start();
 
   // Allow SchedulerService to push schedule events to renderer
@@ -1187,6 +1206,7 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature();
   codexAccountFeature = createCodexAccountFeature({
     logger: createLogger('Feature:CodexAccount'),
     configManager,
@@ -1253,6 +1273,7 @@ async function initializeServices(): Promise<void> {
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
+  registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
 
   // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
@@ -1436,6 +1457,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      removeRuntimeProviderManagementIpc(ipcMain);
     });
 
     await runShutdownStep('team backup dispose', () => teamBackupService?.dispose());

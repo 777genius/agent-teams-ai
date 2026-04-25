@@ -16,6 +16,22 @@ import { useStore } from '../store';
 
 const logger = createLogger('Hook:KeyboardShortcuts');
 
+export function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  const editableElement = target.closest(
+    'input, textarea, select, [role="textbox"], [contenteditable]'
+  );
+  if (!editableElement) {
+    return false;
+  }
+
+  const contentEditable = editableElement.getAttribute('contenteditable');
+  return contentEditable == null || contentEditable.toLowerCase() !== 'false';
+}
+
 export function useKeyboardShortcuts(): void {
   const {
     openTabs,
@@ -77,6 +93,10 @@ export function useKeyboardShortcuts(): void {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
+      if (isEditableShortcutTarget(event.target)) {
+        return;
+      }
+
       // Check if Cmd (macOS) or Ctrl (Windows/Linux) is pressed
       const isMod = event.metaKey || event.ctrlKey;
       // Layout-independent key (uses event.code for letters/symbols)

@@ -19,6 +19,7 @@ import type { QuickOpenFile } from '@shared/types/editor';
 
 const MAX_FILE_SUGGESTIONS = 8;
 const MAX_FOLDER_SUGGESTIONS = 5;
+const MENTION_PATH_QUOTE_NEEDED = /[\s,)}\]"']/;
 
 export interface UseFileSuggestionsResult {
   suggestions: MentionSuggestion[];
@@ -33,6 +34,19 @@ interface DerivedFolder {
   relativePath: string;
   /** Absolute path */
   absolutePath: string;
+}
+
+export function formatFileMentionPath(relativePath: string): string {
+  if (!MENTION_PATH_QUOTE_NEEDED.test(relativePath)) {
+    return relativePath;
+  }
+  if (!relativePath.includes('"')) {
+    return `"${relativePath}"`;
+  }
+  if (!relativePath.includes("'")) {
+    return `'${relativePath}'`;
+  }
+  return `"${relativePath.replace(/"/g, '')}"`;
 }
 
 /**
@@ -94,6 +108,7 @@ export function filterFileSuggestions(files: QuickOpenFile[], query: string): Me
         type: 'file',
         filePath: f.path,
         relativePath: f.relativePath,
+        insertText: formatFileMentionPath(f.relativePath),
       });
     }
   }
@@ -127,6 +142,7 @@ export function filterFolderSuggestions(
         type: 'folder',
         filePath: f.absolutePath,
         relativePath: f.relativePath,
+        insertText: formatFileMentionPath(f.relativePath),
       });
     }
   }

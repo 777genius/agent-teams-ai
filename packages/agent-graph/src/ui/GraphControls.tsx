@@ -25,6 +25,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import type { GraphLayoutMode } from '../ports/types';
 
 export interface GraphFilterState {
   showActivity: boolean;
@@ -50,6 +51,8 @@ export interface GraphControlsProps {
   teamName: string;
   teamColor?: string;
   isAlive?: boolean;
+  layoutMode?: GraphLayoutMode;
+  onLayoutModeChange?: (mode: GraphLayoutMode) => void;
   topToolbarContent?: React.ReactNode;
   interactionLocked?: boolean;
 }
@@ -71,6 +74,8 @@ export function GraphControls({
   onToggleSidebar,
   isSidebarVisible = true,
   teamColor,
+  layoutMode = 'radial',
+  onLayoutModeChange,
   topToolbarContent,
   interactionLocked = false,
 }: GraphControlsProps): React.JSX.Element {
@@ -80,8 +85,14 @@ export function GraphControls({
     (key: keyof GraphFilterState) => {
       onFiltersChange({ ...filters, [key]: !filters[key] });
     },
-    [filters, onFiltersChange],
+    [filters, onFiltersChange]
   );
+  const toggleLayoutMode = useCallback(() => {
+    if (!onLayoutModeChange) {
+      return;
+    }
+    onLayoutModeChange(layoutMode === 'radial' ? 'grid-under-lead' : 'radial');
+  }, [layoutMode, onLayoutModeChange]);
 
   useEffect(() => {
     if (!isSettingsOpen) return;
@@ -174,9 +185,7 @@ export function GraphControls({
 
         <div className="absolute left-1/2 top-0 w-[min(360px,38vw)] -translate-x-1/2 px-2">
           {topToolbarContent ? (
-            <div className={`${chromeInteractivityClass} min-w-0`}>
-              {topToolbarContent}
-            </div>
+            <div className={`${chromeInteractivityClass} min-w-0`}>{topToolbarContent}</div>
           ) : null}
         </div>
 
@@ -190,11 +199,43 @@ export function GraphControls({
           >
             <ToolbarButton
               onClick={() => toggle('paused')}
-              icon={filters.paused ? <Play size={TOPBAR_ICON_SIZE} /> : <Pause size={TOPBAR_ICON_SIZE} />}
+              icon={
+                filters.paused ? (
+                  <Play size={TOPBAR_ICON_SIZE} />
+                ) : (
+                  <Pause size={TOPBAR_ICON_SIZE} />
+                )
+              }
               toolbar
               title={filters.paused ? 'Resume animation' : 'Pause animation'}
             />
           </div>
+
+          {onLayoutModeChange ? (
+            <div
+              className={`${chromeInteractivityClass} flex items-center rounded-md p-0 backdrop-blur-sm`}
+              style={{
+                background: 'rgba(8, 12, 24, 0.8)',
+                border: '1px solid rgba(100, 200, 255, 0.08)',
+              }}
+            >
+              <ToolbarButton
+                onClick={toggleLayoutMode}
+                icon={
+                  layoutMode === 'radial' ? (
+                    <Columns3 size={TOPBAR_ICON_SIZE} />
+                  ) : (
+                    <Users size={TOPBAR_ICON_SIZE} />
+                  )
+                }
+                active={layoutMode === 'grid-under-lead'}
+                toolbar
+                title={
+                  layoutMode === 'radial' ? 'Switch to rows layout' : 'Switch to radial layout'
+                }
+              />
+            </div>
+          ) : null}
 
           <div ref={settingsRef} className={`relative ${chromeInteractivityClass}`}>
             <div
@@ -288,7 +329,7 @@ export function GraphControls({
         </div>
       </div>
 
-      <div className="absolute bottom-3 right-3 z-20 pointer-events-none">
+      <div className="pointer-events-none absolute bottom-3 right-3 z-20">
         <div
           className="pointer-events-auto flex items-center gap-0.5 rounded-lg px-0.5 py-[2px] backdrop-blur-sm"
           style={{
@@ -349,7 +390,7 @@ function ToolbarButton({
               }
             : undefined
       }
-      className={`flex items-center rounded-md font-mono transition-colors cursor-pointer ${
+      className={`flex cursor-pointer items-center rounded-md font-mono transition-colors ${
         toolbar
           ? 'justify-center text-[0]'
           : mini
@@ -359,8 +400,8 @@ function ToolbarButton({
               : 'gap-1 px-2 py-1 text-[11px]'
       } ${
         active
-          ? 'text-[#aaeeff] bg-[rgba(100,200,255,0.14)]'
-          : 'text-[#66ccff90] hover:text-[#aaeeff] hover:bg-[rgba(100,200,255,0.1)]'
+          ? 'bg-[rgba(100,200,255,0.14)] text-[#aaeeff]'
+          : 'text-[#66ccff90] hover:bg-[rgba(100,200,255,0.1)] hover:text-[#aaeeff]'
       }`}
     >
       {icon}
@@ -379,7 +420,7 @@ function ToolbarButton({
         <Tooltip.Content
           side="bottom"
           sideOffset={8}
-          className="z-[100] rounded-md border border-[rgba(100,200,255,0.14)] bg-[rgba(8,12,24,0.96)] px-2 py-1 text-[11px] font-mono text-[#dff6ff] shadow-xl backdrop-blur-sm"
+          className="z-[100] rounded-md border border-[rgba(100,200,255,0.14)] bg-[rgba(8,12,24,0.96)] px-2 py-1 font-mono text-[11px] text-[#dff6ff] shadow-xl backdrop-blur-sm"
         >
           {title}
           <Tooltip.Arrow className="fill-[rgba(8,12,24,0.96)]" />
@@ -405,12 +446,12 @@ function ToolbarToggle({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-mono transition-all cursor-pointer border ${
+      className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-mono text-[11px] transition-all ${
         block ? 'w-full justify-start' : ''
       } ${
         active
-          ? 'text-[#aaeeff] bg-[rgba(100,200,255,0.15)] border-[rgba(100,200,255,0.25)]'
-          : 'text-[#66ccff50] bg-transparent border-transparent hover:text-[#66ccff90] hover:bg-[rgba(100,200,255,0.06)]'
+          ? 'border-[rgba(100,200,255,0.25)] bg-[rgba(100,200,255,0.15)] text-[#aaeeff]'
+          : 'border-transparent bg-transparent text-[#66ccff50] hover:bg-[rgba(100,200,255,0.06)] hover:text-[#66ccff90]'
       }`}
     >
       {icon}

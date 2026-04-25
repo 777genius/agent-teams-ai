@@ -36,6 +36,7 @@ describe('buildMergedCliPath', () => {
     expect(p.split(':')).toEqual(
       expect.arrayContaining([
         '/home/testuser/.claude/local/node_modules/.bin',
+        '/home/testuser/.bun/bin',
         '/home/testuser/.local/bin',
         '/home/testuser/.npm-global/bin',
         '/home/testuser/.npm/bin',
@@ -66,6 +67,7 @@ describe('buildMergedCliPath', () => {
     expect(p.startsWith('/opt/custom/bin')).toBe(true);
     expect(p).toContain('/bin');
     expect(p).toContain('/home/testuser/.claude/local/node_modules/.bin');
+    expect(p).toContain('/home/testuser/.bun/bin');
     expect(p).toContain('/usr/bin');
     expect(p).not.toContain('/home/testuser/.local/bin');
   });

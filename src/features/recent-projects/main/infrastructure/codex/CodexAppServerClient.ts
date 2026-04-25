@@ -46,6 +46,7 @@ export interface CodexThreadSummary {
 export interface CodexThreadSegmentResult {
   threads: CodexThreadSummary[];
   error?: string;
+  skipped?: boolean;
 }
 
 export interface CodexRecentThreadsResult {
@@ -142,6 +143,17 @@ export class CodexAppServerClient {
           limit: options.limit,
           timeoutMs: liveRequestTimeoutMs,
         });
+        if (live.error) {
+          return {
+            live,
+            archived: {
+              threads: [],
+              error: `Skipped archived thread/list after live thread/list failed: ${live.error}`,
+              skipped: true,
+            },
+          };
+        }
+
         const archived = await this.#requestThreadListSegment(session, {
           archived: true,
           limit: options.limit,

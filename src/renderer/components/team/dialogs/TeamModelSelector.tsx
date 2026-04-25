@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import {
@@ -17,6 +18,11 @@ import {
   GEMINI_UI_DISABLED_REASON,
   isGeminiUiFrozen,
 } from '@renderer/utils/geminiUiFreeze';
+import {
+  compareOpenCodeTeamModelRecommendations,
+  getOpenCodeTeamModelRecommendation,
+  isOpenCodeTeamModelRecommended,
+} from '@renderer/utils/openCodeModelRecommendations';
 import {
   getAvailableTeamProviderModelOptions,
   getTeamModelUiDisabledReason,
@@ -37,7 +43,7 @@ import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
-import { AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Info, Star } from 'lucide-react';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -59,8 +65,9 @@ const PROVIDERS: ProviderDef[] = [
 ];
 
 const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
-export const OPENCODE_TEAM_LEAD_DISABLED_REASON = 'OpenCode is not available for team lead.';
-export const OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL = 'not teamlead';
+export const OPENCODE_TEAM_LEAD_DISABLED_REASON =
+  'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.';
+export const OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL = 'side lane';
 
 export function getTeamModelLabel(model: string): string {
   return getCatalogTeamModelLabel(model) ?? model;
@@ -161,6 +168,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   modelIssueReasonByValue,
 }) => {
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
+  const [recommendedOnly, setRecommendedOnly] = useState(false);
 
   const effectiveProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -301,6 +309,47 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return getAvailableTeamProviderModelOptions(effectiveProviderId, runtimeProviderStatus);
   }, [effectiveProviderId, runtimeProviderStatus, shouldAwaitRuntimeModelList]);
+  const hasRecommendedOpenCodeModels = useMemo(
+    () =>
+      effectiveProviderId === 'opencode' &&
+      modelOptions.some((option) => isOpenCodeTeamModelRecommended(option.value)),
+    [effectiveProviderId, modelOptions]
+  );
+
+  useEffect(() => {
+    if (effectiveProviderId !== 'opencode' || !hasRecommendedOpenCodeModels) {
+      setRecommendedOnly(false);
+    }
+  }, [effectiveProviderId, hasRecommendedOpenCodeModels]);
+
+  const visibleModelOptions = useMemo(() => {
+    if (effectiveProviderId !== 'opencode') {
+      return modelOptions;
+    }
+
+    const concreteOptions = modelOptions
+      .filter((option) => option.value.trim().length > 0)
+      .map((option, index) => ({ option, index }))
+      .filter(({ option }) => !recommendedOnly || isOpenCodeTeamModelRecommended(option.value))
+      .sort((left, right) => {
+        const recommendationOrder = compareOpenCodeTeamModelRecommendations(
+          left.option.value,
+          right.option.value
+        );
+        return recommendationOrder || left.index - right.index;
+      })
+      .map(({ option }) => option);
+
+    if (recommendedOnly) {
+      return concreteOptions;
+    }
+
+    return [
+      ...modelOptions.filter((option) => option.value.trim().length === 0),
+      ...concreteOptions,
+    ];
+  }, [effectiveProviderId, modelOptions, recommendedOnly]);
+  const shouldConstrainModelListHeight = visibleModelOptions.length > 8;
 
   return (
     <div className="mb-5">
@@ -384,11 +433,34 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   list is syncing.
                 </p>
               ) : null}
+              {hasRecommendedOpenCodeModels ? (
+                <div className="mb-2 flex w-fit items-center gap-2">
+                  <Checkbox
+                    id="opencode-team-model-recommended-only"
+                    checked={recommendedOnly}
+                    onCheckedChange={(checked) => setRecommendedOnly(checked === true)}
+                    className="size-3.5"
+                  />
+                  <Label
+                    htmlFor="opencode-team-model-recommended-only"
+                    className="cursor-pointer text-[11px] font-normal text-[var(--color-text-secondary)]"
+                  >
+                    Recommended only
+                  </Label>
+                </div>
+              ) : null}
               <div
-                className="grid gap-1.5 rounded-md bg-[var(--color-surface)]"
-                style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
+                data-testid="team-model-selector-model-grid"
+                className={cn(
+                  'grid gap-1.5 rounded-md bg-[var(--color-surface)]',
+                  shouldConstrainModelListHeight && 'overflow-y-auto pr-1'
+                )}
+                style={{
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  maxHeight: shouldConstrainModelListHeight ? 400 : undefined,
+                }}
               >
-                {modelOptions.map((opt) =>
+                {visibleModelOptions.map((opt) =>
                   (() => {
                     const modelDisabledReason = getTeamModelUiDisabledReason(
                       effectiveProviderId,
@@ -413,6 +485,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     const sourceBadgeLabel =
                       effectiveProviderId === 'opencode' && opt.value !== ''
                         ? opt.badgeLabel?.trim() || null
+                        : null;
+                    const modelRecommendation =
+                      effectiveProviderId === 'opencode'
+                        ? getOpenCodeTeamModelRecommendation(opt.value)
                         : null;
 
                     return (
@@ -454,6 +530,29 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                               title={`Source: ${sourceBadgeLabel}`}
                             >
                               {sourceBadgeLabel}
+                            </span>
+                          ) : null}
+                          {modelRecommendation ? (
+                            <span
+                              className={cn(
+                                'inline-flex items-center justify-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                                modelRecommendation.level === 'recommended'
+                                  ? 'bg-emerald-300/12 border-emerald-300/35 text-emerald-200'
+                                  : modelRecommendation.level === 'recommended-with-limits'
+                                    ? 'bg-amber-300/12 border-amber-300/35 text-amber-200'
+                                    : modelRecommendation.level === 'unavailable-in-opencode'
+                                      ? 'border-slate-300/30 bg-slate-400/10 text-slate-200'
+                                      : 'border-red-300/35 bg-red-400/10 text-red-200'
+                              )}
+                              title={modelRecommendation.reason}
+                            >
+                              {modelRecommendation.level === 'not-recommended' ||
+                              modelRecommendation.level === 'unavailable-in-opencode' ? (
+                                <AlertTriangle className="size-3 shrink-0" />
+                              ) : (
+                                <Star className="size-3 shrink-0 fill-current" />
+                              )}
+                              <span>{modelRecommendation.label}</span>
                             </span>
                           ) : null}
                           {opt.value === '' && (
@@ -527,6 +626,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   })()
                 )}
               </div>
+              {effectiveProviderId === 'opencode' && visibleModelOptions.length === 0 ? (
+                <div className="rounded-md border border-white/10 px-3 py-2 text-xs text-[var(--color-text-muted)]">
+                  No recommended OpenCode models are available in the current runtime list.
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

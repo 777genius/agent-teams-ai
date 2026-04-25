@@ -272,7 +272,95 @@ describe('teamSlice actions', () => {
     expect(result.messageId).toBe('m-opencode-1');
     expect(store.getState().lastSendMessageResult).toBeNull();
     expect(store.getState().sendMessageError).toBeNull();
-    expect(store.getState().sendMessageWarning).toContain('OpenCode runtime delivery failed');
+    expect(store.getState().sendMessageWarning).toBe(
+      'OpenCode runtime delivery failed. Message was saved to inbox, but live delivery did not complete.'
+    );
+    expect(store.getState().sendMessageDebugDetails).toMatchObject({
+      messageId: 'm-opencode-1',
+      providerId: 'opencode',
+      delivered: false,
+      responsePending: null,
+      responseState: null,
+      ledgerStatus: null,
+      acceptanceUnknown: null,
+      reason: 'opencode_runtime_not_active',
+      diagnostics: [],
+    });
+  });
+
+  it('stores hidden OpenCode runtime diagnostics while live response is pending', async () => {
+    const store = createSliceStore();
+    hoisted.sendMessage.mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'm-opencode-pending',
+      runtimeDelivery: {
+        providerId: 'opencode',
+        attempted: true,
+        delivered: true,
+        responsePending: true,
+        responseState: 'pending',
+        ledgerStatus: 'accepted',
+        acceptanceUnknown: false,
+        reason: 'assistant_response_pending',
+        diagnostics: ['assistant_response_pending'],
+      },
+    });
+
+    const result = await store.getState().sendTeamMessage('my-team', {
+      member: 'bob',
+      text: 'hello',
+    });
+
+    expect(store.getState().lastSendMessageResult).toBe(result);
+    expect(store.getState().sendMessageWarning).toBe(
+      'OpenCode runtime delivery is still being checked. Message was saved and will be retried if needed.'
+    );
+    expect(store.getState().sendMessageDebugDetails).toMatchObject({
+      messageId: 'm-opencode-pending',
+      providerId: 'opencode',
+      delivered: true,
+      responsePending: true,
+      responseState: 'pending',
+      ledgerStatus: 'accepted',
+      acceptanceUnknown: false,
+      reason: 'assistant_response_pending',
+      diagnostics: ['assistant_response_pending'],
+    });
+  });
+
+  it('clears OpenCode runtime diagnostics after normal success or send failure', async () => {
+    const store = createSliceStore();
+    hoisted.sendMessage
+      .mockResolvedValueOnce({
+        deliveredToInbox: true,
+        messageId: 'm-opencode-failed',
+        runtimeDelivery: {
+          providerId: 'opencode',
+          attempted: true,
+          delivered: false,
+          reason: 'runtime_unavailable',
+        },
+      })
+      .mockResolvedValueOnce({
+        deliveredToInbox: true,
+        messageId: 'm-ok',
+      })
+      .mockRejectedValueOnce(new Error('boom'));
+
+    await store.getState().sendTeamMessage('my-team', { member: 'bob', text: 'first' });
+    expect(store.getState().sendMessageDebugDetails?.messageId).toBe('m-opencode-failed');
+
+    await store.getState().sendTeamMessage('my-team', { member: 'alice', text: 'second' });
+    expect(store.getState().sendMessageWarning).toBeNull();
+    expect(store.getState().sendMessageDebugDetails).toBeNull();
+    expect(store.getState().lastSendMessageResult?.messageId).toBe('m-ok');
+
+    await expect(
+      store.getState().sendTeamMessage('my-team', { member: 'alice', text: 'third' })
+    ).rejects.toThrow('boom');
+    expect(store.getState().sendMessageWarning).toBeNull();
+    expect(store.getState().sendMessageDebugDetails).toBeNull();
+    expect(store.getState().sendMessageError).toBe('boom');
   });
 
   it('maps task status verify failure in updateKanban and rethrows', async () => {
@@ -347,6 +435,83 @@ describe('teamSlice actions', () => {
       mode: 'manual',
       signature: null,
     });
+  });
+
+  it('stores graph layout mode without mutating radial slot assignments', () => {
+    const store = createSliceStore();
+    store
+      .getState()
+      .commitTeamGraphOwnerSlotDrop('my-team', 'agent-alice', { ringIndex: 0, sectorIndex: 2 });
+
+    store.getState().setTeamGraphLayoutMode('my-team', 'grid-under-lead');
+
+    expect(store.getState().graphLayoutModeByTeam['my-team']).toBe('grid-under-lead');
+    expect(store.getState().slotAssignmentsByTeam['my-team']).toEqual({
+      'agent-alice': { ringIndex: 0, sectorIndex: 2 },
+    });
+
+    store.getState().setTeamGraphLayoutMode('my-team', 'radial');
+
+    expect(store.getState().graphLayoutModeByTeam['my-team']).toBe('radial');
+    expect(store.getState().slotAssignmentsByTeam['my-team']).toEqual({
+      'agent-alice': { ringIndex: 0, sectorIndex: 2 },
+    });
+  });
+
+  it('swaps grid owners from canonical visible order without mutating radial slots', () => {
+    const store = createSliceStore();
+    store.setState({
+      teamDataCacheByName: {
+        'my-team': createTeamSnapshot({
+          config: {
+            name: 'My Team',
+            members: [
+              { name: 'team-lead', agentId: 'lead-agent' },
+              { name: 'alice', agentId: 'agent-alice' },
+              { name: 'bob', agentId: 'agent-bob' },
+              { name: 'tom', agentId: 'agent-tom' },
+            ],
+          },
+          members: [
+            { name: 'team-lead', agentId: 'lead-agent', agentType: 'team-lead' },
+            { name: 'alice', agentId: 'agent-alice' },
+            { name: 'bob', agentId: 'agent-bob' },
+            { name: 'tom', agentId: 'agent-tom' },
+          ],
+        }),
+      },
+      slotAssignmentsByTeam: {
+        'my-team': {
+          'agent-alice': { ringIndex: 0, sectorIndex: 2 },
+        },
+      },
+    });
+
+    store.getState().swapTeamGraphGridOwners('my-team', 'agent-alice', 'agent-tom');
+
+    expect(store.getState().gridOwnerOrderByTeam['my-team']).toEqual([
+      'agent-tom',
+      'agent-bob',
+      'agent-alice',
+    ]);
+    expect(store.getState().slotAssignmentsByTeam['my-team']).toEqual({
+      'agent-alice': { ringIndex: 0, sectorIndex: 2 },
+    });
+  });
+
+  it('keeps grid owner order unchanged when radial slots are committed', () => {
+    const store = createSliceStore();
+    store.setState({
+      gridOwnerOrderByTeam: {
+        'my-team': ['agent-bob', 'agent-alice'],
+      },
+    });
+
+    store
+      .getState()
+      .commitTeamGraphOwnerSlotDrop('my-team', 'agent-alice', { ringIndex: 0, sectorIndex: 2 });
+
+    expect(store.getState().gridOwnerOrderByTeam['my-team']).toEqual(['agent-bob', 'agent-alice']);
   });
 
   it('replaces persisted slot assignments with defaults while persistence is disabled', () => {

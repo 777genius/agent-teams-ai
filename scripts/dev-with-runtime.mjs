@@ -27,6 +27,11 @@ function shouldUseWindowsShell(cmd) {
     return false;
   }
 
+  const extension = path.extname(cmd).toLowerCase();
+  if (extension === '.cmd' || extension === '.bat') {
+    return true;
+  }
+
   const commandName = path.basename(cmd).toLowerCase();
   return WINDOWS_SHELL_COMMANDS.has(commandName);
 }
@@ -502,7 +507,8 @@ async function resolveRuntimeCli() {
 
     runOrExit(runtimePackageManager, ['run', 'build:dev'], { cwd: runtimeRepoRoot });
 
-    const runtimeCliPath = path.join(runtimeRepoRoot, 'cli-dev');
+    const runtimeCliName = process.platform === 'win32' ? 'cli-dev.cmd' : 'cli-dev';
+    const runtimeCliPath = path.join(runtimeRepoRoot, runtimeCliName);
     return {
       binaryPath: runtimeCliPath,
       versionText: readBinaryVersion(runtimeCliPath),

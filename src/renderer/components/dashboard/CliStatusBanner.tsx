@@ -44,6 +44,7 @@ import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInst
 import { formatBytes } from '@renderer/utils/formatters';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import { isMultimodelRuntimeStatus } from '@renderer/utils/multimodelProviderVisibility';
+import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getRuntimeDisplayName as getHumanRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import {
@@ -78,6 +79,8 @@ const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
   info: { border: 'var(--info-border)', bg: 'var(--info-bg)' },
   warning: { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.06)' },
 };
+
+const OPENCODE_DOWNLOAD_URL = 'https://opencode.ai/download';
 
 /** Minimum banner height — prevents layout shift between states (loading → installed → checking). */
 const BANNER_MIN_H = 'min-h-[4.25rem]';
@@ -285,7 +288,7 @@ function getProviderLabel(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode';
+      return 'OpenCode (75+ LLM providers)';
   }
 }
 
@@ -560,6 +563,19 @@ function hasVisibleAuthenticatedMultimodelProvider(
   return visibleProviders.some((provider) => provider.authenticated);
 }
 
+function shouldShowOpenCodeDownloadAction(
+  provider: CliProviderStatus,
+  showSkeleton: boolean
+): boolean {
+  return (
+    provider.providerId === 'opencode' &&
+    !showSkeleton &&
+    !provider.supported &&
+    !provider.authenticated &&
+    provider.backend == null
+  );
+}
+
 const InstalledBanner = ({
   cliStatus,
   sourceProviderMap,
@@ -758,7 +774,9 @@ const InstalledBanner = ({
                           className="text-xs font-medium"
                           style={{ color: 'var(--color-text)' }}
                         >
-                          {provider.displayName}
+                          {provider.providerId === 'opencode'
+                            ? getProviderLabel(provider.providerId)
+                            : provider.displayName}
                         </span>
                         {provider.providerId === 'opencode' ? <OpenCodeBetaBadge /> : null}
                       </span>
@@ -802,6 +820,7 @@ const InstalledBanner = ({
                           models={provider.models}
                           modelAvailability={provider.modelAvailability}
                           providerStatus={provider}
+                          collapseAfter={15}
                         />
                         {codexDashboardRateLimits!.map((item) => (
                           <div
@@ -898,6 +917,21 @@ const InstalledBanner = ({
                     ) : null}
                   </div>
                   <div className="flex shrink-0 items-start gap-2">
+                    {shouldShowOpenCodeDownloadAction(provider, showSkeleton) ? (
+                      <button
+                        type="button"
+                        onClick={() => void api.openExternal(OPENCODE_DOWNLOAD_URL)}
+                        className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5"
+                        style={{
+                          borderColor: 'rgba(14, 165, 233, 0.36)',
+                          color: '#7dd3fc',
+                        }}
+                        title="Download OpenCode CLI"
+                      >
+                        <Download className="size-3" />
+                        Download
+                      </button>
+                    ) : null}
                     <button
                       onClick={() => onProviderManage(provider.providerId)}
                       disabled={actionDisabled}
@@ -960,6 +994,7 @@ const InstalledBanner = ({
                       models={provider.models}
                       modelAvailability={provider.modelAvailability}
                       providerStatus={provider}
+                      collapseAfter={15}
                     />
                   </div>
                 )}
@@ -979,6 +1014,9 @@ const InstalledBanner = ({
 export const CliStatusBanner = (): React.JSX.Element | null => {
   const isElectron = useMemo(() => isElectronMode(), []);
   const appConfig = useStore((s) => s.appConfig);
+  const selectedProjectId = useStore((s) => s.selectedProjectId);
+  const projects = useStore((s) => s.projects);
+  const repositoryGroups = useStore((s) => s.repositoryGroups);
   const updateConfig = useStore((s) => s.updateConfig);
   const {
     cliStatus,
@@ -1014,6 +1052,10 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     loadDashboardCliStatusBannerCollapsed()
   );
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
+  const selectedProjectPath = useMemo(
+    () => resolveProjectPathById(selectedProjectId, projects, repositoryGroups)?.path ?? null,
+    [projects, repositoryGroups, selectedProjectId]
+  );
   const loadingCliStatus = useMemo(
     () =>
       !cliStatus && cliStatusLoading && multimodelEnabled
@@ -1177,9 +1219,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
   const handleProviderRefresh = useCallback(
     (providerId: CliProviderId) => {
-      void fetchCliProviderStatus(providerId, {
-        verifyModels: providerId === 'opencode',
-      });
+      void fetchCliProviderStatus(providerId);
     },
     [fetchCliProviderStatus]
   );
@@ -1257,6 +1297,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           open={manageDialogOpen}
           onOpenChange={setManageDialogOpen}
           providers={visibleCliProviders}
+          projectPath={selectedProjectPath}
           initialProviderId={
             visibleCliProviders.some((provider) => provider.providerId === manageProviderId)
               ? manageProviderId
@@ -1265,11 +1306,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           providerStatusLoading={cliProviderStatusLoading}
           disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
           onSelectBackend={handleProviderBackendChange}
-          onRefreshProvider={(providerId) =>
-            fetchCliProviderStatus(providerId, {
-              verifyModels: providerId === 'opencode',
-            })
-          }
+          onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
           onRequestLogin={(providerId) => setProviderTerminal({ providerId, action: 'login' })}
         />
         {providerTerminal && renderCliStatus.binaryPath && (

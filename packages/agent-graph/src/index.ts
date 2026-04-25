@@ -26,6 +26,7 @@ export type {
   GraphActivityItem,
   GraphOwnerSlotAssignment,
   GraphLayoutPort,
+  GraphLayoutMode,
   GraphLayoutVersion,
   GraphNodeKind,
   GraphNodeState,

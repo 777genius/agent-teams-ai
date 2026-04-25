@@ -18,10 +18,11 @@
  */
 
 import { syncTelemetryFlag } from '@main/sentry';
+import { quoteWindowsCmdArg } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import { execFile } from 'child_process';
+import { execFile, execFileSync, spawn } from 'child_process';
 import { BrowserWindow, dialog, type IpcMain, type IpcMainInvokeEvent } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -56,6 +57,72 @@ const configManager = ConfigManager.getInstance();
 let onClaudeRootPathUpdated: ((claudeRootPath: string | null) => Promise<void> | void) | null =
   null;
 let onAgentLanguageUpdated: ((newLangCode: string) => Promise<void> | void) | null = null;
+
+function isPathLikeCommand(command: string): boolean {
+  return /[\\/]/.test(command) || /^[A-Za-z]:/.test(command);
+}
+
+function resolveWindowsEditorCommand(editor: string): string {
+  if (process.platform !== 'win32' || isPathLikeCommand(editor)) {
+    return editor;
+  }
+
+  try {
+    const whereExe = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'where.exe');
+    const output = execFileSync(whereExe, [editor], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+    });
+    return output.trim().split(/\r?\n/)[0] || editor;
+  } catch {
+    return editor;
+  }
+}
+
+function needsWindowsShell(command: string): boolean {
+  if (process.platform !== 'win32') return false;
+  const extension = path.extname(command).toLowerCase();
+  return extension === '.cmd' || extension === '.bat';
+}
+
+function launchExternalEditor(editor: string, configPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const resolvedEditor = resolveWindowsEditorCommand(editor);
+    const launchOptions = {
+      detached: true,
+      stdio: 'ignore' as const,
+      windowsHide: true,
+    };
+    let child: ReturnType<typeof spawn>;
+    if (needsWindowsShell(resolvedEditor)) {
+      const command = [resolvedEditor, configPath].map(quoteWindowsCmdArg).join(' ');
+      // eslint-disable-next-line sonarjs/os-command -- Windows .cmd launchers require cmd.exe; editor path is resolved via where.exe and args are cmd-escaped.
+      child = spawn(command, {
+        ...launchOptions,
+        shell: true,
+      });
+    } else {
+      child = spawn(resolvedEditor, [configPath], launchOptions);
+    }
+
+    let settled = false;
+    function settle(fn: () => void): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    }
+    const timer = setTimeout(() => {
+      child.unref();
+      settle(() => resolve());
+    }, 500);
+
+    child.on('error', (err) => {
+      settle(() => reject(err));
+    });
+  });
+}
 
 /**
  * Initializes config handlers with callbacks that require app-level services.
@@ -607,16 +674,7 @@ async function handleOpenInEditor(_event: IpcMainInvokeEvent): Promise<IpcResult
 
     for (const editor of editors) {
       try {
-        await new Promise<void>((resolve, reject) => {
-          const child = execFile(editor, [configPath], { timeout: 5000 });
-          // If the process spawns successfully, resolve after a short delay
-          // (editors typically fork and the parent exits quickly)
-          const timer = setTimeout(() => resolve(), 500);
-          child.on('error', (err) => {
-            clearTimeout(timer);
-            reject(err);
-          });
-        });
+        await launchExternalEditor(editor, configPath);
         return { success: true };
       } catch {
         // Editor not found, try next

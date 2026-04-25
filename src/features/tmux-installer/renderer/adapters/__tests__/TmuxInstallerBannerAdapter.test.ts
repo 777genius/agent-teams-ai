@@ -74,6 +74,7 @@ describe('TmuxInstallerBannerAdapter', () => {
     expect(result.manualHintsCollapsible).toBe(false);
     expect(result.body).toContain('persistent teammate reliability');
     expect(result.benefitsBody).toContain('Optional, but recommended');
+    expect(result.benefitsBody).toContain('multi-agent teams that mix providers');
     expect(result.installButtonPrimary).toBe(true);
     expect(result.showRefreshButton).toBe(true);
   });

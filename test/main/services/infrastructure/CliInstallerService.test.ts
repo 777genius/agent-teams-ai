@@ -140,7 +140,9 @@ describe('CliInstallerService', () => {
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue(null);
 
       const status = await service.getStatus();
-      const openCodeStatus = status.providers.find((provider) => provider.providerId === 'opencode');
+      const openCodeStatus = status.providers.find(
+        (provider) => provider.providerId === 'opencode'
+      );
 
       expect(status.providers.map((provider) => provider.providerId)).toEqual([
         'anthropic',
@@ -149,7 +151,7 @@ describe('CliInstallerService', () => {
         'opencode',
       ]);
       expect(openCodeStatus).toMatchObject({
-        displayName: 'OpenCode',
+        displayName: 'OpenCode (75+ LLM providers)',
         supported: false,
         statusMessage: 'Runtime not found.',
         canLoginFromUi: false,
@@ -362,7 +364,9 @@ describe('CliInstallerService', () => {
       service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
 
       const status = await service.getStatus();
-      expect(status.providers.find((provider) => provider.providerId === 'codex')?.modelAvailability).toEqual([]);
+      expect(
+        status.providers.find((provider) => provider.providerId === 'codex')?.modelAvailability
+      ).toEqual([]);
 
       const verifiedProvider = await service.verifyProviderModels('codex');
       expect(verifiedProvider?.modelAvailability).toEqual(
@@ -411,10 +415,11 @@ describe('CliInstallerService', () => {
               'modelAvailability' in provider &&
               (provider as { providerId?: string }).providerId === 'codex' &&
               Array.isArray((provider as { modelAvailability?: unknown[] }).modelAvailability) &&
-              (provider as { modelAvailability: Array<{ modelId?: string; status?: string }> })
-                .modelAvailability.some(
-                  (item) => item.modelId === 'gpt-5.4' && item.status === 'available'
-                )
+              (
+                provider as { modelAvailability: Array<{ modelId?: string; status?: string }> }
+              ).modelAvailability.some(
+                (item) => item.modelId === 'gpt-5.4' && item.status === 'available'
+              )
           )
         )
       ).toBe(true);
@@ -428,15 +433,15 @@ describe('CliInstallerService', () => {
               'modelAvailability' in provider &&
               (provider as { providerId?: string }).providerId === 'codex' &&
               Array.isArray((provider as { modelAvailability?: unknown[] }).modelAvailability) &&
-              (provider as { modelAvailability: Array<{ modelId?: string }> }).modelAvailability.some(
-                (item) => item.modelId === 'gpt-5.2-codex'
-              )
+              (
+                provider as { modelAvailability: Array<{ modelId?: string }> }
+              ).modelAvailability.some((item) => item.modelId === 'gpt-5.2-codex')
           )
         )
       ).toBe(false);
     });
 
-    it('uses execution-grade OpenCode model verification for explicit verify requests', async () => {
+    it('keeps OpenCode provider verification catalog-only for explicit verify requests', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
       vi.mocked(getCliFlavorUiOptions).mockReturnValue({
@@ -600,22 +605,15 @@ describe('CliInstallerService', () => {
       });
 
       const status = await service.getStatus();
-      expect(status.providers.find((provider) => provider.providerId === 'opencode')?.modelAvailability).toEqual([]);
+      expect(
+        status.providers.find((provider) => provider.providerId === 'opencode')?.modelAvailability
+      ).toEqual([]);
 
       const verifiedProvider = await service.verifyProviderModels('opencode');
 
-      expect(verifyOpenCodeModelsSpy).toHaveBeenCalledTimes(1);
-      expect(verifiedProvider?.modelVerificationState).toBe('verified');
-      expect(verifiedProvider?.modelAvailability).toEqual([
-        expect.objectContaining({
-          modelId: 'openai/gpt-5.4-mini',
-          status: 'unavailable',
-        }),
-        expect.objectContaining({
-          modelId: 'opencode/big-pickle',
-          status: 'available',
-        }),
-      ]);
+      expect(verifyOpenCodeModelsSpy).not.toHaveBeenCalled();
+      expect(verifiedProvider?.modelVerificationState).toBe('idle');
+      expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
   });
 

@@ -2622,9 +2622,13 @@ async function handleSendMessage(
             delivered: 0,
             failed: 1,
             lastDelivery: {
-              delivered: false,
-              reason: 'opencode_runtime_delivery_timeout',
-              diagnostics: ['opencode_runtime_delivery_timeout'],
+              delivered: true,
+              accepted: false,
+              responsePending: true,
+              acceptanceUnknown: true,
+              responseState: 'not_observed',
+              reason: 'opencode_runtime_delivery_ui_timeout_pending',
+              diagnostics: ['opencode_runtime_delivery_ui_timeout_pending'],
             },
           }
         );
@@ -2637,10 +2641,20 @@ async function handleSendMessage(
           providerId: 'opencode',
           attempted: true,
           delivered: delivery.delivered,
+          responsePending: delivery.responsePending,
+          acceptanceUnknown: delivery.acceptanceUnknown,
+          responseState: delivery.responseState,
+          ledgerStatus: delivery.ledgerStatus,
+          visibleReplyMessageId: delivery.visibleReplyMessageId,
+          visibleReplyCorrelation: delivery.visibleReplyCorrelation,
           reason: delivery.reason,
           diagnostics: delivery.diagnostics,
         };
-        if (!delivery.delivered && delivery.reason !== 'recipient_is_not_opencode') {
+        if (
+          !delivery.delivered &&
+          delivery.reason !== 'recipient_is_not_opencode' &&
+          delivery.reason !== 'opencode_runtime_delivery_ui_timeout_pending'
+        ) {
           logger.warn(
             `OpenCode runtime delivery after sendMessage failed for teammate "${memberName}": ${
               delivery.reason ?? 'unknown error'

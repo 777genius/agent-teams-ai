@@ -59,6 +59,7 @@ const codexAccountHookState = {
 
 vi.mock('@renderer/api', () => ({
   api: {
+    openExternal: vi.fn(() => Promise.resolve({ success: true })),
     showInFolder: vi.fn(),
   },
   isElectronMode: () => true,
@@ -397,6 +398,67 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(storeState.openExtensionsTab).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows an OpenCode download action on the dashboard when the OpenCode CLI is missing', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const { api } = await import('@renderer/api');
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (75+ LLM providers)',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusMessage: 'OpenCode CLI is not installed.',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+          },
+          backend: null,
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode (75+ LLM providers)');
+    expect(host.textContent).toContain('Download');
+
+    const downloadButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Download'
+    );
+    expect(downloadButton).not.toBeUndefined();
+
+    await act(async () => {
+      downloadButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(api.openExternal).toHaveBeenCalledWith('https://opencode.ai/download');
 
     await act(async () => {
       root.unmount();

@@ -126,6 +126,52 @@ describe('CodexAppServerClient', () => {
     });
   });
 
+  it('does not queue archived loading after live thread loading times out', async () => {
+    const request = vi
+      .fn()
+      .mockImplementation((method: string, params?: { archived?: boolean }) => {
+        if (method === 'initialize') {
+          return Promise.resolve({});
+        }
+
+        if (method === 'thread/list' && params?.archived === false) {
+          return Promise.reject(new Error('JSON-RPC request timed out: thread/list'));
+        }
+
+        return Promise.reject(new Error(`Unexpected method: ${method}`));
+      });
+    const session = createSession(request);
+
+    const withSession = vi.fn().mockImplementation((_options, handler) => handler(session));
+    const client = new CodexAppServerClient({ withSession } as unknown as JsonRpcStdioClient);
+
+    const result = await client.listRecentThreads('/usr/local/bin/codex', {
+      limit: 40,
+      liveRequestTimeoutMs: 4500,
+      archivedRequestTimeoutMs: 2500,
+      totalTimeoutMs: 4500,
+    });
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).not.toHaveBeenCalledWith(
+      'thread/list',
+      expect.objectContaining({ archived: true }),
+      expect.any(Number)
+    );
+    expect(result).toEqual({
+      live: {
+        threads: [],
+        error: 'JSON-RPC request timed out: thread/list',
+      },
+      archived: {
+        threads: [],
+        error:
+          'Skipped archived thread/list after live thread/list failed: JSON-RPC request timed out: thread/list',
+        skipped: true,
+      },
+    });
+  });
+
   it('raises the session timeout budget above sequential request timeouts', async () => {
     const session = createSession(
       vi.fn().mockImplementation((method: string, params?: { archived?: boolean }) => {

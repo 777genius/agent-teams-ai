@@ -11,7 +11,6 @@ import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHo
 import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
-import { useTeamGraphSlotReset } from '../hooks/useTeamGraphSlotReset';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
 
 import { GraphActivityHud } from './GraphActivityHud';
@@ -54,14 +53,17 @@ export const TeamGraphOverlay = ({
   onOpenMemberProfile,
 }: TeamGraphOverlayProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
-  const { openTeamPage: openTeamTab, commitOwnerSlotDrop } = useTeamGraphSurfaceActions(teamName);
+  const {
+    openTeamPage: openTeamTab,
+    commitOwnerSlotDrop,
+    commitOwnerGridOrderDrop,
+    setLayoutMode,
+  } = useTeamGraphSurfaceActions(teamName);
   const { sidebarVisible: persistedSidebarVisible, toggleSidebarVisible } =
     useGraphSidebarVisibility();
   const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
   const effectiveSidebarVisible = sidebarVisible ?? persistedSidebarVisible;
   const handleToggleSidebar = onToggleSidebar ?? toggleSidebarVisible;
-
-  useTeamGraphSlotReset(teamName);
 
   // Task action dispatchers (same pattern as TeamGraphTab)
   const dispatchTaskAction = useCallback(
@@ -127,7 +129,9 @@ export const TeamGraphOverlay = ({
         onToggleSidebar={handleToggleSidebar}
         isSidebarVisible={effectiveSidebarVisible}
         renderTopToolbarContent={() => <GraphProvisioningHud teamName={teamName} />}
+        onLayoutModeChange={setLayoutMode}
         onOwnerSlotDrop={commitOwnerSlotDrop}
+        onOwnerGridOrderDrop={commitOwnerGridOrderDrop}
         className="team-graph-view min-w-0 flex-1"
         renderHud={(hudProps) => {
           const extraHudProps = hudProps as typeof hudProps & {

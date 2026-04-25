@@ -4,6 +4,8 @@ import type {
   OpenCodeBridgeRuntimeSnapshot,
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
+  OpenCodeObserveMessageDeliveryCommandBody,
+  OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
   OpenCodeSendMessageCommandBody,
   OpenCodeSendMessageCommandData,
@@ -41,6 +43,9 @@ export interface OpenCodeTeamRuntimeBridgePort {
   sendOpenCodeTeamMessage?(
     input: OpenCodeSendMessageCommandBody
   ): Promise<OpenCodeSendMessageCommandData>;
+  observeOpenCodeTeamMessageDelivery?(
+    input: OpenCodeObserveMessageDeliveryCommandBody
+  ): Promise<OpenCodeObserveMessageDeliveryCommandData>;
 }
 
 export interface OpenCodeTeamRuntimeMessageInput {
@@ -62,6 +67,8 @@ export interface OpenCodeTeamRuntimeMessageResult {
   memberName: string;
   sessionId?: string;
   runtimePid?: number;
+  prePromptCursor?: string | null;
+  responseObservation?: OpenCodeSendMessageCommandData['responseObservation'];
   diagnostics: string[];
 }
 
@@ -285,6 +292,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       memberName: input.memberName,
       text: buildOpenCodeRuntimeMessageText(input),
       messageId: input.messageId,
+      actionMode: input.actionMode,
+      taskRefs: input.taskRefs,
       agent: 'teammate',
     });
 
@@ -294,6 +303,50 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       memberName: input.memberName,
       sessionId: data.sessionId,
       runtimePid: data.runtimePid,
+      prePromptCursor: data.prePromptCursor,
+      responseObservation: data.responseObservation,
+      diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
+    };
+  }
+
+  async observeMessageDelivery(
+    input: OpenCodeTeamRuntimeMessageInput & { prePromptCursor?: string | null }
+  ): Promise<OpenCodeTeamRuntimeMessageResult> {
+    if (!this.bridge.observeOpenCodeTeamMessageDelivery) {
+      return {
+        ok: false,
+        providerId: this.providerId,
+        memberName: input.memberName,
+        diagnostics: ['OpenCode message delivery observe bridge is not registered.'],
+      };
+    }
+    if (!input.messageId?.trim()) {
+      return {
+        ok: false,
+        providerId: this.providerId,
+        memberName: input.memberName,
+        diagnostics: ['OpenCode message delivery observe requires messageId.'],
+      };
+    }
+
+    const data = await this.bridge.observeOpenCodeTeamMessageDelivery({
+      runId: input.runId,
+      laneId: input.laneId,
+      teamId: input.teamName,
+      teamName: input.teamName,
+      projectPath: input.cwd,
+      memberName: input.memberName,
+      messageId: input.messageId,
+      prePromptCursor: input.prePromptCursor ?? null,
+    });
+
+    return {
+      ok: data.observed,
+      providerId: this.providerId,
+      memberName: input.memberName,
+      sessionId: data.sessionId,
+      runtimePid: data.runtimePid,
+      responseObservation: data.responseObservation,
       diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
     };
   }
@@ -564,6 +617,10 @@ function buildMemberBootstrapPrompt(
     'After runtime identity check-in, if you have not already done so, call MCP tool agent-teams_member_briefing (or mcp__agent-teams__member_briefing if that is the exposed name) with:',
     `{ "teamName": "${input.teamName}", "memberName": "${member.name}", "runtimeProvider": "opencode" }`,
     'If that tool is not available, stay idle and wait for app-delivered instructions. Do not improvise a replacement workflow.',
+    'Launch bootstrap is a silent attach, not a user/team conversation turn.',
+    'After runtime_bootstrap_checkin and member_briefing both succeed, stop this turn immediately and wait for app-delivered messages or actionable task assignments.',
+    'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
+    'If the briefing says there are no actionable tasks, stay idle silently.',
     '',
     'When you need to message the human user, team lead, or another teammate, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.',
     `Always set from="${member.name}" when sending a team message from this OpenCode teammate.`,
@@ -582,17 +639,24 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
     'You are running in OpenCode, not Claude Code or Codex native.',
     'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
     `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
+    'Include source="runtime_delivery" in that message_send call.',
+    input.messageId
+      ? `Include relayOfMessageId="${input.messageId}" in that message_send call.`
+      : null,
+    'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
     'Do not answer only with plain assistant text when agent-teams_message_send is available.',
     'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',
     'Do not invent placeholder task labels. If no explicit taskRefs are provided and the reply is not about a real board task, do not prefix text or summary with a # task label; never use #00000000.',
+    'The inbound app message follows. Treat it as the actual instruction to process now, not as background context.',
+    'If the inbound message asks for exact reply text, use that exact text. Do not replace concrete instructions with a generic greeting or availability message.',
     input.actionMode ? `Action mode for this message: ${input.actionMode}.` : null,
     taskRefs ? `If your reply is about these tasks, include taskRefs exactly: ${taskRefs}` : null,
-    input.messageId
-      ? `The inbound app messageId is "${input.messageId}"; keep it only as context unless a tool explicitly asks for provenance.`
-      : null,
+    input.messageId ? `The inbound app messageId is "${input.messageId}".` : null,
     '</opencode_app_message_delivery>',
     '',
+    '<opencode_inbound_app_message>',
     input.text,
+    '</opencode_inbound_app_message>',
   ]
     .filter((line): line is string => line !== null)
     .join('\n');

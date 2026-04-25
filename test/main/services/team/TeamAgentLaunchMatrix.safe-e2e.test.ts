@@ -109,6 +109,42 @@ describe('Team agent launch matrix safe e2e', () => {
     ).resolves.toContain('"teamLaunchState": "clean_success"');
   });
 
+  it('accepts pure OpenCode runtime bootstrap check-ins during adapter launch', async () => {
+    const svc = new TeamProvisioningService();
+    const adapter = new BootstrapCheckingOpenCodeRuntimeAdapter(svc);
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'pure-opencode-bootstrap-during-launch-safe-e2e',
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+
+    expect(runId).toBe(adapter.launchInputs[0]?.runId);
+    expect(adapter.bootstrapCheckins).toEqual([
+      {
+        memberName: 'alice',
+        runId,
+        state: 'accepted',
+      },
+    ]);
+
+    const statuses = await svc.getMemberSpawnStatuses(
+      'pure-opencode-bootstrap-during-launch-safe-e2e'
+    );
+    expect(statuses.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+    });
+  });
+
   it('keeps failed OpenCode runtime adapter launches out of alive teams', async () => {
     const adapter = new FakeOpenCodeRuntimeAdapter('partial_failure');
     const svc = new TeamProvisioningService();
@@ -16124,6 +16160,36 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       return 'partial_pending';
     }
     return 'clean_success';
+  }
+}
+
+class BootstrapCheckingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
+  readonly bootstrapCheckins: { memberName: string; runId: string; state: string }[] = [];
+
+  constructor(private readonly svc: TeamProvisioningService) {
+    super();
+  }
+
+  override async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    const firstMember = input.expectedMembers[0];
+    if (!firstMember) {
+      return super.launch(input);
+    }
+
+    const ack = await this.svc.recordOpenCodeRuntimeBootstrapCheckin({
+      teamName: input.teamName,
+      runId: input.runId,
+      memberName: firstMember.name,
+      runtimeSessionId: `session-${firstMember.name}`,
+      observedAt: new Date().toISOString(),
+    });
+    this.bootstrapCheckins.push({
+      memberName: firstMember.name,
+      runId: input.runId,
+      state: ack.state,
+    });
+
+    return super.launch(input);
   }
 }
 

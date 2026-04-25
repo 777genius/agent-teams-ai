@@ -205,6 +205,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
     const launchArg = launchOpenCodeTeam.mock.calls[0]?.[0];
     expect(launchArg?.members[0]?.prompt).toContain('Do NOT create local team files');
+    expect(launchArg?.members[0]?.prompt).toContain('Launch bootstrap is a silent attach');
+    expect(launchArg?.members[0]?.prompt).toContain('stay idle silently');
     expect(launchArg?.members[0]?.prompt).not.toContain('Join team "team-a"');
   });
 
@@ -349,11 +351,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       memberName: 'bob',
       text: expect.stringContaining('agent-teams_message_send'),
       messageId: 'msg-1',
+      actionMode: 'delegate',
+      taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
       agent: 'teammate',
     });
     const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
     expect(sentText).toContain('hello bob');
     expect(sentText).toContain('Use teamName="team-a", to="alice", from="bob", text, and summary.');
+    expect(sentText).toContain('Include source="runtime_delivery"');
+    expect(sentText).toContain('Include relayOfMessageId="msg-1"');
     expect(sentText).toContain('Action mode for this message: delegate.');
     expect(sentText).toContain(
       'If your reply is about these tasks, include taskRefs exactly: [{"taskId":"task-1","displayId":"abcd1234","teamName":"team-a"}]'

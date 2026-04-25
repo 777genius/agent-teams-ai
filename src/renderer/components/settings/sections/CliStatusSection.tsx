@@ -32,6 +32,7 @@ import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { formatBytes } from '@renderer/utils/formatters';
+import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import {
@@ -122,7 +123,7 @@ function getProviderLabel(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode';
+      return 'OpenCode (75+ LLM providers)';
   }
 }
 
@@ -185,6 +186,9 @@ function getProviderTerminalLogoutCommand(provider: CliProviderStatus): {
 export const CliStatusSection = (): React.JSX.Element | null => {
   const isElectron = useMemo(() => isElectronMode(), []);
   const appConfig = useStore((s) => s.appConfig);
+  const selectedProjectId = useStore((s) => s.selectedProjectId);
+  const projects = useStore((s) => s.projects);
+  const repositoryGroups = useStore((s) => s.repositoryGroups);
   const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const updateConfig = useStore((s) => s.updateConfig);
   const {
@@ -211,6 +215,10 @@ export const CliStatusSection = (): React.JSX.Element | null => {
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('gemini');
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
+  const selectedProjectPath = useMemo(
+    () => resolveProjectPathById(selectedProjectId, projects, repositoryGroups)?.path ?? null,
+    [projects, repositoryGroups, selectedProjectId]
+  );
   const loadingCliStatus =
     !cliStatus && cliStatusLoading && multimodelEnabled
       ? createLoadingMultimodelCliStatus()
@@ -645,15 +653,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                   open={manageDialogOpen}
                   onOpenChange={setManageDialogOpen}
                   providers={effectiveCliStatus.providers}
+                  projectPath={selectedProjectPath}
                   initialProviderId={manageProviderId}
                   providerStatusLoading={cliProviderStatusLoading}
                   disabled={!effectiveCliStatus.binaryPath || isBusy || cliStatusLoading}
                   onSelectBackend={handleRuntimeBackendChange}
-                  onRefreshProvider={(providerId) =>
-                    fetchCliProviderStatus(providerId, {
-                      verifyModels: providerId === 'opencode',
-                    })
-                  }
+                  onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
                   onRequestLogin={(providerId) =>
                     setProviderTerminal({ providerId, action: 'login' })
                   }

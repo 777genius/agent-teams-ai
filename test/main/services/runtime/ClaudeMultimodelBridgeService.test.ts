@@ -63,11 +63,11 @@ describe('ClaudeMultimodelBridgeService', () => {
     buildProviderAwareCliEnvMock.mockImplementation(
       ({ providerId }: { providerId?: string } = {}) =>
         Promise.resolve({
-        env: {
-          HOME: '/Users/tester',
-          ...(providerId ? { CLAUDE_CODE_ENTRY_PROVIDER: providerId } : {}),
-        },
-        connectionIssues: {},
+          env: {
+            HOME: '/Users/tester',
+            ...(providerId ? { CLAUDE_CODE_ENTRY_PROVIDER: providerId } : {}),
+          },
+          connectionIssues: {},
         })
     );
     readFileMock.mockImplementation((filePath) => {
@@ -221,7 +221,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(providers[3]).toMatchObject({
       providerId: 'opencode',
-      displayName: 'OpenCode',
+      displayName: 'OpenCode (75+ LLM providers)',
       supported: false,
       authenticated: false,
       models: [],
@@ -237,8 +237,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     buildProviderAwareCliEnvMock.mockResolvedValue({
       env: { HOME: '/Users/tester' },
       connectionIssues: {
-        anthropic:
-          'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.',
+        anthropic: 'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.',
       },
     });
     execCliMock.mockResolvedValue({
@@ -511,7 +510,8 @@ describe('ClaudeMultimodelBridgeService', () => {
                 plugins: {
                   status: 'unsupported',
                   ownership: 'shared',
-                  reason: 'Plugins are not currently guaranteed for codex-native sessions in the multimodel runtime.',
+                  reason:
+                    'Plugins are not currently guaranteed for codex-native sessions in the multimodel runtime.',
                 },
                 mcp: {
                   status: 'unsupported',
@@ -636,14 +636,16 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     const codex = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'codex');
 
-    expect(codex.availableBackends?.find((backend) => backend.id === 'codex-native')).toMatchObject({
-      id: 'codex-native',
-      selectable: true,
-      available: true,
-      state: 'ready',
-      audience: 'general',
-      statusMessage: 'Ready',
-    });
+    expect(codex.availableBackends?.find((backend) => backend.id === 'codex-native')).toMatchObject(
+      {
+        id: 'codex-native',
+        selectable: true,
+        available: true,
+        state: 'ready',
+        audience: 'general',
+        statusMessage: 'Ready',
+      }
+    );
   });
 
   it('preserves codex-native runtime-missing rollout states from runtime status payloads', async () => {
@@ -657,7 +659,8 @@ describe('ClaudeMultimodelBridgeService', () => {
             verificationState: 'unknown',
             canLoginFromUi: false,
             statusMessage: 'Codex native runtime unavailable',
-            detailMessage: 'Codex native runtime requires the codex CLI binary to be installed and discoverable.',
+            detailMessage:
+              'Codex native runtime requires the codex CLI binary to be installed and discoverable.',
             selectedBackendId: 'codex-native',
             resolvedBackendId: null,
             availableBackends: [
@@ -670,7 +673,8 @@ describe('ClaudeMultimodelBridgeService', () => {
                 state: 'runtime-missing',
                 audience: 'general',
                 statusMessage: 'Codex CLI not found',
-                detailMessage: 'Codex native runtime requires the codex CLI binary to be installed and discoverable.',
+                detailMessage:
+                  'Codex native runtime requires the codex CLI binary to be installed and discoverable.',
               },
             ],
             capabilities: {
@@ -697,14 +701,16 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     const codex = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'codex');
 
-    expect(codex.availableBackends?.find((backend) => backend.id === 'codex-native')).toMatchObject({
-      id: 'codex-native',
-      selectable: false,
-      available: false,
-      state: 'runtime-missing',
-      audience: 'general',
-      statusMessage: 'Codex CLI not found',
-    });
+    expect(codex.availableBackends?.find((backend) => backend.id === 'codex-native')).toMatchObject(
+      {
+        id: 'codex-native',
+        selectable: false,
+        available: false,
+        state: 'runtime-missing',
+        audience: 'general',
+        statusMessage: 'Codex CLI not found',
+      }
+    );
   });
 
   it('uses live OpenCode verification on explicit provider verify', async () => {
@@ -783,12 +789,25 @@ describe('ClaudeMultimodelBridgeService', () => {
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
     const service = new ClaudeMultimodelBridgeService();
 
-    const provider = await service.verifyProviderStatus('/mock/agent_teams_orchestrator', 'opencode');
+    const provider = await service.verifyProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode'
+    );
 
     expect(provider).toMatchObject({
       providerId: 'opencode',
       verificationState: 'verified',
       detailMessage: expect.stringContaining('live resolved-fin'),
+      capabilities: {
+        extensions: {
+          plugins: {
+            status: 'unsupported',
+          },
+          mcp: {
+            status: 'read-only',
+          },
+        },
+      },
       backend: {
         kind: 'opencode-cli',
         authMethodDetail: 'managed teammate agent',
@@ -971,67 +990,9 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(toolNames).not.toContain('SendMessage');
   });
 
-  it('verifies OpenCode models through execution-grade runtime probes', async () => {
+  it('keeps OpenCode model verification catalog-only in the bridge', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
-
-      if (
-        normalizedArgs
-        === 'runtime verify-model --json --provider opencode --model openai/gpt-5.4-mini'
-      ) {
-        return Promise.resolve({
-          stdout: JSON.stringify({
-            schemaVersion: 1,
-            providerId: 'opencode',
-            result: {
-              modelId: 'openai/gpt-5.4-mini',
-              outcome: 'unavailable',
-              reason: 'Token refresh failed: 401',
-            },
-          }),
-          stderr: '',
-          exitCode: 0,
-        });
-      }
-
-      if (
-        normalizedArgs
-        === 'runtime verify-model --json --provider opencode --model opencode/big-pickle'
-      ) {
-        return Promise.resolve({
-          stdout: JSON.stringify({
-            schemaVersion: 1,
-            providerId: 'opencode',
-            result: {
-              modelId: 'opencode/big-pickle',
-              outcome: 'available',
-              reason: null,
-            },
-          }),
-          stderr: '',
-          exitCode: 0,
-        });
-      }
-
-      if (
-        normalizedArgs
-        === 'runtime verify-model --json --provider opencode --model openrouter/moonshotai/kimi-k2'
-      ) {
-        return Promise.resolve({
-          stdout: JSON.stringify({
-            schemaVersion: 1,
-            providerId: 'opencode',
-            result: {
-              modelId: 'openrouter/moonshotai/kimi-k2',
-              outcome: 'available',
-              reason: null,
-            },
-          }),
-          stderr: '',
-          exitCode: 0,
-        });
-      }
-
       return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
     });
 
@@ -1070,23 +1031,8 @@ describe('ClaudeMultimodelBridgeService', () => {
       connection: null,
     });
 
-    expect(provider.modelVerificationState).toBe('verified');
-      expect(provider.modelAvailability).toEqual([
-        expect.objectContaining({
-          modelId: 'openai/gpt-5.4-mini',
-          status: 'unavailable',
-          reason: 'Token refresh failed: 401',
-        }),
-        expect.objectContaining({
-          modelId: 'openrouter/moonshotai/kimi-k2',
-          status: 'available',
-          reason: null,
-        }),
-        expect.objectContaining({
-          modelId: 'opencode/big-pickle',
-          status: 'available',
-          reason: null,
-        }),
-    ]);
+    expect(execCliMock).not.toHaveBeenCalled();
+    expect(provider.modelVerificationState).toBe('idle');
+    expect(provider.modelAvailability).toEqual([]);
   });
 });

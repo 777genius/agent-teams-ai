@@ -50,7 +50,7 @@ vi.mock('@renderer/store', () => ({
 }));
 
 vi.mock('zustand/react/shallow', () => ({
-  useShallow: <T,>(selector: T) => selector,
+  useShallow: <T>(selector: T) => selector,
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -144,16 +144,19 @@ vi.mock('@renderer/components/ui/button', () => ({
 vi.mock('@renderer/components/ui/tabs', () => ({
   Tabs: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
   TabsList: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
-  TabsContent: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  TabsContent: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
 }));
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: React.PropsWithChildren) =>
     React.createElement(React.Fragment, null, children),
-  Tooltip: ({ children }: React.PropsWithChildren) => React.createElement(React.Fragment, null, children),
+  Tooltip: ({ children }: React.PropsWithChildren) =>
+    React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: React.PropsWithChildren) =>
     React.createElement(React.Fragment, null, children),
-  TooltipContent: ({ children }: React.PropsWithChildren) => React.createElement('span', null, children),
+  TooltipContent: ({ children }: React.PropsWithChildren) =>
+    React.createElement('span', null, children),
 }));
 
 vi.mock('@renderer/components/extensions/ExtensionsSubTabTrigger', () => ({
@@ -409,6 +412,61 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     });
   });
 
+  it('shows OpenCode plugins as unsupported in multimodel capability cards', async () => {
+    storeState.cliStatusLoading = false;
+    storeState.cliProviderStatusLoading = {};
+    const baseProvider = createLoadingMultimodelStatus().providers[0];
+    storeState.cliStatus = {
+      ...createLoadingMultimodelStatus(),
+      authLoggedIn: true,
+      authStatusChecking: false,
+      providers: [
+        {
+          ...baseProvider,
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: 'OpenCode CLI',
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: {
+              plugins: { status: 'unsupported', ownership: 'provider-scoped', reason: null },
+              mcp: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+              skills: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+              apiKeys: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+            },
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('Plugins: unsupported');
+    expect(host.textContent).toContain('MCP: read-only');
+    expect(host.textContent).not.toContain('Plugins: read-only');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses the live Codex account snapshot to replace stale extension-card status', async () => {
     storeState.cliStatusLoading = false;
     storeState.cliProviderStatusLoading = {};
@@ -443,9 +501,7 @@ describe('ExtensionStoreView provider loading placeholders', () => {
       ...createLoadingMultimodelStatus(),
       authLoggedIn: true,
       authStatusChecking: false,
-      providers: [
-        createLoadingMultimodelStatus().providers[1],
-      ],
+      providers: [createLoadingMultimodelStatus().providers[1]],
     };
 
     const host = document.createElement('div');
@@ -659,9 +715,9 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     expect(pluginsPanelProps.cliStatus?.providers[0]?.supported).toBe(true);
     expect(pluginsPanelProps.cliStatus?.providers[0]?.statusMessage).toBe('ChatGPT account ready');
     expect(mcpPanelProps.cliStatus?.providers[0]?.resolvedBackendId).toBe('codex-native');
-    expect(customDialogProps.cliStatus?.providers[0]?.connection?.codex?.managedAccount?.email).toBe(
-      'user@example.com'
-    );
+    expect(
+      customDialogProps.cliStatus?.providers[0]?.connection?.codex?.managedAccount?.email
+    ).toBe('user@example.com');
 
     await act(async () => {
       root.unmount();

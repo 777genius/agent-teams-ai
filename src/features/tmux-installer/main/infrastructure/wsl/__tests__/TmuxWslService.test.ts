@@ -108,6 +108,90 @@ describe('TmuxWslService', () => {
     expect(result.status.tmuxBinaryPath).toBe('/usr/bin/tmux');
   });
 
+  it('does not target Docker Desktop when it is the only WSL distribution', async () => {
+    const service = new TmuxWslService(
+      createExecFileMock({
+        '--status': { stdout: 'Default Distribution: docker-desktop\nDefault Version: 2\n' },
+        '--list --quiet': { stdout: 'docker-desktop\n' },
+      }),
+      createPreferenceStore() as never
+    );
+
+    const result = await service.probe();
+
+    expect(result.preference).toBeNull();
+    expect(result.status.wslInstalled).toBe(true);
+    expect(result.status.distroName).toBeNull();
+    expect(result.status.distroBootstrapped).toBe(false);
+    expect(result.status.innerPackageManager).toBeNull();
+    expect(result.status.tmuxAvailableInsideWsl).toBe(false);
+    expect(result.status.statusDetail).toContain('only service distributions');
+    expect(result.status.statusDetail).toContain('docker-desktop');
+  });
+
+  it('ignores a service default distro and targets the only user distro', async () => {
+    const service = new TmuxWslService(
+      createExecFileMock({
+        '--status': { stdout: 'Default Distribution: docker-desktop\nDefault Version: 2\n' },
+        '--list --quiet': { stdout: 'docker-desktop\nUbuntu\n' },
+        '--list --verbose': {
+          stdout: '* docker-desktop    Running    2\n  Ubuntu    Stopped    2\n',
+        },
+        '-d Ubuntu -- sh -lc printf ready': { stdout: 'ready' },
+        '-d Ubuntu -- sh -lc . /etc/os-release >/dev/null 2>&1 && printf %s "$ID"': {
+          stdout: 'ubuntu',
+        },
+        '-d Ubuntu -- sh -lc command -v tmux >/dev/null 2>&1 && { tmux -V; printf "\\n"; command -v tmux; }':
+          {
+            stdout: '',
+            stderr: '',
+            error: Object.assign(new Error('tmux missing'), { code: 'EFAIL' }),
+          },
+      }),
+      createPreferenceStore() as never
+    );
+
+    const result = await service.probe();
+
+    expect(result.preference?.preferredDistroName).toBe('Ubuntu');
+    expect(result.preference?.source).toBe('manual');
+    expect(result.status.distroName).toBe('Ubuntu');
+    expect(result.status.innerPackageManager).toBe('apt');
+    expect(result.status.tmuxAvailableInsideWsl).toBe(false);
+    expect(result.status.statusDetail).toBe(
+      'tmux is not installed inside the Ubuntu WSL distro yet.'
+    );
+  });
+
+  it('uses a recommended Ubuntu target when a service distro is default among multiple user distros', async () => {
+    const service = new TmuxWslService(
+      createExecFileMock({
+        '--status': { stdout: 'Default Distribution: docker-desktop\nDefault Version: 2\n' },
+        '--list --quiet': { stdout: 'docker-desktop\nDebian\nUbuntu-24.04\nFedora\n' },
+        '--list --verbose': {
+          stdout:
+            '* docker-desktop    Running    2\n  Debian    Stopped    2\n  Ubuntu-24.04    Stopped    2\n  Fedora    Stopped    2\n',
+        },
+        '-d Ubuntu-24.04 -- sh -lc printf ready': { stdout: 'ready' },
+        '-d Ubuntu-24.04 -- sh -lc . /etc/os-release >/dev/null 2>&1 && printf %s "$ID"': {
+          stdout: 'ubuntu',
+        },
+        '-d Ubuntu-24.04 -- sh -lc command -v tmux >/dev/null 2>&1 && { tmux -V; printf "\\n"; command -v tmux; }':
+          {
+            stdout: 'tmux 3.4\n/usr/bin/tmux\n',
+          },
+      }),
+      createPreferenceStore() as never
+    );
+
+    const result = await service.probe();
+
+    expect(result.preference?.preferredDistroName).toBe('Ubuntu-24.04');
+    expect(result.preference?.source).toBe('manual');
+    expect(result.status.distroName).toBe('Ubuntu-24.04');
+    expect(result.status.tmuxAvailableInsideWsl).toBe(true);
+  });
+
   it('prefers the persisted distro over the default WSL marker', async () => {
     const service = new TmuxWslService(
       createExecFileMock({
@@ -131,6 +215,35 @@ describe('TmuxWslService', () => {
     expect(result.preference?.preferredDistroName).toBe('Ubuntu');
     expect(result.preference?.source).toBe('persisted');
     expect(result.status.distroName).toBe('Ubuntu');
+  });
+
+  it('prefers the persisted user distro over a service default distro', async () => {
+    const service = new TmuxWslService(
+      createExecFileMock({
+        '--status': { stdout: 'Default Distribution: docker-desktop\nDefault Version: 2\n' },
+        '--list --quiet': { stdout: 'docker-desktop\nUbuntu\nDebian\n' },
+        '--list --verbose': {
+          stdout:
+            '* docker-desktop    Running    2\n  Ubuntu    Stopped    2\n  Debian    Stopped    2\n',
+        },
+        '-d Debian -- sh -lc printf ready': { stdout: 'ready' },
+        '-d Debian -- sh -lc . /etc/os-release >/dev/null 2>&1 && printf %s "$ID"': {
+          stdout: 'debian',
+        },
+        '-d Debian -- sh -lc command -v tmux >/dev/null 2>&1 && { tmux -V; printf "\\n"; command -v tmux; }':
+          {
+            stdout: 'tmux 3.4\n/usr/bin/tmux\n',
+          },
+      }),
+      createPreferenceStore('Debian') as never
+    );
+
+    const result = await service.probe();
+
+    expect(result.preference?.preferredDistroName).toBe('Debian');
+    expect(result.preference?.source).toBe('persisted');
+    expect(result.status.distroName).toBe('Debian');
+    expect(result.status.tmuxAvailableInsideWsl).toBe(true);
   });
 
   it('clears a stale preferred distro when WSL has no installed distributions', async () => {
@@ -205,7 +318,7 @@ describe('TmuxWslService', () => {
         encoding: 'buffer';
       },
       callback: (error: Error | null, stdout: string | Buffer, stderr: string | Buffer) => void
-    ) => {
+    ): void => {
       if (command === 'powershell.exe') {
         callback(
           null,

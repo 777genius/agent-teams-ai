@@ -11,6 +11,7 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.reconcileTeam'
   | 'opencode.stopTeam'
   | 'opencode.sendMessage'
+  | 'opencode.observeMessageDelivery'
   | 'opencode.answerPermission'
   | 'opencode.listRuntimePermissions'
   | 'opencode.getRuntimeTranscript'
@@ -156,8 +157,44 @@ export interface OpenCodeSendMessageCommandBody {
   memberName: string;
   text: string;
   messageId?: string;
+  actionMode?: 'do' | 'ask' | 'delegate';
+  taskRefs?: { taskId: string; displayId: string; teamName: string }[];
   agent?: string;
   noReply?: boolean;
+}
+
+export type OpenCodeDeliveryResponseState =
+  | 'not_observed'
+  | 'pending'
+  | 'prompt_not_indexed'
+  | 'responded_tool_call'
+  | 'responded_visible_message'
+  | 'responded_non_visible_tool'
+  | 'responded_plain_text'
+  | 'permission_blocked'
+  | 'tool_error'
+  | 'empty_assistant_turn'
+  | 'session_stale'
+  | 'session_error'
+  | 'reconcile_failed';
+
+export type OpenCodeDeliveryVisibleReplyCorrelation =
+  | 'relayOfMessageId'
+  | 'direct_child_message_send'
+  | 'plain_assistant_text';
+
+export interface OpenCodeDeliveryResponseObservation {
+  state: OpenCodeDeliveryResponseState;
+  deliveredUserMessageId: string | null;
+  assistantMessageId: string | null;
+  toolCallNames: string[];
+  visibleMessageToolCallId: string | null;
+  visibleReplyMessageId: string | null;
+  visibleReplyCorrelation: OpenCodeDeliveryVisibleReplyCorrelation | null;
+  visibleReplyMissingRelayOfMessageId?: boolean;
+  latestAssistantPreview: string | null;
+  needsFullHistory?: boolean;
+  reason: string | null;
 }
 
 export interface OpenCodeSendMessageCommandData {
@@ -165,6 +202,28 @@ export interface OpenCodeSendMessageCommandData {
   sessionId?: string;
   memberName: string;
   runtimePid?: number;
+  prePromptCursor?: string | null;
+  responseObservation?: OpenCodeDeliveryResponseObservation;
+  diagnostics: OpenCodeTeamBridgeDiagnostic[];
+}
+
+export interface OpenCodeObserveMessageDeliveryCommandBody {
+  runId?: string;
+  laneId: string;
+  teamId: string;
+  teamName: string;
+  projectPath: string;
+  memberName: string;
+  messageId: string;
+  prePromptCursor?: string | null;
+}
+
+export interface OpenCodeObserveMessageDeliveryCommandData {
+  observed: boolean;
+  sessionId?: string;
+  memberName: string;
+  runtimePid?: number;
+  responseObservation: OpenCodeDeliveryResponseObservation;
   diagnostics: OpenCodeTeamBridgeDiagnostic[];
 }
 
@@ -310,6 +369,7 @@ const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
   'opencode.reconcileTeam',
   'opencode.stopTeam',
   'opencode.sendMessage',
+  'opencode.observeMessageDelivery',
   'opencode.answerPermission',
   'opencode.listRuntimePermissions',
   'opencode.getRuntimeTranscript',

@@ -39,6 +39,13 @@ interface TeamNode {
   robots: RobotNode[];
 }
 
+interface MessageFlightState {
+  progress: number;
+  motionSpeed: number;
+  bubbleScale: number;
+  bubbleAlpha: number;
+}
+
 interface DepthParticle {
   x: number;
   y: number;
@@ -52,7 +59,6 @@ interface Palette {
   isLight: boolean;
   centerGlow: string;
   teamColors: string[];
-  teamLineAlpha: number;
   robotBody: string;
   robotShade: string;
   robotEye: string;
@@ -63,6 +69,7 @@ interface Palette {
 const TAU = Math.PI * 2;
 const TEAM_MEMBER_COUNTS = [4, 3, 5] as const;
 const TEAM_MEMBER_OFFSETS = [0, 4, 7] as const;
+const TEAM_LABELS = ['Marketing', 'Researchers', 'Coding'] as const;
 const MAX_DPR = 2;
 const avatarCache = new Map<string, HTMLImageElement>();
 const avatarLoading = new Map<string, Promise<HTMLImageElement | null>>();
@@ -191,13 +198,13 @@ function drawScene(
   drawMessages(ctx, teams, sceneTime, palette, mobile);
 
   for (const team of teams) {
-    drawTeamLinks(ctx, team, palette);
-  }
-
-  for (const team of teams) {
     for (const robot of team.robots) {
       drawRobot(ctx, robot, sceneTime, palette);
     }
+  }
+
+  for (const team of teams) {
+    drawTeamLabel(ctx, team, palette, mobile);
   }
 }
 
@@ -208,7 +215,6 @@ function resolvePalette(): Palette {
         isLight,
         centerGlow: '#4f46e5',
         teamColors: ['#0369a1', '#047857', '#b45309'],
-        teamLineAlpha: 0.26,
         robotBody: '#eef2ff',
         robotShade: '#dbe4ff',
         robotEye: '#ffffff',
@@ -219,7 +225,6 @@ function resolvePalette(): Palette {
         isLight,
         centerGlow: '#7c83f7',
         teamColors: ['#24a8d8', '#23b488', '#d58a19'],
-        teamLineAlpha: 0.28,
         robotBody: '#0f1724',
         robotShade: '#1a2438',
         robotEye: '#d8f3ff',
@@ -412,22 +417,6 @@ function drawTeamHalo(
   ctx.setLineDash([]);
 }
 
-function drawTeamLinks(ctx: CanvasRenderingContext2D, team: TeamNode, palette: Palette): void {
-  const pairs = getTeamConnectionPairs(team.robots.length);
-
-  for (const [fromIndex, toIndex] of pairs) {
-    const from = team.robots[fromIndex];
-    const to = team.robots[toIndex];
-    if (!from || !to) continue;
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.strokeStyle = withAlpha(team.color, palette.teamLineAlpha);
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-}
-
 function drawMessages(
   ctx: CanvasRenderingContext2D,
   teams: TeamNode[],
@@ -459,10 +448,10 @@ function drawLocalMessages(
     if (!from || !to) continue;
     const raw = positiveModulo(time + team.index * 0.7 + pairIndex * 0.36, period) / period;
     applyReceivePulse(to, getReceivePulse(raw, activeWindow));
-    if (raw > activeWindow) continue;
-    const progress = easeInOutCubic(raw / activeWindow);
+    const flightState = getMessageFlightState(raw, activeWindow, 0.12);
+    if (!flightState) continue;
     const curve = makeLocalCurve(from, to, team.center, team.radius * 0.42);
-    drawMessageFlight(ctx, curve, progress, team.color, time, mobile ? 4.6 : 5.8, palette);
+    drawMessageFlight(ctx, curve, flightState, team.color, mobile ? 4.6 : 5.8, palette);
   }
 }
 
@@ -491,15 +480,14 @@ function drawCrossTeamMessages(
     const to = toTeam.robots[route.toRobot % toTeam.robots.length];
     if (!from || !to) continue;
     applyReceivePulse(to, getReceivePulse(raw, activeWindow) * 0.88);
-    if (raw > activeWindow) continue;
-    const progress = easeInOutCubic(raw / activeWindow);
-    const curve = makeStraightCurve(fromTeam.center, toTeam.center);
+    const flightState = getMessageFlightState(raw, activeWindow, 0.1);
+    if (!flightState) continue;
+    const curve = makeStraightCurve(from, to);
     drawMessageFlight(
       ctx,
       curve,
-      progress,
+      flightState,
       route.accent ? palette.messageAccent : fromTeam.color,
-      time,
       mobile ? 5.2 : 6.8,
       palette,
       true
@@ -510,43 +498,115 @@ function drawCrossTeamMessages(
 function drawMessageFlight(
   ctx: CanvasRenderingContext2D,
   curve: [Point, Point, Point, Point],
-  progress: number,
+  state: MessageFlightState,
   color: string,
-  time: number,
   size: number,
   palette: Palette,
   crossTeam = false
 ): void {
   const [p0, p1, p2, p3] = curve;
   ctx.save();
-  if (!crossTeam) {
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-    ctx.strokeStyle = withAlpha(color, 0.12);
-    ctx.lineWidth = 0.85;
-    ctx.setLineDash([4, 8]);
-    ctx.lineDashOffset = -time * 34;
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
 
-  for (let i = 7; i >= 1; i--) {
-    const t = progress - i * 0.036;
-    if (t <= 0) continue;
-    const point = cubicPoint(p0, p1, p2, p3, t);
-    const alpha = (1 - i / 8) * (palette.isLight ? 0.14 : 0.2);
-    ctx.fillStyle = withAlpha(color, alpha);
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, size * (0.18 + i * 0.025), 0, TAU);
-    ctx.fill();
+  const progress = state.progress;
+  const speed = clamp(state.motionSpeed, 0, 1);
+  if (speed > 0.045) {
+    drawSpeedTrail(ctx, curve, progress, speed, color, size, palette, crossTeam);
   }
 
   const position = cubicPoint(p0, p1, p2, p3, progress);
   const tangent = cubicTangent(p0, p1, p2, p3, progress);
   const angle = Math.atan2(tangent.y, tangent.x);
-  drawMessageBubble(ctx, position, angle, size, color, palette, crossTeam);
+  drawMessageBubble(
+    ctx,
+    position,
+    angle,
+    size,
+    color,
+    palette,
+    crossTeam,
+    state.bubbleScale,
+    state.bubbleAlpha
+  );
   ctx.restore();
+}
+
+function drawSpeedTrail(
+  ctx: CanvasRenderingContext2D,
+  curve: [Point, Point, Point, Point],
+  progress: number,
+  speed: number,
+  color: string,
+  size: number,
+  palette: Palette,
+  crossTeam: boolean
+): void {
+  const [p0, p1, p2, p3] = curve;
+  const trailLength = (crossTeam ? 0.26 : 0.21) * (0.24 + speed * 1.08);
+  const segmentCount = Math.round(9 + speed * 10);
+  const alphaBase = (palette.isLight ? 0.22 : 0.32) * speed;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = withAlpha(color, alphaBase * 0.58);
+  ctx.shadowBlur = size * (0.78 + speed * 1.28);
+
+  for (let segment = 0; segment < segmentCount; segment++) {
+    const startRatio = segment / segmentCount;
+    const endRatio = (segment + 1) / segmentCount;
+    const t0 = progress - trailLength * (1 - startRatio);
+    const t1 = progress - trailLength * (1 - endRatio);
+    if (t1 <= 0) continue;
+
+    const from = cubicPoint(p0, p1, p2, p3, Math.max(0, t0));
+    const to = cubicPoint(p0, p1, p2, p3, Math.max(0, t1));
+    const headWeight = endRatio * endRatio;
+    const width = size * (0.12 + headWeight * 0.48) * (0.9 + speed * 0.45);
+    const alpha = alphaBase * headWeight;
+
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = withAlpha(color, alpha * 0.34);
+    ctx.lineWidth = width * 2.35;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = withAlpha(color, alpha);
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function getMessageFlightState(
+  raw: number,
+  activeWindow: number,
+  settleWindow: number
+): MessageFlightState | null {
+  if (raw > activeWindow + settleWindow) return null;
+
+  if (raw <= activeWindow) {
+    const phase = raw / activeWindow;
+    return {
+      progress: easeInOutCubic(phase),
+      motionSpeed: getEasedMotionSpeed(phase),
+      bubbleScale: 1,
+      bubbleAlpha: 1,
+    };
+  }
+
+  const settlePhase = (raw - activeWindow) / settleWindow;
+  const eased = easeOutCubic(settlePhase);
+  return {
+    progress: 1,
+    motionSpeed: 0,
+    bubbleScale: Math.max(0.12, 1 - eased * 0.88),
+    bubbleAlpha: Math.max(0, 1 - eased),
+  };
 }
 
 function applyReceivePulse(robot: RobotNode, pulse: number): void {
@@ -554,12 +614,26 @@ function applyReceivePulse(robot: RobotNode, pulse: number): void {
 }
 
 function getReceivePulse(raw: number, activeWindow: number): number {
-  const start = activeWindow * 0.78;
-  const end = Math.min(0.96, activeWindow + 0.11);
+  const previousStart = activeWindow * 0.78;
+  const previousEnd = Math.min(0.96, activeWindow + 0.11);
+  const duration = (previousEnd - previousStart) / 3;
+  const start = activeWindow - duration * 0.62;
+  const end = activeWindow + duration * 0.38;
   if (raw < start || raw > end) return 0;
 
   const phase = (raw - start) / (end - start);
   return Math.sin(phase * Math.PI) * (1 - phase * 0.28);
+}
+
+function getEasedMotionSpeed(value: number): number {
+  const t = clamp(value, 0, 1);
+  const derivative = t < 0.5 ? 12 * t * t : 12 * (1 - t) * (1 - t);
+  return clamp(derivative / 3, 0, 1);
+}
+
+function easeOutCubic(value: number): number {
+  const t = clamp(value, 0, 1);
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function drawMessageBubble(
@@ -569,13 +643,19 @@ function drawMessageBubble(
   size: number,
   color: string,
   palette: Palette,
-  crossTeam: boolean
+  crossTeam: boolean,
+  scale = 1,
+  alpha = 1
 ): void {
+  if (scale <= 0.02 || alpha <= 0.01) return;
+
   ctx.save();
   ctx.translate(position.x, position.y);
   ctx.rotate(angle * 0.08);
-  ctx.shadowColor = withAlpha(color, palette.isLight ? 0.16 : 0.3);
-  ctx.shadowBlur = crossTeam ? 12 : 8;
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = withAlpha(color, (palette.isLight ? 0.16 : 0.3) * alpha);
+  ctx.shadowBlur = (crossTeam ? 12 : 8) * (0.5 + scale * 0.5);
 
   const width = size * (crossTeam ? 2.28 : 2.06);
   const height = size * 1.42;
@@ -597,6 +677,44 @@ function drawMessageBubble(
     ctx.arc(i * size * 0.4, -size * 0.02, size * 0.095, 0, TAU);
     ctx.fill();
   }
+  ctx.restore();
+}
+
+function drawTeamLabel(
+  ctx: CanvasRenderingContext2D,
+  team: TeamNode,
+  palette: Palette,
+  mobile: boolean
+): void {
+  const label = TEAM_LABELS[team.index] ?? '';
+  if (!label) return;
+
+  const fontSize = mobile ? 7.5 : 8.5;
+  const y = team.center.y + team.radius * (mobile ? 1.65 : 1.58);
+  ctx.save();
+  ctx.font = `600 ${fontSize}px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const metrics = ctx.measureText(label);
+  const paddingX = mobile ? 4 : 5;
+  const paddingY = mobile ? 2 : 2.5;
+  const width = metrics.width + paddingX * 2;
+  const height = fontSize + paddingY * 2;
+  const x = team.center.x - width / 2;
+  const rectY = y - height / 2;
+
+  roundRectPath(ctx, x, rectY, width, height, height / 2);
+  ctx.fillStyle = withAlpha(palette.isLight ? '#ffffff' : '#090a14', palette.isLight ? 0.36 : 0.24);
+  ctx.fill();
+  ctx.strokeStyle = withAlpha(team.color, palette.isLight ? 0.18 : 0.24);
+  ctx.lineWidth = 0.75;
+  ctx.stroke();
+
+  ctx.shadowColor = withAlpha(team.color, palette.isLight ? 0.12 : 0.22);
+  ctx.shadowBlur = mobile ? 4 : 6;
+  ctx.fillStyle = withAlpha(palette.isLight ? '#3f3f46' : '#e4e4e7', palette.isLight ? 0.58 : 0.66);
+  ctx.fillText(label, team.center.x, y + 0.2);
   ctx.restore();
 }
 
@@ -703,24 +821,6 @@ function drawAvatarFallback(
   ctx.arc(-size * 0.24, -size * 0.13, size * 0.095, 0, TAU);
   ctx.arc(size * 0.24, -size * 0.13, size * 0.095, 0, TAU);
   ctx.fill();
-}
-
-function getTeamConnectionPairs(memberCount: number): [number, number][] {
-  if (memberCount <= 3) {
-    return [
-      [0, 1],
-      [1, 2],
-      [2, 0],
-    ];
-  }
-
-  const pairs: [number, number][] = [];
-  for (let index = 0; index < memberCount; index++) {
-    pairs.push([index, (index + 1) % memberCount]);
-  }
-  if (memberCount >= 4) pairs.push([0, 2]);
-  if (memberCount >= 5) pairs.push([1, 4]);
-  return pairs;
 }
 
 function getLocalMessagePairs(teamIndex: number, memberCount: number): [number, number][] {

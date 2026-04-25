@@ -501,7 +501,7 @@ export class CliInstallerService {
               },
               {
                 providerId: 'opencode',
-                displayName: 'OpenCode',
+                displayName: 'OpenCode (75+ LLM providers)',
               },
             ] as const
           ).map((provider) => ({
@@ -768,18 +768,32 @@ export class CliInstallerService {
       return null;
     }
 
-    const providerStatus =
-      providerId === 'opencode'
-        ? await this.multimodelBridgeService.verifyProviderStatus(binaryPath, providerId)
-        : await this.multimodelBridgeService.getProviderStatus(binaryPath, providerId);
-    const nextProviderStatus =
-      providerId === 'opencode'
-        ? await this.multimodelBridgeService.verifyOpenCodeModels(binaryPath, providerStatus)
-        : this.applyProviderModelAvailabilityToProvider(
-            binaryPath,
-            versionProbe.version,
-            providerStatus
-          );
+    if (providerId === 'opencode') {
+      const providerStatus = await this.multimodelBridgeService.verifyProviderStatus(
+        binaryPath,
+        providerId
+      );
+      const nextProviderStatus = {
+        ...providerStatus,
+        modelVerificationState: 'idle' as const,
+        modelAvailability: [],
+      };
+      this.updateLatestProviderStatus(nextProviderStatus);
+      if (this.latestStatusSnapshot) {
+        this.publishStatusSnapshot(this.latestStatusSnapshot);
+      }
+      return nextProviderStatus;
+    }
+
+    const providerStatus = await this.multimodelBridgeService.getProviderStatus(
+      binaryPath,
+      providerId
+    );
+    const nextProviderStatus = this.applyProviderModelAvailabilityToProvider(
+      binaryPath,
+      versionProbe.version,
+      providerStatus
+    );
     this.updateLatestProviderStatus(nextProviderStatus);
     if (this.latestStatusSnapshot) {
       this.publishStatusSnapshot(this.latestStatusSnapshot);

@@ -20,9 +20,18 @@ const logger = createLogger('HTTP:validation');
  * Prevents path traversal attacks.
  */
 function isPathContained(fullPath: string, basePath: string): boolean {
-  const normalizedFull = path.normalize(fullPath);
-  const normalizedBase = path.normalize(basePath);
+  const normalizedFull = normalizeForContainment(fullPath);
+  const normalizedBase = normalizeForContainment(basePath);
   return normalizedFull === normalizedBase || normalizedFull.startsWith(normalizedBase + path.sep);
+}
+
+function normalizeForContainment(value: string): string {
+  const resolved = path.resolve(value);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function resolveProjectPath(projectPath: string, requestedPath: string): string {
+  return path.isAbsolute(requestedPath) ? requestedPath : path.join(projectPath, requestedPath);
 }
 
 export function registerValidationRoutes(app: FastifyInstance): void {
@@ -32,7 +41,7 @@ export function registerValidationRoutes(app: FastifyInstance): void {
     async (request) => {
       try {
         const { relativePath, projectPath } = request.body;
-        const fullPath = path.join(projectPath, relativePath);
+        const fullPath = resolveProjectPath(projectPath, relativePath);
 
         if (!isPathContained(fullPath, projectPath)) {
           logger.warn('validate-path blocked path traversal attempt:', relativePath);
@@ -57,7 +66,7 @@ export function registerValidationRoutes(app: FastifyInstance): void {
       // Validate all mentions in parallel with async I/O
       const entries = await Promise.all(
         mentions.map(async (mention) => {
-          const fullPath = path.join(projectPath, mention.value);
+          const fullPath = resolveProjectPath(projectPath, mention.value);
           if (!isPathContained(fullPath, projectPath)) {
             return [`@${mention.value}`, false] as const;
           }

@@ -1,4 +1,8 @@
 // @vitest-environment node
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
+
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 // Mock the entire child_process module so that we can inspect how our helpers
@@ -15,7 +19,12 @@ vi.mock('child_process', async (importOriginal) => {
 
 // Import after the mock call so that the mocked module is returned.
 import * as child from 'child_process';
-import { execCli, killTrackedCliProcesses, spawnCli } from '@main/utils/childProcess';
+import {
+  execCli,
+  killTrackedCliProcesses,
+  quoteWindowsCmdArg,
+  spawnCli,
+} from '@main/utils/childProcess';
 
 type ExecCallback = (error: Error | null, stdout: string, stderr: string) => void;
 
@@ -31,6 +40,30 @@ function setPlatform(value: string) {
 // restore platform after tests
 const originalPlatform = process.platform;
 
+function createGeneratedBunLauncher(): { dir: string; launcher: string; target: string } {
+  const dir = mkdtempSync(path.join(tmpdir(), 'cat-cli-launcher-'));
+  const targetDir = path.join(dir, 'dist');
+  mkdirSync(targetDir, { recursive: true });
+  const target = path.join(targetDir, 'cli.js');
+  writeFileSync(target, 'console.log("ok")', 'utf8');
+  const launcher = path.join(dir, 'cli-dev.cmd');
+  writeFileSync(
+    launcher,
+    [
+      '@echo off',
+      'setlocal',
+      'set "SCRIPT_DIR=%~dp0"',
+      'set "TARGET=%SCRIPT_DIR%dist\\cli.js"',
+      ':run_target',
+      'bun "%TARGET%" %*',
+      'exit /b %ERRORLEVEL%',
+      '',
+    ].join('\r\n'),
+    'utf8'
+  );
+  return { dir, launcher, target };
+}
+
 describe('cli child process helpers', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -38,6 +71,15 @@ describe('cli child process helpers', () => {
 
   afterEach(() => {
     setPlatform(originalPlatform);
+  });
+
+  describe('quoteWindowsCmdArg', () => {
+    it('keeps percent signs literal in cmd.exe command strings', () => {
+      const quoted = quoteWindowsCmdArg('C:\\Users\\Alice\\a%PATH%b.txt');
+      expect(quoted).toContain('"C:\\Users\\Alice\\a"^%"PATH"^%"b.txt"');
+      expect(quoted).not.toContain('%PATH%');
+      expect(quoted).not.toContain('%%PATH%%');
+    });
   });
 
   describe('spawnCli', () => {
@@ -77,6 +119,37 @@ describe('cli child process helpers', () => {
       expect(secondArg0).toMatch(/claude\.exe/);
       expect(spawnMock.mock.calls[1][1]).toMatchObject({ shell: true, env: { FOO: 'bar' } });
       expect(result).toBe(fake);
+    });
+
+    it('uses shell directly for Windows cmd launchers', () => {
+      setPlatform('win32');
+      const fake = {} as any;
+      const spawnMock = child.spawn as unknown as Mock;
+      spawnMock.mockReturnValue(fake);
+
+      const result = spawnCli('C:\\runtime\\cli-dev.cmd', ['--version']);
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+      expect(spawnMock.mock.calls[0][0]).toContain('cli-dev.cmd');
+      expect(spawnMock.mock.calls[0][1]).toMatchObject({ shell: true });
+      expect(result).toBe(fake);
+    });
+
+    it('runs generated Bun cmd launchers directly to preserve percent args', () => {
+      setPlatform('win32');
+      const fake = {} as any;
+      const spawnMock = child.spawn as unknown as Mock;
+      spawnMock.mockReturnValue(fake);
+      const { dir, launcher, target } = createGeneratedBunLauncher();
+      try {
+        const result = spawnCli(launcher, ['--model', 'test%PATH%"arg']);
+        expect(spawnMock).toHaveBeenCalledTimes(1);
+        expect(spawnMock.mock.calls[0][0]).toBe('bun');
+        expect(spawnMock.mock.calls[0][1]).toEqual([target, '--model', 'test%PATH%"arg']);
+        expect(spawnMock.mock.calls[0][2]).not.toHaveProperty('shell');
+        expect(result).toBe(fake);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
 
     it('uses shell directly when path contains non-ASCII on windows', () => {
@@ -170,6 +243,44 @@ describe('cli child process helpers', () => {
       expect(result.stdout).toBe('ok');
     });
 
+    it('skips straight to shell for Windows cmd launchers', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      const execMock = child.exec as unknown as Mock;
+      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+        cb(null, '0.0.8', '');
+        return {} as any;
+      });
+
+      const result = await execCli('C:\\runtime\\cli-dev.cmd', ['--version']);
+      expect(execFileMock).not.toHaveBeenCalled();
+      expect(execMock).toHaveBeenCalled();
+      expect(result.stdout).toBe('0.0.8');
+    });
+
+    it('executes generated Bun cmd launchers directly to preserve percent args', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      const execMock = child.exec as unknown as Mock;
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
+          cb(null, 'ok', '');
+          return {} as any;
+        }
+      );
+      const { dir, launcher, target } = createGeneratedBunLauncher();
+      try {
+        const result = await execCli(launcher, ['--model', 'test%PATH%"arg']);
+        expect(execFileMock).toHaveBeenCalledTimes(1);
+        expect(execFileMock.mock.calls[0][0]).toBe('bun');
+        expect(execFileMock.mock.calls[0][1]).toEqual([target, '--model', 'test%PATH%"arg']);
+        expect(execMock).not.toHaveBeenCalled();
+        expect(result.stdout).toBe('ok');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
     it('skips straight to shell when path contains non-ASCII on windows', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;
@@ -198,12 +309,35 @@ describe('cli child process helpers', () => {
 
       await execCli('C:\\Users\\Алексей\\bin\\claude.cmd', ['--model', 'test%PATH%"arg']);
       const shellCmd = execMock.mock.calls[0][0] as string;
-      // %PATH% must become %%PATH%% to prevent cmd.exe env var expansion
-      expect(shellCmd).toContain('%%PATH%%');
-      // double quote inside arg must become "" (cmd.exe escaping)
-      expect(shellCmd).toContain('""arg');
-      // should NOT contain \" (Unix-style escaping)
-      expect(shellCmd).not.toContain('\\"');
+      // Keep % outside quoted chunks so cmd.exe does not expand it as an env var.
+      expect(shellCmd).toContain('^%"PATH"^%');
+      expect(shellCmd).not.toContain('%PATH%');
+      expect(shellCmd).not.toContain('%%PATH%%');
+      // Quotes inside JSON-like args must survive cmd.exe and the target argv parser.
+      expect(shellCmd).toContain('\\"arg');
+      expect(shellCmd).not.toContain('""arg');
+    });
+
+    it('keeps inline settings JSON as one argv-safe argument for Windows cmd launchers', async () => {
+      setPlatform('win32');
+      const execMock = child.exec as unknown as Mock;
+      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+        cb(null, 'ok', '');
+        return {} as any;
+      });
+
+      await execCli('C:\\runtime\\cli-dev.cmd', [
+        '--settings',
+        '{"codex":{"forced_login_method":"chatgpt"}}',
+        'runtime',
+        'status',
+        '--json',
+        '--provider',
+        'codex',
+      ]);
+      const shellCmd = execMock.mock.calls[0][0] as string;
+      expect(shellCmd).toContain('"{\\"codex\\":{\\"forced_login_method\\":\\"chatgpt\\"}}"');
+      expect(shellCmd).not.toContain('{""codex"":');
     });
 
     it('shell: true cannot be overridden by caller options', () => {
@@ -238,6 +372,23 @@ describe('cli child process helpers', () => {
       expect(execFileMock).toHaveBeenCalled();
       expect(execMock).toHaveBeenCalled();
       expect(result.stdout).toBe('2.3.4');
+    });
+
+    it('preserves stdout and stderr on execFile failures', async () => {
+      setPlatform('linux');
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
+          cb(new Error('Command failed'), '{"error":"bad"}', 'bun: not found');
+          return {} as any;
+        }
+      );
+
+      await expect(execCli('/usr/bin/claude', ['--version'])).rejects.toMatchObject({
+        message: 'Command failed',
+        stdout: '{"error":"bad"}',
+        stderr: 'bun: not found',
+      });
     });
   });
 });

@@ -15,7 +15,12 @@ import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/d
 import type { GraphDataPort } from '../ports/GraphDataPort';
 import type { GraphEventPort } from '../ports/GraphEventPort';
 import type { GraphConfigPort } from '../ports/GraphConfigPort';
-import type { GraphEdge, GraphNode, GraphOwnerSlotAssignment } from '../ports/types';
+import type {
+  GraphEdge,
+  GraphLayoutMode,
+  GraphNode,
+  GraphOwnerSlotAssignment,
+} from '../ports/types';
 import type { StableRect } from '../layout/stableSlots';
 import { GraphCanvas, type GraphCanvasHandle } from './GraphCanvas';
 import { GraphControls, type GraphFilterState } from './GraphControls';
@@ -50,12 +55,14 @@ export interface GraphViewProps {
   onToggleSidebar?: () => void;
   isSidebarVisible?: boolean;
   renderTopToolbarContent?: () => React.ReactNode;
+  onLayoutModeChange?: (mode: GraphLayoutMode) => void;
   onOwnerSlotDrop?: (payload: {
     nodeId: string;
     assignment: GraphOwnerSlotAssignment;
     displacedNodeId?: string;
     displacedAssignment?: GraphOwnerSlotAssignment;
   }) => void;
+  onOwnerGridOrderDrop?: (payload: { nodeId: string; targetNodeId: string }) => void;
   /** Custom overlay renderer — replaces built-in GraphOverlay. Allows host app to reuse its own components. */
   renderOverlay?: (props: {
     node: GraphNode;
@@ -72,7 +79,7 @@ export interface GraphViewProps {
   renderHud?: (props: {
     filters: GraphFilterState;
     getLaunchAnchorScreenPlacement: (
-      leadNodeId: string,
+      leadNodeId: string
     ) => { x: number; y: number; scale: number; visible: boolean } | null;
     getActivityWorldRect: (ownerNodeId: string) => StableRect | null;
     getTransientHandoffSnapshot: (options?: {
@@ -103,7 +110,9 @@ export function GraphView({
   onToggleSidebar,
   isSidebarVisible = true,
   renderTopToolbarContent,
+  onLayoutModeChange,
   onOwnerSlotDrop,
+  onOwnerGridOrderDrop,
   renderOverlay,
   renderEdgeOverlay,
   renderHud,
@@ -120,6 +129,18 @@ export function GraphView({
     paused: !(config?.animationEnabled ?? true),
   });
   const effectivePaused = filters.paused || suspendAnimation;
+  const layoutMode = data.layout?.mode ?? 'radial';
+  const canDragOwners = layoutMode === 'radial' || layoutMode === 'grid-under-lead';
+  const simulationLayout = useMemo(
+    () =>
+      data.layout
+        ? {
+            ...data.layout,
+            showActivity: filters.showActivity,
+          }
+        : data.layout,
+    [data.layout, filters.showActivity]
+  );
 
   // Ref mirror of selectedNodeId — read by RAF loop to avoid recreating animate on selection change
   const selectedNodeIdRef = useRef<string | null>(null);
@@ -156,6 +177,12 @@ export function GraphView({
         simulation.setNodePosition(nodeId, x, y);
       },
       [simulation]
+    ),
+    useMemo(
+      () => ({
+        canDragNode: (node: GraphNode) => canDragOwners && node.kind === 'member',
+      }),
+      [canDragOwners]
     )
   );
 
@@ -166,9 +193,9 @@ export function GraphView({
   cameraRef.current = camera;
   const interactionRef = useRef(interaction);
   interactionRef.current = interaction;
-  const processActivePointerMoveRef = useRef<((clientX: number, clientY: number) => boolean) | null>(
-    null
-  );
+  const processActivePointerMoveRef = useRef<
+    ((clientX: number, clientY: number) => boolean) | null
+  >(null);
   const completePointerInteractionRef = useRef<((clientX: number, clientY: number) => void) | null>(
     null
   );
@@ -196,8 +223,8 @@ export function GraphView({
 
   // ─── Sync data from adapter → simulation ────────────────────────────────
   useEffect(() => {
-    simulation.updateData(data.nodes, data.edges, data.particles, data.teamName, data.layout);
-  }, [data, simulation]);
+    simulation.updateData(data.nodes, data.edges, data.particles, data.teamName, simulationLayout);
+  }, [data.edges, data.nodes, data.particles, data.teamName, simulation, simulationLayout]);
 
   // ─── UNIFIED RAF LOOP: tick simulation + draw canvas ────────────────────
   const focusState = useMemo(
@@ -240,26 +267,29 @@ export function GraphView({
       height: container?.clientHeight ?? 0,
     };
   }, []);
-  const getLaunchAnchorScreenPlacement = useCallback((leadNodeId: string) => {
-    const anchor = simulationRef.current.getLaunchAnchorWorldPosition(leadNodeId);
-    if (!anchor) {
-      return null;
-    }
-    const viewport = getViewportSize();
-    if (viewport.width <= 0 || viewport.height <= 0) {
-      return null;
-    }
-    const transform = cameraRef.current.transformRef.current;
-    return buildLaunchAnchorScreenPlacement({
-      anchorX: anchor.x,
-      anchorY: anchor.y,
-      cameraX: transform.x,
-      cameraY: transform.y,
-      zoom: transform.zoom,
-      viewportWidth: viewport.width,
-      viewportHeight: viewport.height,
-    });
-  }, [getViewportSize]);
+  const getLaunchAnchorScreenPlacement = useCallback(
+    (leadNodeId: string) => {
+      const anchor = simulationRef.current.getLaunchAnchorWorldPosition(leadNodeId);
+      if (!anchor) {
+        return null;
+      }
+      const viewport = getViewportSize();
+      if (viewport.width <= 0 || viewport.height <= 0) {
+        return null;
+      }
+      const transform = cameraRef.current.transformRef.current;
+      return buildLaunchAnchorScreenPlacement({
+        anchorX: anchor.x,
+        anchorY: anchor.y,
+        cameraX: transform.x,
+        cameraY: transform.y,
+        zoom: transform.zoom,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+      });
+    },
+    [getViewportSize]
+  );
   const getCameraZoom = useCallback(() => cameraRef.current.transformRef.current.zoom, []);
   const getActivityWorldRect = useCallback(
     (ownerNodeId: string) => simulationRef.current.getActivityWorldRect(ownerNodeId),
@@ -277,7 +307,9 @@ export function GraphView({
     []
   );
   const getNodeWorldPosition = useCallback((nodeId: string) => {
-    const node = simulationRef.current.stateRef.current.nodes.find((candidate) => candidate.id === nodeId);
+    const node = simulationRef.current.stateRef.current.nodes.find(
+      (candidate) => candidate.id === nodeId
+    );
     if (node?.x == null || node?.y == null) {
       return null;
     }
@@ -548,11 +580,7 @@ export function GraphView({
       }
 
       const edgeMouseDown = edgeMouseDownRef.current;
-      if (
-        edgeMouseDown &&
-        !interaction.dragNodeId.current &&
-        !interaction.isDragging.current
-      ) {
+      if (edgeMouseDown && !interaction.dragNodeId.current && !interaction.isDragging.current) {
         const dx = clientX - edgeMouseDown.clientX;
         const dy = clientY - edgeMouseDown.clientY;
         if (dx * dx + dy * dy > ANIM.dragThresholdPx * ANIM.dragThresholdPx) {
@@ -585,16 +613,25 @@ export function GraphView({
 
       const rect = canvas.getBoundingClientRect();
       const world = camera.screenToWorld(clientX - rect.left, clientY - rect.top);
-      interaction.handleMouseMove(world.x, world.y, getVisibleNodes(simulation.stateRef.current.nodes));
+      interaction.handleMouseMove(
+        world.x,
+        world.y,
+        getVisibleNodes(simulation.stateRef.current.nodes)
+      );
 
       const draggedNodeId = interaction.dragNodeId.current;
       if (interaction.isDragging.current && draggedNodeId) {
         if (typeof document !== 'undefined') {
           document.getSelection()?.removeAllRanges();
         }
-        const draggedNode = simulation.stateRef.current.nodes.find((node) => node.id === draggedNodeId);
+        const draggedNode = simulation.stateRef.current.nodes.find(
+          (node) => node.id === draggedNodeId
+        );
         if (draggedNode?.kind === 'member') {
-          const nearest = simulation.resolveNearestOwnerSlot(draggedNodeId, world.x, world.y);
+          const nearest =
+            layoutMode === 'grid-under-lead'
+              ? simulation.resolveNearestOwnerGridTarget(draggedNodeId, world.x, world.y)
+              : simulation.resolveNearestOwnerSlot(draggedNodeId, world.x, world.y);
           if (nearest) {
             dragPreviewRef.current = {
               nodeId: draggedNodeId,
@@ -610,7 +647,7 @@ export function GraphView({
       dragPreviewRef.current = null;
       return true;
     },
-    [camera, getVisibleNodes, interaction, simulation]
+    [camera, getVisibleNodes, interaction, layoutMode, simulation]
   );
 
   const completePointerInteraction = useCallback(
@@ -633,8 +670,31 @@ export function GraphView({
       const clickedId = interaction.handleMouseUp();
       if (wasDragging && draggedNodeId) {
         setInteractionGuards(false);
-        const draggedNode = simulation.stateRef.current.nodes.find((node) => node.id === draggedNodeId);
+        const draggedNode = simulation.stateRef.current.nodes.find(
+          (node) => node.id === draggedNodeId
+        );
         if (draggedNode?.kind === 'member' && draggedNode.x != null && draggedNode.y != null) {
+          if (layoutMode === 'grid-under-lead') {
+            const nearest = simulation.resolveNearestOwnerGridTarget(
+              draggedNodeId,
+              draggedNode.x,
+              draggedNode.y
+            );
+            if (nearest) {
+              if (nearest.targetOwnerId !== draggedNodeId) {
+                onOwnerGridOrderDrop?.({
+                  nodeId: draggedNodeId,
+                  targetNodeId: nearest.targetOwnerId,
+                });
+              }
+              requestAnimationFrame(() => {
+                simulation.clearNodePosition(draggedNodeId);
+              });
+              dragPreviewRef.current = null;
+              edgeMouseDownRef.current = null;
+              return;
+            }
+          }
           const nearest = simulation.resolveNearestOwnerSlot(
             draggedNodeId,
             draggedNode.x,
@@ -700,7 +760,16 @@ export function GraphView({
       }
       dragPreviewRef.current = null;
     },
-    [camera, events, interaction, onOwnerSlotDrop, setInteractionGuards, simulation]
+    [
+      camera,
+      events,
+      interaction,
+      layoutMode,
+      onOwnerGridOrderDrop,
+      onOwnerSlotDrop,
+      setInteractionGuards,
+      simulation,
+    ]
   );
   processActivePointerMoveRef.current = processActivePointerMove;
   completePointerInteractionRef.current = completePointerInteraction;
@@ -965,7 +1034,7 @@ export function GraphView({
   return (
     <div
       ref={containerRef}
-      className={`relative h-full w-full overflow-hidden select-none ${className ?? ''}`}
+      className={`relative h-full w-full select-none overflow-hidden ${className ?? ''}`}
     >
       <GraphCanvas
         ref={canvasHandle}
@@ -1011,6 +1080,8 @@ export function GraphView({
         teamName={data.teamName}
         teamColor={data.teamColor}
         isAlive={data.isAlive}
+        layoutMode={layoutMode}
+        onLayoutModeChange={onLayoutModeChange}
         topToolbarContent={renderTopToolbarContent?.()}
         interactionLocked={interactionLocked}
       />

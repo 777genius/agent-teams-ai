@@ -129,6 +129,37 @@ function buildAssignmentMessage(context, task, options = {}) {
     return lines.join('\n');
 }
 
+function buildTaskRef(context, task) {
+    return {
+        taskId: task.id,
+        displayId: task.displayId || task.id,
+        teamName: context.teamName,
+    };
+}
+
+function mergeTaskRefs(primaryTaskRef, extraTaskRefs) {
+    const refs = [primaryTaskRef, ...(Array.isArray(extraTaskRefs) ? extraTaskRefs : [])]
+        .filter((ref) => ref && typeof ref === 'object');
+    const seen = new Set();
+    const merged = [];
+    for (const ref of refs) {
+        const taskId = typeof ref.taskId === 'string' ? ref.taskId.trim() : '';
+        const displayId = typeof ref.displayId === 'string' ? ref.displayId.trim() : '';
+        const teamName = typeof ref.teamName === 'string' ? ref.teamName.trim() : '';
+        const key = `${teamName || ''}:${taskId || displayId}`;
+        if ((!taskId && !displayId) || seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        merged.push({
+            ...(taskId ? { taskId } : {}),
+            ...(displayId ? { displayId } : {}),
+            ...(teamName ? { teamName } : {}),
+        });
+    }
+    return merged.length > 0 ? merged : undefined;
+}
+
 function buildCommentNotificationMessage(context, task, comment) {
     const taskLabel = `#${task.displayId || task.id}`;
     return [
@@ -171,7 +202,7 @@ function maybeNotifyAssignedOwner(context, task, options = {}) {
                 ...options,
                 messagingProtocol,
             }),
-            taskRefs: Array.isArray(options.taskRefs) && options.taskRefs.length > 0 ? options.taskRefs : undefined,
+            taskRefs: mergeTaskRefs(buildTaskRef(context, task), options.taskRefs),
             summary,
             source: 'system_notification',
             ...(leadSessionId ? { leadSessionId } : {}),
@@ -869,6 +900,9 @@ async function memberBriefing(context, memberName, options = {}) {
         ...(messagingProtocol.runtimeProvider === 'opencode'
             ? [
                 'OpenCode visible messaging rule: call agent-teams_message_send for normal replies to the human user, lead, or same-team teammates. Always include teamName, to, from, text, and summary. Do not use SendMessage or runtime_deliver_message for ordinary replies.',
+                'OpenCode bootstrap silence rule: if this briefing was requested because the desktop app attached or reconnected you, do not send readiness, understood, idle, or no-task acknowledgements to the user, lead, or teammates.',
+                'This briefing already includes your current Task briefing. If it shows no actionable tasks, stop and wait silently. Do not call task_briefing again in the same bootstrap turn just to check for work.',
+                'Use agent-teams_message_send only for actual app-delivered messages, actionable task coordination, blockers, or task results.',
                 'For cross-team replies or messages to another team, call agent-teams_cross_team_send with toTeam/fromMember. Do not put "cross_team_send" or a remote team name into message_send.to.',
             ]
             : []),

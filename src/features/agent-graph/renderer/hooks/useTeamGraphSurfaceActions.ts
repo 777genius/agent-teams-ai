@@ -5,7 +5,7 @@ import { isTeamGraphSlotPersistenceDisabled } from '@renderer/store/slices/teamS
 
 import { parseGraphMemberNodeId } from '../../core/domain/graphOwnerIdentity';
 
-import type { GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
+import type { GraphLayoutMode, GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
 
 export function useTeamGraphSurfaceActions(teamName: string): {
   openTeamPage: () => void;
@@ -16,6 +16,8 @@ export function useTeamGraphSurfaceActions(teamName: string): {
     displacedNodeId?: string;
     displacedAssignment?: GraphOwnerSlotAssignment;
   }) => void;
+  commitOwnerGridOrderDrop: (payload: { nodeId: string; targetNodeId: string }) => void;
+  setLayoutMode: (mode: GraphLayoutMode) => void;
 } {
   const openTeamPage = useCallback(() => {
     useStore.getState().openTeamTab(teamName);
@@ -43,6 +45,9 @@ export function useTeamGraphSurfaceActions(teamName: string): {
         ? parseGraphMemberNodeId(payload.displacedNodeId, teamName)
         : null;
       const store = useStore.getState();
+      if ((store.graphLayoutModeByTeam[teamName] ?? 'radial') !== 'radial') {
+        return;
+      }
       if (displacedStableOwnerId && payload.displacedAssignment) {
         store.commitTeamGraphOwnerSlotDrop(
           teamName,
@@ -58,9 +63,36 @@ export function useTeamGraphSurfaceActions(teamName: string): {
     [teamName]
   );
 
+  const commitOwnerGridOrderDrop = useCallback(
+    (payload: { nodeId: string; targetNodeId: string }) => {
+      const stableOwnerId = parseGraphMemberNodeId(payload.nodeId, teamName);
+      const targetStableOwnerId = parseGraphMemberNodeId(payload.targetNodeId, teamName);
+      if (!stableOwnerId || !targetStableOwnerId || stableOwnerId === targetStableOwnerId) {
+        return;
+      }
+
+      const store = useStore.getState();
+      if ((store.graphLayoutModeByTeam[teamName] ?? 'radial') !== 'grid-under-lead') {
+        return;
+      }
+
+      store.swapTeamGraphGridOwners(teamName, stableOwnerId, targetStableOwnerId);
+    },
+    [teamName]
+  );
+
+  const setLayoutMode = useCallback(
+    (mode: GraphLayoutMode) => {
+      useStore.getState().setTeamGraphLayoutMode(teamName, mode);
+    },
+    [teamName]
+  );
+
   return {
     openTeamPage,
     resetOwnerSlotAssignmentsToDefaults,
     commitOwnerSlotDrop,
+    commitOwnerGridOrderDrop,
+    setLayoutMode,
   };
 }

@@ -4,6 +4,7 @@ import {
   buildStableSlotLayoutSnapshot,
   computeOwnerFootprints,
   computeProcessBandWidth,
+  resolveNearestGridOwnerTarget,
   resolveNearestSlotAssignment,
   snapshotToWorldBounds,
   translateSlotFrame,
@@ -81,6 +82,26 @@ function rectsOverlap(
   );
 }
 
+function rectsOverlapVertically(
+  left: { top: number; bottom: number },
+  right: { top: number; bottom: number }
+): boolean {
+  return left.top < right.bottom && left.bottom > right.top;
+}
+
+function horizontalGapBetween(
+  left: { left: number; right: number },
+  right: { left: number; right: number }
+): number {
+  if (left.right <= right.left) {
+    return right.left - left.right;
+  }
+  if (right.right <= left.left) {
+    return left.left - right.right;
+  }
+  return 0;
+}
+
 describe('stable slot layout planner', () => {
   it('does not build a stable slot snapshot when the lead is missing', () => {
     const snapshot = buildStableSlotLayoutSnapshot({
@@ -153,6 +174,7 @@ describe('stable slot layout planner', () => {
     expect(frame?.activityColumnRect.left).toBe(frame?.boardBandRect.left);
     expect(frame?.kanbanBandRect.left).toBeGreaterThan(frame?.activityColumnRect.right ?? 0);
     expect(frame?.processBandRect.width).toBe(computeProcessBandWidth(0));
+    expect(frame?.processBandRect.height).toBe(STABLE_SLOT_GEOMETRY.processBandHeight);
   });
 
   it('uses strict cardinal owner slots for teams with up to four members', () => {
@@ -200,6 +222,7 @@ describe('stable slot layout planner', () => {
 
     expect(Math.abs(Math.abs(leftFrame.ownerX) - Math.abs(rightFrame.ownerX))).toBeLessThan(1);
     expect(Math.abs(Math.abs(topFrame.ownerY) - Math.abs(bottomFrame.ownerY))).toBeLessThan(1);
+    expect(Math.abs(topFrame.ownerY)).toBeLessThan(Math.abs(rightFrame.ownerX));
   });
 
   it('uses strict cardinal owner slots even when ownerOrder differs from assignment order', () => {
@@ -246,6 +269,67 @@ describe('stable slot layout planner', () => {
     expect(Math.abs(jackFrame.ownerY)).toBeLessThan(1);
   });
 
+  it('keeps horizontal spacing around lead columns and between side-by-side owners', () => {
+    const teamName = 'team-horizontal-spacing';
+    const lead = createLead(teamName);
+    const members = [
+      createMember(teamName, 'agent-top', 'top'),
+      createMember(teamName, 'agent-right', 'right'),
+      createMember(teamName, 'agent-bottom', 'bottom'),
+      createMember(teamName, 'agent-left', 'left'),
+      createMember(teamName, 'agent-top-right', 'top-right'),
+      createMember(teamName, 'agent-bottom-right', 'bottom-right'),
+    ];
+    const tasks = [
+      createTask(teamName, 'lead-todo', lead.id),
+      createTask(teamName, 'lead-wip', lead.id, { taskStatus: 'in_progress' }),
+      ...members.map((member, index) => createTask(teamName, `task-${index + 1}`, member.id)),
+    ];
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      ownerOrder: members.map((member) => member.id),
+      slotAssignments: {
+        [members[0]!.id]: { ringIndex: 0, sectorIndex: 0 },
+        [members[1]!.id]: { ringIndex: 0, sectorIndex: 1 },
+        [members[2]!.id]: { ringIndex: 0, sectorIndex: 2 },
+        [members[3]!.id]: { ringIndex: 0, sectorIndex: 3 },
+        [members[4]!.id]: { ringIndex: 0, sectorIndex: 4 },
+        [members[5]!.id]: { ringIndex: 0, sectorIndex: 5 },
+      },
+    };
+
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, ...members, ...tasks],
+      layout,
+    });
+
+    expect(snapshot).not.toBeNull();
+    expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
+
+    for (const frame of snapshot!.memberSlotFrames) {
+      for (const centralRect of snapshot!.centralCollisionRects) {
+        if (!rectsOverlapVertically(frame.bounds, centralRect)) {
+          continue;
+        }
+        expect(horizontalGapBetween(frame.bounds, centralRect)).toBeGreaterThanOrEqual(
+          STABLE_SLOT_GEOMETRY.centralHorizontalGap
+        );
+      }
+    }
+
+    for (const [index, left] of snapshot!.memberSlotFrames.entries()) {
+      for (const right of snapshot!.memberSlotFrames.slice(index + 1)) {
+        if (!rectsOverlapVertically(left.bounds, right.bounds)) {
+          continue;
+        }
+        expect(horizontalGapBetween(left.bounds, right.bounds)).toBeGreaterThanOrEqual(
+          STABLE_SLOT_GEOMETRY.slotHorizontalGap
+        );
+      }
+    }
+  });
+
   it('reserves a full empty activity column and minimum kanban width for idle members', () => {
     const teamName = 'team-empty-slot';
     const lead = createLead(teamName);
@@ -271,6 +355,38 @@ describe('stable slot layout planner', () => {
     expect(footprint?.boardBandHeight).toBe(
       Math.max(footprint?.activityColumnHeight ?? 0, footprint?.kanbanBandHeight ?? 0)
     );
+  });
+
+  it('removes the reserved activity column when activity is hidden', () => {
+    const teamName = 'team-hidden-activity-slot';
+    const lead = createLead(teamName);
+    const alice = createMember(teamName, 'agent-alice', 'alice');
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      showActivity: false,
+      ownerOrder: [alice.id],
+      slotAssignments: {
+        [alice.id]: { ringIndex: 0, sectorIndex: 1 },
+      },
+    };
+
+    const [footprint] = computeOwnerFootprints([lead, alice], layout);
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, alice],
+      layout,
+    });
+    const frame = snapshot?.memberSlotFrames[0];
+
+    expect(footprint).toBeDefined();
+    expect(footprint?.activityColumnWidth).toBe(0);
+    expect(footprint?.activityColumnHeight).toBe(0);
+    expect(footprint?.boardBandWidth).toBe(footprint?.kanbanBandWidth);
+    expect(snapshot).not.toBeNull();
+    expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
+    expect(frame?.activityColumnRect.width).toBe(0);
+    expect(frame?.activityColumnRect.height).toBe(0);
+    expect(frame?.kanbanBandRect.left).toBe(frame?.boardBandRect.left);
   });
 
   it('keeps diagonal ring-zero sectors closer than the legacy coarse central box radius', () => {
@@ -310,9 +426,9 @@ describe('stable slot layout planner', () => {
     const actualRadius = Math.abs(frame!.ownerX / sectorVector.x);
 
     expect(actualRadius).toBeLessThan(legacyMinRadius);
-    expect(
-      snapshot!.centralCollisionRects.some((rect) => rectsOverlap(frame!.bounds, rect))
-    ).toBe(false);
+    expect(snapshot!.centralCollisionRects.some((rect) => rectsOverlap(frame!.bounds, rect))).toBe(
+      false
+    );
   });
 
   it('grows process band width when an owner has multiple visible process nodes', () => {
@@ -657,12 +773,8 @@ describe('stable slot layout planner', () => {
       layout,
     });
     const footprints = computeOwnerFootprints([lead, first, second], layout);
-    const firstRingFrame = snapshot?.memberSlotFrames.find(
-      (frame) => frame.ownerId === first.id
-    );
-    const secondRingFrame = snapshot?.memberSlotFrames.find(
-      (frame) => frame.ownerId === second.id
-    );
+    const firstRingFrame = snapshot?.memberSlotFrames.find((frame) => frame.ownerId === first.id);
+    const secondRingFrame = snapshot?.memberSlotFrames.find((frame) => frame.ownerId === second.id);
 
     expect(snapshot).not.toBeNull();
     expect(firstRingFrame).toBeDefined();
@@ -673,8 +785,9 @@ describe('stable slot layout planner', () => {
       throw new Error('expected first footprint for ring-depth test');
     }
 
-    const ringDelta = Math.hypot(secondRingFrame!.ownerX, secondRingFrame!.ownerY)
-      - Math.hypot(firstRingFrame!.ownerX, firstRingFrame!.ownerY);
+    const ringDelta =
+      Math.hypot(secondRingFrame!.ownerX, secondRingFrame!.ownerY) -
+      Math.hypot(firstRingFrame!.ownerX, firstRingFrame!.ownerY);
     const sectorVector = { x: 0.82, y: -0.57 };
     const ownerLocalY =
       STABLE_SLOT_GEOMETRY.memberSlotInnerPadding + STABLE_SLOT_GEOMETRY.ownerBandHeight / 2;
@@ -753,6 +866,141 @@ describe('stable slot layout planner', () => {
     }
   });
 
+  it('places grid-under-lead members in centered rows of two', () => {
+    const teamName = 'team-grid-layout';
+    const lead = createLead(teamName);
+    const members = [
+      createMember(teamName, 'agent-alice', 'alice'),
+      createMember(teamName, 'agent-bob', 'bob'),
+      createMember(teamName, 'agent-tom', 'tom'),
+      createMember(teamName, 'agent-jack', 'jack'),
+      createMember(teamName, 'agent-eve', 'eve'),
+    ];
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      mode: 'grid-under-lead',
+      ownerOrder: members.map((member) => member.id),
+      slotAssignments: {},
+    };
+
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, ...members],
+      layout,
+    });
+
+    expect(snapshot).not.toBeNull();
+    expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
+
+    const frames = snapshot!.memberSlotFrames;
+    expect(frames).toHaveLength(5);
+    expect(frames[0].ownerY).toBe(frames[1].ownerY);
+    expect(frames[2].ownerY).toBe(frames[3].ownerY);
+    expect(frames[2].ownerY).toBeGreaterThan(frames[0].ownerY);
+    expect(frames[4].ownerY).toBeGreaterThan(frames[2].ownerY);
+    expect(frames[0].ownerX).toBeLessThan(0);
+    expect(frames[1].ownerX).toBeGreaterThan(0);
+    expect(frames[4].ownerX).toBeCloseTo(0, 3);
+    expect(frames[0].processBandRect.height).toBe(STABLE_SLOT_GEOMETRY.processBandHeight);
+  });
+
+  it('keeps wide grid-under-lead rows from overlapping horizontally', () => {
+    const teamName = 'team-grid-wide';
+    const lead = createLead(teamName);
+    const members = [
+      createMember(teamName, 'agent-alice', 'alice'),
+      createMember(teamName, 'agent-bob', 'bob'),
+      createMember(teamName, 'agent-tom', 'tom'),
+      createMember(teamName, 'agent-jack', 'jack'),
+    ];
+    const tasks = [
+      createTask(teamName, 'alice-todo', members[0].id, { taskStatus: 'pending' }),
+      createTask(teamName, 'alice-wip', members[0].id, { taskStatus: 'in_progress' }),
+      createTask(teamName, 'alice-done', members[0].id, { taskStatus: 'completed' }),
+      createTask(teamName, 'alice-review', members[0].id, { reviewState: 'review' }),
+      createTask(teamName, 'bob-todo', members[1].id, { taskStatus: 'pending' }),
+      createTask(teamName, 'bob-wip', members[1].id, { taskStatus: 'in_progress' }),
+      createTask(teamName, 'bob-done', members[1].id, { taskStatus: 'completed' }),
+      createTask(teamName, 'bob-review', members[1].id, { reviewState: 'review' }),
+    ];
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      mode: 'grid-under-lead',
+      ownerOrder: members.map((member) => member.id),
+      slotAssignments: {
+        [members[0].id]: { ringIndex: 3, sectorIndex: 7 },
+        [members[1].id]: { ringIndex: 3, sectorIndex: 7 },
+      },
+    };
+
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, ...members, ...tasks],
+      layout,
+    });
+
+    expect(snapshot).not.toBeNull();
+    expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
+    expect(
+      horizontalGapBetween(
+        snapshot!.memberSlotFrames[0].bounds,
+        snapshot!.memberSlotFrames[1].bounds
+      )
+    ).toBeGreaterThanOrEqual(STABLE_SLOT_GEOMETRY.slotHorizontalGap);
+    expect(snapshot!.memberSlotFrames[0].ringIndex).toBe(0);
+    expect(snapshot!.memberSlotFrames[0].sectorIndex).toBe(0);
+    expect(snapshot!.memberSlotFrames[1].ringIndex).toBe(0);
+    expect(snapshot!.memberSlotFrames[1].sectorIndex).toBe(1);
+  });
+
+  it('uses a separate nearest owner target for grid-under-lead drag-drop', () => {
+    const teamName = 'team-grid-drag-target';
+    const lead = createLead(teamName);
+    const members = [
+      createMember(teamName, 'agent-alice', 'alice'),
+      createMember(teamName, 'agent-bob', 'bob'),
+    ];
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      mode: 'grid-under-lead',
+      ownerOrder: members.map((member) => member.id),
+      slotAssignments: {},
+    };
+
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, ...members],
+      layout,
+    });
+
+    expect(snapshot).not.toBeNull();
+    const targetFrame = snapshot!.memberSlotFrames[1]!;
+
+    expect(
+      resolveNearestSlotAssignment({
+        ownerId: members[0].id,
+        ownerX: targetFrame.ownerX,
+        ownerY: targetFrame.ownerY,
+        nodes: [lead, ...members],
+        snapshot: snapshot!,
+        layout,
+      })
+    ).toBeNull();
+
+    expect(
+      resolveNearestGridOwnerTarget({
+        ownerId: members[0].id,
+        ownerX: targetFrame.ownerX,
+        ownerY: targetFrame.ownerY,
+        snapshot: snapshot!,
+      })
+    ).toEqual({
+      targetOwnerId: members[1].id,
+      previewOwnerX: targetFrame.ownerX,
+      previewOwnerY: targetFrame.ownerY,
+    });
+  });
+
   it('positions lead-owned tasks inside the lead kanban band instead of unassigned', () => {
     const teamName = 'team-lead-owned-tasks';
     const lead = createLead(teamName);
@@ -825,8 +1073,10 @@ describe('stable slot layout planner', () => {
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.processBandRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.activityColumnRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.kanbanBandRect);
-    expect(snapshot!.leadCentralReservedBlock.width).toBeLessThan(snapshot!.leadSlotFrame.bounds.width);
-    expect(snapshot!.leadCentralReservedBlock.height).toBeLessThan(
+    expect(snapshot!.leadCentralReservedBlock.width).toBeLessThan(
+      snapshot!.leadSlotFrame.bounds.width
+    );
+    expect(snapshot!.leadCentralReservedBlock.height).toBeLessThanOrEqual(
       snapshot!.leadSlotFrame.bounds.height
     );
   });

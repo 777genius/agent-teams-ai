@@ -27,7 +27,7 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
       { providerId: 'anthropic', displayName: 'Anthropic' },
       { providerId: 'codex', displayName: 'Codex' },
       { providerId: 'gemini', displayName: 'Gemini' },
-      { providerId: 'opencode', displayName: 'OpenCode' },
+      { providerId: 'opencode', displayName: 'OpenCode (75+ LLM providers)' },
     ] as const
   ).map((provider) => ({
     ...provider,
@@ -212,7 +212,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode';
+      return 'OpenCode (75+ LLM providers)';
   }
 }
 
@@ -480,7 +480,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (get().cliStatus && !get().cliStatus?.installed) {
       return;
     }
-    const verifyModels = options?.verifyModels === true;
+    const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}`;
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight) return inFlight;
