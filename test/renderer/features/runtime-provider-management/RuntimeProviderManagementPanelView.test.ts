@@ -257,6 +257,64 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
   });
 
+  it('does not open a model list for a render-only filtered fallback provider', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const openRouterProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      modelCount: 174,
+      actions: [],
+    };
+    const openAiProvider = {
+      ...openRouterProvider,
+      providerId: 'openai',
+      displayName: 'OpenAI',
+      recommended: false,
+      defaultModelId: 'openai/gpt-5.4-mini-fast',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [openRouterProvider, openAiProvider],
+            },
+            providers: [openRouterProvider, openAiProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            providerQuery: 'openai',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/openai/gpt-oss-20b:free',
+                displayName: 'openai/gpt-oss-20b:free',
+                sourceLabel: 'OpenRouter',
+                free: true,
+                default: false,
+                availability: 'untested',
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenAI');
+    expect(host.textContent).not.toContain('OpenRouter');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).toBeNull();
+  });
+
   it('opens the OpenCode provider directory and renders directory rows', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -1,38 +1,21 @@
-import { constants as fsConstants, promises as fs } from 'fs';
+import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import Fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { registerTeamRoutes } from '../../../../src/main/http/teams';
-import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
-import {
-  createOpenCodeBridgeCommandLeaseStore,
-  createOpenCodeBridgeCommandLedgerStore,
-} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import {
-  createOpenCodeBridgeClientIdentity,
-  OpenCodeBridgeCommandHandshakePort,
-} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
-import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { readOpenCodeRuntimeLaneIndex } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
-import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
-import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
-import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import { getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 import {
-  getClaudeBasePath,
-  getTeamsBasePath,
-  setClaudeBasePathOverride,
-} from '../../../../src/main/utils/pathDecoder';
+  createOpenCodeLiveHarness,
+  getRuntimeTranscript,
+  type InboxMessage,
+  waitForMemberInboxMessage,
+  waitForOpenCodeLanesStopped,
+  waitForOpenCodePeerRelay,
+  waitForUserInboxReply,
+} from './openCodeLiveTestHarness';
 
-import type { HttpServices } from '../../../../src/main/http';
-import type { OpenCodeBridgeCommandExecutor } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import type { RuntimeStoreManifestReader } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
 
 const liveDescribe =
@@ -41,16 +24,7 @@ const liveDescribe =
     : describe.skip;
 
 const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() || process.cwd();
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli';
 const DEFAULT_MODEL = 'opencode/big-pickle';
-
-interface InboxMessage {
-  from?: string;
-  to?: string;
-  text?: string;
-  messageId?: string;
-  read?: boolean;
-}
 
 liveDescribe('OpenCode semantic messaging live e2e', () => {
   let tempDir: string;
@@ -71,7 +45,10 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
   it(
     'delivers a desktop message to an OpenCode member and records the reply through agent-teams_message_send',
     async () => {
-      const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness(tempDir);
+      const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
+        tempDir,
+        selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
+      });
 
       const teamName = `opencode-semantic-message-${Date.now()}`;
       const memberName = 'bob';
@@ -152,7 +129,12 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
         try {
           reply = await waitForUserInboxReply(teamName, memberName, expectedReply, 90_000);
         } catch (error) {
-          const transcript = await getRuntimeTranscript(bridgeClient, teamName, memberName);
+          const transcript = await getRuntimeTranscript({
+            bridgeClient,
+            teamName,
+            memberName,
+            projectPath: PROJECT_PATH,
+          });
           throw new Error(
             `${error instanceof Error ? error.message : String(error)}\nTranscript: ${JSON.stringify(
               transcript,
@@ -169,10 +151,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       } finally {
         await svc.stopTeam(teamName).catch(() => undefined);
         await dispose();
-        await waitUntil(async () => {
-          const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
-          return Object.keys(laneIndex.lanes).length === 0;
-        }, 90_000).catch(() => undefined);
+        await waitForOpenCodeLanesStopped(teamName);
       }
     },
     300_000
@@ -181,7 +160,10 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
   it(
     'relays an OpenCode teammate message into another OpenCode member runtime and records the reply',
     async () => {
-      const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness(tempDir);
+      const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
+        tempDir,
+        selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
+      });
 
       const teamName = `opencode-peer-message-${Date.now()}`;
       const senderName = 'bob';
@@ -282,7 +264,12 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
             180_000
           );
         } catch (error) {
-          const transcript = await getRuntimeTranscript(bridgeClient, teamName, senderName);
+          const transcript = await getRuntimeTranscript({
+            bridgeClient,
+            teamName,
+            memberName: senderName,
+            projectPath: PROJECT_PATH,
+          });
           throw new Error(
             `${error instanceof Error ? error.message : String(error)}\n${senderName} transcript: ${JSON.stringify(
               transcript,
@@ -305,8 +292,18 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
           reply = await waitForUserInboxReply(teamName, recipientName, replyToken, 120_000);
         } catch (error) {
           const [senderTranscript, recipientTranscript] = await Promise.all([
-            getRuntimeTranscript(bridgeClient, teamName, senderName),
-            getRuntimeTranscript(bridgeClient, teamName, recipientName),
+            getRuntimeTranscript({
+              bridgeClient,
+              teamName,
+              memberName: senderName,
+              projectPath: PROJECT_PATH,
+            }),
+            getRuntimeTranscript({
+              bridgeClient,
+              teamName,
+              memberName: recipientName,
+              projectPath: PROJECT_PATH,
+            }),
           ]);
           throw new Error(
             `${error instanceof Error ? error.message : String(error)}\n${senderName} transcript: ${JSON.stringify(
@@ -324,297 +321,9 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       } finally {
         await svc.stopTeam(teamName).catch(() => undefined);
         await dispose();
-        await waitUntil(async () => {
-          const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
-          return Object.keys(laneIndex.lanes).length === 0;
-        }, 90_000).catch(() => undefined);
+        await waitForOpenCodeLanesStopped(teamName);
       }
     },
     360_000
   );
 });
-
-async function waitForUserInboxReply(
-  teamName: string,
-  from: string,
-  expectedText: string,
-  timeoutMs: number
-): Promise<InboxMessage> {
-  const deadline = Date.now() + timeoutMs;
-  const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', 'user.json');
-  let lastMessages: InboxMessage[] = [];
-
-  while (Date.now() < deadline) {
-    lastMessages = await readInboxMessages(inboxPath);
-    const match = lastMessages.find(
-      (message) =>
-        message.from === from &&
-        message.to === 'user' &&
-        typeof message.text === 'string' &&
-        message.text.includes(expectedText)
-    );
-    if (match) {
-      return match;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_500));
-  }
-
-  throw new Error(
-    `Timed out waiting for OpenCode reply in ${inboxPath}. Last messages: ${JSON.stringify(
-      lastMessages,
-      null,
-      2
-    )}`
-  );
-}
-
-async function waitForMemberInboxMessage(
-  teamName: string,
-  memberName: string,
-  from: string,
-  expectedText: string | string[],
-  timeoutMs: number
-): Promise<InboxMessage & { messageId: string }> {
-  const deadline = Date.now() + timeoutMs;
-  const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
-  let lastMessages: InboxMessage[] = [];
-  const expectedTexts = Array.isArray(expectedText) ? expectedText : [expectedText];
-
-  while (Date.now() < deadline) {
-    lastMessages = await readInboxMessages(inboxPath);
-    const match = lastMessages.find(
-      (message): message is InboxMessage & { messageId: string; text: string } => {
-        if (message.from !== from || message.to !== memberName) return false;
-        if (typeof message.messageId !== 'string' || !message.messageId.trim()) return false;
-        const text = message.text;
-        if (typeof text !== 'string') return false;
-        return expectedTexts.every((expected) => text.includes(expected));
-      }
-    );
-    if (match) {
-      return match;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_500));
-  }
-
-  throw new Error(
-    `Timed out waiting for OpenCode member message in ${inboxPath}. Last messages: ${JSON.stringify(
-      lastMessages,
-      null,
-      2
-    )}`
-  );
-}
-
-async function waitForOpenCodePeerRelay(
-  svc: TeamProvisioningService,
-  teamName: string,
-  memberName: string,
-  messageId: string,
-  timeoutMs: number
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  let lastRelay: Awaited<ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>> | null =
-    null;
-
-  while (Date.now() < deadline) {
-    lastRelay = await svc.relayOpenCodeMemberInboxMessages(teamName, memberName, {
-      onlyMessageId: messageId,
-      source: 'manual',
-      deliveryMetadata: {
-        replyRecipient: 'user',
-      },
-    });
-    if (lastRelay.delivered >= 1) {
-      return;
-    }
-    if (lastRelay.failed > 0 && lastRelay.lastDelivery?.responsePending !== true) {
-      break;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 3_000));
-  }
-
-  throw new Error(`OpenCode peer relay failed: ${JSON.stringify(lastRelay, null, 2)}`);
-}
-
-async function readInboxMessages(inboxPath: string): Promise<InboxMessage[]> {
-  try {
-    const parsed = JSON.parse(await fs.readFile(inboxPath, 'utf8'));
-    return Array.isArray(parsed) ? (parsed as InboxMessage[]) : [];
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
-}
-
-async function waitUntil(
-  predicate: () => Promise<boolean>,
-  timeoutMs: number,
-  pollMs = 500
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await predicate()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, pollMs));
-  }
-  throw new Error(`Timed out after ${timeoutMs}ms waiting for condition`);
-}
-
-async function createOpenCodeLiveHarness(tempDir: string): Promise<{
-  bridgeClient: OpenCodeBridgeCommandClient;
-  selectedModel: string;
-  svc: TeamProvisioningService;
-  dispose: () => Promise<void>;
-}> {
-  const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL;
-  const orchestratorCli =
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
-  await assertExecutable(orchestratorCli);
-
-  const svc = new TeamProvisioningService();
-  const controlApi = await startLiveTeamControlApi(svc);
-  svc.setControlApiBaseUrlResolver(async () => controlApi.baseUrl);
-
-  const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
-  const bridgeEnv = {
-    ...createStableBridgeEnv(),
-    PATH: withBunOnPath(process.env.PATH ?? ''),
-    XDG_DATA_HOME: path.join(tempDir, 'xdg-data'),
-    AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
-    CLAUDE_TEAM_CONTROL_URL: controlApi.baseUrl,
-    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
-    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
-  };
-  const bridgeClient = new OpenCodeBridgeCommandClient({
-    binaryPath: orchestratorCli,
-    tempDirectory: path.join(tempDir, 'bridge-input'),
-    env: bridgeEnv,
-  });
-  const stateChangingCommands = createStateChangingCommands({
-    bridge: bridgeClient,
-    controlDir: path.join(tempDir, 'control'),
-  });
-  const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
-    stateChangingCommands,
-    timeoutMs: 180_000,
-    launchTimeoutMs: 180_000,
-    reconcileTimeoutMs: 90_000,
-    stopTimeoutMs: 90_000,
-  });
-  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge);
-  svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
-  return {
-    bridgeClient,
-    selectedModel,
-    svc,
-    dispose: async () => {
-      svc.setControlApiBaseUrlResolver(null);
-      await controlApi.close();
-    },
-  };
-}
-
-async function startLiveTeamControlApi(svc: TeamProvisioningService): Promise<{
-  baseUrl: string;
-  close: () => Promise<void>;
-}> {
-  const app = Fastify({ logger: false });
-  registerTeamRoutes(app, {
-    teamProvisioningService: svc,
-  } as HttpServices);
-  await app.listen({ host: '127.0.0.1', port: 0 });
-  const address = app.server.address();
-  if (!address || typeof address === 'string') {
-    await app.close();
-    throw new Error('Failed to start live team control API');
-  }
-
-  return {
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    close: async () => {
-      await app.close();
-    },
-  };
-}
-
-async function getRuntimeTranscript(
-  bridgeClient: OpenCodeBridgeCommandClient,
-  teamName: string,
-  memberName: string
-): Promise<unknown> {
-  return bridgeClient
-    .execute<
-      { teamId: string; teamName: string; laneId: string; memberName: string },
-      { logProjection?: { messages?: unknown[] }; messages?: unknown[] }
-    >(
-      'opencode.getRuntimeTranscript',
-      { teamId: teamName, teamName, laneId: 'primary', memberName },
-      { cwd: PROJECT_PATH, timeoutMs: 60_000 }
-    )
-    .catch((transcriptError) => ({
-      ok: false as const,
-      error: String(transcriptError),
-    }));
-}
-
-function createStateChangingCommands(input: {
-  bridge: OpenCodeBridgeCommandExecutor;
-  controlDir: string;
-}): OpenCodeStateChangingBridgeCommandService {
-  const clientIdentity = createOpenCodeBridgeClientIdentity({
-    appVersion: '1.3.0-e2e',
-    gitSha: null,
-    buildId: 'opencode-semantic-message-e2e',
-  });
-
-  return new OpenCodeStateChangingBridgeCommandService({
-    expectedClientIdentity: clientIdentity,
-    handshakePort: new OpenCodeBridgeCommandHandshakePort({
-      bridge: input.bridge,
-      clientIdentity,
-    }),
-    leaseStore: createOpenCodeBridgeCommandLeaseStore({
-      filePath: path.join(input.controlDir, 'leases.json'),
-    }),
-    ledger: createOpenCodeBridgeCommandLedgerStore({
-      filePath: path.join(input.controlDir, 'ledger.json'),
-    }),
-    bridge: input.bridge,
-    manifestReader: new StaticManifestReader(),
-  });
-}
-
-class StaticManifestReader implements RuntimeStoreManifestReader {
-  async read(): Promise<RuntimeStoreManifestEvidence> {
-    return {
-      highWatermark: 0,
-      activeRunId: null,
-      capabilitySnapshotId: null,
-    };
-  }
-}
-
-async function assertExecutable(filePath: string): Promise<void> {
-  await fs.access(filePath, fsConstants.X_OK);
-}
-
-function withBunOnPath(pathValue: string): string {
-  const bunDir = '/Users/belief/.bun/bin';
-  return pathValue.split(path.delimiter).includes(bunDir)
-    ? pathValue
-    : `${bunDir}${path.delimiter}${pathValue}`;
-}
-
-function createStableBridgeEnv(): NodeJS.ProcessEnv {
-  const realHome = os.userInfo().homedir;
-  const env = applyOpenCodeAutoUpdatePolicy({ ...process.env });
-  return {
-    ...env,
-    HOME: realHome,
-    USERPROFILE: realHome,
-  };
-}

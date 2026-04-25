@@ -1142,11 +1142,6 @@ export function RuntimeProviderManagementPanelView({
           .includes(providerQuery)
       )
     : state.providers;
-  const selectedProviderId = filteredProviders.some(
-    (provider) => provider.providerId === state.selectedProviderId
-  )
-    ? state.selectedProviderId
-    : (filteredProviders[0]?.providerId ?? state.selectedProviderId ?? null);
   const canSearchDirectory =
     state.directorySupported && providerQuery.length >= 2 && filteredProviders.length === 0;
 
@@ -1256,7 +1251,7 @@ export function RuntimeProviderManagementPanelView({
               key={provider.providerId}
               provider={provider}
               state={state}
-              active={provider.providerId === selectedProviderId}
+              active={provider.providerId === state.selectedProviderId}
               formOpen={state.activeFormProviderId === provider.providerId}
               apiKeyValue={state.apiKeyValue}
               busy={state.savingProviderId === provider.providerId}
