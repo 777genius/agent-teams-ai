@@ -15,10 +15,6 @@ function isWindowsAbsolutePath(input: string): boolean {
   return /^[A-Za-z]:[/\\]/.test(input) || input.startsWith('\\\\') || input.startsWith('//');
 }
 
-function comparePath(input: string, caseInsensitive: boolean): string {
-  return caseInsensitive ? input.toLowerCase() : input;
-}
-
 function pathSeparatorFor(root: string): '/' | '\\' {
   return root.includes('\\') && !root.includes('/') ? '\\' : '/';
 }
@@ -44,8 +40,8 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
   if (projectRoot) {
     const root = projectRoot.replace(/[/\\]$/, '');
     const caseInsensitive = isWindowsAbsolutePath(p) || isWindowsAbsolutePath(root);
-    const pathForCompare = comparePath(p, caseInsensitive);
-    const rootForCompare = comparePath(root, caseInsensitive);
+    const pathForCompare = caseInsensitive ? p.toLowerCase() : p;
+    const rootForCompare = caseInsensitive ? root.toLowerCase() : root;
     if (
       pathForCompare.startsWith(rootForCompare + '/') ||
       pathForCompare.startsWith(rootForCompare + '\\')
@@ -58,7 +54,7 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
   p = p
     .replace(/^\/Users\/[^/]+/, '~')
     .replace(/^\/home\/[^/]+/, '~')
-    .replace(/^[A-Za-z]:\\Users\\[^\\]+/i, '~');
+    .replace(/^[A-Z]:\\Users\\[^\\]+/i, '~');
 
   // 3. If short enough, return as-is
   if (p.length <= maxLength) return p;
@@ -88,7 +84,7 @@ function inferHomeDir(projectRoot: string): string | null {
   const match =
     /^(\/Users\/[^/]+)/.exec(projectRoot) ??
     /^(\/home\/[^/]+)/.exec(projectRoot) ??
-    /^([A-Za-z]:\\Users\\[^\\]+)/i.exec(projectRoot);
+    /^([A-Z]:\\Users\\[^\\]+)/i.exec(projectRoot);
   return match?.[1] ?? null;
 }
 
