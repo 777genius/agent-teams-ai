@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { registerRuntimeProviderManagementIpc } from '../../../../src/features/runtime-provider-management/main';
 import {
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
+  RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
   RUNTIME_PROVIDER_MANAGEMENT_MODELS,
   RUNTIME_PROVIDER_MANAGEMENT_VIEW,
 } from '../../../../src/features/runtime-provider-management/contracts';
@@ -130,6 +131,22 @@ describe('registerRuntimeProviderManagementIpc', () => {
     registerRuntimeProviderManagementIpc(ipcMain, feature);
 
     await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_VIEW)?.({}, { runtimeId: 'opencode' });
+    await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY)?.(
+      {},
+      {
+        runtimeId: 'opencode',
+        query: 'deep',
+        filter: 'connectable',
+        limit: 10,
+      }
+    );
+    expect(feature.loadProviderDirectory).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      query: 'deep',
+      filter: 'connectable',
+      limit: 10,
+    });
+
     const response = await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY)?.(
       {},
       {

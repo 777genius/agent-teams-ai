@@ -257,7 +257,7 @@ export function useRuntimeProviderManagement(
       const refreshDirectoryData = input.refresh === true;
       const query = input.query ?? directoryQuery;
       const filter = input.filter ?? directoryFilter;
-      const cursor = input.cursor ?? (append ? directoryNextCursor : null);
+      const cursor = input.cursor ?? null;
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
 
@@ -319,7 +319,6 @@ export function useRuntimeProviderManagement(
     },
     [
       directoryFilter,
-      directoryNextCursor,
       directoryQuery,
       directorySupported,
       options.enabled,
@@ -629,7 +628,6 @@ export function useRuntimeProviderManagement(
           connectError instanceof Error ? connectError.message : 'Failed to connect provider'
         );
       } finally {
-        setApiKeyValue('');
         setSavingProviderId(null);
       }
     },

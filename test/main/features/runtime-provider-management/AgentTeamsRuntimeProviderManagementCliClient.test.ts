@@ -152,4 +152,61 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       expect.objectContaining({ cwd: '/Users/test/project' })
     );
   });
+
+  it('loads provider directory with optional args and omits absent values', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          totalCount: 1,
+          returnedCount: 1,
+          query: 'deep',
+          filter: 'connectable',
+          limit: 10,
+          cursor: null,
+          nextCursor: null,
+          fetchedAt: '2026-04-25T00:00:00.000Z',
+          entries: [],
+          diagnostics: [],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const response = await client.loadProviderDirectory({
+      runtimeId: 'opencode',
+      projectPath: '/Users/test/project',
+      query: 'deep',
+      filter: 'connectable',
+      limit: 10,
+      refresh: true,
+    });
+
+    expect(response.directory?.query).toBe('deep');
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/repo/cli-dev',
+      [
+        'runtime',
+        'providers',
+        'directory',
+        '--runtime',
+        'opencode',
+        '--json',
+        '--project-path',
+        '/Users/test/project',
+        '--query',
+        'deep',
+        '--filter',
+        'connectable',
+        '--limit',
+        '10',
+        '--refresh',
+      ],
+      expect.objectContaining({ cwd: '/Users/test/project' })
+    );
+    expect(JSON.stringify(execCliMock.mock.calls[0])).not.toContain('undefined');
+  });
 });

@@ -257,6 +257,110 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
   });
 
+  it('opens the OpenCode provider directory and renders directory rows', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryOpen: true,
+            directoryLoaded: true,
+            directoryTotalCount: 115,
+            directoryEntries: [
+              {
+                providerId: 'deepseek',
+                displayName: 'DeepSeek',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: [],
+                recommended: false,
+                modelCount: 62,
+                defaultModelId: null,
+                authMethods: [],
+                actions: [
+                  {
+                    id: 'configure',
+                    label: 'Configure manually',
+                    enabled: false,
+                    disabledReason: 'OpenCode did not advertise API-key auth',
+                    requiresSecret: false,
+                    ownershipScope: 'runtime',
+                  },
+                ],
+                sources: ['opencode-provider'],
+                sourceLabel: 'OpenCode catalog',
+                providerSource: 'models.dev',
+                detail: 'Models are visible, but no connected credential was reported',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('115 OpenCode providers');
+    expect(host.textContent).toContain('DeepSeek');
+    expect(host.textContent).toContain('62 models');
+    expect(host.textContent).toContain('OpenCode catalog');
+    expect(host.querySelector('[data-testid="runtime-provider-directory-search"]')).not.toBeNull();
+
+    await act(async () => {
+      host
+        .querySelector('[data-testid="runtime-provider-directory-row-deepseek"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.selectDirectoryProvider).toHaveBeenCalledWith('deepseek');
+  });
+
+  it('offers global provider search when compact search has no matches', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            providerQuery: 'deep',
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const searchAll = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Search all OpenCode providers for "deep"')
+    );
+    expect(searchAll).not.toBeNull();
+
+    await act(async () => {
+      searchAll?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.searchAllProviders).toHaveBeenCalledWith('deep');
+  });
+
   it('renders connected provider model picker actions', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
