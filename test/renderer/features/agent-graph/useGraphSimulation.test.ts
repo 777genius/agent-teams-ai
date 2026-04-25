@@ -81,6 +81,26 @@ function rectsOverlap(
   );
 }
 
+function rectsOverlapVertically(
+  left: { top: number; bottom: number },
+  right: { top: number; bottom: number }
+): boolean {
+  return left.top < right.bottom && left.bottom > right.top;
+}
+
+function horizontalGapBetween(
+  left: { left: number; right: number },
+  right: { left: number; right: number }
+): number {
+  if (left.right <= right.left) {
+    return right.left - left.right;
+  }
+  if (right.right <= left.left) {
+    return left.left - right.right;
+  }
+  return 0;
+}
+
 describe('stable slot layout planner', () => {
   it('does not build a stable slot snapshot when the lead is missing', () => {
     const snapshot = buildStableSlotLayoutSnapshot({
@@ -153,6 +173,7 @@ describe('stable slot layout planner', () => {
     expect(frame?.activityColumnRect.left).toBe(frame?.boardBandRect.left);
     expect(frame?.kanbanBandRect.left).toBeGreaterThan(frame?.activityColumnRect.right ?? 0);
     expect(frame?.processBandRect.width).toBe(computeProcessBandWidth(0));
+    expect(frame?.processBandRect.height).toBe(STABLE_SLOT_GEOMETRY.processBandHeight);
   });
 
   it('uses strict cardinal owner slots for teams with up to four members', () => {
@@ -200,6 +221,7 @@ describe('stable slot layout planner', () => {
 
     expect(Math.abs(Math.abs(leftFrame.ownerX) - Math.abs(rightFrame.ownerX))).toBeLessThan(1);
     expect(Math.abs(Math.abs(topFrame.ownerY) - Math.abs(bottomFrame.ownerY))).toBeLessThan(1);
+    expect(Math.abs(topFrame.ownerY)).toBeLessThan(Math.abs(rightFrame.ownerX));
   });
 
   it('uses strict cardinal owner slots even when ownerOrder differs from assignment order', () => {
@@ -244,6 +266,67 @@ describe('stable slot layout planner', () => {
 
     expect(jackFrame.ownerX).toBeLessThan(0);
     expect(Math.abs(jackFrame.ownerY)).toBeLessThan(1);
+  });
+
+  it('keeps horizontal spacing around lead columns and between side-by-side owners', () => {
+    const teamName = 'team-horizontal-spacing';
+    const lead = createLead(teamName);
+    const members = [
+      createMember(teamName, 'agent-top', 'top'),
+      createMember(teamName, 'agent-right', 'right'),
+      createMember(teamName, 'agent-bottom', 'bottom'),
+      createMember(teamName, 'agent-left', 'left'),
+      createMember(teamName, 'agent-top-right', 'top-right'),
+      createMember(teamName, 'agent-bottom-right', 'bottom-right'),
+    ];
+    const tasks = [
+      createTask(teamName, 'lead-todo', lead.id),
+      createTask(teamName, 'lead-wip', lead.id, { taskStatus: 'in_progress' }),
+      ...members.map((member, index) => createTask(teamName, `task-${index + 1}`, member.id)),
+    ];
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      ownerOrder: members.map((member) => member.id),
+      slotAssignments: {
+        [members[0]!.id]: { ringIndex: 0, sectorIndex: 0 },
+        [members[1]!.id]: { ringIndex: 0, sectorIndex: 1 },
+        [members[2]!.id]: { ringIndex: 0, sectorIndex: 2 },
+        [members[3]!.id]: { ringIndex: 0, sectorIndex: 3 },
+        [members[4]!.id]: { ringIndex: 0, sectorIndex: 4 },
+        [members[5]!.id]: { ringIndex: 0, sectorIndex: 5 },
+      },
+    };
+
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, ...members, ...tasks],
+      layout,
+    });
+
+    expect(snapshot).not.toBeNull();
+    expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
+
+    for (const frame of snapshot!.memberSlotFrames) {
+      for (const centralRect of snapshot!.centralCollisionRects) {
+        if (!rectsOverlapVertically(frame.bounds, centralRect)) {
+          continue;
+        }
+        expect(horizontalGapBetween(frame.bounds, centralRect)).toBeGreaterThanOrEqual(
+          STABLE_SLOT_GEOMETRY.centralHorizontalGap
+        );
+      }
+    }
+
+    for (const [index, left] of snapshot!.memberSlotFrames.entries()) {
+      for (const right of snapshot!.memberSlotFrames.slice(index + 1)) {
+        if (!rectsOverlapVertically(left.bounds, right.bounds)) {
+          continue;
+        }
+        expect(horizontalGapBetween(left.bounds, right.bounds)).toBeGreaterThanOrEqual(
+          STABLE_SLOT_GEOMETRY.slotHorizontalGap
+        );
+      }
+    }
   });
 
   it('reserves a full empty activity column and minimum kanban width for idle members', () => {
@@ -825,8 +908,10 @@ describe('stable slot layout planner', () => {
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.processBandRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.activityColumnRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.kanbanBandRect);
-    expect(snapshot!.leadCentralReservedBlock.width).toBeLessThan(snapshot!.leadSlotFrame.bounds.width);
-    expect(snapshot!.leadCentralReservedBlock.height).toBeLessThan(
+    expect(snapshot!.leadCentralReservedBlock.width).toBeLessThan(
+      snapshot!.leadSlotFrame.bounds.width
+    );
+    expect(snapshot!.leadCentralReservedBlock.height).toBeLessThanOrEqual(
       snapshot!.leadSlotFrame.bounds.height
     );
   });

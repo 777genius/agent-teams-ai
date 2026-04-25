@@ -11,7 +11,6 @@ import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHo
 import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
-import { useTeamGraphSlotReset } from '../hooks/useTeamGraphSlotReset';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
 
 import { GraphActivityHud } from './GraphActivityHud';
@@ -60,8 +59,6 @@ export const TeamGraphOverlay = ({
   const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
   const effectiveSidebarVisible = sidebarVisible ?? persistedSidebarVisible;
   const handleToggleSidebar = onToggleSidebar ?? toggleSidebarVisible;
-
-  useTeamGraphSlotReset(teamName);
 
   // Task action dispatchers (same pattern as TeamGraphTab)
   const dispatchTaskAction = useCallback(

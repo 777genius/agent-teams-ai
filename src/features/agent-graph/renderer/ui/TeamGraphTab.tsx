@@ -11,7 +11,6 @@ import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHo
 import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
-import { useTeamGraphSlotReset } from '../hooks/useTeamGraphSlotReset';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
 
 import { GraphActivityHud } from './GraphActivityHud';
@@ -51,8 +50,6 @@ export const TeamGraphTab = ({
   const [fullscreen, setFullscreen] = useState(false);
   const { sidebarVisible, toggleSidebarVisible } = useGraphSidebarVisibility();
   const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
-
-  useTeamGraphSlotReset(teamName, isActive);
 
   // Typed event dispatchers (DRY — used in both events + renderOverlay)
   const dispatchOpenTask = useCallback(

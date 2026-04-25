@@ -119,6 +119,7 @@ const PROCESS_RAIL_NODE_GAP = 42;
 const PROCESS_RAIL_NODE_FOOTPRINT = 28;
 const GEOMETRY_EPSILON = 0.001;
 const SMALL_TEAM_CARDINAL_RADIUS_STEP = 24;
+const SMALL_TEAM_CARDINAL_VERTICAL_PADDING = 77.7;
 
 const SECTOR_VECTORS = STABLE_SLOT_SECTOR_VECTORS;
 const SMALL_TEAM_CARDINAL_LAYOUTS: ReadonlyArray<
@@ -265,7 +266,9 @@ function rectOverlapsAnyCentralRect(
   rect: StableRect,
   centralCollisionRects: readonly StableRect[]
 ): boolean {
-  return centralCollisionRects.some((centralRect) => rectsOverlap(rect, centralRect));
+  return centralCollisionRects.some((centralRect) =>
+    rectsOverlapWithAxisGap(rect, centralRect, SLOT_GEOMETRY.centralHorizontalGap, 0)
+  );
 }
 
 export function computeOwnerFootprints(
@@ -988,21 +991,25 @@ function planStrictSmallTeamOwnerSlots(
     return null;
   }
 
-  let radius = Math.max(
-    ...slotConfigs.map((slot) =>
-      resolveMinimumDirectionalRadiusForVector({
-        vector: slot!.vector,
-        footprint: slot!.footprint,
-        centralCollisionRects,
-        runtimeCentralExclusion,
-      })
-    )
+  const baseRadiusByAxis = resolveStrictSmallTeamRadiusByAxis(
+    slotConfigs.map((slot) => slot!),
+    centralCollisionRects,
+    runtimeCentralExclusion
   );
 
   for (let iteration = 0; iteration < 48; iteration += 1) {
-    const frames = slotConfigs.map((slot) =>
-      buildSlotFrameAtRadiusWithVector(slot!.footprint, slot!.assignment, radius, slot!.vector)
-    );
+    const radiusBump = iteration * SMALL_TEAM_CARDINAL_RADIUS_STEP;
+    const frames = slotConfigs.map((slot) => {
+      const axis = resolveStrictSmallTeamVectorAxis(slot!.vector);
+      return buildSlotFrameAtRadiusWithVector(
+        slot!.footprint,
+        slot!.assignment,
+        baseRadiusByAxis[axis] +
+          (axis === 'vertical' ? SMALL_TEAM_CARDINAL_VERTICAL_PADDING : 0) +
+          radiusBump,
+        slot!.vector
+      );
+    });
     const allValid = frames.every((frame, frameIndex) =>
       isSlotFramePlacementValid(
         frame,
@@ -1013,10 +1020,40 @@ function planStrictSmallTeamOwnerSlots(
     if (allValid) {
       return frames;
     }
-    radius += SMALL_TEAM_CARDINAL_RADIUS_STEP;
   }
 
   return null;
+}
+
+function resolveStrictSmallTeamRadiusByAxis(
+  slotConfigs: readonly {
+    footprint: OwnerFootprint;
+    vector: { x: number; y: number };
+  }[],
+  centralCollisionRects: readonly StableRect[],
+  runtimeCentralExclusion: StableRect
+): Record<'horizontal' | 'vertical', number> {
+  const radiusByAxis = {
+    horizontal: 0,
+    vertical: 0,
+  };
+
+  for (const slot of slotConfigs) {
+    const axis = resolveStrictSmallTeamVectorAxis(slot.vector);
+    const radius = resolveMinimumDirectionalRadiusForVector({
+      vector: slot.vector,
+      footprint: slot.footprint,
+      centralCollisionRects,
+      runtimeCentralExclusion,
+    });
+    radiusByAxis[axis] = Math.max(radiusByAxis[axis], radius);
+  }
+
+  return radiusByAxis;
+}
+
+function resolveStrictSmallTeamVectorAxis(vector: { x: number; y: number }): 'horizontal' | 'vertical' {
+  return Math.abs(vector.x) >= Math.abs(vector.y) ? 'horizontal' : 'vertical';
 }
 
 function buildPreferredAssignmentsMap(
@@ -1329,7 +1366,7 @@ function rankNearestSlotAssignmentResult(args: {
     if (
       !isSlotFramePlacementValid(frame, otherFrames, centralCollisionRects) ||
       !isSlotFramePlacementValid(displacedFrame, otherFrames, centralCollisionRects) ||
-      rectsOverlapWithGap(frame.bounds, displacedFrame.bounds, SLOT_GEOMETRY.ringPadding)
+      ownerSlotFramesOverlap(frame.bounds, displacedFrame.bounds)
     ) {
       return null;
     }
@@ -1735,17 +1772,31 @@ function resolveTaskColumnKey(task: GraphNode): string {
   return 'todo';
 }
 
-function rectsOverlapWithGap(a: StableRect, b: StableRect, gap: number): boolean {
+function rectsOverlapWithAxisGap(
+  a: StableRect,
+  b: StableRect,
+  horizontalGap: number,
+  verticalGap: number
+): boolean {
   return (
-    a.left - gap < b.right &&
-    a.right + gap > b.left &&
-    a.top - gap < b.bottom &&
-    a.bottom + gap > b.top
+    a.left - horizontalGap < b.right &&
+    a.right + horizontalGap > b.left &&
+    a.top - verticalGap < b.bottom &&
+    a.bottom + verticalGap > b.top
   );
 }
 
 function rectsOverlap(a: StableRect, b: StableRect): boolean {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function ownerSlotFramesOverlap(a: StableRect, b: StableRect): boolean {
+  return rectsOverlapWithAxisGap(
+    a,
+    b,
+    SLOT_GEOMETRY.slotHorizontalGap,
+    SLOT_GEOMETRY.ringPadding
+  );
 }
 
 function rectContainsRect(outer: StableRect, inner: StableRect): boolean {
@@ -1788,9 +1839,7 @@ function isSlotFramePlacementValid(
   if (rectOverlapsAnyCentralRect(frame.bounds, centralCollisionRects)) {
     return false;
   }
-  return !existingFrames.some((existing) =>
-    rectsOverlapWithGap(frame.bounds, existing.bounds, SLOT_GEOMETRY.ringPadding)
-  );
+  return !existingFrames.some((existing) => ownerSlotFramesOverlap(frame.bounds, existing.bounds));
 }
 
 function buildAssignmentKey(assignment: GraphOwnerSlotAssignment): string {
