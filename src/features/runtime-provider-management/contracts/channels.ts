@@ -1,4 +1,5 @@
 export const RUNTIME_PROVIDER_MANAGEMENT_VIEW = 'runtimeProviderManagement:view';
+export const RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY = 'runtimeProviderManagement:directory';
 export const RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY =
   'runtimeProviderManagement:connectApiKey';
 export const RUNTIME_PROVIDER_MANAGEMENT_FORGET = 'runtimeProviderManagement:forget';

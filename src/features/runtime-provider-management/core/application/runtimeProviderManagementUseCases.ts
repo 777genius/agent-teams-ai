@@ -1,7 +1,9 @@
 import type { RuntimeProviderManagementPort } from './RuntimeProviderManagementPort';
 import type {
   RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelTestResponse,
@@ -17,6 +19,13 @@ export function loadRuntimeProviderManagementView(
   input: RuntimeProviderManagementLoadViewInput
 ): Promise<RuntimeProviderManagementViewResponse> {
   return port.loadView(input);
+}
+
+export function loadRuntimeProviderDirectory(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementLoadDirectoryInput
+): Promise<RuntimeProviderManagementDirectoryResponse> {
+  return port.loadProviderDirectory(input);
 }
 
 export function connectRuntimeProviderWithApiKey(

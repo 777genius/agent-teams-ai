@@ -1,5 +1,6 @@
 import {
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
+  RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
   RUNTIME_PROVIDER_MANAGEMENT_FORGET,
   RUNTIME_PROVIDER_MANAGEMENT_MODELS,
   RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL,
@@ -11,7 +12,9 @@ import { createLogger } from '@shared/utils/logger';
 import type { RuntimeProviderManagementFeatureFacade } from '../../composition/createRuntimeProviderManagementFeature';
 import type {
   RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelTestResponse,
@@ -45,6 +48,29 @@ export function registerRuntimeProviderManagementIpc(
           error: {
             code: 'runtime-unhealthy',
             message: error instanceof Error ? error.message : 'Failed to load providers',
+            recoverable: true,
+          },
+        };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
+    async (
+      _event,
+      input: RuntimeProviderManagementLoadDirectoryInput
+    ): Promise<RuntimeProviderManagementDirectoryResponse> => {
+      try {
+        return await feature.loadProviderDirectory(input);
+      } catch (error) {
+        logger.error('Failed to load runtime provider directory', error);
+        return {
+          schemaVersion: 1,
+          runtimeId: input.runtimeId,
+          error: {
+            code: 'runtime-unhealthy',
+            message: error instanceof Error ? error.message : 'Failed to load provider directory',
             recoverable: true,
           },
         };
@@ -173,6 +199,7 @@ export function registerRuntimeProviderManagementIpc(
 
 export function removeRuntimeProviderManagementIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_VIEW);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_FORGET);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_MODELS);

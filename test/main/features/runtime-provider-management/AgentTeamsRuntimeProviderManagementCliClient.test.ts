@@ -88,6 +88,34 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
   });
 
+  it('parses JSON error responses from failed forget commands', async () => {
+    const error = new Error('Command failed: /repo/cli-dev runtime providers forget');
+    Object.assign(error, {
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'unsupported-action',
+          message: 'This OpenCode runtime does not advertise credential removal through /doc',
+          recoverable: true,
+        },
+      }),
+      stderr: '',
+    });
+    execCliMock.mockRejectedValue(error);
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const response = await client.forgetCredential({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+    });
+
+    expect(response.error?.code).toBe('unsupported-action');
+    expect(response.error?.message).toBe(
+      'This OpenCode runtime does not advertise credential removal through /doc'
+    );
+  });
+
   it('passes project path as cwd and CLI flag for project-aware provider management', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({

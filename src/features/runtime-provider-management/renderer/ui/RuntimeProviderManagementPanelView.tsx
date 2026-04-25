@@ -12,6 +12,7 @@ import {
 } from '@renderer/utils/openCodeModelRecommendations';
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   KeyRound,
   Loader2,
@@ -36,6 +37,8 @@ import type {
 } from '../hooks/useRuntimeProviderManagement';
 import type {
   RuntimeProviderConnectionDto,
+  RuntimeProviderDirectoryEntryDto,
+  RuntimeProviderDirectoryFilterDto,
   RuntimeProviderModelDto,
   RuntimeProviderModelTestResultDto,
 } from '@features/runtime-provider-management/contracts';
@@ -65,6 +68,49 @@ interface ProviderRowProps {
   readonly busy: boolean;
   readonly disabled: boolean;
   readonly actions: RuntimeProviderManagementActions;
+}
+
+const DIRECTORY_FILTERS: Array<{ id: RuntimeProviderDirectoryFilterDto; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'connectable', label: 'Connectable' },
+  { id: 'connected', label: 'Connected' },
+  { id: 'configured', label: 'Configured' },
+  { id: 'manual', label: 'Manual setup' },
+  { id: 'has-models', label: 'Has models' },
+];
+
+function getDirectoryAction(
+  provider: RuntimeProviderDirectoryEntryDto,
+  actionId: RuntimeProviderConnectionDto['actions'][number]['id']
+) {
+  return provider.actions.find((action) => action.id === actionId) ?? null;
+}
+
+function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): string {
+  switch (provider.setupKind) {
+    case 'connected':
+      return 'Connected';
+    case 'connect-api-key':
+      return 'Connect';
+    case 'configure-manually':
+      return 'Configure manually';
+    case 'requires-environment':
+      return 'Requires environment';
+    case 'available-readonly':
+      return 'Available';
+    case 'unsupported':
+      return 'Unsupported';
+  }
+}
+
+function getDirectoryModelsLabel(provider: RuntimeProviderDirectoryEntryDto): string {
+  if (provider.modelCount === null) {
+    return 'models unknown';
+  }
+  if (provider.modelCount <= 0) {
+    return 'models not reported';
+  }
+  return `${provider.modelCount} model${provider.modelCount === 1 ? '' : 's'}`;
 }
 
 function stateClassName(provider: RuntimeProviderConnectionDto): string {
@@ -523,6 +569,242 @@ function ProviderRow({
           provider={provider}
           disabled={disabled || busy}
         />
+      ) : null}
+    </div>
+  );
+}
+
+function DirectoryProviderRow({
+  provider,
+  active,
+  disabled,
+  busy,
+  actions,
+}: {
+  readonly provider: RuntimeProviderDirectoryEntryDto;
+  readonly active: boolean;
+  readonly disabled: boolean;
+  readonly busy: boolean;
+  readonly actions: RuntimeProviderManagementActions;
+}): JSX.Element {
+  const connect = getDirectoryAction(provider, 'connect');
+  const configure = getDirectoryAction(provider, 'configure');
+  const forget = getDirectoryAction(provider, 'forget');
+
+  return (
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      data-testid={`runtime-provider-directory-row-${provider.providerId}`}
+      className={`cursor-pointer rounded-lg border p-3 transition-all hover:border-sky-300/60 hover:bg-sky-400/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 ${
+        active
+          ? 'border-sky-300/70 bg-sky-400/[0.075] shadow-[0_0_0_1px_rgba(125,211,252,0.22)]'
+          : 'border-[var(--color-border-subtle)] bg-white/[0.02]'
+      }`}
+      onClick={() => actions.selectDirectoryProvider(provider.providerId)}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        event.preventDefault();
+        actions.selectDirectoryProvider(provider.providerId);
+      }}
+    >
+      <div className="grid grid-cols-[1fr_auto] gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <ProviderBrandIcon provider={provider} />
+            <span className="text-sm font-medium text-[var(--color-text)]">
+              {provider.displayName}
+            </span>
+            {provider.recommended ? <Badge variant="secondary">Recommended</Badge> : null}
+            <span
+              className={`rounded-md border px-2 py-0.5 text-[11px] ${
+                provider.state === 'connected'
+                  ? 'border-emerald-400/35 bg-emerald-400/10 text-emerald-200'
+                  : 'border-white/10 bg-white/[0.04] text-[var(--color-text-muted)]'
+              }`}
+            >
+              {formatDirectorySetupKind(provider)}
+            </span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-text-secondary)]">
+            <span>{getDirectoryModelsLabel(provider)}</span>
+            {provider.sourceLabel ? <span>{provider.sourceLabel}</span> : null}
+            {provider.providerSource ? <span>{provider.providerSource}</span> : null}
+            {provider.ownership.map((owner) => (
+              <Badge
+                key={owner}
+                variant="outline"
+                className="border-white/10 px-1.5 py-0 text-[10px]"
+              >
+                {owner}
+              </Badge>
+            ))}
+          </div>
+          {provider.detail ? (
+            <div className="mt-1 text-xs text-[var(--color-text-muted)]">{provider.detail}</div>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-start justify-end gap-1.5">
+          {connect ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={disabled || busy || !connect.enabled}
+              title={connect.disabledReason ?? undefined}
+              onClick={(event) => {
+                event.stopPropagation();
+                actions.startConnect(provider.providerId);
+              }}
+            >
+              {busy ? (
+                <Loader2 className="mr-1 size-3.5 animate-spin" />
+              ) : (
+                <KeyRound className="mr-1 size-3.5" />
+              )}
+              {connect.label}
+            </Button>
+          ) : null}
+          {forget ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || busy || !forget.enabled}
+              title={forget.disabledReason ?? undefined}
+              onClick={(event) => {
+                event.stopPropagation();
+                void actions.forgetProvider(provider.providerId);
+              }}
+            >
+              {busy ? (
+                <Loader2 className="mr-1 size-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1 size-3.5" />
+              )}
+              {forget.label}
+            </Button>
+          ) : null}
+          {!connect && configure ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled
+              title={configure.disabledReason ?? undefined}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {configure.label}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProviderDirectoryPanel({
+  state,
+  actions,
+  disabled,
+}: {
+  readonly state: RuntimeProviderManagementState;
+  readonly actions: RuntimeProviderManagementActions;
+  readonly disabled: boolean;
+}): JSX.Element {
+  return (
+    <div
+      className="rounded-lg border p-3"
+      style={{
+        borderColor: 'var(--color-border-subtle)',
+        backgroundColor: 'rgba(255,255,255,0.018)',
+      }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button type="button" size="sm" variant="ghost" onClick={actions.closeDirectory}>
+          <ArrowLeft className="mr-1 size-3.5" />
+          Providers
+        </Button>
+        <div className="text-xs text-[var(--color-text-muted)]">
+          {state.directoryTotalCount === null
+            ? 'All OpenCode providers'
+            : `${state.directoryTotalCount} OpenCode providers`}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <Input
+            data-testid="runtime-provider-directory-search"
+            value={state.directoryQuery}
+            disabled={disabled || state.directoryLoading}
+            onChange={(event) => actions.setDirectoryQuery(event.target.value)}
+            placeholder="Search all OpenCode providers"
+            className="h-9 pr-3 text-sm"
+            style={{ paddingLeft: 40 }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {DIRECTORY_FILTERS.map((filter) => (
+            <Button
+              key={filter.id}
+              type="button"
+              size="sm"
+              variant={state.directoryFilter === filter.id ? 'default' : 'outline'}
+              className="h-7 px-2 text-xs"
+              disabled={disabled || state.directoryLoading}
+              onClick={() => actions.setDirectoryFilter(filter.id)}
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {state.directoryError ? (
+        <div className="mt-3 rounded-md border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-200">
+          {state.directoryError}
+        </div>
+      ) : null}
+
+      <div className="mt-3 max-h-[48vh] space-y-2 overflow-y-auto pr-1">
+        {state.directoryLoading && state.directoryEntries.length === 0 ? (
+          <RuntimeProviderLoadingPlaceholder />
+        ) : null}
+        {state.directoryEntries.map((provider) => (
+          <DirectoryProviderRow
+            key={provider.providerId}
+            provider={provider}
+            active={state.directorySelectedProviderId === provider.providerId}
+            disabled={disabled || state.directoryLoading}
+            busy={state.savingProviderId === provider.providerId}
+            actions={actions}
+          />
+        ))}
+      </div>
+
+      {!state.directoryLoading && state.directoryEntries.length === 0 && !state.directoryError ? (
+        <div className="mt-3 rounded-md border border-white/10 px-3 py-3 text-sm text-[var(--color-text-muted)]">
+          No providers match this search.
+        </div>
+      ) : null}
+
+      {state.directoryNextCursor ? (
+        <div className="mt-3 flex justify-center">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={disabled || state.directoryRefreshing}
+            onClick={() => void actions.loadMoreDirectory()}
+          >
+            {state.directoryRefreshing ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+            Load more
+          </Button>
+        </div>
       ) : null}
     </div>
   );

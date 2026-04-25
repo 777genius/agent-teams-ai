@@ -1,6 +1,8 @@
 import type {
   RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementModelTestResponse,
@@ -15,6 +17,9 @@ export interface RuntimeProviderManagementApi {
   loadView(
     input: RuntimeProviderManagementLoadViewInput
   ): Promise<RuntimeProviderManagementViewResponse>;
+  loadProviderDirectory(
+    input: RuntimeProviderManagementLoadDirectoryInput
+  ): Promise<RuntimeProviderManagementDirectoryResponse>;
   connectWithApiKey(
     input: RuntimeProviderManagementConnectApiKeyInput
   ): Promise<RuntimeProviderManagementProviderResponse>;

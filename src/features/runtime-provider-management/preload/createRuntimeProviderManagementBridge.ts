@@ -1,5 +1,6 @@
 import {
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
+  RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
   RUNTIME_PROVIDER_MANAGEMENT_FORGET,
   RUNTIME_PROVIDER_MANAGEMENT_MODELS,
   RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL,
@@ -10,7 +11,9 @@ import {
 
 import type {
   RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelTestResponse,
@@ -30,6 +33,10 @@ export function createRuntimeProviderManagementBridge(
       input: RuntimeProviderManagementLoadViewInput
     ): Promise<RuntimeProviderManagementViewResponse> =>
       ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_VIEW, input),
+    loadProviderDirectory: (
+      input: RuntimeProviderManagementLoadDirectoryInput
+    ): Promise<RuntimeProviderManagementDirectoryResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY, input),
     connectWithApiKey: (
       input: RuntimeProviderManagementConnectApiKeyInput
     ): Promise<RuntimeProviderManagementProviderResponse> =>

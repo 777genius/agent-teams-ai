@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -10,6 +10,8 @@ import {
 
 import type {
   RuntimeProviderConnectionDto,
+  RuntimeProviderDirectoryEntryDto,
+  RuntimeProviderDirectoryFilterDto,
   RuntimeProviderManagementRuntimeId,
   RuntimeProviderManagementViewDto,
   RuntimeProviderModelDto,
@@ -30,6 +32,18 @@ export interface RuntimeProviderManagementState {
   providers: readonly RuntimeProviderConnectionDto[];
   selectedProviderId: string | null;
   providerQuery: string;
+  directoryOpen: boolean;
+  directoryLoading: boolean;
+  directoryRefreshing: boolean;
+  directoryError: string | null;
+  directoryEntries: readonly RuntimeProviderDirectoryEntryDto[];
+  directoryTotalCount: number | null;
+  directoryNextCursor: string | null;
+  directoryQuery: string;
+  directoryFilter: RuntimeProviderDirectoryFilterDto;
+  directoryLoaded: boolean;
+  directorySelectedProviderId: string | null;
+  directorySupported: boolean;
   activeFormProviderId: string | null;
   apiKeyValue: string;
   modelPickerProviderId: string | null;
@@ -52,6 +66,14 @@ export interface RuntimeProviderManagementActions {
   refresh: () => Promise<void>;
   selectProvider: (providerId: string) => void;
   setProviderQuery: (value: string) => void;
+  openDirectory: () => void;
+  closeDirectory: () => void;
+  setDirectoryQuery: (value: string) => void;
+  setDirectoryFilter: (value: RuntimeProviderDirectoryFilterDto) => void;
+  loadMoreDirectory: () => Promise<void>;
+  refreshDirectory: () => Promise<void>;
+  selectDirectoryProvider: (providerId: string) => void;
+  searchAllProviders: (query: string) => void;
   startConnect: (providerId: string) => void;
   cancelConnect: () => void;
   setApiKeyValue: (value: string) => void;
@@ -146,6 +168,23 @@ export function useRuntimeProviderManagement(
   const [view, setView] = useState<RuntimeProviderManagementViewDto | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [providerQuery, setProviderQuery] = useState('');
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryRefreshing, setDirectoryRefreshing] = useState(false);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+  const [directoryEntries, setDirectoryEntries] = useState<
+    readonly RuntimeProviderDirectoryEntryDto[]
+  >([]);
+  const [directoryTotalCount, setDirectoryTotalCount] = useState<number | null>(null);
+  const [directoryNextCursor, setDirectoryNextCursor] = useState<string | null>(null);
+  const [directoryQuery, setDirectoryQuery] = useState('');
+  const [directoryFilter, setDirectoryFilterState] =
+    useState<RuntimeProviderDirectoryFilterDto>('all');
+  const [directoryLoaded, setDirectoryLoaded] = useState(false);
+  const [directorySelectedProviderId, setDirectorySelectedProviderId] = useState<string | null>(
+    null
+  );
+  const [directorySupported, setDirectorySupported] = useState(true);
   const [activeFormProviderId, setActiveFormProviderId] = useState<string | null>(null);
   const [apiKeyValue, setApiKeyValue] = useState('');
   const [modelPickerProviderId, setModelPickerProviderId] = useState<string | null>(null);
@@ -166,6 +205,7 @@ export function useRuntimeProviderManagement(
   const [savingProviderId, setSavingProviderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const directoryRequestSeq = useRef(0);
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!options.enabled) {
@@ -199,9 +239,109 @@ export function useRuntimeProviderManagement(
     }
   }, [options.enabled, options.projectPath, options.runtimeId]);
 
+  const loadDirectoryPage = useCallback(
+    async (
+      input: {
+        append?: boolean;
+        refresh?: boolean;
+        query?: string;
+        filter?: RuntimeProviderDirectoryFilterDto;
+        cursor?: string | null;
+      } = {}
+    ): Promise<void> => {
+      if (!options.enabled || !directorySupported) {
+        return;
+      }
+
+      const append = input.append === true;
+      const refreshDirectoryData = input.refresh === true;
+      const query = input.query ?? directoryQuery;
+      const filter = input.filter ?? directoryFilter;
+      const cursor = input.cursor ?? (append ? directoryNextCursor : null);
+      const requestSeq = directoryRequestSeq.current + 1;
+      directoryRequestSeq.current = requestSeq;
+
+      if (append) {
+        setDirectoryRefreshing(true);
+      } else if (refreshDirectoryData) {
+        setDirectoryRefreshing(true);
+      } else {
+        setDirectoryLoading(true);
+      }
+      setDirectoryError(null);
+
+      try {
+        const response = await api.runtimeProviderManagement.loadProviderDirectory({
+          runtimeId: options.runtimeId,
+          projectPath: options.projectPath ?? null,
+          query: query.trim() || null,
+          filter,
+          limit: 50,
+          cursor,
+          refresh: refreshDirectoryData,
+        });
+        if (directoryRequestSeq.current !== requestSeq) {
+          return;
+        }
+        if (response.error) {
+          setDirectoryError(response.error.message);
+          if (
+            response.error.code === 'unsupported-action' ||
+            response.error.message.toLowerCase().includes('unknown command')
+          ) {
+            setDirectorySupported(false);
+          }
+          return;
+        }
+        const directory = response.directory;
+        if (!directory) {
+          setDirectoryError('Provider directory response was empty');
+          return;
+        }
+        setDirectoryLoaded(true);
+        setDirectoryTotalCount(directory.totalCount);
+        setDirectoryNextCursor(directory.nextCursor);
+        setDirectoryEntries((current) =>
+          append ? [...current, ...directory.entries] : directory.entries
+        );
+      } catch (loadError) {
+        if (directoryRequestSeq.current === requestSeq) {
+          setDirectoryError(
+            loadError instanceof Error ? loadError.message : 'Failed to load provider directory'
+          );
+        }
+      } finally {
+        if (directoryRequestSeq.current === requestSeq) {
+          setDirectoryLoading(false);
+          setDirectoryRefreshing(false);
+        }
+      }
+    },
+    [
+      directoryFilter,
+      directoryNextCursor,
+      directoryQuery,
+      directorySupported,
+      options.enabled,
+      options.projectPath,
+      options.runtimeId,
+    ]
+  );
+
   useEffect(() => {
     if (!options.enabled) {
       setProviderQuery('');
+      setDirectoryOpen(false);
+      setDirectoryLoading(false);
+      setDirectoryRefreshing(false);
+      setDirectoryError(null);
+      setDirectoryEntries([]);
+      setDirectoryTotalCount(null);
+      setDirectoryNextCursor(null);
+      setDirectoryQuery('');
+      setDirectoryFilterState('all');
+      setDirectoryLoaded(false);
+      setDirectorySelectedProviderId(null);
       setApiKeyValue('');
       setActiveFormProviderId(null);
       const reset = resetModelState();
@@ -215,6 +355,34 @@ export function useRuntimeProviderManagement(
     }
     void refresh();
   }, [options.enabled, refresh]);
+
+  useEffect(() => {
+    if (!options.enabled || !directoryOpen || !directorySupported) {
+      return;
+    }
+
+    const timeout = window.setTimeout(
+      () => {
+        void loadDirectoryPage({
+          append: false,
+          query: directoryQuery,
+          filter: directoryFilter,
+          cursor: null,
+        });
+      },
+      directoryLoaded ? 250 : 0
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    directoryFilter,
+    directoryLoaded,
+    directoryOpen,
+    directoryQuery,
+    directorySupported,
+    loadDirectoryPage,
+    options.enabled,
+  ]);
 
   useEffect(() => {
     if (!options.enabled || !modelPickerProviderId) {
@@ -281,13 +449,17 @@ export function useRuntimeProviderManagement(
     const selectedProvider = view?.providers.find(
       (provider) => provider.providerId === selectedProviderId
     );
+    const selectedDirectoryProvider = directoryEntries.find(
+      (provider) => provider.providerId === selectedProviderId
+    );
     if (
-      selectedProvider &&
-      selectedProvider.state === 'connected' &&
-      selectedProvider.modelCount > 0
+      (selectedProvider?.state === 'connected' && selectedProvider.modelCount > 0) ||
+      (selectedDirectoryProvider?.state === 'connected' &&
+        selectedDirectoryProvider.modelCount !== 0)
     ) {
-      if (modelPickerProviderId !== selectedProvider.providerId) {
-        setModelPickerProviderId(selectedProvider.providerId);
+      const providerId = selectedProvider?.providerId ?? selectedDirectoryProvider!.providerId;
+      if (modelPickerProviderId !== providerId) {
+        setModelPickerProviderId(providerId);
         setModelPickerMode('use');
         setModelQuery('');
         setModels([]);
@@ -306,7 +478,85 @@ export function useRuntimeProviderManagement(
       setSelectedModelId(null);
       setModelResults({});
     }
-  }, [activeFormProviderId, modelPickerProviderId, options.enabled, selectedProviderId, view]);
+  }, [
+    activeFormProviderId,
+    directoryEntries,
+    modelPickerProviderId,
+    options.enabled,
+    selectedProviderId,
+    view,
+  ]);
+
+  const openDirectory = useCallback((): void => {
+    if (!directorySupported) {
+      return;
+    }
+    setDirectoryOpen(true);
+    setDirectoryError(null);
+  }, [directorySupported]);
+
+  const closeDirectory = useCallback((): void => {
+    setDirectoryOpen(false);
+    setDirectorySelectedProviderId(null);
+  }, []);
+
+  const setDirectoryFilter = useCallback((value: RuntimeProviderDirectoryFilterDto): void => {
+    setDirectoryFilterState(value);
+    setDirectoryNextCursor(null);
+  }, []);
+
+  const loadMoreDirectory = useCallback(async (): Promise<void> => {
+    if (!directoryNextCursor || directoryLoading || directoryRefreshing) {
+      return;
+    }
+    await loadDirectoryPage({
+      append: true,
+      cursor: directoryNextCursor,
+    });
+  }, [directoryLoading, directoryNextCursor, directoryRefreshing, loadDirectoryPage]);
+
+  const refreshDirectory = useCallback(async (): Promise<void> => {
+    await loadDirectoryPage({
+      refresh: true,
+      cursor: null,
+    });
+  }, [loadDirectoryPage]);
+
+  const selectDirectoryProvider = useCallback(
+    (providerId: string): void => {
+      setDirectorySelectedProviderId(providerId);
+      setSelectedProviderId(providerId);
+      setActiveFormProviderId(null);
+
+      const compactProvider = view?.providers.find(
+        (provider) => provider.providerId === providerId
+      );
+      const directoryProvider = directoryEntries.find(
+        (provider) => provider.providerId === providerId
+      );
+      const connected =
+        compactProvider?.state === 'connected' || directoryProvider?.state === 'connected';
+      const modelCount = compactProvider?.modelCount ?? directoryProvider?.modelCount ?? null;
+
+      if (connected && modelCount !== 0) {
+        setModelPickerProviderId(providerId);
+        setModelPickerMode('use');
+        setModelQuery('');
+        setModels([]);
+        setModelsError(null);
+        setSelectedModelId(null);
+        setModelResults({});
+      }
+    },
+    [directoryEntries, view]
+  );
+
+  const searchAllProviders = useCallback((query: string): void => {
+    setDirectoryQuery(query);
+    setDirectoryOpen(true);
+    setDirectoryError(null);
+    setDirectoryNextCursor(null);
+  }, []);
 
   const startConnect = useCallback((providerId: string): void => {
     setSelectedProviderId(providerId);
@@ -358,6 +608,12 @@ export function useRuntimeProviderManagement(
         setApiKeyValue('');
         void Promise.resolve(options.onProviderChanged?.())
           .then(() => refresh())
+          .then(() => {
+            if (directoryOpen) {
+              return loadDirectoryPage({ refresh: true, cursor: null });
+            }
+            return undefined;
+          })
           .catch((refreshError) => {
             setError(
               refreshError instanceof Error ? refreshError.message : 'Failed to refresh providers'
@@ -372,7 +628,7 @@ export function useRuntimeProviderManagement(
         setSavingProviderId(null);
       }
     },
-    [apiKeyValue, options, refresh]
+    [apiKeyValue, directoryOpen, loadDirectoryPage, options, refresh]
   );
 
   const forgetProvider = useCallback(
@@ -400,6 +656,12 @@ export function useRuntimeProviderManagement(
         setSavingProviderId(null);
         void Promise.resolve(options.onProviderChanged?.())
           .then(() => refresh())
+          .then(() => {
+            if (directoryOpen) {
+              return loadDirectoryPage({ refresh: true, cursor: null });
+            }
+            return undefined;
+          })
           .catch((refreshError) => {
             setError(
               refreshError instanceof Error ? refreshError.message : 'Failed to refresh providers'
@@ -413,7 +675,7 @@ export function useRuntimeProviderManagement(
         setSavingProviderId(null);
       }
     },
-    [options, refresh]
+    [directoryOpen, loadDirectoryPage, options, refresh]
   );
 
   const openModelPicker = useCallback(
@@ -549,6 +811,18 @@ export function useRuntimeProviderManagement(
       providers: view?.providers ?? [],
       selectedProviderId,
       providerQuery,
+      directoryOpen,
+      directoryLoading,
+      directoryRefreshing,
+      directoryError,
+      directoryEntries,
+      directoryTotalCount,
+      directoryNextCursor,
+      directoryQuery,
+      directoryFilter,
+      directoryLoaded,
+      directorySelectedProviderId,
+      directorySupported,
       activeFormProviderId,
       apiKeyValue,
       modelPickerProviderId,
@@ -569,6 +843,18 @@ export function useRuntimeProviderManagement(
     [
       activeFormProviderId,
       apiKeyValue,
+      directoryEntries,
+      directoryError,
+      directoryFilter,
+      directoryLoaded,
+      directoryLoading,
+      directoryNextCursor,
+      directoryOpen,
+      directoryQuery,
+      directoryRefreshing,
+      directorySelectedProviderId,
+      directorySupported,
+      directoryTotalCount,
       error,
       loading,
       modelPickerMode,
@@ -594,6 +880,14 @@ export function useRuntimeProviderManagement(
       refresh,
       selectProvider,
       setProviderQuery,
+      openDirectory,
+      closeDirectory,
+      setDirectoryQuery,
+      setDirectoryFilter,
+      loadMoreDirectory,
+      refreshDirectory,
+      selectDirectoryProvider,
+      searchAllProviders,
       startConnect,
       cancelConnect,
       setApiKeyValue,
@@ -609,12 +903,19 @@ export function useRuntimeProviderManagement(
     }),
     [
       cancelConnect,
+      closeDirectory,
       closeModelPicker,
       forgetProvider,
+      loadMoreDirectory,
+      openDirectory,
       openModelPicker,
       refresh,
+      refreshDirectory,
+      searchAllProviders,
+      selectDirectoryProvider,
       selectProvider,
       setDefaultModel,
+      setDirectoryFilter,
       startConnect,
       submitConnect,
       testModel,

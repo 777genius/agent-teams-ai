@@ -1,7 +1,11 @@
 import opencodeIconUrl from '../assets/provider-icons/opencode-favicon.png';
 
-import type { RuntimeProviderConnectionDto } from '@features/runtime-provider-management/contracts';
 import type { CSSProperties, JSX } from 'react';
+
+type ProviderBrand = {
+  providerId: string;
+  displayName: string;
+};
 
 interface SvgPath {
   d: string;
@@ -393,7 +397,7 @@ function normalizeProviderKey(value: string): string {
     .replace(/(?:^-)|(?:-$)/g, '');
 }
 
-function getBrandIconKey(provider: RuntimeProviderConnectionDto): string | null {
+function getBrandIconKey(provider: ProviderBrand): string | null {
   const providerId = normalizeProviderKey(provider.providerId);
   const displayName = normalizeProviderKey(provider.displayName);
   const aliasedProviderId = BRAND_ALIASES[providerId] ?? providerId;
@@ -420,7 +424,7 @@ function getBrandIconKey(provider: RuntimeProviderConnectionDto): string | null 
   return null;
 }
 
-function fallbackDescriptor(provider: RuntimeProviderConnectionDto): BrandIconDescriptor {
+function fallbackDescriptor(provider: ProviderBrand): BrandIconDescriptor {
   const displayName = provider.displayName.trim();
   return {
     kind: 'letters',
@@ -431,7 +435,7 @@ function fallbackDescriptor(provider: RuntimeProviderConnectionDto): BrandIconDe
   };
 }
 
-function descriptorFor(provider: RuntimeProviderConnectionDto): BrandIconDescriptor {
+function descriptorFor(provider: ProviderBrand): BrandIconDescriptor {
   const key = getBrandIconKey(provider);
   return key
     ? (BRAND_ICONS[key] ?? LETTER_BRANDS[key] ?? fallbackDescriptor(provider))
@@ -446,11 +450,7 @@ function shellStyle(descriptor: BrandIconDescriptor): CSSProperties {
   };
 }
 
-export function ProviderBrandIcon({
-  provider,
-}: {
-  readonly provider: RuntimeProviderConnectionDto;
-}): JSX.Element {
+export function ProviderBrandIcon({ provider }: { readonly provider: ProviderBrand }): JSX.Element {
   const descriptor = descriptorFor(provider);
 
   return (

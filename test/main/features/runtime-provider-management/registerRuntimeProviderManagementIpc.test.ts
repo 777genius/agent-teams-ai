@@ -9,6 +9,7 @@ import {
 
 import type { RuntimeProviderManagementFeatureFacade } from '../../../../src/features/runtime-provider-management/main';
 import type {
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementProviderResponse,
   RuntimeProviderManagementViewResponse,
   RuntimeProviderManagementModelsResponse,
@@ -60,6 +61,23 @@ describe('registerRuntimeProviderManagementIpc', () => {
         detail: null,
       },
     };
+    const directoryResponse: RuntimeProviderManagementDirectoryResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 0,
+        returnedCount: 0,
+        query: null,
+        filter: 'all',
+        limit: 100,
+        cursor: null,
+        nextCursor: null,
+        entries: [],
+        diagnostics: [],
+        fetchedAt: '2026-04-25T00:00:00.000Z',
+      },
+    };
     const forgottenResponse: RuntimeProviderManagementProviderResponse = {
       schemaVersion: 1,
       runtimeId: 'opencode',
@@ -101,6 +119,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
     };
     const feature: RuntimeProviderManagementFeatureFacade = {
       loadView: vi.fn(() => Promise.resolve(viewResponse)),
+      loadProviderDirectory: vi.fn(() => Promise.resolve(directoryResponse)),
       connectWithApiKey: vi.fn(() => Promise.resolve(connectedResponse)),
       forgetCredential: vi.fn(() => Promise.resolve(forgottenResponse)),
       loadModels: vi.fn(() => Promise.resolve(modelsResponse)),

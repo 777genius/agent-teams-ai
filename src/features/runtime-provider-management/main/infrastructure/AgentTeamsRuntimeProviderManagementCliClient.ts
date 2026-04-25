@@ -6,8 +6,10 @@ import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import type {
   RuntimeProviderManagementApi,
   RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementErrorDto,
   RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementModelsResponse,
@@ -26,6 +28,7 @@ const COMMAND_ERROR_DETAIL_LIMIT = 1_600;
 
 type RuntimeProviderManagementErrorResponse =
   | RuntimeProviderManagementViewResponse
+  | RuntimeProviderManagementDirectoryResponse
   | RuntimeProviderManagementProviderResponse
   | RuntimeProviderManagementModelsResponse
   | RuntimeProviderManagementModelTestResponse;
@@ -114,6 +117,13 @@ function normalizeProjectPath(projectPath: string | null | undefined): string | 
 
 function appendProjectPathArgs(args: string[], projectPath: string | null): string[] {
   return projectPath ? [...args, '--project-path', projectPath] : args;
+}
+
+function appendOptionalArg(args: string[], name: string, value: string | null | undefined): void {
+  const normalized = value?.trim();
+  if (normalized) {
+    args.push(name, normalized);
+  }
 }
 
 function runtimeProviderCommandOptions<T extends { env: NodeJS.ProcessEnv }>(
@@ -233,6 +243,51 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
   }
 
+  async loadProviderDirectory(
+    input: RuntimeProviderManagementLoadDirectoryInput
+  ): Promise<RuntimeProviderManagementDirectoryResponse> {
+    const { binaryPath, env } = await resolveCliEnv();
+    if (!binaryPath) {
+      return errorResponse<RuntimeProviderManagementDirectoryResponse>(
+        input.runtimeId,
+        'Multimodel runtime binary was not found.',
+        'runtime-missing'
+      );
+    }
+
+    const projectPath = normalizeProjectPath(input.projectPath);
+    const args = ['runtime', 'providers', 'directory', '--runtime', input.runtimeId, '--json'];
+    appendOptionalArg(args, '--project-path', projectPath);
+    appendOptionalArg(args, '--query', input.query ?? null);
+    appendOptionalArg(args, '--filter', input.filter ?? null);
+    if (typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0) {
+      args.push('--limit', String(Math.floor(input.limit)));
+    }
+    appendOptionalArg(args, '--cursor', input.cursor ?? null);
+    if (input.refresh) {
+      args.push('--refresh');
+    }
+
+    try {
+      const { stdout } = await execCli(
+        binaryPath,
+        args,
+        runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
+      );
+      return extractJsonObject<RuntimeProviderManagementDirectoryResponse>(stdout);
+    } catch (error) {
+      const response =
+        extractJsonObjectFromError<RuntimeProviderManagementDirectoryResponse>(error);
+      if (response) {
+        return response;
+      }
+      return errorResponse<RuntimeProviderManagementDirectoryResponse>(
+        input.runtimeId,
+        normalizeCommandFailure(error)
+      );
+    }
+  }
+
   async connectWithApiKey(
     input: RuntimeProviderManagementConnectApiKeyInput
   ): Promise<RuntimeProviderManagementProviderResponse> {
@@ -329,6 +384,10 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       );
       return extractJsonObject<RuntimeProviderManagementProviderResponse>(stdout);
     } catch (error) {
+      const response = extractJsonObjectFromError<RuntimeProviderManagementProviderResponse>(error);
+      if (response) {
+        return response;
+      }
       return errorResponse<RuntimeProviderManagementProviderResponse>(
         input.runtimeId,
         normalizeCommandFailure(error)

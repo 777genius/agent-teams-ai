@@ -58,6 +58,64 @@ export interface RuntimeProviderConnectionDto {
   detail: string | null;
 }
 
+export type RuntimeProviderDirectoryFilterDto =
+  | 'all'
+  | 'connected'
+  | 'configured'
+  | 'connectable'
+  | 'manual'
+  | 'has-models';
+
+export type RuntimeProviderSetupKindDto =
+  | 'connected'
+  | 'connect-api-key'
+  | 'configure-manually'
+  | 'requires-environment'
+  | 'available-readonly'
+  | 'unsupported';
+
+export type RuntimeProviderDirectorySourceDto =
+  | 'opencode-provider'
+  | 'config-provider'
+  | 'inventory'
+  | 'seed';
+
+export interface RuntimeProviderDirectoryEntryDto {
+  providerId: string;
+  displayName: string;
+  state: RuntimeProviderConnectionStateDto;
+  setupKind: RuntimeProviderSetupKindDto;
+  ownership: readonly RuntimeProviderOwnershipDto[];
+  recommended: boolean;
+  modelCount: number | null;
+  authMethods: readonly RuntimeProviderAuthMethodDto[];
+  defaultModelId: string | null;
+  sources: readonly RuntimeProviderDirectorySourceDto[];
+  sourceLabel: string | null;
+  providerSource: string | null;
+  detail: string | null;
+  actions: readonly RuntimeProviderActionDescriptorDto[];
+  metadata: {
+    hasKnownModels: boolean;
+    requiresManualConfig: boolean;
+    supportedInlineAuth: boolean;
+  };
+}
+
+export interface RuntimeProviderDirectoryDto {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  totalCount: number;
+  returnedCount: number;
+  query: string | null;
+  filter: RuntimeProviderDirectoryFilterDto;
+  limit: number;
+  cursor: string | null;
+  nextCursor: string | null;
+  entries: readonly RuntimeProviderDirectoryEntryDto[];
+  diagnostics: readonly string[];
+  fetchedAt: string;
+}
+
 export interface RuntimeProviderManagementViewDto {
   runtimeId: RuntimeProviderManagementRuntimeId;
   title: string;
@@ -90,6 +148,13 @@ export interface RuntimeProviderManagementViewResponse {
   schemaVersion: 1;
   runtimeId: RuntimeProviderManagementRuntimeId;
   view?: RuntimeProviderManagementViewDto;
+  error?: RuntimeProviderManagementErrorDto;
+}
+
+export interface RuntimeProviderManagementDirectoryResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  directory?: RuntimeProviderDirectoryDto;
   error?: RuntimeProviderManagementErrorDto;
 }
 
@@ -151,6 +216,16 @@ export interface RuntimeProviderManagementModelTestResponse {
 export interface RuntimeProviderManagementLoadViewInput {
   runtimeId: RuntimeProviderManagementRuntimeId;
   projectPath?: string | null;
+}
+
+export interface RuntimeProviderManagementLoadDirectoryInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  projectPath?: string | null;
+  query?: string | null;
+  filter?: RuntimeProviderDirectoryFilterDto | null;
+  limit?: number | null;
+  cursor?: string | null;
+  refresh?: boolean | null;
 }
 
 export interface RuntimeProviderManagementConnectApiKeyInput {
