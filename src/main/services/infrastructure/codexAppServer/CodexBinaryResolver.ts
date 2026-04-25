@@ -43,10 +43,29 @@ function expandWindowsExtensions(candidate: string): string[] {
   return [...pathext.map((ext) => `${candidate}${ext.toLowerCase()}`), candidate];
 }
 
+function isPathLikeCandidate(candidate: string): boolean {
+  if (process.platform === 'win32') {
+    return path.win32.isAbsolute(candidate) || candidate.includes('\\') || candidate.includes('/');
+  }
+  return path.isAbsolute(candidate) || candidate.includes(path.sep);
+}
+
+function getPathEntries(): string[] {
+  const delimiter = process.platform === 'win32' ? ';' : path.delimiter;
+  return (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+}
+
+function resolvePathEntryCandidate(pathEntry: string, candidate: string): string {
+  if (process.platform === 'win32') {
+    return path.win32.join(pathEntry, candidate);
+  }
+  return path.join(pathEntry, candidate);
+}
+
 async function verifyBinary(candidate: string): Promise<string | null> {
   const expandedCandidates = expandWindowsExtensions(candidate);
 
-  if (path.isAbsolute(candidate) || candidate.includes(path.sep)) {
+  if (isPathLikeCandidate(candidate)) {
     for (const expandedCandidate of expandedCandidates) {
       if (await fileExists(expandedCandidate)) {
         return expandedCandidate;
@@ -55,10 +74,10 @@ async function verifyBinary(candidate: string): Promise<string | null> {
     return null;
   }
 
-  const pathEntries = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const pathEntries = getPathEntries();
   for (const pathEntry of pathEntries) {
     for (const expandedCandidate of expandedCandidates) {
-      const resolvedCandidate = path.join(pathEntry, expandedCandidate);
+      const resolvedCandidate = resolvePathEntryCandidate(pathEntry, expandedCandidate);
       if (await fileExists(resolvedCandidate)) {
         return resolvedCandidate;
       }

@@ -42,8 +42,8 @@ describe('CodexBinaryResolver', () => {
 
   it('prefers the Windows command shim over the extensionless POSIX shim on PATH', async () => {
     const binDir = 'C:\\Program Files\\nodejs';
-    const extensionless = path.join(binDir, 'codex');
-    const cmdShim = path.join(binDir, 'codex.cmd');
+    const extensionless = path.win32.join(binDir, 'codex');
+    const cmdShim = path.win32.join(binDir, 'codex.cmd');
     process.env.PATH = binDir;
 
     accessMock.mockImplementation((filePath, mode) => {

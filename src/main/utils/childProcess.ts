@@ -112,6 +112,7 @@ function resolveCmdPathTemplate(template: string, launcherDir: string): string {
       .replace(/%SCRIPT_DIR%/gi, dirWithSep)
       .replace(/%~dp0/gi, dirWithSep)
       .replace(/%dp0%/gi, dirWithSep)
+      .replace(/\\/g, path.sep)
   );
 }
 
