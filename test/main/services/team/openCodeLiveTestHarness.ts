@@ -64,15 +64,22 @@ export async function createOpenCodeLiveHarness(input: {
   svc.setControlApiBaseUrlResolver(async () => controlApi.baseUrl);
 
   const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
-  const bridgeEnv = {
-    ...createStableBridgeEnv(),
+  const stableBridgeEnv = createStableBridgeEnv();
+  const bridgeEnv: NodeJS.ProcessEnv = {
+    ...stableBridgeEnv,
     PATH: withBunOnPath(process.env.PATH ?? ''),
-    XDG_DATA_HOME: path.join(input.tempDir, 'xdg-data'),
     AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
     CLAUDE_TEAM_CONTROL_URL: controlApi.baseUrl,
     CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
     CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
   };
+  if (process.env.OPENCODE_E2E_USE_REAL_APP_CREDENTIALS !== '1') {
+    bridgeEnv.XDG_DATA_HOME = path.join(input.tempDir, 'xdg-data');
+  } else if (stableBridgeEnv.XDG_DATA_HOME) {
+    bridgeEnv.XDG_DATA_HOME = stableBridgeEnv.XDG_DATA_HOME;
+  } else {
+    delete bridgeEnv.XDG_DATA_HOME;
+  }
   const bridgeClient = new OpenCodeBridgeCommandClient({
     binaryPath: orchestratorCli,
     tempDirectory: path.join(input.tempDir, 'bridge-input'),
