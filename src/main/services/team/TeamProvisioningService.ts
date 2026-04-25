@@ -10133,6 +10133,24 @@ export class TeamProvisioningService {
     }
 
     if (trimmedModelId.includes('/')) {
+      const requestedProviderId = this.extractOpenCodeCatalogProviderId(trimmedModelId);
+      const availableProviderIds = this.getOpenCodeCatalogProviderIds(availableModels);
+      if (
+        requestedProviderId === 'openrouter' &&
+        !availableProviderIds.includes(requestedProviderId)
+      ) {
+        const availableProviderList =
+          availableProviderIds.length > 0 ? availableProviderIds.join(', ') : 'none';
+        return {
+          ok: false,
+          reason:
+            `OpenCode provider "openrouter" for selected model "${trimmedModelId}" ` +
+            'is not available in the current runtime catalog for this project/profile. ' +
+            `Live catalog providers: ${availableProviderList}. ` +
+            'Connect OpenRouter in OpenCode provider management or choose one of the listed OpenCode models.',
+        };
+      }
+
       return {
         ok: false,
         reason: `Selected model ${trimmedModelId} was not found in the live provider catalog.`,
@@ -10161,6 +10179,24 @@ export class TeamProvisioningService {
       ok: false,
       reason: `Selected model ${trimmedModelId} was not found in the live provider catalog.`,
     };
+  }
+
+  private extractOpenCodeCatalogProviderId(modelId: string): string | null {
+    const separatorIndex = modelId.indexOf('/');
+    if (separatorIndex <= 0) {
+      return null;
+    }
+    return modelId.slice(0, separatorIndex).trim().toLowerCase() || null;
+  }
+
+  private getOpenCodeCatalogProviderIds(availableModels: readonly string[]): string[] {
+    return Array.from(
+      new Set(
+        availableModels
+          .map((modelId) => this.extractOpenCodeCatalogProviderId(modelId.trim()))
+          .filter((providerId): providerId is string => Boolean(providerId))
+      )
+    ).sort((left, right) => left.localeCompare(right));
   }
 
   private findEquivalentOpenRouterModelIds(

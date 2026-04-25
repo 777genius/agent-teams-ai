@@ -836,6 +836,65 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(prepare).toHaveBeenCalledTimes(1);
   });
 
+  it('explains OpenRouter selected-model failures when the current OpenCode catalog has no OpenRouter provider', async () => {
+    const prepare = vi.fn(async (input: { model?: string; runtimeOnly?: boolean }) => ({
+      ok: true as const,
+      providerId: 'opencode' as const,
+      modelId: input.model ?? null,
+      diagnostics: [],
+      warnings: [],
+    }));
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        getLastOpenCodeTeamLaunchReadiness: vi.fn(() => ({
+          state: 'ready',
+          launchAllowed: true,
+          modelId: 'opencode/minimax-m2.5-free',
+          availableModels: ['opencode/minimax-m2.5-free', 'openai/gpt-5.4'],
+          opencodeVersion: '1.0.0',
+          installMethod: 'unknown',
+          binaryPath: 'opencode',
+          hostHealthy: true,
+          appMcpConnected: true,
+          requiredToolsPresent: true,
+          permissionBridgeReady: true,
+          runtimeStoresReady: true,
+          supportLevel: 'production_supported',
+          missing: [],
+          diagnostics: [],
+          evidence: {
+            capabilitiesReady: true,
+            mcpToolProofRoute: 'mcp:tools/list',
+            observedMcpTools: [],
+            runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
+          },
+        })),
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['openrouter/qwen/qwen3-coder'],
+      modelVerificationMode: 'compatibility',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toContain(
+      'OpenCode provider "openrouter" for selected model "openrouter/qwen/qwen3-coder" is not available'
+    );
+    expect(result.message).toContain('Live catalog providers: openai, opencode.');
+    expect(result.message).toContain('Connect OpenRouter in OpenCode provider management');
+    expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
   it('treats retryable OpenCode compatibility failures as blocking selected-model diagnostics', async () => {
     const prepare = vi.fn(async () => ({
       ok: false as const,

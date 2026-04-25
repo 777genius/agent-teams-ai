@@ -352,11 +352,16 @@ describe('RuntimeProviderManagementPanelView', () => {
     ) as HTMLElement | undefined;
     expect(connectedBadge?.style.color).toBeTruthy();
     expect(
-      host.querySelector('[data-testid="runtime-provider-model-search"]')?.style.paddingLeft
+      (
+        host.querySelector(
+          '[data-testid="runtime-provider-model-search"]'
+        ) as HTMLElement | null
+      )?.style.paddingLeft
     ).toBe('42px');
-    expect(host.querySelector('[data-testid="runtime-provider-model-list"]')?.style.maxHeight).toBe(
-      '300px'
-    );
+    expect(
+      (host.querySelector('[data-testid="runtime-provider-model-list"]') as HTMLElement | null)
+        ?.style.maxHeight
+    ).toBe('300px');
     expect(host.textContent).not.toContain('OpenRouterfree');
     const firstTestButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Test'
@@ -364,7 +369,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(firstTestButton?.className).toContain('border');
     const modelResult = host.querySelector(
       '[data-testid="runtime-provider-model-result-openrouter/openai/gpt-oss-20b:free"]'
-    );
+    ) as HTMLElement | null;
     expect(modelResult?.style.color).toBe('#86efac');
     expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-flash')).toBeLessThan(
       (host.textContent ?? '').indexOf('opencode/big-pickle')
