@@ -83,7 +83,7 @@ function isRelayDuplicateOfVisibleMessage(
     return false;
   }
 
-  if (message.source === 'lead_process' || message.source === 'runtime_delivery') {
+  if (message.source === 'lead_process') {
     return true;
   }
 

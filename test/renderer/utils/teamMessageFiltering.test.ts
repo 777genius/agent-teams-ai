@@ -139,6 +139,42 @@ describe('filterTeamMessages', () => {
     expect(result.map((message) => message.messageId)).toEqual(['delivery-1', 'reply-1']);
   });
 
+  it('keeps same-direction OpenCode follow-ups when the visible text differs', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'reply-1',
+        from: 'jack',
+        to: 'user',
+        source: 'runtime_delivery',
+        text: 'Initial answer.',
+      }),
+      makeMessage({
+        messageId: 'reply-2',
+        from: 'jack',
+        to: 'user',
+        source: 'runtime_delivery',
+        text: 'Additional context after checking logs.',
+        relayOfMessageId: 'reply-1',
+      }),
+      makeMessage({
+        messageId: 'reply-3',
+        from: 'jack',
+        to: 'user',
+        source: 'runtime_delivery',
+        text: 'Initial answer.',
+        relayOfMessageId: 'reply-1',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result.map((message) => message.messageId)).toEqual(['reply-1', 'reply-2']);
+  });
+
   it('hides internal lead relay deliveries while keeping member replies', () => {
     const messages = [
       makeMessage({
