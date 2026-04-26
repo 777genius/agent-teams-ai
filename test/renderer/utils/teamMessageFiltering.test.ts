@@ -175,6 +175,62 @@ describe('filterTeamMessages', () => {
     expect(result.map((message) => message.messageId)).toEqual(['reply-1', 'reply-2']);
   });
 
+  it('hides exact duplicate OpenCode replies for the same delivered app message', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'user-request-1',
+        from: 'user',
+        to: 'team-lead',
+        source: 'user_sent',
+        text: 'Ask everyone to message me.',
+      }),
+      makeMessage({
+        messageId: 'delivery-1',
+        from: 'team-lead',
+        to: 'bob',
+        source: 'runtime_delivery',
+        text: 'Please message the user directly.',
+        relayOfMessageId: 'user-request-1',
+      }),
+      makeMessage({
+        messageId: 'reply-1',
+        from: 'bob',
+        to: 'user',
+        source: 'runtime_delivery',
+        text: 'Привет! Я готов к работе.',
+        relayOfMessageId: 'delivery-1',
+      }),
+      makeMessage({
+        messageId: 'reply-2',
+        from: 'bob',
+        to: 'user',
+        source: 'runtime_delivery',
+        text: ' Привет! Я готов к работе. ',
+        relayOfMessageId: 'delivery-1',
+      }),
+      makeMessage({
+        messageId: 'reply-3',
+        from: 'bob',
+        to: 'user',
+        source: 'runtime_delivery',
+        text: 'Дополнительный контекст после проверки.',
+        relayOfMessageId: 'delivery-1',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result.map((message) => message.messageId)).toEqual([
+      'user-request-1',
+      'reply-1',
+      'reply-3',
+    ]);
+  });
+
   it('hides internal lead relay deliveries while keeping member replies', () => {
     const messages = [
       makeMessage({

@@ -90,6 +90,22 @@ function isRelayDuplicateOfVisibleMessage(
   return normalizeMessageText(message.text) === normalizeMessageText(original.text);
 }
 
+function getRuntimeDeliveryRelayDuplicateKey(
+  message: InboxMessage,
+  relayOfMessageId: string
+): string | null {
+  if (message.source !== 'runtime_delivery') {
+    return null;
+  }
+  const from = normalizeParticipant(message.from);
+  const to = normalizeParticipant(message.to);
+  const text = normalizeMessageText(message.text);
+  if (!from || !to || !text) {
+    return null;
+  }
+  return [relayOfMessageId, from, to, text].join('\0');
+}
+
 export function filterTeamMessages(
   messages: InboxMessage[],
   options: {
@@ -163,6 +179,8 @@ export function filterTeamMessages(
       .filter((entry): entry is readonly [string, InboxMessage] => entry !== null)
   );
 
+  const seenRuntimeDeliveryRelayDuplicates = new Set<string>();
+
   return list.filter((m) => {
     const relayOfMessageId =
       typeof m.relayOfMessageId === 'string' ? m.relayOfMessageId.trim() : '';
@@ -172,6 +190,13 @@ export function filterTeamMessages(
     const ownMessageId = typeof m.messageId === 'string' ? m.messageId.trim() : '';
     if (relayOfMessageId === ownMessageId) {
       return true;
+    }
+    const runtimeDuplicateKey = getRuntimeDeliveryRelayDuplicateKey(m, relayOfMessageId);
+    if (runtimeDuplicateKey) {
+      if (seenRuntimeDeliveryRelayDuplicates.has(runtimeDuplicateKey)) {
+        return false;
+      }
+      seenRuntimeDeliveryRelayDuplicates.add(runtimeDuplicateKey);
     }
     return !isRelayDuplicateOfVisibleMessage(
       m,
