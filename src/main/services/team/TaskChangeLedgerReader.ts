@@ -103,7 +103,9 @@ interface LedgerEvent {
     | 'bash_simulated_sed'
     | 'shell_snapshot'
     | 'powershell_snapshot'
-    | 'post_tool_hook_snapshot';
+    | 'post_tool_hook_snapshot'
+    | 'opencode_toolpart_write'
+    | 'opencode_toolpart_edit';
   operation: 'create' | 'modify' | 'delete';
   confidence: LedgerConfidence;
   workspaceRoot: string;
@@ -1128,9 +1130,12 @@ export class TaskChangeLedgerReader {
       case 'file_edit':
         return 'Edit';
       case 'file_write':
+      case 'opencode_toolpart_write':
         return 'Write';
       case 'notebook_edit':
         return 'NotebookEdit';
+      case 'opencode_toolpart_edit':
+        return 'Edit';
       case 'bash_simulated_sed':
       case 'shell_snapshot':
         return 'Bash';
@@ -1142,7 +1147,7 @@ export class TaskChangeLedgerReader {
   }
 
   private mapSnippetType(event: LedgerEvent): SnippetDiff['type'] {
-    if (event.source === 'file_write') {
+    if (event.source === 'file_write' || event.source === 'opencode_toolpart_write') {
       return event.operation === 'create' ? 'write-new' : 'write-update';
     }
     if (event.source === 'notebook_edit') {

@@ -186,6 +186,78 @@ describe('TaskChangeLedgerReader', () => {
     expect(result?.files[0]?.relativePath).toBe('src/new.ts');
   });
 
+  it('maps OpenCode toolpart sources into normal review snippet semantics', async () => {
+    tmpDir = await makeLedgerBundle({
+      events: [
+        {
+          schemaVersion: 1,
+          eventId: 'event-write',
+          taskId: TASK_ID,
+          taskRef: TASK_ID,
+          taskRefKind: 'canonical',
+          phase: 'work',
+          executionSeq: 1,
+          sessionId: 'opencode-session-1',
+          memberName: 'bob',
+          toolUseId: 'part-write',
+          source: 'opencode_toolpart_write',
+          operation: 'create',
+          confidence: 'exact',
+          workspaceRoot: '/repo',
+          filePath: '/repo/src/new.ts',
+          relativePath: 'src/new.ts',
+          timestamp: '2026-03-01T10:00:00.000Z',
+          toolStatus: 'succeeded',
+          before: null,
+          after: null,
+          oldString: '',
+          newString: 'export const value = 1;\n',
+          linesAdded: 1,
+          linesRemoved: 0,
+        },
+        {
+          schemaVersion: 1,
+          eventId: 'event-edit',
+          taskId: TASK_ID,
+          taskRef: TASK_ID,
+          taskRefKind: 'canonical',
+          phase: 'work',
+          executionSeq: 2,
+          sessionId: 'opencode-session-1',
+          memberName: 'bob',
+          toolUseId: 'part-edit',
+          source: 'opencode_toolpart_edit',
+          operation: 'modify',
+          confidence: 'exact',
+          workspaceRoot: '/repo',
+          filePath: '/repo/src/new.ts',
+          relativePath: 'src/new.ts',
+          timestamp: '2026-03-01T10:01:00.000Z',
+          toolStatus: 'succeeded',
+          before: null,
+          after: null,
+          oldString: 'value = 1',
+          newString: 'value = 2',
+          linesAdded: 1,
+          linesRemoved: 1,
+        },
+      ],
+    });
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    const snippets = result?.files[0]?.snippets ?? [];
+    expect(snippets.map((snippet) => snippet.toolName)).toEqual(['Write', 'Edit']);
+    expect(snippets.map((snippet) => snippet.type)).toEqual(['write-new', 'edit']);
+  });
+
   it('groups rename relations in summary-only bundles without losing absolute paths', async () => {
     const relation = { kind: 'rename', oldPath: 'src/old.ts', newPath: 'src/new.ts' };
     tmpDir = await makeLedgerBundle({

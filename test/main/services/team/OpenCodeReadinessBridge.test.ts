@@ -137,6 +137,63 @@ describe('OpenCodeReadinessBridge', () => {
     );
   });
 
+  it('executes OpenCode task ledger backfill through a direct read-only bridge command', async () => {
+    const executor = fakeExecutor(
+      bridgeCommandSuccess({
+        command: 'opencode.backfillTaskLedger',
+        requestId: 'backfill-req-1',
+        data: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          teamName: 'team-a',
+          taskId: 'task-1',
+          projectDir: '/claude/project',
+          workspaceRoot: '/repo',
+          dryRun: false,
+          scannedSessions: 1,
+          scannedToolparts: 2,
+          candidateEvents: 2,
+          importedEvents: 2,
+          skippedEvents: 0,
+          outcome: 'imported',
+          notices: [],
+          diagnostics: [],
+        },
+      })
+    );
+    const bridge = new OpenCodeReadinessBridge(executor);
+
+    await expect(
+      bridge.backfillOpenCodeTaskLedger({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskDisplayId: 'abc12345',
+        projectDir: '/claude/project',
+        workspaceRoot: '/repo',
+      })
+    ).resolves.toMatchObject({
+      outcome: 'imported',
+      importedEvents: 2,
+    });
+
+    expect(executor.execute).toHaveBeenCalledWith(
+      'opencode.backfillTaskLedger',
+      {
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskDisplayId: 'abc12345',
+        projectDir: '/claude/project',
+        workspaceRoot: '/repo',
+      },
+      {
+        cwd: '/repo',
+        timeoutMs: 45_000,
+        stdoutLimitBytes: 2_000_000,
+        stderrLimitBytes: 512_000,
+      }
+    );
+  });
+
   it('routes state-changing launch commands through the guarded command service when configured', async () => {
     const executor = fakeExecutor(
       bridgeFailure('internal_error', 'direct bridge must not run', [])

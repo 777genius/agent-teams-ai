@@ -864,4 +864,498 @@ describe('ChangeExtractorService', () => {
     expect(result.confidence === 'high' || result.confidence === 'medium').toBe(false);
     expect(upsertEntry).not.toHaveBeenCalled();
   });
+
+  it('backfills OpenCode ledger artifacts once before falling back to legacy extraction', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
+    const projectDir = path.join(tmpDir, 'project-dir');
+    const projectPath = path.join(tmpDir, 'repo');
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+
+    const backfillOpenCodeTaskLedger = vi.fn(async (input: any) => {
+      const bundleDir = path.join(input.projectDir, '.board-task-changes', 'bundles');
+      await fs.mkdir(bundleDir, { recursive: true });
+      await fs.writeFile(
+        path.join(bundleDir, `${encodeURIComponent(TASK_ID)}.json`),
+        JSON.stringify({
+          schemaVersion: 1,
+          source: 'task-change-ledger',
+          taskId: TASK_ID,
+          generatedAt: '2026-03-01T10:00:00.000Z',
+          eventCount: 1,
+          files: [
+            {
+              filePath: path.join(projectPath, 'src/opencode.ts'),
+              relativePath: 'src/opencode.ts',
+              eventIds: ['event-1'],
+              linesAdded: 1,
+              linesRemoved: 0,
+              isNewFile: true,
+              latestAfterHash: null,
+            },
+          ],
+          totalLinesAdded: 1,
+          totalLinesRemoved: 0,
+          totalFiles: 1,
+          confidence: 'high',
+          warnings: [],
+          events: [
+            {
+              schemaVersion: 1,
+              eventId: 'event-1',
+              taskId: TASK_ID,
+              taskRef: TASK_ID,
+              taskRefKind: 'canonical',
+              phase: 'work',
+              executionSeq: 0,
+              sessionId: 'opencode-session-1',
+              memberName: 'bob',
+              toolUseId: 'part-1',
+              source: 'opencode_toolpart_write',
+              operation: 'create',
+              confidence: 'exact',
+              workspaceRoot: projectPath,
+              filePath: path.join(projectPath, 'src/opencode.ts'),
+              relativePath: 'src/opencode.ts',
+              timestamp: '2026-03-01T10:00:00.000Z',
+              toolStatus: 'succeeded',
+              before: null,
+              after: null,
+              oldString: '',
+              newString: 'export const source = "opencode";\n',
+              linesAdded: 1,
+              linesRemoved: 0,
+            },
+          ],
+        }),
+        'utf8'
+      );
+      return {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        teamName: input.teamName,
+        taskId: input.taskId,
+        projectDir: input.projectDir,
+        workspaceRoot: input.workspaceRoot,
+        dryRun: false,
+        scannedSessions: 1,
+        scannedToolparts: 1,
+        candidateEvents: 1,
+        importedEvents: 1,
+        skippedEvents: 0,
+        outcome: 'imported',
+        notices: [],
+        diagnostics: [],
+      };
+    });
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })
+      ),
+    };
+
+    const service = new ChangeExtractorService(
+      {
+        getLogSourceWatchContext: vi.fn(async () => ({
+          projectDir,
+          projectPath,
+          sessionIds: [],
+        })),
+        findLogFileRefsForTask: vi.fn(async () => []),
+        findMemberLogPaths: vi.fn(async () => []),
+      } as any,
+      {
+        parseBoundaries: vi.fn(async () => ({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        })),
+      } as any,
+      { getConfig: vi.fn(async () => ({ projectPath })) } as any,
+      undefined,
+      workerClient as any,
+      { backfillOpenCodeTaskLedger } as any,
+      { getMeta: vi.fn(async () => ({ providerId: 'opencode' })) } as any
+    );
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]?.snippets[0]?.toolName).toBe('Write');
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName: TEAM_NAME,
+        taskId: TASK_ID,
+        taskDisplayId: 'abc12345',
+        memberName: 'bob',
+        projectDir,
+        workspaceRoot: projectPath,
+        attributionMode: 'strict-delivery',
+      })
+    );
+    expect(workerClient.computeTaskChanges).not.toHaveBeenCalled();
+  });
+
+  it('does not run OpenCode backfill for explicit non-OpenCode teams even if stale runtime files exist', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'alice' });
+    const projectDir = path.join(tmpDir, 'project-dir');
+    const projectPath = path.join(tmpDir, 'repo');
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.mkdir(path.join(tmpDir, 'teams', TEAM_NAME, '.opencode-runtime'), {
+      recursive: true,
+    });
+
+    const backfillOpenCodeTaskLedger = vi.fn(async () => {
+      throw new Error('OpenCode backfill should not run for non-OpenCode teams');
+    });
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () => makeTaskChangeResult(TASK_ID)),
+    };
+
+    const service = new ChangeExtractorService(
+      {
+        getLogSourceWatchContext: vi.fn(async () => ({
+          projectDir,
+          projectPath,
+          sessionIds: [],
+        })),
+        findLogFileRefsForTask: vi.fn(async () => []),
+        findMemberLogPaths: vi.fn(async () => []),
+      } as any,
+      {
+        parseBoundaries: vi.fn(async () => ({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        })),
+      } as any,
+      {
+        getConfig: vi.fn(async () => ({
+          projectPath,
+          members: [{ name: 'alice', providerId: 'codex' }],
+        })),
+      } as any,
+      undefined,
+      workerClient as any,
+      { backfillOpenCodeTaskLedger } as any,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as any
+    );
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'alice',
+      status: 'completed',
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(workerClient.computeTaskChanges).toHaveBeenCalledTimes(1);
+    expect(backfillOpenCodeTaskLedger).not.toHaveBeenCalled();
+  });
+
+  it('queues OpenCode backfill for summary-only requests without blocking board rendering', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
+    const projectDir = path.join(tmpDir, 'project-dir');
+    const projectPath = path.join(tmpDir, 'repo');
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+    const pendingBackfill = deferred<any>();
+    const backfillOpenCodeTaskLedger = vi.fn(() => pendingBackfill.promise);
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })
+      ),
+    };
+
+    const service = new ChangeExtractorService(
+      {
+        getLogSourceWatchContext: vi.fn(async () => ({
+          projectDir,
+          projectPath,
+          sessionIds: [],
+        })),
+        findLogFileRefsForTask: vi.fn(async () => []),
+        findMemberLogPaths: vi.fn(async () => []),
+      } as any,
+      {
+        parseBoundaries: vi.fn(async () => ({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        })),
+      } as any,
+      { getConfig: vi.fn(async () => ({ projectPath })) } as any,
+      undefined,
+      workerClient as any,
+      { backfillOpenCodeTaskLedger } as any,
+      { getMeta: vi.fn(async () => ({ providerId: 'opencode' })) } as any
+    );
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(result.files).toHaveLength(0);
+    expect(workerClient.computeTaskChanges).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(backfillOpenCodeTaskLedger).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: TEAM_NAME,
+          taskId: TASK_ID,
+          projectDir,
+          workspaceRoot: projectPath,
+          attributionMode: 'strict-delivery',
+        })
+      );
+    });
+    pendingBackfill.resolve({
+      schemaVersion: 1,
+      providerId: 'opencode',
+      teamName: TEAM_NAME,
+      taskId: TASK_ID,
+      projectDir,
+      workspaceRoot: projectPath,
+      dryRun: false,
+      scannedSessions: 0,
+      scannedToolparts: 0,
+      candidateEvents: 0,
+      importedEvents: 0,
+      skippedEvents: 0,
+      outcome: 'no-history',
+      notices: [],
+      diagnostics: [],
+    });
+  });
+
+  it('does not reuse a negative OpenCode backfill cache entry after delivery context appears', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
+    const projectDir = path.join(tmpDir, 'project-dir');
+    const projectPath = path.join(tmpDir, 'repo');
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+
+    const backfillOpenCodeTaskLedger = vi.fn(async (input: any) => ({
+      schemaVersion: 1,
+      providerId: 'opencode',
+      teamName: input.teamName,
+      taskId: input.taskId,
+      projectDir: input.projectDir,
+      workspaceRoot: input.workspaceRoot,
+      dryRun: false,
+      attributionMode: input.attributionMode,
+      scannedSessions: 0,
+      scannedToolparts: 0,
+      candidateEvents: 0,
+      importedEvents: 0,
+      skippedEvents: 0,
+      outcome: 'no-attribution',
+      notices: [],
+      diagnostics: [],
+    }));
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })
+      ),
+    };
+
+    const service = new ChangeExtractorService(
+      {
+        getLogSourceWatchContext: vi.fn(async () => ({
+          projectDir,
+          projectPath,
+          sessionIds: [],
+        })),
+        findLogFileRefsForTask: vi.fn(async () => []),
+        findMemberLogPaths: vi.fn(async () => []),
+      } as any,
+      {
+        parseBoundaries: vi.fn(async () => ({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        })),
+      } as any,
+      { getConfig: vi.fn(async () => ({ projectPath })) } as any,
+      undefined,
+      workerClient as any,
+      { backfillOpenCodeTaskLedger } as any,
+      { getMeta: vi.fn(async () => ({ providerId: 'opencode' })) } as any
+    );
+
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+    });
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(1);
+    expect(backfillOpenCodeTaskLedger.mock.calls[0]?.[0]?.deliveryContextPath).toBeUndefined();
+
+    const deliveryLedgerPath = path.join(
+      tmpDir,
+      'teams',
+      TEAM_NAME,
+      '.opencode-runtime',
+      'lanes',
+      encodeURIComponent('secondary:opencode:bob'),
+      'opencode-prompt-delivery-ledger.json'
+    );
+    await fs.mkdir(path.dirname(deliveryLedgerPath), { recursive: true });
+    await fs.writeFile(
+      deliveryLedgerPath,
+      JSON.stringify(
+        {
+          data: [
+            {
+              teamName: TEAM_NAME,
+              memberName: 'bob',
+              laneId: 'secondary:opencode:bob',
+              runtimeSessionId: 'session-1',
+              inboxMessageId: 'user-1',
+              deliveredUserMessageId: 'user-1',
+              observedAssistantMessageId: null,
+              prePromptCursor: null,
+              postPromptCursor: null,
+              taskRefs: [{ taskId: TASK_ID, displayId: 'abc12345', teamName: TEAM_NAME }],
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+    });
+
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+    expect(backfillOpenCodeTaskLedger.mock.calls[1]?.[0]?.deliveryContextPath).toEqual(
+      expect.stringContaining('delivery-context.json')
+    );
+  });
+
+  it('does not cache negative OpenCode backfill while delivery context already exists', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { displayId: 'abc12345', owner: 'bob' });
+    const projectDir = path.join(tmpDir, 'project-dir');
+    const projectPath = path.join(tmpDir, 'repo');
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(projectPath, { recursive: true });
+
+    const deliveryLedgerPath = path.join(
+      tmpDir,
+      'teams',
+      TEAM_NAME,
+      '.opencode-runtime',
+      'lanes',
+      encodeURIComponent('secondary:opencode:bob'),
+      'opencode-prompt-delivery-ledger.json'
+    );
+    await fs.mkdir(path.dirname(deliveryLedgerPath), { recursive: true });
+    await fs.writeFile(
+      deliveryLedgerPath,
+      JSON.stringify({
+        data: [
+          {
+            teamName: TEAM_NAME,
+            memberName: 'bob',
+            laneId: 'secondary:opencode:bob',
+            runtimeSessionId: 'session-1',
+            inboxMessageId: 'user-1',
+            deliveredUserMessageId: 'user-1',
+            observedAssistantMessageId: null,
+            prePromptCursor: null,
+            postPromptCursor: null,
+            taskRefs: [{ taskId: TASK_ID, displayId: 'abc12345', teamName: TEAM_NAME }],
+          },
+        ],
+      }),
+      'utf8'
+    );
+
+    const backfillOpenCodeTaskLedger = vi.fn(async (input: any) => ({
+      schemaVersion: 1,
+      providerId: 'opencode',
+      teamName: input.teamName,
+      taskId: input.taskId,
+      projectDir: input.projectDir,
+      workspaceRoot: input.workspaceRoot,
+      dryRun: false,
+      attributionMode: input.attributionMode,
+      scannedSessions: 1,
+      scannedToolparts: 0,
+      candidateEvents: 0,
+      importedEvents: 0,
+      skippedEvents: 0,
+      outcome: 'no-attribution',
+      notices: [],
+      diagnostics: [],
+    }));
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })
+      ),
+    };
+
+    const service = new ChangeExtractorService(
+      {
+        getLogSourceWatchContext: vi.fn(async () => ({
+          projectDir,
+          projectPath,
+          sessionIds: [],
+        })),
+        findLogFileRefsForTask: vi.fn(async () => []),
+        findMemberLogPaths: vi.fn(async () => []),
+      } as any,
+      {
+        parseBoundaries: vi.fn(async () => ({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        })),
+      } as any,
+      { getConfig: vi.fn(async () => ({ projectPath })) } as any,
+      undefined,
+      workerClient as any,
+      { backfillOpenCodeTaskLedger } as any,
+      { getMeta: vi.fn(async () => ({ providerId: 'opencode' })) } as any
+    );
+
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+    });
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+    });
+
+    expect(backfillOpenCodeTaskLedger).toHaveBeenCalledTimes(2);
+    expect(backfillOpenCodeTaskLedger.mock.calls[0]?.[0]?.deliveryContextPath).toEqual(
+      expect.stringContaining('delivery-context.json')
+    );
+    expect(backfillOpenCodeTaskLedger.mock.calls[1]?.[0]?.deliveryContextPath).toEqual(
+      expect.stringContaining('delivery-context.json')
+    );
+  });
 });

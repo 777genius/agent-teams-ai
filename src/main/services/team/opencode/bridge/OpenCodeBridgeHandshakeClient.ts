@@ -94,6 +94,7 @@ export function createOpenCodeBridgeClientIdentity(input: {
         'opencode.listRuntimePermissions',
         'opencode.getRuntimeTranscript',
         'opencode.recoverDeliveryJournal',
+        'opencode.backfillTaskLedger',
       ],
     },
     runtime: {

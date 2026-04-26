@@ -1,6 +1,7 @@
 import type { TaskChangeSetV2 } from '@shared/types';
 
 export interface TaskChangeTaskMeta {
+  displayId?: string;
   createdAt?: string;
   owner?: string;
   status?: string;

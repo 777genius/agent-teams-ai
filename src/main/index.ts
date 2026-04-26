@@ -1087,7 +1087,14 @@ async function initializeServices(): Promise<void> {
   });
   const memberStatsComputer = new MemberStatsComputer(teamMemberLogsFinder);
   const taskBoundaryParser = new TaskBoundaryParser();
-  const changeExtractor = new ChangeExtractorService(teamMemberLogsFinder, taskBoundaryParser);
+  const changeExtractor = new ChangeExtractorService(
+    teamMemberLogsFinder,
+    taskBoundaryParser,
+    undefined,
+    undefined,
+    undefined,
+    openCodeLifecycleBridge
+  );
   teamDataService.setTaskChangePresenceServices(taskChangePresenceRepository, teamLogSourceTracker);
   changeExtractor.setTaskChangePresenceServices(taskChangePresenceRepository, teamLogSourceTracker);
   const gitDiffFallback = new GitDiffFallback();

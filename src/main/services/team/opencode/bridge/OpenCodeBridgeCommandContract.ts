@@ -15,7 +15,8 @@ export type OpenCodeBridgeCommandName =
   | 'opencode.answerPermission'
   | 'opencode.listRuntimePermissions'
   | 'opencode.getRuntimeTranscript'
-  | 'opencode.recoverDeliveryJournal';
+  | 'opencode.recoverDeliveryJournal'
+  | 'opencode.backfillTaskLedger';
 
 export type OpenCodeTeamLaunchBridgeState =
   | 'blocked'
@@ -228,6 +229,51 @@ export interface OpenCodeObserveMessageDeliveryCommandData {
   diagnostics: OpenCodeTeamBridgeDiagnostic[];
 }
 
+export interface OpenCodeBackfillTaskLedgerCommandBody {
+  teamId?: string;
+  teamName: string;
+  taskId?: string;
+  taskDisplayId?: string;
+  memberName?: string;
+  laneId?: string;
+  projectDir?: string;
+  workspaceRoot?: string;
+  deliveryContextPath?: string;
+  attributionMode?: OpenCodeBackfillTaskLedgerAttributionMode;
+  dryRun?: boolean;
+}
+
+export type OpenCodeBackfillTaskLedgerAttributionMode = 'strict-delivery' | 'compatible';
+
+export type OpenCodeBackfillTaskLedgerOutcome =
+  | 'imported'
+  | 'duplicates-only'
+  | 'no-history'
+  | 'no-attribution'
+  | 'manual-only'
+  | 'skipped-capability'
+  | 'transient-error'
+  | 'unsafe-input';
+
+export interface OpenCodeBackfillTaskLedgerCommandData {
+  schemaVersion: 1;
+  providerId: 'opencode';
+  teamName: string;
+  taskId?: string;
+  projectDir?: string;
+  workspaceRoot?: string;
+  dryRun: boolean;
+  attributionMode?: OpenCodeBackfillTaskLedgerAttributionMode;
+  scannedSessions: number;
+  scannedToolparts: number;
+  candidateEvents: number;
+  importedEvents: number;
+  skippedEvents: number;
+  outcome: OpenCodeBackfillTaskLedgerOutcome;
+  notices: Array<{ severity: 'warning'; message: string; code: string }>;
+  diagnostics: string[];
+}
+
 export type OpenCodeBridgePeerName = 'claude_team' | 'agent_teams_orchestrator';
 
 export type OpenCodeBridgeFailureKind =
@@ -375,6 +421,7 @@ const VALID_COMMANDS: ReadonlySet<OpenCodeBridgeCommandName> = new Set([
   'opencode.listRuntimePermissions',
   'opencode.getRuntimeTranscript',
   'opencode.recoverDeliveryJournal',
+  'opencode.backfillTaskLedger',
 ]);
 
 const VALID_FAILURE_KINDS: ReadonlySet<OpenCodeBridgeFailureKind> = new Set([

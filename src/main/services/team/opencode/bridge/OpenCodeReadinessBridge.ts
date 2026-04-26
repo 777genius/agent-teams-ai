@@ -9,6 +9,8 @@ import type {
   OpenCodeBridgeFailureKind,
   OpenCodeBridgeResult,
   OpenCodeBridgeRuntimeSnapshot,
+  OpenCodeBackfillTaskLedgerCommandBody,
+  OpenCodeBackfillTaskLedgerCommandData,
   OpenCodeCleanupHostsCommandBody,
   OpenCodeCleanupHostsCommandData,
   OpenCodeLaunchTeamCommandBody,
@@ -22,6 +24,12 @@ import type {
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
+
+export interface OpenCodeLedgerBackfillPort {
+  backfillOpenCodeTaskLedger(
+    input: OpenCodeBackfillTaskLedgerCommandBody
+  ): Promise<OpenCodeBackfillTaskLedgerCommandData>;
+}
 
 export interface OpenCodeReadinessBridgeCommandExecutor {
   execute<TBody, TData>(
@@ -61,6 +69,7 @@ const DEFAULT_SEND_TIMEOUT_MS = 30_000;
 const DEFAULT_OBSERVE_TIMEOUT_MS = 8_000;
 const DEFAULT_STOP_TIMEOUT_MS = 30_000;
 const DEFAULT_CLEANUP_TIMEOUT_MS = 10_000;
+const DEFAULT_BACKFILL_TIMEOUT_MS = 45_000;
 
 export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   private readonly lastRuntimeSnapshotsByProjectPath = new Map<
@@ -270,6 +279,45 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           severity: event.severity,
           message: event.message,
         })),
+      ],
+    };
+  }
+
+  async backfillOpenCodeTaskLedger(
+    input: OpenCodeBackfillTaskLedgerCommandBody
+  ): Promise<OpenCodeBackfillTaskLedgerCommandData> {
+    const cwd = input.workspaceRoot ?? input.projectDir ?? process.cwd();
+    const result = await this.bridge.execute<
+      OpenCodeBackfillTaskLedgerCommandBody,
+      OpenCodeBackfillTaskLedgerCommandData
+    >('opencode.backfillTaskLedger', input, {
+      cwd,
+      timeoutMs: DEFAULT_BACKFILL_TIMEOUT_MS,
+      stdoutLimitBytes: 2_000_000,
+      stderrLimitBytes: 512_000,
+    });
+    if (result.ok) {
+      return result.data;
+    }
+    return {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      teamName: input.teamName,
+      ...(input.taskId ? { taskId: input.taskId } : {}),
+      ...(input.projectDir ? { projectDir: input.projectDir } : {}),
+      ...(input.workspaceRoot ? { workspaceRoot: input.workspaceRoot } : {}),
+      dryRun: input.dryRun === true,
+      ...(input.attributionMode ? { attributionMode: input.attributionMode } : {}),
+      scannedSessions: 0,
+      scannedToolparts: 0,
+      candidateEvents: 0,
+      importedEvents: 0,
+      skippedEvents: 0,
+      outcome: result.error.retryable ? 'transient-error' : 'unsafe-input',
+      notices: [],
+      diagnostics: [
+        `OpenCode task ledger backfill bridge failed: ${result.error.kind}: ${result.error.message}`,
+        ...result.diagnostics.map(formatDiagnosticEvent),
       ],
     };
   }

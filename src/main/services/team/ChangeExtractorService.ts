@@ -1,4 +1,4 @@
-import { getTasksBasePath } from '@main/utils/pathDecoder';
+import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { resolveTaskChangePresenceFromResult } from '@shared/utils/taskChangePresence';
 import {
@@ -7,12 +7,20 @@ import {
   type TaskChangeStateBucket,
 } from '@shared/utils/taskChangeState';
 import { createHash } from 'crypto';
-import { readFile, stat } from 'fs/promises';
+import { existsSync } from 'fs';
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 
 import { JsonTaskChangeSummaryCacheRepository } from './cache/JsonTaskChangeSummaryCacheRepository';
+import { TeamMetaStore } from './TeamMetaStore';
 import { TaskChangeComputer } from './TaskChangeComputer';
 import { TaskChangeLedgerReader } from './TaskChangeLedgerReader';
+import {
+  getOpenCodeLaneScopedRuntimeFilePath,
+  getOpenCodeTeamRuntimeDirectory,
+  readOpenCodeRuntimeLaneIndex,
+} from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   buildTaskChangePresenceDescriptor,
   computeTaskChangePresenceProjectFingerprint,
@@ -31,9 +39,13 @@ import type { TaskBoundaryParser } from './TaskBoundaryParser';
 import type { TaskChangeWorkerClient } from './TaskChangeWorkerClient';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
+import type { OpenCodeLedgerBackfillPort } from './opencode/bridge/OpenCodeReadinessBridge';
+import type { OpenCodePromptDeliveryLedgerRecord } from './opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { AgentChangeSet, ChangeStats, TaskChangeSetV2 } from '@shared/types';
 
 const logger = createLogger('Service:ChangeExtractorService');
+const OPEN_CODE_AUTO_BACKFILL_ATTRIBUTION_MODE = 'strict-delivery' as const;
+const OPEN_CODE_MAX_DISCOVERED_LANES = 500;
 
 /** Кеш-запись: данные + mtime файла + время протухания */
 interface CacheEntry {
@@ -52,16 +64,31 @@ interface LogFileRef {
   memberName: string;
 }
 
+interface OpenCodeBackfillCacheEntry {
+  backfilledAt: number;
+  expiresAt: number;
+}
+
+interface OpenCodeDeliveryContextTempFile {
+  filePath: string | null;
+  cleanup: () => Promise<void>;
+}
+
 export class ChangeExtractorService {
   private cache = new Map<string, CacheEntry>();
   private taskChangeSummaryCache = new Map<string, TaskChangeSummaryCacheEntry>();
   private taskChangeSummaryInFlight = new Map<string, Promise<TaskChangeSetV2>>();
   private taskChangeSummaryVersionByTask = new Map<string, number>();
   private taskChangeSummaryValidationInFlight = new Set<string>();
+  private openCodeBackfillInFlight = new Map<string, Promise<boolean>>();
+  private openCodeBackfillCache = new Map<string, OpenCodeBackfillCacheEntry>();
+  private openCodeTeamEligibilityCache = new Map<string, { value: boolean; expiresAt: number }>();
   private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
   private readonly taskChangeSummaryCacheTtl = 60 * 1000;
   private readonly emptyTaskChangeSummaryCacheTtl = 10 * 1000;
   private readonly persistedTaskChangeSummaryTtl = 24 * 60 * 60 * 1000;
+  private readonly openCodeBackfillCacheTtl = 60 * 1000;
+  private readonly openCodeTeamEligibilityCacheTtl = 30 * 1000;
   private readonly maxTaskChangeSummaryCacheEntries = 200;
   private readonly isPersistedTaskChangeCacheEnabled =
     process.env.CLAUDE_TEAM_ENABLE_PERSISTED_TASK_CHANGE_CACHE !== '0';
@@ -75,7 +102,9 @@ export class ChangeExtractorService {
     boundaryParser: TaskBoundaryParser,
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     private readonly taskChangeSummaryRepository = new JsonTaskChangeSummaryCacheRepository(),
-    private readonly taskChangeWorkerClient: TaskChangeWorkerClient = getTaskChangeWorkerClient()
+    private readonly taskChangeWorkerClient: TaskChangeWorkerClient = getTaskChangeWorkerClient(),
+    private readonly openCodeLedgerBackfillPort: OpenCodeLedgerBackfillPort | null = null,
+    private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore()
   ) {
     this.taskChangeComputer = new TaskChangeComputer(logsFinder, boundaryParser);
   }
@@ -177,6 +206,22 @@ export class ChangeExtractorService {
         ledgerResult
       );
       return ledgerResult;
+    }
+
+    if (!includeDetails) {
+      this.enqueueOpenCodeLedgerBackfill(resolvedInput);
+    } else if (await this.tryBackfillOpenCodeLedger(resolvedInput)) {
+      const backfilledLedgerResult = await this.readLedgerTaskChanges(resolvedInput);
+      if (backfilledLedgerResult) {
+        await this.recordTaskChangePresence(
+          teamName,
+          taskId,
+          taskMeta,
+          effectiveOptions,
+          backfilledLedgerResult
+        );
+        return backfilledLedgerResult;
+      }
     }
 
     if (!shouldUseSummaryCache) {
@@ -334,6 +379,404 @@ export class ChangeExtractorService {
     }
   }
 
+  private async tryBackfillOpenCodeLedger(input: ResolvedTaskChangeComputeInput): Promise<boolean> {
+    if (!this.openCodeLedgerBackfillPort) {
+      return false;
+    }
+    if (!(await this.isOpenCodeTeamCandidate(input.teamName))) {
+      return false;
+    }
+    if (typeof this.logsFinder.getLogSourceWatchContext !== 'function') {
+      return false;
+    }
+
+    const context = await this.logsFinder
+      .getLogSourceWatchContext(input.teamName)
+      .catch(() => null);
+    const projectDir = context?.projectDir;
+    const workspaceRoot = input.projectPath ?? context?.projectPath;
+    if (
+      !projectDir ||
+      !workspaceRoot ||
+      !path.isAbsolute(projectDir) ||
+      !path.isAbsolute(workspaceRoot)
+    ) {
+      return false;
+    }
+
+    const sourceGeneration = this.teamLogSourceTracker
+      ? await this.teamLogSourceTracker
+          .ensureTracking(input.teamName)
+          .then((snapshot) => snapshot.logSourceGeneration)
+          .catch(() => null)
+      : null;
+    const deliveryContextRecords = await this.readOpenCodeDeliveryContextRecords(
+      input.teamName,
+      input.taskId
+    );
+    const deliveryContextFingerprint =
+      this.hashOpenCodeDeliveryContextRecords(deliveryContextRecords);
+
+    const cacheKey = this.buildOpenCodeBackfillCacheKey({
+      teamName: input.teamName,
+      taskId: input.taskId,
+      projectDir,
+      workspaceRoot,
+      displayId: input.taskMeta?.displayId,
+      sourceGeneration,
+      deliveryContextFingerprint,
+      attributionMode: OPEN_CODE_AUTO_BACKFILL_ATTRIBUTION_MODE,
+    });
+    const now = Date.now();
+    const cached = this.openCodeBackfillCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.backfilledAt > 0;
+    }
+    this.openCodeBackfillCache.delete(cacheKey);
+
+    const existing = this.openCodeBackfillInFlight.get(cacheKey);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = this.runOpenCodeBackfill(
+      input,
+      projectDir,
+      workspaceRoot,
+      cacheKey,
+      deliveryContextRecords
+    ).finally(() => {
+      this.openCodeBackfillInFlight.delete(cacheKey);
+    });
+    this.openCodeBackfillInFlight.set(cacheKey, promise);
+    return promise;
+  }
+
+  private enqueueOpenCodeLedgerBackfill(input: ResolvedTaskChangeComputeInput): void {
+    void this.tryBackfillOpenCodeLedger(input).catch((error) => {
+      logger.debug(
+        `Background OpenCode ledger backfill failed for ${input.teamName}/${input.taskId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+  }
+
+  private async runOpenCodeBackfill(
+    input: ResolvedTaskChangeComputeInput,
+    projectDir: string,
+    workspaceRoot: string,
+    cacheKey: string,
+    deliveryContextRecords: Awaited<
+      ReturnType<ChangeExtractorService['readOpenCodeDeliveryContextRecords']>
+    >
+  ): Promise<boolean> {
+    const deliveryContext = await this.createOpenCodeDeliveryContextTempFile(
+      input.teamName,
+      input.taskId,
+      deliveryContextRecords
+    );
+    try {
+      const result = await this.openCodeLedgerBackfillPort!.backfillOpenCodeTaskLedger({
+        teamId: input.teamName,
+        teamName: input.teamName,
+        taskId: input.taskId,
+        taskDisplayId: input.taskMeta?.displayId,
+        memberName: input.effectiveOptions.owner,
+        projectDir,
+        workspaceRoot,
+        attributionMode: OPEN_CODE_AUTO_BACKFILL_ATTRIBUTION_MODE,
+        ...(deliveryContext.filePath ? { deliveryContextPath: deliveryContext.filePath } : {}),
+      });
+      const backfilled =
+        result.importedEvents > 0 ||
+        result.outcome === 'imported' ||
+        (result.outcome === 'duplicates-only' && result.candidateEvents > 0);
+
+      if (result.importedEvents > 0) {
+        await this.invalidateTaskChangeSummaries(input.teamName, [input.taskId], {
+          deletePersisted: true,
+        });
+      }
+
+      if (backfilled || deliveryContextRecords.length === 0) {
+        this.openCodeBackfillCache.set(cacheKey, {
+          backfilledAt: backfilled ? Date.now() : 0,
+          expiresAt: Date.now() + this.openCodeBackfillCacheTtl,
+        });
+      } else {
+        this.openCodeBackfillCache.delete(cacheKey);
+      }
+
+      if (result.diagnostics.length > 0 && result.outcome !== 'no-history') {
+        logger.debug(
+          `OpenCode ledger backfill for ${input.teamName}/${input.taskId}: ${result.outcome}; ${result.diagnostics.join('; ')}`
+        );
+      }
+      return backfilled;
+    } catch (error) {
+      logger.warn(
+        `OpenCode ledger backfill failed for ${input.teamName}/${input.taskId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      if (deliveryContextRecords.length === 0) {
+        this.openCodeBackfillCache.set(cacheKey, {
+          backfilledAt: 0,
+          expiresAt: Date.now() + this.openCodeBackfillCacheTtl,
+        });
+      } else {
+        this.openCodeBackfillCache.delete(cacheKey);
+      }
+      return false;
+    } finally {
+      await deliveryContext.cleanup();
+    }
+  }
+
+  private async isOpenCodeTeamCandidate(teamName: string): Promise<boolean> {
+    const cached = this.openCodeTeamEligibilityCache.get(teamName);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    let value = false;
+    try {
+      const [meta, config] = await Promise.all([
+        this.teamMetaStore.getMeta(teamName).catch(() => null),
+        this.configReader.getConfig(teamName).catch(() => null),
+      ]);
+      const hasOpenCodeMember = (config?.members ?? []).some(
+        (member) => member.providerId === 'opencode'
+      );
+      const hasExplicitNonOpenCodeProvider =
+        (meta?.providerId != null && meta.providerId !== 'opencode') ||
+        ((config?.members?.length ?? 0) > 0 &&
+          !hasOpenCodeMember &&
+          (config?.members ?? []).some((member) => typeof member.providerId === 'string'));
+      value =
+        meta?.providerId === 'opencode' ||
+        hasOpenCodeMember ||
+        (!hasExplicitNonOpenCodeProvider &&
+          existsSync(getOpenCodeTeamRuntimeDirectory(getTeamsBasePath(), teamName)));
+    } catch {
+      value = false;
+    }
+
+    this.openCodeTeamEligibilityCache.set(teamName, {
+      value,
+      expiresAt: now + this.openCodeTeamEligibilityCacheTtl,
+    });
+    return value;
+  }
+
+  private async createOpenCodeDeliveryContextTempFile(
+    teamName: string,
+    taskId: string,
+    records: Awaited<ReturnType<ChangeExtractorService['readOpenCodeDeliveryContextRecords']>>
+  ): Promise<OpenCodeDeliveryContextTempFile> {
+    if (records.length === 0) {
+      return { filePath: null, cleanup: async () => undefined };
+    }
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'claude-team-opencode-ledger-context-'));
+    const filePath = path.join(dir, 'delivery-context.json');
+    await writeFile(
+      filePath,
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          teamName,
+          taskId,
+          records,
+        },
+        null,
+        2
+      )}\n`,
+      { encoding: 'utf8', mode: 0o600 }
+    );
+    return {
+      filePath,
+      cleanup: async () => {
+        await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+      },
+    };
+  }
+
+  private async readOpenCodeDeliveryContextRecords(
+    teamName: string,
+    taskId: string
+  ): Promise<
+    Array<{
+      memberName: string;
+      laneId?: string;
+      runtimeSessionId: string | null;
+      inboxMessageId: string | null;
+      deliveredUserMessageId: string | null;
+      observedAssistantMessageId: string | null;
+      prePromptCursor: string | null;
+      postPromptCursor: string | null;
+      taskRefs: Array<{ taskId: string; displayId: string; teamName: string }>;
+    }>
+  > {
+    const teamsBasePath = getTeamsBasePath();
+    const laneIds = new Set<string>(['primary']);
+    try {
+      const index = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName);
+      for (const laneId of Object.keys(index.lanes)) {
+        if (laneId.trim()) laneIds.add(laneId);
+      }
+    } catch {
+      // Old teams may not have a lane index. The primary fallback covers the initial runtime shape.
+    }
+    for (const laneId of await this.readOpenCodeRuntimeLaneIdsFromDisk(teamsBasePath, teamName)) {
+      laneIds.add(laneId);
+    }
+
+    const records: Array<{
+      memberName: string;
+      laneId?: string;
+      runtimeSessionId: string | null;
+      inboxMessageId: string | null;
+      deliveredUserMessageId: string | null;
+      observedAssistantMessageId: string | null;
+      prePromptCursor: string | null;
+      postPromptCursor: string | null;
+      taskRefs: Array<{ taskId: string; displayId: string; teamName: string }>;
+    }> = [];
+
+    for (const laneId of laneIds) {
+      const filePath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath,
+        teamName,
+        laneId,
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      const laneRecords = await this.readOpenCodePromptDeliveryLedgerRecords(filePath);
+      for (const record of laneRecords) {
+        if (record.teamName !== teamName) continue;
+        const taskRefs = record.taskRefs.filter((taskRef) => taskRef.teamName === teamName);
+        if (!taskRefs.some((taskRef) => taskRef.taskId === taskId)) continue;
+        records.push({
+          memberName: record.memberName,
+          laneId: record.laneId || laneId,
+          runtimeSessionId: record.runtimeSessionId,
+          inboxMessageId: record.inboxMessageId,
+          deliveredUserMessageId: record.deliveredUserMessageId,
+          observedAssistantMessageId: record.observedAssistantMessageId,
+          prePromptCursor: record.prePromptCursor,
+          postPromptCursor: record.postPromptCursor,
+          taskRefs,
+        });
+      }
+    }
+
+    return records.slice(-200);
+  }
+
+  private async readOpenCodeRuntimeLaneIdsFromDisk(
+    teamsBasePath: string,
+    teamName: string
+  ): Promise<string[]> {
+    const lanesDir = path.join(getOpenCodeTeamRuntimeDirectory(teamsBasePath, teamName), 'lanes');
+    const entries = await readdir(lanesDir, { withFileTypes: true }).catch(() => []);
+    const laneIds: string[] = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      let laneId: string;
+      try {
+        laneId = decodeURIComponent(entry.name);
+      } catch {
+        continue;
+      }
+      if (!laneId.trim() || laneId.includes('\0')) continue;
+      laneIds.push(laneId);
+      if (laneIds.length >= OPEN_CODE_MAX_DISCOVERED_LANES) break;
+    }
+    return laneIds.sort((left, right) => left.localeCompare(right));
+  }
+
+  private hashOpenCodeDeliveryContextRecords(
+    records: Awaited<ReturnType<ChangeExtractorService['readOpenCodeDeliveryContextRecords']>>
+  ): string {
+    const stableRecords = records
+      .map((record) => ({
+        memberName: record.memberName,
+        laneId: record.laneId ?? '',
+        runtimeSessionId: record.runtimeSessionId ?? '',
+        inboxMessageId: record.inboxMessageId ?? '',
+        deliveredUserMessageId: record.deliveredUserMessageId ?? '',
+        taskRefs: record.taskRefs
+          .map((taskRef) => ({
+            taskId: taskRef.taskId,
+            displayId: taskRef.displayId,
+            teamName: taskRef.teamName,
+          }))
+          .sort((left, right) =>
+            `${left.teamName}\0${left.taskId}\0${left.displayId}`.localeCompare(
+              `${right.teamName}\0${right.taskId}\0${right.displayId}`
+            )
+          ),
+      }))
+      .sort((left, right) =>
+        [
+          left.laneId,
+          left.memberName,
+          left.runtimeSessionId,
+          left.inboxMessageId,
+          left.deliveredUserMessageId,
+        ]
+          .join('\0')
+          .localeCompare(
+            [
+              right.laneId,
+              right.memberName,
+              right.runtimeSessionId,
+              right.inboxMessageId,
+              right.deliveredUserMessageId,
+            ].join('\0')
+          )
+      );
+    return createHash('sha256').update(JSON.stringify(stableRecords)).digest('hex');
+  }
+
+  private async readOpenCodePromptDeliveryLedgerRecords(
+    filePath: string
+  ): Promise<OpenCodePromptDeliveryLedgerRecord[]> {
+    try {
+      const raw = await readFile(filePath, 'utf8');
+      if (Buffer.byteLength(raw, 'utf8') > 1024 * 1024) {
+        return [];
+      }
+      const parsed = JSON.parse(raw) as { data?: unknown };
+      if (!Array.isArray(parsed.data)) {
+        return [];
+      }
+      return parsed.data.filter(isOpenCodePromptDeliveryLedgerRecord);
+    } catch {
+      return [];
+    }
+  }
+
+  private buildOpenCodeBackfillCacheKey(input: {
+    teamName: string;
+    taskId: string;
+    displayId?: string;
+    projectDir: string;
+    workspaceRoot: string;
+    sourceGeneration?: string | null;
+    deliveryContextFingerprint: string;
+    attributionMode: typeof OPEN_CODE_AUTO_BACKFILL_ATTRIBUTION_MODE;
+  }): string {
+    return JSON.stringify({
+      teamName: input.teamName,
+      taskId: input.taskId,
+      displayId: input.displayId ?? '',
+      projectDir: normalizeTaskChangePresenceFilePath(input.projectDir),
+      workspaceRoot: normalizeTaskChangePresenceFilePath(input.workspaceRoot),
+      sourceGeneration: input.sourceGeneration ?? '',
+      deliveryContextFingerprint: input.deliveryContextFingerprint,
+      attributionMode: input.attributionMode,
+    });
+  }
+
   private isValidWorkerTaskChangeResult(
     result: TaskChangeSetV2,
     input: ResolvedTaskChangeComputeInput
@@ -413,6 +856,10 @@ export class ChangeExtractorService {
         return derived.length > 0 ? derived : undefined;
       })();
       return {
+        displayId:
+          typeof parsed.displayId === 'string' && parsed.displayId.trim().length > 0
+            ? parsed.displayId.trim()
+            : undefined,
         createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
         owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
         status: typeof parsed.status === 'string' ? parsed.status : undefined,
@@ -793,4 +1240,46 @@ export class ChangeExtractorService {
       }
     );
   }
+}
+
+function isOpenCodePromptDeliveryLedgerRecord(
+  value: unknown
+): value is OpenCodePromptDeliveryLedgerRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.teamName === 'string' &&
+    typeof record.memberName === 'string' &&
+    typeof record.laneId === 'string' &&
+    typeof record.inboxMessageId === 'string' &&
+    Array.isArray(record.taskRefs) &&
+    record.taskRefs.every(isOpenCodeTaskRefLike) &&
+    isNullableString(record.runtimeSessionId) &&
+    isNullableString(record.deliveredUserMessageId) &&
+    isNullableString(record.observedAssistantMessageId) &&
+    isNullableString(record.prePromptCursor) &&
+    isNullableString(record.postPromptCursor)
+  );
+}
+
+function isOpenCodeTaskRefLike(
+  value: unknown
+): value is { taskId: string; displayId: string; teamName: string } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const ref = value as Record<string, unknown>;
+  return (
+    typeof ref.taskId === 'string' &&
+    ref.taskId.length > 0 &&
+    typeof ref.displayId === 'string' &&
+    typeof ref.teamName === 'string' &&
+    ref.teamName.length > 0
+  );
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === 'string';
 }

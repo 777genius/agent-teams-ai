@@ -54,6 +54,10 @@ describe('OpenCodeBridgeCommandContract', () => {
     expect(isOpenCodeBridgeCommandName('opencode.cleanupHosts')).toBe(true);
   });
 
+  it('accepts opencode.backfillTaskLedger as a read-only bridge command', () => {
+    expect(isOpenCodeBridgeCommandName('opencode.backfillTaskLedger')).toBe(true);
+  });
+
   it('validates result request id and command against the command envelope', () => {
     const envelope: OpenCodeBridgeCommandEnvelope<Record<string, never>> = {
       schemaVersion: 1,
