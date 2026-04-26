@@ -1,27 +1,27 @@
 {
-  "version": "0.0.9",
-  "sourceRef": "v0.0.9",
+  "version": "0.0.10",
+  "sourceRef": "v0.0.10",
   "sourceRepository": "777genius/agent_teams_orchestrator",
   "releaseRepository": "777genius/claude_agent_teams_ui",
   "releaseTag": "v1.2.0",
   "assets": {
     "darwin-arm64": {
-      "file": "agent-teams-runtime-darwin-arm64-v0.0.9.tar.gz",
+      "file": "agent-teams-runtime-darwin-arm64-v0.0.10.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel"
     },
     "darwin-x64": {
-      "file": "agent-teams-runtime-darwin-x64-v0.0.9.tar.gz",
+      "file": "agent-teams-runtime-darwin-x64-v0.0.10.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel"
     },
     "linux-x64": {
-      "file": "agent-teams-runtime-linux-x64-v0.0.9.tar.gz",
+      "file": "agent-teams-runtime-linux-x64-v0.0.10.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel"
     },
     "win32-x64": {
-      "file": "agent-teams-runtime-win32-x64-v0.0.9.zip",
+      "file": "agent-teams-runtime-win32-x64-v0.0.10.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe"
     }
