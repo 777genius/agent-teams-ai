@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <sub>Free desktop app for AI agent teams. Auto-detects Claude/Codex. Use the provider access you already have - subscriptions or API keys. Not just coding agents.</sub>
+  <sub>Free desktop app for AI agent teams. Auto-detects Claude/Codex/OpenCode (75+ LLM providers). Use the provider access you already have - subscriptions or API keys. Not just coding agents.</sub>
 </p>
 
 <img width="1304" height="820" alt="image" src="https://github.com/user-attachments/assets/dea53a01-68b3-4c36-bcf6-e4d1ad4cdb31" />
