@@ -13,7 +13,7 @@
 
 import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
 import { parseJsonlFile } from '@main/utils/jsonl';
-import { extractBaseDir, extractSessionId } from '@main/utils/pathDecoder';
+import { extractSessionId } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
@@ -21,6 +21,7 @@ import { startMainSpan } from '../../sentry';
 
 import { SearchTextCache } from './SearchTextCache';
 import { extractSearchableEntries } from './SearchTextExtractor';
+import { resolveProjectStorageDir } from './projectStorageDir';
 import { subprojectRegistry } from './SubprojectRegistry';
 
 import type { SearchableEntry } from './SearchTextExtractor';
@@ -74,11 +75,14 @@ export class SessionSearcher {
       const normalizedQuery = query.toLowerCase().trim();
 
       try {
-        const baseDir = extractBaseDir(projectId);
-        const projectPath = path.join(this.projectsDir, baseDir);
+        const projectPath = await resolveProjectStorageDir(
+          this.projectsDir,
+          projectId,
+          this.fsProvider
+        );
         const sessionFilter = subprojectRegistry.getSessionFilter(projectId);
 
-        if (!(await this.fsProvider.exists(projectPath))) {
+        if (!projectPath) {
           return { results: [], totalMatches: 0, sessionsSearched: 0, query };
         }
 
@@ -283,9 +287,7 @@ export class SessionSearcher {
         sessionTitle: sessionTitle ?? 'Untitled Session',
         matchedText,
         context:
-          (contextStart > 0 ? '...' : '') +
-          context +
-          (contextEnd < entry.text.length ? '...' : ''),
+          (contextStart > 0 ? '...' : '') + context + (contextEnd < entry.text.length ? '...' : ''),
         messageType: entry.messageType,
         timestamp: entry.timestamp,
         groupId: entry.groupId,

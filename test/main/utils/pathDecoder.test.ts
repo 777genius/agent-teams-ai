@@ -10,8 +10,10 @@ import {
   buildTodoPath,
   decodePath,
   encodePath,
+  encodePathPortable,
   extractProjectName,
   extractSessionId,
+  getProjectDirNameCandidates,
   getAppDataPath,
   getProjectsBasePath,
   getSchedulesBasePath,
@@ -71,6 +73,12 @@ describe('pathDecoder', () => {
 
     it('should encode a Linux-style path', () => {
       expect(encodePath('/home/user/projects/myapp')).toBe('-home-user-projects-myapp');
+    });
+
+    it('should produce orchestrator-compatible Windows storage keys', () => {
+      expect(encodePathPortable('C:\\Users\\User\\PROJECT_IT\\сlaude_team')).toBe(
+        'c--users-user-project-it--laude-team'
+      );
     });
   });
 
@@ -188,9 +196,24 @@ describe('pathDecoder', () => {
       expect(isValidEncodedPath('C--Users-username-projectname')).toBe(true);
     });
 
+    it('should return true for Windows encoded paths with underscores and Unicode', () => {
+      expect(isValidEncodedPath('C--Users-User-PROJECT_IT-сlaude_team')).toBe(true);
+    });
+
     it('should return false for misplaced colons', () => {
       expect(isValidEncodedPath('-Users-username:project')).toBe(false);
       expect(isValidEncodedPath('-C:-Users-name-project:extra')).toBe(false);
+    });
+  });
+
+  describe('getProjectDirNameCandidates', () => {
+    it('includes the orchestrator storage key for the current Windows project path shape', () => {
+      expect(getProjectDirNameCandidates('C--Users-User-PROJECT_IT-сlaude_team')).toEqual(
+        expect.arrayContaining([
+          'C--Users-User-PROJECT_IT-сlaude_team',
+          'c--users-user-project-it--laude-team',
+        ])
+      );
     });
   });
 

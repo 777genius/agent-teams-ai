@@ -46,6 +46,10 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
 import {
+  listWindowsProcessTable,
+  listWindowsProcessTableSync,
+} from '@main/utils/windowsProcessTable';
+import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
@@ -203,6 +207,7 @@ import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
 import {
+  commandArgEquals,
   isStrongRuntimeEvidence,
   resolveTeamMemberRuntimeLiveness,
   sanitizeProcessCommandForDiagnostics,
@@ -15191,6 +15196,25 @@ export class TeamProvisioningService {
         }`
       );
     }
+    let windowsHostProcessRows: typeof processRows | null = null;
+    let windowsHostProcessTableAvailable = false;
+    const getWindowsHostProcessRows = async (): Promise<typeof processRows> => {
+      if (windowsHostProcessRows) {
+        return windowsHostProcessRows;
+      }
+      try {
+        windowsHostProcessRows = await listWindowsProcessTable();
+        windowsHostProcessTableAvailable = true;
+      } catch (error) {
+        windowsHostProcessRows = [];
+        logger.debug(
+          `[${teamName}] Failed to read Windows host process table for runtime snapshot: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+      return windowsHostProcessRows;
+    };
 
     for (const [memberName, metadata] of metadataByMember.entries()) {
       const paneId = metadata.tmuxPaneId?.trim() ?? '';
@@ -15225,6 +15249,20 @@ export class TeamProvisioningService {
           }
         : undefined;
       const status = this.findTrackedMemberSpawnStatus(run, memberName) ?? adapterStatus;
+      const shouldUseWindowsHostRows =
+        process.platform === 'win32' &&
+        (metadata.providerId === 'opencode' ||
+          launchMember?.providerId === 'opencode' ||
+          metadata.backendType !== 'tmux') &&
+        currentRuntimeAdapterRun?.members?.[memberName]?.runtimeAlive !== true &&
+        currentRuntimeAdapterRun?.members?.[memberName]?.bootstrapConfirmed !== true;
+      const hostProcessRows = shouldUseWindowsHostRows ? await getWindowsHostProcessRows() : [];
+      const memberProcessRows = shouldUseWindowsHostRows
+        ? [...hostProcessRows, ...processRows]
+        : processRows;
+      const memberProcessTableAvailable = shouldUseWindowsHostRows
+        ? windowsHostProcessTableAvailable || processTableAvailable
+        : processTableAvailable;
       const resolved = resolveTeamMemberRuntimeLiveness({
         teamName,
         memberName,
@@ -15238,8 +15276,8 @@ export class TeamProvisioningService {
         runtimePid: metadata.metricsPid,
         runtimeSessionId: metadata.runtimeSessionId,
         pane: paneId ? paneInfoById.get(paneId) : undefined,
-        processRows,
-        processTableAvailable,
+        processRows: memberProcessRows,
+        processTableAvailable: memberProcessTableAvailable,
         nowIso: nowIso(),
       });
       metadataByMember.set(memberName, {
@@ -17757,37 +17795,50 @@ export class TeamProvisioningService {
   }
 
   private killOrphanedTeamAgentProcesses(teamName: string): void {
-    if (process.platform === 'win32') {
-      return;
-    }
-
-    let output = '';
-    try {
-      output = execFileSync('ps', ['-ax', '-o', 'pid=,command='], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      });
-    } catch {
-      return;
-    }
-
     const currentRunPid = this.getTrackedRunId(teamName)
       ? this.runs.get(this.getTrackedRunId(teamName)!)?.child?.pid
       : undefined;
-    const marker = `--team-name ${teamName}`;
     const pids = new Set<number>();
+    const rows: Array<{ pid: number; command: string }> = [];
 
-    for (const line of output.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.includes(marker) || !trimmed.includes('--agent-id')) {
+    if (process.platform === 'win32') {
+      try {
+        rows.push(
+          ...listWindowsProcessTableSync().map((row) => ({ pid: row.pid, command: row.command }))
+        );
+      } catch {
+        return;
+      }
+    } else {
+      let output = '';
+      try {
+        output = execFileSync('ps', ['-ax', '-o', 'pid=,command='], {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+      } catch {
+        return;
+      }
+
+      for (const line of output.split('\n')) {
+        const trimmed = line.trim();
+        const match = /^(\d+)\s+(.*)$/.exec(trimmed);
+        if (!match) continue;
+        const pid = Number.parseInt(match[1], 10);
+        if (!Number.isFinite(pid) || pid <= 0) continue;
+        rows.push({ pid, command: match[2] ?? '' });
+      }
+    }
+
+    for (const row of rows) {
+      if (
+        !commandArgEquals(row.command, '--team-name', teamName) ||
+        !row.command.includes('--agent-id')
+      ) {
         continue;
       }
-      const match = /^(\d+)\s+(.*)$/.exec(trimmed);
-      if (!match) continue;
-      const pid = Number.parseInt(match[1], 10);
-      if (!Number.isFinite(pid) || pid <= 0) continue;
-      if (currentRunPid && pid === currentRunPid) continue;
-      pids.add(pid);
+      if (currentRunPid && row.pid === currentRunPid) continue;
+      pids.add(row.pid);
     }
 
     for (const pid of pids) {

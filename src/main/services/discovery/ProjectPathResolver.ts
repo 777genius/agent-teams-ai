@@ -11,7 +11,12 @@
 
 import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
 import { extractCwd } from '@main/utils/jsonl';
-import { decodePath, extractBaseDir, getProjectsBasePath } from '@main/utils/pathDecoder';
+import {
+  decodePath,
+  extractBaseDir,
+  getProjectDirNameCandidates,
+  getProjectsBasePath,
+} from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
@@ -25,6 +30,11 @@ interface ResolveProjectPathOptions {
   cwdHint?: string;
   sessionPaths?: string[];
   forceRefresh?: boolean;
+}
+
+function isAbsolutePathLike(value: string): boolean {
+  const slashPath = value.replace(/\\/g, '/');
+  return path.isAbsolute(value) || /^[a-zA-Z]:\//.test(slashPath) || slashPath.startsWith('//');
 }
 
 export class ProjectPathResolver {
@@ -61,7 +71,7 @@ export class ProjectPathResolver {
     }
 
     const cwdHint = opts.cwdHint?.trim();
-    if (cwdHint && path.isAbsolute(cwdHint)) {
+    if (cwdHint && isAbsolutePathLike(cwdHint)) {
       this.projectPathCache.set(projectId, cwdHint);
       return cwdHint;
     }
@@ -80,7 +90,7 @@ export class ProjectPathResolver {
     for (const sessionPath of sessionPaths.slice(0, maxPathsToInspect)) {
       try {
         const cwd = await extractCwd(sessionPath, this.fsProvider);
-        if (cwd && path.isAbsolute(cwd)) {
+        if (cwd && isAbsolutePathLike(cwd)) {
           this.projectPathCache.set(projectId, cwd);
           return cwd;
         }
@@ -109,20 +119,24 @@ export class ProjectPathResolver {
   }
 
   private async listSessionPaths(projectId: string): Promise<string[]> {
-    const projectDir = path.join(this.projectsDir, extractBaseDir(projectId));
-    if (!(await this.fsProvider.exists(projectDir))) {
-      return [];
+    for (const dirName of getProjectDirNameCandidates(projectId)) {
+      const projectDir = path.join(this.projectsDir, dirName);
+      if (!(await this.fsProvider.exists(projectDir))) {
+        continue;
+      }
+
+      try {
+        const entries = await this.fsProvider.readdir(projectDir);
+        return entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
+          .map((entry) => path.join(projectDir, entry.name));
+      } catch (error) {
+        logger.error(`Failed to read session files for ${projectId}:`, error);
+        return [];
+      }
     }
 
-    try {
-      const entries = await this.fsProvider.readdir(projectDir);
-      return entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
-        .map((entry) => path.join(projectDir, entry.name));
-    } catch (error) {
-      logger.error(`Failed to read session files for ${projectId}:`, error);
-      return [];
-    }
+    return [];
   }
 }
 

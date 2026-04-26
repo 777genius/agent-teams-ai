@@ -378,7 +378,10 @@ export class FileContentResolver {
    * For subagents, sessionId = the parent directory's parent name.
    */
   private extractSessionId(logPath: string): string | null {
-    const parts = path.normalize(logPath).split(path.sep).filter(Boolean);
+    const parts = path
+      .normalize(logPath)
+      .split(/[/\\]+/)
+      .filter(Boolean);
 
     // Check if it's a subagent path: .../{sessionId}/subagents/agent-xxx.jsonl
     const subagentsIdx = parts.indexOf('subagents');
@@ -613,7 +616,7 @@ export class FileContentResolver {
 
   private getDisplayRelativePath(filePath: string, segmentCount: number): string {
     const normalized = path.normalize(filePath);
-    const parts = normalized.split(path.sep).filter(Boolean);
+    const parts = normalized.split(/[/\\]+/).filter(Boolean);
     return parts.slice(-segmentCount).join('/');
   }
 

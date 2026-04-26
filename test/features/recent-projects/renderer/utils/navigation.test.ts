@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildSyntheticRepositoryGroup,
+  encodeProjectPathForNavigation,
   findMatchingWorktree,
 } from '@features/recent-projects/renderer/utils/navigation';
 
@@ -31,9 +32,7 @@ describe('recent-projects navigation utils', () => {
       },
     ];
 
-    expect(
-      findMatchingWorktree(groups, ['/users/test/alpha/', '/users/test/other'])
-    ).toEqual({
+    expect(findMatchingWorktree(groups, ['/users/test/alpha/', '/users/test/other'])).toEqual({
       repoId: 'repo-alpha',
       worktreeId: 'wt-alpha',
     });
@@ -58,5 +57,11 @@ describe('recent-projects navigation utils', () => {
     expect(group.worktrees[0].createdAt).toBe(Date.parse('2026-04-14T12:00:00Z'));
 
     vi.useRealTimers();
+  });
+
+  it('encodes Windows custom project paths with the same drive format as session ids', () => {
+    expect(encodeProjectPathForNavigation('C:\\Users\\User\\PROJECT_IT\\сlaude_team')).toBe(
+      'C--Users-User-PROJECT_IT-сlaude_team'
+    );
   });
 });

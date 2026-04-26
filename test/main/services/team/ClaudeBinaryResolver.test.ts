@@ -53,6 +53,7 @@ describe('ClaudeBinaryResolver', () => {
   const originalPlatform = process.platform;
   const originalCwd = process.cwd;
   const originalResourcesPath = process.resourcesPath;
+  const originalPathext = process.env.PATHEXT;
   const workspaceRoot = '/Users/belief/dev/projects/claude/claude_team_runtime';
 
   beforeEach(() => {
@@ -91,6 +92,11 @@ describe('ClaudeBinaryResolver', () => {
       configurable: true,
       writable: true,
     });
+    if (originalPathext === undefined) {
+      delete process.env.PATHEXT;
+    } else {
+      process.env.PATHEXT = originalPathext;
+    }
     vi.unstubAllEnvs();
   });
 
@@ -128,6 +134,31 @@ describe('ClaudeBinaryResolver', () => {
 
     await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
     expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
+  });
+
+  it('resolves extensionless Windows explicit overrides to a real executable file first', async () => {
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+      writable: true,
+    });
+    mockGetConfiguredCliFlavor.mockReturnValue('claude');
+    process.env.PATHEXT = '.EXE;.CMD';
+    process.env.CLAUDE_CLI_PATH = 'C:\\Tools\\claude';
+    const expectedBinary = 'C:\\Tools\\claude.exe';
+
+    statMock.mockImplementation((filePath) => {
+      if (filePath === expectedBinary) {
+        return Promise.resolve({ isFile: () => true });
+      }
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    });
+
+    const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+    ClaudeBinaryResolver.clearCache();
+
+    await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
+    expect(statMock.mock.calls[0]?.[0]).toBe(expectedBinary);
   });
 
   it('ignores the dedicated orchestrator overrides when Claude flavor is selected', async () => {

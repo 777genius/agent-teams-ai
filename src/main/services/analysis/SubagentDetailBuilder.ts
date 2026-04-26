@@ -14,18 +14,18 @@ import {
   type SemanticStepGroup,
   type SubagentDetail,
 } from '@main/types';
-import { extractBaseDir } from '@main/utils/pathDecoder';
 import { countTokens } from '@main/utils/tokenizer';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
-const logger = createLogger('Service:SubagentDetailBuilder');
-
 import { buildSemanticStepGroups } from './SemanticStepGrouper';
+import { resolveProjectStorageDir } from '../discovery/projectStorageDir';
 
 import type { SubagentResolver } from '../discovery/SubagentResolver';
 import type { FileSystemProvider } from '../infrastructure/FileSystemProvider';
 import type { SessionParser } from '../parsing/SessionParser';
+
+const logger = createLogger('Service:SubagentDetailBuilder');
 
 /**
  * Build detailed information for a specific subagent.
@@ -52,12 +52,14 @@ export async function buildSubagentDetail(
   projectsDir: string
 ): Promise<SubagentDetail | null> {
   try {
-    // Construct path to subagent JSONL file
-    // projectId may be composite (e.g. "baseDir::suffix"), extract base dir
-    const baseDir = extractBaseDir(projectId);
+    const projectPath = await resolveProjectStorageDir(projectsDir, projectId, fsProvider);
+    if (!projectPath) {
+      logger.warn(`Project storage directory not found for subagent detail: ${projectId}`);
+      return null;
+    }
+
     const subagentPath = path.join(
-      projectsDir,
-      baseDir,
+      projectPath,
       sessionId,
       'subagents',
       `agent-${subagentId}.jsonl`

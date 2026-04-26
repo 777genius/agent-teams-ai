@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import {
   buildSyntheticRepositoryGroup,
+  encodeProjectPathForNavigation,
   findMatchingWorktree,
   type WorktreeMatch,
 } from '../utils/navigation';
@@ -79,7 +80,7 @@ export function useOpenRecentProject(): {
         repositoryGroups: [buildSyntheticRepositoryGroup(path), ...state.repositoryGroups],
       }));
 
-      const encodedId = path.replace(/[/\\]/g, '-');
+      const encodedId = encodeProjectPathForNavigation(path);
       navigateToMatch({ repoId: encodedId, worktreeId: encodedId });
     },
     [fetchRepositoryGroups, navigateToMatch, repositoryGroups]

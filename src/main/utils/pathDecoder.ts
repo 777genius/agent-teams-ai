@@ -40,6 +40,30 @@ export function encodePath(absolutePath: string): string {
   return encoded.startsWith('-') ? encoded : `-${encoded}`;
 }
 
+function isWindowsAbsolutePathLike(name: string): boolean {
+  const slashPath = name.replace(/\\/g, '/');
+  return /^[a-zA-Z]:\//.test(slashPath) || slashPath.startsWith('//');
+}
+
+function normalizeWindowsPathForStorageKey(name: string): string {
+  if (!isWindowsAbsolutePathLike(name)) {
+    return name;
+  }
+  return name.replace(/\\/g, '/').toLowerCase();
+}
+
+/**
+ * Matches the orchestrator's cross-platform storage key codec.
+ * It lowercases Windows absolute paths, normalizes separators, and replaces
+ * every non-ASCII-alphanumeric character with a dash.
+ */
+export function encodePathPortable(absolutePath: string): string {
+  if (!absolutePath) {
+    return '';
+  }
+  return normalizeWindowsPathForStorageKey(absolutePath).replace(/[^a-zA-Z0-9]/g, '-');
+}
+
 /**
  * Decodes a project directory name to its original path.
  * Note: This is a best-effort decode. Paths with dashes cannot be decoded accurately.
@@ -133,7 +157,7 @@ export function isValidEncodedPath(encodedName: string): boolean {
 
   // Support legacy Windows format: "C--Users-name-project"
   // (no leading dash, drive separator encoded as "--").
-  if (/^[a-zA-Z]--[a-zA-Z0-9_.\s-]+$/.test(encodedName)) {
+  if (/^[a-zA-Z]--[^\x00-\x1f/\\:*?"<>|]+$/u.test(encodedName)) {
     return true;
   }
 
@@ -142,11 +166,10 @@ export function isValidEncodedPath(encodedName: string): boolean {
     return false;
   }
 
-  // Allow only expected encoded characters:
-  // - alphanumeric, underscores, dots, spaces, dashes
-  // - optional ":" for Windows drive notation (e.g., -C:-Users-name-project)
-  const validPattern = /^-[a-zA-Z0-9_.\s:-]+$/;
-  if (!validPattern.test(encodedName)) {
+  // Encoded path is a single directory name. It may contain Unicode project
+  // names, but must not contain separators, control chars, or Windows-invalid chars.
+  // A single drive colon is allowed only in the old "-C:-Users-name" form.
+  if (/[\x00-\x1f/\\*?"<>|]/u.test(encodedName)) {
     return false;
   }
 
@@ -200,6 +223,35 @@ export function extractBaseDir(projectId: string): string {
     return projectId.slice(0, sep);
   }
   return projectId;
+}
+
+function addUniqueCandidate(candidates: string[], candidate: string): void {
+  if (candidate && !candidates.includes(candidate)) {
+    candidates.push(candidate);
+  }
+}
+
+/**
+ * Returns possible ~/.claude/projects directory names for a project id.
+ * The first candidate is always the id's own base dir. Additional entries cover
+ * the orchestrator's portable codec, which lowercases Windows paths and folds
+ * underscores/non-ASCII characters to dashes.
+ */
+export function getProjectDirNameCandidates(projectId: string): string[] {
+  const baseDir = extractBaseDir(projectId);
+  const candidates: string[] = [];
+  addUniqueCandidate(candidates, baseDir);
+
+  const decoded = decodePath(baseDir);
+  addUniqueCandidate(candidates, encodePath(decoded));
+  addUniqueCandidate(candidates, encodePathPortable(decoded));
+
+  if (path.isAbsolute(projectId)) {
+    addUniqueCandidate(candidates, encodePath(projectId));
+    addUniqueCandidate(candidates, encodePathPortable(projectId));
+  }
+
+  return candidates;
 }
 
 // =============================================================================

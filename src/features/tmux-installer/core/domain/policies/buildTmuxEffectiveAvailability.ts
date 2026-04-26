@@ -22,10 +22,9 @@ export function buildTmuxEffectiveAvailability(
         location: 'wsl',
         version: input.wsl.tmuxVersion,
         binaryPath: input.wsl.tmuxBinaryPath,
-        runtimeReady: input.wsl.distroBootstrapped,
-        detail: input.wsl.distroBootstrapped
-          ? 'tmux is available inside WSL for the persistent teammate runtime.'
-          : 'tmux is installed inside WSL, but the Linux distro still needs first-launch setup.',
+        runtimeReady: false,
+        detail:
+          'tmux is available inside WSL, but the persistent teammate runtime still needs native Windows pane support.',
       };
     }
 

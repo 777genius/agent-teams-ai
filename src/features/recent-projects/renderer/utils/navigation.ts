@@ -24,8 +24,22 @@ export function findMatchingWorktree(
   return null;
 }
 
+export function encodeProjectPathForNavigation(projectPath: string): string {
+  if (!projectPath) {
+    return '';
+  }
+
+  const encoded = projectPath.replace(/[/\\]/g, '-');
+  const windowsDriveMatch = /^([a-zA-Z]):-(.*)$/.exec(encoded);
+  if (windowsDriveMatch) {
+    return `${windowsDriveMatch[1].toUpperCase()}--${windowsDriveMatch[2]}`;
+  }
+
+  return encoded.startsWith('-') ? encoded : `-${encoded}`;
+}
+
 export function buildSyntheticRepositoryGroup(selectedPath: string): RepositoryGroup {
-  const encodedId = selectedPath.replace(/[/\\]/g, '-');
+  const encodedId = encodeProjectPathForNavigation(selectedPath);
   const folderName = selectedPath.split(/[/\\]/).filter(Boolean).pop() ?? selectedPath;
   const now = Date.now();
 

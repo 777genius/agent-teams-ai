@@ -9,10 +9,12 @@
  */
 
 import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
-import { buildSubagentsPath, extractBaseDir } from '@main/utils/pathDecoder';
+import { buildSubagentsPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { resolveProjectStorageDir, resolveProjectStorageDirSync } from './projectStorageDir';
 
 import type { FileSystemProvider } from '@main/services/infrastructure/FileSystemProvider';
 
@@ -40,7 +42,10 @@ export class SubagentLocator {
    */
   async hasSubagents(projectId: string, sessionId: string): Promise<boolean> {
     // Check NEW structure: {projectId}/{sessionId}/subagents/
-    const newSubagentsPath = this.getSubagentsPath(projectId, sessionId);
+    const newSubagentsPath = await this.resolveSubagentsPath(projectId, sessionId);
+    if (!newSubagentsPath) {
+      return false;
+    }
     try {
       const entries = await this.fsProvider.readdir(newSubagentsPath);
       // A non-empty agent-*.jsonl file is sufficient proof of subagents.
@@ -93,7 +98,10 @@ export class SubagentLocator {
    */
   async listSubagentFiles(projectId: string, sessionId: string): Promise<string[]> {
     try {
-      const newSubagentsPath = this.getSubagentsPath(projectId, sessionId);
+      const newSubagentsPath = await this.resolveSubagentsPath(projectId, sessionId);
+      if (!newSubagentsPath) {
+        return [];
+      }
       if (await this.fsProvider.exists(newSubagentsPath)) {
         const entries = await this.fsProvider.readdir(newSubagentsPath);
         return entries
@@ -118,6 +126,18 @@ export class SubagentLocator {
    * @returns Path to the subagents directory
    */
   getSubagentsPath(projectId: string, sessionId: string): string {
-    return buildSubagentsPath(this.projectsDir, projectId, sessionId);
+    const projectPath = resolveProjectStorageDirSync(this.projectsDir, projectId);
+    return projectPath
+      ? path.join(projectPath, sessionId, 'subagents')
+      : buildSubagentsPath(this.projectsDir, projectId, sessionId);
+  }
+
+  private async resolveSubagentsPath(projectId: string, sessionId: string): Promise<string | null> {
+    const projectPath = await resolveProjectStorageDir(
+      this.projectsDir,
+      projectId,
+      this.fsProvider
+    );
+    return projectPath ? path.join(projectPath, sessionId, 'subagents') : null;
   }
 }

@@ -67,7 +67,9 @@ export class SessionParser {
    * Parse a session JSONL file and return structured data.
    */
   async parseSession(projectId: string, sessionId: string): Promise<ParsedSession> {
-    const sessionPath = this.projectScanner.getSessionPath(projectId, sessionId);
+    const sessionPath =
+      (await this.projectScanner.resolveSessionPath(projectId, sessionId)) ??
+      this.projectScanner.getSessionPath(projectId, sessionId);
     return this.parseSessionFile(sessionPath);
   }
 

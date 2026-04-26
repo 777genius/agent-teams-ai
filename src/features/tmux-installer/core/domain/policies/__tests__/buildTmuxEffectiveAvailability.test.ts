@@ -21,7 +21,7 @@ describe('buildTmuxEffectiveAvailability', () => {
     expect(result.runtimeReady).toBe(true);
   });
 
-  it('prefers WSL tmux on Windows when it is available', () => {
+  it('keeps WSL tmux visible but non-runtime-ready on Windows', () => {
     const result = buildTmuxEffectiveAvailability({
       platform: 'win32',
       nativeSupported: false,
@@ -47,7 +47,7 @@ describe('buildTmuxEffectiveAvailability', () => {
 
     expect(result.available).toBe(true);
     expect(result.location).toBe('wsl');
-    expect(result.runtimeReady).toBe(true);
+    expect(result.runtimeReady).toBe(false);
     expect(result.version).toBe('tmux 3.4');
   });
 

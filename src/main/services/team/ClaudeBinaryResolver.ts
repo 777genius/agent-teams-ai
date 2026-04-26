@@ -147,23 +147,17 @@ async function resolveFromExplicitPath(inputPath: string): Promise<string | null
     return null;
   }
 
+  if (process.platform === 'win32' && !path.extname(trimmed)) {
+    for (const ext of getWindowsExecutableExtensions()) {
+      const candidate = `${trimmed}${ext}`;
+      if (await isExecutable(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
   if (await isExecutable(trimmed)) {
     return trimmed;
-  }
-
-  if (process.platform !== 'win32') {
-    return null;
-  }
-
-  if (path.extname(trimmed)) {
-    return null;
-  }
-
-  for (const ext of getWindowsExecutableExtensions()) {
-    const candidate = `${trimmed}${ext}`;
-    if (await isExecutable(candidate)) {
-      return candidate;
-    }
   }
 
   return null;

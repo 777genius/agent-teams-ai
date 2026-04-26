@@ -77,11 +77,16 @@ export class SkillsCatalogService {
   }
 
   private isWithinRoot(targetPath: string, rootPath: string): boolean {
-    const normalizedTarget = path.resolve(targetPath);
-    const normalizedRoot = path.resolve(rootPath);
+    const normalizedTarget = this.normalizeForContainment(targetPath);
+    const normalizedRoot = this.normalizeForContainment(rootPath);
+    const relativePath = path.relative(normalizedRoot, normalizedTarget);
     return (
-      normalizedTarget === normalizedRoot ||
-      normalizedTarget.startsWith(`${normalizedRoot}${path.sep}`)
+      relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
     );
+  }
+
+  private normalizeForContainment(value: string): string {
+    const resolved = path.resolve(path.normalize(value));
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
   }
 }

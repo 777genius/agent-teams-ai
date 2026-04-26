@@ -10,7 +10,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getHomeDir, setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
 
 import {
+  isPathWithinRoot,
   isPathWithinAllowedDirectories,
+  isWindowsReservedFileName,
+  validateFileName,
   validateFilePath,
   validateOpenPath,
   validateOpenPathUserSelected,
@@ -59,6 +62,41 @@ describe('pathValidation', () => {
 
     it('should allow exact project path', () => {
       expect(isPathWithinAllowedDirectories(testProjectPath, testProjectPath)).toBe(true);
+    });
+  });
+
+  describe('isPathWithinRoot', () => {
+    it('rejects sibling paths that only share the same prefix', () => {
+      const root = path.join(os.tmpdir(), 'repo');
+      const sibling = path.join(os.tmpdir(), 'repo2', 'file.ts');
+      expect(isPathWithinRoot(sibling, root)).toBe(false);
+    });
+
+    it('handles Windows drive casing and traversal consistently', () => {
+      if (process.platform !== 'win32') {
+        return;
+      }
+
+      expect(isPathWithinRoot('C:\\Repo\\File.ts', 'c:\\repo')).toBe(true);
+      expect(isPathWithinRoot('c:\\repo\\file.ts', 'C:\\Repo')).toBe(true);
+      expect(isPathWithinRoot('C:\\Repo2\\file.ts', 'C:\\Repo')).toBe(false);
+      expect(isPathWithinRoot('C:\\Repo\\..\\escape\\file.ts', 'C:\\Repo')).toBe(false);
+    });
+  });
+
+  describe('validateFileName', () => {
+    it('rejects Windows reserved basenames before file creation', () => {
+      expect(isWindowsReservedFileName('con')).toBe(true);
+      expect(isWindowsReservedFileName('NUL.txt')).toBe(true);
+      expect(isWindowsReservedFileName('com1.json')).toBe(true);
+      expect(validateFileName('con').valid).toBe(false);
+      expect(validateFileName('NUL.txt').valid).toBe(false);
+      expect(validateFileName('com1.json').valid).toBe(false);
+    });
+
+    it('rejects trailing spaces and periods for Windows-safe names', () => {
+      expect(validateFileName('report.').valid).toBe(false);
+      expect(validateFileName('report ').valid).toBe(false);
     });
   });
 
