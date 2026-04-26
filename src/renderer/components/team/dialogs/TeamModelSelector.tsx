@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Checkbox } from '@renderer/components/ui/checkbox';
+import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import {
@@ -43,7 +44,7 @@ import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
-import { AlertTriangle, Info, Star } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Search, Star } from 'lucide-react';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -169,6 +170,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
 }) => {
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const [recommendedOnly, setRecommendedOnly] = useState(false);
+  const [modelQuery, setModelQuery] = useState('');
 
   const effectiveProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -322,15 +324,41 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
   }, [effectiveProviderId, hasRecommendedOpenCodeModels]);
 
+  useEffect(() => {
+    setModelQuery('');
+  }, [effectiveProviderId]);
+
   const visibleModelOptions = useMemo(() => {
+    const normalizedModelQuery = modelQuery.trim().toLowerCase();
+    const matchesModelQuery = (option: (typeof modelOptions)[number]): boolean => {
+      if (!normalizedModelQuery) {
+        return true;
+      }
+      const modelRecommendation =
+        effectiveProviderId === 'opencode'
+          ? getOpenCodeTeamModelRecommendation(option.value)
+          : null;
+      return [
+        option.value,
+        option.label,
+        option.badgeLabel ?? '',
+        modelRecommendation?.label ?? '',
+        modelRecommendation?.reason ?? '',
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedModelQuery);
+    };
+
     if (effectiveProviderId !== 'opencode') {
-      return modelOptions;
+      return modelOptions.filter(matchesModelQuery);
     }
 
     const concreteOptions = modelOptions
       .filter((option) => option.value.trim().length > 0)
       .map((option, index) => ({ option, index }))
       .filter(({ option }) => !recommendedOnly || isOpenCodeTeamModelRecommended(option.value))
+      .filter(({ option }) => matchesModelQuery(option))
       .sort((left, right) => {
         const recommendationOrder = compareOpenCodeTeamModelRecommendations(
           left.option.value,
@@ -347,8 +375,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return [
       ...modelOptions.filter((option) => option.value.trim().length === 0),
       ...concreteOptions,
-    ];
-  }, [effectiveProviderId, modelOptions, recommendedOnly]);
+    ].filter(matchesModelQuery);
+  }, [effectiveProviderId, modelOptions, modelQuery, recommendedOnly]);
+  const concreteModelOptionCount = modelOptions.filter((option) => option.value.trim()).length;
+  const shouldShowModelSearch = concreteModelOptionCount > 8;
+  const trimmedModelQuery = modelQuery.trim();
   const shouldConstrainModelListHeight = visibleModelOptions.length > 8;
 
   return (
@@ -432,6 +463,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   Explicit models load from the current runtime. Default remains available while the
                   list is syncing.
                 </p>
+              ) : null}
+              {shouldShowModelSearch ? (
+                <div className="relative mb-2">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                  <Input
+                    data-testid="team-model-selector-model-search"
+                    value={modelQuery}
+                    onChange={(event) => setModelQuery(event.target.value)}
+                    placeholder="Search models"
+                    aria-label="Search models"
+                    className="h-9 pr-3 text-sm"
+                    style={{ paddingLeft: 40 }}
+                  />
+                </div>
               ) : null}
               {hasRecommendedOpenCodeModels ? (
                 <div className="mb-2 flex w-fit items-center gap-2">
@@ -540,15 +585,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                                   ? 'bg-emerald-300/12 border-emerald-300/35 text-emerald-200'
                                   : modelRecommendation.level === 'recommended-with-limits'
                                     ? 'bg-amber-300/12 border-amber-300/35 text-amber-200'
-                                    : modelRecommendation.level === 'unavailable-in-opencode'
-                                      ? 'border-slate-300/30 bg-slate-400/10 text-slate-200'
-                                      : 'border-red-300/35 bg-red-400/10 text-red-200'
+                                    : modelRecommendation.level === 'tested'
+                                      ? 'bg-sky-300/12 border-sky-300/35 text-sky-200'
+                                      : modelRecommendation.level === 'tested-with-limits'
+                                        ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-200'
+                                        : modelRecommendation.level === 'unavailable-in-opencode'
+                                          ? 'border-slate-300/30 bg-slate-400/10 text-slate-200'
+                                          : 'border-red-300/35 bg-red-400/10 text-red-200'
                               )}
                               title={modelRecommendation.reason}
                             >
                               {modelRecommendation.level === 'not-recommended' ||
                               modelRecommendation.level === 'unavailable-in-opencode' ? (
                                 <AlertTriangle className="size-3 shrink-0" />
+                              ) : modelRecommendation.level === 'tested' ||
+                                modelRecommendation.level === 'tested-with-limits' ? (
+                                <CheckCircle2 className="size-3 shrink-0" />
                               ) : (
                                 <Star className="size-3 shrink-0 fill-current" />
                               )}
@@ -626,9 +678,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   })()
                 )}
               </div>
-              {effectiveProviderId === 'opencode' && visibleModelOptions.length === 0 ? (
+              {visibleModelOptions.length === 0 ? (
                 <div className="rounded-md border border-white/10 px-3 py-2 text-xs text-[var(--color-text-muted)]">
-                  No recommended OpenCode models are available in the current runtime list.
+                  {trimmedModelQuery
+                    ? 'No models match this search.'
+                    : effectiveProviderId === 'opencode' && recommendedOnly
+                      ? 'No recommended OpenCode models are available in the current runtime list.'
+                      : 'No models are available in the current runtime list.'}
                 </div>
               ) : null}
             </div>

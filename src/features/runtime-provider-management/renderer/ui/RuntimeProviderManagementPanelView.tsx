@@ -1126,15 +1126,22 @@ function ModelBadges({
               ? 'bg-emerald-400/15 px-1.5 py-0 text-[10px] text-emerald-200'
               : modelRecommendation.level === 'recommended-with-limits'
                 ? 'bg-amber-400/15 px-1.5 py-0 text-[10px] text-amber-200'
-                : modelRecommendation.level === 'unavailable-in-opencode'
-                  ? 'bg-slate-400/15 px-1.5 py-0 text-[10px] text-slate-200'
-                  : 'bg-red-400/15 px-1.5 py-0 text-[10px] text-red-200'
+                : modelRecommendation.level === 'tested'
+                  ? 'bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-200'
+                  : modelRecommendation.level === 'tested-with-limits'
+                    ? 'bg-cyan-400/15 px-1.5 py-0 text-[10px] text-cyan-200'
+                    : modelRecommendation.level === 'unavailable-in-opencode'
+                      ? 'bg-slate-400/15 px-1.5 py-0 text-[10px] text-slate-200'
+                      : 'bg-red-400/15 px-1.5 py-0 text-[10px] text-red-200'
           }
           title={modelRecommendation.reason}
         >
           {modelRecommendation.level === 'not-recommended' ||
           modelRecommendation.level === 'unavailable-in-opencode' ? (
             <AlertTriangle className="mr-1 size-3" />
+          ) : modelRecommendation.level === 'tested' ||
+            modelRecommendation.level === 'tested-with-limits' ? (
+            <CheckCircle2 className="mr-1 size-3" />
           ) : (
             <Star className="mr-1 size-3 fill-current" />
           )}

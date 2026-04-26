@@ -106,6 +106,7 @@ async function runModelScenario(input: {
     harness = await createOpenCodeLiveHarness({
       tempDir,
       selectedModel: input.model,
+      projectPath,
     });
 
     const progressEvents: TeamProvisioningProgress[] = [];

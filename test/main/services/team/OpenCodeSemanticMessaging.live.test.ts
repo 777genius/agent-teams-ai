@@ -48,6 +48,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
         tempDir,
         selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
+        projectPath: PROJECT_PATH,
       });
 
       const teamName = `opencode-semantic-message-${Date.now()}`;
@@ -163,6 +164,7 @@ liveDescribe('OpenCode semantic messaging live e2e', () => {
       const { bridgeClient, selectedModel, svc, dispose } = await createOpenCodeLiveHarness({
         tempDir,
         selectedModel: process.env.OPENCODE_E2E_MODEL?.trim() || DEFAULT_MODEL,
+        projectPath: PROJECT_PATH,
       });
 
       const teamName = `opencode-peer-message-${Date.now()}`;

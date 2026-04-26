@@ -54,6 +54,7 @@ export interface OpenCodeLiveHarness {
 export async function createOpenCodeLiveHarness(input: {
   tempDir: string;
   selectedModel: string;
+  projectPath?: string;
 }): Promise<OpenCodeLiveHarness> {
   const orchestratorCli =
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
@@ -104,6 +105,17 @@ export async function createOpenCodeLiveHarness(input: {
     svc,
     dispose: async () => {
       svc.setControlApiBaseUrlResolver(null);
+      if (input.projectPath?.trim()) {
+        await readinessBridge
+          .cleanupOpenCodeHosts({
+            reason: 'test-harness-dispose',
+            mode: 'force',
+            projectPath: input.projectPath,
+            staleAgeMs: null,
+            leaseStaleAgeMs: null,
+          })
+          .catch(() => undefined);
+      }
       await controlApi.close();
     },
   };

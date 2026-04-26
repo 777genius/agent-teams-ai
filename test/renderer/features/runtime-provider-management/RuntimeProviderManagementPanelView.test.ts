@@ -586,8 +586,26 @@ describe('RuntimeProviderManagementPanelView', () => {
         },
         {
           providerId: 'openrouter',
-          modelId: 'openrouter/qwen/qwen3-coder-flash',
-          displayName: 'qwen/qwen3-coder-flash',
+          modelId: 'opencode/minimax-m2.5-free',
+          displayName: 'minimax-m2.5-free',
+          sourceLabel: 'OpenCode',
+          free: true,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/mistralai/codestral-2508',
+          displayName: 'mistralai/codestral-2508',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/anthropic/claude-sonnet-4.6',
+          displayName: 'anthropic/claude-sonnet-4.6',
           sourceLabel: 'OpenRouter',
           free: false,
           default: false,
@@ -621,11 +639,12 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('openrouter/openai/gpt-oss-20b:free');
     expect(host.textContent).toContain('Used for new teams');
     expect(host.textContent).toContain('Model probe passed');
+    expect(host.textContent).toContain('Recommended');
     expect(host.textContent).toContain('Not recommended');
     expect(host.textContent).toContain('Unavailable in OpenCode');
-    expect(host.textContent).toContain('Recommended only');
-    expect(host.textContent).toContain('Recommended');
-    expect(host.textContent).toContain('Recommended with limits');
+    expect(host.textContent).toContain('Tested');
+    expect(host.textContent).toContain('Tested with limits');
+    expect(host.textContent).not.toContain('Recommended only');
     expect(host.textContent).not.toContain('Set OpenCode default');
     expect(
       Array.from(host.querySelectorAll('button')).some(
@@ -640,11 +659,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     ) as HTMLElement | undefined;
     expect(connectedBadge?.style.color).toBeTruthy();
     expect(
-      (
-        host.querySelector(
-          '[data-testid="runtime-provider-model-search"]'
-        ) as HTMLElement | null
-      )?.style.paddingLeft
+      (host.querySelector('[data-testid="runtime-provider-model-search"]') as HTMLElement | null)
+        ?.style.paddingLeft
     ).toBe('42px');
     expect(
       (host.querySelector('[data-testid="runtime-provider-model-list"]') as HTMLElement | null)
@@ -659,10 +675,13 @@ describe('RuntimeProviderManagementPanelView', () => {
       '[data-testid="runtime-provider-model-result-openrouter/openai/gpt-oss-20b:free"]'
     ) as HTMLElement | null;
     expect(modelResult?.style.color).toBe('#86efac');
-    expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-flash')).toBeLessThan(
-      (host.textContent ?? '').indexOf('openai/gpt-oss-120b:free')
+    expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
+      (host.textContent ?? '').indexOf('anthropic/claude-sonnet-4.6')
     );
-    expect((host.textContent ?? '').indexOf('openai/gpt-oss-120b:free')).toBeLessThan(
+    expect((host.textContent ?? '').indexOf('anthropic/claude-sonnet-4.6')).toBeLessThan(
+      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+    );
+    expect((host.textContent ?? '').indexOf('minimax-m2.5-free')).toBeLessThan(
       (host.textContent ?? '').indexOf('opencode/big-pickle')
     );
     expect((host.textContent ?? '').indexOf('opencode/big-pickle')).toBeLessThan(
@@ -671,29 +690,6 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')).toBeLessThan(
       (host.textContent ?? '').indexOf('openrouter/openai/gpt-oss-20b:free')
     );
-
-    await act(async () => {
-      const checkbox = Array.from(host.querySelectorAll('button')).find(
-        (button) => button.getAttribute('role') === 'checkbox'
-      );
-      checkbox?.click();
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).toContain('qwen/qwen3-coder-flash');
-    expect(host.textContent).toContain('openai/gpt-oss-120b:free');
-    expect(host.textContent).not.toContain('opencode/big-pickle');
-    expect(host.textContent).not.toContain('qwen/qwen3-coder-plus');
-    expect(host.textContent).not.toContain('openrouter/openai/gpt-oss-20b:free');
-
-    await act(async () => {
-      const checkbox = Array.from(host.querySelectorAll('button')).find(
-        (button) => button.getAttribute('role') === 'checkbox'
-      );
-      checkbox?.click();
-      await Promise.resolve();
-    });
-
     await act(async () => {
       host
         .querySelector(
@@ -854,14 +850,10 @@ describe('RuntimeProviderManagementPanelView', () => {
       expect(logo).not.toBeNull();
       expect(logo?.className).toContain('runtime-provider-brand-icon');
       expect(logo?.querySelector('svg,img')).not.toBeNull();
-      expect(logo?.getAttribute('style')).toContain(
-        '--runtime-provider-brand-fallback-background'
-      );
+      expect(logo?.getAttribute('style')).toContain('--runtime-provider-brand-fallback-background');
       expect(logo?.getAttribute('style')).toContain('--runtime-provider-brand-fallback-border');
       if (logo?.querySelector('svg')) {
-        expect(logo.getAttribute('style')).toContain(
-          '--runtime-provider-brand-fallback-color'
-        );
+        expect(logo.getAttribute('style')).toContain('--runtime-provider-brand-fallback-color');
       }
     }
   });

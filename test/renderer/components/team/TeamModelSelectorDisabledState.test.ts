@@ -253,8 +253,10 @@ describe('TeamModelSelector disabled Codex models', () => {
             'openrouter/openai/gpt-oss-20b:free',
             'openrouter/qwen/qwen3-coder-plus',
             'opencode/big-pickle',
+            'opencode/minimax-m2.5-free',
             'openrouter/openai/gpt-oss-120b:free',
-            'openrouter/qwen/qwen3-coder-flash',
+            'openrouter/mistralai/codestral-2508',
+            'openrouter/anthropic/claude-sonnet-4.6',
           ],
           modelVerificationState: 'idle',
           modelAvailability: [],
@@ -278,11 +280,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Recommended only');
-    expect(host.textContent).toContain('qwen/qwen3-coder-flash');
-    expect(host.textContent).toContain('Recommended');
+    expect(host.textContent).toContain('anthropic/claude-sonnet-4.6');
+    expect(host.textContent).toContain('Tested');
+    expect(host.textContent).toContain('mistralai/codestral-2508');
+    expect(host.textContent).toContain('Tested');
+    expect(host.textContent).toContain('minimax-m2.5-free');
+    expect(host.textContent).toContain('Tested with limits');
     expect(host.textContent).toContain('openai/gpt-oss-120b:free');
-    expect(host.textContent).toContain('Recommended with limits');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('qwen/qwen3-coder-plus');
     expect(host.textContent).toContain('Unavailable in OpenCode');
@@ -292,38 +296,26 @@ describe('TeamModelSelector disabled Codex models', () => {
     const buttonTexts = Array.from(host.querySelectorAll('button')).map(
       (button) => button.textContent ?? ''
     );
-    const recommendedIndex = buttonTexts.findIndex((text) =>
-      text.includes('qwen/qwen3-coder-flash')
+    const sonnetIndex = buttonTexts.findIndex((text) =>
+      text.includes('anthropic/claude-sonnet-4.6')
     );
+    const testedIndex = buttonTexts.findIndex((text) => text.includes('mistralai/codestral-2508'));
     const neutralIndex = buttonTexts.findIndex((text) => text.includes('big-pickle'));
-    const limitedIndex = buttonTexts.findIndex((text) =>
-      text.includes('openai/gpt-oss-120b:free')
-    );
+    const limitedIndex = buttonTexts.findIndex((text) => text.includes('minimax-m2.5-free'));
     const notRecommendedIndex = buttonTexts.findIndex((text) =>
       text.includes('openai/gpt-oss-20b:free')
     );
     const unavailableIndex = buttonTexts.findIndex((text) =>
       text.includes('qwen/qwen3-coder-plus')
     );
-    expect(recommendedIndex).toBeGreaterThanOrEqual(0);
-    expect(limitedIndex).toBeGreaterThan(recommendedIndex);
+    expect(sonnetIndex).toBeGreaterThanOrEqual(0);
+    expect(testedIndex).toBeGreaterThanOrEqual(0);
+    expect(limitedIndex).toBeGreaterThan(testedIndex);
     expect(neutralIndex).toBeGreaterThan(limitedIndex);
     expect(unavailableIndex).toBeGreaterThan(neutralIndex);
     expect(notRecommendedIndex).toBeGreaterThan(unavailableIndex);
 
-    await act(async () => {
-      const checkbox = Array.from(host.querySelectorAll('button')).find(
-        (button) => button.getAttribute('role') === 'checkbox'
-      );
-      checkbox?.click();
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).toContain('qwen/qwen3-coder-flash');
-    expect(host.textContent).toContain('openai/gpt-oss-120b:free');
-    expect(host.textContent).not.toContain('big-pickle');
-    expect(host.textContent).not.toContain('qwen/qwen3-coder-plus');
-    expect(host.textContent).not.toContain('openai/gpt-oss-20b:free');
+    expect(host.textContent).not.toContain('Recommended only');
 
     await act(async () => {
       root.unmount();
@@ -375,6 +367,23 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(modelGrid).toBeTruthy();
     expect(modelGrid?.style.maxHeight).toBe('400px');
     expect(modelGrid?.className).toContain('overflow-y-auto');
+    const searchInput = host.querySelector(
+      '[data-testid="team-model-selector-model-search"]'
+    ) as HTMLInputElement | null;
+    expect(searchInput).toBeTruthy();
+
+    await act(async () => {
+      const setValue = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set;
+      setValue?.call(searchInput, '5.3');
+      searchInput?.dispatchEvent(new Event('input', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('5.3 Codex');
+    expect(host.textContent).not.toContain('5.4 Mini');
 
     await act(async () => {
       root.unmount();
@@ -413,6 +422,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('5.4');
     expect(host.textContent).toContain('5.3 Codex');
     expect(host.textContent).not.toContain('Explicit models load from the current runtime');
+    expect(host.querySelector('[data-testid="team-model-selector-model-search"]')).toBeNull();
 
     await act(async () => {
       root.unmount();

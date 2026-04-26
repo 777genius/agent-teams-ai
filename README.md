@@ -188,7 +188,7 @@ For feature architecture and implementation guidance:
 | **Per-task code review** | ✅ Accept / reject / comment | ⚠️ PR-level only | ⚠️ File-level only | ✅ BugBot on PRs | ❌ |
 | **Flexible autonomy** | ✅ Granular settings, per-action approval, notifications | ❌ | ⚠️ Plan approval only | ✅ | ✅ |
 | **Git worktree isolation** | ✅ Optional | ⚠️ Mandatory | ⚠️ Mandatory | ✅ | ✅ |
-| **Multi-agent backend** | ✅ Claude, Codex, more coming soon | ✅ 6+ agents | ✅ 11 providers | ✅ Multi-model | — |
+| **Multi-agent backend** | ✅ Codex, Claude, and 75+ providers | ✅ 6+ agents | ✅ 11 providers | ✅ Multi-model | — |
 | **Price** | **Free** | Free / $30 user/mo | Free | $0–$200/mo | Provider subscription |
 
 ---
