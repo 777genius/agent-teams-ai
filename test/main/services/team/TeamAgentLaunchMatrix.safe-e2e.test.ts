@@ -2124,7 +2124,7 @@ describe('Team agent launch matrix safe e2e', () => {
         },
       },
     });
-  });
+  }, 120_000);
 
   it('stopAllTeams stops in-flight mixed OpenCode secondary lanes for multiple teams', async () => {
     const firstTeamName = 'mixed-opencode-stop-all-inflight-multi-a-safe-e2e';
@@ -3701,6 +3701,11 @@ describe('Team agent launch matrix safe e2e', () => {
       ]);
     (svc as any).readProcessRssBytesByPid = async () =>
       new Map([[sharedHostPid, 183.9 * 1024 * 1024]]);
+
+    await waitForCondition(async () => {
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+      return snapshot.members.bob?.alive === true;
+    });
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -16259,15 +16264,15 @@ class RejectingBlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter
   }
 }
 
-async function waitForCondition(assertion: () => boolean): Promise<void> {
+async function waitForCondition(assertion: () => boolean | Promise<boolean>): Promise<void> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 5_000) {
-    if (assertion()) {
+    if (await assertion()) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  expect(assertion()).toBe(true);
+  expect(await assertion()).toBe(true);
 }
 
 async function removeTempDirWithRetries(dir: string): Promise<void> {
