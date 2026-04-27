@@ -1222,7 +1222,7 @@ describe('TeamProvisioningService', () => {
       });
     });
 
-    it('shows RSS for OpenCode secondary lanes through the shared runtime host without exposing a member pid', async () => {
+    it('shows RSS for OpenCode secondary lane host pids without treating pre-bootstrap runtime as alive', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
         getConfig: vi.fn(async () => ({
@@ -1325,15 +1325,16 @@ describe('TeamProvisioningService', () => {
       expect(pidusage).toHaveBeenCalledWith(333, { maxage: 0 });
       expect(snapshot.members.bob).toMatchObject({
         memberName: 'bob',
-        alive: true,
+        alive: false,
         restartable: false,
         pid: 333,
         runtimeModel: 'opencode/minimax-m2.5-free',
         rssBytes: 456_000_000,
+        livenessKind: 'runtime_process_candidate',
       });
     });
 
-    it('shows RSS for persisted OpenCode secondary lane runtime pids after the launch run is gone', async () => {
+    it('shows RSS for persisted OpenCode secondary lane host pids without treating historical bootstrap as live', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
         getConfig: vi.fn(async () => ({
@@ -1399,12 +1400,14 @@ describe('TeamProvisioningService', () => {
       expect(pidusage).toHaveBeenCalledWith([333], { maxage: 0 });
       expect(snapshot.members.bob).toMatchObject({
         memberName: 'bob',
-        alive: true,
+        alive: false,
         restartable: false,
         pid: 333,
         providerId: 'opencode',
         runtimeModel: 'opencode/minimax-m2.5-free',
         rssBytes: 456_000_000,
+        historicalBootstrapConfirmed: true,
+        livenessKind: 'runtime_process_candidate',
       });
     });
   });
@@ -9892,7 +9895,7 @@ describe('TeamProvisioningService', () => {
     });
   });
 
-  it('clears stale OpenCode bridge launch failure when the runtime process is verified alive', async () => {
+  it('does not clear OpenCode bridge launch failure from process-only liveness', async () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
       async () =>
@@ -9900,12 +9903,13 @@ describe('TeamProvisioningService', () => {
           [
             'bob',
             {
-              alive: true,
+              alive: false,
               model: 'openrouter/google/gemini-2.5-flash',
-              livenessKind: 'runtime_process',
+              livenessKind: 'runtime_process_candidate',
               providerId: 'opencode',
-              runtimeDiagnostic: 'OpenCode runtime process detected',
-              runtimeDiagnosticSeverity: 'info',
+              runtimeDiagnostic:
+                'OpenCode runtime process detected, but teammate bootstrap is not confirmed',
+              runtimeDiagnosticSeverity: 'warning',
             },
           ],
         ])
@@ -9922,17 +9926,18 @@ describe('TeamProvisioningService', () => {
     });
 
     expect(result.bob).toMatchObject({
-      status: 'online',
-      launchState: 'runtime_pending_bootstrap',
-      runtimeAlive: true,
-      hardFailure: false,
-      hardFailureReason: undefined,
-      error: undefined,
+      status: 'error',
+      launchState: 'failed_to_start',
+      runtimeAlive: false,
+      hardFailure: true,
+      hardFailureReason: 'OpenCode bridge reported member launch failure',
+      error: 'OpenCode bridge reported member launch failure',
       runtimeModel: 'openrouter/google/gemini-2.5-flash',
-      livenessKind: 'runtime_process',
-      runtimeDiagnostic: 'OpenCode runtime process detected',
-      runtimeDiagnosticSeverity: 'info',
-      livenessSource: 'process',
+      livenessKind: 'runtime_process_candidate',
+      runtimeDiagnostic:
+        'OpenCode runtime process detected, but teammate bootstrap is not confirmed',
+      runtimeDiagnosticSeverity: 'warning',
+      livenessSource: undefined,
     });
   });
 

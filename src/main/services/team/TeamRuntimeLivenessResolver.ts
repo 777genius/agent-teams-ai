@@ -185,6 +185,8 @@ export function resolveTeamMemberRuntimeLiveness(
 ): ResolvedTeamMemberRuntimeLiveness {
   const tracked = input.trackedSpawnStatus;
   const runtimeSessionId = input.runtimeSessionId ?? input.persistedRuntimeSessionId;
+  const hasConfirmedBootstrap =
+    tracked?.bootstrapConfirmed === true || tracked?.launchState === 'confirmed_alive';
   const diagnostics: string[] = [];
   if (!input.processTableAvailable) {
     diagnostics.push('process table unavailable');
@@ -230,15 +232,38 @@ export function resolveTeamMemberRuntimeLiveness(
   if (runtimePidRow && input.providerId === 'opencode') {
     const processCommand = sanitizeProcessCommandForDiagnostics(runtimePidRow.command);
     if (isOpenCodeRuntimeProcess(runtimePidRow.command)) {
+      if (hasConfirmedBootstrap) {
+        return result({
+          alive: true,
+          livenessKind: 'runtime_process',
+          pidSource: 'opencode_bridge',
+          pid: runtimePidRow.pid,
+          runtimeSessionId,
+          processCommand,
+          runtimeLastSeenAt: tracked?.lastHeartbeatAt ?? tracked?.updatedAt,
+          runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+          diagnostics: [
+            ...diagnostics,
+            'matched OpenCode runtime pid and process identity',
+            'bootstrap confirmed',
+          ],
+        });
+      }
       return result({
-        alive: true,
-        livenessKind: 'runtime_process',
+        alive: false,
+        livenessKind: 'runtime_process_candidate',
         pidSource: 'opencode_bridge',
         pid: runtimePidRow.pid,
         runtimeSessionId,
         processCommand,
-        runtimeDiagnostic: 'OpenCode runtime process detected',
-        diagnostics: [...diagnostics, 'matched OpenCode runtime pid and process identity'],
+        runtimeDiagnostic:
+          'OpenCode runtime process detected, but teammate bootstrap is not confirmed',
+        runtimeDiagnosticSeverity: 'warning',
+        diagnostics: [
+          ...diagnostics,
+          'matched OpenCode runtime pid and process identity',
+          'waiting for teammate bootstrap confirmation',
+        ],
       });
     }
     return result({
@@ -257,7 +282,7 @@ export function resolveTeamMemberRuntimeLiveness(
     });
   }
 
-  if (tracked?.bootstrapConfirmed === true || tracked?.launchState === 'confirmed_alive') {
+  if (hasConfirmedBootstrap) {
     return result({
       alive: true,
       livenessKind: 'confirmed_bootstrap',

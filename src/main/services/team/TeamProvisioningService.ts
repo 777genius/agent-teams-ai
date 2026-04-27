@@ -16072,6 +16072,11 @@ export class TeamProvisioningService {
                 hardFailureReason: evidenceEntry.hardFailureReason,
                 pendingPermissionRequestIds: evidenceEntry.pendingPermissionRequestIds,
                 runtimePid: evidenceEntry.runtimePid,
+                sessionId: evidenceEntry.sessionId,
+                livenessKind: evidenceEntry.livenessKind,
+                pidSource: evidenceEntry.pidSource,
+                runtimeDiagnostic: evidenceEntry.runtimeDiagnostic,
+                runtimeDiagnosticSeverity: evidenceEntry.runtimeDiagnosticSeverity,
                 diagnostics: evidenceEntry.diagnostics,
               }
             : finishedWithoutRuntimeEvidence
@@ -16638,6 +16643,12 @@ export class TeamProvisioningService {
         hardFailureReason?: string;
         pendingPermissionRequestIds?: string[];
         runtimePid?: number;
+        sessionId?: string;
+        runtimeSessionId?: string;
+        livenessKind?: TeamAgentRuntimeLivenessKind;
+        pidSource?: TeamAgentRuntimePidSource;
+        runtimeDiagnostic?: string;
+        runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
         diagnostics?: string[];
       };
       pendingReason?: string;
@@ -16685,6 +16696,11 @@ export class TeamProvisioningService {
               hardFailureReason: runtimeEvidence.hardFailureReason,
               pendingPermissionRequestIds: runtimeEvidence.pendingPermissionRequestIds,
               runtimePid: runtimeEvidence.runtimePid,
+              sessionId: runtimeEvidence.sessionId,
+              livenessKind: runtimeEvidence.livenessKind,
+              pidSource: runtimeEvidence.pidSource,
+              runtimeDiagnostic: runtimeEvidence.runtimeDiagnostic,
+              runtimeDiagnosticSeverity: runtimeEvidence.runtimeDiagnosticSeverity,
               diagnostics: runtimeEvidence.diagnostics,
             },
           });

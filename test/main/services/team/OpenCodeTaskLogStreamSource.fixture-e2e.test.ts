@@ -32,6 +32,21 @@ const RELAY_WORKS_10_TASK: TeamTask = {
   ],
 };
 
+const RELAY_WORKS_10_COORDINATION_TASK: TeamTask = {
+  id: 'b5534868-0901-4c9e-9296-2b6e2059a08f',
+  displayId: 'b5534868',
+  subject: 'Split calculator implementation work',
+  owner: 'jack',
+  status: 'in_progress',
+  createdAt: '2026-04-24T20:28:58.000Z',
+  updatedAt: '2026-04-24T20:31:21.876Z',
+  workIntervals: [
+    {
+      startedAt: '2026-04-24T20:28:58.000Z',
+    },
+  ],
+};
+
 async function loadFixtureTranscript(): Promise<
   NonNullable<OpenCodeRuntimeTranscriptResponse['transcript']>
 > {
@@ -171,6 +186,43 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
     });
   });
 
+  it('includes real native OpenCode read/bash tools from a task-scoped runtime projection', async () => {
+    const transcript = await loadFixtureTranscript();
+    const { source } = createSource({
+      transcript,
+      activeTasks: [RELAY_WORKS_10_COORDINATION_TASK],
+    });
+
+    const response = await source.getTaskLogStream(
+      'relay-works-10',
+      RELAY_WORKS_10_COORDINATION_TASK.id
+    );
+
+    expect(response).not.toBeNull();
+    expect(response?.source).toBe('opencode_runtime_fallback');
+    expect(response?.runtimeProjection).toMatchObject({
+      provider: 'opencode',
+      mode: 'heuristic',
+      fallbackReason: 'task_tool_markers',
+    });
+    expect(response?.runtimeProjection?.boardMcpToolCount).toBeGreaterThan(0);
+    expect(response?.runtimeProjection?.nativeToolCount).toBeGreaterThanOrEqual(2);
+
+    const rawMessages = flattenRawMessages(response as BoardTaskLogStreamResponse);
+    const toolNames = rawMessages.flatMap((message) =>
+      message.toolCalls.map((toolCall) => toolCall.name)
+    );
+    const serialized = rawMessages.map(serializeContent).join('\n');
+
+    expect(toolNames).toEqual(expect.arrayContaining(['read', 'bash']));
+    expect(toolNames).toEqual(
+      expect.arrayContaining(['agent-teams_task_start', 'agent-teams_task_add_comment'])
+    );
+    expect(serialized).toContain('package.json');
+    expect(serialized).toContain('Разбил работу на мелкие задачи');
+    expect(toolNames).not.toContain('SendMessage');
+  });
+
   it('uses real attribution UUID bounds before heuristic fallback', async () => {
     const transcript = await loadFixtureTranscript();
     const { source, bridge, attributionStore } = createSource({
@@ -196,6 +248,8 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
       mode: 'attribution',
       attributionRecordCount: 1,
       projectedMessageCount: 10,
+      boardMcpToolCount: 4,
+      nativeToolCount: 0,
     });
     expect(response?.defaultFilter).toBe('member:jack');
     expect(response?.segments).toHaveLength(1);
@@ -353,7 +407,9 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
     const assistantToolIds = new Set(
       projectedMessages.flatMap((message) => message.toolCalls.map((toolCall) => toolCall.id))
     );
-    const toolResultMessages = projectedMessages.filter((message) => message.toolResults.length > 0);
+    const toolResultMessages = projectedMessages.filter(
+      (message) => message.toolResults.length > 0
+    );
 
     expect(projectedMessages).toHaveLength(101);
     expect(toolResultMessages.length).toBeGreaterThan(20);

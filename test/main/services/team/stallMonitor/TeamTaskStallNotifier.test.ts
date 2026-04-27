@@ -170,6 +170,31 @@ describe('TeamTaskStallNotifier', () => {
     await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
   });
 
+  it('does not mark response-pending delivery as remediated even after runtime acceptance', async () => {
+    const relay = vi.fn(async () => ({
+      relayed: 1,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: {
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        ledgerRecordId: 'active-ledger-record',
+        reason: 'opencode_delivery_response_pending',
+      },
+    }));
+    const notifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      { relayOpenCodeMemberInboxMessages: relay } as never,
+      { getMessagesFor: vi.fn(async () => []) } as never,
+      { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
+    );
+
+    await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
+    expect(relay).toHaveBeenCalledTimes(1);
+  });
+
   it('does not deliver runtime nudge when inbox write fails', async () => {
     const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
     const notifier = new TeamTaskStallNotifier(

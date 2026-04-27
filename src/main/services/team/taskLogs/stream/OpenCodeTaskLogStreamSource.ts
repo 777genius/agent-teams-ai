@@ -36,6 +36,15 @@ const WINDOW_GRACE_AFTER_MS = 15_000;
 const ATTRIBUTION_WINDOW_GRACE_MS = 1_000;
 const TASK_MARKER_CONTEXT_BEFORE_MESSAGES = 1;
 const TASK_MARKER_CONTEXT_MAX_MS = 5 * 60_000;
+const NATIVE_TOOL_CONTEXT_BEFORE_MS = 5 * 60_000;
+const NATIVE_TOOL_CONTEXT_AFTER_MS = 5 * 60_000;
+
+const AGENT_TEAMS_TOOL_PREFIXES = [
+  'mcp__agent-teams__',
+  'mcp__agent_teams__',
+  'agent-teams_',
+  'agent_teams_',
+] as const;
 
 const TASK_LOG_MARKER_TOOL_NAMES = new Set<string>([
   'task_start',
@@ -50,6 +59,22 @@ const TASK_LOG_MARKER_TOOL_NAMES = new Set<string>([
   'review_request',
   'review_approve',
   'review_request_changes',
+]);
+
+const BOARD_MCP_TOOL_NAMES = new Set<string>([
+  ...TASK_LOG_MARKER_TOOL_NAMES,
+  'runtime_bootstrap_checkin',
+  'member_briefing',
+  'message_send',
+  'cross_team_send',
+  'task_create',
+  'task_create_from_message',
+  'task_get',
+  'task_get_comment',
+  'task_list',
+  'task_update',
+  'task_delete',
+  'process_list',
 ]);
 
 const TERMINAL_TASK_MARKER_TOOL_NAMES = new Set<string>([
@@ -104,6 +129,13 @@ interface TaskMarkerProjection {
   messages: ParsedMessage[];
   markerMatchCount: number;
   markerSpanCount: number;
+  boardMcpToolCount: number;
+  nativeToolCount: number;
+}
+
+interface ProjectionToolCounts {
+  boardMcpToolCount: number;
+  nativeToolCount: number;
 }
 
 type HeuristicFallbackReason =
@@ -282,6 +314,44 @@ function refsIntersect(left: Set<string>, right: Set<string>): boolean {
     }
   }
   return false;
+}
+
+function isBoardMcpToolName(rawName: string): boolean {
+  const normalizedRawName = rawName
+    .trim()
+    .replace(/^proxy_/, '')
+    .toLowerCase();
+  const canonicalName = canonicalizeAgentTeamsToolName(rawName).trim().toLowerCase();
+  return (
+    AGENT_TEAMS_TOOL_PREFIXES.some((prefix) => normalizedRawName.startsWith(prefix)) ||
+    BOARD_MCP_TOOL_NAMES.has(canonicalName)
+  );
+}
+
+function isNativeOpenCodeToolName(rawName: string): boolean {
+  const normalizedName = rawName.trim();
+  return normalizedName.length > 0 && !isBoardMcpToolName(normalizedName);
+}
+
+function messageHasNativeOpenCodeToolCall(message: ParsedMessage): boolean {
+  return message.toolCalls.some((toolCall) => isNativeOpenCodeToolName(toolCall.name ?? ''));
+}
+
+function countProjectionToolCalls(messages: ParsedMessage[]): ProjectionToolCounts {
+  let boardMcpToolCount = 0;
+  let nativeToolCount = 0;
+
+  for (const message of messages) {
+    for (const toolCall of message.toolCalls) {
+      if (isNativeOpenCodeToolName(toolCall.name ?? '')) {
+        nativeToolCount += 1;
+      } else if (isBoardMcpToolName(toolCall.name ?? '')) {
+        boardMcpToolCount += 1;
+      }
+    }
+  }
+
+  return { boardMcpToolCount, nativeToolCount };
 }
 
 function markerInputReferencesTaskInTeam(
@@ -504,11 +574,16 @@ function resolveMarkerSpanStart(messages: ParsedMessage[], markerIndex: number):
 function findLastMessageIndexInWindow(
   messages: ParsedMessage[],
   startIndex: number,
-  window: TimeWindow
+  window: TimeWindow,
+  maxEndMs = Number.POSITIVE_INFINITY
 ): number {
   let endIndex = startIndex;
   for (let index = startIndex + 1; index < messages.length; index += 1) {
-    if (!isWithinSingleTimeWindow(messages[index].timestamp, window)) {
+    const message = messages[index];
+    if (!message || message.timestamp.getTime() > maxEndMs) {
+      break;
+    }
+    if (!isWithinSingleTimeWindow(message.timestamp, window)) {
       break;
     }
     endIndex = index;
@@ -562,13 +637,118 @@ function buildMarkerSpan(
     lastMarker.windowIndex === null ? undefined : (windows[lastMarker.windowIndex] ?? undefined);
 
   if (!isTerminalTaskMarkerMatch(lastMarker) && window) {
-    endIndex = findLastMessageIndexInWindow(messages, lastMarker.index, window);
+    const maxEndMs =
+      window.endMs === null
+        ? messages[lastMarker.index].timestamp.getTime() + TASK_MARKER_CONTEXT_MAX_MS
+        : Number.POSITIVE_INFINITY;
+    endIndex = findLastMessageIndexInWindow(messages, lastMarker.index, window, maxEndMs);
   }
 
   return {
     startIndex,
     endIndex: extendSpanEndForToolResults(messages, startIndex, endIndex),
   };
+}
+
+function clampWindowToTaskWindow(
+  window: TimeWindow,
+  taskWindow: TimeWindow | undefined
+): TimeWindow {
+  if (!taskWindow) {
+    return window;
+  }
+
+  const taskEndMs = taskWindow.endMs ?? Date.now();
+  return {
+    startMs: Math.max(window.startMs, taskWindow.startMs),
+    endMs: Math.min(window.endMs ?? taskEndMs, taskEndMs),
+  };
+}
+
+function buildNativeToolWindowForMarkerGroup(
+  messages: ParsedMessage[],
+  markerGroup: TaskMarkerMatch[],
+  span: { startIndex: number; endIndex: number },
+  taskWindows: TimeWindow[]
+): TimeWindow | null {
+  const firstMarker = markerGroup[0];
+  const lastMarker = markerGroup[markerGroup.length - 1];
+  if (!firstMarker || !lastMarker) {
+    return null;
+  }
+
+  const groupHasStartMarker = markerGroup.some((match) =>
+    match.markerCalls.some((markerCall) => markerCall.toolName === 'task_start')
+  );
+  const spanStartMessage = messages[span.startIndex];
+  const lastMarkerMessage = messages[lastMarker.index];
+  if (!spanStartMessage || !lastMarkerMessage) {
+    return null;
+  }
+
+  const startMs = groupHasStartMarker
+    ? spanStartMessage.timestamp.getTime()
+    : lastMarkerMessage.timestamp.getTime() - NATIVE_TOOL_CONTEXT_BEFORE_MS;
+  const taskWindow =
+    lastMarker.windowIndex === null
+      ? undefined
+      : (taskWindows[lastMarker.windowIndex] ?? undefined);
+  const endMs = isTerminalTaskMarkerMatch(lastMarker)
+    ? Math.max(
+        messages[span.endIndex]?.timestamp.getTime() ?? lastMarkerMessage.timestamp.getTime(),
+        lastMarkerMessage.timestamp.getTime()
+      )
+    : (taskWindow?.endMs ?? lastMarkerMessage.timestamp.getTime() + NATIVE_TOOL_CONTEXT_AFTER_MS);
+  const clamped = clampWindowToTaskWindow({ startMs, endMs }, taskWindow);
+  return clamped.startMs <= (clamped.endMs ?? Date.now()) ? clamped : null;
+}
+
+function addNativeToolIndexesInWindows(
+  includedIndexes: Set<number>,
+  messages: ParsedMessage[],
+  windows: TimeWindow[]
+): void {
+  if (windows.length === 0) {
+    return;
+  }
+
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    if (!messageHasNativeOpenCodeToolCall(message)) {
+      continue;
+    }
+    if (isWithinTimeWindows(message.timestamp, windows)) {
+      includedIndexes.add(index);
+    }
+  }
+}
+
+function addToolResultIndexesForIncludedAssistants(
+  includedIndexes: Set<number>,
+  messages: ParsedMessage[]
+): void {
+  const includedAssistantUuids = new Set<string>();
+  for (const index of includedIndexes) {
+    const message = messages[index];
+    if (message?.type === 'assistant') {
+      includedAssistantUuids.add(message.uuid);
+    }
+  }
+
+  if (includedAssistantUuids.size === 0) {
+    return;
+  }
+
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    if (
+      message?.isMeta &&
+      message.sourceToolAssistantUUID &&
+      includedAssistantUuids.has(message.sourceToolAssistantUUID)
+    ) {
+      includedIndexes.add(index);
+    }
+  }
 }
 
 function buildTaskMarkerProjection(
@@ -595,15 +775,36 @@ function buildTaskMarkerProjection(
     return null;
   }
 
-  const spans = groupMarkerMatches(markerMatches, taskWindows)
-    .map((group) => buildMarkerSpan(parsedMessages, group, taskWindows))
-    .filter((span): span is { startIndex: number; endIndex: number } => span !== null);
+  const markerGroups = groupMarkerMatches(markerMatches, taskWindows);
+  const spansWithGroups = markerGroups
+    .map((group) => {
+      const span = buildMarkerSpan(parsedMessages, group, taskWindows);
+      return span ? { group, span } : null;
+    })
+    .filter(
+      (
+        item
+      ): item is { group: TaskMarkerMatch[]; span: { startIndex: number; endIndex: number } } =>
+        item !== null
+    );
   const includedIndexes = new Set<number>();
-  for (const span of spans) {
+  const nativeToolWindows: TimeWindow[] = [];
+  for (const { group, span } of spansWithGroups) {
     for (let index = span.startIndex; index <= span.endIndex; index += 1) {
       includedIndexes.add(index);
     }
+    const nativeToolWindow = buildNativeToolWindowForMarkerGroup(
+      parsedMessages,
+      group,
+      span,
+      taskWindows
+    );
+    if (nativeToolWindow) {
+      nativeToolWindows.push(nativeToolWindow);
+    }
   }
+  addNativeToolIndexesInWindows(includedIndexes, parsedMessages, nativeToolWindows);
+  addToolResultIndexesForIncludedAssistants(includedIndexes, parsedMessages);
 
   const messages = [...includedIndexes]
     .sort((left, right) => left - right)
@@ -618,7 +819,8 @@ function buildTaskMarkerProjection(
     ? {
         messages,
         markerMatchCount,
-        markerSpanCount: spans.length,
+        markerSpanCount: spansWithGroups.length,
+        ...countProjectionToolCalls(messages),
       }
     : null;
 }
@@ -989,6 +1191,12 @@ export class OpenCodeTaskLogStreamSource {
         .filter((message): message is ParsedMessage => message !== null)
         .filter((message) => isWithinTimeWindows(message.timestamp, timeWindows))
         .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime());
+    const toolCounts = markerProjection
+      ? {
+          boardMcpToolCount: markerProjection.boardMcpToolCount,
+          nativeToolCount: markerProjection.nativeToolCount,
+        }
+      : countProjectionToolCalls(filteredMessages);
 
     if (filteredMessages.length === 0) {
       return null;
@@ -1017,7 +1225,7 @@ export class OpenCodeTaskLogStreamSource {
     };
 
     logger.debug(
-      `[${teamName}/${task.id}] using OpenCode runtime fallback for task log stream (${filteredMessages.length} messages, owner=${ownerName})`
+      `[${teamName}/${task.id}] using OpenCode runtime fallback for task log stream (${filteredMessages.length} messages, owner=${ownerName}, boardMcpTools=${toolCounts.boardMcpToolCount}, nativeTools=${toolCounts.nativeToolCount})`
     );
 
     return {
@@ -1030,6 +1238,7 @@ export class OpenCodeTaskLogStreamSource {
         mode: 'heuristic',
         attributionRecordCount: projectionContext.attributionRecordCount,
         projectedMessageCount: filteredMessages.length,
+        ...toolCounts,
         fallbackReason: projectionReason,
         ...(markerProjection
           ? {
@@ -1122,6 +1331,8 @@ export class OpenCodeTaskLogStreamSource {
     const participants: BoardTaskLogParticipant[] = [];
     const segments: BoardTaskLogSegment[] = [];
     let projectedMessageCount = 0;
+    let boardMcpToolCount = 0;
+    let nativeToolCount = 0;
     for (const member of members.sort((left, right) => {
       const leftStart = left.messages[0]?.timestamp.getTime() ?? 0;
       const rightStart = right.messages[0]?.timestamp.getTime() ?? 0;
@@ -1142,7 +1353,10 @@ export class OpenCodeTaskLogStreamSource {
       }
 
       const participant = buildParticipant(member.memberName);
+      const memberToolCounts = countProjectionToolCalls(member.messages);
       projectedMessageCount += member.messages.length;
+      boardMcpToolCount += memberToolCounts.boardMcpToolCount;
+      nativeToolCount += memberToolCounts.nativeToolCount;
       participants.push(participant);
       segments.push({
         id: `opencode-attributed:${teamName}:${task.id}:${normalizeMemberName(member.memberName)}`,
@@ -1159,7 +1373,7 @@ export class OpenCodeTaskLogStreamSource {
     }
 
     logger.debug(
-      `[${teamName}/${task.id}] using OpenCode task-log attribution (${segments.length} segment(s), ${attributionRecords.length} record(s))`
+      `[${teamName}/${task.id}] using OpenCode task-log attribution (${segments.length} segment(s), ${attributionRecords.length} record(s), boardMcpTools=${boardMcpToolCount}, nativeTools=${nativeToolCount})`
     );
 
     return {
@@ -1172,6 +1386,8 @@ export class OpenCodeTaskLogStreamSource {
         mode: 'attribution',
         attributionRecordCount: attributionRecords.length,
         projectedMessageCount,
+        boardMcpToolCount,
+        nativeToolCount,
       },
     };
   }

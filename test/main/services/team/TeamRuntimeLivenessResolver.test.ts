@@ -104,13 +104,43 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
     expect(result.pid).toBe(301);
   });
 
-  it('promotes a live OpenCode runtime pid only when process identity matches', () => {
+  it('keeps a live OpenCode runtime pid as candidate until bootstrap is confirmed', () => {
     const result = resolveTeamMemberRuntimeLiveness({
       teamName: 'demo',
       memberName: 'bob',
       providerId: 'opencode',
       persistedRuntimePid: 404,
       persistedRuntimeSessionId: 'session-bob',
+      processRows: [{ pid: 404, ppid: 1, command: 'opencode runtime host' }],
+      processTableAvailable: true,
+      nowIso: NOW,
+    });
+
+    expect(result.alive).toBe(false);
+    expect(result.livenessKind).toBe('runtime_process_candidate');
+    expect(result.pidSource).toBe('opencode_bridge');
+    expect(result.pid).toBe(404);
+    expect(result.runtimeDiagnostic).toBe(
+      'OpenCode runtime process detected, but teammate bootstrap is not confirmed'
+    );
+  });
+
+  it('promotes a live OpenCode runtime pid after bootstrap confirmation', () => {
+    const result = resolveTeamMemberRuntimeLiveness({
+      teamName: 'demo',
+      memberName: 'bob',
+      providerId: 'opencode',
+      persistedRuntimePid: 404,
+      persistedRuntimeSessionId: 'session-bob',
+      trackedSpawnStatus: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        updatedAt: NOW,
+      },
       processRows: [{ pid: 404, ppid: 1, command: 'opencode runtime host' }],
       processTableAvailable: true,
       nowIso: NOW,

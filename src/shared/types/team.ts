@@ -353,6 +353,8 @@ export interface BoardTaskLogStreamRuntimeProjection {
   mode: 'attribution' | 'heuristic';
   attributionRecordCount: number;
   projectedMessageCount: number;
+  boardMcpToolCount?: number;
+  nativeToolCount?: number;
   fallbackReason?:
     | 'no_attribution_records'
     | 'attribution_no_projected_messages'

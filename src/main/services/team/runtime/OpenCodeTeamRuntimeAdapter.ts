@@ -556,6 +556,14 @@ function mapBridgeMemberToRuntimeEvidence(
       : runtimeMaterialized || sessionId
         ? 'OpenCode session exists without verified runtime pid'
         : undefined;
+  const runtimeDiagnosticSeverity = failed
+    ? 'error'
+    : pendingRuntimeObserved ||
+        launchState === 'permission_blocked' ||
+        runtimeMaterialized ||
+        sessionId
+      ? 'warning'
+      : undefined;
   return {
     memberName,
     providerId: 'opencode',
@@ -585,6 +593,7 @@ function mapBridgeMemberToRuntimeEvidence(
     livenessKind,
     ...(hasRuntimePid ? { pidSource: 'opencode_bridge' as const } : {}),
     ...(runtimeDiagnostic ? { runtimeDiagnostic } : {}),
+    ...(runtimeDiagnosticSeverity ? { runtimeDiagnosticSeverity } : {}),
     diagnostics,
   };
 }

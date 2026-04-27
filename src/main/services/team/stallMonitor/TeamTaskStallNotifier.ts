@@ -44,13 +44,16 @@ function isOpenCodeDeliveryAccepted(delivery: OpenCodeTaskStallDelivery): boolea
   if (delivery.queuedBehindMessageId) {
     return false;
   }
+  if (delivery.responsePending === true) {
+    return false;
+  }
   if (delivery.accepted === true) {
     return true;
   }
-  if (delivery.delivered === true && delivery.responsePending !== true) {
+  if (delivery.delivered === true) {
     return true;
   }
-  return Boolean(delivery.responsePending === true && delivery.ledgerRecordId);
+  return false;
 }
 
 export class TeamTaskStallNotifier {

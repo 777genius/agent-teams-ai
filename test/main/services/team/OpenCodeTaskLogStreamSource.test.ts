@@ -233,6 +233,8 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 0,
       projectedMessageCount: 2,
+      boardMcpToolCount: 0,
+      nativeToolCount: 1,
       fallbackReason: 'no_attribution_records',
     });
     expect(first?.participants).toEqual([
@@ -254,7 +256,9 @@ describe('OpenCodeTaskLogStreamSource', () => {
     expect(chunkBuilder.buildBundleChunks).toHaveBeenCalledTimes(1);
     expect(chunkBuilder.buildBundleChunks.mock.calls[0]?.[0]).toHaveLength(2);
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual(['assistant-1', 'assistant-1::tool_results']);
     expect(bridge.getOpenCodeTranscript).toHaveBeenCalledTimes(1);
     expect(second).toEqual(first);
@@ -529,12 +533,16 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 0,
       projectedMessageCount: 6,
+      boardMcpToolCount: 2,
+      nativeToolCount: 0,
       fallbackReason: 'task_tool_markers',
       markerMatchCount: 2,
       markerSpanCount: 1,
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual([
       'user-task-prompt',
       'assistant-start',
@@ -542,6 +550,226 @@ describe('OpenCodeTaskLogStreamSource', () => {
       'assistant-work',
       'assistant-complete',
       'assistant-complete::tool_results',
+    ]);
+  });
+
+  it('keeps native OpenCode tools near task markers in the task stream', async () => {
+    const bridge = {
+      getOpenCodeTranscript: vi.fn(async () => ({
+        sessionId: 'session-opencode',
+        logProjection: {
+          messages: [
+            taskMarkerLogMessage({
+              uuid: 'native-before-task',
+              timestamp: '2026-04-21T09:50:00.000Z',
+              toolName: 'read',
+              input: { filePath: '/tmp/unrelated.ts' },
+            }),
+            textLogMessage({
+              uuid: 'user-task-prompt',
+              type: 'user',
+              role: 'user',
+              timestamp: '2026-04-21T10:01:00.000Z',
+              content: [{ type: 'text', text: 'Start task-a now' }],
+            }),
+            taskMarkerLogMessage({
+              uuid: 'assistant-start',
+              parentUuid: 'user-task-prompt',
+              timestamp: '2026-04-21T10:02:00.000Z',
+              toolName: 'mcp__agent-teams__task_start',
+              input: { teamName: 'team-a', taskId: 'task-a' },
+            }),
+            toolResultLogMessage({
+              uuid: 'assistant-start::tool_results',
+              parentUuid: 'assistant-start',
+              timestamp: '2026-04-21T10:02:01.000Z',
+              sourceToolAssistantUUID: 'assistant-start',
+            }),
+            taskMarkerLogMessage({
+              uuid: 'native-read',
+              parentUuid: 'assistant-start::tool_results',
+              timestamp: '2026-04-21T10:03:00.000Z',
+              toolName: 'read',
+              input: { filePath: '/tmp/app.ts' },
+            }),
+            toolResultLogMessage({
+              uuid: 'native-read::tool_results',
+              parentUuid: 'native-read',
+              timestamp: '2026-04-21T10:03:01.000Z',
+              sourceToolAssistantUUID: 'native-read',
+            }),
+            taskMarkerLogMessage({
+              uuid: 'native-bash',
+              parentUuid: 'native-read::tool_results',
+              timestamp: '2026-04-21T10:04:00.000Z',
+              toolName: 'bash',
+              input: { command: 'pnpm test' },
+            }),
+            toolResultLogMessage({
+              uuid: 'native-bash::tool_results',
+              parentUuid: 'native-bash',
+              timestamp: '2026-04-21T10:04:01.000Z',
+              sourceToolAssistantUUID: 'native-bash',
+            }),
+            taskMarkerLogMessage({
+              uuid: 'assistant-comment',
+              parentUuid: 'native-bash::tool_results',
+              timestamp: '2026-04-21T10:05:00.000Z',
+              toolName: 'mcp__agent-teams__task_add_comment',
+              input: { teamName: 'team-a', taskId: 'task-a', text: 'Tests passed' },
+            }),
+            toolResultLogMessage({
+              uuid: 'assistant-comment::tool_results',
+              parentUuid: 'assistant-comment',
+              timestamp: '2026-04-21T10:05:01.000Z',
+              sourceToolAssistantUUID: 'assistant-comment',
+            }),
+            taskMarkerLogMessage({
+              uuid: 'native-after-task',
+              timestamp: '2026-04-21T10:20:00.000Z',
+              toolName: 'bash',
+              input: { command: 'echo unrelated' },
+            }),
+          ],
+        },
+      })),
+    };
+    const chunkBuilder = {
+      buildBundleChunks: vi.fn((messages) => [
+        {
+          id: 'chunk-native-tools',
+          kind: 'assistant',
+          messages,
+        },
+      ]),
+    };
+    const source = new OpenCodeTaskLogStreamSource(
+      bridge as never,
+      { resolve: async () => '/tmp/claude' },
+      {
+        getTasks: async () => [
+          createTask({
+            workIntervals: [
+              {
+                startedAt: '2026-04-21T10:00:00.000Z',
+                completedAt: '2026-04-21T10:06:00.000Z',
+              },
+            ],
+          }),
+        ],
+        getDeletedTasks: async () => [],
+      } as never,
+      chunkBuilder as never,
+      { readTaskRecords: vi.fn(async () => []) }
+    );
+
+    const response = await source.getTaskLogStream('team-a', 'task-a');
+
+    expect(response?.runtimeProjection).toEqual({
+      provider: 'opencode',
+      mode: 'heuristic',
+      attributionRecordCount: 0,
+      projectedMessageCount: 9,
+      boardMcpToolCount: 2,
+      nativeToolCount: 2,
+      fallbackReason: 'task_tool_markers',
+      markerMatchCount: 2,
+      markerSpanCount: 1,
+    });
+    expect(
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
+    ).toEqual([
+      'user-task-prompt',
+      'assistant-start',
+      'assistant-start::tool_results',
+      'native-read',
+      'native-read::tool_results',
+      'native-bash',
+      'native-bash::tool_results',
+      'assistant-comment',
+      'assistant-comment::tool_results',
+    ]);
+  });
+
+  it('can include native OpenCode work shortly before a comment-only task marker', async () => {
+    const bridge = {
+      getOpenCodeTranscript: vi.fn(async () => ({
+        sessionId: 'session-opencode',
+        logProjection: {
+          messages: [
+            taskMarkerLogMessage({
+              uuid: 'native-read',
+              timestamp: '2026-04-21T10:02:00.000Z',
+              toolName: 'read',
+              input: { filePath: '/tmp/app.ts' },
+            }),
+            toolResultLogMessage({
+              uuid: 'native-read::tool_results',
+              parentUuid: 'native-read',
+              timestamp: '2026-04-21T10:02:01.000Z',
+              sourceToolAssistantUUID: 'native-read',
+            }),
+            taskMarkerLogMessage({
+              uuid: 'assistant-comment',
+              parentUuid: 'native-read::tool_results',
+              timestamp: '2026-04-21T10:04:00.000Z',
+              toolName: 'mcp__agent-teams__task_add_comment',
+              input: { teamName: 'team-a', taskId: 'task-a', text: 'Found the issue' },
+            }),
+            toolResultLogMessage({
+              uuid: 'assistant-comment::tool_results',
+              parentUuid: 'assistant-comment',
+              timestamp: '2026-04-21T10:04:01.000Z',
+              sourceToolAssistantUUID: 'assistant-comment',
+            }),
+          ],
+        },
+      })),
+    };
+    const chunkBuilder = {
+      buildBundleChunks: vi.fn((messages) => [
+        {
+          id: 'chunk-comment-only-native',
+          kind: 'assistant',
+          messages,
+        },
+      ]),
+    };
+    const source = new OpenCodeTaskLogStreamSource(
+      bridge as never,
+      { resolve: async () => '/tmp/claude' },
+      {
+        getTasks: async () => [createTask()],
+        getDeletedTasks: async () => [],
+      } as never,
+      chunkBuilder as never,
+      { readTaskRecords: vi.fn(async () => []) }
+    );
+
+    const response = await source.getTaskLogStream('team-a', 'task-a');
+
+    expect(response?.runtimeProjection).toEqual({
+      provider: 'opencode',
+      mode: 'heuristic',
+      attributionRecordCount: 0,
+      projectedMessageCount: 4,
+      boardMcpToolCount: 1,
+      nativeToolCount: 1,
+      fallbackReason: 'task_tool_markers',
+      markerMatchCount: 1,
+      markerSpanCount: 1,
+    });
+    expect(
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
+    ).toEqual([
+      'native-read',
+      'native-read::tool_results',
+      'assistant-comment',
+      'assistant-comment::tool_results',
     ]);
   });
 
@@ -620,12 +848,16 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 0,
       projectedMessageCount: 3,
+      boardMcpToolCount: 1,
+      nativeToolCount: 0,
       fallbackReason: 'task_tool_markers',
       markerMatchCount: 1,
       markerSpanCount: 1,
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual(['team-a-prompt', 'team-a-start', 'team-a-start::tool_results']);
   });
 
@@ -743,12 +975,16 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 0,
       projectedMessageCount: 10,
+      boardMcpToolCount: 3,
+      nativeToolCount: 0,
       fallbackReason: 'task_tool_markers',
       markerMatchCount: 3,
       markerSpanCount: 2,
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual([
       'cycle-1-prompt',
       'cycle-1-start',
@@ -810,10 +1046,14 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 0,
       projectedMessageCount: 1,
+      boardMcpToolCount: 0,
+      nativeToolCount: 0,
       fallbackReason: 'no_attribution_records',
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual(['current-window-work']);
   });
 
@@ -866,12 +1106,16 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 0,
       projectedMessageCount: 2,
+      boardMcpToolCount: 1,
+      nativeToolCount: 0,
       fallbackReason: 'task_tool_markers',
       markerMatchCount: 1,
       markerSpanCount: 1,
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual(['display-ref-start', 'display-ref-start::tool_results']);
   });
 
@@ -955,6 +1199,8 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'attribution',
       attributionRecordCount: 1,
       projectedMessageCount: 1,
+      boardMcpToolCount: 0,
+      nativeToolCount: 0,
     });
     expect(response?.participants).toEqual([
       {
@@ -973,7 +1219,9 @@ describe('OpenCodeTaskLogStreamSource', () => {
       isSidechain: true,
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls[0]?.[0].map(
+        (message: { uuid: string }) => message.uuid
+      )
     ).toEqual(['bob-inside']);
     expect(bridge.getOpenCodeTranscript).toHaveBeenCalledWith('/tmp/claude', {
       teamId: 'team-a',
@@ -1065,11 +1313,15 @@ describe('OpenCodeTaskLogStreamSource', () => {
       mode: 'heuristic',
       attributionRecordCount: 1,
       projectedMessageCount: 1,
+      boardMcpToolCount: 0,
+      nativeToolCount: 0,
       fallbackReason: 'attribution_no_projected_messages',
     });
     expect(response?.participants[0]?.label).toBe('alice');
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls.at(-1)?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls
+        .at(-1)?.[0]
+        .map((message: { uuid: string }) => message.uuid)
     ).toEqual(['alice-inside']);
     expect(bridge.getOpenCodeTranscript).toHaveBeenNthCalledWith(1, '/tmp/claude', {
       teamId: 'team-a',
@@ -1111,9 +1363,7 @@ describe('OpenCodeTaskLogStreamSource', () => {
                 uuid: isBob ? 'bob-new-attribution' : 'alice-old-heuristic',
                 parentUuid: undefined,
                 type: 'assistant',
-                timestamp: isBob
-                  ? '2026-04-21T12:05:00.000Z'
-                  : '2026-04-21T10:05:00.000Z',
+                timestamp: isBob ? '2026-04-21T12:05:00.000Z' : '2026-04-21T10:05:00.000Z',
                 role: 'assistant',
                 content: [{ type: 'text', text: isBob ? 'new attribution' : 'old heuristic' }],
                 isMeta: false,
@@ -1168,7 +1418,9 @@ describe('OpenCodeTaskLogStreamSource', () => {
       limit: 500,
     });
     expect(
-      chunkBuilder.buildBundleChunks.mock.calls.at(-1)?.[0].map((message: { uuid: string }) => message.uuid)
+      chunkBuilder.buildBundleChunks.mock.calls
+        .at(-1)?.[0]
+        .map((message: { uuid: string }) => message.uuid)
     ).toEqual(['bob-new-attribution']);
   });
 });
