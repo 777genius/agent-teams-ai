@@ -23,6 +23,8 @@ export interface OwnerFootprint {
   radialDepth: number;
   activityColumnWidth: number;
   activityColumnHeight: number;
+  logColumnWidth: number;
+  logColumnHeight: number;
   processBandWidth: number;
   kanbanBandWidth: number;
   kanbanBandHeight: number;
@@ -42,6 +44,7 @@ export interface SlotFrame {
   ownerY: number;
   boardBandRect: StableRect;
   activityColumnRect: StableRect;
+  logColumnRect: StableRect;
   processBandRect: StableRect;
   kanbanBandRect: StableRect;
   taskColumnCount: number;
@@ -108,6 +111,11 @@ const SLOT_GEOMETRY = {
     ACTIVITY_LANE.maxVisibleItems * ACTIVITY_LANE.rowHeight +
     ACTIVITY_LANE.overflowHeight,
   activityColumnWidth: ACTIVITY_LANE.width,
+  logColumnHeight:
+    ACTIVITY_LANE.headerHeight +
+    ACTIVITY_LANE.maxVisibleItems * ACTIVITY_LANE.rowHeight +
+    ACTIVITY_LANE.overflowHeight,
+  logColumnWidth: 260,
   ownerToProcessGap: STABLE_SLOT_GEOMETRY.slotVerticalGap,
   processToBoardGap: STABLE_SLOT_GEOMETRY.slotVerticalGap,
   boardColumnGap: 24,
@@ -231,6 +239,7 @@ function buildCentralCollisionRects(args: {
     args.leadCoreRect,
     args.leadSlotFrame.processBandRect,
     args.leadSlotFrame.activityColumnRect,
+    args.leadSlotFrame.logColumnRect,
     args.leadSlotFrame.kanbanBandRect,
   ];
   if (args.unassignedTaskRect) {
@@ -247,6 +256,7 @@ function buildLeadCentralReservedBlock(args: {
     args.leadCoreRect,
     args.leadSlotFrame.processBandRect,
     args.leadSlotFrame.activityColumnRect,
+    args.leadSlotFrame.logColumnRect,
     args.leadSlotFrame.kanbanBandRect,
   ]);
 }
@@ -270,6 +280,7 @@ export function computeOwnerFootprints(
 ): OwnerFootprint[] {
   const ownerNodes = nodes.filter((node) => node.kind === 'member');
   const showActivity = layout?.showActivity ?? true;
+  const showLogs = layout?.showLogs ?? showActivity;
   const ownerNodeById = new Map(ownerNodes.map((node) => [node.id, node] as const));
   const taskColumnsByOwnerId = new Map<string, Set<string>>();
   const processCountByOwnerId = new Map<string, number>();
@@ -304,6 +315,7 @@ export function computeOwnerFootprints(
         taskColumnCount: taskColumnsByOwnerId.get(ownerId)?.size ?? 0,
         processCount: processCountByOwnerId.get(ownerId) ?? 0,
         showActivity,
+        showLogs,
       }),
     ];
   });
@@ -331,6 +343,7 @@ function computeOwnerFootprintForOwnerId(
     taskColumnCount: taskColumns.size,
     processCount,
     showActivity: layout?.showActivity ?? true,
+    showLogs: layout?.showLogs ?? layout?.showActivity ?? true,
   });
 }
 
@@ -339,17 +352,28 @@ function buildOwnerFootprint(args: {
   taskColumnCount: number;
   processCount: number;
   showActivity: boolean;
+  showLogs: boolean;
 }): OwnerFootprint {
   const activityColumnWidth = args.showActivity ? SLOT_GEOMETRY.activityColumnWidth : 0;
   const activityColumnHeight = args.showActivity ? SLOT_GEOMETRY.activityColumnHeight : 0;
-  const activityToKanbanGap = args.showActivity ? SLOT_GEOMETRY.boardColumnGap : 0;
+  const logColumnWidth = args.showLogs ? SLOT_GEOMETRY.logColumnWidth : 0;
+  const logColumnHeight = args.showLogs ? SLOT_GEOMETRY.logColumnHeight : 0;
+  const activityToLogGap =
+    activityColumnWidth > 0 && logColumnWidth > 0 ? SLOT_GEOMETRY.boardColumnGap : 0;
+  const feedToKanbanGap =
+    activityColumnWidth > 0 || logColumnWidth > 0 ? SLOT_GEOMETRY.boardColumnGap : 0;
   const kanbanBandWidth =
     args.taskColumnCount <= 1
       ? TASK_PILL.width
       : TASK_PILL.width + (args.taskColumnCount - 1) * KANBAN_ZONE.columnWidth;
   const processBandWidth = computeProcessBandWidth(args.processCount);
-  const boardBandWidth = activityColumnWidth + activityToKanbanGap + kanbanBandWidth;
-  const boardBandHeight = Math.max(activityColumnHeight, SLOT_GEOMETRY.kanbanBandHeight);
+  const boardBandWidth =
+    activityColumnWidth + activityToLogGap + logColumnWidth + feedToKanbanGap + kanbanBandWidth;
+  const boardBandHeight = Math.max(
+    activityColumnHeight,
+    logColumnHeight,
+    SLOT_GEOMETRY.kanbanBandHeight
+  );
   const innerContentWidth = Math.max(SLOT_GEOMETRY.ownerMinWidth, processBandWidth, boardBandWidth);
   const slotWidth = innerContentWidth + SLOT_GEOMETRY.memberSlotInnerPadding * 2;
   const slotHeight =
@@ -377,6 +401,8 @@ function buildOwnerFootprint(args: {
     radialDepth,
     activityColumnWidth,
     activityColumnHeight,
+    logColumnWidth,
+    logColumnHeight,
     processBandWidth,
     kanbanBandWidth,
     kanbanBandHeight: SLOT_GEOMETRY.kanbanBandHeight,
@@ -651,6 +677,7 @@ function validateStaticSnapshotRects(
     ['leadSlotFrame.bounds', snapshot.leadSlotFrame.bounds],
     ['leadSlotFrame.boardBandRect', snapshot.leadSlotFrame.boardBandRect],
     ['leadSlotFrame.activityColumnRect', snapshot.leadSlotFrame.activityColumnRect],
+    ['leadSlotFrame.logColumnRect', snapshot.leadSlotFrame.logColumnRect],
     ['leadSlotFrame.processBandRect', snapshot.leadSlotFrame.processBandRect],
     ['leadSlotFrame.kanbanBandRect', snapshot.leadSlotFrame.kanbanBandRect],
     ['leadActivityRect', snapshot.leadActivityRect],
@@ -696,6 +723,9 @@ function validateLeadSnapshotRects(
   }
   if (!rectContainsRect(snapshot.leadCentralReservedBlock, snapshot.leadActivityRect)) {
     return { valid: false, reason: 'leadActivityRect must fit inside leadCentralReservedBlock' };
+  }
+  if (!rectContainsRect(snapshot.leadCentralReservedBlock, snapshot.leadSlotFrame.logColumnRect)) {
+    return { valid: false, reason: 'lead logColumnRect must fit inside leadCentralReservedBlock' };
   }
   if (
     !rectContainsRect(snapshot.leadCentralReservedBlock, snapshot.leadSlotFrame.processBandRect)
@@ -795,6 +825,9 @@ function validateSlotFrameGeometry(
   if (!rectContainsRect(frame.bounds, frame.activityColumnRect)) {
     return { valid: false, reason: `activityColumnRect escapes ${label}` };
   }
+  if (!rectContainsRect(frame.bounds, frame.logColumnRect)) {
+    return { valid: false, reason: `logColumnRect escapes ${label}` };
+  }
   if (!rectContainsRect(frame.bounds, frame.processBandRect)) {
     return { valid: false, reason: `processBandRect escapes ${label}` };
   }
@@ -807,6 +840,12 @@ function validateSlotFrameGeometry(
       reason: `activityColumnRect escapes boardBandRect in ${label}`,
     };
   }
+  if (!rectContainsRect(frame.boardBandRect, frame.logColumnRect)) {
+    return {
+      valid: false,
+      reason: `logColumnRect escapes boardBandRect in ${label}`,
+    };
+  }
   if (!rectContainsRect(frame.boardBandRect, frame.kanbanBandRect)) {
     return {
       valid: false,
@@ -817,6 +856,18 @@ function validateSlotFrameGeometry(
     return {
       valid: false,
       reason: `activityColumnRect overlaps kanbanBandRect in ${label}`,
+    };
+  }
+  if (rectsOverlap(frame.activityColumnRect, frame.logColumnRect)) {
+    return {
+      valid: false,
+      reason: `activityColumnRect overlaps logColumnRect in ${label}`,
+    };
+  }
+  if (rectsOverlap(frame.logColumnRect, frame.kanbanBandRect)) {
+    return {
+      valid: false,
+      reason: `logColumnRect overlaps kanbanBandRect in ${label}`,
     };
   }
   if (!pointInRect(frame.ownerX, frame.ownerY, frame.bounds)) {
@@ -853,6 +904,7 @@ export function translateSlotFrame(frame: SlotFrame, dx: number, dy: number): Sl
     ownerY: frame.ownerY + dy,
     boardBandRect: translateRect(frame.boardBandRect, dx, dy),
     activityColumnRect: translateRect(frame.activityColumnRect, dx, dy),
+    logColumnRect: translateRect(frame.logColumnRect, dx, dy),
     processBandRect: translateRect(frame.processBandRect, dx, dy),
     kanbanBandRect: translateRect(frame.kanbanBandRect, dx, dy),
   };
@@ -1296,9 +1348,22 @@ function buildSlotFrameAtOwnerAnchor(
     footprint.activityColumnWidth,
     footprint.activityColumnHeight
   );
-  const activityToKanbanGap = footprint.activityColumnWidth > 0 ? SLOT_GEOMETRY.boardColumnGap : 0;
+  const activityToLogGap =
+    footprint.activityColumnWidth > 0 && footprint.logColumnWidth > 0
+      ? SLOT_GEOMETRY.boardColumnGap
+      : 0;
+  const logColumnRect = createRect(
+    activityColumnRect.right + activityToLogGap,
+    boardBandRect.top,
+    footprint.logColumnWidth,
+    footprint.logColumnHeight
+  );
+  const feedToKanbanGap =
+    footprint.activityColumnWidth > 0 || footprint.logColumnWidth > 0
+      ? SLOT_GEOMETRY.boardColumnGap
+      : 0;
   const kanbanBandRect = createRect(
-    activityColumnRect.right + activityToKanbanGap,
+    logColumnRect.right + feedToKanbanGap,
     boardBandRect.top,
     footprint.kanbanBandWidth,
     footprint.kanbanBandHeight
@@ -1314,6 +1379,7 @@ function buildSlotFrameAtOwnerAnchor(
     ownerY,
     boardBandRect,
     activityColumnRect,
+    logColumnRect,
     processBandRect,
     kanbanBandRect,
     taskColumnCount: footprint.taskColumnCount,

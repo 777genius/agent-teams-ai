@@ -15,6 +15,7 @@ import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions'
 
 import { GraphActivityHud } from './GraphActivityHud';
 import { GraphBlockingEdgePopover } from './GraphBlockingEdgePopover';
+import { GraphMemberLogPreviewHud } from './GraphMemberLogPreviewHud';
 import { GraphNodePopover } from './GraphNodePopover';
 import { GraphProvisioningHud } from './GraphProvisioningHud';
 import { GraphTransientHandoffHud } from './GraphTransientHandoffHud';
@@ -148,6 +149,14 @@ export const TeamGraphOverlay = ({
               width: number;
               height: number;
             } | null;
+            getLogWorldRect?: (ownerNodeId: string) => {
+              left: number;
+              top: number;
+              right: number;
+              bottom: number;
+              width: number;
+              height: number;
+            } | null;
             getCameraZoom?: () => number;
             getTransientHandoffSnapshot?: (options?: {
               focusNodeIds?: ReadonlySet<string> | null;
@@ -184,6 +193,17 @@ export const TeamGraphOverlay = ({
                 focusNodeIds={focusNodeIds}
                 enabled={filters?.showActivity ?? true}
                 onOpenTaskDetail={onOpenTaskDetail}
+                onOpenMemberProfile={onOpenMemberProfile}
+              />
+              <GraphMemberLogPreviewHud
+                teamName={teamName}
+                nodes={graphData.nodes}
+                getLogWorldRect={extraHudProps.getLogWorldRect}
+                getCameraZoom={extraHudProps.getCameraZoom}
+                worldToScreen={extraHudProps.worldToScreen}
+                getViewportSize={getViewportSize}
+                focusNodeIds={focusNodeIds}
+                enabled={filters?.showActivity ?? true}
                 onOpenMemberProfile={onOpenMemberProfile}
               />
             </>

@@ -1,4 +1,3 @@
-import { sanitizeDisplayContent } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
 
 import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
@@ -7,17 +6,15 @@ import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
 import { TeamTaskReader } from '../../TeamTaskReader';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
 
+import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from './OpenCodeRuntimeProjectionMapper';
 import { OpenCodeTaskLogAttributionStore } from './OpenCodeTaskLogAttributionStore';
 
-import type {
-  OpenCodeRuntimeTranscriptLogContentBlock,
-  OpenCodeRuntimeTranscriptLogMessage,
-} from '../../../runtime/ClaudeMultimodelBridgeService';
+import type { OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';
 import type {
   OpenCodeTaskLogAttributionReader,
   OpenCodeTaskLogAttributionRecord,
 } from './OpenCodeTaskLogAttributionStore';
-import type { ContentBlock, ParsedMessage, ToolUseResultData } from '@main/types';
+import type { ParsedMessage } from '@main/types';
 import type {
   BoardTaskLogActor,
   BoardTaskLogParticipant,
@@ -431,7 +428,7 @@ function hasForeignTeamTaskMarker(
   }
 
   return projectedMessages
-    .map(toParsedMessage)
+    .map(mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage)
     .filter((message): message is ParsedMessage => message !== null)
     .some((message) =>
       message.toolCalls.some((toolCall) => {
@@ -758,7 +755,7 @@ function buildTaskMarkerProjection(
 ): TaskMarkerProjection | null {
   const parsedMessages = sortParsedMessagesByTime(
     projectedMessages
-      .map(toParsedMessage)
+      .map(mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage)
       .filter((message): message is ParsedMessage => message !== null)
   );
   const taskRefs = buildTaskRefSet(task);
@@ -919,7 +916,7 @@ function filterMessagesForAttribution(
   record: OpenCodeTaskLogAttributionRecord
 ): ParsedMessage[] {
   const parsedMessages = messages
-    .map(toParsedMessage)
+    .map(mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage)
     .filter((message): message is ParsedMessage => message !== null);
 
   const hasMessageBounds = Boolean(record.startMessageUuid || record.endMessageUuid);
@@ -934,115 +931,6 @@ function filterMessagesForAttribution(
   return rangeFiltered
     .filter((message) => isWithinTimeWindows(message.timestamp, windows))
     .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime());
-}
-
-function mapOpenCodeContentBlock(
-  block: OpenCodeRuntimeTranscriptLogContentBlock
-): ContentBlock | null {
-  switch (block.type) {
-    case 'text': {
-      const text = sanitizeDisplayContent(block.text);
-      return text.length > 0 ? { type: 'text', text } : null;
-    }
-    case 'thinking':
-      return {
-        type: 'thinking',
-        thinking: block.thinking,
-        signature: block.signature,
-      };
-    case 'tool_use':
-      return {
-        type: 'tool_use',
-        id: block.id,
-        name: block.name,
-        input: block.input,
-      };
-    case 'tool_result':
-      return {
-        type: 'tool_result',
-        tool_use_id: block.tool_use_id,
-        content: Array.isArray(block.content)
-          ? block.content
-              .map(mapOpenCodeContentBlock)
-              .filter((item): item is ContentBlock => item !== null)
-          : block.content,
-        ...(block.is_error ? { is_error: true } : {}),
-      };
-    default:
-      return null;
-  }
-}
-
-function buildToolUseResultData(
-  message: OpenCodeRuntimeTranscriptLogMessage
-): ToolUseResultData | undefined {
-  if (!message.sourceToolUseID || message.toolResults.length !== 1) {
-    return undefined;
-  }
-
-  const toolResult = message.toolResults[0];
-  if (!toolResult) {
-    return undefined;
-  }
-
-  return {
-    toolUseId: toolResult.toolUseId,
-    content: toolResult.content,
-    isError: toolResult.isError,
-  };
-}
-
-function toParsedMessage(message: OpenCodeRuntimeTranscriptLogMessage): ParsedMessage | null {
-  const timestamp = new Date(message.timestamp);
-  if (Number.isNaN(timestamp.getTime())) {
-    return null;
-  }
-
-  const normalizedContent: ContentBlock[] | string =
-    typeof message.content === 'string'
-      ? sanitizeDisplayContent(message.content)
-      : message.content
-          .map(mapOpenCodeContentBlock)
-          .filter((item): item is ContentBlock => item !== null);
-
-  const toolCalls = message.toolCalls.map((toolCall) => ({
-    id: toolCall.id,
-    name: toolCall.name,
-    input: toolCall.input,
-    isTask: toolCall.isTask,
-    ...(toolCall.taskDescription ? { taskDescription: toolCall.taskDescription } : {}),
-    ...(toolCall.taskSubagentType ? { taskSubagentType: toolCall.taskSubagentType } : {}),
-  }));
-
-  const toolResults = message.toolResults.map((toolResult) => ({
-    toolUseId: toolResult.toolUseId,
-    content: toolResult.content,
-    isError: toolResult.isError,
-  }));
-  const toolUseResult = buildToolUseResultData(message);
-
-  return {
-    uuid: message.uuid,
-    parentUuid: message.parentUuid,
-    type: message.type,
-    timestamp,
-    role: message.role,
-    content: normalizedContent,
-    model: message.model,
-    agentName: message.agentName,
-    isSidechain: true,
-    isMeta: message.isMeta,
-    sessionId: message.sessionId,
-    toolCalls,
-    toolResults,
-    ...(message.sourceToolUseID ? { sourceToolUseID: message.sourceToolUseID } : {}),
-    ...(message.sourceToolAssistantUUID
-      ? { sourceToolAssistantUUID: message.sourceToolAssistantUUID }
-      : {}),
-    ...(toolUseResult ? { toolUseResult } : {}),
-    ...(message.subtype ? { subtype: message.subtype } : {}),
-    ...(message.level ? { level: message.level } : {}),
-  };
 }
 
 export class OpenCodeTaskLogStreamSource {
@@ -1187,7 +1075,7 @@ export class OpenCodeTaskLogStreamSource {
     const filteredMessages =
       markerProjection?.messages ??
       projectedMessages
-        .map(toParsedMessage)
+        .map(mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage)
         .filter((message): message is ParsedMessage => message !== null)
         .filter((message) => isWithinTimeWindows(message.timestamp, timeWindows))
         .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime());

@@ -31,6 +31,11 @@ import {
   createCodexModelCatalogFeature,
 } from '@features/codex-model-catalog/main';
 import {
+  createMemberLogStreamFeature,
+  registerMemberLogStreamIpc,
+  removeMemberLogStreamIpc,
+} from '@features/member-log-stream/main';
+import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
   type MemberWorkSyncFeatureFacade,
@@ -49,6 +54,7 @@ import {
   removeRuntimeProviderManagementIpc,
   type RuntimeProviderManagementFeatureFacade,
 } from '@features/runtime-provider-management/main';
+import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
@@ -1138,6 +1144,13 @@ async function initializeServices(): Promise<void> {
     undefined,
     teamTranscriptSourceLocator
   );
+  const memberLogStreamFeature = createMemberLogStreamFeature({
+    logsFinder: teamMemberLogsFinder,
+    logSourceTracker: teamLogSourceTracker,
+    runtimeBridge: new ClaudeMultimodelBridgeService(),
+    configReader: taskLogConfigReader,
+    logger: createLogger('Feature:MemberLogStream'),
+  });
   const teamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(
     teamMemberLogsFinder
   );
@@ -1483,6 +1496,7 @@ async function initializeServices(): Promise<void> {
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
+  registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
   // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
@@ -1672,6 +1686,7 @@ async function shutdownServices(): Promise<void> {
       removeRecentProjectsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
       removeMemberWorkSyncIpc(ipcMain);
+      removeMemberLogStreamIpc(ipcMain);
     });
 
     await runShutdownStep('team backup dispose', () => teamBackupService?.dispose());

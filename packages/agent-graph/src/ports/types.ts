@@ -67,6 +67,7 @@ export interface GraphLayoutPort {
   version: GraphLayoutVersion;
   mode?: GraphLayoutMode;
   showActivity?: boolean;
+  showLogs?: boolean;
   ownerOrder: string[];
   slotAssignments: Record<string, GraphOwnerSlotAssignment>;
 }

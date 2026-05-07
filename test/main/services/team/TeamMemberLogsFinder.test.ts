@@ -37,39 +37,43 @@ describe('TeamMemberLogsFinder', () => {
     await fs.mkdir(projectRoot, { recursive: true });
 
     const projectResolver = {
-      getLiveBaseContext: vi.fn(async () => ({
-        projectDir: projectRoot,
-        projectId: '-Users-test-live-context',
-        config,
-      })),
-      getContext: vi.fn(async () => {
-        throw new Error('broad context must not be used for live tracking');
-      }),
+      getLiveBaseContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: projectRoot,
+          projectId: '-Users-test-live-context',
+          config,
+        })
+      ),
+      getContext: vi.fn(() =>
+        Promise.reject(new Error('broad context must not be used for live tracking'))
+      ),
     };
     const launchStateStore = {
-      read: vi.fn(async () => ({
-        version: 2,
-        teamName,
-        updatedAt: '2026-05-03T12:00:00.000Z',
-        leadSessionId: 'lead-session',
-        launchPhase: 'active',
-        expectedMembers: ['bob'],
-        members: {
-          bob: {
-            name: 'bob',
-            launchState: 'runtime_pending_bootstrap',
-            agentToolAccepted: true,
-            runtimeAlive: false,
-            bootstrapConfirmed: false,
-            hardFailure: false,
-            runtimeSessionId: 'runtime-bob',
-            cwd: runtimeProjectPath,
-            updatedAt: '2026-05-03T12:00:00.000Z',
+      read: vi.fn(() =>
+        Promise.resolve({
+          version: 2,
+          teamName,
+          updatedAt: '2026-05-03T12:00:00.000Z',
+          leadSessionId: 'lead-session',
+          launchPhase: 'active',
+          expectedMembers: ['bob'],
+          members: {
+            bob: {
+              name: 'bob',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              runtimeSessionId: 'runtime-bob',
+              cwd: runtimeProjectPath,
+              updatedAt: '2026-05-03T12:00:00.000Z',
+            },
           },
-        },
-        summary: {},
-        teamLaunchState: 'partial_pending',
-      })),
+          summary: {},
+          teamLaunchState: 'partial_pending',
+        })
+      ),
     };
 
     const finder = new TeamMemberLogsFinder(
@@ -429,6 +433,97 @@ describe('TeamMemberLogsFinder', () => {
     expect(refs.some((ref) => ref.memberName === 'Tom')).toBe(false);
   });
 
+  it('applies recent-ref object options to discovery, lead refs, metadata, and requested-member attribution', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'member-stream-ref-options';
+    const projectPath = '/Users/test/member-stream-ref-options';
+    const projectId = '-Users-test-member-stream-ref-options';
+    const leadSessionId = 'lead-session';
+    const recentSince = Date.now() - 10 * 60_000;
+    const old = new Date(Date.now() - 30 * 60_000);
+    const now = new Date();
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    const subagentsDir = path.join(projectRoot, leadSessionId, 'subagents');
+    await fs.mkdir(subagentsDir, { recursive: true });
+
+    const leadPath = path.join(projectRoot, `${leadSessionId}.jsonl`);
+    await fs.writeFile(
+      leadPath,
+      JSON.stringify({
+        timestamp: old.toISOString(),
+        type: 'user',
+        message: { role: 'user', content: `Lead for team "${teamName}" (${teamName})` },
+      }) + '\n',
+      'utf8'
+    );
+    await fs.utimes(leadPath, old, old);
+
+    const zoePath = path.join(subagentsDir, 'agent-zoe.jsonl');
+    await fs.writeFile(
+      zoePath,
+      [
+        JSON.stringify({
+          timestamp: now.toISOString(),
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are Zoe, a developer on team "${teamName}" (${teamName}).`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: now.toISOString(),
+          type: 'assistant',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Ready' }] },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+    await fs.utimes(zoePath, now, now);
+
+    const projectResolver = {
+      getContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: projectRoot,
+          projectId,
+          sessionIds: [leadSessionId],
+          config: {
+            name: teamName,
+            projectPath,
+            leadSessionId,
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        })
+      ),
+    };
+    const finder = new TeamMemberLogsFinder(
+      undefined,
+      undefined,
+      undefined,
+      projectResolver as never
+    );
+
+    const refs = await finder.findRecentMemberLogFileRefsByMember(teamName, ['team-lead', 'Zoe'], {
+      mtimeSinceMs: recentSince,
+      forceRefresh: true,
+    });
+
+    expect(projectResolver.getContext).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({ forceRefresh: true })
+    );
+    expect(refs).toEqual([
+      expect.objectContaining({
+        memberName: 'Zoe',
+        filePath: zoePath,
+        kind: 'subagent',
+        sizeBytes: expect.any(Number),
+      }),
+    ]);
+    expect(refs.some((ref) => ref.filePath === leadPath)).toBe(false);
+  });
+
   it('listAttributedSubagentFiles only returns files from the current lead session for live tracking', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
     setClaudeBasePathOverride(tmpDir);
@@ -463,18 +558,22 @@ describe('TeamMemberLogsFinder', () => {
     await fs.mkdir(path.join(projectRoot, currentSessionId, 'subagents'), { recursive: true });
     await fs.mkdir(path.join(projectRoot, oldSessionId, 'subagents'), { recursive: true });
 
-    const attributedLog = [
-      JSON.stringify({
-        timestamp: '2026-01-01T00:00:01.000Z',
-        type: 'user',
-        message: { role: 'user', content: `You are alice, a developer on team "${teamName}" (${teamName}).` },
-      }),
-      JSON.stringify({
-        timestamp: '2026-01-01T00:00:02.000Z',
-        type: 'assistant',
-        message: { role: 'assistant', content: [{ type: 'text', text: 'OK' }] },
-      }),
-    ].join('\n') + '\n';
+    const attributedLog =
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are alice, a developer on team "${teamName}" (${teamName}).`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'OK' }] },
+        }),
+      ].join('\n') + '\n';
 
     await fs.writeFile(
       path.join(projectRoot, currentSessionId, 'subagents', 'agent-current.jsonl'),
@@ -1270,7 +1369,11 @@ describe('TeamMemberLogsFinder', () => {
           message: {
             role: 'assistant',
             content: [
-              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '5', status: 'in_progress' } },
+              {
+                type: 'tool_use',
+                name: 'TaskUpdate',
+                input: { taskId: '5', status: 'in_progress' },
+              },
             ],
           },
         }),
@@ -1424,7 +1527,11 @@ describe('TeamMemberLogsFinder', () => {
           message: {
             role: 'assistant',
             content: [
-              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '3', status: 'in_progress' } },
+              {
+                type: 'tool_use',
+                name: 'TaskUpdate',
+                input: { taskId: '3', status: 'in_progress' },
+              },
             ],
           },
         }),

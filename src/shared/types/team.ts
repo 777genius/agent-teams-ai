@@ -808,8 +808,14 @@ export interface ResolvedTeamMember {
   workflow?: string;
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
+  laneOwnerProviderId?: TeamProviderId;
   cwd?: string;
   /** Set only when member's git branch differs from the lead's branch. */
   gitBranch?: string;
@@ -910,7 +916,13 @@ export interface TeamViewSnapshot {
 
 export type EffortLevel = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 export type TeamProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode';
-export type TeamProviderBackendId = 'auto' | 'adapter' | 'api' | 'cli-sdk' | 'codex-native';
+export type TeamProviderBackendId =
+  | 'auto'
+  | 'adapter'
+  | 'api'
+  | 'cli-sdk'
+  | 'codex-native'
+  | 'opencode-cli';
 export type TeamFastMode = 'inherit' | 'on' | 'off';
 
 export interface ProviderModelLaunchIdentity {

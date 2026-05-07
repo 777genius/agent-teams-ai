@@ -925,6 +925,8 @@ export class ClaudeMultimodelBridgeService {
       teamId: string;
       memberName: string;
       limit?: number;
+      laneId?: string;
+      timeoutMs?: number;
     }
   ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
     const { env } = await this.buildCliEnv(binaryPath);
@@ -943,12 +945,15 @@ export class ClaudeMultimodelBridgeService {
     if (typeof params.limit === 'number') {
       args.push('--limit', String(params.limit));
     }
+    if (typeof params.laneId === 'string' && params.laneId.trim().length > 0) {
+      args.push('--lane', params.laneId.trim());
+    }
 
     const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));
     const outputPath = path.join(outputDir, 'transcript.json');
     try {
       await execCli(binaryPath, [...args, '--output', outputPath], {
-        timeout: PROVIDER_STATUS_TIMEOUT_MS,
+        timeout: params.timeoutMs ?? PROVIDER_STATUS_TIMEOUT_MS,
         env,
       });
       const parsed = extractJsonObject<OpenCodeRuntimeTranscriptResponse>(

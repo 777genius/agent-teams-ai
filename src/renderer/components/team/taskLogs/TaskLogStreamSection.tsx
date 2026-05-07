@@ -1,29 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
-import { MemberBadge } from '@renderer/components/team/MemberBadge';
-import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
-  getTeamColorSet,
-  getThemedBadge,
-  getThemedBorder,
-  getThemedText,
-} from '@renderer/constants/teamColors';
-import { useTheme } from '@renderer/hooks/useTheme';
+  ExecutionLogStreamView,
+  normalizeExecutionLogStream,
+} from '@features/member-log-stream/renderer';
+import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
-import { asEnhancedChunkArray } from '@renderer/types/data';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
-import { isLeadMember } from '@shared/utils/leadDetection';
-import { AlertCircle, Clock, FileText, Loader2 } from 'lucide-react';
 
-import type {
-  BoardTaskLogActor,
-  BoardTaskLogSegment,
-  BoardTaskLogStreamResponse,
-  ResolvedTeamMember,
-} from '@shared/types';
+import type { BoardTaskLogStreamResponse } from '@shared/types';
 
 interface TaskLogStreamSectionProps {
   teamName: string;
@@ -33,54 +19,6 @@ interface TaskLogStreamSectionProps {
 }
 
 const LIVE_RELOAD_DEBOUNCE_MS = 350;
-
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString);
-  const diffMs = Date.now() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMin / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (!Number.isFinite(diffMs)) return '--';
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
-}
-
-function actorLabel(actor: BoardTaskLogActor): string {
-  if (actor.memberName) {
-    return actor.memberName;
-  }
-  if (actor.role === 'lead' || actor.isSidechain === false) {
-    return 'lead session';
-  }
-  if (actor.agentId) {
-    return `member ${actor.agentId.slice(0, 8)}`;
-  }
-  return `member session ${actor.sessionId.slice(0, 8)}`;
-}
-
-function normalizeResponse(response: BoardTaskLogStreamResponse): BoardTaskLogStreamResponse {
-  return {
-    participants: response.participants,
-    defaultFilter: response.defaultFilter,
-    source: response.source,
-    runtimeProjection: response.runtimeProjection,
-    segments: response.segments.map((segment) => ({
-      ...segment,
-      chunks: asEnhancedChunkArray(segment.chunks) ?? [],
-    })),
-  };
-}
-
-function buildStableSegmentRenderKey(segment: BoardTaskLogSegment): string {
-  const firstChunkId = segment.chunks[0]?.id;
-  if (firstChunkId) {
-    return `${segment.participantKey}:${firstChunkId}`;
-  }
-  return `${segment.participantKey}:${segment.startTimestamp}`;
-}
 
 function describeStreamSource(stream: BoardTaskLogStreamResponse | null): string {
   if (stream?.source === 'opencode_runtime_attribution') {
@@ -110,142 +48,6 @@ function describeStreamSource(stream: BoardTaskLogStreamResponse | null): string
   return 'Task-scoped transcript logs rendered with the same execution-log components used in Logs.';
 }
 
-interface ParticipantVisual {
-  name: string;
-  color?: string;
-}
-
-function buildParticipantVisualMap(
-  stream: BoardTaskLogStreamResponse | null,
-  members: readonly ResolvedTeamMember[],
-  memberColorMap: ReadonlyMap<string, string>
-): Map<string, ParticipantVisual> {
-  const visuals = new Map<string, ParticipantVisual>();
-  const leadMember = members.find((member) => isLeadMember(member));
-
-  for (const participant of stream?.participants ?? []) {
-    const matchingSegment = stream?.segments.find(
-      (segment) => segment.participantKey === participant.key
-    );
-    const name =
-      matchingSegment?.actor.memberName ??
-      (participant.isLead ? leadMember?.name : undefined) ??
-      participant.label;
-
-    visuals.set(participant.key, {
-      name,
-      color: memberColorMap.get(name) ?? memberColorMap.get(participant.label),
-    });
-  }
-
-  for (const segment of stream?.segments ?? []) {
-    if (visuals.has(segment.participantKey)) {
-      continue;
-    }
-    const name = segment.actor.memberName ?? actorLabel(segment.actor);
-    visuals.set(segment.participantKey, {
-      name,
-      color: memberColorMap.get(name),
-    });
-  }
-
-  return visuals;
-}
-
-const SegmentMarker = ({
-  segment,
-  visual,
-  teamName,
-}: {
-  segment: BoardTaskLogSegment;
-  visual?: ParticipantVisual;
-  teamName: string;
-}): React.JSX.Element => {
-  return (
-    <div className="mb-2 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
-      {visual ? (
-        <MemberBadge
-          name={visual.name}
-          color={visual.color}
-          teamName={teamName}
-          size="xs"
-          disableHoverCard
-        />
-      ) : null}
-      <span className="flex items-center gap-1">
-        <Clock size={10} />
-        {formatRelativeTime(segment.endTimestamp)}
-      </span>
-    </div>
-  );
-};
-
-const SegmentBlock = ({
-  segment,
-  showHeader,
-  teamName,
-  visual,
-}: {
-  segment: BoardTaskLogSegment;
-  showHeader: boolean;
-  teamName: string;
-  visual?: ParticipantVisual;
-}): React.JSX.Element => {
-  return (
-    <div className="min-w-0 overflow-hidden">
-      {showHeader ? <SegmentMarker segment={segment} visual={visual} teamName={teamName} /> : null}
-      <MemberExecutionLog
-        chunks={segment.chunks}
-        memberName={segment.actor.memberName}
-        memberColor={visual?.color}
-        teamName={teamName}
-        hideMemberHeading={showHeader && Boolean(segment.actor.memberName)}
-      />
-    </div>
-  );
-};
-
-const ParticipantFilterChip = ({
-  label,
-  selected,
-  visual,
-  teamName,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  visual?: ParticipantVisual;
-  teamName: string;
-  onClick: () => void;
-}): React.JSX.Element => {
-  const { isLight } = useTheme();
-  const colors = getTeamColorSet(visual?.color ?? '');
-  const borderColor = selected ? getThemedBorder(colors, isLight) : 'var(--color-border)';
-  const backgroundColor = selected ? getThemedBadge(colors, isLight) : 'transparent';
-  const textColor = selected ? getThemedText(colors, isLight) : 'var(--color-text-muted)';
-
-  return (
-    <button
-      type="button"
-      className="rounded-full border px-2 py-1 text-[11px] transition-colors hover:text-[var(--color-text)]"
-      style={{ borderColor, backgroundColor, color: textColor }}
-      onClick={onClick}
-    >
-      {visual ? (
-        <MemberBadge
-          name={visual.name}
-          color={visual.color}
-          teamName={teamName}
-          size="xs"
-          disableHoverCard
-        />
-      ) : (
-        label
-      )}
-    </button>
-  );
-};
-
 export const TaskLogStreamSection = ({
   teamName,
   taskId,
@@ -255,7 +57,6 @@ export const TaskLogStreamSection = ({
   const [stream, setStream] = useState<BoardTaskLogStreamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedParticipantKey, setSelectedParticipantKey] = useState<'all' | string>('all');
   const teamMembers = useStore((s) => selectResolvedMembersForTeamName(s, teamName));
   const requestSeqRef = useRef(0);
   const streamRef = useRef<BoardTaskLogStreamResponse | null>(null);
@@ -266,41 +67,25 @@ export const TaskLogStreamSection = ({
   }, [stream]);
 
   const loadStream = useCallback(
-    async (options?: { resetSelection?: boolean; background?: boolean }): Promise<void> => {
-      const resetSelection = options?.resetSelection ?? false;
+    async (options?: { background?: boolean }): Promise<void> => {
       const background = options?.background ?? false;
       const hadExistingStream = streamRef.current != null;
       const requestSeq = requestSeqRef.current + 1;
       requestSeqRef.current = requestSeq;
 
-      if (!background) {
-        setLoading(true);
-      }
+      if (!background) setLoading(true);
       setError((prev) => (background ? prev : null));
 
       try {
-        const response = normalizeResponse(await api.teams.getTaskLogStream(teamName, taskId));
-        if (requestSeqRef.current !== requestSeq) {
-          return;
-        }
+        const response = normalizeExecutionLogStream(
+          await api.teams.getTaskLogStream(teamName, taskId)
+        );
+        if (requestSeqRef.current !== requestSeq) return;
 
         setStream(response);
-        setSelectedParticipantKey((prev) => {
-          if (resetSelection) {
-            return response.defaultFilter;
-          }
-          const availableParticipantKeys = new Set([
-            'all',
-            ...response.participants.map((participant) => participant.key),
-          ]);
-          return availableParticipantKeys.has(prev) ? prev : response.defaultFilter;
-        });
         setError(null);
       } catch (loadError) {
-        if (requestSeqRef.current !== requestSeq) {
-          return;
-        }
-
+        if (requestSeqRef.current !== requestSeq) return;
         if (!background || streamRef.current == null) {
           setError(
             loadError instanceof Error ? loadError.message : 'Failed to load task log stream'
@@ -320,13 +105,12 @@ export const TaskLogStreamSection = ({
     setStream(null);
     streamRef.current = null;
     setError(null);
-    setSelectedParticipantKey('all');
     requestSeqRef.current += 1;
     if (reloadTimerRef.current) {
       clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = null;
     }
-    void loadStream({ resetSelection: true });
+    void loadStream();
   }, [loadStream]);
 
   const previousTaskMetaRef = useRef({ taskId, taskStatus });
@@ -335,10 +119,7 @@ export const TaskLogStreamSection = ({
     const previousTaskMeta = previousTaskMetaRef.current;
     previousTaskMetaRef.current = { taskId, taskStatus };
 
-    if (previousTaskMeta.taskId !== taskId) {
-      return;
-    }
-
+    if (previousTaskMeta.taskId !== taskId) return;
     if (
       previousTaskMeta.taskStatus === 'in_progress' &&
       taskStatus &&
@@ -358,12 +139,8 @@ export const TaskLogStreamSection = ({
     }
 
     const scheduleReload = (): void => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        return;
-      }
-      if (reloadTimerRef.current) {
-        clearTimeout(reloadTimerRef.current);
-      }
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
         reloadTimerRef.current = null;
         void loadStream({ background: true });
@@ -371,22 +148,15 @@ export const TaskLogStreamSection = ({
     };
 
     const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
-      if (event.teamName !== teamName) {
-        return;
-      }
+      if (event.teamName !== teamName) return;
       const shouldReload =
         event.type === 'log-source-change' ||
         (isTaskLogActivityChangeEvent(event) && event.taskId === taskId);
-      if (!shouldReload) {
-        return;
-      }
-      scheduleReload();
+      if (shouldReload) scheduleReload();
     });
 
     const handleVisibilityChange = (): void => {
-      if (document.visibilityState === 'visible') {
-        scheduleReload();
-      }
+      if (document.visibilityState === 'visible') scheduleReload();
     };
 
     if (typeof document !== 'undefined') {
@@ -401,115 +171,25 @@ export const TaskLogStreamSection = ({
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+      if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, [liveEnabled, loadStream, taskId, teamName]);
 
-  const participants = stream?.participants ?? [];
-  const memberColorMap = useMemo(() => buildMemberColorMap(teamMembers), [teamMembers]);
-  const participantVisuals = useMemo(
-    () => buildParticipantVisualMap(stream, teamMembers, memberColorMap),
-    [memberColorMap, stream, teamMembers]
-  );
-  const showChips = participants.length > 1;
   const streamDescription = useMemo(() => describeStreamSource(stream), [stream]);
-  const visibleSegments = useMemo(() => {
-    const source = stream?.segments ?? [];
-    const filtered =
-      selectedParticipantKey === 'all'
-        ? source
-        : source.filter((segment) => segment.participantKey === selectedParticipantKey);
-    return [...filtered].reverse();
-  }, [selectedParticipantKey, stream?.segments]);
-
-  const showSegmentHeaders =
-    participants.length > 1 || (selectedParticipantKey !== 'all' && visibleSegments.length > 1);
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-          Task Log Stream
-        </h4>
-        <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-text-muted)]">
-          <Loader2 size={12} className="animate-spin" />
-          Loading task log stream...
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-          Task Log Stream
-        </h4>
-        <div className="flex items-center gap-2 py-4 text-xs text-red-400">
-          <AlertCircle size={14} />
-          {error}
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-3">
-      <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-        Task Log Stream
-      </h4>
-      <p className="text-xs text-[var(--color-text-muted)]">{streamDescription}</p>
-
-      {showChips ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-              selectedParticipantKey === 'all'
-                ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)] text-[var(--color-text)]'
-                : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-            }`}
-            onClick={() => setSelectedParticipantKey('all')}
-          >
-            All
-          </button>
-          {participants.map((participant) => (
-            <ParticipantFilterChip
-              key={participant.key}
-              label={participant.label}
-              selected={selectedParticipantKey === participant.key}
-              visual={participantVisuals.get(participant.key)}
-              teamName={teamName}
-              onClick={() => setSelectedParticipantKey(participant.key)}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {visibleSegments.length === 0 ? (
-        <div className="py-8 text-center text-xs text-[var(--color-text-muted)]">
-          <FileText size={20} className="mx-auto mb-2 opacity-40" />
-          No task log stream yet
-          <p className="mt-1 text-[10px] opacity-60">
-            Task-linked logs will appear here when transcript metadata or runtime projection is
-            available.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {visibleSegments.map((segment) => (
-            <SegmentBlock
-              key={buildStableSegmentRenderKey(segment)}
-              segment={segment}
-              showHeader={showSegmentHeaders}
-              teamName={teamName}
-              visual={participantVisuals.get(segment.participantKey)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <ExecutionLogStreamView
+      title="Task Log Stream"
+      description={streamDescription}
+      stream={stream}
+      loading={loading}
+      error={error}
+      teamName={teamName}
+      teamMembers={teamMembers}
+      loadingText="Loading task log stream..."
+      emptyTitle="No task log stream yet"
+      emptyDescription="Task-linked logs will appear here when transcript metadata or runtime projection is available."
+      selectionResetKey={`${teamName}:${taskId}`}
+    />
   );
 };

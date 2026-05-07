@@ -82,6 +82,7 @@ export interface GraphViewProps {
       leadNodeId: string
     ) => { x: number; y: number; scale: number; visible: boolean } | null;
     getActivityWorldRect: (ownerNodeId: string) => StableRect | null;
+    getLogWorldRect: (ownerNodeId: string) => StableRect | null;
     getTransientHandoffSnapshot: (options?: {
       focusNodeIds?: ReadonlySet<string> | null;
       focusEdgeIds?: ReadonlySet<string> | null;
@@ -137,6 +138,7 @@ export function GraphView({
         ? {
             ...data.layout,
             showActivity: filters.showActivity,
+            showLogs: filters.showActivity,
           }
         : data.layout,
     [data.layout, filters.showActivity]
@@ -293,6 +295,10 @@ export function GraphView({
   const getCameraZoom = useCallback(() => cameraRef.current.transformRef.current.zoom, []);
   const getActivityWorldRect = useCallback(
     (ownerNodeId: string) => simulationRef.current.getActivityWorldRect(ownerNodeId),
+    []
+  );
+  const getLogWorldRect = useCallback(
+    (ownerNodeId: string) => simulationRef.current.getLogWorldRect(ownerNodeId),
     []
   );
   const getTransientHandoffSnapshot = useCallback(
@@ -1092,6 +1098,7 @@ export function GraphView({
             filters,
             getLaunchAnchorScreenPlacement,
             getActivityWorldRect,
+            getLogWorldRect,
             getTransientHandoffSnapshot,
             getCameraZoom,
             worldToScreen: camera.worldToScreen,

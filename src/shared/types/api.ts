@@ -98,6 +98,7 @@ import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
+import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type {
   MemberWorkSyncMetricsRequest,
   MemberWorkSyncReportRequest,
@@ -903,6 +904,9 @@ export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElec
 
   // Member actionable-work sync diagnostics API
   memberWorkSync: MemberWorkSyncElectronApi;
+
+  // Member log stream API
+  memberLogStream: MemberLogStreamApi;
 
   // tmux runtime diagnostics API
   tmux: TmuxAPI;

@@ -149,7 +149,7 @@ describe('stable slot layout planner', () => {
     expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
   });
 
-  it('builds a board band that contains both the activity column and kanban band', () => {
+  it('builds a board band that contains activity, logs, and kanban without overlap', () => {
     const teamName = 'team-process-width';
     const lead = createLead(teamName);
     const alice = createMember(teamName, 'agent-alice', 'alice');
@@ -170,9 +170,14 @@ describe('stable slot layout planner', () => {
     const frame = snapshot?.memberSlotFrames[0];
     expect(frame).toBeDefined();
     expect(frame?.boardBandRect.top).toBe(frame?.activityColumnRect.top);
+    expect(frame?.boardBandRect.top).toBe(frame?.logColumnRect.top);
     expect(frame?.boardBandRect.top).toBe(frame?.kanbanBandRect.top);
     expect(frame?.activityColumnRect.left).toBe(frame?.boardBandRect.left);
-    expect(frame?.kanbanBandRect.left).toBeGreaterThan(frame?.activityColumnRect.right ?? 0);
+    expect(frame?.logColumnRect.left).toBeGreaterThan(frame?.activityColumnRect.right ?? 0);
+    expect(frame?.kanbanBandRect.left).toBeGreaterThan(frame?.logColumnRect.right ?? 0);
+    expect(rectsOverlap(frame!.activityColumnRect, frame!.logColumnRect)).toBe(false);
+    expect(rectsOverlap(frame!.logColumnRect, frame!.kanbanBandRect)).toBe(false);
+    expect(rectsOverlap(frame!.logColumnRect, frame!.processBandRect)).toBe(false);
     expect(frame?.processBandRect.width).toBe(computeProcessBandWidth(0));
     expect(frame?.processBandRect.height).toBe(STABLE_SLOT_GEOMETRY.processBandHeight);
   });
@@ -289,12 +294,12 @@ describe('stable slot layout planner', () => {
       version: 'stable-slots-v1',
       ownerOrder: members.map((member) => member.id),
       slotAssignments: {
-        [members[0]!.id]: { ringIndex: 0, sectorIndex: 0 },
-        [members[1]!.id]: { ringIndex: 0, sectorIndex: 1 },
-        [members[2]!.id]: { ringIndex: 0, sectorIndex: 2 },
-        [members[3]!.id]: { ringIndex: 0, sectorIndex: 3 },
-        [members[4]!.id]: { ringIndex: 0, sectorIndex: 4 },
-        [members[5]!.id]: { ringIndex: 0, sectorIndex: 5 },
+        [members[0].id]: { ringIndex: 0, sectorIndex: 0 },
+        [members[1].id]: { ringIndex: 0, sectorIndex: 1 },
+        [members[2].id]: { ringIndex: 0, sectorIndex: 2 },
+        [members[3].id]: { ringIndex: 0, sectorIndex: 3 },
+        [members[4].id]: { ringIndex: 0, sectorIndex: 4 },
+        [members[5].id]: { ringIndex: 0, sectorIndex: 5 },
       },
     };
 
@@ -307,8 +312,8 @@ describe('stable slot layout planner', () => {
     expect(snapshot).not.toBeNull();
     expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
 
-    for (const frame of snapshot!.memberSlotFrames) {
-      for (const centralRect of snapshot!.centralCollisionRects) {
+    for (const frame of snapshot.memberSlotFrames) {
+      for (const centralRect of snapshot.centralCollisionRects) {
         if (!rectsOverlapVertically(frame.bounds, centralRect)) {
           continue;
         }
@@ -346,6 +351,7 @@ describe('stable slot layout planner', () => {
 
     expect(footprint).toBeDefined();
     expect(footprint?.activityColumnWidth).toBe(ACTIVITY_LANE.width);
+    expect(footprint?.logColumnWidth).toBe(260);
     expect(footprint?.activityColumnHeight).toBe(
       ACTIVITY_LANE.headerHeight +
         ACTIVITY_LANE.maxVisibleItems * ACTIVITY_LANE.rowHeight +
@@ -381,11 +387,15 @@ describe('stable slot layout planner', () => {
     expect(footprint).toBeDefined();
     expect(footprint?.activityColumnWidth).toBe(0);
     expect(footprint?.activityColumnHeight).toBe(0);
+    expect(footprint?.logColumnWidth).toBe(0);
+    expect(footprint?.logColumnHeight).toBe(0);
     expect(footprint?.boardBandWidth).toBe(footprint?.kanbanBandWidth);
     expect(snapshot).not.toBeNull();
     expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
     expect(frame?.activityColumnRect.width).toBe(0);
     expect(frame?.activityColumnRect.height).toBe(0);
+    expect(frame?.logColumnRect.width).toBe(0);
+    expect(frame?.logColumnRect.height).toBe(0);
     expect(frame?.kanbanBandRect.left).toBe(frame?.boardBandRect.left);
   });
 
@@ -414,19 +424,19 @@ describe('stable slot layout planner', () => {
     expect(frame).toBeDefined();
     expect(footprint).toBeDefined();
 
-    const legacyHorizontalExtent = snapshot!.runtimeCentralExclusion.right;
-    const legacyVerticalExtent = Math.abs(snapshot!.runtimeCentralExclusion.top);
+    const legacyHorizontalExtent = snapshot.runtimeCentralExclusion.right;
+    const legacyVerticalExtent = Math.abs(snapshot.runtimeCentralExclusion.top);
     const legacyRequiredX =
-      (legacyHorizontalExtent + footprint!.slotWidth / 2 + STABLE_SLOT_GEOMETRY.ringPadding) /
+      (legacyHorizontalExtent + footprint.slotWidth / 2 + STABLE_SLOT_GEOMETRY.ringPadding) /
       Math.abs(sectorVector.x);
     const legacyRequiredY =
-      (legacyVerticalExtent + footprint!.slotHeight / 2 + STABLE_SLOT_GEOMETRY.ringPadding) /
+      (legacyVerticalExtent + footprint.slotHeight / 2 + STABLE_SLOT_GEOMETRY.ringPadding) /
       Math.abs(sectorVector.y);
     const legacyMinRadius = Math.max(legacyRequiredX, legacyRequiredY, 0);
-    const actualRadius = Math.abs(frame!.ownerX / sectorVector.x);
+    const actualRadius = Math.abs(frame.ownerX / sectorVector.x);
 
     expect(actualRadius).toBeLessThan(legacyMinRadius);
-    expect(snapshot!.centralCollisionRects.some((rect) => rectsOverlap(frame!.bounds, rect))).toBe(
+    expect(snapshot.centralCollisionRects.some((rect) => rectsOverlap(frame.bounds, rect))).toBe(
       false
     );
   });
@@ -974,7 +984,7 @@ describe('stable slot layout planner', () => {
     });
 
     expect(snapshot).not.toBeNull();
-    const targetFrame = snapshot!.memberSlotFrames[1]!;
+    const targetFrame = snapshot.memberSlotFrames[1];
 
     expect(
       resolveNearestSlotAssignment({
@@ -982,7 +992,7 @@ describe('stable slot layout planner', () => {
         ownerX: targetFrame.ownerX,
         ownerY: targetFrame.ownerY,
         nodes: [lead, ...members],
-        snapshot: snapshot!,
+        snapshot,
         layout,
       })
     ).toBeNull();
@@ -992,7 +1002,7 @@ describe('stable slot layout planner', () => {
         ownerId: members[0].id,
         ownerX: targetFrame.ownerX,
         ownerY: targetFrame.ownerY,
-        snapshot: snapshot!,
+        snapshot,
       })
     ).toEqual({
       targetOwnerId: members[1].id,
@@ -1072,6 +1082,7 @@ describe('stable slot layout planner', () => {
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadCoreRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.processBandRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.activityColumnRect);
+    expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.logColumnRect);
     expect(snapshot!.centralCollisionRects).toContain(snapshot!.leadSlotFrame.kanbanBandRect);
     expect(snapshot!.leadCentralReservedBlock.width).toBeLessThan(
       snapshot!.leadSlotFrame.bounds.width

@@ -6,6 +6,10 @@ import { useStore } from '@renderer/store';
 
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
+const memberLogStreamMockState = vi.hoisted(() => ({
+  uiEnabled: true,
+}));
+
 vi.mock('@renderer/hooks/useMemberStats', () => ({
   useMemberStats: () => ({
     stats: null,
@@ -110,11 +114,32 @@ vi.mock('@renderer/components/team/members/MemberLogsTab', () => ({
   MemberLogsTab: () => React.createElement('div', null, 'logs-tab'),
 }));
 
+vi.mock('@features/member-log-stream/renderer', async () => {
+  const ReactModule = await import('react');
+  return {
+    isMemberLogStreamUiEnabled: () => memberLogStreamMockState.uiEnabled,
+    MemberLogStreamSection: ({
+      onInitialLoadErrorChange,
+    }: {
+      onInitialLoadErrorChange?: (hasError: boolean) => void;
+    }) =>
+      ReactModule.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: () => onInitialLoadErrorChange?.(true),
+        },
+        'member-log-stream'
+      ),
+  };
+});
+
 import { MemberDetailDialog } from '@renderer/components/team/members/MemberDetailDialog';
 
 describe('MemberDetailDialog activity count', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    memberLogStreamMockState.uiEnabled = true;
     useStore.setState({
       teamMessagesByName: {
         'demo-team': {
@@ -137,6 +162,98 @@ describe('MemberDetailDialog activity count', () => {
     vi.clearAllMocks();
     useStore.setState({ teamMessagesByName: {} } as never);
     vi.unstubAllGlobals();
+  });
+
+  it('renders legacy member logs directly when the member log stream UI gate is off', async () => {
+    memberLogStreamMockState.uiEnabled = false;
+    const member: ResolvedTeamMember = {
+      name: 'jack',
+      status: 'active',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailDialog, {
+          open: true,
+          member,
+          teamName: 'demo-team',
+          members: [member],
+          tasks: [],
+          initialTab: 'logs',
+          onClose: () => undefined,
+          onSendMessage: () => undefined,
+          onAssignTask: () => undefined,
+          onTaskClick: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('logs-tab');
+    expect(host.textContent).not.toContain('member-log-stream');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the stream visible and renders legacy fallback after an initial stream error', async () => {
+    const member: ResolvedTeamMember = {
+      name: 'jack',
+      status: 'active',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailDialog, {
+          open: true,
+          member,
+          teamName: 'demo-team',
+          members: [member],
+          tasks: [],
+          initialTab: 'logs',
+          onClose: () => undefined,
+          onSendMessage: () => undefined,
+          onAssignTask: () => undefined,
+          onTaskClick: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const streamButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('member-log-stream')
+    );
+    expect(streamButton).not.toBeUndefined();
+
+    await act(async () => {
+      streamButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('member-log-stream');
+    expect(host.textContent).toContain('Legacy Logs Fallback');
+    expect(host.textContent).toContain('logs-tab');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('counts task comments in the Activity badge even when messageCount is zero', async () => {
@@ -348,7 +465,7 @@ describe('MemberDetailDialog activity count', () => {
       messageCount: 0,
       providerId: 'opencode',
     };
-    const onRestartMember = vi.fn(async () => undefined);
+    const onRestartMember = vi.fn(() => Promise.resolve(undefined));
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -424,7 +541,7 @@ describe('MemberDetailDialog activity count', () => {
       messageCount: 0,
       providerId: 'opencode',
     };
-    const onRestartMember = vi.fn(async () => undefined);
+    const onRestartMember = vi.fn(() => Promise.resolve(undefined));
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);

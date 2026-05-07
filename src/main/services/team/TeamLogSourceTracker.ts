@@ -39,6 +39,7 @@ export type TeamLogSourceTrackingConsumer =
   | 'change_presence'
   | 'tool_activity'
   | 'task_log_stream'
+  | 'member_log_stream'
   | 'stall_monitor';
 
 interface TrackingState {

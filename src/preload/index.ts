@@ -1,4 +1,5 @@
 import { createCodexAccountBridge } from '@features/codex-account/preload';
+import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
@@ -478,6 +479,7 @@ const electronAPI: ElectronAPI = {
   ...createRecentProjectsBridge(),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
+  memberLogStream: createMemberLogStreamBridge(),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getProjects: () => ipcRenderer.invoke('get-projects'),
   getSessions: (projectId: string) => ipcRenderer.invoke('get-sessions', projectId),
