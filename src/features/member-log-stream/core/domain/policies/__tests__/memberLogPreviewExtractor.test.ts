@@ -458,6 +458,52 @@ Reply to this comment using MCP tool task_add_comment.
     });
   });
 
+  it('marks plain failed tool-result text as an error when runtime flags are missing', () => {
+    const result = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'read-task-call',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-task-get',
+              name: 'agent-teams_task_get',
+              input: {
+                taskId: '211e430b-0901-4c9e-9296-2b6e2059a08f',
+              },
+            },
+          ],
+        }),
+        message({
+          uuid: 'read-task-result',
+          type: 'user',
+          role: 'user',
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-task-get',
+              content:
+                "Tool 'task_get' execution failed: Task not found: 211e430b-0901-4c9e-9296-2b6e2059a08f",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(result.items[0]).toMatchObject({
+      kind: 'tool_result',
+      title: 'Read task error',
+      preview:
+        "Tool 'task_get' execution failed: Task not found: 211e430b-0901-4c9e-9296-2b6e2059a08f",
+      tone: 'error',
+    });
+  });
+
   it('formats orphan comment result payloads without guessing add vs read semantics', () => {
     const result = extractMemberLogPreviewItems({
       provider: 'claude_transcript',
@@ -925,6 +971,292 @@ Reply to this comment using MCP tool task_add_comment.
       preview: '#abc12345 blocked-by #def67890',
     });
     expect(result.items).toHaveLength(2);
+  });
+
+  it('formats runtime housekeeping previews without leaking internal fields', () => {
+    const result = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'briefing-call',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-briefing',
+              name: 'agent-teams_member_briefing',
+              input: {
+                teamName: 'relay-works-10',
+                memberName: 'jack',
+                runtimeProvider: 'opencode',
+              },
+            },
+          ],
+        }),
+        message({
+          uuid: 'briefing-result',
+          type: 'user',
+          role: 'user',
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-briefing',
+              content:
+                'Member briefing for jack on team "relay-works-10" (relay-works-10). Role: developer. CRITICAL: hidden long briefing details.',
+            },
+          ],
+        }),
+        message({
+          uuid: 'checkin-call',
+          timestamp: '2026-04-01T10:02:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-checkin',
+              name: 'agent-teams_runtime_bootstrap_checkin',
+              input: {
+                teamName: 'relay-works-10',
+                runId: 'run-1',
+                memberName: 'jack',
+                runtimeSessionId: 'ses-1',
+              },
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(result.items[0]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Runtime check-in',
+      preview: 'jack checked in',
+    });
+    expect(result.items[1]).toMatchObject({
+      kind: 'tool_result',
+      title: 'Member briefing',
+      preview: 'Loaded briefing for jack',
+    });
+    expect(JSON.stringify(result.items)).not.toContain('runtimeSessionId');
+    expect(JSON.stringify(result.items)).not.toContain('CRITICAL');
+
+    const inputOnly = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'briefing-input-only',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-briefing-only',
+              name: 'agent-teams_member_briefing',
+              input: {
+                teamName: 'relay-works-10',
+                memberName: 'jack',
+                runtimeProvider: 'opencode',
+              },
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(inputOnly.items[0]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Member briefing',
+      preview: 'Loaded briefing for jack',
+    });
+
+    const failedBriefing = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'briefing-call-failed',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-briefing-failed',
+              name: 'agent-teams_member_briefing',
+              input: {
+                teamName: 'relay-works-10',
+                memberName: 'jack',
+              },
+            },
+          ],
+        }),
+        message({
+          uuid: 'briefing-result-failed',
+          type: 'user',
+          role: 'user',
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-briefing-failed',
+              content: "Tool 'member_briefing' execution failed: runtime session missing",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(failedBriefing.items[0]).toMatchObject({
+      kind: 'tool_result',
+      title: 'Member briefing error',
+      preview: "Tool 'member_briefing' execution failed: runtime session missing",
+      tone: 'error',
+    });
+  });
+
+  it('formats runtime ops, work sync and process previews without internal ids', () => {
+    const runtimeResult = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'heartbeat-call',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-heartbeat',
+              name: 'agent-teams_runtime_heartbeat',
+              input: {
+                runId: 'run-1',
+                teamName: 'relay-works-10',
+                memberName: 'jack',
+                runtimeSessionId: 'ses-1',
+              },
+            },
+          ],
+        }),
+        message({
+          uuid: 'runtime-event-call',
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-runtime-event',
+              name: 'agent-teams_runtime_task_event',
+              input: {
+                memberName: 'jack',
+                taskId: 'abc12345-0000-0000-0000-000000000000',
+                event: 'started',
+              },
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(runtimeResult.items[0]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Runtime task event',
+      preview: 'jack started #abc12345',
+    });
+    expect(runtimeResult.items[1]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Runtime heartbeat',
+      preview: 'jack heartbeat',
+    });
+    expect(JSON.stringify(runtimeResult.items)).not.toContain('runtimeSessionId');
+
+    const workSyncResult = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'work-sync-call',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-work-sync',
+              name: 'agent-teams_member_work_sync_report',
+              input: {
+                memberName: 'jack',
+                state: 'still_working',
+                taskIds: ['abc12345-0000-0000-0000-000000000000'],
+                reportToken: 'secret-token',
+              },
+            },
+          ],
+        }),
+        message({
+          uuid: 'work-sync-result',
+          type: 'user',
+          role: 'user',
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-work-sync',
+              content: 'ok',
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(workSyncResult.items[0]).toMatchObject({
+      kind: 'tool_result',
+      title: 'Work sync report',
+      preview: 'jack still_working #abc12345',
+    });
+    expect(JSON.stringify(workSyncResult.items)).not.toContain('reportToken');
+
+    const processResult = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'process-call',
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool-process-list',
+              name: 'agent-teams_process_list',
+              input: { teamName: 'relay-works-10' },
+            },
+          ],
+        }),
+        message({
+          uuid: 'process-result',
+          type: 'user',
+          role: 'user',
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-process-list',
+              content: JSON.stringify([
+                { pid: 123, label: 'vite dev', status: 'running' },
+                { pid: 456, command: 'pnpm test', status: 'exited' },
+              ]),
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(processResult.items[0]).toMatchObject({
+      kind: 'tool_result',
+      title: 'Process list',
+      preview: '2 processes - vite dev running; pnpm test exited',
+    });
+    expect(processResult.items[0]?.preview).not.toContain('[{');
   });
 
   it('uses concrete names for generic runtime tool results', () => {
