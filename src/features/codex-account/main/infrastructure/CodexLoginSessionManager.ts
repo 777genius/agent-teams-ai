@@ -26,6 +26,7 @@ export class CodexLoginSessionManager {
     status: 'idle',
     error: null,
     startedAt: null,
+    authUrl: null,
   };
   private pendingStartToken: symbol | null = null;
   private activeSession: {
@@ -71,6 +72,7 @@ export class CodexLoginSessionManager {
       status: 'starting',
       error: null,
       startedAt: new Date().toISOString(),
+      authUrl: null,
     });
 
     try {
@@ -135,6 +137,7 @@ export class CodexLoginSessionManager {
         status: 'pending',
         error: null,
         startedAt: this.state.startedAt,
+        authUrl: authUrl.toString(),
       });
 
       await shell.openExternal(authUrl.toString());
@@ -158,6 +161,7 @@ export class CodexLoginSessionManager {
         status: 'failed',
         error: error instanceof Error ? error.message : String(error),
         startedAt: this.state.startedAt,
+        authUrl: this.state.authUrl,
       });
       throw error;
     }
@@ -170,6 +174,7 @@ export class CodexLoginSessionManager {
         status: 'cancelled',
         error: null,
         startedAt: null,
+        authUrl: null,
       });
       this.emitSettled();
       return;
@@ -180,6 +185,7 @@ export class CodexLoginSessionManager {
         status: 'cancelled',
         error: null,
         startedAt: null,
+        authUrl: null,
       });
       return;
     }
@@ -207,6 +213,7 @@ export class CodexLoginSessionManager {
       status: 'cancelled',
       error: null,
       startedAt: null,
+      authUrl: null,
     });
     this.emitSettled();
   }
@@ -221,6 +228,7 @@ export class CodexLoginSessionManager {
         status: 'idle',
         error: null,
         startedAt: null,
+        authUrl: null,
       });
       return;
     }
@@ -234,6 +242,7 @@ export class CodexLoginSessionManager {
       status: 'idle',
       error: null,
       startedAt: null,
+      authUrl: null,
     });
   }
 
@@ -255,12 +264,14 @@ export class CodexLoginSessionManager {
         status: 'idle',
         error: null,
         startedAt: null,
+        authUrl: null,
       });
     } else {
       this.setState({
         status: 'failed',
         error: notification.error ?? 'ChatGPT login failed.',
         startedAt: this.state.startedAt,
+        authUrl: this.state.authUrl,
       });
     }
 
@@ -281,6 +292,7 @@ export class CodexLoginSessionManager {
       status: 'failed',
       error: errorMessage,
       startedAt: this.state.startedAt,
+      authUrl: this.state.authUrl,
     });
     this.emitSettled();
   }

@@ -8,6 +8,7 @@ import {
   getMemberRuntimeAdvisoryTitle,
   getMemberRuntimeAdvisoryTone,
   isOpenCodeRelaunchActionable,
+  shouldDisplayMemberCurrentTask,
 } from '@renderer/utils/memberHelpers';
 
 import type { ResolvedTeamMember } from '@shared/types';
@@ -27,6 +28,73 @@ const member: ResolvedTeamMember = {
 };
 
 describe('memberHelpers spawn-aware presence', () => {
+  it('does not display current task labels for offline or terminal launch states', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: 'offline',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: 'error',
+        spawnLaunchState: 'failed_to_start',
+      })
+    ).toBe(false);
+  });
+
+  it('does not display current task labels for runtime entries without a live agent runtime', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        runtimeEntry: {
+          memberName: 'alice',
+          alive: false,
+          restartable: true,
+          providerId: 'opencode',
+          livenessKind: 'stale_metadata',
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      })
+    ).toBe(false);
+  });
+
+  it('keeps current task labels for confirmed online members', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: true,
+        runtimeEntry: {
+          memberName: 'alice',
+          alive: true,
+          restartable: true,
+          providerId: 'gemini',
+          livenessKind: 'confirmed_bootstrap',
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      })
+    ).toBe(true);
+  });
+
   it('shows process-online teammates as online with a green dot', () => {
     expect(
       getSpawnAwarePresenceLabel(

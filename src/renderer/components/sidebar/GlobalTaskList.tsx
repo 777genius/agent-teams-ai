@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useCollapsedGroups } from '@renderer/hooks/useCollapsedGroups';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
 import { cn } from '@renderer/lib/utils';
+import { markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { projectColor } from '@renderer/utils/projectColor';
@@ -283,6 +284,10 @@ export const GlobalTaskList = memo(function GlobalTaskList({
     setRenamingTaskKey(null);
   }, []);
 
+  const handleMarkTaskUnread = useCallback((teamName: string, taskId: string): void => {
+    markTaskUnread(teamName, taskId);
+  }, []);
+
   const handleDeleteTask = useCallback(
     async (teamName: string, taskId: string): Promise<void> => {
       const confirmed = await confirm({
@@ -548,6 +553,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
               isArchived={false}
               onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
               onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
+              onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
               onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
               onDelete={() => handleDeleteTask(task.teamName, task.id)}
             >
@@ -641,6 +647,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
               isArchived={taskLocalState.isArchived(task.teamName, task.id)}
               onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
               onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
+              onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
               onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
               onDelete={() => handleDeleteTask(task.teamName, task.id)}
             >
@@ -726,6 +733,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                           onToggleArchive={() =>
                             taskLocalState.toggleArchive(task.teamName, task.id)
                           }
+                          onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
                           onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
                           onDelete={() => handleDeleteTask(task.teamName, task.id)}
                         >
@@ -832,6 +840,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
                           onToggleArchive={() =>
                             taskLocalState.toggleArchive(task.teamName, task.id)
                           }
+                          onMarkUnread={() => handleMarkTaskUnread(task.teamName, task.id)}
                           onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
                           onDelete={() => handleDeleteTask(task.teamName, task.id)}
                         >

@@ -563,7 +563,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         }}
                       >
                         <span className="flex flex-col items-center justify-center gap-0.5">
-                          <span className="leading-tight">{opt.label}</span>
+                          <span
+                            className={cn('leading-tight', opt.value === 'gpt-5.5' && 'font-bold')}
+                          >
+                            {opt.label}
+                          </span>
                           {sourceBadgeLabel ? (
                             <span
                               className="rounded-full border px-2 py-0.5 text-[10px] font-medium"

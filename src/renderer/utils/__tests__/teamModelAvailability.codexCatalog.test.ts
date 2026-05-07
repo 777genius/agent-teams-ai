@@ -116,7 +116,7 @@ function createAnthropicProviderStatus(
 }
 
 describe('team model availability Codex catalog integration', () => {
-  it('uses app-server catalog models even when the static Codex list has not learned a new model yet', () => {
+  it('uses app-server catalog models with runtime-backed labels', () => {
     const providerStatus = createCodexProviderStatus(
       [
         {
@@ -171,10 +171,60 @@ describe('team model availability Codex catalog integration', () => {
     expect(getAvailableTeamProviderModelOptions('codex', providerStatus)[1]).toMatchObject({
       value: 'gpt-5.5',
       label: '5.5',
-      badgeLabel: 'New',
       availabilityStatus: 'available',
     });
     expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toBeNull();
+  });
+
+  it('orders GPT-5.5 first after the virtual default option', () => {
+    const providerStatus = createCodexProviderStatus([
+      {
+        id: 'gpt-5.4',
+        launchModel: 'gpt-5.4',
+        displayName: 'GPT-5.4',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'app-server',
+        badgeLabel: '5.4',
+      },
+      {
+        id: 'gpt-5.5',
+        launchModel: 'gpt-5.5',
+        displayName: 'GPT-5.5',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+        defaultReasoningEffort: 'high',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+        badgeLabel: '5.5',
+      },
+      {
+        id: 'gpt-5.2',
+        launchModel: 'gpt-5.2',
+        displayName: 'GPT-5.2',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+        badgeLabel: '5.2',
+      },
+    ]);
+
+    expect(
+      getAvailableTeamProviderModelOptions('codex', providerStatus).map((model) => model.value)
+    ).toEqual(['', 'gpt-5.5', 'gpt-5.4', 'gpt-5.2']);
   });
 
   it('keeps existing disabled model policy on top of the dynamic catalog', () => {

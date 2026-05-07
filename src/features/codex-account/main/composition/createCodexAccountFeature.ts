@@ -692,6 +692,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       status: 'idle',
       error: loginState.status === 'failed' ? loginState.error : null,
       startedAt: null,
+      authUrl: null,
     };
   }
 

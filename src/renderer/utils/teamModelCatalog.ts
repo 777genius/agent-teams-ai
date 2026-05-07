@@ -84,6 +84,7 @@ const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   'claude-haiku-4-5': 'Haiku 4.5',
   'claude-haiku-4-5-20251001': 'Haiku 4.5',
   'gpt-5.4': 'GPT-5.4',
+  'gpt-5.5': 'GPT-5.5',
   'gpt-5.4-mini': 'GPT-5.4 Mini',
   'gpt-5.3-codex': 'GPT-5.3 Codex',
   'gpt-5.3-codex-spark': 'GPT-5.3 Codex Spark',
@@ -107,6 +108,7 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
     ],
     codex: [
       { value: '', label: 'Default', badgeLabel: 'Default' },
+      { value: 'gpt-5.5', label: 'GPT-5.5', badgeLabel: '5.5' },
       { value: 'gpt-5.4', label: 'GPT-5.4', badgeLabel: '5.4' },
       { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini', badgeLabel: '5.4-mini' },
       { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex', badgeLabel: '5.3-codex' },

@@ -91,6 +91,7 @@ import { CronScheduleInput } from '../schedule/CronScheduleInput';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
+import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
@@ -100,6 +101,7 @@ import {
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   buildReusableProviderPrepareModelResults,
@@ -153,7 +155,6 @@ import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   CreateScheduleInput,
   EffortLevel,
-  Project,
   ResolvedTeamMember,
   Schedule,
   ScheduleLaunchConfig,
@@ -404,7 +405,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const chipDraft = useChipDraftPersistence(
     `launchTeam:${effectiveTeamName || 'standalone'}:${props.mode}:chips`
   );
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -585,6 +586,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       fetchCliStatus,
     });
   }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled, open]);
+
+  const handleCodexReconnect = React.useCallback(() => {
+    void (async () => {
+      const success = await codexAccount.startChatgptLogin();
+      if (success) {
+        await refreshCliStatusForCurrentMode({
+          multimodelEnabled,
+          bootstrapCliStatus,
+          fetchCliStatus,
+        });
+      }
+    })();
+  }, [bootstrapCliStatus, codexAccount, fetchCliStatus, multimodelEnabled]);
 
   // Schedule store actions
   const createSchedule = useStore((s) => s.createSchedule);
@@ -1579,6 +1593,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // ---------------------------------------------------------------------------
 
   const repositoryGroups = useStore(useShallow((s) => s.repositoryGroups));
+  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -1589,30 +1604,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     let cancelled = false;
     void (async () => {
       try {
-        const apiProjects = (await api.getProjects()).filter(
-          (project) => !isEphemeralProjectPath(project.path)
-        );
+        const nextProjects = await loadProjectPathProjects({
+          defaultProjectPath,
+          repositoryGroups,
+        });
         if (cancelled) return;
 
-        const pathSet = new Set(apiProjects.map((p) => p.path));
-        const extras: Project[] = [];
-        for (const repo of repositoryGroups) {
-          for (const wt of repo.worktrees) {
-            if (!isEphemeralProjectPath(wt.path) && !pathSet.has(wt.path)) {
-              pathSet.add(wt.path);
-              extras.push({
-                id: wt.id,
-                path: wt.path,
-                name: wt.name,
-                sessions: [],
-                totalSessions: 0,
-                createdAt: wt.createdAt ?? Date.now(),
-              });
-            }
-          }
-        }
-
-        setProjects([...apiProjects, ...extras]);
+        setProjects(nextProjects);
       } catch (error) {
         if (cancelled) return;
         setProjectsError(error instanceof Error ? error.message : 'Failed to load projects');
@@ -1625,10 +1623,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, repositoryGroups]);
+  }, [open, repositoryGroups, defaultProjectPath]);
 
   // Pre-select defaultProjectPath (launch mode) or first project
-  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
 
   useEffect(() => {
     if (!open || cwdMode !== 'project' || selectedProjectPath) return;
@@ -1920,6 +1917,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }),
     [prepareChecks, prepareMessage, prepareState, prepareWarnings]
   );
+  const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
+    effectiveCliStatus,
+    selectedProviderIds: selectedMemberProviders,
+    prepareMessage: effectivePrepare.message,
+    prepareChecks,
+  });
   const launchInFlight = useStore((s) =>
     isLaunchMode && effectiveTeamName ? isTeamProvisioningActive(s, effectiveTeamName) : false
   );
@@ -2819,8 +2822,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   <ProvisioningProviderStatusList checks={prepareChecks} className="mt-1" />
                   {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
                     <div className="mt-0.5 space-y-0.5 pl-5">
-                      {prepareWarnings.map((warning) => (
-                        <p key={warning} className="text-[11px] text-sky-300">
+                      {prepareWarnings.map((warning, index) => (
+                        <p key={`${index}:${warning}`} className="text-[11px] text-sky-300">
                           {warning}
                         </p>
                       ))}
@@ -2858,9 +2861,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   ) : null}
                   {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
                     <div className="mt-1 space-y-0.5 pl-6">
-                      {prepareWarnings.map((warning) => (
+                      {prepareWarnings.map((warning, index) => (
                         <p
-                          key={warning}
+                          key={`${index}:${warning}`}
                           className="text-[11px]"
                           style={{ color: 'var(--warning-text)' }}
                         >
@@ -2889,6 +2892,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       </button>
                     ) : null}
                   </div>
+                  {showCodexReconnectPrompt ? (
+                    <div className="pl-6">
+                      <CodexReconnectPrompt
+                        authUrl={codexAccount.snapshot?.login.authUrl ?? null}
+                        reconnectBusy={codexAccount.loading}
+                        onReconnect={handleCodexReconnect}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

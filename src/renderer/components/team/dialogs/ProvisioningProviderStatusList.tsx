@@ -619,9 +619,9 @@ export const ProvisioningProviderStatusList = ({
             </div>
             {visibleDetails.length > 0 ? (
               <div className="mt-0.5 space-y-0.5 pl-4">
-                {visibleDetails.map((detail) => (
+                {visibleDetails.map((detail, index) => (
                   <p
-                    key={detail}
+                    key={`${check.providerId}:${index}:${detail}`}
                     className={`text-[10px] ${getDetailColorClass(detail, check.status)}`}
                   >
                     {detail}

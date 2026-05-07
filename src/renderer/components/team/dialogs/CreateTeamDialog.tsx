@@ -88,6 +88,7 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
+import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
@@ -95,6 +96,7 @@ import {
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   buildReusableProviderPrepareModelResults,
@@ -155,7 +157,6 @@ const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskU
 
 import type {
   EffortLevel,
-  Project,
   TeamCreateRequest,
   TeamFastMode,
   TeamProviderId,
@@ -402,7 +403,7 @@ export const CreateTeamDialog = ({
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
 
   // ── Transient UI state (NOT persisted) ───────────────────────────────
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -709,6 +710,19 @@ export const CreateTeamDialog = ({
     });
   }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled, open]);
 
+  const handleCodexReconnect = useCallback(() => {
+    void (async () => {
+      const success = await codexAccount.startChatgptLogin();
+      if (success) {
+        await refreshCliStatusForCurrentMode({
+          multimodelEnabled,
+          bootstrapCliStatus,
+          fetchCliStatus,
+        });
+      }
+    })();
+  }, [bootstrapCliStatus, codexAccount, fetchCliStatus, multimodelEnabled]);
+
   useEffect(() => {
     if (!open || !canCreate || !launchTeam) {
       prepareRequestSeqRef.current += 1;
@@ -948,34 +962,9 @@ export const CreateTeamDialog = ({
     let cancelled = false;
     void (async () => {
       try {
-        const nextProjects = (await api.getProjects()).filter(
-          (project) => !isEphemeralProjectPath(project.path)
-        );
+        const nextProjects = await loadProjectPathProjects({ defaultProjectPath });
         if (cancelled) {
           return;
-        }
-
-        // If defaultProjectPath is set but not in the fetched list (e.g. new project
-        // without Claude sessions), add it as a synthetic entry so the Combobox can
-        // display and select it.
-        const normalizedDefaultProjectPath = defaultProjectPath
-          ? normalizePath(defaultProjectPath)
-          : null;
-        if (
-          defaultProjectPath &&
-          normalizedDefaultProjectPath &&
-          !isEphemeralProjectPath(defaultProjectPath) &&
-          !nextProjects.some((p) => normalizePath(p.path) === normalizedDefaultProjectPath)
-        ) {
-          const folderName =
-            defaultProjectPath.split(/[/\\]/).filter(Boolean).pop() ?? defaultProjectPath;
-          nextProjects.unshift({
-            id: defaultProjectPath.replace(/[/\\]/g, '-'),
-            path: defaultProjectPath,
-            name: folderName,
-            sessions: [],
-            createdAt: Date.now(),
-          });
         }
 
         setProjects(nextProjects);
@@ -1552,6 +1541,12 @@ export const CreateTeamDialog = ({
       }),
     [prepareChecks, prepareMessage, prepareState, prepareWarnings]
   );
+  const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
+    effectiveCliStatus,
+    selectedProviderIds: selectedMemberProviders,
+    prepareMessage: effectivePrepare.message,
+    prepareChecks,
+  });
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 
@@ -2117,8 +2112,8 @@ export const CreateTeamDialog = ({
                 <ProvisioningProviderStatusList checks={prepareChecks} className="mt-1" />
                 {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
                   <div className="mt-0.5 space-y-0.5 pl-5">
-                    {prepareWarnings.map((warning) => (
-                      <p key={warning} className="text-[11px] text-sky-300">
+                    {prepareWarnings.map((warning, index) => (
+                      <p key={`${index}:${warning}`} className="text-[11px] text-sky-300">
                         {warning}
                       </p>
                     ))}
@@ -2152,9 +2147,9 @@ export const CreateTeamDialog = ({
                 ) : null}
                 {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
                   <div className="mt-1 space-y-0.5 pl-6">
-                    {prepareWarnings.map((warning) => (
+                    {prepareWarnings.map((warning, index) => (
                       <p
-                        key={warning}
+                        key={`${index}:${warning}`}
                         className="text-[11px]"
                         style={{ color: 'var(--warning-text)' }}
                       >
@@ -2166,6 +2161,15 @@ export const CreateTeamDialog = ({
                 <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
                   {getProvisioningFailureHint(effectivePrepare.message, prepareChecks)}
                 </p>
+                {showCodexReconnectPrompt ? (
+                  <div className="pl-6">
+                    <CodexReconnectPrompt
+                      authUrl={codexAccount.snapshot?.login.authUrl ?? null}
+                      reconnectBusy={codexAccount.loading}
+                      onReconnect={handleCodexReconnect}
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ResolvedTeamMember } from '@shared/types';
+import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 const member: ResolvedTeamMember = {
   name: 'alice',
@@ -22,7 +22,7 @@ const storeState = {
   selectedTeamData: {
     members: [member],
     isAlive: true,
-    tasks: [],
+    tasks: [] as TeamTaskWithKanban[],
   },
   selectedTeamName: 'northstar-core',
   progress: null as Record<string, unknown> | null,
@@ -118,7 +118,18 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 }));
 
 vi.mock('@renderer/components/team/members/CurrentTaskIndicator', () => ({
-  CurrentTaskIndicator: () => null,
+  CurrentTaskIndicator: ({
+    task,
+    activityLabel,
+  }: {
+    task: TeamTaskWithKanban;
+    activityLabel?: string;
+  }) =>
+    React.createElement(
+      'span',
+      { 'data-testid': 'hover-current-task' },
+      `${activityLabel ?? 'task'} ${task.id}`
+    ),
 }));
 
 import { MemberHoverCard } from '@renderer/components/team/members/MemberHoverCard';
@@ -300,6 +311,45 @@ describe('MemberHoverCard spawn-aware presence', () => {
 
     expect(host.textContent).toContain('Gemini quota retry');
     expect(host.textContent).not.toContain('idle');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not show a working-on task when the member is offline', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const task: TeamTaskWithKanban = {
+      id: 'task-active',
+      subject: 'Active work',
+      status: 'in_progress',
+    };
+    storeState.selectedTeamData.members = [{ ...member, currentTaskId: task.id }];
+    storeState.selectedTeamData.tasks = [task];
+    storeState.memberSpawnStatusesByTeam['northstar-core'].alice = {
+      status: 'offline',
+      launchState: 'confirmed_alive',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      runtimeAlive: false,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberHoverCard, {
+          name: 'alice',
+          children: React.createElement('button', { type: 'button' }, 'alice'),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="hover-current-task"]')).toBeNull();
+    expect(host.textContent).not.toContain('working on');
 
     await act(async () => {
       root.unmount();

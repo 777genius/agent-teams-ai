@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { CodexLoginLinkCopyButton } from '@renderer/components/runtime/CodexLoginLinkCopyButton';
 import { useStore } from '@renderer/store';
 import { AlertTriangle, Key, Link2, Loader2, Trash2 } from 'lucide-react';
 
@@ -715,6 +716,7 @@ export const ProviderRuntimeSettingsDialog = ({
     Boolean(codexConnection?.localActiveChatgptAccountPresent) && !codexHasActiveChatgptSession;
   const codexLoginPending =
     codexConnection?.login.status === 'starting' || codexConnection?.login.status === 'pending';
+  const codexLoginAuthUrl = codexConnection?.login.authUrl ?? null;
   const configurableAuthModes = selectedProvider?.connection?.configurableAuthModes ?? [];
   const configuredAuthMode: CliProviderAuthMode | undefined =
     selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
@@ -1389,14 +1391,31 @@ export const ProviderRuntimeSettingsDialog = ({
                           Refresh
                         </Button>
                         {codexLoginPending ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={codexActionBusy}
-                            onClick={() => void handleCodexCancelLogin()}
-                          >
-                            Cancel login
-                          </Button>
+                          <>
+                            <CodexLoginLinkCopyButton
+                              authUrl={codexLoginAuthUrl}
+                              disabled={codexActionBusy}
+                            />
+                            {codexLoginAuthUrl ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={codexActionBusy}
+                                onClick={() => void api.openExternal(codexLoginAuthUrl)}
+                              >
+                                <Link2 className="mr-1 size-3.5" />
+                                Open login
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={codexActionBusy}
+                              onClick={() => void handleCodexCancelLogin()}
+                            >
+                              Cancel login
+                            </Button>
+                          </>
                         ) : codexHasActiveChatgptSession ? (
                           <Button
                             size="sm"
@@ -1407,15 +1426,21 @@ export const ProviderRuntimeSettingsDialog = ({
                             Disconnect account
                           </Button>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={codexActionBusy}
-                            onClick={() => void handleCodexStartLogin()}
-                          >
-                            <Link2 className="mr-1 size-3.5" />
-                            {codexNeedsReconnect ? 'Reconnect ChatGPT' : 'Connect ChatGPT'}
-                          </Button>
+                          <>
+                            <CodexLoginLinkCopyButton
+                              authUrl={codexLoginAuthUrl}
+                              disabled={codexActionBusy}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={codexActionBusy}
+                              onClick={() => void handleCodexStartLogin()}
+                            >
+                              <Link2 className="mr-1 size-3.5" />
+                              {codexNeedsReconnect ? 'Reconnect ChatGPT' : 'Connect ChatGPT'}
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>

@@ -1,0 +1,6 @@
+- generic [ref=e1]:
+  - img
+  - img [ref=e2]
+  - generic [ref=e12]:
+    - generic [ref=e13]: Agent Teams AI
+    - generic [ref=e15]: Get more done by doing less.

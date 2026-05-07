@@ -40,6 +40,7 @@ const {
       status: 'idle' as CodexAccountLoginStatus,
       error: null as string | null,
       startedAt: null as string | null,
+      authUrl: null as string | null,
     },
   },
   loginStateListeners: new Set<() => void>(),
@@ -857,6 +858,7 @@ describe('createCodexAccountFeature', () => {
         status: 'pending',
         error: null,
         startedAt: '2026-04-20T12:00:00.000Z',
+        authUrl: 'https://chatgpt.com/auth',
       });
     });
 
@@ -872,6 +874,7 @@ describe('createCodexAccountFeature', () => {
       expect(pendingSnapshot.login).toMatchObject({
         status: 'pending',
         startedAt: '2026-04-20T12:00:00.000Z',
+        authUrl: 'https://chatgpt.com/auth',
       });
       expect(loginStartMock).toHaveBeenCalledTimes(1);
     } finally {
@@ -893,12 +896,14 @@ describe('createCodexAccountFeature', () => {
       status: 'pending',
       error: null,
       startedAt: '2026-04-20T12:00:00.000Z',
+      authUrl: 'https://chatgpt.com/auth',
     });
     loginCancelMock.mockImplementation(() => {
       emitLoginState({
         status: 'cancelled',
         error: null,
         startedAt: null,
+        authUrl: null,
       });
       for (const listener of loginSettledListeners) {
         listener();

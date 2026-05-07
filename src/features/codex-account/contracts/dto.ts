@@ -62,6 +62,7 @@ export interface CodexLoginStateDto {
   status: CodexAccountLoginStatus;
   error: string | null;
   startedAt: string | null;
+  authUrl?: string | null;
 }
 
 export interface CodexRuntimeContextDto {

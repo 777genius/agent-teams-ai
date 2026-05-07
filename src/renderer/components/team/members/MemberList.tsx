@@ -1,6 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import {
+  deriveReviewActivityTimerAnchor,
+  deriveWorkActivityTimerAnchor,
+  syncMemberActivityTimer,
+} from '@renderer/utils/memberActivityTimer';
+import { buildMemberColorMap, shouldDisplayMemberCurrentTask } from '@renderer/utils/memberHelpers';
 import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -9,6 +14,7 @@ import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { MemberCard } from './MemberCard';
 
 import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
+import type { MemberActivityTimerAnchor } from '@renderer/utils/memberActivityTimer';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
   LeadActivityState,
@@ -22,6 +28,7 @@ import type {
 } from '@shared/types';
 
 interface MemberListProps {
+  teamName?: string;
   members: ResolvedTeamMember[];
   memberTaskCounts?: Map<string, TaskStatusCounts>;
   taskMap?: Map<string, TeamTaskWithKanban>;
@@ -101,6 +108,45 @@ function areTaskStatusCountsMapsEquivalent(
   return true;
 }
 
+function areTaskWorkIntervalsEquivalent(
+  left: TeamTaskWithKanban['workIntervals'],
+  right: TeamTaskWithKanban['workIntervals']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.length !== right.length) return false;
+  return left.every((interval, index) => {
+    const other = right[index];
+    if (!other) return false;
+    return interval.startedAt === other.startedAt && interval.completedAt === other.completedAt;
+  });
+}
+
+function areTaskHistoryEventsEquivalent(
+  left: TeamTaskWithKanban['historyEvents'],
+  right: TeamTaskWithKanban['historyEvents']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.length !== right.length) return false;
+  return left.every((event, index) => {
+    const other = right[index];
+    if (!other) return false;
+    const leftRow = event as unknown as Record<string, unknown>;
+    const rightRow = other as unknown as Record<string, unknown>;
+    return (
+      event.id === other.id &&
+      event.type === other.type &&
+      event.timestamp === other.timestamp &&
+      leftRow.actor === rightRow.actor &&
+      leftRow.reviewer === rightRow.reviewer &&
+      leftRow.from === rightRow.from &&
+      leftRow.to === rightRow.to &&
+      leftRow.status === rightRow.status
+    );
+  });
+}
+
 function areMemberTaskMapsEquivalent(
   left: Map<string, TeamTaskWithKanban> | undefined,
   right: Map<string, TeamTaskWithKanban> | undefined
@@ -118,7 +164,9 @@ function areMemberTaskMapsEquivalent(
       leftTask.status !== rightTask.status ||
       leftTask.reviewer !== rightTask.reviewer ||
       leftTask.reviewState !== rightTask.reviewState ||
-      leftTask.kanbanColumn !== rightTask.kanbanColumn
+      leftTask.kanbanColumn !== rightTask.kanbanColumn ||
+      !areTaskWorkIntervalsEquivalent(leftTask.workIntervals, rightTask.workIntervals) ||
+      !areTaskHistoryEventsEquivalent(leftTask.historyEvents, rightTask.historyEvents)
     ) {
       return false;
     }
@@ -243,6 +291,7 @@ function areMemberListPropsEqual(
   next: Readonly<MemberListProps>
 ): boolean {
   return (
+    prev.teamName === next.teamName &&
     areResolvedMembersEquivalent(prev.members, next.members) &&
     areTaskStatusCountsMapsEquivalent(prev.memberTaskCounts, next.memberTaskCounts) &&
     areMemberTaskMapsEquivalent(prev.taskMap, next.taskMap) &&
@@ -270,6 +319,10 @@ interface MemberCardRowProps {
   memberColor: string;
   currentTask: TeamTaskWithKanban | null;
   reviewTask: TeamTaskWithKanban | null;
+  currentTaskTimer: MemberActivityTimerAnchor | null;
+  reviewTaskTimer: MemberActivityTimerAnchor | null;
+  currentTaskTimerRunning: boolean;
+  reviewTaskTimerRunning: boolean;
   awaitingReply: boolean;
   taskCounts?: TaskStatusCounts | null;
   runtimeSummary?: string;
@@ -299,6 +352,10 @@ const MemberCardRow = memo(function MemberCardRow({
   memberColor,
   currentTask,
   reviewTask,
+  currentTaskTimer,
+  reviewTaskTimer,
+  currentTaskTimerRunning,
+  reviewTaskTimerRunning,
   awaitingReply,
   taskCounts,
   runtimeSummary,
@@ -346,6 +403,10 @@ const MemberCardRow = memo(function MemberCardRow({
       leadActivity={isLeadMember(member) ? leadActivity : undefined}
       currentTask={currentTask}
       reviewTask={reviewTask}
+      currentTaskTimer={currentTaskTimer}
+      reviewTaskTimer={reviewTaskTimer}
+      currentTaskTimerRunning={currentTaskTimerRunning}
+      reviewTaskTimerRunning={reviewTaskTimerRunning}
       isAwaitingReply={awaitingReply}
       isRemoved={isRemoved}
       runtimeSummary={runtimeSummary}
@@ -370,6 +431,7 @@ const MemberCardRow = memo(function MemberCardRow({
 });
 
 export const MemberList = memo(function MemberList({
+  teamName = '__unknown_team__',
   members,
   memberTaskCounts,
   taskMap,
@@ -434,6 +496,124 @@ export const MemberList = memo(function MemberList({
     return result;
   }, [taskMap]);
 
+  const isMemberActivityTimerRunning = useCallback(
+    (
+      spawnEntry: MemberSpawnStatusEntry | undefined,
+      runtimeEntry: TeamAgentRuntimeEntry | undefined
+    ): boolean => {
+      if (isTeamAlive === false) return false;
+      if (
+        spawnEntry?.status === 'offline' ||
+        spawnEntry?.status === 'error' ||
+        spawnEntry?.status === 'skipped'
+      ) {
+        return false;
+      }
+      if (spawnEntry?.runtimeAlive === false && spawnEntry.status !== 'online') {
+        return false;
+      }
+      if (
+        runtimeEntry?.livenessKind === 'shell_only' ||
+        runtimeEntry?.livenessKind === 'registered_only' ||
+        runtimeEntry?.livenessKind === 'stale_metadata' ||
+        runtimeEntry?.livenessKind === 'not_found'
+      ) {
+        return false;
+      }
+      return true;
+    },
+    [isTeamAlive]
+  );
+
+  const getActivityTimerRunId = useCallback(
+    (running: boolean): string | null => {
+      if (!running) return null;
+      return runtimeRunId ?? 'runtime:unknown';
+    },
+    [runtimeRunId]
+  );
+
+  const withActivityTimerRunId = useCallback(
+    (
+      anchor: MemberActivityTimerAnchor | null,
+      running: boolean
+    ): MemberActivityTimerAnchor | null => {
+      if (!anchor) return null;
+      return {
+        ...anchor,
+        runId: getActivityTimerRunId(running),
+      };
+    },
+    [getActivityTimerRunId]
+  );
+
+  useEffect(() => {
+    if (!taskMap) return;
+    const nowMs = Date.now();
+    for (const member of activeMembers) {
+      const spawnEntry = memberSpawnStatuses?.get(member.name);
+      const runtimeEntry = memberRuntimeEntries?.get(member.name);
+      const running = isMemberActivityTimerRunning(spawnEntry, runtimeEntry);
+      const currentTaskCandidate = member.currentTaskId
+        ? (taskMap.get(member.currentTaskId) ?? null)
+        : null;
+      if (isDisplayableCurrentTask(currentTaskCandidate)) {
+        const anchor = deriveWorkActivityTimerAnchor(currentTaskCandidate, {
+          teamName,
+          memberName: member.name,
+        });
+        if (anchor) {
+          const visible =
+            running &&
+            shouldDisplayMemberCurrentTask({
+              member,
+              isTeamAlive,
+              spawnStatus: spawnEntry?.status,
+              spawnLaunchState: spawnEntry?.launchState,
+              spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+              runtimeEntry,
+            });
+          syncMemberActivityTimer({
+            timerId: anchor.timerId,
+            startedAtMs: anchor.startedAtMs,
+            baseElapsedMs: anchor.baseElapsedMs,
+            running: visible,
+            runId: getActivityTimerRunId(visible),
+            nowMs,
+          });
+        }
+      }
+
+      const reviewTask = reviewTaskByMember.get(member.name) ?? null;
+      if (reviewTask) {
+        const anchor = deriveReviewActivityTimerAnchor(reviewTask, {
+          teamName,
+          memberName: member.name,
+        });
+        if (anchor) {
+          syncMemberActivityTimer({
+            timerId: anchor.timerId,
+            startedAtMs: anchor.startedAtMs,
+            baseElapsedMs: anchor.baseElapsedMs,
+            running,
+            runId: getActivityTimerRunId(running),
+            nowMs,
+          });
+        }
+      }
+    }
+  }, [
+    activeMembers,
+    getActivityTimerRunId,
+    isMemberActivityTimerRunning,
+    isTeamAlive,
+    memberRuntimeEntries,
+    memberSpawnStatuses,
+    reviewTaskByMember,
+    taskMap,
+    teamName,
+  ]);
+
   const buildRuntimeSummary = useCallback(
     (
       member: ResolvedTeamMember,
@@ -457,16 +637,44 @@ export const MemberList = memo(function MemberList({
     <div ref={containerRef} className="flex flex-col gap-1">
       <div className={gridClass}>
         {activeMembers.map((member) => {
+          const spawnEntry = memberSpawnStatuses?.get(member.name);
+          const runtimeEntry = memberRuntimeEntries?.get(member.name);
           const currentTaskCandidate =
             member.currentTaskId && taskMap ? (taskMap.get(member.currentTaskId) ?? null) : null;
-          const currentTask = isDisplayableCurrentTask(currentTaskCandidate)
-            ? currentTaskCandidate
-            : null;
+          const currentTask =
+            isDisplayableCurrentTask(currentTaskCandidate) &&
+            shouldDisplayMemberCurrentTask({
+              member,
+              isTeamAlive,
+              spawnStatus: spawnEntry?.status,
+              spawnLaunchState: spawnEntry?.launchState,
+              spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+              runtimeEntry,
+            })
+              ? currentTaskCandidate
+              : null;
           const reviewCandidate = reviewTaskByMember.get(member.name) ?? null;
           const reviewTask =
             reviewCandidate && reviewCandidate.id !== currentTask?.id ? reviewCandidate : null;
-          const spawnEntry = memberSpawnStatuses?.get(member.name);
-          const runtimeEntry = memberRuntimeEntries?.get(member.name);
+          const activityTimerRunning = isMemberActivityTimerRunning(spawnEntry, runtimeEntry);
+          const currentTaskTimer = withActivityTimerRunId(
+            currentTask
+              ? deriveWorkActivityTimerAnchor(currentTask, {
+                  teamName,
+                  memberName: member.name,
+                })
+              : null,
+            activityTimerRunning
+          );
+          const reviewTaskTimer = withActivityTimerRunId(
+            reviewTask
+              ? deriveReviewActivityTimerAnchor(reviewTask, {
+                  teamName,
+                  memberName: member.name,
+                })
+              : null,
+            activityTimerRunning
+          );
           return (
             <MemberCardRow
               key={member.name}
@@ -475,6 +683,10 @@ export const MemberList = memo(function MemberList({
               memberColor={colorMap.get(member.name) ?? 'blue'}
               currentTask={currentTask}
               reviewTask={reviewTask}
+              currentTaskTimer={currentTaskTimer}
+              reviewTaskTimer={reviewTaskTimer}
+              currentTaskTimerRunning={activityTimerRunning}
+              reviewTaskTimerRunning={activityTimerRunning}
               awaitingReply={
                 isTeamAlive !== false && Boolean(pendingRepliesByMember?.[member.name])
               }
@@ -516,6 +728,10 @@ export const MemberList = memo(function MemberList({
                 memberColor={colorMap.get(member.name) ?? 'blue'}
                 currentTask={null}
                 reviewTask={null}
+                currentTaskTimer={null}
+                reviewTaskTimer={null}
+                currentTaskTimerRunning={false}
+                reviewTaskTimerRunning={false}
                 awaitingReply={false}
                 taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
                 runtimeSummary={buildRuntimeSummary(member, undefined, undefined)}

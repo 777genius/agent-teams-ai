@@ -27,6 +27,7 @@ import type {
 
 const LOG_PREVIEW_FALLBACK_WIDTH = 260;
 const LOG_PREVIEW_FALLBACK_HEIGHT = 292;
+const NEW_LOG_HIGHLIGHT_MS = 1_000;
 
 interface StableRectLike {
   left: number;
@@ -75,16 +76,18 @@ function formatRelativeTime(timestamp: string): string {
 function itemIcon(item: MemberLogPreviewItem): React.JSX.Element {
   const className = 'size-3.5 shrink-0';
   const title = item.title.trim().toLowerCase();
+  if (item.tone === 'error') {
+    return <AlertCircle className={`${className} text-rose-300`} />;
+  }
   if (
+    title.includes('message') ||
+    title.includes('comment') ||
     title === 'send message' ||
     title === 'message sent' ||
     title === 'add comment' ||
     title === 'comment added'
   ) {
     return <MessageSquareText className={`${className} text-sky-300`} />;
-  }
-  if (item.tone === 'error') {
-    return <AlertCircle className={`${className} text-rose-300`} />;
   }
   if (item.kind === 'tool_result') {
     return <CheckCircle2 className={`${className} text-emerald-300`} />;
@@ -106,6 +109,14 @@ function resolveEmptyText(preview: MemberLogPreviewMember | undefined, loading: 
   return 'No recent logs';
 }
 
+function compactDisplayTitle(item: MemberLogPreviewItem): string {
+  const title = item.title.trim();
+  if (item.kind === 'tool_result' && title.toLowerCase().endsWith(' result')) {
+    return title.slice(0, -' result'.length).trim() || title;
+  }
+  return title;
+}
+
 function setShellHidden(shell: HTMLDivElement): void {
   shell.style.opacity = '0';
   shell.style.pointerEvents = 'none';
@@ -125,7 +136,12 @@ export const GraphMemberLogPreviewHud = ({
   const worldLayerRef = useRef<HTMLDivElement | null>(null);
   const shellRefs = useRef(new Map<string, HTMLDivElement | null>());
   const visibleKeyRef = useRef('');
+  const knownItemIdsByMemberRef = useRef(new Map<string, Set<string>>());
+  const highlightTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const [visibleMemberNames, setVisibleMemberNames] = useState<string[]>([]);
+  const [highlightedItemIds, setHighlightedItemIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
   const { teamData } = useGraphActivityContext(teamName);
   const members = teamData?.members ?? [];
   const laneIdsByMember = useMemo(() => buildGraphLogPreviewLaneIdsByMember(members), [members]);
@@ -154,6 +170,69 @@ export const GraphMemberLogPreviewHud = ({
     },
     [onOpenMemberProfile]
   );
+
+  useEffect(() => {
+    knownItemIdsByMemberRef.current.clear();
+    setHighlightedItemIds(new Set());
+    for (const timer of highlightTimersRef.current.values()) {
+      clearTimeout(timer);
+    }
+    highlightTimersRef.current.clear();
+  }, [teamName]);
+
+  useEffect(() => {
+    return () => {
+      for (const timer of highlightTimersRef.current.values()) {
+        clearTimeout(timer);
+      }
+      highlightTimersRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const newItemIds: string[] = [];
+    for (const [memberKey, preview] of previewsByMember) {
+      const currentIds = new Set(preview.items.map((item) => item.id));
+      const knownIds = knownItemIdsByMemberRef.current.get(memberKey);
+      if (knownIds) {
+        for (const itemId of currentIds) {
+          if (!knownIds.has(itemId)) {
+            newItemIds.push(itemId);
+          }
+        }
+      }
+      knownItemIdsByMemberRef.current.set(memberKey, currentIds);
+    }
+
+    if (newItemIds.length === 0) return;
+
+    setHighlightedItemIds((current) => {
+      const next = new Set(current);
+      for (const itemId of newItemIds) {
+        next.add(itemId);
+      }
+      return next;
+    });
+
+    for (const itemId of newItemIds) {
+      const existingTimer = highlightTimersRef.current.get(itemId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+      const timer = setTimeout(() => {
+        highlightTimersRef.current.delete(itemId);
+        setHighlightedItemIds((current) => {
+          if (!current.has(itemId)) return current;
+          const next = new Set(current);
+          next.delete(itemId);
+          return next;
+        });
+      }, NEW_LOG_HIGHLIGHT_MS);
+      highlightTimersRef.current.set(itemId, timer);
+    }
+  }, [enabled, previewsByMember]);
 
   useLayoutEffect(() => {
     if (!enabled || ownerNodes.length === 0) {
@@ -285,29 +364,57 @@ export const GraphMemberLogPreviewHud = ({
   }, [enabled, forwardWheelToGraph, ownerNodes]);
 
   const renderItem = useCallback(
-    (memberName: string, item: MemberLogPreviewItem) => (
-      <button
-        key={item.id}
-        type="button"
-        className="block h-14 min-h-14 w-full min-w-0 overflow-hidden rounded-md border border-white/10 bg-[rgba(8,14,28,0.52)] px-2.5 py-2 text-left text-[10px] leading-3 text-slate-400 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]"
-        onClick={() => openLogs(memberName)}
-      >
-        <span
-          className="mr-1.5 inline-flex size-4 shrink-0 translate-y-0.5 items-center justify-center rounded bg-white/5 align-middle"
-          aria-hidden="true"
+    (memberName: string, item: MemberLogPreviewItem) => {
+      const relativeTime = formatRelativeTime(item.timestamp);
+      const displayTitle = compactDisplayTitle(item);
+      const previewText = item.preview || item.sourceLabel || 'Log event';
+      const titleText = relativeTime
+        ? `${item.title} ${relativeTime} ${previewText}`
+        : `${item.title} ${previewText}`;
+      const isHighlighted = highlightedItemIds.has(item.id);
+
+      return (
+        <button
+          key={item.id}
+          type="button"
+          className={[
+            'block h-14 min-h-14 w-full min-w-0 overflow-hidden rounded-md border px-2.5 py-1.5 text-left text-slate-400 transition-[border-color,background-color,box-shadow] duration-500 hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]',
+            isHighlighted
+              ? 'border-sky-300/70 bg-[rgba(14,34,62,0.74)] shadow-[0_0_0_1px_rgba(125,211,252,0.30),0_0_18px_rgba(56,189,248,0.22)]'
+              : 'border-white/10 bg-[rgba(8,14,28,0.52)]',
+          ].join(' ')}
+          title={titleText}
+          onClick={() => openLogs(memberName)}
         >
-          {itemIcon(item)}
-        </span>
-        <span className="align-baseline text-[11px] font-medium leading-4 text-slate-200">
-          {item.title}
-        </span>{' '}
-        <span className="align-baseline text-[9px] leading-4 text-slate-500">
-          {formatRelativeTime(item.timestamp)}
-        </span>{' '}
-        <span className="align-baseline">{item.preview || item.sourceLabel || 'Log event'}</span>
-      </button>
-    ),
-    [openLogs]
+          <span
+            className="float-left mr-2 inline-flex size-5 shrink-0 items-center justify-center rounded bg-white/5 align-top"
+            aria-hidden="true"
+          >
+            {itemIcon(item)}
+          </span>
+          <span
+            className="inline-flex h-5 items-center align-top"
+            style={{ position: 'relative', top: '-3px' }}
+          >
+            <span className="text-[11px] font-medium leading-none text-slate-200">
+              {displayTitle}
+            </span>
+            {relativeTime ? (
+              <span className="ml-1 text-[9px] font-normal leading-none text-slate-500">
+                {relativeTime}
+              </span>
+            ) : null}
+          </span>
+          <span
+            className="ml-1 break-words align-top text-[10px] leading-5 text-slate-300/85"
+            style={{ position: 'relative', top: '-3px' }}
+          >
+            {previewText}
+          </span>
+        </button>
+      );
+    },
+    [highlightedItemIds, openLogs]
   );
 
   if (!enabled || ownerNodes.length === 0) {

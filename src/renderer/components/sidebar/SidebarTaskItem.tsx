@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
+import { clearTaskManualUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -157,6 +158,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
       style={{ borderColor: 'var(--color-border)' }}
       onClick={() => {
         if (!isRenaming) {
+          clearTaskManualUnread(task.teamName, task.id);
           openGlobalTaskDetail(task.teamName, task.id);
         }
       }}

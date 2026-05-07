@@ -14,6 +14,7 @@ const STALE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 interface TaskReadEntry {
   readIds: string[];
   lastUpdated: number;
+  manualUnread?: boolean;
 }
 
 type ReadState = Record<string, TaskReadEntry>; // key = "teamName/taskId"
@@ -116,9 +117,12 @@ export function getSnapshot(): ReadState {
  * Mark specific comment IDs as read for a given team/task.
  */
 export function markCommentsRead(teamName: string, taskId: string, commentIds: string[]): void {
-  if (commentIds.length === 0) return;
   const key = `${teamName}/${taskId}`;
   const prev = cache[key];
+  if (commentIds.length === 0) {
+    if (prev?.manualUnread) clearTaskManualUnread(teamName, taskId);
+    return;
+  }
   const prevSet = new Set(prev?.readIds ?? []);
   let changed = false;
   for (const id of commentIds) {
@@ -127,7 +131,7 @@ export function markCommentsRead(teamName: string, taskId: string, commentIds: s
       changed = true;
     }
   }
-  if (!changed) return;
+  if (!changed && !prev?.manualUnread) return;
   cache = {
     ...cache,
     [key]: {
@@ -148,12 +152,49 @@ export function markAsRead(teamName: string, taskId: string, latestTimestamp: nu
   const prev = cache[key];
   // Update lastUpdated to at least this timestamp (for legacy migration support)
   const prevLastUpdated = prev?.lastUpdated ?? 0;
-  if (latestTimestamp <= prevLastUpdated && prev) return;
+  if (latestTimestamp <= prevLastUpdated && prev && !prev.manualUnread) return;
   cache = {
     ...cache,
     [key]: {
       readIds: prev?.readIds ?? [],
       lastUpdated: Math.max(prevLastUpdated, latestTimestamp),
+    },
+  };
+  notify();
+  scheduleSave();
+}
+
+/**
+ * Manually mark a task as unread even when it has no unread comments.
+ */
+export function markTaskUnread(teamName: string, taskId: string): void {
+  const key = `${teamName}/${taskId}`;
+  const prev = cache[key];
+  if (prev?.manualUnread) return;
+  cache = {
+    ...cache,
+    [key]: {
+      readIds: prev?.readIds ?? [],
+      lastUpdated: Date.now(),
+      manualUnread: true,
+    },
+  };
+  notify();
+  scheduleSave();
+}
+
+/**
+ * Clear only the manual unread marker. Comment read state is preserved.
+ */
+export function clearTaskManualUnread(teamName: string, taskId: string): void {
+  const key = `${teamName}/${taskId}`;
+  const prev = cache[key];
+  if (!prev?.manualUnread) return;
+  cache = {
+    ...cache,
+    [key]: {
+      readIds: prev.readIds,
+      lastUpdated: Date.now(),
     },
   };
   notify();
@@ -177,9 +218,9 @@ export function getUnreadCount(
   taskId: string,
   comments: { id?: string; createdAt: string }[]
 ): number {
-  if (!comments || comments.length === 0) return 0;
   const key = `${teamName}/${taskId}`;
   const entry = readState[key];
+  if (!comments || comments.length === 0) return entry?.manualUnread ? 1 : 0;
   if (!entry) return comments.length;
 
   const readSet = new Set(entry.readIds);
@@ -200,7 +241,7 @@ export function getUnreadCount(
     // Otherwise → unread
     count++;
   }
-  return count;
+  return entry.manualUnread && count === 0 ? 1 : count;
 }
 
 /**
@@ -272,6 +313,7 @@ async function load(): Promise<void> {
             merged[k] = {
               readIds: Array.from(mergedIds),
               lastUpdated: Math.max(prev.lastUpdated, entry.lastUpdated),
+              ...(prev.manualUnread || entry.manualUnread ? { manualUnread: true } : {}),
             };
           }
         }
@@ -290,6 +332,7 @@ async function load(): Promise<void> {
               merged[k] = {
                 readIds: [...new Set([...merged[k].readIds, ...v.readIds])],
                 lastUpdated: Math.max(merged[k].lastUpdated, v.lastUpdated),
+                ...(merged[k].manualUnread || v.manualUnread ? { manualUnread: true } : {}),
               };
             }
           }

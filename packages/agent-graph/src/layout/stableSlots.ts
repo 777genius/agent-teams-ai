@@ -128,6 +128,7 @@ const SLOT_GEOMETRY = {
 const PROCESS_RAIL_NODE_GAP = 42;
 const PROCESS_RAIL_NODE_FOOTPRINT = 28;
 const GEOMETRY_EPSILON = 0.001;
+const FEED_HEADER_BOTTOM_GAP = 4;
 const SMALL_TEAM_CARDINAL_RADIUS_STEP = 24;
 const SMALL_TEAM_CARDINAL_VERTICAL_PADDING = 77.7;
 const GRID_UNDER_LEAD_COLUMN_COUNT = 2;
@@ -372,7 +373,7 @@ function buildOwnerFootprint(args: {
   const boardBandHeight = Math.max(
     activityColumnHeight,
     logColumnHeight,
-    SLOT_GEOMETRY.kanbanBandHeight
+    SLOT_GEOMETRY.kanbanBandHeight + getKanbanBandTopInset({ activityColumnWidth, logColumnWidth })
   );
   const innerContentWidth = Math.max(SLOT_GEOMETRY.ownerMinWidth, processBandWidth, boardBandWidth);
   const slotWidth = innerContentWidth + SLOT_GEOMETRY.memberSlotInnerPadding * 2;
@@ -1362,9 +1363,10 @@ function buildSlotFrameAtOwnerAnchor(
     footprint.activityColumnWidth > 0 || footprint.logColumnWidth > 0
       ? SLOT_GEOMETRY.boardColumnGap
       : 0;
+  const kanbanBandTopInset = getKanbanBandTopInset(footprint);
   const kanbanBandRect = createRect(
     logColumnRect.right + feedToKanbanGap,
-    boardBandRect.top,
+    boardBandRect.top + kanbanBandTopInset,
     footprint.kanbanBandWidth,
     footprint.kanbanBandHeight
   );
@@ -1388,6 +1390,19 @@ function buildSlotFrameAtOwnerAnchor(
 
 function getOwnerAnchorTopOffset(): number {
   return SLOT_GEOMETRY.memberSlotInnerPadding + SLOT_GEOMETRY.ownerBandHeight / 2;
+}
+
+function getKanbanBandTopInset(args: {
+  activityColumnWidth: number;
+  logColumnWidth: number;
+}): number {
+  if (args.activityColumnWidth <= 0 && args.logColumnWidth <= 0) {
+    return 0;
+  }
+
+  const feedCardTopInset = ACTIVITY_LANE.headerHeight + FEED_HEADER_BOTTOM_GAP;
+  const taskPillTopInset = KANBAN_ZONE.headerHeight - TASK_PILL.height / 2;
+  return Math.max(0, feedCardTopInset - taskPillTopInset);
 }
 
 function buildCandidateAssignments(maxRingExclusive: number): GraphOwnerSlotAssignment[] {

@@ -30,6 +30,7 @@ import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
 import { MemberPresenceDot } from './MemberPresenceDot';
 
+import type { MemberActivityTimerAnchor } from '@renderer/utils/memberActivityTimer';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
   LeadActivityState,
@@ -54,6 +55,10 @@ interface MemberCardProps {
   leadActivity?: LeadActivityState;
   currentTask?: TeamTaskWithKanban | null;
   reviewTask?: TeamTaskWithKanban | null;
+  currentTaskTimer?: MemberActivityTimerAnchor | null;
+  reviewTaskTimer?: MemberActivityTimerAnchor | null;
+  currentTaskTimerRunning?: boolean;
+  reviewTaskTimerRunning?: boolean;
   isAwaitingReply?: boolean;
   isRemoved?: boolean;
   spawnStatus?: MemberSpawnStatus;
@@ -132,6 +137,10 @@ export const MemberCard = memo(function MemberCard({
   leadActivity,
   currentTask,
   reviewTask,
+  currentTaskTimer,
+  reviewTaskTimer,
+  currentTaskTimerRunning = isTeamAlive !== false,
+  reviewTaskTimerRunning = isTeamAlive !== false,
   isAwaitingReply,
   isRemoved,
   spawnStatus,
@@ -433,6 +442,8 @@ export const MemberCard = memo(function MemberCard({
                   task={currentTask}
                   borderColor={colors.border}
                   activityLabel="working on"
+                  activityTimer={currentTaskTimer}
+                  isTimerRunning={currentTaskTimerRunning}
                   onOpenTask={onOpenTask}
                 />
               ) : null}
@@ -441,6 +452,8 @@ export const MemberCard = memo(function MemberCard({
                   task={reviewTask}
                   borderColor={colors.border}
                   activityLabel="reviewing"
+                  activityTimer={reviewTaskTimer}
+                  isTimerRunning={reviewTaskTimerRunning}
                   onOpenTask={onOpenReviewTask}
                 />
               ) : null}

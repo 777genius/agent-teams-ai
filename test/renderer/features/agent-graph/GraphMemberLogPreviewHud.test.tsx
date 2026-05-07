@@ -6,7 +6,7 @@ import { GraphMemberLogPreviewHud } from '@features/agent-graph/renderer/ui/Grap
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 
-const previewsByMember = new Map([
+const basePreviewsByMember = new Map([
   [
     'team-lead',
     {
@@ -43,6 +43,24 @@ const previewsByMember = new Map([
           preview: 'pnpm test',
           tone: 'warning' as const,
         },
+        {
+          id: 'preview-2',
+          kind: 'tool_result' as const,
+          provider: 'opencode_runtime' as const,
+          timestamp: '2026-04-03T00:00:30.000Z',
+          title: 'Send message error',
+          preview: 'OpenCode tool failed without output',
+          tone: 'error' as const,
+        },
+        {
+          id: 'preview-3',
+          kind: 'tool_result' as const,
+          provider: 'opencode_runtime' as const,
+          timestamp: '2026-04-03T00:00:40.000Z',
+          title: 'Bash result',
+          preview: 'Tests passed',
+          tone: 'success' as const,
+        },
       ],
       coverage: [{ provider: 'claude_transcript' as const, status: 'included' as const }],
       warnings: [],
@@ -52,11 +70,12 @@ const previewsByMember = new Map([
     },
   ],
 ]);
+let mockedPreviewsByMember = basePreviewsByMember;
 
 vi.mock('@features/agent-graph/renderer/hooks/useGraphMemberLogPreviews', () => ({
   buildGraphLogPreviewLaneIdsByMember: () => ({ alice: 'secondary:opencode:alice' }),
   useGraphMemberLogPreviews: () => ({
-    previewsByMember,
+    previewsByMember: mockedPreviewsByMember,
     loading: false,
     error: null,
     reload: vi.fn(),
@@ -93,6 +112,7 @@ describe('GraphMemberLogPreviewHud', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-03T00:01:00.000Z'));
+    mockedPreviewsByMember = basePreviewsByMember;
   });
 
   afterEach(() => {
@@ -141,6 +161,20 @@ describe('GraphMemberLogPreviewHud', () => {
       button.textContent?.includes('pnpm test')
     );
     expect(row).not.toBeUndefined();
+    expect(row?.querySelector('.float-left')).not.toBeNull();
+    expect(row?.querySelector('.line-clamp-3')).toBeNull();
+    expect(row?.textContent).toContain('pnpm test');
+
+    const errorRow = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('OpenCode tool failed')
+    );
+    expect(errorRow?.querySelector('svg.text-rose-300')).not.toBeNull();
+
+    const resultRow = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Tests passed')
+    );
+    expect(resultRow?.textContent).toContain('Bash');
+    expect(resultRow?.textContent).not.toContain('Bash result');
 
     await act(async () => {
       row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -160,6 +194,83 @@ describe('GraphMemberLogPreviewHud', () => {
     });
 
     expect(onOpenMemberProfile).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('briefly highlights a newly appeared preview row', async () => {
+    const node: GraphNode = {
+      id: 'member:alpha-team:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'active',
+      domainRef: { kind: 'member', teamName: 'alpha-team', memberName: 'alice' },
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderHud = (): void => {
+      root.render(
+        <GraphMemberLogPreviewHud
+          teamName="alpha-team"
+          nodes={[node]}
+          getLogWorldRect={() => ({
+            left: 40,
+            top: 80,
+            right: 300,
+            bottom: 372,
+            width: 260,
+            height: 292,
+          })}
+          getCameraZoom={() => 1}
+          worldToScreen={(x, y) => ({ x, y })}
+          getViewportSize={() => ({ width: 1200, height: 800 })}
+          focusNodeIds={null}
+        />
+      );
+    };
+
+    await act(async () => {
+      renderHud();
+      await Promise.resolve();
+    });
+
+    const alicePreview = basePreviewsByMember.get('alice')!;
+    mockedPreviewsByMember = new Map(basePreviewsByMember);
+    mockedPreviewsByMember.set('alice', {
+      ...alicePreview,
+      items: [
+        {
+          id: 'preview-new',
+          kind: 'text' as const,
+          provider: 'claude_transcript' as const,
+          timestamp: '2026-04-03T00:01:00.000Z',
+          title: 'Assistant',
+          preview: 'new compact log',
+          tone: 'neutral' as const,
+        },
+        ...alicePreview.items,
+      ],
+    });
+
+    await act(async () => {
+      renderHud();
+      await Promise.resolve();
+    });
+
+    const newRow = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('new compact log')
+    );
+    expect(newRow?.className).toContain('border-sky-300/70');
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
+    });
+
+    expect(newRow?.className).not.toContain('border-sky-300/70');
 
     act(() => {
       root.unmount();

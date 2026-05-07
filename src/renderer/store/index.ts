@@ -80,6 +80,7 @@ import type {
 } from '@shared/types';
 
 const ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING = false;
+const ENABLE_IN_PROGRESS_CHANGE_PRESENCE_BACKGROUND_POLL = false;
 const IN_PROGRESS_CHANGE_PRESENCE_POLL_MS = 10_000;
 const FINISHED_TOOL_DISPLAY_MS = 1_500;
 const MAX_TOOL_HISTORY_PER_MEMBER = 6;
@@ -257,14 +258,20 @@ export function initializeNotificationListeners(): () => void {
   cleanupFns.push(() => {
     if (cliStatusTimer) clearTimeout(cliStatusTimer);
   });
-  // This lightweight renderer-side poll keeps visible in-progress task badges fresh.
-  // It is intentionally independent from the backend log-source tracking feature flag below.
-  const inProgressChangePresencePollTimer = setInterval(() => {
-    void pollVisibleTeamInProgressChangePresence();
-  }, IN_PROGRESS_CHANGE_PRESENCE_POLL_MS);
-  cleanupFns.push(() => {
-    clearInterval(inProgressChangePresencePollTimer);
-  });
+  // TODO(task-change-presence): re-enable this only after the board uses a bounded
+  // batch/priority presence pipeline. The old one-task-per-tick poll was accurate
+  // only after enough time or after opening a task popup, while still doing periodic
+  // summary extraction work in the background. The replacement should check visible
+  // tasks first, dedupe in-flight requests, keep popup/full diff requests higher
+  // priority, and never render "unknown" as "no_changes".
+  if (ENABLE_IN_PROGRESS_CHANGE_PRESENCE_BACKGROUND_POLL) {
+    const inProgressChangePresencePollTimer = setInterval(() => {
+      void pollVisibleTeamInProgressChangePresence();
+    }, IN_PROGRESS_CHANGE_PRESENCE_POLL_MS);
+    cleanupFns.push(() => {
+      clearInterval(inProgressChangePresencePollTimer);
+    });
+  }
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const teamLastRelevantActivityAt = new Map<string, number>();

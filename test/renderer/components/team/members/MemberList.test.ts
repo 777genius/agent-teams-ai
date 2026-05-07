@@ -89,6 +89,24 @@ function failedSpawnStatus(reason: string): MemberSpawnStatusEntry {
   };
 }
 
+function offlineSpawnStatus(): MemberSpawnStatusEntry {
+  return {
+    status: 'offline',
+    launchState: 'confirmed_alive',
+    updatedAt: '2026-04-23T10:00:00.000Z',
+    runtimeAlive: false,
+    bootstrapConfirmed: false,
+  };
+}
+
+function activeTask(id = 'task-active'): TeamTaskWithKanban {
+  return {
+    id,
+    subject: 'Active task',
+    status: 'in_progress',
+  };
+}
+
 describe('MemberList spawn-status memoization', () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -233,6 +251,61 @@ describe('MemberList spawn-status memoization', () => {
 
     expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
     expect(host.querySelector('[data-testid="review-bob"]')?.textContent).toBe('task-review');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not pass active current tasks to cards while the whole team is offline', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const task = activeTask();
+    const members: ResolvedTeamMember[] = [{ ...member, currentTaskId: task.id }];
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: false,
+          taskMap: new Map([[task.id, task]]),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not pass active current tasks to cards for individually offline members', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const task = activeTask();
+    const members: ResolvedTeamMember[] = [{ ...member, currentTaskId: task.id }];
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: true,
+          taskMap: new Map([[task.id, task]]),
+          memberSpawnStatuses: new Map([['bob', offlineSpawnStatus()]]),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
 
     await act(async () => {
       root.unmount();

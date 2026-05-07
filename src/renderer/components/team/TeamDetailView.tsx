@@ -809,6 +809,7 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
   return (
     <MemberList
       {...props}
+      teamName={teamName}
       leadActivity={leadActivity}
       memberSpawnStatuses={memberSpawnStatusMap}
       memberRuntimeEntries={memberRuntimeMap}

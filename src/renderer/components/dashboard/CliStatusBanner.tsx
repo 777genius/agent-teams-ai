@@ -29,6 +29,7 @@ import {
   isConnectionManagedRuntimeProvider,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
+import { CodexLoginLinkCopyButton } from '@renderer/components/runtime/CodexLoginLinkCopyButton';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
 import { getProviderRuntimeBackendSummary } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import { ProviderRuntimeSettingsDialog } from '@renderer/components/runtime/ProviderRuntimeSettingsDialog';
@@ -102,7 +103,7 @@ function getCodexDashboardHint(provider: CliProviderStatus): string | null {
   }
 
   if (codex.login.status === 'starting' || codex.login.status === 'pending') {
-    return null;
+    return codex.login.authUrl ? 'Finish ChatGPT login in the browser.' : null;
   }
 
   const usageHint = codex.localActiveChatgptAccountPresent
@@ -731,6 +732,8 @@ const InstalledBanner = ({
               provider.connection?.codex?.launchAllowed !== true &&
               provider.connection?.codex?.login.status !== 'starting' &&
               provider.connection?.codex?.login.status !== 'pending';
+            const codexLoginAuthUrl = provider.connection?.codex?.login.authUrl ?? null;
+            const showCodexLoginActions = codexNeedsReconnect || Boolean(codexLoginAuthUrl);
             const disconnectAction = getProviderDisconnectAction(provider);
             const providerLoading = cliProviderStatusLoading[provider.providerId] === true;
             const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
@@ -897,20 +900,33 @@ const InstalledBanner = ({
                       >
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="min-w-0 flex-1">{codexDashboardHint}</span>
-                          {codexNeedsReconnect ? (
-                            <button
-                              type="button"
-                              onClick={onCodexReconnect}
-                              disabled={codexReconnectBusy || actionDisabled}
-                              className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
-                              style={{
-                                borderColor: 'rgba(245, 158, 11, 0.28)',
-                                backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                                color: '#fbbf24',
-                              }}
-                            >
-                              Reconnect ChatGPT
-                            </button>
+                          {showCodexLoginActions ? (
+                            <>
+                              <CodexLoginLinkCopyButton
+                                authUrl={codexLoginAuthUrl}
+                                disabled={codexReconnectBusy || actionDisabled}
+                                size="xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (codexLoginAuthUrl) {
+                                    void api.openExternal(codexLoginAuthUrl);
+                                    return;
+                                  }
+                                  onCodexReconnect();
+                                }}
+                                disabled={codexReconnectBusy || actionDisabled}
+                                className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+                                style={{
+                                  borderColor: 'rgba(245, 158, 11, 0.28)',
+                                  backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                                  color: '#fbbf24',
+                                }}
+                              >
+                                {codexLoginAuthUrl ? 'Open login' : 'Reconnect ChatGPT'}
+                              </button>
+                            </>
                           ) : null}
                         </div>
                       </div>

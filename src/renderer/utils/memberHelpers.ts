@@ -711,6 +711,54 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
   }
 }
 
+export function shouldDisplayMemberCurrentTask({
+  member,
+  isTeamAlive,
+  spawnStatus,
+  spawnLaunchState,
+  spawnRuntimeAlive,
+  runtimeEntry,
+}: {
+  member: ResolvedTeamMember;
+  isTeamAlive?: boolean;
+  spawnStatus?: MemberSpawnStatus;
+  spawnLaunchState?: MemberLaunchState;
+  spawnRuntimeAlive?: boolean;
+  runtimeEntry?: TeamAgentRuntimeEntry;
+}): boolean {
+  if (member.removedAt || member.status === 'terminated') {
+    return false;
+  }
+  if (isTeamAlive === false) {
+    return false;
+  }
+  if (spawnStatus === 'offline' || spawnStatus === 'error' || spawnStatus === 'skipped') {
+    return false;
+  }
+  if (
+    spawnLaunchState === 'failed_to_start' ||
+    spawnLaunchState === 'skipped_for_launch' ||
+    spawnLaunchState === 'runtime_pending_permission'
+  ) {
+    return false;
+  }
+  if (
+    runtimeEntry?.livenessKind === 'shell_only' ||
+    runtimeEntry?.livenessKind === 'registered_only' ||
+    runtimeEntry?.livenessKind === 'stale_metadata' ||
+    runtimeEntry?.livenessKind === 'not_found'
+  ) {
+    return false;
+  }
+  if (runtimeEntry?.alive === false && spawnStatus !== 'online') {
+    return false;
+  }
+  if (spawnRuntimeAlive === false && spawnStatus !== 'online') {
+    return false;
+  }
+  return true;
+}
+
 function isQueuedOpenCodeLaunch(
   member: ResolvedTeamMember,
   spawnStatus: MemberSpawnStatus | undefined,

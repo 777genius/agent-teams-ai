@@ -11,7 +11,10 @@ import {
   validateStableSlotLayout,
 } from '../../../../packages/agent-graph/src/layout/stableSlots';
 import { KanbanLayoutEngine } from '../../../../packages/agent-graph/src/layout/kanbanLayout';
-import { TASK_PILL } from '../../../../packages/agent-graph/src/constants/canvas-constants';
+import {
+  KANBAN_ZONE,
+  TASK_PILL,
+} from '../../../../packages/agent-graph/src/constants/canvas-constants';
 import { ACTIVITY_LANE } from '../../../../packages/agent-graph/src/layout/activityLane';
 import {
   STABLE_SLOT_GEOMETRY,
@@ -171,7 +174,10 @@ describe('stable slot layout planner', () => {
     expect(frame).toBeDefined();
     expect(frame?.boardBandRect.top).toBe(frame?.activityColumnRect.top);
     expect(frame?.boardBandRect.top).toBe(frame?.logColumnRect.top);
-    expect(frame?.boardBandRect.top).toBe(frame?.kanbanBandRect.top);
+    const expectedKanbanTopInset =
+      ACTIVITY_LANE.headerHeight + 4 - (KANBAN_ZONE.headerHeight - TASK_PILL.height / 2);
+    expect(frame?.kanbanBandRect.top).toBe(frame!.boardBandRect.top + expectedKanbanTopInset);
+    expect(frame?.kanbanBandRect.bottom).toBeLessThanOrEqual(frame!.boardBandRect.bottom);
     expect(frame?.activityColumnRect.left).toBe(frame?.boardBandRect.left);
     expect(frame?.logColumnRect.left).toBeGreaterThan(frame?.activityColumnRect.right ?? 0);
     expect(frame?.kanbanBandRect.left).toBeGreaterThan(frame?.logColumnRect.right ?? 0);
