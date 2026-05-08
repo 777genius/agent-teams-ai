@@ -523,6 +523,7 @@ const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const RUN_TIMEOUT_MS = 300_000;
 const VERIFY_TIMEOUT_MS = 15_000;
 const MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS = 45_000;
+const TASK_ACTIVITY_RUNTIME_PAUSE_GRACE_MS = 5_000;
 
 function asRuntimeRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -1980,6 +1981,48 @@ export function shouldWarnOnMissingRegisteredMember(params: {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function parseOptionalIsoMs(value: string | undefined): number {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function deriveTaskActivityPauseAt(previous: MemberSpawnStatusEntry, fallbackAt: string): string {
+  const fallbackMs = parseOptionalIsoMs(fallbackAt);
+  const explicitEvidenceMs = Math.max(
+    parseOptionalIsoMs(previous.lastHeartbeatAt),
+    parseOptionalIsoMs(previous.livenessLastCheckedAt)
+  );
+  const evidenceMs =
+    explicitEvidenceMs > 0 ? explicitEvidenceMs : parseOptionalIsoMs(previous.updatedAt);
+  if (evidenceMs <= 0 || fallbackMs <= 0) {
+    return fallbackAt;
+  }
+  const boundedEvidenceMs = Math.min(evidenceMs, fallbackMs);
+  const closeMs = Math.max(
+    boundedEvidenceMs,
+    Math.min(fallbackMs, boundedEvidenceMs + TASK_ACTIVITY_RUNTIME_PAUSE_GRACE_MS)
+  );
+  return new Date(closeMs).toISOString();
+}
+
+function deriveTaskActivityResumeAt(
+  previous: MemberSpawnStatusEntry,
+  evidenceAt: string,
+  fallbackAt: string
+): string {
+  const fallbackMs = parseOptionalIsoMs(fallbackAt);
+  const evidenceMs = parseOptionalIsoMs(evidenceAt);
+  const previousUpdatedMs = parseOptionalIsoMs(previous.updatedAt);
+  if (evidenceMs <= 0 || fallbackMs <= 0) {
+    return fallbackAt;
+  }
+  if (previousUpdatedMs > 0 && evidenceMs < previousUpdatedMs) {
+    return fallbackAt;
+  }
+  return new Date(Math.min(evidenceMs, fallbackMs)).toISOString();
 }
 
 function createInitialMemberSpawnStatusEntry(): MemberSpawnStatusEntry {
@@ -5242,6 +5285,16 @@ interface OpenCodeMemberInboxDelivery {
   diagnostics?: string[];
 }
 
+type OpenCodeVisibleReplyCorrelation = NonNullable<
+  OpenCodePromptDeliveryLedgerRecord['visibleReplyCorrelation']
+>;
+
+interface OpenCodeRecoveredVisibleReplyProof {
+  visibleReply: OpenCodeVisibleReplyProof;
+  visibleReplyCorrelation: OpenCodeVisibleReplyCorrelation;
+  diagnostics: string[];
+}
+
 interface OpenCodeMemberDirectory {
   config: TeamConfig | null;
   teamMeta: Awaited<ReturnType<TeamMetaStore['getMeta']>> | null;
@@ -5454,6 +5507,10 @@ export class TeamProvisioningService {
   private readonly transcriptProjectResolver: TeamTranscriptProjectResolver;
   private readonly taskActivityIntervalService = new TeamTaskActivityIntervalService();
   private readonly crashRepairedActivityIntervalsByTeam = new Set<string>();
+  private readonly pendingCrashRepairSnapshotByTeam = new Map<
+    string,
+    PersistedTeamLaunchSnapshot | null
+  >();
   private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
   private helpOutputCache: string | null = null;
   private helpOutputCacheTime = 0;
@@ -5510,10 +5567,51 @@ export class TeamProvisioningService {
   private repairStaleTaskActivityIntervalsOnce(
     teamName: string,
     launchSnapshot?: PersistedTeamLaunchSnapshot | null
-  ): void {
-    if (this.crashRepairedActivityIntervalsByTeam.has(teamName)) return;
-    this.taskActivityIntervalService.repairStaleIntervalsAfterCrash(teamName, launchSnapshot);
+  ): boolean {
+    if (this.crashRepairedActivityIntervalsByTeam.has(teamName)) return true;
+    const repairSnapshot = this.pendingCrashRepairSnapshotByTeam.has(teamName)
+      ? this.pendingCrashRepairSnapshotByTeam.get(teamName)
+      : (launchSnapshot ?? null);
+    const result = this.taskActivityIntervalService.repairStaleIntervalsAfterCrash(
+      teamName,
+      repairSnapshot
+    );
+    if (result.failed) {
+      if (!this.pendingCrashRepairSnapshotByTeam.has(teamName)) {
+        this.pendingCrashRepairSnapshotByTeam.set(teamName, launchSnapshot ?? null);
+      }
+      return false;
+    }
+    this.pendingCrashRepairSnapshotByTeam.delete(teamName);
     this.crashRepairedActivityIntervalsByTeam.add(teamName);
+    return true;
+  }
+
+  private async readTaskActivityRepairLaunchSnapshot(
+    teamName: string
+  ): Promise<PersistedTeamLaunchSnapshot | null> {
+    const [bootstrapSnapshot, launchSnapshot] = await Promise.all([
+      readBootstrapLaunchSnapshot(teamName).catch(() => null),
+      this.launchStateStore.read(teamName).catch(() => null),
+    ]);
+    return choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
+  }
+
+  async repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void> {
+    if (this.crashRepairedActivityIntervalsByTeam.has(teamName)) {
+      return;
+    }
+
+    const runId = this.getTrackedRunId(teamName);
+    if (runId && this.runs.has(runId)) {
+      return;
+    }
+
+    const repairSnapshot = await this.readTaskActivityRepairLaunchSnapshot(teamName);
+    const repaired = this.repairStaleTaskActivityIntervalsOnce(teamName, repairSnapshot);
+    if (!repaired) {
+      throw new Error(`Task activity interval repair failed before snapshot for team ${teamName}`);
+    }
   }
 
   private scheduleStaleAnthropicTeamApiKeyHelperCleanup(): void {
@@ -6728,16 +6826,19 @@ export class TeamProvisioningService {
       return this.isOpenCodePlainTextResponseReadCommitAllowed({
         actionMode: input.actionMode,
         taskRefs: input.taskRefs,
+        visibleReply: input.visibleReply,
         ledgerRecord: input.ledgerRecord,
       });
     }
     if (state === 'responded_visible_message') {
-      return isOpenCodeVisibleReplyReadCommitAllowed({
-        actionMode: input.actionMode,
-        taskRefs: input.taskRefs,
-        visibleReply: input.visibleReply,
-        transcriptOnlyVisibleReply: !input.visibleReply,
-      });
+      return (
+        isOpenCodeVisibleReplyReadCommitAllowed({
+          actionMode: input.actionMode,
+          taskRefs: input.taskRefs,
+          visibleReply: input.visibleReply,
+          transcriptOnlyVisibleReply: !input.visibleReply,
+        }) && this.openCodeTaskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs)
+      );
     }
     const hasTaskRefs = (input.taskRefs ?? []).length > 0;
     if (!hasTaskRefs && input.actionMode !== 'do' && input.actionMode !== 'delegate') {
@@ -6774,6 +6875,14 @@ export class TeamProvisioningService {
     });
   }
 
+  private hasOpenCodeObservedMessageSendToolCall(
+    ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null
+  ): boolean {
+    return (ledgerRecord?.observedToolCallNames ?? []).some(
+      (toolName) => this.normalizeOpenCodeObservedToolName(toolName) === 'message_send'
+    );
+  }
+
   private normalizeOpenCodeObservedToolName(toolName: string): string {
     return toolName
       .trim()
@@ -6787,12 +6896,15 @@ export class TeamProvisioningService {
   private isOpenCodePlainTextResponseReadCommitAllowed(input: {
     actionMode?: AgentActionMode;
     taskRefs?: TaskRef[];
+    visibleReply?: OpenCodeVisibleReplyProof | null;
     ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
   }): boolean {
     if (this.isOpenCodeDirectUserPromptDelivery(input.ledgerRecord)) {
-      return Boolean(
-        input.ledgerRecord?.visibleReplyInbox?.trim() &&
-        input.ledgerRecord?.visibleReplyMessageId?.trim()
+      return (
+        Boolean(
+          input.ledgerRecord?.visibleReplyInbox?.trim() &&
+          input.ledgerRecord?.visibleReplyMessageId?.trim()
+        ) && this.openCodeTaskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs)
       );
     }
     const preview = input.ledgerRecord?.observedAssistantPreview?.trim();
@@ -6815,11 +6927,27 @@ export class TeamProvisioningService {
   }): string {
     const record = input.ledgerRecord;
     const state = input.responseState ?? record?.responseState;
-    if (record?.lastReason === 'visible_reply_ack_only_still_requires_answer') {
-      return 'visible_reply_ack_only_still_requires_answer';
+    if (state === 'responded_visible_message' && !input.visibleReply) {
+      return 'visible_reply_destination_not_found_yet';
+    }
+    if (
+      state === 'responded_visible_message' &&
+      !this.openCodeTaskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs)
+    ) {
+      return 'visible_reply_missing_task_refs';
     }
     if (state === 'responded_plain_text') {
       const preview = record?.observedAssistantPreview?.trim();
+      if (
+        this.isOpenCodeDirectUserPromptDelivery(record) &&
+        input.visibleReply &&
+        !this.openCodeTaskRefsIncludeAll(input.visibleReply.message.taskRefs, input.taskRefs)
+      ) {
+        return 'visible_reply_missing_task_refs';
+      }
+      if (record?.lastReason === 'visible_reply_ack_only_still_requires_answer') {
+        return 'visible_reply_ack_only_still_requires_answer';
+      }
       if (
         preview &&
         !isOpenCodeVisibleReplySemanticallySufficient({
@@ -6838,8 +6966,8 @@ export class TeamProvisioningService {
         return 'plain_text_visible_reply_not_materialized_yet';
       }
     }
-    if (state === 'responded_visible_message' && !input.visibleReply) {
-      return 'visible_reply_destination_not_found_yet';
+    if (record?.lastReason === 'visible_reply_ack_only_still_requires_answer') {
+      return 'visible_reply_ack_only_still_requires_answer';
     }
     if (state === 'responded_non_visible_tool' || state === 'responded_tool_call') {
       const hasTaskRefs = (input.taskRefs ?? []).length > 0;
@@ -6904,7 +7032,8 @@ export class TeamProvisioningService {
     }
     if (
       input.ledgerRecord.lastReason === 'visible_reply_ack_only_still_requires_answer' ||
-      input.ledgerRecord.lastReason === 'plain_text_ack_only_still_requires_answer'
+      input.ledgerRecord.lastReason === 'plain_text_ack_only_still_requires_answer' ||
+      input.ledgerRecord.lastReason === 'visible_reply_missing_task_refs'
     ) {
       return true;
     }
@@ -6989,6 +7118,18 @@ export class TeamProvisioningService {
     return ledgerRecord?.replyRecipient?.trim().toLowerCase() === 'user';
   }
 
+  private canMaterializeOpenCodePlainTextReply(
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord
+  ): boolean {
+    if (ledgerRecord.responseState === 'responded_plain_text') {
+      return true;
+    }
+    return (
+      ledgerRecord.responseState === 'tool_error' &&
+      this.hasOpenCodeObservedMessageSendToolCall(ledgerRecord)
+    );
+  }
+
   private isOpenCodePromptDeliveryWatchdogEnabled(): boolean {
     const enabled = process.env.CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG !== '0';
     if (!enabled && !this.openCodePromptDeliveryWatchdogDisabledLogged) {
@@ -7068,6 +7209,235 @@ export class TeamProvisioningService {
     return null;
   }
 
+  private isOpenCodeVisibleReplyTimestampEligible(input: {
+    message: InboxMessage;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  }): boolean {
+    const messageMs = Date.parse(input.message.timestamp);
+    const inboxMs = Date.parse(input.ledgerRecord.inboxTimestamp);
+    if (!Number.isFinite(messageMs) || !Number.isFinite(inboxMs)) {
+      return true;
+    }
+    return messageMs + 5_000 >= inboxMs;
+  }
+
+  private isOpenCodeRecoveredVisibleReplyCandidate(input: {
+    message: InboxMessage & { messageId: string };
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+    from: string;
+    requireTaskRefs: boolean;
+  }): boolean {
+    const expectedFrom = input.from.trim().toLowerCase();
+    if (!expectedFrom || input.message.from.trim().toLowerCase() !== expectedFrom) {
+      return false;
+    }
+    if (input.message.source !== undefined && input.message.source !== 'runtime_delivery') {
+      return false;
+    }
+    if (
+      input.requireTaskRefs &&
+      !this.openCodeTaskRefsIncludeAll(input.message.taskRefs, input.ledgerRecord.taskRefs)
+    ) {
+      return false;
+    }
+    if (
+      !this.isOpenCodeVisibleReplyTimestampEligible({
+        message: input.message,
+        ledgerRecord: input.ledgerRecord,
+      })
+    ) {
+      return false;
+    }
+    return isOpenCodeVisibleReplySemanticallySufficient({
+      actionMode: input.ledgerRecord.actionMode,
+      taskRefs: input.ledgerRecord.taskRefs,
+      text: input.message.text,
+      summary: input.message.summary,
+    }).sufficient;
+  }
+
+  private async correlateOpenCodeRecoveredVisibleReply(input: {
+    teamName: string;
+    inboxName: string;
+    memberName: string;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+    visibleReply: OpenCodeVisibleReplyProof;
+    diagnostic: string;
+  }): Promise<OpenCodeRecoveredVisibleReplyProof> {
+    const expectedRelayOfMessageId = input.ledgerRecord.inboxMessageId.trim();
+    const currentRelayOfMessageId =
+      typeof input.visibleReply.message.relayOfMessageId === 'string'
+        ? input.visibleReply.message.relayOfMessageId.trim()
+        : '';
+    if (currentRelayOfMessageId === expectedRelayOfMessageId) {
+      return {
+        visibleReply: input.visibleReply,
+        visibleReplyCorrelation: 'relayOfMessageId',
+        diagnostics: [input.diagnostic],
+      };
+    }
+
+    try {
+      const correlated = await this.inboxWriter.correlateRuntimeDeliveryReply(input.teamName, {
+        inboxName: input.inboxName,
+        messageId: input.visibleReply.message.messageId,
+        relayOfMessageId: expectedRelayOfMessageId,
+        from: input.memberName,
+        taskRefs: input.ledgerRecord.taskRefs,
+      });
+      if (correlated.message) {
+        const visibleReply = {
+          ...input.visibleReply,
+          message: correlated.message,
+        };
+        if (correlated.updated) {
+          this.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
+        }
+        return {
+          visibleReply,
+          visibleReplyCorrelation: 'relayOfMessageId',
+          diagnostics: [
+            input.diagnostic,
+            correlated.updated
+              ? 'opencode_visible_reply_relayOfMessageId_repaired'
+              : 'opencode_visible_reply_relayOfMessageId_already_correlated',
+          ],
+        };
+      }
+      return {
+        visibleReply: input.visibleReply,
+        visibleReplyCorrelation: 'direct_child_message_send',
+        diagnostics: [input.diagnostic, 'opencode_visible_reply_relayOfMessageId_repair_not_found'],
+      };
+    } catch (error) {
+      logger.warn(
+        `[${input.teamName}] Failed to repair OpenCode visible reply relayOfMessageId for ${input.memberName}/${expectedRelayOfMessageId}: ${getErrorMessage(error)}`
+      );
+      return {
+        visibleReply: input.visibleReply,
+        visibleReplyCorrelation: 'direct_child_message_send',
+        diagnostics: [input.diagnostic, 'opencode_visible_reply_relayOfMessageId_repair_failed'],
+      };
+    }
+  }
+
+  private async findOpenCodeVisibleReplyByObservedMessageId(input: {
+    teamName: string;
+    replyRecipient?: string | null;
+    from: string;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  }): Promise<OpenCodeRecoveredVisibleReplyProof | null> {
+    const expectedMessageId = input.ledgerRecord.visibleReplyMessageId?.trim();
+    if (!expectedMessageId) {
+      return null;
+    }
+    const candidates = await this.getOpenCodeVisibleReplyInboxCandidates({
+      teamName: input.teamName,
+      replyRecipient: input.replyRecipient,
+      includeUserFallbackForLeadRecipient: true,
+    });
+    for (const inboxName of candidates) {
+      const messages = await this.inboxReader
+        .getMessagesFor(input.teamName, inboxName)
+        .catch(() => []);
+      const match = messages.find((message): message is InboxMessage & { messageId: string } => {
+        const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+        return (
+          messageId === expectedMessageId &&
+          this.isOpenCodeRecoveredVisibleReplyCandidate({
+            message: { ...message, messageId },
+            ledgerRecord: input.ledgerRecord,
+            from: input.from,
+            requireTaskRefs: false,
+          })
+        );
+      });
+      if (!match) {
+        continue;
+      }
+      return await this.correlateOpenCodeRecoveredVisibleReply({
+        teamName: input.teamName,
+        inboxName,
+        memberName: input.from,
+        ledgerRecord: input.ledgerRecord,
+        visibleReply: {
+          inboxName,
+          message: { ...match, messageId: match.messageId.trim() },
+          missingRuntimeDeliverySource: match.source !== 'runtime_delivery',
+        },
+        diagnostic: 'opencode_visible_reply_recovered_by_observed_message_id',
+      });
+    }
+    return null;
+  }
+
+  private async findOpenCodeVisibleReplyByTaskRefs(input: {
+    teamName: string;
+    replyRecipient?: string | null;
+    from: string;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  }): Promise<OpenCodeRecoveredVisibleReplyProof | null> {
+    if (this.normalizeOpenCodeTaskRefsForComparison(input.ledgerRecord.taskRefs).length === 0) {
+      return null;
+    }
+    const candidates = await this.getOpenCodeVisibleReplyInboxCandidates({
+      teamName: input.teamName,
+      replyRecipient: input.replyRecipient,
+      includeUserFallbackForLeadRecipient: true,
+    });
+    const matches: OpenCodeVisibleReplyProof[] = [];
+    for (const inboxName of candidates) {
+      const messages = await this.inboxReader
+        .getMessagesFor(input.teamName, inboxName)
+        .catch(() => []);
+      for (const message of messages) {
+        const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+        if (!messageId) {
+          continue;
+        }
+        const candidate = { ...message, messageId };
+        if (
+          this.isOpenCodeRecoveredVisibleReplyCandidate({
+            message: candidate,
+            ledgerRecord: input.ledgerRecord,
+            from: input.from,
+            requireTaskRefs: true,
+          })
+        ) {
+          matches.push({
+            inboxName,
+            message: candidate,
+            missingRuntimeDeliverySource: candidate.source !== 'runtime_delivery',
+          });
+        }
+      }
+    }
+    const match = matches.sort((left, right) => {
+      const leftMs = Date.parse(left.message.timestamp);
+      const rightMs = Date.parse(right.message.timestamp);
+      const leftValid = Number.isFinite(leftMs);
+      const rightValid = Number.isFinite(rightMs);
+      if (leftValid && rightValid && leftMs !== rightMs) {
+        return leftMs - rightMs;
+      }
+      if (leftValid !== rightValid) {
+        return leftValid ? -1 : 1;
+      }
+      return left.message.messageId.localeCompare(right.message.messageId);
+    })[0];
+    if (!match) {
+      return null;
+    }
+    return await this.correlateOpenCodeRecoveredVisibleReply({
+      teamName: input.teamName,
+      inboxName: match.inboxName,
+      memberName: input.from,
+      ledgerRecord: input.ledgerRecord,
+      visibleReply: match,
+      diagnostic: 'opencode_visible_reply_recovered_by_task_refs',
+    });
+  }
+
   private async getOpenCodeVisibleReplyInboxCandidates(input: {
     teamName: string;
     replyRecipient?: string | null;
@@ -7115,6 +7485,114 @@ export class TeamProvisioningService {
     );
   }
 
+  private openCodeTaskRefsIncludeAll(
+    actual: readonly TaskRef[] | undefined,
+    expected: readonly TaskRef[] | undefined
+  ): boolean {
+    const normalizedExpected = this.normalizeOpenCodeTaskRefsForComparison(expected);
+    if (normalizedExpected.length === 0) {
+      return true;
+    }
+    const actualKeys = new Set(
+      this.normalizeOpenCodeTaskRefsForComparison(actual).map((taskRef) =>
+        this.openCodeTaskRefKey(taskRef)
+      )
+    );
+    return normalizedExpected.every((taskRef) => actualKeys.has(this.openCodeTaskRefKey(taskRef)));
+  }
+
+  private normalizeOpenCodeTaskRefsForComparison(
+    taskRefs: readonly TaskRef[] | undefined
+  ): TaskRef[] {
+    if (!Array.isArray(taskRefs)) {
+      return [];
+    }
+    const normalized: TaskRef[] = [];
+    for (const rawTaskRef of taskRefs as readonly unknown[]) {
+      if (!rawTaskRef || typeof rawTaskRef !== 'object') {
+        continue;
+      }
+      const taskRef = rawTaskRef as Record<string, unknown>;
+      const teamName = typeof taskRef.teamName === 'string' ? taskRef.teamName.trim() : '';
+      const taskId = typeof taskRef.taskId === 'string' ? taskRef.taskId.trim() : '';
+      const displayId = typeof taskRef.displayId === 'string' ? taskRef.displayId.trim() : '';
+      if (teamName && taskId && displayId) {
+        normalized.push({ teamName, taskId, displayId });
+      }
+    }
+    return normalized;
+  }
+
+  private openCodeTaskRefKey(taskRef: TaskRef): string {
+    return `${taskRef.teamName.trim()}\u0000${taskRef.taskId.trim()}\u0000${taskRef.displayId.trim()}`;
+  }
+
+  private async ensureOpenCodeVisibleReplyTaskRefs(input: {
+    teamName: string;
+    memberName: string;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+    visibleReply: OpenCodeVisibleReplyProof;
+  }): Promise<{ visibleReply: OpenCodeVisibleReplyProof; diagnostics: string[] }> {
+    const taskRefs = this.normalizeOpenCodeTaskRefsForComparison(input.ledgerRecord.taskRefs);
+    if (taskRefs.length === 0) {
+      return { visibleReply: input.visibleReply, diagnostics: [] };
+    }
+    if (this.openCodeTaskRefsIncludeAll(input.visibleReply.message.taskRefs, taskRefs)) {
+      return { visibleReply: input.visibleReply, diagnostics: [] };
+    }
+
+    const messageId = input.visibleReply.message.messageId.trim();
+    const relayOfMessageId =
+      typeof input.visibleReply.message.relayOfMessageId === 'string'
+        ? input.visibleReply.message.relayOfMessageId.trim()
+        : '';
+    if (!messageId || relayOfMessageId !== input.ledgerRecord.inboxMessageId.trim()) {
+      return {
+        visibleReply: input.visibleReply,
+        diagnostics: ['visible_reply_missing_task_refs'],
+      };
+    }
+
+    try {
+      const merged = await this.inboxWriter.mergeRuntimeDeliveryTaskRefs(input.teamName, {
+        inboxName: input.visibleReply.inboxName,
+        messageId,
+        relayOfMessageId,
+        from: input.memberName,
+        taskRefs,
+      });
+      if (merged.message && this.openCodeTaskRefsIncludeAll(merged.message.taskRefs, taskRefs)) {
+        const visibleReply = {
+          ...input.visibleReply,
+          message: merged.message,
+        };
+        if (merged.updated) {
+          this.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
+        }
+        return {
+          visibleReply,
+          diagnostics: merged.updated
+            ? ['opencode_runtime_delivery_task_refs_inherited_from_relay']
+            : [],
+        };
+      }
+      return {
+        visibleReply: input.visibleReply,
+        diagnostics: merged.found
+          ? ['visible_reply_missing_task_refs_after_merge']
+          : ['visible_reply_missing_task_refs'],
+      };
+    } catch (error) {
+      logger.warn(
+        `[${input.teamName}] Failed to merge OpenCode runtime delivery taskRefs for ${input.memberName}/${input.ledgerRecord.inboxMessageId}: ${getErrorMessage(error)}`
+      );
+      return {
+        visibleReply: input.visibleReply,
+        diagnostics: ['visible_reply_task_refs_merge_failed'],
+      };
+    }
+  }
+
   private async applyOpenCodeVisibleDestinationProof(input: {
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
@@ -7125,7 +7603,7 @@ export class TeamProvisioningService {
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     visibleReply: OpenCodeVisibleReplyProof | null;
   }> {
-    const visibleReply = await this.findOpenCodeVisibleReplyByRelayOfMessageId({
+    let visibleReply = await this.findOpenCodeVisibleReplyByRelayOfMessageId({
       teamName: input.teamName,
       replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
       from: input.memberName,
@@ -7137,26 +7615,70 @@ export class TeamProvisioningService {
       allowUserFallbackForLeadRecipient:
         input.ledgerRecord.visibleReplyCorrelation === 'relayOfMessageId',
     });
+    let visibleReplyCorrelation: OpenCodeVisibleReplyCorrelation = 'relayOfMessageId';
+    let recoveryDiagnostics: string[] = [];
+    if (!visibleReply) {
+      const recoveredByMessageId = await this.findOpenCodeVisibleReplyByObservedMessageId({
+        teamName: input.teamName,
+        replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
+        from: input.memberName,
+        ledgerRecord: input.ledgerRecord,
+      });
+      if (recoveredByMessageId) {
+        visibleReply = recoveredByMessageId.visibleReply;
+        visibleReplyCorrelation = recoveredByMessageId.visibleReplyCorrelation;
+        recoveryDiagnostics = recoveredByMessageId.diagnostics;
+      }
+    }
+    if (!visibleReply) {
+      const recoveredByTaskRefs = await this.findOpenCodeVisibleReplyByTaskRefs({
+        teamName: input.teamName,
+        replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
+        from: input.memberName,
+        ledgerRecord: input.ledgerRecord,
+      });
+      if (recoveredByTaskRefs) {
+        visibleReply = recoveredByTaskRefs.visibleReply;
+        visibleReplyCorrelation = recoveredByTaskRefs.visibleReplyCorrelation;
+        recoveryDiagnostics = recoveredByTaskRefs.diagnostics;
+      }
+    }
     if (!visibleReply) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
-    const semantic = isOpenCodeVisibleReplyReadCommitAllowed({
-      actionMode: input.ledgerRecord.actionMode,
-      taskRefs: input.ledgerRecord.taskRefs,
+    const enriched = await this.ensureOpenCodeVisibleReplyTaskRefs({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      ledgerRecord: input.ledgerRecord,
       visibleReply,
     });
+    const visibleReplyForProof = enriched.visibleReply;
+    const taskRefsSatisfied = this.openCodeTaskRefsIncludeAll(
+      visibleReplyForProof.message.taskRefs,
+      input.ledgerRecord.taskRefs
+    );
+    const semantic =
+      isOpenCodeVisibleReplyReadCommitAllowed({
+        actionMode: input.ledgerRecord.actionMode,
+        taskRefs: input.ledgerRecord.taskRefs,
+        visibleReply: visibleReplyForProof,
+      }) && taskRefsSatisfied;
     const ledgerRecord = await input.ledger.applyDestinationProof({
       id: input.ledgerRecord.id,
-      visibleReplyInbox: visibleReply.inboxName,
-      visibleReplyMessageId: visibleReply.message.messageId,
-      visibleReplyCorrelation: 'relayOfMessageId',
+      visibleReplyInbox: visibleReplyForProof.inboxName,
+      visibleReplyMessageId: visibleReplyForProof.message.messageId,
+      visibleReplyCorrelation,
       semanticallySufficient: semantic,
-      diagnostics: visibleReply.missingRuntimeDeliverySource
-        ? ['visible_reply_missing_runtime_delivery_source']
-        : [],
+      diagnostics: [
+        ...recoveryDiagnostics,
+        ...(visibleReplyForProof.missingRuntimeDeliverySource
+          ? ['visible_reply_missing_runtime_delivery_source']
+          : []),
+        ...enriched.diagnostics,
+      ],
       observedAt: nowIso(),
     });
-    return { ledgerRecord, visibleReply };
+    return { ledgerRecord, visibleReply: visibleReplyForProof };
   }
 
   private buildOpenCodePlainTextVisibleReplyMessageId(
@@ -7184,8 +7706,11 @@ export class TeamProvisioningService {
     if (input.visibleReply) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply };
     }
+    const materializedFromMessageSendToolError =
+      input.ledgerRecord.responseState === 'tool_error' &&
+      this.hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord);
     if (
-      input.ledgerRecord.responseState !== 'responded_plain_text' ||
+      !this.canMaterializeOpenCodePlainTextReply(input.ledgerRecord) ||
       !this.isOpenCodeDirectUserPromptDelivery(input.ledgerRecord) ||
       input.ledgerRecord.visibleReplyMessageId ||
       input.ledgerRecord.visibleReplyInbox
@@ -7216,19 +7741,35 @@ export class TeamProvisioningService {
     });
 
     if (existing) {
+      const enriched = await this.ensureOpenCodeVisibleReplyTaskRefs({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        ledgerRecord: input.ledgerRecord,
+        visibleReply: existing,
+      });
+      const existingForProof = enriched.visibleReply;
       const ledgerRecord = await input.ledger.applyDestinationProof({
         id: input.ledgerRecord.id,
-        visibleReplyInbox: existing.inboxName,
-        visibleReplyMessageId: existing.message.messageId,
+        visibleReplyInbox: existingForProof.inboxName,
+        visibleReplyMessageId: existingForProof.message.messageId,
         visibleReplyCorrelation: 'plain_assistant_text',
-        semanticallySufficient: true,
-        diagnostics: existing.missingRuntimeDeliverySource
-          ? ['plain_text_visible_reply_missing_runtime_delivery_source']
-          : [],
+        semanticallySufficient: this.openCodeTaskRefsIncludeAll(
+          existingForProof.message.taskRefs,
+          input.ledgerRecord.taskRefs
+        ),
+        diagnostics: [
+          ...(materializedFromMessageSendToolError
+            ? ['opencode_message_send_tool_error_plain_text_reply_materialized']
+            : []),
+          ...(existingForProof.missingRuntimeDeliverySource
+            ? ['plain_text_visible_reply_missing_runtime_delivery_source']
+            : []),
+          ...enriched.diagnostics,
+        ],
         observedAt: nowIso(),
       });
-      this.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, existing.message);
-      return { ledgerRecord, visibleReply: existing };
+      this.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, existingForProof.message);
+      return { ledgerRecord, visibleReply: existingForProof };
     }
 
     const timestamp =
@@ -7247,6 +7788,7 @@ export class TeamProvisioningService {
         messageId,
         relayOfMessageId: input.ledgerRecord.inboxMessageId,
         source: 'runtime_delivery',
+        taskRefs: input.ledgerRecord.taskRefs,
       });
       const visibleReply: OpenCodeVisibleReplyProof = {
         inboxName: 'user',
@@ -7260,6 +7802,7 @@ export class TeamProvisioningService {
           messageId: written.messageId,
           relayOfMessageId: input.ledgerRecord.inboxMessageId,
           source: 'runtime_delivery',
+          taskRefs: input.ledgerRecord.taskRefs,
         },
       };
       const ledgerRecord = await input.ledger.applyDestinationProof({
@@ -7268,9 +7811,14 @@ export class TeamProvisioningService {
         visibleReplyMessageId: written.messageId,
         visibleReplyCorrelation: 'plain_assistant_text',
         semanticallySufficient: true,
-        diagnostics: written.deduplicated
-          ? ['opencode_plain_text_reply_materialized_deduplicated']
-          : ['opencode_plain_text_reply_materialized_to_user_inbox'],
+        diagnostics: [
+          ...(materializedFromMessageSendToolError
+            ? ['opencode_message_send_tool_error_plain_text_reply_materialized']
+            : []),
+          written.deduplicated
+            ? 'opencode_plain_text_reply_materialized_deduplicated'
+            : 'opencode_plain_text_reply_materialized_to_user_inbox',
+        ],
         observedAt: nowIso(),
       });
       this.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
@@ -7438,7 +7986,15 @@ export class TeamProvisioningService {
   private getOpenCodeDeliveryNextDelayMs(input: {
     responseState?: NonNullable<OpenCodeTeamRuntimeMessageResult['responseObservation']>['state'];
     retry: boolean;
+    ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
   }): number {
+    if (
+      input.retry &&
+      input.responseState === 'tool_error' &&
+      this.hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord)
+    ) {
+      return OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS;
+    }
     if (input.retry) {
       return OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS;
     }
@@ -7483,6 +8039,7 @@ export class TeamProvisioningService {
     const delayMs = this.getOpenCodeDeliveryNextDelayMs({
       responseState: input.ledgerRecord.responseState,
       retry: input.retry,
+      ledgerRecord: input.ledgerRecord,
     });
     const nextAttemptAt = new Date(Date.now() + delayMs).toISOString();
     const ledgerRecord = await input.ledger.markNextAttemptScheduled({
@@ -11154,6 +11711,13 @@ export class TeamProvisioningService {
       livenessLastCheckedAt: input.observedAt,
       updatedAt: input.observedAt,
     };
+    this.syncMemberTaskActivityForRuntimeTransition(
+      run,
+      input.memberName,
+      previousStatus,
+      nextStatus,
+      input.observedAt
+    );
     run.memberSpawnStatuses.set(input.memberName, nextStatus);
     run.pendingMemberRestarts?.delete(input.memberName);
     this.syncMemberLaunchGraceCheck(run, input.memberName, nextStatus);
@@ -12103,6 +12667,44 @@ export class TeamProvisioningService {
     }
   }
 
+  private pauseMemberTaskActivityForRuntimeLoss(
+    run: ProvisioningRun,
+    memberName: string,
+    previous: MemberSpawnStatusEntry,
+    observedAt: string
+  ): void {
+    if (previous.runtimeAlive !== true) return;
+    this.taskActivityIntervalService.pauseActiveIntervalsForMember(
+      run.teamName,
+      memberName,
+      deriveTaskActivityPauseAt(previous, observedAt)
+    );
+  }
+
+  private syncMemberTaskActivityForRuntimeTransition(
+    run: ProvisioningRun,
+    memberName: string,
+    previous: MemberSpawnStatusEntry,
+    next: MemberSpawnStatusEntry,
+    observedAt: string
+  ): void {
+    if (previous.runtimeAlive === true && next.runtimeAlive !== true) {
+      this.pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, observedAt);
+    } else if (previous.runtimeAlive !== true && next.runtimeAlive === true) {
+      const nextUpdatedMs = parseOptionalIsoMs(next.updatedAt);
+      const previousUpdatedMs = parseOptionalIsoMs(previous.updatedAt);
+      const resumeFallbackAt =
+        nextUpdatedMs > 0 && (previousUpdatedMs <= 0 || nextUpdatedMs > previousUpdatedMs)
+          ? next.updatedAt
+          : nowIso();
+      this.taskActivityIntervalService.resumeActiveIntervalsForMember(
+        run.teamName,
+        memberName,
+        deriveTaskActivityResumeAt(previous, observedAt, resumeFallbackAt)
+      );
+    }
+  }
+
   /**
    * Update spawn status for a specific team member and emit a change event.
    */
@@ -12138,6 +12740,7 @@ export class TeamProvisioningService {
     };
 
     if (status === 'spawning') {
+      const pendingRestart = run.pendingMemberRestarts?.get(memberName);
       next.skippedForLaunch = false;
       next.skipReason = undefined;
       next.skippedAt = undefined;
@@ -12153,8 +12756,13 @@ export class TeamProvisioningService {
       next.runtimeDiagnostic = undefined;
       next.runtimeDiagnosticSeverity = undefined;
       next.livenessLastCheckedAt = undefined;
-      next.firstSpawnAcceptedAt = undefined;
+      next.firstSpawnAcceptedAt = pendingRestart?.requestedAt;
       next.lastHeartbeatAt = undefined;
+      if (pendingRestart) {
+        next.runtimeDiagnostic =
+          'Manual restart is already in progress; waiting for teammate bootstrap.';
+        next.runtimeDiagnosticSeverity = 'info';
+      }
       next.launchState = 'starting';
     } else if (status === 'waiting') {
       next.skippedForLaunch = false;
@@ -12267,20 +12875,17 @@ export class TeamProvisioningService {
       return;
     }
 
-    if (prev.runtimeAlive === true && next.runtimeAlive !== true) {
-      this.taskActivityIntervalService.pauseActiveIntervalsForMember(
-        run.teamName,
-        memberName,
-        updatedAt
-      );
-    } else if (prev.runtimeAlive !== true && next.runtimeAlive === true) {
-      this.taskActivityIntervalService.resumeActiveIntervalsForMember(
-        run.teamName,
-        memberName,
-        updatedAt
-      );
-    }
-
+    const runtimeTransitionAt =
+      status === 'online' && livenessSource === 'heartbeat'
+        ? (normalizeIsoTimestamp(heartbeatAt) ?? updatedAt)
+        : updatedAt;
+    this.syncMemberTaskActivityForRuntimeTransition(
+      run,
+      memberName,
+      prev,
+      next,
+      runtimeTransitionAt
+    );
     run.memberSpawnStatuses.set(memberName, next);
     if (
       (status === 'online' && (next.bootstrapConfirmed || livenessSource === 'process')) ||
@@ -12387,6 +12992,14 @@ export class TeamProvisioningService {
       return;
     }
 
+    const runtimeTransitionAt = source === 'runtime-proof' ? observedAt : updatedAt;
+    this.syncMemberTaskActivityForRuntimeTransition(
+      run,
+      memberName,
+      prev,
+      next,
+      runtimeTransitionAt
+    );
     run.memberSpawnStatuses.set(memberName, next);
     run.pendingMemberRestarts?.delete(memberName);
     this.syncMemberLaunchGraceCheck(run, memberName, next);
@@ -12419,8 +13032,9 @@ export class TeamProvisioningService {
     source?: 'live' | 'persisted' | 'merged';
   }> {
     const readPersistedStatuses = async (resolvedRunId: string | null) => {
+      const repairSnapshot = await this.readTaskActivityRepairLaunchSnapshot(teamName);
+      this.repairStaleTaskActivityIntervalsOnce(teamName, repairSnapshot);
       const { snapshot, statuses } = await this.reconcilePersistedLaunchState(teamName);
-      this.repairStaleTaskActivityIntervalsOnce(teamName, snapshot);
       const nextStatuses = await this.attachLiveRuntimeMetadataToStatuses(teamName, statuses, {
         openCodeSecondaryBootstrapPendingMembers:
           this.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
@@ -13537,11 +14151,6 @@ export class TeamProvisioningService {
       throw new Error('Lead restart is not supported from member controls');
     }
 
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    this.resetRuntimeToolActivity(run, memberName);
-    this.clearMemberSpawnToolTracking(run, memberName);
-    this.setMemberSpawnStatus(run, memberName, 'spawning');
-    this.appendMemberBootstrapDiagnostic(run, memberName, 'manual restart requested from UI');
     run.pendingMemberRestarts.set(memberName, {
       requestedAt: nowIso(),
       desired: {
@@ -13554,6 +14163,11 @@ export class TeamProvisioningService {
         effort: configuredMember.effort,
       },
     });
+    this.invalidateRuntimeSnapshotCaches(teamName);
+    this.resetRuntimeToolActivity(run, memberName);
+    this.clearMemberSpawnToolTracking(run, memberName);
+    this.setMemberSpawnStatus(run, memberName, 'spawning');
+    this.appendMemberBootstrapDiagnostic(run, memberName, 'manual restart requested from UI');
 
     const leadName = this.resolveLeadMemberName(
       currentConfiguredMemberState.configuredMembers,
@@ -14544,7 +15158,8 @@ export class TeamProvisioningService {
     if (restartPending) {
       run.pendingMemberRestarts.delete(memberName);
     }
-    run.memberSpawnStatuses.set(memberName, {
+    const livenessObservedAt = nowIso();
+    const nextRuntimeLostStatus: MemberSpawnStatusEntry = {
       ...refreshed,
       runtimeAlive: false,
       livenessSource: undefined,
@@ -14554,8 +15169,16 @@ export class TeamProvisioningService {
       ...(metadata?.runtimeDiagnosticSeverity
         ? { runtimeDiagnosticSeverity: metadata.runtimeDiagnosticSeverity }
         : {}),
-      livenessLastCheckedAt: nowIso(),
-    });
+      livenessLastCheckedAt: livenessObservedAt,
+    };
+    this.syncMemberTaskActivityForRuntimeTransition(
+      run,
+      memberName,
+      refreshed,
+      nextRuntimeLostStatus,
+      livenessObservedAt
+    );
+    run.memberSpawnStatuses.set(memberName, nextRuntimeLostStatus);
     this.setMemberSpawnStatus(run, memberName, 'error', strictReason);
   }
 
@@ -14591,6 +15214,7 @@ export class TeamProvisioningService {
       updatedAt: observedAt,
     };
 
+    this.syncMemberTaskActivityForRuntimeTransition(run, memberName, current, next, observedAt);
     run.memberSpawnStatuses.set(memberName, next);
     const launchDiagnostics = boundLaunchDiagnostics(buildLaunchDiagnosticsFromRun(run));
     if (launchDiagnostics) {
@@ -14688,6 +15312,7 @@ export class TeamProvisioningService {
       updatedAt: observedAt,
     };
 
+    this.syncMemberTaskActivityForRuntimeTransition(run, memberName, current, next, observedAt);
     run.memberSpawnStatuses.set(memberName, next);
     const launchDiagnostics = boundLaunchDiagnostics(buildLaunchDiagnosticsFromRun(run));
     if (launchDiagnostics) {
@@ -16923,9 +17548,9 @@ export class TeamProvisioningService {
     if (existingProvisioningRunId) {
       return { runId: existingProvisioningRunId };
     }
-    const previousLaunchSnapshot = await this.launchStateStore
-      .read(request.teamName)
-      .catch(() => null);
+    const previousLaunchSnapshot = await this.readTaskActivityRepairLaunchSnapshot(
+      request.teamName
+    );
     this.repairStaleTaskActivityIntervalsOnce(request.teamName, previousLaunchSnapshot);
     const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
     assertAppDeterministicBootstrapEnabled();
@@ -20622,6 +21247,10 @@ export class TeamProvisioningService {
         continue;
       }
 
+      if (run.pendingMemberRestarts?.has(expected) === true) {
+        continue;
+      }
+
       const acceptedAtMs =
         current?.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
       const graceExpired =
@@ -20679,6 +21308,9 @@ export class TeamProvisioningService {
       if (this.isMemberLifecycleOperationActive(run.teamName, expected)) {
         continue;
       }
+      if (run.pendingMemberRestarts?.has(expected) === true) {
+        continue;
+      }
 
       const current = run.memberSpawnStatuses.get(expected);
       if (
@@ -20713,6 +21345,9 @@ export class TeamProvisioningService {
         continue;
       }
       if (this.isMemberLifecycleOperationActive(run.teamName, expected)) {
+        continue;
+      }
+      if (run.pendingMemberRestarts?.has(expected) === true) {
         continue;
       }
       const hasExistingTerminalFailure =
@@ -20752,6 +21387,7 @@ export class TeamProvisioningService {
         launchState: 'failed_to_start',
       };
 
+      this.syncMemberTaskActivityForRuntimeTransition(run, expected, prev, next, failedAt);
       run.memberSpawnStatuses.set(expected, next);
       this.appendMemberBootstrapDiagnostic(run, expected, hardFailureReason);
       if (this.isCurrentTrackedRun(run)) {
@@ -22479,10 +23115,60 @@ export class TeamProvisioningService {
   ): Record<string, MemberSpawnStatusEntry> {
     const statuses: Record<string, MemberSpawnStatusEntry> = {};
     for (const expected of run.expectedMembers) {
-      statuses[expected] =
+      const current =
         run.memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
+      statuses[expected] = this.projectPendingRestartStatusForSnapshot(run, expected, current);
     }
     return statuses;
+  }
+
+  private projectPendingRestartStatusForSnapshot(
+    run: ProvisioningRun,
+    memberName: string,
+    current: MemberSpawnStatusEntry
+  ): MemberSpawnStatusEntry {
+    const pendingRestart = run.pendingMemberRestarts?.get(memberName);
+    if (!pendingRestart) {
+      return current;
+    }
+    if (
+      current.launchState === 'confirmed_alive' ||
+      current.launchState === 'failed_to_start' ||
+      current.launchState === 'skipped_for_launch' ||
+      current.skippedForLaunch === true
+    ) {
+      return current;
+    }
+
+    // A manual restart can be requested after the original launch has already finished.
+    // Persisting that transient state as `finished + starting` is unsafe because the
+    // launch-state evaluator intentionally converts old `starting` entries into
+    // "never spawned" failures. Project it as pending bootstrap until the lead accepts,
+    // rejects, or the normal restart grace timeout resolves it.
+    const updatedAt = current.updatedAt ?? pendingRestart.requestedAt;
+    const next: MemberSpawnStatusEntry = {
+      ...current,
+      status: 'waiting',
+      updatedAt,
+      skippedForLaunch: false,
+      skipReason: undefined,
+      skippedAt: undefined,
+      agentToolAccepted: true,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      livenessSource: undefined,
+      bootstrapStalled: undefined,
+      runtimeDiagnostic:
+        current.runtimeDiagnostic ??
+        'Manual restart is already in progress; waiting for teammate bootstrap.',
+      runtimeDiagnosticSeverity: current.runtimeDiagnosticSeverity ?? 'info',
+      firstSpawnAcceptedAt: current.firstSpawnAcceptedAt ?? pendingRestart.requestedAt,
+    };
+    next.launchState = deriveMemberLaunchState(next);
+    return next;
   }
 
   private async overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState(
@@ -22572,6 +23258,7 @@ export class TeamProvisioningService {
         livenessLastCheckedAt: updatedAt,
         launchState: 'confirmed_alive',
       };
+      this.syncMemberTaskActivityForRuntimeTransition(run, memberName, current, next, updatedAt);
       run.memberSpawnStatuses.set(memberName, next);
       run.pendingMemberRestarts?.delete(memberName);
       this.syncMemberLaunchGraceCheck(run, memberName, next);
@@ -22858,8 +23545,16 @@ export class TeamProvisioningService {
     const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
     run.expectedMembers = memberNames;
     for (const memberName of memberNames) {
+      if (run.pendingMemberRestarts?.has(memberName) === true) {
+        continue;
+      }
       const entry = snapshotStatuses[memberName];
       if (entry) {
+        const previous =
+          run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
+        if (previous.runtimeAlive === true && entry.runtimeAlive !== true) {
+          this.pauseMemberTaskActivityForRuntimeLoss(run, memberName, previous, entry.updatedAt);
+        }
         run.memberSpawnStatuses.set(memberName, entry);
       }
     }
@@ -26324,6 +27019,9 @@ export class TeamProvisioningService {
    */
   async stopAllTeams(): Promise<void> {
     this.stopAllTeamsGeneration += 1;
+    for (const teamName of this.getShutdownTrackedTeamNames()) {
+      this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName);
+    }
     killTrackedCliProcesses('SIGKILL');
     this.killTransientProbeProcessesForShutdown();
 

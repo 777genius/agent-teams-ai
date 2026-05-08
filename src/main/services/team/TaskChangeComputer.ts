@@ -179,7 +179,12 @@ export class TaskChangeComputer {
       if (!Number.isFinite(startMs)) continue;
       const endMsRaw =
         typeof interval.completedAt === 'string' ? Date.parse(interval.completedAt) : Number.NaN;
-      const endMs = Number.isFinite(endMsRaw) ? endMsRaw : null;
+      const endMs =
+        interval.completedAt === undefined
+          ? null
+          : Number.isFinite(endMsRaw)
+            ? Math.max(endMsRaw, startMs)
+            : startMs;
       normalized.push({
         startMs,
         endMs,
@@ -192,7 +197,13 @@ export class TaskChangeComputer {
     const startTimestamp = normalized[0]?.startedAt ?? '';
     const maxEnd = normalized.reduce<{ endMs: number; endTimestamp: string } | null>(
       (acc, item) => {
-        if (item.endMs == null || typeof item.completedAt !== 'string') return acc;
+        if (
+          item.endMs == null ||
+          typeof item.completedAt !== 'string' ||
+          !Number.isFinite(Date.parse(item.completedAt))
+        ) {
+          return acc;
+        }
         if (!acc || item.endMs > acc.endMs) {
           return { endMs: item.endMs, endTimestamp: item.completedAt };
         }

@@ -98,10 +98,14 @@ const PROTOCOL_PROOF_MISSING_TOKENS = [
   'plain_text_ack_only_still_requires_answer',
   'visible_reply_destination_not_found_yet',
   'visible_reply_missing_relayofmessageid',
+  'visible_reply_missing_task_refs',
+  'visible_reply_missing_task_refs_after_merge',
+  'visible_reply_task_refs_merge_failed',
   'did not create a visible reply',
   'did not create a visible message_send reply',
   'did not create a visible reply or task progress proof',
   'without the required relayofmessageid correlation',
+  'without the required taskrefs metadata',
 ];
 const logger = createLogger('Service:TeamMemberRuntimeAdvisory');
 

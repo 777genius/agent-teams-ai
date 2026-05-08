@@ -46,6 +46,15 @@ function formatOpenCodeRuntimeDeliveryFailureReason(reason: string | null | unde
   ) {
     return 'OpenCode created a reply without the required relayOfMessageId correlation.';
   }
+  if (normalized === 'visible_reply_missing_task_refs') {
+    return 'OpenCode created a reply without the required taskRefs metadata.';
+  }
+  if (normalized === 'visible_reply_missing_task_refs_after_merge') {
+    return 'OpenCode created a reply without the required taskRefs metadata.';
+  }
+  if (normalized === 'visible_reply_task_refs_merge_failed') {
+    return 'OpenCode created a reply without the required taskRefs metadata, and the app could not attach it automatically.';
+  }
   if (normalized === 'non_visible_tool_without_task_progress') {
     return 'OpenCode used tools, but did not create a visible reply or task progress proof.';
   }

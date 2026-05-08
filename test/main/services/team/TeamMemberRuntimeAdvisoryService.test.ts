@@ -170,6 +170,10 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
     ['codex_native_timeout', 'Codex native exec timed out after 120000ms.'],
     ['network_error', 'Fetch failed because the network connection timed out.'],
     ['provider_overloaded', 'Service unavailable: provider temporarily unavailable (503).'],
+    [
+      'protocol_proof_missing',
+      'OpenCode created a reply without the required taskRefs metadata.',
+    ],
     ['backend_error', 'Unexpected backend blew up during request processing.'],
   ] as const)('classifies %s retry causes from api_error messages', async (expected, message) => {
     const service = new TeamMemberRuntimeAdvisoryService({} as never);

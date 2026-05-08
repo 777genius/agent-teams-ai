@@ -664,7 +664,7 @@ export const MessageComposer = ({
               className={cn(
                 'mr-[15px] inline-flex items-center border text-xs transition-colors',
                 shouldDockRecipientSelector
-                  ? 'relative z-10 -mb-px overflow-hidden rounded-b-none rounded-t-[1.35rem] border-b-0 bg-[var(--color-surface-raised)]'
+                  ? 'relative z-[1] -mb-px overflow-hidden rounded-b-none rounded-t-[1.35rem] border-b-0 bg-[var(--color-surface-raised)]'
                   : 'rounded-full',
                 isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
               )}
@@ -948,7 +948,7 @@ export const MessageComposer = ({
         ) : null}
       </div>
 
-      <div className="relative">
+      <div className={cn('relative', shouldDockRecipientSelector && 'z-[2]')}>
         <DropZoneOverlay
           active={isDragOver}
           rejected={!canAttach}

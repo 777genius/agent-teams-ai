@@ -126,6 +126,7 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(directCommand?.text).toContain('Include relayOfMessageId="semantic-direct-');
     expect(directCommand?.text).toContain('Action mode for this message: ask.');
     expect(directCommand?.text).toContain('You must not end this turn empty.');
+    expect(directCommand?.text).toContain('include taskRefs exactly as provided');
     expect(directCommand?.text).toContain('"displayId":"59560c95"');
     expect(directCommand?.text).toContain('Do not use SendMessage or runtime_deliver_message');
     expect(directCommand?.text).toContain('never use #00000000');
@@ -143,12 +144,7 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
 
     if (process.env.OPENCODE_E2E_DUMP_PROMPTS === '1') {
       await dumpOpenCodePromptArtifacts({
-        outputDir: path.join(
-          process.cwd(),
-          'test-results',
-          'opencode-semantic-prompts',
-          teamName
-        ),
+        outputDir: path.join(process.cwd(), 'test-results', 'opencode-semantic-prompts', teamName),
         launchInput: launchInput!,
         launchCommand: launchCommand!,
         messageCommands: bridgeCapture.messageCommands,

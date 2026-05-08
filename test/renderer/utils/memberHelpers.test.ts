@@ -864,6 +864,23 @@ describe('memberHelpers spawn-aware presence', () => {
     expect(title).not.toContain('non_visible_tool_without_task_progress');
   });
 
+  it('formats missing taskRefs advisory reasons before showing them in titles', () => {
+    const title = getMemberRuntimeAdvisoryTitle(
+      {
+        kind: 'api_error',
+        observedAt: '2026-04-07T09:00:00.000Z',
+        reasonCode: 'protocol_proof_missing',
+        message: 'visible_reply_missing_task_refs',
+      },
+      'opencode'
+    );
+
+    expect(title).toContain(
+      'OpenCode created a reply without the required taskRefs metadata.'
+    );
+    expect(title).not.toContain('visible_reply_missing_task_refs');
+  });
+
   it('renders Codex native timeout separately from network errors', () => {
     const advisory = {
       kind: 'api_error' as const,

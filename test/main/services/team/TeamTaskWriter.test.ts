@@ -134,6 +134,28 @@ describe('TeamTaskWriter', () => {
     });
   });
 
+  it('opens a new work interval when the previous completedAt is malformed', async () => {
+    hoisted.files.set(
+      taskPath,
+      JSON.stringify({
+        id: '12',
+        subject: 'task',
+        owner: 'alice',
+        status: 'pending',
+        workIntervals: [{ startedAt: '2026-05-02T10:00:00.000Z', completedAt: '' }],
+      })
+    );
+
+    await writer.updateStatus('my-team', '12', 'in_progress');
+
+    const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}') as {
+      workIntervals?: { startedAt?: string; completedAt?: string }[];
+    };
+    expect(persisted.workIntervals).toHaveLength(2);
+    expect(persisted.workIntervals?.[0]?.completedAt).toBe('');
+    expect(persisted.workIntervals?.[1]?.completedAt).toBeUndefined();
+  });
+
   it('throws when verify detects conflicting status', async () => {
     hoisted.files.set(
       taskPath,
@@ -217,7 +239,13 @@ describe('TeamTaskWriter', () => {
           subject: 'task',
           status: 'pending',
           historyEvents: [
-            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z', actor: 'user' },
+            {
+              type: 'task_created',
+              id: 'ev1',
+              status: 'pending',
+              timestamp: '2024-01-01T00:00:00.000Z',
+              actor: 'user',
+            },
           ],
         })
       );
@@ -264,8 +292,19 @@ describe('TeamTaskWriter', () => {
           subject: 'task',
           status: 'in_progress',
           historyEvents: [
-            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
-            { type: 'status_changed', id: 'ev2', from: 'pending', to: 'in_progress', timestamp: '2024-01-01T00:01:00.000Z' },
+            {
+              type: 'task_created',
+              id: 'ev1',
+              status: 'pending',
+              timestamp: '2024-01-01T00:00:00.000Z',
+            },
+            {
+              type: 'status_changed',
+              id: 'ev2',
+              from: 'pending',
+              to: 'in_progress',
+              timestamp: '2024-01-01T00:01:00.000Z',
+            },
           ],
         })
       );
@@ -291,8 +330,19 @@ describe('TeamTaskWriter', () => {
           status: 'deleted',
           deletedAt: '2024-01-01T00:02:00.000Z',
           historyEvents: [
-            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
-            { type: 'status_changed', id: 'ev2', from: 'pending', to: 'deleted', timestamp: '2024-01-01T00:02:00.000Z' },
+            {
+              type: 'task_created',
+              id: 'ev1',
+              status: 'pending',
+              timestamp: '2024-01-01T00:00:00.000Z',
+            },
+            {
+              type: 'status_changed',
+              id: 'ev2',
+              from: 'pending',
+              to: 'deleted',
+              timestamp: '2024-01-01T00:02:00.000Z',
+            },
           ],
         })
       );
@@ -342,7 +392,12 @@ describe('TeamTaskWriter', () => {
           owner: 'alice',
           status: 'pending',
           historyEvents: [
-            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
+            {
+              type: 'task_created',
+              id: 'ev1',
+              status: 'pending',
+              timestamp: '2024-01-01T00:00:00.000Z',
+            },
           ],
         })
       );

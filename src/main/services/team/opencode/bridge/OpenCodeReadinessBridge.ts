@@ -68,7 +68,7 @@ const DEFAULT_RECONCILE_TIMEOUT_MS = 30_000;
 // Longer than the renderer-facing UI timeout: late OpenCode turns should still
 // finish bridge-side observation and emit member-work-sync signals.
 const DEFAULT_SEND_TIMEOUT_MS = 45_000;
-const DEFAULT_OBSERVE_TIMEOUT_MS = 8_000;
+const DEFAULT_OBSERVE_TIMEOUT_MS = 20_000;
 const DEFAULT_STOP_TIMEOUT_MS = 30_000;
 const DEFAULT_CLEANUP_TIMEOUT_MS = 10_000;
 const DEFAULT_BACKFILL_TIMEOUT_MS = 45_000;

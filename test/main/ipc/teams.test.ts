@@ -312,6 +312,7 @@ describe('ipc teams handlers', () => {
     getAliveTeams: vi.fn(() => ['my-team']),
     getLeadActivityState: vi.fn(() => 'idle'),
     stopTeam: vi.fn(() => Promise.resolve()),
+    repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve(undefined)),
     reattachOpenCodeOwnedMemberLane: vi.fn(async () => undefined),
     detachOpenCodeOwnedMemberLane: vi.fn(async () => undefined),
   };
@@ -369,6 +370,8 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockReset();
     provisioningService.resolveRuntimeRecipientProviderId.mockReset();
     provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
+    provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockReset();
+    provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
     initializeTeamHandlers(
       service as never,
@@ -1375,6 +1378,32 @@ describe('ipc teams handlers', () => {
       includeMemberBranches: false,
     });
     expect(service.getTeamData).not.toHaveBeenCalled();
+  });
+
+  it('repairs stale task activity before reading TEAM_GET_DATA through the worker', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+
+    const handler = handlers.get(TEAM_GET_DATA)!;
+    const result = (await handler({} as never, 'my-team')) as {
+      success: boolean;
+      data?: { teamName: string };
+    };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot).toHaveBeenCalledWith(
+      'my-team'
+    );
+    expect(
+      provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mock.invocationCallOrder[0]
+    ).toBeLessThan(mockTeamDataWorkerClient.getTeamData.mock.invocationCallOrder[0]);
   });
 
   it('normalizes explicit full TEAM_GET_DATA options to the existing one-argument call shape', async () => {

@@ -221,6 +221,147 @@ describe('TeamInboxWriter', () => {
     });
   });
 
+  it('merges taskRefs when deduplicating repeated runtime delivery replies', async () => {
+    const taskRef = { taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' };
+    const first = await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: 'Готово по задаче.',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-task-1',
+    });
+    const second = await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: ' Готово   по задаче. ',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-task-1',
+      taskRefs: [taskRef],
+    });
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as Record<
+      string,
+      unknown
+    >[];
+    expect(second).toMatchObject({
+      deliveredToInbox: true,
+      deduplicated: true,
+      messageId: first.messageId,
+    });
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].taskRefs).toEqual([taskRef]);
+  });
+
+  it('merges taskRefs into an exact runtime delivery reply row', async () => {
+    const taskRef = { taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' };
+    const written = await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: 'Готово по задаче.',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-task-1',
+      messageId: 'reply-1',
+    });
+
+    const result = await writer.mergeRuntimeDeliveryTaskRefs('my-team', {
+      inboxName: 'user',
+      messageId: written.messageId,
+      relayOfMessageId: 'inbound-task-1',
+      from: 'alice',
+      taskRefs: [taskRef],
+    });
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as Record<
+      string,
+      unknown
+    >[];
+    expect(result).toMatchObject({
+      found: true,
+      updated: true,
+      message: {
+        messageId: 'reply-1',
+        taskRefs: [taskRef],
+      },
+    });
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].taskRefs).toEqual([taskRef]);
+  });
+
+  it('does not merge taskRefs into explicit non-runtime reply rows', async () => {
+    const taskRef = { taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' };
+    await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: 'Lead process reply.',
+      source: 'lead_process',
+      relayOfMessageId: 'inbound-task-1',
+      messageId: 'reply-1',
+    });
+
+    const result = await writer.mergeRuntimeDeliveryTaskRefs('my-team', {
+      inboxName: 'user',
+      messageId: 'reply-1',
+      relayOfMessageId: 'inbound-task-1',
+      from: 'alice',
+      taskRefs: [taskRef],
+    });
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as Record<
+      string,
+      unknown
+    >[];
+    expect(result).toEqual({ found: false, updated: false });
+    expect(persisted[0]).not.toHaveProperty('taskRefs');
+  });
+
+  it('repairs relayOfMessageId on a runtime delivery reply matched by messageId', async () => {
+    const taskRef = { taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' };
+    await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: 'Visible answer.',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'hallucinated-inbound-id',
+      messageId: 'reply-1',
+    });
+
+    const result = await writer.correlateRuntimeDeliveryReply('my-team', {
+      inboxName: 'user',
+      messageId: 'reply-1',
+      relayOfMessageId: 'real-inbound-id',
+      from: 'alice',
+      taskRefs: [taskRef],
+    });
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as Record<
+      string,
+      unknown
+    >[];
+    expect(result).toMatchObject({
+      found: true,
+      updated: true,
+      message: {
+        messageId: 'reply-1',
+        relayOfMessageId: 'real-inbound-id',
+        taskRefs: [taskRef],
+      },
+    });
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]).toMatchObject({
+      relayOfMessageId: 'real-inbound-id',
+      taskRefs: [taskRef],
+    });
+  });
+
   it('omits source field from payload when not provided in request', async () => {
     await writer.sendMessage('my-team', {
       member: 'alice',

@@ -116,6 +116,36 @@ describe('memberActivityTimer', () => {
     ).toBeNull();
   });
 
+  it('does not treat invalid empty completedAt values as active work or review intervals', () => {
+    const workTask: TeamTaskWithKanban = {
+      ...baseTask,
+      workIntervals: [{ startedAt: '2026-05-07T09:10:00.000Z', completedAt: '' }],
+    };
+    expect(
+      deriveWorkActivityTimerAnchor(workTask, {
+        teamName: 'alpha',
+        memberName: 'bob',
+      })
+    ).toBeNull();
+
+    const reviewTask: TeamTaskWithKanban = {
+      ...baseTask,
+      status: 'completed',
+      reviewState: 'review',
+      kanbanColumn: 'review',
+      reviewer: 'alice',
+      reviewIntervals: [
+        { reviewer: 'alice', startedAt: '2026-05-07T09:30:00.000Z', completedAt: '' },
+      ],
+    };
+    expect(
+      deriveReviewActivityTimerAnchor(reviewTask, {
+        teamName: 'alpha',
+        memberName: 'alice',
+      })
+    ).toBeNull();
+  });
+
   it('anchors review timers only after the reviewer actually starts review', () => {
     const assignedOnly: TeamTaskWithKanban = {
       ...baseTask,

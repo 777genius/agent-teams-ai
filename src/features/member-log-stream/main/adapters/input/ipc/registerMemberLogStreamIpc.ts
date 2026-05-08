@@ -4,9 +4,11 @@ import { createLogger } from '@shared/utils/logger';
 import {
   MEMBER_LOG_STREAM_GET,
   MEMBER_LOG_STREAM_GET_PREVIEWS,
+  MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
   MEMBER_LOG_STREAM_SET_TRACKING,
   normalizeMemberLogPreviewResponse,
   normalizeMemberLogStreamResponse,
+  normalizeMemberRuntimeLogTailResponse,
 } from '../../../../contracts';
 
 import type {
@@ -14,6 +16,8 @@ import type {
   MemberLogPreviewResponse,
   MemberLogStreamRequestOptions,
   MemberLogStreamResponse,
+  MemberRuntimeLogTailOptions,
+  MemberRuntimeLogTailResponse,
 } from '../../../../contracts';
 import type { MemberLogStreamFeatureFacade } from '../../../composition/createMemberLogStreamFeature';
 import type { IpcResult } from '@shared/types';
@@ -27,6 +31,8 @@ const ALLOWED_PREVIEW_OPTION_KEYS = new Set([
   'laneIdsByMember',
   'forceRefresh',
 ]);
+const ALLOWED_RUNTIME_LOG_OPTION_KEYS = new Set(['kind', 'maxBytes', 'forceRefresh']);
+const MEMBER_RUNTIME_LOG_KINDS = new Set(['stdout', 'stderr', 'events']);
 
 interface ValidationResult<T> {
   valid: boolean;
@@ -217,6 +223,50 @@ function normalizePreviewOptions(options: unknown): ValidationResult<{
   };
 }
 
+function normalizeRuntimeLogOptions(
+  options: unknown
+): ValidationResult<MemberRuntimeLogTailOptions> {
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    return { valid: false, error: 'options must be an object' };
+  }
+
+  const record = options as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (!ALLOWED_RUNTIME_LOG_OPTION_KEYS.has(key)) {
+      return { valid: false, error: `Unknown getMemberRuntimeLogTail option: ${key}` };
+    }
+  }
+
+  if (!MEMBER_RUNTIME_LOG_KINDS.has(record.kind as string)) {
+    return { valid: false, error: 'kind must be stdout, stderr, or events' };
+  }
+
+  let maxBytes: number | undefined;
+  if (record.maxBytes != null) {
+    if (typeof record.maxBytes !== 'number' || !Number.isFinite(record.maxBytes)) {
+      return { valid: false, error: 'maxBytes must be a finite number' };
+    }
+    maxBytes = Math.max(1024, Math.min(512 * 1024, Math.floor(record.maxBytes)));
+  }
+
+  let forceRefresh: boolean | undefined;
+  if (record.forceRefresh != null) {
+    if (typeof record.forceRefresh !== 'boolean') {
+      return { valid: false, error: 'forceRefresh must be a boolean' };
+    }
+    forceRefresh = record.forceRefresh;
+  }
+
+  return {
+    valid: true,
+    value: {
+      kind: record.kind as MemberRuntimeLogTailOptions['kind'],
+      ...(maxBytes !== undefined ? { maxBytes } : {}),
+      ...(forceRefresh !== undefined ? { forceRefresh } : {}),
+    },
+  };
+}
+
 export function registerMemberLogStreamIpc(
   ipcMain: IpcMain,
   feature: MemberLogStreamFeatureFacade
@@ -324,10 +374,49 @@ export function registerMemberLogStreamIpc(
       }
     }
   );
+
+  ipcMain.handle(
+    MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
+    async (
+      _event: IpcMainInvokeEvent,
+      teamName: unknown,
+      memberName: unknown,
+      options?: MemberRuntimeLogTailOptions
+    ): Promise<IpcResult<MemberRuntimeLogTailResponse>> => {
+      const vTeam = validateTeamName(teamName);
+      if (!vTeam.valid) {
+        return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+      }
+      const vMember = validateMemberName(memberName);
+      if (!vMember.valid) {
+        return { success: false, error: vMember.error ?? 'Invalid memberName' };
+      }
+      const vOptions = normalizeRuntimeLogOptions(options);
+      if (!vOptions.valid) {
+        return { success: false, error: vOptions.error ?? 'Invalid options' };
+      }
+
+      try {
+        const response = await feature.getMemberRuntimeLogTail({
+          teamName: vTeam.value!,
+          memberName: vMember.value!,
+          options: vOptions.value!,
+        });
+        return { success: true, data: normalizeMemberRuntimeLogTailResponse(response) };
+      } catch (error) {
+        logger.error('Failed to load member runtime log tail', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to load member runtime log tail',
+        };
+      }
+    }
+  );
 }
 
 export function removeMemberLogStreamIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(MEMBER_LOG_STREAM_GET);
   ipcMain.removeHandler(MEMBER_LOG_STREAM_GET_PREVIEWS);
+  ipcMain.removeHandler(MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL);
   ipcMain.removeHandler(MEMBER_LOG_STREAM_SET_TRACKING);
 }

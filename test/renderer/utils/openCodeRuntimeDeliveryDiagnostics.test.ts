@@ -98,4 +98,25 @@ describe('openCodeRuntimeDeliveryDiagnostics', () => {
       'OpenCode runtime delivery failed. Message was saved to inbox, but live delivery did not complete. Reason: OpenCode used tools, but did not create a visible reply or task progress proof.'
     );
   });
+
+  it('surfaces missing taskRefs proof as a readable failure', () => {
+    const diagnostics = buildOpenCodeRuntimeDeliveryDiagnostics({
+      deliveredToInbox: true,
+      messageId: 'msg-taskrefs-required',
+      runtimeDelivery: {
+        providerId: 'opencode',
+        attempted: true,
+        delivered: false,
+        responsePending: false,
+        responseState: 'responded_visible_message',
+        ledgerStatus: 'failed_terminal',
+        reason: 'visible_reply_missing_task_refs',
+        diagnostics: ['visible_reply_missing_task_refs'],
+      },
+    });
+
+    expect(diagnostics.warning).toBe(
+      'OpenCode runtime delivery failed. Message was saved to inbox, but live delivery did not complete. Reason: OpenCode created a reply without the required taskRefs metadata.'
+    );
+  });
 });

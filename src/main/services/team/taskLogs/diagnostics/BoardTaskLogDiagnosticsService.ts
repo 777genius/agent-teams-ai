@@ -99,11 +99,12 @@ function isWithinWorkIntervals(timestamp: Date, intervals: TaskWorkInterval[]): 
     if (!Number.isFinite(startedAt) || time < startedAt) {
       return false;
     }
-    if (!interval.completedAt) {
+    if (interval.completedAt === undefined) {
       return true;
     }
     const completedAt = Date.parse(interval.completedAt);
-    return !Number.isFinite(completedAt) || time <= completedAt;
+    const endMs = Number.isFinite(completedAt) ? Math.max(completedAt, startedAt) : startedAt;
+    return time <= endMs;
   });
 }
 

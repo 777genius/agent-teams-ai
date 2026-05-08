@@ -267,6 +267,36 @@ describe('OpenCodePromptDeliveryLedger', () => {
     ).toBe(true);
   });
 
+  it('preserves missing taskRefs as the pending reason for insufficient destination proof', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-taskrefs',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:taskrefs',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+
+    const missingTaskRefs = await store.applyDestinationProof({
+      id: record.id,
+      visibleReplyInbox: 'user',
+      visibleReplyMessageId: 'reply-taskrefs',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      semanticallySufficient: false,
+      diagnostics: ['visible_reply_missing_task_refs_after_merge'],
+      observedAt: '2026-04-25T10:00:01.000Z',
+    });
+
+    expect(missingTaskRefs.status).toBe('pending');
+    expect(missingTaskRefs.responseState).toBe('responded_visible_message');
+    expect(missingTaskRefs.lastReason).toBe('visible_reply_missing_task_refs');
+    expect(missingTaskRefs.diagnostics).toContain('visible_reply_missing_task_refs_after_merge');
+  });
+
   it('records empty assistant delivery results as unanswered and stores plain text previews', async () => {
     const store = createStore();
     const unanswered = await store.ensurePending({

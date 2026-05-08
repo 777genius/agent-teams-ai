@@ -2,6 +2,8 @@ import type {
   MemberLogPreviewMember,
   MemberLogPreviewResponse,
   MemberLogStreamResponse,
+  MemberRuntimeLogKind,
+  MemberRuntimeLogTailResponse,
 } from './dto';
 
 export function createEmptyMemberLogStreamResponse(
@@ -89,5 +91,54 @@ export function normalizeMemberLogPreviewResponse(
       typeof response.generatedAt === 'string' && response.generatedAt.length > 0
         ? response.generatedAt
         : new Date().toISOString(),
+  };
+}
+
+const MEMBER_RUNTIME_LOG_KINDS = new Set<MemberRuntimeLogKind>(['stdout', 'stderr', 'events']);
+
+function normalizeMemberRuntimeLogKind(kind: unknown): MemberRuntimeLogKind {
+  return MEMBER_RUNTIME_LOG_KINDS.has(kind as MemberRuntimeLogKind)
+    ? (kind as MemberRuntimeLogKind)
+    : 'stdout';
+}
+
+function normalizeOptionalFiniteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+export function createEmptyMemberRuntimeLogTailResponse(
+  kind: MemberRuntimeLogKind = 'stdout'
+): MemberRuntimeLogTailResponse {
+  return {
+    kind,
+    content: '',
+    truncated: false,
+    bytesRead: 0,
+    missing: true,
+  };
+}
+
+export function normalizeMemberRuntimeLogTailResponse(
+  response: MemberRuntimeLogTailResponse | null | undefined
+): MemberRuntimeLogTailResponse {
+  if (!response) {
+    return createEmptyMemberRuntimeLogTailResponse();
+  }
+
+  const kind = normalizeMemberRuntimeLogKind(response.kind);
+  const fileSizeBytes = normalizeOptionalFiniteNumber(response.fileSizeBytes);
+  const updatedAt =
+    typeof response.updatedAt === 'string' && response.updatedAt.length > 0
+      ? response.updatedAt
+      : undefined;
+
+  return {
+    kind,
+    content: typeof response.content === 'string' ? response.content : '',
+    truncated: response.truncated === true,
+    bytesRead: normalizeOptionalFiniteNumber(response.bytesRead) ?? 0,
+    ...(fileSizeBytes !== undefined ? { fileSizeBytes } : {}),
+    ...(updatedAt !== undefined ? { updatedAt } : {}),
+    missing: response.missing === true,
   };
 }

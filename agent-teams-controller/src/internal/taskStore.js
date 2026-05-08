@@ -201,13 +201,23 @@ function appendHistoryEvent(events, event) {
   return list;
 }
 
+function isOpenReviewInterval(interval) {
+  return interval && interval.completedAt === undefined;
+}
+
 function closeOpenReviewIntervals(task, timestamp) {
   if (!Array.isArray(task.reviewIntervals)) return false;
   let changed = false;
   task.reviewIntervals = task.reviewIntervals.map((interval) => {
-    if (interval.completedAt) return interval;
+    if (!isOpenReviewInterval(interval)) return interval;
     changed = true;
-    return { ...interval, completedAt: timestamp };
+    const startedAtMs = Date.parse(interval.startedAt);
+    const timestampMs = Date.parse(timestamp);
+    const completedAt =
+      Number.isFinite(startedAtMs) && Number.isFinite(timestampMs) && timestampMs < startedAtMs
+        ? interval.startedAt
+        : timestamp;
+    return { ...interval, completedAt };
   });
   return changed;
 }
@@ -466,7 +476,7 @@ function setTaskStatus(paths, taskRef, nextStatus, actor) {
     const lastInterval = workIntervals.length > 0 ? workIntervals[workIntervals.length - 1] : null;
 
     if (task.status !== 'in_progress' && status === 'in_progress') {
-      if (!lastInterval || typeof lastInterval.completedAt === 'string') {
+      if (!lastInterval || lastInterval.completedAt !== undefined) {
         workIntervals.push({ startedAt: timestamp });
       }
     } else if (task.status === 'in_progress' && status !== 'in_progress') {

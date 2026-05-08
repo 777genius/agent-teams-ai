@@ -53,6 +53,39 @@ describe('taskWorkDuration', () => {
     });
   });
 
+  it('does not treat empty completedAt strings as running implementation time', () => {
+    const duration = calculateTaskImplementationDuration(
+      {
+        status: 'in_progress',
+        workIntervals: [{ startedAt: '2026-05-08T10:00:00.000Z', completedAt: '' }],
+      },
+      Date.parse('2026-05-08T10:30:00.000Z')
+    );
+
+    expect(duration).toEqual({
+      elapsedMs: 0,
+      hasRunningInterval: false,
+      countedIntervalCount: 0,
+    });
+
+    expect(
+      calculateTaskImplementationEventDuration(
+        {
+          status: 'in_progress',
+          workIntervals: [{ startedAt: '2026-05-08T10:00:00.000Z', completedAt: '' }],
+        },
+        {
+          id: 'event-started',
+          timestamp: '2026-05-08T10:00:00.000Z',
+          type: 'status_changed',
+          from: 'pending',
+          to: 'in_progress',
+        },
+        Date.parse('2026-05-08T10:30:00.000Z')
+      )
+    ).toBeNull();
+  });
+
   it('merges overlapping intervals to avoid double counting malformed data', () => {
     const duration = calculateTaskImplementationDuration(
       {

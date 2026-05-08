@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MEMBER_LOG_STREAM_GET,
   MEMBER_LOG_STREAM_GET_PREVIEWS,
+  MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
   MEMBER_LOG_STREAM_SET_TRACKING,
 } from '../../contracts';
 import { createMemberLogStreamBridge } from '../createMemberLogStreamBridge';
@@ -119,6 +120,48 @@ describe('createMemberLogStreamBridge', () => {
         maxItemsPerMember: 3,
         textLimit: 200,
         laneIdsByMember: { alice: 'secondary:opencode:alice' },
+      }
+    );
+  });
+
+  it('forwards process runtime log tail IPC requests and normalizes response payloads', async () => {
+    mocks.ipcRenderer.invoke.mockResolvedValueOnce({
+      success: true,
+      data: {
+        kind: 'stderr',
+        content: 'OpenCode API error',
+        truncated: true,
+        bytesRead: 131072,
+        fileSizeBytes: 262144,
+        updatedAt: '2026-04-02T00:00:00.000Z',
+        missing: false,
+      },
+    });
+    const bridge = createMemberLogStreamBridge();
+
+    const response = await bridge.getMemberRuntimeLogTail('alpha-team', 'alice', {
+      kind: 'stderr',
+      maxBytes: 131072,
+      forceRefresh: true,
+    });
+
+    expect(response).toEqual({
+      kind: 'stderr',
+      content: 'OpenCode API error',
+      truncated: true,
+      bytesRead: 131072,
+      fileSizeBytes: 262144,
+      updatedAt: '2026-04-02T00:00:00.000Z',
+      missing: false,
+    });
+    expect(mocks.ipcRenderer.invoke).toHaveBeenCalledWith(
+      MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
+      'alpha-team',
+      'alice',
+      {
+        kind: 'stderr',
+        maxBytes: 131072,
+        forceRefresh: true,
       }
     );
   });

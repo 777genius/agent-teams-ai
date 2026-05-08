@@ -49,7 +49,7 @@ function getOpenWorkInterval(task: TeamTask): TaskWorkInterval | null {
   const intervals = task.workIntervals ?? [];
   for (let i = intervals.length - 1; i >= 0; i -= 1) {
     const interval = intervals[i];
-    if (!interval.completedAt) {
+    if (interval.completedAt === undefined) {
       return interval;
     }
   }

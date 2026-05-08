@@ -255,7 +255,7 @@ export function deriveWorkActivityTimerAnchor(
   for (let index = intervals.length - 1; index >= 0; index -= 1) {
     const interval = intervals[index];
     const startedAtMs = parseIsoMs(interval?.startedAt);
-    if (startedAtMs > 0 && !interval?.completedAt) {
+    if (startedAtMs > 0 && interval?.completedAt === undefined) {
       for (let previousIndex = 0; previousIndex < index; previousIndex += 1) {
         const previous = intervals[previousIndex];
         const previousStartedAtMs = parseIsoMs(previous?.startedAt);
@@ -335,7 +335,10 @@ export function deriveReviewActivityTimerAnchor(
   const reviewIntervals = Array.isArray(task.reviewIntervals) ? task.reviewIntervals : [];
   for (let index = reviewIntervals.length - 1; index >= 0; index -= 1) {
     const interval = reviewIntervals[index];
-    if (normalizeMemberName(interval?.reviewer) !== memberKey || interval?.completedAt) {
+    if (
+      normalizeMemberName(interval?.reviewer) !== memberKey ||
+      interval?.completedAt !== undefined
+    ) {
       continue;
     }
     const startedAtMs = parseIsoMs(interval.startedAt);

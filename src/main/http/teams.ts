@@ -523,6 +523,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         });
       }
 
+      await services.teamProvisioningService?.repairStaleTaskActivityIntervalsBeforeSnapshot?.(
+        teamName
+      );
       return reply.send(await getTeamDataService(services).getTeamData(teamName));
     } catch (error) {
       if (shouldLogError(error)) {

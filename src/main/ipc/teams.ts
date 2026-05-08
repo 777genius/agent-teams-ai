@@ -1044,6 +1044,8 @@ async function handleGetData(
       return { success: false, error: 'TEAM_DRAFT' };
     }
 
+    await getTeamProvisioningService().repairStaleTaskActivityIntervalsBeforeSnapshot?.(tn);
+
     if (workerAvailable) {
       try {
         data =

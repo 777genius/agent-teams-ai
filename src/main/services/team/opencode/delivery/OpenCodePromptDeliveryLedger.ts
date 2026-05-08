@@ -389,7 +389,7 @@ export class OpenCodePromptDeliveryLedgerStore {
       visibleReplyCorrelation: input.visibleReplyCorrelation,
       lastReason: input.semanticallySufficient
         ? record.lastReason
-        : 'visible_reply_ack_only_still_requires_answer',
+        : selectOpenCodeDestinationProofInsufficientReason(input.diagnostics),
       diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
       updatedAt: input.observedAt,
     }));
@@ -872,6 +872,22 @@ function shouldPruneOpenCodePromptDeliveryRecord(
     return Number.isFinite(failedMs) && nowMs - failedMs >= failedRetentionMs;
   }
   return false;
+}
+
+function selectOpenCodeDestinationProofInsufficientReason(
+  diagnostics: readonly string[] | undefined
+): string {
+  const normalizedDiagnostics = (diagnostics ?? []).map((diagnostic) =>
+    diagnostic.trim().toLowerCase()
+  );
+  if (
+    normalizedDiagnostics.includes('visible_reply_missing_task_refs') ||
+    normalizedDiagnostics.includes('visible_reply_missing_task_refs_after_merge') ||
+    normalizedDiagnostics.includes('visible_reply_task_refs_merge_failed')
+  ) {
+    return 'visible_reply_missing_task_refs';
+  }
+  return 'visible_reply_ack_only_still_requires_answer';
 }
 
 function mergeDiagnostics(existing: string[], next: string[]): string[] {

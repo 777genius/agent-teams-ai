@@ -44,4 +44,30 @@ describe('OpenCodeRuntimeDeliveryDiagnostics', () => {
       'OpenCode used tools, but did not create a visible reply or task progress proof.'
     );
   });
+
+  it('formats visible replies missing taskRefs without exposing the internal reason code', () => {
+    const record = {
+      diagnostics: ['visible_reply_missing_task_refs'],
+      lastReason: 'visible_reply_missing_task_refs',
+      responseState: 'responded_visible_message',
+      status: 'failed_terminal',
+    } as Parameters<typeof selectOpenCodeRuntimeDeliveryReason>[0];
+
+    expect(selectOpenCodeRuntimeDeliveryReason(record)).toBe(
+      'OpenCode created a reply without the required taskRefs metadata.'
+    );
+  });
+
+  it('formats taskRefs merge verification failures without exposing internal diagnostics', () => {
+    const record = {
+      diagnostics: ['visible_reply_missing_task_refs_after_merge'],
+      lastReason: 'visible_reply_ack_only_still_requires_answer',
+      responseState: 'responded_visible_message',
+      status: 'failed_terminal',
+    } as Parameters<typeof selectOpenCodeRuntimeDeliveryReason>[0];
+
+    expect(selectOpenCodeRuntimeDeliveryReason(record)).toBe(
+      'OpenCode created a reply without the required taskRefs metadata.'
+    );
+  });
 });

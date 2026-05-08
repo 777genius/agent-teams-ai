@@ -21,7 +21,7 @@ function getActiveWorkStartedAt(task: TeamTaskWithKanban): number {
   const workIntervals = task.workIntervals ?? [];
   for (let index = workIntervals.length - 1; index >= 0; index--) {
     const interval = workIntervals[index];
-    if (interval && !interval.completedAt) {
+    if (interval && interval.completedAt === undefined) {
       const startedAt = parseIsoTime(interval.startedAt);
       if (startedAt > 0) {
         return startedAt;

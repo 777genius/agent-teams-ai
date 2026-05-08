@@ -9,6 +9,7 @@
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
+  createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
 
 import type {
@@ -270,6 +271,10 @@ export class HttpAPIClient implements ElectronAPI {
     getMemberLogPreviews: async () => {
       console.warn('[HttpAPIClient] getMemberLogPreviews is not available in browser mode');
       return createEmptyMemberLogPreviewResponse();
+    },
+    getMemberRuntimeLogTail: async (_teamName, _memberName, options) => {
+      console.warn('[HttpAPIClient] getMemberRuntimeLogTail is not available in browser mode');
+      return createEmptyMemberRuntimeLogTailResponse(options.kind);
     },
     setMemberLogStreamTracking: async () => {
       // Not available in browser mode - no-op.

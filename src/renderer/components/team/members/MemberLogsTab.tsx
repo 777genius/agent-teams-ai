@@ -36,25 +36,47 @@ import type { MemberLogSummary } from '@shared/types';
 const CHUNK_GRACE_BEFORE_MS = 30_000; // 30s before startedAt
 const CHUNK_GRACE_AFTER_MS = 10_000; // 10s after completedAt
 
-function filterChunksByWorkIntervals(
+function getWorkIntervalWindow(
+  interval: { startedAt: string; completedAt?: string },
+  options: {
+    graceBeforeMs: number;
+    graceAfterMs: number;
+    nowMs: number;
+  }
+): { startMs: number; endMs: number } | null {
+  const startMs = Date.parse(interval.startedAt);
+  if (!Number.isFinite(startMs)) return null;
+  if (interval.completedAt === undefined) {
+    return {
+      startMs: startMs - options.graceBeforeMs,
+      endMs: options.nowMs + options.graceAfterMs,
+    };
+  }
+  const completedAtMs = Date.parse(interval.completedAt);
+  const endMs = Number.isFinite(completedAtMs) ? Math.max(completedAtMs, startMs) : startMs;
+  return {
+    startMs: startMs - options.graceBeforeMs,
+    endMs: endMs + options.graceAfterMs,
+  };
+}
+
+export function filterChunksByWorkIntervals(
   chunks: EnhancedChunk[] | null,
   intervals: { startedAt: string; completedAt?: string }[] | undefined
 ): EnhancedChunk[] | null {
   if (!chunks) return null;
   if (!intervals || intervals.length === 0) return chunks;
 
-  const now = Date.now();
+  const nowMs = Date.now();
   const parsed = intervals
-    .map((i) => {
-      const s = Date.parse(i.startedAt);
-      if (!Number.isFinite(s)) return null;
-      const e = typeof i.completedAt === 'string' ? Date.parse(i.completedAt) : null;
-      return {
-        startMs: s - CHUNK_GRACE_BEFORE_MS,
-        endMs: e != null && Number.isFinite(e) ? e + CHUNK_GRACE_AFTER_MS : null,
-      };
-    })
-    .filter((v): v is { startMs: number; endMs: number | null } => v !== null);
+    .map((interval) =>
+      getWorkIntervalWindow(interval, {
+        graceBeforeMs: CHUNK_GRACE_BEFORE_MS,
+        graceAfterMs: CHUNK_GRACE_AFTER_MS,
+        nowMs,
+      })
+    )
+    .filter((v): v is { startMs: number; endMs: number } => v !== null);
 
   if (parsed.length === 0) return chunks;
 
@@ -62,10 +84,7 @@ function filterChunksByWorkIntervals(
     const cs = chunk.startTime.getTime();
     const ce = chunk.endTime.getTime();
     if (!Number.isFinite(cs) || !Number.isFinite(ce)) return true;
-    return parsed.some((i) => {
-      const end = i.endMs ?? now;
-      return cs <= end && ce >= i.startMs;
-    });
+    return parsed.some((i) => cs <= i.endMs && ce >= i.startMs);
   });
   return filtered;
 }
@@ -215,13 +234,14 @@ export const MemberLogsTab = ({
 
       let totalOverlap = 0;
       for (const interval of taskWorkIntervals) {
-        const intStart = Date.parse(interval.startedAt);
-        if (!Number.isFinite(intStart)) continue;
-        const intEnd =
-          typeof interval.completedAt === 'string' ? Date.parse(interval.completedAt) : nowMs;
-        if (!Number.isFinite(intEnd)) continue;
-        const overlapStart = Math.max(logStartMs, intStart);
-        const overlapEnd = Math.min(logEndMs, intEnd);
+        const window = getWorkIntervalWindow(interval, {
+          graceBeforeMs: 0,
+          graceAfterMs: 0,
+          nowMs,
+        });
+        if (!window) continue;
+        const overlapStart = Math.max(logStartMs, window.startMs);
+        const overlapEnd = Math.min(logEndMs, window.endMs);
         if (overlapEnd > overlapStart) totalOverlap += overlapEnd - overlapStart;
       }
       return totalOverlap;
@@ -294,17 +314,15 @@ export const MemberLogsTab = ({
       ) {
         const GRACE_BEFORE = 30_000;
         const GRACE_AFTER = 15_000;
-        const now = Date.now();
+        const nowMs = Date.now();
         const intervals = taskWorkIntervals
-          .map((i) => {
-            const s = Date.parse(i.startedAt);
-            if (!Number.isFinite(s)) return null;
-            const e = typeof i.completedAt === 'string' ? Date.parse(i.completedAt) : null;
-            return {
-              startMs: s - GRACE_BEFORE,
-              endMs: e != null && Number.isFinite(e) ? e + GRACE_AFTER : now + GRACE_AFTER,
-            };
-          })
+          .map((interval) =>
+            getWorkIntervalWindow(interval, {
+              graceBeforeMs: GRACE_BEFORE,
+              graceAfterMs: GRACE_AFTER,
+              nowMs,
+            })
+          )
           .filter((v): v is { startMs: number; endMs: number } => v !== null);
 
         if (intervals.length > 0) {

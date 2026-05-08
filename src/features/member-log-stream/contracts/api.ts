@@ -3,6 +3,8 @@ import type {
   MemberLogPreviewResponse,
   MemberLogStreamRequestOptions,
   MemberLogStreamResponse,
+  MemberRuntimeLogTailOptions,
+  MemberRuntimeLogTailResponse,
 } from './dto';
 
 export interface MemberLogStreamApi {
@@ -16,5 +18,10 @@ export interface MemberLogStreamApi {
     memberNames: string[],
     options?: MemberLogPreviewRequestOptions
   ): Promise<MemberLogPreviewResponse>;
+  getMemberRuntimeLogTail(
+    teamName: string,
+    memberName: string,
+    options: MemberRuntimeLogTailOptions
+  ): Promise<MemberRuntimeLogTailResponse>;
   setMemberLogStreamTracking(teamName: string, enabled: boolean): Promise<void>;
 }

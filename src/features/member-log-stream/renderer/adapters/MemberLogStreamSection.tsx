@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 
 import { useMemberLogStream } from '../hooks/useMemberLogStream';
 import { ExecutionLogStreamView } from '../ui/ExecutionLogStreamView';
+import { MemberRuntimeProcessLogsPanel } from '../ui/MemberRuntimeProcessLogsPanel';
 
 import type { MemberLogStreamSegment } from '../../contracts';
 import type { ResolvedTeamMember } from '@shared/types';
@@ -41,6 +42,7 @@ export function MemberLogStreamSection({
   enabled = true,
   onInitialLoadErrorChange,
 }: Readonly<MemberLogStreamSectionProps>): React.JSX.Element {
+  const [selectedLogView, setSelectedLogView] = useState<'execution' | 'process'>('execution');
   const teamMembers = useStore((s) => selectResolvedMembersForTeamName(s, teamName));
   const { stream, loading, error } = useMemberLogStream({ teamName, member, enabled });
   const hasInitialLoadError = Boolean(error && !stream && !loading);
@@ -57,22 +59,57 @@ export function MemberLogStreamSection({
   }, [hasInitialLoadError, onInitialLoadErrorChange]);
 
   return (
-    <ExecutionLogStreamView
-      title="Logs"
-      description={describeMemberStream()}
-      stream={stream}
-      loading={loading}
-      error={error}
-      teamName={teamName}
-      teamMembers={teamMembers}
-      loadingText="Loading member log stream..."
-      emptyTitle="No log stream entries were found for this member yet."
-      emptyDescription="Member-scoped transcript or runtime logs will appear here when available."
-      selectionResetKey={`${teamName}:${member.name}`}
-      boundedHistoryNote={boundedHistoryNote}
-      forceSegmentHeaders
-      buildSegmentRenderKey={buildMemberSegmentRenderKey}
-      getSegmentMetaLabel={getSegmentMetaLabel}
-    />
+    <div className="space-y-4">
+      <div className="inline-flex rounded-xl bg-[var(--color-surface-subtle)] p-1">
+        <button
+          type="button"
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            selectedLogView === 'execution'
+              ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+          }`}
+          onClick={() => setSelectedLogView('execution')}
+        >
+          Execution
+        </button>
+        <button
+          type="button"
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            selectedLogView === 'process'
+              ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+          }`}
+          onClick={() => setSelectedLogView('process')}
+        >
+          Process
+        </button>
+      </div>
+
+      {selectedLogView === 'execution' ? (
+        <ExecutionLogStreamView
+          title="Logs"
+          description={describeMemberStream()}
+          stream={stream}
+          loading={loading}
+          error={error}
+          teamName={teamName}
+          teamMembers={teamMembers}
+          loadingText="Loading member log stream..."
+          emptyTitle="No log stream entries were found for this member yet."
+          emptyDescription="Member-scoped transcript or runtime logs will appear here when available."
+          selectionResetKey={`${teamName}:${member.name}`}
+          boundedHistoryNote={boundedHistoryNote}
+          forceSegmentHeaders
+          buildSegmentRenderKey={buildMemberSegmentRenderKey}
+          getSegmentMetaLabel={getSegmentMetaLabel}
+        />
+      ) : (
+        <MemberRuntimeProcessLogsPanel
+          teamName={teamName}
+          memberName={member.name}
+          enabled={enabled && selectedLogView === 'process'}
+        />
+      )}
+    </div>
   );
 }

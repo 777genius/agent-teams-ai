@@ -63,7 +63,7 @@ export function calculateTaskImplementationDuration<TInterval extends TaskWorkDu
       continue;
     }
 
-    if (!interval?.completedAt && task.status === 'in_progress' && nowMs > startMs) {
+    if (interval?.completedAt === undefined && task.status === 'in_progress' && nowMs > startMs) {
       windows.push({ startMs, endMs: nowMs });
       hasRunningInterval = true;
     }
@@ -130,7 +130,12 @@ export function calculateTaskImplementationEventDuration<
 
   for (const interval of task.workIntervals) {
     const startMs = parseIsoMs(interval?.startedAt);
-    if (startMs > 0 && !interval?.completedAt && nowMs > startMs && isNearTime(startMs, eventMs)) {
+    if (
+      startMs > 0 &&
+      interval?.completedAt === undefined &&
+      nowMs > startMs &&
+      isNearTime(startMs, eventMs)
+    ) {
       return { elapsedMs: nowMs - startMs, running: true };
     }
   }

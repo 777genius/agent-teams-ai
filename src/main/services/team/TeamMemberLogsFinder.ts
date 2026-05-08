@@ -499,7 +499,12 @@ export class TeamMemberLogsFinder {
               const startMs = Date.parse(i.startedAt);
               const endMsRaw =
                 typeof i.completedAt === 'string' ? Date.parse(i.completedAt) : Number.NaN;
-              const endMs = Number.isFinite(endMsRaw) ? endMsRaw : null;
+              const endMs =
+                i.completedAt === undefined
+                  ? null
+                  : Number.isFinite(endMsRaw)
+                    ? Math.max(endMsRaw, startMs)
+                    : startMs;
               return Number.isFinite(startMs) ? { startMs, endMs } : null;
             })
             .filter((v): v is { startMs: number; endMs: number | null } => v !== null)
@@ -516,12 +521,12 @@ export class TeamMemberLogsFinder {
             : [];
 
       const filteredOwnerLogs = ownerLogs.filter((log) => {
-        if (log.isOngoing) return true;
         const startMs = new Date(log.startTime).getTime();
         if (!Number.isFinite(startMs)) return false;
         const durationMs =
           typeof log.durationMs === 'number' && log.durationMs > 0 ? log.durationMs : 0;
-        const endMs = startMs + durationMs;
+        const rawEndMs = startMs + durationMs;
+        const endMs = log.isOngoing ? Math.max(rawEndMs, now) : rawEndMs;
 
         if (effectiveIntervals.length > 0) {
           return this.logOverlapsIntervals(
@@ -533,6 +538,7 @@ export class TeamMemberLogsFinder {
           );
         }
 
+        if (log.isOngoing) return true;
         return startMs >= now - fallbackRecentMs;
       });
       const seen = new Set<string>();
@@ -740,7 +746,12 @@ export class TeamMemberLogsFinder {
               const startMs = Date.parse(i.startedAt);
               const endMsRaw =
                 typeof i.completedAt === 'string' ? Date.parse(i.completedAt) : Number.NaN;
-              const endMs = Number.isFinite(endMsRaw) ? endMsRaw : null;
+              const endMs =
+                i.completedAt === undefined
+                  ? null
+                  : Number.isFinite(endMsRaw)
+                    ? Math.max(endMsRaw, startMs)
+                    : startMs;
               return Number.isFinite(startMs) ? { startMs, endMs } : null;
             })
             .filter((v): v is { startMs: number; endMs: number | null } => v !== null)
@@ -757,28 +768,27 @@ export class TeamMemberLogsFinder {
 
       for (const log of ownerLogs) {
         if (!log.filePath) continue;
-        if (!log.isOngoing) {
-          const startMs = new Date(log.startTime).getTime();
-          if (!Number.isFinite(startMs)) continue;
-          const durationMs =
-            typeof log.durationMs === 'number' && log.durationMs > 0 ? log.durationMs : 0;
-          const endMs = startMs + durationMs;
+        const startMs = new Date(log.startTime).getTime();
+        if (!Number.isFinite(startMs)) continue;
+        const durationMs =
+          typeof log.durationMs === 'number' && log.durationMs > 0 ? log.durationMs : 0;
+        const rawEndMs = startMs + durationMs;
+        const endMs = log.isOngoing ? Math.max(rawEndMs, now) : rawEndMs;
 
-          if (effectiveIntervals.length > 0) {
-            if (
-              !this.logOverlapsIntervals(
-                startMs,
-                endMs,
-                effectiveIntervals,
-                now,
-                TASK_LOG_INTERVAL_GRACE_MS
-              )
-            ) {
-              continue;
-            }
-          } else if (startMs < now - fallbackRecentMs) {
+        if (effectiveIntervals.length > 0) {
+          if (
+            !this.logOverlapsIntervals(
+              startMs,
+              endMs,
+              effectiveIntervals,
+              now,
+              TASK_LOG_INTERVAL_GRACE_MS
+            )
+          ) {
             continue;
           }
+        } else if (!log.isOngoing && startMs < now - fallbackRecentMs) {
+          continue;
         }
 
         pushRef(

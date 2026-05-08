@@ -3,9 +3,11 @@ import { ipcRenderer } from 'electron';
 import {
   MEMBER_LOG_STREAM_GET,
   MEMBER_LOG_STREAM_GET_PREVIEWS,
+  MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
   MEMBER_LOG_STREAM_SET_TRACKING,
   normalizeMemberLogPreviewResponse,
   normalizeMemberLogStreamResponse,
+  normalizeMemberRuntimeLogTailResponse,
 } from '../contracts';
 
 import type {
@@ -14,6 +16,8 @@ import type {
   MemberLogStreamApi,
   MemberLogStreamRequestOptions,
   MemberLogStreamResponse,
+  MemberRuntimeLogTailOptions,
+  MemberRuntimeLogTailResponse,
 } from '../contracts';
 import type { IpcResult } from '@shared/types';
 
@@ -50,6 +54,19 @@ export function createMemberLogStreamBridge(): MemberLogStreamApi {
           MEMBER_LOG_STREAM_GET_PREVIEWS,
           teamName,
           memberNames,
+          options
+        )
+      ),
+    getMemberRuntimeLogTail: async (
+      teamName: string,
+      memberName: string,
+      options: MemberRuntimeLogTailOptions
+    ): Promise<MemberRuntimeLogTailResponse> =>
+      normalizeMemberRuntimeLogTailResponse(
+        await invokeIpcWithResult<MemberRuntimeLogTailResponse>(
+          MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
+          teamName,
+          memberName,
           options
         )
       ),

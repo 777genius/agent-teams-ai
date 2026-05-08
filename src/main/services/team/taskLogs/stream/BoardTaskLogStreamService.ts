@@ -1285,9 +1285,14 @@ function buildTaskTimeWindows(task: TeamTask, recordTimestamps: number[]): TimeW
       }
       const completedAt =
         typeof interval.completedAt === 'string' ? Date.parse(interval.completedAt) : Number.NaN;
+      const endMs =
+        interval.completedAt === undefined
+          ? null
+          : (Number.isFinite(completedAt) ? Math.max(completedAt, startedAt) : startedAt) +
+            INFERRED_WINDOW_GRACE_AFTER_MS;
       return {
         startMs: startedAt - INFERRED_WINDOW_GRACE_BEFORE_MS,
-        endMs: Number.isFinite(completedAt) ? completedAt + INFERRED_WINDOW_GRACE_AFTER_MS : null,
+        endMs,
       };
     })
     .filter((window): window is TimeWindow => window !== null);

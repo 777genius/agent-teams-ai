@@ -58,6 +58,25 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.controlText).not.toContain('reportToken=');
   });
 
+  it('repairs visible replies that missed required taskRefs with exact metadata', () => {
+    const taskRef = { taskId: 'task-refs-1', displayId: 'refs-1', teamName: 'team-a' };
+    const decision = decideOpenCodePromptDeliveryRepair(
+      base({
+        taskRefs: [taskRef],
+        responseState: 'responded_visible_message',
+        pendingReason: 'visible_reply_missing_task_refs',
+        visibleReplyFound: true,
+      })
+    );
+
+    expect(decision.kind).toBe('missing_visible_reply_correlation');
+    expect(decision.retryable).toBe(true);
+    expect(decision.controlText).toContain('relayOfMessageId="msg-1"');
+    expect(decision.controlText).toContain(
+      `Include taskRefs exactly as this JSON array: ${JSON.stringify([taskRef])}.`
+    );
+  });
+
   it('does not repair terminal, permission, or session failures', () => {
     expect(
       decideOpenCodePromptDeliveryRepair(

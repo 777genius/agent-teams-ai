@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   MEMBER_LOG_STREAM_GET,
   MEMBER_LOG_STREAM_GET_PREVIEWS,
+  MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
   MEMBER_LOG_STREAM_SET_TRACKING,
 } from '../../../../../contracts';
 import {
@@ -50,6 +51,16 @@ function emptyPreviewResponse(): MemberLogPreviewResponse {
   };
 }
 
+function emptyRuntimeLogTailResponse() {
+  return {
+    kind: 'stdout' as const,
+    content: '',
+    truncated: false,
+    bytesRead: 0,
+    missing: true,
+  };
+}
+
 function createFakeIpcMain(): {
   handlers: Map<string, (...args: unknown[]) => unknown>;
   ipcMain: {
@@ -78,6 +89,7 @@ describe('registerMemberLogStreamIpc', () => {
     const feature: MemberLogStreamFeatureFacade = {
       getMemberLogStream,
       getMemberLogPreviews: vi.fn().mockResolvedValue(emptyPreviewResponse()),
+      getMemberRuntimeLogTail: vi.fn().mockResolvedValue(emptyRuntimeLogTailResponse()),
       setMemberLogStreamTracking: vi.fn(),
     };
 
@@ -111,6 +123,7 @@ describe('registerMemberLogStreamIpc', () => {
     const feature: MemberLogStreamFeatureFacade = {
       getMemberLogStream,
       getMemberLogPreviews: vi.fn().mockResolvedValue(emptyPreviewResponse()),
+      getMemberRuntimeLogTail: vi.fn().mockResolvedValue(emptyRuntimeLogTailResponse()),
       setMemberLogStreamTracking: vi.fn(),
     };
 
@@ -138,6 +151,7 @@ describe('registerMemberLogStreamIpc', () => {
     const feature: MemberLogStreamFeatureFacade = {
       getMemberLogStream,
       getMemberLogPreviews: vi.fn().mockResolvedValue(emptyPreviewResponse()),
+      getMemberRuntimeLogTail: vi.fn().mockResolvedValue(emptyRuntimeLogTailResponse()),
       setMemberLogStreamTracking: vi.fn(),
     };
 
@@ -187,6 +201,7 @@ describe('registerMemberLogStreamIpc', () => {
     const feature: MemberLogStreamFeatureFacade = {
       getMemberLogStream: vi.fn().mockResolvedValue(emptyResponse()),
       getMemberLogPreviews: vi.fn().mockResolvedValue(emptyPreviewResponse()),
+      getMemberRuntimeLogTail: vi.fn().mockResolvedValue(emptyRuntimeLogTailResponse()),
       setMemberLogStreamTracking,
     };
 
@@ -206,6 +221,7 @@ describe('registerMemberLogStreamIpc', () => {
 
     expect(handlers.has(MEMBER_LOG_STREAM_GET)).toBe(false);
     expect(handlers.has(MEMBER_LOG_STREAM_GET_PREVIEWS)).toBe(false);
+    expect(handlers.has(MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL)).toBe(false);
     expect(handlers.has(MEMBER_LOG_STREAM_SET_TRACKING)).toBe(false);
   });
 
@@ -215,6 +231,7 @@ describe('registerMemberLogStreamIpc', () => {
     const feature: MemberLogStreamFeatureFacade = {
       getMemberLogStream: vi.fn().mockResolvedValue(emptyResponse()),
       getMemberLogPreviews,
+      getMemberRuntimeLogTail: vi.fn().mockResolvedValue(emptyRuntimeLogTailResponse()),
       setMemberLogStreamTracking: vi.fn(),
     };
 
@@ -243,12 +260,66 @@ describe('registerMemberLogStreamIpc', () => {
     });
   });
 
+  it('validates runtime log tail requests before calling the feature facade', async () => {
+    const { handlers, ipcMain } = createFakeIpcMain();
+    const getMemberRuntimeLogTail = vi.fn().mockResolvedValue({
+      kind: 'stderr',
+      content: 'runtime error',
+      truncated: false,
+      bytesRead: 13,
+      missing: false,
+    });
+    const feature: MemberLogStreamFeatureFacade = {
+      getMemberLogStream: vi.fn().mockResolvedValue(emptyResponse()),
+      getMemberLogPreviews: vi.fn().mockResolvedValue(emptyPreviewResponse()),
+      getMemberRuntimeLogTail,
+      setMemberLogStreamTracking: vi.fn(),
+    };
+
+    registerMemberLogStreamIpc(ipcMain as never, feature);
+    const getRuntimeTail = handlers.get(MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL)!;
+
+    await expect(
+      getRuntimeTail({} as IpcMainInvokeEvent, 'alpha-team', 'alice', {
+        kind: 'stderr',
+        maxBytes: 999999,
+        forceRefresh: true,
+      })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        kind: 'stderr',
+        content: 'runtime error',
+        truncated: false,
+        bytesRead: 13,
+        missing: false,
+      },
+    });
+    expect(getMemberRuntimeLogTail).toHaveBeenCalledWith({
+      teamName: 'alpha-team',
+      memberName: 'alice',
+      options: {
+        kind: 'stderr',
+        maxBytes: 512 * 1024,
+        forceRefresh: true,
+      },
+    });
+
+    await expect(
+      getRuntimeTail({} as IpcMainInvokeEvent, 'alpha-team', 'alice', { kind: 'bad' })
+    ).resolves.toEqual({
+      success: false,
+      error: 'kind must be stdout, stderr, or events',
+    });
+  });
+
   it('rejects unknown batch preview options and unsafe lane maps', async () => {
     const { handlers, ipcMain } = createFakeIpcMain();
     const getMemberLogPreviews = vi.fn().mockResolvedValue(emptyPreviewResponse());
     const feature: MemberLogStreamFeatureFacade = {
       getMemberLogStream: vi.fn().mockResolvedValue(emptyResponse()),
       getMemberLogPreviews,
+      getMemberRuntimeLogTail: vi.fn().mockResolvedValue(emptyRuntimeLogTailResponse()),
       setMemberLogStreamTracking: vi.fn(),
     };
 

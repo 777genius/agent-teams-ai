@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { TeamTaskStallPolicy } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallPolicy';
 
-import type { TeamTaskStallExactRow, TeamTaskStallSnapshot } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
+import type {
+  TeamTaskStallExactRow,
+  TeamTaskStallSnapshot,
+} from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
 import type { BoardTaskActivityRecord } from '../../../../../src/main/services/team/taskLogs/activity/BoardTaskActivityRecord';
 import type { ParsedMessage } from '../../../../../src/main/types';
 import type { TeamTask } from '../../../../../src/shared/types';
@@ -104,6 +107,33 @@ function createSnapshot(overrides: Partial<TeamTaskStallSnapshot>): TeamTaskStal
 
 describe('TeamTaskStallPolicy', () => {
   const policy = new TeamTaskStallPolicy();
+
+  it('does not treat malformed empty completedAt as an open work interval', () => {
+    const task: TeamTask = {
+      id: 'task-closed-empty',
+      displayId: 'feed0000',
+      subject: 'Malformed closed interval',
+      owner: 'alice',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z', completedAt: '' }],
+    };
+
+    const evaluation = policy.evaluateWork({
+      now: new Date('2026-04-19T12:30:00.000Z'),
+      task,
+      snapshot: createSnapshot({
+        activeTasks: [task],
+        allTasksById: new Map([[task.id, task]]),
+        inProgressTasks: [task],
+      }),
+    });
+
+    expect(evaluation).toMatchObject({
+      status: 'skip',
+      taskId: 'task-closed-empty',
+      skipReason: 'no_open_work_interval',
+    });
+  });
 
   it('alerts for work stall after turn ended and threshold elapsed', () => {
     const task: TeamTask = {

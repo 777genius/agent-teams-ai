@@ -1080,6 +1080,152 @@ describe('TeamMemberLogsFinder', () => {
     );
   });
 
+  it('findLogsForTask does not treat malformed empty completedAt intervals as open', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-task-owner-malformed-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 't5-malformed';
+    const projectPath = '/Users/test/proj5-malformed';
+    const projectId = '-Users-test-proj5-malformed';
+    const leadSessionId = 's5-malformed';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'bob', agentType: 'general-purpose' },
+          { name: 'alice', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-alice10.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are alice, a developer on team "${teamName}" (${teamName}).`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                name: 'TaskUpdate',
+                input: { team_name: teamName, taskId: '10', status: 'pending' },
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob-near.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T10:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bob, a developer on team "${teamName}" (${teamName}).`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T10:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Near malformed interval' }],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob-late.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T12:00:00.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bob, a developer on team "${teamName}" (${teamName}).`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T12:00:01.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Late malformed interval' }],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const options = {
+      owner: 'bob',
+      status: 'in_progress',
+      intervals: [{ startedAt: '2026-01-01T10:00:00.000Z', completedAt: '' }],
+    };
+    const logs = await finder.findLogsForTask(teamName, '10', options);
+
+    const bobFilePaths = logs
+      .filter((l) => l.kind === 'subagent' && l.memberName?.toLowerCase() === 'bob')
+      .map((l) => l.filePath ?? '');
+
+    expect(bobFilePaths.some((filePath) => filePath.endsWith('agent-bob-near.jsonl'))).toBe(true);
+    expect(bobFilePaths.some((filePath) => filePath.endsWith('agent-bob-late.jsonl'))).toBe(false);
+
+    const reversedIntervalLogs = await finder.findLogsForTask(teamName, '10', {
+      ...options,
+      intervals: [
+        {
+          startedAt: '2026-01-01T10:00:00.000Z',
+          completedAt: '2026-01-01T09:59:00.000Z',
+        },
+      ],
+    });
+    const reversedBobFilePaths = reversedIntervalLogs
+      .filter((l) => l.kind === 'subagent' && l.memberName?.toLowerCase() === 'bob')
+      .map((l) => l.filePath ?? '');
+
+    expect(reversedBobFilePaths.some((filePath) => filePath.endsWith('agent-bob-near.jsonl'))).toBe(
+      true
+    );
+    expect(reversedBobFilePaths.some((filePath) => filePath.endsWith('agent-bob-late.jsonl'))).toBe(
+      false
+    );
+
+    const refs = await finder.findLogFileRefsForTask(teamName, '10', options);
+    const bobRefPaths = refs
+      .filter((ref) => ref.memberName.toLowerCase() === 'bob')
+      .map((ref) => ref.filePath);
+
+    expect(bobRefPaths.some((filePath) => filePath.endsWith('agent-bob-late.jsonl'))).toBe(false);
+  });
+
   it('findLogsForTask does not auto-include owner sessions when owner is team-lead', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-task-lead-owner-'));
     setClaudeBasePathOverride(tmpDir);

@@ -326,4 +326,36 @@ describe('selectCurrentActiveTeamTask', () => {
 
     expect(selected?.id).toBe('task-a');
   });
+
+  it('does not treat malformed empty completedAt as an open work interval', () => {
+    const tasks: TeamTaskWithKanban[] = [
+      {
+        id: 'task-a',
+        displayId: '1',
+        subject: 'Malformed closed interval',
+        status: 'in_progress',
+        workIntervals: [{ startedAt: '2026-05-06T13:00:00.000Z', completedAt: '' }],
+        historyEvents: [
+          {
+            id: 'event-a',
+            type: 'status_changed',
+            from: 'pending',
+            to: 'in_progress',
+            timestamp: '2026-05-06T10:00:00.000Z',
+          },
+        ],
+      },
+      {
+        id: 'task-b',
+        displayId: '2',
+        subject: 'Real active task',
+        status: 'in_progress',
+        workIntervals: [{ startedAt: '2026-05-06T11:00:00.000Z' }],
+      },
+    ];
+
+    const selected = selectCurrentActiveTeamTask(tasks);
+
+    expect(selected?.id).toBe('task-b');
+  });
 });

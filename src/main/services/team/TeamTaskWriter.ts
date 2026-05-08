@@ -332,7 +332,7 @@ export class TeamTaskWriter {
 
       if (!wasInProgress && isInProgress) {
         // Entering in_progress: open a new interval if none is open.
-        if (!last || typeof last.completedAt === 'string') {
+        if (!last || last.completedAt !== undefined) {
           intervals.push({ startedAt: nowIso });
         }
       } else if (wasInProgress && !isInProgress) {

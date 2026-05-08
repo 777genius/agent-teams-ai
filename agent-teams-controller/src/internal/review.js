@@ -75,6 +75,10 @@ function closeTimestampForInterval(interval, timestamp) {
   return timestamp;
 }
 
+function isOpenReviewInterval(interval) {
+  return interval && interval.completedAt === undefined;
+}
+
 function openReviewInterval(task, reviewer, timestamp = new Date().toISOString()) {
   const reviewerName = typeof reviewer === 'string' && reviewer.trim() ? reviewer.trim() : '';
   if (!reviewerName) return false;
@@ -83,7 +87,7 @@ function openReviewInterval(task, reviewer, timestamp = new Date().toISOString()
   let changed = false;
   let hasOpenForReviewer = false;
   const nextIntervals = intervals.map((interval) => {
-    if (interval.completedAt) return interval;
+    if (!isOpenReviewInterval(interval)) return interval;
     if (normalizeActorKey(interval.reviewer) === reviewerKey) {
       hasOpenForReviewer = true;
       return interval;
@@ -103,7 +107,7 @@ function closeReviewIntervals(task, timestamp = new Date().toISOString()) {
   if (!Array.isArray(task.reviewIntervals)) return false;
   let changed = false;
   task.reviewIntervals = task.reviewIntervals.map((interval) => {
-    if (interval.completedAt) return interval;
+    if (!isOpenReviewInterval(interval)) return interval;
     changed = true;
     return { ...interval, completedAt: closeTimestampForInterval(interval, timestamp) };
   });

@@ -110,3 +110,21 @@ export interface MemberLogPreviewResponse {
   members: MemberLogPreviewMember[];
   generatedAt: string;
 }
+
+export type MemberRuntimeLogKind = 'stdout' | 'stderr' | 'events';
+
+export interface MemberRuntimeLogTailOptions {
+  kind: MemberRuntimeLogKind;
+  maxBytes?: number;
+  forceRefresh?: boolean;
+}
+
+export interface MemberRuntimeLogTailResponse {
+  kind: MemberRuntimeLogKind;
+  content: string;
+  truncated: boolean;
+  bytesRead: number;
+  fileSizeBytes?: number;
+  updatedAt?: string;
+  missing: boolean;
+}

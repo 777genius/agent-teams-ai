@@ -722,6 +722,23 @@ describe('agent-teams-controller API', () => {
     expect(statusChanges).toEqual(['in_progress', 'completed', 'deleted', 'pending']);
   });
 
+  it('does not treat malformed empty completedAt work intervals as already open', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Malformed work interval' });
+    const taskPath = path.join(claudeDir, 'tasks', 'my-team', `${task.id}.json`);
+    const rawTask = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    rawTask.workIntervals = [{ startedAt: '2026-01-01T00:00:00.000Z', completedAt: '' }];
+    fs.writeFileSync(taskPath, JSON.stringify(rawTask, null, 2));
+
+    controller.tasks.startTask(task.id, 'bob');
+    const reloaded = controller.tasks.getTask(task.id);
+
+    expect(reloaded.workIntervals).toHaveLength(2);
+    expect(reloaded.workIntervals[0].completedAt).toBe('');
+    expect(reloaded.workIntervals[1].completedAt).toBeUndefined();
+  });
+
   it('tracks owner assignment history without duplicate same-owner events', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -849,6 +866,30 @@ describe('agent-teams-controller API', () => {
     expect(changed.reviewIntervals).toHaveLength(1);
     expect(changed.reviewIntervals[0].reviewer).toBe('alice');
     expect(changed.reviewIntervals[0].completedAt).toBeTruthy();
+  });
+
+  it('does not treat malformed empty completedAt review intervals as already open', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Review me', owner: 'bob' });
+
+    controller.tasks.completeTask(task.id, 'bob');
+    controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' });
+
+    const taskPath = path.join(claudeDir, 'tasks', 'my-team', `${task.id}.json`);
+    const rawTask = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    rawTask.reviewIntervals = [
+      { reviewer: 'alice', startedAt: '2026-01-01T00:00:00.000Z', completedAt: '' },
+    ];
+    fs.writeFileSync(taskPath, JSON.stringify(rawTask, null, 2));
+
+    controller.review.startReview(task.id, { from: 'alice' });
+    const reloaded = controller.tasks.getTask(task.id);
+
+    expect(reloaded.reviewIntervals).toHaveLength(2);
+    expect(reloaded.reviewIntervals[0].completedAt).toBe('');
+    expect(reloaded.reviewIntervals[1].reviewer).toBe('alice');
+    expect(reloaded.reviewIntervals[1].completedAt).toBeUndefined();
   });
 
   it('records review_start after review_request and surfaces review_in_progress for the reviewer', async () => {
@@ -2212,13 +2253,22 @@ describe('agent-teams-controller API', () => {
       to: 'review',
       actor: 'carol',
     });
+    rawTask.reviewIntervals = [{ reviewer: 'carol', startedAt: '2026-01-01T00:00:00.000Z' }];
     fs.writeFileSync(taskPath, JSON.stringify(rawTask, null, 2));
 
     controller.review.startReview(task.id);
-    const startedEvents = controller.tasks
-      .getTask(task.id)
-      .historyEvents.filter((event) => event.type === 'review_started');
+    const repairedTask = controller.tasks.getTask(task.id);
+    const startedEvents = repairedTask.historyEvents.filter(
+      (event) => event.type === 'review_started'
+    );
     expect(startedEvents.at(-1).actor).toBe('alice');
+    expect(repairedTask.reviewIntervals).toHaveLength(2);
+    expect(repairedTask.reviewIntervals[0]).toMatchObject({
+      reviewer: 'carol',
+      completedAt: expect.any(String),
+    });
+    expect(repairedTask.reviewIntervals[1].reviewer).toBe('alice');
+    expect(repairedTask.reviewIntervals[1].completedAt).toBeUndefined();
 
     const aliceBriefing = await controller.tasks.taskBriefing('alice');
     const carolBriefing = await controller.tasks.taskBriefing('carol');

@@ -1,8 +1,5 @@
 import type { OpenCodeDeliveryResponseState } from '../bridge/OpenCodeBridgeCommandContract';
-import type {
-  OpenCodePromptDeliveryLedgerRecord,
-  OpenCodePromptDeliveryStatus,
-} from './OpenCodePromptDeliveryLedger';
+import type { OpenCodePromptDeliveryStatus } from './OpenCodePromptDeliveryLedger';
 import type { AgentActionMode, InboxMessageKind, TaskRef } from '@shared/types/team';
 
 export type OpenCodePromptDeliveryRepairKind =
@@ -128,12 +125,14 @@ function taskIdList(taskRefs: TaskRef[]): string | null {
 
 function messageSendControlLines(input: OpenCodePromptDeliveryRepairInput): string[] {
   const replyRecipient = input.replyRecipient.trim() || 'user';
+  const taskRefsJson = input.taskRefs.length > 0 ? JSON.stringify(input.taskRefs) : null;
   return [
     'The app still has no correlated visible reply proof for this message.',
     `Call agent-teams_message_send or mcp__agent-teams__message_send exactly once with teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", and relayOfMessageId="${input.inboxMessageId}".`,
+    taskRefsJson ? `Include taskRefs exactly as this JSON array: ${taskRefsJson}.` : null,
     'Use a concrete answer in text and summary. Do not reply only with acknowledgement.',
     'After the message_send tool succeeds, stop this turn. Do not repeat task/tool work unless the inbound message explicitly asks for new work.',
-  ];
+  ].filter((line): line is string => line !== null);
 }
 
 function workSyncControlLines(input: OpenCodePromptDeliveryRepairInput): string[] {
@@ -169,7 +168,9 @@ function noAssistantControlLines(input: OpenCodePromptDeliveryRepairInput): stri
   ];
 }
 
-function toolErrorControl(input: OpenCodePromptDeliveryRepairInput) {
+function toolErrorControl(
+  input: OpenCodePromptDeliveryRepairInput
+): OpenCodePromptDeliveryRepairDecision {
   const tools = normalizedToolNames(input);
   if (hasTool(tools, 'message_send')) {
     return control(
@@ -264,6 +265,7 @@ export function decideOpenCodePromptDeliveryRepair(
   if (
     input.pendingReason === 'visible_reply_destination_not_found_yet' ||
     input.pendingReason === 'visible_reply_missing_relayOfMessageId' ||
+    input.pendingReason === 'visible_reply_missing_task_refs' ||
     input.pendingReason === 'visible_reply_still_required' ||
     (input.responseState === 'responded_visible_message' && !input.visibleReplyFound)
   ) {

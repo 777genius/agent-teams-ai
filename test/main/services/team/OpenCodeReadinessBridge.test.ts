@@ -137,6 +137,70 @@ describe('OpenCodeReadinessBridge', () => {
     );
   });
 
+  it('gives observeMessageDelivery enough time for OpenCode plain-text fallback reconciliation', async () => {
+    const executor = fakeExecutor(
+      bridgeCommandSuccess({
+        command: 'opencode.observeMessageDelivery',
+        requestId: 'observe-req-1',
+        data: {
+          observed: true,
+          memberName: 'tom',
+          sessionId: 'session-tom',
+          diagnostics: [],
+          responseObservation: {
+            state: 'responded_plain_text',
+            deliveredUserMessageId: 'user-message-1',
+            assistantMessageId: 'assistant-message-1',
+            toolCallNames: ['message_send'],
+            visibleMessageToolCallId: null,
+            visibleReplyMessageId: null,
+            visibleReplyCorrelation: 'plain_assistant_text',
+            latestAssistantPreview: 'GAUNTLET_CONCURRENT_TOM_OK_1',
+            reason: 'assistant_replied_with_plain_text',
+          },
+        },
+      })
+    );
+    const bridge = new OpenCodeReadinessBridge(executor);
+
+    await expect(
+      bridge.observeOpenCodeTeamMessageDelivery({
+        teamId: 'team-a',
+        teamName: 'team-a',
+        laneId: 'primary',
+        runId: 'run-1',
+        projectPath: '/repo',
+        memberName: 'tom',
+        messageId: 'gauntlet-concurrent-tom-1',
+        prePromptCursor: 'cursor-before',
+      })
+    ).resolves.toMatchObject({
+      observed: true,
+      responseObservation: {
+        state: 'responded_plain_text',
+        latestAssistantPreview: 'GAUNTLET_CONCURRENT_TOM_OK_1',
+      },
+    });
+
+    expect(executor.execute).toHaveBeenCalledWith(
+      'opencode.observeMessageDelivery',
+      {
+        teamId: 'team-a',
+        teamName: 'team-a',
+        laneId: 'primary',
+        runId: 'run-1',
+        projectPath: '/repo',
+        memberName: 'tom',
+        messageId: 'gauntlet-concurrent-tom-1',
+        prePromptCursor: 'cursor-before',
+      },
+      {
+        cwd: '/repo',
+        timeoutMs: 20_000,
+      }
+    );
+  });
+
   it('executes OpenCode task ledger backfill through a direct read-only bridge command', async () => {
     const executor = fakeExecutor(
       bridgeCommandSuccess({
