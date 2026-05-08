@@ -2,10 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const LEGACY_USER_DATA_DIR_NAMES = [
-  'Claude Agent Teams UI',
-  'claude-agent-teams-ui',
   'agent-teams-ai',
   'Agent Teams UI',
+  'Claude Agent Teams UI',
+  'claude-agent-teams-ui',
   'claude-devtools',
   'claude-code-context',
 ] as const;
@@ -72,6 +72,9 @@ const TRANSIENT_CHROMIUM_FILE_NAMES = new Set([
   'Trust Tokens-journal',
 ]);
 
+const DURABLE_USER_DATA_ROOT_NAMES = new Set(['data', 'backups']);
+const PREFERRED_USER_DATA_DIR_NAME = 'agent-teams-ai';
+
 const STALE_MIGRATION_TEMP_MAX_AGE_MS = 60 * 60 * 1000;
 
 export function getLegacyElectronUserDataCandidates(currentPath: string): string[] {
@@ -102,6 +105,30 @@ export function migrateElectronUserDataDirectory(
       fallbackToLegacy: false,
       reason: 'error',
     };
+  }
+
+  const preferredExistingPath = selectPreferredElectronUserDataPath(currentPath);
+  if (preferredExistingPath) {
+    try {
+      setLegacyElectronPaths(app, preferredExistingPath, logger);
+      logger?.info(`Reusing preferred Electron userData at ${preferredExistingPath}`);
+      return {
+        currentPath,
+        legacyPath: preferredExistingPath,
+        migrated: false,
+        fallbackToLegacy: false,
+        reason: 'legacy-reused',
+      };
+    } catch (error) {
+      logger?.warn(`Electron userData preferred reuse failed: ${stringifyError(error)}`);
+      return {
+        currentPath,
+        legacyPath: preferredExistingPath,
+        migrated: false,
+        fallbackToLegacy: false,
+        reason: 'error',
+      };
+    }
   }
 
   if (directoryExists(currentPath) && directoryHasDurableUserDataEntries(currentPath)) {
@@ -209,13 +236,21 @@ export function migrateElectronUserDataDirectory(
 }
 
 function selectLegacyElectronUserDataPath(currentPath: string): string | null {
-  const candidates = getLegacyElectronUserDataCandidates(currentPath).filter(directoryExists);
   return (
-    candidates.find((candidatePath) => directoryHasDurableUserDataEntries(candidatePath)) ??
-    candidates.find((candidatePath) => directoryHasEntries(candidatePath)) ??
-    candidates[0] ??
-    null
+    getLegacyElectronUserDataCandidates(currentPath)
+      .filter(directoryExists)
+      .find((candidatePath) => directoryHasDurableUserDataEntries(candidatePath)) ?? null
   );
+}
+
+function selectPreferredElectronUserDataPath(currentPath: string): string | null {
+  const preferredPath = path.join(path.dirname(currentPath), PREFERRED_USER_DATA_DIR_NAME);
+  if (path.resolve(preferredPath) === path.resolve(currentPath)) {
+    return null;
+  }
+  return directoryExists(preferredPath) && directoryHasDurableUserDataEntries(preferredPath)
+    ? preferredPath
+    : null;
 }
 
 function setLegacyElectronPaths(
@@ -252,7 +287,7 @@ function copyLegacyUserDataDirectory(
 
     copyDirectory(legacyPath, tempPath);
 
-    if (directoryExists(currentPath) && !directoryHasEntries(currentPath)) {
+    if (directoryExists(currentPath) && directoryIsEmpty(currentPath)) {
       fs.rmdirSync(currentPath);
     }
 
@@ -360,9 +395,9 @@ function directoryExists(targetPath: string): boolean {
   }
 }
 
-function directoryHasEntries(targetPath: string): boolean {
+function directoryIsEmpty(targetPath: string): boolean {
   try {
-    return fs.readdirSync(targetPath).length > 0;
+    return fs.readdirSync(targetPath).length === 0;
   } catch {
     return false;
   }
@@ -381,6 +416,12 @@ function directoryHasDurableUserDataEntriesWithin(rootPath: string, targetPath: 
 
   for (const entry of entries) {
     const entryPath = path.join(targetPath, entry.name);
+    const relativePath = path.relative(rootPath, entryPath);
+    const rootSegment = relativePath.split(path.sep).find(Boolean);
+    if (!rootSegment || !DURABLE_USER_DATA_ROOT_NAMES.has(rootSegment)) {
+      continue;
+    }
+
     if (!shouldCopyElectronUserDataEntry(rootPath, entryPath)) {
       continue;
     }

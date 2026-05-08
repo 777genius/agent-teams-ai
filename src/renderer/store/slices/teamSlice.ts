@@ -2239,7 +2239,57 @@ function normalizeTeamGraphSlotAssignmentsForVisibleOwners(
     }
     normalizedAssignments[stableOwnerId] = assignment;
   }
-  return normalizedAssignments;
+  return normalizeLegacySixRowOrbitAssignments(normalizedAssignments, visibleOwnerIds);
+}
+
+function normalizeLegacySixRowOrbitAssignments(
+  assignments: TeamGraphSlotAssignments,
+  visibleOwnerIds: readonly string[]
+): TeamGraphSlotAssignments {
+  if (visibleOwnerIds.length !== 6) {
+    return assignments;
+  }
+
+  const visibleAssignments = visibleOwnerIds.flatMap((stableOwnerId) => {
+    const assignment = assignments[stableOwnerId];
+    return assignment ? [assignment] : [];
+  });
+  const hasLegacyTwoRowBottomMarker = visibleAssignments.some(
+    (assignment) => assignment.ringIndex === 1 && assignment.sectorIndex === 2
+  );
+  let changed = false;
+  const normalizedAssignments: TeamGraphSlotAssignments = { ...assignments };
+
+  for (const stableOwnerId of visibleOwnerIds) {
+    const assignment = normalizedAssignments[stableOwnerId];
+    if (!assignment) {
+      continue;
+    }
+
+    if (
+      hasLegacyTwoRowBottomMarker &&
+      assignment.ringIndex === 1 &&
+      assignment.sectorIndex >= 0 &&
+      assignment.sectorIndex < 3
+    ) {
+      normalizedAssignments[stableOwnerId] = {
+        ringIndex: 2,
+        sectorIndex: assignment.sectorIndex,
+      };
+      changed = true;
+      continue;
+    }
+
+    if (assignment.ringIndex === 0 && assignment.sectorIndex >= 3 && assignment.sectorIndex < 6) {
+      normalizedAssignments[stableOwnerId] = {
+        ringIndex: 2,
+        sectorIndex: assignment.sectorIndex - 3,
+      };
+      changed = true;
+    }
+  }
+
+  return changed ? normalizedAssignments : assignments;
 }
 
 function pruneTeamGraphSlotAssignmentsForVisibleOwners(

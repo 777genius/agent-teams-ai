@@ -10,6 +10,16 @@ function isAnthropicHaikuModel(model: string): boolean {
   return baseModel === 'haiku' || baseModel.startsWith('claude-haiku-');
 }
 
+function isAnthropicSonnetModel(model: string): boolean {
+  const baseModel = stripOneMillionSuffix(model);
+  return baseModel === 'sonnet' || baseModel.startsWith('claude-sonnet-');
+}
+
+function normalizeStandardOnlyAnthropicModel(model: string): string {
+  const baseModel = stripOneMillionSuffix(model);
+  return isAnthropicHaikuModel(baseModel) || isAnthropicSonnetModel(baseModel) ? baseModel : model;
+}
+
 function normalizeAvailableLaunchModels(
   availableLaunchModels: Iterable<string> | undefined
 ): Set<string> {
@@ -52,9 +62,10 @@ export function resolveAnthropicLaunchModel(params: {
   if (!selectedModel || isDefaultProviderModelSelection(selectedModel)) {
     const staticDefault = getAnthropicDefaultTeamModel(params.limitContext);
     const runtimeDefault = params.defaultLaunchModel?.trim() || null;
+    const rawPreferredDefault = runtimeDefault || staticDefault;
     const preferredDefault = params.limitContext
-      ? stripOneMillionSuffix(runtimeDefault || staticDefault) || staticDefault
-      : runtimeDefault || staticDefault;
+      ? stripOneMillionSuffix(rawPreferredDefault) || staticDefault
+      : normalizeStandardOnlyAnthropicModel(rawPreferredDefault) || staticDefault;
     if (availableModels.size === 0) {
       return preferredDefault;
     }
@@ -74,7 +85,11 @@ export function resolveAnthropicLaunchModel(params: {
     return null;
   }
 
-  if (params.limitContext || isAnthropicHaikuModel(baseModel)) {
+  if (
+    params.limitContext ||
+    isAnthropicHaikuModel(baseModel) ||
+    isAnthropicSonnetModel(baseModel)
+  ) {
     return baseModel;
   }
 

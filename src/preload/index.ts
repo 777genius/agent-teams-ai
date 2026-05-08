@@ -14,6 +14,8 @@ import {
   API_KEYS_SAVE,
   API_KEYS_STORAGE_STATUS,
   APP_RELAUNCH,
+  APP_STARTUP_GET_STATUS,
+  APP_STARTUP_PROGRESS,
   CLI_INSTALLER_GET_PROVIDER_STATUS,
   CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_INSTALL,
@@ -249,6 +251,7 @@ import type {
   AppConfig,
   ApplyReviewRequest,
   ApplyReviewResult,
+  AppStartupStatus,
   AttachmentFileData,
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
@@ -480,6 +483,18 @@ const electronAPI: ElectronAPI = {
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
+  startup: {
+    getStatus: () => ipcRenderer.invoke(APP_STARTUP_GET_STATUS) as Promise<AppStartupStatus>,
+    onProgress: (callback: (status: AppStartupStatus) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, status: AppStartupStatus): void => {
+        callback(status);
+      };
+      ipcRenderer.on(APP_STARTUP_PROGRESS, listener);
+      return (): void => {
+        ipcRenderer.removeListener(APP_STARTUP_PROGRESS, listener);
+      };
+    },
+  },
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getProjects: () => ipcRenderer.invoke('get-projects'),
   getSessions: (projectId: string) => ipcRenderer.invoke('get-sessions', projectId),

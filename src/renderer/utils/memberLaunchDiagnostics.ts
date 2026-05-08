@@ -13,6 +13,7 @@ export interface MemberLaunchDiagnosticsPayload {
   teamName?: string;
   runId?: string;
   memberName: string;
+  memberCardError?: string;
   launchState?: MemberLaunchState;
   spawnStatus?: MemberSpawnStatus;
   livenessKind?: TeamAgentRuntimeLivenessKind;
@@ -55,6 +56,15 @@ function boundedNumber(value: number | undefined): number | undefined {
     : undefined;
 }
 
+export function normalizeMemberLaunchFailureReason(value: string | undefined): string | null {
+  const normalized = value
+    ?.replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^Latest assistant message\s+\S+\s+failed with APIError\s*[-:]\s*/i, '')
+    .replace(/^APIError\s*[-:]\s*/i, '');
+  return normalized && normalized.length > 0 ? normalized : null;
+}
+
 function uniqueDiagnostics(
   ...groups: (readonly (string | undefined)[] | undefined)[]
 ): string[] | undefined {
@@ -91,7 +101,16 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     boundedString(runtimeEntry?.runtimeDiagnostic) ??
     boundedString(spawnEntry?.hardFailureReason) ??
     boundedString(spawnEntry?.error);
+  const memberCardError = boundedString(
+    normalizeMemberLaunchFailureReason(
+      spawnEntry?.error ??
+        spawnEntry?.hardFailureReason ??
+        spawnEntry?.runtimeDiagnostic ??
+        runtimeEntry?.runtimeDiagnostic
+    ) ?? undefined
+  );
   const diagnostics = uniqueDiagnostics(
+    memberCardError ? [memberCardError] : undefined,
     runtimeDiagnostic ? [runtimeDiagnostic] : undefined,
     spawnEntry?.hardFailureReason ? [spawnEntry.hardFailureReason] : undefined,
     spawnEntry?.error ? [spawnEntry.error] : undefined,
@@ -103,6 +122,7 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     ...(params.teamName ? { teamName: params.teamName } : {}),
     ...(runId ? { runId } : {}),
     memberName: params.memberName,
+    ...(memberCardError ? { memberCardError } : {}),
     ...((spawnEntry?.launchState ?? params.launchState)
       ? { launchState: spawnEntry?.launchState ?? params.launchState }
       : {}),
@@ -161,6 +181,7 @@ export function hasMemberLaunchDiagnosticsDetails(
   return Boolean(
     (payload.launchState && payload.launchState !== 'confirmed_alive') ||
     (payload.spawnStatus && payload.spawnStatus !== 'online') ||
+    payload.memberCardError ||
     payload.bootstrapStalled === true ||
     weakLiveness ||
     payload.runtimeDiagnostic ||
@@ -182,7 +203,12 @@ export function getMemberLaunchDiagnosticsErrorMessage(
   if (!hasMemberLaunchDiagnosticsError(payload)) {
     return undefined;
   }
-  return payload.runtimeDiagnostic ?? payload.diagnostics?.[0] ?? 'Launch failed';
+  return (
+    payload.memberCardError ??
+    payload.runtimeDiagnostic ??
+    payload.diagnostics?.[0] ??
+    'Launch failed'
+  );
 }
 
 export function formatMemberLaunchDiagnosticsPayload(

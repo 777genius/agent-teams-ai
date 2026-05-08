@@ -4,6 +4,7 @@ import {
   buildMemberLaunchDiagnosticsPayload,
   formatMemberLaunchDiagnosticsPayload,
   hasMemberLaunchDiagnosticsDetails,
+  getMemberLaunchDiagnosticsErrorMessage,
 } from '@renderer/utils/memberLaunchDiagnostics';
 
 describe('member launch diagnostics', () => {
@@ -61,5 +62,32 @@ describe('member launch diagnostics', () => {
     ]);
     expect(hasMemberLaunchDiagnosticsDetails(payload)).toBe(true);
     expect(formatMemberLaunchDiagnosticsPayload(payload)).toContain('"livenessKind": "shell_only"');
+  });
+
+  it('includes the exact normalized member card error in copy diagnostics', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      memberName: 'jack',
+      spawnEntry: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        hardFailureReason:
+          'Latest assistant message msg_123 failed with APIError - OpenCode quota exhausted. Visit https://openrouter.ai/settings/keys',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
+        runtimeDiagnosticSeverity: 'error',
+        updatedAt: '2026-05-08T12:00:00.000Z',
+      },
+    });
+
+    expect(payload.memberCardError).toBe(
+      'OpenCode quota exhausted. Visit https://openrouter.ai/settings/keys'
+    );
+    expect(payload.diagnostics?.[0]).toBe(
+      'OpenCode quota exhausted. Visit https://openrouter.ai/settings/keys'
+    );
+    expect(getMemberLaunchDiagnosticsErrorMessage(payload)).toBe(
+      'OpenCode quota exhausted. Visit https://openrouter.ai/settings/keys'
+    );
+    expect(formatMemberLaunchDiagnosticsPayload(payload)).toContain('"memberCardError"');
   });
 });

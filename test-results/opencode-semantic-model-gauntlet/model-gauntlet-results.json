@@ -1,0 +1,268 @@
+{
+  "generatedAt": "2026-05-08T18:34:37.950Z",
+  "runsPerModel": 1,
+  "qualification": {
+    "minimumAverageScore": 80,
+    "minimumSuccessfulRuns": 1,
+    "minimumConsistencyScore": 85,
+    "requireNoHardFailures": true
+  },
+  "models": [
+    {
+      "model": "opencode/big-pickle",
+      "verdict": "tested-only",
+      "confidence": "low",
+      "qualified": false,
+      "readinessScore": 73,
+      "averageScore": 90,
+      "consistencyScore": 100,
+      "behavioralAverageScore": 90,
+      "minScore": 90,
+      "successfulRuns": 0,
+      "countedRuns": 1,
+      "hardFailures": 1,
+      "providerInfraFailures": 0,
+      "runtimeTransportFailures": 0,
+      "modelBehaviorFailures": 1,
+      "harnessFailures": 0,
+      "p50DurationMs": 124249,
+      "p95DurationMs": 124249,
+      "stagePassRates": {
+        "launchBootstrap": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "directReply": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "peerRelayAB": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "peerRelayBC": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "concurrentReplies": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "taskRefs": {
+          "passed": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "cleanTranscript": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "noDuplicateTokens": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "latencyStable": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        }
+      },
+      "taskRefPassRates": {
+        "directReply": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "peerRelayAB": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "peerRelayBC": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        },
+        "concurrentBob": {
+          "passed": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "concurrentTom": {
+          "passed": 1,
+          "total": 1,
+          "rate": 100
+        }
+      },
+      "protocolViolationTotals": {
+        "badMessages": 0,
+        "duplicateOrMissingTokens": 0,
+        "affectedRuns": 0
+      },
+      "stageFailureImpact": [
+        {
+          "stage": "taskRefs",
+          "failedRuns": 1,
+          "weightedLoss": 10,
+          "passRate": {
+            "passed": 0,
+            "total": 1,
+            "rate": 0
+          }
+        },
+        {
+          "stage": "cleanTranscript",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "concurrentReplies",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "directReply",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "latencyStable",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "launchBootstrap",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "noDuplicateTokens",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "peerRelayAB",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "peerRelayBC",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        }
+      ],
+      "scoreStability": {
+        "sampleSize": 1,
+        "minScore": 90,
+        "maxScore": 90,
+        "spread": 0,
+        "standardDeviation": 0,
+        "consistencyScore": 100
+      },
+      "dominantFailureCategory": "model-behavior",
+      "recommendationBlockers": [
+        "successful runs 0 < 1",
+        "hard failures 1",
+        "model-behavior failures 1",
+        "highest weighted stage loss taskRefs=10",
+        "weakest taskRefs concurrentBob=0/1 (0%)"
+      ],
+      "runs": [
+        {
+          "runIndex": 1,
+          "passed": false,
+          "score": 90,
+          "countedForRecommendation": true,
+          "outcome": "behavioral-fail",
+          "failureCategory": "model-behavior",
+          "primaryFailure": null,
+          "durationMs": 124249,
+          "hardFailure": true,
+          "stageDurationsMs": {
+            "setup": 214,
+            "launchBootstrap": 23875,
+            "materializeTasks": 32,
+            "directReply": 11617,
+            "peerRelayAB": 27950,
+            "peerRelayBC": 25689,
+            "concurrentReplies": 25243,
+            "hygiene": 1
+          },
+          "stageFailures": {},
+          "taskRefChecks": {
+            "directReply": true,
+            "peerRelayAB": true,
+            "peerRelayBC": true,
+            "concurrentBob": false,
+            "concurrentTom": true
+          },
+          "protocolViolations": {
+            "badMessages": 0,
+            "duplicateOrMissingTokens": []
+          },
+          "stages": {
+            "launchBootstrap": true,
+            "directReply": true,
+            "peerRelayAB": true,
+            "peerRelayBC": true,
+            "concurrentReplies": true,
+            "taskRefs": false,
+            "cleanTranscript": true,
+            "noDuplicateTokens": true,
+            "latencyStable": true
+          },
+          "diagnostics": [
+            "runId=34e07fb0-df87-4419-be0c-0f5386847b23"
+          ]
+        }
+      ]
+    }
+  ]
+}

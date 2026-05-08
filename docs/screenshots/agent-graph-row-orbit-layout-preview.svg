@@ -1,0 +1,125 @@
+<svg width="1800" height="1050" viewBox="0 0 1800 1050" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#111733"/>
+      <stop offset="55%" stop-color="#090d20"/>
+      <stop offset="100%" stop-color="#050717"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.25 0 0 0 0 0.75 0 0 0 0 1 0 0 0 0.65 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+    <style>
+      .panel-title { font: 700 28px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #e6f0ff; letter-spacing: 0; }
+      .panel-subtitle { font: 500 15px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #8fa4c6; letter-spacing: 0; }
+      .label { font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #eff6ff; letter-spacing: 0; }
+      .role { font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #8ea0bd; letter-spacing: 0; }
+      .hint { font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #8fa4c6; letter-spacing: 0; }
+      .card { fill: rgba(11, 16, 36, 0.84); stroke: rgba(148, 163, 184, 0.22); stroke-width: 1; }
+      .slot { fill: rgba(59, 130, 246, 0.035); stroke: rgba(125, 211, 252, 0.16); stroke-width: 1; stroke-dasharray: 5 7; }
+      .edge { stroke: rgba(96, 165, 250, 0.18); stroke-width: 2; }
+      .row-guide { stroke: rgba(148, 163, 184, 0.14); stroke-width: 1; stroke-dasharray: 6 10; }
+      .divider { stroke: rgba(148, 163, 184, 0.16); stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1050" fill="url(#bg)"/>
+  <g opacity="0.85">
+    <circle cx="108" cy="102" r="1.5" fill="#94a3b8"/>
+    <circle cx="238" cy="860" r="1.2" fill="#64748b"/>
+    <circle cx="385" cy="145" r="1.3" fill="#94a3b8"/>
+    <circle cx="520" cy="950" r="1.4" fill="#cbd5e1"/>
+    <circle cx="690" cy="372" r="1.1" fill="#94a3b8"/>
+    <circle cx="823" cy="787" r="1.2" fill="#64748b"/>
+    <circle cx="982" cy="210" r="1.1" fill="#94a3b8"/>
+    <circle cx="1112" cy="902" r="1.5" fill="#cbd5e1"/>
+    <circle cx="1286" cy="118" r="1.2" fill="#94a3b8"/>
+    <circle cx="1458" cy="730" r="1.3" fill="#64748b"/>
+    <circle cx="1632" cy="340" r="1.5" fill="#cbd5e1"/>
+    <circle cx="1748" cy="934" r="1.1" fill="#94a3b8"/>
+  </g>
+
+  <line x1="900" y1="70" x2="900" y2="980" class="divider"/>
+
+  <text x="70" y="72" class="panel-title">8 participants</text>
+  <text x="70" y="101" class="panel-subtitle">3 top / 2 at lead level / 3 bottom</text>
+  <text x="970" y="72" class="panel-title">12 participants</text>
+  <text x="970" y="101" class="panel-subtitle">4 top / 2 + lead + 2 middle / 4 bottom</text>
+
+  <g id="eight-layout">
+    <line x1="110" y1="245" x2="790" y2="245" class="row-guide"/>
+    <line x1="110" y1="525" x2="790" y2="525" class="row-guide"/>
+    <line x1="110" y1="805" x2="790" y2="805" class="row-guide"/>
+    <text x="118" y="232" class="hint">top row</text>
+    <text x="118" y="512" class="hint">lead row</text>
+    <text x="118" y="792" class="hint">bottom row</text>
+
+    <path d="M450 525 C370 430 305 330 245 245" class="edge"/>
+    <path d="M450 525 C450 425 450 335 450 245" class="edge"/>
+    <path d="M450 525 C530 430 595 330 655 245" class="edge"/>
+    <path d="M450 525 C360 515 285 515 200 525" class="edge"/>
+    <path d="M450 525 C540 515 615 515 700 525" class="edge"/>
+    <path d="M450 525 C370 620 305 720 245 805" class="edge"/>
+    <path d="M450 525 C450 625 450 715 450 805" class="edge"/>
+    <path d="M450 525 C530 620 595 720 655 805" class="edge"/>
+
+    <g transform="translate(450 525)">
+      <circle r="56" fill="rgba(132, 204, 22, 0.11)" filter="url(#glow)"/>
+      <path d="M0 -35 L31 -17.5 L31 17.5 L0 35 L-31 17.5 L-31 -17.5 Z" fill="#1a2f0d" stroke="#a3e635" stroke-width="2"/>
+      <circle r="17" fill="#84cc16"/>
+      <text x="0" y="66" text-anchor="middle" class="label">lead</text>
+    </g>
+
+    <g transform="translate(245 245)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#0ea5e9"/><text y="17" text-anchor="middle" class="label">alice</text><text y="34" text-anchor="middle" class="role">reviewer</text></g>
+    <g transform="translate(450 245)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#22c55e"/><text y="17" text-anchor="middle" class="label">nova</text><text y="34" text-anchor="middle" class="role">developer</text></g>
+    <g transform="translate(655 245)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#eab308"/><text y="17" text-anchor="middle" class="label">tom</text><text y="34" text-anchor="middle" class="role">developer</text></g>
+    <g transform="translate(200 525)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#8b5cf6"/><text y="17" text-anchor="middle" class="label">jack</text><text y="34" text-anchor="middle" class="role">developer</text></g>
+    <g transform="translate(700 525)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#06b6d4"/><text y="17" text-anchor="middle" class="label">atlas</text><text y="34" text-anchor="middle" class="role">assistant</text></g>
+    <g transform="translate(245 805)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#ef4444"/><text y="17" text-anchor="middle" class="label">bob</text><text y="34" text-anchor="middle" class="role">developer</text></g>
+    <g transform="translate(450 805)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#f97316"/><text y="17" text-anchor="middle" class="label">maya</text><text y="34" text-anchor="middle" class="role">qa</text></g>
+    <g transform="translate(655 805)"><rect x="-92" y="-64" width="184" height="128" rx="8" class="slot"/><rect x="-78" y="-46" width="156" height="92" rx="7" class="card"/><circle cy="-18" r="20" fill="#14b8a6"/><text y="17" text-anchor="middle" class="label">kai</text><text y="34" text-anchor="middle" class="role">ops</text></g>
+  </g>
+
+  <g id="twelve-layout">
+    <line x1="970" y1="245" x2="1730" y2="245" class="row-guide"/>
+    <line x1="970" y1="525" x2="1730" y2="525" class="row-guide"/>
+    <line x1="970" y1="805" x2="1730" y2="805" class="row-guide"/>
+    <text x="978" y="232" class="hint">top row</text>
+    <text x="978" y="512" class="hint">lead row</text>
+    <text x="978" y="792" class="hint">bottom row</text>
+
+    <path d="M1350 525 C1245 425 1135 330 1030 245" class="edge"/>
+    <path d="M1350 525 C1295 420 1270 335 1243 245" class="edge"/>
+    <path d="M1350 525 C1405 420 1430 335 1457 245" class="edge"/>
+    <path d="M1350 525 C1455 425 1565 330 1670 245" class="edge"/>
+    <path d="M1350 525 C1235 515 1135 515 1030 525" class="edge"/>
+    <path d="M1350 525 C1270 520 1235 520 1210 525" class="edge"/>
+    <path d="M1350 525 C1430 520 1465 520 1490 525" class="edge"/>
+    <path d="M1350 525 C1465 515 1565 515 1670 525" class="edge"/>
+    <path d="M1350 525 C1245 625 1135 720 1030 805" class="edge"/>
+    <path d="M1350 525 C1295 630 1270 715 1243 805" class="edge"/>
+    <path d="M1350 525 C1405 630 1430 715 1457 805" class="edge"/>
+    <path d="M1350 525 C1455 625 1565 720 1670 805" class="edge"/>
+
+    <g transform="translate(1350 525)">
+      <circle r="56" fill="rgba(132, 204, 22, 0.11)" filter="url(#glow)"/>
+      <path d="M0 -35 L31 -17.5 L31 17.5 L0 35 L-31 17.5 L-31 -17.5 Z" fill="#1a2f0d" stroke="#a3e635" stroke-width="2"/>
+      <circle r="17" fill="#84cc16"/>
+      <text x="0" y="66" text-anchor="middle" class="label">lead</text>
+    </g>
+
+    <g transform="translate(1030 245)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#0ea5e9"/><text y="17" text-anchor="middle" class="label">alice</text></g>
+    <g transform="translate(1243 245)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#22c55e"/><text y="17" text-anchor="middle" class="label">nova</text></g>
+    <g transform="translate(1457 245)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#eab308"/><text y="17" text-anchor="middle" class="label">tom</text></g>
+    <g transform="translate(1670 245)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#8b5cf6"/><text y="17" text-anchor="middle" class="label">jack</text></g>
+    <g transform="translate(1030 525)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#06b6d4"/><text y="17" text-anchor="middle" class="label">atlas</text></g>
+    <g transform="translate(1210 525)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#ef4444"/><text y="17" text-anchor="middle" class="label">bob</text></g>
+    <g transform="translate(1490 525)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#f97316"/><text y="17" text-anchor="middle" class="label">maya</text></g>
+    <g transform="translate(1670 525)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#14b8a6"/><text y="17" text-anchor="middle" class="label">kai</text></g>
+    <g transform="translate(1030 805)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#a855f7"/><text y="17" text-anchor="middle" class="label">ivy</text></g>
+    <g transform="translate(1243 805)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#f43f5e"/><text y="17" text-anchor="middle" class="label">rex</text></g>
+    <g transform="translate(1457 805)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#38bdf8"/><text y="17" text-anchor="middle" class="label">zoe</text></g>
+    <g transform="translate(1670 805)"><rect x="-80" y="-62" width="160" height="124" rx="8" class="slot"/><rect x="-68" y="-44" width="136" height="88" rx="7" class="card"/><circle cy="-18" r="18" fill="#84cc16"/><text y="17" text-anchor="middle" class="label">sam</text></g>
+  </g>
+</svg>

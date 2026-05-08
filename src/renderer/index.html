@@ -237,9 +237,153 @@
         animation: splash-tagline-type 1.05s steps(28, end) 0.22s forwards;
         will-change: clip-path;
       }
+      #splash-status-row {
+        display: flex;
+        width: min(320px, 78vw);
+        margin-top: 14px;
+        align-items: baseline;
+        justify-content: center;
+        gap: 6px;
+      }
+      #splash-status {
+        min-height: 16px;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(212, 212, 216, 0.72);
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+      #splash-elapsed::before {
+        content: '·';
+        margin-right: 6px;
+        color: rgba(212, 212, 216, 0.34);
+      }
+      #splash-elapsed {
+        font-family:
+          ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(212, 212, 216, 0.5);
+        white-space: nowrap;
+      }
+      #splash-hint {
+        width: min(320px, 78vw);
+        min-height: 15px;
+        margin-top: 6px;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 11px;
+        color: rgba(212, 212, 216, 0.54);
+        line-height: 1.35;
+      }
+      #splash-timeline {
+        display: flex;
+        width: min(320px, 78vw);
+        max-height: 128px;
+        margin-top: 14px;
+        flex-direction: column;
+        gap: 6px;
+        overflow: hidden;
+      }
+      .splash-step {
+        display: grid;
+        grid-template-columns: 8px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 9px;
+        opacity: 0.56;
+      }
+      .splash-step.is-current {
+        opacity: 1;
+      }
+      .splash-step-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(212, 212, 216, 0.42);
+      }
+      .splash-step.is-current .splash-step-dot {
+        background: #a78bfa;
+        box-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
+      }
+      .splash-step-label,
+      .splash-step-time {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 11px;
+        line-height: 1.25;
+      }
+      .splash-step-label {
+        min-width: 0;
+        overflow: hidden;
+        color: rgba(212, 212, 216, 0.62);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .splash-step.is-current .splash-step-label {
+        color: rgba(244, 244, 245, 0.86);
+      }
+      .splash-step-time {
+        color: rgba(212, 212, 216, 0.44);
+        white-space: nowrap;
+      }
+      #splash-progress {
+        position: relative;
+        width: min(240px, 64vw);
+        height: 3px;
+        margin-top: 10px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      #splash-progress-bar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 38%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #818cf8, #c084fc);
+        animation: splash-progress 1.2s ease-in-out infinite;
+      }
+      #splash.splash-status-error #splash-status {
+        color: #fca5a5;
+      }
+      #splash.splash-status-slow #splash-status {
+        color: #fde68a;
+      }
+      #splash.splash-status-error #splash-progress-bar {
+        background: #f87171;
+        animation: none;
+      }
       @keyframes splash-tagline-type {
         to {
           clip-path: inset(0 0 0 0);
+        }
+      }
+      @keyframes splash-progress {
+        0% {
+          transform: translateX(-110%);
+        }
+        55% {
+          transform: translateX(90%);
+        }
+        100% {
+          transform: translateX(260%);
         }
       }
 
@@ -284,6 +428,26 @@
       :root.light #splash-tagline {
         color: rgba(63, 63, 70, 0.66);
       }
+      :root.light #splash-status {
+        color: rgba(63, 63, 70, 0.7);
+      }
+      :root.light #splash-elapsed,
+      :root.light .splash-step-time {
+        color: rgba(63, 63, 70, 0.48);
+      }
+      :root.light #splash-hint,
+      :root.light .splash-step-label {
+        color: rgba(63, 63, 70, 0.58);
+      }
+      :root.light .splash-step.is-current .splash-step-label {
+        color: rgba(39, 39, 42, 0.82);
+      }
+      :root.light .splash-step-dot {
+        background: rgba(63, 63, 70, 0.34);
+      }
+      :root.light #splash-progress {
+        background: rgba(79, 70, 229, 0.14);
+      }
       :root.light #splash-noise {
         opacity: 0.02;
       }
@@ -307,6 +471,7 @@
         #splash,
         #splash-enhanced-canvas,
         #splash-logo,
+        #splash-progress-bar,
         #splash-tagline > span,
         .splash-node {
           animation: none !important;
@@ -446,6 +611,13 @@
       <div id="splash-copy">
         <div id="splash-text">Agent Teams AI</div>
         <div id="splash-tagline"><span>Get more done by doing less.</span></div>
+        <div id="splash-status-row">
+          <div id="splash-status" aria-live="polite">Preparing workspace...</div>
+          <div id="splash-elapsed">0s</div>
+        </div>
+        <div id="splash-hint" aria-live="polite"></div>
+        <div id="splash-progress" aria-hidden="true"><div id="splash-progress-bar"></div></div>
+        <div id="splash-timeline" aria-label="Startup steps"></div>
       </div>
     </div>
     <div id="root"></div>

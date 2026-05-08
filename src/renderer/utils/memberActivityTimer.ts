@@ -332,6 +332,47 @@ export function deriveReviewActivityTimerAnchor(
   const memberKey = normalizeMemberName(params.memberName);
   if (!memberKey) return null;
 
+  const reviewIntervals = Array.isArray(task.reviewIntervals) ? task.reviewIntervals : [];
+  for (let index = reviewIntervals.length - 1; index >= 0; index -= 1) {
+    const interval = reviewIntervals[index];
+    if (normalizeMemberName(interval?.reviewer) !== memberKey || interval?.completedAt) {
+      continue;
+    }
+    const startedAtMs = parseIsoMs(interval.startedAt);
+    if (startedAtMs <= 0) return null;
+
+    const cycleStartedAtMs = getCurrentReviewCycleStartedAtMs(task, startedAtMs);
+    let baseElapsedMs = 0;
+    for (let previousIndex = 0; previousIndex < index; previousIndex += 1) {
+      const previous = reviewIntervals[previousIndex];
+      if (normalizeMemberName(previous?.reviewer) !== memberKey) continue;
+      const previousStartedAtMs = parseIsoMs(previous?.startedAt);
+      const previousCompletedAtMs = parseIsoMs(previous?.completedAt);
+      if (
+        previousStartedAtMs >= cycleStartedAtMs &&
+        previousStartedAtMs > 0 &&
+        previousCompletedAtMs > previousStartedAtMs
+      ) {
+        baseElapsedMs += previousCompletedAtMs - previousStartedAtMs;
+      }
+    }
+
+    return {
+      startedAt: interval.startedAt,
+      startedAtMs,
+      baseElapsedMs,
+      timerId: createMemberActivityTimerId({
+        teamName: params.teamName,
+        memberName: params.memberName,
+        phase: 'review',
+        taskId: task.id,
+        startedAt: interval.startedAt,
+      }),
+    };
+  }
+
+  if (reviewIntervals.length > 0) return null;
+
   const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
@@ -367,6 +408,27 @@ export function deriveReviewActivityTimerAnchor(
   }
 
   return null;
+}
+
+function getCurrentReviewCycleStartedAtMs(task: TeamTaskWithKanban, fallbackMs: number): number {
+  const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event.type === 'review_started') {
+      const startedAtMs = parseIsoMs(event.timestamp);
+      return startedAtMs > 0 ? startedAtMs : fallbackMs;
+    }
+    if (
+      event.type === 'review_approved' ||
+      event.type === 'review_changes_requested' ||
+      event.type === 'task_created' ||
+      (event.type === 'status_changed' &&
+        (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
+    ) {
+      return fallbackMs;
+    }
+  }
+  return fallbackMs;
 }
 
 export function resetMemberActivityTimerStoreForTests(): void {

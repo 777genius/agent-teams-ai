@@ -159,6 +159,8 @@ export const MemberHoverCard = memo(function MemberHoverCard({
     spawnRuntimeAlive: spawnEntry?.runtimeAlive,
     spawnBootstrapConfirmed: spawnEntry?.bootstrapConfirmed,
     spawnBootstrapStalled: spawnEntry?.bootstrapStalled,
+    spawnFirstSpawnAcceptedAt: spawnEntry?.firstSpawnAcceptedAt,
+    spawnUpdatedAt: spawnEntry?.updatedAt,
     runtimeEntry,
     runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
@@ -176,7 +178,8 @@ export const MemberHoverCard = memo(function MemberHoverCard({
   const badgeLabel =
     runtimeAdvisoryTone === 'error' && runtimeAdvisoryLabel
       ? runtimeAdvisoryLabel
-      : launchVisualState === 'bootstrap_stalled' ||
+      : launchVisualState === 'starting_stale' ||
+          launchVisualState === 'bootstrap_stalled' ||
           launchVisualState === 'runtime_pending' ||
           launchVisualState === 'permission_pending' ||
           launchVisualState === 'shell_only' ||

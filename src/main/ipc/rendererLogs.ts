@@ -10,6 +10,7 @@ const lastHeartbeatWarnedAtByWebContentsId = new Map<number, number>();
 const hasReceivedHeartbeatByWebContentsId = new Set<number>();
 let heartbeatMonitorStarted = false;
 let heartbeatMonitorInterval: ReturnType<typeof setInterval> | null = null;
+let rendererLogHandlersRegistered = false;
 
 function startHeartbeatMonitor(): void {
   if (heartbeatMonitorStarted) return;
@@ -40,6 +41,10 @@ function startHeartbeatMonitor(): void {
 }
 
 export function registerRendererLogHandlers(ipcMain: IpcMain): void {
+  if (rendererLogHandlersRegistered) {
+    return;
+  }
+  rendererLogHandlersRegistered = true;
   startHeartbeatMonitor();
 
   ipcMain.on(RENDERER_LOG, () => {
@@ -69,6 +74,7 @@ export function removeRendererLogHandlers(ipcMain: IpcMain): void {
   ipcMain.removeAllListeners(RENDERER_LOG);
   ipcMain.removeAllListeners(RENDERER_BOOT);
   ipcMain.removeAllListeners(RENDERER_HEARTBEAT);
+  rendererLogHandlersRegistered = false;
 
   if (heartbeatMonitorInterval) {
     clearInterval(heartbeatMonitorInterval);

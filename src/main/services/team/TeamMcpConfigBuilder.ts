@@ -16,6 +16,15 @@ export interface McpLaunchSpec {
   args: string[];
 }
 
+export interface McpLaunchSpecResolveProgress {
+  phase: string;
+  message: string;
+}
+
+export interface McpLaunchSpecResolveOptions {
+  onProgress?: (progress: McpLaunchSpecResolveProgress) => void;
+}
+
 const MCP_SERVER_NAME = 'agent-teams';
 const MCP_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
 const logger = createLogger('Service:TeamMcpConfigBuilder');
@@ -158,15 +167,24 @@ export function clearResolvedNodePathForTests(): void {
   _resolvedNodePath = undefined;
 }
 
+function emitProgress(
+  options: McpLaunchSpecResolveOptions | undefined,
+  phase: string,
+  message: string
+): void {
+  options?.onProgress?.({ phase, message });
+}
+
 /**
  * Find the real `node` binary path. In Electron, process.execPath is the
  * Electron binary — NOT node — so we must resolve node separately.
  * Uses async execFile('node', ...) which is cross-platform (no /usr/bin/env dependency).
  */
-async function resolveNodePath(): Promise<string> {
+async function resolveNodePath(options?: McpLaunchSpecResolveOptions): Promise<string> {
   if (_resolvedNodePath) return _resolvedNodePath;
 
   try {
+    emitProgress(options, 'node-runtime', 'Resolving Node.js runtime for MCP server...');
     const resolved = await new Promise<string>((resolve, reject) => {
       execFile(
         'node',
@@ -180,12 +198,14 @@ async function resolveNodePath(): Promise<string> {
     });
     if (resolved) {
       _resolvedNodePath = resolved;
+      emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
       return _resolvedNodePath;
     }
   } catch {
     // node not found or timed out — use bare 'node' and let the OS resolve it
   }
   _resolvedNodePath = 'node';
+  emitProgress(options, 'node-runtime-fallback', 'Using system Node.js command...');
   return _resolvedNodePath;
 }
 
@@ -199,10 +219,11 @@ async function resolveNodePath(): Promise<string> {
  *
  * Returns the resolved index.js path (stable copy or resourcesPath fallback).
  */
-async function resolvePackagedServerEntry(): Promise<string> {
+async function resolvePackagedServerEntry(options?: McpLaunchSpecResolveOptions): Promise<string> {
   const fallbackEntry = getPackagedServerEntry();
   if (!isPackagedApp()) return fallbackEntry;
 
+  emitProgress(options, 'packaged-server', 'Checking packaged MCP server...');
   const appVersion = getAppVersion();
   const baseDir = getMcpServerBasePath();
   const finalDir = path.join(baseDir, appVersion);
@@ -210,6 +231,7 @@ async function resolvePackagedServerEntry(): Promise<string> {
 
   // Reuse existing valid copy
   if (await hasValidServerCopy(finalDir)) {
+    emitProgress(options, 'packaged-server-reuse', 'Using cached MCP server copy...');
     return finalEntry;
   }
 
@@ -230,6 +252,7 @@ async function resolvePackagedServerEntry(): Promise<string> {
       return fallbackEntry;
     }
 
+    emitProgress(options, 'packaged-server-copy', 'Copying MCP server to app data...');
     // Atomic: copy to temp dir, then rename to final
     const tmpDir = path.join(baseDir, `${appVersion}.tmp-${process.pid}-${randomUUID()}`);
     await fs.promises.mkdir(tmpDir, { recursive: true });
@@ -254,6 +277,7 @@ async function resolvePackagedServerEntry(): Promise<string> {
     }
 
     logger.info(`MCP server copied to stable path ${finalDir} (v${appVersion})`);
+    emitProgress(options, 'packaged-server-ready', 'MCP server copy is ready...');
     return finalEntry;
   } catch (error) {
     logger.warn(
@@ -265,16 +289,18 @@ async function resolvePackagedServerEntry(): Promise<string> {
   }
 }
 
-export async function resolveAgentTeamsMcpLaunchSpec(): Promise<McpLaunchSpec> {
+export async function resolveAgentTeamsMcpLaunchSpec(
+  options: McpLaunchSpecResolveOptions = {}
+): Promise<McpLaunchSpec> {
   const checked: string[] = [];
 
   // 1. Packaged Electron app — prefer stable copy, fall back to resourcesPath
   if (isPackagedApp()) {
-    const packagedEntry = await resolvePackagedServerEntry();
+    const packagedEntry = await resolvePackagedServerEntry(options);
     checked.push(packagedEntry);
     if (await pathExists(packagedEntry)) {
       return {
-        command: await resolveNodePath(),
+        command: await resolveNodePath(options),
         args: [packagedEntry],
       };
     }
@@ -283,12 +309,14 @@ export async function resolveAgentTeamsMcpLaunchSpec(): Promise<McpLaunchSpec> {
 
   // 2. Dev mode — prefer source so pnpm dev always sees current MCP tools
   const sourceEntry = getSourceServerEntry();
+  emitProgress(options, 'source-entry', 'Checking MCP source entry...');
   checked.push(sourceEntry);
   if (await pathExists(sourceEntry)) {
+    emitProgress(options, 'tsx-runner', 'Resolving MCP TypeScript runner...');
     const tsxCli = await resolveWorkspaceTsxCli(checked);
     if (tsxCli) {
       return {
-        command: await resolveNodePath(),
+        command: await resolveNodePath(options),
         args: [tsxCli, sourceEntry],
       };
     }
@@ -296,10 +324,11 @@ export async function resolveAgentTeamsMcpLaunchSpec(): Promise<McpLaunchSpec> {
 
   // 3. Dev mode fallback — use built dist when source execution is unavailable
   const builtEntry = getBuiltServerEntry();
+  emitProgress(options, 'built-entry', 'Checking built MCP server entry...');
   checked.push(builtEntry);
   if (await pathExists(builtEntry)) {
     return {
-      command: await resolveNodePath(),
+      command: await resolveNodePath(options),
       args: [builtEntry],
     };
   }

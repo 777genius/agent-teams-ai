@@ -133,6 +133,7 @@ export const SPAWN_PRESENCE_LABELS: Record<MemberSpawnStatus, string> = {
 };
 
 const OPENCODE_RUNTIME_CANDIDATE_RELAUNCH_GRACE_MS = 5 * 60 * 1000;
+export const MEMBER_STARTING_STALE_AFTER_MS = 2 * 60 * 1000;
 
 function isLaunchStillStarting(
   spawnStatus: MemberSpawnStatus | undefined,
@@ -634,6 +635,7 @@ export type MemberLaunchVisualState =
   | 'queued'
   | 'waiting'
   | 'spawning'
+  | 'starting_stale'
   | 'permission_pending'
   | 'bootstrap_stalled'
   | 'runtime_pending'
@@ -666,6 +668,8 @@ export function getMemberLaunchStatusLabel(visualState: MemberLaunchVisualState)
       return 'waiting to start';
     case 'spawning':
       return 'starting';
+    case 'starting_stale':
+      return 'starting stale';
     case 'permission_pending':
       return 'awaiting permission';
     case 'bootstrap_stalled':
@@ -700,6 +704,8 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
     case 'runtime_pending':
     case 'runtime_candidate':
       return 'bg-amber-400 animate-pulse';
+    case 'starting_stale':
+      return 'bg-amber-400';
     case 'registered_only':
       return SPAWN_DOT_COLORS.waiting;
     case 'shell_only':
@@ -794,6 +800,41 @@ function hasElapsedSinceIso(
   return Number.isFinite(parsed) && nowMs - parsed >= thresholdMs;
 }
 
+export function isMemberStartingStale({
+  spawnStatus,
+  spawnLaunchState,
+  spawnFirstSpawnAcceptedAt,
+  spawnUpdatedAt,
+  nowMs = Date.now(),
+}: {
+  spawnStatus?: MemberSpawnStatus;
+  spawnLaunchState?: MemberLaunchState;
+  spawnFirstSpawnAcceptedAt?: string;
+  spawnUpdatedAt?: string;
+  nowMs?: number;
+}): boolean {
+  if (
+    spawnLaunchState === 'failed_to_start' ||
+    spawnLaunchState === 'confirmed_alive' ||
+    spawnLaunchState === 'skipped_for_launch' ||
+    spawnLaunchState === 'runtime_pending_permission' ||
+    spawnStatus === 'error' ||
+    spawnStatus === 'online' ||
+    spawnStatus === 'skipped'
+  ) {
+    return false;
+  }
+  if (spawnLaunchState !== 'starting' && spawnStatus !== 'waiting' && spawnStatus !== 'spawning') {
+    return false;
+  }
+
+  return hasElapsedSinceIso(
+    spawnFirstSpawnAcceptedAt ?? spawnUpdatedAt,
+    MEMBER_STARTING_STALE_AFTER_MS,
+    nowMs
+  );
+}
+
 function hasBootstrapStallDiagnostic(value: string | undefined): boolean {
   const normalized = value?.trim().toLowerCase() ?? '';
   return (
@@ -881,12 +922,15 @@ export function buildMemberLaunchPresentation({
   spawnRuntimeAlive,
   spawnBootstrapConfirmed,
   spawnBootstrapStalled,
+  spawnFirstSpawnAcceptedAt,
+  spawnUpdatedAt,
   runtimeAdvisory,
   runtimeEntry,
   isLaunchSettling = false,
   isTeamAlive,
   isTeamProvisioning,
   leadActivity,
+  nowMs,
 }: {
   member: ResolvedTeamMember;
   spawnStatus: MemberSpawnStatus | undefined;
@@ -895,12 +939,15 @@ export function buildMemberLaunchPresentation({
   spawnRuntimeAlive: boolean | undefined;
   spawnBootstrapConfirmed?: boolean;
   spawnBootstrapStalled?: boolean;
+  spawnFirstSpawnAcceptedAt?: string;
+  spawnUpdatedAt?: string;
   runtimeAdvisory: MemberRuntimeAdvisory | undefined;
   runtimeEntry?: TeamAgentRuntimeEntry;
   isLaunchSettling?: boolean;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
+  nowMs?: number;
 }): MemberLaunchPresentation {
   const hasConfirmedSpawnLaunch =
     spawnLaunchState === 'confirmed_alive' && spawnBootstrapConfirmed === true;
@@ -943,6 +990,15 @@ export function buildMemberLaunchPresentation({
   const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(runtimeAdvisory, member.providerId);
   const runtimeAdvisoryTone = getMemberRuntimeAdvisoryTone(runtimeAdvisory);
   const keepLaunchSettlingVisuals = isTeamProvisioning === true || isLaunchSettling;
+  const startingIsStale =
+    !hasConfirmedSpawnLaunch &&
+    isMemberStartingStale({
+      spawnStatus,
+      spawnLaunchState,
+      spawnFirstSpawnAcceptedAt,
+      spawnUpdatedAt,
+      nowMs,
+    });
 
   let launchVisualState: MemberLaunchVisualState = null;
   if (isTeamAlive !== false || isTeamProvisioning) {
@@ -969,6 +1025,8 @@ export function buildMemberLaunchPresentation({
         runtimeEntry?.livenessKind === 'not_found')
     ) {
       launchVisualState = 'stale_runtime';
+    } else if (!hasConfirmedSpawnLaunch && startingIsStale) {
+      launchVisualState = 'starting_stale';
     } else if (
       !hasConfirmedSpawnLaunch &&
       isQueuedOpenCodeLaunch(
@@ -1007,6 +1065,7 @@ export function buildMemberLaunchPresentation({
   const launchVisualStateDotClass = getLaunchVisualStateDotClass(launchVisualState);
   const shouldShowLaunchStatusAsPresence =
     launchVisualState === 'queued' ||
+    launchVisualState === 'starting_stale' ||
     launchVisualState === 'permission_pending' ||
     launchVisualState === 'bootstrap_stalled' ||
     launchVisualState === 'runtime_pending' ||
@@ -1023,7 +1082,9 @@ export function buildMemberLaunchPresentation({
   const spawnBadgeLabel =
     spawnStatus && spawnStatus !== 'online'
       ? spawnStatus === 'waiting' || spawnStatus === 'spawning'
-        ? 'starting'
+        ? startingIsStale
+          ? 'starting stale'
+          : 'starting'
         : spawnStatus
       : null;
 
@@ -1033,7 +1094,7 @@ export function buildMemberLaunchPresentation({
       runtimeAdvisoryTone === 'error'
         ? STATUS_DOT_COLORS.terminated
         : (launchVisualStateDotClass ?? baseDotClass),
-    cardClass,
+    cardClass: launchVisualState === 'starting_stale' ? 'opacity-90' : cardClass,
     runtimeAdvisoryLabel,
     runtimeAdvisoryTitle,
     runtimeAdvisoryTone,

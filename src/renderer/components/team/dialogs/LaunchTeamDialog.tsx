@@ -138,8 +138,8 @@ import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibili
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
-  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL,
-  OPENCODE_TEAM_LEAD_DISABLED_REASON,
+  OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL,
+  OPENCODE_ONE_SHOT_DISABLED_REASON,
   TeamModelSelector,
 } from './TeamModelSelector';
 import {
@@ -247,6 +247,14 @@ function getLocalTimezone(): string {
 function getStoredTeamProvider(): TeamProviderId {
   const stored = localStorage.getItem('team:lastSelectedProvider');
   return normalizeCreateLaunchProviderForUi(normalizeOptionalTeamProviderId(stored), true);
+}
+
+function normalizeOneShotProviderForMode(
+  providerId: TeamProviderId | undefined,
+  multimodelEnabled: boolean
+): TeamProviderId {
+  const normalizedProviderId = normalizeProviderForMode(providerId, multimodelEnabled);
+  return normalizedProviderId === 'opencode' ? 'anthropic' : normalizedProviderId;
 }
 
 function getStoredTeamModel(providerId: TeamProviderId): string {
@@ -412,10 +420,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
-    normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+    isLaunchMode
+      ? normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+      : normalizeOneShotProviderForMode(getStoredTeamProvider(), multimodelEnabled)
   );
   const [selectedModel, setSelectedModelRaw] = useState(() =>
-    getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
+    getStoredTeamModel(
+      isLaunchMode
+        ? normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+        : normalizeOneShotProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+    )
   );
   const [membersDrafts, setMembersDrafts] = useState<MemberDraft[]>([]);
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(false);
@@ -623,7 +637,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
-    const normalizedValue = normalizeLeadProviderForMode(value, multimodelEnabled);
+    const normalizedValue = isLaunchMode
+      ? normalizeLeadProviderForMode(value, multimodelEnabled)
+      : normalizeOneShotProviderForMode(value, multimodelEnabled);
     setSelectedProviderIdRaw(normalizedValue);
     localStorage.setItem('team:lastSelectedProvider', normalizedValue);
     if (normalizedValue !== 'anthropic') {
@@ -736,15 +752,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       promptDraft.setValue(schedule.launchConfig.prompt);
       setCustomCwd(schedule.launchConfig.cwd);
       setCwdMode('custom');
-      const scheduleProviderId = normalizeLeadProviderForMode(
+      const scheduleProviderId = normalizeOneShotProviderForMode(
         schedule.launchConfig.providerId,
         multimodelEnabled
       );
+      const scheduleSourceProviderId = normalizeOptionalTeamProviderId(
+        schedule.launchConfig.providerId
+      );
       setSelectedProviderIdRaw(scheduleProviderId);
       setSelectedModelRaw(
-        schedule.launchConfig.providerId !== 'gemini' &&
+        scheduleSourceProviderId !== 'gemini' &&
+          scheduleSourceProviderId !== 'opencode' &&
           scheduleProviderId ===
-            normalizeLeadProviderForMode(schedule.launchConfig.providerId, true)
+            normalizeOneShotProviderForMode(schedule.launchConfig.providerId, true)
           ? (schedule.launchConfig.model ?? '')
           : getStoredTeamModel('anthropic')
       );
@@ -765,7 +785,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setCwdMode('project');
       setSelectedProjectPath('');
       setCustomCwd('');
-      const storedProviderId = normalizeLeadProviderForMode(
+      const storedProviderId = normalizeOneShotProviderForMode(
         getStoredTeamProvider(),
         multimodelEnabled
       );
@@ -1825,6 +1845,18 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     cronExpression,
   ]);
   const modelValidationError = useMemo(() => {
+    if (isLaunchMode && selectedProviderId === 'opencode') {
+      if (!selectedModel.trim()) {
+        return 'OpenCode lead requires a selected model.';
+      }
+      const activeMemberCount = effectiveMemberDrafts.filter(
+        (member) => !member.removedAt && member.name.trim()
+      ).length;
+      if (activeMemberCount === 0) {
+        return 'OpenCode lead requires at least one OpenCode teammate.';
+      }
+    }
+
     const leadError = getTeamModelSelectionError(
       selectedProviderId,
       selectedModel,
@@ -2674,10 +2706,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   id="dialog-model"
                   disableGeminiOption={isGeminiUiFrozen()}
                   providerDisabledReasonById={{
-                    opencode: OPENCODE_TEAM_LEAD_DISABLED_REASON,
+                    opencode: OPENCODE_ONE_SHOT_DISABLED_REASON,
                   }}
                   providerDisabledBadgeLabelById={{
-                    opencode: OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL,
+                    opencode: OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL,
                   }}
                 />
                 <EffortLevelSelector

@@ -54,7 +54,10 @@ describe('agent-teams-controller API', () => {
     const address = server.address();
     return {
       baseUrl: `http://127.0.0.1:${address.port}`,
-      close: async () => await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve()))),
+      close: async () =>
+        await new Promise((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve()))
+        ),
     };
   }
 
@@ -146,8 +149,12 @@ describe('agent-teams-controller API', () => {
     expect(briefing).toContain('Implement carefully');
     expect(briefing).toContain('Working directory: /tmp/project-x');
     expect(briefing).toContain('Task briefing for bob:');
-    expect(briefing).toContain('Use task_briefing as your primary working queue whenever you need to see assigned work.');
-    expect(briefing).toContain('Use task_list only to search/browse inventory rows, not as your working queue.');
+    expect(briefing).toContain(
+      'Use task_briefing as your primary working queue whenever you need to see assigned work.'
+    );
+    expect(briefing).toContain(
+      'Use task_list only to search/browse inventory rows, not as your working queue.'
+    );
     expect(briefing).toContain('member_work_sync_status and member_work_sync_report');
     expect(briefing).toContain(
       'Awareness items are watch-only context and do not authorize you to start work unless the lead reroutes the task or you become the actionOwner.'
@@ -175,9 +182,7 @@ describe('agent-teams-controller API', () => {
     );
     expect(briefing).toContain('OpenCode visible messaging rule: call agent-teams_message_send');
     expect(briefing).toContain('OpenCode bootstrap silence rule');
-    expect(briefing).toContain(
-      'If it shows no actionable tasks, stop and wait silently.'
-    );
+    expect(briefing).toContain('If it shows no actionable tasks, stop and wait silently.');
     expect(briefing).toContain(
       'agent-teams_message_send { teamName: "my-team", to: "alice", from: "bob"'
     );
@@ -478,7 +483,10 @@ describe('agent-teams-controller API', () => {
       owner: 'bob',
     });
     controller.tasks.completeTask(completedTask.id, 'bob');
-    controller.tasks.addTaskComment(activeTask.id, { from: 'bob', text: 'Resumed work with latest context.' });
+    controller.tasks.addTaskComment(activeTask.id, {
+      from: 'bob',
+      text: 'Resumed work with latest context.',
+    });
     const needsFixTask = controller.tasks.createTask({
       subject: 'Fix after review',
       owner: 'bob',
@@ -517,7 +525,9 @@ describe('agent-teams-controller API', () => {
     expect(ownerInbox[0].text).toContain('task_get');
     expect(ownerInbox[0].text).toContain('task_start');
     expect(ownerInbox[0].text).toContain('task_add_comment');
-    expect(ownerInbox[0].text).toContain('If you are idle and this task is ready to start, start it now.');
+    expect(ownerInbox[0].text).toContain(
+      'If you are idle and this task is ready to start, start it now.'
+    );
     expect(ownerInbox[0].text).toContain(
       'If you are busy, blocked, or still need more context, immediately add a short task comment'
     );
@@ -527,7 +537,9 @@ describe('agent-teams-controller API', () => {
     expect(ownerInbox[0].text).toContain('Check the migration plan first.');
     expect(ownerInbox[0].leadSessionId).toBe('lead-session-1');
     expect(ownerInbox[3].summary).toContain(`#${reassignedTask.displayId}`);
-    expect(ownerInbox[3].text).toContain('If you are idle and this task is ready to start, start it now.');
+    expect(ownerInbox[3].text).toContain(
+      'If you are idle and this task is ready to start, start it now.'
+    );
     expect(ownerInbox[3].text).toContain('task_add_comment');
 
     const briefing = await controller.tasks.taskBriefing('bob');
@@ -549,9 +561,7 @@ describe('agent-teams-controller API', () => {
     expect(briefing).toContain(`#${reviewTask.displayId}`);
     expect(briefing).toContain('reason=review_reviewer_missing');
     expect(briefing).toContain(`#${completedTask.displayId}`);
-    expect(briefing).not.toContain(
-      'Completed task description should stay out of compact rows'
-    );
+    expect(briefing).not.toContain('Completed task description should stay out of compact rows');
     expect(briefing).toContain(`#${approvedTask.displayId}`);
     expect(briefing).toContain('Counters: actionable=4, awareness=3');
   });
@@ -709,12 +719,7 @@ describe('agent-teams-controller API', () => {
     const firstEvent = restored.historyEvents[0];
     expect(firstEvent.status).toBe('pending');
     const statusChanges = restored.historyEvents.slice(1).map((e) => e.to);
-    expect(statusChanges).toEqual([
-      'in_progress',
-      'completed',
-      'deleted',
-      'pending',
-    ]);
+    expect(statusChanges).toEqual(['in_progress', 'completed', 'deleted', 'pending']);
   });
 
   it('tracks owner assignment history without duplicate same-owner events', () => {
@@ -804,6 +809,10 @@ describe('agent-teams-controller API', () => {
     expect(reviewEvent.from).toBe('review');
     expect(reviewEvent.to).toBe('review');
     expect(reviewEvent.actor).toBe('alice');
+    expect(updatedTask.reviewIntervals).toHaveLength(1);
+    expect(updatedTask.reviewIntervals[0].reviewer).toBe('alice');
+    expect(updatedTask.reviewIntervals[0].startedAt).toBeTruthy();
+    expect(updatedTask.reviewIntervals[0].completedAt).toBeUndefined();
 
     // Idempotent: calling again should also succeed without duplicate events
     const again = controller.review.startReview(task.id, { from: 'alice' });
@@ -811,6 +820,35 @@ describe('agent-teams-controller API', () => {
     const reloaded = controller.tasks.getTask(task.id);
     const startedEvents = reloaded.historyEvents.filter((e) => e.type === 'review_started');
     expect(startedEvents).toHaveLength(1);
+    expect(reloaded.reviewIntervals).toHaveLength(1);
+  });
+
+  it('closes review intervals when review is approved or changes are requested', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const approvedTask = controller.tasks.createTask({ subject: 'Approve review', owner: 'bob' });
+
+    controller.tasks.completeTask(approvedTask.id, 'bob');
+    controller.review.requestReview(approvedTask.id, { from: 'team-lead', reviewer: 'alice' });
+    controller.review.startReview(approvedTask.id, { from: 'alice' });
+    const approved = controller.review.approveReview(approvedTask.id, { from: 'alice' });
+
+    expect(approved.reviewIntervals).toHaveLength(1);
+    expect(approved.reviewIntervals[0].reviewer).toBe('alice');
+    expect(approved.reviewIntervals[0].completedAt).toBeTruthy();
+
+    const changesTask = controller.tasks.createTask({ subject: 'Request changes', owner: 'bob' });
+    controller.tasks.completeTask(changesTask.id, 'bob');
+    controller.review.requestReview(changesTask.id, { from: 'team-lead', reviewer: 'alice' });
+    controller.review.startReview(changesTask.id, { from: 'alice' });
+    const changed = controller.review.requestChanges(changesTask.id, {
+      from: 'alice',
+      comment: 'Needs a fix.',
+    });
+
+    expect(changed.reviewIntervals).toHaveLength(1);
+    expect(changed.reviewIntervals[0].reviewer).toBe('alice');
+    expect(changed.reviewIntervals[0].completedAt).toBeTruthy();
   });
 
   it('records review_start after review_request and surfaces review_in_progress for the reviewer', async () => {
@@ -841,7 +879,10 @@ describe('agent-teams-controller API', () => {
   it('uses the assigned reviewer when review_start omits from', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Queued for implicit reviewer', owner: 'bob' });
+    const task = controller.tasks.createTask({
+      subject: 'Queued for implicit reviewer',
+      owner: 'bob',
+    });
 
     controller.tasks.completeTask(task.id, 'bob');
     controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' });
@@ -866,15 +907,23 @@ describe('agent-teams-controller API', () => {
       'must be completed before approval'
     );
 
-    const completedTask = controller.tasks.createTask({ subject: 'Completed but not review', owner: 'bob' });
+    const completedTask = controller.tasks.createTask({
+      subject: 'Completed but not review',
+      owner: 'bob',
+    });
     controller.tasks.completeTask(completedTask.id, 'bob');
     expect(() =>
       controller.review.requestChanges(completedTask.id, { from: 'alice', comment: 'Fix it' })
     ).toThrow('must be in review before requesting changes');
 
-    const deletedTask = controller.tasks.createTask({ subject: 'Deleted review task', owner: 'bob' });
+    const deletedTask = controller.tasks.createTask({
+      subject: 'Deleted review task',
+      owner: 'bob',
+    });
     controller.tasks.softDeleteTask(deletedTask.id, 'bob');
-    expect(() => controller.review.approveReview(deletedTask.id, { from: 'alice' })).toThrow('is deleted');
+    expect(() => controller.review.approveReview(deletedTask.id, { from: 'alice' })).toThrow(
+      'is deleted'
+    );
     expect(() =>
       controller.review.requestChanges(deletedTask.id, { from: 'alice', comment: 'Fix it' })
     ).toThrow('is deleted');
@@ -885,13 +934,19 @@ describe('agent-teams-controller API', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
 
-    const pendingTask = controller.tasks.createTask({ subject: 'Pending implementation', owner: 'bob' });
+    const pendingTask = controller.tasks.createTask({
+      subject: 'Pending implementation',
+      owner: 'bob',
+    });
     expect(() => controller.review.startReview(pendingTask.id, { from: 'alice' })).toThrow(
       'must be completed before starting review'
     );
     expect(controller.tasks.getTask(pendingTask.id).reviewState).toBe('none');
 
-    const completedTask = controller.tasks.createTask({ subject: 'Completed without review request', owner: 'bob' });
+    const completedTask = controller.tasks.createTask({
+      subject: 'Completed without review request',
+      owner: 'bob',
+    });
     controller.tasks.completeTask(completedTask.id, 'bob');
     expect(() => controller.review.startReview(completedTask.id, { from: 'alice' })).toThrow(
       'must be in review before starting review'
@@ -907,12 +962,18 @@ describe('agent-teams-controller API', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
 
-    const pendingTask = controller.tasks.createTask({ subject: 'Kanban bypass pending', owner: 'bob' });
+    const pendingTask = controller.tasks.createTask({
+      subject: 'Kanban bypass pending',
+      owner: 'bob',
+    });
     expect(() => controller.kanban.setKanbanColumn(pendingTask.id, 'approved')).toThrow(
       'must be completed before moving to APPROVED column'
     );
 
-    const completedTask = controller.tasks.createTask({ subject: 'Kanban bypass completed', owner: 'bob' });
+    const completedTask = controller.tasks.createTask({
+      subject: 'Kanban bypass completed',
+      owner: 'bob',
+    });
     controller.tasks.completeTask(completedTask.id, 'bob');
     expect(() => controller.kanban.setKanbanColumn(completedTask.id, 'review')).toThrow(
       'must be in review before moving to REVIEW column'
@@ -938,9 +999,9 @@ describe('agent-teams-controller API', () => {
     controller.review.startReview(task.id, { from: 'alice' });
     controller.review.approveReview(task.id, { from: 'alice' });
 
-    expect(() => controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' })).toThrow(
-      'is already approved'
-    );
+    expect(() =>
+      controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' })
+    ).toThrow('is already approved');
     expect(controller.tasks.getTask(task.id).reviewState).toBe('approved');
     expect(controller.kanban.getKanbanState().tasks[task.id].column).toBe('approved');
   });
@@ -963,7 +1024,9 @@ describe('agent-teams-controller API', () => {
     controller.review.startReview(task.id, { from: 'alice' });
     expect(controller.kanban.getKanbanState().tasks[task.id].column).toBe('review');
     expect(
-      controller.tasks.getTask(task.id).historyEvents.filter((event) => event.type === 'review_started')
+      controller.tasks
+        .getTask(task.id)
+        .historyEvents.filter((event) => event.type === 'review_started')
     ).toHaveLength(1);
 
     controller.review.approveReview(task.id, { from: 'alice' });
@@ -976,7 +1039,9 @@ describe('agent-teams-controller API', () => {
     expect(approvedAgain.alreadyApproved).toBe(true);
     expect(controller.kanban.getKanbanState().tasks[task.id].column).toBe('approved');
     expect(
-      controller.tasks.getTask(task.id).historyEvents.filter((event) => event.type === 'review_approved')
+      controller.tasks
+        .getTask(task.id)
+        .historyEvents.filter((event) => event.type === 'review_approved')
     ).toHaveLength(1);
   });
 
@@ -1189,7 +1254,11 @@ describe('agent-teams-controller API', () => {
   it('wakes task owner on regular comment from another member', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Investigate', owner: 'bob', notifyOwner: false });
+    const task = controller.tasks.createTask({
+      subject: 'Investigate',
+      owner: 'bob',
+      notifyOwner: false,
+    });
 
     const commented = controller.tasks.addTaskComment(task.id, {
       from: 'alice',
@@ -1354,7 +1423,10 @@ describe('agent-teams-controller API', () => {
   it('rejects task comments from unknown authors', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Reject unknown author', notifyOwner: false });
+    const task = controller.tasks.createTask({
+      subject: 'Reject unknown author',
+      notifyOwner: false,
+    });
 
     expect(() =>
       controller.tasks.addTaskComment(task.id, {
@@ -1374,7 +1446,10 @@ describe('agent-teams-controller API', () => {
       claudeDir,
       allowUserMessageSender: false,
     });
-    const task = appController.tasks.createTask({ subject: 'Reserved comment authors', notifyOwner: false });
+    const task = appController.tasks.createTask({
+      subject: 'Reserved comment authors',
+      notifyOwner: false,
+    });
 
     const appComment = appController.tasks.addTaskComment(task.id, {
       from: 'user',
@@ -1803,11 +1878,19 @@ describe('agent-teams-controller API', () => {
     );
 
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const leadOwnedTask = controller.tasks.createTask({ subject: 'Lead alias owner', owner: 'lead' });
+    const leadOwnedTask = controller.tasks.createTask({
+      subject: 'Lead alias owner',
+      owner: 'lead',
+    });
     expect(leadOwnedTask.owner).toBe('leadbot');
-    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'lead.json'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'lead.json'))).toBe(
+      false
+    );
 
-    const reassignedTask = controller.tasks.createTask({ subject: 'Reassign alias owner', owner: 'bob' });
+    const reassignedTask = controller.tasks.createTask({
+      subject: 'Reassign alias owner',
+      owner: 'bob',
+    });
     expect(controller.tasks.setTaskOwner(reassignedTask.id, 'team-lead').owner).toBe('leadbot');
 
     controller.kanban.addReviewer('lead');
@@ -1822,8 +1905,12 @@ describe('agent-teams-controller API', () => {
       .historyEvents.filter((event) => event.type === 'review_requested')
       .at(-1);
     expect(requested.reviewer).toBe('leadbot');
-    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'leadbot.json'))).toBe(true);
-    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'lead.json'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'leadbot.json'))).toBe(
+      true
+    );
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'lead.json'))).toBe(
+      false
+    );
   });
 
   it('rejects task_briefing for unknown members', async () => {
@@ -1879,7 +1966,10 @@ describe('agent-teams-controller API', () => {
   it('clears kanban tasks and column order when task_set_status deletes a review task', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Generic status delete cleanup', owner: 'bob' });
+    const task = controller.tasks.createTask({
+      subject: 'Generic status delete cleanup',
+      owner: 'bob',
+    });
 
     controller.tasks.completeTask(task.id, 'bob');
     controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' });
@@ -1956,7 +2046,10 @@ describe('agent-teams-controller API', () => {
   it('guards direct kanban_clear against active review state while keeping no-op clears safe', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Do not unapprove directly', owner: 'bob' });
+    const task = controller.tasks.createTask({
+      subject: 'Do not unapprove directly',
+      owner: 'bob',
+    });
 
     controller.tasks.completeTask(task.id, 'bob');
     controller.review.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
@@ -1980,11 +2073,13 @@ describe('agent-teams-controller API', () => {
     const controller = createController({ teamName: 'my-team', claudeDir });
     const task = controller.tasks.createTask({ subject: 'Typo owner guard', owner: 'bob' });
 
-    expect(() => controller.tasks.setTaskOwner(task.id, 'boob')).toThrow('Unknown task owner: boob');
-    controller.tasks.completeTask(task.id, 'bob');
-    expect(() => controller.review.requestReview(task.id, { from: 'alice', reviewer: 'boob' })).toThrow(
-      'Unknown reviewer: boob'
+    expect(() => controller.tasks.setTaskOwner(task.id, 'boob')).toThrow(
+      'Unknown task owner: boob'
     );
+    controller.tasks.completeTask(task.id, 'bob');
+    expect(() =>
+      controller.review.requestReview(task.id, { from: 'alice', reviewer: 'boob' })
+    ).toThrow('Unknown reviewer: boob');
 
     const taskPath = path.join(claudeDir, 'tasks', 'my-team', `${task.id}.json`);
     const rawTask = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
@@ -2006,8 +2101,12 @@ describe('agent-teams-controller API', () => {
 
     controller.tasks.softDeleteTask(task.id, 'bob');
 
-    expect(() => controller.tasks.startTask(task.id, 'bob')).toThrow('use task_restore before starting work');
-    expect(() => controller.tasks.completeTask(task.id, 'bob')).toThrow('use task_restore before changing status');
+    expect(() => controller.tasks.startTask(task.id, 'bob')).toThrow(
+      'use task_restore before starting work'
+    );
+    expect(() => controller.tasks.completeTask(task.id, 'bob')).toThrow(
+      'use task_restore before changing status'
+    );
     expect(() => controller.tasks.setTaskStatus(task.id, 'pending', 'bob')).toThrow(
       'use task_restore before changing status'
     );
@@ -2020,7 +2119,10 @@ describe('agent-teams-controller API', () => {
   it('rejects task_restore for non-deleted tasks', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Approved task must stay approved', owner: 'bob' });
+    const task = controller.tasks.createTask({
+      subject: 'Approved task must stay approved',
+      owner: 'bob',
+    });
 
     controller.tasks.completeTask(task.id, 'bob');
     controller.review.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
@@ -2047,7 +2149,9 @@ describe('agent-teams-controller API', () => {
     delete state.tasks[task.id];
     fs.writeFileSync(kanbanPath, JSON.stringify(state, null, 2));
 
-    expect(controller.tasks.listTaskInventory({ reviewState: 'approved' }).map((row) => row.id)).toContain(task.id);
+    expect(
+      controller.tasks.listTaskInventory({ reviewState: 'approved' }).map((row) => row.id)
+    ).toContain(task.id);
     expect(controller.tasks.listTaskInventory({ kanbanColumn: 'approved' })).toHaveLength(0);
   });
 
@@ -2090,7 +2194,10 @@ describe('agent-teams-controller API', () => {
     config.members.push({ name: 'carol', role: 'reviewer' });
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const task = controller.tasks.createTask({ subject: 'Repair mismatched reviewer actor', owner: 'bob' });
+    const task = controller.tasks.createTask({
+      subject: 'Repair mismatched reviewer actor',
+      owner: 'bob',
+    });
 
     controller.tasks.completeTask(task.id, 'bob');
     controller.review.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
@@ -2124,7 +2231,11 @@ describe('agent-teams-controller API', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     const longSubject = `Long subject ${'x'.repeat(5000)}`;
-    const task = controller.tasks.createTask({ subject: longSubject, owner: 'bob', notifyOwner: false });
+    const task = controller.tasks.createTask({
+      subject: longSubject,
+      owner: 'bob',
+      notifyOwner: false,
+    });
     const kanbanPath = path.join(claudeDir, 'teams', 'my-team', 'kanban-state.json');
     fs.writeFileSync(
       kanbanPath,
@@ -2147,7 +2258,11 @@ describe('agent-teams-controller API', () => {
       'utf8'
     );
     for (let index = 0; index < 30; index += 1) {
-      fs.writeFileSync(path.join(claudeDir, 'tasks', 'my-team', `broken-${index}.json`), '{ bad json', 'utf8');
+      fs.writeFileSync(
+        path.join(claudeDir, 'tasks', 'my-team', `broken-${index}.json`),
+        '{ bad json',
+        'utf8'
+      );
     }
 
     const briefing = await controller.tasks.leadBriefing();

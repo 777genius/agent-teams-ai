@@ -1380,6 +1380,18 @@ export const CreateTeamDialog = ({
     [request, launchTeam]
   );
   const modelValidationError = useMemo(() => {
+    if (selectedProviderId === 'opencode') {
+      if (!selectedModel.trim()) {
+        return 'OpenCode lead requires a selected model.';
+      }
+      const activeMemberCount = soloTeam
+        ? 0
+        : effectiveMemberDrafts.filter((member) => !member.removedAt && member.name.trim()).length;
+      if (activeMemberCount === 0) {
+        return 'OpenCode lead requires at least one OpenCode teammate.';
+      }
+    }
+
     const leadError = getTeamModelSelectionError(
       selectedProviderId,
       selectedModel,
@@ -1409,7 +1421,13 @@ export const CreateTeamDialog = ({
     }
 
     return null;
-  }, [effectiveMemberDrafts, runtimeProviderStatusById, selectedModel, selectedProviderId]);
+  }, [
+    effectiveMemberDrafts,
+    runtimeProviderStatusById,
+    selectedModel,
+    selectedProviderId,
+    soloTeam,
+  ]);
   const leadModelIssueText = useMemo(() => {
     const issue = getProvisioningModelIssue(
       prepareChecks,

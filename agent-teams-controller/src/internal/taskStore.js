@@ -66,7 +66,9 @@ function normalizeTask(rawTask, filePath) {
   };
 
   if (!TASK_STATUSES.has(String(task.status || '').trim())) {
-    throw new Error(`Invalid task status "${String(task.status || '')}"${filePath ? `: ${filePath}` : ''}`);
+    throw new Error(
+      `Invalid task status "${String(task.status || '')}"${filePath ? `: ${filePath}` : ''}`
+    );
   }
   task.status = String(task.status).trim();
 
@@ -121,10 +123,14 @@ function listTaskRows(paths, options = {}) {
   }
 
   tasks.sort((a, b) => {
-    const byDisplay = String(a.displayId || a.id).localeCompare(String(b.displayId || b.id), undefined, {
-      numeric: true,
-      sensitivity: 'base',
-    });
+    const byDisplay = String(a.displayId || a.id).localeCompare(
+      String(b.displayId || b.id),
+      undefined,
+      {
+        numeric: true,
+        sensitivity: 'base',
+      }
+    );
     if (byDisplay !== 0) return byDisplay;
     return String(a.id).localeCompare(String(b.id), undefined, {
       numeric: true,
@@ -144,7 +150,9 @@ function listTasks(paths, options = {}) {
 }
 
 function resolveTaskRef(paths, taskRef, options = {}) {
-  const normalizedRef = String(taskRef || '').trim().replace(/^#/, '');
+  const normalizedRef = String(taskRef || '')
+    .trim()
+    .replace(/^#/, '');
   if (!normalizedRef) {
     throw new Error('Missing taskId');
   }
@@ -168,9 +176,7 @@ function resolveTaskRef(paths, taskRef, options = {}) {
   }
 
   const byDisplay = tasks.find(
-    (task) =>
-      task.displayId === normalizedRef &&
-      (includeDeleted || task.status !== 'deleted')
+    (task) => task.displayId === normalizedRef && (includeDeleted || task.status !== 'deleted')
   );
   if (byDisplay) {
     return byDisplay.id;
@@ -195,6 +201,17 @@ function appendHistoryEvent(events, event) {
   return list;
 }
 
+function closeOpenReviewIntervals(task, timestamp) {
+  if (!Array.isArray(task.reviewIntervals)) return false;
+  let changed = false;
+  task.reviewIntervals = task.reviewIntervals.map((interval) => {
+    if (interval.completedAt) return interval;
+    changed = true;
+    return { ...interval, completedAt: timestamp };
+  });
+  return changed;
+}
+
 function normalizeStatus(status) {
   const normalized = String(status || '').trim();
   return TASK_STATUSES.has(normalized) ? normalized : null;
@@ -204,7 +221,10 @@ function parseRelationshipList(paths, value) {
   const rawValues = Array.isArray(value)
     ? value
     : typeof value === 'string'
-      ? value.split(',').map((entry) => entry.trim()).filter(Boolean)
+      ? value
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
       : [];
 
   return rawValues.map((entry) => resolveTaskRef(paths, entry));
@@ -248,7 +268,9 @@ function pickUniqueDisplayId(paths, canonicalId, explicitDisplayId) {
       ? explicitDisplayId.trim()
       : deriveDisplayId(canonicalId);
 
-  const existing = new Set(listRawTasks(paths).map((task) => task.displayId || deriveDisplayId(task.id)));
+  const existing = new Set(
+    listRawTasks(paths).map((task) => task.displayId || deriveDisplayId(task.id))
+  );
   if (!existing.has(preferred)) {
     return preferred;
   }
@@ -310,7 +332,9 @@ function createTask(paths, input = {}) {
         ? input.createdBy.trim()
         : undefined;
   const createdAt =
-    typeof input.createdAt === 'string' && input.createdAt.trim() ? input.createdAt.trim() : nowIso();
+    typeof input.createdAt === 'string' && input.createdAt.trim()
+      ? input.createdAt.trim()
+      : nowIso();
   const status = computeInitialStatus(paths, input, owner, blockedByIds);
   const displayId = pickUniqueDisplayId(paths, canonicalId, input.displayId);
 
@@ -429,7 +453,10 @@ function setTaskStatus(paths, taskRef, nextStatus, actor) {
     if (task.status === status) {
       if (status === 'deleted' || status === 'in_progress') {
         task.reviewState = 'none';
-      } else if (status === 'pending' && normalizeTaskReviewState(task.reviewState) !== 'needsFix') {
+      } else if (
+        status === 'pending' &&
+        normalizeTaskReviewState(task.reviewState) !== 'needsFix'
+      ) {
         task.reviewState = 'none';
       }
       return task;
@@ -446,6 +473,9 @@ function setTaskStatus(paths, taskRef, nextStatus, actor) {
       if (lastInterval && lastInterval.completedAt === undefined) {
         lastInterval.completedAt = timestamp;
       }
+    }
+    if (status === 'pending' || status === 'in_progress' || status === 'deleted') {
+      closeOpenReviewIntervals(task, timestamp);
     }
 
     task.workIntervals = workIntervals.length > 0 ? workIntervals : undefined;
@@ -531,16 +561,16 @@ function addTaskComment(paths, taskRef, text, options = {}) {
   const comment = {
     id: options.id || crypto.randomUUID(),
     author:
-      typeof options.author === 'string' && options.author.trim()
-        ? options.author.trim()
-        : 'user',
+      typeof options.author === 'string' && options.author.trim() ? options.author.trim() : 'user',
     text,
     createdAt:
       typeof options.createdAt === 'string' && options.createdAt.trim()
         ? options.createdAt.trim()
         : nowIso(),
     type: options.type || 'regular',
-    ...(normalizeTaskRefs(options.taskRefs) ? { taskRefs: normalizeTaskRefs(options.taskRefs) } : {}),
+    ...(normalizeTaskRefs(options.taskRefs)
+      ? { taskRefs: normalizeTaskRefs(options.taskRefs) }
+      : {}),
     ...(Array.isArray(options.attachments) && options.attachments.length > 0
       ? { attachments: options.attachments }
       : {}),
@@ -711,10 +741,14 @@ function getTaskFreshness(task) {
 function compareTasksByFreshness(a, b) {
   const freshnessDiff = getTaskFreshness(b) - getTaskFreshness(a);
   if (freshnessDiff !== 0) return freshnessDiff;
-  const byDisplay = String(a.displayId || a.id).localeCompare(String(b.displayId || b.id), undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  });
+  const byDisplay = String(a.displayId || a.id).localeCompare(
+    String(b.displayId || b.id),
+    undefined,
+    {
+      numeric: true,
+      sensitivity: 'base',
+    }
+  );
   if (byDisplay !== 0) return byDisplay;
   return String(a.id).localeCompare(String(b.id), undefined, {
     numeric: true,
@@ -756,7 +790,9 @@ function formatTaskBriefing(paths, teamName, memberName) {
     in_progress: activeTasks.filter((task) => task.status === 'in_progress'),
     needs_fix: activeTasks.filter((task) => {
       const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;
-      return task.status !== 'in_progress' && getEffectiveReviewState(kanbanEntry, task) === 'needsFix';
+      return (
+        task.status !== 'in_progress' && getEffectiveReviewState(kanbanEntry, task) === 'needsFix'
+      );
     }),
     pending: activeTasks.filter((task) => {
       const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;

@@ -105,6 +105,15 @@ export interface TaskWorkInterval {
   completedAt?: string;
 }
 
+export interface TaskReviewInterval {
+  /** Reviewer actively reviewing during this interval. */
+  reviewer: string;
+  /** ISO timestamp when reviewer started or resumed review. */
+  startedAt: string;
+  /** ISO timestamp when reviewer stopped, paused, approved, or requested changes. */
+  completedAt?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Task History Events — unified workflow event log
 // ---------------------------------------------------------------------------
@@ -470,6 +479,10 @@ export interface TeamTask {
    * We persist intervals for reliable log attribution without relying on heuristics.
    */
   workIntervals?: TaskWorkInterval[];
+  /**
+   * Review work periods, split across runtime pauses/restarts just like workIntervals.
+   */
+  reviewIntervals?: TaskReviewInterval[];
   /**
    * Unified workflow event log.
    * Append-only — records task creation, status changes, and review transitions.

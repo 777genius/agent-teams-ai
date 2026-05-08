@@ -108,10 +108,28 @@ describe('ProcessBootstrapTransportEvidence', () => {
 
     expect(summary).not.toBeNull();
     expect(buildProcessBootstrapPendingDiagnostic(summary!)).toBe(
-      'Bootstrap transport reached bootstrap prompt observed: prompt seen; waiting for bootstrap confirmation.'
+      'Bootstrap prompt has not been submitted yet. Last transport stage: bootstrap prompt observed: prompt seen.'
     );
     expect(buildProcessBootstrapTimeoutDiagnostic(summary!)).toBe(
-      'Teammate was registered but did not bootstrap-confirm before timeout. Last transport stage: bootstrap prompt observed: prompt seen'
+      'Bootstrap prompt was not submitted before timeout. Last transport stage: bootstrap prompt observed: prompt seen'
+    );
+  });
+
+  it('distinguishes submitted bootstrap prompts from not-submitted transport timeouts', () => {
+    const summary = summarizeProcessBootstrapTransportEvents([
+      {
+        type: 'bootstrap_submitted',
+        timestamp: '2026-05-07T10:00:02.000Z',
+        detail: 'messageId=abc',
+      },
+    ]);
+
+    expect(summary).not.toBeNull();
+    expect(buildProcessBootstrapPendingDiagnostic(summary!)).toBe(
+      'Bootstrap prompt was submitted; waiting for bootstrap confirmation. Last transport stage: bootstrap submitted: messageId=abc.'
+    );
+    expect(buildProcessBootstrapTimeoutDiagnostic(summary!)).toBe(
+      'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before timeout. Last transport stage: bootstrap submitted: messageId=abc'
     );
   });
 

@@ -7,6 +7,23 @@ import * as path from 'path';
 import { getDoctorInvokedCandidates } from './ClaudeDoctorProbe';
 import { getConfiguredCliFlavor } from './cliFlavor';
 
+export interface ClaudeBinaryResolveProgress {
+  phase: string;
+  message: string;
+}
+
+export interface ClaudeBinaryResolveOptions {
+  onProgress?: (progress: ClaudeBinaryResolveProgress) => void;
+}
+
+function emitProgress(
+  options: ClaudeBinaryResolveOptions | undefined,
+  phase: string,
+  message: string
+): void {
+  options?.onProgress?.({ phase, message });
+}
+
 async function isExecutable(filePath: string): Promise<boolean> {
   if (process.platform === 'win32') {
     try {
@@ -218,34 +235,46 @@ export class ClaudeBinaryResolver {
     cacheVerifiedAt = 0;
   }
 
-  static async resolve(): Promise<string | null> {
+  static async resolve(options: ClaudeBinaryResolveOptions = {}): Promise<string | null> {
     if (cachedPath !== undefined) {
       const now = Date.now();
       // Re-verify the cached binary still exists, but at most once per TTL
       if (cachedPath !== null && now - cacheVerifiedAt > CACHE_VERIFY_TTL_MS) {
+        emitProgress(options, 'cache-verify', 'Verifying cached runtime...');
         if (await isExecutable(cachedPath)) {
           cacheVerifiedAt = now;
+          emitProgress(options, 'cache-hit', 'Using cached runtime...');
           return cachedPath;
         }
         cachedPath = undefined;
         cacheVerifiedAt = 0;
         // Fall through to full resolution below
       } else {
+        emitProgress(
+          options,
+          cachedPath ? 'cache-hit' : 'cache-miss',
+          'Using cached runtime status...'
+        );
         return cachedPath;
       }
     }
     if (!resolveInFlight) {
-      resolveInFlight = ClaudeBinaryResolver.runResolve().finally(() => {
+      resolveInFlight = ClaudeBinaryResolver.runResolve(options).finally(() => {
         resolveInFlight = null;
       });
+    } else {
+      emitProgress(options, 'in-flight', 'Waiting for runtime lookup...');
     }
     return resolveInFlight;
   }
 
-  private static async runResolve(): Promise<string | null> {
-    await resolveInteractiveShellEnv();
+  private static async runResolve(options: ClaudeBinaryResolveOptions): Promise<string | null> {
+    await resolveInteractiveShellEnv({
+      onProgress: (progress) => emitProgress(options, progress.phase, progress.message),
+    });
     const enrichedPath = buildMergedCliPath(null);
     const flavor = getConfiguredCliFlavor();
+    emitProgress(options, 'flavor', `Using ${flavor} runtime mode...`);
 
     const overrideRaw =
       flavor === 'agent_teams_orchestrator'
@@ -253,6 +282,7 @@ export class ClaudeBinaryResolver {
           process.env.CLAUDE_CLI_PATH?.trim())
         : process.env.CLAUDE_CLI_PATH?.trim();
     if (overrideRaw) {
+      emitProgress(options, 'configured-path', 'Checking configured runtime path...');
       const looksLikePath =
         path.isAbsolute(overrideRaw) || overrideRaw.includes('\\') || overrideRaw.includes('/');
       const resolvedOverride = looksLikePath
@@ -262,15 +292,18 @@ export class ClaudeBinaryResolver {
       if (resolvedOverride) {
         cachedPath = resolvedOverride;
         cacheVerifiedAt = Date.now();
+        emitProgress(options, 'configured-path-found', 'Using configured runtime path...');
         return cachedPath;
       }
     }
 
     if (flavor === 'agent_teams_orchestrator') {
+      emitProgress(options, 'bundled-runtime', 'Checking bundled Agent Teams runtime...');
       const bundledBinary = await resolveBundledOrchestratorBinary();
       if (bundledBinary) {
         cachedPath = bundledBinary;
         cacheVerifiedAt = Date.now();
+        emitProgress(options, 'bundled-runtime-found', 'Using bundled Agent Teams runtime...');
         return cachedPath;
       }
 
@@ -279,17 +312,21 @@ export class ClaudeBinaryResolver {
       // claude-multimodel on PATH without making this resolver guess a sibling
       // repo name or folder.
       const orchestratorBinaryName = 'claude-multimodel';
+      emitProgress(options, 'path-runtime', 'Searching PATH for Agent Teams runtime...');
       const fromPath = await resolveFromPathEnv(orchestratorBinaryName, enrichedPath);
       if (fromPath) {
         cachedPath = fromPath;
         cacheVerifiedAt = Date.now();
+        emitProgress(options, 'path-runtime-found', 'Using Agent Teams runtime from PATH...');
         return cachedPath;
       }
 
+      emitProgress(options, 'doctor-runtime', 'Checking runtime diagnostics fallback...');
       const fromDoctor = await resolveFromDoctorFallback(orchestratorBinaryName);
       if (fromDoctor) {
         cachedPath = fromDoctor;
         cacheVerifiedAt = Date.now();
+        emitProgress(options, 'doctor-runtime-found', 'Using runtime from diagnostics fallback...');
         return cachedPath;
       }
 
@@ -300,10 +337,12 @@ export class ClaudeBinaryResolver {
     }
 
     const baseBinaryName = 'claude';
+    emitProgress(options, 'path-claude', 'Searching PATH for Claude CLI...');
     const fromPath = await resolveFromPathEnv(baseBinaryName, enrichedPath);
     if (fromPath) {
       cachedPath = fromPath;
       cacheVerifiedAt = Date.now();
+      emitProgress(options, 'path-claude-found', 'Using Claude CLI from PATH...');
       return cachedPath;
     }
 
@@ -343,7 +382,11 @@ export class ClaudeBinaryResolver {
       platformBinaryNames.map((name) => path.join(dir, name))
     );
 
+    emitProgress(options, 'standard-locations', 'Checking standard Claude install locations...');
     const nvmCandidates = await collectNvmCandidates();
+    if (nvmCandidates.length > 0) {
+      emitProgress(options, 'nvm-locations', 'Checking nvm-managed Claude installs...');
+    }
     const allCandidates = [...candidates, ...nvmCandidates];
 
     // Check all fallback candidates in parallel for speed
@@ -358,17 +401,29 @@ export class ClaudeBinaryResolver {
     if (found) {
       cachedPath = found.path;
       cacheVerifiedAt = Date.now();
+      emitProgress(
+        options,
+        'fallback-location-found',
+        'Using Claude CLI from install locations...'
+      );
       return cachedPath;
     }
 
+    emitProgress(options, 'doctor-claude', 'Checking Claude diagnostics fallback...');
     const fromDoctor = await resolveFromDoctorFallback(baseBinaryName);
     if (fromDoctor) {
       cachedPath = fromDoctor;
       cacheVerifiedAt = Date.now();
+      emitProgress(options, 'doctor-claude-found', 'Using Claude CLI from diagnostics fallback...');
       return cachedPath;
     }
 
     // Don't cache null — CLI may be installed later without app restart
+    emitProgress(
+      options,
+      'not-found',
+      'Runtime not found. Continuing with limited launch support...'
+    );
     return null;
   }
 }

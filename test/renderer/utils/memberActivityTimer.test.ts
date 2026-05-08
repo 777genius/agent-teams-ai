@@ -165,6 +165,42 @@ describe('memberActivityTimer', () => {
     ).toBe('2026-05-07T09:35:00.000Z');
   });
 
+  it('anchors review timers to persisted review intervals and adds paused review time', () => {
+    const task: TeamTaskWithKanban = {
+      ...baseTask,
+      status: 'completed',
+      reviewState: 'review',
+      kanbanColumn: 'review',
+      reviewer: 'alice',
+      historyEvents: [
+        {
+          id: 'evt-1',
+          type: 'review_started',
+          from: 'review',
+          to: 'review',
+          actor: 'alice',
+          timestamp: '2026-05-07T09:30:00.000Z',
+        },
+      ],
+      reviewIntervals: [
+        {
+          reviewer: 'alice',
+          startedAt: '2026-05-07T09:30:00.000Z',
+          completedAt: '2026-05-07T09:35:00.000Z',
+        },
+        { reviewer: 'alice', startedAt: '2026-05-07T09:40:00.000Z' },
+      ],
+    };
+
+    const anchor = deriveReviewActivityTimerAnchor(task, {
+      teamName: 'alpha',
+      memberName: 'alice',
+    });
+
+    expect(anchor?.startedAt).toBe('2026-05-07T09:40:00.000Z');
+    expect(anchor?.baseElapsedMs).toBe(300_000);
+  });
+
   it('pauses elapsed time while the activity is not running and resumes from the frozen value', () => {
     const timerId = createMemberActivityTimerId({
       teamName: 'alpha',

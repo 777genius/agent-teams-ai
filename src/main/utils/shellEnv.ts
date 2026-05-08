@@ -20,6 +20,23 @@ const SHELL_ENV_TIMEOUT_MS = 12_000;
 let cachedInteractiveShellEnv: NodeJS.ProcessEnv | null = null;
 let shellEnvResolvePromise: Promise<NodeJS.ProcessEnv> | null = null;
 
+export interface ShellEnvResolveProgress {
+  phase: string;
+  message: string;
+}
+
+export interface ShellEnvResolveOptions {
+  onProgress?: (progress: ShellEnvResolveProgress) => void;
+}
+
+function emitProgress(
+  options: ShellEnvResolveOptions | undefined,
+  phase: string,
+  message: string
+): void {
+  options?.onProgress?.({ phase, message });
+}
+
 function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   const parsed: NodeJS.ProcessEnv = {};
   const lines = content.split('\0');
@@ -95,14 +112,19 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
  * Tries login shell first (`-lic`), falls back to interactive (`-ic`).
  * On Windows returns empty object. Result is cached after first success.
  */
-export async function resolveInteractiveShellEnv(): Promise<NodeJS.ProcessEnv> {
+export async function resolveInteractiveShellEnv(
+  options: ShellEnvResolveOptions = {}
+): Promise<NodeJS.ProcessEnv> {
   if (cachedInteractiveShellEnv) {
+    emitProgress(options, 'shell-env-cached', 'Using cached shell environment...');
     return cachedInteractiveShellEnv;
   }
   if (shellEnvResolvePromise) {
+    emitProgress(options, 'shell-env-waiting', 'Waiting for shell environment...');
     return shellEnvResolvePromise;
   }
   if (process.platform === 'win32') {
+    emitProgress(options, 'shell-env-skipped', 'Skipping shell environment on Windows...');
     cachedInteractiveShellEnv = {};
     return cachedInteractiveShellEnv;
   }
@@ -110,6 +132,7 @@ export async function resolveInteractiveShellEnv(): Promise<NodeJS.ProcessEnv> {
   shellEnvResolvePromise = (async () => {
     const shellPath = process.env.SHELL || '/bin/zsh';
     try {
+      emitProgress(options, 'shell-env-login', 'Reading login shell environment...');
       const loginEnv = await readShellEnv(shellPath, ['-lic', 'env -0']);
       cachedInteractiveShellEnv = loginEnv;
       return loginEnv;
@@ -117,6 +140,7 @@ export async function resolveInteractiveShellEnv(): Promise<NodeJS.ProcessEnv> {
       const loginMessage = loginError instanceof Error ? loginError.message : String(loginError);
       logger.warn(`Failed to resolve login shell env: ${loginMessage}`);
       try {
+        emitProgress(options, 'shell-env-interactive', 'Trying interactive shell environment...');
         const interactiveEnv = await readShellEnv(shellPath, ['-ic', 'env -0']);
         cachedInteractiveShellEnv = interactiveEnv;
         return interactiveEnv;
@@ -124,6 +148,7 @@ export async function resolveInteractiveShellEnv(): Promise<NodeJS.ProcessEnv> {
         const interactiveMessage =
           interactiveError instanceof Error ? interactiveError.message : String(interactiveError);
         logger.warn(`Failed to resolve interactive shell env: ${interactiveMessage}`);
+        emitProgress(options, 'shell-env-fallback', 'Using current process environment...');
         return {};
       }
     } finally {

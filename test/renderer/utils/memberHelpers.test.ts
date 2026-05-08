@@ -195,6 +195,30 @@ describe('memberHelpers spawn-aware presence', () => {
     });
   });
 
+  it('marks long-running starting states as stale without making them failed', () => {
+    const presentation = buildMemberLaunchPresentation({
+      member,
+      spawnStatus: 'waiting',
+      spawnLaunchState: 'starting',
+      spawnLivenessSource: undefined,
+      spawnRuntimeAlive: false,
+      spawnUpdatedAt: '2026-05-08T12:00:00.000Z',
+      runtimeAdvisory: undefined,
+      isLaunchSettling: true,
+      isTeamAlive: true,
+      isTeamProvisioning: false,
+      nowMs: Date.parse('2026-05-08T12:03:00.000Z'),
+    });
+
+    expect(presentation.presenceLabel).toBe('starting stale');
+    expect(presentation.launchVisualState).toBe('starting_stale');
+    expect(presentation.launchStatusLabel).toBe('starting stale');
+    expect(presentation.dotClass).toContain('bg-amber-400');
+    expect(presentation.dotClass).not.toContain('animate-pulse');
+    expect(presentation.cardClass).not.toContain('member-waiting-shimmer');
+    expect(presentation.spawnBadgeLabel).toBe('starting stale');
+  });
+
   it('keeps OpenCode runtime evidence states more specific than queued', () => {
     const openCodeMember: ResolvedTeamMember = { ...member, providerId: 'opencode' };
 

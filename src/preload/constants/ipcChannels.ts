@@ -17,6 +17,12 @@ export const RENDERER_BOOT = 'renderer:boot';
 /** Renderer -> main heartbeat (detect renderer stalls) */
 export const RENDERER_HEARTBEAT = 'renderer:heartbeat';
 
+/** Renderer -> main startup status request */
+export const APP_STARTUP_GET_STATUS = 'appStartup:getStatus';
+
+/** Main -> renderer startup progress update */
+export const APP_STARTUP_PROGRESS = 'appStartup:progress';
+
 // =============================================================================
 // Config API Channels
 // =============================================================================

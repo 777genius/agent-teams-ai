@@ -42,9 +42,9 @@ import {
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
+import { isPathWithinRoot } from '@main/utils/pathValidation';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
-import { isPathWithinRoot } from '@main/utils/pathValidation';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
 import {
@@ -158,15 +158,6 @@ import {
   validateBootstrapRuntimeProofEnvelope,
 } from './bootstrap/BootstrapProofValidation';
 import {
-  buildProcessBootstrapPendingDiagnostic,
-  buildProcessBootstrapTimeoutDiagnostic,
-  deriveProcessTransportProjectionPhase,
-  sanitizeProcessRuntimeEventFilePrefix,
-  summarizeProcessBootstrapTransportEvents,
-  type ProcessBootstrapTransportEvent,
-  type ProcessBootstrapTransportSummary,
-} from './ProcessBootstrapTransportEvidence';
-import {
   buildNativeAppManagedBootstrapSpecs,
   type NativeAppManagedBootstrapSpec,
 } from './bootstrap/NativeAppManagedBootstrapContextBuilder';
@@ -248,6 +239,15 @@ import {
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import {
+  buildProcessBootstrapPendingDiagnostic,
+  buildProcessBootstrapTimeoutDiagnostic,
+  deriveProcessTransportProjectionPhase,
+  type ProcessBootstrapTransportEvent,
+  type ProcessBootstrapTransportSummary,
+  sanitizeProcessRuntimeEventFilePrefix,
+  summarizeProcessBootstrapTransportEvents,
+} from './ProcessBootstrapTransportEvidence';
+import {
   boundLaunchDiagnostics,
   buildProgressLiveOutput,
   buildProgressLogsTail,
@@ -289,6 +289,7 @@ import {
   sanitizeProcessCommandForDiagnostics,
 } from './TeamRuntimeLivenessResolver';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
+import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
@@ -5451,6 +5452,8 @@ export class TeamProvisioningService {
     | null = null;
   private readonly memberLogsFinder: TeamMemberLogsFinder;
   private readonly transcriptProjectResolver: TeamTranscriptProjectResolver;
+  private readonly taskActivityIntervalService = new TeamTaskActivityIntervalService();
+  private readonly crashRepairedActivityIntervalsByTeam = new Set<string>();
   private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
   private helpOutputCache: string | null = null;
   private helpOutputCacheTime = 0;
@@ -5502,6 +5505,15 @@ export class TeamProvisioningService {
       getConfig: (teamName) => this.configReader.getConfigSnapshot(teamName),
     });
     this.scheduleStaleAnthropicTeamApiKeyHelperCleanup();
+  }
+
+  private repairStaleTaskActivityIntervalsOnce(
+    teamName: string,
+    launchSnapshot?: PersistedTeamLaunchSnapshot | null
+  ): void {
+    if (this.crashRepairedActivityIntervalsByTeam.has(teamName)) return;
+    this.taskActivityIntervalService.repairStaleIntervalsAfterCrash(teamName, launchSnapshot);
+    this.crashRepairedActivityIntervalsByTeam.add(teamName);
   }
 
   private scheduleStaleAnthropicTeamApiKeyHelperCleanup(): void {
@@ -12255,6 +12267,20 @@ export class TeamProvisioningService {
       return;
     }
 
+    if (prev.runtimeAlive === true && next.runtimeAlive !== true) {
+      this.taskActivityIntervalService.pauseActiveIntervalsForMember(
+        run.teamName,
+        memberName,
+        updatedAt
+      );
+    } else if (prev.runtimeAlive !== true && next.runtimeAlive === true) {
+      this.taskActivityIntervalService.resumeActiveIntervalsForMember(
+        run.teamName,
+        memberName,
+        updatedAt
+      );
+    }
+
     run.memberSpawnStatuses.set(memberName, next);
     if (
       (status === 'online' && (next.bootstrapConfirmed || livenessSource === 'process')) ||
@@ -12394,10 +12420,21 @@ export class TeamProvisioningService {
   }> {
     const readPersistedStatuses = async (resolvedRunId: string | null) => {
       const { snapshot, statuses } = await this.reconcilePersistedLaunchState(teamName);
+      this.repairStaleTaskActivityIntervalsOnce(teamName, snapshot);
       const nextStatuses = await this.attachLiveRuntimeMetadataToStatuses(teamName, statuses, {
         openCodeSecondaryBootstrapPendingMembers:
           this.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
       });
+      const runtimeObservedAt = nowIso();
+      for (const [memberName, entry] of Object.entries(nextStatuses)) {
+        if (entry.runtimeAlive === true) {
+          this.taskActivityIntervalService.resumeActiveIntervalsForMember(
+            teamName,
+            memberName,
+            runtimeObservedAt
+          );
+        }
+      }
       const expectedMembers = snapshot ? this.getPersistedLaunchMemberNames(snapshot) : undefined;
       const summary = expectedMembers
         ? summarizeMemberSpawnStatusRecord(expectedMembers, nextStatuses)
@@ -16886,6 +16923,10 @@ export class TeamProvisioningService {
     if (existingProvisioningRunId) {
       return { runId: existingProvisioningRunId };
     }
+    const previousLaunchSnapshot = await this.launchStateStore
+      .read(request.teamName)
+      .catch(() => null);
+    this.repairStaleTaskActivityIntervalsOnce(request.teamName, previousLaunchSnapshot);
     const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
     assertAppDeterministicBootstrapEnabled();
     if (this.shouldRouteOpenCodeToRuntimeAdapter(request)) {
@@ -25806,6 +25847,7 @@ export class TeamProvisioningService {
    */
   async stopTeam(teamName: string): Promise<void> {
     this.invalidateRuntimeSnapshotCaches(teamName);
+    this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName);
     this.stopPersistentTeamMembers(teamName);
 
     const runId = this.getTrackedRunId(teamName);
@@ -26301,6 +26343,7 @@ export class TeamProvisioningService {
     if (orphanOnly.length > 0) {
       logger.info(`Cleaning up persisted teammate runtimes on shutdown: ${orphanOnly.join(', ')}`);
       for (const teamName of orphanOnly) {
+        this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName);
         this.stopPersistentTeamMembers(teamName);
         await this.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       }
@@ -30828,7 +30871,14 @@ export class TeamProvisioningService {
           return providerId === 'opencode' || inferTeamProviderIdFromModel(model) === 'opencode';
         });
         if (configHasOpenCodeMember) {
-          return this.buildConfigLaunchCompatibilityReport(teamName, configMembers, leadProviderId);
+          return this.buildConfigLaunchCompatibilityReport(
+            teamName,
+            configMembers,
+            leadProviderId,
+            {
+              ignoredInboxNames: true,
+            }
+          );
         }
         const configMembersByName = new Map(
           configMembers.map((member) => [member.name.toLowerCase(), member] as const)
@@ -30915,7 +30965,8 @@ export class TeamProvisioningService {
   private buildConfigLaunchCompatibilityReport(
     teamName: string,
     configMembers: TeamCreateRequest['members'],
-    leadProviderId?: TeamProviderId
+    leadProviderId?: TeamProviderId,
+    options: { ignoredInboxNames?: boolean } = {}
   ): TeamLaunchCompatibilityReport {
     if (this.hasIncompleteOpenCodeLaunchCompatibilityMember(configMembers)) {
       return {
@@ -30957,8 +31008,10 @@ export class TeamProvisioningService {
       rosterSource: 'config',
       members: configMembers,
       warnings: [
-        'members.meta.json and inboxes are empty; launch fell back to config.json members. ' +
-          'Run a fresh team bootstrap to persist stable member metadata.',
+        options.ignoredInboxNames
+          ? 'members.meta.json is missing; launch used complete config.json member metadata instead of inbox fallback to preserve mixed provider/model layout.'
+          : 'members.meta.json and inboxes are empty; launch fell back to config.json members. ' +
+            'Run a fresh team bootstrap to persist stable member metadata.',
       ],
       blockers: [],
       repairAction: 'materialize-members-meta',

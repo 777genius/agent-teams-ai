@@ -26,7 +26,7 @@ export const RecentProjectCard = ({
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="bg-surface/50 group relative flex min-h-[120px] flex-col overflow-hidden rounded-lg border border-l-[3px] border-border p-4 text-left transition-all duration-300 hover:border-border-emphasis hover:bg-surface-raised"
+      className="bg-surface/50 group relative flex min-h-[120px] flex-col overflow-hidden rounded-lg border border-border p-4 text-left transition-all duration-300 hover:border-border-emphasis hover:bg-surface-raised"
       style={{
         borderLeftColor: color.border,
         boxShadow: isHovered ? `inset 3px 0 12px -4px ${color.glow}` : undefined,

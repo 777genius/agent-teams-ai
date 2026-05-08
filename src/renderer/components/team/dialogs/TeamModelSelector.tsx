@@ -66,9 +66,9 @@ const PROVIDERS: ProviderDef[] = [
 ];
 
 const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
-export const OPENCODE_TEAM_LEAD_DISABLED_REASON =
-  'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.';
-export const OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL = 'side lane';
+export const OPENCODE_ONE_SHOT_DISABLED_REASON =
+  'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.';
+export const OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL = 'team only';
 
 export function getTeamModelLabel(model: string): string {
   return getCatalogTeamModelLabel(model) ?? model;
@@ -118,9 +118,9 @@ export function formatTeamModelSummary(
 
 /**
  * Computes the effective model string for team provisioning.
- * By default adds [1m] suffix for 1M context (Opus/Sonnet).
+ * By default adds [1m] suffix for Opus 1M context.
  * When limitContext=true, returns base model without [1m] (200K context).
- * Haiku does not support 1M — always returned as-is.
+ * Sonnet and Haiku default to standard context to avoid extra-usage-only variants.
  */
 export function computeEffectiveTeamModel(
   selectedModel: string,

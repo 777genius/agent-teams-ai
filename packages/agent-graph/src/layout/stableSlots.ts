@@ -50,6 +50,8 @@ export interface SlotFrame {
   taskColumnCount: number;
 }
 
+type OwnerSlotLayoutKind = 'radial-sector' | 'row-orbit' | 'grid-under-lead';
+
 export interface StableSlotLayoutSnapshot {
   version: GraphLayoutPort['version'];
   teamName: string;
@@ -61,6 +63,7 @@ export interface StableSlotLayoutSnapshot {
   launchAnchor: { x: number; y: number } | null;
   leadCentralReservedBlock: StableRect;
   runtimeCentralExclusion: StableRect;
+  ownerSlotLayoutKind: OwnerSlotLayoutKind;
   centralCollisionRects: StableRect[];
   memberSlotFrames: SlotFrame[];
   memberSlotFrameByOwnerId: Map<string, SlotFrame>;
@@ -104,6 +107,20 @@ interface RingLayoutState {
 
 type RingLayoutStateMap = ReadonlyMap<string, RingLayoutState>;
 
+interface PlannedMemberSlotLayout {
+  frames: SlotFrame[];
+  kind: OwnerSlotLayoutKind;
+}
+
+interface RowOrbitSlotConfig {
+  footprint: OwnerFootprint;
+  assignment: GraphOwnerSlotAssignment;
+  rowIndex: number;
+  columnIndex: number;
+  columnCount: number;
+  band: 'top' | 'middle' | 'bottom';
+}
+
 const SLOT_GEOMETRY = {
   ...STABLE_SLOT_GEOMETRY,
   activityColumnHeight:
@@ -129,11 +146,19 @@ const PROCESS_RAIL_NODE_GAP = 42;
 const PROCESS_RAIL_NODE_FOOTPRINT = 28;
 const GEOMETRY_EPSILON = 0.001;
 const FEED_HEADER_BOTTOM_GAP = 4;
-const SMALL_TEAM_CARDINAL_RADIUS_STEP = 24;
-const SMALL_TEAM_CARDINAL_VERTICAL_PADDING = 77.7;
-const GRID_UNDER_LEAD_COLUMN_COUNT = 2;
+const STRICT_SMALL_TEAM_MAX_PACKING_ITERATIONS = 96;
+const STRICT_SMALL_TEAM_RADIUS_EPSILON = 0.5;
+const STRICT_SMALL_TEAM_RADIUS_STEP = 24;
+const GRID_UNDER_LEAD_DEFAULT_COLUMN_COUNT = 2;
+const GRID_UNDER_LEAD_WIDE_TEAM_COLUMN_COUNT = 3;
+const GRID_UNDER_LEAD_WIDE_TEAM_OWNER_COUNT = 6;
 const GRID_UNDER_LEAD_LEAD_GAP = 77.7;
 const GRID_UNDER_LEAD_ROW_GAP = 77.7;
+const ROW_ORBIT_MIN_OWNER_COUNT = 6;
+const ROW_ORBIT_MAX_OWNER_COUNT = 12;
+const ROW_ORBIT_HORIZONTAL_GAP = Math.max(112, STABLE_SLOT_GEOMETRY.slotHorizontalGap);
+const ROW_ORBIT_VERTICAL_GAP = Math.max(144, GRID_UNDER_LEAD_ROW_GAP);
+const ROW_ORBIT_CENTRAL_GAP = 160;
 
 const SECTOR_VECTORS = STABLE_SLOT_SECTOR_VECTORS;
 const SMALL_TEAM_CARDINAL_LAYOUTS: ReadonlyArray<
@@ -159,14 +184,48 @@ const SMALL_TEAM_CARDINAL_LAYOUTS: ReadonlyArray<
     { assignment: { ringIndex: 0, sectorIndex: 2 }, vector: { x: 0, y: 1 } },
     { assignment: { ringIndex: 0, sectorIndex: 3 }, vector: { x: -1, y: 0 } },
   ],
+  [
+    { assignment: { ringIndex: 0, sectorIndex: 0 }, vector: SECTOR_VECTORS[0] },
+    { assignment: { ringIndex: 0, sectorIndex: 1 }, vector: SECTOR_VECTORS[1] },
+    { assignment: { ringIndex: 0, sectorIndex: 2 }, vector: SECTOR_VECTORS[2] },
+    { assignment: { ringIndex: 0, sectorIndex: 4 }, vector: SECTOR_VECTORS[4] },
+    { assignment: { ringIndex: 0, sectorIndex: 5 }, vector: SECTOR_VECTORS[5] },
+  ],
+  [
+    { assignment: { ringIndex: 0, sectorIndex: 0 }, vector: SECTOR_VECTORS[0] },
+    { assignment: { ringIndex: 0, sectorIndex: 1 }, vector: SECTOR_VECTORS[1] },
+    { assignment: { ringIndex: 0, sectorIndex: 2 }, vector: SECTOR_VECTORS[2] },
+    { assignment: { ringIndex: 0, sectorIndex: 3 }, vector: SECTOR_VECTORS[3] },
+    { assignment: { ringIndex: 0, sectorIndex: 4 }, vector: SECTOR_VECTORS[4] },
+    { assignment: { ringIndex: 0, sectorIndex: 5 }, vector: SECTOR_VECTORS[5] },
+  ],
 ];
 
 const SMALL_TEAM_CARDINAL_ASSIGNMENTS: ReadonlyArray<ReadonlyArray<GraphOwnerSlotAssignment>> =
   SMALL_TEAM_CARDINAL_LAYOUTS.map((layout) => layout.map((slot) => slot.assignment));
-const SMALL_TEAM_CARDINAL_VECTOR_BY_ASSIGNMENT_KEY = new Map(
-  SMALL_TEAM_CARDINAL_LAYOUTS.flatMap((layout) =>
-    layout.map((slot) => [buildAssignmentKey(slot.assignment), slot.vector] as const)
-  )
+
+const ROW_ORBIT_ROW_COUNTS_BY_OWNER_COUNT: Readonly<Record<number, readonly number[]>> = {
+  6: [3, 2, 3],
+  7: [3, 2, 2],
+  8: [3, 2, 3],
+  9: [3, 2, 2, 2],
+  10: [3, 2, 2, 3],
+  11: [3, 3, 2, 3],
+  12: [3, 3, 3, 3],
+};
+
+const ROW_ORBIT_ASSIGNMENTS_BY_OWNER_COUNT: Readonly<
+  Record<number, readonly GraphOwnerSlotAssignment[]>
+> = Object.fromEntries(
+  Object.entries(ROW_ORBIT_ROW_COUNTS_BY_OWNER_COUNT).map(([ownerCount, rowCounts]) => [
+    Number(ownerCount),
+    rowCounts.flatMap((columnCount, rowIndex) =>
+      Array.from({ length: columnCount }, (_, columnIndex) => ({
+        ringIndex: rowIndex,
+        sectorIndex: columnIndex,
+      }))
+    ),
+  ])
 );
 
 export function buildStableSlotLayoutSnapshot({
@@ -201,10 +260,14 @@ export function buildStableSlotLayoutSnapshot({
     SLOT_GEOMETRY.centralPadding
   );
 
-  const memberSlotFrames =
+  const memberSlotLayout =
     (layout?.mode ?? 'radial') === 'grid-under-lead'
-      ? planGridUnderLeadOwnerSlots(ownerFootprints, centralCollisionRects)
+      ? {
+          frames: planGridUnderLeadOwnerSlots(ownerFootprints, centralCollisionRects),
+          kind: 'grid-under-lead' as const,
+        }
       : planOwnerSlots(ownerFootprints, centralCollisionRects, runtimeCentralExclusion, layout);
+  const memberSlotFrames = memberSlotLayout.frames;
   const memberSlotFrameByOwnerId = new Map(
     memberSlotFrames.map((frame) => [frame.ownerId, frame] as const)
   );
@@ -223,6 +286,7 @@ export function buildStableSlotLayoutSnapshot({
     launchAnchor: null,
     leadCentralReservedBlock,
     runtimeCentralExclusion,
+    ownerSlotLayoutKind: memberSlotLayout.kind,
     centralCollisionRects,
     memberSlotFrames,
     memberSlotFrameByOwnerId,
@@ -457,6 +521,21 @@ export function resolveNearestSlotAssignment(args: {
     return null;
   }
 
+  if (args.snapshot.ownerSlotLayoutKind === 'row-orbit') {
+    const rowOrbitCandidate = resolveNearestRowOrbitSlotAssignment({
+      ownerId: args.ownerId,
+      ownerX: args.ownerX,
+      ownerY: args.ownerY,
+      currentFrame,
+      ownerFootprints: allFootprints,
+      snapshot: args.snapshot,
+      layout: args.layout,
+    });
+    if (rowOrbitCandidate) {
+      return rowOrbitCandidate;
+    }
+  }
+
   const strictSmallTeamCandidate = resolveStrictSmallTeamNearestSlotAssignment({
     ownerId: args.ownerId,
     ownerX: args.ownerX,
@@ -568,11 +647,119 @@ function resolveStrictSmallTeamNearestSlotAssignment(args: {
     return null;
   }
 
+  return resolveNearestExistingFrameSlotAssignment({
+    ownerId: args.ownerId,
+    ownerX: args.ownerX,
+    ownerY: args.ownerY,
+    currentFrame: args.currentFrame,
+    frames: strictFrames,
+  });
+}
+
+function resolveNearestRowOrbitSlotAssignment(args: {
+  ownerId: string;
+  ownerX: number;
+  ownerY: number;
+  currentFrame: SlotFrame;
+  ownerFootprints: readonly OwnerFootprint[];
+  snapshot: StableSlotLayoutSnapshot;
+  layout?: GraphLayoutPort;
+}): NearestSlotAssignmentResult | null {
+  const allowedAssignments = ROW_ORBIT_ASSIGNMENTS_BY_OWNER_COUNT[args.ownerFootprints.length];
+  if (!allowedAssignments || allowedAssignments.length < args.ownerFootprints.length) {
+    return null;
+  }
+
+  const baseAssignments = Object.fromEntries(
+    args.snapshot.memberSlotFrames.map((frame) => [
+      frame.ownerId,
+      {
+        ringIndex: frame.ringIndex,
+        sectorIndex: frame.sectorIndex,
+      },
+    ])
+  );
+  let best: RankedNearestSlotAssignmentResult | null = null;
+
+  for (const assignment of allowedAssignments) {
+    const occupiedFrame = args.snapshot.memberSlotFrames.find(
+      (frame) =>
+        frame.ownerId !== args.ownerId &&
+        frame.ringIndex === assignment.ringIndex &&
+        frame.sectorIndex === assignment.sectorIndex
+    );
+    const simulatedAssignments: Record<string, GraphOwnerSlotAssignment> = {
+      ...baseAssignments,
+      [args.ownerId]: assignment,
+    };
+    if (occupiedFrame) {
+      simulatedAssignments[occupiedFrame.ownerId] = {
+        ringIndex: args.currentFrame.ringIndex,
+        sectorIndex: args.currentFrame.sectorIndex,
+      };
+    }
+
+    const frames = planRowOrbitOwnerSlots(
+      args.ownerFootprints,
+      args.snapshot.centralCollisionRects,
+      args.snapshot.runtimeCentralExclusion,
+      {
+        version: args.layout?.version ?? 'stable-slots-v1',
+        mode: args.layout?.mode ?? 'radial',
+        ownerOrder:
+          args.layout?.ownerOrder ?? args.ownerFootprints.map((footprint) => footprint.ownerId),
+        slotAssignments: simulatedAssignments,
+      }
+    );
+    const previewFrame = frames?.find((frame) => frame.ownerId === args.ownerId);
+    if (!previewFrame) {
+      continue;
+    }
+
+    const dx = previewFrame.ownerX - args.ownerX;
+    const dy = previewFrame.ownerY - args.ownerY;
+    const candidate: RankedNearestSlotAssignmentResult = {
+      assignment,
+      displacedOwnerId: occupiedFrame?.ownerId,
+      displacedAssignment: occupiedFrame
+        ? {
+            ringIndex: args.currentFrame.ringIndex,
+            sectorIndex: args.currentFrame.sectorIndex,
+          }
+        : undefined,
+      previewOwnerX: previewFrame.ownerX,
+      previewOwnerY: previewFrame.ownerY,
+      distanceSquared: dx * dx + dy * dy,
+    };
+
+    if (!best || candidate.distanceSquared < best.distanceSquared) {
+      best = candidate;
+    }
+  }
+
+  return best
+    ? {
+        assignment: best.assignment,
+        displacedOwnerId: best.displacedOwnerId,
+        displacedAssignment: best.displacedAssignment,
+        previewOwnerX: best.previewOwnerX,
+        previewOwnerY: best.previewOwnerY,
+      }
+    : null;
+}
+
+function resolveNearestExistingFrameSlotAssignment(args: {
+  ownerId: string;
+  ownerX: number;
+  ownerY: number;
+  currentFrame: SlotFrame;
+  frames: readonly SlotFrame[];
+}): NearestSlotAssignmentResult | null {
   let best: {
     frame: SlotFrame;
     distanceSquared: number;
   } | null = null;
-  for (const frame of strictFrames) {
+  for (const frame of args.frames) {
     const dx = frame.ownerX - args.ownerX;
     const dy = frame.ownerY - args.ownerY;
     const distanceSquared = dx * dx + dy * dy;
@@ -613,7 +800,7 @@ function resolveStrictSmallTeamNearestSlotAssignment(args: {
 }
 
 function getStrictSmallTeamFrames(frames: readonly SlotFrame[]): readonly SlotFrame[] | null {
-  if (frames.length === 0 || frames.length > 4) {
+  if (frames.length === 0 || frames.length > 6) {
     return null;
   }
   const preset = SMALL_TEAM_CARDINAL_ASSIGNMENTS[frames.length];
@@ -968,7 +1155,22 @@ function planOwnerSlots(
   centralCollisionRects: readonly StableRect[],
   runtimeCentralExclusion: StableRect,
   layout?: GraphLayoutPort
-): SlotFrame[] {
+): PlannedMemberSlotLayout {
+  const rowOrbitFrames = shouldUseRowOrbitLayout(ownerFootprints, layout)
+    ? planRowOrbitOwnerSlots(
+        ownerFootprints,
+        centralCollisionRects,
+        runtimeCentralExclusion,
+        layout
+      )
+    : null;
+  if (rowOrbitFrames) {
+    return {
+      frames: rowOrbitFrames,
+      kind: 'row-orbit',
+    };
+  }
+
   const strictSmallTeamFrames = shouldUseStrictSmallTeamCardinalLayout(ownerFootprints, layout)
     ? planStrictSmallTeamOwnerSlots(
         ownerFootprints,
@@ -978,7 +1180,10 @@ function planOwnerSlots(
       )
     : null;
   if (strictSmallTeamFrames) {
-    return strictSmallTeamFrames;
+    return {
+      frames: strictSmallTeamFrames,
+      kind: 'radial-sector',
+    };
   }
 
   const placedFrames: SlotFrame[] = [];
@@ -1002,7 +1207,354 @@ function planOwnerSlots(
     commitRingPlacement(ringStates, resolvedFrame, footprint);
   }
 
-  return placedFrames;
+  return {
+    frames: placedFrames,
+    kind: 'radial-sector',
+  };
+}
+
+function shouldUseRowOrbitLayout(
+  ownerFootprints: readonly OwnerFootprint[],
+  layout?: GraphLayoutPort
+): boolean {
+  if (
+    ownerFootprints.length < ROW_ORBIT_MIN_OWNER_COUNT ||
+    ownerFootprints.length > ROW_ORBIT_MAX_OWNER_COUNT
+  ) {
+    return false;
+  }
+
+  const preset = ROW_ORBIT_ASSIGNMENTS_BY_OWNER_COUNT[ownerFootprints.length];
+  if (!preset || preset.length < ownerFootprints.length) {
+    return false;
+  }
+  const rowCounts = ROW_ORBIT_ROW_COUNTS_BY_OWNER_COUNT[ownerFootprints.length];
+  if (!rowCounts) {
+    return false;
+  }
+  const actualAssignments = ownerFootprints
+    .map((footprint) => layout?.slotAssignments?.[footprint.ownerId])
+    .filter((assignment): assignment is GraphOwnerSlotAssignment => assignment != null);
+  const useLegacySixTwoRowAssignments = shouldNormalizeLegacySixTwoRowAssignments(
+    ownerFootprints.length,
+    actualAssignments
+  );
+
+  const actualAssignmentKeys = actualAssignments
+    .map((assignment) =>
+      normalizeRowOrbitAssignment(assignment, ownerFootprints.length, rowCounts, {
+        useLegacySixTwoRowAssignments,
+      })
+    )
+    .filter((assignment): assignment is GraphOwnerSlotAssignment => assignment != null)
+    .map((assignment) => buildAssignmentKey(assignment))
+    .sort();
+  const allowedAssignmentKeys = new Set(preset.map((assignment) => buildAssignmentKey(assignment)));
+
+  if (actualAssignmentKeys.length !== ownerFootprints.length) {
+    return false;
+  }
+
+  const uniqueAssignmentKeys = new Set(actualAssignmentKeys);
+  if (uniqueAssignmentKeys.size !== actualAssignmentKeys.length) {
+    return false;
+  }
+
+  for (const assignmentKey of actualAssignmentKeys) {
+    if (!allowedAssignmentKeys.has(assignmentKey)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function planRowOrbitOwnerSlots(
+  ownerFootprints: readonly OwnerFootprint[],
+  centralCollisionRects: readonly StableRect[],
+  runtimeCentralExclusion: StableRect,
+  layout?: GraphLayoutPort
+): SlotFrame[] | null {
+  const rowCounts = ROW_ORBIT_ROW_COUNTS_BY_OWNER_COUNT[ownerFootprints.length];
+  if (!rowCounts) {
+    return null;
+  }
+
+  const slotConfigs = buildRowOrbitSlotConfigs(ownerFootprints, rowCounts, layout);
+  if (!slotConfigs) {
+    return null;
+  }
+
+  const frames = buildRowOrbitSlotFrames(slotConfigs, rowCounts, runtimeCentralExclusion);
+  const allValid = frames.every((frame, frameIndex) =>
+    isSlotFramePlacementValid(
+      frame,
+      frames.filter((_, index) => index !== frameIndex),
+      centralCollisionRects
+    )
+  );
+  return allValid ? frames : null;
+}
+
+function buildRowOrbitSlotConfigs(
+  ownerFootprints: readonly OwnerFootprint[],
+  rowCounts: readonly number[],
+  layout?: GraphLayoutPort
+): RowOrbitSlotConfig[] | null {
+  const rowCount = rowCounts.length;
+  const middleRowIndex = rowCount === 3 ? 1 : -1;
+  const configs: RowOrbitSlotConfig[] = [];
+  const actualAssignments = ownerFootprints
+    .map((footprint) => layout?.slotAssignments?.[footprint.ownerId])
+    .filter((assignment): assignment is GraphOwnerSlotAssignment => assignment != null);
+  const useLegacySixTwoRowAssignments = shouldNormalizeLegacySixTwoRowAssignments(
+    ownerFootprints.length,
+    actualAssignments
+  );
+
+  for (const footprint of ownerFootprints) {
+    const assignment = layout?.slotAssignments?.[footprint.ownerId];
+    if (!assignment) {
+      return null;
+    }
+
+    const rowOrbitAssignment = normalizeRowOrbitAssignment(
+      assignment,
+      ownerFootprints.length,
+      rowCounts,
+      {
+        useLegacySixTwoRowAssignments,
+      }
+    );
+    if (!rowOrbitAssignment) {
+      return null;
+    }
+
+    const columnCount = rowCounts[rowOrbitAssignment.ringIndex];
+    if (
+      columnCount == null ||
+      rowOrbitAssignment.sectorIndex < 0 ||
+      rowOrbitAssignment.sectorIndex >= columnCount
+    ) {
+      return null;
+    }
+
+    configs.push({
+      footprint,
+      assignment: rowOrbitAssignment,
+      rowIndex: rowOrbitAssignment.ringIndex,
+      columnIndex: rowOrbitAssignment.sectorIndex,
+      columnCount,
+      band: resolveRowOrbitBand(rowOrbitAssignment.ringIndex, rowCount, middleRowIndex),
+    });
+  }
+
+  return configs;
+}
+
+function normalizeRowOrbitAssignment(
+  assignment: GraphOwnerSlotAssignment,
+  ownerCount: number,
+  rowCounts: readonly number[],
+  options: { useLegacySixTwoRowAssignments?: boolean } = {}
+): GraphOwnerSlotAssignment | null {
+  if (
+    options.useLegacySixTwoRowAssignments === true &&
+    ownerCount === 6 &&
+    assignment.ringIndex === 1 &&
+    assignment.sectorIndex >= 0 &&
+    assignment.sectorIndex < 3
+  ) {
+    return {
+      ringIndex: 2,
+      sectorIndex: assignment.sectorIndex,
+    };
+  }
+
+  const directColumnCount = rowCounts[assignment.ringIndex];
+  if (
+    directColumnCount != null &&
+    assignment.sectorIndex >= 0 &&
+    assignment.sectorIndex < directColumnCount
+  ) {
+    return assignment;
+  }
+
+  if (
+    ownerCount === 6 &&
+    assignment.ringIndex === 0 &&
+    assignment.sectorIndex >= 0 &&
+    assignment.sectorIndex < 6
+  ) {
+    return {
+      ringIndex: assignment.sectorIndex < 3 ? 0 : 2,
+      sectorIndex: assignment.sectorIndex % 3,
+    };
+  }
+
+  return null;
+}
+
+function shouldNormalizeLegacySixTwoRowAssignments(
+  ownerCount: number,
+  assignments: readonly GraphOwnerSlotAssignment[]
+): boolean {
+  if (ownerCount !== 6 || assignments.length !== ownerCount) {
+    return false;
+  }
+
+  return assignments.some(
+    (assignment) => assignment.ringIndex === 1 && assignment.sectorIndex === 2
+  );
+}
+
+function resolveRowOrbitBand(
+  rowIndex: number,
+  rowCount: number,
+  middleRowIndex: number
+): RowOrbitSlotConfig['band'] {
+  if (middleRowIndex >= 0) {
+    if (rowIndex < middleRowIndex) {
+      return 'top';
+    }
+    return rowIndex === middleRowIndex ? 'middle' : 'bottom';
+  }
+  return rowIndex < rowCount / 2 ? 'top' : 'bottom';
+}
+
+function buildRowOrbitSlotFrames(
+  slotConfigs: readonly RowOrbitSlotConfig[],
+  rowCounts: readonly number[],
+  runtimeCentralExclusion: StableRect
+): SlotFrame[] {
+  const rowConfigs = groupRowOrbitSlotConfigs(slotConfigs, rowCounts.length);
+  const middleRowIndex = rowCounts.length === 3 ? 1 : -1;
+  const rowTopByIndex = resolveRowOrbitRowTops(rowConfigs, middleRowIndex, runtimeCentralExclusion);
+  const framesByOwnerId = new Map<string, SlotFrame>();
+  const fallbackColumnWidth = Math.max(...slotConfigs.map((config) => config.footprint.slotWidth));
+
+  for (const row of rowConfigs) {
+    if (row.length === 0) {
+      continue;
+    }
+
+    if (row[0]?.band === 'middle') {
+      for (const config of row) {
+        const ownerX =
+          config.columnIndex === 0
+            ? runtimeCentralExclusion.left - ROW_ORBIT_CENTRAL_GAP - config.footprint.slotWidth / 2
+            : runtimeCentralExclusion.right +
+              ROW_ORBIT_CENTRAL_GAP +
+              config.footprint.slotWidth / 2;
+        framesByOwnerId.set(
+          config.footprint.ownerId,
+          buildSlotFrameAtOwnerAnchor(config.footprint, config.assignment, ownerX, 0)
+        );
+      }
+      continue;
+    }
+
+    const rowTop = rowTopByIndex.get(row[0]!.rowIndex) ?? 0;
+    const columnCount = rowCounts[row[0]!.rowIndex] ?? row.length;
+    const columnWidths = resolveRowOrbitColumnWidths(row, columnCount, fallbackColumnWidth);
+    let nextLeft = -getRowOrbitRowWidth(columnWidths) / 2;
+    for (const config of row) {
+      const ownerX =
+        nextLeft +
+        columnWidths.slice(0, config.columnIndex).reduce((sum, width) => sum + width, 0) +
+        config.columnIndex * ROW_ORBIT_HORIZONTAL_GAP +
+        columnWidths[config.columnIndex]! / 2;
+      const ownerY = rowTop + getOwnerAnchorTopOffset();
+      framesByOwnerId.set(
+        config.footprint.ownerId,
+        buildSlotFrameAtOwnerAnchor(config.footprint, config.assignment, ownerX, ownerY)
+      );
+    }
+  }
+
+  return slotConfigs.flatMap((config) => {
+    const frame = framesByOwnerId.get(config.footprint.ownerId);
+    return frame ? [frame] : [];
+  });
+}
+
+function groupRowOrbitSlotConfigs(
+  slotConfigs: readonly RowOrbitSlotConfig[],
+  rowCount: number
+): RowOrbitSlotConfig[][] {
+  const rows: RowOrbitSlotConfig[][] = Array.from({ length: rowCount }, () => []);
+  for (const config of slotConfigs) {
+    rows[config.rowIndex]!.push(config);
+  }
+  for (const row of rows) {
+    row.sort((left, right) => left.columnIndex - right.columnIndex);
+  }
+  return rows;
+}
+
+function resolveRowOrbitRowTops(
+  rowConfigs: readonly (readonly RowOrbitSlotConfig[])[],
+  middleRowIndex: number,
+  runtimeCentralExclusion: StableRect
+): Map<number, number> {
+  const topByRowIndex = new Map<number, number>();
+  let nextTopRowBottom = runtimeCentralExclusion.top - ROW_ORBIT_CENTRAL_GAP;
+  for (
+    let rowIndex = middleRowIndex >= 0 ? middleRowIndex - 1 : rowConfigs.length / 2 - 1;
+    rowIndex >= 0;
+    rowIndex -= 1
+  ) {
+    const row = rowConfigs[rowIndex] ?? [];
+    if (row.length === 0) {
+      continue;
+    }
+    const rowHeight = getRowOrbitRowHeight(row);
+    const rowTop = nextTopRowBottom - rowHeight;
+    topByRowIndex.set(rowIndex, rowTop);
+    nextTopRowBottom = rowTop - ROW_ORBIT_VERTICAL_GAP;
+  }
+
+  let nextBottomRowTop = runtimeCentralExclusion.bottom + ROW_ORBIT_CENTRAL_GAP;
+  for (
+    let rowIndex = middleRowIndex >= 0 ? middleRowIndex + 1 : Math.ceil(rowConfigs.length / 2);
+    rowIndex < rowConfigs.length;
+    rowIndex += 1
+  ) {
+    const row = rowConfigs[rowIndex] ?? [];
+    if (row.length === 0) {
+      continue;
+    }
+    topByRowIndex.set(rowIndex, nextBottomRowTop);
+    nextBottomRowTop += getRowOrbitRowHeight(row) + ROW_ORBIT_VERTICAL_GAP;
+  }
+
+  return topByRowIndex;
+}
+
+function resolveRowOrbitColumnWidths(
+  row: readonly RowOrbitSlotConfig[],
+  columnCount: number,
+  fallbackColumnWidth: number
+): number[] {
+  const columnWidths = Array.from({ length: columnCount }, () => fallbackColumnWidth);
+  for (const config of row) {
+    columnWidths[config.columnIndex] = Math.max(
+      columnWidths[config.columnIndex] ?? fallbackColumnWidth,
+      config.footprint.slotWidth
+    );
+  }
+  return columnWidths;
+}
+
+function getRowOrbitRowWidth(columnWidths: readonly number[]): number {
+  return (
+    columnWidths.reduce((sum, width) => sum + width, 0) +
+    Math.max(0, columnWidths.length - 1) * ROW_ORBIT_HORIZONTAL_GAP
+  );
+}
+
+function getRowOrbitRowHeight(row: readonly RowOrbitSlotConfig[]): number {
+  return Math.max(...row.map((config) => config.footprint.slotHeight));
 }
 
 function planGridUnderLeadOwnerSlots(
@@ -1012,16 +1564,14 @@ function planGridUnderLeadOwnerSlots(
   const frames: SlotFrame[] = [];
   const centralBlock = unionRects([...centralCollisionRects]);
   let rowTop = centralBlock.bottom + GRID_UNDER_LEAD_LEAD_GAP;
+  const columnCount = getGridUnderLeadColumnCount(ownerFootprints.length);
 
   for (
     let rowStartIndex = 0;
     rowStartIndex < ownerFootprints.length;
-    rowStartIndex += GRID_UNDER_LEAD_COLUMN_COUNT
+    rowStartIndex += columnCount
   ) {
-    const rowFootprints = ownerFootprints.slice(
-      rowStartIndex,
-      rowStartIndex + GRID_UNDER_LEAD_COLUMN_COUNT
-    );
+    const rowFootprints = ownerFootprints.slice(rowStartIndex, rowStartIndex + columnCount);
     const rowWidth =
       rowFootprints.reduce((sum, footprint) => sum + footprint.slotWidth, 0) +
       Math.max(0, rowFootprints.length - 1) * SLOT_GEOMETRY.slotHorizontalGap;
@@ -1035,7 +1585,7 @@ function planGridUnderLeadOwnerSlots(
         buildSlotFrameAtOwnerAnchor(
           footprint,
           {
-            ringIndex: Math.floor(rowStartIndex / GRID_UNDER_LEAD_COLUMN_COUNT),
+            ringIndex: Math.floor(rowStartIndex / columnCount),
             sectorIndex: columnIndex,
           },
           ownerX,
@@ -1051,11 +1601,17 @@ function planGridUnderLeadOwnerSlots(
   return frames;
 }
 
+function getGridUnderLeadColumnCount(ownerCount: number): number {
+  return ownerCount === GRID_UNDER_LEAD_WIDE_TEAM_OWNER_COUNT
+    ? GRID_UNDER_LEAD_WIDE_TEAM_COLUMN_COUNT
+    : GRID_UNDER_LEAD_DEFAULT_COLUMN_COUNT;
+}
+
 function shouldUseStrictSmallTeamCardinalLayout(
   ownerFootprints: readonly OwnerFootprint[],
   layout?: GraphLayoutPort
 ): boolean {
-  if (ownerFootprints.length === 0 || ownerFootprints.length > 4) {
+  if (ownerFootprints.length === 0 || ownerFootprints.length > 6) {
     return false;
   }
 
@@ -1090,7 +1646,7 @@ function planStrictSmallTeamOwnerSlots(
   runtimeCentralExclusion: StableRect,
   layout?: GraphLayoutPort
 ): SlotFrame[] | null {
-  if (ownerFootprints.length === 0 || ownerFootprints.length > 4) {
+  if (ownerFootprints.length === 0 || ownerFootprints.length > 6) {
     return null;
   }
 
@@ -1098,13 +1654,16 @@ function planStrictSmallTeamOwnerSlots(
   if (!preset || preset.length !== ownerFootprints.length) {
     return null;
   }
+  const vectorByAssignmentKey = new Map(
+    preset.map((slot) => [buildAssignmentKey(slot.assignment), slot.vector] as const)
+  );
 
   const slotConfigs = ownerFootprints.map((footprint) => {
     const assignment = layout?.slotAssignments?.[footprint.ownerId];
     if (!assignment) {
       return null;
     }
-    const vector = SMALL_TEAM_CARDINAL_VECTOR_BY_ASSIGNMENT_KEY.get(buildAssignmentKey(assignment));
+    const vector = vectorByAssignmentKey.get(buildAssignmentKey(assignment));
     if (!vector) {
       return null;
     }
@@ -1119,72 +1678,164 @@ function planStrictSmallTeamOwnerSlots(
     return null;
   }
 
-  const baseRadiusByAxis = resolveStrictSmallTeamRadiusByAxis(
+  return packStrictSmallTeamOwnerSlots(
     slotConfigs.map((slot) => slot!),
     centralCollisionRects,
     runtimeCentralExclusion
   );
+}
 
-  for (let iteration = 0; iteration < 48; iteration += 1) {
-    const radiusBump = iteration * SMALL_TEAM_CARDINAL_RADIUS_STEP;
-    const frames = slotConfigs.map((slot) => {
-      const axis = resolveStrictSmallTeamVectorAxis(slot!.vector);
-      return buildSlotFrameAtRadiusWithVector(
-        slot!.footprint,
-        slot!.assignment,
-        baseRadiusByAxis[axis] +
-          (axis === 'vertical' ? SMALL_TEAM_CARDINAL_VERTICAL_PADDING : 0) +
-          radiusBump,
-        slot!.vector
-      );
-    });
-    const allValid = frames.every((frame, frameIndex) =>
-      isSlotFramePlacementValid(
-        frame,
-        frames.filter((_, index) => index !== frameIndex),
-        centralCollisionRects
-      )
+function packStrictSmallTeamOwnerSlots(
+  slotConfigs: readonly {
+    footprint: OwnerFootprint;
+    assignment: GraphOwnerSlotAssignment;
+    vector: { x: number; y: number };
+  }[],
+  centralCollisionRects: readonly StableRect[],
+  runtimeCentralExclusion: StableRect
+): SlotFrame[] | null {
+  const radii = slotConfigs.map((slot) =>
+    resolveMinimumDirectionalRadiusForVector({
+      vector: slot.vector,
+      footprint: slot.footprint,
+      centralCollisionRects,
+      runtimeCentralExclusion,
+    })
+  );
+
+  for (let iteration = 0; iteration < STRICT_SMALL_TEAM_MAX_PACKING_ITERATIONS; iteration += 1) {
+    const frames = buildStrictSmallTeamFrames(slotConfigs, radii);
+    const invalidCentralIndex = frames.findIndex((frame) =>
+      rectOverlapsAnyCentralRect(frame.bounds, centralCollisionRects)
     );
-    if (allValid) {
+    if (invalidCentralIndex >= 0) {
+      radii[invalidCentralIndex] += STRICT_SMALL_TEAM_RADIUS_STEP;
+      continue;
+    }
+
+    const conflict = findFirstOwnerSlotFrameConflict(frames);
+    if (!conflict) {
       return frames;
+    }
+
+    const nextLeftRadius = resolveMinimumRadiusAvoidingFrame({
+      slotConfig: slotConfigs[conflict.leftIndex]!,
+      currentRadius: radii[conflict.leftIndex]!,
+      otherFrame: frames[conflict.rightIndex]!,
+      centralCollisionRects,
+    });
+    const nextRightRadius = resolveMinimumRadiusAvoidingFrame({
+      slotConfig: slotConfigs[conflict.rightIndex]!,
+      currentRadius: radii[conflict.rightIndex]!,
+      otherFrame: frames[conflict.leftIndex]!,
+      centralCollisionRects,
+    });
+
+    if (nextLeftRadius == null && nextRightRadius == null) {
+      return null;
+    }
+
+    const leftIncrease =
+      nextLeftRadius == null
+        ? Number.POSITIVE_INFINITY
+        : nextLeftRadius - radii[conflict.leftIndex]!;
+    const rightIncrease =
+      nextRightRadius == null
+        ? Number.POSITIVE_INFINITY
+        : nextRightRadius - radii[conflict.rightIndex]!;
+
+    if (leftIncrease <= rightIncrease) {
+      radii[conflict.leftIndex] = nextLeftRadius!;
+    } else {
+      radii[conflict.rightIndex] = nextRightRadius!;
     }
   }
 
   return null;
 }
 
-function resolveStrictSmallTeamRadiusByAxis(
+function buildStrictSmallTeamFrames(
   slotConfigs: readonly {
     footprint: OwnerFootprint;
+    assignment: GraphOwnerSlotAssignment;
     vector: { x: number; y: number };
   }[],
-  centralCollisionRects: readonly StableRect[],
-  runtimeCentralExclusion: StableRect
-): Record<'horizontal' | 'vertical', number> {
-  const radiusByAxis = {
-    horizontal: 0,
-    vertical: 0,
-  };
-
-  for (const slot of slotConfigs) {
-    const axis = resolveStrictSmallTeamVectorAxis(slot.vector);
-    const radius = resolveMinimumDirectionalRadiusForVector({
-      vector: slot.vector,
-      footprint: slot.footprint,
-      centralCollisionRects,
-      runtimeCentralExclusion,
-    });
-    radiusByAxis[axis] = Math.max(radiusByAxis[axis], radius);
-  }
-
-  return radiusByAxis;
+  radii: readonly number[]
+): SlotFrame[] {
+  return slotConfigs.map((slot, index) =>
+    buildSlotFrameAtRadiusWithVector(
+      slot.footprint,
+      slot.assignment,
+      radii[index] ?? 0,
+      slot.vector
+    )
+  );
 }
 
-function resolveStrictSmallTeamVectorAxis(vector: {
-  x: number;
-  y: number;
-}): 'horizontal' | 'vertical' {
-  return Math.abs(vector.x) >= Math.abs(vector.y) ? 'horizontal' : 'vertical';
+function findFirstOwnerSlotFrameConflict(
+  frames: readonly SlotFrame[]
+): { leftIndex: number; rightIndex: number } | null {
+  for (const [leftIndex, left] of frames.entries()) {
+    for (let rightIndex = leftIndex + 1; rightIndex < frames.length; rightIndex += 1) {
+      const right = frames[rightIndex]!;
+      if (ownerSlotFramesOverlap(left.bounds, right.bounds)) {
+        return { leftIndex, rightIndex };
+      }
+    }
+  }
+  return null;
+}
+
+function resolveMinimumRadiusAvoidingFrame(args: {
+  slotConfig: {
+    footprint: OwnerFootprint;
+    assignment: GraphOwnerSlotAssignment;
+    vector: { x: number; y: number };
+  };
+  currentRadius: number;
+  otherFrame: SlotFrame;
+  centralCollisionRects: readonly StableRect[];
+}): number | null {
+  const canPlaceAtRadius = (radius: number): boolean => {
+    const frame = buildSlotFrameAtRadiusWithVector(
+      args.slotConfig.footprint,
+      args.slotConfig.assignment,
+      radius,
+      args.slotConfig.vector
+    );
+    return (
+      !rectOverlapsAnyCentralRect(frame.bounds, args.centralCollisionRects) &&
+      !ownerSlotFramesOverlap(frame.bounds, args.otherFrame.bounds)
+    );
+  };
+
+  if (canPlaceAtRadius(args.currentRadius)) {
+    return args.currentRadius;
+  }
+
+  let low = args.currentRadius;
+  let high = Math.max(args.currentRadius + STRICT_SMALL_TEAM_RADIUS_STEP, args.currentRadius * 1.1);
+  let expansionCount = 0;
+  while (!canPlaceAtRadius(high) && expansionCount < 24) {
+    low = high;
+    high = Math.max(high + STRICT_SMALL_TEAM_RADIUS_STEP, high * 1.25);
+    expansionCount += 1;
+  }
+
+  if (!canPlaceAtRadius(high)) {
+    return null;
+  }
+
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const mid = (low + high) / 2;
+    if (canPlaceAtRadius(mid)) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+
+  return Math.ceil(high + STRICT_SMALL_TEAM_RADIUS_EPSILON);
 }
 
 function buildPreferredAssignmentsMap(

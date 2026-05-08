@@ -47,16 +47,31 @@ describe('resolveAnthropicLaunchModel', () => {
         availableLaunchModels: ['opus', 'opus[1m]'],
       })
     ).toBe('opus');
-  });
-
-  it('preserves limitContext requests and never manufactures 1M Haiku variants', () => {
     expect(
       resolveAnthropicLaunchModel({
-        selectedModel: 'sonnet',
-        limitContext: true,
+        selectedModel: DEFAULT_PROVIDER_MODEL_SELECTION,
+        limitContext: false,
+        defaultLaunchModel: 'sonnet[1m]',
         availableLaunchModels: ['sonnet', 'sonnet[1m]'],
       })
     ).toBe('sonnet');
+  });
+
+  it('preserves limitContext requests and never manufactures 1M Sonnet or Haiku variants', () => {
+    expect(
+      resolveAnthropicLaunchModel({
+        selectedModel: 'sonnet',
+        limitContext: false,
+        availableLaunchModels: ['sonnet', 'sonnet[1m]'],
+      })
+    ).toBe('sonnet');
+    expect(
+      resolveAnthropicLaunchModel({
+        selectedModel: 'claude-sonnet-4-6',
+        limitContext: false,
+        availableLaunchModels: ['claude-sonnet-4-6', 'claude-sonnet-4-6[1m]'],
+      })
+    ).toBe('claude-sonnet-4-6');
     expect(
       resolveAnthropicLaunchModel({
         selectedModel: 'haiku',

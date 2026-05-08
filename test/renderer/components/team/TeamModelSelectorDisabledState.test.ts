@@ -975,10 +975,10 @@ describe('TeamModelSelector disabled Codex models', () => {
           onValueChange: () => undefined,
           providerDisabledReasonById: {
             opencode:
-              'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.',
+              'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.',
           },
           providerDisabledBadgeLabelById: {
-            opencode: 'side lane',
+            opencode: 'team only',
           },
         })
       );
@@ -990,9 +990,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(openCodeButton?.hasAttribute('disabled')).toBe(true);
     expect(openCodeButton?.getAttribute('title')).toBe(
-      'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.'
+      'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.'
     );
-    expect(openCodeButton?.textContent).toContain('side lane');
+    expect(openCodeButton?.textContent).toContain('team only');
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

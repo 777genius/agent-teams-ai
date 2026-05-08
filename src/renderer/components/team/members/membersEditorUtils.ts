@@ -114,8 +114,7 @@ export function normalizeLeadProviderForMode(
   providerId: TeamProviderId | undefined,
   multimodelEnabled: boolean
 ): TeamProviderId {
-  const normalizedProviderId = normalizeProviderForMode(providerId, multimodelEnabled);
-  return normalizedProviderId === 'opencode' ? 'anthropic' : normalizedProviderId;
+  return normalizeProviderForMode(providerId, multimodelEnabled);
 }
 
 export function normalizeMemberDraftForProviderMode(

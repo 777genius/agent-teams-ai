@@ -122,6 +122,24 @@ function areTaskWorkIntervalsEquivalent(
   });
 }
 
+function areTaskReviewIntervalsEquivalent(
+  left: TeamTaskWithKanban['reviewIntervals'],
+  right: TeamTaskWithKanban['reviewIntervals']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.length !== right.length) return false;
+  return left.every((interval, index) => {
+    const other = right[index];
+    if (!other) return false;
+    return (
+      interval.reviewer === other.reviewer &&
+      interval.startedAt === other.startedAt &&
+      interval.completedAt === other.completedAt
+    );
+  });
+}
+
 function areTaskHistoryEventsEquivalent(
   left: TeamTaskWithKanban['historyEvents'],
   right: TeamTaskWithKanban['historyEvents']
@@ -166,6 +184,7 @@ function areMemberTaskMapsEquivalent(
       leftTask.reviewState !== rightTask.reviewState ||
       leftTask.kanbanColumn !== rightTask.kanbanColumn ||
       !areTaskWorkIntervalsEquivalent(leftTask.workIntervals, rightTask.workIntervals) ||
+      !areTaskReviewIntervalsEquivalent(leftTask.reviewIntervals, rightTask.reviewIntervals) ||
       !areTaskHistoryEventsEquivalent(leftTask.historyEvents, rightTask.historyEvents)
     ) {
       return false;

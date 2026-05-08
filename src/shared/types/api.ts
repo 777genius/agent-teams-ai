@@ -320,6 +320,34 @@ export interface UpdaterAPI {
 }
 
 // =============================================================================
+// Startup API
+// =============================================================================
+
+export interface AppStartupStatus {
+  phase: string;
+  message: string;
+  ready: boolean;
+  error?: string | null;
+  startedAt: number;
+  updatedAt: number;
+  steps?: AppStartupStep[];
+}
+
+export interface AppStartupStep {
+  phase: string;
+  message: string;
+  startedAt: number;
+  updatedAt: number;
+  finishedAt?: number;
+  durationMs?: number;
+}
+
+export interface AppStartupAPI {
+  getStatus: () => Promise<AppStartupStatus>;
+  onProgress: (callback: (status: AppStartupStatus) => void) => () => void;
+}
+
+// =============================================================================
 // Context API
 // =============================================================================
 
@@ -770,6 +798,7 @@ export interface ReviewAPI {
  * Complete Electron API exposed to the renderer process via preload script.
  */
 export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElectronApi {
+  startup?: AppStartupAPI;
   getAppVersion: () => Promise<string>;
   getProjects: () => Promise<Project[]>;
   getSessions: (projectId: string) => Promise<Session[]>;

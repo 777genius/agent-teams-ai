@@ -11,6 +11,7 @@ const pkg = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf-8')) as 
 
 export default defineConfig({
   root: resolve(ROOT, 'src/renderer'),
+  cacheDir: resolve(ROOT, 'node_modules/.vite/web-renderer'),
   plugins: [react()],
   server: {
     host: '127.0.0.1',

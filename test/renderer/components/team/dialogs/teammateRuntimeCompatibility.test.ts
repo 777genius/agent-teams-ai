@@ -94,7 +94,7 @@ describe('analyzeTeammateRuntimeCompatibility', () => {
 
     expect(result.blocksSubmission).toBe(true);
     expect(result.title).toBe('OpenCode cannot lead mixed-provider teams');
-    expect(result.message).toContain('OpenCode-led mixed teams are not supported');
+    expect(result.message).toContain('mixed teams cannot use OpenCode as the lead');
     expect(result.memberWarningById.bob).toContain('OpenCode cannot be the team lead');
   });
 

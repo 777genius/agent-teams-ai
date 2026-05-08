@@ -220,6 +220,7 @@ interface ParsedTask {
   reviewState?: unknown;
   metadata?: { _internal?: unknown };
   workIntervals?: unknown;
+  reviewIntervals?: unknown;
   historyEvents?: unknown;
   attachments?: unknown;
   sourceMessageId?: unknown;
@@ -227,6 +228,12 @@ interface ParsedTask {
 }
 
 interface RawWorkInterval {
+  startedAt?: unknown;
+  completedAt?: unknown;
+}
+
+interface RawReviewInterval {
+  reviewer?: unknown;
   startedAt?: unknown;
   completedAt?: unknown;
 }
@@ -1215,6 +1222,27 @@ function normalizeWorkIntervals(
     }));
 }
 
+function normalizeReviewIntervals(
+  parsed: ParsedTask
+): { reviewer: string; startedAt: string; completedAt?: string }[] | undefined {
+  if (!Array.isArray(parsed.reviewIntervals)) return undefined;
+  return (parsed.reviewIntervals as unknown[])
+    .filter(
+      (i): i is RawReviewInterval =>
+        Boolean(i) &&
+        typeof i === 'object' &&
+        typeof (i as RawReviewInterval).reviewer === 'string' &&
+        typeof (i as RawReviewInterval).startedAt === 'string' &&
+        ((i as RawReviewInterval).completedAt === undefined ||
+          typeof (i as RawReviewInterval).completedAt === 'string')
+    )
+    .map((i) => ({
+      reviewer: i.reviewer as string,
+      startedAt: i.startedAt as string,
+      completedAt: i.completedAt as string | undefined,
+    }));
+}
+
 function normalizeHistoryEvents(parsed: ParsedTask): RawHistoryEvent[] | undefined {
   if (!Array.isArray(parsed.historyEvents)) return undefined;
   return (parsed.historyEvents as unknown[])
@@ -1479,6 +1507,7 @@ async function readTasksDirForTeam(
         createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
         status,
         workIntervals: normalizeWorkIntervals(parsed),
+        reviewIntervals: normalizeReviewIntervals(parsed),
         historyEvents: normalizeHistoryEvents(parsed),
         blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as unknown[]) : undefined,
         blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as unknown[]) : undefined,

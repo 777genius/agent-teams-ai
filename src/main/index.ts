@@ -18,6 +18,7 @@ process.env.UV_THREADPOOL_SIZE ??= '16';
 
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
+// eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
 import { earlyElectronUserDataMigrationResult } from './bootstrapUserDataMigration';
 import './sentry';
 
@@ -76,8 +77,9 @@ import {
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
-import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import {
+  APP_STARTUP_GET_STATUS,
+  APP_STARTUP_PROGRESS,
   CONTEXT_CHANGED,
   SCHEDULE_CHANGE,
   SKILLS_CHANGED,
@@ -105,6 +107,7 @@ import { join } from 'path';
 
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
 import { setTmuxMainWindow } from './ipc/tmux';
 import {
@@ -209,7 +212,7 @@ import {
 } from './services';
 
 import type { FileChangeEvent } from '@main/types';
-import type { TeamChangeEvent } from '@shared/types';
+import type { AppStartupStatus, AppStartupStep, TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('App');
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
@@ -256,17 +259,27 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) — suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
-async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapterRegistry> {
-  const binaryPath = await ClaudeBinaryResolver.resolve();
+async function createOpenCodeRuntimeAdapterRegistry(
+  reportProgress: (phase: string, message: string) => void = () => undefined
+): Promise<TeamRuntimeAdapterRegistry> {
+  const binaryPath = await ClaudeBinaryResolver.resolve({
+    onProgress: ({ phase, message }) => reportProgress(`runtime-${phase}`, message),
+  });
   if (!binaryPath) {
     logger.warn('[OpenCode] Runtime adapter bridge disabled: orchestrator CLI binary not resolved');
+    reportProgress(
+      'runtime-unavailable',
+      'Runtime not found. Continuing with limited launch support...'
+    );
     openCodeLifecycleBridge = null;
     return new TeamRuntimeAdapterRegistry();
   }
 
+  reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   try {
+    reportProgress('runtime-work-sync', 'Preparing runtime work sync hooks...');
     const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
       teamsBasePath: getTeamsBasePath(),
       provider: 'opencode',
@@ -282,7 +295,10 @@ async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapte
     );
   }
   try {
-    const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
+    reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
+    const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec({
+      onProgress: ({ phase, message }) => reportProgress(`mcp-${phase}`, message),
+    });
     const mcpEntry = mcpLaunchSpec.args[0];
     if (mcpEntry) {
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
@@ -297,6 +313,7 @@ async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapte
     );
   }
 
+  reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const bridgeClient = new OpenCodeBridgeCommandClient({
     binaryPath,
     tempDirectory: join(app.getPath('temp'), 'claude-team-opencode-bridge'),
@@ -624,6 +641,11 @@ let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let rendererRecoveryAttempts = 0;
+let servicesReady = false;
+let rendererDidFinishLoad = false;
+let fileWatcherStartupStarted = false;
+let backgroundStartupTasksStarted = false;
+let appStartupHandlersRegistered = false;
 
 // File watcher event cleanup functions
 let fileChangeCleanup: (() => void) | null = null;
@@ -636,6 +658,24 @@ const startupTimers = new Set<ReturnType<typeof setTimeout>>();
 const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_RECOVERY_CONCURRENCY = 1;
+const appStartupStartedAt = Date.now();
+let appStartupSteps: AppStartupStep[] = [
+  {
+    phase: 'boot',
+    message: 'Starting Agent Teams AI...',
+    startedAt: appStartupStartedAt,
+    updatedAt: appStartupStartedAt,
+  },
+];
+let appStartupStatus: AppStartupStatus = {
+  phase: 'boot',
+  message: 'Starting Agent Teams AI...',
+  ready: false,
+  error: null,
+  startedAt: appStartupStartedAt,
+  updatedAt: appStartupStartedAt,
+  steps: appStartupSteps,
+};
 
 function isShutdownStarted(): boolean {
   return shutdownComplete || shutdownPromise !== null;
@@ -651,6 +691,74 @@ function scheduleStartupTask(action: () => void, delayMs: number): void {
   }, delayMs);
   timer.unref?.();
   startupTimers.add(timer);
+}
+
+function registerAppStartupHandlers(): void {
+  if (appStartupHandlersRegistered) {
+    return;
+  }
+  appStartupHandlersRegistered = true;
+  registerRendererLogHandlers(ipcMain);
+  ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
+}
+
+function cloneStartupSteps(): AppStartupStep[] {
+  return appStartupSteps.map((step) => ({ ...step }));
+}
+
+function updateStartupTimeline(update: Partial<AppStartupStatus>, now: number): void {
+  if (!update.phase && !update.message) {
+    return;
+  }
+
+  const phase = update.phase ?? appStartupStatus.phase;
+  const message = update.message ?? appStartupStatus.message;
+  const current = appStartupSteps[appStartupSteps.length - 1];
+
+  if (current?.phase !== phase) {
+    if (current && !current.finishedAt) {
+      current.finishedAt = now;
+      current.durationMs = now - current.startedAt;
+      current.updatedAt = now;
+    }
+    appStartupSteps.push({
+      phase,
+      message,
+      startedAt: now,
+      updatedAt: now,
+    });
+    if (appStartupSteps.length > 32) {
+      appStartupSteps = appStartupSteps.slice(-32);
+    }
+  } else {
+    current.message = message;
+    current.updatedAt = now;
+  }
+}
+
+function finishCurrentStartupStep(now: number): void {
+  const current = appStartupSteps[appStartupSteps.length - 1];
+  if (!current || current.finishedAt) {
+    return;
+  }
+  current.finishedAt = now;
+  current.durationMs = now - current.startedAt;
+  current.updatedAt = now;
+}
+
+function publishStartupStatus(update: Partial<AppStartupStatus>): void {
+  const now = Date.now();
+  updateStartupTimeline(update, now);
+  if (update.ready === true || update.error) {
+    finishCurrentStartupStep(now);
+  }
+  appStartupStatus = {
+    ...appStartupStatus,
+    ...update,
+    updatedAt: now,
+    steps: cloneStartupSteps(),
+  };
+  safeSendToRenderer(mainWindow, APP_STARTUP_PROGRESS, appStartupStatus);
 }
 
 async function runStartupJobsBounded<T>(
@@ -1063,6 +1171,12 @@ function reconfigureLocalContextForClaudeRoot(): void {
  */
 async function initializeServices(): Promise<void> {
   logger.info('Initializing services...');
+  publishStartupStatus({
+    phase: 'services',
+    message: 'Preparing app services...',
+    ready: false,
+    error: null,
+  });
 
   // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
@@ -1167,10 +1281,20 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator((teamName, memberName) => {
     teamMemberRuntimeAdvisoryService.invalidateMemberAdvisory(teamName, memberName);
   });
-  teamProvisioningService.setRuntimeAdapterRegistry(await createOpenCodeRuntimeAdapterRegistry());
-  await cleanupOpenCodeHostsForLifecycle('startup').catch((error: unknown) =>
-    logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+  publishStartupStatus({
+    phase: 'runtime',
+    message: 'Resolving local runtime...',
+  });
+  teamProvisioningService.setRuntimeAdapterRegistry(
+    await createOpenCodeRuntimeAdapterRegistry((phase, message) =>
+      publishStartupStatus({ phase, message })
+    )
   );
+  scheduleStartupTask(() => {
+    void cleanupOpenCodeHostsForLifecycle('startup').catch((error: unknown) =>
+      logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+    );
+  }, STARTUP_RECOVERY_DELAY_MS);
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
@@ -1267,6 +1391,10 @@ async function initializeServices(): Promise<void> {
   const mcpInstallService = new McpInstallService(mcpAggregator, extensionsRuntimeAdapter);
   const apiKeyService = new ApiKeyService();
   providerConnectionService.setApiKeyService(apiKeyService);
+  publishStartupStatus({
+    phase: 'settings',
+    message: 'Loading secure settings...',
+  });
   await apiKeyService.syncProcessEnv(RUNTIME_MANAGED_API_KEY_ENV_VARS);
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
@@ -1448,6 +1576,11 @@ async function initializeServices(): Promise<void> {
   // startProcessHealthPolling() is deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
 
+  publishStartupStatus({
+    phase: 'ipc',
+    message: 'Wiring app actions...',
+  });
+
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
@@ -1529,6 +1662,10 @@ async function initializeServices(): Promise<void> {
   }
 
   logger.info('Services initialized successfully');
+  publishStartupStatus({
+    phase: 'readying',
+    message: 'Finishing startup...',
+  });
 }
 
 /**
@@ -1717,6 +1854,85 @@ function syncTrafficLightPosition(win: BrowserWindow): void {
   safeSendToRenderer(win, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL, zoomFactor);
 }
 
+function attachMainWindowToServices(): void {
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+
+  notificationManager?.setMainWindow(win);
+  updaterService?.setMainWindow(win);
+  cliInstallerService?.setMainWindow(win);
+  setTmuxMainWindow(win);
+  ptyTerminalService?.setMainWindow(win);
+  teamProvisioningService?.setMainWindow(win);
+  codexAccountFeature?.setMainWindow(win);
+  setEditorMainWindow(win);
+  setReviewMainWindow(win);
+}
+
+function runPostRendererStartupTasks(): void {
+  if (!servicesReady || !rendererDidFinishLoad || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  if (!fileWatcherStartupStarted) {
+    fileWatcherStartupStarted = true;
+    // Start file watchers after both the visible window and main services are ready.
+    const activeContext = contextRegistry.getActive();
+    if (process.platform === 'win32') {
+      scheduleStartupTask(() => {
+        if (!fileWatcherStartupStarted || !servicesReady || !rendererDidFinishLoad) {
+          return;
+        }
+        activeContext.startFileWatcher();
+      }, 1500);
+    } else if (!isShutdownStarted()) {
+      activeContext.startFileWatcher();
+    }
+  }
+
+  if (backgroundStartupTasksStarted) {
+    return;
+  }
+  backgroundStartupTasksStarted = true;
+
+  if (!isShutdownStarted()) {
+    scheduleStartupTask(() => void updaterService.checkForUpdates(), 3000);
+    updaterService.startPeriodicCheck(60 * 60 * 1000);
+  }
+
+  scheduleStartupTask(
+    () => {
+      void getTeamFsWorkerClient()
+        .prewarm()
+        .catch((error: unknown) =>
+          logger.debug(
+            `[startup] team-fs-worker prewarm skipped: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          )
+        );
+      void getTeamDataWorkerClient()
+        .prewarm()
+        .catch((error: unknown) =>
+          logger.debug(
+            `[startup] team-data-worker prewarm skipped: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          )
+        );
+    },
+    process.platform === 'win32' ? 2500 : 1000
+  );
+
+  scheduleStartupTask(() => {
+    void teamProvisioningService.warmup();
+    teamDataService.startProcessHealthPolling();
+    void schedulerService?.start();
+  }, 5000);
+}
+
 function scheduleRendererRecovery(win: BrowserWindow): void {
   if (isShutdownStarted()) {
     return;
@@ -1759,6 +1975,7 @@ function createWindow(): void {
   if (isShutdownStarted()) {
     return;
   }
+  rendererDidFinishLoad = false;
 
   const isMac = process.platform === 'darwin';
   const isDev = process.env.NODE_ENV === 'development';
@@ -1780,7 +1997,7 @@ function createWindow(): void {
     backgroundColor: '#1a1a1a',
     ...(useNativeTitleBar ? {} : { titleBarStyle: 'hidden' as const }),
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
-    title: 'Agent Teams UI',
+    title: 'Agent Teams AI',
   });
   markRendererUnavailable(mainWindow);
 
@@ -1850,6 +2067,7 @@ function createWindow(): void {
     if (isShutdownStarted()) {
       return;
     }
+    rendererDidFinishLoad = false;
     markRendererUnavailable(mainWindow);
     branchStatusService?.resetAllTracking();
   });
@@ -1874,57 +2092,8 @@ function createWindow(): void {
         }
       }, 0);
       fullscreenSyncTimer.unref?.();
-      // Start file watchers now that the window is visible and responsive.
-      // Deferred from initializeServices() to avoid blocking window creation
-      // with fs.watch() setup (especially slow on Windows with recursive watchers).
-      const activeContext = contextRegistry.getActive();
-      if (process.platform === 'win32') {
-        // On Windows, delay FileWatcher startup to let the renderer complete
-        // its initial IPC calls without UV thread pool contention. Recursive
-        // fs.watch() on NTFS saturates all 4 default UV threads.
-        scheduleStartupTask(() => activeContext.startFileWatcher(), 1500);
-      } else {
-        if (!isShutdownStarted()) {
-          activeContext.startFileWatcher();
-        }
-      }
-
-      if (!isShutdownStarted()) {
-        scheduleStartupTask(() => void updaterService.checkForUpdates(), 3000);
-        updaterService.startPeriodicCheck(60 * 60 * 1000);
-      }
-
-      scheduleStartupTask(
-        () => {
-          void getTeamFsWorkerClient()
-            .prewarm()
-            .catch((error: unknown) =>
-              logger.debug(
-                `[startup] team-fs-worker prewarm skipped: ${
-                  error instanceof Error ? error.message : String(error)
-                }`
-              )
-            );
-          void getTeamDataWorkerClient()
-            .prewarm()
-            .catch((error: unknown) =>
-              logger.debug(
-                `[startup] team-data-worker prewarm skipped: ${
-                  error instanceof Error ? error.message : String(error)
-                }`
-              )
-            );
-        },
-        process.platform === 'win32' ? 2500 : 1000
-      );
-
-      // Defer non-critical startup work to avoid thread pool contention.
-      // The window is now visible and responsive; these run in the background.
-      scheduleStartupTask(() => {
-        void teamProvisioningService.warmup();
-        teamDataService.startProcessHealthPolling();
-        void schedulerService?.start();
-      }, 5000);
+      rendererDidFinishLoad = true;
+      runPostRendererStartupTasks();
     }
   });
 
@@ -2037,34 +2206,16 @@ function createWindow(): void {
       return;
     }
     markRendererUnavailable(mainWindow);
+    rendererDidFinishLoad = false;
+    fileWatcherStartupStarted = false;
     branchStatusService?.resetAllTracking();
-    const activeContext = contextRegistry.getActive();
-    activeContext?.stopFileWatcher();
+    contextRegistry?.getActive()?.stopFileWatcher();
     if (mainWindow) {
       scheduleRendererRecovery(mainWindow);
     }
   });
 
-  // Set main window reference for notification manager and updater
-  if (notificationManager) {
-    notificationManager.setMainWindow(mainWindow);
-  }
-  if (updaterService) {
-    updaterService.setMainWindow(mainWindow);
-  }
-  if (cliInstallerService) {
-    cliInstallerService.setMainWindow(mainWindow);
-  }
-  setTmuxMainWindow(mainWindow);
-  if (ptyTerminalService) {
-    ptyTerminalService.setMainWindow(mainWindow);
-  }
-  if (teamProvisioningService) {
-    teamProvisioningService.setMainWindow(mainWindow);
-  }
-  codexAccountFeature?.setMainWindow(mainWindow);
-  setEditorMainWindow(mainWindow);
-  setReviewMainWindow(mainWindow);
+  attachMainWindowToServices();
 
   logger.info('Main window created');
 }
@@ -2074,18 +2225,14 @@ function createWindow(): void {
  */
 void app.whenReady().then(async () => {
   logger.info('App ready, initializing...');
-
-  // Pre-warm interactive shell env cache (non-blocking).
-  // On macOS, Finder-launched apps get a minimal PATH. This resolves the user's
-  // full shell PATH (nvm, homebrew, .local/bin, etc.) in the background so that
-  // CliInstallerService.getStatus() and other services get cached results instantly.
-  void resolveInteractiveShellEnv();
+  registerAppStartupHandlers();
 
   try {
-    // Initialize services first
-    await initializeServices();
+    publishStartupStatus({
+      phase: 'electron-ready',
+      message: 'Opening window...',
+    });
 
-    // Apply configuration settings
     const config = configManager.getConfig();
 
     // Sync Sentry telemetry opt-in flag from persisted config
@@ -2109,8 +2256,18 @@ void app.whenReady().then(async () => {
       // so we avoid runtime setIcon calls that can fail and block startup.
     }
 
-    // Then create window
     createWindow();
+
+    await initializeServices();
+    servicesReady = true;
+    attachMainWindowToServices();
+    publishStartupStatus({
+      phase: 'ready',
+      message: 'Ready',
+      ready: true,
+      error: null,
+    });
+    runPostRendererStartupTasks();
 
     // Listen for notification click events
     notificationManager.on('notification-clicked', (_error) => {
@@ -2124,6 +2281,12 @@ void app.whenReady().then(async () => {
     });
   } catch (error) {
     logger.error('Startup initialization failed:', error);
+    publishStartupStatus({
+      phase: 'failed',
+      message: 'Startup failed',
+      ready: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
     if (!mainWindow) {
       createWindow();
     }

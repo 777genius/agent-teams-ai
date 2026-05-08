@@ -13734,7 +13734,7 @@ describe('TeamProvisioningService', () => {
       runtimeDiagnosticSeverity: 'warning',
     });
     expect(result.statuses.jack?.runtimeDiagnostic).toContain(
-      'Bootstrap transport reached bootstrap submit rejected'
+      'Bootstrap prompt has not been submitted yet. Last transport stage: bootstrap submit rejected'
     );
   });
 

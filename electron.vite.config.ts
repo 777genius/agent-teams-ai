@@ -132,6 +132,7 @@ export default defineConfig({
     }
   },
   renderer: {
+    cacheDir: resolve(__dirname, 'node_modules/.vite/electron-renderer'),
     optimizeDeps: {
       include: ['@codemirror/language-data'],
       exclude: ['@claude-teams/agent-graph']

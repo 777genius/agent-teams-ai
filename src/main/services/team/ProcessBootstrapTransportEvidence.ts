@@ -203,15 +203,27 @@ export function summarizeProcessBootstrapTransportEvents(
 export function buildProcessBootstrapPendingDiagnostic(
   summary: ProcessBootstrapTransportSummary
 ): string {
+  if (summary.submitted) {
+    return summary.lastStage
+      ? `Bootstrap prompt was submitted; waiting for bootstrap confirmation. Last transport stage: ${summary.lastStage}.`
+      : 'Bootstrap prompt was submitted; waiting for bootstrap confirmation.';
+  }
+
   return summary.lastStage
-    ? `Bootstrap transport reached ${summary.lastStage}; waiting for bootstrap confirmation.`
-    : 'Bootstrap transport is waiting for bootstrap confirmation.';
+    ? `Bootstrap prompt has not been submitted yet. Last transport stage: ${summary.lastStage}.`
+    : 'Bootstrap prompt has not been submitted yet.';
 }
 
 export function buildProcessBootstrapTimeoutDiagnostic(
   summary: ProcessBootstrapTransportSummary
 ): string {
+  if (summary.submitted) {
+    return summary.lastStage
+      ? `Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before timeout. Last transport stage: ${summary.lastStage}`
+      : 'Bootstrap prompt was submitted, but teammate did not bootstrap-confirm before timeout.';
+  }
+
   return summary.lastStage
-    ? `Teammate was registered but did not bootstrap-confirm before timeout. Last transport stage: ${summary.lastStage}`
-    : 'Teammate was registered but did not bootstrap-confirm before timeout.';
+    ? `Bootstrap prompt was not submitted before timeout. Last transport stage: ${summary.lastStage}`
+    : 'Bootstrap prompt was not submitted before timeout.';
 }

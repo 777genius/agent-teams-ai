@@ -80,7 +80,16 @@ export interface TeamGraphData extends TeamViewSnapshot {
 function toGraphLaunchVisualState(
   visualState: ReturnType<typeof buildMemberLaunchPresentation>['launchVisualState'] | undefined
 ): GraphNode['launchVisualState'] {
-  return visualState === 'bootstrap_stalled' ? 'runtime_pending' : (visualState ?? undefined);
+  if (!visualState) {
+    return undefined;
+  }
+  if (visualState === 'bootstrap_stalled') {
+    return 'runtime_pending';
+  }
+  if (visualState === 'starting_stale') {
+    return 'spawning';
+  }
+  return visualState;
 }
 
 export class TeamGraphAdapter {

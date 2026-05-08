@@ -20,6 +20,7 @@ import {
   buildMemberLaunchDiagnosticsPayload,
   hasMemberLaunchDiagnosticsDetails,
   hasMemberLaunchDiagnosticsError,
+  normalizeMemberLaunchFailureReason,
 } from '@renderer/utils/memberLaunchDiagnostics';
 import { getRuntimeMemorySourceLabel } from '@renderer/utils/memberRuntimeSummary';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -97,15 +98,6 @@ function splitRuntimeSummaryMemory(runtimeSummary: string | undefined): {
   };
 }
 
-function normalizeLaunchFailureReason(value: string | undefined): string | null {
-  const normalized = value
-    ?.replace(/\s+/g, ' ')
-    .trim()
-    .replace(/^Latest assistant message\s+\S+\s+failed with APIError\s*[-:]\s*/i, '')
-    .replace(/^APIError\s*[-:]\s*/i, '');
-  return normalized && normalized.length > 0 ? normalized : null;
-}
-
 function getLaunchFailureLinkLabel(url: string): string {
   try {
     const parsed = new URL(url);
@@ -180,6 +172,8 @@ export const MemberCard = memo(function MemberCard({
     spawnRuntimeAlive,
     spawnBootstrapConfirmed: spawnEntry?.bootstrapConfirmed,
     spawnBootstrapStalled: spawnEntry?.bootstrapStalled,
+    spawnFirstSpawnAcceptedAt: spawnEntry?.firstSpawnAcceptedAt,
+    spawnUpdatedAt: spawnEntry?.updatedAt,
     runtimeEntry,
     runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
@@ -197,6 +191,7 @@ export const MemberCard = memo(function MemberCard({
   const launchStatusLabel = launchPresentation.launchStatusLabel;
   const displayPresenceLabel =
     launchVisualState === 'queued' ||
+    launchVisualState === 'starting_stale' ||
     launchVisualState === 'bootstrap_stalled' ||
     launchVisualState === 'runtime_pending' ||
     launchVisualState === 'permission_pending' ||
@@ -243,6 +238,7 @@ export const MemberCard = memo(function MemberCard({
     (presenceLabel === 'starting' ||
       presenceLabel === 'connecting' ||
       launchVisualState === 'queued' ||
+      launchVisualState === 'starting_stale' ||
       launchVisualState === 'runtime_pending' ||
       launchVisualState === 'shell_only' ||
       launchVisualState === 'runtime_candidate' ||
@@ -289,7 +285,7 @@ export const MemberCard = memo(function MemberCard({
     spawnEntry?.runtimeDiagnostic ??
     spawnEntry?.error;
   const launchFailureReason = showFailedLaunchBadge
-    ? normalizeLaunchFailureReason(rawLaunchFailureReason)
+    ? normalizeMemberLaunchFailureReason(rawLaunchFailureReason)
     : null;
   const hasLiveLaunchControls =
     isTeamAlive === true || isTeamProvisioning === true || isLaunchSettling === true;
@@ -523,10 +519,17 @@ export const MemberCard = memo(function MemberCard({
               className="flex shrink-0 items-center gap-1"
               title={runtimeEntry?.runtimeDiagnostic}
             >
-              <SyncedLoader2
-                className="size-3.5 shrink-0 text-[var(--color-text-muted)]"
-                aria-label={launchBadgeLabel}
-              />
+              {launchVisualState === 'starting_stale' ? (
+                <AlertTriangle
+                  className="size-3.5 shrink-0 text-amber-400"
+                  aria-label={launchBadgeLabel}
+                />
+              ) : (
+                <SyncedLoader2
+                  className="size-3.5 shrink-0 text-[var(--color-text-muted)]"
+                  aria-label={launchBadgeLabel}
+                />
+              )}
               <Badge
                 variant="secondary"
                 className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"

@@ -40,6 +40,8 @@ interface MemberDetailHeaderProps {
   spawnRuntimeAlive?: boolean;
   spawnBootstrapConfirmed?: boolean;
   spawnBootstrapStalled?: boolean;
+  spawnFirstSpawnAcceptedAt?: string;
+  spawnUpdatedAt?: string;
   isLaunchSettling?: boolean;
   onUpdateRole?: (newRole: string | undefined) => Promise<void> | void;
   updatingRole?: boolean;
@@ -58,6 +60,8 @@ export const MemberDetailHeader = ({
   spawnRuntimeAlive,
   spawnBootstrapConfirmed,
   spawnBootstrapStalled,
+  spawnFirstSpawnAcceptedAt,
+  spawnUpdatedAt,
   isLaunchSettling,
   onUpdateRole,
   updatingRole,
@@ -85,6 +89,8 @@ export const MemberDetailHeader = ({
     spawnRuntimeAlive,
     spawnBootstrapConfirmed,
     spawnBootstrapStalled,
+    spawnFirstSpawnAcceptedAt,
+    spawnUpdatedAt,
     runtimeEntry,
     runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
@@ -102,7 +108,8 @@ export const MemberDetailHeader = ({
   const badgeLabel =
     runtimeAdvisoryTone === 'error' && runtimeAdvisoryLabel
       ? runtimeAdvisoryLabel
-      : launchVisualState === 'bootstrap_stalled' ||
+      : launchVisualState === 'starting_stale' ||
+          launchVisualState === 'bootstrap_stalled' ||
           launchVisualState === 'runtime_pending' ||
           launchVisualState === 'permission_pending' ||
           launchVisualState === 'shell_only' ||

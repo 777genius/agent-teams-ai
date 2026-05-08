@@ -21,7 +21,7 @@ import {
 } from '../../../src/main/utils/electronUserDataMigration';
 
 class FakeElectronApp implements ElectronUserDataMigrationApp {
-  setPathCalls: Array<{ name: string; value: string }> = [];
+  setPathCalls: { name: string; value: string }[] = [];
 
   constructor(private userDataPath: string) {}
 
@@ -74,9 +74,9 @@ describe('electron userData migration', () => {
     const parentPath = path.dirname(currentPath);
 
     expect(getLegacyElectronUserDataCandidates(currentPath)).toEqual([
+      path.join(parentPath, 'agent-teams-ai'),
       path.join(parentPath, 'Claude Agent Teams UI'),
       path.join(parentPath, 'claude-agent-teams-ui'),
-      path.join(parentPath, 'agent-teams-ai'),
       path.join(parentPath, 'claude-devtools'),
       path.join(parentPath, 'claude-code-context'),
     ]);
@@ -91,6 +91,34 @@ describe('electron userData migration', () => {
     writeFile(legacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
 
     const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath,
+      legacyPath,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-reused',
+    });
+    expect(app.setPathCalls).toEqual([
+      { name: 'userData', value: legacyPath },
+      { name: 'sessionData', value: legacyPath },
+    ]);
+    expect(fs.existsSync(currentPath)).toBe(false);
+  });
+
+  it('does not invoke the copy migration in the default startup strategy', () => {
+    const root = createTempRoot();
+    const legacyPath = path.join(root, 'claude-agent-teams-ui');
+    const currentPath = path.join(root, 'agent-teams-ai');
+    const app = new FakeElectronApp(currentPath);
+
+    writeFile(legacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
+
+    const result = migrateElectronUserDataDirectory(app, {
+      copyDirectory: () => {
+        throw new Error('copy should not run during default startup');
+      },
+    });
 
     expect(result).toMatchObject({
       currentPath,
@@ -130,6 +158,137 @@ describe('electron userData migration', () => {
       { name: 'userData', value: legacyPath },
       { name: 'sessionData', value: legacyPath },
     ]);
+  });
+
+  it('does not treat Electron-generated shell files as populated new userData', () => {
+    const root = createTempRoot();
+    const legacyPath = path.join(root, 'claude-agent-teams-ui');
+    const currentPath = path.join(root, 'agent-teams-ai');
+    const app = new FakeElectronApp(currentPath);
+
+    writeFile(currentPath, 'Preferences', '{}');
+    writeFile(currentPath, 'Cookies', 'sqlite bytes');
+    writeFile(currentPath, 'DIPS', 'tracking state');
+    writeFile(currentPath, 'WebStorage/QuotaManager', 'quota');
+    writeFile(currentPath, '.updaterId', 'updater');
+    writeFile(legacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
+
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath,
+      legacyPath,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-reused',
+    });
+    expect(app.setPathCalls).toEqual([
+      { name: 'userData', value: legacyPath },
+      { name: 'sessionData', value: legacyPath },
+    ]);
+  });
+
+  it('does not treat regenerated runtime-only folders as completed migration evidence', () => {
+    const root = createTempRoot();
+    const legacyPath = path.join(root, 'claude-agent-teams-ui');
+    const currentPath = path.join(root, 'agent-teams-ai');
+    const app = new FakeElectronApp(currentPath);
+
+    writeFile(currentPath, 'opencode-bridge/production-e2e-evidence.json', '{}');
+    writeFile(currentPath, 'mcp-server/1.3.0/index.js', 'console.log("generated")');
+    writeFile(currentPath, 'mcp-configs/agent-teams-mcp-generated.json', '{}');
+    writeFile(currentPath, 'Local Storage/leveldb/000003.log', 'renderer local storage');
+    writeFile(currentPath, 'IndexedDB/http_localhost_5173.indexeddb.leveldb/000003.log', 'idb');
+    writeFile(currentPath, 'Partitions/dev/Local Storage/leveldb/000003.log', 'partition state');
+    writeFile(legacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
+
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath,
+      legacyPath,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-reused',
+    });
+    expect(app.setPathCalls).toEqual([
+      { name: 'userData', value: legacyPath },
+      { name: 'sessionData', value: legacyPath },
+    ]);
+  });
+
+  it('keeps a populated new userData directory after a completed migration', () => {
+    const root = createTempRoot();
+    const legacyPath = path.join(root, 'claude-agent-teams-ui');
+    const currentPath = path.join(root, 'agent-teams-ai');
+    const app = new FakeElectronApp(currentPath);
+
+    writeFile(legacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
+    writeFile(currentPath, 'data/attachments/team-a/current.txt', 'current');
+    writeFile(currentPath, 'backups/registry.json', '{}');
+
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath,
+      legacyPath: null,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'current-populated',
+    });
+    expect(app.setPathCalls).toEqual([]);
+  });
+
+  it('prefers an already populated agent-teams-ai directory over older legacy data', () => {
+    const root = createTempRoot();
+    const completedNewPath = path.join(root, 'agent-teams-ai');
+    const olderLegacyPath = path.join(root, 'claude-agent-teams-ui');
+    const currentPath = path.join(root, 'Agent Teams UI');
+    const app = new FakeElectronApp(currentPath);
+
+    writeFile(currentPath, 'opencode-bridge/production-e2e-evidence.json', '{}');
+    writeFile(completedNewPath, 'data/attachments/team-a/current.txt', 'current');
+    writeFile(olderLegacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
+
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath,
+      legacyPath: completedNewPath,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-reused',
+    });
+    expect(app.setPathCalls).toEqual([
+      { name: 'userData', value: completedNewPath },
+      { name: 'sessionData', value: completedNewPath },
+    ]);
+  });
+
+  it('uses populated agent-teams-ai when both current product-name and new package-name paths exist', () => {
+    const root = createTempRoot();
+    const completedNewPath = path.join(root, 'agent-teams-ai');
+    const currentProductPath = path.join(root, 'Agent Teams UI');
+    const app = new FakeElectronApp(currentProductPath);
+
+    writeFile(currentProductPath, 'data/attachments/team-a/old.txt', 'old');
+    writeFile(completedNewPath, 'data/attachments/team-a/current.txt', 'current');
+
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath: currentProductPath,
+      legacyPath: completedNewPath,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-reused',
+    });
+    expect(app.setPathCalls).toEqual([
+      { name: 'userData', value: completedNewPath },
+      { name: 'sessionData', value: completedNewPath },
+    ]);
+    expect(readFile(completedNewPath, 'data/attachments/team-a/current.txt')).toBe('current');
+    expect(readFile(currentProductPath, 'data/attachments/team-a/old.txt')).toBe('old');
   });
 
   it('copies legacy app-owned state and durable renderer storage without Chromium caches', async () => {
@@ -383,12 +542,12 @@ describe('electron userData migration', () => {
     });
   });
 
-  it('uses the lowercase package-name legacy directory when product-name legacy data is absent', () => {
+  it('uses the lowercase package-name legacy directory when product-name durable data is absent', () => {
     const root = createTempRoot();
     const legacyPath = path.join(root, 'claude-agent-teams-ui');
     const currentPath = path.join(root, 'Agent Teams UI');
 
-    writeFile(legacyPath, 'mcp-configs/legacy.json', '{}');
+    writeFile(legacyPath, 'data/attachments/team-a/legacy.txt', 'legacy');
 
     const app = new FakeElectronApp(currentPath);
     const result = migrateElectronUserDataDirectory(app);
@@ -404,7 +563,31 @@ describe('electron userData migration', () => {
       { name: 'userData', value: legacyPath },
       { name: 'sessionData', value: legacyPath },
     ]);
-    expect(fs.existsSync(path.join(currentPath, 'mcp-configs/legacy.json'))).toBe(false);
+    expect(fs.existsSync(path.join(currentPath, 'data/attachments/team-a/legacy.txt'))).toBe(
+      false
+    );
+  });
+
+  it('does not reuse non-durable legacy directories when no durable user data exists', () => {
+    const root = createTempRoot();
+    const legacyPath = path.join(root, 'claude-agent-teams-ui');
+    const currentPath = path.join(root, 'Agent Teams UI');
+
+    writeFile(legacyPath, 'mcp-configs/legacy.json', '{}');
+    writeFile(legacyPath, 'opencode-bridge/command-ledger.json', '{"commands":[]}');
+    writeFile(legacyPath, 'Local Storage/leveldb/000003.log', 'renderer local storage');
+
+    const app = new FakeElectronApp(currentPath);
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath,
+      legacyPath: null,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-missing',
+    });
+    expect(app.setPathCalls).toEqual([]);
   });
 
   it('prefers populated older legacy data over an empty newer legacy directory', () => {

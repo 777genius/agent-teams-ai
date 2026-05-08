@@ -135,7 +135,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       name: draft.name,
       role: draft.customRole || undefined,
       workflow: draft.workflow,
-      providerId: draft.providerId as 'anthropic' | 'codex' | 'gemini' | undefined,
+      providerId: draft.providerId as 'anthropic' | 'codex' | 'gemini' | 'opencode' | undefined,
       providerBackendId: draft.providerBackendId as 'codex-native' | undefined,
       model: draft.model,
       effort: draft.effort as 'low' | 'medium' | 'high' | undefined,
@@ -170,8 +170,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       fastMode: member.fastMode,
     })),
   filterEditableMemberInputs: (members: unknown) => members,
-  normalizeLeadProviderForMode: (providerId: unknown) =>
-    providerId === 'opencode' ? 'anthropic' : providerId,
+  normalizeLeadProviderForMode: (providerId: unknown) => providerId,
   normalizeMemberDraftForProviderMode: (member: unknown) => member,
   normalizeProviderForMode: (providerId: unknown) => providerId,
   validateMemberNameInline: () => null,
@@ -385,9 +384,9 @@ vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   computeEffectiveTeamModel: (model: string) => model || undefined,
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
-  OPENCODE_TEAM_LEAD_DISABLED_BADGE_LABEL: 'side lane',
-  OPENCODE_TEAM_LEAD_DISABLED_REASON:
-    'OpenCode is teammate-only in this phase. Use Anthropic, Codex, or Gemini as the team lead, then add OpenCode as a teammate.',
+  OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL: 'team only',
+  OPENCODE_ONE_SHOT_DISABLED_REASON:
+    'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.',
 }));
 
 vi.mock('@renderer/components/team/dialogs/EffortLevelSelector', () => ({
@@ -745,7 +744,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('normalizes saved OpenCode lead hydration away from the unsupported lead path', async () => {
+  it('launches a saved pure OpenCode team with OpenCode as the lead provider', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
@@ -769,7 +768,7 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any;
-    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'opencode',
       model: 'opencode/minimax-m2.5-free',
@@ -777,7 +776,8 @@ describe('LaunchTeamDialog', () => {
         {
           name: 'alice',
           role: 'Reviewer',
-          model: 'gemini-3-pro-preview',
+          providerId: 'opencode',
+          model: 'opencode/minimax-m2.5-free',
         },
       ],
     } as any);
@@ -812,7 +812,7 @@ describe('LaunchTeamDialog', () => {
     const opencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
-    expect(opencodePrepareCalls).toHaveLength(0);
+    expect(opencodePrepareCalls.length).toBeGreaterThan(0);
 
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
@@ -831,7 +831,8 @@ describe('LaunchTeamDialog', () => {
         {
           name: 'alice',
           role: 'Reviewer',
-          model: '',
+          providerId: 'opencode',
+          model: 'opencode/minimax-m2.5-free',
         },
       ],
     });
@@ -840,9 +841,217 @@ describe('LaunchTeamDialog', () => {
       onLaunch.mock.calls as Array<[{ providerId?: string; model?: string }]>
     )[0]?.[0] as { providerId?: string; model?: string } | undefined;
     expect(launchRequest).toMatchObject({
-      providerId: 'anthropic',
+      providerId: 'opencode',
+      model: 'opencode/minimax-m2.5-free',
     });
-    expect(launchRequest?.model).not.toBe('opencode/minimax-m2.5-free');
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('blocks OpenCode lead launch until a model is selected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['opencode/minimax-m2.5-free'],
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      providerId: 'opencode',
+      model: '',
+      members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
+    } as any);
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(host.textContent).toContain('OpenCode lead requires a selected model.');
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(submitButton?.hasAttribute('disabled')).toBe(true);
+    expect(onLaunch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('blocks OpenCode lead launch without an OpenCode teammate', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['opencode/minimax-m2.5-free'],
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      providerId: 'opencode',
+      model: 'opencode/minimax-m2.5-free',
+      members: [],
+    } as any);
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(host.textContent).toContain('OpenCode lead requires at least one OpenCode teammate.');
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(submitButton?.hasAttribute('disabled')).toBe(true);
+    expect(onLaunch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps OpenCode lead mixed-provider launches blocked', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['opencode/minimax-m2.5-free'],
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+        {
+          providerId: 'codex',
+          supported: true,
+          authenticated: true,
+          authMethod: 'codex_api_key',
+          verificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          selectedBackendId: 'codex-native',
+          resolvedBackendId: 'codex-native',
+          models: ['gpt-5.4'],
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      providerId: 'opencode',
+      model: 'opencode/minimax-m2.5-free',
+      members: [{ name: 'alice', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.4' }],
+    } as any);
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(host.textContent).toContain('OpenCode cannot lead mixed-provider teams');
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(submitButton?.hasAttribute('disabled')).toBe(true);
+    expect(onLaunch).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

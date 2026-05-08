@@ -254,7 +254,7 @@ export function analyzeTeammateRuntimeCompatibility({
     details.push(
       names
         ? `OpenCode-led mixed team: ${names} use a non-OpenCode provider.`
-        : 'OpenCode-led mixed teams are not supported in this phase.'
+        : 'Mixed teams cannot use OpenCode as the lead in this phase.'
     );
   }
   if (hasCodexNative) {
@@ -317,7 +317,7 @@ export function analyzeTeammateRuntimeCompatibility({
     message: checking
       ? 'Custom CLI args request tmux teammates. The app is checking whether tmux is available.'
       : hasOpenCodeLeadMixedUnsupported
-        ? 'OpenCode teammates can run as secondary runtime lanes under an Anthropic, Codex, or Gemini lead, but OpenCode-led mixed teams are not supported in this phase.'
+        ? 'OpenCode can be added as a teammate under an Anthropic, Codex, or Gemini lead, but mixed teams cannot use OpenCode as the lead in this phase.'
         : hasExplicitInProcess
           ? 'Some teammates require separate processes. Remove --teammate-mode in-process so the app can use native process transport.'
           : 'Custom CLI args force --teammate-mode tmux, but tmux is not ready. Remove that arg to use native process transport on Windows, or install tmux/WSL tmux.',

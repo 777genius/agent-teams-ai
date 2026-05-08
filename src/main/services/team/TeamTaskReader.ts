@@ -15,6 +15,7 @@ import type {
   TaskComment,
   TaskHistoryEvent,
   TaskRef,
+  TaskReviewInterval,
   TaskWorkInterval,
   TeamTask,
 } from '@shared/types';
@@ -194,6 +195,25 @@ export class TeamTaskReader {
                 completedAt: i.completedAt,
               }))
           : undefined;
+        const reviewIntervals: TaskReviewInterval[] | undefined = Array.isArray(
+          parsed.reviewIntervals
+        )
+          ? (parsed.reviewIntervals as unknown[])
+              .filter(
+                (i): i is { reviewer: string; startedAt: string; completedAt?: string } =>
+                  Boolean(i) &&
+                  typeof i === 'object' &&
+                  typeof (i as Record<string, unknown>).reviewer === 'string' &&
+                  typeof (i as Record<string, unknown>).startedAt === 'string' &&
+                  ((i as Record<string, unknown>).completedAt === undefined ||
+                    typeof (i as Record<string, unknown>).completedAt === 'string')
+              )
+              .map((i) => ({
+                reviewer: i.reviewer,
+                startedAt: i.startedAt,
+                completedAt: i.completedAt,
+              }))
+          : undefined;
         const status = (['pending', 'in_progress', 'completed', 'deleted'] as const).includes(
           parsed.status as TeamTask['status']
         )
@@ -223,6 +243,7 @@ export class TeamTaskReader {
           createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
           status,
           workIntervals,
+          reviewIntervals,
           historyEvents,
           blocks: Array.isArray(parsed.blocks)
             ? (parsed.blocks as unknown[]).filter((id): id is string => typeof id === 'string')
