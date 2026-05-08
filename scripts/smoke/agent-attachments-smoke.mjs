@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -9,6 +9,28 @@ const PROMPT = 'Look at the attached image. Reply with exactly one word: red, gr
 const TIMEOUT_MS = 90_000;
 
 const CASES = [
+  {
+    id: 'claude-subscription-streaming',
+    runtime: 'claude',
+    model: process.env.CLAUDE_ATTACHMENTS_SMOKE_CLAUDE_MODEL || 'claude-haiku-4-5',
+    command: async (imagePath, cwd, testCase) => ({
+      bin: 'claude',
+      args: [
+        '-p',
+        '--input-format',
+        'stream-json',
+        '--output-format',
+        'stream-json',
+        '--verbose',
+        '--no-session-persistence',
+        '--model',
+        testCase.model,
+      ],
+      cwd,
+      stdin: await buildClaudeStreamJsonPrompt(imagePath),
+    }),
+    expected: /red/i,
+  },
   {
     id: 'codex-native-gpt-5-4-mini',
     runtime: 'codex',
@@ -174,6 +196,29 @@ function createRedCardPng(width = 320, height = 240) {
   ]);
 }
 
+async function buildClaudeStreamJsonPrompt(imagePath) {
+  const data = await readFile(imagePath, 'base64');
+  return `${JSON.stringify({
+    type: 'user',
+    message: {
+      role: 'user',
+      content: [
+        { type: 'text', text: PROMPT },
+        {
+          type: 'image',
+          source: {
+            // Claude stream-json expects image bytes inside a structured image block.
+            // Do not replace this with base64-in-text fallback because that tests a different path.
+            type: 'base64',
+            media_type: 'image/png',
+            data,
+          },
+        },
+      ],
+    },
+  })}\n`;
+}
+
 function parseArgs(argv) {
   const selected = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -193,6 +238,7 @@ function runCommand(command) {
     const child = spawn(command.bin, command.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: process.env,
+      cwd: command.cwd,
     });
     let stdout = '';
     let stderr = '';
@@ -256,7 +302,7 @@ async function main() {
       continue;
     }
 
-    const command = testCase.command(imagePath, cwd);
+    const command = await testCase.command(imagePath, cwd, testCase);
     const result = await runCommand(command);
     const output = `${result.stdout}\n${result.stderr}`;
     const matched = testCase.expected ? testCase.expected.test(output) : false;
