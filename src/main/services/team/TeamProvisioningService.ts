@@ -1,7 +1,9 @@
 import {
   buildClaudeAttachmentDeliveryParts,
   buildCodexNativeAttachmentDeliveryParts,
+  buildOpenCodeAttachmentDeliveryParts,
   type CodexNativeImageArgPart,
+  type OpenCodeFilePart,
 } from '@features/agent-attachments/main';
 import {
   resolveAnthropicFastMode,
@@ -8557,14 +8559,6 @@ export class TeamProvisioningService {
             }),
             now,
           });
-          if (message.attachments?.length) {
-            await ledger.markFailedTerminal({
-              id: record.id,
-              reason: 'opencode_attachments_not_supported_for_secondary_runtime',
-              failedAt: now,
-            });
-            continue;
-          }
           const recovered = await ledger.markAcceptanceUnknown({
             id: record.id,
             reason: 'opencode_prompt_delivery_ledger_rebuilt_from_unread_inbox',
@@ -8599,6 +8593,7 @@ export class TeamProvisioningService {
       actionMode?: AgentActionMode;
       messageKind?: InboxMessage['messageKind'];
       taskRefs?: TaskRef[];
+      attachments?: AttachmentPayload[];
       source?: OpenCodeMemberInboxRelayOptions['source'];
       inboxTimestamp?: string;
     }
@@ -8787,6 +8782,15 @@ export class TeamProvisioningService {
       }
     }
 
+    const openCodeFileParts: OpenCodeFilePart[] =
+      input.attachments?.length && laneIdentity.laneOwnerProviderId === 'opencode'
+        ? buildOpenCodeAttachmentDeliveryParts({
+            text: input.text,
+            model: metaMember?.model ?? configMember?.model ?? '',
+            attachments: input.attachments,
+          }).fileParts
+        : [];
+
     if (!this.isOpenCodePromptDeliveryWatchdogEnabled()) {
       const result = await adapter.sendMessageToMember({
         ...(runtimeRunId ? { runId: runtimeRunId } : {}),
@@ -8796,6 +8800,7 @@ export class TeamProvisioningService {
         cwd,
         text: input.text,
         messageId: input.messageId,
+        fileParts: openCodeFileParts,
         replyRecipient: input.replyRecipient,
         actionMode: input.actionMode,
         messageKind: input.messageKind,
@@ -8912,6 +8917,7 @@ export class TeamProvisioningService {
             replyRecipient: input.replyRecipient ?? 'user',
             actionMode: input.actionMode ?? null,
             taskRefs: input.taskRefs ?? [],
+            attachments: input.attachments,
             source: input.source,
           }),
           now,
@@ -9191,6 +9197,7 @@ export class TeamProvisioningService {
       cwd,
       text: deliveryText,
       messageId: input.messageId,
+      fileParts: openCodeFileParts,
       replyRecipient: input.replyRecipient,
       actionMode: input.actionMode,
       messageKind: input.messageKind,
@@ -20202,54 +20209,6 @@ export class TeamProvisioningService {
           existingRecord?.taskRefs ?? options.deliveryMetadata?.taskRefs ?? message.taskRefs ?? [];
         const effectiveSource = existingRecord?.source ?? options.source ?? 'watcher';
         result.attempted += 1;
-        if (message.attachments?.length) {
-          const reason = 'opencode_attachments_not_supported_for_secondary_runtime';
-          const now = nowIso();
-          const record = await promptLedger.ensurePending({
-            teamName,
-            memberName: memberIdentity.canonicalMemberName,
-            laneId: memberIdentity.laneId,
-            runId: await this.resolveCurrentOpenCodeRuntimeRunId(teamName, memberIdentity.laneId),
-            inboxMessageId: message.messageId,
-            inboxTimestamp: message.timestamp,
-            source: effectiveSource,
-            replyRecipient: effectiveReplyRecipient,
-            actionMode: effectiveActionMode,
-            messageKind: message.messageKind ?? null,
-            taskRefs: effectiveTaskRefs,
-            payloadHash: hashOpenCodePromptDeliveryPayload({
-              text: message.text,
-              replyRecipient: effectiveReplyRecipient,
-              actionMode: effectiveActionMode,
-              taskRefs: effectiveTaskRefs,
-              attachments: message.attachments,
-              source: effectiveSource,
-            }),
-            now,
-          });
-          const failed = await promptLedger.markFailedTerminal({
-            id: record.id,
-            reason,
-            failedAt: now,
-          });
-          this.logOpenCodePromptDeliveryEvent('opencode_prompt_delivery_terminal_failure', failed);
-          const diagnostics = failed.diagnostics.length ? failed.diagnostics : [reason];
-          result.failed += 1;
-          result.lastDelivery = {
-            delivered: false,
-            accepted: false,
-            ledgerStatus: failed.status,
-            ledgerRecordId: failed.id,
-            laneId: memberIdentity.laneId,
-            reason,
-            diagnostics,
-          };
-          result.diagnostics = [...(result.diagnostics ?? []), ...diagnostics];
-          logger.warn(
-            `[${teamName}] OpenCode inbox relay refused attachment-only unsupported delivery for ${memberName}/${message.messageId}: ${reason}`
-          );
-          continue;
-        }
         const delivery = await this.deliverOpenCodeMemberMessage(teamName, {
           memberName,
           text: message.text,
@@ -20258,6 +20217,7 @@ export class TeamProvisioningService {
           actionMode: effectiveActionMode ?? undefined,
           messageKind: message.messageKind,
           taskRefs: effectiveTaskRefs,
+          attachments: message.attachments,
           source: effectiveSource,
           inboxTimestamp: message.timestamp,
         });
