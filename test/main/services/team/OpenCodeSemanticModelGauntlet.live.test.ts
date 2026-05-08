@@ -911,6 +911,10 @@ async function runGauntletOnce(input: {
       score >= 90 && !isHardProtocolFailure(stages)
         ? 'none'
         : classifyGauntletFailure({ diagnostics, stages });
+    if (failureCategory !== 'none' && process.env.OPENCODE_E2E_KEEP_FAILED === '1') {
+      keepTempDir = true;
+      diagnostics.push(`tempDir=${tempDir}`);
+    }
     return {
       runIndex: input.runIndex,
       passed: failureCategory === 'none',
