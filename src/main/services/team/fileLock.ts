@@ -99,16 +99,50 @@ function releaseLock(lockPath: string): void {
   }
 }
 
+function sleepSync(ms: number): void {
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline) {
+    // Synchronous callers need the same cross-process lock as controller writes.
+  }
+}
+
+function resolveLockOptions(options: FileLockOptions): Required<FileLockOptions> {
+  return {
+    acquireTimeoutMs: options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS,
+    staleTimeoutMs: options.staleTimeoutMs ?? STALE_TIMEOUT_MS,
+    retryIntervalMs: options.retryIntervalMs ?? RETRY_INTERVAL_MS,
+  };
+}
+
+export function withFileLockSync<T>(
+  filePath: string,
+  fn: () => T,
+  options: FileLockOptions = {}
+): T {
+  const resolvedOptions = resolveLockOptions(options);
+  const lockPath = `${filePath}.lock`;
+  const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
+
+  while (!tryAcquire(lockPath, resolvedOptions)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`File lock timeout: ${filePath}`);
+    }
+    sleepSync(Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now())));
+  }
+
+  try {
+    return fn();
+  } finally {
+    releaseLock(lockPath);
+  }
+}
+
 export async function withFileLock<T>(
   filePath: string,
   fn: () => Promise<T>,
   options: FileLockOptions = {}
 ): Promise<T> {
-  const resolvedOptions = {
-    acquireTimeoutMs: options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS,
-    staleTimeoutMs: options.staleTimeoutMs ?? STALE_TIMEOUT_MS,
-    retryIntervalMs: options.retryIntervalMs ?? RETRY_INTERVAL_MS,
-  };
+  const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
 

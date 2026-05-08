@@ -237,10 +237,17 @@
         animation: splash-tagline-type 1.05s steps(28, end) 0.22s forwards;
         will-change: clip-path;
       }
-      #splash-status-row {
+      #splash-loading {
         display: flex;
         width: min(320px, 78vw);
-        margin-top: 14px;
+        margin-top: 24px;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      #splash-status-row {
+        display: flex;
+        width: 100%;
         align-items: baseline;
         justify-content: center;
         gap: 6px;
@@ -274,9 +281,8 @@
         white-space: nowrap;
       }
       #splash-hint {
-        width: min(320px, 78vw);
+        width: 100%;
         min-height: 15px;
-        margin-top: 6px;
         font-family:
           ui-sans-serif,
           system-ui,
@@ -347,7 +353,6 @@
         position: relative;
         width: min(240px, 64vw);
         height: 3px;
-        margin-top: 10px;
         overflow: hidden;
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.1);
@@ -611,12 +616,14 @@
       <div id="splash-copy">
         <div id="splash-text">Agent Teams AI</div>
         <div id="splash-tagline"><span>Get more done by doing less.</span></div>
-        <div id="splash-status-row">
-          <div id="splash-status" aria-live="polite">Preparing workspace...</div>
-          <div id="splash-elapsed">0s</div>
+        <div id="splash-loading">
+          <div id="splash-progress" aria-hidden="true"><div id="splash-progress-bar"></div></div>
+          <div id="splash-status-row">
+            <div id="splash-status" aria-live="polite">Preparing workspace...</div>
+            <div id="splash-elapsed">0s</div>
+          </div>
+          <div id="splash-hint" aria-live="polite"></div>
         </div>
-        <div id="splash-hint" aria-live="polite"></div>
-        <div id="splash-progress" aria-hidden="true"><div id="splash-progress-bar"></div></div>
         <div id="splash-timeline" aria-label="Startup steps"></div>
       </div>
     </div>
