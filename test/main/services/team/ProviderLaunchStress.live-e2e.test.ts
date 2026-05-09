@@ -404,10 +404,6 @@ function resolveRestartStressTargets(
   expectedMembers: string[]
 ): string[] {
   if (expectedMembers.length === 0) return [];
-  // Pure OpenCode launch can finish without a tracked lead run. Per-member
-  // restart for OpenCode is covered by the mixed secondary-lane scenario,
-  // where the app owns the live run and can reattach the OpenCode lane.
-  if (scenario === 'opencode') return [];
   if (scenario !== 'mixed') {
     return [expectedMembers[1] ?? expectedMembers[0]];
   }
