@@ -18,6 +18,18 @@ function isTaskChangeDiagnosticCode(value: unknown): value is TaskChangeReviewDi
   return typeof value === 'string' && TASK_CHANGE_DIAGNOSTIC_CODE_SET.has(value);
 }
 
+function isTaskChangeDiagnosticSeverity(
+  value: unknown
+): value is TaskChangeReviewDiagnostic['severity'] {
+  return value === 'info' || value === 'warning' || value === 'error';
+}
+
+function isTaskChangeDiagnosticSource(
+  value: unknown
+): value is NonNullable<TaskChangeReviewDiagnostic['source']> {
+  return value === 'ledger' || value === 'legacy' || value === 'summary' || value === 'runtime';
+}
+
 function normalizeIsoString(value: unknown): string | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
   const date = new Date(value);
@@ -47,30 +59,47 @@ function normalizeFileSummary(value: unknown): FileChangeSummary | null {
 }
 
 function normalizeReviewDiagnostic(value: unknown): TaskChangeReviewDiagnostic | null {
+  if (typeof value === 'string') {
+    const message = value.trim();
+    return message
+      ? {
+          code: 'legacy_warning',
+          severity: 'warning',
+          reviewBlocking: true,
+          message,
+          source: 'legacy',
+        }
+      : null;
+  }
+
   if (!value || typeof value !== 'object') return null;
   const candidate = value as Partial<TaskChangeReviewDiagnostic>;
-  if (
-    !isTaskChangeDiagnosticCode(candidate.code) ||
-    (candidate.severity !== 'info' &&
-      candidate.severity !== 'warning' &&
-      candidate.severity !== 'error') ||
-    typeof candidate.reviewBlocking !== 'boolean' ||
-    typeof candidate.message !== 'string'
-  ) {
+  const message = typeof candidate.message === 'string' ? candidate.message.trim() : '';
+  if (!message) {
     return null;
   }
 
+  const source = isTaskChangeDiagnosticSource(candidate.source) ? { source: candidate.source } : {};
+  if (
+    isTaskChangeDiagnosticCode(candidate.code) &&
+    isTaskChangeDiagnosticSeverity(candidate.severity) &&
+    typeof candidate.reviewBlocking === 'boolean'
+  ) {
+    return {
+      code: candidate.code,
+      severity: candidate.severity,
+      reviewBlocking: candidate.reviewBlocking,
+      message,
+      ...source,
+    };
+  }
+
   return {
-    code: candidate.code,
-    severity: candidate.severity,
-    reviewBlocking: candidate.reviewBlocking,
-    message: candidate.message,
-    ...(candidate.source === 'ledger' ||
-    candidate.source === 'legacy' ||
-    candidate.source === 'summary' ||
-    candidate.source === 'runtime'
-      ? { source: candidate.source }
-      : {}),
+    code: 'legacy_warning',
+    severity: 'warning',
+    reviewBlocking: true,
+    message,
+    ...source,
   };
 }
 

@@ -1,14 +1,30 @@
+/* eslint-disable @typescript-eslint/naming-convention -- Component mocks mirror PascalCase exports. */
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const unreadBadgeMock = vi.hoisted(() => ({
+  props: [] as { unreadCount: number; totalCount: number; pulseKey?: number }[],
+}));
+
+const unreadCommentCountMock = vi.hoisted(() => ({
+  value: 0,
+}));
 
 vi.mock('@renderer/components/team/MemberBadge', () => ({
   MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
 }));
 
 vi.mock('@renderer/components/team/UnreadCommentsBadge', () => ({
-  UnreadCommentsBadge: () => null,
+  UnreadCommentsBadge: (props: { unreadCount: number; totalCount: number; pulseKey?: number }) => {
+    unreadBadgeMock.props.push(props);
+    return React.createElement('span', {
+      className: (props.pulseKey ?? 0) > 0 ? 'kanban-comment-badge-pulse' : '',
+      'data-pulse-key': props.pulseKey ?? 0,
+      'data-testid': 'unread-comments-badge',
+    });
+  },
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
@@ -55,12 +71,14 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 }));
 
 vi.mock('@renderer/hooks/useUnreadCommentCount', () => ({
-  useUnreadCommentCount: () => 0,
+  useUnreadCommentCount: () => unreadCommentCountMock.value,
 }));
+
+/* eslint-enable @typescript-eslint/naming-convention -- Re-enable after component mocks. */
 
 import { KanbanTaskCard } from './KanbanTaskCard';
 
-import type { TeamTaskWithKanban } from '@shared/types/team';
+import type { TaskComment, TeamTaskWithKanban } from '@shared/types/team';
 
 const baseTask: TeamTaskWithKanban = {
   id: 'task-1',
@@ -81,6 +99,97 @@ const baseTask: TeamTaskWithKanban = {
 
 const noop = (): void => undefined;
 
+function createComment(id: string, author = 'teammate'): TaskComment {
+  return {
+    id,
+    author,
+    text: `Comment ${id}`,
+    createdAt: '2026-04-18T10:20:00.000Z',
+    type: 'regular',
+  };
+}
+
+function createTaskCardElement(
+  props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
+): React.ReactElement {
+  return React.createElement(KanbanTaskCard, {
+    task: baseTask,
+    teamName: 'my-team',
+    columnId: 'in_progress',
+    hasReviewers: true,
+    compact: false,
+    taskMap: new Map(),
+    memberColorMap: new Map([['alice', 'blue']]),
+    onRequestReview: noop,
+    onApprove: noop,
+    onRequestChanges: noop,
+    onMoveBackToDone: noop,
+    onStartTask: noop,
+    onCompleteTask: noop,
+    onCancelTask: noop,
+    onViewChanges: noop,
+    ...props,
+  });
+}
+
+function getLastUnreadBadgeProps(): { unreadCount: number; totalCount: number; pulseKey?: number } {
+  const props = unreadBadgeMock.props[unreadBadgeMock.props.length - 1];
+  if (!props) throw new Error('UnreadCommentsBadge was not rendered');
+  return props;
+}
+
+async function flushReact(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+async function rerenderTaskCard(
+  root: ReturnType<typeof createRoot>,
+  props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
+): Promise<void> {
+  await act(async () => {
+    root.render(createTaskCardElement(props));
+    await flushReact();
+  });
+}
+
+function createStrictTaskCardElement(
+  props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
+): React.ReactElement {
+  return React.createElement(React.StrictMode, null, createTaskCardElement(props));
+}
+
+async function renderStrictTaskCard(
+  props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
+): Promise<{ host: HTMLDivElement; root: ReturnType<typeof createRoot> }> {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+
+  await act(async () => {
+    root.render(createStrictTaskCardElement(props));
+    await flushReact();
+  });
+
+  return { host, root };
+}
+
+async function rerenderStrictTaskCard(
+  root: ReturnType<typeof createRoot>,
+  props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
+): Promise<void> {
+  await act(async () => {
+    root.render(createStrictTaskCardElement(props));
+    await flushReact();
+  });
+}
+
+afterEach(() => {
+  unreadBadgeMock.props.length = 0;
+  unreadCommentCountMock.value = 0;
+});
+
 async function renderTaskCard(
   props: Partial<React.ComponentProps<typeof KanbanTaskCard>> = {}
 ): Promise<{ host: HTMLDivElement; root: ReturnType<typeof createRoot> }> {
@@ -90,31 +199,190 @@ async function renderTaskCard(
   const root = createRoot(host);
 
   await act(async () => {
-    root.render(
-      React.createElement(KanbanTaskCard, {
-        task: baseTask,
-        teamName: 'my-team',
-        columnId: 'in_progress',
-        hasReviewers: true,
-        compact: false,
-        taskMap: new Map(),
-        memberColorMap: new Map([['alice', 'blue']]),
-        onRequestReview: noop,
-        onApprove: noop,
-        onRequestChanges: noop,
-        onMoveBackToDone: noop,
-        onStartTask: noop,
-        onCompleteTask: noop,
-        onCancelTask: noop,
-        onViewChanges: noop,
-        ...props,
-      })
-    );
-    await Promise.resolve();
+    root.render(createTaskCardElement(props));
+    await flushReact();
   });
 
   return { host, root };
 }
+
+describe('KanbanTaskCard comment badge pulse', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('does not pulse on initial render with existing comments', async () => {
+    const { host, root } = await renderTaskCard({
+      task: { ...baseTask, comments: [createComment('comment-1')] },
+    });
+
+    expect(getLastUnreadBadgeProps().pulseKey ?? 0).toBe(0);
+    expect(host.querySelector('.kanban-comment-badge-pulse')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('pulses when a new non-user comment arrives', async () => {
+    const firstComment = createComment('comment-1');
+    const { host, root } = await renderTaskCard({
+      task: { ...baseTask, comments: [firstComment] },
+    });
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [firstComment, createComment('comment-2')] },
+    });
+
+    expect(getLastUnreadBadgeProps().pulseKey).toBe(1);
+    expect(host.querySelector('.kanban-comment-badge-pulse')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('pulses when the first non-user comment arrives', async () => {
+    const { host, root } = await renderTaskCard({
+      task: { ...baseTask, comments: [] },
+    });
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [createComment('comment-1')] },
+    });
+
+    expect(getLastUnreadBadgeProps().pulseKey).toBe(1);
+    expect(host.querySelector('.kanban-comment-badge-pulse')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('does not double-pulse under React StrictMode', async () => {
+    const firstComment = createComment('comment-1');
+    const { root } = await renderStrictTaskCard({
+      task: { ...baseTask, comments: [firstComment] },
+    });
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderStrictTaskCard(root, {
+      task: { ...baseTask, comments: [firstComment, createComment('comment-2')] },
+    });
+
+    expect(getLastUnreadBadgeProps().pulseKey).toBe(1);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('restarts the pulse when another non-user comment arrives', async () => {
+    const firstComment = createComment('comment-1');
+    const secondComment = createComment('comment-2');
+    const { root } = await renderTaskCard({
+      task: { ...baseTask, comments: [firstComment] },
+    });
+
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [firstComment, secondComment] },
+    });
+    expect(getLastUnreadBadgeProps().pulseKey).toBe(1);
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderTaskCard(root, {
+      task: {
+        ...baseTask,
+        comments: [firstComment, secondComment, createComment('comment-3')],
+      },
+    });
+
+    expect(getLastUnreadBadgeProps().pulseKey).toBe(2);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('does not pulse when the new comment belongs to the user', async () => {
+    const firstComment = createComment('comment-1');
+    const { host, root } = await renderTaskCard({
+      task: { ...baseTask, comments: [firstComment] },
+    });
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [firstComment, createComment('comment-2', 'user')] },
+    });
+
+    expect(getLastUnreadBadgeProps().pulseKey ?? 0).toBe(0);
+    expect(host.querySelector('.kanban-comment-badge-pulse')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('does not pulse when only the unread count changes', async () => {
+    const taskWithComment = { ...baseTask, comments: [createComment('comment-1')] };
+    const { root } = await renderTaskCard({ task: taskWithComment });
+
+    unreadBadgeMock.props.length = 0;
+    unreadCommentCountMock.value = 1;
+    await rerenderTaskCard(root, { task: taskWithComment });
+
+    const props = getLastUnreadBadgeProps();
+    expect(props.unreadCount).toBe(1);
+    expect(props.pulseKey ?? 0).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+
+  it('does not reuse an old pulse when the card instance switches tasks', async () => {
+    const firstComment = createComment('comment-1');
+    const secondComment = createComment('comment-2');
+    const taskWithPulse = { ...baseTask, comments: [firstComment] };
+    const { root } = await renderTaskCard({ task: taskWithPulse });
+
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [firstComment, secondComment] },
+    });
+    expect(getLastUnreadBadgeProps().pulseKey).toBe(1);
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderTaskCard(root, {
+      task: {
+        ...baseTask,
+        id: 'task-2',
+        displayId: 'efgh5678',
+        comments: [createComment('task-2-comment')],
+      },
+    });
+    expect(getLastUnreadBadgeProps().pulseKey ?? 0).toBe(0);
+
+    unreadBadgeMock.props.length = 0;
+    await rerenderTaskCard(root, {
+      task: { ...baseTask, comments: [firstComment, secondComment] },
+    });
+    expect(getLastUnreadBadgeProps().pulseKey ?? 0).toBe(0);
+
+    await act(async () => {
+      root.unmount();
+      await flushReact();
+    });
+  });
+});
 
 describe('KanbanTaskCard change badge', () => {
   afterEach(() => {

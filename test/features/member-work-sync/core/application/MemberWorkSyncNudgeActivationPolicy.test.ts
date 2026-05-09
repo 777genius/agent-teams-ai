@@ -263,6 +263,47 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'review_pickup_required' });
   });
 
+  it('allows strict review pickup while shadow data is collecting even when short-window nudge rate is high', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: status({
+          agenda: {
+            ...status().agenda,
+            items: [
+              {
+                taskId: 'task-review',
+                displayId: '#2',
+                subject: 'Review current request',
+                kind: 'review',
+                assignee: 'alice',
+                priority: 'review_requested',
+                reason: 'current_cycle_review_assigned',
+                evidence: {
+                  status: 'completed',
+                  owner: 'bob',
+                  reviewer: 'alice',
+                  reviewState: 'review',
+                  reviewCycleId: 'evt-review-request',
+                  reviewRequestEventId: 'evt-review-request',
+                  reviewObligation: 'review_pickup_required',
+                  canBypassPhase2: true,
+                  historyEventIds: ['evt-review-request'],
+                },
+              },
+            ],
+          },
+        }),
+        metrics: metrics({
+          phase2Readiness: {
+            ...metrics().phase2Readiness,
+            state: 'collecting_shadow_data',
+            reasons: ['insufficient_status_events', 'would_nudge_rate_high'],
+          },
+        }),
+      })
+    ).toEqual({ active: true, reason: 'review_pickup_required' });
+  });
+
   it('does not activate when blocking safety metrics are present', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({

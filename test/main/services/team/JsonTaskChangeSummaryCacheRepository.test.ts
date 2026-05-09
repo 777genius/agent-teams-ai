@@ -155,6 +155,56 @@ describe('JsonTaskChangeSummaryCacheRepository', () => {
     });
   });
 
+  it('keeps unknown cached diagnostics as blocking legacy warnings', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-summary-repo-'));
+    setClaudeBasePathOverride(tmpDir);
+    const repo = new JsonTaskChangeSummaryCacheRepository();
+
+    await repo.save(
+      buildEntry({
+        summary: {
+          ...buildEntry().summary,
+          files: [],
+          totalFiles: 0,
+          totalLinesAdded: 0,
+          totalLinesRemoved: 0,
+          reviewDiagnostics: [
+            'string diagnostic from older cache',
+            {
+              code: 'future_warning_code',
+              severity: 'info',
+              reviewBlocking: false,
+              message: 'Future diagnostic from cache.',
+              source: 'summary',
+            },
+          ] as unknown as PersistedTaskChangeSummaryEntry['summary']['reviewDiagnostics'],
+        },
+      })
+    );
+
+    const loaded = await repo.load('team-a', '1');
+
+    expect(loaded?.summary.reviewDiagnostics).toEqual([
+      {
+        code: 'legacy_warning',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'string diagnostic from older cache',
+        source: 'legacy',
+      },
+      {
+        code: 'legacy_warning',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'Future diagnostic from cache.',
+        source: 'summary',
+      },
+    ]);
+    expect(loaded?.summary ? resolveTaskChangePresenceFromResult(loaded.summary) : null).toBe(
+      'needs_attention'
+    );
+  });
+
   it('treats expired entries as cache misses', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-summary-repo-'));
     setClaudeBasePathOverride(tmpDir);

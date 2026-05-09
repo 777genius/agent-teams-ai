@@ -47,8 +47,8 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() || process.cwd();
-const MODEL = process.env.OPENCODE_E2E_MODEL?.trim() || 'opencode/big-pickle';
+const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() ?? process.cwd();
+const MODEL = process.env.OPENCODE_E2E_MODEL?.trim() ?? 'opencode/big-pickle';
 
 liveDescribe('OpenCode review pickup live e2e', () => {
   let tempDir: string;
@@ -154,7 +154,7 @@ liveDescribe('OpenCode review pickup live e2e', () => {
       const displayId = '7142f765';
 
       try {
-        const progressEvents: Array<{ message?: string }> = [];
+        const progressEvents: { message?: string }[] = [];
         await harness.svc.createTeam(
           {
             teamName,

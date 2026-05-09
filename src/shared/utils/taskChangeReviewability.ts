@@ -1,4 +1,4 @@
-import { TASK_CHANGE_DIAGNOSTIC_CODES } from '../types';
+import { TASK_CHANGE_DIAGNOSTIC_CODES } from '../types/review';
 
 import type {
   TaskChangeDiagnosticCode,
@@ -197,25 +197,64 @@ function getInputWarnings(input: ReviewabilityInput): string[] {
     : [];
 }
 
+function isTaskChangeDiagnosticSeverity(value: unknown): value is TaskChangeDiagnosticSeverity {
+  return value === 'info' || value === 'warning' || value === 'error';
+}
+
+function isTaskChangeDiagnosticSource(
+  value: unknown
+): value is NonNullable<TaskChangeReviewDiagnostic['source']> {
+  return value === 'ledger' || value === 'legacy' || value === 'summary' || value === 'runtime';
+}
+
+function normalizeReviewDiagnosticInput(value: unknown): TaskChangeReviewDiagnostic | null {
+  if (typeof value === 'string') {
+    const message = value.trim();
+    return message ? createTaskChangeDiagnosticFromWarning(message) : null;
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Partial<TaskChangeReviewDiagnostic>;
+  const message = typeof candidate.message === 'string' ? candidate.message.trim() : '';
+  if (!message) {
+    return null;
+  }
+
+  const source = isTaskChangeDiagnosticSource(candidate.source) ? { source: candidate.source } : {};
+  if (
+    typeof candidate.code === 'string' &&
+    TASK_CHANGE_DIAGNOSTIC_CODE_SET.has(candidate.code) &&
+    isTaskChangeDiagnosticSeverity(candidate.severity) &&
+    typeof candidate.reviewBlocking === 'boolean'
+  ) {
+    return {
+      code: candidate.code,
+      severity: candidate.severity,
+      reviewBlocking: candidate.reviewBlocking,
+      message,
+      ...source,
+    };
+  }
+
+  return {
+    code: 'legacy_warning',
+    severity: 'warning',
+    reviewBlocking: true,
+    message,
+    ...source,
+  };
+}
+
 function getInputReviewDiagnostics(input: ReviewabilityInput): TaskChangeReviewDiagnostic[] {
   if (!Array.isArray(input.reviewDiagnostics)) {
     return [];
   }
-  return input.reviewDiagnostics.filter((diagnostic): diagnostic is TaskChangeReviewDiagnostic => {
-    if (!diagnostic || typeof diagnostic !== 'object' || Array.isArray(diagnostic)) {
-      return false;
-    }
-    const candidate = diagnostic as Partial<TaskChangeReviewDiagnostic>;
-    return (
-      typeof candidate.code === 'string' &&
-      TASK_CHANGE_DIAGNOSTIC_CODE_SET.has(candidate.code) &&
-      (candidate.severity === 'info' ||
-        candidate.severity === 'warning' ||
-        candidate.severity === 'error') &&
-      typeof candidate.reviewBlocking === 'boolean' &&
-      typeof candidate.message === 'string'
-    );
-  });
+  return input.reviewDiagnostics
+    .map(normalizeReviewDiagnosticInput)
+    .filter((diagnostic): diagnostic is TaskChangeReviewDiagnostic => diagnostic !== null);
 }
 
 function getInputToolUseIds(input: ReviewabilityInput): string[] {

@@ -65,6 +65,13 @@ export function decideMemberWorkSyncNudgeActivation(input: {
     return { active: false, reason: 'status_not_nudgeable' };
   }
 
+  if (
+    input.metrics.phase2Readiness.state === 'collecting_shadow_data' &&
+    isReviewPickupRequiredCandidate(input.status)
+  ) {
+    return { active: true, reason: 'review_pickup_required' };
+  }
+
   if (hasBlockingMetrics(input.metrics)) {
     return { active: false, reason: 'blocking_metrics' };
   }

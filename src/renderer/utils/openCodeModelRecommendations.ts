@@ -24,9 +24,11 @@ const PASSED_GAUNTLET_REAL_AGENT_TEAMS_E2E_REASON =
 const PASSED_GAUNTLET_WITH_LIMITS_REASON =
   'This exact model route passed the deeper OpenCode Agent Teams gauntlet, but has a production caveat such as free-route capacity, preview availability, cost, or latency variance.';
 
-const OPENCODE_TEAM_RECOMMENDED_MODELS = new Set<string>([]);
+const OPENCODE_TEAM_RECOMMENDED_MODELS = new Set<string>(['opencode/big-pickle']);
 
-const OPENCODE_TEAM_RECOMMENDED_WITH_LIMITS_MODELS = new Set<string>([]);
+const OPENCODE_TEAM_RECOMMENDED_WITH_LIMITS_MODELS = new Set<string>([
+  'opencode/minimax-m2.5-free',
+]);
 
 const OPENCODE_TEAM_TESTED_MODELS = new Set<string>([
   'openrouter/anthropic/claude-haiku-4.5',
@@ -52,7 +54,7 @@ const OPENCODE_TEAM_TESTED_MODELS = new Set<string>([
   'openrouter/z-ai/glm-5.1',
 ]);
 
-const OPENCODE_TEAM_TESTED_WITH_LIMITS_MODELS = new Set<string>(['opencode/minimax-m2.5-free']);
+const OPENCODE_TEAM_TESTED_WITH_LIMITS_MODELS = new Set<string>([]);
 
 const OPENCODE_TEAM_UNAVAILABLE_MODELS = new Map<string, string>([
   [

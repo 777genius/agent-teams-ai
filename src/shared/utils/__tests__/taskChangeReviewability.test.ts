@@ -233,8 +233,18 @@ describe('taskChangeReviewability', () => {
   it('tolerates malformed cached scope and diagnostic shapes', () => {
     const result = changeSet({
       totalFiles: 'not-a-number' as unknown as number,
-      reviewDiagnostics: {} as unknown as TaskChangeSetV2['reviewDiagnostics'],
-      warnings: [EMPTY_INTERVAL_NO_EDITS_WARNING],
+      reviewDiagnostics: [
+        null,
+        'bad-diagnostic',
+        {
+          code: 'legacy_warning',
+          severity: 'warning',
+          reviewBlocking: true,
+          message: 'Recovered warning from cache.',
+          source: 'summary',
+        },
+      ] as unknown as TaskChangeSetV2['reviewDiagnostics'],
+      warnings: [42, EMPTY_INTERVAL_NO_EDITS_WARNING] as unknown as string[],
       scope: {
         taskId: 'task-a',
         memberName: 'alice',
@@ -244,8 +254,16 @@ describe('taskChangeReviewability', () => {
       } as unknown as TaskChangeSetV2['scope'],
     });
 
-    expect(classifyTaskChangeReviewability(result).reviewability).toBe('unknown');
-    expect(resolveTaskChangePresenceFromResult(result)).toBeNull();
+    const status = classifyTaskChangeReviewability(result);
+
+    expect(status.reviewability).toBe('attention_required');
+    expect(status.diagnostics).toHaveLength(3);
+    expect(status.diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      'bad-diagnostic',
+      'Recovered warning from cache.',
+      'No file edits have been observed in the active task interval yet.',
+    ]);
+    expect(resolveTaskChangePresenceFromResult(result)).toBe('needs_attention');
   });
 
   it('confirms empty high-confidence summaries as no changes', () => {

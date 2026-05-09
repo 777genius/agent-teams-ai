@@ -643,8 +643,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Not recommended');
     expect(host.textContent).toContain('Unavailable in OpenCode');
     expect(host.textContent).toContain('Tested');
-    expect(host.textContent).toContain('Tested with limits');
-    expect(host.textContent).not.toContain('Recommended only');
+    expect(host.textContent).toContain('Recommended with limits');
+    expect(host.textContent).toContain('Recommended only');
     expect(host.textContent).not.toContain('Set OpenCode default');
     expect(
       Array.from(host.querySelectorAll('button')).some(
@@ -656,15 +656,13 @@ describe('RuntimeProviderManagementPanelView', () => {
     ).not.toBeNull();
     const connectedBadge = Array.from(host.querySelectorAll('span')).find(
       (span) => span.textContent === 'Connected'
-    ) as HTMLElement | undefined;
+    );
     expect(connectedBadge?.style.color).toBeTruthy();
     expect(
-      (host.querySelector('[data-testid="runtime-provider-model-search"]') as HTMLElement | null)
-        ?.style.paddingLeft
+      host.querySelector('[data-testid="runtime-provider-model-search"]')?.style.paddingLeft
     ).toBe('42px');
     expect(
-      (host.querySelector('[data-testid="runtime-provider-model-list"]') as HTMLElement | null)
-        ?.style.maxHeight
+      host.querySelector('[data-testid="runtime-provider-model-list"]')?.style.maxHeight
     ).toBe('300px');
     expect(host.textContent).not.toContain('OpenRouterfree');
     const firstTestButton = Array.from(host.querySelectorAll('button')).find(
@@ -673,19 +671,16 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(firstTestButton?.className).toContain('border');
     const modelResult = host.querySelector(
       '[data-testid="runtime-provider-model-result-openrouter/openai/gpt-oss-20b:free"]'
-    ) as HTMLElement | null;
+    );
     expect(modelResult?.style.color).toBe('#86efac');
     expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
-      (host.textContent ?? '').indexOf('anthropic/claude-sonnet-4.6')
+      (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
     );
-    expect((host.textContent ?? '').indexOf('anthropic/claude-sonnet-4.6')).toBeLessThan(
+    expect((host.textContent ?? '').indexOf('opencode/big-pickle')).toBeLessThan(
       (host.textContent ?? '').indexOf('minimax-m2.5-free')
     );
     expect((host.textContent ?? '').indexOf('minimax-m2.5-free')).toBeLessThan(
-      (host.textContent ?? '').indexOf('opencode/big-pickle')
-    );
-    expect((host.textContent ?? '').indexOf('opencode/big-pickle')).toBeLessThan(
-      (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
+      (host.textContent ?? '').indexOf('mistralai/codestral-2508')
     );
     expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')).toBeLessThan(
       (host.textContent ?? '').indexOf('openrouter/openai/gpt-oss-20b:free')
@@ -767,7 +762,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     const searchInput = host.querySelector(
       '[data-testid="runtime-provider-model-search"]'
-    ) as HTMLInputElement | null;
+    );
 
     expect(searchInput).not.toBeNull();
     expect(searchInput?.disabled).toBe(false);
@@ -902,7 +897,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     for (const provider of providers) {
       const logo = host.querySelector(
         `[data-testid="runtime-provider-logo-${provider.providerId}"]`
-      ) as HTMLElement | null;
+      );
       expect(logo).not.toBeNull();
       expect(logo?.className).toContain('runtime-provider-brand-icon');
       expect(logo?.querySelector('svg,img')).not.toBeNull();

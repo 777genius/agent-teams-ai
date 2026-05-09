@@ -7,6 +7,14 @@ import {
 } from '@renderer/utils/openCodeModelRecommendations';
 
 describe('getOpenCodeTeamModelRecommendation', () => {
+  it('marks deeply gauntlet-qualified OpenCode-hosted routes as recommended', () => {
+    expect(getOpenCodeTeamModelRecommendation('opencode/big-pickle')).toMatchObject({
+      level: 'recommended',
+      label: 'Recommended',
+    });
+    expect(isOpenCodeTeamModelRecommended('opencode/big-pickle')).toBe(true);
+  });
+
   it('keeps Claude Sonnet 4.6 as tested while recommendations are disabled', () => {
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/anthropic/claude-sonnet-4.6')
@@ -93,9 +101,10 @@ describe('getOpenCodeTeamModelRecommendation', () => {
 
   it('keeps similarly named models distinct when real E2E disagreed', () => {
     expect(getOpenCodeTeamModelRecommendation('opencode/minimax-m2.5-free')).toMatchObject({
-      level: 'tested-with-limits',
-      label: 'Tested with limits',
+      level: 'recommended-with-limits',
+      label: 'Recommended with limits',
     });
+    expect(isOpenCodeTeamModelRecommended('opencode/minimax-m2.5-free')).toBe(true);
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-m2.5:free')
     ).toMatchObject({
@@ -787,7 +796,6 @@ describe('getOpenCodeTeamModelRecommendation', () => {
   });
 
   it('does not label noisy or unproven models as good or bad', () => {
-    expect(getOpenCodeTeamModelRecommendation('opencode/big-pickle')).toBeNull();
     expect(getOpenCodeTeamModelRecommendation('openrouter/x-ai/grok-4.20-unknown')).toBeNull();
     expect(getOpenCodeTeamModelRecommendation('')).toBeNull();
   });
@@ -805,10 +813,10 @@ describe('getOpenCodeTeamModelRecommendation', () => {
     expect(
       [...models].sort((left, right) => compareOpenCodeTeamModelRecommendations(left, right))
     ).toEqual([
+      'opencode/big-pickle',
+      'opencode/minimax-m2.5-free',
       'openrouter/mistralai/codestral-2508',
       'openrouter/anthropic/claude-sonnet-4.6',
-      'opencode/minimax-m2.5-free',
-      'opencode/big-pickle',
       'openrouter/qwen/qwen3-coder-plus',
       'openrouter/openai/gpt-oss-20b:free',
     ]);
