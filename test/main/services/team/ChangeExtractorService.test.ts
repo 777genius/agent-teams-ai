@@ -686,25 +686,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-missing-task.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
-    await createService({ logPaths: [logPath] }).service.getTaskChanges(
-      TEAM_NAME,
-      TASK_ID,
-      SUMMARY_OPTIONS
-    );
+    await createService({ logPaths: [logPath] }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
     await fs.unlink(taskPath);
-    await createService({ logPaths: [logPath] }).service.getTaskChanges(
-      TEAM_NAME,
-      TASK_ID,
-      SUMMARY_OPTIONS
-    );
+    await createService({ logPaths: [logPath] }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
 
     await expect(fs.stat(persistedEntryPath(tmpDir))).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -716,19 +703,10 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-corrupt.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
-    await createService({ logPaths: [logPath] }).service.getTaskChanges(
-      TEAM_NAME,
-      TASK_ID,
-      SUMMARY_OPTIONS
-    );
+    await createService({ logPaths: [logPath] }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     await fs.writeFile(persistedEntryPath(tmpDir), '{bad-json', 'utf8');
 
@@ -748,12 +726,7 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-fallback.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
     const service = new ChangeExtractorService(
@@ -792,20 +765,10 @@ describe('ChangeExtractorService', () => {
     const firstLogPath = path.join(tmpDir, 'first.jsonl');
     const secondLogPath = path.join(tmpDir, 'second.jsonl');
     await writeJsonl(firstLogPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        'C:\\repo\\src\\same.ts',
-        'first\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', 'C:\\repo\\src\\same.ts', 'first\n', '2026-03-01T10:00:00.000Z'),
     ]);
     await writeJsonl(secondLogPath, [
-      buildAssistantWriteEntry(
-        'tool-2',
-        'C:/repo/src/same.ts',
-        'second\n',
-        '2026-03-01T10:01:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-2', 'C:/repo/src/same.ts', 'second\n', '2026-03-01T10:01:00.000Z'),
     ]);
 
     const service = createService({
@@ -855,12 +818,7 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-inline-unavailable.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
     const computeTaskChanges = vi.fn();
@@ -890,12 +848,7 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-inline-worker-error.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
     const computeTaskChanges = vi.fn(async () => {
@@ -926,12 +879,7 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-worker-summary-cache.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
     const computeTaskChanges = vi.fn(async () => makeTaskChangeResult());
@@ -956,12 +904,7 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-worker-persisted.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry(
-        'tool-1',
-        '/repo/src/file.ts',
-        'export const value = 1;\n',
-        '2026-03-01T10:00:00.000Z'
-      ),
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
     ]);
 
     const firstWorker = {
