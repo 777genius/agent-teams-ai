@@ -152,6 +152,10 @@ import pidusage from 'pidusage';
 import * as readline from 'readline';
 
 import {
+  applyAgentChildProcessWritableEnv,
+  assertAgentChildProcessPreflight,
+} from '../runtime/agentChildProcessPreflight';
+import {
   ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS,
   type AnthropicTeamApiKeyHelperMaterial,
   CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH_ENV,
@@ -19553,6 +19557,10 @@ export class TeamProvisioningService {
     // Respawn with saved context — CLI handles its own auth refresh.
     let child: ReturnType<typeof spawn>;
     try {
+      await assertAgentChildProcessPreflight({
+        cwd: ctx.cwd,
+        env: ctx.env,
+      });
       if (mcpFlagIdx !== -1 && mcpFlagIdx + 1 < ctx.args.length) {
         await this.validateAgentTeamsMcpRuntime(
           ctx.claudePath,
@@ -20253,6 +20261,15 @@ export class TeamProvisioningService {
         emitProvisioningCheckpoint(run, 'Writing MCP config file');
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
         run.mcpConfigPath = mcpConfigPath;
+        emitProvisioningCheckpoint(
+          run,
+          'Running child-process preflight',
+          `cwd=${request.cwd}`
+        );
+        await assertAgentChildProcessPreflight({
+          cwd: request.cwd,
+          env: shellEnv,
+        });
         emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
         await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
           isCancelled: () =>
@@ -21512,6 +21529,15 @@ export class TeamProvisioningService {
         emitProvisioningCheckpoint(run, 'Writing MCP config file');
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
         run.mcpConfigPath = mcpConfigPath;
+        emitProvisioningCheckpoint(
+          run,
+          'Running child-process preflight',
+          `cwd=${request.cwd}`
+        );
+        await assertAgentChildProcessPreflight({
+          cwd: request.cwd,
+          env: shellEnv,
+        });
         emitProvisioningCheckpoint(run, 'Validating agent-teams MCP runtime');
         await this.validateAgentTeamsMcpRuntime(claudePath, request.cwd, shellEnv, mcpConfigPath, {
           isCancelled: () =>
@@ -33350,6 +33376,7 @@ export class TeamProvisioningService {
     });
     const providerConnectionIssue = providerEnvResult.connectionIssues[resolvedProviderId];
     const providerEnv = providerEnvResult.env;
+    applyAgentChildProcessWritableEnv(providerEnv, { home });
     if (options?.includeCodexTeammateAuth && resolvedProviderId !== 'codex') {
       await this.providerConnectionService.augmentConfiguredConnectionEnv(
         providerEnv,
