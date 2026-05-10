@@ -147,6 +147,33 @@ const UNKNOWN_CLASSIFICATION: RuntimeDiagnosticClassification = {
   generic: true,
 };
 
+function stripLatestAssistantFailurePrefix(message: string): string {
+  const marker = ' failed with ';
+  const lowerMessage = message.toLowerCase();
+  const markerIndex = lowerMessage.indexOf(marker);
+  if (!lowerMessage.startsWith('latest assistant message ') || markerIndex < 0) {
+    return message;
+  }
+
+  const errorNameStart = markerIndex + marker.length;
+  const dashIndex = message.indexOf('-', errorNameStart);
+  const colonIndex = message.indexOf(':', errorNameStart);
+  const separatorIndexes = [dashIndex, colonIndex]
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right);
+  if (separatorIndexes.length === 0) {
+    return message;
+  }
+
+  const separatorIndex = separatorIndexes[0];
+  const errorName = message.slice(errorNameStart, separatorIndex).trim();
+  if (!/^[A-Za-z][A-Za-z0-9_.]*Error$/.test(errorName)) {
+    return message;
+  }
+
+  return message.slice(separatorIndex + 1).trimStart();
+}
+
 export function normalizeRuntimeDiagnosticMessage(
   message: string | null | undefined
 ): string | null {
@@ -154,14 +181,9 @@ export function normalizeRuntimeDiagnosticMessage(
     (current, pattern) => current.replace(pattern, '[redacted]'),
     message ?? ''
   );
-  const normalized = scrubbed
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(
-      /^Latest assistant message(?:\s+\S+|\s+for\s+opencode\s+session\s+\S+)?\s+failed with\s+[^-:]+Error\s*[-:]\s*/i,
-      ''
-    )
-    .replace(/^APIError\s*[-:]\s*/i, '');
+  const normalized = stripLatestAssistantFailurePrefix(
+    scrubbed.replace(/\s+/g, ' ').trim()
+  ).replace(/^APIError\s*[-:]\s*/i, '');
   return normalized.length > 0 ? normalized : null;
 }
 
