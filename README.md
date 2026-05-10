@@ -107,9 +107,9 @@ If you want the FRESHEST version, clone the repo and run it from the `dev` branc
 
 ## What is this
 
-An orchestration layer for AI agent teams across Claude and Codex.
+An orchestration layer for AI agent teams across Claude, Codex, and OpenCode.
 
-- **Claude + Codex orchestration** — auto-detect available Claude/Codex runtimes and use the provider access you already have - subscriptions or API keys
+- **Claude + Codex + OpenCode orchestration** — auto-detect available Claude/Codex/OpenCode runtimes and use the provider access you already have - subscriptions or API keys
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
 - **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
