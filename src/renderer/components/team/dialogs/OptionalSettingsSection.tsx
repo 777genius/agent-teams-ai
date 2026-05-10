@@ -134,7 +134,7 @@ export const OptionalSettingsSection = ({
             {title}
           </span>
           <span
-            className="shrink-0 rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium capitalize"
+            className="shrink-0 rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium"
             style={{ color: headerMutedColor }}
           >
             Optional
