@@ -62,7 +62,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Restore ESLint cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .eslintcache
           key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.*', 'src/**/*.ts', 'src/**/*.tsx') }}
