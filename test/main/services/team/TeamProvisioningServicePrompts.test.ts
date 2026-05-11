@@ -215,7 +215,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
-  it('launchTeam prompt (solo) uses deterministic refresh-only reconnect instructions', async () => {
+  it('launchTeam prompt (solo) uses deterministic refresh-only launch instructions', async () => {
     // Seed config.json so launchTeam can validate team existence.
     const teamName = 'solo-team-launch';
     const teamDir = path.join(tempTeamsBase, teamName);
@@ -265,7 +265,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(writeSpy).not.toHaveBeenCalled();
     const prompt = extractPromptFromBootstrapFile();
     expect(prompt).toContain('SOLO MODE: This team CURRENTLY has ZERO teammates.');
-    expect(prompt).toContain('This reconnect/bootstrap step has already been completed deterministically by the runtime.');
+    expect(prompt).toContain('This launch/bootstrap step has already been completed deterministically by the runtime.');
     expect(prompt).toContain('Do NOT start implementation in this turn.');
     expect(prompt).toContain('Use this turn only to refresh context, review the current board snapshot, and confirm you are ready.');
     expect(prompt).toContain(
@@ -738,7 +738,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
-  it('launchTeam reconnect prompt for teammates includes explicit hidden-instruction block rules', async () => {
+  it('launchTeam bootstrap prompt for teammates includes explicit hidden-instruction block rules', async () => {
     const teamName = 'multi-team-launch';
     const teamDir = path.join(tempTeamsBase, teamName);
     fs.mkdirSync(teamDir, { recursive: true });
@@ -790,7 +790,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     expect(writeSpy).not.toHaveBeenCalled();
     const prompt = extractPromptFromBootstrapFile();
-    expect(prompt).toContain('This reconnect/bootstrap step has already been completed deterministically by the runtime.');
+    expect(prompt).toContain('This launch/bootstrap step has already been completed deterministically by the runtime.');
     expect(prompt).toContain('Do NOT use Agent to spawn or restore teammates.');
     expect(prompt).toContain('Use this turn only to refresh context and review the current board snapshot.');
     expect(prompt).toContain(
