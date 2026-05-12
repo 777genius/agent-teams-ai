@@ -1,0 +1,25 @@
+name: ReviewRouter Interaction
+
+on:
+  pull_request_review_comment:
+    types: [created, edited]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  interaction:
+    name: interaction
+    uses: 777genius/review-router/.github/workflows/reviewrouter-interaction-reusable.yml@v1
+    with:
+      runtime_ref: v1
+      api_url: "https://api.reviewrouter.site"
+      runtime_config_mode: oidc
+      review_workflow_file: reviewrouter.yml
+    secrets:
+      REVIEW_ROUTER_LEDGER_KEY: ${{ secrets.REVIEW_ROUTER_LEDGER_KEY }}

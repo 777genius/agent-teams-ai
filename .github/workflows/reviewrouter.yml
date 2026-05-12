@@ -1,0 +1,51 @@
+name: ReviewRouter
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number for manual reruns"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review:
+    name: review
+    uses: 777genius/review-router/.github/workflows/reviewrouter-reusable.yml@v1
+    with:
+      runtime_ref: v1
+      api_url: "https://api.reviewrouter.site"
+      runtime_config_mode: oidc
+      static_runtime_env_json: |-
+        {
+          "REVIEWROUTER_CONFIG_SCHEMA_VERSION": "2",
+          "CODEX_MODEL": "gpt-5.5",
+          "CODEX_REASONING_EFFORT": "medium",
+          "CODEX_AGENTIC_CONTEXT": "true",
+          "CODEX_FAST_MODE": "false",
+          "INLINE_MAX_COMMENTS": "5",
+          "INLINE_MIN_AGREEMENT": "1",
+          "TARGET_TOKENS_PER_BATCH": "50000",
+          "FAIL_ON_SEVERITY": "critical",
+          "PROVIDER_LIMIT": "1",
+          "PROVIDER_MAX_PARALLEL": "1",
+          "REVIEW_AUTH_MODE": "codex-oauth",
+          "REVIEW_PROVIDERS": "codex/gpt-5.5",
+          "SYNTHESIS_MODEL": "codex/gpt-5.5"
+        }
+      pr_number: ${{ github.event.pull_request.number || inputs.pr_number }}
+    secrets:
+      REVIEW_ROUTER_LEDGER_KEY: ${{ secrets.REVIEW_ROUTER_LEDGER_KEY }}
+      CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+      CODEX_CONFIG_TOML: ${{ secrets.CODEX_CONFIG_TOML }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
