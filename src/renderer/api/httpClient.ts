@@ -16,6 +16,7 @@ import type {
   CodexAccountSnapshotDto,
   CodexStartChatgptLoginOptions,
 } from '@features/codex-account/contracts';
+import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
@@ -1269,6 +1270,24 @@ export class HttpAPIClient implements ElectronAPI {
       source: 'missing',
       state: 'failed',
       error: 'OpenCode runtime installer is not available in browser mode',
+    }),
+    invalidateStatus: async (): Promise<void> => {},
+    onProgress: (): (() => void) => {
+      return () => {};
+    },
+  };
+
+  codexRuntime: CodexRuntimeAPI = {
+    getStatus: async () => ({
+      installed: false,
+      source: 'missing',
+      state: 'idle',
+    }),
+    install: async () => ({
+      installed: false,
+      source: 'missing',
+      state: 'failed',
+      error: 'Codex runtime installer is not available in browser mode',
     }),
     invalidateStatus: async (): Promise<void> => {},
     onProgress: (): (() => void) => {

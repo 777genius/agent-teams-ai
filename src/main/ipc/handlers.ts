@@ -22,6 +22,7 @@ import {
   registerCliInstallerHandlers,
   removeCliInstallerHandlers,
 } from './cliInstaller';
+import { registerCodexRuntimeHandlers, removeCodexRuntimeHandlers } from './codexRuntime';
 import { initializeConfigHandlers, registerConfigHandlers, removeConfigHandlers } from './config';
 import {
   initializeContextHandlers,
@@ -273,6 +274,7 @@ export function initializeIpcHandlers(
   if (openCodeRuntimeInstaller) {
     registerOpenCodeRuntimeHandlers(ipcMain);
   }
+  registerCodexRuntimeHandlers(ipcMain);
   if (ptyTerminal) {
     registerTerminalHandlers(ipcMain);
   }
@@ -315,6 +317,7 @@ export function removeIpcHandlers(): void {
   removeScheduleHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
   removeOpenCodeRuntimeHandlers(ipcMain);
+  removeCodexRuntimeHandlers(ipcMain);
   removeTerminalHandlers(ipcMain);
   removeTmuxHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);

@@ -175,6 +175,7 @@ import {
   safeSendToRenderer,
 } from './utils/safeWebContentsSend';
 import { syncTelemetryFlag } from './sentry';
+import { setCodexRuntimeMainWindow } from './ipc/codexRuntime';
 import {
   ActiveTeamRegistry,
   BoardTaskActivityDetailService,
@@ -2094,6 +2095,7 @@ function attachMainWindowToServices(): void {
   updaterService?.setMainWindow(win);
   cliInstallerService?.setMainWindow(win);
   openCodeRuntimeInstallerService?.setMainWindow(win);
+  setCodexRuntimeMainWindow(win);
   setTmuxMainWindow(win);
   ptyTerminalService?.setMainWindow(win);
   teamProvisioningService?.setMainWindow(win);
@@ -2420,6 +2422,7 @@ function createWindow(): void {
     if (openCodeRuntimeInstallerService) {
       openCodeRuntimeInstallerService.setMainWindow(null);
     }
+    setCodexRuntimeMainWindow(null);
     setTmuxMainWindow(null);
     if (ptyTerminalService) {
       ptyTerminalService.setMainWindow(null);

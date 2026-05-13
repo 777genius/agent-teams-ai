@@ -11,6 +11,7 @@ const applyAllConfiguredConnectionEnvMock = vi.fn();
 const getConfiguredConnectionIssuesMock = vi.fn();
 const getConfiguredConnectionLaunchArgsMock = vi.fn();
 const resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock = vi.fn();
+const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn();
 
 vi.mock('@main/utils/cliEnv', () => ({
   buildEnrichedEnv: (...args: Parameters<typeof buildEnrichedEnvMock>) =>
@@ -62,6 +63,11 @@ vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerSe
     resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock(),
 }));
 
+vi.mock('@features/codex-runtime-installer/main', () => ({
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath: () =>
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock(),
+}));
+
 describe('buildProviderAwareCliEnv', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -88,6 +94,7 @@ describe('buildProviderAwareCliEnv', () => {
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([]);
     getConfiguredConnectionIssuesMock.mockResolvedValue({});
     resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
   });
 
   it('builds provider-pinned CLI env and returns provider-specific issues', async () => {
@@ -331,5 +338,59 @@ describe('buildProviderAwareCliEnv', () => {
     });
 
     expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBeUndefined();
+  });
+
+  it('injects the verified app-managed Codex binary for Codex launches', async () => {
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(
+      '/Users/tester/App Support/runtimes/codex/current/codex'
+    );
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'codex',
+    });
+
+    expect(applyConfiguredConnectionEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        CODEX_CLI_PATH: '/Users/tester/App Support/runtimes/codex/current/codex',
+      }),
+      'codex',
+      undefined
+    );
+    expect(result.env.CODEX_CLI_PATH).toBe(
+      '/Users/tester/App Support/runtimes/codex/current/codex'
+    );
+  });
+
+  it('preserves explicit CODEX_CLI_PATH over the app-managed Codex binary', async () => {
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(
+      '/Users/tester/App Support/runtimes/codex/current/codex'
+    );
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'codex',
+      env: {
+        CODEX_CLI_PATH: '/custom/codex',
+      },
+    });
+
+    expect(result.env.CODEX_CLI_PATH).toBe('/custom/codex');
+  });
+
+  it('does not inject the app-managed Codex binary into non-Codex provider launches', async () => {
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(
+      '/Users/tester/App Support/runtimes/codex/current/codex'
+    );
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'anthropic',
+    });
+
+    expect(result.env.CODEX_CLI_PATH).toBeUndefined();
   });
 });
