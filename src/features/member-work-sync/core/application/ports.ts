@@ -94,7 +94,11 @@ export type MemberWorkSyncAuditEventName =
   | 'member_busy'
   | 'team_inactive'
   | 'index_repaired'
-  | 'legacy_fallback_used';
+  | 'legacy_fallback_used'
+  | 'proof_missing_recovery_scheduled'
+  | 'proof_missing_recovery_coalesced'
+  | 'proof_missing_recovery_suppressed'
+  | 'proof_missing_recovery_conflict';
 
 export interface MemberWorkSyncAuditEvent {
   timestamp: string;
@@ -161,6 +165,18 @@ export interface MemberWorkSyncOutboxStorePort {
     memberName: string;
     reviewRequestEventIds: string[];
   }): Promise<string[]>;
+  findRecentRecoveryByIntent?(input: {
+    teamName: string;
+    memberName: string;
+    intentKey: string;
+    sinceIso: string;
+  }): Promise<{
+    id: string;
+    status: MemberWorkSyncOutboxItem['status'];
+    deliveredMessageId?: string;
+    payloadHash: string;
+    updatedAt: string;
+  } | null>;
 }
 
 export interface MemberWorkSyncInboxNudgePort {

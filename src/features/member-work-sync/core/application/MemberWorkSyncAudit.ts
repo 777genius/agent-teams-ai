@@ -31,6 +31,18 @@ export async function appendMemberWorkSyncAudit(
 }
 
 export function reasonToAuditEvent(reason: string): MemberWorkSyncAuditEventName {
+  if (reason === 'proof_missing_recovery_scheduled') {
+    return 'proof_missing_recovery_scheduled';
+  }
+  if (reason === 'proof_missing_recovery_coalesced') {
+    return 'proof_missing_recovery_coalesced';
+  }
+  if (reason === 'proof_missing_recovery_suppressed') {
+    return 'proof_missing_recovery_suppressed';
+  }
+  if (reason === 'proof_missing_recovery_conflict') {
+    return 'proof_missing_recovery_conflict';
+  }
   if (reason.startsWith('member_busy:')) {
     return 'member_busy';
   }

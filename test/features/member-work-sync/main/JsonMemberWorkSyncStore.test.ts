@@ -430,6 +430,95 @@ describe('JsonMemberWorkSyncStore', () => {
     });
   });
 
+  it('finds recent recovery outbox rows by logical intent key', async () => {
+    const olderInput = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:older',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:older',
+      payloadHash: 'hash-older',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-1' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    const latestInput = {
+      ...olderInput,
+      id: 'member-work-sync:team-a:bob:agenda:v1:latest',
+      agendaFingerprint: 'agenda:v1:latest',
+      payloadHash: 'hash-latest',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    };
+    const unrelatedInput = {
+      ...olderInput,
+      id: 'member-work-sync:team-a:bob:agenda:v1:unrelated',
+      agendaFingerprint: 'agenda:v1:unrelated',
+      payloadHash: 'hash-unrelated',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-2' }),
+      nowIso: '2026-04-29T00:04:00.000Z',
+    };
+
+    await store.ensurePending(olderInput);
+    await store.ensurePending(latestInput);
+    await store.ensurePending(unrelatedInput);
+
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:01:00.000Z',
+      })
+    ).resolves.toMatchObject({
+      id: latestInput.id,
+      status: 'pending',
+      payloadHash: 'hash-latest',
+      updatedAt: '2026-04-29T00:03:00.000Z',
+    });
+  });
+
+  it('ignores terminal and stale rows for logical recovery lookup', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:terminal',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:terminal',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload({ workSyncIntentKey: 'proof-missing:message-1' }),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      error: 'inbox_payload_conflict',
+      retryable: false,
+      nowIso: '2026-04-29T00:02:00.000Z',
+    });
+
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:00:00.000Z',
+      })
+    ).resolves.toBeNull();
+    await expect(
+      store.findRecentRecoveryByIntent({
+        teamName: 'team-a',
+        memberName: 'bob',
+        intentKey: 'proof-missing:message-1',
+        sinceIso: '2026-04-29T00:03:00.000Z',
+      })
+    ).resolves.toBeNull();
+  });
+
   it('claims due outbox items and fences terminal updates by attempt generation', async () => {
     const input = {
       id: 'member-work-sync:team-a:bob:agenda:v1:abc',

@@ -54,6 +54,33 @@ describe('FileMemberWorkSyncAuditJournal', () => {
     });
   });
 
+  it('accepts typed proof-missing recovery audit events', async () => {
+    const journal = new FileMemberWorkSyncAuditJournal(new MemberWorkSyncStorePaths(root));
+
+    await journal.append({
+      timestamp: '2026-04-30T00:00:00.000Z',
+      teamName: 'team-a',
+      memberName: 'bob',
+      event: 'proof_missing_recovery_scheduled',
+      source: 'test',
+      reason: 'protocol_proof_missing',
+      metadata: {
+        originalMessageId: 'message-1',
+        intentKey: 'proof-missing:message-1',
+      },
+    });
+
+    const [line] = (await readFile(journalPath(root), 'utf8')).trim().split('\n');
+    expect(JSON.parse(line)).toMatchObject({
+      event: 'proof_missing_recovery_scheduled',
+      reason: 'protocol_proof_missing',
+      metadata: {
+        originalMessageId: 'message-1',
+        intentKey: 'proof-missing:message-1',
+      },
+    });
+  });
+
   it('truncates previews and rotates bounded journals', async () => {
     const journal = new FileMemberWorkSyncAuditJournal(
       new MemberWorkSyncStorePaths(root),

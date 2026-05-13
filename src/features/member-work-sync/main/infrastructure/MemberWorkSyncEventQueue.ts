@@ -14,6 +14,7 @@ export type MemberWorkSyncTriggerReason =
   | 'tool_finished'
   | 'runtime_activity'
   | 'turn_settled'
+  | 'proof_missing_recovery'
   | 'manual_refresh';
 
 export interface MemberWorkSyncQueueDiagnostics {
@@ -461,6 +462,8 @@ function defaultRunAfterMs(reason: MemberWorkSyncTriggerReason): number {
   switch (reason) {
     case 'manual_refresh':
       return 0;
+    case 'proof_missing_recovery':
+      return 5_000;
     case 'turn_settled':
     case 'tool_finished':
       return 5_000;
@@ -479,6 +482,8 @@ function defaultMaxCoalesceWaitMs(reason: MemberWorkSyncTriggerReason): number {
   switch (reason) {
     case 'manual_refresh':
       return 0;
+    case 'proof_missing_recovery':
+      return 30_000;
     case 'turn_settled':
     case 'tool_finished':
       return 30_000;
