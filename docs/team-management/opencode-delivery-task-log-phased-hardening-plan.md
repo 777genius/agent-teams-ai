@@ -2811,6 +2811,791 @@ Tests:
 - scheduler skips inactive/no-team cases;
 - scheduler failure logs and recovers on next run.
 
+### 4.65 Runtime Turn-Settled Installation Must Match The Provider Emitter
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/RuntimeTurnSettledSpoolInitializer.ts
+src/features/member-work-sync/main/infrastructure/ShellRuntimeTurnSettledHookScriptInstaller.ts
+src/features/member-work-sync/main/infrastructure/runtimeTurnSettledHookSettings.ts
+src/features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment.ts
+src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts
+src/main/services/team/TeamProvisioningService.ts
+src/main/index.ts
+test/features/member-work-sync/main/RuntimeTurnSettledHookSettings.test.ts
+test/main/services/team/TeamProvisioningServicePrepare.test.ts
+test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts
+test/main/services/team/MemberWorkSyncCodex.live.test.ts
+test/main/services/team/MemberWorkSyncOpenCode.live.test.ts
+```
+
+Source-audit finding:
+
+```text
+Claude uses a shell Stop hook settings payload.
+Codex receives the spool environment through normal team provisioning.
+OpenCode receives the spool environment through the OpenCode bridge process wiring, not through the Claude shell hook installer.
+The shell hook script currently validates the provider argument as claude/codex only.
+```
+
+This is not one generic "install hook" path. Treating it as generic is a bug risk: a test could prove Claude hooks work while OpenCode never emits, or OpenCode bridge wiring could work while Codex secondary members miss the environment.
+
+Rules:
+
+- Claude Stop hook settings are installed only for Claude provider launches;
+- Codex turn-settled uses environment injection from provisioning, not Claude hook settings;
+- OpenCode turn-settled uses bridge environment injection from the main runtime bridge and live harness;
+- the OpenCode bridge env path must be covered directly, not inferred from shell hook tests;
+- if the shell script is ever reused for OpenCode, its provider allowlist must be changed in the same commit and tested;
+- missing turn-settled env must degrade to no sync event, not break foreground delivery or launch;
+- workspace trust env filtering must preserve the `AGENT_TEAMS_RUNTIME_TURN_SETTLED_` prefix;
+- diagnostics should record provider, install mode, and spool root without logging full prompt payloads.
+
+Tests:
+
+- Claude settings include one non-blocking Stop hook command and preserve user settings;
+- Codex primary and secondary launches include `AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT`;
+- OpenCode bridge env includes the same spool root in desktop app and live harness composition;
+- OpenCode bridge env missing produces no member-work-sync turn event but does not fail prompt delivery;
+- shell hook provider validation rejects unsupported providers and is not used as proof for OpenCode;
+- workspace trust preflight preserves the turn-settled spool environment variable.
+
+### 4.66 Runtime Turn-Settled Normalizers Must Stay Provider-Strict
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/ClaudeStopHookPayloadNormalizer.ts
+src/features/member-work-sync/main/infrastructure/CodexNativeTurnSettledPayloadNormalizer.ts
+src/features/member-work-sync/main/infrastructure/OpenCodeTurnSettledPayloadNormalizer.ts
+src/features/member-work-sync/main/infrastructure/CompositeRuntimeTurnSettledPayloadNormalizer.ts
+src/features/member-work-sync/contracts/types.ts
+test/features/member-work-sync/main/RuntimeTurnSettledIngestor.test.ts
+test/features/member-work-sync/main/CodexNativeTurnSettledPayloadNormalizer.test.ts
+test/features/member-work-sync/main/OpenCodeTurnSettledPayloadNormalizer.test.ts
+```
+
+Source-audit finding:
+
+```text
+Claude payloads are accepted only for provider "claude" and Stop hook data.
+Codex payloads require provider "codex" and source "agent-teams-orchestrator-codex-native".
+OpenCode payloads require provider "opencode" and source "agent-teams-orchestrator-opencode".
+The composite normalizer tries normalizers in order and should not turn a source mismatch into another provider's event.
+```
+
+This provider strictness is a safety boundary. It prevents a malformed OpenCode or Codex payload from being routed to the wrong member and creating a false "agent stopped" signal.
+
+Rules:
+
+- provider id and source string are part of the public turn-settled contract;
+- malformed payloads are invalid, not best-effort accepted;
+- unsupported-provider results may fall through to another normalizer, but provider/source mismatch for a claimed provider must fail closed;
+- `sourceId` must be stable for the same logical event and different for different turns;
+- `payloadHash` is useful for diagnostics and dedupe, but cannot be the only identity if the payload contains timestamp-like fields;
+- OpenCode outcomes that are not terminal enough for work-sync should be ingested as diagnostic or ignored by policy, not treated as caught-up proof;
+- old payload shapes must be accepted only when they still carry enough team/member/provider identity.
+
+Tests:
+
+- Codex payload with OpenCode source is rejected, not normalized as Codex;
+- OpenCode payload with Codex source is rejected, not normalized as OpenCode;
+- valid duplicate payloads produce the same `sourceId`;
+- changed session, turn, runtime prompt, or payload hash produces a distinct `sourceId`;
+- malformed JSON object is quarantined and never enqueues member reconcile;
+- empty or unknown provider payload cannot target `lead` by fallback.
+
+### 4.67 Runtime Turn-Settled Drain Scheduler Must Be Non-Blocking And Observable
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler.ts
+src/features/member-work-sync/main/infrastructure/FileRuntimeTurnSettledEventStore.ts
+src/features/member-work-sync/main/RuntimeTurnSettledIngestor.ts
+src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts
+test/features/member-work-sync/main/RuntimeTurnSettledIngestor.test.ts
+test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts
+```
+
+Source-audit finding:
+
+```text
+The scheduler starts a first drain after a short delay, repeats periodically, skips overlapping runs, logs failures, and continues scheduling.
+```
+
+This is the right shape. The fragile part is operational: a failed drain must not silently stop future drains, and a slow drain must not block the Electron app.
+
+Rules:
+
+- first drain should run soon after feature composition so live agents do not wait for a full periodic interval;
+- drain runs are non-overlapping;
+- drain failure is warning-only and schedules the next attempt;
+- drain must have a bounded claim/read batch size;
+- stale `processing` spool files are recovered or quarantined deterministically;
+- invalid payloads are quarantined with diagnostics and never retried forever;
+- drain cannot write inbox nudges directly; it only ingests events and enqueues/reconciles through member-work-sync use cases.
+
+Tests:
+
+- scheduler starts a near-immediate drain and then repeats;
+- overlapping run is skipped without dropping the next scheduled run;
+- drain exception logs once and next tick still runs;
+- stale processing file is recovered and ingested once;
+- invalid payload is quarantined and not reprocessed forever;
+- manual drain in tests can assert event-to-reconcile without waiting for timers.
+
+### 4.68 Audit Journal Must Stay Diagnostic, Not Canonical State
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/FileMemberWorkSyncAuditJournal.ts
+src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts
+test/features/member-work-sync/main/FileMemberWorkSyncAuditJournal.test.ts
+```
+
+Source-audit finding:
+
+```text
+The audit journal sanitizes and truncates payloads, rotates files, serializes appends per file, uses file locks, and logs append failures as warnings.
+```
+
+That makes it a good debug source and a bad source of truth. Do not base correctness on it.
+
+Rules:
+
+- correctness state lives in member-work-sync store, outbox, inbox, ledger, and runtime event store;
+- audit append failure cannot fail delivery, reconcile, report validation, or task write;
+- audit rotation/truncation means audit entries cannot be required for exact proof;
+- audit rows may be included in artifact packs as explanation only;
+- audit payloads must remain sanitized and bounded;
+- no full prompt, API key, auth path, or unbounded transcript should be written to audit.
+
+Tests:
+
+- audit append failure logs warning and use case still succeeds;
+- rotated audit files still leave current metrics/status intact;
+- truncated audit data is never parsed back as canonical proof;
+- artifact/debug export can include audit snippets without exposing secrets.
+
+### 4.69 Phase 2 Readiness Metrics Must Be Conservative Under Sparse Or Corrupt Data
+
+Current files:
+
+```text
+src/features/member-work-sync/core/domain/MemberWorkSyncPhase2Readiness.ts
+src/features/member-work-sync/core/application/MemberWorkSyncMetricsReader.ts
+src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts
+test/features/member-work-sync/core/MemberWorkSyncPhase2Readiness.test.ts
+test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts
+```
+
+Source-audit finding:
+
+```text
+Phase 2 readiness is derived from recent metric events. Empty data returns an assessment from empty metrics. Store repair/truncation can affect available events.
+```
+
+The safe default is conservative. Sparse or repaired data should keep the feature in collecting/shadow mode, not accidentally enable active nudges.
+
+Rules:
+
+- empty metrics must not report active-ready;
+- repaired or truncated metrics index must not create a false ready state;
+- high would-nudge rate, high fingerprint churn, high report rejection rate, and too few observed members block active readiness;
+- readiness rates must be computed from a bounded observation window with safe denominators;
+- audit journal rotation must not affect readiness metrics;
+- readiness state should explain its blocking reasons in diagnostics.
+
+Tests:
+
+- empty metrics returns collecting/not-ready with explicit reasons;
+- one member and too few events cannot become active-ready;
+- metrics truncation or corrupt event quarantine keeps readiness conservative;
+- high nudge, high churn, or high rejection rates block readiness;
+- healthy synthetic shadow data crosses thresholds only after minimum observation duration and event count.
+
+### 4.70 Member Work Sync Paths Must Use Canonical Member Storage
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths.ts
+src/main/services/team/TeamMemberStoragePaths.ts
+test/main/services/team/TeamMemberStoragePaths.test.ts
+test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts
+```
+
+Source-audit finding:
+
+```text
+Member-work-sync path construction delegates per-member path safety to TeamMemberStoragePaths and getMemberKey.
+```
+
+Keep that boundary. Raw member names are user/team data and should not be manually joined into paths.
+
+Rules:
+
+- never build per-member sync paths by joining raw `memberName`;
+- indexes store canonical member keys and display names separately;
+- reserved identities such as `user`, `system`, and automation sources must not create teammate store directories;
+- removed member storage can be read for diagnostics but cannot be reused for a new active member without canonical identity checks;
+- case-only name drift must not split one member into two active sync stores;
+- path errors should fail closed and not dispatch nudges.
+
+Tests:
+
+- unsafe member names resolve through `TeamMemberStoragePaths` or are rejected;
+- case-only member-name drift reuses canonical key or fails closed consistently;
+- reserved identities cannot get member-work-sync report leases;
+- removed teammate diagnostics do not dispatch nudges to stale member storage.
+
+### 4.71 Team-Change Routing Must Treat Event Detail As Untrusted
+
+Current files:
+
+```text
+src/features/member-work-sync/main/adapters/input/MemberWorkSyncTeamChangeRouter.ts
+src/features/member-work-sync/main/adapters/input/MemberWorkSyncTaskImpactResolver.ts
+src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts
+test/features/member-work-sync/main/MemberWorkSyncTeamChangeRouter.test.ts
+test/features/member-work-sync/main/MemberWorkSyncTaskImpactResolver.test.ts
+```
+
+Source-audit finding:
+
+```text
+The router parses inbox recipient from detail shaped like inboxes/<member>.json.
+It parses tool and member-turn-settled detail as JSON.
+It extracts task id from event.taskId or a safe .json detail.
+Task resolver failures fall back to team-wide enqueue.
+```
+
+This is a fragile input-adapter boundary. `TeamChangeEvent.detail` is transport metadata, not domain truth. Dropping an event because detail had a new shape can recreate delayed or missing sync; broad fallback for every malformed event can create nudge pressure.
+
+Rules:
+
+- malformed JSON detail never throws out of `noteTeamChange`;
+- known durable task changes fallback team-wide only when exact impacted members cannot be resolved;
+- inbox/lead-message events should support every detail shape emitted by the app, or explicitly log/drop with diagnostics;
+- unknown inbox recipient must not create a raw member path;
+- task-log-change path parsing only accepts safe task JSON names, not arbitrary paths;
+- materializer failure must not prevent queueing other impacted active members;
+- team-wide fallback is diagnostic and still goes through queue, readiness, busy, cooldown, and outbox revalidation.
+
+Tests:
+
+- malformed tool/member-turn-settled JSON does not throw and does not enqueue wrong member;
+- inbox detail shapes emitted by current writers resolve the intended member;
+- unknown inbox detail is either diagnostic fallback or explicit no-op with a test documenting why;
+- task detail with absolute path or dotfile does not create a fake task/member;
+- materializer failure for one member does not block other impacted members;
+- resolver exception falls back team-wide but dispatcher revalidation suppresses unsafe nudges.
+
+### 4.72 Nudge Delivery Wake Is Best-Effort, But Must Not Be Invisible
+
+Current files:
+
+```text
+src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatcher.ts
+src/features/member-work-sync/core/application/ports.ts
+src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts
+test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts
+test/features/member-work-sync/core/MemberWorkSyncUseCases.test.ts
+```
+
+Source-audit finding:
+
+```text
+Normal nudge dispatch inserts the inbox row, marks outbox delivered, then schedules a short delivery wake.
+Wake failure is logged/audited as nudge_wake_failed, but the outbox row is already delivered because the inbox write succeeded.
+```
+
+That state model is reasonable: after durable inbox insert, retrying the outbox could duplicate rows. The risk is observability and recovery. If wake fails, the user can see a delayed agent even though the work-sync data layer thinks the nudge was delivered.
+
+Rules:
+
+- inbox insert is the durable delivery boundary for generic work-sync nudges;
+- wake failure after insert is not an outbox retry by default, because the row already exists;
+- wake failure must be visible in diagnostics, latency timeline, and artifact packs;
+- another safe trigger such as inbox refresh, manual refresh, or scheduled dispatcher may re-attempt the wake path, but must not insert a duplicate inbox row;
+- OpenCode foreground delivery and review-pickup direct delivery keep their own stricter acceptance semantics;
+- `member_work_sync_nudge_existing` wake cannot bypass foreground/busy checks.
+
+Tests:
+
+- wake failure after successful inbox insert records `nudge_wake_failed` and keeps outbox delivered;
+- a later wake for the same messageId does not insert another row;
+- wake failure appears in diagnostics/latency timeline;
+- foreground unread OpenCode delivery still blocks existing-nudge wake;
+- review-pickup direct delivery failure does not get mislabeled as generic wake failure.
+
+### 4.73 Pending Report Replay Must Be Bounded And Current-Agenda-Based
+
+Current files:
+
+```text
+src/features/member-work-sync/core/application/MemberWorkSyncPendingReportIntentReplayer.ts
+src/features/member-work-sync/core/application/MemberWorkSyncReporter.ts
+src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts
+test/features/member-work-sync/core/MemberWorkSyncUseCases.test.ts
+test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts
+```
+
+Source-audit finding:
+
+```text
+Pending replay uses the same reporter and therefore reloads current agenda.
+If reporter execution throws, the intent currently stays pending for a future replay.
+Validation failures are marked accepted/rejected/superseded through markPendingReportProcessed.
+```
+
+Replay is a recovery path for agents that called the report tool while the control API was unavailable. It must not become an infinite startup loop or a way to apply stale leases.
+
+Rules:
+
+- every replay uses current agenda and current token validation;
+- accepted/rejected/superseded validation results are marked processed;
+- transient execution failures may stay pending, but must have bounded retry diagnostics or an eventual stale cutoff;
+- replay cannot accept `caught_up` unless current agenda is empty;
+- replay cannot accept `still_working`/`blocked` unless current fingerprint and evidence still match;
+- replay should process a bounded number of intents per team per run;
+- old pending intents from removed members or inactive teams are superseded, not retried forever.
+
+Tests:
+
+- stale pending `caught_up` after new work appears is rejected and marked processed;
+- removed member pending intent is superseded;
+- reporter throw leaves pending only for a bounded/transient path and logs diagnostics;
+- many pending intents are processed in deterministic order with a limit;
+- replay summary distinguishes accepted, rejected, superseded, and unprocessed transient failures.
+
+### 4.74 Review-Pickup Escalation Must Be Idempotent
+
+Current files:
+
+```text
+src/features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanner.ts
+src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatcher.ts
+src/features/member-work-sync/core/application/ports.ts
+test/features/member-work-sync/core/MemberWorkSyncUseCases.test.ts
+test/features/member-work-sync/core/application/MemberWorkSyncNudgeActivationPolicy.test.ts
+```
+
+Source-audit finding:
+
+```text
+Strict review pickup can bypass normal Phase 2 activation.
+Planner can escalate when delivery capability is unavailable or already-delivered review request is still stuck.
+Dispatcher can also escalate when a claimed review-pickup delivery cannot be delivered.
+```
+
+This is intentionally stronger than generic agenda sync, but it creates a duplicate-notification risk if plan-time and dispatch-time failures both notify lead for the same review request.
+
+Rules:
+
+- escalation key should include team, member, reviewRequestEventId set, agendaFingerprint or intent key, and reason class;
+- one review request event should not produce repeated lead escalations while the underlying board state is unchanged;
+- direct review-pickup delivery remains scoped to current review obligation only;
+- generic agenda sync must not use review-pickup bypass rules;
+- delivered review-pickup request IDs are durable and checked before planning more direct nudges;
+- failed direct delivery should either retry through outbox or escalate, not both for the same attempt.
+
+Tests:
+
+- plan-time capability absence escalates once for the same review request;
+- dispatch-time capability absence does not duplicate an existing plan-time escalation for the same key;
+- new reviewRequestEventId allows a new escalation;
+- generic agenda_sync item cannot use review-pickup bypass;
+- already-delivered review pickup that remains stuck escalates once and does not insert another direct nudge.
+
+### 4.75 Feature Composition Must Own Timers, Drains, And Disposal
+
+Current files:
+
+```text
+src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts
+src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts
+src/features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler.ts
+src/features/member-work-sync/main/infrastructure/MemberWorkSyncNudgeDispatchScheduler.ts
+test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts
+test/features/member-work-sync/main/MemberWorkSyncEventQueue.test.ts
+```
+
+Source-audit finding:
+
+```text
+createMemberWorkSyncFeature starts runtime turn-settled drain scheduler and optional nudge dispatch scheduler immediately.
+dispose stops the drain scheduler and awaits queue/nudge scheduler cleanup.
+```
+
+This is the main-process composition root. If old timers survive app reload, tests, or feature recreation, they can dispatch stale nudges from an old dependency graph.
+
+Rules:
+
+- all timers created by the feature are owned by the facade returned from composition;
+- dispose stops future drains, future scheduled nudge dispatch, and queued/running reconciles from scheduling follow-up work;
+- in-flight reconciliation may complete, but must pass lifecycle/revalidation before any inbox write;
+- feature recreation must not share old queue state, stale report token cache, or stale busy signal memory;
+- dispose must be idempotent;
+- live tests should dispose the feature before deleting temp team dirs.
+
+Tests:
+
+- dispose prevents queued item from reconciling later;
+- dispose while reconcile is running does not schedule follow-up queue item;
+- scheduler timers are cleared and no later dispatchDue call fires;
+- creating a second feature instance does not receive events from the disposed instance;
+- dispose can be called twice safely.
+
+### 4.76 Agenda Source Member Merge Must Preserve Runtime Identity
+
+Current files:
+
+```text
+src/features/member-work-sync/main/adapters/output/TeamTaskAgendaSource.ts
+src/features/member-work-sync/core/domain/ActionableWorkAgenda.ts
+src/shared/utils/teamProvider.ts
+test/features/member-work-sync/main/adapters/output/TeamTaskAgendaSource.test.ts
+test/features/member-work-sync/core/ActionableWorkAgenda.test.ts
+```
+
+Source-audit finding:
+
+```text
+TeamTaskAgendaSource merges config members and members-meta by normalized name.
+Provider id comes from member.providerId or model inference.
+Removed members are filtered from active member names.
+```
+
+Provider id is not part of the agenda fingerprint today, but it controls provider-specific behavior such as OpenCode direct remediation and targeted recovery. A merge bug can make the agenda look correct while dispatch chooses the wrong delivery path.
+
+Rules:
+
+- config/meta merge must prefer removedAt and provider/runtime metadata consistently;
+- provider id changes should affect dispatch capability and diagnostics, not churn agenda fingerprint unless actionable work semantics changed;
+- unknown provider id fails closed for provider-specific direct delivery;
+- removedAt from meta must remove the member from active sync even if config still lists it;
+- lead-like detection must not accidentally classify provider name `codex` as a teammate name;
+- provider inference from model is compatibility only and should be diagnostic when it affects dispatch.
+
+Tests:
+
+- meta removedAt overrides active config member for sync eligibility;
+- providerId from meta/config enables OpenCode targeted recovery only for the matching member;
+- unknown provider keeps agenda status readable but blocks provider-specific direct delivery;
+- provider/model-only changes do not churn fingerprint unless a product decision says otherwise;
+- lead-like and reserved names cannot become secondary member sync targets.
+
+### 4.77 Outbox Claimed Rows Need A Lease Recovery Contract
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts
+src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatcher.ts
+test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts
+test/features/member-work-sync/core/MemberWorkSyncUseCases.test.ts
+```
+
+Source-audit finding:
+
+```text
+claimDue() moves pending or failed_retryable rows to claimed and increments attemptGeneration.
+markDelivered(), markSuperseded(), and markFailed() only update rows that match the claimed attemptGeneration.
+There is no obvious due-path recovery for rows that stay claimed after a process crash or killed dispatcher.
+```
+
+This is a classic queue lease problem. `claimed` cannot mean "owned forever". It must be a short lease. Otherwise a crash between claim and mark can permanently hide a valid nudge.
+
+Rules:
+
+- claimed rows need a bounded claim lease such as `claimedAt + claimStaleMs`;
+- stale claimed rows are returned to `failed_retryable` or `pending` with a diagnostic, not delivered blindly;
+- recovery must preserve `attemptGeneration` monotonicity so late writes from the old dispatcher are ignored;
+- terminal rows remain terminal and are never revived by stale-claim recovery;
+- recovery runs inside the same team/index lock order as normal claim, so it cannot race with active dispatch;
+- tests must prove crash recovery does not create duplicate inbox rows when the old attempt actually delivered just before restart.
+
+Tests:
+
+- stale claimed row becomes claimable again after lease expiry;
+- non-stale claimed row is not claimed by a second dispatcher;
+- late `markDelivered` from an older attemptGeneration is ignored after recovery;
+- stale claimed row with an existing inbox messageId remains idempotent through sink/outbox validation;
+- terminal delivered/superseded/failed_terminal rows are not revived.
+
+### 4.78 Runtime Turn-Settled Poison Payloads Need Backoff Or Quarantine
+
+Current files:
+
+```text
+src/features/member-work-sync/core/application/RuntimeTurnSettledIngestor.ts
+src/features/member-work-sync/main/infrastructure/FileRuntimeTurnSettledEventStore.ts
+test/features/member-work-sync/main/RuntimeTurnSettledIngestor.test.ts
+test/features/member-work-sync/main/FileRuntimeTurnSettledEventStore.test.ts
+```
+
+Source-audit finding:
+
+```text
+claimPending() moves incoming files to processing.
+Invalid normalizer results are marked invalid.
+If the ingestor catches an unexpected exception while processing a claimed payload, it logs and leaves the file in processing.
+The file store later recovers stale processing files back to incoming.
+```
+
+That is good for transient failure, but dangerous for poison payloads that repeatedly crash target resolution or enqueue. They can create endless drain churn.
+
+Rules:
+
+- unexpected processing failures should keep retry semantics, but with bounded attempts recorded in metadata;
+- after a small retry budget, payload moves to invalid with reason `processing_failed_repeatedly`;
+- retry count must survive app restart;
+- poison payload quarantine must not block later payloads in the same drain batch;
+- drain summary should distinguish `failed_transient` from `invalid_quarantined`;
+- OpenCode non-terminal outcomes that are intentionally ignored remain processed, not retried.
+
+Tests:
+
+- one transient exception is retried after stale processing recovery;
+- repeated exception exceeds budget and quarantines the file;
+- poison file does not prevent a later valid file from enqueueing;
+- invalid/quarantined metadata includes provider, sourceId if known, and concise reason;
+- ignored OpenCode timeout/stream_unavailable does not count as poison.
+
+### 4.79 IPC And HTTP Boundaries Must Validate Member Work Sync Requests
+
+Current files:
+
+```text
+src/features/member-work-sync/main/adapters/input/registerMemberWorkSyncIpc.ts
+src/features/member-work-sync/preload/index.ts
+src/main/http/teams.ts
+src/renderer/api/httpClient.ts
+test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts
+test/renderer/api/httpClient.memberWorkSync.test.ts
+```
+
+Source-audit finding:
+
+```text
+Electron IPC handlers forward typed requests directly to the feature.
+HTTP routes validate teamName and some report fields, but browser-mode report currently posts the full request while the HTTP route normalizes source to "mcp".
+Renderer/preload code relies on TypeScript shape, not runtime validation.
+```
+
+Renderer and HTTP inputs are not domain-trusted. This is a Clean Architecture boundary: adapter validates and normalizes, application use cases receive a safe command.
+
+Rules:
+
+- shared request validators should live at the contract/input-adapter boundary, not inside domain policy;
+- IPC and HTTP should normalize teamName/memberName/state/fingerprint/taskIds consistently;
+- path-like member names may be valid display names only after canonical member validation, not raw path use;
+- report `source` must preserve real provenance: MCP tool report, app UI report, replay, or test;
+- browser-mode HTTP route must not label app-originated reports as MCP unless it is actually an MCP tool endpoint;
+- invalid IPC/HTTP input returns a structured error and never creates status, pending report, or outbox storage.
+
+Tests:
+
+- IPC rejects missing/blank teamName or memberName before calling the feature;
+- HTTP report rejects invalid state, empty fingerprint, non-array taskIds, and oversized note;
+- browser-mode report preserves or explicitly maps source provenance in a tested way;
+- encoded slash in memberName is treated consistently across HTTP client and route;
+- invalid requests do not create `.member-work-sync` files.
+
+### 4.80 Phase 2 Readiness Must Not Be Trained By Manual Status Reads
+
+Current files:
+
+```text
+src/features/member-work-sync/core/application/MemberWorkSyncReconciler.ts
+src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts
+src/features/member-work-sync/core/domain/MemberWorkSyncPhase2Readiness.ts
+src/features/member-work-sync/renderer/hooks/useMemberWorkSyncStatus.ts
+test/features/member-work-sync/core/MemberWorkSyncPhase2Readiness.test.ts
+test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts
+```
+
+Source-audit finding:
+
+```text
+MemberWorkSyncReconciler writes status for both request and queue contexts.
+JsonMemberWorkSyncStore creates status_evaluated metric events using evaluatedAt.
+Renderer status panel calls getStatus when opened.
+```
+
+If every manual status read trains readiness metrics, a user opening diagnostics repeatedly can move Phase 2 from shadow to active readiness. That is a hidden feedback loop.
+
+Rules:
+
+- metrics that unlock active nudges should be based on queue/runtime/team-change evaluations, not arbitrary UI reads;
+- request-based reads may update status for visibility, but should either not count toward readiness or carry a separate metric kind;
+- `refreshStatus` from UI must remain diagnostic and never directly dispatch a nudge;
+- readiness should expose how many events were automation-derived versus manual/request-derived;
+- test clocks should prove evaluatedAt changes alone do not create readiness.
+
+Tests:
+
+- repeated `getStatus`/request reconciles do not satisfy active readiness thresholds by themselves;
+- queue reconciles still count toward readiness;
+- manual refresh writes status but does not plan outbox;
+- mixed manual and queue events report clear readiness diagnostics;
+- opening `MemberWorkSyncStatusPanel` cannot turn on generic nudges.
+
+### 4.81 Watchdog Cooldown Fail-Closed Behavior Must Be Bounded And Visible
+
+Current files:
+
+```text
+src/features/member-work-sync/main/adapters/output/TeamTaskStallJournalWorkSyncCooldown.ts
+src/features/member-work-sync/core/application/MemberWorkSyncNudgeDispatcher.ts
+test/features/member-work-sync/main/TeamTaskStallJournalWorkSyncCooldown.test.ts
+test/features/member-work-sync/core/MemberWorkSyncUseCases.test.ts
+```
+
+Source-audit finding:
+
+```text
+Missing stall journal returns false.
+Malformed or unreadable stall journal returns true, suppressing work-sync nudges.
+Dispatcher treats watchdog_cooldown_active as retryable.
+```
+
+Failing closed is safer than spamming, but an unreadable journal can suppress sync forever if the retry path keeps seeing the same parse failure.
+
+Rules:
+
+- missing journal means no cooldown;
+- malformed/unreadable journal can suppress temporarily, but must expose a diagnostic reason;
+- repeated unreadable journal should not hide all work-sync forever without artifact visibility;
+- retry backoff for `watchdog_cooldown_active` should be bounded and observable;
+- watchdog cooldown is task-scoped: unrelated tasks for the same member should not be suppressed if taskIds do not overlap.
+
+Tests:
+
+- ENOENT returns no cooldown;
+- malformed JSON returns cooldown with diagnostic/audit reason;
+- unrelated task IDs do not trigger cooldown;
+- expired alertedAt does not suppress;
+- dispatcher retry after cooldown keeps outbox recoverable and does not duplicate nudge.
+
+### 4.82 Main-Process Event Fanout Must Stay Idempotent
+
+Current files:
+
+```text
+src/main/index.ts
+src/features/member-work-sync/main/composition/createMemberWorkSyncFeature.ts
+src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue.ts
+test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts
+test/features/member-work-sync/main/MemberWorkSyncEventQueue.test.ts
+```
+
+Source-audit finding:
+
+```text
+memberWorkSyncFeature.noteTeamChange() is called from file watcher forwarding and from TeamProvisioningService/teamLogSourceTracker emitters.
+The event queue coalesces by team/member and trigger reason.
+```
+
+Duplicate event delivery is expected in Electron main. The plan must not rely on "exactly once" event fanout.
+
+Rules:
+
+- noteTeamChange is at-least-once, not exactly-once;
+- duplicate events must coalesce into one reconcile per team/member window;
+- multiple trigger reasons can be preserved for diagnostics without changing agenda fingerprint;
+- event fanout must never call dispatcher directly;
+- feature disposal must remove or ignore stale fanout safely;
+- tests should simulate duplicate file watcher plus service-emitter events for the same task/inbox change.
+
+Tests:
+
+- duplicate inbox event enqueues one member reconcile and preserves trigger reasons;
+- duplicate task event does not create duplicate outbox rows;
+- event order `task then inbox` and `inbox then task` converges to the same agenda/outbox state;
+- post-dispose noteTeamChange is ignored or safe no-op;
+- repeated renderer broadcast does not imply repeated work-sync dispatch.
+
+### 4.83 Store Index Repair Must Not Drop Members With Bad Metadata Silently
+
+Current files:
+
+```text
+src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts
+src/features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths.ts
+src/main/services/team/TeamMemberStoragePaths.ts
+test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts
+```
+
+Source-audit finding:
+
+```text
+Index repair scans per-member storage by reading members/<key>/member.meta.json.
+Malformed member storage dirs are ignored during repair.
+```
+
+Ignoring malformed member dirs is safe for path traversal, but it can hide existing outbox/report/status rows if the meta file is corrupt. The repair path must make that degradation visible and avoid destructive cleanup.
+
+Rules:
+
+- malformed member meta during repair is diagnostic, not destructive;
+- repair must not delete member feature files just because meta is unreadable;
+- indexes can skip unsafe dirs, but artifact/debug output should list skipped member keys;
+- legacy store fallback must not create new raw member dirs when meta is corrupt;
+- canonical member meta repair belongs to `TeamMemberStoragePaths`/team storage, not member-work-sync domain code.
+
+Tests:
+
+- corrupt member.meta leaves member feature files untouched;
+- repair emits audit/log diagnostic for skipped member storage;
+- valid member dirs still repair indexes when another dir is malformed;
+- legacy fallback does not create unsafe raw member directory;
+- metrics/outbox repair remains deterministic with mixed valid and malformed member dirs.
+
+### 4.84 Public Status Surfaces Must Separate Operator Diagnostics From User State
+
+Current files:
+
+```text
+src/features/member-work-sync/renderer/adapters/memberWorkSyncStatusViewModel.ts
+src/features/member-work-sync/renderer/ui/MemberWorkSyncStatusPanel.tsx
+src/renderer/components/team/messages/MessagesPanel.tsx
+src/renderer/components/team/activity/ActivityItem.tsx
+test/features/member-work-sync/renderer/memberWorkSyncStatusViewModel.test.ts
+test/renderer/components/team/messages/MessagesPanel.test.tsx
+```
+
+Source-audit finding:
+
+```text
+MemberWorkSyncStatusPanel can expose detailed status.
+MessagesPanel hides work-sync nudges from normal Messages.
+ActivityItem still has automation/work-sync rows for audit/activity views.
+```
+
+This split is correct. The risk is product semantics drift: a user-facing "Needs sync" badge can look like a broken agent, while a hidden automation row can look like missing history.
+
+Rules:
+
+- normal Messages feed hides `member_work_sync_nudge` and task-stall automation by default;
+- activity/debug views may show automation, but with clear control-plane copy;
+- member card/status surfaces should explain "work agenda sync" without implying user message failure;
+- status badge must not be used as a delivery proof source;
+- diagnostics panels can show fingerprint/token/outbox state, but not full prompts or secrets;
+- screenshots and tests should cover both normal-user and diagnostics modes.
+
+Tests:
+
+- normal Messages excludes work-sync nudges;
+- Activity/audit view can show work-sync rows with automation labeling;
+- status view model maps inactive/unknown/needs_sync without scary false-error copy;
+- hidden automation row still appears in diagnostics/raw inbox;
+- status panel never triggers dispatch by rendering.
+
 ---
 
 ## 5. What Not To Do
@@ -5242,6 +6027,287 @@ Risk:
 
 `🎯 9   🛡️ 8   🧠 4`, roughly `50-130 LOC`.
 
+### 7.58 Provider Hook Wiring Can Look Enabled But Emit Nothing
+
+Claude, Codex, and OpenCode do not share one installation path. A green Claude Stop hook test does not prove Codex env injection or OpenCode bridge env injection.
+
+Rules:
+
+- test each provider's actual emitter path;
+- log install mode and spool root diagnostics;
+- missing env should degrade to no turn-settled signal, not failed foreground delivery.
+
+Risk:
+
+`🎯 9   🛡️ 8   🧠 4`, roughly `80-180 LOC`.
+
+### 7.59 Normalizer Drift Can Route Wrong Provider Events
+
+If provider/source validation becomes loose, a malformed runtime event can enqueue reconcile for the wrong member or provider.
+
+Rules:
+
+- provider and source strings are contract fields;
+- claimed-provider source mismatch fails closed;
+- duplicate identity is stable and tested.
+
+Risk:
+
+`🎯 9   🛡️ 9   🧠 4`, roughly `60-140 LOC`.
+
+### 7.60 Drain Scheduler Failure Can Silently Stop Reconcile
+
+If the drain scheduler stops after one exception, live agents can keep finishing turns while the app never sees events.
+
+Rules:
+
+- scheduler failure is warning-only;
+- next tick still runs;
+- stale processing files are recovered or quarantined;
+- no drain path writes inbox directly.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 4`, roughly `70-160 LOC`.
+
+### 7.61 Audit Journal Loss Can Hide Diagnostics But Must Not Change State
+
+The audit journal is rotated, truncated, and warning-only. Treating it as canonical proof would create hidden data-loss bugs.
+
+Rules:
+
+- audit is diagnostics only;
+- canonical state remains in stores/ledgers/outbox/inbox/runtime event store;
+- audit append failure cannot fail business flows.
+
+Risk:
+
+`🎯 9   🛡️ 9   🧠 3`, roughly `30-90 LOC`.
+
+### 7.62 Sparse Metrics Can Accidentally Enable Or Disable Phase 2
+
+Shadow readiness can become misleading if empty, corrupt, or truncated metrics are interpreted as healthy.
+
+Rules:
+
+- empty metrics remain collecting/not-ready;
+- corrupt/truncated data is conservative;
+- high nudge, churn, or rejection rates block readiness.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 4`, roughly `70-150 LOC`.
+
+### 7.63 Raw Member Names Can Corrupt Per-Member Stores
+
+Directly joining member names into storage paths can split state, collide with reserved names, or write outside the intended member directory.
+
+Rules:
+
+- use `MemberWorkSyncStorePaths` and `TeamMemberStoragePaths`;
+- store canonical key and display name separately;
+- path uncertainty fails closed before nudge dispatch.
+
+Risk:
+
+`🎯 9   🛡️ 9   🧠 3`, roughly `40-110 LOC`.
+
+### 7.64 Event Detail Shape Drift Can Drop Sync Triggers
+
+If `TeamChangeEvent.detail` changes shape, router parsing can silently miss inbox, tool, task, or turn-settled events.
+
+Rules:
+
+- parse detail defensively;
+- cover every emitted detail shape with tests;
+- fallback team-wide only for durable task changes where exact target is unknown.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 4`, roughly `80-180 LOC`.
+
+### 7.65 Wake Failure Can Make Delivered Nudges Look Idle
+
+The inbox row can be inserted and outbox marked delivered, while the runtime wake fails and the agent does not process it until a later trigger.
+
+Rules:
+
+- keep inbox insert as durable boundary;
+- make wake failure visible in diagnostics;
+- allow safe re-wake without duplicate inbox insert.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 4`, roughly `70-160 LOC`.
+
+### 7.66 Pending Report Replay Can Become Infinite Startup Work
+
+Transient reporter failures leave intents pending. Without retry bounds or stale cutoff, every startup can keep replaying the same bad intent.
+
+Rules:
+
+- permanent validation failures are marked processed;
+- transient failures are bounded and diagnostic;
+- replay always validates against current agenda.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 5`, roughly `90-220 LOC`.
+
+### 7.67 Review-Pickup Escalation Can Double Notify Lead
+
+Plan-time and dispatch-time review-pickup failures can both escalate the same review request unless keyed idempotently.
+
+Rules:
+
+- escalation key includes review request IDs and reason class;
+- one unchanged review request produces one escalation;
+- generic agenda sync never uses review-pickup bypass.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 5`, roughly `90-220 LOC`.
+
+### 7.68 Disposed Feature Instances Can Dispatch Stale Nudges
+
+If timers or running queue work survive feature disposal, old dependencies can write inbox rows after app reload or test teardown.
+
+Rules:
+
+- composition owns every timer;
+- dispose is idempotent;
+- stale in-flight work still passes lifecycle/revalidation before writing.
+
+Risk:
+
+`🎯 8   🛡️ 9   🧠 4`, roughly `70-180 LOC`.
+
+### 7.69 Provider Identity Drift Can Pick The Wrong Delivery Path
+
+Agenda items can be correct while provider id is stale, inferred incorrectly, or hidden by config/meta merge. That can route OpenCode-specific remediation to the wrong path or block it unexpectedly.
+
+Rules:
+
+- provider identity is dispatch metadata, not agenda fingerprint by default;
+- removedAt and provider metadata merge rules are explicit;
+- unknown provider fails closed for provider-specific direct delivery.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 4`, roughly `70-160 LOC`.
+
+### 7.70 Claimed Outbox Rows Can Get Stuck Forever After Crash
+
+A dispatcher can claim a pending nudge and crash before marking delivered, superseded, or failed. Without a claim lease, that row is no longer due and the agent never receives the nudge.
+
+Rules:
+
+- claimed status has a lease, not permanent ownership;
+- stale claims are recovered under lock;
+- late writes from old attempts are ignored by attemptGeneration.
+
+Risk:
+
+`🎯 9   🛡️ 9   🧠 5`, roughly `100-240 LOC`.
+
+### 7.71 Poison Turn-Settled Payload Can Churn The Drain Forever
+
+Payloads that repeatedly throw after being claimed can bounce from processing back to incoming forever.
+
+Rules:
+
+- processing retries are counted durably;
+- repeated failures quarantine;
+- one poison file cannot block later files.
+
+Risk:
+
+`🎯 8   🛡️ 9   🧠 5`, roughly `100-240 LOC`.
+
+### 7.72 IPC Or HTTP Source Drift Can Trust The Wrong Actor
+
+Typed renderer calls and HTTP route payloads are not runtime-trusted. If report source is mislabeled, app-originated reports can look like MCP tool reports.
+
+Rules:
+
+- validate and normalize at IPC/HTTP adapters;
+- preserve report provenance;
+- invalid input cannot create sync storage.
+
+Risk:
+
+`🎯 9   🛡️ 9   🧠 4`, roughly `80-180 LOC`.
+
+### 7.73 Manual Status Reads Can Train Phase 2 Readiness
+
+Opening diagnostics repeatedly can create status_evaluated metrics if request reconciles count exactly like queue/runtime reconciles.
+
+Rules:
+
+- separate request/manual metrics from automation readiness metrics;
+- UI refresh never dispatches;
+- readiness diagnostics show event provenance.
+
+Risk:
+
+`🎯 9   🛡️ 8   🧠 4`, roughly `80-180 LOC`.
+
+### 7.74 Corrupt Stall Journal Can Suppress Work-Sync Forever
+
+Fail-closed watchdog cooldown is safe against spam, but corrupt/unreadable journal data can become an invisible permanent suppressor.
+
+Rules:
+
+- corrupt journal suppresses temporarily and visibly;
+- missing journal does not suppress;
+- cooldown remains task-scoped.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 3`, roughly `50-130 LOC`.
+
+### 7.75 Duplicate Main-Process Events Can Become Duplicate Nudges
+
+File watcher, provisioning service, and log source events can all notify the same logical change.
+
+Rules:
+
+- event fanout is at-least-once;
+- queue/outbox dedupe is the correctness boundary;
+- event order must converge to the same state.
+
+Risk:
+
+`🎯 8   🛡️ 9   🧠 4`, roughly `70-170 LOC`.
+
+### 7.76 Index Repair Can Hide Corrupt Member Metadata
+
+Repair currently depends on member meta files to discover member storage. Corrupt meta can hide status/outbox/report rows during repair.
+
+Rules:
+
+- skipped member storage is diagnostic;
+- repair never deletes hidden member feature data;
+- canonical meta repair stays outside work-sync domain.
+
+Risk:
+
+`🎯 8   🛡️ 8   🧠 5`, roughly `90-220 LOC`.
+
+### 7.77 User-Facing Status Can Confuse Control-Plane State With Agent Failure
+
+Hidden automation is good, but a visible "Needs sync" badge or audit row can look like a failed message if copy is not strict.
+
+Rules:
+
+- normal Messages hides control-plane rows;
+- diagnostics show them with control-plane labels;
+- status UI never becomes a proof source.
+
+Risk:
+
+`🎯 9   🛡️ 8   🧠 3`, roughly `40-120 LOC`.
+
 ---
 
 ## 8. Implementation Sequence
@@ -5382,6 +6448,28 @@ Tasks:
 77. Add stale status read-refresh tests proving renderer polling coalesces and never writes inbox or prompts directly.
 78. Add scheduled dispatcher recovery tests separating fresh assignment wake from periodic due-row recovery.
 79. Add slow-start artifact fields for nudge origin: `foreground_delivery`, `event_queue`, `scheduled_dispatcher`, or `manual_refresh`.
+80. Add provider-specific turn-settled wiring tests for Claude Stop hook settings, Codex provisioning env, and OpenCode bridge env.
+81. Add workspace trust/preflight tests proving `AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT` survives allowed env filtering.
+82. Add normalizer strictness tests for provider/source mismatch, duplicate `sourceId`, malformed payload quarantine, and no lead fallback.
+83. Add drain scheduler tests for first-run timing, non-overlap, exception recovery, stale processing recovery, and invalid payload quarantine.
+84. Add audit journal tests proving append failure and rotation do not affect canonical sync state or dispatch decisions.
+85. Add Phase 2 readiness tests for empty, sparse, corrupt, high-nudge, high-churn, and high-rejection metrics.
+86. Add member path safety tests proving sync stores use canonical member keys and reject reserved/removed/unsafe identities.
+87. Add live artifact fields for provider emitter mode, spool root present/missing, last drain result, last normalizer result, and readiness blocking reasons.
+88. Add router detail-shape tests for inbox, lead-message, tool-activity, member-turn-settled, task file paths, malformed JSON, and resolver fallback.
+89. Add nudge wake tests proving wake failure is diagnostic/recoverable without turning delivered inbox rows back into retrying duplicates.
+90. Add pending report replay tests for bounded transient failures, stale cutoff, deterministic ordering, removed members, and current-agenda validation.
+91. Add review-pickup escalation idempotency tests keyed by review request IDs, agenda fingerprint or intent key, and reason class.
+92. Add composition lifecycle tests proving dispose clears timers, queue follow-ups, scheduler ticks, and old feature instances.
+93. Add agenda source provider-identity merge tests for config/meta precedence, removedAt, provider inference, and unknown-provider direct-delivery gating.
+94. Add outbox claim lease tests proving stale claimed rows recover, active claims do not double dispatch, and late old-attempt writes are ignored.
+95. Add poison turn-settled payload tests proving repeated processing exceptions quarantine after bounded retries and do not block later files.
+96. Add IPC/HTTP boundary tests for member-work-sync status/report validation, source provenance, encoded member names, and no storage writes on invalid input.
+97. Add Phase 2 metric provenance tests proving manual/request status reads do not unlock active nudges without queue/runtime observations.
+98. Add watchdog cooldown adapter tests for missing, corrupt, expired, unrelated, and matching task journal rows.
+99. Add main-process fanout/coalescing tests proving duplicate task/inbox/runtime events converge to one outbox row.
+100. Add store repair diagnostics tests proving corrupt member metadata does not delete hidden sync data and valid members still repair.
+101. Add user-surface tests proving work-sync automation stays hidden in normal Messages but visible in audit/debug surfaces.
 
 Commit:
 
@@ -5700,6 +6788,34 @@ Task-log projection and file-change extraction change for different reasons and 
 
 Keep evidence collection behind `TaskLogOpenCodeSessionEvidenceSource` so task-log projection can be tested separately from ledger discovery.
 
+### 10.1.1 Member-Work-Sync Provider Emitter Boundary
+
+The provider-specific "turn settled" emitters are input/infrastructure adapters, not domain policy.
+
+Current boundary should stay:
+
+```text
+provider runtime:
+  Claude Stop hook, Codex native orchestrator event, OpenCode bridge event
+
+main/infrastructure:
+  hook/env installer, spool paths, payload normalizers, runtime event store
+
+core/application:
+  ingest normalized RuntimeTurnSettledEvent, enqueue/reconcile member work state
+
+core/domain:
+  agenda fingerprint, report validation, readiness, nudge activation policy
+```
+
+Rules:
+
+- `ActionableWorkAgenda`, report validation, readiness, and nudge policy must not inspect provider-specific raw payloads;
+- provider-specific normalizers convert raw payloads into one shared `RuntimeTurnSettledEvent`;
+- adding a future provider should add a normalizer/emitter adapter and tests, not fork member-work-sync core use cases;
+- OpenCode-specific remediation remains an output-port behavior at dispatch/targeting time, not a different agenda model;
+- provider wiring diagnostics belong in main/infrastructure or artifacts, not renderer state.
+
 ### 10.2 `agent_teams_orchestrator`
 
 Provider-specific OpenCode protocol remains here:
@@ -5844,6 +6960,26 @@ Add or extend tests for:
 - event queue fast triggers stay fast even when coalescing and scheduler recovery are present.
 - stale status reads enqueue coalesced refresh only and never become direct delivery.
 - scheduled dispatcher is tested as recovery for due rows, not the fresh assignment wake path.
+- Claude Stop hook, Codex provisioning env, and OpenCode bridge env are tested through their real provider wiring paths.
+- normalizers reject provider/source drift instead of routing to another provider or defaulting to lead.
+- runtime turn-settled drain scheduler recovers from exceptions, stale processing files, and invalid payloads without blocking the app.
+- member-work-sync audit journal failures do not alter canonical store, outbox, inbox, or delivery state.
+- Phase 2 readiness remains conservative under empty, sparse, corrupt, or truncated metrics.
+- member-work-sync paths are derived from canonical member storage, not raw member-name joins.
+- router detail parsing covers every current team-change detail shape and malformed detail cannot enqueue the wrong member.
+- nudge wake failure is visible and re-wakeable without duplicate inbox rows.
+- pending report replay is bounded, ordered, and validates against current agenda every time.
+- review-pickup escalation is idempotent for unchanged review request events.
+- feature dispose clears timers and prevents stale feature instances from dispatching.
+- agenda source provider identity is tested separately from agenda fingerprint stability.
+- outbox claimed rows recover after lease expiry and never double-dispatch through old attempts.
+- poison runtime turn-settled payloads are quarantined after bounded retries.
+- IPC and HTTP member-work-sync requests are runtime-validated and preserve report provenance.
+- manual status reads do not train Phase 2 active readiness by themselves.
+- watchdog cooldown suppression is task-scoped, bounded, and diagnostic on corrupt journal data.
+- duplicate main-process team-change fanout coalesces before outbox writes.
+- store repair diagnostics expose corrupt member metadata without deleting hidden sync data.
+- user-facing status copy separates control-plane sync from delivery failure.
 
 ```bash
 pnpm vitest run \
@@ -5874,6 +7010,28 @@ pnpm vitest run \
   test/shared/utils/teamInternalControlMessages.test.ts \
   test/renderer/utils/teamMessageFiltering.test.ts \
   test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts
+```
+
+```bash
+pnpm vitest run \
+  test/features/member-work-sync/main/RuntimeTurnSettledHookSettings.test.ts \
+  test/features/member-work-sync/main/CodexNativeTurnSettledPayloadNormalizer.test.ts \
+  test/features/member-work-sync/main/OpenCodeTurnSettledPayloadNormalizer.test.ts \
+  test/features/member-work-sync/main/RuntimeTurnSettledIngestor.test.ts \
+  test/features/member-work-sync/main/FileMemberWorkSyncAuditJournal.test.ts \
+  test/features/member-work-sync/core/MemberWorkSyncPhase2Readiness.test.ts \
+  test/features/member-work-sync/main/JsonMemberWorkSyncStore.test.ts \
+  test/features/member-work-sync/main/MemberWorkSyncTeamChangeRouter.test.ts \
+  test/features/member-work-sync/main/MemberWorkSyncTaskImpactResolver.test.ts \
+  test/features/member-work-sync/main/adapters/output/TeamTaskAgendaSource.test.ts \
+  test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts \
+  test/features/member-work-sync/main/TeamTaskStallJournalWorkSyncCooldown.test.ts \
+  test/features/member-work-sync/renderer/memberWorkSyncStatusViewModel.test.ts \
+  test/renderer/api/httpClient.memberWorkSync.test.ts \
+  test/preload/electronApiMemberWorkSync.test.ts \
+  test/main/services/team/TeamProvisioningServicePrepare.test.ts \
+  test/features/member-work-sync/main/createMemberWorkSyncFeature.test.ts \
+  test/main/services/team/TeamMemberStoragePaths.test.ts
 ```
 
 `agent_teams_orchestrator`:
@@ -6289,6 +7447,178 @@ Expected live assertions:
 - diagnostics separate stale refresh enqueue from actual nudge delivery;
 - renderer polling is not required for correctness.
 
+### 12.34 Runtime Turn-Settled Provider Wiring Checklist
+
+- Claude Stop hook settings are tested independently from Codex/OpenCode env wiring;
+- Codex primary and secondary teammate provisioning include the spool env;
+- OpenCode desktop bridge and live harness include the spool env;
+- workspace trust/preflight does not strip the spool env;
+- missing env degrades to no turn-settled event, not launch or delivery failure;
+- diagnostics identify provider, install mode, and spool root presence.
+
+### 12.35 Normalizer Strictness Checklist
+
+- provider and source strings are explicit contract fields;
+- source mismatch for a claimed provider fails closed;
+- unsupported providers do not fall back to `lead` or any configured member;
+- duplicate logical event produces stable `sourceId`;
+- different session/turn/runtime prompt identity produces distinct `sourceId`;
+- invalid payloads are quarantined and do not enqueue reconcile.
+
+### 12.36 Runtime Turn-Settled Drain Scheduler Checklist
+
+- first drain runs promptly after composition;
+- scheduler runs are non-overlapping;
+- exceptions log warning and do not stop future ticks;
+- claim/read batches are bounded;
+- stale processing files are recovered or quarantined;
+- drain only ingests/enqueues and never writes inbox nudges directly.
+
+### 12.37 Audit Journal Checklist
+
+- audit append failure is warning-only;
+- audit rotation/truncation does not alter canonical sync state;
+- audit entries are never parsed as proof;
+- artifact packs may include audit snippets as diagnostics only;
+- audit payloads are sanitized and bounded;
+- no full prompt, auth value, API key, or unbounded transcript is written.
+
+### 12.38 Phase 2 Metrics Checklist
+
+- empty metrics remain collecting/not-ready;
+- sparse metrics cannot enable active nudges;
+- corrupt or truncated metric data is conservative;
+- high nudge rate, fingerprint churn, or report rejection blocks readiness;
+- readiness reasons are user/debug explainable;
+- audit journal rotation does not affect metrics readiness.
+
+### 12.39 Member Work Sync Path Safety Checklist
+
+- per-member sync files use `MemberWorkSyncStorePaths`;
+- raw `memberName` is not joined into filesystem paths;
+- canonical key and display name are separated;
+- reserved identities cannot create teammate sync stores;
+- removed member storage is diagnostic-only unless the member is active again by canonical identity;
+- path uncertainty fails closed before nudge dispatch.
+
+### 12.40 Team Change Router Detail Checklist
+
+- every emitted `TeamChangeEvent.detail` shape has a router test;
+- malformed JSON detail never throws;
+- unknown inbox recipient cannot create a member directory;
+- durable task changes fallback safely when exact task impact cannot be resolved;
+- materializer failure for one member does not block queueing other members;
+- team-wide fallback remains diagnostic and downstream-gated.
+
+### 12.41 Nudge Delivery Wake Checklist
+
+- inbox insert remains the durable generic nudge boundary;
+- wake failure after insert records diagnostic/audit data;
+- wake failure does not mark delivered outbox rows retryable by default;
+- safe re-wake path does not duplicate inbox rows;
+- existing-nudge wake still respects foreground, busy, cooldown, and provider delivery gates;
+- latency timeline shows whether delay happened before or after durable inbox insert.
+
+### 12.42 Pending Report Replay Checklist
+
+- replay uses current agenda and current token validation;
+- accepted/rejected/superseded outcomes are marked processed;
+- transient reporter failures are bounded and diagnosable;
+- removed member and inactive team intents are superseded;
+- replay has deterministic order and per-run limits;
+- replay summary distinguishes processed from still-pending transient failures.
+
+### 12.43 Review Pickup Escalation Checklist
+
+- escalation key includes review request IDs and reason class;
+- same unchanged review request escalates once;
+- new review request event can escalate again;
+- generic agenda sync cannot use review-pickup bypass;
+- delivery failure chooses retry or escalation for one attempt, not both;
+- delivered review-pickup event IDs suppress duplicate direct nudges.
+
+### 12.44 Feature Composition Lifecycle Checklist
+
+- composition owns every scheduler, queue, and runtime-drain timer;
+- dispose is idempotent;
+- dispose prevents queued follow-up work after in-flight reconcile completes;
+- stale feature instance cannot receive or dispatch new events;
+- live tests dispose feature before deleting temp teams;
+- feature recreation does not reuse stale busy signal or queue state.
+
+### 12.45 Agenda Source Runtime Identity Checklist
+
+- config/member-meta merge precedence is documented and tested;
+- meta `removedAt` removes a member from active sync;
+- provider id affects provider-specific dispatch but not agenda fingerprint by default;
+- unknown provider fails closed for provider-specific direct delivery;
+- provider inference from model is diagnostic when it affects behavior;
+- lead-like and reserved identities cannot become secondary sync targets.
+
+### 12.46 Outbox Claim Lease Checklist
+
+- claimed outbox rows have an explicit stale threshold;
+- stale claimed rows recover under the same locks as normal claim;
+- old attemptGeneration writes are ignored after recovery;
+- terminal rows are never revived;
+- recovery path is idempotent across app restart.
+
+### 12.47 Poison Turn-Settled Payload Checklist
+
+- unexpected processing failures increment durable retry metadata;
+- repeated failures quarantine with a stable reason;
+- poison payload does not block other payloads in the batch;
+- invalid and ignored outcomes remain separate in summaries;
+- diagnostics include provider/source identity when available.
+
+### 12.48 IPC And HTTP Boundary Checklist
+
+- IPC handlers validate request shape at runtime;
+- HTTP routes and IPC normalize team/member/report fields consistently;
+- report source provenance is not overwritten incorrectly;
+- invalid input cannot create status, pending report, outbox, or member storage files;
+- browser-mode client route mapping has parity tests with Electron bridge behavior.
+
+### 12.49 Phase 2 Metric Provenance Checklist
+
+- manual/request status reads do not satisfy active readiness thresholds alone;
+- queue/runtime/team-change reconciles are the primary readiness signal;
+- UI refresh writes no outbox rows directly;
+- readiness diagnostics include event provenance counts;
+- evaluatedAt churn alone cannot unlock nudges.
+
+### 12.50 Watchdog Cooldown Checklist
+
+- missing stall journal does not suppress sync;
+- corrupt or unreadable journal suppression is visible and bounded;
+- cooldown is scoped to overlapping task IDs;
+- expired alerts do not suppress;
+- retry after cooldown remains idempotent.
+
+### 12.51 Main-Process Fanout Checklist
+
+- team-change fanout is treated as at-least-once;
+- duplicate events coalesce before outbox planning;
+- trigger reasons are diagnostic and do not churn fingerprints;
+- event fanout never dispatches inbox nudges directly;
+- disposed features ignore late fanout safely.
+
+### 12.52 Store Repair Diagnostics Checklist
+
+- corrupt member meta during repair is diagnostic;
+- repair never deletes member feature data because discovery failed;
+- valid members still repair when one member dir is malformed;
+- legacy fallback does not create unsafe raw member dirs;
+- repair output is deterministic.
+
+### 12.53 User Status Surface Checklist
+
+- normal Messages hides work-sync automation by default;
+- activity/debug views label work-sync rows as control-plane automation;
+- member status copy does not imply user-message delivery failure;
+- diagnostics expose fingerprint/token/outbox state without secrets;
+- rendering a status panel cannot trigger dispatch.
+
 ---
 
 ## 13. Rollback Strategy
@@ -6355,6 +7685,26 @@ This hardening is complete when:
 - Inbox nudge idempotency cannot hide changed payload, message kind, source, or task refs.
 - Targeted recovery remains provider-specific and does not become a global phase2 bypass.
 - Queue fast triggers, stale-read refresh, and scheduler recovery are separated and explainable in diagnostics.
+- Runtime turn-settled install paths are tested per provider: Claude Stop hook, Codex provisioning env, and OpenCode bridge env.
+- Runtime turn-settled normalizers reject provider/source drift and cannot route malformed events to the wrong member.
+- Runtime turn-settled drain is non-blocking, recovers after failure, and never writes inbox nudges directly.
+- Member-work-sync audit journal is diagnostic-only and cannot change canonical sync or delivery state.
+- Phase 2 readiness remains conservative under empty, sparse, corrupt, or truncated metrics.
+- Member-work-sync per-member storage uses canonical member paths and rejects unsafe/reserved identities before dispatch.
+- Team-change routing cannot silently drop current event detail shapes or enqueue unsafe/raw member names.
+- Nudge wake failures are visible and recoverable without duplicating durable inbox rows.
+- Pending report replay is bounded, current-agenda validated, and cannot loop stale intents forever.
+- Review-pickup escalation is idempotent for unchanged review request events.
+- Feature composition owns and disposes all work-sync timers, queues, and drain schedulers.
+- Provider/runtime identity merge rules are tested separately from agenda fingerprint semantics.
+- Claimed outbox rows recover after crash without duplicate dispatch.
+- Poison runtime turn-settled payloads quarantine after bounded retries.
+- IPC/HTTP adapters validate requests and preserve report provenance.
+- Phase 2 readiness cannot be trained by manual status reads alone.
+- Watchdog cooldown failures are bounded, task-scoped, and visible.
+- Duplicate main-process events coalesce before dispatch.
+- Store repair never deletes hidden sync data because member metadata is malformed.
+- User status surfaces separate control-plane sync from agent/message failure.
 - Live smoke proves a task assignment reaches OpenCode, starts work, produces task logs, and settles member-work-sync without duplicate nudges.
 
 ---
