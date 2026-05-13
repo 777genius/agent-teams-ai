@@ -51,6 +51,7 @@ import type {
   MemberWorkSyncBusySignalPort,
   MemberWorkSyncLoggerPort,
   MemberWorkSyncNudgeDeliveryWakePort,
+  MemberWorkSyncProofMissingRecoveryGuardPort,
   MemberWorkSyncReviewPickupDeliveryPort,
   MemberWorkSyncReviewPickupEscalationPort,
 } from '../../core/application';
@@ -173,6 +174,7 @@ export function createMemberWorkSyncFeature(deps: {
   queueQuietWindowMs?: number;
   runtimeTurnSettledTargetResolver?: RuntimeTurnSettledTargetResolverPort;
   extraBusySignals?: MemberWorkSyncBusySignalPort[];
+  proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
   nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
@@ -238,6 +240,9 @@ export function createMemberWorkSyncFeature(deps: {
     inboxNudge,
     watchdogCooldown,
     busySignal,
+    ...(deps.proofMissingRecoveryGuard
+      ? { proofMissingRecoveryGuard: deps.proofMissingRecoveryGuard }
+      : {}),
     ...(deps.nudgeDeliveryWake ? { nudgeDeliveryWake: deps.nudgeDeliveryWake } : {}),
     ...(deps.reviewPickupDelivery ? { reviewPickupDelivery: deps.reviewPickupDelivery } : {}),
     ...(deps.reviewPickupEscalation ? { reviewPickupEscalation: deps.reviewPickupEscalation } : {}),
@@ -382,6 +387,22 @@ export function createMemberWorkSyncFeature(deps: {
       return { scheduled: false, reason: 'invalid' };
     }
 
+    const taskRefs = normalizeRecoveryTaskRefs(request.taskRefs);
+    if (taskRefs.length === 0) {
+      await auditJournal.append({
+        timestamp: clock.now().toISOString(),
+        teamName,
+        memberName,
+        event: 'proof_missing_recovery_suppressed',
+        source: 'proof_missing_recovery_scheduler',
+        reason: 'missing_task_refs',
+        metadata: {
+          originalMessageId,
+        },
+      });
+      return { scheduled: false, reason: 'invalid' };
+    }
+
     const intentKey = buildProofMissingRecoveryIntentKey(originalMessageId);
     const sinceIso = new Date(
       clock.now().getTime() - PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS
@@ -414,7 +435,6 @@ export function createMemberWorkSyncFeature(deps: {
       };
     }
 
-    const taskRefs = normalizeRecoveryTaskRefs(request.taskRefs);
     await auditJournal.append({
       timestamp: clock.now().toISOString(),
       teamName,

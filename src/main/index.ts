@@ -1682,6 +1682,48 @@ async function initializeServices(): Promise<void> {
         isBusy: (input) => teamProvisioningService.getOpenCodeMemberDeliveryBusyStatus(input),
       },
     ],
+    proofMissingRecoveryGuard: {
+      shouldDispatch: async (input) => {
+        const status = await teamProvisioningService.getOpenCodeRuntimeDeliveryStatus(
+          input.teamName,
+          input.originalMessageId
+        );
+        if (!status) {
+          return {
+            ok: false,
+            reason: 'proof_missing_recovery_record_missing',
+            retryable: false,
+          };
+        }
+
+        const impact = status.userVisibleImpact;
+        if (impact?.reasonCode === 'protocol_proof_missing') {
+          if (impact.state === 'checking') {
+            return {
+              ok: false,
+              reason: 'proof_missing_recovery_still_in_grace',
+              retryable: true,
+              ...(impact.nextReviewAt ? { nextAttemptAt: impact.nextReviewAt } : {}),
+            };
+          }
+          return { ok: true };
+        }
+
+        if (status.responsePending) {
+          return {
+            ok: false,
+            reason: 'proof_missing_recovery_delivery_still_pending',
+            retryable: true,
+          };
+        }
+
+        return {
+          ok: false,
+          reason: 'proof_missing_recovery_suppressed',
+          retryable: false,
+        };
+      },
+    },
     nudgeDeliveryWake: {
       schedule: async (input) => {
         if (input.providerId === 'opencode') {

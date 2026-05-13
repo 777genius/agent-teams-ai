@@ -210,6 +210,19 @@ export interface MemberWorkSyncBusySignalPort {
   }): Promise<{ busy: boolean; reason?: string; retryAfterIso?: string }>;
 }
 
+export interface MemberWorkSyncProofMissingRecoveryGuardPort {
+  shouldDispatch(input: {
+    teamName: string;
+    memberName: string;
+    intentKey: string;
+    originalMessageId: string;
+    taskIds: string[];
+    nowIso: string;
+  }): Promise<
+    { ok: true } | { ok: false; reason: string; retryable: boolean; nextAttemptAt?: string }
+  >;
+}
+
 export interface MemberWorkSyncNudgeDeliveryWakePort {
   schedule(input: {
     teamName: string;
@@ -281,6 +294,7 @@ export interface MemberWorkSyncUseCaseDeps {
   inboxNudge?: MemberWorkSyncInboxNudgePort;
   watchdogCooldown?: MemberWorkSyncWatchdogCooldownPort;
   busySignal?: MemberWorkSyncBusySignalPort;
+  proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
   nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;

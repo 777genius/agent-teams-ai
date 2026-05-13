@@ -81,4 +81,53 @@ describe('RuntimeDiagnosticClassifier', () => {
       actionRequired: false,
     });
   });
+
+  it('does not classify message_send Not connected as protocol proof missing', () => {
+    expect(
+      classifyRuntimeDiagnostic(
+        'agent-teams_message_send returned Not connected while sending a visible reply'
+      )
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      actionRequired: false,
+    });
+  });
+
+  it('keeps explicit proof-missing diagnostics narrow', () => {
+    expect(
+      classifyRuntimeDiagnostic(
+        'OpenCode used tools, but did not create a visible reply or task progress proof.'
+      )
+    ).toMatchObject({
+      reasonCode: 'protocol_proof_missing',
+      generic: true,
+    });
+  });
+
+  it('keeps quota and auth diagnostics above proof-missing substrings in the same message', () => {
+    expect(
+      classifyRuntimeDiagnostic(
+        'Insufficient credits: OpenCode used tools, but did not create a visible reply or task progress proof.'
+      )
+    ).toMatchObject({
+      reasonCode: 'quota_exhausted',
+      actionRequired: true,
+    });
+
+    expect(
+      classifyRuntimeDiagnostic(
+        'authentication_failed: visible_reply_missing_task_refs because API key is invalid'
+      )
+    ).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+  });
+
+  it('keeps OpenCode bridge command timeout as backend state despite timeout tokens', () => {
+    expect(classifyRuntimeDiagnostic('OpenCode bridge command timed out')).toMatchObject({
+      reasonCode: 'backend_error',
+      generic: true,
+    });
+  });
 });

@@ -413,6 +413,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           teamName,
           memberName,
           originalMessageId: 'message-1',
+          taskRefs: [{ taskId: 'task-1', displayId: '11111111', teamName }],
         })
       ).resolves.toMatchObject({
         scheduled: false,
@@ -420,6 +421,47 @@ describe('createMemberWorkSyncFeature composition', () => {
         existingOutboxId: 'member-work-sync:team-a:bob:proof-missing:message-1',
       });
       expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 0 });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('does not schedule broad proof-missing recovery without task refs', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })),
+      } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    });
+
+    try {
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName,
+          memberName,
+          originalMessageId: 'message-1',
+        })
+      ).resolves.toMatchObject({
+        scheduled: false,
+        reason: 'invalid',
+      });
+      expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 0 });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+        []
+      );
     } finally {
       await feature.dispose();
     }
@@ -497,6 +539,104 @@ describe('createMemberWorkSyncFeature composition', () => {
           encoding: 'utf8',
         })
       ).resolves.toContain(outboxInput!.id);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('suppresses queued proof-missing recovery when the original delivery is no longer proof-missing', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const proofMissingRecoveryGuard = {
+      shouldDispatch: vi.fn(async () => ({
+        ok: false as const,
+        reason: 'proof_missing_recovery_suppressed',
+        retryable: false,
+      })),
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      proofMissingRecoveryGuard,
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const status = await feature.refreshStatus({ teamName, memberName });
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await expect(
+        store.ensurePending({
+          id: 'member-work-sync:team-a:bob:proof-missing:message-1',
+          teamName,
+          memberName,
+          agendaFingerprint: status.agenda.fingerprint,
+          payloadHash: 'payload-hash',
+          payload: {
+            from: 'system',
+            to: memberName,
+            messageKind: 'member_work_sync_nudge',
+            source: 'member-work-sync',
+            actionMode: 'do',
+            workSyncIntent: 'agenda_sync',
+            workSyncIntentKey: 'proof-missing:message-1',
+            text: 'Recover proof',
+            taskRefs: [{ taskId: 'task-1', displayId: '11111111', teamName }],
+          },
+          nowIso: status.evaluatedAt,
+        })
+      ).resolves.toMatchObject({
+        ok: true,
+        outcome: 'created',
+      });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 0,
+        superseded: 1,
+        retryable: 0,
+        terminal: 0,
+      });
+      expect(proofMissingRecoveryGuard.shouldDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName,
+          memberName,
+          intentKey: 'proof-missing:message-1',
+          originalMessageId: 'message-1',
+          taskIds: ['task-1'],
+        })
+      );
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+        []
+      );
     } finally {
       await feature.dispose();
     }
