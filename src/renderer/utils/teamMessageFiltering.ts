@@ -117,6 +117,7 @@ export function filterTeamMessages(
   options: {
     includePassiveIdlePeerSummariesWhenNoiseHidden?: boolean;
     includeAutomationEvents?: boolean;
+    includeMemberWorkSyncNudges?: boolean;
     leadNames?: Iterable<string>;
     timeWindow?: { start: number; end: number } | null;
     filter: TeamMessagesFilter;
@@ -126,6 +127,7 @@ export function filterTeamMessages(
   const {
     includePassiveIdlePeerSummariesWhenNoiseHidden = false,
     includeAutomationEvents = false,
+    includeMemberWorkSyncNudges = false,
     leadNames: rawLeadNames,
     timeWindow,
     filter,
@@ -136,8 +138,8 @@ export function filterTeamMessages(
   let list = messages.filter(
     (m) =>
       m.messageKind !== 'task_comment_notification' &&
-      (includeAutomationEvents ||
-        (!isTaskStallRemediationMessage(m) && !isMemberWorkSyncNudgeMessage(m))) &&
+      (includeAutomationEvents || !isTaskStallRemediationMessage(m)) &&
+      (includeMemberWorkSyncNudges || !isMemberWorkSyncNudgeMessage(m)) &&
       !isReviewPickupEscalationMessage(m) &&
       !isTeamInternalControlMessageEnvelope(m)
   );

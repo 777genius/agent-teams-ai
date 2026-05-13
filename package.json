@@ -19,7 +19,6 @@
   "main": "dist-electron/main/index.cjs",
   "scripts": {
     "dev": "node ./scripts/dev-with-runtime.mjs",
-    "dev:web": "node ./scripts/dev-web.mjs",
     "dev:kill": "node bin/kill-dev.js",
     "opencode:prove-mixed-recovery": "node ./scripts/prove-opencode-mixed-recovery.mjs",
     "opencode:prove-semantic-gauntlet": "node ./scripts/prove-opencode-semantic-gauntlet.mjs",

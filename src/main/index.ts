@@ -143,6 +143,7 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
@@ -221,6 +222,8 @@ import type { FileChangeEvent } from '@main/types';
 import type { AppStartupStatus, AppStartupStep, TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('App');
+const appStartedAtMs = Date.now();
+const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
 if (
   earlyElectronUserDataMigrationResult.migrated &&
@@ -346,6 +349,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
 
   reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
+  bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   try {
     reportProgress('runtime-work-sync', 'Preparing runtime work sync hooks...');
@@ -419,23 +423,63 @@ async function createOpenCodeRuntimeAdapterRegistry(
 }
 
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
-  if (!openCodeLifecycleBridge) {
-    return;
-  }
-  const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
-    reason,
-    mode: reason === 'shutdown' ? 'force' : 'stale',
-    staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
-    leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
-    preflightLeaseStaleAgeMs: reason === 'startup' ? 2 * 60_000 : null,
-  });
-  if (result.cleaned > 0) {
-    logger.info(
-      `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+  let registryHostPids = new Set<number>();
+  let registryCleanupAvailable = false;
+  if (openCodeLifecycleBridge) {
+    const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
+      reason,
+      mode: reason === 'shutdown' ? 'force' : 'stale',
+      staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
+      leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
+      preflightLeaseStaleAgeMs: reason === 'startup' ? 2 * 60_000 : null,
+    });
+    registryHostPids = new Set(
+      result.hosts
+        .filter((host) => host.action.startsWith('kept_'))
+        .map((host) => host.pid)
+        .filter((pid) => Number.isFinite(pid) && pid > 0)
+    );
+    if (result.cleaned > 0) {
+      logger.info(
+        `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+      );
+    }
+    for (const diagnostic of result.diagnostics) {
+      logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
+    }
+    registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
+      diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
   }
-  for (const diagnostic of result.diagnostics) {
-    logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
+
+  if (reason === 'startup' && !registryCleanupAvailable) {
+    logger.warn(
+      '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
+    );
+    return;
+  }
+
+  await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
+    mode: reason === 'shutdown' ? 'force' : 'orphaned',
+    excludePids: reason === 'startup' ? registryHostPids : undefined,
+    requiredDetailsMarkers:
+      reason === 'shutdown'
+        ? [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`]
+        : undefined,
+    startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
+  });
+}
+
+async function cleanupOpenCodeHostProcessFallback(
+  label: string,
+  options: Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0]
+): Promise<void> {
+  const fallback = await cleanupManagedOpenCodeServeProcesses(options);
+  if (fallback.killed > 0) {
+    logger.info(`[OpenCode] ${label} cleanup killed ${fallback.killed} managed host(s)`);
+  }
+  for (const diagnostic of fallback.diagnostics) {
+    logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
   }
 }
 
@@ -1979,6 +2023,15 @@ async function shutdownServices(): Promise<void> {
     );
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
+    );
+    await runShutdownStep(
+      'OpenCode post-subprocess fallback cleanup',
+      () =>
+        cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
+          mode: 'force',
+          requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`],
+        }),
+      5_000
     );
 
     await runShutdownStep('MCP config GC', () => new TeamMcpConfigBuilder().gcOwnConfigs());

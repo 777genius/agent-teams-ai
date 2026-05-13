@@ -403,6 +403,7 @@ function formatRuntimeErrorText(
   const payload = parseJsonObjectFromText(compact);
   const hasErrorSignal =
     /^(api error|runtime error|provider error|tool error)\b/i.test(compact) ||
+    /^(opencode|codex|claude|openai|anthropic|provider)\s+runtime\s+error\b/i.test(compact) ||
     /\b(api|codex|claude|openai|anthropic)\s+api\s+error\b/i.test(compact) ||
     /\b(api|codex|claude|openai|anthropic|provider)\s+error\s*:\s*\d{3}\b/i.test(compact) ||
     unknownPayloadLooksLikeError(payload);
@@ -415,10 +416,11 @@ function formatRuntimeErrorText(
   const jsonStart = compact.indexOf('{');
   const header = jsonStart > 0 ? compact.slice(0, jsonStart).trim() : '';
   const payloadMessage = payload ? payloadErrorMessage(payload) : null;
+  const fallbackText = payloadMessage ?? header;
   const text =
     payloadMessage && header && !header.toLowerCase().includes(payloadMessage.toLowerCase())
       ? `${header} - ${payloadMessage}`
-      : (payloadMessage ?? header);
+      : fallbackText || compact;
   return { ...truncatePreview(text || 'Runtime error', limit), title };
 }
 
@@ -2385,6 +2387,33 @@ export function extractMemberLogPreviewItems(
             laneId: input.laneId,
             token: 'thinking',
             textTruncated: thinkingPreview.truncated,
+          })
+        );
+      }
+    }
+
+    if (role === 'system') {
+      const runtimeErrorPreview = formatRuntimeErrorText(
+        textFromPreviewContent(message.content),
+        textLimit
+      );
+      if (runtimeErrorPreview) {
+        candidates.push(
+          buildCandidate({
+            provider: input.provider,
+            sourceId,
+            message,
+            messageIndex,
+            blockIndex: 10,
+            kind: 'text',
+            title: runtimeErrorPreview.title,
+            preview: runtimeErrorPreview.preview,
+            tone: 'error',
+            sourceLabel: input.sourceLabel,
+            sessionId: input.sessionId ?? message.sessionId,
+            laneId: input.laneId,
+            token: 'system-runtime-error',
+            textTruncated: runtimeErrorPreview.truncated,
           })
         );
       }

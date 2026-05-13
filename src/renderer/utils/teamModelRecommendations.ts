@@ -13,7 +13,13 @@ import type { TeamProviderId } from '@shared/types';
 export type TeamModelRecommendationLevel = OpenCodeTeamModelRecommendationLevel;
 export type TeamModelRecommendation = OpenCodeTeamModelRecommendation;
 
-const CODEX_TEAM_RECOMMENDED_MODELS = new Set<string>(['gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.5']);
+const CODEX_TEAM_RECOMMENDED_MODELS = new Set<string>([
+  'gpt-5.5',
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.3-codex',
+  'gpt-5.2',
+]);
 
 const CODEX_RECOMMENDED_REASON =
   'This Codex model passed real Agent Teams launch and task-flow stress testing and is selected for stable team-agent behavior.';

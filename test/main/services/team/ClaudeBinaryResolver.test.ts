@@ -136,6 +136,25 @@ describe('ClaudeBinaryResolver', () => {
     expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
   });
 
+  it('does not wait for shell env before using an explicit absolute runtime override', async () => {
+    const expectedBinary = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
+    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = expectedBinary;
+    mockResolveInteractiveShellEnv.mockRejectedValue(new Error('shell env should not be needed'));
+
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === expectedBinary) {
+        return Promise.resolve();
+      }
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    });
+
+    const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+    ClaudeBinaryResolver.clearCache();
+
+    await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
+    expect(mockResolveInteractiveShellEnv).not.toHaveBeenCalled();
+  });
+
   it('resolves extensionless Windows explicit overrides to a real executable file first', async () => {
     Object.defineProperty(process, 'platform', {
       value: 'win32',
