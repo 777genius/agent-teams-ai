@@ -1441,18 +1441,14 @@
       })();
     </script>
     <script type="module">
-      if (window.location.protocol !== 'file:') {
-        const { startSplashScene } = await import('./components/splash/splashScene.ts');
-        const splash = document.getElementById('splash');
-        if (splash && !window.__claudeTeamsSplashScene) {
-          window.__claudeTeamsSplashScene = startSplashScene(splash);
-        }
+      const { startSplashScene } = await import('./components/splash/splashScene.ts');
+      const splash = document.getElementById('splash');
+      if (splash && !window.__claudeTeamsSplashScene) {
+        window.__claudeTeamsSplashScene = startSplashScene(splash);
       }
     </script>
     <script type="module">
-      if (window.location.protocol !== 'file:') {
-        import('./main.tsx');
-      }
+      import('./main.tsx');
     </script>
   </body>
 </html>

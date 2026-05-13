@@ -6,6 +6,7 @@ import { execCli } from '@main/utils/childProcess';
 
 const CACHE_VERIFY_TTL_MS = 30_000;
 const VERSION_CACHE_TTL_MS = 30_000;
+const BINARY_LAUNCH_VERIFY_TIMEOUT_MS = 3_000;
 
 let cachedBinaryPath: string | null | undefined;
 let cacheVerifiedAt = 0;
@@ -15,6 +16,18 @@ const versionCache = new Map<string, { version: string | null; observedAt: numbe
 async function fileExists(filePath: string): Promise<boolean> {
   try {
     await fsp.access(filePath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function binaryCanLaunch(candidate: string): Promise<boolean> {
+  try {
+    await execCli(candidate, ['--version'], {
+      timeout: BINARY_LAUNCH_VERIFY_TIMEOUT_MS,
+      windowsHide: true,
+    });
     return true;
   } catch {
     return false;
@@ -67,7 +80,7 @@ async function verifyBinary(candidate: string): Promise<string | null> {
 
   if (isPathLikeCandidate(candidate)) {
     for (const expandedCandidate of expandedCandidates) {
-      if (await fileExists(expandedCandidate)) {
+      if ((await fileExists(expandedCandidate)) && (await binaryCanLaunch(expandedCandidate))) {
         return expandedCandidate;
       }
     }
@@ -78,7 +91,7 @@ async function verifyBinary(candidate: string): Promise<string | null> {
   for (const pathEntry of pathEntries) {
     for (const expandedCandidate of expandedCandidates) {
       const resolvedCandidate = resolvePathEntryCandidate(pathEntry, expandedCandidate);
-      if (await fileExists(resolvedCandidate)) {
+      if ((await fileExists(resolvedCandidate)) && (await binaryCanLaunch(resolvedCandidate))) {
         return resolvedCandidate;
       }
     }

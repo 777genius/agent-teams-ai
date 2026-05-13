@@ -2,9 +2,34 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getCachedShellEnvMock = vi.fn<() => NodeJS.ProcessEnv | null>();
+const execCliMock = vi.fn<
+  (
+    binaryPath: string | null,
+    args: string[],
+    options?: {
+      env?: NodeJS.ProcessEnv;
+      timeout?: number;
+      windowsHide?: boolean;
+      maxBuffer?: number;
+    }
+  ) => Promise<{ stdout: string; stderr: string }>
+>();
 
 vi.mock('@main/utils/shellEnv', () => ({
   getCachedShellEnv: () => getCachedShellEnvMock(),
+}));
+
+vi.mock('@main/utils/childProcess', () => ({
+  execCli: (
+    binaryPath: string | null,
+    args: string[],
+    options?: {
+      env?: NodeJS.ProcessEnv;
+      timeout?: number;
+      windowsHide?: boolean;
+      maxBuffer?: number;
+    }
+  ) => execCliMock(binaryPath, args, options),
 }));
 
 describe('ProviderConnectionService', () => {
@@ -34,6 +59,7 @@ describe('ProviderConnectionService', () => {
     vi.resetModules();
     vi.clearAllMocks();
     getCachedShellEnvMock.mockReturnValue({});
+    execCliMock.mockResolvedValue({ stdout: 'Logged in using ChatGPT', stderr: '' });
     delete process.env.OPENAI_API_KEY;
     delete process.env.CODEX_API_KEY;
   });
@@ -259,7 +285,177 @@ describe('ProviderConnectionService', () => {
     });
   });
 
-  it('surfaces stored Anthropic API key mode as the effective provider auth status', async () => {
+  it('does not report stored Anthropic API key mode as connected until runtime verifies the API key', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const verifyAnthropicApiKey = vi.fn().mockResolvedValue({ state: 'unknown' });
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'ANTHROPIC_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never,
+      undefined,
+      verifyAnthropicApiKey
+    );
+
+    const status = await service.enrichProviderStatus({
+      providerId: 'anthropic',
+      displayName: 'Anthropic',
+      supported: true,
+      authenticated: true,
+      authMethod: 'claude.ai',
+      verificationState: 'verified',
+      statusMessage: 'Connected via Anthropic subscription',
+      models: ['claude-sonnet-4-6'],
+      canLoginFromUi: true,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
+      },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: null,
+      connection: null,
+    } as never);
+
+    expect(status).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage:
+        'Anthropic API key is configured, but has not been verified by the runtime yet.',
+      connection: {
+        configuredAuthMode: 'api_key',
+        apiKeyConfigured: true,
+        apiKeySource: 'stored',
+        apiKeySourceLabel: 'Stored in app',
+      },
+    });
+    expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key');
+  });
+
+  it('reports Anthropic API key mode as connected after direct API verification succeeds', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const verifyAnthropicApiKey = vi.fn().mockResolvedValue({ state: 'valid', status: 200 });
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'ANTHROPIC_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never,
+      undefined,
+      verifyAnthropicApiKey
+    );
+
+    const status = await service.enrichProviderStatus({
+      providerId: 'anthropic',
+      displayName: 'Anthropic',
+      supported: true,
+      authenticated: true,
+      authMethod: 'claude.ai',
+      verificationState: 'verified',
+      statusMessage: 'Connected via Anthropic subscription',
+      models: ['claude-sonnet-4-6'],
+      canLoginFromUi: true,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
+      },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: null,
+      connection: null,
+    } as never);
+
+    expect(status).toMatchObject({
+      authenticated: true,
+      authMethod: 'api_key',
+      verificationState: 'verified',
+      statusMessage: 'Connected via API key',
+      connection: {
+        configuredAuthMode: 'api_key',
+        apiKeyConfigured: true,
+        apiKeySource: 'stored',
+        apiKeySourceLabel: 'Stored in app',
+      },
+    });
+    expect(verifyAnthropicApiKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports an invalid Anthropic API key after direct API verification fails', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const verifyAnthropicApiKey = vi.fn().mockResolvedValue({
+      state: 'invalid',
+      status: 401,
+      errorType: 'authentication_error',
+      errorMessage: 'invalid x-api-key',
+    });
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'ANTHROPIC_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never,
+      undefined,
+      verifyAnthropicApiKey
+    );
+
+    const status = await service.enrichProviderStatus({
+      providerId: 'anthropic',
+      displayName: 'Anthropic',
+      supported: true,
+      authenticated: true,
+      authMethod: 'claude.ai',
+      verificationState: 'verified',
+      statusMessage: 'Connected via Anthropic subscription',
+      models: ['claude-sonnet-4-6'],
+      canLoginFromUi: true,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
+      },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: null,
+      connection: null,
+    } as never);
+
+    expect(status).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusMessage: 'Anthropic API key verification failed: invalid x-api-key',
+    });
+  });
+
+  it('reports Anthropic API key mode as connected after runtime verifies the API key', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
 
@@ -280,9 +476,9 @@ describe('ProviderConnectionService', () => {
       displayName: 'Anthropic',
       supported: true,
       authenticated: true,
-      authMethod: 'claude.ai',
+      authMethod: 'api_key',
       verificationState: 'verified',
-      statusMessage: 'Connected via Anthropic subscription',
+      statusMessage: null,
       models: ['claude-sonnet-4-6'],
       canLoginFromUi: true,
       capabilities: {
@@ -821,6 +1017,73 @@ describe('ProviderConnectionService', () => {
     ).resolves.toBeNull();
 
     expect(loginStatusChecker).not.toHaveBeenCalled();
+  });
+
+  it('verifies degraded Codex cmd shim login status through the shared CLI launcher', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue({
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: 'chatgpt',
+        launchAllowed: true,
+        launchIssueMessage: null,
+        launchReadinessState: 'warning_degraded_but_launchable',
+        appServerState: 'degraded',
+        appServerStatusMessage: 'Using cached ChatGPT account after transient app-server failure.',
+        managedAccount: {
+          type: 'chatgpt',
+          email: 'user@example.com',
+          planType: 'pro',
+        },
+        apiKey: {
+          available: false,
+          source: null,
+          sourceLabel: null,
+        },
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: true,
+        localActiveChatgptAccountPresent: true,
+        runtimeContext: {
+          binaryPath: '/opt/codex/bin/codex.cmd',
+          codexHome: '/Users/tester/.codex-custom',
+        },
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        updatedAt: '2026-04-20T00:00:00.000Z',
+      }),
+    } as never);
+
+    await expect(service.getConfiguredConnectionIssue({}, 'codex')).resolves.toBeNull();
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/opt/codex/bin/codex.cmd',
+      ['-c', 'forced_login_method="chatgpt"', 'login', 'status'],
+      expect.objectContaining({
+        timeout: 5_000,
+        windowsHide: true,
+        maxBuffer: 128 * 1024,
+        env: expect.objectContaining({
+          CODEX_CLI_PATH: '/opt/codex/bin/codex.cmd',
+          CODEX_HOME: '/Users/tester/.codex-custom',
+          CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+        }),
+      })
+    );
   });
 
   it('blocks launch when managed ChatGPT is selected but degraded exact runtime login is logged out', async () => {

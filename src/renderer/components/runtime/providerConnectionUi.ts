@@ -123,7 +123,10 @@ function isAnthropicApiKeyModeReady(provider: CliProviderStatus): boolean {
   return (
     provider.providerId === 'anthropic' &&
     provider.connection?.configuredAuthMode === 'api_key' &&
-    provider.connection.apiKeyConfigured === true
+    provider.connection.apiKeyConfigured === true &&
+    provider.authenticated === true &&
+    provider.authMethod === 'api_key' &&
+    provider.verificationState === 'verified'
   );
 }
 
@@ -259,6 +262,18 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
 
   if (isAnthropicApiKeyModeReady(provider)) {
     return 'Connected via API key';
+  }
+
+  if (
+    provider.providerId === 'anthropic' &&
+    provider.connection?.configuredAuthMode === 'api_key' &&
+    provider.connection.apiKeyConfigured === true
+  ) {
+    const statusMessage = provider.statusMessage?.trim();
+    if (statusMessage && !/^connected\b/i.test(statusMessage)) {
+      return statusMessage;
+    }
+    return 'API key configured, but not verified yet';
   }
 
   if (isAnthropicApiKeyModeMissingCredential(provider)) {

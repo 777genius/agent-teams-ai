@@ -1,5 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading -- Standard shadcn pattern: forward remaining props to underlying elements */
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn } from '@renderer/lib/utils';
@@ -7,8 +8,21 @@ import { X } from 'lucide-react';
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
-const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
+
+type DialogPortalProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Portal>;
+
+const DialogPortal = ({ children, container }: DialogPortalProps): React.ReactPortal | null => {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const portalContainer = container ?? (mounted ? globalThis.document?.body : null);
+  return portalContainer ? createPortal(<>{children}</>, portalContainer) : null;
+};
+DialogPortal.displayName = DialogPrimitive.Portal.displayName;
 
 const DialogOverlay = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Overlay>,

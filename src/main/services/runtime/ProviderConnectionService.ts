@@ -1,7 +1,8 @@
-import { execFile } from 'node:child_process';
+import crypto from 'node:crypto';
 import path from 'node:path';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
+import { execCli } from '@main/utils/childProcess';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 import {
   isDynamicCodexModelCatalog,
@@ -76,6 +77,8 @@ const CODEX_HOME_ENV_VAR = 'CODEX_HOME';
 const CODEX_FORCED_LOGIN_METHOD_ENV_VAR = 'CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
+const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
+const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
 
 type CodexCliLoginStatus = 'logged_in' | 'not_logged_in' | 'unknown';
 
@@ -89,13 +92,102 @@ type CodexCliLoginStatusChecker = (params: {
   env: NodeJS.ProcessEnv;
 }) => Promise<CodexCliLoginStatusCheckResult>;
 
+type AnthropicApiKeyVerificationState = 'valid' | 'invalid' | 'unknown';
+
+interface AnthropicApiKeyVerificationResult {
+  state: AnthropicApiKeyVerificationState;
+  status?: number | null;
+  errorType?: string | null;
+  errorMessage?: string | null;
+}
+
+type AnthropicApiKeyVerifier = (apiKey: string) => Promise<AnthropicApiKeyVerificationResult>;
+
+function hashCredentialForCache(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function normalizeAnthropicApiKeyVerificationMessage(
+  result: AnthropicApiKeyVerificationResult
+): string {
+  if (result.errorMessage?.trim()) {
+    return result.errorMessage.trim();
+  }
+
+  if (result.errorType?.trim()) {
+    return result.errorType.trim();
+  }
+
+  if (typeof result.status === 'number') {
+    return `HTTP ${result.status}`;
+  }
+
+  return 'unknown verification error';
+}
+
+async function verifyAnthropicApiKeyWithApi(
+  apiKey: string
+): Promise<AnthropicApiKeyVerificationResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS);
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/models', {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+    });
+    const text = await response.text();
+    let body: { error?: { type?: string; message?: string } } | null = null;
+    try {
+      body = text ? (JSON.parse(text) as { error?: { type?: string; message?: string } }) : null;
+    } catch {
+      body = null;
+    }
+
+    if (response.ok) {
+      return { state: 'valid', status: response.status };
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        state: 'invalid',
+        status: response.status,
+        errorType: body?.error?.type ?? null,
+        errorMessage: body?.error?.message ?? null,
+      };
+    }
+
+    return {
+      state: 'unknown',
+      status: response.status,
+      errorType: body?.error?.type ?? null,
+      errorMessage: body?.error?.message ?? null,
+    };
+  } catch (error) {
+    return {
+      state: 'unknown',
+      status: null,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function isCodexExecBinary(binaryPath?: string | null): boolean {
   const binaryName = path.basename(binaryPath?.trim() ?? '').toLowerCase();
   return (
     binaryName === 'codex' ||
     binaryName === 'codex.exe' ||
+    binaryName === 'codex.cmd' ||
+    binaryName === 'codex.bat' ||
     binaryName === 'codex-cli' ||
-    binaryName === 'codex-cli.exe'
+    binaryName === 'codex-cli.exe' ||
+    binaryName === 'codex-cli.cmd' ||
+    binaryName === 'codex-cli.bat'
   );
 }
 
@@ -158,34 +250,33 @@ async function checkCodexCliLoginStatus({
   const executable = binaryPath?.trim() || 'codex';
   const args = [...buildCodexForcedLoginLaunchArgs(executable, 'chatgpt'), 'login', 'status'];
 
-  return new Promise((resolve) => {
-    execFile(
-      executable,
-      args,
-      {
-        env,
-        timeout: CODEX_LOGIN_STATUS_TIMEOUT_MS,
-        windowsHide: true,
-        maxBuffer: 128 * 1024,
-      },
-      (error, stdout, stderr) => {
-        const detail = sanitizeCodexLoginStatusDetail(`${stdout ?? ''}\n${stderr ?? ''}`);
-        if (!error) {
-          resolve({ status: 'logged_in', detail: detail || null });
-          return;
-        }
+  try {
+    const result = await execCli(executable, args, {
+      env,
+      timeout: CODEX_LOGIN_STATUS_TIMEOUT_MS,
+      windowsHide: true,
+      maxBuffer: 128 * 1024,
+    });
+    const detail = sanitizeCodexLoginStatusDetail(`${result.stdout}\n${result.stderr}`);
+    return { status: 'logged_in', detail: detail || null };
+  } catch (error) {
+    const stdout =
+      error && typeof error === 'object' && 'stdout' in error
+        ? String((error as { stdout?: unknown }).stdout ?? '')
+        : '';
+    const stderr =
+      error && typeof error === 'object' && 'stderr' in error
+        ? String((error as { stderr?: unknown }).stderr ?? '')
+        : '';
+    const detail = sanitizeCodexLoginStatusDetail(`${stdout}\n${stderr}`);
 
-        if (/not logged in/i.test(detail)) {
-          resolve({ status: 'not_logged_in', detail: detail || null });
-          return;
-        }
+    if (/not logged in/i.test(detail)) {
+      return { status: 'not_logged_in', detail: detail || null };
+    }
 
-        const fallback =
-          error instanceof Error ? sanitizeCodexLoginStatusDetail(error.message) : null;
-        resolve({ status: 'unknown', detail: detail || fallback || null });
-      }
-    );
-  });
+    const fallback = error instanceof Error ? sanitizeCodexLoginStatusDetail(error.message) : null;
+    return { status: 'unknown', detail: detail || fallback || null };
+  }
 }
 
 export class ProviderConnectionService {
@@ -193,11 +284,16 @@ export class ProviderConnectionService {
   private codexAccountFeature: Pick<CodexAccountFeatureFacade, 'getSnapshot'> | null = null;
   private codexModelCatalogFeature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null =
     null;
+  private readonly anthropicApiKeyVerificationCache = new Map<
+    string,
+    { result: AnthropicApiKeyVerificationResult; at: number }
+  >();
 
   constructor(
     private apiKeyService = new ApiKeyService(),
     private readonly configManager = ConfigManager.getInstance(),
-    private readonly codexCliLoginStatusChecker: CodexCliLoginStatusChecker = checkCodexCliLoginStatus
+    private readonly codexCliLoginStatusChecker: CodexCliLoginStatusChecker = checkCodexCliLoginStatus,
+    private readonly anthropicApiKeyVerifier: AnthropicApiKeyVerifier = verifyAnthropicApiKeyWithApi
   ) {}
 
   static getInstance(): ProviderConnectionService {
@@ -647,21 +743,69 @@ export class ProviderConnectionService {
     }
   }
 
-  private enrichAnthropicProviderStatus(provider: CliProviderStatus): CliProviderStatus {
+  private async enrichAnthropicProviderStatus(
+    provider: CliProviderStatus
+  ): Promise<CliProviderStatus> {
     const connection = provider.connection;
     if (connection?.configuredAuthMode !== 'api_key') {
       return provider;
     }
 
     if (connection.apiKeyConfigured) {
+      const runtimeVerifiedApiKey =
+        provider.authenticated === true &&
+        provider.authMethod === 'api_key' &&
+        provider.verificationState === 'verified';
+
+      if (runtimeVerifiedApiKey) {
+        return {
+          ...provider,
+          authenticated: true,
+          authMethod: 'api_key',
+          subscriptionRateLimits: null,
+          verificationState: 'verified',
+          statusMessage: provider.statusMessage ?? 'Connected via API key',
+        };
+      }
+
+      const apiVerification = await this.verifyConfiguredAnthropicApiKeyForStatus();
+      if (apiVerification?.state === 'valid') {
+        return {
+          ...provider,
+          authenticated: true,
+          authMethod: 'api_key',
+          subscriptionRateLimits: null,
+          verificationState: 'verified',
+          statusMessage: 'Connected via API key',
+        };
+      }
+
+      if (apiVerification?.state === 'invalid') {
+        return {
+          ...provider,
+          authenticated: false,
+          authMethod: null,
+          subscriptionRateLimits: null,
+          verificationState: 'error',
+          statusMessage: `Anthropic API key verification failed: ${normalizeAnthropicApiKeyVerificationMessage(
+            apiVerification
+          )}`,
+        };
+      }
+
       return {
         ...provider,
-        authenticated: true,
-        authMethod: 'api_key',
+        authenticated: false,
+        authMethod: null,
         subscriptionRateLimits: null,
         verificationState:
-          provider.verificationState === 'error' ? provider.verificationState : 'verified',
-        statusMessage: 'Connected via API key',
+          provider.verificationState === 'error' || provider.verificationState === 'offline'
+            ? provider.verificationState
+            : 'unknown',
+        statusMessage:
+          provider.verificationState === 'error'
+            ? (provider.statusMessage ?? 'Anthropic API key verification failed')
+            : 'Anthropic API key is configured, but has not been verified by the runtime yet.',
       };
     }
 
@@ -673,6 +817,32 @@ export class ProviderConnectionService {
       verificationState: provider.verificationState === 'error' ? 'error' : 'unknown',
       statusMessage: 'API key mode is selected, but no Anthropic API credential is available yet.',
     };
+  }
+
+  private async verifyConfiguredAnthropicApiKeyForStatus(): Promise<AnthropicApiKeyVerificationResult | null> {
+    const apiKey = await this.resolveAnthropicApiKeyForStatus();
+    if (!apiKey) {
+      return null;
+    }
+
+    const cacheKey = hashCredentialForCache(apiKey);
+    const cached = this.anthropicApiKeyVerificationCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS) {
+      return cached.result;
+    }
+
+    const result = await this.anthropicApiKeyVerifier(apiKey);
+    this.anthropicApiKeyVerificationCache.set(cacheKey, { result, at: Date.now() });
+    return result;
+  }
+
+  private async resolveAnthropicApiKeyForStatus(): Promise<string | null> {
+    const storedKey = await this.lookupStoredApiKeyValue('ANTHROPIC_API_KEY');
+    if (storedKey?.value.trim()) {
+      return storedKey.value.trim();
+    }
+
+    return this.getExternalCredential('anthropic')?.value.trim() || null;
   }
 
   async enrichProviderStatuses(providers: CliProviderStatus[]): Promise<CliProviderStatus[]> {

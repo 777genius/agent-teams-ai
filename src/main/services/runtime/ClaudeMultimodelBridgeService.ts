@@ -22,8 +22,8 @@ import type {
 
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
-const PROVIDER_STATUS_TIMEOUT_MS = 10_000;
-const PROVIDER_MODELS_TIMEOUT_MS = 10_000;
+const PROVIDER_STATUS_TIMEOUT_MS = 25_000;
+const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 

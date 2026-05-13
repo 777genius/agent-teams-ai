@@ -580,6 +580,13 @@ function appendPreflightDebugLog(event: string, data: Record<string, unknown>): 
     // Best-effort debug logging only.
   }
 }
+
+function truncatePreflightDebugText(value: string, maxLength = 1200): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength)}...`;
+}
 const {
   AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
@@ -2021,6 +2028,32 @@ type ProvisioningAuthSource =
   | 'codex_runtime'
   | 'gemini_runtime'
   | 'none';
+
+function isAnthropicApiKeyBackedAuthSource(authSource: unknown): boolean {
+  return (
+    authSource === 'anthropic_api_key' ||
+    authSource === 'anthropic_auth_token' ||
+    authSource === 'anthropic_api_key_helper'
+  );
+}
+
+function buildAnthropicCrossProviderDirectAuthEnvPatch(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const envPatch: NodeJS.ProcessEnv = {};
+  const apiKey = env.ANTHROPIC_API_KEY?.trim();
+  if (apiKey) {
+    envPatch.ANTHROPIC_API_KEY = apiKey;
+  }
+  const baseUrl = env.ANTHROPIC_BASE_URL?.trim();
+  if (baseUrl) {
+    envPatch.ANTHROPIC_BASE_URL = baseUrl;
+  }
+  for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
+    if (key !== 'ANTHROPIC_API_KEY') {
+      envPatch[key] = '';
+    }
+  }
+  return envPatch;
+}
 
 interface TeamRuntimeAuthContext {
   teamName?: string;
@@ -17179,7 +17212,7 @@ export class TeamProvisioningService {
 
       const providerLabel = getTeamProviderLabel(providerId);
       const { authSource } = probeResult;
-      if (authSource === 'anthropic_api_key') {
+      if (authSource === 'anthropic_api_key' || authSource === 'anthropic_api_key_helper') {
         logger.info(`Auth: using explicit ANTHROPIC_API_KEY for ${providerLabel}`);
       } else if (authSource === 'anthropic_auth_token') {
         logger.info(
@@ -17205,29 +17238,68 @@ export class TeamProvisioningService {
       };
 
       const appendOneShotDiagnostic = async (): Promise<void> => {
-        if (opts?.modelVerificationMode !== 'deep') {
+        let envResolution: ProvisioningEnvResolution | null = null;
+        const ensureEnvResolution = async (): Promise<ProvisioningEnvResolution> => {
+          if (!envResolution) {
+            envResolution = await this.buildProvisioningEnv(providerId);
+          }
+          return envResolution;
+        };
+
+        let shouldRequireRuntimePingForAnthropicApiKey =
+          isAnthropicApiKeyBackedAuthSource(authSource);
+        if (
+          resolveTeamProviderId(providerId) === 'anthropic' &&
+          !shouldRequireRuntimePingForAnthropicApiKey
+        ) {
+          const resolvedEnv = await ensureEnvResolution();
+          shouldRequireRuntimePingForAnthropicApiKey = isAnthropicApiKeyBackedAuthSource(
+            resolvedEnv.authSource
+          );
+          if (resolvedEnv.authSource === 'configured_api_key_missing' && resolvedEnv.warning) {
+            blockingMessages.push(
+              providerIds.length > 1
+                ? `${providerLabel}: ${resolvedEnv.warning}`
+                : resolvedEnv.warning
+            );
+            return;
+          }
+        }
+
+        if (opts?.modelVerificationMode !== 'deep' && !shouldRequireRuntimePingForAnthropicApiKey) {
           return;
         }
-        const envResolution = await this.buildProvisioningEnv(providerId);
-        if (envResolution.warning) {
-          warnings.push(
+        const resolvedEnv = await ensureEnvResolution();
+        if (resolvedEnv.warning) {
+          const prefixedWarning =
             providerIds.length > 1
-              ? `${providerLabel}: ${envResolution.warning}`
-              : envResolution.warning
-          );
+              ? `${providerLabel}: ${resolvedEnv.warning}`
+              : resolvedEnv.warning;
+          if (resolvedEnv.authSource === 'configured_api_key_missing') {
+            blockingMessages.push(prefixedWarning);
+            return;
+          }
+          warnings.push(prefixedWarning);
           return;
         }
         const diagnostic = await this.runProviderOneShotDiagnostic(
           probeResult.claudePath,
           targetCwd,
-          envResolution.env,
+          resolvedEnv.env,
           providerId,
-          envResolution.providerArgs
+          resolvedEnv.providerArgs
         );
         if (diagnostic.warning) {
-          warnings.push(
-            providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning
-          );
+          const prefixedWarning =
+            providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning;
+          if (
+            shouldRequireRuntimePingForAnthropicApiKey &&
+            this.isAuthFailureWarning(diagnostic.warning, 'probe')
+          ) {
+            blockingMessages.push(prefixedWarning);
+            return;
+          }
+          warnings.push(prefixedWarning);
         }
       };
 
@@ -17246,6 +17318,7 @@ export class TeamProvisioningService {
         const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
         const isBlockingPreflightWarning =
           authSource === 'configured_api_key_missing' ||
+          (isAnthropicApiKeyBackedAuthSource(authSource) && isAuthFailure) ||
           ((authSource === 'none' ||
             authSource === 'codex_runtime' ||
             authSource === 'gemini_runtime') &&
@@ -17259,6 +17332,8 @@ export class TeamProvisioningService {
             authSource === 'gemini_runtime') &&
           isAuthFailure
         ) {
+          blockingMessages.push(prefixedWarning);
+        } else if (isAnthropicApiKeyBackedAuthSource(authSource) && isAuthFailure) {
           blockingMessages.push(prefixedWarning);
         } else if (isBinaryProbeWarning(probeResult.warning)) {
           blockingMessages.push(prefixedWarning);
@@ -32568,6 +32643,8 @@ export class TeamProvisioningService {
       if (env.anthropicApiKeyHelper) {
         usesAnthropicApiKeyHelper = true;
         Object.assign(envPatch, env.anthropicApiKeyHelper.envPatch);
+      } else if (providerId === 'anthropic' && isAnthropicApiKeyBackedAuthSource(env.authSource)) {
+        Object.assign(envPatch, buildAnthropicCrossProviderDirectAuthEnvPatch(env.env));
       }
       const flattenedArgs =
         providerId === 'anthropic' && env.anthropicApiKeyHelper
@@ -34066,25 +34143,33 @@ export class TeamProvisioningService {
       return {};
     }
 
+    const args = buildProviderCliCommandArgs(providerArgs, getPreflightPingArgs(providerId));
+    const timeoutMs = getPreflightTimeoutMs(providerId);
+    appendPreflightDebugLog('provider_one_shot_diagnostic_start', {
+      providerId: resolvedProviderId,
+      cwd,
+      timeoutMs,
+      args,
+    });
+
     for (let attempt = 1; attempt <= PREFLIGHT_AUTH_MAX_RETRIES; attempt++) {
       let pingProbe: { exitCode: number | null; stdout: string; stderr: string } | null = null;
       try {
-        pingProbe = await this.spawnProbe(
-          claudePath,
-          buildProviderCliCommandArgs(providerArgs, getPreflightPingArgs(providerId)),
-          cwd,
-          env,
-          getPreflightTimeoutMs(providerId),
-          {
-            resolveOnOutputMatch: ({ stdout, stderr }) => {
-              const combined = `${stdout}\n${stderr}`.trim();
-              return /\bPONG\b/i.test(combined);
-            },
-          }
-        );
+        pingProbe = await this.spawnProbe(claudePath, args, cwd, env, timeoutMs, {
+          resolveOnOutputMatch: ({ stdout, stderr }) => {
+            const combined = `${stdout}\n${stderr}`.trim();
+            return /\bPONG\b/i.test(combined);
+          },
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (!isProbeTimeoutMessage(message) && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
+          appendPreflightDebugLog('provider_one_shot_diagnostic_retry', {
+            providerId: resolvedProviderId,
+            cwd,
+            attempt,
+            reason: truncatePreflightDebugText(message),
+          });
           logger.warn(
             `One-shot diagnostic failed (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
               `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms: ${message}`
@@ -34093,6 +34178,14 @@ export class TeamProvisioningService {
           continue;
         }
         const normalizedMessage = normalizeProviderModelProbeFailureReason(message);
+        appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
+          providerId: resolvedProviderId,
+          cwd,
+          attempt,
+          ok: false,
+          reason: isProbeTimeoutMessage(message) ? 'timeout' : 'error',
+          message: truncatePreflightDebugText(normalizedMessage),
+        });
         return {
           warning:
             (isProbeTimeoutMessage(message)
@@ -34106,6 +34199,14 @@ export class TeamProvisioningService {
       const isAuthFailure = this.isAuthFailureWarning(combinedOutput, 'probe');
 
       if (isAuthFailure && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
+        appendPreflightDebugLog('provider_one_shot_diagnostic_retry', {
+          providerId: resolvedProviderId,
+          cwd,
+          attempt,
+          exitCode: pingProbe.exitCode,
+          reason: 'auth_failure',
+          output: truncatePreflightDebugText(combinedOutput),
+        });
         logger.warn(
           `One-shot diagnostic auth failure detected (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
             `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms - likely stale locks from interrupted process`
@@ -34131,6 +34232,15 @@ export class TeamProvisioningService {
           : normalizedOutput
             ? `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}). Details: ${normalizedOutput}`
             : `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
+        appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
+          providerId: resolvedProviderId,
+          cwd,
+          attempt,
+          ok: false,
+          exitCode: pingProbe.exitCode,
+          authFailure: isAuthFailure,
+          output: truncatePreflightDebugText(normalizedOutput || combinedOutput),
+        });
         return {
           warning:
             'One-shot diagnostic failed after runtime readiness passed. ' +
@@ -34143,6 +34253,15 @@ export class TeamProvisioningService {
         pongCandidate
       );
       if (!isPong) {
+        appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
+          providerId: resolvedProviderId,
+          cwd,
+          attempt,
+          ok: false,
+          exitCode: pingProbe.exitCode,
+          reason: 'unexpected_output',
+          output: truncatePreflightDebugText(combinedOutput),
+        });
         return {
           warning:
             'One-shot diagnostic completed but did not return the expected PONG. ' +
@@ -34156,6 +34275,13 @@ export class TeamProvisioningService {
           `One-shot diagnostic succeeded on attempt ${attempt} (previous attempt had auth failure)`
         );
       }
+      appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
+        providerId: resolvedProviderId,
+        cwd,
+        attempt,
+        ok: true,
+        exitCode: pingProbe.exitCode,
+      });
       return {};
     }
 
