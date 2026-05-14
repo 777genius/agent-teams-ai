@@ -214,6 +214,41 @@ export function reconcileMultimodelProviderLoading(
   );
 }
 
+function areProvidersReferenceEqual(
+  a: readonly CliProviderStatus[],
+  b: readonly CliProviderStatus[]
+): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function isCliInstallationStatusContentEqual(
+  a: CliInstallationStatus,
+  b: CliInstallationStatus
+): boolean {
+  return (
+    a.flavor === b.flavor &&
+    a.displayName === b.displayName &&
+    a.supportsSelfUpdate === b.supportsSelfUpdate &&
+    a.showVersionDetails === b.showVersionDetails &&
+    a.showBinaryPath === b.showBinaryPath &&
+    a.installed === b.installed &&
+    a.installedVersion === b.installedVersion &&
+    a.binaryPath === b.binaryPath &&
+    (a.launchError ?? null) === (b.launchError ?? null) &&
+    a.latestVersion === b.latestVersion &&
+    a.updateAvailable === b.updateAvailable &&
+    a.authLoggedIn === b.authLoggedIn &&
+    a.authStatusChecking === b.authStatusChecking &&
+    a.authMethod === b.authMethod &&
+    areProvidersReferenceEqual(a.providers, b.providers)
+  );
+}
+
 export function mergeCliStatusPreservingHydratedProviders(
   current: CliInstallationStatus | null,
   incoming: CliInstallationStatus
@@ -222,6 +257,9 @@ export function mergeCliStatusPreservingHydratedProviders(
     current?.flavor !== 'agent_teams_orchestrator' ||
     incoming.flavor !== 'agent_teams_orchestrator'
   ) {
+    if (current && isCliInstallationStatusContentEqual(current, incoming)) {
+      return current;
+    }
     return incoming;
   }
 
@@ -248,12 +286,22 @@ export function mergeCliStatusPreservingHydratedProviders(
 
   const authenticatedProvider = providers.find((provider) => provider.authenticated) ?? null;
 
-  return {
+  const mergedProviders = areProvidersReferenceEqual(providers, current.providers)
+    ? current.providers
+    : providers;
+
+  const merged: CliInstallationStatus = {
     ...incoming,
-    providers,
-    authLoggedIn: providers.some((provider) => provider.authenticated),
+    providers: mergedProviders,
+    authLoggedIn: mergedProviders.some((provider) => provider.authenticated),
     authMethod: authenticatedProvider?.authMethod ?? null,
   };
+
+  if (isCliInstallationStatusContentEqual(current, merged)) {
+    return current;
+  }
+
+  return merged;
 }
 
 export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(

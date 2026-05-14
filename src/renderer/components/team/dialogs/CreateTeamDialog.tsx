@@ -435,7 +435,7 @@ export const CreateTeamDialog = ({
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
 
   // Advanced CLI section state (use teamName-derived key for localStorage)
-  const advancedKey = sanitizeTeamName(teamName.trim()) || '_new_';
+  const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
   const [worktreeName, setWorktreeNameRaw] = useState('');
   const [customArgs, setCustomArgsRaw] = useState('');
@@ -541,7 +541,10 @@ export const CreateTeamDialog = ({
     () => [...new Set([...existingTeamNames, ...provisioningTeamNames])],
     [existingTeamNames, provisioningTeamNames]
   );
-  const suggestedTeamName = getNextSuggestedTeamName(allTakenTeamNames);
+  const suggestedTeamName = useMemo(
+    () => getNextSuggestedTeamName(allTakenTeamNames),
+    [allTakenTeamNames]
+  );
 
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
@@ -1747,6 +1750,48 @@ export const CreateTeamDialog = ({
     });
   };
 
+  const rosterHeaderTop = useMemo(
+    () => (
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="solo-team"
+          checked={soloTeam}
+          onCheckedChange={(checked) => setSoloTeam(checked === true)}
+        />
+        <Label
+          htmlFor="solo-team"
+          className="cursor-pointer text-xs font-normal text-text-secondary"
+        >
+          Solo team
+        </Label>
+      </div>
+    ),
+    [setSoloTeam, soloTeam]
+  );
+
+  const rosterHeaderBottom = useMemo(
+    () => (
+      <div className="space-y-2">
+        {soloTeam ? (
+          <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
+            <p className="text-[11px] leading-relaxed text-sky-300">
+              Only the team lead (main process) will be started &mdash; no teammates will be
+              spawned. Works like a regular agent session in your chosen runtime (Claude Code,
+              Codex, OpenCode, Gemini) but with access to the task board for planning. Saves tokens
+              by avoiding teammate coordination overhead. You can add members later from the team
+              settings.
+            </p>
+          </div>
+        ) : null}
+        {canCreate && hasSelectedWorktreeIsolation ? (
+          <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+        ) : null}
+      </div>
+    ),
+    [canCreate, hasSelectedWorktreeIsolation, soloTeam, worktreeGitReadiness]
+  );
+
   return (
     <Dialog
       open={open}
@@ -1904,40 +1949,8 @@ export const CreateTeamDialog = ({
               modelUnavailableReasonByProvider={
                 shortLivedModelIssueReasons.modelUnavailableReasonByProvider
               }
-              headerTop={
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="solo-team"
-                    checked={soloTeam}
-                    onCheckedChange={(checked) => setSoloTeam(checked === true)}
-                  />
-                  <Label
-                    htmlFor="solo-team"
-                    className="cursor-pointer text-xs font-normal text-text-secondary"
-                  >
-                    Solo team
-                  </Label>
-                </div>
-              }
-              headerBottom={
-                <div className="space-y-2">
-                  {soloTeam ? (
-                    <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-                      <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
-                      <p className="text-[11px] leading-relaxed text-sky-300">
-                        Only the team lead (main process) will be started &mdash; no teammates will
-                        be spawned. Works like a regular agent session in your chosen runtime
-                        (Claude Code, Codex, OpenCode, Gemini) but with access to the task board for
-                        planning. Saves tokens by avoiding teammate coordination overhead. You can
-                        add members later from the team settings.
-                      </p>
-                    </div>
-                  ) : null}
-                  {canCreate && hasSelectedWorktreeIsolation ? (
-                    <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
-                  ) : null}
-                </div>
-              }
+              headerTop={rosterHeaderTop}
+              headerBottom={rosterHeaderBottom}
             />
           </div>
 
