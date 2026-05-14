@@ -812,176 +812,198 @@ export const CreateTeamDialog = ({
     setPrepareWarnings([]);
     setPrepareChecks(initialChecks);
 
-    void (async () => {
-      await Promise.resolve();
-      let checks = initialChecks;
-      const providerPlans = selectedMemberProviders.map((providerId) => {
-        const selectedModelChecks = (() => {
-          const next = new Set<string>();
-          let hasDefaultSelection = false;
-          const supportsProviderDefaultCheck =
-            providerId === 'codex' ||
-            providerId === 'gemini' ||
-            (providerId === 'anthropic' && selectedProviderId === 'anthropic');
-          const leadModel = computeEffectiveTeamModel(
-            selectedModel,
-            effectiveAnthropicRuntimeLimitContext,
-            selectedProviderId
-          );
-          if (selectedProviderId === providerId && selectedModel.trim()) {
-            if (leadModel?.trim()) {
-              next.add(leadModel.trim());
-            }
-          } else if (selectedProviderId === providerId && supportsProviderDefaultCheck) {
-            hasDefaultSelection = true;
+    // Defer the heavy IPC orchestration until the renderer is idle so the
+    // synchronous state updates above (setPrepareState etc.) can paint first.
+    // Falls back to a short timeout in environments without requestIdleCallback.
+    const scheduleIdle = (cb: () => void): void => {
+      try {
+        const ric = (
+          window as unknown as {
+            requestIdleCallback?: (fn: () => void, opts?: { timeout: number }) => number;
           }
-          for (const member of effectiveMemberDrafts) {
-            if (member.removedAt) {
-              continue;
-            }
-            const scopedModel = resolveProviderScopedMemberModel({
-              memberProviderId: member.providerId,
-              memberModel: member.model,
-              selectedProviderId,
-              runtimeProviderStatusById,
-            });
-            if (scopedModel.providerId !== providerId) {
-              continue;
-            }
-            if (scopedModel.model) {
-              next.add(scopedModel.model);
-            } else if (supportsProviderDefaultCheck) {
+        ).requestIdleCallback;
+        if (typeof ric === 'function') {
+          ric(cb, { timeout: 2000 });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      setTimeout(cb, 0);
+    };
+
+    scheduleIdle(() => {
+      void (async () => {
+        let checks = initialChecks;
+        const providerPlans = selectedMemberProviders.map((providerId) => {
+          const selectedModelChecks = (() => {
+            const next = new Set<string>();
+            let hasDefaultSelection = false;
+            const supportsProviderDefaultCheck =
+              providerId === 'codex' ||
+              providerId === 'gemini' ||
+              (providerId === 'anthropic' && selectedProviderId === 'anthropic');
+            const leadModel = computeEffectiveTeamModel(
+              selectedModel,
+              effectiveAnthropicRuntimeLimitContext,
+              selectedProviderId
+            );
+            if (selectedProviderId === providerId && selectedModel.trim()) {
+              if (leadModel?.trim()) {
+                next.add(leadModel.trim());
+              }
+            } else if (selectedProviderId === providerId && supportsProviderDefaultCheck) {
               hasDefaultSelection = true;
             }
-          }
-          if (supportsProviderDefaultCheck && hasDefaultSelection) {
-            next.add(DEFAULT_PROVIDER_MODEL_SELECTION);
-          }
-          return Array.from(next);
-        })();
-        const backendSummary = runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null;
-        const cacheKey = buildProviderPrepareModelCacheKey({
-          cwd: effectiveCwd,
-          providerId,
-          backendSummary,
-          limitContext: effectiveAnthropicRuntimeLimitContext,
-          runtimeStatusSignature: prepareRuntimeStatusSignature,
-        });
-        const cachedModelResultsById = {
-          ...getShortLivedProviderPrepareModelResults({
+            for (const member of effectiveMemberDrafts) {
+              if (member.removedAt) {
+                continue;
+              }
+              const scopedModel = resolveProviderScopedMemberModel({
+                memberProviderId: member.providerId,
+                memberModel: member.model,
+                selectedProviderId,
+                runtimeProviderStatusById,
+              });
+              if (scopedModel.providerId !== providerId) {
+                continue;
+              }
+              if (scopedModel.model) {
+                next.add(scopedModel.model);
+              } else if (supportsProviderDefaultCheck) {
+                hasDefaultSelection = true;
+              }
+            }
+            if (supportsProviderDefaultCheck && hasDefaultSelection) {
+              next.add(DEFAULT_PROVIDER_MODEL_SELECTION);
+            }
+            return Array.from(next);
+          })();
+          const backendSummary = runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null;
+          const cacheKey = buildProviderPrepareModelCacheKey({
+            cwd: effectiveCwd,
             providerId,
-            cacheKey,
-          }),
-          ...(prepareModelResultsCacheRef.current.get(cacheKey) ?? {}),
-        };
-        const cachedSnapshot = getProviderPrepareCachedSnapshot({
-          providerId,
-          selectedModelIds: selectedModelChecks,
-          cachedModelResultsById,
-        });
-        return {
-          providerId,
-          selectedModelChecks,
-          backendSummary,
-          cacheKey,
-          cachedModelResultsById,
-          cachedSnapshot,
-        };
-      });
-
-      try {
-        for (const plan of providerPlans) {
-          checks = updateProviderCheck(checks, plan.providerId, {
-            status: plan.selectedModelChecks.length > 0 ? plan.cachedSnapshot.status : 'checking',
-            backendSummary: plan.backendSummary,
-            details: plan.cachedSnapshot.details,
+            backendSummary,
+            limitContext: effectiveAnthropicRuntimeLimitContext,
+            runtimeStatusSignature: prepareRuntimeStatusSignature,
           });
-        }
-        if (prepareRequestSeqRef.current === requestSeq) {
-          setPrepareChecks(checks);
-        }
-        const providerResults = await Promise.all(
-          providerPlans.map(async (plan) => {
-            const prepResult = await runProviderPrepareDiagnostics({
-              cwd: effectiveCwd,
-              providerId: plan.providerId,
-              selectedModelIds: plan.selectedModelChecks,
-              prepareProvisioning: api.teams.prepareProvisioning,
-              limitContext: effectiveAnthropicRuntimeLimitContext,
-              cachedModelResultsById: plan.cachedModelResultsById,
-              onModelProgress: ({ status, details }) => {
-                checks = updateProviderCheck(checks, plan.providerId, {
-                  status,
-                  backendSummary: plan.backendSummary,
-                  details,
-                });
-                if (prepareRequestSeqRef.current === requestSeq) {
-                  setPrepareChecks(checks);
-                }
-              },
+          const cachedModelResultsById = {
+            ...getShortLivedProviderPrepareModelResults({
+              providerId,
+              cacheKey,
+            }),
+            ...(prepareModelResultsCacheRef.current.get(cacheKey) ?? {}),
+          };
+          const cachedSnapshot = getProviderPrepareCachedSnapshot({
+            providerId,
+            selectedModelIds: selectedModelChecks,
+            cachedModelResultsById,
+          });
+          return {
+            providerId,
+            selectedModelChecks,
+            backendSummary,
+            cacheKey,
+            cachedModelResultsById,
+            cachedSnapshot,
+          };
+        });
+
+        try {
+          for (const plan of providerPlans) {
+            checks = updateProviderCheck(checks, plan.providerId, {
+              status: plan.selectedModelChecks.length > 0 ? plan.cachedSnapshot.status : 'checking',
+              backendSummary: plan.backendSummary,
+              details: plan.cachedSnapshot.details,
             });
-            return { ...plan, prepResult };
-          })
-        );
-        let anyFailure = false;
-        let anyNotes = false;
-        const collectedWarnings: string[] = [];
-        for (const plan of providerResults) {
-          if (plan.prepResult.warnings.length > 0) {
-            anyNotes = true;
-            collectedWarnings.push(
-              ...plan.prepResult.warnings.map(
-                (warning) => `${getProviderLabel(plan.providerId)}: ${warning}`
-              )
-            );
-          }
-          if (plan.prepResult.status === 'failed') {
-            anyFailure = true;
-          } else if (plan.prepResult.status === 'notes') {
-            anyNotes = true;
           }
           if (prepareRequestSeqRef.current === requestSeq) {
-            const reusableModelResults = buildReusableProviderPrepareModelResults(
-              plan.prepResult.modelResultsById
-            );
-            prepareModelResultsCacheRef.current.set(plan.cacheKey, reusableModelResults);
-            storeShortLivedProviderPrepareModelResults({
-              providerId: plan.providerId,
-              cacheKey: plan.cacheKey,
-              modelResultsById: plan.prepResult.modelResultsById,
+            setPrepareChecks(checks);
+          }
+          const providerResults = await Promise.all(
+            providerPlans.map(async (plan) => {
+              const prepResult = await runProviderPrepareDiagnostics({
+                cwd: effectiveCwd,
+                providerId: plan.providerId,
+                selectedModelIds: plan.selectedModelChecks,
+                prepareProvisioning: api.teams.prepareProvisioning,
+                limitContext: effectiveAnthropicRuntimeLimitContext,
+                cachedModelResultsById: plan.cachedModelResultsById,
+                onModelProgress: ({ status, details }) => {
+                  checks = updateProviderCheck(checks, plan.providerId, {
+                    status,
+                    backendSummary: plan.backendSummary,
+                    details,
+                  });
+                  if (prepareRequestSeqRef.current === requestSeq) {
+                    setPrepareChecks(checks);
+                  }
+                },
+              });
+              return { ...plan, prepResult };
+            })
+          );
+          let anyFailure = false;
+          let anyNotes = false;
+          const collectedWarnings: string[] = [];
+          for (const plan of providerResults) {
+            if (plan.prepResult.warnings.length > 0) {
+              anyNotes = true;
+              collectedWarnings.push(
+                ...plan.prepResult.warnings.map(
+                  (warning) => `${getProviderLabel(plan.providerId)}: ${warning}`
+                )
+              );
+            }
+            if (plan.prepResult.status === 'failed') {
+              anyFailure = true;
+            } else if (plan.prepResult.status === 'notes') {
+              anyNotes = true;
+            }
+            if (prepareRequestSeqRef.current === requestSeq) {
+              const reusableModelResults = buildReusableProviderPrepareModelResults(
+                plan.prepResult.modelResultsById
+              );
+              prepareModelResultsCacheRef.current.set(plan.cacheKey, reusableModelResults);
+              storeShortLivedProviderPrepareModelResults({
+                providerId: plan.providerId,
+                cacheKey: plan.cacheKey,
+                modelResultsById: plan.prepResult.modelResultsById,
+              });
+            }
+            checks = updateProviderCheck(checks, plan.providerId, {
+              status: plan.prepResult.status,
+              backendSummary: plan.backendSummary,
+              details: plan.prepResult.details,
             });
           }
-          checks = updateProviderCheck(checks, plan.providerId, {
-            status: plan.prepResult.status,
-            backendSummary: plan.backendSummary,
-            details: plan.prepResult.details,
-          });
+          if (prepareRequestSeqRef.current === requestSeq) {
+            setPrepareChecks(checks);
+          }
+          if (prepareRequestSeqRef.current !== requestSeq) return;
+          const failureMessage =
+            getPrimaryProvisioningFailureDetail(checks) ??
+            'Some selected providers need attention.';
+          setPrepareState(anyFailure ? 'failed' : 'ready');
+          setPrepareMessage(
+            anyFailure
+              ? failureMessage
+              : anyNotes
+                ? 'Selected providers are ready with notes.'
+                : 'Selected providers are ready.'
+          );
+          setPrepareWarnings(collectedWarnings);
+        } catch (error) {
+          if (prepareRequestSeqRef.current !== requestSeq) return;
+          const failureMessage =
+            error instanceof Error ? error.message : 'Failed to warm up Claude CLI environment';
+          setPrepareState('failed');
+          setPrepareWarnings([]);
+          setPrepareChecks(failIncompleteProviderChecks(checks, failureMessage));
+          setPrepareMessage(failureMessage);
         }
-        if (prepareRequestSeqRef.current === requestSeq) {
-          setPrepareChecks(checks);
-        }
-        if (prepareRequestSeqRef.current !== requestSeq) return;
-        const failureMessage =
-          getPrimaryProvisioningFailureDetail(checks) ?? 'Some selected providers need attention.';
-        setPrepareState(anyFailure ? 'failed' : 'ready');
-        setPrepareMessage(
-          anyFailure
-            ? failureMessage
-            : anyNotes
-              ? 'Selected providers are ready with notes.'
-              : 'Selected providers are ready.'
-        );
-        setPrepareWarnings(collectedWarnings);
-      } catch (error) {
-        if (prepareRequestSeqRef.current !== requestSeq) return;
-        const failureMessage =
-          error instanceof Error ? error.message : 'Failed to warm up Claude CLI environment';
-        setPrepareState('failed');
-        setPrepareWarnings([]);
-        setPrepareChecks(failIncompleteProviderChecks(checks, failureMessage));
-        setPrepareMessage(failureMessage);
-      }
-    })();
+      })();
+    });
   }, [
     open,
     canCreate,
