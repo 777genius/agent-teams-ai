@@ -3228,7 +3228,7 @@ Messages:
     });
   });
 
-  it('allows OpenCode agenda-sync recovery past same-task proof-missing foreground blockers', async () => {
+  it('allows OpenCode agenda-sync recovery past the exact proof-missing foreground message', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     const laneId = 'secondary:opencode:jack';
@@ -3257,15 +3257,6 @@ Messages:
           messageId: 'proof-missing-message-1',
           messageKind: 'default',
           taskRefs: [taskRef],
-        },
-        {
-          from: 'team-lead',
-          to: 'jack',
-          text: 'Dependency resolved for #task1234 (task-1234).',
-          timestamp: '2026-02-23T17:31:40.000Z',
-          read: false,
-          messageId: 'same-task-follow-up-1',
-          source: 'system_notification',
         },
       ])
     );
@@ -3307,6 +3298,109 @@ Messages:
     });
 
     expect(busy).toEqual({ busy: false });
+  });
+
+  it('allows OpenCode agenda-sync recovery for legacy proof-missing foreground ids', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    const legacyMessage = {
+      from: 'team-lead',
+      to: 'jack',
+      text: 'Please continue task #task1234.',
+      timestamp: '2026-02-23T17:31:00.000Z',
+      read: false,
+      messageKind: 'default',
+      taskRefs: [taskRef],
+    };
+    const legacyMessageId = buildLegacyInboxMessageId(
+      legacyMessage.from,
+      legacyMessage.timestamp,
+      legacyMessage.text
+    );
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [legacyMessage],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: legacyMessageId,
+          taskRefs: [taskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toEqual({ busy: false });
+  });
+
+  it('keeps newer same-task OpenCode foreground messages busy during agenda-sync recovery', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Dependency resolved. Please re-check #task1234.',
+          timestamp: '2026-02-23T17:31:40.000Z',
+          read: false,
+          messageId: 'same-task-follow-up-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'same-task-follow-up-1',
+    });
   });
 
   it('keeps OpenCode agenda-sync busy when proof-missing recovery evidence is absent', async () => {
