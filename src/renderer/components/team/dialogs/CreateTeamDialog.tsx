@@ -454,38 +454,44 @@ export const CreateTeamDialog = ({
     setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
   }, [advancedKey]);
 
-  const setSelectedModel = (value: string): void => {
-    const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
-    setSelectedModelRaw(normalizedValue);
-    setStoredCreateTeamModel(selectedProviderId, normalizedValue);
-  };
+  const setSelectedModel = useCallback(
+    (value: string): void => {
+      const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
+      setSelectedModelRaw(normalizedValue);
+      setStoredCreateTeamModel(selectedProviderId, normalizedValue);
+    },
+    [selectedProviderId]
+  );
 
-  const setSelectedProviderId = (value: TeamProviderId): void => {
-    const normalizedValue = normalizeLeadProviderForMode(value, multimodelEnabled);
-    setSelectedProviderIdRaw(normalizedValue);
-    setStoredCreateTeamProvider(normalizedValue);
-    setSelectedModelRaw(getStoredTeamModel(normalizedValue));
-  };
+  const setSelectedProviderId = useCallback(
+    (value: TeamProviderId): void => {
+      const normalizedValue = normalizeLeadProviderForMode(value, multimodelEnabled);
+      setSelectedProviderIdRaw(normalizedValue);
+      setStoredCreateTeamProvider(normalizedValue);
+      setSelectedModelRaw(getStoredTeamModel(normalizedValue));
+    },
+    [multimodelEnabled]
+  );
 
-  const setLimitContext = (value: boolean): void => {
+  const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
-  };
+  }, []);
 
-  const setSkipPermissions = (value: boolean): void => {
+  const setSkipPermissions = useCallback((value: boolean): void => {
     setSkipPermissionsRaw(value);
     setStoredCreateTeamSkipPermissions(value);
-  };
+  }, []);
 
-  const setSelectedEffort = (value: string): void => {
+  const setSelectedEffort = useCallback((value: string): void => {
     setSelectedEffortRaw(value);
     setStoredCreateTeamEffort(value);
-  };
+  }, []);
 
-  const setSelectedFastMode = (value: TeamFastMode): void => {
+  const setSelectedFastMode = useCallback((value: TeamFastMode): void => {
     setSelectedFastModeRaw(value);
     setStoredCreateTeamFastMode(value);
-  };
+  }, []);
 
   const setWorktreeEnabled = (value: boolean): void => {
     setWorktreeEnabledRaw(value);
