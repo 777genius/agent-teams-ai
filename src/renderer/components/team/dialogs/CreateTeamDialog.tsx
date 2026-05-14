@@ -70,6 +70,7 @@ import {
   setStoredCreateTeamSkipPermissions,
 } from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
+import { useShallow } from 'zustand/react/shallow';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
@@ -350,8 +351,9 @@ export const CreateTeamDialog = ({
   const anthropicProviderFastModeDefault = useStore(
     (s) => s.appConfig?.providerConnections?.anthropic.fastModeDefault ?? false
   );
-  const cliStatus = useStore((s) => s.cliStatus);
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const { cliStatus, cliStatusLoading } = useStore(
+    useShallow((s) => ({ cliStatus: s.cliStatus, cliStatusLoading: s.cliStatusLoading }))
+  );
   const bootstrapCliStatus = useStore((s) => s.bootstrapCliStatus);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
   const openDashboard = useStore((s) => s.openDashboard);
