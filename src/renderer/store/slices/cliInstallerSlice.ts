@@ -214,13 +214,25 @@ export function reconcileMultimodelProviderLoading(
   );
 }
 
-function areStringArraysEqual(a: readonly string[], b: readonly string[]): boolean {
+function areArraysReferenceEqual<T>(a: readonly T[], b: readonly T[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] !== b[i]) return false;
   }
   return true;
+}
+
+function areExtensionCapabilitiesEqual(
+  a: CliProviderStatus['capabilities']['extensions']['plugins'],
+  b: CliProviderStatus['capabilities']['extensions']['plugins']
+): boolean {
+  if (a === b) return true;
+  return (
+    a.status === b.status &&
+    a.ownership === b.ownership &&
+    (a.reason ?? null) === (b.reason ?? null)
+  );
 }
 
 function areProviderCapabilitiesEqual(
@@ -231,10 +243,10 @@ function areProviderCapabilitiesEqual(
   return (
     a.teamLaunch === b.teamLaunch &&
     a.oneShot === b.oneShot &&
-    a.extensions.plugins === b.extensions.plugins &&
-    a.extensions.mcp === b.extensions.mcp &&
-    a.extensions.skills === b.extensions.skills &&
-    a.extensions.apiKeys === b.extensions.apiKeys
+    areExtensionCapabilitiesEqual(a.extensions.plugins, b.extensions.plugins) &&
+    areExtensionCapabilitiesEqual(a.extensions.mcp, b.extensions.mcp) &&
+    areExtensionCapabilitiesEqual(a.extensions.skills, b.extensions.skills) &&
+    areExtensionCapabilitiesEqual(a.extensions.apiKeys, b.extensions.apiKeys)
   );
 }
 
@@ -281,30 +293,22 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.canLoginFromUi === b.canLoginFromUi &&
     (a.selectedBackendId ?? null) === (b.selectedBackendId ?? null) &&
     (a.resolvedBackendId ?? null) === (b.resolvedBackendId ?? null) &&
-    areStringArraysEqual(a.models, b.models) &&
+    areArraysReferenceEqual(a.models, b.models) &&
     areProviderCapabilitiesEqual(a.capabilities, b.capabilities) &&
     areProviderBackendsEqual(a.backend ?? null, b.backend ?? null) &&
+    // Optional array fields: compare element references so freshly-cloned
+    // empty arrays (the common loading-state case) are treated as equal.
+    // For populated arrays the elements themselves will be fresh references
+    // after structuredClone and we conservatively treat that as a change.
+    areArraysReferenceEqual(a.modelAvailability ?? [], b.modelAvailability ?? []) &&
+    areArraysReferenceEqual(a.availableBackends ?? [], b.availableBackends ?? []) &&
     // Complex nested optional fields: fall back to reference equality
     a.modelCatalog === b.modelCatalog &&
-    a.modelAvailability === b.modelAvailability &&
     a.runtimeCapabilities === b.runtimeCapabilities &&
     a.subscriptionRateLimits === b.subscriptionRateLimits &&
     a.connection === b.connection &&
-    a.availableBackends === b.availableBackends &&
     a.externalRuntimeDiagnostics === b.externalRuntimeDiagnostics
   );
-}
-
-function areProvidersReferenceEqual(
-  a: readonly CliProviderStatus[],
-  b: readonly CliProviderStatus[]
-): boolean {
-  if (a === b) return true;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
 
 function isCliInstallationStatusContentEqual(
@@ -326,7 +330,7 @@ function isCliInstallationStatusContentEqual(
     a.authLoggedIn === b.authLoggedIn &&
     a.authStatusChecking === b.authStatusChecking &&
     a.authMethod === b.authMethod &&
-    areProvidersReferenceEqual(a.providers, b.providers)
+    areArraysReferenceEqual<CliProviderStatus>(a.providers, b.providers)
   );
 }
 
@@ -375,7 +379,7 @@ export function mergeCliStatusPreservingHydratedProviders(
 
   const authenticatedProvider = providers.find((provider) => provider.authenticated) ?? null;
 
-  const mergedProviders = areProvidersReferenceEqual(providers, current.providers)
+  const mergedProviders = areArraysReferenceEqual<CliProviderStatus>(providers, current.providers)
     ? current.providers
     : providers;
 
