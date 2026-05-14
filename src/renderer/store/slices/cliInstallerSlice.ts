@@ -214,6 +214,87 @@ export function reconcileMultimodelProviderLoading(
   );
 }
 
+function areStringArraysEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function areProviderCapabilitiesEqual(
+  a: CliProviderStatus['capabilities'],
+  b: CliProviderStatus['capabilities']
+): boolean {
+  if (a === b) return true;
+  return (
+    a.teamLaunch === b.teamLaunch &&
+    a.oneShot === b.oneShot &&
+    a.extensions.plugins === b.extensions.plugins &&
+    a.extensions.mcp === b.extensions.mcp &&
+    a.extensions.skills === b.extensions.skills &&
+    a.extensions.apiKeys === b.extensions.apiKeys
+  );
+}
+
+function areProviderBackendsEqual(
+  a: CliProviderStatus['backend'],
+  b: CliProviderStatus['backend']
+): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  return (
+    a.kind === b.kind &&
+    a.label === b.label &&
+    (a.endpointLabel ?? null) === (b.endpointLabel ?? null) &&
+    (a.projectId ?? null) === (b.projectId ?? null) &&
+    (a.authMethodDetail ?? null) === (b.authMethodDetail ?? null)
+  );
+}
+
+/**
+ * Content-level equality check for a single CliProviderStatus.
+ *
+ * Compares all scalar fields explicitly and arrays/nested-objects by content
+ * so that a freshly-deserialized provider returned by IPC polling does not
+ * produce a new reference when nothing has actually changed.
+ *
+ * Complex nested optional structures (modelCatalog, runtimeCapabilities,
+ * subscriptionRateLimits, connection, availableBackends,
+ * externalRuntimeDiagnostics, modelAvailability) fall back to reference
+ * equality — they change rarely and reference stability for those cases is
+ * already handled by the shouldPreserveCurrentProviderStatus guard.
+ */
+function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatus): boolean {
+  if (a === b) return true;
+  return (
+    a.providerId === b.providerId &&
+    a.displayName === b.displayName &&
+    a.supported === b.supported &&
+    a.authenticated === b.authenticated &&
+    a.authMethod === b.authMethod &&
+    a.verificationState === b.verificationState &&
+    (a.modelVerificationState ?? null) === (b.modelVerificationState ?? null) &&
+    (a.statusMessage ?? null) === (b.statusMessage ?? null) &&
+    (a.detailMessage ?? null) === (b.detailMessage ?? null) &&
+    a.canLoginFromUi === b.canLoginFromUi &&
+    (a.selectedBackendId ?? null) === (b.selectedBackendId ?? null) &&
+    (a.resolvedBackendId ?? null) === (b.resolvedBackendId ?? null) &&
+    areStringArraysEqual(a.models, b.models) &&
+    areProviderCapabilitiesEqual(a.capabilities, b.capabilities) &&
+    areProviderBackendsEqual(a.backend ?? null, b.backend ?? null) &&
+    // Complex nested optional fields: fall back to reference equality
+    a.modelCatalog === b.modelCatalog &&
+    a.modelAvailability === b.modelAvailability &&
+    a.runtimeCapabilities === b.runtimeCapabilities &&
+    a.subscriptionRateLimits === b.subscriptionRateLimits &&
+    a.connection === b.connection &&
+    a.availableBackends === b.availableBackends &&
+    a.externalRuntimeDiagnostics === b.externalRuntimeDiagnostics
+  );
+}
+
 function areProvidersReferenceEqual(
   a: readonly CliProviderStatus[],
   b: readonly CliProviderStatus[]
@@ -269,7 +350,15 @@ export function mergeCliStatusPreservingHydratedProviders(
   const incomingProviderIds = new Set(incoming.providers.map((provider) => provider.providerId));
   const providers = incoming.providers.map((incomingProvider) => {
     const currentProvider = currentProvidersById.get(incomingProvider.providerId);
-    if (currentProvider && shouldPreserveCurrentProviderStatus(currentProvider, incomingProvider)) {
+    if (!currentProvider) {
+      return incomingProvider;
+    }
+    if (shouldPreserveCurrentProviderStatus(currentProvider, incomingProvider)) {
+      return currentProvider;
+    }
+    // Preserve the current reference when content is identical so the
+    // providers array stays reference-stable across steady-state IPC polls.
+    if (areProviderStatusContentEqual(currentProvider, incomingProvider)) {
       return currentProvider;
     }
     return incomingProvider;
