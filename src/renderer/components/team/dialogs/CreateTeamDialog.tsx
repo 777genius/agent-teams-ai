@@ -332,6 +332,33 @@ function validateRequest(
   return { valid: true };
 }
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+type ScheduledIdleHandle = { kind: 'idle' | 'timeout'; id: number };
+
+function scheduleIdle(cb: () => void): ScheduledIdleHandle {
+  const idleWindow = window as IdleWindow;
+  if (typeof idleWindow.requestIdleCallback === 'function') {
+    return { kind: 'idle', id: idleWindow.requestIdleCallback(cb, { timeout: 2000 }) };
+  }
+  return { kind: 'timeout', id: window.setTimeout(cb, 0) };
+}
+
+function cancelScheduledIdle(handle: ScheduledIdleHandle | null): void {
+  if (!handle) return;
+  if (handle.kind === 'idle') {
+    const idleWindow = window as IdleWindow;
+    if (typeof idleWindow.cancelIdleCallback === 'function') {
+      idleWindow.cancelIdleCallback(handle.id);
+    }
+    return;
+  }
+  window.clearTimeout(handle.id);
+}
+
 export const CreateTeamDialog = ({
   open,
   canCreate,
@@ -415,6 +442,7 @@ export const CreateTeamDialog = ({
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
   const prepareRequestSeqRef = useRef(0);
+  const prepareIdleHandleRef = useRef<ScheduledIdleHandle | null>(null);
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
   const lastAutoDescriptionRef = useRef<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
@@ -814,25 +842,14 @@ export const CreateTeamDialog = ({
 
     // Defer the heavy IPC orchestration until the renderer is idle so the
     // synchronous state updates above (setPrepareState etc.) can paint first.
-    // Falls back to a short timeout in environments without requestIdleCallback.
-    const scheduleIdle = (cb: () => void): void => {
-      try {
-        const ric = (
-          window as unknown as {
-            requestIdleCallback?: (fn: () => void, opts?: { timeout: number }) => number;
-          }
-        ).requestIdleCallback;
-        if (typeof ric === 'function') {
-          ric(cb, { timeout: 2000 });
-          return;
-        }
-      } catch {
-        // ignore
-      }
-      setTimeout(cb, 0);
-    };
+    // Cancel any pending idle work from a superseded run so a stale callback
+    // can't start expensive diagnostics for an obsolete request.
+    cancelScheduledIdle(prepareIdleHandleRef.current);
+    prepareIdleHandleRef.current = null;
 
-    scheduleIdle(() => {
+    prepareIdleHandleRef.current = scheduleIdle(() => {
+      prepareIdleHandleRef.current = null;
+      if (prepareRequestSeqRef.current !== requestSeq) return;
       void (async () => {
         let checks = initialChecks;
         const providerPlans = selectedMemberProviders.map((providerId) => {
@@ -1004,6 +1021,16 @@ export const CreateTeamDialog = ({
         }
       })();
     });
+
+    return () => {
+      cancelScheduledIdle(prepareIdleHandleRef.current);
+      prepareIdleHandleRef.current = null;
+      // Bump the request sequence so any callback that already woke up but
+      // hasn't checked yet treats itself as superseded.
+      if (prepareRequestSeqRef.current === requestSeq) {
+        prepareRequestSeqRef.current += 1;
+      }
+    };
   }, [
     open,
     canCreate,

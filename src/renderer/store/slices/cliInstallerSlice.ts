@@ -214,13 +214,33 @@ export function reconcileMultimodelProviderLoading(
   );
 }
 
-function areArraysReferenceEqual<T>(a: readonly T[], b: readonly T[]): boolean {
+function areArraysEqual<T>(
+  a: readonly T[],
+  b: readonly T[],
+  isEqual: (left: T, right: T) => boolean
+): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
+    if (!isEqual(a[i], b[i])) return false;
   }
   return true;
+}
+
+/**
+ * Content-level equality for cloned IPC DTO values. The provider snapshot is
+ * serialised by `CliInstallerService.cloneCliInstallationStatus()` and
+ * `publishStatusSnapshot()` before reaching the renderer, so every nested
+ * array/object arrives as a fresh reference even when nothing changed. These
+ * values are plain JSON-serialisable DTOs, so a stringify-based comparator is
+ * acceptable: false negatives are fine (we just produce a new merged status
+ * unnecessarily), but false positives are not (we must never preserve stale
+ * data).
+ */
+function areDtoValuesEqual<T>(a: T | null | undefined, b: T | null | undefined): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return a == null && b == null;
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function areExtensionCapabilitiesEqual(
@@ -268,15 +288,16 @@ function areProviderBackendsEqual(
 /**
  * Content-level equality check for a single CliProviderStatus.
  *
- * Compares all scalar fields explicitly and arrays/nested-objects by content
- * so that a freshly-deserialized provider returned by IPC polling does not
- * produce a new reference when nothing has actually changed.
- *
- * Complex nested optional structures (modelCatalog, runtimeCapabilities,
+ * Compares all scalar fields explicitly, the well-typed nested structures
+ * (capabilities, backend) via dedicated comparators, and the cloned DTO
+ * fields (modelCatalog, modelAvailability, runtimeCapabilities,
  * subscriptionRateLimits, connection, availableBackends,
- * externalRuntimeDiagnostics, modelAvailability) fall back to reference
- * equality — they change rarely and reference stability for those cases is
- * already handled by the shouldPreserveCurrentProviderStatus guard.
+ * externalRuntimeDiagnostics) by content. This is necessary because the
+ * IPC path (`CliInstallerService.cloneCliInstallationStatus()` then
+ * `publishStatusSnapshot()`) hands the renderer freshly-deserialised
+ * provider objects on every tick — reference equality on those nested
+ * fields would never hold even when the snapshot is structurally
+ * identical.
  */
 function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatus): boolean {
   if (a === b) return true;
@@ -293,21 +314,16 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.canLoginFromUi === b.canLoginFromUi &&
     (a.selectedBackendId ?? null) === (b.selectedBackendId ?? null) &&
     (a.resolvedBackendId ?? null) === (b.resolvedBackendId ?? null) &&
-    areArraysReferenceEqual(a.models, b.models) &&
+    areArraysEqual(a.models, b.models, (left, right) => left === right) &&
     areProviderCapabilitiesEqual(a.capabilities, b.capabilities) &&
     areProviderBackendsEqual(a.backend ?? null, b.backend ?? null) &&
-    // Optional array fields: compare element references so freshly-cloned
-    // empty arrays (the common loading-state case) are treated as equal.
-    // For populated arrays the elements themselves will be fresh references
-    // after structuredClone and we conservatively treat that as a change.
-    areArraysReferenceEqual(a.modelAvailability ?? [], b.modelAvailability ?? []) &&
-    areArraysReferenceEqual(a.availableBackends ?? [], b.availableBackends ?? []) &&
-    // Complex nested optional fields: fall back to reference equality
-    a.modelCatalog === b.modelCatalog &&
-    a.runtimeCapabilities === b.runtimeCapabilities &&
-    a.subscriptionRateLimits === b.subscriptionRateLimits &&
-    a.connection === b.connection &&
-    a.externalRuntimeDiagnostics === b.externalRuntimeDiagnostics
+    areDtoValuesEqual(a.modelCatalog ?? null, b.modelCatalog ?? null) &&
+    areDtoValuesEqual(a.modelAvailability ?? [], b.modelAvailability ?? []) &&
+    areDtoValuesEqual(a.runtimeCapabilities ?? null, b.runtimeCapabilities ?? null) &&
+    areDtoValuesEqual(a.subscriptionRateLimits ?? null, b.subscriptionRateLimits ?? null) &&
+    areDtoValuesEqual(a.connection ?? null, b.connection ?? null) &&
+    areDtoValuesEqual(a.availableBackends ?? [], b.availableBackends ?? []) &&
+    areDtoValuesEqual(a.externalRuntimeDiagnostics ?? [], b.externalRuntimeDiagnostics ?? [])
   );
 }
 
@@ -330,7 +346,7 @@ function isCliInstallationStatusContentEqual(
     a.authLoggedIn === b.authLoggedIn &&
     a.authStatusChecking === b.authStatusChecking &&
     a.authMethod === b.authMethod &&
-    areArraysReferenceEqual<CliProviderStatus>(a.providers, b.providers)
+    areArraysEqual(a.providers, b.providers, Object.is)
   );
 }
 
@@ -379,7 +395,7 @@ export function mergeCliStatusPreservingHydratedProviders(
 
   const authenticatedProvider = providers.find((provider) => provider.authenticated) ?? null;
 
-  const mergedProviders = areArraysReferenceEqual<CliProviderStatus>(providers, current.providers)
+  const mergedProviders = areArraysEqual(providers, current.providers, Object.is)
     ? current.providers
     : providers;
 
