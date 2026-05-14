@@ -70,7 +70,6 @@ import {
   setStoredCreateTeamSkipPermissions,
 } from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
@@ -86,6 +85,7 @@ import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSel
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
