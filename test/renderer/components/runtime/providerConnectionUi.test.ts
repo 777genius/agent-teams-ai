@@ -198,6 +198,20 @@ describe('providerConnectionUi', () => {
     expect(getProviderCredentialSummary(provider)).toBe('Stored in app');
   });
 
+  it('shows Anthropic API key helper as verified API-key mode', () => {
+    const provider = createAnthropicProvider({
+      authenticated: true,
+      authMethod: 'api_key_helper',
+      configuredAuthMode: 'api_key',
+      apiKeyConfigured: true,
+      apiKeySource: 'stored',
+      apiKeySourceLabel: 'Stored in app',
+    });
+
+    expect(formatProviderStatusText(provider)).toBe('Connected via API key');
+    expect(getProviderCredentialSummary(provider)).toBe('Stored in app');
+  });
+
   it('does not show API key mode as connected when only a stored key is known', () => {
     const provider = createAnthropicProvider({
       authenticated: false,

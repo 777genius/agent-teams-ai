@@ -79,6 +79,7 @@ const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
+const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
 
 type CodexCliLoginStatus = 'logged_in' | 'not_logged_in' | 'unknown';
 
@@ -101,7 +102,10 @@ interface AnthropicApiKeyVerificationResult {
   errorMessage?: string | null;
 }
 
-type AnthropicApiKeyVerifier = (apiKey: string) => Promise<AnthropicApiKeyVerificationResult>;
+type AnthropicApiKeyVerifier = (
+  apiKey: string,
+  baseUrl?: string | null
+) => Promise<AnthropicApiKeyVerificationResult>;
 
 function hashCredentialForCache(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -125,13 +129,31 @@ function normalizeAnthropicApiKeyVerificationMessage(
   return 'unknown verification error';
 }
 
+function buildAnthropicModelsUrl(baseUrl?: string | null): string {
+  const url = new URL(baseUrl?.trim() || ANTHROPIC_DEFAULT_API_BASE_URL);
+  let pathname = url.pathname;
+  while (pathname.endsWith('/')) {
+    pathname = pathname.slice(0, -1);
+  }
+  if (pathname.endsWith('/v1/models')) {
+    url.pathname = pathname;
+  } else if (pathname.endsWith('/v1')) {
+    url.pathname = `${pathname}/models`;
+  } else {
+    url.pathname = `${pathname}/v1/models`;
+  }
+  url.search = '';
+  return url.toString();
+}
+
 async function verifyAnthropicApiKeyWithApi(
-  apiKey: string
+  apiKey: string,
+  baseUrl?: string | null
 ): Promise<AnthropicApiKeyVerificationResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS);
   try {
-    const response = await fetch('https://api.anthropic.com/v1/models', {
+    const response = await fetch(buildAnthropicModelsUrl(baseUrl), {
       method: 'GET',
       signal: controller.signal,
       headers: {
@@ -752,16 +774,18 @@ export class ProviderConnectionService {
     }
 
     if (connection.apiKeyConfigured) {
+      const runtimeApiKeyAuthMethod =
+        provider.authMethod === 'api_key' || provider.authMethod === 'api_key_helper';
       const runtimeVerifiedApiKey =
         provider.authenticated === true &&
-        provider.authMethod === 'api_key' &&
+        runtimeApiKeyAuthMethod &&
         provider.verificationState === 'verified';
 
       if (runtimeVerifiedApiKey) {
         return {
           ...provider,
           authenticated: true,
-          authMethod: 'api_key',
+          authMethod: provider.authMethod,
           subscriptionRateLimits: null,
           verificationState: 'verified',
           statusMessage: provider.statusMessage ?? 'Connected via API key',
@@ -825,13 +849,14 @@ export class ProviderConnectionService {
       return null;
     }
 
-    const cacheKey = hashCredentialForCache(apiKey);
+    const baseUrl = this.getExternalEnvValue('ANTHROPIC_BASE_URL');
+    const cacheKey = hashCredentialForCache(`${apiKey}\0${baseUrl ?? ''}`);
     const cached = this.anthropicApiKeyVerificationCache.get(cacheKey);
     if (cached && Date.now() - cached.at < ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS) {
       return cached.result;
     }
 
-    const result = await this.anthropicApiKeyVerifier(apiKey);
+    const result = await this.anthropicApiKeyVerifier(apiKey, baseUrl);
     this.anthropicApiKeyVerificationCache.set(cacheKey, { result, at: Date.now() });
     return result;
   }
@@ -1056,21 +1081,8 @@ export class ProviderConnectionService {
   }
 
   private getExternalCredential(providerId: CliProviderId): ExternalCredential {
-    const shellEnv = getCachedShellEnv() ?? {};
-    const sources = [shellEnv, process.env];
-
-    const findEnvValue = (envVarName: string): string | null => {
-      for (const source of sources) {
-        const value = source[envVarName];
-        if (typeof value === 'string' && value.trim().length > 0) {
-          return value;
-        }
-      }
-      return null;
-    };
-
     if (providerId === 'anthropic') {
-      const apiKey = findEnvValue('ANTHROPIC_API_KEY');
+      const apiKey = this.getExternalEnvValue('ANTHROPIC_API_KEY');
       if (apiKey) {
         return {
           label: 'Detected from ANTHROPIC_API_KEY',
@@ -1080,7 +1092,7 @@ export class ProviderConnectionService {
     }
 
     if (providerId === 'gemini') {
-      const apiKey = findEnvValue('GEMINI_API_KEY');
+      const apiKey = this.getExternalEnvValue('GEMINI_API_KEY');
       if (apiKey) {
         return {
           label: 'Detected from GEMINI_API_KEY',
@@ -1090,7 +1102,7 @@ export class ProviderConnectionService {
     }
 
     if (providerId === 'codex') {
-      const nativeApiKey = findEnvValue(CODEX_NATIVE_API_KEY_ENV_VAR);
+      const nativeApiKey = this.getExternalEnvValue(CODEX_NATIVE_API_KEY_ENV_VAR);
       if (nativeApiKey) {
         return {
           label: `Detected from ${CODEX_NATIVE_API_KEY_ENV_VAR}`,
@@ -1098,7 +1110,7 @@ export class ProviderConnectionService {
         };
       }
 
-      const apiKey = findEnvValue('OPENAI_API_KEY');
+      const apiKey = this.getExternalEnvValue('OPENAI_API_KEY');
       if (apiKey) {
         return {
           label: 'Detected from OPENAI_API_KEY',
@@ -1107,6 +1119,17 @@ export class ProviderConnectionService {
       }
     }
 
+    return null;
+  }
+
+  private getExternalEnvValue(envVarName: string): string | null {
+    const shellEnv = getCachedShellEnv() ?? {};
+    for (const source of [shellEnv, process.env]) {
+      const value = source[envVarName];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+    }
     return null;
   }
 }

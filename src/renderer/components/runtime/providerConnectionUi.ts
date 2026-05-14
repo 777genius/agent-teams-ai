@@ -125,7 +125,7 @@ function isAnthropicApiKeyModeReady(provider: CliProviderStatus): boolean {
     provider.connection?.configuredAuthMode === 'api_key' &&
     provider.connection.apiKeyConfigured === true &&
     provider.authenticated === true &&
-    provider.authMethod === 'api_key' &&
+    (provider.authMethod === 'api_key' || provider.authMethod === 'api_key_helper') &&
     provider.verificationState === 'verified'
   );
 }
@@ -343,7 +343,11 @@ export function getProviderCredentialSummary(provider: CliProviderStatus): strin
     return 'Saved API key available in Manage';
   }
 
-  if (provider.authMethod !== 'api_key' && provider.providerId === 'anthropic') {
+  if (
+    provider.providerId === 'anthropic' &&
+    provider.authMethod !== 'api_key' &&
+    provider.authMethod !== 'api_key_helper'
+  ) {
     return provider.connection.apiKeySource === 'stored'
       ? 'API key also configured in Manage'
       : (provider.connection.apiKeySourceLabel ?? 'API key is configured');

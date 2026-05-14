@@ -35,6 +35,8 @@ vi.mock('@main/utils/childProcess', () => ({
 describe('ProviderConnectionService', () => {
   const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
   const originalCodexApiKey = process.env.CODEX_API_KEY;
+  const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const originalAnthropicBaseUrl = process.env.ANTHROPIC_BASE_URL;
 
   function createConfig(authMode: 'auto' | 'oauth' | 'api_key' = 'auto') {
     return {
@@ -62,6 +64,8 @@ describe('ProviderConnectionService', () => {
     execCliMock.mockResolvedValue({ stdout: 'Logged in using ChatGPT', stderr: '' });
     delete process.env.OPENAI_API_KEY;
     delete process.env.CODEX_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_BASE_URL;
   });
 
   afterEach(() => {
@@ -75,6 +79,18 @@ describe('ProviderConnectionService', () => {
       delete process.env.CODEX_API_KEY;
     } else {
       process.env.CODEX_API_KEY = originalCodexApiKey;
+    }
+
+    if (originalAnthropicApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
+    }
+
+    if (originalAnthropicBaseUrl === undefined) {
+      delete process.env.ANTHROPIC_BASE_URL;
+    } else {
+      process.env.ANTHROPIC_BASE_URL = originalAnthropicBaseUrl;
     }
   });
 
@@ -340,7 +356,7 @@ describe('ProviderConnectionService', () => {
         apiKeySourceLabel: 'Stored in app',
       },
     });
-    expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key');
+    expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key', null);
   });
 
   it('reports Anthropic API key mode as connected after direct API verification succeeds', async () => {
@@ -398,6 +414,66 @@ describe('ProviderConnectionService', () => {
       },
     });
     expect(verifyAnthropicApiKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('verifies Anthropic API keys against ANTHROPIC_BASE_URL when configured', async () => {
+    getCachedShellEnvMock.mockReturnValue({
+      ANTHROPIC_BASE_URL: 'https://gateway.example/anthropic/',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      const service = new ProviderConnectionService(
+        {
+          lookupPreferred: vi.fn().mockResolvedValue({
+            envVarName: 'ANTHROPIC_API_KEY',
+            value: 'stored-key',
+          }),
+        } as never,
+        {
+          getConfig: () => createConfig('api_key'),
+        } as never
+      );
+
+      await service.enrichProviderStatus({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: true,
+        authenticated: true,
+        authMethod: 'claude.ai',
+        verificationState: 'verified',
+        statusMessage: 'Connected via Anthropic subscription',
+        models: ['claude-sonnet-4-6'],
+        canLoginFromUi: true,
+        capabilities: {
+          teamLaunch: true,
+          oneShot: true,
+          extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
+        },
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: null,
+        connection: null,
+      } as never);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://gateway.example/anthropic/v1/models',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'x-api-key': 'stored-key',
+            'anthropic-version': '2023-06-01',
+          }),
+          method: 'GET',
+        })
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('reports an invalid Anthropic API key after direct API verification fails', async () => {
@@ -506,6 +582,57 @@ describe('ProviderConnectionService', () => {
         apiKeySourceLabel: 'Stored in app',
       },
     });
+  });
+
+  it('treats Anthropic API-key helper runtime auth as verified API-key mode', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const verifyAnthropicApiKey = vi.fn().mockResolvedValue({ state: 'unknown' });
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'ANTHROPIC_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never,
+      undefined,
+      verifyAnthropicApiKey
+    );
+
+    const status = await service.enrichProviderStatus({
+      providerId: 'anthropic',
+      displayName: 'Anthropic',
+      supported: true,
+      authenticated: true,
+      authMethod: 'api_key_helper',
+      verificationState: 'verified',
+      statusMessage: null,
+      models: ['claude-sonnet-4-6'],
+      canLoginFromUi: true,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
+      },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: null,
+      connection: null,
+    } as never);
+
+    expect(status).toMatchObject({
+      authenticated: true,
+      authMethod: 'api_key_helper',
+      verificationState: 'verified',
+      statusMessage: 'Connected via API key',
+    });
+    expect(verifyAnthropicApiKey).not.toHaveBeenCalled();
   });
 
   it('does not treat a subscription session as connected when Anthropic API key mode has no key', async () => {

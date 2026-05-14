@@ -2030,11 +2030,11 @@ type ProvisioningAuthSource =
   | 'none';
 
 function isAnthropicApiKeyBackedAuthSource(authSource: unknown): boolean {
-  return (
-    authSource === 'anthropic_api_key' ||
-    authSource === 'anthropic_auth_token' ||
-    authSource === 'anthropic_api_key_helper'
-  );
+  return authSource === 'anthropic_api_key' || authSource === 'anthropic_api_key_helper';
+}
+
+function isAnthropicDirectCredentialAuthSource(authSource: unknown): boolean {
+  return isAnthropicApiKeyBackedAuthSource(authSource) || authSource === 'anthropic_auth_token';
 }
 
 function buildAnthropicCrossProviderDirectAuthEnvPatch(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -17258,16 +17258,15 @@ export class TeamProvisioningService {
           return envResolution;
         };
 
-        let shouldRequireRuntimePingForAnthropicApiKey =
-          isAnthropicApiKeyBackedAuthSource(authSource);
+        let shouldRequireRuntimePingForAnthropicDirectCredential =
+          isAnthropicDirectCredentialAuthSource(authSource);
         if (
           resolveTeamProviderId(providerId) === 'anthropic' &&
-          !shouldRequireRuntimePingForAnthropicApiKey
+          !shouldRequireRuntimePingForAnthropicDirectCredential
         ) {
           const resolvedEnv = await ensureEnvResolution();
-          shouldRequireRuntimePingForAnthropicApiKey = isAnthropicApiKeyBackedAuthSource(
-            resolvedEnv.authSource
-          );
+          shouldRequireRuntimePingForAnthropicDirectCredential =
+            isAnthropicDirectCredentialAuthSource(resolvedEnv.authSource);
           if (resolvedEnv.authSource === 'configured_api_key_missing' && resolvedEnv.warning) {
             blockingMessages.push(
               providerIds.length > 1
@@ -17278,7 +17277,10 @@ export class TeamProvisioningService {
           }
         }
 
-        if (opts?.modelVerificationMode !== 'deep' && !shouldRequireRuntimePingForAnthropicApiKey) {
+        if (
+          opts?.modelVerificationMode !== 'deep' &&
+          !shouldRequireRuntimePingForAnthropicDirectCredential
+        ) {
           return;
         }
         const resolvedEnv = await ensureEnvResolution();
@@ -17305,7 +17307,7 @@ export class TeamProvisioningService {
           const prefixedWarning =
             providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning;
           if (
-            shouldRequireRuntimePingForAnthropicApiKey &&
+            shouldRequireRuntimePingForAnthropicDirectCredential &&
             this.isAuthFailureWarning(diagnostic.warning, 'probe')
           ) {
             blockingMessages.push(prefixedWarning);
@@ -17330,7 +17332,7 @@ export class TeamProvisioningService {
         const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
         const isBlockingPreflightWarning =
           authSource === 'configured_api_key_missing' ||
-          (isAnthropicApiKeyBackedAuthSource(authSource) && isAuthFailure) ||
+          (isAnthropicDirectCredentialAuthSource(authSource) && isAuthFailure) ||
           ((authSource === 'none' ||
             authSource === 'codex_runtime' ||
             authSource === 'gemini_runtime') &&
@@ -17345,7 +17347,7 @@ export class TeamProvisioningService {
           isAuthFailure
         ) {
           blockingMessages.push(prefixedWarning);
-        } else if (isAnthropicApiKeyBackedAuthSource(authSource) && isAuthFailure) {
+        } else if (isAnthropicDirectCredentialAuthSource(authSource) && isAuthFailure) {
           blockingMessages.push(prefixedWarning);
         } else if (isBinaryProbeWarning(probeResult.warning)) {
           blockingMessages.push(prefixedWarning);
@@ -32793,7 +32795,10 @@ export class TeamProvisioningService {
       if (env.anthropicApiKeyHelper) {
         usesAnthropicApiKeyHelper = true;
         Object.assign(envPatch, env.anthropicApiKeyHelper.envPatch);
-      } else if (providerId === 'anthropic' && isAnthropicApiKeyBackedAuthSource(env.authSource)) {
+      } else if (
+        providerId === 'anthropic' &&
+        isAnthropicDirectCredentialAuthSource(env.authSource)
+      ) {
         Object.assign(envPatch, buildAnthropicCrossProviderDirectAuthEnvPatch(env.env));
       }
       const flattenedArgs =
