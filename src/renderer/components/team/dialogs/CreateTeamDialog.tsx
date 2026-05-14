@@ -720,7 +720,6 @@ export const CreateTeamDialog = ({
   }, [
     effectiveAnthropicRuntimeLimitContext,
     effectiveCwd,
-    prepareChecks,
     prepareRuntimeStatusSignature,
     runtimeBackendSummaryByProvider,
     selectedMemberProviders,
