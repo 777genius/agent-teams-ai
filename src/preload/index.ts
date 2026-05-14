@@ -1,4 +1,5 @@
 import { createCodexAccountBridge } from '@features/codex-account/preload';
+import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
@@ -1591,6 +1592,9 @@ const electronAPI: ElectronAPI = {
       };
     },
   },
+
+  // ===== Codex Runtime Installer API =====
+  codexRuntime: createCodexRuntimeInstallerBridge({ ipcRenderer, invokeIpcWithResult }),
 
   tmux: createTmuxInstallerBridge({ ipcRenderer, invokeIpcWithResult }),
 

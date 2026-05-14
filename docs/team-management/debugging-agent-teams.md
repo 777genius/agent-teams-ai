@@ -17,17 +17,18 @@ Team root:
 ```bash
 TEAM="<team-name>"
 TEAM_DIR="$HOME/.claude/teams/$TEAM"
+TASKS_DIR="$HOME/.claude/tasks/$TEAM"
 ```
 
 Important files and folders:
 - `config.json` - configured members, provider/model selection, project path
-- `members-meta.json` - member metadata, removed members, worktree settings if present
+- `members.meta.json` - member metadata, removed members, worktree settings if present
 - `launch-state.json` - current app-side truth for member launch/liveness
 - `bootstrap-state.json` - bootstrap phase summary when present
 - `bootstrap-journal.jsonl` - ordered bootstrap events from the CLI/runtime
 - `inboxes/*.json` - durable inbox messages for user, lead, and native teammates
 - `sentMessages.json` - app-side sent-message records
-- `tasks/*.json` - task board state
+- `$TASKS_DIR/*.json` - task board state
 - `.opencode-runtime/lanes.json` - OpenCode lane index
 - `.opencode-runtime/lanes/<encoded-lane-id>/manifest.json` - lane-scoped runtime store manifest
 - `.opencode-runtime/lanes/<encoded-lane-id>/opencode-sessions.json` - committed OpenCode session evidence
@@ -155,7 +156,7 @@ For task stalls:
 
 ```bash
 TASK="<short-or-full-task-id>"
-rg -n "$TASK" "$TEAM_DIR/tasks" "$TEAM_DIR/inboxes" "$TEAM_DIR/bootstrap-journal.jsonl" 2>/dev/null
+rg -n "$TASK" "$TASKS_DIR" "$TEAM_DIR/inboxes" "$TEAM_DIR/bootstrap-journal.jsonl" 2>/dev/null
 ```
 
 Important distinctions:

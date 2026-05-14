@@ -1,12 +1,12 @@
 # Team Management Feature
 
-Интерфейс для управления командами тиммейтов Claude Code внутри Agent Teams (Electron).
+Интерфейс для управления командами AI-тиммейтов внутри Agent Teams (Electron), включая Claude, Codex и OpenCode runtime paths.
 
 ## Что делает
 
 - Видеть состав команды и роли участников
 - Kanban-доска с 5 колонками: TODO, IN PROGRESS, REVIEW, DONE, APPROVED
-- Отправка сообщений тиммейтам через inbox-файлы
+- Отправка сообщений тиммейтам через inbox-файлы и runtime-aware delivery для OpenCode
 - Review flow: запрос ревью, ручное ревью и прямое manual approval из DONE
 - Live updates через file watcher
 
@@ -30,9 +30,9 @@
 
 ⚠️ `agent-attachments-*.md` (architecture plan + phase 1-5 plans) - это исторические дизайн-документы для feature attachments. Фактическая реализация в `src/features/agent-attachments/` может отличаться от описанной архитектуры. Для актуального состояния см. код в `src/features/agent-attachments/core/domain/` и тесты.
 
-### 1. Messaging: Inbox-файлы
+### 1. Messaging: inbox + runtime delivery
 
-Единственный способ общаться с **запущенными** тиммейтами. SDK и CLI создают новые сессии, а не подключаются к существующим. Подробности: [research-messaging.md](./research-messaging.md)
+Для native Claude/Codex-style тиммейтов основной путь - durable inbox-файлы. Lead inbox доставляется через `relayLeadInboxMessages()`, потому что lead читает stdin. OpenCode secondary lanes не читают `inboxes/{member}.json` напрямую, поэтому UI сначала сохраняет сообщение в inbox, затем доставляет его через runtime bridge с delivery proof. Подробности: [research-messaging.md](./research-messaging.md) и [debugging-agent-teams.md](./debugging-agent-teams.md)
 
 ### 1.1 Roster source: members.meta.json + inboxes
 
@@ -87,7 +87,7 @@ Kanban-позиция (REVIEW, APPROVED) хранится в `kanban-state.json`
 
 ### Members: полный список через union
 
-- `union(config members + inbox filenames + task owners)` — единственный способ получить полный список
+- `union(members.meta.json + config members + inbox filenames + task owners)` - единственный способ получить полный список
 - `owner` в task-файлах — опционален (агент может не иметь owner до назначения)
 
 ### Graceful Degradation

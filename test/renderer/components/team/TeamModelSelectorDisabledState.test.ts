@@ -1382,6 +1382,118 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('renders OpenCode free badges and tiny model pricing from runtime catalog metadata', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: ['opencode/big-pickle', 'opencode/minimax-m2.7'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-13T00:00:00.000Z',
+            staleAt: '2026-05-13T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  cost: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
+                  context: 200000,
+                  limits: null,
+                  free: true,
+                },
+              },
+              {
+                id: 'opencode/minimax-m2.7',
+                launchModel: 'opencode/minimax-m2.7',
+                displayName: 'minimax-m2.7',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  cost: { input: 0.3, output: 1.2, cache_read: 0.06, cache_write: 0.375 },
+                  context: 200000,
+                  limits: null,
+                  free: false,
+                },
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+              message: null,
+              code: null,
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('in Free · out Free / 1M');
+    expect(host.textContent).toContain('in $0.30 · out $1.20 / 1M');
+    expect(host.textContent).toContain('Free');
+
+    const pricingRows = Array.from(
+      host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-pricing"]')
+    );
+    expect(pricingRows).toHaveLength(2);
+    expect(pricingRows[0]?.className).toContain('text-[9px]');
+    expect(pricingRows[1]?.getAttribute('title')).toContain('Cache write: $0.375 per 1M tokens');
+
+    const freeBadges = host.querySelectorAll(
+      '[data-testid="team-model-selector-model-free-badge"]'
+    );
+    expect(freeBadges).toHaveLength(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('filters OpenCode model groups by selected source providers', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {

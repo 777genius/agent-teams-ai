@@ -5,8 +5,14 @@ This file is a navigation layer for architecture and implementation guidance.
 Start here:
 - Repo overview and commands: [README.md](README.md)
 - Working instructions and project conventions: [CLAUDE.md](CLAUDE.md)
+- Hard guardrails: [AGENT_CRITICAL_GUARDRAILS.md](AGENT_CRITICAL_GUARDRAILS.md)
 - Canonical feature architecture standard: [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
 - Agent team launch/runtime debugging runbook: [docs/team-management/debugging-agent-teams.md](docs/team-management/debugging-agent-teams.md)
+
+Default local run target:
+- Use the desktop Electron app: `pnpm dev`
+- Do not start the browser/web dev mode for normal development or smoke checks. The browser path is limited and lacks the full desktop runtime, IPC, terminal, provider auth, and team lifecycle behavior.
+- When documenting or recommending startup commands, point contributors to the desktop app unless a task explicitly asks for browser-mode internals.
 
 For new features:
 - Default home for medium and large features: `src/features/<feature-name>/`

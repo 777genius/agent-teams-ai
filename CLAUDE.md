@@ -18,7 +18,7 @@ Key capabilities:
 - **Notification system** — alerts on task completion, agent attention needed, errors
 - **Zero-setup onboarding** — built-in Claude Code installation and authentication
 
-100% free, open source. No API keys. No configuration. Runs entirely locally.
+100% free, open source, and local-first. The app uses available Claude/Codex/OpenCode provider access instead of forcing a single app-level API-key setup.
 
 ## Tech Stack
 Electron 40.x, React 19.x, TypeScript 5.x, Tailwind CSS 3.x, Zustand 4.x
@@ -31,7 +31,7 @@ When running build/typecheck/test commands, pipe through `tail -20` to avoid flo
 - Hard guardrails: [`AGENT_CRITICAL_GUARDRAILS.md`](AGENT_CRITICAL_GUARDRAILS.md)
 
 - `pnpm install` - Install dependencies
-- `pnpm dev` - Dev server with hot reload
+- `pnpm dev` - Desktop Electron app with hot reload
 - `pnpm build` - Production build
 - `pnpm typecheck` - Type checking
 - `pnpm lint:fix` - Lint and auto-fix
@@ -108,8 +108,8 @@ Task tool_use blocks are filtered when subagent exists
 Keep orphaned Task calls (no matching subagent) for visibility.
 
 ### Agent Teams
-Claude Code's "Orchestrate Teams" feature: multiple sessions coordinate as a team.
-Official docs: https://code.claude.com/docs/en/agent-teams
+Agent Teams is this app's orchestration layer across Claude, Codex, and OpenCode runtimes.
+For Claude runtime behavior, also track Anthropic's upstream agent-team docs: https://code.claude.com/docs/en/agent-teams
 
 #### Debugging Team Launches And Teammates
 - Use [`docs/team-management/debugging-agent-teams.md`](docs/team-management/debugging-agent-teams.md) when a team launch hangs, a teammate remains `registered`, OpenCode shows `bootstrap unconfirmed`, messages are missing, or Task Log Stream looks wrong.
@@ -119,12 +119,13 @@ Official docs: https://code.claude.com/docs/en/agent-teams
 
 #### Message Delivery Architecture
 - **Lead** reads ONLY stdin (stream-json). Messages to lead must go through `relayLeadInboxMessages()` which converts inbox entries to stdin.
-- **Teammates** are independent CLI processes. Claude Code runtime monitors each teammate's inbox file and delivers messages between turns. No relay through lead needed.
-- **User → Teammate DM**: UI writes to `inboxes/{member}.json` with `from: "user"`. Teammate reads it directly.
-- **Teammate → User response**: Teammate writes to `inboxes/user.json`. UI reads all inbox files including `user.json` via `TeamInboxReader`.
-- **`relayMemberInboxMessages` is DISABLED** for teammate DMs (commented out in `teams.ts` and `index.ts`). It caused bugs: lead responding instead of teammate, duplicate messages, relay loops. Code preserved but not called.
-- **`relayLeadInboxMessages` is ACTIVE** — lead needs it because lead reads stdin, not inbox files.
-- Messages in `user.json` may lack `messageId` — `TeamInboxReader` generates deterministic IDs via sha256(from+timestamp+text).
+- **Native teammates** are independent CLI/process teammates. Claude/Codex-style teammates read their own inbox files between turns; no relay through the lead is needed.
+- **OpenCode secondary lanes** do not watch teammate inbox files. User DMs are persisted to `inboxes/{member}.json`, then delivered through the OpenCode runtime bridge with explicit delivery proof.
+- **User → Teammate DM**: UI writes to `inboxes/{member}.json` with `from: "user"`. Native teammates read it directly; OpenCode teammates receive it through runtime delivery.
+- **Teammate → User response**: Teammate writes to `inboxes/user.json` or uses the runtime-specific Agent Teams message tool that persists there. UI reads all inbox files including `user.json` via `TeamInboxReader`.
+- **`relayMemberInboxMessages` is legacy fallback code, not the normal teammate-DM path.** The UI caller in `src/main/ipc/teams.ts` is disabled because lead-mediated relay caused lead replies, duplicate messages, and relay loops.
+- **`relayLeadInboxMessages` is ACTIVE** - lead needs it because lead reads stdin, not inbox files.
+- Messages in `user.json` may lack `messageId` - `TeamInboxReader` generates deterministic IDs via sha256(from+timestamp+text).
 - See `docs/team-management/research-messaging.md` for full architecture details.
 
 #### Team Protocol Details

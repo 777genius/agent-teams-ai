@@ -214,6 +214,19 @@ async function resolveBundledOrchestratorBinary(): Promise<string | null> {
   return resolveFromCandidateList([path.join(resourcesPath, 'runtime', binaryName)]);
 }
 
+function getConfiguredRuntimeOverrideRaw(flavor: 'claude' | 'agent_teams_orchestrator'): string {
+  return (
+    (flavor === 'agent_teams_orchestrator'
+      ? (process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() ??
+        process.env.CLAUDE_CLI_PATH?.trim())
+      : process.env.CLAUDE_CLI_PATH?.trim()) ?? ''
+  );
+}
+
+function looksLikeExplicitPath(value: string): boolean {
+  return path.isAbsolute(value) || value.includes('\\') || value.includes('/');
+}
+
 let cachedPath: string | null | undefined;
 
 /** Timestamp of last successful cache verification (ms). */
@@ -269,25 +282,31 @@ export class ClaudeBinaryResolver {
   }
 
   private static async runResolve(options: ClaudeBinaryResolveOptions): Promise<string | null> {
+    const flavor = getConfiguredCliFlavor();
+    emitProgress(options, 'flavor', `Using ${flavor} runtime mode...`);
+
+    const overrideRaw = getConfiguredRuntimeOverrideRaw(flavor);
+    const overrideIsExplicitPath = overrideRaw ? looksLikeExplicitPath(overrideRaw) : false;
+    if (overrideRaw && overrideIsExplicitPath) {
+      emitProgress(options, 'configured-path', 'Checking configured runtime path...');
+      const resolvedOverride = await resolveFromExplicitPath(overrideRaw);
+
+      if (resolvedOverride) {
+        cachedPath = resolvedOverride;
+        cacheVerifiedAt = Date.now();
+        emitProgress(options, 'configured-path-found', 'Using configured runtime path...');
+        return cachedPath;
+      }
+    }
+
     await resolveInteractiveShellEnv({
       onProgress: (progress) => emitProgress(options, progress.phase, progress.message),
     });
     const enrichedPath = buildMergedCliPath(null);
-    const flavor = getConfiguredCliFlavor();
-    emitProgress(options, 'flavor', `Using ${flavor} runtime mode...`);
 
-    const overrideRaw =
-      flavor === 'agent_teams_orchestrator'
-        ? (process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() ??
-          process.env.CLAUDE_CLI_PATH?.trim())
-        : process.env.CLAUDE_CLI_PATH?.trim();
-    if (overrideRaw) {
+    if (overrideRaw && !overrideIsExplicitPath) {
       emitProgress(options, 'configured-path', 'Checking configured runtime path...');
-      const looksLikePath =
-        path.isAbsolute(overrideRaw) || overrideRaw.includes('\\') || overrideRaw.includes('/');
-      const resolvedOverride = looksLikePath
-        ? await resolveFromExplicitPath(overrideRaw)
-        : await resolveFromPathEnv(overrideRaw, enrichedPath);
+      const resolvedOverride = await resolveFromPathEnv(overrideRaw, enrichedPath);
 
       if (resolvedOverride) {
         cachedPath = resolvedOverride;

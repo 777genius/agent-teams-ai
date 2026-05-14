@@ -113,8 +113,24 @@ function resolveEmptyText(
   loading: boolean,
   error: string | null
 ): string {
-  if (preview?.warnings.some((warning) => warning.code === 'codex_member_wide_not_supported')) {
+  const hasCodexUnsupportedWarning = preview?.warnings.some(
+    (warning) => warning.code === 'codex_member_wide_not_supported'
+  );
+  const hasOnlyCodexUnsupportedCoverage =
+    hasCodexUnsupportedWarning === true &&
+    (preview?.coverage.length ?? 0) > 0 &&
+    preview?.coverage.every((coverage) => coverage.provider === 'codex_native_trace');
+  if (hasOnlyCodexUnsupportedCoverage) {
     return 'Unsupported provider';
+  }
+  const hasOpenCodeRuntimeWarning = preview?.warnings.some(
+    (warning) =>
+      warning.code === 'opencode_runtime_timeout' ||
+      warning.code === 'opencode_runtime_unavailable' ||
+      warning.code === 'opencode_ambiguous_lane'
+  );
+  if ((preview?.items.length ?? 0) === 0 && hasOpenCodeRuntimeWarning) {
+    return 'Logs unavailable';
   }
   if (loading && !preview) return 'Loading logs';
   if (error && !preview) return 'Logs unavailable';

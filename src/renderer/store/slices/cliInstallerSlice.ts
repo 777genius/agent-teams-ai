@@ -7,6 +7,7 @@ import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { AppState } from '../types';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type {
   CliInstallationStatus,
   CliProviderId,
@@ -19,6 +20,11 @@ const logger = createLogger('Store:cliInstaller');
 
 /** Max log lines to keep in UI (reserved for future use) */
 const _MAX_LOG_LINES = 50;
+const OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
+const OPENCODE_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
+const CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
+const CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
+
 export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = [
   'anthropic',
   'codex',
@@ -106,6 +112,66 @@ function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefi
   );
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
+  cliProviderStatusInFlight.delete(`${providerId}:status`);
+  cliProviderStatusInFlight.delete(`${providerId}:verify`);
+}
+
+function getProviderStatus(
+  status: CliInstallationStatus | null | undefined,
+  providerId: CliProviderId
+): CliProviderStatus | undefined {
+  return status?.providers.find((provider) => provider.providerId === providerId);
+}
+
+function hasOpenCodeModels(provider: CliProviderStatus | undefined): boolean {
+  return provider?.providerId === 'opencode' && provider.models.length > 0;
+}
+
+function hasCodexRuntimeReady(provider: CliProviderStatus | undefined): boolean {
+  return (
+    provider?.providerId === 'codex' &&
+    provider.availableBackends?.some((backend) => backend.id === 'codex-native') === true
+  );
+}
+
+function isOpenCodeRuntimeMissingSnapshot(provider: CliProviderStatus | undefined): boolean {
+  if (!provider || provider.providerId !== 'opencode' || provider.models.length > 0) {
+    return false;
+  }
+
+  const message = `${provider.statusMessage ?? ''} ${provider.detailMessage ?? ''}`.toLowerCase();
+  return (
+    provider.verificationState === 'error' &&
+    message.includes('opencode cli') &&
+    (message.includes('not found') ||
+      message.includes('not installed') ||
+      message.includes('missing'))
+  );
+}
+
+function shouldPreserveCurrentProviderStatus(
+  currentProvider: CliProviderStatus | undefined,
+  incomingProvider: CliProviderStatus
+): boolean {
+  if (!currentProvider) {
+    return false;
+  }
+
+  if (hasOpenCodeModels(currentProvider) && isOpenCodeRuntimeMissingSnapshot(incomingProvider)) {
+    return true;
+  }
+
+  return (
+    isHydratedMultimodelProviderStatus(currentProvider) &&
+    !isHydratedMultimodelProviderStatus(incomingProvider)
+  );
+}
+
 export function getIncompleteMultimodelProviderIds(
   status: CliInstallationStatus | null
 ): CliProviderId[] {
@@ -165,11 +231,7 @@ export function mergeCliStatusPreservingHydratedProviders(
   const incomingProviderIds = new Set(incoming.providers.map((provider) => provider.providerId));
   const providers = incoming.providers.map((incomingProvider) => {
     const currentProvider = currentProvidersById.get(incomingProvider.providerId);
-    if (
-      currentProvider &&
-      isHydratedMultimodelProviderStatus(currentProvider) &&
-      !isHydratedMultimodelProviderStatus(incomingProvider)
-    ) {
+    if (currentProvider && shouldPreserveCurrentProviderStatus(currentProvider, incomingProvider)) {
       return currentProvider;
     }
     return incomingProvider;
@@ -192,6 +254,52 @@ export function mergeCliStatusPreservingHydratedProviders(
     authLoggedIn: providers.some((provider) => provider.authenticated),
     authMethod: authenticatedProvider?.authMethod ?? null,
   };
+}
+
+export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+): Promise<void> {
+  if (!api.cliInstaller) {
+    return;
+  }
+
+  for (let attempt = 1; attempt <= OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
+    await api.cliInstaller.invalidateStatus();
+    clearCliProviderStatusInFlight('opencode');
+    const epoch = ++cliStatusEpoch;
+    await get().fetchCliProviderStatus('opencode', { silent: false, epoch });
+
+    if (hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
+      return;
+    }
+
+    if (attempt < OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS) {
+      await sleep(OPENCODE_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS);
+    }
+  }
+}
+
+export async function refreshCodexProviderStatusAfterRuntimeInstall(
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+): Promise<void> {
+  if (!api.cliInstaller) {
+    return;
+  }
+
+  for (let attempt = 1; attempt <= CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
+    await api.cliInstaller.invalidateStatus();
+    clearCliProviderStatusInFlight('codex');
+    const epoch = ++cliStatusEpoch;
+    await get().fetchCliProviderStatus('codex', { silent: false, epoch });
+
+    if (hasCodexRuntimeReady(getProviderStatus(get().cliStatus, 'codex'))) {
+      return;
+    }
+
+    if (attempt < CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS) {
+      await sleep(CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS);
+    }
+  }
 }
 
 function isMultimodelCliStatus(
@@ -291,6 +399,9 @@ export interface CliInstallerSlice {
   openCodeRuntimeStatus: OpenCodeRuntimeStatus | null;
   openCodeRuntimeStatusLoading: boolean;
   openCodeRuntimeError: string | null;
+  codexRuntimeStatus: CodexRuntimeStatus | null;
+  codexRuntimeStatusLoading: boolean;
+  codexRuntimeError: string | null;
 
   // Actions
   bootstrapCliStatus: (options?: { multimodelEnabled?: boolean }) => Promise<void>;
@@ -304,6 +415,9 @@ export interface CliInstallerSlice {
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
   installOpenCodeRuntime: () => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
+  fetchCodexRuntimeStatus: () => Promise<void>;
+  installCodexRuntime: () => Promise<void>;
+  invalidateCodexRuntimeStatus: () => Promise<void>;
 }
 
 let cliStatusInFlight: Promise<void> | null = null;
@@ -311,6 +425,7 @@ const cliProviderStatusInFlight = new Map<string, Promise<void>>();
 let cliStatusEpoch = 0;
 const cliProviderStatusSeq = new Map<CliProviderId, number>();
 let openCodeRuntimeStatusInFlight: Promise<void> | null = null;
+let codexRuntimeStatusInFlight: Promise<void> | null = null;
 
 // =============================================================================
 // Slice Creator
@@ -337,6 +452,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   openCodeRuntimeStatus: null,
   openCodeRuntimeStatusLoading: false,
   openCodeRuntimeError: null,
+  codexRuntimeStatus: null,
+  codexRuntimeStatusLoading: false,
+  codexRuntimeError: null,
 
   bootstrapCliStatus: async (options) => {
     if (!api.cliInstaller) return;
@@ -749,9 +867,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
       if (status.installed) {
         await api.openCodeRuntime.invalidateStatus();
-        await api.cliInstaller?.invalidateStatus();
-        const epoch = ++cliStatusEpoch;
-        await get().fetchCliProviderStatus('opencode', { silent: false, epoch });
+        await refreshOpenCodeProviderStatusAfterRuntimeInstall(get);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
@@ -765,5 +881,64 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   invalidateOpenCodeRuntimeStatus: async () => {
     await api.openCodeRuntime?.invalidateStatus();
     set({ openCodeRuntimeStatus: null });
+  },
+
+  fetchCodexRuntimeStatus: async () => {
+    if (!api.codexRuntime) return;
+    if (codexRuntimeStatusInFlight) return codexRuntimeStatusInFlight;
+
+    codexRuntimeStatusInFlight = (async () => {
+      set({ codexRuntimeStatusLoading: true, codexRuntimeError: null });
+      try {
+        const status = await api.codexRuntime.getStatus();
+        set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to check Codex runtime status';
+        logger.error('Failed to fetch Codex runtime status:', error);
+        set({ codexRuntimeError: message });
+      } finally {
+        set({ codexRuntimeStatusLoading: false });
+        codexRuntimeStatusInFlight = null;
+      }
+    })();
+
+    return codexRuntimeStatusInFlight;
+  },
+
+  installCodexRuntime: async () => {
+    if (!api.codexRuntime) return;
+    set({
+      codexRuntimeStatusLoading: true,
+      codexRuntimeError: null,
+      codexRuntimeStatus: {
+        installed: false,
+        source: 'missing',
+        state: 'checking',
+        progress: {
+          phase: 'checking',
+          detail: 'Resolving latest Codex package...',
+        },
+      },
+    });
+    try {
+      const status = await api.codexRuntime.install();
+      set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
+      if (status.installed) {
+        await api.codexRuntime.invalidateStatus();
+        await refreshCodexProviderStatusAfterRuntimeInstall(get);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to install Codex runtime';
+      logger.error('Failed to install Codex runtime:', error);
+      set({ codexRuntimeError: message });
+    } finally {
+      set({ codexRuntimeStatusLoading: false });
+    }
+  },
+
+  invalidateCodexRuntimeStatus: async () => {
+    await api.codexRuntime?.invalidateStatus();
+    set({ codexRuntimeStatus: null });
   },
 });

@@ -82,6 +82,21 @@ interface OpenCodeModelGroup {
   options: TeamRuntimeModelOption[];
 }
 
+type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
+
+interface OpenCodeModelCostRates {
+  input: number | null;
+  output: number | null;
+  cacheRead: number | null;
+  cacheWrite: number | null;
+}
+
+interface OpenCodeModelPricingInfo {
+  free: boolean;
+  summary: string | null;
+  title: string | undefined;
+}
+
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
   { id: 'codex', label: 'Codex', comingSoon: false },
@@ -98,6 +113,97 @@ function getOpenCodeSourceInfo(model: string): { id: string; label: string } | n
   return {
     id: parsed.sourceId,
     label: getTeamModelSourceBadgeLabel('opencode', model) ?? parsed.sourceId,
+  };
+}
+
+function getRecordValue(record: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    if (key in record) {
+      return record[key];
+    }
+  }
+  return undefined;
+}
+
+function getFiniteCostNumber(record: Record<string, unknown>, keys: string[]): number | null {
+  const value = getRecordValue(record, keys);
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function extractOpenCodeCostRates(cost: unknown): OpenCodeModelCostRates | null {
+  if (!cost || typeof cost !== 'object' || Array.isArray(cost)) {
+    return null;
+  }
+
+  const record = cost as Record<string, unknown>;
+  const rates: OpenCodeModelCostRates = {
+    input: getFiniteCostNumber(record, ['input']),
+    output: getFiniteCostNumber(record, ['output']),
+    cacheRead: getFiniteCostNumber(record, ['cache_read', 'cacheRead', 'cached_read']),
+    cacheWrite: getFiniteCostNumber(record, ['cache_write', 'cacheWrite', 'cached_write']),
+  };
+
+  return Object.values(rates).some((rate) => rate !== null) ? rates : null;
+}
+
+function formatOpenCodeCostRate(rate: number): string {
+  if (rate === 0) {
+    return 'Free';
+  }
+
+  const formatted = rate.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: rate >= 1 ? 2 : 4,
+  });
+  return `$${formatted}`;
+}
+
+function formatOpenCodeCostSummary(rates: OpenCodeModelCostRates): string | null {
+  const summaryParts: string[] = [];
+  if (rates.input !== null) {
+    summaryParts.push(`in ${formatOpenCodeCostRate(rates.input)}`);
+  }
+  if (rates.output !== null) {
+    summaryParts.push(`out ${formatOpenCodeCostRate(rates.output)}`);
+  }
+
+  if (summaryParts.length === 0) {
+    return null;
+  }
+
+  return `${summaryParts.join(' · ')} / 1M`;
+}
+
+function formatOpenCodeCostTitle(rates: OpenCodeModelCostRates): string {
+  const titleParts: string[] = [];
+  if (rates.input !== null) {
+    titleParts.push(`Input: ${formatOpenCodeCostRate(rates.input)} per 1M tokens`);
+  }
+  if (rates.output !== null) {
+    titleParts.push(`Output: ${formatOpenCodeCostRate(rates.output)} per 1M tokens`);
+  }
+  if (rates.cacheRead !== null) {
+    titleParts.push(`Cache read: ${formatOpenCodeCostRate(rates.cacheRead)} per 1M tokens`);
+  }
+  if (rates.cacheWrite !== null) {
+    titleParts.push(`Cache write: ${formatOpenCodeCostRate(rates.cacheWrite)} per 1M tokens`);
+  }
+  return titleParts.join('\n');
+}
+
+function getOpenCodeModelPricingInfo(
+  catalogModel: ProviderModelCatalogItem | null | undefined
+): OpenCodeModelPricingInfo | null {
+  const metadata = catalogModel?.metadata;
+  if (!metadata) {
+    return null;
+  }
+
+  const rates = extractOpenCodeCostRates(metadata.cost);
+  return {
+    free: metadata.free === true,
+    summary: rates ? formatOpenCodeCostSummary(rates) : null,
+    title: rates ? formatOpenCodeCostTitle(rates) : undefined,
   };
 }
 
@@ -352,6 +458,26 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return getAvailableTeamProviderModelOptions(effectiveProviderId, runtimeProviderStatus);
   }, [effectiveProviderId, runtimeProviderStatus, shouldAwaitRuntimeModelList]);
+  const openCodeCatalogModelById = useMemo(() => {
+    const catalog = runtimeProviderStatus?.modelCatalog;
+    const modelById = new Map<string, ProviderModelCatalogItem>();
+    if (effectiveProviderId !== 'opencode' || catalog?.providerId !== 'opencode') {
+      return modelById;
+    }
+
+    for (const model of catalog.models) {
+      const launchModel = model.launchModel.trim();
+      const id = model.id.trim();
+      if (launchModel) {
+        modelById.set(launchModel, model);
+      }
+      if (id) {
+        modelById.set(id, model);
+      }
+    }
+
+    return modelById;
+  }, [effectiveProviderId, runtimeProviderStatus?.modelCatalog]);
   const hasRecommendedOpenCodeModels = useMemo(
     () =>
       effectiveProviderId === 'opencode' &&
@@ -474,6 +600,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         return true;
       }
       const modelRecommendation = getTeamModelRecommendation(effectiveProviderId, option.value);
+      const openCodePricingInfo = getOpenCodeModelPricingInfo(
+        openCodeCatalogModelById.get(option.value)
+      );
       return [
         option.value,
         option.label,
@@ -481,6 +610,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         getOpenCodeSourceInfo(option.value)?.label ?? '',
         modelRecommendation?.label ?? '',
         modelRecommendation?.reason ?? '',
+        openCodePricingInfo?.free ? 'free' : '',
+        openCodePricingInfo?.summary ?? '',
       ]
         .join(' ')
         .toLowerCase()
@@ -524,7 +655,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       ...modelOptions.filter((option) => option.value.trim().length === 0),
       ...concreteOptions,
     ].filter(matchesModelQuery);
-  }, [effectiveProviderId, modelOptions, modelQuery, recommendedOnly, selectedOpenCodeSourceIds]);
+  }, [
+    effectiveProviderId,
+    modelOptions,
+    modelQuery,
+    openCodeCatalogModelById,
+    recommendedOnly,
+    selectedOpenCodeSourceIds,
+  ]);
   const visibleOpenCodeModelGroups = useMemo<OpenCodeModelGroup[]>(() => {
     if (effectiveProviderId !== 'opencode') {
       return [];
@@ -598,6 +736,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       availabilityReason ??
       null;
     const modelRecommendation = getTeamModelRecommendation(effectiveProviderId, opt.value);
+    const openCodePricingInfo =
+      effectiveProviderId === 'opencode'
+        ? getOpenCodeModelPricingInfo(openCodeCatalogModelById.get(opt.value))
+        : null;
 
     return (
       <button
@@ -626,9 +768,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         }}
       >
         <span className="flex flex-col items-center justify-center gap-0.5">
-          <span className={cn('leading-tight', opt.value === 'gpt-5.5' && 'font-bold')}>
+          <span
+            className={cn(
+              'max-w-full break-words leading-tight',
+              opt.value === 'gpt-5.5' && 'font-bold'
+            )}
+          >
             {opt.label}
           </span>
+          {openCodePricingInfo?.summary ? (
+            <span
+              data-testid="team-model-selector-model-pricing"
+              className="max-w-full text-balance text-[9px] font-normal leading-[1.1] text-[var(--color-text-muted)]"
+              title={openCodePricingInfo.title}
+            >
+              {openCodePricingInfo.summary}
+            </span>
+          ) : null}
+          {openCodePricingInfo?.free ? (
+            <span
+              data-testid="team-model-selector-model-free-badge"
+              className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-200"
+              title="OpenCode marks this model as free."
+            >
+              Free
+            </span>
+          ) : null}
           {modelRecommendation ? (
             <span
               className={cn(

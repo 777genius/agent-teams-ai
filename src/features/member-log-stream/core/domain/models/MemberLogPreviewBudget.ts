@@ -16,7 +16,7 @@ export const DEFAULT_MEMBER_LOG_PREVIEW_BUDGET: MemberLogPreviewBudget = {
   maxTranscriptFiles: 8,
   maxSourceMessagesPerProvider: 120,
   openCodeMessageLimit: 80,
-  openCodeTimeoutMs: 2_500,
+  openCodeTimeoutMs: 5_000,
   cacheTtlMs: 3_000,
 };
 

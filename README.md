@@ -5,7 +5,7 @@
   <a href="docs/screenshots/8.png"><img src="docs/screenshots/8.png" width="75" alt="Task Detail" /></a>&nbsp;
   <img src="resources/icons/png/1024x1024.png" alt="Agent Teams" width="80" />&nbsp;
   <a href="docs/screenshots/9.png"><img src="docs/screenshots/9.png" width="75" alt="Execution Logs" /></a>&nbsp;
-  <a href="docs/screenshots/3.jpg"><img src="docs/screenshots/3.png" width="75" alt="Agent Comments" /></a>&nbsp;
+  <a href="docs/screenshots/3.png"><img src="docs/screenshots/3.png" width="75" alt="Agent Comments" /></a>&nbsp;
   <a href="docs/screenshots/4.png"><img src="docs/screenshots/4.png" width="75" alt="Create Team" /></a>&nbsp;
   <a href="docs/screenshots/6.png"><img src="docs/screenshots/6.png" width="65" alt="Settings" /></a>
 </p>
@@ -201,9 +201,11 @@ Fact sources checked on May 5, 2026: [detailed research notes](docs/research/gas
 ## Quick start
 
 1. **Download** the app for your platform (see [Installation](#installation))
-2. **Launch** — On first run, the setup wizard will detect the runtime and guide provider authentication
+2. **Launch the desktop app** - On first run, the setup wizard will detect the runtime and guide provider authentication
 3. **Create a team** — Pick a project, define roles, write a provisioning prompt
 4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
+
+Use the desktop app as the primary product. The browser/web path is not needed for normal use and does not provide the full desktop runtime, IPC, terminal, provider auth, or team lifecycle behavior.
 
 
 ---
@@ -274,7 +276,9 @@ pnpm install
 pnpm dev
 ```
 
-The app auto-discovers Claude Code projects from `~/.claude/`.
+`pnpm dev` starts the desktop Electron app. Do not start a browser/web dev server for normal development; that path is limited and is not the supported way to run agent teams locally.
+
+The desktop app auto-discovers Claude Code projects from `~/.claude/`.
 
 ### Debug teammate runtimes
 
@@ -303,7 +307,7 @@ pnpm dist            # macOS + Windows + Linux
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Development with hot reload |
+| `pnpm dev` | Desktop app development with hot reload |
 | `pnpm build` | Production build |
 | `pnpm typecheck` | TypeScript type checking |
 | `pnpm lint` | Lint (no auto-fix) |

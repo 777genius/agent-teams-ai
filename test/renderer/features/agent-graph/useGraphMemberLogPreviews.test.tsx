@@ -298,7 +298,9 @@ describe('useGraphMemberLogPreviews', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(<HookProbe teamName="alpha-team" memberNames={['alice']} onState={() => undefined} />);
+      root.render(
+        <HookProbe teamName="alpha-team" memberNames={['alice']} onState={() => undefined} />
+      );
       await Promise.resolve();
     });
     act(() => {
@@ -783,7 +785,9 @@ describe('useGraphMemberLogPreviews', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(<HookProbe teamName="alpha-team" memberNames={['alice']} onState={() => undefined} />);
+      root.render(
+        <HookProbe teamName="alpha-team" memberNames={['alice']} onState={() => undefined} />
+      );
       await Promise.resolve();
     });
     await act(async () => {

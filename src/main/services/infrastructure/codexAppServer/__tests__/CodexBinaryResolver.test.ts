@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PathLike } from 'node:fs';
 
 const accessMock = vi.fn<(filePath: PathLike, mode?: number) => Promise<void>>();
+const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn<() => Promise<string | null>>();
 const execCliMock =
   vi.fn<
     (
@@ -18,6 +19,11 @@ const execCliMock =
 
 vi.mock('node:fs/promises', () => ({
   access: (filePath: PathLike, mode?: number) => accessMock(filePath, mode),
+}));
+
+vi.mock('@features/codex-runtime-installer/main', () => ({
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath: () =>
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock(),
 }));
 
 vi.mock('@main/utils/childProcess', () => ({
@@ -48,6 +54,7 @@ describe('CodexBinaryResolver', () => {
     setPlatform('win32');
     process.env.PATHEXT = '.EXE;.CMD;.BAT;.COM';
     delete process.env.CODEX_CLI_PATH;
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
     execCliMock.mockResolvedValue({ stdout: 'codex-cli 0.130.0', stderr: '' });
   });
 
@@ -94,6 +101,47 @@ describe('CodexBinaryResolver', () => {
     CodexBinaryResolver.clearCache();
 
     await expect(CodexBinaryResolver.resolve()).resolves.toBe(cmdShim);
+  });
+
+  it('prefers a verified app-managed Codex binary before PATH lookup', async () => {
+    const appManagedBinary = 'C:\\Users\\tester\\AppData\\Roaming\\AgentTeams\\codex.exe';
+    const pathBinary = 'C:\\Program Files\\nodejs\\codex.cmd';
+    process.env.PATH = 'C:\\Program Files\\nodejs';
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(appManagedBinary);
+
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === appManagedBinary || filePath === pathBinary) {
+        return Promise.resolve();
+      }
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    });
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
+  });
+
+  it('recovers a negative cache entry when a verified app-managed Codex binary appears', async () => {
+    const appManagedBinary = 'C:\\Users\\tester\\AppData\\Roaming\\AgentTeams\\codex.exe';
+    process.env.PATH = '';
+
+    accessMock.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBeNull();
+
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(appManagedBinary);
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === appManagedBinary) {
+        return Promise.resolve();
+      }
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    });
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
   });
 
   it('skips Windows PATH candidates that exist but cannot be launched', async () => {

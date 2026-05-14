@@ -24,6 +24,8 @@ import {
   getModelOnlyFallbackProviderIds,
   mergeCliStatusPreservingHydratedProviders,
   reconcileMultimodelProviderLoading,
+  refreshCodexProviderStatusAfterRuntimeInstall,
+  refreshOpenCodeProviderStatusAfterRuntimeInstall,
 } from './slices/cliInstallerSlice';
 import { createConfigSlice } from './slices/configSlice';
 import { createConnectionSlice } from './slices/connectionSlice';
@@ -65,6 +67,7 @@ import {
 
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type {
   ActiveToolCall,
   CliInstallerProgress,
@@ -247,6 +250,9 @@ export function initializeNotificationListeners(): () => void {
     }
     if (api.openCodeRuntime) {
       void useStore.getState().fetchOpenCodeRuntimeStatus();
+    }
+    if (api.codexRuntime) {
+      void useStore.getState().fetchCodexRuntimeStatus();
     }
 
     // Remaining fetches have no data dependency on each other — run in parallel
@@ -2317,10 +2323,29 @@ export function initializeNotificationListeners(): () => void {
       });
       if (status.installed && status.state === 'ready') {
         void (async () => {
-          await api.cliInstaller?.invalidateStatus();
-          await useStore.getState().fetchCliProviderStatus('opencode', {
-            silent: false,
-          });
+          await refreshOpenCodeProviderStatusAfterRuntimeInstall(() => useStore.getState());
+        })();
+      }
+    });
+    if (typeof cleanup === 'function') {
+      cleanupFns.push(cleanup);
+    }
+  }
+
+  if (api.codexRuntime?.onProgress) {
+    const cleanup = api.codexRuntime.onProgress((_event: unknown, data: unknown) => {
+      const status = data as CodexRuntimeStatus;
+      useStore.setState({
+        codexRuntimeStatus: status,
+        codexRuntimeError: status.error ?? null,
+        codexRuntimeStatusLoading:
+          status.state === 'checking' ||
+          status.state === 'downloading' ||
+          status.state === 'installing',
+      });
+      if (status.installed && status.state === 'ready') {
+        void (async () => {
+          await refreshCodexProviderStatusAfterRuntimeInstall(() => useStore.getState());
         })();
       }
     });
