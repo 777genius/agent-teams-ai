@@ -9,6 +9,12 @@ out/
 release/
 coverage/
 
+# Runtime release artifacts are downloaded during dev/release builds.
+# Keep only the placeholder directory in git.
+.runtime-download/
+resources/runtime/*
+!resources/runtime/.gitkeep
+
 # IDE
 .vscode/
 .idea/

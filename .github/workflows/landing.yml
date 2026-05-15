@@ -4,15 +4,15 @@ on:
   push:
     branches: [main]
     paths: [landing/**]
+  pull_request:
+    paths: [landing/**]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: landing-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
 
       - name: Install dependencies
         working-directory: landing
@@ -37,18 +39,24 @@ jobs:
           NUXT_PUBLIC_GITHUB_REPO: 777genius/agent-teams-ai
         run: npm run generate:all
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
+        if: github.event_name != 'pull_request'
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
         with:
           path: landing/.output/public
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

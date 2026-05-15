@@ -10,6 +10,7 @@ on:
       - 'mcp-server/**'
       - 'packages/**'
       - 'resources/runtime/**'
+      - '.runtime-download/**'
       - 'runtime.lock.json'
       - 'test/**'
       - '.github/workflows/**'
@@ -29,6 +30,7 @@ on:
       - 'mcp-server/**'
       - 'packages/**'
       - 'resources/runtime/**'
+      - '.runtime-download/**'
       - 'runtime.lock.json'
       - 'test/**'
       - '.github/workflows/**'
@@ -49,8 +51,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Guard runtime artifacts
+        run: node ./scripts/ci/forbid-runtime-artifacts.cjs
+
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -59,16 +66,13 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Restore ESLint cache
         uses: actions/cache@v5
         with:
           path: .eslintcache
           key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.*', 'src/**/*.ts', 'src/**/*.tsx') }}
-
-      - name: Auto-fix import sort (Node version parity)
-        run: npx eslint src/ --fix --no-cache || true
 
       - name: Validate workspace truth gate
         run: pnpm check:ci
@@ -81,7 +85,9 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -90,7 +96,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Test
         run: pnpm test:workspace:ci
@@ -108,7 +114,9 @@ jobs:
         run: git config --global core.longpaths true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -117,7 +125,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Test task change ledger
         run: pnpm test:task-change-ledger

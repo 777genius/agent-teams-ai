@@ -2,17 +2,17 @@ import { buildClaudeWorkspaceTrustPreflightArgs } from './ClaudePreflightCommand
 import { runPtyDialogEngine } from './PtyDialogEngine';
 import { detectClaudeStartupState, normalizeTerminalText } from './StartupDialogRules';
 
+import type { WorkspaceTrustDiagnosticStrategyResult, WorkspaceTrustWorkspace } from '../domain';
 import type {
   ProviderStateProbe,
   PtyProcessPort,
-  TerminalSnapshot,
   TempEmptyMcpConfigStore,
+  TerminalSnapshot,
 } from './ports';
-import type { WorkspaceTrustDiagnosticStrategyResult, WorkspaceTrustWorkspace } from '../domain';
 
 const WORKSPACE_TRUST_RAW_TAIL_LIMIT = 4096;
 
-export type ClaudePtyWorkspaceTrustStrategyInput = {
+export interface ClaudePtyWorkspaceTrustStrategyInput {
   claudePath: string;
   workspaces: WorkspaceTrustWorkspace[];
   env: Record<string, string | undefined>;
@@ -22,7 +22,7 @@ export type ClaudePtyWorkspaceTrustStrategyInput = {
   isCancelled(): boolean;
   timeoutMs?: number;
   pollIntervalMs?: number;
-};
+}
 
 function toPtyEnv(env: Record<string, string | undefined>): Record<string, string> {
   const output: Record<string, string> = {};

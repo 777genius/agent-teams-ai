@@ -30,7 +30,7 @@ export type PtyDialogEngineResult =
       lastSnapshot?: TerminalSnapshot;
     };
 
-export type PtyDialogEngineInput = {
+export interface PtyDialogEngineInput {
   session: PtySessionPort;
   detect(snapshotText: string): StartupReadinessState;
   isCancelled(): boolean;
@@ -43,7 +43,7 @@ export type PtyDialogEngineInput = {
     actions: PtyKeyAction[];
     snapshot: TerminalSnapshot;
   }) => Promise<{ action: 'continue' } | { action: 'stop'; reason: string }>;
-};
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -47,7 +47,7 @@ function hasClaudeWorkspaceTrustPrompt(lower: string, compact: string): boolean 
       /trust this folder/,
     ]) ||
     (/(quicksafetycheck|projectyoucreated|workspacetrust)/.test(compact) &&
-      /trustthisfolder/.test(compact));
+      compact.includes('trustthisfolder'));
   if (knownPrompt) {
     return true;
   }

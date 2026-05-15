@@ -16,7 +16,7 @@ Key capabilities:
 - **MCP integration** — built-in mcp-server for external tools and agent plugins
 - **Post-compact context recovery** — restores team-management instructions after context compaction
 - **Notification system** — alerts on task completion, agent attention needed, errors
-- **Zero-setup onboarding** — built-in Claude Code installation and authentication
+- **Zero-setup onboarding** — built-in runtime detection and provider authentication for Claude, Codex, and OpenCode
 
 100% free, open source, and local-first. The app uses available Claude/Codex/OpenCode provider access instead of forcing a single app-level API-key setup.
 

@@ -18,7 +18,9 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -27,7 +29,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Set version from tag
         if: startsWith(github.ref, 'refs/tags/v')
@@ -57,7 +59,7 @@ jobs:
             --draft=false 2>/dev/null || echo "Release $TAG already exists, skipping creation"
 
       - name: Upload dist artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: |
@@ -67,13 +69,13 @@ jobs:
 
   prepare-runtime:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -84,7 +86,12 @@ jobs:
             --generate-notes \
             --draft=false 2>/dev/null || echo "Release $TAG already exists, skipping creation"
 
+      - name: Skip runtime asset preparation for manual builds
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: echo "Runtime asset preparation is only needed for tagged releases."
+
       - name: Check runtime assets
+        if: startsWith(github.ref, 'refs/tags/v')
         id: runtime-assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -116,10 +123,10 @@ jobs:
             --method POST \
             "repos/${SOURCE_REPO}/actions/workflows/release-runtime.yml/dispatches" \
             -f ref=main \
-            -f inputs[source_ref]="$SOURCE_REF" \
-            -f inputs[runtime_version]="$RUNTIME_VERSION" \
-            -f inputs[target_release_repo]="$GITHUB_REPOSITORY" \
-            -f inputs[target_release_tag]="$TARGET_TAG"
+            -f "inputs[source_ref]=$SOURCE_REF" \
+            -f "inputs[runtime_version]=$RUNTIME_VERSION" \
+            -f "inputs[target_release_repo]=$GITHUB_REPOSITORY" \
+            -f "inputs[target_release_tag]=$TARGET_TAG"
 
       - name: Wait for runtime assets
         if: steps.runtime-assets.outputs.missing == '1'
@@ -175,7 +182,9 @@ jobs:
           name: dist
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -184,12 +193,12 @@ jobs:
           cache: pnpm
 
       - name: Setup Python for node-gyp
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Set version from tag
         if: startsWith(github.ref, 'refs/tags/v')
@@ -256,6 +265,9 @@ jobs:
       - name: Validate packaged bundle (macOS ${{ matrix.arch }})
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/mac-${{ matrix.arch }}/Agent Teams UI.app" darwin ${{ matrix.arch }}
 
+      - name: Smoke packaged app (macOS ${{ matrix.arch }})
+        run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/mac-${{ matrix.arch }}/Agent Teams UI.app" darwin
+
       - name: Upload assets to release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -284,7 +296,9 @@ jobs:
           name: dist
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -293,12 +307,12 @@ jobs:
           cache: pnpm
 
       - name: Setup Python for node-gyp
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Set version from tag
         if: startsWith(github.ref, 'refs/tags/v')
@@ -359,6 +373,10 @@ jobs:
         shell: bash
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/win-unpacked" win32 x64
 
+      - name: Smoke packaged app (Windows)
+        shell: bash
+        run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/win-unpacked" win32
+
       - name: Upload assets to release
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -388,7 +406,9 @@ jobs:
           name: dist
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -397,17 +417,17 @@ jobs:
           cache: pnpm
 
       - name: Setup Python for node-gyp
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
       - name: Install Linux packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-tools rpm
+          sudo apt-get install -y libarchive-tools rpm xvfb
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Set version from tag
         if: startsWith(github.ref, 'refs/tags/v')
@@ -462,6 +482,9 @@ jobs:
 
       - name: Validate packaged bundle (Linux)
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/linux-unpacked" linux x64
+
+      - name: Smoke packaged app (Linux)
+        run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "release/linux-unpacked" linux
 
       - name: Upload assets to release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -542,8 +565,8 @@ jobs:
 
           # Canonical Windows feed
           download_asset "Claude-Agent-Teams-UI-Setup.exe"
-          WIN_SHA="$(sha512_base64 Claude-Agent-Teams-UI-Setup.exe)"
-          WIN_SIZE="$(file_size Claude-Agent-Teams-UI-Setup.exe)"
+          WIN_SHA="$(sha512_base64 "Claude-Agent-Teams-UI-Setup.exe")"
+          WIN_SIZE="$(file_size "Claude-Agent-Teams-UI-Setup.exe")"
           cat > latest.yml <<EOF
           version: ${VERSION}
           files:
@@ -557,8 +580,8 @@ jobs:
 
           # Canonical Linux feed
           download_asset "Claude-Agent-Teams-UI.AppImage"
-          LINUX_SHA="$(sha512_base64 Claude-Agent-Teams-UI.AppImage)"
-          LINUX_SIZE="$(file_size Claude-Agent-Teams-UI.AppImage)"
+          LINUX_SHA="$(sha512_base64 "Claude-Agent-Teams-UI.AppImage")"
+          LINUX_SIZE="$(file_size "Claude-Agent-Teams-UI.AppImage")"
           cat > latest-linux.yml <<EOF
           version: ${VERSION}
           files:
@@ -576,10 +599,10 @@ jobs:
           # until we switch to universal packaging or an arch-aware provider.
           download_asset "Agent.Teams.AI-${VERSION}-arm64-mac.zip"
           download_asset "Agent.Teams.AI-${VERSION}-arm64.dmg"
-          MAC_ZIP_SHA="$(sha512_base64 Agent.Teams.AI-${VERSION}-arm64-mac.zip)"
-          MAC_ZIP_SIZE="$(file_size Agent.Teams.AI-${VERSION}-arm64-mac.zip)"
-          MAC_DMG_SHA="$(sha512_base64 Agent.Teams.AI-${VERSION}-arm64.dmg)"
-          MAC_DMG_SIZE="$(file_size Agent.Teams.AI-${VERSION}-arm64.dmg)"
+          MAC_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
+          MAC_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
+          MAC_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          MAC_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64.dmg")"
           cat > latest-mac.yml <<EOF
           version: ${VERSION}
           files:

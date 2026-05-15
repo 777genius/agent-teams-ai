@@ -25,6 +25,8 @@ Run the runtime binary in a terminal to verify `PATH` and auth. Example: `claude
 
 If OpenCode shows `registered` but bootstrap is unconfirmed, inspect artifacts first before changing team prompts.
 
+Contributor/debugging details live in [Contributor Architecture](/reference/contributor-architecture), which links to the canonical agent team debugging runbook.
+
 Look at the newest launch failure artifact:
 
 ```bash
@@ -48,6 +50,57 @@ jq '.activeRunId, .entries' ~/.claude/teams/<team>/.opencode-runtime/lanes/<lane
 ::: tip Do not guess from the UI
 Always correlate UI diagnostics with persisted files (`launch-state.json`, `bootstrap-journal.jsonl`) and runtime-specific evidence.
 :::
+
+## General diagnostics
+
+Start with persisted files on disk rather than the UI alone.
+
+### Team root
+
+```bash
+~/.claude/teams/<team>/
+```
+
+Key files and what they tell you:
+
+- `launch-state.json` — member launch/liveness state (`.teamLaunchState`, `.summary`, `.members`)
+- `bootstrap-journal.jsonl` — ordered bootstrap events from CLI/runtime (`tail -80`)
+- `bootstrap-state.json` — bootstrap phase summary
+- `config.json` — provider, model, and project configuration
+- `inboxes/*.json` and `sentMessages.json` — message delivery state
+
+```bash
+jq '.teamLaunchState, .summary, .members' ~/.claude/teams/<team>/launch-state.json
+tail -80 ~/.claude/teams/<team>/bootstrap-journal.jsonl 2>/dev/null
+```
+
+### OpenCode runtime evidence
+
+For OpenCode teammates, session proof is in the lane runtime store:
+
+- `.opencode-runtime/lanes.json` — lane index with state
+- `.opencode-runtime/lanes/<lane>/manifest.json` — `activeRunId` and evidence entries
+- `.opencode-runtime/lanes/<lane>/opencode-sessions.json` — committed session records
+
+Expected healthy state: lane state `active`, manifest has `activeRunId` with at least one evidence entry, member has `bootstrapConfirmed: true`.
+
+```bash
+jq '.lanes' ~/.claude/teams/<team>/.opencode-runtime/lanes.json 2>/dev/null
+find ~/.claude/teams/<team>/.opencode-runtime -maxdepth 3 -type f | sort
+```
+
+### Launch failure artifacts
+
+When a launch is marked as a failure, inspect `latest.json`:
+
+```bash
+~/.claude/teams/<team>/launch-failure-artifacts/latest.json
+```
+
+The manifest includes:
+- `classification` — why the launch was considered a failure
+- `bootstrapTransportBreadcrumb` — delivery path used
+- Member spawn statuses and redacted logs/traces
 
 ## Agent replies are missing
 

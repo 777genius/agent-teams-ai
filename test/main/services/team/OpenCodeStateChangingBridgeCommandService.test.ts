@@ -125,6 +125,49 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(1);
   });
 
+  it('does not apply runtime-store high watermark preconditions to sendMessage delivery', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator', {
+      runtimeStoreManifestHighWatermark: 0,
+    });
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+        },
+      });
+    const service = createService();
+
+    await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body.preconditions).toMatchObject({
+      expectedManifestHighWatermark: null,
+      idempotencyKey: expect.stringMatching(
+        /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
+      ),
+    });
+    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
+      .resolves.toMatchObject({
+        requestId: 'cmd-1',
+        status: 'completed',
+        retryable: false,
+      });
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
   it('adds preconditions, commits ledger, and releases lease on success', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({

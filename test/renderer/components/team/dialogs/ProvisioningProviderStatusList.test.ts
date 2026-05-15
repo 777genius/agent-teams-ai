@@ -165,6 +165,43 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('summarizes OpenCode advisory ping misses without failure wording', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'notes',
+              backendSummary: 'OpenCode CLI',
+              details: ['big-pickle - ping not confirmed'],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): Selected model checks - 1 ping not confirmed'
+    );
+    expect(host.textContent).not.toContain('model check failed');
+    expect(host.textContent).not.toContain('Needs attention');
+
+    const detailLines = Array.from(host.querySelectorAll('p'));
+    expect(detailLines[0]?.className).toContain('text-[var(--color-text-muted)]');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('does not count generic one-shot diagnostic timeouts as model timeouts', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

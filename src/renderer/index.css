@@ -1438,7 +1438,7 @@ a[href],
 .team-row-zebra-card,
 .project-row-zebra-card {
   --row-card-bg: color-mix(in srgb, var(--color-surface) 50%, var(--color-surface-raised) 50%);
-  --row-zebra-bg: color-mix(in srgb, var(--color-surface-raised) 96%, var(--color-text) 4%);
+  --row-zebra-bg: color-mix(in srgb, var(--color-surface-raised) 99%, var(--color-text) 1%);
   --row-zebra-hover-bg: color-mix(in srgb, var(--row-zebra-bg) 97%, var(--color-text) 3%);
   background-color: var(--row-card-bg);
 }

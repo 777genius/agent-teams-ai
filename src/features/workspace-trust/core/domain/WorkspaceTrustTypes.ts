@@ -11,7 +11,7 @@ export type WorkspaceTrustNonPersistableReason =
   | 'filesystem_root'
   | 'unavailable';
 
-export type WorkspaceTrustWorkspace = {
+export interface WorkspaceTrustWorkspace {
   id: string;
   displayCwd: string;
   cwd: string;
@@ -23,15 +23,15 @@ export type WorkspaceTrustWorkspace = {
   memberId?: string;
   persistable: boolean;
   nonPersistableReason?: WorkspaceTrustNonPersistableReason;
-};
+}
 
-export type WorkspaceTrustFeatureFlags = {
+export interface WorkspaceTrustFeatureFlags {
   enabled: boolean;
   claudePty: boolean;
   codexArgs: boolean;
   retry: boolean;
   fileLock: boolean;
-};
+}
 
 export type WorkspaceTrustLaunchArgTargetSurface =
   | 'primary_provider_args'
@@ -44,7 +44,7 @@ export type WorkspaceTrustLaunchArgDialect =
   | 'claude-codex-runtime-settings'
   | 'codex-direct-cli-config';
 
-export type WorkspaceTrustLaunchArgPatch = {
+export interface WorkspaceTrustLaunchArgPatch {
   id: string;
   owner: 'workspace-trust';
   targetProvider: WorkspaceTrustProvider;
@@ -54,11 +54,11 @@ export type WorkspaceTrustLaunchArgPatch = {
   dedupeKey: string;
   sourceWorkspaceIds: string[];
   reason: string;
-};
+}
 
 export type WorkspaceTrustExecutionStatus = 'ok' | 'soft_failed' | 'blocked' | 'cancelled';
 
-export type WorkspaceTrustDiagnosticStrategyResult = {
+export interface WorkspaceTrustDiagnosticStrategyResult {
   id: string;
   provider: WorkspaceTrustProvider;
   status: WorkspaceTrustExecutionStatus | 'skipped';
@@ -70,11 +70,11 @@ export type WorkspaceTrustDiagnosticStrategyResult = {
   errorCode?: string;
   errorMessage?: string;
   rawTail?: string;
-};
+}
 
-export type WorkspaceTrustDiagnosticsManifest = {
+export interface WorkspaceTrustDiagnosticsManifest {
   attempt: number;
   featureFlags: WorkspaceTrustFeatureFlags;
   strategyResults: WorkspaceTrustDiagnosticStrategyResult[];
   omittedCounts?: Record<string, number>;
-};
+}

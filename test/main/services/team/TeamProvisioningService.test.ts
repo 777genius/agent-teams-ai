@@ -5501,6 +5501,39 @@ describe('TeamProvisioningService', () => {
       );
     });
 
+    it('does not deliver direct OpenCode messages when recovery leaves the lane inactive', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_direct_lane',
+        runtimePid: 456,
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+      (svc as any).deleteSecondaryRuntimeRun('team-a', 'secondary:opencode:bob');
+      vi.spyOn(svc as any, 'tryRecoverOpenCodeRuntimeLaneBeforeDelivery').mockResolvedValue(false);
+      const committedRecoverySpy = vi
+        .spyOn(svc as any, 'tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery')
+        .mockResolvedValue(true);
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-1',
+        })
+      ).resolves.toMatchObject({
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+      });
+
+      expect(committedRecoverySpy).toHaveBeenCalled();
+      expect(sendMessageToMember).not.toHaveBeenCalled();
+    });
+
     it('persists verified OpenCode bridge runtime pids so member cards can show memory', async () => {
       const svc = new TeamProvisioningService();
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
@@ -8429,6 +8462,7 @@ describe('TeamProvisioningService', () => {
         diagnostics: [],
       }));
       await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+      svc.setControlApiBaseUrlResolver(async () => 'http://127.0.0.1:43123');
 
       await expect(
         svc.deliverOpenCodeMemberMessage('team-a', {
@@ -8455,6 +8489,11 @@ describe('TeamProvisioningService', () => {
         responseState: 'responded_non_visible_tool',
         ledgerStatus: 'responded',
       });
+      expect(sendMessageToMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          controlUrl: 'http://127.0.0.1:43123',
+        })
+      );
     });
 
     it('accepts review workflow tools as review pickup delivery response proof', async () => {

@@ -12,6 +12,11 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { extractMemberLogPreviewItems } from '../../../../core/domain/policies/memberLogPreviewExtractor';
 
 import { normalizeMemberName } from './memberLogStreamSourceUtils';
+import {
+  type OpenCodeMemberVisibleActivityEntry,
+  OpenCodeMemberVisibleActivityReader,
+  sanitizeOpenCodeVisibleActivityText,
+} from './OpenCodeMemberVisibleActivityReader';
 
 import type { MemberLogPreviewItem, MemberLogStreamWarning } from '../../../../contracts';
 import type {
@@ -32,9 +37,21 @@ const HIDDEN_PREVIEW_BLOCK_TAGS = [
 const ERROR_RESPONSE_STATES: ReadonlySet<string> = new Set([
   'permission_blocked',
   'tool_error',
+  'empty_assistant_turn',
+  'prompt_delivered_no_assistant_message',
+  'session_stale',
   'session_error',
   'reconcile_failed',
 ] as const);
+const OPENCODE_DELIVERY_DELAYED_WARNING: MemberLogStreamWarning = {
+  code: 'opencode_delivery_delayed',
+  message: 'OpenCode logs are delayed while message delivery is being confirmed.',
+};
+
+interface LedgerPreviewCandidate {
+  item: MemberLogPreviewItem | null;
+  warning?: MemberLogStreamWarning;
+}
 
 interface BinaryResolverLike {
   resolve(): Promise<string | null>;
@@ -73,6 +90,7 @@ class FileOpenCodePromptDeliveryLedgerPreviewReader implements OpenCodePromptDel
 }
 
 const DEFAULT_LEDGER_PREVIEW_READER = new FileOpenCodePromptDeliveryLedgerPreviewReader();
+const DEFAULT_VISIBLE_ACTIVITY_READER = new OpenCodeMemberVisibleActivityReader();
 
 function classifyOpenCodePreviewError(error: unknown): MemberLogStreamWarning {
   const message = error instanceof Error ? error.message : String(error);
@@ -217,34 +235,7 @@ function ledgerStatusText(record: OpenCodePromptDeliveryLedgerRecord): string {
   }
 }
 
-function ledgerErrorTitle(record: OpenCodePromptDeliveryLedgerRecord): string {
-  const reason = record.lastReason?.toLowerCase() ?? '';
-  if (reason.includes('visible_reply')) {
-    return 'Visible reply missing';
-  }
-  switch (record.responseState) {
-    case 'empty_assistant_turn':
-      return 'Empty assistant turn';
-    case 'permission_blocked':
-      return 'Permission blocked';
-    case 'prompt_delivered_no_assistant_message':
-      return 'No assistant reply';
-    case 'responded_non_visible_tool':
-      return 'Visible reply missing';
-    case 'session_stale':
-      return 'OpenCode session stale';
-    case 'tool_error':
-      return 'Tool error';
-    case 'session_error':
-      return 'OpenCode session error';
-    case 'reconcile_failed':
-      return 'OpenCode reconcile failed';
-    default:
-      return 'OpenCode delivery failed';
-  }
-}
-
-function ledgerRecordIsError(record: OpenCodePromptDeliveryLedgerRecord): boolean {
+function ledgerRecordHasDeliveryIssue(record: OpenCodePromptDeliveryLedgerRecord): boolean {
   return record.status === 'failed_terminal' || ERROR_RESPONSE_STATES.has(record.responseState);
 }
 
@@ -252,15 +243,31 @@ function firstNonEmptyText(values: readonly (string | null | undefined)[]): stri
   return values.find((value) => typeof value === 'string' && value.trim().length > 0)?.trim() ?? '';
 }
 
-function humanizeShortReason(value: string): string {
-  return /^[a-z0-9_]+$/i.test(value) ? value.replace(/_/g, ' ') : value;
+function ledgerRecordHasObservedEvidence(record: OpenCodePromptDeliveryLedgerRecord): boolean {
+  return (
+    Boolean(record.observedAssistantPreview?.trim()) ||
+    record.observedToolCallNames.length > 0 ||
+    Boolean(record.observedVisibleMessageId?.trim()) ||
+    record.responseState === 'responded_visible_message' ||
+    record.responseState === 'responded_plain_text'
+  );
+}
+
+function buildLedgerPreviewWarning(
+  record: OpenCodePromptDeliveryLedgerRecord
+): MemberLogStreamWarning | undefined {
+  if (!ledgerRecordHasDeliveryIssue(record)) {
+    return undefined;
+  }
+  return OPENCODE_DELIVERY_DELAYED_WARNING;
 }
 
 function buildLedgerPreviewItem(
   record: OpenCodePromptDeliveryLedgerRecord,
   input: MemberLogPreviewSourceInput
-): MemberLogPreviewItem | null {
+): LedgerPreviewCandidate {
   const timestamp = ledgerRecordTimestampIso(record);
+  const warning = buildLedgerPreviewWarning(record);
   const sourceBase = {
     provider: 'opencode_runtime' as const,
     timestamp,
@@ -269,51 +276,35 @@ function buildLedgerPreviewItem(
     laneId: input.laneId,
   };
 
-  if (ledgerRecordIsError(record)) {
-    const preview = sanitizeLedgerPreviewText(
-      humanizeShortReason(
-        firstNonEmptyText([
-          record.lastReason,
-          record.diagnostics[0],
-          record.observedAssistantPreview,
-          ledgerStatusText(record),
-        ])
-      ),
-      input.textLimit
-    );
-    return {
-      ...sourceBase,
-      id: `opencode-ledger:${record.id}:error`,
-      kind: 'tool_result',
-      title: ledgerErrorTitle(record),
-      preview,
-      tone: 'error',
-    };
-  }
-
   if (record.observedAssistantPreview?.trim()) {
     return {
-      ...sourceBase,
-      id: `opencode-ledger:${record.id}:assistant`,
-      kind: 'text',
-      title:
-        record.responseState === 'responded_visible_message' ||
-        record.responseState === 'responded_plain_text'
-          ? 'OpenCode reply'
-          : 'Assistant',
-      preview: sanitizeLedgerPreviewText(record.observedAssistantPreview, input.textLimit),
-      tone: 'neutral',
+      item: {
+        ...sourceBase,
+        id: `opencode-ledger:${record.id}:assistant`,
+        kind: 'text',
+        title:
+          record.responseState === 'responded_visible_message' ||
+          record.responseState === 'responded_plain_text'
+            ? 'OpenCode reply'
+            : 'Assistant',
+        preview: sanitizeLedgerPreviewText(record.observedAssistantPreview, input.textLimit),
+        tone: 'neutral',
+      },
+      warning,
     };
   }
 
   if (record.observedToolCallNames.length > 0) {
     return {
-      ...sourceBase,
-      id: `opencode-ledger:${record.id}:tools`,
-      kind: 'tool_use',
-      title: 'Tool activity',
-      preview: formatLedgerToolNames(record.observedToolCallNames, input.textLimit),
-      tone: 'neutral',
+      item: {
+        ...sourceBase,
+        id: `opencode-ledger:${record.id}:tools`,
+        kind: 'tool_use',
+        title: 'Tool activity',
+        preview: formatLedgerToolNames(record.observedToolCallNames, input.textLimit),
+        tone: 'neutral',
+      },
+      warning,
     };
   }
 
@@ -322,13 +313,20 @@ function buildLedgerPreviewItem(
     record.responseState === 'responded_plain_text'
   ) {
     return {
-      ...sourceBase,
-      id: `opencode-ledger:${record.id}:reply`,
-      kind: 'text',
-      title: 'OpenCode reply',
-      preview: sanitizeLedgerPreviewText(ledgerStatusText(record), input.textLimit),
-      tone: 'success',
+      item: {
+        ...sourceBase,
+        id: `opencode-ledger:${record.id}:reply`,
+        kind: 'text',
+        title: 'OpenCode reply',
+        preview: sanitizeLedgerPreviewText(ledgerStatusText(record), input.textLimit),
+        tone: 'success',
+      },
+      warning,
     };
+  }
+
+  if (ledgerRecordHasDeliveryIssue(record) && !ledgerRecordHasObservedEvidence(record)) {
+    return { item: null, warning };
   }
 
   const statusText = sanitizeLedgerPreviewText(
@@ -337,17 +335,72 @@ function buildLedgerPreviewItem(
   );
   return statusText
     ? {
-        ...sourceBase,
-        id: `opencode-ledger:${record.id}:status`,
-        kind: 'text',
-        title: 'OpenCode status',
-        preview: statusText,
-        tone:
-          record.status === 'failed_retryable' || record.status === 'retry_scheduled'
-            ? 'warning'
-            : 'neutral',
+        item: {
+          ...sourceBase,
+          id: `opencode-ledger:${record.id}:status`,
+          kind: 'text',
+          title: 'OpenCode status',
+          preview: statusText,
+          tone:
+            record.status === 'failed_retryable' || record.status === 'retry_scheduled'
+              ? 'warning'
+              : 'neutral',
+        },
+        warning,
       }
-    : null;
+    : { item: null, warning };
+}
+
+function dedupeWarnings(warnings: readonly MemberLogStreamWarning[]): MemberLogStreamWarning[] {
+  const seen = new Set<string>();
+  const result: MemberLogStreamWarning[] = [];
+  for (const warning of warnings) {
+    const key = `${warning.code}:${warning.message}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(warning);
+  }
+  return result;
+}
+
+function previewItemTimestampMs(item: MemberLogPreviewItem): number {
+  const parsed = Date.parse(item.timestamp);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function comparePreviewItemsNewestFirst(
+  left: MemberLogPreviewItem,
+  right: MemberLogPreviewItem
+): number {
+  const byTime = previewItemTimestampMs(right) - previewItemTimestampMs(left);
+  return byTime !== 0 ? byTime : right.id.localeCompare(left.id);
+}
+
+function dedupePreviewItems(items: readonly MemberLogPreviewItem[]): MemberLogPreviewItem[] {
+  const deduped = new Map<string, MemberLogPreviewItem>();
+  for (const item of items) {
+    if (!deduped.has(item.id)) {
+      deduped.set(item.id, item);
+    }
+  }
+  return [...deduped.values()];
+}
+
+function buildVisibleActivityPreviewItem(
+  entry: OpenCodeMemberVisibleActivityEntry,
+  input: MemberLogPreviewSourceInput
+): MemberLogPreviewItem {
+  return {
+    id: `${entry.id}:preview`,
+    kind: 'text',
+    provider: 'opencode_runtime',
+    timestamp: entry.timestamp,
+    title: entry.title,
+    preview: sanitizeOpenCodeVisibleActivityText(entry.text, input.textLimit),
+    tone: entry.title === 'Agent error' ? 'error' : 'neutral',
+    sourceLabel: entry.sourceLabel,
+    laneId: input.laneId,
+  };
 }
 
 export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSource {
@@ -361,7 +414,8 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
   constructor(
     private readonly runtimeBridge: ClaudeMultimodelBridgeService,
     private readonly binaryResolver: BinaryResolverLike = ClaudeBinaryResolver,
-    private readonly ledgerReader: OpenCodePromptDeliveryLedgerPreviewReader = DEFAULT_LEDGER_PREVIEW_READER
+    private readonly ledgerReader: OpenCodePromptDeliveryLedgerPreviewReader = DEFAULT_LEDGER_PREVIEW_READER,
+    private readonly visibleActivityReader: OpenCodeMemberVisibleActivityReader = DEFAULT_VISIBLE_ACTIVITY_READER
   ) {}
 
   async loadPreview(input: MemberLogPreviewSourceInput): Promise<MemberLogPreviewSourceResult> {
@@ -418,11 +472,70 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
     }
 
     const ledgerResult = await this.buildLedgerResult(input);
+    const visibleActivityResult = await this.buildVisibleActivityResult(input, ledgerResult);
+    if (visibleActivityResult.status === 'included') {
+      return visibleActivityResult;
+    }
     if (ledgerResult.status === 'included') {
-      return ledgerResult;
+      return {
+        ...ledgerResult,
+        warnings: dedupeWarnings([...ledgerResult.warnings, ...visibleActivityResult.warnings]),
+      };
     }
 
-    return this.buildTranscriptResult(input, ledgerResult.warnings);
+    return this.buildTranscriptResult(
+      input,
+      dedupeWarnings([...ledgerResult.warnings, ...visibleActivityResult.warnings])
+    );
+  }
+
+  private async buildVisibleActivityResult(
+    input: MemberLogPreviewSourceInput,
+    ledgerResult: MemberLogPreviewSourceResult
+  ): Promise<MemberLogPreviewSourceResult> {
+    try {
+      const activityItems = (
+        await this.visibleActivityReader.list({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          forceRefresh: input.forceRefresh,
+        })
+      ).map((entry) => buildVisibleActivityPreviewItem(entry, input));
+      const mergedItems = dedupePreviewItems([...activityItems, ...ledgerResult.items]).sort(
+        comparePreviewItemsNewestFirst
+      );
+      const items = mergedItems.slice(0, input.maxItems);
+      const overflowCount = Math.max(
+        0,
+        mergedItems.length - items.length + ledgerResult.overflowCount
+      );
+      return {
+        provider: this.provider,
+        status: items.length > 0 ? 'included' : 'skipped',
+        reason: items.length > 0 ? undefined : 'opencode_visible_activity_empty',
+        items,
+        warnings: [...ledgerResult.warnings],
+        truncated: overflowCount > 0,
+        overflowCount,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        provider: this.provider,
+        status: 'skipped',
+        reason: 'opencode_visible_activity_unavailable',
+        items: [],
+        warnings: [
+          ...ledgerResult.warnings,
+          {
+            code: 'opencode_runtime_unavailable',
+            message: `OpenCode visible activity preview is unavailable: ${message}`,
+          },
+        ],
+        truncated: false,
+        overflowCount: 0,
+      };
+    }
   }
 
   private async buildLedgerResult(
@@ -440,20 +553,28 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
         return byTime !== 0 ? byTime : right.id.localeCompare(left.id);
       });
       const records = orderedRecords.slice(0, MAX_LEDGER_RECORDS_TO_CONSIDER);
-      const candidates = records
-        .map((record) => buildLedgerPreviewItem(record, input))
+      const candidates = records.map((record) => buildLedgerPreviewItem(record, input));
+      const previewItems = candidates
+        .map((candidate) => candidate.item)
         .filter((item): item is MemberLogPreviewItem => Boolean(item));
-      const items = candidates.slice(0, input.maxItems);
-      const overflowCount = Math.max(
-        0,
-        Math.max(candidates.length, orderedRecords.length) - items.length
+      const warnings = dedupeWarnings(
+        candidates
+          .map((candidate) => candidate.warning)
+          .filter((warning): warning is MemberLogStreamWarning => Boolean(warning))
       );
+      const items = previewItems.slice(0, input.maxItems);
+      const overflowCount = Math.max(0, previewItems.length - items.length);
       return {
         provider: this.provider,
         status: items.length > 0 ? 'included' : 'skipped',
-        reason: items.length > 0 ? undefined : 'opencode_delivery_ledger_empty',
+        reason:
+          items.length > 0
+            ? undefined
+            : warnings.length > 0
+              ? 'opencode_delivery_delayed'
+              : 'opencode_delivery_ledger_empty',
         items,
-        warnings: [],
+        warnings,
         truncated: overflowCount > 0,
         overflowCount,
       };

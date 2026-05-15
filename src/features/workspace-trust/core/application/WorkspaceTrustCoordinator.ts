@@ -8,23 +8,24 @@ import {
   type WorkspaceTrustWorkspace,
 } from '../domain';
 
-import type { ClaudePtyWorkspaceTrustStrategy } from './ClaudePtyWorkspaceTrustStrategy';
 import {
   WorkspaceTrustLockCancelledError,
   WorkspaceTrustLockRegistry,
   WorkspaceTrustLockTimeoutError,
 } from './WorkspaceTrustLocks';
 
-export type WorkspaceTrustArgsOnlyPlanRequest = {
+import type { ClaudePtyWorkspaceTrustStrategy } from './ClaudePtyWorkspaceTrustStrategy';
+
+export interface WorkspaceTrustArgsOnlyPlanRequest {
   providers: WorkspaceTrustProvider[];
   workspaces: WorkspaceTrustWorkspace[];
   targetSurfaces?: WorkspaceTrustLaunchArgTargetSurface[];
   featureFlags: WorkspaceTrustFeatureFlags;
-};
+}
 
-export type WorkspaceTrustArgsOnlyPlanResult = {
+export interface WorkspaceTrustArgsOnlyPlanResult {
   launchArgPatches: WorkspaceTrustLaunchArgPatch[];
-};
+}
 
 export type WorkspaceTrustFullPlanRequest = WorkspaceTrustArgsOnlyPlanRequest;
 
@@ -32,13 +33,13 @@ export type WorkspaceTrustFullPlanResult = WorkspaceTrustArgsOnlyPlanResult & {
   workspaces: WorkspaceTrustWorkspace[];
 };
 
-export type WorkspaceTrustExecutionPlan = {
+export interface WorkspaceTrustExecutionPlan {
   claudePath: string;
   workspaces: WorkspaceTrustWorkspace[];
   env: Record<string, string | undefined>;
   featureFlags: WorkspaceTrustFeatureFlags;
   isCancelled(): boolean;
-};
+}
 
 export type WorkspaceTrustExecutionResult = Awaited<
   ReturnType<ClaudePtyWorkspaceTrustStrategy['execute']>

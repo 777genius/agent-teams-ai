@@ -14,13 +14,13 @@ import {
   stableHash,
   validateOpenCodeBridgeHandshake,
 } from './OpenCodeBridgeCommandContract';
+import { OpenCodeBridgeCommandLeaseError } from './OpenCodeBridgeCommandLedgerStore';
 
 import type {
-  OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLease,
+  OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from './OpenCodeBridgeCommandLedgerStore';
-import { OpenCodeBridgeCommandLeaseError } from './OpenCodeBridgeCommandLedgerStore';
 
 const DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS = 10_000;
 const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
@@ -117,11 +117,17 @@ export class OpenCodeStateChangingBridgeCommandService {
   }): Promise<OpenCodeBridgeResult<TData>> {
     const normalizedLaneId = input.laneId ?? null;
     const manifest = await this.manifestReader.read(input.teamName, normalizedLaneId);
+    const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
+      input.command
+    );
+    const expectedManifestHighWatermark = enforceManifestHighWatermark
+      ? manifest.highWatermark
+      : null;
     const handshake = await this.handshakePort.handshake({
       requiredCommand: input.command,
       expectedRunId: input.runId,
       expectedCapabilitySnapshotId: input.capabilitySnapshotId,
-      expectedManifestHighWatermark: manifest.highWatermark,
+      expectedManifestHighWatermark,
       cwd: input.cwd,
     });
     const handshakeValidation = validateOpenCodeBridgeHandshake({
@@ -129,7 +135,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       expectedClient: this.expectedClientIdentity,
       requiredCommand: input.command,
       expectedCapabilitySnapshotId: input.capabilitySnapshotId,
-      expectedManifestHighWatermark: manifest.highWatermark,
+      expectedManifestHighWatermark,
       expectedRunId: input.runId,
       requiresDeliveryAcceptanceContract: requiresOpenCodeDeliveryAcceptanceContract(
         input.command,
@@ -164,7 +170,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         expectedRunId: input.runId,
         expectedCapabilitySnapshotId: input.capabilitySnapshotId,
         expectedBehaviorFingerprint: input.behaviorFingerprint,
-        expectedManifestHighWatermark: manifest.highWatermark,
+        expectedManifestHighWatermark,
         commandLeaseId: lease.leaseId,
         idempotencyKey,
       });
@@ -183,7 +189,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
           behaviorFingerprint: input.behaviorFingerprint,
-          manifestHighWatermark: manifest.highWatermark,
+          manifestHighWatermark: expectedManifestHighWatermark,
           body: input.body,
         }),
       });
@@ -238,6 +244,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           capabilitySnapshotId: input.capabilitySnapshotId,
           manifest,
           idempotencyKey,
+          enforceManifestHighWatermark,
         });
       } catch (error) {
         await this.ledger.markFailed({
@@ -355,6 +362,12 @@ function requiresOpenCodeDeliveryAcceptanceContract(
     return false;
   }
   return body.settlementMode === 'acceptance';
+}
+
+function commandRequiresRuntimeStoreManifestPrecondition(
+  command: OpenCodeBridgeCommandName
+): boolean {
+  return command !== 'opencode.sendMessage';
 }
 
 function stringifyError(error: unknown): string {

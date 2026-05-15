@@ -45,6 +45,8 @@ export interface ProviderPrepareDiagnosticsResult {
   modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>;
 }
 
+type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
+
 export function buildReusableProviderPrepareModelResults(
   modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>
 ): Record<string, ProviderPrepareDiagnosticsModelResult> {
@@ -235,18 +237,88 @@ function looksLikeOpenCodeRuntimeFailureReason(reason: string | null | undefined
   );
 }
 
+function getBlockingProviderIssue(
+  providerId: TeamProviderId,
+  result: TeamProvisioningPrepareResult
+): TeamProvisioningPrepareIssue | null {
+  return (
+    result.issues?.find(
+      (entry) =>
+        entry.scope === 'provider' &&
+        entry.severity === 'blocking' &&
+        (!entry.providerId || entry.providerId === providerId) &&
+        entry.message.trim().length > 0
+    ) ?? null
+  );
+}
+
 function getBlockingProviderIssueMessage(
   providerId: TeamProviderId,
   result: TeamProvisioningPrepareResult
 ): string | null {
-  const issue = result.issues?.find(
-    (entry) =>
-      entry.scope === 'provider' &&
-      entry.severity === 'blocking' &&
-      (!entry.providerId || entry.providerId === providerId) &&
-      entry.message.trim().length > 0
+  return getBlockingProviderIssue(providerId, result)?.message.trim() ?? null;
+}
+
+function isAdvisoryOpenCodeDeepVerificationIssue(
+  issue: TeamProvisioningPrepareIssue | null,
+  reason: string | null | undefined
+): boolean {
+  if (issue?.code?.trim().toLowerCase() !== 'unknown_error') {
+    return false;
+  }
+
+  const lower = [issue.message, reason]
+    .map((entry) => entry?.trim() ?? '')
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+
+  if (!lower) {
+    return false;
+  }
+
+  const hasHardRuntimeMarker =
+    lower.includes('mcp_unavailable') ||
+    lower.includes('not_authenticated') ||
+    lower.includes('authentication') ||
+    lower.includes('credential') ||
+    lower.includes('api key') ||
+    lower.includes('/experimental/tool') ||
+    lower.includes('runtime store') ||
+    lower.includes('opencode cli');
+  if (hasHardRuntimeMarker) {
+    return false;
+  }
+
+  return (
+    lower.includes('unable to connect') ||
+    lower.includes('timed out') ||
+    lower.includes('timeout') ||
+    lower.includes('aborted') ||
+    lower.includes('econnreset') ||
+    lower.includes('econnrefused') ||
+    lower.includes('fetch failed') ||
+    lower.includes('socket hang up') ||
+    lower.includes('networkerror')
   );
-  return issue?.message.trim() ?? null;
+}
+
+function buildOpenCodeAdvisoryDeepVerificationWarning(reason: string | null | undefined): string {
+  const normalizedReason =
+    normalizeModelReason(reason?.trim() ?? '') || 'Model ping was not confirmed';
+  return `OpenCode model ping was not confirmed. ${normalizedReason}`;
+}
+
+function createOpenCodeAdvisoryDeepVerificationModelResult(
+  providerId: TeamProviderId,
+  modelId: string
+): ProviderPrepareDiagnosticsModelResult {
+  const line = `${getModelLabel(providerId, modelId)} - ping not confirmed`;
+  return {
+    status: 'notes',
+    line,
+    warningLine: line,
+  };
 }
 
 function getResultReason(modelId: string, result: TeamProvisioningPrepareResult): string | null {
@@ -1036,32 +1108,54 @@ export async function runProviderPrepareDiagnostics({
           compatibilityPassedModelIds,
           batchedModelResult
         );
-        const structuredProviderScopedFailure = getBlockingProviderIssueMessage(
+        const structuredProviderScopedIssue = getBlockingProviderIssue(
           providerId,
           batchedModelResult
         );
+        const structuredProviderScopedFailure =
+          structuredProviderScopedIssue?.message.trim() ?? null;
+        let handledAdvisoryDeepFailure = false;
         if (structuredProviderScopedFailure || providerScopedFailure) {
-          return {
-            status: 'failed',
-            details: [
-              structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed',
-            ],
-            warnings: [],
-            modelResultsById: {},
-          };
+          const failureReason =
+            structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed';
+          if (
+            isAdvisoryOpenCodeDeepVerificationIssue(structuredProviderScopedIssue, failureReason)
+          ) {
+            hasNotes = true;
+            runtimeDetailLines = [];
+            runtimeWarnings = uniquePrepareLines([
+              ...runtimeWarnings,
+              buildOpenCodeAdvisoryDeepVerificationWarning(failureReason),
+            ]);
+            for (const modelId of compatibilityPassedModelIds) {
+              recordTerminalModelResult(
+                modelId,
+                createOpenCodeAdvisoryDeepVerificationModelResult(providerId, modelId)
+              );
+            }
+            handledAdvisoryDeepFailure = true;
+          } else {
+            return {
+              status: 'failed',
+              details: [failureReason],
+              warnings: [],
+              modelResultsById: {},
+            };
+          }
         }
         if (
-          shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
+          !handledAdvisoryDeepFailure &&
+          (shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
             result: batchedModelResult,
             modelIds: compatibilityPassedModelIds,
             modelScopedEntriesPresent: hasModelScopedEntries,
             runtimeDetailLines,
             runtimeWarnings,
           }) ||
-          (!batchedModelResult.ready &&
-            !hasModelScopedEntries &&
-            (compatibilityPassedModelIds.length > 1 ||
-              (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason)))
+            (!batchedModelResult.ready &&
+              !hasModelScopedEntries &&
+              (compatibilityPassedModelIds.length > 1 ||
+                (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason))))
         ) {
           return {
             status: 'failed',
@@ -1073,21 +1167,27 @@ export async function runProviderPrepareDiagnostics({
             modelResultsById: {},
           };
         }
-        if (!hasModelScopedEntries && compatibilityPassedModelIds.length === 1) {
+        if (
+          !handledAdvisoryDeepFailure &&
+          !hasModelScopedEntries &&
+          compatibilityPassedModelIds.length === 1
+        ) {
           runtimeDetailLines = [];
           runtimeWarnings = [];
         }
 
-        for (const modelId of compatibilityPassedModelIds) {
-          recordTerminalModelResult(
-            modelId,
-            resolveModelResultFromBatch(
-              providerId,
+        if (!handledAdvisoryDeepFailure) {
+          for (const modelId of compatibilityPassedModelIds) {
+            recordTerminalModelResult(
               modelId,
-              batchedModelResult,
-              compatibilityPassedModelIds.length === 1
-            )
-          );
+              resolveModelResultFromBatch(
+                providerId,
+                modelId,
+                batchedModelResult,
+                compatibilityPassedModelIds.length === 1
+              )
+            );
+          }
         }
       } catch (error) {
         hasNotes = true;

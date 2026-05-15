@@ -57,7 +57,7 @@ function parseTimestampMs(value: string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function minTimestampIso(values: Array<string | null | undefined>): string | undefined {
+function minTimestampIso(values: (string | null | undefined)[]): string | undefined {
   const times = values.map(parseTimestampMs).filter((value) => Number.isFinite(value) && value > 0);
   if (times.length === 0) {
     return undefined;
@@ -65,7 +65,7 @@ function minTimestampIso(values: Array<string | null | undefined>): string | und
   return new Date(Math.min(...times)).toISOString();
 }
 
-function maxTimestampIso(values: Array<string | null | undefined>): string | undefined {
+function maxTimestampIso(values: (string | null | undefined)[]): string | undefined {
   const times = values.map(parseTimestampMs).filter((value) => Number.isFinite(value) && value > 0);
   if (times.length === 0) {
     return undefined;
@@ -192,7 +192,7 @@ async function mapWithConcurrency<TInput, TOutput>(
       while (index < inputs.length) {
         const currentIndex = index;
         index += 1;
-        results[currentIndex] = await mapper(inputs[currentIndex] as TInput);
+        results[currentIndex] = await mapper(inputs[currentIndex]);
       }
     })
   );

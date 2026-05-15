@@ -1,17 +1,17 @@
 import type { WorkspaceTrustWorkspace } from '../domain';
 
-export type TerminalSnapshot = {
+export interface TerminalSnapshot {
   text: string;
   capturedAtMs: number;
-};
+}
 
-export type PtyKeyAction = {
+export interface PtyKeyAction {
   id: string;
   label: string;
   sequence: string;
-};
+}
 
-export type PtySpawnInput = {
+export interface PtySpawnInput {
   command: string;
   args: string[];
   cwd: string;
@@ -19,7 +19,7 @@ export type PtySpawnInput = {
   cols?: number;
   rows?: number;
   name?: string;
-};
+}
 
 export type PtySpawnResult =
   | { ok: true; session: PtySessionPort }
@@ -44,10 +44,10 @@ export interface ProviderStateProbe {
   readTrustState(workspace: WorkspaceTrustWorkspace): Promise<ProviderTrustState>;
 }
 
-export type TempEmptyMcpConfigHandle = {
+export interface TempEmptyMcpConfigHandle {
   path: string;
   cleanup(): Promise<void>;
-};
+}
 
 export interface TempEmptyMcpConfigStore {
   create(): Promise<TempEmptyMcpConfigHandle>;

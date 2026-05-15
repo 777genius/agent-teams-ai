@@ -873,6 +873,215 @@ describe('GraphMemberLogPreviewHud', () => {
     });
   });
 
+  it('shows delayed OpenCode delivery as a distinct empty state', async () => {
+    const node: GraphNode = {
+      id: 'member:alpha-team:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      domainRef: { kind: 'member', teamName: 'alpha-team', memberName: 'alice' },
+    };
+    mockedPreviewsByMember = new Map<string, MemberLogPreviewMember>([
+      [
+        'alice',
+        {
+          memberName: 'alice',
+          items: [],
+          coverage: [
+            {
+              provider: 'opencode_runtime',
+              status: 'skipped',
+              reason: 'opencode_delivery_delayed',
+            },
+          ],
+          warnings: [
+            {
+              code: 'opencode_delivery_delayed',
+              message: 'OpenCode logs are delayed while message delivery is being confirmed.',
+            },
+          ],
+          truncated: false,
+          overflowCount: 0,
+          generatedAt: '2026-04-03T00:00:00.000Z',
+        },
+      ],
+    ]);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <GraphMemberLogPreviewHud
+          teamName="alpha-team"
+          nodes={[node]}
+          getLogWorldRect={() => ({
+            left: 40,
+            top: 80,
+            right: 300,
+            bottom: 372,
+            width: 260,
+            height: 292,
+          })}
+          getCameraZoom={() => 1}
+          worldToScreen={(x, y) => ({ x, y })}
+          getViewportSize={() => ({ width: 1200, height: 800 })}
+          focusNodeIds={null}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode logs delayed');
+    expect(host.textContent).not.toContain('Logs unavailable');
+    expect(host.textContent).not.toContain('No recent logs');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows a loader while refreshing a stale empty OpenCode runtime failure', async () => {
+    const node: GraphNode = {
+      id: 'member:alpha-team:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      domainRef: { kind: 'member', teamName: 'alpha-team', memberName: 'alice' },
+    };
+    mockedLoading = true;
+    mockedPreviewsByMember = new Map<string, MemberLogPreviewMember>([
+      [
+        'alice',
+        {
+          memberName: 'alice',
+          items: [],
+          coverage: [
+            {
+              provider: 'opencode_runtime',
+              status: 'skipped',
+              reason: 'opencode_runtime_timeout',
+            },
+          ],
+          warnings: [
+            {
+              code: 'opencode_runtime_timeout',
+              message: 'OpenCode runtime preview timed out.',
+            },
+          ],
+          truncated: false,
+          overflowCount: 0,
+          generatedAt: '2026-04-03T00:00:00.000Z',
+        },
+      ],
+    ]);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <GraphMemberLogPreviewHud
+          teamName="alpha-team"
+          nodes={[node]}
+          getLogWorldRect={() => ({
+            left: 40,
+            top: 80,
+            right: 300,
+            bottom: 372,
+            width: 260,
+            height: 292,
+          })}
+          getCameraZoom={() => 1}
+          worldToScreen={(x, y) => ({ x, y })}
+          getViewportSize={() => ({ width: 1200, height: 800 })}
+          focusNodeIds={null}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Loading logs');
+    expect(host.textContent).not.toContain('Logs unavailable');
+    expect(host.querySelector('button[aria-busy="true"]')).not.toBeNull();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows a loader while refreshing stale delayed OpenCode delivery', async () => {
+    const node: GraphNode = {
+      id: 'member:alpha-team:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      domainRef: { kind: 'member', teamName: 'alpha-team', memberName: 'alice' },
+    };
+    mockedLoading = true;
+    mockedPreviewsByMember = new Map<string, MemberLogPreviewMember>([
+      [
+        'alice',
+        {
+          memberName: 'alice',
+          items: [],
+          coverage: [
+            {
+              provider: 'opencode_runtime',
+              status: 'skipped',
+              reason: 'opencode_delivery_delayed',
+            },
+          ],
+          warnings: [
+            {
+              code: 'opencode_delivery_delayed',
+              message: 'OpenCode logs are delayed while message delivery is being confirmed.',
+            },
+          ],
+          truncated: false,
+          overflowCount: 0,
+          generatedAt: '2026-04-03T00:00:00.000Z',
+        },
+      ],
+    ]);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <GraphMemberLogPreviewHud
+          teamName="alpha-team"
+          nodes={[node]}
+          getLogWorldRect={() => ({
+            left: 40,
+            top: 80,
+            right: 300,
+            bottom: 372,
+            width: 260,
+            height: 292,
+          })}
+          getCameraZoom={() => 1}
+          worldToScreen={(x, y) => ({ x, y })}
+          getViewportSize={() => ({ width: 1200, height: 800 })}
+          focusNodeIds={null}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Loading logs');
+    expect(host.textContent).not.toContain('OpenCode logs delayed');
+    expect(host.querySelector('button[aria-busy="true"]')).not.toBeNull();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('shows loading only before a member preview has been loaded', async () => {
     const quietNode: GraphNode = {
       id: 'member:alpha-team:quiet-dev',

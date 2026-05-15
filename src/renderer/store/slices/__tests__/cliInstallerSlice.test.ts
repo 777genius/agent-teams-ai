@@ -2,8 +2,9 @@ import {
   createLoadingMultimodelCliStatus,
   mergeCliStatusPreservingHydratedProviders,
 } from '@renderer/store/slices/cliInstallerSlice';
-import type { CliProviderReasoningEffort } from '@shared/types/cliInstaller';
 import { describe, expect, it } from 'vitest';
+
+import type { CliProviderReasoningEffort } from '@shared/types/cliInstaller';
 
 describe('mergeCliStatusPreservingHydratedProviders', () => {
   it('returns the previous status reference when a structurally identical clone arrives', () => {

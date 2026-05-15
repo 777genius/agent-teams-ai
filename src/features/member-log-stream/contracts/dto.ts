@@ -34,6 +34,7 @@ export interface MemberLogStreamCoverage {
 export interface MemberLogStreamWarning {
   code:
     | 'opencode_ambiguous_lane'
+    | 'opencode_delivery_delayed'
     | 'opencode_missing_runtime_session'
     | 'opencode_runtime_unavailable'
     | 'opencode_runtime_timeout'

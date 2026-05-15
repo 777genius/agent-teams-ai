@@ -1,15 +1,15 @@
 import type {
-  WorkspaceTrustDiagnosticStrategyResult,
   WorkspaceTrustDiagnosticsManifest,
+  WorkspaceTrustDiagnosticStrategyResult,
 } from './WorkspaceTrustTypes';
 
-export type WorkspaceTrustDiagnosticsBudgetLimits = {
+export interface WorkspaceTrustDiagnosticsBudgetLimits {
   maxStrategyResults: number;
   maxWorkspaceIdsPerResult: number;
   maxEvidencePerResult: number;
   maxEvidenceLength: number;
   maxRawTailLength: number;
-};
+}
 
 export const DEFAULT_WORKSPACE_TRUST_DIAGNOSTICS_BUDGET: WorkspaceTrustDiagnosticsBudgetLimits = {
   maxStrategyResults: 20,

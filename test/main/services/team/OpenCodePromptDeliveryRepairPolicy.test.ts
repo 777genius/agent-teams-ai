@@ -48,12 +48,14 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
         taskRefs: [{ taskId: 'task-1', displayId: '#1', teamName: 'team-a' }],
         responseState: 'responded_plain_text',
         pendingReason: 'plain_text_ack_only_still_requires_answer',
+        controlUrl: 'http://127.0.0.1:43123',
       })
     );
 
     expect(decision.kind).toBe('work_sync_report_required');
     expect(decision.controlText).toContain('member_work_sync_status');
     expect(decision.controlText).toContain('member_work_sync_report');
+    expect(decision.controlText).toContain('controlUrl="http://127.0.0.1:43123"');
     expect(decision.controlText).toContain('"task-1"');
     expect(decision.controlText).not.toContain('reportToken=');
   });

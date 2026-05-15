@@ -742,6 +742,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
   capabilitySnapshotId: string | null;
   manifest: RuntimeStoreManifestEvidence;
   idempotencyKey: string;
+  enforceManifestHighWatermark?: boolean;
 }): asserts input is {
   result: OpenCodeBridgeSuccess<unknown>;
   requestId: string;
@@ -760,6 +761,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
 
   const resultManifestHighWatermark = extractManifestHighWatermark(input.result.data);
   if (
+    input.enforceManifestHighWatermark !== false &&
     typeof resultManifestHighWatermark === 'number' &&
     resultManifestHighWatermark < input.manifest.highWatermark
   ) {

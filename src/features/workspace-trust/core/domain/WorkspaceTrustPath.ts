@@ -8,9 +8,9 @@ import type {
 
 export type WorkspaceTrustPathPlatform = 'posix' | 'win32';
 
-export type WorkspaceTrustPathOptions = {
+export interface WorkspaceTrustPathOptions {
   platform?: WorkspaceTrustPathPlatform;
-};
+}
 
 export type BuildWorkspaceTrustPathCandidatesInput = WorkspaceTrustPathOptions & {
   cwd: string;

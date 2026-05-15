@@ -9,13 +9,13 @@ export const CODEX_WORKSPACE_TRUST_CONFIG_OVERRIDES_KEY = 'config_overrides';
 const CODEX_WORKSPACE_TRUST_OVERRIDE_PATTERN =
   /^projects\."(?:[^"\\\x00-\x1F]|\\["\\bfnrt]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8})+"\.trust_level="trusted"$/;
 
-export type CodexWorkspaceTrustSettingsObject = {
+export interface CodexWorkspaceTrustSettingsObject {
   codex: {
     agent_teams_workspace_trust: {
       config_overrides: string[];
     };
   };
-};
+}
 
 function toHex(value: number, width: number): string {
   return value.toString(16).padStart(width, '0').toUpperCase();

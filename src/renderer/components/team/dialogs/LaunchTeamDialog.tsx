@@ -2358,16 +2358,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           </div>
         ) : null}
 
-        {isLaunchMode ? (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              closeDialog();
-              openDashboard();
-            }}
-          />
-        ) : null}
-
         <div className="space-y-4">
           {/* ═══════════════════════════════════════════════════════════════════
               Schedule-only: Team selector (standalone mode)
@@ -2612,8 +2602,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   softDeleteMembers
                   disableGeminiOption={isGeminiUiFrozen()}
                   headerBottom={
-                    hasSelectedWorktreeIsolation ? (
-                      <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+                    teammateRuntimeCompatibility.visible || hasSelectedWorktreeIsolation ? (
+                      <div className="space-y-2">
+                        <TeammateRuntimeCompatibilityNotice
+                          analysis={teammateRuntimeCompatibility}
+                          onOpenDashboard={() => {
+                            closeDialog();
+                            openDashboard();
+                          }}
+                        />
+                        {hasSelectedWorktreeIsolation ? (
+                          <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+                        ) : null}
+                      </div>
                     ) : null
                   }
                 />

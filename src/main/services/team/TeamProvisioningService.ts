@@ -556,8 +556,8 @@ import type {
   TeamMember,
   TeamProviderBackendId,
   TeamProviderId,
-  TeamProvisioningPrepareIssue,
   TeamProvisioningModelVerificationMode,
+  TeamProvisioningPrepareIssue,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamProvisioningState,
@@ -1055,7 +1055,7 @@ function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
   }
 
   if (providerIds.size === 1) {
-    return getProviderRuntimeFailureLabel([...providerIds][0]!);
+    return getProviderRuntimeFailureLabel([...providerIds][0]);
   }
 
   return getCliFlavorUiOptions(getConfiguredCliFlavor()).displayName;
@@ -7732,6 +7732,7 @@ export class TeamProvisioningService {
     ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
     readAllowed: boolean;
     pendingReason: string;
+    controlUrl?: string | null;
   }): string | null {
     const record = input.ledgerRecord;
     if (!record) {
@@ -7758,6 +7759,7 @@ export class TeamProvisioningService {
       toolCallNames: record.observedToolCallNames,
       acceptanceUnknown: record.acceptanceUnknown,
       hardFailureKind: this.getOpenCodeDeliveryHardFailureKind(record),
+      controlUrl: input.controlUrl,
     }).controlText;
   }
 
@@ -7771,6 +7773,50 @@ export class TeamProvisioningService {
 
   private isOpenCodePromptAcceptanceUnknownFailure(diagnostics: readonly string[]): boolean {
     return diagnostics.some((diagnostic) => isProbeTimeoutMessage(diagnostic));
+  }
+
+  private isOpenCodeRuntimeManifestWatermarkDeliveryFailure(
+    record: OpenCodePromptDeliveryLedgerRecord
+  ): boolean {
+    return [record.lastReason, ...record.diagnostics].some(
+      (reason) =>
+        typeof reason === 'string' &&
+        reason.toLowerCase().includes('runtime manifest high watermark is stale')
+    );
+  }
+
+  private async requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input: {
+    ledger: OpenCodePromptDeliveryLedgerStore;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    if (
+      input.ledgerRecord.status !== 'failed_terminal' ||
+      input.ledgerRecord.inboxReadCommittedAt ||
+      !this.isOpenCodeRuntimeManifestWatermarkDeliveryFailure(input.ledgerRecord)
+    ) {
+      return input.ledgerRecord;
+    }
+
+    const scheduledAt = nowIso();
+    const requeued = await input.ledger.markNextAttemptScheduled({
+      id: input.ledgerRecord.id,
+      status: 'retry_scheduled',
+      nextAttemptAt: scheduledAt,
+      reason: 'opencode_prompt_delivery_requeued_after_runtime_manifest_high_watermark_fix',
+      scheduledAt,
+    });
+    logger.info(
+      'opencode_prompt_delivery_requeued_after_runtime_manifest_high_watermark_fix',
+      JSON.stringify({
+        teamName: requeued.teamName,
+        memberName: requeued.memberName,
+        laneId: requeued.laneId,
+        runId: requeued.runId,
+        inboxMessageId: requeued.inboxMessageId,
+        attempts: requeued.attempts,
+      })
+    );
+    return requeued;
   }
 
   private isOpenCodeDirectUserPromptDelivery(
@@ -9606,7 +9652,7 @@ export class TeamProvisioningService {
       }
       if (recovered) {
         runtimeRunId = await this.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId);
-        runtimeActive = true;
+        runtimeActive = await this.isOpenCodeRuntimeLaneIndexActive(teamName, laneIdentity.laneId);
       }
     }
     if (
@@ -9699,6 +9745,10 @@ export class TeamProvisioningService {
     }
 
     if (!this.isOpenCodePromptDeliveryWatchdogEnabled()) {
+      const controlUrl =
+        input.messageKind === 'member_work_sync_nudge'
+          ? await this.resolveControlApiBaseUrl()
+          : null;
       const result = await adapter.sendMessageToMember({
         ...(runtimeRunId ? { runId: runtimeRunId } : {}),
         teamName,
@@ -9713,6 +9763,7 @@ export class TeamProvisioningService {
         messageKind: input.messageKind,
         workSyncIntent: input.workSyncIntent,
         workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
+        controlUrl: controlUrl ?? undefined,
         taskRefs: input.taskRefs,
       });
       await this.rememberOpenCodeRuntimePidFromBridge({
@@ -9885,6 +9936,11 @@ export class TeamProvisioningService {
           diagnostics: ledgerRecord.diagnostics,
         };
       }
+
+      ledgerRecord = await this.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
+        ledger,
+        ledgerRecord,
+      });
 
       if (ledgerRecord.status === 'failed_terminal') {
         this.logOpenCodePromptDeliveryEvent(
@@ -10105,12 +10161,15 @@ export class TeamProvisioningService {
           ledgerRecord,
         })
       : 'opencode_delivery_response_pending';
+    const controlUrl =
+      input.messageKind === 'member_work_sync_nudge' ? await this.resolveControlApiBaseUrl() : null;
     const deliveryText = this.buildOpenCodePromptDeliveryAttemptText({
       text: input.text,
       controlText: this.buildOpenCodePromptDeliveryRepairControlText({
         ledgerRecord,
         readAllowed: retryReadAllowed,
         pendingReason: retryPendingReason,
+        controlUrl,
       }),
     });
     let result: OpenCodeTeamRuntimeMessageResult;
@@ -10130,6 +10189,7 @@ export class TeamProvisioningService {
         messageKind: input.messageKind,
         workSyncIntent: input.workSyncIntent,
         workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
+        controlUrl: controlUrl ?? undefined,
         taskRefs: input.taskRefs,
       });
     } catch (error) {
@@ -10891,6 +10951,21 @@ export class TeamProvisioningService {
       projectPath,
       previousLaunchState,
     });
+  }
+
+  private async tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(input: {
+    teamName: string;
+    memberName: string;
+    laneId: string;
+  }): Promise<boolean> {
+    const recovered = await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery({
+      teamName: input.teamName,
+      memberName: input.memberName,
+    }).catch(() => false);
+    if (!recovered) {
+      return false;
+    }
+    return this.isOpenCodeRuntimeLaneIndexActive(input.teamName, input.laneId).catch(() => false);
   }
 
   private async tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog(
@@ -13258,9 +13333,10 @@ export class TeamProvisioningService {
       () => null
     );
     if (laneIndex?.lanes[identity.laneId]?.state !== 'active') {
-      const recovered = await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery({
+      const recovered = await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
         teamName: input.teamName,
         memberName: identity.canonicalMemberName,
+        laneId: identity.laneId,
       });
       if (!recovered) {
         return null;
@@ -13391,7 +13467,14 @@ export class TeamProvisioningService {
     if (!laneIndex) {
       return { busy: true, reason: 'opencode_lane_index_unavailable', retryAfterIso };
     }
-    if (laneIndex.lanes[identity.laneId]?.state !== 'active') {
+    if (
+      laneIndex.lanes[identity.laneId]?.state !== 'active' &&
+      !(await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
+        teamName: input.teamName,
+        memberName: identity.canonicalMemberName,
+        laneId: identity.laneId,
+      }).catch(() => false))
+    ) {
       return { busy: true, reason: 'opencode_no_active_lane', retryAfterIso };
     }
 
@@ -22486,7 +22569,7 @@ export class TeamProvisioningService {
         .slice(0, 10);
 
       for (const message of unread) {
-        const existingRecord = await promptLedger
+        let existingRecord = await promptLedger
           .getByInboxMessage({
             teamName,
             memberName: memberIdentity.canonicalMemberName,
@@ -22494,6 +22577,17 @@ export class TeamProvisioningService {
             inboxMessageId: message.messageId,
           })
           .catch(() => null);
+        if (existingRecord?.status === 'failed_terminal') {
+          const requeuedRecord = await this.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(
+            {
+              ledger: promptLedger,
+              ledgerRecord: existingRecord,
+            }
+          );
+          if (requeuedRecord.status !== 'failed_terminal') {
+            existingRecord = requeuedRecord;
+          }
+        }
         if (existingRecord?.status === 'failed_terminal') {
           let recoveredRecord: OpenCodePromptDeliveryLedgerRecord | null = null;
           let recoveredVisibleReply: OpenCodeVisibleReplyProof | null = null;
@@ -22852,7 +22946,17 @@ export class TeamProvisioningService {
     const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), input.teamName).catch(
       () => null
     );
-    if (laneIndex?.lanes[identity.laneId]?.state !== 'active') {
+    if (!laneIndex) {
+      return bypassMessageIds;
+    }
+    const laneActive =
+      laneIndex.lanes[identity.laneId]?.state === 'active' ||
+      (await this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
+        teamName: input.teamName,
+        memberName: identity.canonicalMemberName,
+        laneId: identity.laneId,
+      }).catch(() => false));
+    if (!laneActive) {
       return bypassMessageIds;
     }
 

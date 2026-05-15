@@ -196,9 +196,9 @@ Before changing launch or runtime logic:
 Recommended verification:
 
 ```bash
-pnpm vitest run test/main/services/team/TeamProvisioningService.test.ts
-pnpm vitest run test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts
-pnpm typecheck --pretty false
+pnpm test -- test/main/services/team/TeamProvisioningService.test.ts
+pnpm test -- test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts
+pnpm typecheck
 git diff --check
 ```
 

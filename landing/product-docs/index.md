@@ -57,13 +57,24 @@ Agent Teams is a free desktop app for orchestrating AI agent teams. You are not 
 
 <DocsCardGrid />
 
+## Next steps after launch
+
+After creating your first team, explore these guides to go further:
+
+- **Runtime setup** - configure Claude, Codex, OpenCode, or multimodel providers: [Configure runtimes](/guide/runtime-setup)
+- **Agent workflow** - understand how agents coordinate through the task board: [Understand workflow](/guide/agent-workflow)
+- **Team brief examples** - learn prompt patterns from real-world briefs: [See examples](/guide/team-brief-examples)
+- **Code review** - inspect diffs, accept or reject changes: [Review changes](/guide/code-review)
+- **Troubleshooting** - diagnose stuck launches, missing teammates, and task failures: [Troubleshoot](/guide/troubleshooting)
+- **Git worktree strategy** - use worktree isolation when multiple teammates edit the same repo in parallel: [Learn about worktrees](/guide/git-worktree-strategy)
+- **Release notes** - see what's new in each version: [View releases](/reference/release-notes)
+
 ## Reference
 
-Use the reference pages when you need exact terminology, provider behavior, or privacy boundaries.
+Use the reference pages when you need exact terminology, provider behavior, contributor architecture, or privacy boundaries.
 
 <DocsCardGrid type="reference" />
 
 ## Product preview
 
 <ZoomImage src="/screenshots/1.jpg" alt="Agent Teams kanban board" caption="Task status, teammate activity, and review workflow stay visible in one workspace." />
-

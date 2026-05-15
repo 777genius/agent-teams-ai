@@ -1,9 +1,4 @@
 ---
-title: Настройка рантайма
-description: Настройте Claude Code, Codex или OpenCode рантаймы и аутентификацию провайдеров для команд агентов.
----
-
----
 title: Настройка рантайма – Документация Agent Teams
 description: Конфигурация Claude Code, Codex или OpenCode. Авторизация, провайдеры, multimodel mode и предзапусковые проверки.
 lang: ru-RU
@@ -11,7 +6,7 @@ lang: ru-RU
 
 # Настройка рантайма
 
-Agent Teams — coordination layer. Model work выполняется через локальные runtimes и providers.
+Agent Teams - координационный слой. Работа моделей выполняется через локальные рантаймы и провайдеры.
 
 ## Предварительные требования
 
@@ -46,7 +41,7 @@ command -v opencode
 
 Приложение по возможности определяет доступные runtimes и ведёт настройку через UI.
 
-Gemini встречается во внутренних provider lists, но сейчас скрыт из основного team creation UI, пока launch experience отмечен как in development.
+Gemini — поддерживаемый провайдер с Google ADC (`gcloud auth`), Gemini CLI OAuth и API key аутентификацией. Настройка доступна через UI управления провайдерами, когда Gemini backend обнаружен.
 
 ## Доступ к провайдеру
 
@@ -114,6 +109,16 @@ Codex-native launches используют Codex account state и model catalog 
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 Если OpenCode запускается, но teammate не становится deliverable, сначала смотрите lane evidence, а не предполагаете, что model проигнорировала prompt. См. [Диагностика](/ru/guide/troubleshooting#opencode-registered-но-bootstrap-не-подтверждён).
+
+### Gemini
+
+Gemini поддерживает три метода аутентификации:
+
+- **Google ADC** — запустите `gcloud auth application-default login` для авторизации через Google Application Default Credentials.
+- **Gemini CLI** — запустите `gemini login`, если Gemini CLI установлен.
+- **API key** — установите `GEMINI_API_KEY` в переменные окружения или настройте через UI управления провайдерами.
+
+Приложение автоматически определяет доступный метод auth и показывает провайдера Gemini в UI настройки рантайма и создания команд, когда backend доступен.
 
 ## Multimodel-режим
 

@@ -1,7 +1,5 @@
 import { createLogger } from '@shared/utils/logger';
 
-import type { IPty } from 'node-pty';
-import type * as NodePty from 'node-pty';
 import type {
   PtyKeyAction,
   PtyProcessPort,
@@ -10,6 +8,8 @@ import type {
   PtySpawnResult,
   TerminalSnapshot,
 } from '../../../core/application';
+import type { IPty } from 'node-pty';
+import type * as NodePty from 'node-pty';
 
 const logger = createLogger('WorkspaceTrustNodePtyProcessAdapter');
 const MAX_TRANSCRIPT_CHARS = 64 * 1024;

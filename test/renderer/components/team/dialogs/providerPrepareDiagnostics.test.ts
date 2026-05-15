@@ -626,6 +626,121 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps transient OpenCode deep ping failures advisory after compatibility passed', async () => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ) => Promise<TeamProvisioningPrepareResult>
+    >((_cwd, _providerId, _providerIds, selectedModels, _limitContext, modelVerificationMode) => {
+      if (modelVerificationMode === 'compatibility') {
+        expect(selectedModels).toEqual(['opencode/big-pickle']);
+        return Promise.resolve({
+          ready: true,
+          message: 'CLI is ready to launch',
+          details: [
+            'Selected model opencode/big-pickle is compatible. Deep verification pending.',
+          ],
+        });
+      }
+
+      expect(modelVerificationMode).toBe('deep');
+      expect(selectedModels).toEqual(['opencode/big-pickle']);
+      return Promise.resolve({
+        ready: false,
+        message: 'Unable to connect. Is the computer able to access the url?',
+        details: ['Unable to connect. Is the computer able to access the url?'],
+        issues: [
+          {
+            providerId: 'opencode',
+            scope: 'provider',
+            severity: 'blocking',
+            code: 'unknown_error',
+            message: 'Unable to connect. Is the computer able to access the url?',
+          },
+        ],
+      });
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('notes');
+    expect(result.details).toEqual(['big-pickle - ping not confirmed']);
+    expect(result.warnings).toEqual([
+      'OpenCode model ping was not confirmed. Unable to connect. Is the computer able to access the url?',
+      'big-pickle - ping not confirmed',
+    ]);
+    expect(result.modelResultsById).toEqual({
+      'opencode/big-pickle': {
+        status: 'notes',
+        line: 'big-pickle - ping not confirmed',
+        warningLine: 'big-pickle - ping not confirmed',
+      },
+    });
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps hard OpenCode deep provider issues blocking after compatibility passed', async () => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ) => Promise<TeamProvisioningPrepareResult>
+    >((_cwd, _providerId, _providerIds, selectedModels, _limitContext, modelVerificationMode) => {
+      if (modelVerificationMode === 'compatibility') {
+        expect(selectedModels).toEqual(['opencode/big-pickle']);
+        return Promise.resolve({
+          ready: true,
+          message: 'CLI is ready to launch',
+          details: [
+            'Selected model opencode/big-pickle is compatible. Deep verification pending.',
+          ],
+        });
+      }
+
+      expect(modelVerificationMode).toBe('deep');
+      expect(selectedModels).toEqual(['opencode/big-pickle']);
+      return Promise.resolve({
+        ready: false,
+        message: 'OpenCode: mcp_unavailable',
+        issues: [
+          {
+            providerId: 'opencode',
+            scope: 'provider',
+            severity: 'blocking',
+            code: 'mcp_unavailable',
+            message: 'OpenCode: mcp_unavailable',
+          },
+        ],
+      });
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details).toEqual(['OpenCode: mcp_unavailable']);
+    expect(result.modelResultsById).toEqual({});
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps OpenCode deep selected-model failures scoped to the selected model', async () => {
     const prepareProvisioning = vi.fn<
       (

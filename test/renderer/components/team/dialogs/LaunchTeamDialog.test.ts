@@ -179,7 +179,13 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
 vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
   TeamRosterEditorSection: (props: any) => {
     teamRosterEditorSectionMock.lastProps = props;
-    return React.createElement('div', null, 'team-roster-editor');
+    return React.createElement(
+      'div',
+      null,
+      props.headerTop,
+      'team-roster-editor',
+      props.headerBottom
+    );
   },
 }));
 

@@ -17,12 +17,12 @@ export type WorkspaceTrustLaunchArgPatchSkipReason =
   | 'empty_patch'
   | 'malformed_patch_settings';
 
-export type WorkspaceTrustLaunchArgPatchApplication = {
+export interface WorkspaceTrustLaunchArgPatchApplication {
   args: string[];
   appliedPatchIds: string[];
-  skippedPatches: Array<{ id: string; reason: WorkspaceTrustLaunchArgPatchSkipReason }>;
+  skippedPatches: { id: string; reason: WorkspaceTrustLaunchArgPatchSkipReason }[];
   addedWorkspaceTrustOverrideCount: number;
-};
+}
 
 function parseJsonObject(value: string): Record<string, unknown> | null {
   try {

@@ -9,7 +9,7 @@ Agent Teams is distributed as a desktop app for macOS, Windows, and Linux.
 
 ## Download builds
 
-Use the <a href="https://github.com/777genius/agent-teams-ai/releases" target="_self">download page</a> or the latest [GitHub release](https://github.com/777genius/agent-teams-ai/releases) when you want the packaged app:
+Use the <a href="/download/" target="_self">download page</a> or the latest [GitHub release](https://github.com/777genius/agent-teams-ai/releases) when you want the packaged app:
 
 - macOS Apple Silicon: `.dmg`
 - macOS Intel: `.dmg`
@@ -30,11 +30,11 @@ To use agent runtimes, you need access to at least one provider:
 | ------------------ | ------------------------------------------------- |
 | Claude (Anthropic) | Claude Code CLI login or API key                  |
 | Codex (OpenAI)     | Codex CLI login or API key                        |
-| Gemini (Google)    | _In development_                                  |
+| Gemini (Google)    | Google ADC, Gemini CLI, or API key                |
 | OpenCode           | API key for a supported backend (e.g. OpenRouter) |
 
 ::: info
-Gemini provider support is in development. You can prepare access now, but it will not appear in the team editor until it is ready.
+Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current status across all providers.
 :::
 
 For source development, you also need:

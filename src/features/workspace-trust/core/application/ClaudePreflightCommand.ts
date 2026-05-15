@@ -1,11 +1,11 @@
-export type ClaudePreflightCommandCapabilities = {
+export interface ClaudePreflightCommandCapabilities {
   bare: boolean;
   strictMcpConfig: boolean;
   mcpConfig: boolean;
   settingSources: boolean;
   inlineSettings: boolean;
   tools: boolean;
-};
+}
 
 export type ClaudePreflightCommandResult =
   | { ok: true; args: string[]; omittedFlags: string[] }
@@ -29,7 +29,7 @@ export function buildClaudeWorkspaceTrustPreflightArgs(input: {
     ...(input.capabilities ?? {}),
   };
 
-  const requiredProtectedFlags: Array<keyof ClaudePreflightCommandCapabilities> = [
+  const requiredProtectedFlags: (keyof ClaudePreflightCommandCapabilities)[] = [
     'strictMcpConfig',
     'mcpConfig',
     'settingSources',

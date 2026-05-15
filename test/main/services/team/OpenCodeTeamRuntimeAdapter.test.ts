@@ -673,6 +673,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       replyRecipient: 'team-lead',
       actionMode: 'do',
       messageKind: 'member_work_sync_nudge',
+      controlUrl: 'http://127.0.0.1:43123',
       taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
     });
 
@@ -690,6 +691,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('mcp__agent-teams__member_work_sync_report');
     expect(sentText).toContain('teamName="team-a"');
     expect(sentText).toContain('memberName="bob"');
+    expect(sentText).toContain('controlUrl="http://127.0.0.1:43123"');
     expect(sentText).toContain('taskIds: "task-1"');
     expect(sentText).toContain(
       'Do not use provider names, runtime names, or team names as memberName'

@@ -2588,10 +2588,13 @@ void app.whenReady().then(async () => {
     // Sync Sentry telemetry opt-in flag from persisted config
     syncTelemetryFlag(config.general.telemetryEnabled);
 
-    // Apply launch-at-login setting only in packaged builds.
-    // In dev, macOS may deny this (and Electron logs a noisy error to stderr).
-    // Also guard by platform: Electron only supports this on macOS/Windows.
-    if (app.isPackaged && (process.platform === 'darwin' || process.platform === 'win32')) {
+    // Apply launch-at-login only where Electron can persist it without noisy OS errors.
+    // Local packaged macOS smoke builds run outside /Applications and cannot set login items.
+    const canSyncLaunchAtLogin =
+      app.isPackaged &&
+      (process.platform === 'win32' ||
+        (process.platform === 'darwin' && app.isInApplicationsFolder()));
+    if (canSyncLaunchAtLogin) {
       app.setLoginItemSettings({
         openAtLogin: config.general.launchAtLogin,
       });

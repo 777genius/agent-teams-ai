@@ -33,10 +33,10 @@ function resolveRendererPath(): string | null {
     candidates.unshift(
       // Standalone: dist-standalone/index.cjs → ../out/renderer
       join(__dirname, '../out/renderer'),
-      // Electron production (asar fallback): app.asar/out/renderer
-      join(__dirname, '../../out/renderer'),
       // Electron production (asarUnpack): app.asar.unpacked/out/renderer (real filesystem)
-      join(__dirname, '../../out/renderer').replace('app.asar', 'app.asar.unpacked')
+      join(__dirname, '../../out/renderer').replace('app.asar', 'app.asar.unpacked'),
+      // Electron production fallback: app.asar/out/renderer
+      join(__dirname, '../../out/renderer')
     );
   }
 

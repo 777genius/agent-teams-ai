@@ -51,7 +51,9 @@ jobs:
         run: git config --global core.longpaths true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -60,7 +62,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Smoke Codex app-managed runtime install
         run: pnpm smoke:codex-runtime-install

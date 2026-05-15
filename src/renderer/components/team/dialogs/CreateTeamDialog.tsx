@@ -24,7 +24,6 @@ import {
   createMemberDraft,
   normalizeLeadProviderForMode,
   normalizeMemberDraftForProviderMode,
-  normalizeProviderForMode,
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
@@ -337,7 +336,10 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (id: number) => void;
 };
 
-type ScheduledIdleHandle = { kind: 'idle' | 'timeout'; id: number };
+interface ScheduledIdleHandle {
+  kind: 'idle' | 'timeout';
+  id: number;
+}
 
 function scheduleIdle(cb: () => void): ScheduledIdleHandle {
   const idleWindow = window as IdleWindow;
@@ -1826,26 +1828,44 @@ export const CreateTeamDialog = ({
   );
 
   const rosterHeaderBottom = useMemo(
-    () => (
-      <div className="space-y-2">
-        {soloTeam ? (
-          <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
-            <p className="text-[11px] leading-relaxed text-sky-300">
-              Only the team lead (main process) will be started &mdash; no teammates will be
-              spawned. Works like a regular agent session in your chosen runtime (Claude Code,
-              Codex, OpenCode, Gemini) but with access to the task board for planning. Saves tokens
-              by avoiding teammate coordination overhead. You can add members later from the team
-              settings.
-            </p>
-          </div>
-        ) : null}
-        {canCreate && hasSelectedWorktreeIsolation ? (
-          <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
-        ) : null}
-      </div>
-    ),
-    [canCreate, hasSelectedWorktreeIsolation, soloTeam, worktreeGitReadiness]
+    () =>
+      teammateRuntimeCompatibility.visible ||
+      soloTeam ||
+      (canCreate && hasSelectedWorktreeIsolation) ? (
+        <div className="space-y-2">
+          <TeammateRuntimeCompatibilityNotice
+            analysis={teammateRuntimeCompatibility}
+            onOpenDashboard={() => {
+              onClose();
+              openDashboard();
+            }}
+          />
+          {soloTeam ? (
+            <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
+              <p className="text-[11px] leading-relaxed text-sky-300">
+                Only the team lead (main process) will be started &mdash; no teammates will be
+                spawned. Works like a regular agent session in your chosen runtime (Claude Code,
+                Codex, OpenCode, Gemini) but with access to the task board for planning. Saves
+                tokens by avoiding teammate coordination overhead. You can add members later from
+                the team settings.
+              </p>
+            </div>
+          ) : null}
+          {canCreate && hasSelectedWorktreeIsolation ? (
+            <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+          ) : null}
+        </div>
+      ) : null,
+    [
+      canCreate,
+      hasSelectedWorktreeIsolation,
+      onClose,
+      openDashboard,
+      soloTeam,
+      teammateRuntimeCompatibility,
+      worktreeGitReadiness,
+    ]
   );
 
   return (
@@ -1915,14 +1935,6 @@ export const CreateTeamDialog = ({
             Available only in local Electron mode.
           </p>
         ) : null}
-
-        <TeammateRuntimeCompatibilityNotice
-          analysis={teammateRuntimeCompatibility}
-          onOpenDashboard={() => {
-            onClose();
-            openDashboard();
-          }}
-        />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">

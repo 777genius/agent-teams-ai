@@ -1,10 +1,10 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
 import { canonicalizeAgentTeamsToolName } from '../../agentTeamsToolNames';
 import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
 import { TeamTaskReader } from '../../TeamTaskReader';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
 
 import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from './OpenCodeRuntimeProjectionMapper';

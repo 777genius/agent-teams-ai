@@ -22,13 +22,16 @@ The desktop app runs on your machine and reads local project/runtime data to pow
 
 Important local locations include:
 
-| Location | Purpose |
-| --- | --- |
-| `~/.claude/teams/<team>/` | Team config, member metadata, inboxes, launch state, bootstrap evidence, runtime diagnostics, sent-message records, kanban state, and review-related team files. |
-| `~/.claude/tasks/<team>/` | Durable task JSON files for the team board. |
-| `~/.claude/projects/<encoded-project>/` | Claude/Codex-style project session files used for session history, context analysis, and transcript-backed UI. |
+| Platform | Location | Purpose |
+| --- | --- | --- |
+| macOS/Linux | `~/.claude/teams/<team>/` | Team config, member metadata, inboxes, launch state, bootstrap evidence, runtime diagnostics, sent-message records, kanban state, and review-related team files. |
+| Windows | `%APPDATA%\Claude\teams\<team>\` | Same — team config, member metadata, inboxes, launch state, and diagnostics. |
+| macOS/Linux | `~/.claude/tasks/<team>/` | Durable task JSON files for the team board. |
+| Windows | `%APPDATA%\Claude\tasks\<team>\` | Same — durable task JSON files. |
+| macOS/Linux | `~/.claude/projects/<encoded-project>/` | Claude/Codex-style project session files used for session history, context analysis, and transcript-backed UI. |
+| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | Same — project session files. |
 
-Exact files can vary by runtime and app version. For launch debugging, the newest evidence is usually under the relevant `~/.claude/teams/<team>/` folder.
+Exact files can vary by runtime and app version. For launch debugging, the newest evidence is usually under the relevant `~/.claude/teams/<team>/` (or `%APPDATA%\Claude\teams\<team>\`) folder.
 
 ## What can leave your machine
 
