@@ -1,4 +1,4 @@
-import { spawnCli, killProcessTree } from '@main/utils/childProcess';
+import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { type ChildProcess } from 'child_process';

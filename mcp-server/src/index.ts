@@ -82,8 +82,8 @@ export function resolveStartOptions(
     transportType: HTTP_TRANSPORT,
     httpStream: {
       host:
-        getArgValue(argv, '--host')?.trim() ||
-        env.AGENT_TEAMS_MCP_HTTP_HOST?.trim() ||
+        getArgValue(argv, '--host')?.trim() ??
+        env.AGENT_TEAMS_MCP_HTTP_HOST?.trim() ??
         DEFAULT_HTTP_HOST,
       port: parsePort(getArgValue(argv, '--port') ?? env.AGENT_TEAMS_MCP_HTTP_PORT),
       endpoint: normalizeEndpoint(getArgValue(argv, '--endpoint') ?? env.AGENT_TEAMS_MCP_HTTP_ENDPOINT),
