@@ -3,6 +3,7 @@ import {
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
 import { killProcessByPid } from '@main/utils/processKill';
+import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { execFile, type ExecFileException } from 'child_process';
 
 export type OpenCodeManagedHostCleanupMode = 'orphaned' | 'force';
@@ -37,11 +38,15 @@ export interface OpenCodeManagedHostProcessCleanupOptions {
   sleepMs?: (ms: number) => Promise<void>;
 }
 
-const OPENCODE_SERVE_COMMAND_RE = /(^|[/\\\s])opencode(?:\.exe)?(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
+const OPENCODE_SERVE_COMMAND_RE =
+  /(^|[/\\\s"])opencode(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
+const WINDOWS_APP_MANAGED_OPENCODE_SERVE_RE =
+  /[\\/]runtimes[\\/]opencode[\\/]versions[\\/][^"'\s]+[\\/]opencode-windows-[^"'\s]+[\\/]opencode\.exe(?:"|\s|$)/i;
 const MANAGED_ENV_MARKERS = ['CLAUDE_MULTIMODEL_DATA_HOME=', 'OPENCODE_CONFIG_CONTENT='] as const;
 const MANAGED_ENV_IDENTITY_MARKERS = [
   'AGENT_TEAMS_MCP_CLAUDE_DIR=',
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY=',
+  'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=',
 ] as const;
 
 export async function cleanupManagedOpenCodeServeProcesses(
@@ -55,18 +60,18 @@ export async function cleanupManagedOpenCodeServeProcesses(
     diagnostics: [],
   };
 
-  if (platform === 'win32') {
-    result.diagnostics.push(
-      'Managed OpenCode serve process fallback cleanup is skipped on Windows.'
-    );
-    return result;
-  }
-
-  const rows = await (options.listProcessRows ?? listRuntimeProcessesForCurrentTmuxPlatform)();
+  const rows = await (
+    options.listProcessRows ??
+    (platform === 'win32' ? listWindowsProcessTable : listRuntimeProcessesForCurrentTmuxPlatform)
+  )();
   const excludePids = options.excludePids ?? new Set<number>();
   const requiredDetailsMarkers = options.requiredDetailsMarkers ?? [];
-  const readDetails = options.readProcessDetails ?? readNativeProcessCommandWithEnv;
-  const readStartTimeMs = options.readProcessStartTimeMs ?? readNativeProcessStartTimeMs;
+  const readDetails =
+    options.readProcessDetails ??
+    (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
+  const readStartTimeMs =
+    options.readProcessStartTimeMs ??
+    (platform === 'win32' ? readWindowsProcessStartTimeMs : readNativeProcessStartTimeMs);
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const killProcess = options.killProcess ?? killProcessByPid;
   const forceKillProcess =
@@ -91,16 +96,23 @@ export async function cleanupManagedOpenCodeServeProcesses(
     }
 
     const details = await readDetails(row.pid);
-    if (
-      !details ||
-      !isManagedOpenCodeServeProcessDetails(details) ||
-      !processDetailsIncludeMarkers(details, requiredDetailsMarkers)
-    ) {
+    const isManaged =
+      platform === 'win32'
+        ? isAppManagedWindowsOpenCodeServeCommand(row.command) ||
+          Boolean(details && isManagedOpenCodeServeProcessDetails(details))
+        : Boolean(details && isManagedOpenCodeServeProcessDetails(details));
+    const hasRequiredDetailsMarkers =
+      requiredDetailsMarkers.length === 0 ||
+      Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
+    if (!isManaged || !hasRequiredDetailsMarkers) {
       result.candidates.push({
         pid: row.pid,
         ppid: row.ppid,
         action: 'kept_unmanaged',
-        reason: 'process does not carry Agent Teams managed OpenCode environment markers',
+        reason:
+          platform === 'win32'
+            ? 'process is not an app-managed Windows OpenCode serve command'
+            : 'process does not carry Agent Teams managed OpenCode environment markers',
       });
       continue;
     }
@@ -122,7 +134,9 @@ export async function cleanupManagedOpenCodeServeProcesses(
         });
         continue;
       }
-      if (row.ppid !== 1) {
+      const parentMayStillOwnProcess =
+        platform === 'win32' ? row.ppid > 0 && isProcessAlive(row.ppid) : row.ppid !== 1;
+      if (parentMayStillOwnProcess) {
         result.candidates.push({
           pid: row.pid,
           ppid: row.ppid,
@@ -175,6 +189,14 @@ export async function cleanupManagedOpenCodeServeProcesses(
 
 export function isOpenCodeServeCommand(command: string): boolean {
   return OPENCODE_SERVE_COMMAND_RE.test(command.trim());
+}
+
+export function isAppManagedWindowsOpenCodeServeCommand(command: string): boolean {
+  const normalizedCommand = command.trim().replace(/\//g, '\\');
+  return (
+    isOpenCodeServeCommand(normalizedCommand) &&
+    WINDOWS_APP_MANAGED_OPENCODE_SERVE_RE.test(normalizedCommand)
+  );
 }
 
 export function isManagedOpenCodeServeProcessDetails(details: string): boolean {
@@ -244,6 +266,30 @@ async function readNativeProcessCommandWithEnv(pid: number): Promise<string | nu
 
 async function readNativeProcessStartTimeMs(pid: number): Promise<number | null> {
   const output = await execFileText('ps', ['-p', String(pid), '-o', 'lstart='], 2_000, 64 * 1024);
+  if (!output) {
+    return null;
+  }
+  const parsed = Date.parse(output.trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function readWindowsProcessStartTimeMs(pid: number): Promise<number | null> {
+  const normalizedPid = Math.trunc(pid);
+  if (!Number.isFinite(normalizedPid) || normalizedPid <= 0) {
+    return null;
+  }
+
+  const script = [
+    '$ErrorActionPreference = "Stop"',
+    `$process = Get-Process -Id ${normalizedPid} -ErrorAction Stop`,
+    '$process.StartTime.ToUniversalTime().ToString("o")',
+  ].join('; ');
+  const output = await execFileText(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+    2_000,
+    64 * 1024
+  );
   if (!output) {
     return null;
   }

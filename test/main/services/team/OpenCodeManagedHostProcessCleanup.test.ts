@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   cleanupManagedOpenCodeServeProcesses,
   getOpenCodeServeLoopbackBaseUrl,
+  isAppManagedWindowsOpenCodeServeCommand,
   isManagedOpenCodeServeProcessDetails,
   isOpenCodeServeCommand,
 } from '@main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
@@ -13,6 +14,12 @@ const MANAGED_DETAILS = [
   'OPENCODE_CONFIG_CONTENT={}',
   'AGENT_TEAMS_MCP_CLAUDE_DIR=/tmp/claude',
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY=/tmp/mcp-entry.js',
+].join(' ');
+const MANAGED_DETAILS_WITH_REMOTE_MCP = [
+  '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 54171',
+  'CLAUDE_MULTIMODEL_DATA_HOME=/tmp/agent-teams-runtime',
+  'OPENCODE_CONFIG_CONTENT={}',
+  'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=http://127.0.0.1:58461/mcp',
 ].join(' ');
 const MANAGED_DETAILS_WITH_WORKSPACE_MCP = [
   '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 54171',
@@ -34,8 +41,27 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(isOpenCodeServeCommand('node mcp-server/src/index.ts')).toBe(false);
   });
 
+  it('identifies app-managed Windows OpenCode serve commands', () => {
+    expect(
+      isAppManagedWindowsOpenCodeServeCommand(
+        '"C:\\Users\\User\\AppData\\Roaming\\claude-agent-teams-ui\\data\\runtimes\\opencode\\versions\\1.14.48\\opencode-windows-x64\\opencode.exe" serve --hostname 127.0.0.1 --port 49913'
+      )
+    ).toBe(true);
+    expect(
+      isAppManagedWindowsOpenCodeServeCommand(
+        'C:\\tools\\opencode.exe serve --hostname 127.0.0.1 --port 49913'
+      )
+    ).toBe(false);
+    expect(
+      isAppManagedWindowsOpenCodeServeCommand(
+        'C:\\Users\\User\\AppData\\Roaming\\claude-agent-teams-ui\\data\\runtimes\\opencode\\versions\\1.14.48\\opencode-windows-x64\\opencode.exe auth login'
+      )
+    ).toBe(false);
+  });
+
   it('requires Agent Teams managed environment markers', () => {
     expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS)).toBe(true);
+    expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS_WITH_REMOTE_MCP)).toBe(true);
     expect(isManagedOpenCodeServeProcessDetails(MANAGED_DETAILS_WITH_WORKSPACE_MCP)).toBe(true);
     expect(
       isManagedOpenCodeServeProcessDetails(
@@ -347,7 +373,62 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     ]);
   });
 
-  it('skips fallback cleanup on Windows because environment markers are unavailable', async () => {
+  it('kills old orphaned app-managed Windows OpenCode serve processes', async () => {
+    const killProcess = vi.fn();
+    const disposeServeHost = vi.fn(() => resolved(undefined));
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'orphaned',
+      platform: 'win32',
+      startedBeforeMs: Date.parse('2026-05-16T00:47:55.000Z'),
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 71628,
+            ppid: 86256,
+            command:
+              '"C:\\Users\\User\\AppData\\Roaming\\claude-agent-teams-ui\\data\\runtimes\\opencode\\versions\\1.14.48\\opencode-windows-x64\\opencode.exe" serve --hostname 127.0.0.1 --port 49913',
+          },
+        ]),
+      readProcessStartTimeMs: () => resolved(Date.parse('2026-05-16T00:35:31.000Z')),
+      disposeServeHost,
+      isProcessAlive: () => false,
+      killProcess,
+    });
+
+    expect(disposeServeHost).toHaveBeenCalledWith('http://127.0.0.1:49913');
+    expect(killProcess).toHaveBeenCalledWith(71628);
+    expect(result.killed).toBe(1);
+    expect(result.scanned).toBe(1);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('keeps app-managed Windows OpenCode serve processes while their parent is still alive', async () => {
+    const killProcess = vi.fn();
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'orphaned',
+      platform: 'win32',
+      startedBeforeMs: Date.parse('2026-05-16T00:47:55.000Z'),
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 71628,
+            ppid: 86256,
+            command:
+              '"C:\\Users\\User\\AppData\\Roaming\\claude-agent-teams-ui\\data\\runtimes\\opencode\\versions\\1.14.48\\opencode-windows-x64\\opencode.exe" serve --hostname 127.0.0.1 --port 49913',
+          },
+        ]),
+      readProcessStartTimeMs: () => resolved(Date.parse('2026-05-16T00:35:31.000Z')),
+      isProcessAlive: (pid) => pid === 86256,
+      killProcess,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(result.candidates[0]).toMatchObject({ pid: 71628, action: 'kept_recent' });
+  });
+
+  it('does not kill unmanaged Windows OpenCode serve commands', async () => {
     const killProcess = vi.fn();
 
     const result = await cleanupManagedOpenCodeServeProcesses({
@@ -358,15 +439,15 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
           {
             pid: 500,
             ppid: 1,
-            command: 'opencode.exe serve --hostname 127.0.0.1',
+            command: 'C:\\tools\\opencode.exe serve --hostname 127.0.0.1',
           },
         ]),
-      readProcessDetails: () => resolved(MANAGED_DETAILS),
       killProcess,
     });
 
     expect(killProcess).not.toHaveBeenCalled();
-    expect(result.scanned).toBe(0);
-    expect(result.diagnostics[0]).toContain('skipped on Windows');
+    expect(result.scanned).toBe(1);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.candidates[0]).toMatchObject({ pid: 500, action: 'kept_unmanaged' });
   });
 });

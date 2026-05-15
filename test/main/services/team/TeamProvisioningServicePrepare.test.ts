@@ -661,6 +661,82 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
+  it('coalesces duplicate OpenCode compatibility preflight requests while prepare is in flight', async () => {
+    const prepareGate: { release?: () => void } = {};
+    const prepare = vi.fn(
+      async () =>
+        new Promise<{
+          ok: true;
+          providerId: 'opencode';
+          modelId: null;
+          diagnostics: string[];
+          warnings: string[];
+        }>((resolve) => {
+          prepareGate.release = () =>
+            resolve({
+              ok: true,
+              providerId: 'opencode',
+              modelId: null,
+              diagnostics: [],
+              warnings: [],
+            });
+        })
+    );
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        getLastOpenCodeTeamLaunchReadiness: vi.fn(() => ({
+          state: 'ready',
+          launchAllowed: true,
+          modelId: 'opencode/big-pickle',
+          availableModels: ['opencode/big-pickle'],
+          opencodeVersion: '1.0.0',
+          installMethod: 'unknown',
+          binaryPath: 'opencode',
+          hostHealthy: true,
+          appMcpConnected: true,
+          requiredToolsPresent: true,
+          permissionBridgeReady: true,
+          issues: [],
+          warnings: [],
+          diagnostics: [],
+        })),
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+    const opts = {
+      providerId: 'opencode' as const,
+      forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'compatibility' as const,
+    };
+
+    const first = svc.prepareForProvisioning(tempRoot, opts);
+    const second = svc.prepareForProvisioning(tempRoot, opts);
+
+    for (let attempt = 0; attempt < 20 && prepare.mock.calls.length === 0; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepareGate.release).toBeTypeOf('function');
+    prepareGate.release?.();
+
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(firstResult).not.toBe(secondResult);
+    expect(firstResult.ready).toBe(true);
+    expect(secondResult.ready).toBe(true);
+    expect(firstResult.details).toContain(
+      'Selected model opencode/big-pickle is compatible. Deep verification pending.'
+    );
+  });
+
   it('checks every selected OpenCode model instead of only the first one', async () => {
     const prepare = vi.fn(async (input: { model?: string }) => {
       if (input.model === 'opencode/nemotron-3-super-free') {

@@ -5996,6 +5996,10 @@ export class TeamProvisioningService {
   private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
   private inFlightResponses = new Set<string>();
+  private readonly prepareForProvisioningInFlight = new Map<
+    string,
+    Promise<TeamProvisioningPrepareResult>
+  >();
   private runtimeAdapterRegistry: TeamRuntimeAdapterRegistry | null = null;
   private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
   private workspaceTrustCoordinator: WorkspaceTrustCoordinator | null = null;
@@ -18055,6 +18059,74 @@ export class TeamProvisioningService {
   }
 
   async prepareForProvisioning(
+    cwd?: string,
+    opts?: {
+      forceFresh?: boolean;
+      providerId?: TeamProviderId;
+      providerIds?: TeamProviderId[];
+      modelIds?: string[];
+      limitContext?: boolean;
+      modelVerificationMode?: TeamProvisioningModelVerificationMode;
+    }
+  ): Promise<TeamProvisioningPrepareResult> {
+    const inFlightKey = this.createPrepareForProvisioningInFlightKey(cwd, opts);
+    const inFlight = this.prepareForProvisioningInFlight.get(inFlightKey);
+    if (inFlight) {
+      return this.clonePrepareForProvisioningResult(await inFlight);
+    }
+
+    const request = this.prepareForProvisioningOnce(cwd, opts).finally(() => {
+      if (this.prepareForProvisioningInFlight.get(inFlightKey) === request) {
+        this.prepareForProvisioningInFlight.delete(inFlightKey);
+      }
+    });
+    this.prepareForProvisioningInFlight.set(inFlightKey, request);
+    return this.clonePrepareForProvisioningResult(await request);
+  }
+
+  private createPrepareForProvisioningInFlightKey(
+    cwd?: string,
+    opts?: {
+      forceFresh?: boolean;
+      providerId?: TeamProviderId;
+      providerIds?: TeamProviderId[];
+      modelIds?: string[];
+      limitContext?: boolean;
+      modelVerificationMode?: TeamProvisioningModelVerificationMode;
+    }
+  ): string {
+    const providerIds = Array.from(
+      new Set(
+        [opts?.providerId, ...(opts?.providerIds ?? [])]
+          .map((providerId) => resolveTeamProviderId(providerId))
+          .filter((providerId): providerId is TeamProviderId => Boolean(providerId))
+      )
+    );
+    const modelIds = Array.from(
+      new Set((opts?.modelIds ?? []).map((modelId) => modelId.trim()).filter(Boolean))
+    );
+    return JSON.stringify({
+      cwd: cwd?.trim() || process.cwd(),
+      forceFresh: opts?.forceFresh === true,
+      providerIds,
+      modelIds,
+      limitContext: opts?.limitContext === true,
+      modelVerificationMode: opts?.modelVerificationMode ?? null,
+    });
+  }
+
+  private clonePrepareForProvisioningResult(
+    result: TeamProvisioningPrepareResult
+  ): TeamProvisioningPrepareResult {
+    return {
+      ...result,
+      details: result.details ? [...result.details] : undefined,
+      warnings: result.warnings ? [...result.warnings] : undefined,
+      issues: result.issues?.map((issue) => ({ ...issue })),
+    };
+  }
+
+  private async prepareForProvisioningOnce(
     cwd?: string,
     opts?: {
       forceFresh?: boolean;

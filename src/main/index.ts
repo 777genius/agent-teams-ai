@@ -133,6 +133,7 @@ import {
 import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
 import { HttpServer } from './services/infrastructure/HttpServer';
 import { clearAutoResumeService } from './services/team/AutoResumeService';
+import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer';
 import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
 import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
@@ -381,22 +382,36 @@ async function createOpenCodeRuntimeAdapterRegistry(
     );
   }
   try {
-    reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
-    const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec({
-      onProgress: ({ phase, message }) => reportProgress(`mcp-${phase}`, message),
-    });
-    const mcpEntry = mcpLaunchSpec.args[0];
-    if (mcpEntry) {
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = mcpEntry;
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON = JSON.stringify(mcpLaunchSpec.args);
-    }
+    reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
+    const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+    bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+    reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
   } catch (error) {
     logger.warn(
-      `[OpenCode] Runtime adapter bridge MCP entrypoint unresolved: ${
+      `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
         error instanceof Error ? error.message : String(error)
       }`
     );
+  }
+  if (!bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
+    try {
+      reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
+      const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec({
+        onProgress: ({ phase, message }) => reportProgress(`mcp-${phase}`, message),
+      });
+      const mcpEntry = mcpLaunchSpec.args[0];
+      if (mcpEntry) {
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = mcpEntry;
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON = JSON.stringify(mcpLaunchSpec.args);
+      }
+    } catch (error) {
+      logger.warn(
+        `[OpenCode] Runtime adapter bridge MCP entrypoint unresolved: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
@@ -2080,6 +2095,9 @@ async function shutdownServices(): Promise<void> {
       'OpenCode host registry cleanup',
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
+    );
+    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () =>
+      agentTeamsMcpHttpServer.stop()
     );
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
