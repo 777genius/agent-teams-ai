@@ -140,6 +140,8 @@ function getConnectionDescription(provider: CliProviderStatus): string {
       return 'Configure optional API access. CLI SDK and ADC are still discovered automatically.';
     case 'opencode':
       return 'OpenCode authentication and provider inventory are managed by the OpenCode runtime.';
+    case 'kilocode':
+      return 'KiloCode uses an API key for authentication with the KiloCode gateway.';
   }
 }
 
@@ -153,6 +155,8 @@ function getRuntimeDescription(provider: CliProviderStatus): string {
       return 'Choose which Gemini runtime backend multimodel should use.';
     case 'opencode':
       return 'OpenCode uses its own managed runtime host. Desktop currently exposes status only.';
+    case 'kilocode':
+      return 'KiloCode uses its own managed runtime host. Configure an API key to use the KiloCode gateway.';
   }
 }
 

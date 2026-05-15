@@ -503,6 +503,10 @@ export class CliInstallerService {
                 providerId: 'opencode',
                 displayName: 'OpenCode (75+ LLM providers)',
               },
+              {
+                providerId: 'kilocode',
+                displayName: 'KiloCode',
+              },
             ] as const
           ).map((provider) => ({
             ...provider,
@@ -768,7 +772,7 @@ export class CliInstallerService {
       return null;
     }
 
-    if (providerId === 'opencode') {
+    if (providerId === 'opencode' || providerId === 'kilocode') {
       const providerStatus = await this.multimodelBridgeService.verifyProviderStatus(
         binaryPath,
         providerId

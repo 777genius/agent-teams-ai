@@ -149,6 +149,7 @@ describe('CliInstallerService', () => {
         'codex',
         'gemini',
         'opencode',
+        'kilocode',
       ]);
       expect(openCodeStatus).toMatchObject({
         displayName: 'OpenCode (75+ LLM providers)',

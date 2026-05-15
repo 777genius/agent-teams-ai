@@ -384,6 +384,7 @@ const BRAND_ALIASES: Record<string, string> = {
   'gitlab-duo': 'gitlab-duo',
   'google-vertex': 'google-vertex',
   'hugging-face': 'huggingface',
+  kilocode: 'kilo',
   'mistral-ai': 'mistral',
   'ollama-cloud': 'ollama-cloud',
   'opencode-zen': 'opencode',

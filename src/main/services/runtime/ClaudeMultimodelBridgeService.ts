@@ -327,6 +327,8 @@ function getProviderDisplayName(providerId: CliProviderId): string {
       return 'Gemini';
     case 'opencode':
       return 'OpenCode (75+ LLM providers)';
+    case 'kilocode':
+      return 'KiloCode';
   }
 }
 
@@ -402,15 +404,14 @@ function mapRuntimeExtensionCapabilities(
   const defaults = capabilities
     ? createDefaultCliExtensionCapabilities()
     : createLegacyRuntimeFallbackCliExtensionCapabilities();
-  const pluginStatus =
-    providerId === 'opencode'
-      ? 'unsupported'
-      : (capabilities?.plugins?.status ?? defaults.plugins.status);
-  const pluginReason =
-    providerId === 'opencode'
-      ? (capabilities?.plugins?.reason ??
-        'OpenCode does not support plugin management from Agent Teams.')
-      : (capabilities?.plugins?.reason ?? defaults.plugins.reason);
+  const isExternalRuntime = providerId === 'opencode' || providerId === 'kilocode';
+  const pluginStatus = isExternalRuntime
+    ? 'unsupported'
+    : (capabilities?.plugins?.status ?? defaults.plugins.status);
+  const pluginReason = isExternalRuntime
+    ? (capabilities?.plugins?.reason ??
+      `${getProviderDisplayName(providerId)} does not support plugin management from Agent Teams.`)
+    : (capabilities?.plugins?.reason ?? defaults.plugins.reason);
 
   return {
     plugins: {

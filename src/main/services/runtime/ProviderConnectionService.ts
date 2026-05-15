@@ -62,12 +62,18 @@ const PROVIDER_CAPABILITIES: Record<
     supportsApiKey: false,
     configurableAuthModes: [],
   },
+  kilocode: {
+    supportsOAuth: false,
+    supportsApiKey: true,
+    configurableAuthModes: ['api_key'],
+  },
 };
 
 const PROVIDER_API_KEY_ENV_VARS: Partial<Record<CliProviderId, string>> = {
   anthropic: 'ANTHROPIC_API_KEY',
   codex: 'OPENAI_API_KEY',
   gemini: 'GEMINI_API_KEY',
+  kilocode: 'KILO_API_KEY',
 };
 
 const CODEX_NATIVE_API_KEY_ENV_VAR = 'CODEX_API_KEY';

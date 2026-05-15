@@ -949,7 +949,7 @@ export interface TeamViewSnapshot {
 }
 
 export type EffortLevel = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-export type TeamProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode';
+export type TeamProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode' | 'kilocode';
 export type TeamProviderBackendId =
   | 'auto'
   | 'adapter'
