@@ -8,6 +8,51 @@ const fetchCliStatus = vi.fn();
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
+const createTeamDraftMock = vi.hoisted(() => ({
+  state: {
+    teamName: 'team-alpha',
+    setTeamName: vi.fn(),
+    members: [
+      {
+        id: 'member-opencode',
+        name: 'tom',
+        roleSelection: '',
+        customRole: 'Developer',
+        workflow: '',
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+      },
+      {
+        id: 'member-codex',
+        name: 'bob',
+        roleSelection: '',
+        customRole: 'Developer',
+        workflow: '',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+      },
+    ],
+    setMembers: vi.fn(),
+    syncModelsWithLead: false,
+    setSyncModelsWithLead: vi.fn(),
+    teammateWorktreeDefault: false,
+    setTeammateWorktreeDefault: vi.fn(),
+    cwdMode: 'project' as const,
+    setCwdMode: vi.fn(),
+    selectedProjectPath: '/tmp/project',
+    setSelectedProjectPath: vi.fn(),
+    customCwd: '',
+    setCustomCwd: vi.fn(),
+    soloTeam: false,
+    setSoloTeam: vi.fn(),
+    launchTeam: true,
+    setLaunchTeam: vi.fn(),
+    teamColor: 'slate',
+    setTeamColor: vi.fn(),
+    isLoaded: true,
+    clearDraft: vi.fn(),
+  },
+}));
 
 const storeState = {
   appConfig: { general: { multimodelEnabled: true } },
@@ -141,6 +186,20 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       effort: draft.effort as 'low' | 'medium' | 'high' | undefined,
       fastMode: draft.fastMode as 'inherit' | 'on' | 'off' | undefined,
     })),
+  createMemberDraft: (member: any = {}) => ({
+    id: member.id ?? 'draft-member',
+    name: member.name ?? '',
+    originalName: member.originalName ?? member.name ?? '',
+    roleSelection: member.roleSelection ?? '',
+    customRole: member.customRole ?? '',
+    workflow: member.workflow ?? '',
+    isolation: member.isolation,
+    providerId: member.providerId,
+    providerBackendId: member.providerBackendId,
+    model: member.model ?? '',
+    effort: member.effort,
+    fastMode: member.fastMode,
+  }),
   clearMemberModelOverrides: (member: unknown) => member,
   createMemberDraftsFromInputs: (
     members: Array<{
@@ -228,6 +287,10 @@ vi.mock('@renderer/components/ui/button', () => ({
     ),
 }));
 
+vi.mock('@renderer/components/ui/auto-resize-textarea', () => ({
+  AutoResizeTextarea: (props: Record<string, unknown>) => React.createElement('textarea', props),
+}));
+
 vi.mock('@renderer/components/ui/checkbox', () => ({
   Checkbox: ({
     checked,
@@ -305,6 +368,10 @@ vi.mock('@renderer/hooks/useChipDraftPersistence', () => ({
     addChip: vi.fn(),
     clearChipDraft: vi.fn(),
   }),
+}));
+
+vi.mock('@renderer/hooks/useCreateTeamDraft', () => ({
+  useCreateTeamDraft: () => createTeamDraftMock.state,
 }));
 
 vi.mock('@renderer/hooks/useDraftPersistence', () => ({
@@ -447,6 +514,7 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
 }));
 
 import { api } from '@renderer/api';
+import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { isTeamModelAvailableForUi } from '@renderer/utils/teamModelAvailability';
@@ -461,6 +529,7 @@ describe('LaunchTeamDialog', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     localStorage.clear();
+    vi.useRealTimers();
     vi.clearAllMocks();
     storeState.cliStatus = { providers: [] };
     storeState.launchParamsByTeam = {};
@@ -1794,6 +1863,156 @@ describe('LaunchTeamDialog', () => {
       .mocked(runProviderPrepareDiagnostics)
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
     expect(inFlightOpencodePrepareCalls).toHaveLength(1);
+    expect(host.textContent).toContain('Selected providers are ready.');
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps create-team preflight alive across same-signature rerenders', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'api_key',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['haiku'],
+          modelCatalog: {
+            source: 'live',
+            status: 'ready',
+            models: [{ id: 'haiku' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+        },
+        {
+          providerId: 'codex',
+          supported: true,
+          authenticated: true,
+          authMethod: 'chatgpt',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          selectedBackendId: 'codex-native',
+          resolvedBackendId: 'codex-native',
+          models: ['gpt-5.5'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'gpt-5.5' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+        },
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: 'warming up',
+          detailMessage: 'first render',
+          models: ['opencode/big-pickle'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'opencode/big-pickle' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+
+    let resolvePrepare!: (value: {
+      status: 'ready';
+      warnings: [];
+      details: [];
+      modelResultsById: {};
+    }) => void;
+    const preparePromise = new Promise<{
+      status: 'ready';
+      warnings: [];
+      details: [];
+      modelResultsById: {};
+    }>((resolve) => {
+      resolvePrepare = resolve;
+    });
+    vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(preparePromise as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const renderDialog = async (): Promise<void> => {
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          clearProvisioningError: vi.fn(),
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate: vi.fn(async () => {}),
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    };
+
+    await act(async () => {
+      await renderDialog();
+      await flush();
+    });
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await flush();
+    });
+
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalled();
+
+    await act(async () => {
+      await renderDialog();
+      await flush();
+    });
+
+    const callsAfterSameSignatureRerender = vi.mocked(runProviderPrepareDiagnostics).mock.calls.length;
+
+    await act(async () => {
+      resolvePrepare({
+        status: 'ready',
+        warnings: [],
+        details: [],
+        modelResultsById: {},
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(
+      callsAfterSameSignatureRerender
+    );
     expect(host.textContent).toContain('Selected providers are ready.');
 
     await act(async () => {

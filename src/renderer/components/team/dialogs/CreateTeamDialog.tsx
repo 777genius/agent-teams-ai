@@ -691,6 +691,15 @@ export const CreateTeamDialog = ({
     }
   }, [open]);
 
+  useEffect(() => {
+    return () => {
+      cancelScheduledIdle(prepareIdleHandleRef.current);
+      prepareIdleHandleRef.current = null;
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
+    };
+  }, []);
+
   const prepareRuntimeStatusSignature = useMemo(
     () =>
       buildProviderPrepareRuntimeStatusSignature(
@@ -800,12 +809,16 @@ export const CreateTeamDialog = ({
 
   useEffect(() => {
     if (!open || !canCreate || !launchTeam) {
+      cancelScheduledIdle(prepareIdleHandleRef.current);
+      prepareIdleHandleRef.current = null;
       prepareRequestSeqRef.current += 1;
       lastPrepareRequestSignatureRef.current = null;
       return;
     }
 
     if (typeof api.teams.prepareProvisioning !== 'function') {
+      cancelScheduledIdle(prepareIdleHandleRef.current);
+      prepareIdleHandleRef.current = null;
       prepareRequestSeqRef.current += 1;
       lastPrepareRequestSignatureRef.current = null;
       setPrepareState('failed');
@@ -818,6 +831,8 @@ export const CreateTeamDialog = ({
     }
 
     if (!effectiveCwd) {
+      cancelScheduledIdle(prepareIdleHandleRef.current);
+      prepareIdleHandleRef.current = null;
       prepareRequestSeqRef.current += 1;
       lastPrepareRequestSignatureRef.current = null;
       setPrepareState('idle');
@@ -1023,16 +1038,6 @@ export const CreateTeamDialog = ({
         }
       })();
     });
-
-    return () => {
-      cancelScheduledIdle(prepareIdleHandleRef.current);
-      prepareIdleHandleRef.current = null;
-      // Bump the request sequence so any callback that already woke up but
-      // hasn't checked yet treats itself as superseded.
-      if (prepareRequestSeqRef.current === requestSeq) {
-        prepareRequestSeqRef.current += 1;
-      }
-    };
   }, [
     open,
     canCreate,
