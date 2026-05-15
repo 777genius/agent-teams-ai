@@ -134,6 +134,18 @@ describe('cli child process helpers', () => {
       expect(result).toEqual({} as any);
     });
 
+    it('hides spawned CLI windows by default but preserves explicit opt-out', () => {
+      setPlatform('win32');
+      const spawnMock = child.spawn as unknown as Mock;
+      spawnMock.mockReturnValue({} as any);
+
+      spawnCli('C:\\bin\\claude.exe', ['--version']);
+      expect(spawnMock.mock.calls[0][2]).toMatchObject({ windowsHide: true });
+
+      spawnCli('C:\\bin\\claude.exe', ['--version'], { windowsHide: false });
+      expect(spawnMock.mock.calls[1][2]).toMatchObject({ windowsHide: false });
+    });
+
     it('falls back to shell when spawn throws EINVAL', () => {
       setPlatform('win32');
       const error: any = new Error('spawn EINVAL');
@@ -294,6 +306,23 @@ describe('cli child process helpers', () => {
         expect.any(Function)
       );
       expect(result.stdout).toBe('ok');
+    });
+
+    it('hides exec CLI windows by default but preserves explicit opt-out', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
+          cb(null, 'ok', '');
+          return {} as any;
+        }
+      );
+
+      await execCli('C:\\bin\\claude.exe', ['--version']);
+      expect(execFileMock.mock.calls[0][2]).toMatchObject({ windowsHide: true });
+
+      await execCli('C:\\bin\\claude.exe', ['--version'], { windowsHide: false });
+      expect(execFileMock.mock.calls[1][2]).toMatchObject({ windowsHide: false });
     });
 
     it('skips straight to shell for Windows cmd launchers', async () => {
