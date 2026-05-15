@@ -979,21 +979,29 @@ export class CliInstallerService {
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
+      const mergeWithNonBridgeProviders = (
+        bridgeProviders: CliProviderStatus[]
+      ): CliProviderStatus[] => {
+        const bridgeIds = new Set(bridgeProviders.map((p) => p.providerId));
+        const nonBridgeProviders = result.providers.filter((p) => !bridgeIds.has(p.providerId));
+        return [...bridgeProviders, ...nonBridgeProviders];
+      };
       try {
         const providers = await this.multimodelBridgeService.getProviderStatuses(
           binaryPath,
           (providersSnapshot) => {
-            result.providers = providersSnapshot;
-            result.authLoggedIn = providersSnapshot.some((provider) => provider.authenticated);
+            const merged = mergeWithNonBridgeProviders(providersSnapshot);
+            result.providers = merged;
+            result.authLoggedIn = merged.some((provider) => provider.authenticated);
             result.authMethod =
-              providersSnapshot.find((provider) => provider.authenticated)?.authMethod ?? null;
+              merged.find((provider) => provider.authenticated)?.authMethod ?? null;
             this.publishStatusSnapshot(result);
           }
         );
-        result.providers = providers;
-        result.authLoggedIn = providers.some((provider) => provider.authenticated);
-        result.authMethod =
-          providers.find((provider) => provider.authenticated)?.authMethod ?? null;
+        const merged = mergeWithNonBridgeProviders(providers);
+        result.providers = merged;
+        result.authLoggedIn = merged.some((provider) => provider.authenticated);
+        result.authMethod = merged.find((provider) => provider.authenticated)?.authMethod ?? null;
         result.authStatusChecking = false;
         this.publishStatusSnapshot(result);
       } catch (error) {
