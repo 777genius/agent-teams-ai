@@ -21,6 +21,11 @@ interface AgentChildProcessWritableEnvPaths {
   commandShell: string;
 }
 
+interface AgentChildProcessWritableDirectory {
+  label: string;
+  dir: string;
+}
+
 function firstNonEmpty(...values: (string | undefined | null)[]): string | undefined {
   for (const value of values) {
     const trimmed = value?.trim();
@@ -29,6 +34,10 @@ function firstNonEmpty(...values: (string | undefined | null)[]): string | undef
     }
   }
   return undefined;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function setPathEnv(env: NodeJS.ProcessEnv, key: string, value: string): string {
@@ -97,6 +106,45 @@ function applyResolvedWritableEnv(
   return env;
 }
 
+async function ensureWritableDirectory(root: AgentChildProcessWritableDirectory): Promise<void> {
+  try {
+    await fs.promises.mkdir(root.dir, { recursive: true });
+
+    const probePath = path.join(
+      root.dir,
+      `.agent-studio-write-probe-${process.pid}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.tmp`
+    );
+    let probeCreated = false;
+    let cleanupError: unknown;
+
+    try {
+      await fs.promises.writeFile(probePath, 'ok', 'utf8');
+      probeCreated = true;
+
+      const written = await fs.promises.readFile(probePath, 'utf8');
+      if (written !== 'ok') {
+        throw new Error('write probe read back unexpected content');
+      }
+    } finally {
+      if (probeCreated) {
+        try {
+          await fs.promises.unlink(probePath);
+        } catch (error) {
+          cleanupError = error;
+        }
+      }
+    }
+
+    if (cleanupError) {
+      throw new Error(`write probe cleanup failed: ${errorMessage(cleanupError)}`);
+    }
+  } catch (error) {
+    throw new Error(`${root.label} at ${root.dir} failed writable check: ${errorMessage(error)}`);
+  }
+}
+
 export function applyAgentChildProcessWritableEnv(
   env: NodeJS.ProcessEnv,
   options: AgentChildProcessEnvOptions = {}
@@ -117,9 +165,19 @@ export async function prepareAgentChildProcessWritableEnv(
   }
 
   const paths = resolveWritableEnvPaths(env, options);
-  const dirs = [paths.tempRoot, paths.npmCache, paths.gradleHome, paths.androidHome];
+  const dirs: AgentChildProcessWritableDirectory[] = [
+    { label: 'TEMP/TMP/TMPDIR', dir: paths.tempRoot },
+    { label: 'npm cache', dir: paths.npmCache },
+    { label: 'Gradle home', dir: paths.gradleHome },
+    { label: 'Android home', dir: paths.androidHome },
+  ];
   try {
-    await Promise.all(dirs.map((dir) => fs.promises.mkdir(dir, { recursive: true })));
+    const checks = await Promise.allSettled(dirs.map((dir) => ensureWritableDirectory(dir)));
+    const failed = checks.find((check) => check.status === 'rejected');
+    if (failed?.status === 'rejected') {
+      throw failed.reason;
+    }
+
     applyResolvedWritableEnv(env, paths);
     return { applied: true, cacheBase: paths.cacheBase };
   } catch (error) {
@@ -128,9 +186,7 @@ export async function prepareAgentChildProcessWritableEnv(
       cacheBase: paths.cacheBase,
       warning:
         `Windows agent writable cache setup skipped for ${paths.cacheBase}; ` +
-        `keeping existing temp/cache env. Details: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `keeping existing temp/cache env. Details: ${errorMessage(error)}`,
     };
   }
 }

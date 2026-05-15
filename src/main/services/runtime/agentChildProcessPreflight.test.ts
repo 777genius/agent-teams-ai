@@ -1,13 +1,12 @@
 // @vitest-environment node
+import {
+  applyAgentChildProcessWritableEnv,
+  prepareAgentChildProcessWritableEnv,
+} from '@main/services/runtime/agentChildProcessPreflight';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import {
-  applyAgentChildProcessWritableEnv,
-  prepareAgentChildProcessWritableEnv,
-} from './agentChildProcessPreflight';
 
 const originalPlatform = process.platform;
 
@@ -80,6 +79,14 @@ describe('agent child-process writable env', () => {
     await expect(
       fs.promises.access(path.join(expectedBase, 'android-home'))
     ).resolves.toBeUndefined();
+
+    for (const dirName of ['tmp', 'npm-cache', 'gradle-home', 'android-home']) {
+      const entries = await fs.promises.readdir(path.join(expectedBase, dirName));
+      const probeEntries = entries.filter((entry) =>
+        entry.startsWith('.agent-studio-write-probe-')
+      );
+      expect(probeEntries).toEqual([]);
+    }
   });
 
   it('fails open and leaves existing env untouched when cache dirs cannot be created', async () => {
@@ -108,6 +115,33 @@ describe('agent child-process writable env', () => {
     });
   });
 
+  it('fails open and leaves existing env untouched when cache dirs are not writable', async () => {
+    const home = path.join(tmpRoot, 'home');
+    const originalTemp = path.join(tmpRoot, 'existing-temp');
+    const env: NodeJS.ProcessEnv = {
+      COMSPEC: 'cmd.exe',
+      LOCALAPPDATA: path.join(home, 'AppData', 'Local'),
+      TEMP: originalTemp,
+      TMP: originalTemp,
+    };
+    vi.spyOn(fs.promises, 'writeFile').mockRejectedValueOnce(new Error('EPERM'));
+
+    const result = await prepareAgentChildProcessWritableEnv(env, { home });
+
+    expect(result.applied).toBe(false);
+    expect(result.cacheBase).toBe(
+      path.join(home, 'AppData', 'Local', 'AgentStudio', 'runner-cache')
+    );
+    expect(result.warning).toContain('failed writable check');
+    expect(result.warning).toContain('EPERM');
+    expect(env).toEqual({
+      COMSPEC: 'cmd.exe',
+      LOCALAPPDATA: path.join(home, 'AppData', 'Local'),
+      TEMP: originalTemp,
+      TMP: originalTemp,
+    });
+  });
+
   it('keeps the synchronous env applicator available for prepared directories', () => {
     const home = path.join(tmpRoot, 'home');
     const env: NodeJS.ProcessEnv = {
@@ -119,6 +153,7 @@ describe('agent child-process writable env', () => {
 
     const expectedBase = path.join(home, 'AppData', 'Local', 'AgentStudio', 'runner-cache');
     expect(env.TEMP).toBe(path.join(expectedBase, 'tmp'));
+    expect(env.TMP).toBe(path.join(expectedBase, 'tmp'));
     expect(env.TMPDIR).toBe(path.join(expectedBase, 'tmp'));
   });
 });
