@@ -979,11 +979,27 @@ export class CliInstallerService {
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
+      const resolveKilocodeStatus = (provider: CliProviderStatus): CliProviderStatus => {
+        if (provider.providerId !== 'kilocode') {
+          return provider;
+        }
+        const hasApiKey = Boolean(process.env.KILO_API_KEY?.trim());
+        return {
+          ...provider,
+          supported: hasApiKey,
+          authenticated: hasApiKey,
+          verificationState: 'verified',
+          statusMessage: hasApiKey ? null : 'Configure KILO_API_KEY to use KiloCode.',
+          canLoginFromUi: true,
+        };
+      };
       const mergeWithNonBridgeProviders = (
         bridgeProviders: CliProviderStatus[]
       ): CliProviderStatus[] => {
         const bridgeIds = new Set(bridgeProviders.map((p) => p.providerId));
-        const nonBridgeProviders = result.providers.filter((p) => !bridgeIds.has(p.providerId));
+        const nonBridgeProviders = result.providers
+          .filter((p) => !bridgeIds.has(p.providerId))
+          .map(resolveKilocodeStatus);
         return [...bridgeProviders, ...nonBridgeProviders];
       };
       try {
