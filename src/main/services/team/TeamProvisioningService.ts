@@ -51,6 +51,7 @@ import {
 } from '@features/workspace-trust/main';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
+import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
 import { getAppIconPath } from '@main/utils/appIcon';
 import {
   execCli,
@@ -33350,6 +33351,10 @@ export class TeamProvisioningService {
     });
     const providerConnectionIssue = providerEnvResult.connectionIssues[resolvedProviderId];
     const providerEnv = providerEnvResult.env;
+    const writableEnvResult = await prepareAgentChildProcessWritableEnv(providerEnv, { home });
+    if (writableEnvResult.warning) {
+      logger.warn(`[TeamProvisioningService] ${writableEnvResult.warning}`);
+    }
     if (options?.includeCodexTeammateAuth && resolvedProviderId !== 'codex') {
       await this.providerConnectionService.augmentConfiguredConnectionEnv(
         providerEnv,
