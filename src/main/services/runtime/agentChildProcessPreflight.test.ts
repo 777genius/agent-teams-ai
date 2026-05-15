@@ -2,25 +2,14 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('child_process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('child_process')>();
-  return {
-    ...actual,
-    spawnSync: vi.fn(),
-  };
-});
-
-import * as childProcess from 'child_process';
 import {
   applyAgentChildProcessWritableEnv,
-  assertAgentChildProcessPreflight,
+  prepareAgentChildProcessWritableEnv,
 } from './agentChildProcessPreflight';
 
 const originalPlatform = process.platform;
-const spawnSyncMock = vi.mocked(childProcess.spawnSync);
 
 function setPlatform(value: string): void {
   Object.defineProperty(process, 'platform', {
@@ -30,44 +19,48 @@ function setPlatform(value: string): void {
   });
 }
 
-function successfulSpawn(stdout = '1.0.0\n'): childProcess.SpawnSyncReturns<string> {
-  return {
-    output: [],
-    pid: 123,
-    signal: null,
-    status: 0,
-    stderr: '',
-    stdout,
-  };
-}
-
-describe('agent child-process preflight', () => {
+describe('agent child-process writable env', () => {
   let tmpRoot: string;
 
   beforeEach(() => {
     setPlatform('win32');
-    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-child-preflight-'));
-    spawnSyncMock.mockReset();
-    spawnSyncMock.mockReturnValue(successfulSpawn());
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-child-env-'));
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     setPlatform(originalPlatform);
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   });
 
-  it('injects stable writable cache and temp env for Windows agents', () => {
+  it('does not mutate env on non-Windows platforms', async () => {
+    setPlatform('darwin');
+    const env: NodeJS.ProcessEnv = {
+      TEMP: path.join(tmpRoot, 'existing-temp'),
+    };
+
+    const result = await prepareAgentChildProcessWritableEnv(env, { home: tmpRoot });
+
+    expect(result).toEqual({ applied: false });
+    expect(env).toEqual({
+      TEMP: path.join(tmpRoot, 'existing-temp'),
+    });
+  });
+
+  it('prepares stable writable cache and temp env for Windows agents', async () => {
     const home = path.join(tmpRoot, 'home');
     const env: NodeJS.ProcessEnv = {
       COMSPEC: 'cmd.exe',
       LOCALAPPDATA: path.join(home, 'AppData', 'Local'),
     };
 
-    applyAgentChildProcessWritableEnv(env, { home });
+    const result = await prepareAgentChildProcessWritableEnv(env, { home });
 
     const expectedBase = path.join(home, 'AppData', 'Local', 'AgentStudio', 'runner-cache');
+    expect(result).toEqual({ applied: true, cacheBase: expectedBase });
     expect(env.TEMP).toBe(path.join(expectedBase, 'tmp'));
     expect(env.TMP).toBe(path.join(expectedBase, 'tmp'));
+    expect(env.TMPDIR).toBe(path.join(expectedBase, 'tmp'));
     expect(env.npm_config_cache).toBe(path.join(expectedBase, 'npm-cache'));
     expect(env.NPM_CONFIG_CACHE).toBe(path.join(expectedBase, 'npm-cache'));
     expect(env.GRADLE_USER_HOME).toBe(path.join(expectedBase, 'gradle-home'));
@@ -78,66 +71,54 @@ describe('agent child-process preflight', () => {
     expect(env.AGENT_STUDIO_NPX_CMD).toBe('npx.cmd');
     expect(env.GRADLE_OPTS).toContain('-Djava.io.tmpdir=');
     expect(env.JAVA_TOOL_OPTIONS).toContain('-Djava.io.tmpdir=');
-  });
 
-  it('checks writable roots and .cmd shims before the agent starts', async () => {
-    const env: NodeJS.ProcessEnv = {
-      COMSPEC: 'cmd.exe',
-      TEMP: path.join(tmpRoot, 'tmp'),
-      TMP: path.join(tmpRoot, 'tmp'),
-      npm_config_cache: path.join(tmpRoot, 'npm-cache'),
-      GRADLE_USER_HOME: path.join(tmpRoot, 'gradle-home'),
-      ANDROID_USER_HOME: path.join(tmpRoot, 'android-home'),
-      ANDROID_SDK_HOME: path.join(tmpRoot, 'android-home'),
-    };
-    const cwd = path.join(tmpRoot, 'workspace');
-
-    await assertAgentChildProcessPreflight({ cwd, env, timeoutMs: 1_000 });
-
-    expect(spawnSyncMock).toHaveBeenCalledTimes(3);
-    expect(spawnSyncMock).toHaveBeenNthCalledWith(
-      1,
-      'node.exe',
-      expect.any(Array),
-      expect.objectContaining({ cwd, env, timeout: 1_000, windowsHide: true })
-    );
-    expect(spawnSyncMock).toHaveBeenNthCalledWith(
-      2,
-      'cmd.exe',
-      ['/d', '/s', '/c', 'npm.cmd --version'],
-      expect.objectContaining({ cwd, env, timeout: 1_000, windowsHide: true })
-    );
-    expect(spawnSyncMock).toHaveBeenNthCalledWith(
-      3,
-      'cmd.exe',
-      ['/d', '/s', '/c', 'npx.cmd --version'],
-      expect.objectContaining({ cwd, env, timeout: 1_000, windowsHide: true })
-    );
-  });
-
-  it('fails with a runner-level error when child process spawn is blocked', async () => {
-    const env: NodeJS.ProcessEnv = {
-      COMSPEC: 'cmd.exe',
-      TEMP: path.join(tmpRoot, 'tmp'),
-      npm_config_cache: path.join(tmpRoot, 'npm-cache'),
-      GRADLE_USER_HOME: path.join(tmpRoot, 'gradle-home'),
-      ANDROID_USER_HOME: path.join(tmpRoot, 'android-home'),
-      ANDROID_SDK_HOME: path.join(tmpRoot, 'android-home'),
-    };
-    spawnSyncMock
-      .mockReturnValueOnce({
-        ...successfulSpawn(''),
-        error: new Error('spawnSync node.exe EPERM'),
-        status: null,
-      })
-      .mockReturnValue(successfulSpawn());
-
+    await expect(fs.promises.access(path.join(expectedBase, 'tmp'))).resolves.toBeUndefined();
+    await expect(fs.promises.access(path.join(expectedBase, 'npm-cache'))).resolves.toBeUndefined();
     await expect(
-      assertAgentChildProcessPreflight({
-        cwd: path.join(tmpRoot, 'workspace-failure'),
-        env,
-        timeoutMs: 1_000,
-      })
-    ).rejects.toThrow(/Agent child-process preflight failed/);
+      fs.promises.access(path.join(expectedBase, 'gradle-home'))
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.promises.access(path.join(expectedBase, 'android-home'))
+    ).resolves.toBeUndefined();
+  });
+
+  it('fails open and leaves existing env untouched when cache dirs cannot be created', async () => {
+    const home = path.join(tmpRoot, 'home');
+    const originalTemp = path.join(tmpRoot, 'existing-temp');
+    const env: NodeJS.ProcessEnv = {
+      COMSPEC: 'cmd.exe',
+      LOCALAPPDATA: path.join(home, 'AppData', 'Local'),
+      TEMP: originalTemp,
+      TMP: originalTemp,
+    };
+    vi.spyOn(fs.promises, 'mkdir').mockRejectedValueOnce(new Error('EACCES'));
+
+    const result = await prepareAgentChildProcessWritableEnv(env, { home });
+
+    expect(result.applied).toBe(false);
+    expect(result.cacheBase).toBe(
+      path.join(home, 'AppData', 'Local', 'AgentStudio', 'runner-cache')
+    );
+    expect(result.warning).toContain('keeping existing temp/cache env');
+    expect(env).toEqual({
+      COMSPEC: 'cmd.exe',
+      LOCALAPPDATA: path.join(home, 'AppData', 'Local'),
+      TEMP: originalTemp,
+      TMP: originalTemp,
+    });
+  });
+
+  it('keeps the synchronous env applicator available for prepared directories', () => {
+    const home = path.join(tmpRoot, 'home');
+    const env: NodeJS.ProcessEnv = {
+      COMSPEC: 'cmd.exe',
+      LOCALAPPDATA: path.join(home, 'AppData', 'Local'),
+    };
+
+    applyAgentChildProcessWritableEnv(env, { home });
+
+    const expectedBase = path.join(home, 'AppData', 'Local', 'AgentStudio', 'runner-cache');
+    expect(env.TEMP).toBe(path.join(expectedBase, 'tmp'));
+    expect(env.TMPDIR).toBe(path.join(expectedBase, 'tmp'));
   });
 });
