@@ -14350,6 +14350,8 @@ describe('TeamProvisioningService', () => {
       getConfig,
       getConfigSnapshot,
     } as any);
+    const persistInboxMessage = vi.fn();
+    (svc as any).persistInboxMessage = persistInboxMessage;
 
     await (svc as any).respondToTeammatePermission(
       { teamName: 'ops-team' },
@@ -14378,6 +14380,13 @@ describe('TeamProvisioningService', () => {
     expect(settings.permissions?.allow).not.toContain('mcp__agent-teams__kanban_clear');
     expect(getConfig).toHaveBeenCalledWith('ops-team');
     expect(getConfigSnapshot).not.toHaveBeenCalled();
+    expect(persistInboxMessage).toHaveBeenCalledWith(
+      'ops-team',
+      'alice',
+      expect.objectContaining({
+        text: expect.stringContaining('"type":"permission_response"'),
+      })
+    );
   });
 
   it('does not broaden admin/runtime teammate permission suggestions', async () => {
@@ -14388,6 +14397,7 @@ describe('TeamProvisioningService', () => {
         members: [{ cwd: tempClaudeRoot }],
       })),
     } as any);
+    (svc as any).persistInboxMessage = vi.fn();
 
     await (svc as any).respondToTeammatePermission(
       { teamName: 'ops-team' },
@@ -14410,6 +14420,127 @@ describe('TeamProvisioningService', () => {
       permissions?: { allow?: string[] };
     };
     expect(settings.permissions?.allow).toEqual(['mcp__agent-teams__team_stop']);
+  });
+
+  it('builds teammate AskUserQuestion permission responses with answers', () => {
+    const svc = new TeamProvisioningService();
+    const toolInput = {
+      questions: [
+        {
+          question: 'What type of calculator app would you like?',
+          header: 'App type',
+          options: [
+            { label: 'Web UI (Recommended)', description: 'Browser app' },
+            { label: 'CLI', description: 'Terminal app' },
+          ],
+          multiSelect: false,
+        },
+      ],
+    };
+
+    expect(
+      (svc as any).buildTeammatePermissionUpdatedInput(
+        'AskUserQuestion',
+        toolInput,
+        JSON.stringify({
+          'What type of calculator app would you like?': 'Web UI (Recommended)',
+        })
+      )
+    ).toEqual({
+      ...toolInput,
+      answers: {
+        'What type of calculator app would you like?': 'Web UI (Recommended)',
+      },
+    });
+  });
+
+  it('sends teammate AskUserQuestion permission responses to the teammate inbox', async () => {
+    const svc = new TeamProvisioningService();
+    const persistInboxMessage = vi.fn();
+    (svc as any).persistInboxMessage = persistInboxMessage;
+    const toolInput = {
+      questions: [
+        {
+          question: 'What type of calculator app would you like?',
+          options: [{ label: 'Web UI (Recommended)', description: 'Browser app' }],
+        },
+      ],
+    };
+
+    await (svc as any).respondToTeammatePermission(
+      { teamName: 'ops-team', runId: 'run-1' },
+      'bob',
+      'perm-1',
+      true,
+      JSON.stringify({
+        'What type of calculator app would you like?': 'Web UI (Recommended)',
+      }),
+      [],
+      'AskUserQuestion',
+      toolInput
+    );
+
+    expect(persistInboxMessage).toHaveBeenCalledTimes(1);
+    const [, recipient, message] = persistInboxMessage.mock.calls[0];
+    expect(recipient).toBe('bob');
+    expect(JSON.parse(message.text)).toEqual({
+      type: 'permission_response',
+      request_id: 'perm-1',
+      subtype: 'success',
+      response: {
+        updated_input: {
+          ...toolInput,
+          answers: {
+            'What type of calculator app would you like?': 'Web UI (Recommended)',
+          },
+        },
+        permission_updates: [],
+      },
+    });
+  });
+
+  it('keeps AskUserQuestion answers in teammate fallback control responses', async () => {
+    const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
+      cb?.();
+      return true;
+    });
+    const svc = new TeamProvisioningService({
+      getConfig: vi.fn(async () => ({
+        projectPath: tempClaudeRoot,
+        members: [{ cwd: tempClaudeRoot }],
+      })),
+    } as any);
+    (svc as any).persistInboxMessage = vi.fn();
+    const toolInput = {
+      questions: [
+        {
+          question: 'What features do you need?',
+          options: [{ label: 'Basic', description: 'Arithmetic' }],
+        },
+      ],
+    };
+
+    await (svc as any).respondToTeammatePermission(
+      {
+        teamName: 'ops-team',
+        runId: 'run-1',
+        child: { stdin: { writable: true, write } },
+      },
+      'bob',
+      'perm-2',
+      true,
+      JSON.stringify({ 'What features do you need?': 'Basic' }),
+      [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }],
+      'AskUserQuestion',
+      toolInput
+    );
+
+    expect(write).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(write.mock.calls[0][0]);
+    expect(payload.response.response.updatedInput).toEqual({
+      ...toolInput,
+      answers: { 'What features do you need?': 'Basic' },
+    });
   });
 
   it('uses a non-alarming model delay message before 2 minutes of silence', () => {
