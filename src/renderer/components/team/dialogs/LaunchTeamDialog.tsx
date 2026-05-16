@@ -99,6 +99,10 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import {
+  isDeletedProjectPathSelection,
+  isSelectableProjectPathProject,
+} from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
@@ -1366,9 +1370,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Launch-only effects
   // ---------------------------------------------------------------------------
 
-  const selectedProjectCwd = isEphemeralProjectPath(selectedProjectPath)
-    ? ''
-    : selectedProjectPath.trim();
+  const selectedProjectPathDeleted = useMemo(
+    () =>
+      cwdMode === 'project' &&
+      selectedProjectPath.length > 0 &&
+      isDeletedProjectPathSelection(projects, selectedProjectPath),
+    [cwdMode, projects, selectedProjectPath]
+  );
+  const selectedProjectCwd =
+    isEphemeralProjectPath(selectedProjectPath) || selectedProjectPathDeleted
+      ? ''
+      : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const hasSelectedWorktreeIsolation =
     isLaunchMode &&
@@ -1700,7 +1712,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
     if (cwdMode !== 'project') return;
-    const selectableProjects = projects.filter((project) => !isEphemeralProjectPath(project.path));
+    const selectableProjects = projects.filter(isSelectableProjectPathProject);
     if (selectableProjects.length === 0) return;
     if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
       const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
@@ -1729,17 +1741,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }
     }
     setSelectedProjectPath(selectableProjects[0].path);
-  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
   useEffect(() => {
     if (!open || cwdMode !== 'project' || !selectedProjectPath) {
       return;
     }
-    if (!isEphemeralProjectPath(selectedProjectPath)) {
+    if (
+      !isEphemeralProjectPath(selectedProjectPath) &&
+      !isDeletedProjectPathSelection(projects, selectedProjectPath)
+    ) {
       return;
     }
     setSelectedProjectPath('');
-  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
 
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);
@@ -1877,7 +1892,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
-    if (!effectiveCwd) errors.push('Working directory is required');
+    if (selectedProjectPathDeleted) {
+      errors.push('Project folder no longer exists');
+    } else if (!effectiveCwd) {
+      errors.push('Working directory is required');
+    }
     if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
     if (isSchedule) {
       if (!effectiveTeamName) errors.push('Team is required');
@@ -1887,6 +1906,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return errors;
   }, [
     effectiveCwd,
+    selectedProjectPathDeleted,
     worktreeGitBlockingMessage,
     isSchedule,
     effectiveTeamName,

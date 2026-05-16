@@ -43,6 +43,27 @@ function toProjectOption(project: ProjectPathProject): ComboboxOption {
   return option;
 }
 
+export function isSelectableProjectPathProject(
+  project: Pick<ProjectPathProject, 'path' | 'filesystemState'>
+): boolean {
+  return !isEphemeralProjectPath(project.path) && project.filesystemState !== 'deleted';
+}
+
+export function findProjectPathProjectByPath(
+  projects: readonly ProjectPathProject[],
+  projectPath: string
+): ProjectPathProject | undefined {
+  const normalizedPath = normalizePath(projectPath);
+  return projects.find((project) => normalizePath(project.path) === normalizedPath);
+}
+
+export function isDeletedProjectPathSelection(
+  projects: readonly ProjectPathProject[],
+  projectPath: string
+): boolean {
+  return findProjectPathProjectByPath(projects, projectPath)?.filesystemState === 'deleted';
+}
+
 /**
  * Collapse duplicate project entries that resolve to the same filesystem path.
  * This keeps combobox item values unique even when scanner sources overlap.

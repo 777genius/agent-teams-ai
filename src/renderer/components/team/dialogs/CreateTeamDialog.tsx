@@ -95,6 +95,10 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import {
+  isDeletedProjectPathSelection,
+  isSelectableProjectPathProject,
+} from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
@@ -574,9 +578,17 @@ export const CreateTeamDialog = ({
     [members]
   );
 
-  const selectedProjectCwd = isEphemeralProjectPath(selectedProjectPath)
-    ? ''
-    : selectedProjectPath.trim();
+  const selectedProjectPathDeleted = useMemo(
+    () =>
+      cwdMode === 'project' &&
+      selectedProjectPath.length > 0 &&
+      isDeletedProjectPathSelection(projects, selectedProjectPath),
+    [cwdMode, projects, selectedProjectPath]
+  );
+  const selectedProjectCwd =
+    isEphemeralProjectPath(selectedProjectPath) || selectedProjectPathDeleted
+      ? ''
+      : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
   /** All taken names: existing teams + teams currently being provisioned. */
@@ -670,23 +682,6 @@ export const CreateTeamDialog = ({
     new Map<string, Record<string, ProviderPrepareDiagnosticsModelResult>>()
   );
   const lastPrepareRequestSignatureRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const generation = ++prepareUnmountGenerationRef.current;
-    return () => {
-      // React StrictMode replays effect cleanup/setup in development; defer
-      // invalidation so the replay does not cancel the live prepare request.
-      queueMicrotask(() => {
-        if (!isCurrentPrepareGeneration(prepareUnmountGenerationRef, generation)) {
-          return;
-        }
-        cancelScheduledIdle(prepareIdleHandleRef.current);
-        prepareIdleHandleRef.current = null;
-        prepareRequestSeqRef.current += 1;
-        lastPrepareRequestSignatureRef.current = null;
-      });
-    };
-  }, []);
 
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
@@ -1231,7 +1226,7 @@ export const CreateTeamDialog = ({
     if (cwdMode !== 'project') {
       return;
     }
-    const selectableProjects = projects.filter((project) => !isEphemeralProjectPath(project.path));
+    const selectableProjects = projects.filter(isSelectableProjectPathProject);
     if (selectableProjects.length === 0) {
       return;
     }
@@ -1264,17 +1259,20 @@ export const CreateTeamDialog = ({
       }
     }
     setSelectedProjectPath(selectableProjects[0].path);
-  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
   useEffect(() => {
     if (!open || cwdMode !== 'project' || !selectedProjectPath) {
       return;
     }
-    if (!isEphemeralProjectPath(selectedProjectPath)) {
+    if (
+      !isEphemeralProjectPath(selectedProjectPath) &&
+      !isDeletedProjectPathSelection(projects, selectedProjectPath)
+    ) {
       return;
     }
     setSelectedProjectPath('');
-  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
 
   useFileListCacheWarmer(effectiveCwd || null);
 
