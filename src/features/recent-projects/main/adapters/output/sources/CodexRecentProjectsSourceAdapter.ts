@@ -1,5 +1,5 @@
-import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
 import { resolveProjectFilesystemState } from '@features/recent-projects/main/infrastructure/filesystem/resolveProjectFilesystemState';
+import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import path from 'path';
 
