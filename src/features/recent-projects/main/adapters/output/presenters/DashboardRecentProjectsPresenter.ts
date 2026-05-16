@@ -20,6 +20,7 @@ export class DashboardRecentProjectsPresenter implements ListDashboardRecentProj
           source: aggregate.source,
           openTarget: aggregate.openTarget,
           primaryBranch: aggregate.branchName,
+          filesystemState: aggregate.filesystemState,
         })
       ),
     };

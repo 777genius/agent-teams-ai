@@ -385,7 +385,7 @@ function getProviderLabel(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode (75+ LLM providers)';
+      return 'OpenCode (200+ models)';
   }
 }
 

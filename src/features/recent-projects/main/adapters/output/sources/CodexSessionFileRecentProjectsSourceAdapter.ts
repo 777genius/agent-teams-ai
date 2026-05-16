@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
+import { resolveProjectFilesystemState } from '@features/recent-projects/main/infrastructure/filesystem/resolveProjectFilesystemState';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
@@ -225,7 +226,7 @@ export class CodexSessionFileRecentProjectsSourceAdapter implements RecentProjec
     try {
       const snapshots = await this.#listRecentSessionSnapshots();
       const candidates = await Promise.all(
-        snapshots.map((snapshot) => this.#toCandidate(snapshot))
+        snapshots.map((snapshot) => this.#toCandidate(snapshot, activeContext.fsProvider))
       );
 
       const validCandidates = candidates.filter(
@@ -303,7 +304,8 @@ export class CodexSessionFileRecentProjectsSourceAdapter implements RecentProjec
   }
 
   async #toCandidate(
-    snapshot: CodexSessionProjectSnapshot
+    snapshot: CodexSessionProjectSnapshot,
+    fsProvider?: ServiceContext['fsProvider']
   ): Promise<RecentProjectCandidate | null> {
     const identity = await this.deps.identityResolver.resolve(snapshot.cwd);
     const displayName = identity?.name ?? path.basename(snapshot.cwd) ?? snapshot.cwd;
@@ -321,6 +323,7 @@ export class CodexSessionFileRecentProjectsSourceAdapter implements RecentProjec
         path: snapshot.cwd,
       },
       branchName: snapshot.branchName,
+      filesystemState: await resolveProjectFilesystemState(snapshot.cwd, fsProvider),
     };
   }
 }

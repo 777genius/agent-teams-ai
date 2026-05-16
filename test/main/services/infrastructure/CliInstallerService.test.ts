@@ -151,7 +151,7 @@ describe('CliInstallerService', () => {
         'opencode',
       ]);
       expect(openCodeStatus).toMatchObject({
-        displayName: 'OpenCode (75+ LLM providers)',
+        displayName: 'OpenCode (200+ models)',
         supported: false,
         statusMessage: 'Runtime not found.',
         canLoginFromUi: false,

@@ -1,4 +1,5 @@
 import { normalizeIdentityPath } from '@features/recent-projects/main/infrastructure/identity/normalizeIdentityPath';
+import { resolveProjectFilesystemState } from '@features/recent-projects/main/infrastructure/filesystem/resolveProjectFilesystemState';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import path from 'path';
 
@@ -129,7 +130,9 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
     );
 
     const candidates = (
-      await Promise.all(interactiveThreads.map((thread) => this.#toCandidate(thread)))
+      await Promise.all(
+        interactiveThreads.map((thread) => this.#toCandidate(thread, activeContext.fsProvider))
+      )
     ).filter((candidate): candidate is RecentProjectCandidate => candidate !== null);
 
     if (!degraded) {
@@ -299,7 +302,10 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
     }
   }
 
-  async #toCandidate(thread: CodexThreadSummary): Promise<RecentProjectCandidate | null> {
+  async #toCandidate(
+    thread: CodexThreadSummary,
+    fsProvider?: ServiceContext['fsProvider']
+  ): Promise<RecentProjectCandidate | null> {
     const cwd = thread.cwd?.trim();
     if (!cwd || isEphemeralProjectPath(cwd)) {
       return null;
@@ -321,6 +327,7 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
         path: cwd,
       },
       branchName: thread.gitInfo?.branch ?? undefined,
+      filesystemState: await resolveProjectFilesystemState(cwd, fsProvider),
     };
   }
 }

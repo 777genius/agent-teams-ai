@@ -88,4 +88,27 @@ describe('buildProjectPathOptions', () => {
       },
     ]);
   });
+
+  it('marks deleted project paths as disabled options', () => {
+    const options = buildProjectPathOptions([
+      createProject({
+        id: 'project-deleted',
+        name: 'my-tes',
+        path: '/Users/belief/dev/projects/my-tes',
+        filesystemState: 'deleted',
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/my-tes',
+        label: 'my-tes',
+        description: '/Users/belief/dev/projects/my-tes',
+        disabled: true,
+        meta: {
+          filesystemState: 'deleted',
+        },
+      },
+    ]);
+  });
 });

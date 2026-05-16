@@ -179,6 +179,69 @@ async function seedBlockingShadowCollectingMetrics(input: {
   );
 }
 
+async function seedNativeStaleInProgressBlockingMetrics(input: {
+  teamsBasePath: string;
+  teamName: string;
+  memberName: string;
+  agendaFingerprint: string;
+}): Promise<void> {
+  const nowMs = Date.now();
+  const staleObservedAt = new Date(nowMs - 6 * 60_000 - 1_000).toISOString();
+  const metricsPath = path.join(
+    input.teamsBasePath,
+    input.teamName,
+    '.member-work-sync',
+    'indexes',
+    'metrics.json'
+  );
+  await fs.promises.mkdir(path.dirname(metricsPath), { recursive: true });
+  await fs.promises.writeFile(
+    metricsPath,
+    `${JSON.stringify(
+      {
+        schemaVersion: 2,
+        members: {
+          [input.memberName]: {
+            memberName: input.memberName,
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            actionableCount: 1,
+            evaluatedAt: staleObservedAt,
+            providerId: 'codex',
+          },
+        },
+        recentEvents: [
+          {
+            id: 'native-stale-status',
+            teamName: input.teamName,
+            memberName: input.memberName,
+            kind: 'status_evaluated',
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            recordedAt: staleObservedAt,
+            actionableCount: 1,
+            providerId: 'codex',
+          },
+          ...Array.from({ length: 12 }, (_, index) => ({
+            id: `native-stale-would-nudge-${index}`,
+            teamName: input.teamName,
+            memberName: input.memberName,
+            kind: 'would_nudge',
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            recordedAt: new Date(nowMs - 5 * 60_000 + index * 5_000).toISOString(),
+            actionableCount: 1,
+            providerId: 'codex',
+          })),
+        ],
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
 async function waitForAssertion(assertion: () => Promise<void> | void): Promise<void> {
   const deadline = Date.now() + 5_000;
   let lastError: unknown;
@@ -1062,6 +1125,130 @@ describe('createMemberWorkSyncFeature composition', () => {
       expect(journal).toContain('"event":"nudge_skipped"');
       expect(journal).toContain('"reason":"phase2_not_ready"');
       expect(journal).not.toContain('"event":"nudge_delivered"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('delivers native stale in-progress recovery nudges despite noisy global metrics', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-native-stale-in-progress';
+    const memberName = 'alice';
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Review landing',
+            status: 'in_progress',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      nudgeDeliveryWake,
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      let agendaFingerprint = '';
+      await waitForAssertion(async () => {
+        const status = await feature.getStatus({ teamName, memberName });
+        expect(status).toMatchObject({
+          state: 'needs_sync',
+          providerId: 'codex',
+          diagnostics: expect.arrayContaining(['no_current_report']),
+          agenda: {
+            items: [
+              expect.objectContaining({
+                reason: 'owned_in_progress_task',
+                evidence: expect.objectContaining({ status: 'in_progress' }),
+              }),
+            ],
+          },
+        });
+        agendaFingerprint = status.agenda.fingerprint;
+      });
+      expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
+      expect(nudgeDeliveryWake.schedule).not.toHaveBeenCalled();
+
+      await seedNativeStaleInProgressBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        agendaFingerprint,
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('Work sync check');
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+          teamName,
+          memberName,
+          messageId: nudges[0]?.messageId,
+          providerId: 'codex',
+          reason: 'member_work_sync_nudge_inserted',
+          delayMs: 500,
+        });
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            reasons: expect.arrayContaining(['would_nudge_rate_high']),
+          },
+        });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([
+          expect.objectContaining({
+            status: 'delivered',
+            deliveredMessageId: nudges[0]?.messageId,
+          }),
+        ]);
+      });
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).toContain('"reason":"created"');
     } finally {
       await feature.dispose();
     }

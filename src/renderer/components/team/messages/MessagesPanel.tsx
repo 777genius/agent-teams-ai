@@ -13,6 +13,12 @@ import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMeta';
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
@@ -33,7 +39,9 @@ import {
   CheckCheck,
   ChevronsDownUp,
   ChevronsUpDown,
+  Dock,
   MessageSquare,
+  MoreHorizontal,
   PanelBottom,
   PanelBottomClose,
   PanelBottomOpen,
@@ -807,6 +815,10 @@ export const MessagesPanel = memo(function MessagesPanel({
     onPositionChange('bottom-sheet');
   }, [onPositionChange]);
 
+  const moveToFloatingComposer = useCallback(() => {
+    onPositionChange('floating-composer');
+  }, [onPositionChange]);
+
   const snapBottomSheetTo = useCallback((snapIndex: number) => {
     setBottomSheetSnapIndex(snapIndex);
     bottomSheetRef.current?.snapTo(snapIndex);
@@ -864,6 +876,53 @@ export const MessagesPanel = memo(function MessagesPanel({
     />
   );
 
+  const floatingComposerModeControls = (
+    <div className="inline-flex items-center gap-0.5 pr-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            onClick={moveToInline}
+            aria-label="Move messages to inline panel"
+          >
+            <PanelBottom size={13} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Move to inline</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            onClick={moveToBottomSheet}
+            aria-label="Move messages to bottom sheet"
+          >
+            <PanelBottomOpen size={13} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Move to bottom sheet</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            onClick={moveToSidebar}
+            aria-label="Move messages to sidebar"
+          >
+            <PanelLeft size={13} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Move to sidebar</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+
   const compactComposerSection = (
     <MessagesComposerSection
       teamName={teamName}
@@ -875,6 +934,24 @@ export const MessagesPanel = memo(function MessagesPanel({
       sendWarning={effectiveSendMessageWarning}
       sendDebugDetails={effectiveSendMessageDebugDetails}
       lastResult={lastSendMessageResult}
+      textareaRef={composerTextareaRef}
+      onSend={handleSend}
+      onCrossTeamSend={handleCrossTeamSend}
+    />
+  );
+
+  const floatingComposerSection = (
+    <MessagesComposerSection
+      teamName={teamName}
+      layout="compact"
+      members={members}
+      isTeamAlive={isTeamAlive}
+      sending={sendingMessage}
+      sendError={sendMessageError}
+      sendWarning={effectiveSendMessageWarning}
+      sendDebugDetails={effectiveSendMessageDebugDetails}
+      lastResult={lastSendMessageResult}
+      cornerActionPrefix={floatingComposerModeControls}
       textareaRef={composerTextareaRef}
       onSend={handleSend}
       onCrossTeamSend={handleCrossTeamSend}
@@ -1054,54 +1131,53 @@ export const MessagesPanel = memo(function MessagesPanel({
             </Tooltip>
           )}
           <div className="ml-auto flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  onClick={() => setMessagesCollapsed((v) => !v)}
-                  aria-label={messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
-                >
-                  {messagesCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  onClick={() => setMessagesSearchBarVisible((v) => !v)}
-                  aria-label={
-                    messagesSearchBarVisible ? 'Hide message search' : 'Show message search'
-                  }
-                >
-                  {messagesSearchBarVisible ? <X size={14} /> : <Search size={14} />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {messagesSearchBarVisible ? 'Hide search' : 'Search messages'}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  onClick={moveToInline}
-                  aria-label="Move messages to inline panel"
-                >
-                  <PanelLeftClose size={14} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Move to inline</TooltipContent>
-            </Tooltip>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] data-[state=open]:bg-[var(--color-surface-raised)] data-[state=open]:text-[var(--color-text-secondary)]"
+                      aria-label="Message panel actions"
+                    >
+                      <MoreHorizontal size={15} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Message actions</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" side="bottom" className="w-48">
+                <DropdownMenuItem onSelect={() => setMessagesCollapsed((v) => !v)}>
+                  {messagesCollapsed ? (
+                    <ChevronsUpDown size={14} className="shrink-0" />
+                  ) : (
+                    <ChevronsDownUp size={14} className="shrink-0" />
+                  )}
+                  <span>{messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setMessagesSearchBarVisible((v) => !v)}>
+                  {messagesSearchBarVisible ? (
+                    <X size={14} className="shrink-0" />
+                  ) : (
+                    <Search size={14} className="shrink-0" />
+                  )}
+                  <span>{messagesSearchBarVisible ? 'Hide search' : 'Search messages'}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={moveToInline}>
+                  <PanelLeftClose size={14} className="shrink-0" />
+                  <span>Move to inline</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={moveToBottomSheet}>
+                  <PanelBottomOpen size={14} className="shrink-0" />
+                  <span>Move to bottom sheet</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={moveToFloatingComposer}>
+                  <Dock size={14} className="shrink-0" />
+                  <span>Float composer</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         {/* Search & filter bar (toggleable) */}
@@ -1121,6 +1197,16 @@ export const MessagesPanel = memo(function MessagesPanel({
             {sidebarStatusSection}
           </div>
           {timelineSection}
+        </div>
+      </div>
+    );
+  }
+
+  if (position === 'floating-composer') {
+    return (
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-4 pb-5 sm:px-6 sm:pb-6">
+        <div className="mx-auto w-full max-w-[500px]">
+          <div className="pointer-events-auto">{floatingComposerSection}</div>
         </div>
       </div>
     );
@@ -1196,114 +1282,74 @@ export const MessagesPanel = memo(function MessagesPanel({
                   className="ml-auto flex items-center gap-1"
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  {messagesUnreadCount > 0 && (
+                  <DropdownMenu>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="size-[22px] p-0 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
-                          onClick={handleMarkAllRead}
-                          aria-label="Mark all messages as read"
-                        >
-                          <CheckCheck size={13} />
-                        </Button>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] data-[state=open]:bg-[var(--color-surface-raised)] data-[state=open]:text-[var(--color-text-secondary)]"
+                            aria-label="Message bottom sheet actions"
+                          >
+                            <MoreHorizontal size={14} />
+                          </Button>
+                        </DropdownMenuTrigger>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Mark all as read</TooltipContent>
+                      <TooltipContent side="top">Message actions</TooltipContent>
                     </Tooltip>
-                  )}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                        onClick={() => setMessagesCollapsed((value) => !value)}
-                        aria-label={
-                          messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'
-                        }
-                      >
+                    <DropdownMenuContent align="end" side="top" className="w-48">
+                      {messagesUnreadCount > 0 && (
+                        <DropdownMenuItem
+                          className="text-blue-400 focus:text-blue-300"
+                          onSelect={handleMarkAllRead}
+                        >
+                          <CheckCheck size={14} className="shrink-0" />
+                          <span>Mark all as read</span>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onSelect={() => setMessagesCollapsed((value) => !value)}>
                         {messagesCollapsed ? (
-                          <ChevronsUpDown size={14} />
+                          <ChevronsUpDown size={14} className="shrink-0" />
                         ) : (
-                          <ChevronsDownUp size={14} />
+                          <ChevronsDownUp size={14} className="shrink-0" />
                         )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                        onClick={() => setMessagesSearchBarVisible((value) => !value)}
-                        aria-label={
-                          messagesSearchBarVisible ? 'Hide message search' : 'Show message search'
-                        }
+                        <span>
+                          {messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => setMessagesSearchBarVisible((value) => !value)}
                       >
-                        {messagesSearchBarVisible ? <X size={14} /> : <Search size={14} />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {messagesSearchBarVisible ? 'Hide search' : 'Search messages'}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                        onClick={toggleBottomSheetExpansion}
-                        aria-label={
-                          isBottomSheetCollapsed
-                            ? 'Expand messages bottom sheet'
-                            : 'Collapse messages bottom sheet'
-                        }
-                      >
+                        {messagesSearchBarVisible ? (
+                          <X size={14} className="shrink-0" />
+                        ) : (
+                          <Search size={14} className="shrink-0" />
+                        )}
+                        <span>{messagesSearchBarVisible ? 'Hide search' : 'Search messages'}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={toggleBottomSheetExpansion}>
                         {isBottomSheetCollapsed ? (
-                          <PanelBottomOpen size={14} />
+                          <PanelBottomOpen size={14} className="shrink-0" />
                         ) : (
-                          <PanelBottomClose size={14} />
+                          <PanelBottomClose size={14} className="shrink-0" />
                         )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {isBottomSheetCollapsed ? 'Expand sheet' : 'Collapse sheet'}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                        onClick={moveToInline}
-                        aria-label="Move messages to inline panel"
-                      >
-                        <PanelBottom size={14} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Move to inline</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                        onClick={moveToSidebar}
-                        aria-label="Move messages to sidebar"
-                      >
-                        <PanelLeft size={14} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Move to sidebar</TooltipContent>
-                  </Tooltip>
+                        <span>{isBottomSheetCollapsed ? 'Expand sheet' : 'Collapse sheet'}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={moveToInline}>
+                        <PanelBottom size={14} className="shrink-0" />
+                        <span>Move to inline</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={moveToSidebar}>
+                        <PanelLeft size={14} className="shrink-0" />
+                        <span>Move to sidebar</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={moveToFloatingComposer}>
+                        <Dock size={14} className="shrink-0" />
+                        <span>Float composer</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
@@ -1385,6 +1431,23 @@ export const MessagesPanel = memo(function MessagesPanel({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Move to bottom sheet</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  moveToFloatingComposer();
+                }}
+                aria-label="Float messages composer"
+              >
+                <Dock size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Float composer</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>

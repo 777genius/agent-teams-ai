@@ -44,6 +44,7 @@ function toCandidate(repo: RepositoryGroup): RecentProjectCandidate | null {
       worktreeId: preferredWorktree.id,
     },
     branchName: preferredWorktree.gitBranch,
+    filesystemState: preferredWorktree.filesystemState ?? 'available',
   };
 }
 

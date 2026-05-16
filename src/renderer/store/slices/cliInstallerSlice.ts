@@ -38,7 +38,7 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
       { providerId: 'anthropic', displayName: 'Anthropic' },
       { providerId: 'codex', displayName: 'Codex' },
       { providerId: 'gemini', displayName: 'Gemini' },
-      { providerId: 'opencode', displayName: 'OpenCode (75+ LLM providers)' },
+      { providerId: 'opencode', displayName: 'OpenCode (200+ models)' },
     ] as const
   ).map((provider) => ({
     ...provider,
@@ -500,7 +500,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode (75+ LLM providers)';
+      return 'OpenCode (200+ models)';
   }
 }
 

@@ -450,7 +450,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (75+ LLM providers)',
+          displayName: 'OpenCode (200+ models)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -476,7 +476,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode (75+ LLM providers)');
+    expect(host.textContent).toContain('OpenCode (200+ models)');
     expect(host.textContent).toContain('Install');
 
     const installButton = Array.from(host.querySelectorAll('button')).find(
@@ -523,7 +523,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (75+ LLM providers)',
+          displayName: 'OpenCode (200+ models)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -575,7 +575,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (75+ LLM providers)',
+          displayName: 'OpenCode (200+ models)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_managed',

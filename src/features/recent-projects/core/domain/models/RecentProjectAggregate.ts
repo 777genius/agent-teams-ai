@@ -1,4 +1,5 @@
 import type { ProviderId } from './ProviderId';
+import type { RecentProjectFilesystemState } from './RecentProjectFilesystemState';
 import type { RecentProjectOpenTarget } from './RecentProjectOpenTarget';
 
 export interface RecentProjectAggregate {
@@ -11,4 +12,5 @@ export interface RecentProjectAggregate {
   source: 'claude' | 'codex' | 'mixed';
   openTarget: RecentProjectOpenTarget;
   branchName?: string;
+  filesystemState: RecentProjectFilesystemState;
 }

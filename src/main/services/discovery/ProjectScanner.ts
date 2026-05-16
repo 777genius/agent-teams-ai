@@ -30,6 +30,7 @@ import {
 import {
   type PaginatedSessionsResult,
   type Project,
+  type ProjectFilesystemState,
   type RepositoryGroup,
   type SearchSessionsResult,
   type Session,
@@ -81,6 +82,21 @@ const SEARCH_PROJECT_CACHE_TTL_MS = 30_000;
 // Keep this non-zero because parts of the renderer still rely on a (partial) sessionId list
 // for lookups and navigation; a small cap preserves that behavior without huge payloads.
 const MAX_SESSION_IDS_EXPORTED = 200;
+
+async function resolveProjectFilesystemState(
+  fsProvider: FileSystemProvider,
+  projectPath: string
+): Promise<ProjectFilesystemState> {
+  if (!projectPath.trim()) {
+    return 'deleted';
+  }
+
+  try {
+    return (await fsProvider.exists(projectPath)) ? 'available' : 'deleted';
+  } catch {
+    return 'deleted';
+  }
+}
 
 export interface ProjectScannerOptions {
   /**
@@ -340,6 +356,7 @@ export class ProjectScanner {
               totalSessions,
               createdAt: project.createdAt,
               mostRecentSession: project.mostRecentSession,
+              filesystemState: project.filesystemState,
             },
           ],
           name: project.name,
@@ -360,6 +377,7 @@ export class ProjectScanner {
         const encodedId = customPath.replace(/[/\\]/g, '-');
         const folderName = customPath.split(/[/\\]/).filter(Boolean).pop() ?? customPath;
         const now = Date.now();
+        const filesystemState = await resolveProjectFilesystemState(this.fsProvider, customPath);
 
         groups.push({
           id: encodedId,
@@ -374,6 +392,7 @@ export class ProjectScanner {
               sessions: [],
               totalSessions: 0,
               createdAt: now,
+              filesystemState,
             },
           ],
           name: folderName,
@@ -550,6 +569,7 @@ export class ProjectScanner {
           cwdHint: firstCwd ?? undefined,
           sessionPaths,
         });
+        const filesystemState = await resolveProjectFilesystemState(this.fsProvider, actualPath);
 
         // Derive name from resolved path — more reliable than decodePath for
         // paths containing dashes (e.g. "test-project" encodes lossily).
@@ -564,6 +584,7 @@ export class ProjectScanner {
             totalSessions: allSessionIds.length,
             createdAt: Math.floor(createdAt),
             mostRecentSession: mostRecentSession ? Math.floor(mostRecentSession) : undefined,
+            filesystemState,
           },
         ];
       }
@@ -623,6 +644,10 @@ export class ProjectScanner {
           totalSessions: sessionIds.length,
           createdAt: Math.floor(createdAt),
           mostRecentSession: mostRecentSession ? Math.floor(mostRecentSession) : undefined,
+          filesystemState: await resolveProjectFilesystemState(
+            this.fsProvider,
+            actualCwd ?? decodedFallback
+          ),
         });
       }
 

@@ -153,4 +153,26 @@ describe('ProjectScanner cwd split logic', () => {
     expect(worktree?.isMainWorktree).toBe(false);
     expect(worktree?.source).toBe('claude-desktop');
   });
+
+  it('marks decoded project paths as deleted when the working directory no longer exists', async () => {
+    const projectsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scanner-'));
+    tempDirs.push(projectsDir);
+
+    const encodedName = '-Users-test-deleted-project';
+    const projectDir = path.join(projectsDir, encodedName);
+    fs.mkdirSync(projectDir);
+
+    fs.writeFileSync(
+      path.join(projectDir, 'session-deleted.jsonl'),
+      createSessionLine({ cwd: '/Users/test/deleted-project' }) + '\n'
+    );
+
+    const scanner = new ProjectScanner(projectsDir);
+    const projects = await scanner.scan();
+
+    expect(projects[0]).toMatchObject({
+      path: '/Users/test/deleted-project',
+      filesystemState: 'deleted',
+    });
+  });
 });

@@ -15,6 +15,7 @@ export interface RecentProjectCardModel {
   lastActivityLabel: string;
   providerIds: DashboardRecentProject['providerIds'];
   primaryBranch?: string;
+  filesystemState?: DashboardRecentProject['filesystemState'];
   taskCounts?: TaskStatusCounts;
   tasksLoading: boolean;
   activeTeams?: TeamSummary[];
@@ -121,6 +122,7 @@ export function adaptRecentProjectsSection({
     }),
     providerIds: sortDashboardProviderIds(project.providerIds),
     primaryBranch: project.primaryBranch,
+    filesystemState: project.filesystemState,
     taskCounts: sumTaskCounts(project, taskCountsByProject),
     tasksLoading,
     activeTeams: collectActiveTeams(project, activeTeamsByProject),

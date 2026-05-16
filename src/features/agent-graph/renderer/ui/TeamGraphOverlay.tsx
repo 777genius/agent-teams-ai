@@ -3,12 +3,13 @@
  * Follows the exact ProjectEditorOverlay pattern (lazy-loaded, fixed z-50).
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
+import { useGraphMessagesPanel } from '../hooks/useGraphMessagesPanel';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
@@ -36,6 +37,7 @@ export interface TeamGraphOverlayProps {
   onPinAsTab?: () => void;
   sidebarVisible?: boolean;
   onToggleSidebar?: () => void;
+  messagesPanelEnabled?: boolean;
   onSendMessage?: (memberName: string) => void;
   onOpenTaskDetail?: (taskId: string) => void;
   onOpenMemberProfile?: (
@@ -53,6 +55,7 @@ export const TeamGraphOverlay = ({
   onPinAsTab,
   sidebarVisible,
   onToggleSidebar,
+  messagesPanelEnabled = true,
   onSendMessage,
   onOpenTaskDetail,
   onOpenMemberProfile,
@@ -67,8 +70,18 @@ export const TeamGraphOverlay = ({
   const { sidebarVisible: persistedSidebarVisible, toggleSidebarVisible } =
     useGraphSidebarVisibility();
   const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
+  const [messagesPanelMountPoint, setMessagesPanelMountPoint] = useState<HTMLDivElement | null>(
+    null
+  );
   const effectiveSidebarVisible = sidebarVisible ?? persistedSidebarVisible;
   const handleToggleSidebar = onToggleSidebar ?? toggleSidebarVisible;
+  const graphMessagesPanel = useGraphMessagesPanel({
+    teamName,
+    enabled: messagesPanelEnabled,
+    mountPoint: messagesPanelMountPoint,
+    onOpenMemberProfile: (memberName) => onOpenMemberProfile?.(memberName),
+    onOpenTaskDetail: (taskId) => onOpenTaskDetail?.(taskId),
+  });
 
   // Task action dispatchers (same pattern as TeamGraphTab)
   const dispatchTaskAction = useCallback(
@@ -242,6 +255,13 @@ export const TeamGraphOverlay = ({
           />
         )}
       />
+      {messagesPanelEnabled ? (
+        <div
+          ref={setMessagesPanelMountPoint}
+          className="pointer-events-none absolute inset-0 z-30"
+        />
+      ) : null}
+      {graphMessagesPanel}
       {createTaskDialog}
     </div>
   );

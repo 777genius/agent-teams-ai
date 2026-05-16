@@ -501,7 +501,7 @@ export class CliInstallerService {
               },
               {
                 providerId: 'opencode',
-                displayName: 'OpenCode (75+ LLM providers)',
+                displayName: 'OpenCode (200+ models)',
               },
             ] as const
           ).map((provider) => ({

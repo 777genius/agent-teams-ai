@@ -672,6 +672,23 @@ export const CreateTeamDialog = ({
   const lastPrepareRequestSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const generation = ++prepareUnmountGenerationRef.current;
+    return () => {
+      // React StrictMode replays effect cleanup/setup in development; defer
+      // invalidation so the replay does not cancel the live prepare request.
+      queueMicrotask(() => {
+        if (!isCurrentPrepareGeneration(prepareUnmountGenerationRef, generation)) {
+          return;
+        }
+        cancelScheduledIdle(prepareIdleHandleRef.current);
+        prepareIdleHandleRef.current = null;
+        prepareRequestSeqRef.current += 1;
+        lastPrepareRequestSignatureRef.current = null;
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
 

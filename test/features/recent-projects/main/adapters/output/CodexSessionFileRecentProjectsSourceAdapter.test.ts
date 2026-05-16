@@ -114,6 +114,42 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
     expect(identityResolver.resolve).toHaveBeenCalledWith('/Users/test/projects/alpha');
   });
 
+  it('marks a Codex session project as deleted when its cwd is gone', async () => {
+    const codexHome = path.join(tempDir, '.codex');
+    const logger = createLogger();
+    const identityResolver = {
+      resolve: vi.fn().mockResolvedValue(null),
+    } as unknown as RecentProjectIdentityResolver;
+    const fsProvider = {
+      exists: vi.fn().mockResolvedValue(false),
+    };
+    await writeRollout(
+      path.join(codexHome, 'sessions', '2026', '04', '14', 'rollout-deleted.jsonl'),
+      {
+        cwd: '/Users/test/projects/deleted',
+      },
+      new Date('2026-04-14T12:00:00.000Z')
+    );
+
+    const adapter = new CodexSessionFileRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1', fsProvider }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      identityResolver,
+      logger,
+      codexHome,
+    });
+
+    const result = await adapter.list();
+
+    expect(result.candidates[0]).toEqual(
+      expect.objectContaining({
+        primaryPath: '/Users/test/projects/deleted',
+        filesystemState: 'deleted',
+      })
+    );
+    expect(fsProvider.exists).toHaveBeenCalledWith('/Users/test/projects/deleted');
+  });
+
   it('loads Codex projects from large session metadata lines without parsing the full line', async () => {
     const codexHome = path.join(tempDir, '.codex');
     const logger = createLogger();

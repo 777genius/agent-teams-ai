@@ -65,6 +65,7 @@ interface MessageComposerProps {
   sendWarning?: string | null;
   sendDebugDetails?: OpenCodeRuntimeDeliveryDebugDetails | null;
   lastResult?: SendMessageResult | null;
+  cornerActionPrefix?: React.ReactNode;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
   onSend: (
@@ -112,6 +113,7 @@ export const MessageComposer = ({
   sendWarning,
   sendDebugDetails,
   lastResult,
+  cornerActionPrefix,
   textareaRef: externalTextareaRef,
   onSend,
   onCrossTeamSend,
@@ -143,6 +145,7 @@ export const MessageComposer = ({
   const [recipientOpen, setRecipientOpen] = useState(false);
   const [recipientSearch, setRecipientSearch] = useState('');
   const recipientSearchRef = useRef<HTMLInputElement>(null);
+  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -642,6 +645,8 @@ export const MessageComposer = ({
     },
     [canAttach, draftHandlePaste, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
+  const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
+  const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
 
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
@@ -666,6 +671,29 @@ export const MessageComposer = ({
       Reused recent cross-team request
     </span>
   ) : null;
+  const shouldShowFooterCharCount = remaining < 200;
+  const shouldShowSavedIndicator = isTextareaFocused && draft.isSaved;
+  const nonCompactFooterRight =
+    compactFooterNotice || shouldShowFooterCharCount || shouldShowSavedIndicator ? (
+      <div className="flex flex-col items-end gap-1">
+        {compactFooterNotice}
+        {shouldShowFooterCharCount || shouldShowSavedIndicator ? (
+          <div className="flex items-center gap-2">
+            {shouldShowFooterCharCount ? (
+              <span
+                className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+              >
+                {remaining} chars left
+              </span>
+            ) : null}
+            {shouldShowSavedIndicator ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+  const composerFooterRight = isCompactLayout ? compactFooterNotice : nonCompactFooterRight;
 
   return (
     <div
@@ -1045,6 +1073,8 @@ export const MessageComposer = ({
           commandSuggestions={slashCommandSuggestions}
           chips={draft.chips}
           onChipRemove={draft.removeChip}
+          onFocus={handleTextareaFocus}
+          onBlur={handleTextareaBlur}
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
           onModEnter={handleSend}
@@ -1059,7 +1089,7 @@ export const MessageComposer = ({
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
-          showHint={!isCompactLayout}
+          showHint={!isCompactLayout && isTextareaFocused}
           cornerActionInset={isCompactLayout ? 'compact' : 'default'}
           cornerActionLeft={
             <ActionModeSelector
@@ -1071,6 +1101,7 @@ export const MessageComposer = ({
           }
           cornerAction={
             <div className="flex items-center gap-2">
+              {cornerActionPrefix}
               {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1108,27 +1139,7 @@ export const MessageComposer = ({
               </Tooltip>
             </div>
           }
-          footerRight={
-            isCompactLayout ? (
-              compactFooterNotice
-            ) : (
-              <div className="flex flex-col items-end gap-1">
-                {compactFooterNotice}
-                <div className="flex items-center gap-2">
-                  {remaining < 200 ? (
-                    <span
-                      className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
-                    >
-                      {remaining} chars left
-                    </span>
-                  ) : null}
-                  {draft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
-                  ) : null}
-                </div>
-              </div>
-            )
-          }
+          footerRight={composerFooterRight}
         />
       </div>
     </div>

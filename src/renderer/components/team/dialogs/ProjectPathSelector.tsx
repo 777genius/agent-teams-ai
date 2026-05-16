@@ -7,7 +7,7 @@ import { Combobox } from '@renderer/components/ui/combobox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { cn } from '@renderer/lib/utils';
-import { Check, FolderOpen } from 'lucide-react';
+import { Check, FolderOpen, FolderX } from 'lucide-react';
 
 import {
   buildProjectPathOptions,
@@ -58,6 +58,10 @@ function getOptionSource(option: ComboboxOption): DashboardRecentProjectSource |
   return (option.meta as ProjectPathOptionMeta | undefined)?.discoverySource;
 }
 
+function isDeletedOption(option: ComboboxOption): boolean {
+  return (option.meta as ProjectPathOptionMeta | undefined)?.filesystemState === 'deleted';
+}
+
 function getSourceLabel(source: DashboardRecentProjectSource): string {
   switch (source) {
     case 'claude':
@@ -96,6 +100,16 @@ const ProjectSourceBadge = ({
     </span>
   );
 };
+
+const ProjectDeletedBadge = (): React.JSX.Element => (
+  <span
+    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-300"
+    title="Project folder no longer exists"
+  >
+    <FolderX className="size-3" />
+    Deleted
+  </span>
+);
 
 export type CwdMode = 'project' | 'custom';
 
@@ -178,28 +192,38 @@ export const ProjectPathSelector = ({
                       renderTriggerLabel={(option) => (
                         <span className="flex min-w-0 items-center gap-1.5">
                           <ProjectSourceBadge source={getOptionSource(option)} />
+                          {isDeletedOption(option) ? <ProjectDeletedBadge /> : null}
                           <span className="min-w-0 truncate">{option.label}</span>
                         </span>
                       )}
-                      renderOption={(option, isSelected, query) => (
-                        <>
-                          <Check
-                            className={cn(
-                              'mr-2 size-3.5 shrink-0',
-                              isSelected ? 'opacity-100' : 'opacity-0'
-                            )}
-                          />
-                          <ProjectSourceBadge source={getOptionSource(option)} />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-[var(--color-text)]">
-                              {renderHighlightedText(option.label, query)}
-                            </p>
-                            <p className="truncate text-[var(--color-text-muted)]">
-                              {renderHighlightedText(option.description ?? '', query)}
-                            </p>
+                      renderOption={(option, isSelected, query) => {
+                        const isDeleted = isDeletedOption(option);
+                        return (
+                          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                            <Check
+                              className={cn(
+                                'size-3.5 shrink-0',
+                                isSelected ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            <ProjectSourceBadge source={getOptionSource(option)} />
+                            {isDeleted ? <ProjectDeletedBadge /> : null}
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={cn(
+                                  'truncate font-medium text-[var(--color-text)]',
+                                  isDeleted && 'text-red-200'
+                                )}
+                              >
+                                {renderHighlightedText(option.label, query)}
+                              </p>
+                              <p className="truncate text-[var(--color-text-muted)]">
+                                {renderHighlightedText(option.description ?? '', query)}
+                              </p>
+                            </div>
                           </div>
-                        </>
-                      )}
+                        );
+                      }}
                     />
                   </div>
                 </div>

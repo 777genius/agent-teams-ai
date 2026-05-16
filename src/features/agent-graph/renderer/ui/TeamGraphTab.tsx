@@ -9,6 +9,7 @@ import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
+import { useGraphMessagesPanel } from '../hooks/useGraphMessagesPanel';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
@@ -54,6 +55,9 @@ export const TeamGraphTab = ({
   const { openTeamPage, commitOwnerSlotDrop, commitOwnerGridOrderDrop, setLayoutMode } =
     useTeamGraphSurfaceActions(teamName);
   const [fullscreen, setFullscreen] = useState(false);
+  const [messagesPanelMountPoint, setMessagesPanelMountPoint] = useState<HTMLDivElement | null>(
+    null
+  );
   const { sidebarVisible, toggleSidebarVisible } = useGraphSidebarVisibility();
   const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
 
@@ -129,9 +133,16 @@ export const TeamGraphTab = ({
       [dispatchOpenProfile]
     ),
   };
+  const graphMessagesPanel = useGraphMessagesPanel({
+    teamName,
+    enabled: isActive && isPaneFocused && !fullscreen,
+    mountPoint: messagesPanelMountPoint,
+    onOpenMemberProfile: dispatchOpenProfile,
+    onOpenTaskDetail: dispatchOpenTask,
+  });
 
   return (
-    <div className="flex size-full overflow-hidden" style={{ background: '#050510' }}>
+    <div className="relative flex size-full overflow-hidden" style={{ background: '#050510' }}>
       {sidebarVisible ? (
         <TeamSidebarHost
           teamName={teamName}
@@ -262,6 +273,13 @@ export const TeamGraphTab = ({
           )}
         />
       </div>
+      {isActive && isPaneFocused && !fullscreen ? (
+        <div
+          ref={setMessagesPanelMountPoint}
+          className="pointer-events-none absolute inset-0 z-30"
+        />
+      ) : null}
+      {graphMessagesPanel}
       {createTaskDialog}
       {fullscreen && (
         <Suspense fallback={null}>
@@ -273,6 +291,7 @@ export const TeamGraphTab = ({
             onSendMessage={dispatchSendMessage}
             onOpenTaskDetail={dispatchOpenTask}
             onOpenMemberProfile={dispatchOpenProfile}
+            messagesPanelEnabled={isActive && isPaneFocused}
           />
         </Suspense>
       )}

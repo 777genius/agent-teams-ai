@@ -3623,9 +3623,18 @@ export const TeamDetailView = memo(function TeamDetailView({
               ref={setMessagesPanelMountPoint}
               className="pointer-events-none absolute inset-0 z-30"
             />
-            {messagesPanelMode === 'bottom-sheet' && (
+            {messagesPanelMode === 'bottom-sheet' && !graphOpen && (
               <TeamMessagesPanelBridge position="bottom-sheet" {...sharedMessagesPanelProps} />
             )}
+            {messagesPanelMode === 'floating-composer' &&
+              isThisTabActive &&
+              isPaneFocused &&
+              !graphOpen && (
+                <TeamMessagesPanelBridge
+                  position="floating-composer"
+                  {...sharedMessagesPanelProps}
+                />
+              )}
           </div>
         </div>
 
@@ -3650,6 +3659,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                   .getState()
                   .openTab({ type: 'graph', label: `${data.config.name} Graph`, teamName });
               }}
+              messagesPanelEnabled={
+                (messagesPanelMode === 'floating-composer' ||
+                  messagesPanelMode === 'bottom-sheet') &&
+                isThisTabActive &&
+                isPaneFocused
+              }
               onSendMessage={(memberName) => {
                 setSendDialogRecipient(memberName);
                 setSendDialogDefaultText(undefined);
