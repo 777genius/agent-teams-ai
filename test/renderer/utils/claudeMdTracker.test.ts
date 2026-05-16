@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   detectClaudeMdFromFilePath,
+  extractUserMentionPaths,
   getDirectory,
   getParentDirectory,
   processSessionClaudeMd,
@@ -156,5 +157,36 @@ describe('processSessionClaudeMd Windows paths', () => {
 
     expect(firstDirectories).toEqual(['C:\\Repo\\src\\CLAUDE.md']);
     expect(secondDirectories).toEqual([]);
+  });
+});
+
+describe('extractUserMentionPaths Windows paths', () => {
+  function userGroupWithPath(path: string) {
+    return {
+      content: {
+        fileReferences: [{ path, raw: `@${path}` }],
+      },
+    } as any;
+  }
+
+  it('resolves Windows current-directory mentions with backslash separators', () => {
+    expect(extractUserMentionPaths(userGroupWithPath('.\\src\\app.ts'), 'C:\\Repo')).toEqual([
+      'C:\\Repo\\src\\app.ts',
+    ]);
+  });
+
+  it('resolves relative mentions under UNC roots without escaping the share root', () => {
+    expect(
+      extractUserMentionPaths(userGroupWithPath('../outside/file.ts'), '//server/share')
+    ).toEqual(['//server/share/outside/file.ts']);
+    expect(
+      extractUserMentionPaths(userGroupWithPath('..\\outside\\file.ts'), '\\\\server\\share')
+    ).toEqual(['\\\\server\\share\\outside\\file.ts']);
+  });
+
+  it('leaves home-relative mentions untouched', () => {
+    expect(extractUserMentionPaths(userGroupWithPath('~\\.claude\\CLAUDE.md'), 'C:\\Repo')).toEqual(
+      ['~\\.claude\\CLAUDE.md']
+    );
   });
 });

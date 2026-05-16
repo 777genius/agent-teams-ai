@@ -40,7 +40,10 @@ vi.mock('@renderer/components/chat/viewers/FileLink', () => ({
   isRelativeUrl: () => false,
 }));
 
-import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import {
+  MarkdownViewer,
+  resolveRelativePath,
+} from '@renderer/components/chat/viewers/MarkdownViewer';
 
 describe('MarkdownViewer code blocks', () => {
   afterEach(() => {
@@ -87,5 +90,25 @@ describe('MarkdownViewer code blocks', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+});
+
+describe('MarkdownViewer local image path resolution', () => {
+  it('resolves Windows relative image paths against a Windows base directory', () => {
+    expect(resolveRelativePath('.\\images\\plot.png', 'C:\\Repo\\docs')).toBe(
+      'C:\\Repo\\docs\\images\\plot.png'
+    );
+  });
+
+  it('preserves absolute Windows image paths', () => {
+    expect(resolveRelativePath('C:\\Screens\\plot.png', 'C:\\Repo\\docs')).toBe(
+      'C:\\Screens\\plot.png'
+    );
+  });
+
+  it('resolves Windows UNC parent image paths without escaping the share root', () => {
+    expect(resolveRelativePath('..\\assets\\plot.png', '\\\\server\\share\\repo\\docs')).toBe(
+      '\\\\server\\share\\repo\\assets\\plot.png'
+    );
   });
 });

@@ -32,21 +32,22 @@ export function resolveFilePath(base: string, relativePath: string): string {
   }
 
   // Handle ./ prefix (current directory)
-  if (cleanRelative.startsWith('./')) {
+  if (cleanRelative.startsWith('./') || cleanRelative.startsWith('.\\')) {
     cleanRelative = cleanRelative.slice(2);
   }
 
   // Handle ../ prefixes (parent directory)
   const separator = cleanBase.includes('\\') ? '\\' : '/';
-  const hasUnixRoot = cleanBase.startsWith('/');
-  const hasUncRoot = cleanBase.startsWith('\\\\');
+  const hasUncRoot = cleanBase.startsWith('\\\\') || cleanBase.startsWith('//');
+  const hasUnixRoot = !hasUncRoot && cleanBase.startsWith('/');
+  const minRootParts = hasUncRoot ? 2 : 1;
   const normalizedRelative = normalizeSeparators(cleanRelative, separator);
   const baseParts = splitPath(cleanBase);
   let remainingRelative = normalizedRelative;
 
   while (remainingRelative.startsWith(`..${separator}`)) {
     remainingRelative = remainingRelative.slice(3);
-    if (baseParts.length > 1) {
+    if (baseParts.length > minRootParts) {
       baseParts.pop();
     }
   }
@@ -56,8 +57,8 @@ export function resolveFilePath(base: string, relativePath: string): string {
   if (hasUnixRoot && !normalizedBase.startsWith('/')) {
     normalizedBase = `/${normalizedBase}`;
   }
-  if (hasUncRoot && !normalizedBase.startsWith('\\\\')) {
-    normalizedBase = `\\\\${normalizedBase}`;
+  if (hasUncRoot && !normalizedBase.startsWith(`${separator}${separator}`)) {
+    normalizedBase = `${separator}${separator}${normalizedBase}`;
   }
   return remainingRelative ? `${normalizedBase}${separator}${remainingRelative}` : normalizedBase;
 }

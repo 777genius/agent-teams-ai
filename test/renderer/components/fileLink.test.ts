@@ -121,4 +121,19 @@ describe('resolveFileLinkPath', () => {
       resolveFileLinkPath('/Users/belief/dev/projects/your_posts/docs/roadmap.md', PROJECT_PATH)
     ).toBe('/Users/belief/dev/projects/your_posts/docs/roadmap.md');
   });
+
+  it('preserves Windows UNC roots when normalizing path segments', () => {
+    expect(resolveFileLinkPath('\\\\server\\share\\repo\\..\\docs\\roadmap.md', PROJECT_PATH)).toBe(
+      '\\\\server\\share\\docs\\roadmap.md'
+    );
+    expect(resolveFileLinkPath('//server/share/repo/../docs/roadmap.md', PROJECT_PATH)).toBe(
+      '//server/share/docs/roadmap.md'
+    );
+  });
+
+  it('preserves Windows drive roots when normalizing dot segments', () => {
+    expect(resolveFileLinkPath('C:\\repo\\src\\..\\README.md', PROJECT_PATH)).toBe(
+      'C:\\repo\\README.md'
+    );
+  });
 });
