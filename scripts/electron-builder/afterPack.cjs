@@ -159,6 +159,93 @@ async function pruneNodePtyArtifacts(appOutDir, platform, archLabel) {
   return removedPaths;
 }
 
+function findNodeModulesSequence(segments, sequence) {
+  for (let index = 0; index <= segments.length - sequence.length; index += 1) {
+    let matches = true;
+    for (let offset = 0; offset < sequence.length; offset += 1) {
+      if (segments[index + offset] !== sequence[offset]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
+  if (targetPlatform !== 'win32') {
+    return null;
+  }
+
+  const relativePath = path.relative(appOutDir, filePath);
+  const segments = relativePath.split(path.sep);
+
+  const conptyIndex = findNodeModulesSequence(segments, [
+    'node_modules',
+    'node-pty',
+    'third_party',
+    'conpty',
+  ]);
+  const conptyArchIndex = conptyIndex + 5;
+  const conptyArchDir = conptyIndex >= 0 ? segments[conptyArchIndex] : null;
+  if (conptyArchDir?.startsWith('win10-') && conptyArchDir !== `win10-${targetArch}`) {
+    return path.join(appOutDir, ...segments.slice(0, conptyArchIndex + 1));
+  }
+
+  return null;
+}
+
+function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform) {
+  const normalizedPath = relativePath.split(path.sep).join('/');
+  const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
+
+  return (
+    targetPlatform === 'win32' &&
+    (normalizedPath === ssh2PageantPath || normalizedPath.endsWith(`/${ssh2PageantPath}`)) &&
+    format === 'pe' &&
+    archs.size === 1 &&
+    archs.has('ia32')
+  );
+}
+
+async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, targetArch) {
+  const files = await walkFiles(appOutDir);
+  const rootsToRemove = new Set();
+
+  for (const filePath of files) {
+    const rootToRemove = getKnownPrunableNativeArtifactRoot(
+      appOutDir,
+      filePath,
+      targetPlatform,
+      targetArch
+    );
+    if (!rootToRemove) {
+      continue;
+    }
+
+    const metadata = await detectBinaryMetadata(filePath);
+    if (!metadata) {
+      continue;
+    }
+
+    if (isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+      continue;
+    }
+
+    rootsToRemove.add(rootToRemove);
+  }
+
+  const removedPaths = [];
+  for (const absolutePath of rootsToRemove) {
+    await fs.promises.rm(absolutePath, { recursive: true, force: true });
+    removedPaths.push(absolutePath);
+  }
+  return removedPaths;
+}
+
 function mapMachOCpuType(cpuType) {
   switch (cpuType >>> 0) {
     case 0x00000007:
@@ -335,6 +422,7 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
   const files = await walkFiles(appOutDir);
 
   for (const filePath of files) {
+    const relativePath = path.relative(appOutDir, filePath);
     const metadata = await detectBinaryMetadata(filePath);
     if (!metadata) {
       continue;
@@ -344,8 +432,14 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
       continue;
     }
 
+    if (
+      isKnownAllowedNativeMismatch(relativePath, metadata.format, metadata.archs, targetPlatform)
+    ) {
+      continue;
+    }
+
     mismatches.push({
-      path: path.relative(appOutDir, filePath),
+      path: relativePath,
       format: metadata.format,
       archs: [...metadata.archs].sort(),
     });
@@ -358,7 +452,14 @@ async function afterPack(context) {
   const targetPlatform = context.electronPlatformName;
   const targetArch = getArchLabel(context.arch);
 
-  const removedPaths = await pruneNodePtyArtifacts(context.appOutDir, targetPlatform, targetArch);
+  const removedPaths = [
+    ...(await pruneNodePtyArtifacts(context.appOutDir, targetPlatform, targetArch)),
+    ...(await pruneKnownIncompatibleNativeArtifacts(
+      context.appOutDir,
+      targetPlatform,
+      targetArch
+    )),
+  ];
   const mismatches = await validateNativeBinaries(context.appOutDir, targetPlatform, targetArch);
 
   if (mismatches.length > 0) {
@@ -383,9 +484,11 @@ module.exports._internal = {
   detectBinaryMetadata,
   getArchLabel,
   isBinaryCompatible,
+  isKnownAllowedNativeMismatch,
   parseElf,
   parseMachO,
   parsePortableExecutable,
+  pruneKnownIncompatibleNativeArtifacts,
   pruneNodePtyArtifacts,
   validateNativeBinaries,
   walkFiles,

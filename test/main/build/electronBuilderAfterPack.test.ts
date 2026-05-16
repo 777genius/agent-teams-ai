@@ -45,8 +45,8 @@ function createElfBuffer(arch: 'arm64' | 'x64'): Buffer {
   return buffer;
 }
 
-function createPortableExecutableBuffer(arch: 'arm64' | 'x64'): Buffer {
-  const machine = arch === 'arm64' ? 0xaa64 : 0x8664;
+function createPortableExecutableBuffer(arch: 'arm64' | 'ia32' | 'x64'): Buffer {
+  const machine = arch === 'arm64' ? 0xaa64 : arch === 'ia32' ? 0x014c : 0x8664;
   const buffer = Buffer.alloc(256);
   buffer[0] = 0x4d;
   buffer[1] = 0x5a;
@@ -223,5 +223,73 @@ describe('electron-builder afterPack', () => {
         )
       )
     ).toBe(false);
+  });
+
+  it('accepts a clean x64 Windows bundle with optional standalone helper binaries', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+
+    writeFile(path.join(tempDir, 'Agent Teams UI.exe'), createPortableExecutableBuffer('x64'));
+    writeFile(
+      path.join(
+        tempDir,
+        'resources',
+        'app.asar.unpacked',
+        'node_modules',
+        'node-pty',
+        'build',
+        'Release',
+        'pty.node'
+      ),
+      createPortableExecutableBuffer('x64')
+    );
+    const pageantPath = path.join(
+      tempDir,
+      'resources',
+      'app.asar.unpacked',
+      'node_modules',
+      'ssh2',
+      'util',
+      'pagent.exe'
+    );
+    const armConptyDir = path.join(
+      tempDir,
+      'resources',
+      'app.asar.unpacked',
+      'node_modules',
+      'node-pty',
+      'third_party',
+      'conpty',
+      '1.23.251008001',
+      'win10-arm64'
+    );
+    writeFile(pageantPath, createPortableExecutableBuffer('ia32'));
+    writeFile(path.join(armConptyDir, 'conpty.dll'), createPortableExecutableBuffer('arm64'));
+    writeFile(path.join(armConptyDir, 'OpenConsole.exe'), createPortableExecutableBuffer('arm64'));
+
+    await afterPackModule({
+      appOutDir: tempDir,
+      electronPlatformName: 'win32',
+      arch: 1,
+    });
+
+    expect(fs.existsSync(pageantPath)).toBe(true);
+    expect(fs.existsSync(armConptyDir)).toBe(false);
+  });
+
+  it('still reports unrelated ia32 Windows binaries in an x64 bundle', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+
+    const badBinaryPath = path.join(tempDir, 'resources', 'app.asar.unpacked', 'bad-helper.exe');
+    writeFile(badBinaryPath, createPortableExecutableBuffer('ia32'));
+
+    await expect(validateNativeBinaries(tempDir, 'win32', 'x64')).resolves.toEqual([
+      {
+        path: path.join('resources', 'app.asar.unpacked', 'bad-helper.exe'),
+        format: 'pe',
+        archs: ['ia32'],
+      },
+    ]);
   });
 });

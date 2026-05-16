@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -326,12 +327,93 @@ function parseArgs(argv) {
   return { all, jsonPath, list, selected };
 }
 
+function hasPathSeparator(value) {
+  return value.includes('/') || value.includes('\\');
+}
+
+function resolveWindowsSpawnBinary(binary) {
+  if (process.platform !== 'win32') {
+    return binary;
+  }
+
+  if (hasPathSeparator(binary)) {
+    if (!path.extname(binary) && existsSync(`${binary}.cmd`)) {
+      return `${binary}.cmd`;
+    }
+    return binary;
+  }
+
+  const whereResult = spawnSync('where.exe', [binary], {
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  if (whereResult.status !== 0 || !whereResult.stdout) {
+    return binary;
+  }
+
+  const candidates = whereResult.stdout
+    .split(/\r?\n/)
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
+  const extensionlessShim = candidates.find(
+    (candidate) => !path.extname(candidate) && existsSync(`${candidate}.cmd`)
+  );
+  if (extensionlessShim) {
+    return `${extensionlessShim}.cmd`;
+  }
+  return (
+    candidates.find((candidate) => /\.exe$/i.test(candidate)) ??
+    candidates.find((candidate) => /\.(?:cmd|bat)$/i.test(candidate)) ??
+    candidates[0] ??
+    binary
+  );
+}
+
+function quoteWindowsCmdArg(value) {
+  const text = String(value);
+  if (text.length === 0) {
+    return '""';
+  }
+  if (!/[ \t\r\n"&|<>^()%!]/.test(text)) {
+    return text;
+  }
+  return `"${text.replace(/%/g, '%%').replace(/(["^&|<>])/g, '^$1')}"`;
+}
+
+function buildSpawnInvocation(command) {
+  if (process.platform !== 'win32') {
+    return {
+      bin: command.bin,
+      args: command.args,
+      options: { windowsHide: true },
+    };
+  }
+
+  const resolvedBin = resolveWindowsSpawnBinary(command.bin);
+  if (/\.(?:cmd|bat)$/i.test(resolvedBin)) {
+    const commandLine = [resolvedBin, ...command.args].map(quoteWindowsCmdArg).join(' ');
+    return {
+      bin: process.env.ComSpec || 'cmd.exe',
+      args: ['/d', '/s', '/c', commandLine],
+      options: { windowsHide: true, windowsVerbatimArguments: true },
+    };
+  }
+
+  return {
+    bin: resolvedBin,
+    args: command.args,
+    options: { windowsHide: true },
+  };
+}
+
 function runCommand(command) {
   return new Promise((resolve) => {
-    const child = spawn(command.bin, command.args, {
+    const spawnInvocation = buildSpawnInvocation(command);
+    const child = spawn(spawnInvocation.bin, spawnInvocation.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: process.env,
       cwd: command.cwd,
+      ...spawnInvocation.options,
     });
     let stdout = '';
     let stderr = '';
