@@ -68,6 +68,13 @@ import { ChangeExtractorService } from '@main/services/team/ChangeExtractorServi
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
+import {
+  clearOpenCodeLocalMcpLaunchEnv,
+  copyOpenCodeLocalMcpLaunchEnv,
+  hasOpenCodeLocalMcpLaunchEnv,
+  isOpenCodeMcpHttpBridgeEnabled,
+  snapshotOpenCodeLocalMcpLaunchEnv,
+} from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -353,10 +360,13 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
-  const useHttpMcpBridge = bridgeEnv.CLAUDE_TEAM_OPENCODE_MCP_HTTP === '1';
+  const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   if (!useHttpMcpBridge) {
-    // The OpenCode bridge direct tools/list proof currently requires a local MCP command.
     delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+  } else {
+    delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+    clearOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   }
   const applyMcpLaunchSpecEnv = async (
     targetEnv: NodeJS.ProcessEnv,
@@ -383,6 +393,25 @@ async function createOpenCodeRuntimeAdapterRegistry(
           error instanceof Error ? error.message : String(error)
         }`
       );
+    }
+  };
+  const ensureOpenCodeLocalMcpLaunchEnv = async (
+    targetEnv: NodeJS.ProcessEnv,
+    options: { emitProgress?: boolean } = {}
+  ): Promise<void> => {
+    if (hasOpenCodeLocalMcpLaunchEnv(bridgeEnv)) {
+      copyOpenCodeLocalMcpLaunchEnv(bridgeEnv, targetEnv);
+      return;
+    }
+    if (explicitLocalMcpLaunchEnv) {
+      copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, targetEnv);
+      copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
+      return;
+    }
+
+    await applyMcpLaunchSpecEnv(targetEnv, options);
+    if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
+      copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
     }
   };
   try {
@@ -418,6 +447,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      clearOpenCodeLocalMcpLaunchEnv(bridgeEnv);
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
     } catch (error) {
       logger.warn(
@@ -428,44 +458,26 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }
   }
   if (!bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
-    await applyMcpLaunchSpecEnv(bridgeEnv, { emitProgress: true });
+    await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
   }
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
-    if (!useHttpMcpBridge || !bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
+    if (!useHttpMcpBridge) {
       return nextEnv;
     }
     try {
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
       nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON;
+      clearOpenCodeLocalMcpLaunchEnv(bridgeEnv);
+      clearOpenCodeLocalMcpLaunchEnv(nextEnv);
     } catch (error) {
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
       delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-      if (
-        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND &&
-        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY &&
-        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON
-      ) {
-        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND =
-          bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND;
-        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY =
-          bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY;
-        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON =
-          bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON;
-      } else {
-        await applyMcpLaunchSpecEnv(nextEnv);
-        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND =
-          nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND;
-        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY =
-          nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY;
-        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON =
-          nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON;
-      }
+      clearOpenCodeLocalMcpLaunchEnv(nextEnv);
+      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
           error instanceof Error ? error.message : String(error)

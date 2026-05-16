@@ -57,6 +57,25 @@ export interface OpenCodeBridgeCommandClientOptions {
 
 const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
 const DEFAULT_STDERR_LIMIT_BYTES = 256_000;
+const WINDOWS_BATCH_EXTENSIONS = new Set(['.cmd', '.bat']);
+
+export function resolveOpenCodeBridgeProcessCwd(
+  binaryPath: string,
+  requestedCwd: string,
+  platform: NodeJS.Platform = process.platform
+): string {
+  if (platform !== 'win32') {
+    return requestedCwd;
+  }
+
+  const extension = path.win32.extname(binaryPath).toLowerCase();
+  if (!WINDOWS_BATCH_EXTENSIONS.has(extension)) {
+    return requestedCwd;
+  }
+
+  const launcherDirectory = path.win32.dirname(binaryPath);
+  return launcherDirectory && launcherDirectory !== '.' ? launcherDirectory : requestedCwd;
+}
 
 export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcessRunner {
   async run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult> {
@@ -146,7 +165,7 @@ export class OpenCodeBridgeCommandClient {
       const processResult = await this.processRunner.run({
         binaryPath: this.binaryPath,
         args: ['runtime', 'opencode-command', '--json', '--input', inputPath],
-        cwd: options.cwd,
+        cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
         timeoutMs: options.timeoutMs,
         stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
         stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
