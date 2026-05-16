@@ -75,7 +75,15 @@ function waitForProcessClose(child, exitPromise, timeoutMs) {
     return Promise.resolve();
   }
 
-  return Promise.race([exitPromise, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
+  let timeoutId;
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = setTimeout(resolve, timeoutMs);
+  });
+  return Promise.race([exitPromise, timeoutPromise]).finally(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  });
 }
 
 async function terminateChild(child, exitPromise, platform) {

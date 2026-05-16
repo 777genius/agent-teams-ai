@@ -30,4 +30,9 @@ describe('platformPath Windows containment', () => {
       null
     );
   });
+
+  it('does not treat an empty prefix as the root of absolute paths', () => {
+    expect(isPathPrefix('', '/Users/Alice/Repo/src/app.ts')).toBe(false);
+    expect(getRelativePathWithinPrefix('', '/Users/Alice/Repo/src/app.ts')).toBe(null);
+  });
 });

@@ -78,6 +78,7 @@ export function joinPath(base: string, ...segments: string[]): string {
 export function isPathPrefix(prefix: string, fullPath: string): boolean {
   const p = stripTrailingSeparators(normalizePathForComparison(prefix));
   const f = stripTrailingSeparators(normalizePathForComparison(fullPath));
+  if (!p) return false;
   if (f === p) return true;
   // Root prefixes are special: p already ends with "/" ("/" or "c:/").
   if (p === '/') return f.startsWith('/');
