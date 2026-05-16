@@ -131,6 +131,7 @@
     "@radix-ui/react-hover-card": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-presence": "^1.1.5",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
@@ -350,7 +351,10 @@
       "electron",
       "node-pty",
       "cpu-features"
-    ]
+    ],
+    "patchedDependencies": {
+      "@radix-ui/react-presence@1.1.5": "patches/@radix-ui__react-presence@1.1.5.patch"
+    }
   },
   "knip": {
     "entry": [

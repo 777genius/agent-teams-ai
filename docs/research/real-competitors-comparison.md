@@ -1,6 +1,6 @@
 # Реальные конкуренты для Comparison в README
 
-> ⚠️ Update 2026-05-05: публичная таблица README/landing теперь сравнивает нас с `Gastown` и `Paperclip`, а не с `Claude Code Agent Teams` и `GoClaw`. Актуальная research-опора: [gastown-paperclip-comparison-2026-05-05.md](gastown-paperclip-comparison-2026-05-05.md). Ниже оставлен старый broader draft как исторический контекст.
+> ⚠️ Update 2026-05-16: публичная таблица README/landing теперь сравнивает нас с `Gastown` и `Paperclip`, а не с `Claude Code Agent Teams` и `GoClaw`. Актуальная research-опора: [gastown-paperclip-comparison-2026-05-16.md](gastown-paperclip-comparison-2026-05-16.md). Ниже оставлен старый broader draft как исторический контекст.
 
 > Дата проверки: 2026-04-13  
 > Статус: внутренний comparison draft  

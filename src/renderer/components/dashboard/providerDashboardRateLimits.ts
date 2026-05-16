@@ -14,6 +14,7 @@ export interface DashboardRateLimitItem {
   label: string;
   remaining: string;
   resetsAt: string;
+  isDepleted: boolean;
 }
 
 export interface DashboardRateLimitSkeletonModeInput {
@@ -180,6 +181,10 @@ function formatDashboardResetTime(timestampSeconds: number | null | undefined): 
   });
 }
 
+function isRateLimitDepleted(usedPercent: number | null | undefined): boolean {
+  return typeof usedPercent === 'number' && Number.isFinite(usedPercent) && usedPercent >= 100;
+}
+
 function buildRateLimitItem(
   label: string,
   usedPercent: number,
@@ -189,6 +194,7 @@ function buildRateLimitItem(
     label,
     remaining: formatCodexRemainingPercent(usedPercent) ?? 'Unknown',
     resetsAt: formatDashboardResetTime(resetsAt),
+    isDepleted: isRateLimitDepleted(usedPercent),
   };
 }
 

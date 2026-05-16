@@ -121,11 +121,13 @@ describe('providerDashboardRateLimits', () => {
         label: '5h left',
         remaining: '75%',
         resetsAt: 'reset unknown',
+        isDepleted: false,
       },
       {
         label: 'Weekly left',
         remaining: '50%',
         resetsAt: 'reset unknown',
+        isDepleted: false,
       },
     ]);
   });
@@ -188,8 +190,40 @@ describe('providerDashboardRateLimits', () => {
         label: '5h left',
         remaining: '80%',
         resetsAt: 'reset unknown',
+        isDepleted: false,
       },
     ]);
+  });
+
+  test('marks fully depleted limits when no quota remains', () => {
+    const connection = createCodexConnection();
+
+    const items = getCodexDashboardRateLimits(
+      createProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        authMethod: 'oauth_token',
+        connection: {
+          ...connection,
+          codex: {
+            ...connection.codex!,
+            rateLimits: {
+              ...connection.codex!.rateLimits!,
+              primary: {
+                usedPercent: 100,
+                windowDurationMins: 300,
+                resetsAt: null,
+              },
+            },
+          },
+        },
+      })
+    );
+
+    expect(items?.[0]).toMatchObject({
+      remaining: '0%',
+      isDepleted: true,
+    });
   });
 
   test('shows Anthropic rate limit skeletons when subscription mode is selected in config', () => {

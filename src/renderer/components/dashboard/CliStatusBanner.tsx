@@ -123,7 +123,10 @@ const DashboardRateLimitChips = ({
           >
             {item.label}
           </span>
-          <span className="text-xs font-medium" style={{ color: '#86efac' }}>
+          <span
+            className="text-xs font-medium"
+            style={{ color: item.isDepleted ? '#f87171' : '#86efac' }}
+          >
             {item.remaining}
           </span>
           <span

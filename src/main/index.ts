@@ -353,6 +353,11 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
+  const useHttpMcpBridge = bridgeEnv.CLAUDE_TEAM_OPENCODE_MCP_HTTP === '1';
+  if (!useHttpMcpBridge) {
+    // The OpenCode bridge direct tools/list proof currently requires a local MCP command.
+    delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+  }
   const applyMcpLaunchSpecEnv = async (
     targetEnv: NodeJS.ProcessEnv,
     options: { emitProgress?: boolean } = {}
@@ -408,17 +413,19 @@ async function createOpenCodeRuntimeAdapterRegistry(
       }`
     );
   }
-  try {
-    reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
-    const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-    bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
-    reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
-  } catch (error) {
-    logger.warn(
-      `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
+  if (useHttpMcpBridge) {
+    try {
+      reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
+      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
+    } catch (error) {
+      logger.warn(
+        `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
   if (!bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
     await applyMcpLaunchSpecEnv(bridgeEnv, { emitProgress: true });
@@ -427,7 +434,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
-    if (!bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
+    if (!useHttpMcpBridge || !bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
       return nextEnv;
     }
     try {
