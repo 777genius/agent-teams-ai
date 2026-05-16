@@ -16708,6 +16708,17 @@ export class TeamProvisioningService {
     );
 
     for (const providerId of providerIds) {
+      if (providerId === 'kilocode') {
+        const kilocodeConnection =
+          await this.providerConnectionService.getConnectionInfo('kilocode');
+        if (!kilocodeConnection.apiKeyConfigured) {
+          blockingMessages.push(
+            'KiloCode: API key not configured. Set KILO_API_KEY or add it in Provider Settings.'
+          );
+        }
+        continue;
+      }
+
       if (providerId === 'opencode') {
         const adapter = this.getOpenCodeRuntimeAdapter();
         if (!adapter) {
