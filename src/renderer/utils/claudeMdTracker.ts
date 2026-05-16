@@ -11,6 +11,7 @@ import {
   isPathPrefix,
   lastSeparatorIndex,
   normalizePathForComparison,
+  stripTrailingSeparators,
   splitPath as splitPathCrossPlatform,
 } from '@shared/utils/platformPath';
 
@@ -91,7 +92,7 @@ function joinPaths(base: string, relative: string): string {
   }
 
   // Remove trailing slash from base if present
-  const cleanBase = trimTrailingSeparator(base);
+  const cleanBase = stripTrailingSeparators(base);
 
   // Handle @ prefix (file mention marker) - strip it if present
   let cleanRelative = relative;
@@ -128,18 +129,6 @@ function joinPaths(base: string, relative: string): string {
     normalizedBase = `${separator}${separator}${normalizedBase}`;
   }
   return remainingRelative ? `${normalizedBase}${separator}${remainingRelative}` : normalizedBase;
-}
-
-function trimTrailingSeparator(input: string): string {
-  let end = input.length;
-  while (end > 0) {
-    const char = input[end - 1];
-    if (char !== '/' && char !== '\\') {
-      break;
-    }
-    end--;
-  }
-  return input.slice(0, end);
 }
 
 function normalizeSeparators(input: string, separator: '/' | '\\'): string {

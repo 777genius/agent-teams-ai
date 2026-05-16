@@ -175,6 +175,12 @@ describe('extractUserMentionPaths Windows paths', () => {
     ]);
   });
 
+  it('preserves Windows drive-root separators for relative mentions', () => {
+    expect(extractUserMentionPaths(userGroupWithPath('src\\app.ts'), 'C:\\')).toEqual([
+      'C:\\src\\app.ts',
+    ]);
+  });
+
   it('resolves relative mentions under UNC roots without escaping the share root', () => {
     expect(
       extractUserMentionPaths(userGroupWithPath('../outside/file.ts'), '//server/share')

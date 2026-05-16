@@ -10,7 +10,7 @@
  */
 
 import { estimateTokens } from '@shared/utils/tokenFormatting';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
+import { normalizePathForComparison, stripTrailingSeparators } from '@shared/utils/platformPath';
 
 import { MAX_MENTIONED_FILE_TOKENS } from '../types/contextInjection';
 
@@ -475,7 +475,7 @@ function joinPaths(base: string, relative: string): string {
     return relative;
   }
 
-  const cleanBase = trimTrailingSeparator(base);
+  const cleanBase = stripTrailingSeparators(base);
 
   // Handle @ prefix (file mention marker) - strip it if present
   let cleanRelative = relative;
@@ -512,18 +512,6 @@ function joinPaths(base: string, relative: string): string {
     normalizedBase = `${separator}${separator}${normalizedBase}`;
   }
   return remainingRelative ? `${normalizedBase}${separator}${remainingRelative}` : normalizedBase;
-}
-
-function trimTrailingSeparator(input: string): string {
-  let end = input.length;
-  while (end > 0) {
-    const char = input[end - 1];
-    if (char !== '/' && char !== '\\') {
-      break;
-    }
-    end--;
-  }
-  return input.slice(0, end);
 }
 
 function normalizeSeparators(input: string, separator: '/' | '\\'): string {

@@ -28,6 +28,11 @@ describe('resolveFilePath', () => {
     );
   });
 
+  it('preserves Windows drive-root separators when resolving child paths', () => {
+    expect(resolveFilePath('C:\\', 'src\\app.ts')).toBe('C:\\src\\app.ts');
+    expect(resolveFilePath('C:/', 'src/app.ts')).toBe('C:/src/app.ts');
+  });
+
   it('passes through tilde paths as-is', () => {
     expect(resolveFilePath('/repo', '~/some/directory')).toBe('~/some/directory');
   });

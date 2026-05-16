@@ -2,6 +2,8 @@
  * Path resolution utilities for the store.
  */
 
+import { stripTrailingSeparators } from '@shared/utils/platformPath';
+
 /**
  * Resolves a relative path against a base path, handling various path formats.
  * Handles:
@@ -17,7 +19,7 @@ export function resolveFilePath(base: string, relativePath: string): string {
     return relativePath;
   }
 
-  const cleanBase = trimTrailingSeparator(base);
+  const cleanBase = stripTrailingSeparators(base);
 
   // Handle @ prefix (file mention marker) - strip it if present
   let cleanRelative = relativePath;
@@ -65,18 +67,6 @@ export function resolveFilePath(base: string, relativePath: string): string {
 
 function isAbsolutePath(input: string): boolean {
   return input.startsWith('/') || input.startsWith('\\\\') || /^[a-zA-Z]:[\\/]/.test(input);
-}
-
-function trimTrailingSeparator(input: string): string {
-  let end = input.length;
-  while (end > 0) {
-    const char = input[end - 1];
-    if (char !== '/' && char !== '\\') {
-      break;
-    }
-    end--;
-  }
-  return input.slice(0, end);
 }
 
 function normalizeSeparators(input: string, separator: '/' | '\\'): string {
