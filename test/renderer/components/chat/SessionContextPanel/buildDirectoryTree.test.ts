@@ -44,4 +44,10 @@ describe('buildDirectoryTree Windows paths', () => {
 
     expect(root.children.get('C:')?.children.get('Users')).toBeDefined();
   });
+
+  it('falls back to absolute injection paths when project root is unavailable', () => {
+    const root = buildDirectoryTree([injection('C:\\Users\\Alice\\Repo\\CLAUDE.md')]);
+
+    expect(root.children.get('C:')?.children.get('Users')).toBeDefined();
+  });
 });

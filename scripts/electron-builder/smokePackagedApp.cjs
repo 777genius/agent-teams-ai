@@ -173,4 +173,13 @@ async function main() {
   fail(`Timed out after ${STARTUP_TIMEOUT_MS}ms waiting for packaged startup`, log);
 }
 
-main().catch((error) => fail(error?.stack || String(error)));
+if (require.main === module) {
+  main().catch((error) => fail(error?.stack || String(error)));
+}
+
+module.exports = {
+  _internal: {
+    terminateChild,
+    waitForProcessClose,
+  },
+};
