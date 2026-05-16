@@ -730,6 +730,10 @@ export class CliInstallerService {
   async getProviderStatus(providerId: CliProviderId): Promise<CliProviderStatus | null> {
     await resolveInteractiveShellEnv();
 
+    if (providerId === 'kilocode') {
+      return this.resolveKilocodeProviderStatus();
+    }
+
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (!binaryPath) {
       return null;
@@ -757,6 +761,10 @@ export class CliInstallerService {
   async verifyProviderModels(providerId: CliProviderId): Promise<CliProviderStatus | null> {
     await resolveInteractiveShellEnv();
 
+    if (providerId === 'kilocode') {
+      return this.resolveKilocodeProviderStatus();
+    }
+
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (!binaryPath) {
       return null;
@@ -772,7 +780,7 @@ export class CliInstallerService {
       return null;
     }
 
-    if (providerId === 'opencode' || providerId === 'kilocode') {
+    if (providerId === 'opencode') {
       const providerStatus = await this.multimodelBridgeService.verifyProviderStatus(
         binaryPath,
         providerId
@@ -964,6 +972,40 @@ export class CliInstallerService {
     }));
     result.authLoggedIn = false;
     result.authMethod = null;
+  }
+
+  private resolveKilocodeProviderStatus(): CliProviderStatus {
+    const hasApiKey = Boolean(process.env.KILO_API_KEY?.trim());
+    const status: CliProviderStatus = {
+      providerId: 'kilocode',
+      displayName: 'KiloCode',
+      supported: hasApiKey,
+      authenticated: hasApiKey,
+      authMethod: hasApiKey ? 'api_key' : null,
+      verificationState: 'verified',
+      modelVerificationState: 'idle',
+      statusMessage: hasApiKey ? null : 'Configure KILO_API_KEY to use KiloCode.',
+      detailMessage: null,
+      models: [],
+      modelAvailability: [],
+      canLoginFromUi: true,
+      capabilities: {
+        teamLaunch: hasApiKey,
+        oneShot: false,
+        extensions: createDefaultCliExtensionCapabilities(),
+      },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: null,
+      connection: null,
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      subscriptionRateLimits: null,
+    };
+    this.updateLatestProviderStatus(status);
+    return status;
   }
 
   /**
