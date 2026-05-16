@@ -14499,6 +14499,33 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('sends teammate denial responses to the teammate inbox', async () => {
+    const svc = new TeamProvisioningService();
+    const persistInboxMessage = vi.fn();
+    (svc as any).persistInboxMessage = persistInboxMessage;
+
+    await (svc as any).respondToTeammatePermission(
+      { teamName: 'ops-team', runId: 'run-1' },
+      'bob',
+      'perm-deny',
+      false,
+      'Denied by test',
+      [],
+      'Bash',
+      { command: 'echo blocked' }
+    );
+
+    expect(persistInboxMessage).toHaveBeenCalledTimes(1);
+    const [, recipient, message] = persistInboxMessage.mock.calls[0];
+    expect(recipient).toBe('bob');
+    expect(JSON.parse(message.text)).toEqual({
+      type: 'permission_response',
+      request_id: 'perm-deny',
+      subtype: 'error',
+      error: 'Denied by test',
+    });
+  });
+
   it('keeps AskUserQuestion answers in teammate fallback control responses', async () => {
     const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
       cb?.();
