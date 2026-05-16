@@ -67,7 +67,7 @@ export const HoverTooltip = ({
       <span
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute z-[80] w-max max-w-72 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1.5 text-left text-xs font-normal leading-relaxed text-[var(--color-text-secondary)] opacity-0 shadow-lg ring-1 ring-black/5 transition-opacity duration-100',
+          'pointer-events-none absolute z-[80] w-max max-w-72 rounded-md border border-[var(--color-border-emphasis)] bg-[var(--color-surface-overlay)] px-2.5 py-1.5 text-left text-xs font-normal leading-relaxed text-[var(--color-text)] opacity-0 shadow-2xl shadow-black/40 ring-1 ring-black/10 transition-opacity duration-100',
           'group-focus-within/hover-tooltip:opacity-100 group-hover/hover-tooltip:opacity-100',
           sideClassBySide[side],
           alignClassByAlign[align],

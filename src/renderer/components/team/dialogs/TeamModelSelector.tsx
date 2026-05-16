@@ -756,7 +756,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 : modelSelectable
                   ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
                   : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
-          !modelSelectable && 'cursor-not-allowed opacity-45',
+          !modelSelectable && 'cursor-not-allowed',
           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
         )}
         onClick={() => {
