@@ -9,8 +9,8 @@
  * This builds on claudeMdTracker.ts and extends it to track all context sources.
  */
 
-import { estimateTokens } from '@shared/utils/tokenFormatting';
 import { normalizePathForComparison, stripTrailingSeparators } from '@shared/utils/platformPath';
+import { estimateTokens } from '@shared/utils/tokenFormatting';
 
 import { MAX_MENTIONED_FILE_TOKENS } from '../types/contextInjection';
 

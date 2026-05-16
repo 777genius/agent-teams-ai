@@ -72,14 +72,14 @@ function findExecutable(bundlePath, platform) {
 
 function waitForProcessClose(child, exitPromise, timeoutMs) {
   if (child.exitCode !== null || child.signalCode !== null) {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 
   let timeoutId;
   const timeoutPromise = new Promise((resolve) => {
-    timeoutId = setTimeout(resolve, timeoutMs);
+    timeoutId = setTimeout(() => resolve(false), timeoutMs);
   });
-  return Promise.race([exitPromise, timeoutPromise]).finally(() => {
+  return Promise.race([exitPromise.then(() => true), timeoutPromise]).finally(() => {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
@@ -103,7 +103,10 @@ async function terminateChild(child, exitPromise, platform) {
     child.kill();
   }
 
-  await waitForProcessClose(child, exitPromise, SHUTDOWN_TIMEOUT_MS);
+  const closed = await waitForProcessClose(child, exitPromise, SHUTDOWN_TIMEOUT_MS);
+  if (!closed && child.exitCode === null && child.signalCode === null) {
+    throw new Error(`Timed out after ${SHUTDOWN_TIMEOUT_MS}ms waiting for packaged app to exit`);
+  }
 }
 
 async function main() {

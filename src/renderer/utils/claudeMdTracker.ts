@@ -11,8 +11,8 @@ import {
   isPathPrefix,
   lastSeparatorIndex,
   normalizePathForComparison,
-  stripTrailingSeparators,
   splitPath as splitPathCrossPlatform,
+  stripTrailingSeparators,
 } from '@shared/utils/platformPath';
 
 import { extractFileReferences } from './groupTransformer';

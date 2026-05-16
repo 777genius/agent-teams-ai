@@ -2,9 +2,10 @@
  * Build a directory tree structure from CLAUDE.md injections.
  */
 
+import { getRelativePathWithinPrefix } from '@shared/utils/platformPath';
+
 import type { TreeNode } from './types';
 import type { ClaudeMdContextInjection } from '@renderer/types/contextInjection';
-import { getRelativePathWithinPrefix } from '@shared/utils/platformPath';
 
 /**
  * Build a tree structure from a list of directory CLAUDE.md injections.
