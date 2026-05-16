@@ -1,16 +1,21 @@
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 
-import type { DashboardRecentProjectSource } from '@features/recent-projects/contracts';
+import type {
+  DashboardRecentProjectFilesystemState,
+  DashboardRecentProjectSource,
+} from '@features/recent-projects/contracts';
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
 import type { Project } from '@shared/types';
 
 export interface ProjectPathProject extends Project {
   discoverySource?: DashboardRecentProjectSource;
+  filesystemState?: DashboardRecentProjectFilesystemState;
 }
 
-export interface ProjectPathOptionMeta {
+export interface ProjectPathOptionMeta extends Record<string, unknown> {
   discoverySource?: DashboardRecentProjectSource;
+  filesystemState?: DashboardRecentProjectFilesystemState;
 }
 
 function toProjectOption(project: ProjectPathProject): ComboboxOption {
@@ -20,13 +25,43 @@ function toProjectOption(project: ProjectPathProject): ComboboxOption {
     description: project.path,
   };
 
-  if (project.discoverySource !== undefined) {
-    option.meta = {
-      discoverySource: project.discoverySource,
-    } satisfies ProjectPathOptionMeta;
+  if (project.filesystemState === 'deleted') {
+    option.disabled = true;
+  }
+
+  if (project.discoverySource !== undefined || project.filesystemState !== undefined) {
+    const meta: ProjectPathOptionMeta = {};
+    if (project.discoverySource !== undefined) {
+      meta.discoverySource = project.discoverySource;
+    }
+    if (project.filesystemState !== undefined) {
+      meta.filesystemState = project.filesystemState;
+    }
+    option.meta = meta;
   }
 
   return option;
+}
+
+export function isSelectableProjectPathProject(
+  project: Pick<ProjectPathProject, 'path' | 'filesystemState'>
+): boolean {
+  return !isEphemeralProjectPath(project.path) && project.filesystemState !== 'deleted';
+}
+
+export function findProjectPathProjectByPath(
+  projects: readonly ProjectPathProject[],
+  projectPath: string
+): ProjectPathProject | undefined {
+  const normalizedPath = normalizePath(projectPath);
+  return projects.find((project) => normalizePath(project.path) === normalizedPath);
+}
+
+export function isDeletedProjectPathSelection(
+  projects: readonly ProjectPathProject[],
+  projectPath: string
+): boolean {
+  return findProjectPathProjectByPath(projects, projectPath)?.filesystemState === 'deleted';
 }
 
 /**

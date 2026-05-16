@@ -2,7 +2,7 @@
  * Path resolution utilities for the store.
  */
 
-import { stripTrailingSeparators } from '@shared/utils/platformPath';
+import { isAbsoluteOrHomePath, stripTrailingSeparators } from '@shared/utils/platformPath';
 
 /**
  * Resolves a relative path against a base path, handling various path formats.
@@ -15,7 +15,7 @@ import { stripTrailingSeparators } from '@shared/utils/platformPath';
  */
 export function resolveFilePath(base: string, relativePath: string): string {
   // If already absolute, return as-is
-  if (isAbsolutePath(relativePath)) {
+  if (isAbsoluteOrHomePath(relativePath)) {
     return relativePath;
   }
 
@@ -27,13 +27,7 @@ export function resolveFilePath(base: string, relativePath: string): string {
     cleanRelative = cleanRelative.slice(1);
   }
 
-  if (isAbsolutePath(cleanRelative)) {
-    return cleanRelative;
-  }
-
-  // Tilde paths (~/) are home-relative absolute paths - pass through as-is
-  // The main process will expand ~ to the actual home directory
-  if (cleanRelative.startsWith('~/') || cleanRelative.startsWith('~\\') || cleanRelative === '~') {
+  if (isAbsoluteOrHomePath(cleanRelative)) {
     return cleanRelative;
   }
 
@@ -67,10 +61,6 @@ export function resolveFilePath(base: string, relativePath: string): string {
     normalizedBase = `${separator}${separator}${normalizedBase}`;
   }
   return remainingRelative ? `${normalizedBase}${separator}${remainingRelative}` : normalizedBase;
-}
-
-function isAbsolutePath(input: string): boolean {
-  return input.startsWith('/') || input.startsWith('\\\\') || /^[a-zA-Z]:[\\/]/.test(input);
 }
 
 function normalizeSeparators(input: string, separator: '/' | '\\'): string {

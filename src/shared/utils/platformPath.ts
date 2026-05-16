@@ -22,6 +22,18 @@ export function isWindowsishPath(filePath: string): boolean {
   return /^[A-Za-z]:\//.test(p) || p.startsWith('//');
 }
 
+/** True for filesystem-absolute paths and home-relative `~` paths. */
+export function isAbsoluteOrHomePath(filePath: string): boolean {
+  return (
+    filePath.startsWith('/') ||
+    filePath.startsWith('~/') ||
+    filePath.startsWith('~\\') ||
+    filePath === '~' ||
+    filePath.startsWith('\\\\') ||
+    /^[A-Za-z]:[\\/]/.test(filePath)
+  );
+}
+
 /**
  * Normalize for comparisons:
  * - Convert `\` → `/`

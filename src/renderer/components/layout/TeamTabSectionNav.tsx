@@ -33,7 +33,7 @@ export const TeamTabSectionNav = ({
     if (messagesPanelMode === 'sidebar') {
       return section.id !== 'messages' && section.id !== 'claude-logs';
     }
-    if (messagesPanelMode === 'bottom-sheet') {
+    if (messagesPanelMode === 'bottom-sheet' || messagesPanelMode === 'floating-composer') {
       return section.id !== 'messages';
     }
     return true;

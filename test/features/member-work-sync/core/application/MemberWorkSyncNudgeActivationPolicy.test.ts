@@ -86,6 +86,62 @@ function metrics(overrides: Partial<MemberWorkSyncTeamMetrics> = {}): MemberWork
   };
 }
 
+function nativeStaleInProgressStatus(
+  overrides: Partial<MemberWorkSyncStatus> = {}
+): MemberWorkSyncStatus {
+  const base = status({
+    providerId: 'codex',
+    diagnostics: ['no_current_report'],
+    agenda: {
+      ...status().agenda,
+      fingerprint: 'agenda:v1:native-stale',
+      items: [
+        {
+          taskId: 'task-1',
+          displayId: '#1',
+          subject: 'Review landing',
+          kind: 'work',
+          assignee: 'alice',
+          priority: 'normal',
+          reason: 'owned_in_progress_task',
+          evidence: {
+            status: 'in_progress',
+            owner: 'alice',
+          },
+        },
+      ],
+    },
+  });
+  return { ...base, ...overrides };
+}
+
+function staleMetrics(
+  overrides: Partial<MemberWorkSyncTeamMetrics> = {}
+): MemberWorkSyncTeamMetrics {
+  return metrics({
+    generatedAt: '2026-05-06T00:06:00.000Z',
+    phase2Readiness: {
+      ...metrics().phase2Readiness,
+      state: 'blocked',
+      reasons: ['would_nudge_rate_high', 'fingerprint_churn_high'],
+    },
+    recentEvents: [
+      {
+        id: 'status-stale',
+        teamName: 'team-a',
+        memberName: 'alice',
+        kind: 'status_evaluated',
+        state: 'needs_sync',
+        agendaFingerprint: 'agenda:v1:native-stale',
+        recordedAt: '2026-05-06T00:00:00.000Z',
+        actionableCount: 1,
+        providerId: 'codex',
+      },
+    ],
+    ...overrides,
+  });
+}
+
 describe('MemberWorkSyncNudgeActivationPolicy', () => {
   it('activates OpenCode targeted nudges while shadow data is still collecting', () => {
     expect(
@@ -346,6 +402,313 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
         }),
       })
     ).toEqual({ active: false, reason: 'blocking_metrics' });
+  });
+
+  it('activates stale native single in-progress recovery despite blocking metrics', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: true, reason: 'native_stale_in_progress' });
+  });
+
+  it('does not activate stale native in-progress recovery before the quiet window elapses', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics({
+          generatedAt: '2026-05-06T00:05:59.000Z',
+        }),
+      })
+    ).toEqual({ active: false, reason: 'blocking_metrics' });
+  });
+
+  it('does not activate stale native in-progress recovery after an accepted report for the fingerprint', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics({
+          recentEvents: [
+            ...staleMetrics().recentEvents,
+            {
+              id: 'report-accepted',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'report_accepted',
+              state: 'still_working',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              recordedAt: '2026-05-06T00:03:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+          ],
+        }),
+      })
+    ).toEqual({ active: false, reason: 'blocking_metrics' });
+  });
+
+  it('does not activate stale native in-progress recovery when the accepted report state is still current', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({
+          state: 'still_working',
+          report: {
+            state: 'still_working',
+            agendaFingerprint: 'agenda:v1:native-stale',
+            memberName: 'alice',
+            teamName: 'team-a',
+            reportedAt: '2026-05-06T00:03:00.000Z',
+            accepted: true,
+          },
+        }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: false, reason: 'status_not_nudgeable' });
+  });
+
+  it('resets the stale native in-progress quiet window after a fingerprint change', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics({
+          generatedAt: '2026-05-06T00:08:59.000Z',
+          recentEvents: [
+            {
+              id: 'old-same-fingerprint',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'status_evaluated',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              recordedAt: '2026-05-06T00:00:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+            {
+              id: 'fingerprint-returned',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'fingerprint_changed',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              previousFingerprint: 'agenda:v1:other',
+              recordedAt: '2026-05-06T00:03:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+            {
+              id: 'current-after-change',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'status_evaluated',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              previousFingerprint: 'agenda:v1:other',
+              recordedAt: '2026-05-06T00:03:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+          ],
+        }),
+      })
+    ).toEqual({ active: false, reason: 'blocking_metrics' });
+  });
+
+  it('activates stale native in-progress recovery after a returned fingerprint is stable long enough', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics({
+          generatedAt: '2026-05-06T00:09:00.000Z',
+          recentEvents: [
+            {
+              id: 'old-same-fingerprint',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'status_evaluated',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              recordedAt: '2026-05-06T00:00:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+            {
+              id: 'fingerprint-returned',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'fingerprint_changed',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              previousFingerprint: 'agenda:v1:other',
+              recordedAt: '2026-05-06T00:03:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+            {
+              id: 'current-after-change',
+              teamName: 'team-a',
+              memberName: 'alice',
+              kind: 'status_evaluated',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              previousFingerprint: 'agenda:v1:other',
+              recordedAt: '2026-05-06T00:03:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+          ],
+        }),
+      })
+    ).toEqual({ active: true, reason: 'native_stale_in_progress' });
+  });
+
+  it('does not activate stale native in-progress recovery from another member stale event', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics({
+          recentEvents: [
+            {
+              id: 'other-member-status-stale',
+              teamName: 'team-a',
+              memberName: 'bob',
+              kind: 'status_evaluated',
+              state: 'needs_sync',
+              agendaFingerprint: 'agenda:v1:native-stale',
+              recordedAt: '2026-05-06T00:00:00.000Z',
+              actionableCount: 1,
+              providerId: 'codex',
+            },
+          ],
+        }),
+      })
+    ).toEqual({ active: false, reason: 'blocking_metrics' });
+  });
+
+  it('does not use native stale recovery for OpenCode or lead members', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({ providerId: 'opencode' }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
+
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({ memberName: 'team-lead' }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: true, reason: 'lead_targeted_shadow_collecting' });
+  });
+
+  it('does not activate stale native in-progress recovery for multiple or non-in-progress work items', () => {
+    const baseItem = nativeStaleInProgressStatus().agenda.items[0]!;
+
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({
+          agenda: {
+            ...nativeStaleInProgressStatus().agenda,
+            items: [
+              baseItem,
+              {
+                ...baseItem,
+                taskId: 'task-2',
+              },
+            ],
+          },
+        }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: false, reason: 'blocking_metrics' });
+
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({
+          agenda: {
+            ...nativeStaleInProgressStatus().agenda,
+            items: [
+              {
+                ...baseItem,
+                reason: 'owned_pending_task',
+                evidence: {
+                  status: 'pending',
+                  owner: 'alice',
+                },
+              },
+            ],
+          },
+        }),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: false, reason: 'blocking_metrics' });
+  });
+
+  it('does not activate stale native in-progress recovery for needsFix, review, blocked dependency, or clarification agenda items', () => {
+    const baseItem = nativeStaleInProgressStatus().agenda.items[0]!;
+    const cases = [
+      {
+        ...baseItem,
+        evidence: {
+          status: 'needsFix',
+          owner: 'alice',
+        },
+      },
+      {
+        ...baseItem,
+        kind: 'review' as const,
+        priority: 'review_requested' as const,
+        reason: 'current_cycle_review_assigned',
+        evidence: {
+          status: 'completed',
+          owner: 'bob',
+          reviewer: 'alice',
+          reviewState: 'review',
+          reviewCycleId: 'evt-review-request',
+          reviewRequestEventId: 'evt-review-request',
+          reviewObligation: 'review_pickup_required' as const,
+          canBypassPhase2: true,
+          historyEventIds: ['evt-review-request'],
+        },
+      },
+      {
+        ...baseItem,
+        kind: 'blocked_dependency' as const,
+        priority: 'blocked' as const,
+        reason: 'blocked_by_incomplete_task',
+        evidence: {
+          status: 'in_progress',
+          owner: 'alice',
+          blockerTaskIds: ['task-blocker'],
+        },
+      },
+      {
+        ...baseItem,
+        kind: 'clarification' as const,
+        priority: 'needs_clarification' as const,
+        reason: 'lead_clarification_required',
+        evidence: {
+          status: 'in_progress',
+          owner: 'alice',
+          needsClarification: 'lead' as const,
+        },
+      },
+    ];
+
+    for (const item of cases) {
+      expect(
+        decideMemberWorkSyncNudgeActivation({
+          status: nativeStaleInProgressStatus({
+            agenda: {
+              ...nativeStaleInProgressStatus().agenda,
+              items: [item],
+            },
+          }),
+          metrics: staleMetrics(),
+        })
+      ).toEqual({ active: false, reason: 'blocking_metrics' });
+    }
   });
 
   it('keeps existing shadow_ready behavior for all providers', () => {

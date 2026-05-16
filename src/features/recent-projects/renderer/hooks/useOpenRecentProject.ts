@@ -106,6 +106,11 @@ export function useOpenRecentProject(): {
 
   const openRecentProject = useCallback(
     async (project: DashboardRecentProject): Promise<void> => {
+      if (project.filesystemState === 'deleted') {
+        logger.warn('Skipped deleted recent project path', { path: project.primaryPath });
+        return;
+      }
+
       try {
         await openTarget(project.openTarget, project.associatedPaths);
         recordRecentProjectOpenPaths([project.primaryPath, ...project.associatedPaths]);

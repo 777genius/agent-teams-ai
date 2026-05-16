@@ -1405,6 +1405,12 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).toContain('model:claude-opus-4-6');
     expect(host.textContent).toContain('effort:max');
     expect(host.textContent).toContain('fast:on');
+    expect(host.textContent).toContain('monthly Agent SDK credit');
+    expect(
+      host.querySelector(
+        'a[href="https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan"]'
+      )
+    ).toBeTruthy();
 
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Save Changes'

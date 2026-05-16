@@ -19,6 +19,7 @@ import {
   isWindowsishPath,
   joinPath,
   lastSeparatorIndex,
+  normalizePathForComparison,
   splitPath,
   stripTrailingSeparators,
 } from '@shared/utils/platformPath';
@@ -40,6 +41,29 @@ function omitKey<V>(record: Record<string, V>, key: string): Record<string, V> {
   const result = { ...record };
   delete result[key];
   return result;
+}
+
+function editorPathsEqual(left: string, right: string): boolean {
+  return normalizePathForComparison(left) === normalizePathForComparison(right);
+}
+
+function findMatchingPathKey<V>(record: Record<string, V>, filePath: string): string | null {
+  if (filePath in record) return filePath;
+  return Object.keys(record).find((key) => editorPathsEqual(key, filePath)) ?? null;
+}
+
+function getMatchingPathMapValue<V>(map: Map<string, V>, filePath: string): V | undefined {
+  const exact = map.get(filePath);
+  if (exact !== undefined) return exact;
+  for (const [key, value] of map) {
+    if (editorPathsEqual(key, filePath)) return value;
+  }
+  return undefined;
+}
+
+function omitMatchingPathKey<V>(record: Record<string, V>, filePath: string): Record<string, V> {
+  const key = findMatchingPathKey(record, filePath);
+  return key ? omitKey(record, key) : record;
 }
 
 /**
@@ -617,7 +641,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     const { editorOpenTabs } = get();
 
     // Dedup: if file already open, just activate it
-    const existing = editorOpenTabs.find((t) => t.filePath === filePath);
+    const existing = editorOpenTabs.find((t) => editorPathsEqual(t.filePath, filePath));
     if (existing) {
       set({ editorActiveTabId: existing.id });
       return;
@@ -1216,26 +1240,27 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       }, 2000);
     }
     const { editorOpenTabs, editorProjectPath, editorSaving } = get();
+    const openTab = editorOpenTabs.find((tab) => editorPathsEqual(tab.filePath, event.path));
+    const canonicalEventPath = openTab?.filePath ?? event.path;
 
     // Ignore watcher events for files we are currently saving (our own write)
-    if (editorSaving[event.path]) return;
+    if (findMatchingPathKey(editorSaving, event.path)) return;
 
     // Ignore watcher events within cooldown after save
     // (covers race: save completes → editorSaving cleared → watcher fires late)
-    const lastSaveTime = recentSaveTimestamps.get(event.path);
+    const lastSaveTime = getMatchingPathMapValue(recentSaveTimestamps, event.path);
     if (lastSaveTime && Date.now() - lastSaveTime < SAVE_COOLDOWN_MS) return;
 
     // Ignore watcher events within cooldown after move
-    const lastMoveTime = recentMoveTimestamps.get(event.path);
+    const lastMoveTime = getMatchingPathMapValue(recentMoveTimestamps, event.path);
     if (lastMoveTime && Date.now() - lastMoveTime < MOVE_COOLDOWN_MS) return;
 
     // Track changes for open files
-    const isOpenFile = editorOpenTabs.some((t) => t.filePath === event.path);
-    if (isOpenFile || event.type === 'delete') {
+    if (openTab || event.type === 'delete') {
       set((s) => ({
         editorExternalChanges: {
           ...s.editorExternalChanges,
-          [event.path]: event.type,
+          [canonicalEventPath]: event.type,
         },
       }));
     }
@@ -1267,7 +1292,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
 
   clearExternalChange: (filePath: string) => {
     set((s) => ({
-      editorExternalChanges: omitKey(s.editorExternalChanges, filePath),
+      editorExternalChanges: omitMatchingPathKey(s.editorExternalChanges, filePath),
     }));
   },
 

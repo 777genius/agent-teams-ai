@@ -295,6 +295,16 @@ describe('editorSlice', () => {
       expect(state.editorActiveTabId).toBe('/project/src/index.ts');
     });
 
+    it('deduplicates Windows tabs across drive case and separator differences', () => {
+      store.getState().openFile('C:\\Repo\\src\\index.ts');
+      store.getState().openFile('c:/repo/src/index.ts');
+
+      const state = store.getState();
+      expect(state.editorOpenTabs).toHaveLength(1);
+      expect(state.editorOpenTabs[0].filePath).toBe('C:\\Repo\\src\\index.ts');
+      expect(state.editorActiveTabId).toBe('C:\\Repo\\src\\index.ts');
+    });
+
     it('detects language from file extension', () => {
       store.getState().openFile('/project/data.json');
 
@@ -528,6 +538,31 @@ describe('editorSlice', () => {
 
       expect(store.getState().editorModifiedFiles).toEqual({ '/project/b.ts': true });
       expect(store.getState().editorSaveError).toEqual({});
+    });
+  });
+
+  describe('handleExternalFileChange', () => {
+    it('keys Windows watcher changes to the open tab path across separator differences', () => {
+      vi.useFakeTimers();
+      try {
+        store.getState().openFile('C:\\Repo\\src\\index.ts');
+
+        store.getState().handleExternalFileChange({
+          type: 'change',
+          path: 'c:/repo/src/index.ts',
+        });
+
+        expect(store.getState().editorExternalChanges).toEqual({
+          'C:\\Repo\\src\\index.ts': 'change',
+        });
+
+        store.getState().clearExternalChange('c:/repo/src/index.ts');
+
+        expect(store.getState().editorExternalChanges).toEqual({});
+      } finally {
+        vi.runOnlyPendingTimers();
+        vi.useRealTimers();
+      }
     });
   });
 

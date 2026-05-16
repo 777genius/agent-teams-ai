@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { getRelativePathWithinPrefix, isPathPrefix } from '../../../src/shared/utils/platformPath';
+import {
+  getRelativePathWithinPrefix,
+  isAbsoluteOrHomePath,
+  isPathPrefix,
+} from '../../../src/shared/utils/platformPath';
 
 describe('platformPath Windows containment', () => {
   it('matches Windows drive paths case-insensitively and preserves child path style', () => {
@@ -34,5 +38,15 @@ describe('platformPath Windows containment', () => {
   it('does not treat an empty prefix as the root of absolute paths', () => {
     expect(isPathPrefix('', '/Users/Alice/Repo/src/app.ts')).toBe(false);
     expect(getRelativePathWithinPrefix('', '/Users/Alice/Repo/src/app.ts')).toBe(null);
+  });
+
+  it('detects absolute and home-relative paths across platforms', () => {
+    expect(isAbsoluteOrHomePath('/Users/Alice/Repo')).toBe(true);
+    expect(isAbsoluteOrHomePath('C:\\Users\\Alice\\Repo')).toBe(true);
+    expect(isAbsoluteOrHomePath('\\\\server\\share\\Repo')).toBe(true);
+    expect(isAbsoluteOrHomePath('~')).toBe(true);
+    expect(isAbsoluteOrHomePath('~/Repo')).toBe(true);
+    expect(isAbsoluteOrHomePath('~\\Repo')).toBe(true);
+    expect(isAbsoluteOrHomePath('src/app.ts')).toBe(false);
   });
 });

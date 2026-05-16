@@ -9,7 +9,11 @@
  * This builds on claudeMdTracker.ts and extends it to track all context sources.
  */
 
-import { normalizePathForComparison, stripTrailingSeparators } from '@shared/utils/platformPath';
+import {
+  isAbsoluteOrHomePath,
+  normalizePathForComparison,
+  stripTrailingSeparators,
+} from '@shared/utils/platformPath';
 import { estimateTokens } from '@shared/utils/tokenFormatting';
 
 import { MAX_MENTIONED_FILE_TOKENS } from '../types/contextInjection';
@@ -448,20 +452,6 @@ interface ComputeContextStatsParams {
 }
 
 /**
- * Helper to check if a path is absolute.
- */
-function isAbsolutePath(path: string): boolean {
-  return (
-    path.startsWith('/') ||
-    path.startsWith('~/') ||
-    path.startsWith('~\\') ||
-    path === '~' ||
-    path.startsWith('\\\\') ||
-    /^[a-zA-Z]:[\\/]/.test(path)
-  );
-}
-
-/**
  * Helper to join paths, handling various path formats properly.
  * Handles:
  * - Absolute paths: /full/path/file.tsx (returned as-is)
@@ -471,7 +461,7 @@ function isAbsolutePath(path: string): boolean {
  * - Paths with @ prefix: @apps/foo/bar.tsx (strips @ then joins)
  */
 function joinPaths(base: string, relative: string): string {
-  if (isAbsolutePath(relative)) {
+  if (isAbsoluteOrHomePath(relative)) {
     return relative;
   }
 
@@ -482,7 +472,7 @@ function joinPaths(base: string, relative: string): string {
   if (cleanRelative.startsWith('@')) {
     cleanRelative = cleanRelative.slice(1);
   }
-  if (isAbsolutePath(cleanRelative)) {
+  if (isAbsoluteOrHomePath(cleanRelative)) {
     return cleanRelative;
   }
 
@@ -679,7 +669,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
   const responseRefs = extractFileRefsFromResponses(aiGroup.responses);
   for (const ref of responseRefs) {
     if (ref.path) {
-      const absPath = isAbsolutePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
+      const absPath = isAbsoluteOrHomePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
       allFilePaths.push(absPath);
     }
   }
@@ -735,7 +725,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
       if (!fileRef.path) continue;
 
       // Convert to absolute path if needed
-      const absolutePath = isAbsolutePath(fileRef.path)
+      const absolutePath = isAbsoluteOrHomePath(fileRef.path)
         ? fileRef.path
         : joinPaths(projectRoot, fileRef.path);
 
@@ -768,7 +758,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
   for (const fileRef of responseRefs) {
     if (!fileRef.path) continue;
 
-    const absolutePath = isAbsolutePath(fileRef.path)
+    const absolutePath = isAbsoluteOrHomePath(fileRef.path)
       ? fileRef.path
       : joinPaths(projectRoot, fileRef.path);
 

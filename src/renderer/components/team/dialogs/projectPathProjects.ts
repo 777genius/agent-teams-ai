@@ -22,6 +22,14 @@ function mergeDiscoverySource(
   return 'mixed';
 }
 
+function mergeFilesystemState(
+  current: ProjectPathProject['filesystemState'],
+  next: ProjectPathProject['filesystemState']
+): ProjectPathProject['filesystemState'] {
+  if (current === 'available' || next === 'available') return 'available';
+  return current ?? next;
+}
+
 function getPathName(projectPath: string): string {
   return projectPath.split(/[/\\]/).filter(Boolean).pop() ?? projectPath;
 }
@@ -47,6 +55,10 @@ function upsertProject(
     existing.discoverySource,
     project.discoverySource
   );
+  existing.filesystemState = mergeFilesystemState(
+    existing.filesystemState,
+    project.filesystemState
+  );
   if (!existing.mostRecentSession && project.mostRecentSession) {
     existing.mostRecentSession = project.mostRecentSession;
   }
@@ -58,6 +70,7 @@ function recentProjectToProject(project: {
   primaryPath: string;
   mostRecentActivity: number;
   source: DashboardRecentProjectSource;
+  filesystemState?: ProjectPathProject['filesystemState'];
 }): ProjectPathProject {
   return {
     id: `recent:${project.id}`,
@@ -68,10 +81,13 @@ function recentProjectToProject(project: {
     createdAt: project.mostRecentActivity,
     mostRecentSession: project.mostRecentActivity,
     discoverySource: project.source,
+    filesystemState: project.filesystemState,
   };
 }
 
-function repositoryWorktreeToProject(worktree: RepositoryGroup['worktrees'][number]): Project {
+function repositoryWorktreeToProject(
+  worktree: RepositoryGroup['worktrees'][number]
+): ProjectPathProject {
   return {
     id: worktree.id,
     path: worktree.path,
@@ -79,6 +95,7 @@ function repositoryWorktreeToProject(worktree: RepositoryGroup['worktrees'][numb
     sessions: [],
     totalSessions: 0,
     createdAt: worktree.createdAt ?? Date.now(),
+    filesystemState: worktree.filesystemState,
   };
 }
 

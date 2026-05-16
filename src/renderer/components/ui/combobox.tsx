@@ -10,6 +10,7 @@ export interface ComboboxOption {
   value: string;
   label: string;
   description?: string;
+  disabled?: boolean;
   /** Extra data for renderOption (e.g. sessionCount, path). */
   meta?: Record<string, unknown>;
 }
@@ -133,12 +134,20 @@ export const Combobox = ({
                   <CommandPrimitive.Item
                     key={option.value}
                     value={option.value}
+                    disabled={option.disabled}
+                    aria-disabled={option.disabled === true}
                     onSelect={() => {
+                      if (option.disabled) {
+                        return;
+                      }
                       onValueChange(option.value);
                       setOpen(false);
                       setSearch('');
                     }}
-                    className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]"
+                    className={cn(
+                      'relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]',
+                      option.disabled && 'cursor-not-allowed opacity-60'
+                    )}
                   >
                     {renderOption ? (
                       renderOption(option, isSelected, search)

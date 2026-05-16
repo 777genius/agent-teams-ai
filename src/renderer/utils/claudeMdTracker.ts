@@ -8,6 +8,7 @@
  */
 
 import {
+  isAbsoluteOrHomePath,
   isPathPrefix,
   lastSeparatorIndex,
   normalizePathForComparison,
@@ -64,20 +65,6 @@ export function getDisplayName(path: string, _source: ClaudeMdSource): string {
 }
 
 /**
- * Check if a path is absolute (starts with /).
- */
-function isAbsolutePath(path: string): boolean {
-  return (
-    path.startsWith('/') ||
-    path.startsWith('~/') ||
-    path.startsWith('~\\') ||
-    path === '~' ||
-    path.startsWith('\\\\') ||
-    /^[a-zA-Z]:[\\/]/.test(path)
-  );
-}
-
-/**
  * Join paths, handling various path formats properly.
  * Handles:
  * - Absolute paths: /full/path/file.tsx (returned as-is)
@@ -87,7 +74,7 @@ function isAbsolutePath(path: string): boolean {
  * - Paths with @ prefix: @apps/foo/bar.tsx (strips @ then joins)
  */
 function joinPaths(base: string, relative: string): string {
-  if (isAbsolutePath(relative)) {
+  if (isAbsoluteOrHomePath(relative)) {
     return relative;
   }
 
@@ -99,7 +86,7 @@ function joinPaths(base: string, relative: string): string {
   if (cleanRelative.startsWith('@')) {
     cleanRelative = cleanRelative.slice(1);
   }
-  if (isAbsolutePath(cleanRelative)) {
+  if (isAbsoluteOrHomePath(cleanRelative)) {
     return cleanRelative;
   }
 
@@ -239,7 +226,9 @@ export function extractUserMentionPaths(
   for (const ref of fileReferences) {
     if (ref.path) {
       // Convert to absolute if relative
-      const absolutePath = isAbsolutePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
+      const absolutePath = isAbsoluteOrHomePath(ref.path)
+        ? ref.path
+        : joinPaths(projectRoot, ref.path);
       paths.push(absolutePath);
     }
   }
@@ -525,7 +514,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
   const responseRefs = extractFileRefsFromResponses(aiGroup.responses);
   for (const ref of responseRefs) {
     if (ref.path) {
-      const absPath = isAbsolutePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
+      const absPath = isAbsoluteOrHomePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
       allFilePaths.push(absPath);
     }
   }
