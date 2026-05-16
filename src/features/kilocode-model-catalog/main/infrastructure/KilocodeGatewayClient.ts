@@ -1,8 +1,8 @@
 import https from 'node:https';
 
 const GATEWAY_BASE_URL = 'https://api.kilo.ai';
-// KiloCode gateway uses /models (not the standard OpenAI /v1/models path)
-const MODELS_PATH = '/models';
+// KiloCode gateway endpoint: https://kilo.ai/docs/gateway/models-and-providers
+const MODELS_PATH = '/api/gateway/models';
 const REQUEST_TIMEOUT_MS = 8_000;
 
 interface GatewayModelObject {
