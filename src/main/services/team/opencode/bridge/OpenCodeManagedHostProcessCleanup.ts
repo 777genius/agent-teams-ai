@@ -102,7 +102,6 @@ export async function cleanupManagedOpenCodeServeProcesses(
       isManagedByWindowsCommand || Boolean(details && isManagedOpenCodeServeProcessDetails(details));
     const hasRequiredDetailsMarkers =
       requiredDetailsMarkers.length === 0 ||
-      (isManagedByWindowsCommand && details === null) ||
       Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
     if (!isManaged || !hasRequiredDetailsMarkers) {
       result.candidates.push({

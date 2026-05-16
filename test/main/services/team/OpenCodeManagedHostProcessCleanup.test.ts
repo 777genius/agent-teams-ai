@@ -403,7 +403,7 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(result.diagnostics).toEqual([]);
   });
 
-  it('does not require unreadable Windows details for app-managed command fallback cleanup', async () => {
+  it('honors required markers when Windows details are unavailable', async () => {
     const killProcess = vi.fn();
 
     const result = await cleanupManagedOpenCodeServeProcesses({
@@ -425,8 +425,8 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
       killProcess,
     });
 
-    expect(killProcess).toHaveBeenCalledWith(71629);
-    expect(result.candidates[0]).toMatchObject({ pid: 71629, action: 'killed' });
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(result.candidates[0]).toMatchObject({ pid: 71629, action: 'kept_unmanaged' });
     expect(result.diagnostics).toEqual([]);
   });
 
