@@ -8,7 +8,9 @@
  */
 
 import {
+  isPathPrefix,
   lastSeparatorIndex,
+  normalizePathForComparison,
   splitPath as splitPathCrossPlatform,
 } from '@shared/utils/platformPath';
 
@@ -158,7 +160,19 @@ function splitPath(input: string): string[] {
 }
 
 function normalizeForComparison(input: string): string {
-  return input.replace(/\\/g, '/');
+  return normalizePathForComparison(input);
+}
+
+function createSeenPathSet(paths: string[]): Set<string> {
+  return new Set(paths.map(normalizeForComparison));
+}
+
+function hasSeenPath(seenPaths: Set<string>, path: string): boolean {
+  return seenPaths.has(normalizeForComparison(path));
+}
+
+function rememberPath(seenPaths: Set<string>, path: string): void {
+  seenPaths.add(normalizeForComparison(path));
 }
 
 /**
@@ -183,11 +197,7 @@ export function getParentDirectory(dirPath: string): string | null {
  * Check if dirPath is at or above stopPath in the directory tree.
  */
 function isAtOrAbove(dirPath: string, stopPath: string): boolean {
-  const normDir = normalizeForComparison(dirPath).replace(/\/$/, '');
-  const normStop = normalizeForComparison(stopPath).replace(/\/$/, '');
-
-  // dirPath is at or above stopPath if stopPath starts with dirPath
-  return normStop === normDir || normStop.startsWith(normDir + '/');
+  return isPathPrefix(dirPath, stopPath);
 }
 
 // =============================================================================
@@ -485,7 +495,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
   } = params;
 
   const newInjections: ClaudeMdInjection[] = [];
-  const previousPaths = new Set(previousInjections.map((inj) => inj.path));
+  const previousPaths = createSeenPathSet(previousInjections.map((inj) => inj.path));
 
   // For the first group, add global injections
   // Use "ai-N" format for firstSeenInGroup to enable turn navigation in SessionClaudeMdPanel
@@ -493,9 +503,9 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
   if (isFirstGroup) {
     const globalInjections = createGlobalInjections(projectRoot, turnGroupId, tokenData);
     for (const injection of globalInjections) {
-      if (!previousPaths.has(injection.path)) {
+      if (!hasSeenPath(previousPaths, injection.path)) {
         newInjections.push(injection);
-        previousPaths.add(injection.path);
+        rememberPath(previousPaths, injection.path);
       }
     }
   }
@@ -526,7 +536,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
 
     for (const claudeMdPath of claudeMdPaths) {
       // Skip if already seen
-      if (previousPaths.has(claudeMdPath)) {
+      if (hasSeenPath(previousPaths, claudeMdPath)) {
         continue;
       }
 
@@ -546,7 +556,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
       // Create directory injection
       const injection = createDirectoryInjection(claudeMdPath, turnGroupId);
       newInjections.push(injection);
-      previousPaths.add(claudeMdPath);
+      rememberPath(previousPaths, claudeMdPath);
     }
   }
 

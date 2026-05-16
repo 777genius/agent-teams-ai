@@ -6,6 +6,7 @@ import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('fs/promises', () => ({
+  access: vi.fn(),
   readdir: vi.fn(),
   readFile: vi.fn(),
   stat: vi.fn(),
@@ -36,6 +37,7 @@ describe('FileSearchService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(fs.access).mockRejectedValue(new Error('not a git repository') as never);
     service = new FileSearchService();
   });
 
@@ -172,5 +174,28 @@ describe('FileSearchService', () => {
     expect(result.results[0].matches[0].column).toBe(0);
     expect(result.results[0].matches[1].column).toBe(4);
     expect(result.results[0].matches[2].column).toBe(8);
+  });
+
+  it('returns slash-normalized relative paths for quick open on Windows', async () => {
+    vi.mocked(fs.readdir).mockImplementation(async (dirPath: unknown) => {
+      const normalized = path.normalize(String(dirPath));
+      if (normalized === path.normalize(PROJECT_ROOT)) {
+        return [{ name: 'src', isFile: () => false, isDirectory: () => true }] as never;
+      }
+      if (normalized === path.normalize(path.join(PROJECT_ROOT, 'src'))) {
+        return [{ name: 'app.ts', isFile: () => true, isDirectory: () => false }] as never;
+      }
+      return [] as never;
+    });
+
+    const files = await service.listFiles(PROJECT_ROOT);
+
+    expect(files).toEqual([
+      {
+        path: path.join(PROJECT_ROOT, 'src', 'app.ts'),
+        name: 'app.ts',
+        relativePath: 'src/app.ts',
+      },
+    ]);
   });
 });

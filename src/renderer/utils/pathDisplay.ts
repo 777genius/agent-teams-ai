@@ -9,7 +9,7 @@
  * Also provides resolveAbsolutePath() for clipboard copy (~ → real home, relative → absolute).
  */
 
-import { splitPath } from '@shared/utils/platformPath';
+import { getRelativePathWithinPrefix, splitPath } from '@shared/utils/platformPath';
 
 function isWindowsAbsolutePath(input: string): boolean {
   return /^[A-Za-z]:[/\\]/.test(input) || input.startsWith('\\\\') || input.startsWith('//');
@@ -38,15 +38,9 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
 
   // 1. Make relative to project root
   if (projectRoot) {
-    const root = projectRoot.replace(/[/\\]$/, '');
-    const caseInsensitive = isWindowsAbsolutePath(p) || isWindowsAbsolutePath(root);
-    const pathForCompare = caseInsensitive ? p.toLowerCase() : p;
-    const rootForCompare = caseInsensitive ? root.toLowerCase() : root;
-    if (
-      pathForCompare.startsWith(rootForCompare + '/') ||
-      pathForCompare.startsWith(rootForCompare + '\\')
-    ) {
-      p = p.slice(root.length + 1);
+    const relativePath = getRelativePathWithinPrefix(projectRoot, p);
+    if (relativePath) {
+      p = relativePath;
     }
   }
 

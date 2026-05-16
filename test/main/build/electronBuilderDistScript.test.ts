@@ -1,14 +1,10 @@
 // @vitest-environment node
-import { pathToFileURL } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
 
-const scriptUrl = pathToFileURL(`${process.cwd()}/scripts/electron-builder/dist.mjs`).href;
+const { buildElectronBuilderInvocations } = require('../../../scripts/electron-builder/dist-invocations.cjs');
 
 describe('electron-builder dist wrapper', () => {
   it('splits multi-platform builds so Linux-only package name overrides do not affect macOS or Windows', async () => {
-    const { buildElectronBuilderInvocations } = await import(scriptUrl);
-
     expect(
       buildElectronBuilderInvocations(['--mac', '--win', '--linux', '--publish', 'never'])
     ).toEqual([
@@ -27,8 +23,6 @@ describe('electron-builder dist wrapper', () => {
   });
 
   it('adds the filesystem-safe package name override to Linux-only builds', async () => {
-    const { buildElectronBuilderInvocations } = await import(scriptUrl);
-
     expect(buildElectronBuilderInvocations(['--linux', '--publish', 'never'])).toEqual([
       {
         args: [
@@ -43,8 +37,6 @@ describe('electron-builder dist wrapper', () => {
   });
 
   it('leaves macOS arch-specific builds unchanged', async () => {
-    const { buildElectronBuilderInvocations } = await import(scriptUrl);
-
     expect(buildElectronBuilderInvocations(['--mac', '--arm64', '--publish', 'never'])).toEqual([
       { args: ['--mac', '--arm64', '--publish', 'never'] },
     ]);

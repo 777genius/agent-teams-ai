@@ -4,54 +4,9 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
+const { buildElectronBuilderInvocations } = require('./dist-invocations.cjs');
 
-const PLATFORM_FLAGS = new Map([
-  ['--mac', 'mac'],
-  ['-m', 'mac'],
-  ['--win', 'win'],
-  ['-w', 'win'],
-  ['--linux', 'linux'],
-  ['-l', 'linux'],
-]);
-
-const PLATFORM_ARGS = {
-  mac: '--mac',
-  win: '--win',
-  linux: '--linux',
-};
-
-const LINUX_PACKAGE_NAME_OVERRIDES = [
-  '--config.productName=Agent-Teams-UI',
-  '--config.linux.desktop.entry.Name=Agent Teams UI',
-];
-
-export function buildElectronBuilderInvocations(argv) {
-  const targets = [];
-  const sharedArgs = [];
-
-  for (const arg of argv) {
-    const target = PLATFORM_FLAGS.get(arg);
-    if (target) {
-      if (!targets.includes(target)) {
-        targets.push(target);
-      }
-      continue;
-    }
-    sharedArgs.push(arg);
-  }
-
-  if (targets.length === 0) {
-    return [{ args: sharedArgs }];
-  }
-
-  return targets.map((target) => ({
-    args: [
-      PLATFORM_ARGS[target],
-      ...sharedArgs,
-      ...(target === 'linux' ? LINUX_PACKAGE_NAME_OVERRIDES : []),
-    ],
-  }));
-}
+export { buildElectronBuilderInvocations };
 
 async function runElectronBuilder(args) {
   const cliPath = require.resolve('electron-builder/cli.js');

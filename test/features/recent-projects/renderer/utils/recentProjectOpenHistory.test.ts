@@ -129,6 +129,20 @@ describe('recentProjectOpenHistory', () => {
     ).toBe(0);
   });
 
+  it('collapses Windows drive-case and separator variants', () => {
+    recordRecentProjectOpenPaths(['C:\\Work\\Repo'], 5_000);
+    recordRecentProjectOpenPaths(['c:/work/repo/'], 8_000);
+
+    expect(
+      getRecentProjectLastOpenedAt(
+        makeProject({
+          primaryPath: 'C:/WORK/REPO',
+          associatedPaths: ['C:/WORK/REPO'],
+        })
+      )
+    ).toBe(8_000);
+  });
+
   it('does not record generated ephemeral project paths', () => {
     recordRecentProjectOpenPaths(
       ['/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9', '/workspace/opened'],

@@ -10,7 +10,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { getBasename, lastSeparatorIndex } from '@shared/utils/platformPath';
+import {
+  getBasename,
+  getRelativePathWithinPrefix,
+  lastSeparatorIndex,
+} from '@shared/utils/platformPath';
 import { Loader2, Search, X } from 'lucide-react';
 
 import { FileIcon } from './FileIcon';
@@ -146,7 +150,7 @@ export const SearchInFilesPanel = ({
 
   const getRelativePath = useCallback(
     (filePath: string) => {
-      return filePath.startsWith(projectPath) ? filePath.slice(projectPath.length + 1) : filePath;
+      return getRelativePathWithinPrefix(projectPath, filePath) ?? filePath;
     },
     [projectPath]
   );

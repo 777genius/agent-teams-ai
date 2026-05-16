@@ -292,9 +292,7 @@ export class FileSearchService {
         subdirs.push(fullPath);
       } else if (entry.isFile()) {
         if (IGNORED_FILES.has(entry.name)) continue;
-        const relativePath = fullPath.startsWith(projectRoot)
-          ? fullPath.slice(projectRoot.length + 1)
-          : entry.name;
+        const relativePath = path.relative(projectRoot, fullPath).split(path.sep).join('/');
         files.push({ path: fullPath, name: entry.name, relativePath });
       }
     }

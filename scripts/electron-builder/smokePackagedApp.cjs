@@ -5,6 +5,7 @@ const { spawn } = require('node:child_process');
 
 const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 30_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
+const SHUTDOWN_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS ?? 5_000);
 const REQUIRED_LOG_MARKERS = ['renderer did-finish-load'];
 const FAILURE_PATTERNS = [
   /Cannot find module/i,
@@ -39,7 +40,10 @@ function findExecutable(bundlePath, platform) {
   if (platform === 'win32') {
     const executable = fs
       .readdirSync(bundlePath)
-      .find((entry) => entry.toLowerCase().endsWith('.exe') && !entry.toLowerCase().includes('uninstall'));
+      .find(
+        (entry) =>
+          entry.toLowerCase().endsWith('.exe') && !entry.toLowerCase().includes('uninstall')
+      );
     if (!executable) fail(`No .exe found in ${bundlePath}`);
     return path.join(bundlePath, executable);
   }
@@ -64,6 +68,34 @@ function findExecutable(bundlePath, platform) {
   }
 
   fail(`Unsupported platform: ${platform}`);
+}
+
+function waitForProcessClose(child, exitPromise, timeoutMs) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve();
+  }
+
+  return Promise.race([exitPromise, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
+}
+
+async function terminateChild(child, exitPromise, platform) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+
+  if (platform === 'win32' && child.pid) {
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill.exe', ['/pid', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+      });
+      killer.once('error', resolve);
+      killer.once('close', resolve);
+    });
+  } else {
+    child.kill();
+  }
+
+  await waitForProcessClose(child, exitPromise, SHUTDOWN_TIMEOUT_MS);
 }
 
 async function main() {
@@ -100,7 +132,7 @@ async function main() {
   let startupSeenAt = null;
   while (Date.now() < deadline) {
     if (FAILURE_PATTERNS.some((pattern) => pattern.test(log))) {
-      child.kill();
+      await terminateChild(child, exitPromise, platform);
       fail('Detected startup failure pattern', log);
     }
 
@@ -109,7 +141,7 @@ async function main() {
     }
 
     if (startupSeenAt !== null && Date.now() - startupSeenAt >= POST_STARTUP_STABLE_MS) {
-      child.kill();
+      await terminateChild(child, exitPromise, platform);
       console.log(`[smokePackagedApp] OK ${platform}: ${bundlePath}`);
       return;
     }
@@ -119,11 +151,14 @@ async function main() {
       new Promise((resolve) => setTimeout(() => resolve(null), 250)),
     ]);
     if (exit) {
-      fail(`Packaged app exited before startup completed: code=${exit.code} signal=${exit.signal}`, log);
+      fail(
+        `Packaged app exited before startup completed: code=${exit.code} signal=${exit.signal}`,
+        log
+      );
     }
   }
 
-  child.kill();
+  await terminateChild(child, exitPromise, platform);
   fail(`Timed out after ${STARTUP_TIMEOUT_MS}ms waiting for packaged startup`, log);
 }
 

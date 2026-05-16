@@ -85,6 +85,26 @@ export function isPathPrefix(prefix: string, fullPath: string): boolean {
   return f.startsWith(p + '/');
 }
 
+/** Return fullPath relative to prefix when fullPath is inside prefix, preserving fullPath style. */
+export function getRelativePathWithinPrefix(prefix: string, fullPath: string): string | null {
+  const cleanPrefix = stripTrailingSeparators(prefix);
+  if (!isPathPrefix(cleanPrefix, fullPath)) {
+    return null;
+  }
+
+  const normalizedPrefix = stripTrailingSeparators(normalizePathForComparison(cleanPrefix));
+  const normalizedFullPath = stripTrailingSeparators(normalizePathForComparison(fullPath));
+  if (normalizedFullPath === normalizedPrefix) {
+    return '';
+  }
+
+  let relativePath = fullPath.slice(cleanPrefix.length);
+  while (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+    relativePath = relativePath.slice(1);
+  }
+  return relativePath;
+}
+
 /** Get the last segment (filename) from a path. */
 export function getBasename(filePath: string): string {
   const parts = splitPath(filePath);

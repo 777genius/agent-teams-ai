@@ -10,6 +10,7 @@
  */
 
 import { estimateTokens } from '@shared/utils/tokenFormatting';
+import { normalizePathForComparison } from '@shared/utils/platformPath';
 
 import { MAX_MENTIONED_FILE_TOKENS } from '../types/contextInjection';
 
@@ -567,7 +568,50 @@ function splitPath(input: string): string[] {
 }
 
 function normalizeForComparison(input: string): string {
-  return input.replace(/\\/g, '/');
+  return normalizePathForComparison(input);
+}
+
+function createSeenPathSet(paths: string[]): Set<string> {
+  return new Set(paths.map(normalizeForComparison));
+}
+
+function hasSeenPath(seenPaths: Set<string>, path: string): boolean {
+  return seenPaths.has(normalizeForComparison(path));
+}
+
+function rememberPath(seenPaths: Set<string>, path: string): void {
+  seenPaths.add(normalizeForComparison(path));
+}
+
+function getRecordValueByPath<T>(
+  record: Record<string, T> | undefined,
+  path: string
+): T | undefined {
+  if (!record) return undefined;
+  const exact = record[path];
+  if (exact !== undefined) return exact;
+
+  const normalizedPath = normalizeForComparison(path);
+  for (const [key, value] of Object.entries(record)) {
+    if (normalizeForComparison(key) === normalizedPath) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function getMapValueByPath<T>(map: Map<string, T> | undefined, path: string): T | undefined {
+  if (!map) return undefined;
+  const exact = map.get(path);
+  if (exact !== undefined) return exact;
+
+  const normalizedPath = normalizeForComparison(path);
+  for (const [key, value] of map.entries()) {
+    if (normalizeForComparison(key) === normalizedPath) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -604,7 +648,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
   } = params;
 
   const newInjections: ContextInjection[] = [];
-  const previousPaths = new Set(
+  const previousPaths = createSeenPathSet(
     previousInjections
       .filter(
         (inj): inj is ClaudeMdContextInjection | MentionedFileInjection =>
@@ -620,9 +664,9 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
   if (isFirstGroup) {
     const globalInjections = createGlobalInjections(projectRoot, turnGroupId, claudeMdTokenData);
     for (const injection of globalInjections) {
-      if (!previousPaths.has(injection.path)) {
+      if (!hasSeenPath(previousPaths, injection.path)) {
         newInjections.push(wrapClaudeMdInjection(injection));
-        previousPaths.add(injection.path);
+        rememberPath(previousPaths, injection.path);
       }
     }
   }
@@ -654,7 +698,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
 
     for (const claudeMdPath of claudeMdPaths) {
       // Skip if already seen
-      if (previousPaths.has(claudeMdPath)) {
+      if (hasSeenPath(previousPaths, claudeMdPath)) {
         continue;
       }
 
@@ -674,7 +718,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
       // Only include directory CLAUDE.md files that exist (validated via directoryTokenData)
       // If directoryTokenData is provided and doesn't contain this path, the file doesn't exist
       if (directoryTokenData) {
-        const fileInfo = directoryTokenData[claudeMdPath];
+        const fileInfo = getRecordValueByPath(directoryTokenData, claudeMdPath);
         if (!fileInfo || !fileInfo.exists || fileInfo.estimatedTokens <= 0) {
           // File doesn't exist or has no content - skip it
           continue;
@@ -683,12 +727,12 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
         const injection = createDirectoryInjection(claudeMdPath, turnGroupId);
         injection.estimatedTokens = fileInfo.estimatedTokens;
         newInjections.push(wrapClaudeMdInjection(injection));
-        previousPaths.add(claudeMdPath);
+        rememberPath(previousPaths, claudeMdPath);
       } else {
         // Fallback: if no directoryTokenData provided, create with default tokens (legacy behavior)
         const injection = createDirectoryInjection(claudeMdPath, turnGroupId);
         newInjections.push(wrapClaudeMdInjection(injection));
-        previousPaths.add(claudeMdPath);
+        rememberPath(previousPaths, claudeMdPath);
       }
     }
   }
@@ -704,12 +748,12 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
         : joinPaths(projectRoot, fileRef.path);
 
       // Skip if already seen
-      if (previousPaths.has(absolutePath)) {
+      if (hasSeenPath(previousPaths, absolutePath)) {
         continue;
       }
 
       // Check if we have token data for this file
-      const fileInfo = mentionedFileTokenData?.get(absolutePath);
+      const fileInfo = getMapValueByPath(mentionedFileTokenData, absolutePath);
 
       // Only include files that exist and are under the token limit
       if (fileInfo && fileInfo.exists && fileInfo.estimatedTokens <= MAX_MENTIONED_FILE_TOKENS) {
@@ -723,7 +767,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
         });
 
         newInjections.push(mentionedFileInjection);
-        previousPaths.add(absolutePath);
+        rememberPath(previousPaths, absolutePath);
       }
     }
   }
@@ -736,11 +780,11 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
       ? fileRef.path
       : joinPaths(projectRoot, fileRef.path);
 
-    if (previousPaths.has(absolutePath)) {
+    if (hasSeenPath(previousPaths, absolutePath)) {
       continue;
     }
 
-    const fileInfo = mentionedFileTokenData?.get(absolutePath);
+    const fileInfo = getMapValueByPath(mentionedFileTokenData, absolutePath);
 
     if (fileInfo && fileInfo.exists && fileInfo.estimatedTokens <= MAX_MENTIONED_FILE_TOKENS) {
       const mentionedFileInjection = createMentionedFileInjection({
@@ -753,7 +797,7 @@ function computeContextStats(params: ComputeContextStatsParams): ContextStats {
       });
 
       newInjections.push(mentionedFileInjection);
-      previousPaths.add(absolutePath);
+      rememberPath(previousPaths, absolutePath);
     }
   }
 
