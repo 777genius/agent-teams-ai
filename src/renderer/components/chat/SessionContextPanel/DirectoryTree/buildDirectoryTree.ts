@@ -12,13 +12,13 @@ import type { ClaudeMdContextInjection } from '@renderer/types/contextInjection'
  */
 export function buildDirectoryTree(
   injections: ClaudeMdContextInjection[],
-  projectRoot: string
+  projectRoot?: string
 ): TreeNode {
   const root: TreeNode = { name: '', path: '', isFile: false, children: new Map() };
 
   for (const injection of injections) {
     const relativePath = projectRoot
-      ? getRelativePathWithinPrefix(projectRoot, injection.path) ?? injection.path
+      ? (getRelativePathWithinPrefix(projectRoot, injection.path) ?? injection.path)
       : injection.path;
 
     const parts = relativePath.split(/[\\/]/);
