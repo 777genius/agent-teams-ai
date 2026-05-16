@@ -6,18 +6,32 @@ const LOCAL_MCP_LAUNCH_ENV_KEYS = [
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON',
 ] as const;
 
-export interface OpenCodeMcpHttpBridgeEnv {
-  CLAUDE_TEAM_OPENCODE_MCP_HTTP?: string;
-}
+export type OpenCodeMcpBridgeEnv = Record<string, string | undefined>;
 
-export function isOpenCodeMcpHttpBridgeEnabled(
-  env: OpenCodeMcpHttpBridgeEnv = process.env
-): boolean {
+export function isOpenCodeMcpHttpBridgeEnabled(env: OpenCodeMcpBridgeEnv = process.env): boolean {
   const rawValue = env.CLAUDE_TEAM_OPENCODE_MCP_HTTP?.trim().toLowerCase();
   return rawValue ? !DISABLED_HTTP_MCP_VALUES.has(rawValue) : true;
 }
 
-export function clearOpenCodeLocalMcpLaunchEnv(env: NodeJS.ProcessEnv): void {
+export function hasOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): boolean {
+  return LOCAL_MCP_LAUNCH_ENV_KEYS.every((key) => Boolean(env[key]?.trim()));
+}
+
+export function copyOpenCodeLocalMcpLaunchEnv(
+  sourceEnv: OpenCodeMcpBridgeEnv,
+  targetEnv: OpenCodeMcpBridgeEnv
+): void {
+  for (const key of LOCAL_MCP_LAUNCH_ENV_KEYS) {
+    const value = sourceEnv[key]?.trim();
+    if (value) {
+      targetEnv[key] = value;
+    } else {
+      delete targetEnv[key];
+    }
+  }
+}
+
+export function clearOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): void {
   for (const key of LOCAL_MCP_LAUNCH_ENV_KEYS) {
     delete env[key];
   }

@@ -68,6 +68,12 @@ import { ChangeExtractorService } from '@main/services/team/ChangeExtractorServi
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
+import {
+  clearOpenCodeLocalMcpLaunchEnv,
+  copyOpenCodeLocalMcpLaunchEnv,
+  hasOpenCodeLocalMcpLaunchEnv,
+  isOpenCodeMcpHttpBridgeEnabled,
+} from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
@@ -145,10 +151,6 @@ import {
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
-import {
-  clearOpenCodeLocalMcpLaunchEnv,
-  isOpenCodeMcpHttpBridgeEnabled,
-} from './services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
@@ -361,6 +363,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   if (!useHttpMcpBridge) {
     delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
   } else {
+    delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
     clearOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   }
   const applyMcpLaunchSpecEnv = async (
@@ -388,6 +391,20 @@ async function createOpenCodeRuntimeAdapterRegistry(
           error instanceof Error ? error.message : String(error)
         }`
       );
+    }
+  };
+  const ensureOpenCodeLocalMcpLaunchEnv = async (
+    targetEnv: NodeJS.ProcessEnv,
+    options: { emitProgress?: boolean } = {}
+  ): Promise<void> => {
+    if (hasOpenCodeLocalMcpLaunchEnv(bridgeEnv)) {
+      copyOpenCodeLocalMcpLaunchEnv(bridgeEnv, targetEnv);
+      return;
+    }
+
+    await applyMcpLaunchSpecEnv(targetEnv, options);
+    if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
+      copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
     }
   };
   try {
@@ -433,8 +450,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       );
     }
   }
-  if (!useHttpMcpBridge && !bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
-    await applyMcpLaunchSpecEnv(bridgeEnv, { emitProgress: true });
+  if (!bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL) {
+    await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
   }
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
@@ -453,6 +470,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
       delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
       delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
       clearOpenCodeLocalMcpLaunchEnv(nextEnv);
+      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
           error instanceof Error ? error.message : String(error)
