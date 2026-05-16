@@ -63,7 +63,7 @@ import {
 import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@shared/types';
 import type { ApiKeyEntry } from '@shared/types/extensions';
 
-type ApiKeyProviderId = 'anthropic' | 'codex' | 'gemini';
+type ApiKeyProviderId = 'anthropic' | 'codex' | 'gemini' | 'kilocode';
 type PendingConnectionAction = 'auto' | 'oauth' | 'chatgpt' | 'api_key' | null;
 
 interface ConnectionMethodCardOption {
@@ -88,7 +88,7 @@ interface Props {
 const API_KEY_PROVIDER_CONFIG: Record<
   ApiKeyProviderId,
   {
-    envVarName: 'ANTHROPIC_API_KEY' | 'OPENAI_API_KEY' | 'GEMINI_API_KEY';
+    envVarName: 'ANTHROPIC_API_KEY' | 'OPENAI_API_KEY' | 'GEMINI_API_KEY' | 'KILO_API_KEY';
     name: string;
     title: string;
     description: string;
@@ -119,10 +119,23 @@ const API_KEY_PROVIDER_CONFIG: Record<
       'Use `GEMINI_API_KEY` for the Gemini API backend. CLI SDK and ADC do not require it.',
     placeholder: 'AIza...',
   },
+  kilocode: {
+    envVarName: 'KILO_API_KEY',
+    name: 'KiloCode API Key',
+    title: 'API key',
+    description:
+      'Use your KiloCode API key to authenticate with the KiloCode gateway and load available models.',
+    placeholder: 'kc-...',
+  },
 };
 
 function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProviderId {
-  return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
+  return (
+    providerId === 'anthropic' ||
+    providerId === 'codex' ||
+    providerId === 'gemini' ||
+    providerId === 'kilocode'
+  );
 }
 
 function findPreferredApiKeyEntry(apiKeys: ApiKeyEntry[], envVarName: string): ApiKeyEntry | null {
