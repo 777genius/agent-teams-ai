@@ -57,6 +57,7 @@ import {
   type RuntimeProviderManagementFeatureFacade,
 } from '@features/runtime-provider-management/main';
 import { createWorkspaceTrustCoordinator } from '@features/workspace-trust/main';
+import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
@@ -411,18 +412,15 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
     }
   };
-  try {
-    const appManagedOpenCodeBinary = await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
-    if (appManagedOpenCodeBinary && !bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH) {
-      bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = appManagedOpenCodeBinary;
-    }
-  } catch (error) {
-    logger.warn(
-      `[OpenCode] Runtime adapter bundled OpenCode binary unresolved: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
+  const ensureOpenCodeRuntimeBinaryEnv = async (targetEnv: NodeJS.ProcessEnv): Promise<void> => {
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv,
+      bridgeEnv,
+      resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
+      onWarning: (message) => logger.warn(message),
+    });
+  };
+  await ensureOpenCodeRuntimeBinaryEnv(bridgeEnv);
   try {
     reportProgress('runtime-work-sync', 'Preparing runtime work sync hooks...');
     const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
@@ -465,6 +463,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
+    await ensureOpenCodeRuntimeBinaryEnv(nextEnv);
     if (!useHttpMcpBridge) {
       return nextEnv;
     }
@@ -895,6 +894,23 @@ let appStartupStatus: AppStartupStatus = {
 
 function isShutdownStarted(): boolean {
   return shutdownComplete || shutdownPromise !== null;
+}
+
+function hasActiveTeamRuntimesForWindowClose(): boolean {
+  if (!servicesReady || !teamProvisioningService) {
+    return false;
+  }
+
+  try {
+    return teamProvisioningService.hasActiveTeamRuntimes();
+  } catch (error) {
+    logger.warn(
+      `Failed to check active team runtimes before closing last window: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return false;
+  }
 }
 
 function scheduleStartupTask(action: () => void, delayMs: number): void {
@@ -2748,10 +2764,16 @@ void app.whenReady().then(async () => {
  * All windows closed handler.
  */
 app.on('window-all-closed', () => {
+  const hasActiveTeamRuntimes = hasActiveTeamRuntimesForWindowClose();
   const shouldQuitWhenAllWindowsClosed =
-    process.platform !== 'darwin' || !configManager.getConfig().general.showDockIcon;
+    hasActiveTeamRuntimes ||
+    process.platform !== 'darwin' ||
+    !configManager.getConfig().general.showDockIcon;
 
   if (shouldQuitWhenAllWindowsClosed) {
+    if (hasActiveTeamRuntimes) {
+      logger.info('Quitting after last window closed because active team runtimes are running');
+    }
     app.quit();
   }
 });

@@ -1,4 +1,6 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildEnrichedEnvMock = vi.fn();
@@ -350,9 +352,15 @@ describe('buildProviderAwareCliEnv', () => {
   });
 
   it('injects the verified app-managed OpenCode binary for OpenCode launches', async () => {
-    resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(
-      '/Users/tester/App Support/runtimes/opencode/current/opencode'
+    const appManagedBinaryPath = path.join(
+      process.cwd(),
+      'App Support',
+      'runtimes',
+      'opencode',
+      'current',
+      'opencode'
     );
+    resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(appManagedBinaryPath);
 
     const { buildProviderAwareCliEnv } =
       await import('../../../../src/main/services/runtime/providerAwareCliEnv');
@@ -362,15 +370,29 @@ describe('buildProviderAwareCliEnv', () => {
 
     expect(applyConfiguredConnectionEnvMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH:
-          '/Users/tester/App Support/runtimes/opencode/current/opencode',
+        CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: appManagedBinaryPath,
       }),
       'opencode',
       undefined
     );
-    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(
-      '/Users/tester/App Support/runtimes/opencode/current/opencode'
-    );
+    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(appManagedBinaryPath);
+    expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(appManagedBinaryPath));
+  });
+
+  it('exposes an explicit OpenCode binary override on PATH when the app-managed resolver is cold', async () => {
+    const explicitBinaryPath = path.join(process.cwd(), 'custom opencode', 'opencode');
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'opencode',
+      env: {
+        CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: explicitBinaryPath,
+      },
+    });
+
+    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
+    expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
   });
 
   it('does not inject the app-managed OpenCode binary into non-OpenCode provider launches', async () => {

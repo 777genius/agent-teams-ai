@@ -50,6 +50,16 @@ describe('memberHelpers spawn-aware presence', () => {
       shouldDisplayMemberCurrentTask({
         member: { ...member, currentTaskId: 'task-1' },
         isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
         spawnStatus: 'error',
         spawnLaunchState: 'failed_to_start',
       })
@@ -69,6 +79,22 @@ describe('memberHelpers spawn-aware presence', () => {
           restartable: true,
           providerId: 'opencode',
           livenessKind: 'stale_metadata',
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        runtimeEntry: {
+          memberName: 'alice',
+          alive: false,
+          restartable: true,
+          providerId: 'opencode',
           updatedAt: '2026-04-24T12:00:00.000Z',
         },
       })
@@ -493,10 +519,10 @@ describe('memberHelpers spawn-aware presence', () => {
         isTeamProvisioning: false,
       })
     ).toMatchObject({
-      presenceLabel: 'online',
-      launchVisualState: null,
-      launchStatusLabel: null,
-      dotClass: expect.stringContaining('bg-emerald-400'),
+      presenceLabel: 'registered',
+      launchVisualState: 'registered_only',
+      launchStatusLabel: 'registered',
+      dotClass: expect.stringContaining('bg-red-400'),
     });
 
     expect(
@@ -521,11 +547,64 @@ describe('memberHelpers spawn-aware presence', () => {
         isTeamProvisioning: false,
       })
     ).toMatchObject({
-      presenceLabel: 'online',
-      launchVisualState: null,
-      launchStatusLabel: null,
-      dotClass: expect.stringContaining('bg-emerald-400'),
+      presenceLabel: 'registered',
+      launchVisualState: 'registered_only',
+      launchStatusLabel: 'registered',
+      dotClass: expect.stringContaining('bg-red-400'),
     });
+  });
+
+  it('marks confirmed members offline when spawn runtime liveness is false', () => {
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnLivenessSource: 'process',
+        spawnRuntimeAlive: false,
+        spawnBootstrapConfirmed: true,
+        runtimeAdvisory: undefined,
+        isLaunchSettling: false,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      })
+    ).toMatchObject({
+      presenceLabel: 'stale runtime',
+      launchVisualState: 'stale_runtime',
+      launchStatusLabel: 'stale runtime',
+      dotClass: expect.stringContaining('bg-red-400'),
+    });
+  });
+
+  it('marks dead confirmed runtime entries as stale runtime', () => {
+    for (const livenessKind of ['runtime_process', 'confirmed_bootstrap'] as const) {
+      expect(
+        buildMemberLaunchPresentation({
+          member,
+          spawnStatus: 'online',
+          spawnLaunchState: 'confirmed_alive',
+          spawnLivenessSource: 'process',
+          spawnRuntimeAlive: true,
+          spawnBootstrapConfirmed: true,
+          runtimeEntry: {
+            memberName: 'alice',
+            alive: false,
+            restartable: true,
+            livenessKind,
+            updatedAt: '2026-04-24T12:00:00.000Z',
+          },
+          runtimeAdvisory: undefined,
+          isLaunchSettling: false,
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+        })
+      ).toMatchObject({
+        presenceLabel: 'stale runtime',
+        launchVisualState: 'stale_runtime',
+        launchStatusLabel: 'stale runtime',
+        dotClass: expect.stringContaining('bg-red-400'),
+      });
+    }
   });
 
   it('marks stuck OpenCode launch states as manually relaunchable', () => {

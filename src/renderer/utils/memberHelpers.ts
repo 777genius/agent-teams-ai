@@ -797,7 +797,7 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
     case 'starting_stale':
       return 'bg-amber-400';
     case 'registered_only':
-      return SPAWN_DOT_COLORS.waiting;
+      return STATUS_DOT_COLORS.terminated;
     case 'shell_only':
       return 'bg-amber-400';
     case 'stale_runtime':
@@ -805,6 +805,38 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
     default:
       return null;
   }
+}
+
+function getCurrentRuntimeOfflineVisualState(
+  runtimeEntry: TeamAgentRuntimeEntry | undefined,
+  spawnStatus: MemberSpawnStatus | undefined,
+  spawnLaunchState: MemberLaunchState | undefined,
+  spawnRuntimeAlive: boolean | undefined
+): MemberLaunchVisualState {
+  if (runtimeEntry?.livenessKind === 'registered_only') {
+    return 'registered_only';
+  }
+  if (
+    runtimeEntry?.livenessKind === 'stale_metadata' ||
+    runtimeEntry?.livenessKind === 'not_found'
+  ) {
+    return 'stale_runtime';
+  }
+  if (
+    runtimeEntry?.alive === false &&
+    (runtimeEntry.livenessKind == null ||
+      runtimeEntry.livenessKind === 'runtime_process' ||
+      runtimeEntry.livenessKind === 'confirmed_bootstrap')
+  ) {
+    return 'stale_runtime';
+  }
+  if (
+    spawnRuntimeAlive === false &&
+    (spawnStatus === 'online' || spawnLaunchState === 'confirmed_alive')
+  ) {
+    return 'stale_runtime';
+  }
+  return null;
 }
 
 export function shouldDisplayMemberCurrentTask({
@@ -846,10 +878,10 @@ export function shouldDisplayMemberCurrentTask({
   ) {
     return false;
   }
-  if (runtimeEntry?.alive === false && spawnStatus !== 'online') {
+  if (runtimeEntry?.alive === false) {
     return false;
   }
-  if (spawnRuntimeAlive === false && spawnStatus !== 'online') {
+  if (spawnRuntimeAlive === false) {
     return false;
   }
   return true;
@@ -1039,13 +1071,26 @@ export function buildMemberLaunchPresentation({
   leadActivity?: LeadActivityState;
   nowMs?: number;
 }): MemberLaunchPresentation {
+  const currentRuntimeOfflineVisualState = getCurrentRuntimeOfflineVisualState(
+    runtimeEntry,
+    spawnStatus,
+    spawnLaunchState,
+    spawnRuntimeAlive
+  );
   const hasConfirmedSpawnLaunch =
     spawnLaunchState === 'confirmed_alive' && spawnBootstrapConfirmed === true;
   const effectiveSpawnStatus =
-    hasConfirmedSpawnLaunch && (spawnStatus === 'waiting' || spawnStatus === 'spawning')
+    hasConfirmedSpawnLaunch &&
+    currentRuntimeOfflineVisualState == null &&
+    (spawnStatus === 'waiting' || spawnStatus === 'spawning')
       ? 'online'
       : spawnStatus;
-  const effectiveSpawnRuntimeAlive = hasConfirmedSpawnLaunch ? true : spawnRuntimeAlive;
+  const effectiveSpawnRuntimeAlive =
+    currentRuntimeOfflineVisualState != null
+      ? false
+      : hasConfirmedSpawnLaunch
+        ? true
+        : spawnRuntimeAlive;
   const presenceLabel = getLaunchAwarePresenceLabel(
     member,
     effectiveSpawnStatus,
@@ -1100,21 +1145,12 @@ export function buildMemberLaunchPresentation({
       launchVisualState = 'permission_pending';
     } else if (spawnBootstrapStalled === true) {
       launchVisualState = 'bootstrap_stalled';
-    } else if (!hasConfirmedSpawnLaunch && runtimeEntry?.livenessKind === 'shell_only') {
+    } else if (currentRuntimeOfflineVisualState != null) {
+      launchVisualState = currentRuntimeOfflineVisualState;
+    } else if (runtimeEntry?.livenessKind === 'shell_only') {
       launchVisualState = 'shell_only';
-    } else if (
-      !hasConfirmedSpawnLaunch &&
-      runtimeEntry?.livenessKind === 'runtime_process_candidate'
-    ) {
+    } else if (runtimeEntry?.livenessKind === 'runtime_process_candidate') {
       launchVisualState = 'runtime_candidate';
-    } else if (!hasConfirmedSpawnLaunch && runtimeEntry?.livenessKind === 'registered_only') {
-      launchVisualState = 'registered_only';
-    } else if (
-      !hasConfirmedSpawnLaunch &&
-      (runtimeEntry?.livenessKind === 'stale_metadata' ||
-        runtimeEntry?.livenessKind === 'not_found')
-    ) {
-      launchVisualState = 'stale_runtime';
     } else if (!hasConfirmedSpawnLaunch && startingIsStale) {
       launchVisualState = 'starting_stale';
     } else if (

@@ -5,6 +5,7 @@ import { resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath } from '../infrastru
 
 import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
+import { applyOpenCodeRuntimeBinaryEnv } from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
 import type { CliProviderId, TeamProviderId } from '@shared/types';
@@ -43,13 +44,9 @@ export async function buildProviderAwareCliEnv(
     shellEnv,
     env: options.env,
   });
-  const appManagedOpenCodeBinary = await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
-  if (
-    appManagedOpenCodeBinary &&
-    !env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH &&
-    (!resolvedProviderId || resolvedProviderId === 'opencode')
-  ) {
-    env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = appManagedOpenCodeBinary;
+  if (!resolvedProviderId || resolvedProviderId === 'opencode') {
+    const appManagedOpenCodeBinary = await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
+    applyOpenCodeRuntimeBinaryEnv(env, appManagedOpenCodeBinary);
   }
   const appManagedCodexBinary = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
   if (

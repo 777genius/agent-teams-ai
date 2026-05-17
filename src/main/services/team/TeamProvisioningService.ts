@@ -24376,6 +24376,15 @@ export class TeamProvisioningService {
     return Array.from(this.aliveRunByTeam.keys()).filter((name) => this.isTeamAlive(name));
   }
 
+  /**
+   * True when shutdown has team runtime state that must not be left headless.
+   * Includes active leads, provisioning runs, runtime-adapter runs, secondary lanes,
+   * and in-flight team operations that may expose a runtime shortly.
+   */
+  hasActiveTeamRuntimes(): boolean {
+    return this.getShutdownTrackedTeamNames().length > 0;
+  }
+
   async getRuntimeState(teamName: string): Promise<TeamRuntimeState> {
     const runId = this.getTrackedRunId(teamName);
     const run = runId ? (this.runs.get(runId) ?? null) : null;

@@ -780,7 +780,10 @@ export const MemberList = memo(function MemberList({
       ) {
         return false;
       }
-      if (spawnEntry?.runtimeAlive === false && spawnEntry.status !== 'online') {
+      if (spawnEntry?.runtimeAlive === false) {
+        return false;
+      }
+      if (runtimeEntry?.alive === false) {
         return false;
       }
       if (
