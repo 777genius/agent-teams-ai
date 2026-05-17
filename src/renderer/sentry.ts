@@ -31,6 +31,9 @@ let initialized = false;
  */
 export function syncRendererTelemetry(enabled: boolean): void {
   telemetryAllowed = enabled;
+  if (!enabled && initialized && typeof SentryElectron.setUser === 'function') {
+    SentryElectron.setUser(null);
+  }
 }
 
 export function initSentryRenderer(): void {
@@ -49,6 +52,8 @@ export function initSentryRenderer(): void {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
   const beforeSend = (event: any): any => (telemetryAllowed ? event : null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
+  const beforeSendTransaction = (event: any): any => (telemetryAllowed ? event : null);
 
   if (window.electronAPI) {
     // Electron renderer — uses IPC transport to main process.
@@ -57,6 +62,7 @@ export function initSentryRenderer(): void {
     SentryElectron.init({
       ...baseOptions,
       beforeSend,
+      beforeSendTransaction,
       integrations: [SentryElectron.browserTracingIntegration()],
     });
   } else {
@@ -64,6 +70,7 @@ export function initSentryRenderer(): void {
     reactInit({
       ...baseOptions,
       beforeSend,
+      beforeSendTransaction,
       integrations: [reactBrowserTracing()],
     });
   }

@@ -1199,6 +1199,15 @@ export type TeamAgentRuntimePidSource =
 
 export type TeamAgentRuntimeDiagnosticSeverity = 'info' | 'warning' | 'error';
 
+export interface TeamAgentRuntimeResourceSample {
+  timestamp: string;
+  cpuPercent?: number;
+  rssBytes?: number;
+  pidSource?: TeamAgentRuntimePidSource;
+  pid?: number;
+  runtimePid?: number;
+}
+
 export interface TeamAgentRuntimeEntry {
   memberName: string;
   alive: boolean;
@@ -1213,6 +1222,8 @@ export interface TeamAgentRuntimeEntry {
   /** Runtime working directory, when known. */
   cwd?: string;
   rssBytes?: number;
+  cpuPercent?: number;
+  resourceHistory?: TeamAgentRuntimeResourceSample[];
   livenessKind?: TeamAgentRuntimeLivenessKind;
   pidSource?: TeamAgentRuntimePidSource;
   processCommand?: string;

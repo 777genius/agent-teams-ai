@@ -1,3 +1,4 @@
+import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { getShellPreferredHome } from '@main/utils/shellEnv';
 
@@ -43,6 +44,7 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
 
   applyConfiguredRuntimeBackendsEnv(env, configManager.getConfig().runtime);
   Object.assign(env, options.env ?? {});
+  applyAgentTeamsIdentityEnv(env);
   const policyAppliedEnv = applyOpenCodeAutoUpdatePolicy(env);
   if (policyAppliedEnv.OPENCODE_DISABLE_AUTOUPDATE === undefined) {
     delete env.OPENCODE_DISABLE_AUTOUPDATE;

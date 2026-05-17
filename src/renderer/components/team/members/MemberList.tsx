@@ -275,6 +275,8 @@ function areMemberRuntimeEntriesEquivalent(
     const rightEntry = right.get(key);
     const leftDiagnostics = leftEntry.diagnostics ?? [];
     const rightDiagnostics = rightEntry?.diagnostics ?? [];
+    const leftResourceHistory = leftEntry.resourceHistory ?? [];
+    const rightResourceHistory = rightEntry?.resourceHistory ?? [];
     if (
       leftEntry.memberName !== rightEntry?.memberName ||
       leftEntry.alive !== rightEntry?.alive ||
@@ -287,6 +289,7 @@ function areMemberRuntimeEntriesEquivalent(
       leftEntry.pid !== rightEntry?.pid ||
       leftEntry.runtimeModel !== rightEntry?.runtimeModel ||
       leftEntry.rssBytes !== rightEntry?.rssBytes ||
+      leftEntry.cpuPercent !== rightEntry?.cpuPercent ||
       leftEntry.livenessKind !== rightEntry?.livenessKind ||
       leftEntry.pidSource !== rightEntry?.pidSource ||
       leftEntry.processCommand !== rightEntry?.processCommand ||
@@ -300,7 +303,19 @@ function areMemberRuntimeEntriesEquivalent(
       leftEntry.runtimeLastSeenAt !== rightEntry?.runtimeLastSeenAt ||
       leftEntry.historicalBootstrapConfirmed !== rightEntry?.historicalBootstrapConfirmed ||
       leftDiagnostics.length !== rightDiagnostics.length ||
-      !leftDiagnostics.every((value, index) => value === rightDiagnostics[index])
+      !leftDiagnostics.every((value, index) => value === rightDiagnostics[index]) ||
+      leftResourceHistory.length !== rightResourceHistory.length ||
+      !leftResourceHistory.every((value, index) => {
+        const other = rightResourceHistory[index];
+        return (
+          value.timestamp === other?.timestamp &&
+          value.cpuPercent === other?.cpuPercent &&
+          value.rssBytes === other?.rssBytes &&
+          value.pidSource === other?.pidSource &&
+          value.pid === other?.pid &&
+          value.runtimePid === other?.runtimePid
+        );
+      })
     ) {
       return false;
     }

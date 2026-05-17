@@ -554,6 +554,63 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
+  it('renders the bottom runtime telemetry strip when resource history is available', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          runtimeSummary: 'gpt-5.4-mini · Codex · 238.3 MB',
+          runtimeEntry: {
+            memberName: 'alice',
+            alive: true,
+            restartable: true,
+            providerId: 'codex',
+            pid: 222,
+            pidSource: 'tmux_child',
+            rssBytes: 238.3 * 1024 * 1024,
+            cpuPercent: 14,
+            resourceHistory: [
+              {
+                timestamp: '2026-04-24T12:00:00.000Z',
+                rssBytes: 220 * 1024 * 1024,
+                cpuPercent: 4,
+                pidSource: 'tmux_child',
+                pid: 222,
+              },
+              {
+                timestamp: '2026-04-24T12:00:05.000Z',
+                rssBytes: 238.3 * 1024 * 1024,
+                cpuPercent: 14,
+                pidSource: 'tmux_child',
+                pid: 222,
+              },
+            ],
+            updatedAt: '2026-04-24T12:00:05.000Z',
+          },
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const strip = host.querySelector('[data-testid="member-runtime-telemetry-strip"]');
+    expect(strip).not.toBeNull();
+    expect(strip?.querySelector('path[fill="#22c55e"]')).not.toBeNull();
+    expect(strip?.querySelector('path[stroke="#3b82f6"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows a worktree badge only for teammates configured with worktree isolation', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

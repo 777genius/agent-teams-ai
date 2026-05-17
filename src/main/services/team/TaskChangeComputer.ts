@@ -53,7 +53,9 @@ interface ParsedJsonlEntry {
   lineNumber: number;
 }
 
-function shouldWarnAboutMissingTaskLogs(input: ResolvedTaskChangeComputeInput): boolean {
+function shouldWarnAboutUnavailableTaskChangeEvidence(
+  input: ResolvedTaskChangeComputeInput
+): boolean {
   const status = input.taskMeta?.status?.trim() || input.effectiveOptions.status?.trim();
   const stateBucket = getTaskChangeStateBucket({
     status,
@@ -141,7 +143,7 @@ export class TaskChangeComputer {
       });
       if (intervalScoped) return intervalScoped;
 
-      return this.fallbackSingleTaskScope(teamName, taskId, logRefs, projectPath, includeDetails);
+      return this.fallbackSingleTaskScope(input, logRefs);
     }
 
     const files = await this.extractScopedChanges(logRefs, allScopes, projectPath, includeDetails);
@@ -418,17 +420,17 @@ export class TaskChangeComputer {
   }
 
   private async fallbackSingleTaskScope(
-    teamName: string,
-    taskId: string,
-    logRefs: LogFileRef[],
-    projectPath?: string,
-    includeDetails = true
+    input: ResolvedTaskChangeComputeInput,
+    logRefs: LogFileRef[]
   ): Promise<TaskChangeSetV2> {
+    const { teamName, taskId, projectPath, includeDetails } = input;
     const allParsed = await this.parseJSONLFilesWithConcurrency(logRefs.map((ref) => ref.filePath));
     const allSnippets = this.sortSnippetsChronologically(
       allParsed.flatMap((result) => result.snippets.map((record) => record.snippet))
     );
     const aggregatedFiles = this.aggregateByFile(allSnippets, projectPath, includeDetails);
+    const shouldWarn =
+      aggregatedFiles.length > 0 || shouldWarnAboutUnavailableTaskChangeEvidence(input);
 
     return {
       teamName,
@@ -450,7 +452,9 @@ export class TaskChangeComputer {
         filePaths: aggregatedFiles.map((file) => file.filePath),
         confidence: { tier: 4, label: 'fallback', reason: 'No task boundaries found in JSONL' },
       },
-      warnings: ['No task boundaries found - showing all changes from related sessions.'],
+      warnings: shouldWarn
+        ? ['No task boundaries found - showing all changes from related sessions.']
+        : [],
     };
   }
 
@@ -476,7 +480,9 @@ export class TaskChangeComputer {
         filePaths: [],
         confidence: { tier: 4, label: 'fallback', reason: 'No log files found for task' },
       },
-      warnings: shouldWarnAboutMissingTaskLogs(input) ? [NO_LOG_FILES_FOUND_WARNING] : [],
+      warnings: shouldWarnAboutUnavailableTaskChangeEvidence(input)
+        ? [NO_LOG_FILES_FOUND_WARNING]
+        : [],
     };
   }
 

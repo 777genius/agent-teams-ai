@@ -11,6 +11,11 @@
  */
 
 import {
+  type AgentTeamsIdentitySource,
+  ensureAgentTeamsClientIdentity,
+  getSentryAnonymousUserId,
+} from '@main/services/identity/AgentTeamsIdentityStore';
+import {
   isValidDsn,
   SENTRY_ENVIRONMENT,
   SENTRY_RELEASE,
@@ -26,6 +31,18 @@ import {
 // Defaults to `true` so early crash reports are NOT silently dropped;
 // if the user later turns telemetry off, the flag flips to `false`.
 let telemetryAllowed = true;
+let telemetryIdentitySyncToken = 0;
+
+export function getSafeSentryTelemetryTags(
+  identitySource: AgentTeamsIdentitySource
+): Record<string, string> {
+  return {
+    platform: process.platform,
+    arch: process.arch,
+    app_version: SENTRY_RELEASE ?? 'unknown',
+    identity_source: identitySource,
+  };
+}
 
 /**
  * Call once ConfigManager is initialised to sync the opt-in flag.
@@ -33,15 +50,79 @@ let telemetryAllowed = true;
  */
 export function syncTelemetryFlag(enabled: boolean): void {
   telemetryAllowed = enabled;
+  void syncTelemetryIdentity();
+}
+
+export function filterSentryEventForTelemetry(event: unknown): unknown {
+  return telemetryAllowed ? event : null;
 }
 
 // ---------------------------------------------------------------------------
 // Lazy Sentry import — safe in non-Electron environments
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let Sentry: any = null;
+interface SentryMainApi {
+  init?: (options: SentryInitOptions) => void;
+  setUser?: (user: { id: string } | null) => void;
+  setTags?: (tags: Record<string, string>) => void;
+  addBreadcrumb?: (breadcrumb: {
+    category: string;
+    message: string;
+    data?: Record<string, unknown>;
+    level: 'info';
+  }) => void;
+  startSpan?: <T>(context: { name: string; op: string }, callback: () => T) => T;
+}
+
+interface SentryInitOptions {
+  dsn: string;
+  release: string | undefined;
+  environment: string;
+  tracesSampleRate: number;
+  sendDefaultPii: false;
+  beforeSend: (event: unknown) => unknown;
+  beforeSendTransaction: (event: unknown) => unknown;
+}
+
+let Sentry: SentryMainApi | null = null;
 let initialized = false;
+
+export function setMainSentryApiForTesting(sentryApi: SentryMainApi): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  Sentry = sentryApi;
+  initialized = true;
+}
+
+function clearSentryUser(): void {
+  if (!initialized || !Sentry) return;
+  Sentry.setUser?.(null);
+}
+
+async function syncTelemetryIdentity(): Promise<void> {
+  const syncToken = ++telemetryIdentitySyncToken;
+  if (!initialized || !Sentry) {
+    return;
+  }
+
+  if (!telemetryAllowed) {
+    clearSentryUser();
+    return;
+  }
+
+  try {
+    const identity = await ensureAgentTeamsClientIdentity();
+    if (syncToken !== telemetryIdentitySyncToken || !telemetryAllowed) {
+      return;
+    }
+
+    Sentry.setUser?.({ id: getSentryAnonymousUserId(identity.clientId) });
+    Sentry.setTags?.(getSafeSentryTelemetryTags(identity.source));
+  } catch {
+    if (syncToken === telemetryIdentitySyncToken) {
+      clearSentryUser();
+    }
+  }
+}
 
 const dsn = process.env.SENTRY_DSN;
 
@@ -51,18 +132,17 @@ if (isValidDsn(dsn)) {
     // in all contexts. require() is synchronous and works in both Electron
     // and Node.js — it simply throws in standalone mode where the electron
     // module is not resolvable.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    Sentry = require('@sentry/electron/main');
-    Sentry.init({
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy optional Electron runtime dependency.
+    Sentry = require('@sentry/electron/main') as SentryMainApi;
+    Sentry.init?.({
       dsn,
       release: SENTRY_RELEASE,
       environment: SENTRY_ENVIRONMENT,
       tracesSampleRate: TRACES_SAMPLE_RATE,
       sendDefaultPii: false,
 
-      beforeSend(event: unknown) {
-        return telemetryAllowed ? event : null;
-      },
+      beforeSend: filterSentryEventForTelemetry,
+      beforeSendTransaction: filterSentryEventForTelemetry,
     });
     initialized = true;
   } catch {
@@ -83,7 +163,7 @@ export function addMainBreadcrumb(
   data?: Record<string, unknown>
 ): void {
   if (!initialized) return;
-  Sentry.addBreadcrumb({ category, message, data, level: 'info' });
+  Sentry?.addBreadcrumb?.({ category, message, data, level: 'info' });
 }
 
 /**
@@ -92,5 +172,6 @@ export function addMainBreadcrumb(
  */
 export function startMainSpan<T>(name: string, op: string, fn: () => T): T {
   if (!initialized) return fn();
+  if (!Sentry?.startSpan) return fn();
   return Sentry.startSpan({ name, op }, fn);
 }

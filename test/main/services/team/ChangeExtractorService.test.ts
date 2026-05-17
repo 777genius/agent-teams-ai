@@ -1502,6 +1502,52 @@ describe('ChangeExtractorService', () => {
     expect(deleteEntry).toHaveBeenCalledWith(TEAM_NAME, TASK_ID);
   });
 
+  it('clears stale presence for pending related logs that have no task boundaries or file edits yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, {
+      status: 'pending',
+      workIntervals: [],
+    });
+
+    const logPath = path.join(tmpDir, 'lead-pending.jsonl');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'user',
+        message: {
+          role: 'user',
+          content: `Task ${TASK_ID} was created and is waiting to start.`,
+        },
+      },
+    ]);
+
+    const upsertEntry = vi.fn(() => Promise.resolve(undefined));
+    const deleteEntry = vi.fn(() => Promise.resolve(undefined));
+    const ensureTracking = vi.fn(() =>
+      Promise.resolve({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      })
+    );
+    const { service } = createService({
+      logPaths: [logPath],
+      taskChangePresenceRepository: { upsertEntry, deleteEntry },
+      teamLogSourceTracker: { ensureTracking },
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'completed',
+      stateBucket: 'completed',
+    });
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual([]);
+    expect(upsertEntry).not.toHaveBeenCalled();
+    expect(deleteEntry).toHaveBeenCalledWith(TEAM_NAME, TASK_ID);
+  });
+
   it('passes task metadata status to task diff workers when request status is stale', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
     setClaudeBasePathOverride(tmpDir);

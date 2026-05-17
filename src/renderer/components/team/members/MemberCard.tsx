@@ -42,6 +42,7 @@ import type {
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TeamAgentRuntimeEntry,
+  TeamAgentRuntimeResourceSample,
   TeamTaskWithKanban,
 } from '@shared/types';
 
@@ -113,6 +114,186 @@ function getLaunchFailureLinkLabel(url: string): string {
   }
   return url;
 }
+
+const RUNTIME_TELEMETRY_SAMPLE_LIMIT = 48;
+const RUNTIME_TELEMETRY_WIDTH = 100;
+const RUNTIME_TELEMETRY_HEIGHT = 18;
+const RUNTIME_TELEMETRY_BASELINE_Y = 16.5;
+
+interface TelemetryPoint {
+  x: number;
+  y: number;
+}
+
+interface RuntimeTelemetryPaths {
+  memoryAreaPath?: string;
+  memoryLinePath?: string;
+  cpuLinePath?: string;
+}
+
+function isFiniteNonNegative(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function formatTelemetryCoordinate(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function buildLinePath(points: readonly TelemetryPoint[]): string | undefined {
+  if (points.length < 2) {
+    return undefined;
+  }
+  return points
+    .map((point, index) => {
+      const command = index === 0 ? 'M' : 'L';
+      return `${command}${formatTelemetryCoordinate(point.x)} ${formatTelemetryCoordinate(point.y)}`;
+    })
+    .join(' ');
+}
+
+function buildAreaPath(points: readonly TelemetryPoint[]): string | undefined {
+  if (points.length < 2) {
+    return undefined;
+  }
+  const first = points[0];
+  const last = points[points.length - 1];
+  return [
+    `M${formatTelemetryCoordinate(first.x)} ${formatTelemetryCoordinate(RUNTIME_TELEMETRY_BASELINE_Y)}`,
+    `L${formatTelemetryCoordinate(first.x)} ${formatTelemetryCoordinate(first.y)}`,
+    ...points
+      .slice(1)
+      .map(
+        (point) => `L${formatTelemetryCoordinate(point.x)} ${formatTelemetryCoordinate(point.y)}`
+      ),
+    `L${formatTelemetryCoordinate(last.x)} ${formatTelemetryCoordinate(RUNTIME_TELEMETRY_BASELINE_Y)}`,
+    'Z',
+  ].join(' ');
+}
+
+function buildTelemetryPoints(
+  samples: readonly TeamAgentRuntimeResourceSample[],
+  getValue: (sample: TeamAgentRuntimeResourceSample) => number | undefined,
+  getY: (value: number, values: readonly number[]) => number
+): TelemetryPoint[] {
+  const values = samples.map(getValue).filter(isFiniteNonNegative);
+  if (values.length < 2 || samples.length < 2) {
+    return [];
+  }
+  return samples.flatMap((sample, index) => {
+    const value = getValue(sample);
+    if (!isFiniteNonNegative(value)) {
+      return [];
+    }
+    return [
+      {
+        x: (index / (samples.length - 1)) * RUNTIME_TELEMETRY_WIDTH,
+        y: getY(value, values),
+      },
+    ];
+  });
+}
+
+function buildRuntimeTelemetryPaths(
+  history: readonly TeamAgentRuntimeResourceSample[] | undefined
+): RuntimeTelemetryPaths | undefined {
+  const samples = (history ?? []).slice(-RUNTIME_TELEMETRY_SAMPLE_LIMIT);
+  if (samples.length < 2) {
+    return undefined;
+  }
+
+  const memoryPoints = buildTelemetryPoints(
+    samples,
+    (sample) => sample.rssBytes,
+    (value, values) => {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const ratio = max > min ? (value - min) / (max - min) : 0.32;
+      return 15.25 - ratio * 4.4;
+    }
+  );
+  const cpuPoints = buildTelemetryPoints(
+    samples,
+    (sample) => sample.cpuPercent,
+    (value, values) => {
+      const max = Math.max(10, ...values);
+      const ratio = Math.min(1, value / max);
+      return 8.3 - ratio * 4.6;
+    }
+  );
+
+  const memoryAreaPath = buildAreaPath(memoryPoints);
+  const memoryLinePath = buildLinePath(memoryPoints);
+  const cpuLinePath = buildLinePath(cpuPoints);
+  if (!memoryAreaPath && !cpuLinePath) {
+    return undefined;
+  }
+  return {
+    memoryAreaPath,
+    memoryLinePath,
+    cpuLinePath,
+  };
+}
+
+const MemberRuntimeTelemetryStrip = memo(function MemberRuntimeTelemetryStrip({
+  runtimeEntry,
+}: {
+  runtimeEntry?: TeamAgentRuntimeEntry;
+}): React.JSX.Element | null {
+  const paths = useMemo(
+    () => buildRuntimeTelemetryPaths(runtimeEntry?.resourceHistory),
+    [runtimeEntry?.resourceHistory]
+  );
+  if (!paths) {
+    return null;
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      data-testid="member-runtime-telemetry-strip"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-5 overflow-hidden rounded-b"
+    >
+      <svg
+        className="size-full"
+        viewBox={`0 0 ${RUNTIME_TELEMETRY_WIDTH} ${RUNTIME_TELEMETRY_HEIGHT}`}
+        preserveAspectRatio="none"
+      >
+        {paths.memoryAreaPath ? (
+          <path d={paths.memoryAreaPath} fill="#22c55e" opacity="0.22" />
+        ) : null}
+        {paths.memoryLinePath ? (
+          <path
+            d={paths.memoryLinePath}
+            fill="none"
+            stroke="#4ade80"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="0.55"
+            opacity="0.68"
+          />
+        ) : null}
+        {paths.cpuLinePath ? (
+          <path
+            d={paths.cpuLinePath}
+            fill="none"
+            stroke="#3b82f6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="0.62"
+            opacity="0.78"
+          />
+        ) : null}
+      </svg>
+      <div
+        className="absolute inset-x-0 bottom-0 h-2"
+        style={{
+          background:
+            'linear-gradient(to top, color-mix(in srgb, var(--color-surface) 35%, transparent), transparent)',
+        }}
+      />
+    </div>
+  );
+});
 
 export const MemberCard = memo(function MemberCard({
   member,
@@ -374,7 +555,10 @@ export const MemberCard = memo(function MemberCard({
       )}
     >
       <div
-        className={cn('group relative cursor-pointer rounded py-1.5', rowSurfaceBleedClass)}
+        className={cn(
+          'group relative cursor-pointer overflow-hidden rounded py-1.5',
+          rowSurfaceBleedClass
+        )}
         style={undefined}
         title={activityTitle}
         role="button"
@@ -387,8 +571,9 @@ export const MemberCard = memo(function MemberCard({
           }
         }}
       >
-        <div className="pointer-events-none absolute inset-0 rounded transition-colors group-hover:bg-white/5" />
-        <div className="flex items-center gap-2.5">
+        {!isRemoved ? <MemberRuntimeTelemetryStrip runtimeEntry={runtimeEntry} /> : null}
+        <div className="pointer-events-none absolute inset-0 z-10 rounded transition-colors group-hover:bg-white/5" />
+        <div className="relative z-20 flex items-center gap-2.5">
           <div className="relative shrink-0">
             <div
               className="rounded-full border-2 p-px"

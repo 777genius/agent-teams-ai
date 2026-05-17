@@ -1,3 +1,4 @@
+import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
@@ -153,7 +154,7 @@ export class AgentTeamsMcpHttpServer {
     const launchSpec = await resolveLaunchSpec();
     const port = await allocatePort();
     const args = buildHttpServerArgs(launchSpec, port);
-    const child = spawnProcess(launchSpec.command, args, {
+    const childEnv = applyAgentTeamsIdentityEnv({
       ...process.env,
       AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
       AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
@@ -161,6 +162,7 @@ export class AgentTeamsMcpHttpServer {
       AGENT_TEAMS_MCP_HTTP_PORT: String(port),
       AGENT_TEAMS_MCP_HTTP_ENDPOINT: MCP_HTTP_ENDPOINT,
     });
+    const child = spawnProcess(launchSpec.command, args, childEnv);
 
     const clearIfCurrent = (): void => {
       if (this.child === child) {

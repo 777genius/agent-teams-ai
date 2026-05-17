@@ -986,6 +986,8 @@ function areTeamAgentRuntimeEntriesEqual(
   if (!left || !right) return left === right;
   const leftDiagnostics = left.diagnostics ?? [];
   const rightDiagnostics = right.diagnostics ?? [];
+  const leftResourceHistory = left.resourceHistory ?? [];
+  const rightResourceHistory = right.resourceHistory ?? [];
   return (
     left.memberName === right.memberName &&
     left.alive === right.alive &&
@@ -998,6 +1000,7 @@ function areTeamAgentRuntimeEntriesEqual(
     left.pid === right.pid &&
     left.runtimeModel === right.runtimeModel &&
     left.rssBytes === right.rssBytes &&
+    left.cpuPercent === right.cpuPercent &&
     left.livenessKind === right.livenessKind &&
     left.pidSource === right.pidSource &&
     left.processCommand === right.processCommand &&
@@ -1011,7 +1014,19 @@ function areTeamAgentRuntimeEntriesEqual(
     left.runtimeLastSeenAt === right.runtimeLastSeenAt &&
     left.historicalBootstrapConfirmed === right.historicalBootstrapConfirmed &&
     leftDiagnostics.length === rightDiagnostics.length &&
-    leftDiagnostics.every((value, index) => value === rightDiagnostics[index])
+    leftDiagnostics.every((value, index) => value === rightDiagnostics[index]) &&
+    leftResourceHistory.length === rightResourceHistory.length &&
+    leftResourceHistory.every((value, index) => {
+      const other = rightResourceHistory[index];
+      return (
+        value.timestamp === other?.timestamp &&
+        value.cpuPercent === other?.cpuPercent &&
+        value.rssBytes === other?.rssBytes &&
+        value.pidSource === other?.pidSource &&
+        value.pid === other?.pid &&
+        value.runtimePid === other?.runtimePid
+      );
+    })
   );
 }
 

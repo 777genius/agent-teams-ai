@@ -5,6 +5,28 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as fs from 'fs/promises';
 
 import { TaskChangeComputer } from '../../../../src/main/services/team/TaskChangeComputer';
+import type { TaskChangeTaskMeta } from '../../../../src/main/services/team/taskChangeWorkerTypes';
+
+const NO_TASK_BOUNDARIES_WARNING =
+  'No task boundaries found - showing all changes from related sessions.';
+
+const noBoundaryTerminalCases: Array<{
+  name: string;
+  taskMeta: TaskChangeTaskMeta;
+}> = [
+  {
+    name: 'completed',
+    taskMeta: { status: 'completed', reviewState: 'none' },
+  },
+  {
+    name: 'review',
+    taskMeta: { status: 'completed', reviewState: 'review' },
+  },
+  {
+    name: 'approved',
+    taskMeta: { status: 'completed', reviewState: 'approved' },
+  },
+];
 
 async function writeJsonl(filePath: string, entries: object[]): Promise<void> {
   await fs.writeFile(
@@ -99,6 +121,37 @@ function createNoLogTaskChangeComputer(): TaskChangeComputer {
   return new TaskChangeComputer(logsFinder as never, boundaryParser as never);
 }
 
+function createNoBoundaryTaskChangeComputer(logPath: string): TaskChangeComputer {
+  const logsFinder = {
+    findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'team-lead' }]),
+  };
+  const boundaryParser = {
+    parseBoundaries: () =>
+      Promise.resolve({
+        boundaries: [],
+        scopes: [],
+        isSingleTaskSession: true,
+        detectedMechanism: 'none' as const,
+      }),
+  };
+  return new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+}
+
+async function writeNoBoundaryTaskMentionLog(tmpDir: string, content: string): Promise<string> {
+  const logPath = path.join(tmpDir, 'lead.jsonl');
+  await writeJsonl(logPath, [
+    {
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'user',
+      message: {
+        role: 'user',
+        content,
+      },
+    },
+  ]);
+  return logPath;
+}
+
 describe('TaskChangeComputer', () => {
   let tmpDir: string | null = null;
 
@@ -148,6 +201,108 @@ describe('TaskChangeComputer', () => {
     expect(result.confidence).toBe('fallback');
     expect(result.warnings).toEqual([]);
   });
+
+  it('keeps pending tasks quiet when related logs exist but no file edits were captured yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = await writeNoBoundaryTaskMentionLog(
+      tmpDir,
+      'Task task-1 was created and is waiting to start.'
+    );
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'pending',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps in-progress related logs quiet when no boundaries or file edits were captured yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = await writeNoBoundaryTaskMentionLog(
+      tmpDir,
+      'Task task-1 is in progress and has not edited files yet.'
+    );
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'in_progress',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps reopened needs-fix related logs quiet when no boundaries or file edits were captured', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = await writeNoBoundaryTaskMentionLog(
+      tmpDir,
+      'Task task-1 was reopened for fixes and is waiting for edits.'
+    );
+
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'completed',
+        reviewState: 'needsFix',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it.each(noBoundaryTerminalCases)(
+    'warns when $name related logs have no task boundaries or file edits',
+    async ({ taskMeta }) => {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+      const logPath = await writeNoBoundaryTaskMentionLog(
+        tmpDir,
+        'Task task-1 completed but no edit data was captured.'
+      );
+
+      const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+      const result = await computer.computeTaskChanges({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskMeta,
+        effectiveOptions: { status: 'in_progress' },
+        projectPath: '/repo',
+        includeDetails: false,
+      });
+
+      expect(result.files).toEqual([]);
+      expect(result.confidence).toBe('fallback');
+      expect(result.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
+    }
+  );
 
   it('warns when completed tasks have no logs even when request status is stale', async () => {
     const computer = createNoLogTaskChangeComputer();
@@ -222,7 +377,9 @@ describe('TaskChangeComputer', () => {
     ]);
 
     expect(first.files.map((file) => file.relativePath)).toEqual(['src/a.ts']);
+    expect(first.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
     expect(second.files).toEqual(first.files);
+    expect(second.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     await writeJsonl(logPath, [
@@ -236,6 +393,7 @@ describe('TaskChangeComputer', () => {
         .map((file) => file.relativePath)
         .sort((left, right) => left.localeCompare(right))
     ).toEqual(['src/a.ts', 'src/b.ts']);
+    expect(afterChange.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
   });
 
   it('does not pull unrelated log changes into a precise task scope with no file edits', async () => {

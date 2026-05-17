@@ -15,9 +15,15 @@ const sentryNoOp = {
   init: vi.fn(),
   addBreadcrumb: vi.fn(),
   captureException: vi.fn(),
+  setUser: vi.fn(),
+  setTags: vi.fn(),
   startSpan: vi.fn((_opts: unknown, fn: () => unknown) => fn()),
   withScope: vi.fn((fn: (scope: unknown) => void) => fn({ setContext: vi.fn() })),
-  browserTracingIntegration: vi.fn(() => ({ name: 'BrowserTracing', setup: vi.fn(), afterAllSetup: vi.fn() })),
+  browserTracingIntegration: vi.fn(() => ({
+    name: 'BrowserTracing',
+    setup: vi.fn(),
+    afterAllSetup: vi.fn(),
+  })),
 };
 vi.mock('@sentry/electron/main', () => sentryNoOp);
 vi.mock('@sentry/electron/renderer', () => sentryNoOp);
@@ -47,8 +53,8 @@ function formatConsoleCall(args: unknown[]): string {
 }
 
 beforeEach(() => {
-  errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
 afterEach(() => {

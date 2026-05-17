@@ -208,9 +208,9 @@ function createRunningChild() {
   });
 }
 
-function createPidusageStat(pid: number, memory: number) {
+function createPidusageStat(pid: number, memory: number, cpu = 0) {
   return {
-    cpu: 0,
+    cpu,
     memory,
     ppid: 1,
     pid,
@@ -2506,6 +2506,98 @@ describe('TeamProvisioningService', () => {
       });
     });
 
+    it('captures CPU and memory history on runtime snapshots', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).aliveRunByTeam.set('runtime-team', 'run-1');
+      (svc as any).runs.set('run-1', {
+        runId: 'run-1',
+        child: { pid: 111 },
+        request: { model: 'gpt-5.4' },
+        processKilled: false,
+        cancelRequested: false,
+        spawnContext: null,
+      });
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '111': createPidusageStat(111, 123_000_000, 3.5),
+      } as any);
+
+      const firstSnapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(firstSnapshot.members['team-lead']).toMatchObject({
+        pid: 111,
+        pidSource: 'lead_process',
+        cpuPercent: 3.5,
+        rssBytes: 123_000_000,
+      });
+      expect(firstSnapshot.members['team-lead']?.resourceHistory).toEqual([
+        expect.objectContaining({
+          cpuPercent: 3.5,
+          rssBytes: 123_000_000,
+          pidSource: 'lead_process',
+          pid: 111,
+        }),
+      ]);
+
+      (svc as any).invalidateRuntimeSnapshotCaches('runtime-team');
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '111': createPidusageStat(111, 130_000_000, 18),
+      } as any);
+
+      const secondSnapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
+
+      expect(secondSnapshot.members['team-lead']).toMatchObject({
+        cpuPercent: 18,
+        rssBytes: 130_000_000,
+      });
+      expect(secondSnapshot.members['team-lead']?.resourceHistory).toEqual([
+        expect.objectContaining({
+          cpuPercent: 3.5,
+          rssBytes: 123_000_000,
+          pidSource: 'lead_process',
+          pid: 111,
+        }),
+        expect.objectContaining({
+          cpuPercent: 18,
+          rssBytes: 130_000_000,
+          pidSource: 'lead_process',
+          pid: 111,
+        }),
+      ]);
+    });
+
+    it('caps runtime resource history per member and pid', () => {
+      const svc = new TeamProvisioningService();
+      let history: unknown[] | undefined;
+      for (let index = 0; index < 70; index += 1) {
+        history = (svc as any).recordAgentRuntimeResourceSample({
+          teamName: 'runtime-team',
+          memberName: 'alice',
+          timestamp: `2026-04-24T12:${String(index).padStart(2, '0')}:00.000Z`,
+          cpuPercent: index,
+          rssBytes: 100_000_000 + index,
+          pidSource: 'tmux_child',
+          pid: 222,
+        });
+      }
+
+      expect(history).toHaveLength(60);
+      expect(history?.[0]).toMatchObject({
+        cpuPercent: 10,
+        rssBytes: 100_000_010,
+        pidSource: 'tmux_child',
+        pid: 222,
+      });
+      expect(history?.[59]).toMatchObject({
+        cpuPercent: 69,
+        rssBytes: 100_000_069,
+      });
+    });
+
     it('does not send legacy process backend pane markers to tmux liveness lookup', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
@@ -2594,7 +2686,10 @@ describe('TeamProvisioningService', () => {
         })),
       };
       (svc as any).teamMetaStore = {
-        getMeta: vi.fn(async () => ({ providerId: 'anthropic', providerBackendId: 'codex-native' })),
+        getMeta: vi.fn(async () => ({
+          providerId: 'anthropic',
+          providerBackendId: 'codex-native',
+        })),
       };
 
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');

@@ -66,6 +66,19 @@ const WORKSPACE_TRUST_TEST_ENV_NAMES = [
 ] as const;
 
 type WorkspaceTrustTestEnvName = (typeof WORKSPACE_TRUST_TEST_ENV_NAMES)[number];
+type RuntimeUsageStatsForTest = { rssBytes: number; cpuPercent?: number };
+
+function createRuntimeUsageStatsMap(
+  entries: readonly (readonly [number, number])[]
+): Map<number, RuntimeUsageStatsForTest> {
+  return new Map(entries.map(([pid, rssBytes]) => [pid, { rssBytes }]));
+}
+
+function createRuntimeUsageStatsByPid(
+  pids: readonly number[]
+): Map<number, RuntimeUsageStatsForTest> {
+  return createRuntimeUsageStatsMap(pids.map((pid) => [pid, pid * 1_000] as const));
+}
 
 describe('Team agent launch matrix safe e2e', () => {
   let tempDir: string;
@@ -4030,8 +4043,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () =>
-      new Map([[sharedHostPid, 183.9 * 1024 * 1024]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, 183.9 * 1024 * 1024]]);
 
     await waitForCondition(async () => {
       const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
@@ -4136,7 +4149,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4237,7 +4251,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4358,7 +4373,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4441,8 +4457,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (restartedService as any).readProcessRssBytesByPid = async () =>
-      new Map([[sharedHostPid, 188.4 * 1024 * 1024]]);
+    (restartedService as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, 188.4 * 1024 * 1024]]);
 
     const runtimeSnapshot = await restartedService.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -5200,7 +5216,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -13596,8 +13613,8 @@ describe('Team agent launch matrix safe e2e', () => {
         ['alice', { alive: true, pid: 64102, model: 'haiku-stale' }],
         ['bob', { alive: true, pid: 64103, model: 'sonnet-stale' }],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const staleSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(staleSnapshot).toMatchObject({
@@ -13645,8 +13662,8 @@ describe('Team agent launch matrix safe e2e', () => {
         ['alice', { alive: true, pid: 64502, model: 'haiku-before-stop' }],
         ['bob', { alive: true, pid: 64503, model: 'sonnet-before-stop' }],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const beforeStop = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(beforeStop).toMatchObject({
@@ -13772,8 +13789,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -13822,8 +13839,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -13863,8 +13880,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.alice).toMatchObject({
@@ -13901,8 +13918,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.alice).toMatchObject({
@@ -13937,8 +13954,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.bob).toMatchObject({
@@ -13973,8 +13990,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.bob).toMatchObject({
@@ -14018,8 +14035,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.reviewer).toMatchObject({
@@ -14063,8 +14080,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot.members.reviewer).toMatchObject({
@@ -14199,8 +14216,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -14249,8 +14266,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(afterSwitch).toMatchObject({
@@ -14293,8 +14310,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(snapshot).toMatchObject({
@@ -14338,8 +14355,8 @@ describe('Team agent launch matrix safe e2e', () => {
         ['bob', { alive: true, pid: 64704, model: 'opencode/minimax-stale' }],
         ['tom', { alive: true, pid: 64705, model: 'opencode/nemotron-stale' }],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const staleSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(staleSnapshot).toMatchObject({
@@ -14463,8 +14480,8 @@ describe('Team agent launch matrix safe e2e', () => {
               ['bob', { alive: true, pid: 50203, model: 'sonnet-runtime' }],
             ]
       );
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const firstSnapshot = await svc.getTeamAgentRuntimeSnapshot(firstTeamName);
     const secondSnapshot = await svc.getTeamAgentRuntimeSnapshot(secondTeamName);
@@ -14543,8 +14560,8 @@ describe('Team agent launch matrix safe e2e', () => {
             ]
       );
     };
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const beforeStop = await svc.getTeamAgentRuntimeSnapshot(stoppedTeamName);
     expect(beforeStop.members['team-lead']).toMatchObject({

@@ -4274,6 +4274,55 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
   });
 
+  it('updates runtime snapshots when resource history changes', async () => {
+    const store = createSliceStore();
+    const firstResourceHistory = [
+      {
+        timestamp: '2026-03-12T10:00:00.000Z',
+        rssBytes: 256 * 1024 * 1024,
+        cpuPercent: 4,
+        pid: 4242,
+      },
+    ];
+    const snapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          cpuPercent: 4,
+          resourceHistory: firstResourceHistory,
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const nextSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          cpuPercent: 14,
+          resourceHistory: [
+            ...firstResourceHistory,
+            {
+              timestamp: '2026-03-12T10:00:05.000Z',
+              rssBytes: 270 * 1024 * 1024,
+              cpuPercent: 14,
+              pid: 4242,
+            },
+          ],
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(nextSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).not.toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
+  });
+
   it('updates runtime snapshots when copy-diagnostics details change', async () => {
     const store = createSliceStore();
     const snapshot = createRuntimeSnapshot({

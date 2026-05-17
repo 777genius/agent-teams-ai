@@ -544,6 +544,7 @@ import type {
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeLivenessKind,
   TeamAgentRuntimePidSource,
+  TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamConfig,
@@ -576,6 +577,11 @@ import type {
 // its initial two-sample pass. Keep this above slow PowerShell startup time, or
 // the first sample can expire before the recursive second read and loop again.
 const RUNTIME_PIDUSAGE_OPTIONS = process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
+
+interface RuntimeProcessUsageStats {
+  rssBytes?: number;
+  cpuPercent?: number;
+}
 
 const logger = createLogger('Service:TeamProvisioning');
 const PREFLIGHT_DEBUG_LOG_PATH = path.join(os.tmpdir(), 'claude-team-preflight-debug.log');
@@ -5851,6 +5857,7 @@ export class TeamProvisioningService {
   private static readonly SAME_TEAM_RUN_START_SKEW_MS = 1_000;
   private static readonly SAME_TEAM_PERSIST_RETRY_MS = 2_000;
   private static readonly AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS = 2_000;
+  private static readonly AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT = 60;
   private static readonly MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 500;
   private static readonly LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
   private static readonly RETAINED_PROVISIONING_PROGRESS_TTL_MS = 5 * 60_000;
@@ -5925,6 +5932,10 @@ export class TeamProvisioningService {
   private readonly agentRuntimeSnapshotCache = new Map<
     string,
     { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
+  >();
+  private readonly agentRuntimeResourceHistoryByTeam = new Map<
+    string,
+    Map<string, TeamAgentRuntimeResourceSample[]>
   >();
   private readonly agentRuntimeSnapshotInFlightByTeam = new Map<
     string,
@@ -15127,9 +15138,10 @@ export class TeamProvisioningService {
         runtimePids.add(memberPid);
       }
     }
-    const rssBytesByPid = await this.readProcessRssBytesByPid([...runtimePids]);
+    const usageStatsByPid = await this.readProcessUsageStatsByPid([...runtimePids]);
     const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName);
     const snapshotMembers: Record<string, TeamAgentRuntimeEntry> = {};
+    const activeResourceHistoryKeys = new Set<string>();
 
     const getPersistedRuntimeMember = (
       memberName: string
@@ -15221,7 +15233,7 @@ export class TeamProvisioningService {
       const isLead = isLeadMember({ name: memberName, agentType: member.agentType });
       if (isLead) {
         const pid = run?.child?.pid;
-        const rssBytes = pid ? rssBytesByPid.get(pid) : undefined;
+        const usageStats = pid ? usageStatsByPid.get(pid) : undefined;
         const runtimeModel =
           run?.request.model?.trim() ||
           (run?.spawnContext
@@ -15229,6 +15241,18 @@ export class TeamProvisioningService {
             : undefined) ||
           member.model?.trim() ||
           undefined;
+        const resourceHistory = pid
+          ? this.recordAgentRuntimeResourceSample({
+              teamName,
+              memberName,
+              timestamp: updatedAt,
+              cpuPercent: usageStats?.cpuPercent,
+              rssBytes: usageStats?.rssBytes,
+              pidSource: 'lead_process',
+              pid,
+              activeKeys: activeResourceHistoryKeys,
+            })
+          : undefined;
         snapshotMembers[memberName] = {
           memberName,
           alive: Boolean(pid && !run?.processKilled && !run?.cancelRequested),
@@ -15236,7 +15260,10 @@ export class TeamProvisioningService {
           backendType: 'lead',
           ...(pid ? { pid } : {}),
           ...(runtimeModel ? { runtimeModel } : {}),
-          ...(rssBytes != null ? { rssBytes } : {}),
+          ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
+          ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
+          ...(pid ? { pidSource: 'lead_process' as const } : {}),
+          ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
           updatedAt,
         };
         continue;
@@ -15342,18 +15369,32 @@ export class TeamProvisioningService {
         liveRuntimeMember?.livenessKind === 'runtime_process_candidate'
           ? 'info'
           : liveRuntimeMember?.runtimeDiagnosticSeverity;
-      let rssBytes = rssPid ? rssBytesByPid.get(rssPid) : undefined;
-      if (rssBytes == null && isSharedOpenCodeHost && typeof rssPid === 'number' && rssPid > 0) {
+      let usageStats = rssPid ? usageStatsByPid.get(rssPid) : undefined;
+      if (!usageStats && isSharedOpenCodeHost && typeof rssPid === 'number' && rssPid > 0) {
         try {
           const refreshedStat = await pidusage(rssPid, RUNTIME_PIDUSAGE_OPTIONS);
-          if (Number.isFinite(refreshedStat.memory) && refreshedStat.memory >= 0) {
-            rssBytesByPid.set(rssPid, refreshedStat.memory);
-            rssBytes = refreshedStat.memory;
+          const refreshedUsageStats = this.normalizeRuntimeProcessUsageStats(refreshedStat);
+          if (refreshedUsageStats) {
+            usageStatsByPid.set(rssPid, refreshedUsageStats);
+            usageStats = refreshedUsageStats;
           }
         } catch {
           // Shared OpenCode host can exit between discovery and the targeted RSS refresh.
         }
       }
+      const resourceHistory = rssPid
+        ? this.recordAgentRuntimeResourceSample({
+            teamName,
+            memberName,
+            timestamp: updatedAt,
+            cpuPercent: usageStats?.cpuPercent,
+            rssBytes: usageStats?.rssBytes,
+            pidSource: liveRuntimeMember?.pidSource,
+            pid: rssPid,
+            runtimePid: liveRuntimeMember?.metricsPid,
+            activeKeys: activeResourceHistoryKeys,
+          })
+        : undefined;
 
       snapshotMembers[memberName] = {
         memberName,
@@ -15367,7 +15408,9 @@ export class TeamProvisioningService {
         ...(displayPid ? { pid: displayPid } : {}),
         ...(runtimeModel ? { runtimeModel } : {}),
         ...(runtimeCwd ? { cwd: runtimeCwd } : {}),
-        ...(typeof rssBytes === 'number' && rssBytes >= 0 ? { rssBytes } : {}),
+        ...(usageStats?.rssBytes != null ? { rssBytes: usageStats.rssBytes } : {}),
+        ...(usageStats?.cpuPercent != null ? { cpuPercent: usageStats.cpuPercent } : {}),
+        ...(resourceHistory && resourceHistory.length > 0 ? { resourceHistory } : {}),
         ...(effectiveLivenessKind ? { livenessKind: effectiveLivenessKind } : {}),
         ...(liveRuntimeMember?.pidSource ? { pidSource: liveRuntimeMember.pidSource } : {}),
         ...(liveRuntimeMember?.processCommand
@@ -15394,6 +15437,7 @@ export class TeamProvisioningService {
         updatedAt,
       };
     }
+    this.pruneAgentRuntimeResourceHistory(teamName, activeResourceHistoryKeys);
 
     const persistedLaunchIdentity = persistedTeamMeta?.launchIdentity;
     const snapshotProviderId =
@@ -25624,24 +25668,137 @@ export class TeamProvisioningService {
     return metadataByMember;
   }
 
-  private async readProcessRssBytesByPid(pids: readonly number[]): Promise<Map<number, number>> {
+  private buildAgentRuntimeResourceHistoryKey(params: {
+    memberName: string;
+    pid?: number;
+    runtimePid?: number;
+    pidSource?: TeamAgentRuntimePidSource;
+  }): string | null {
+    const memberName = params.memberName.trim();
+    const usagePid =
+      typeof params.pid === 'number' && Number.isFinite(params.pid) && params.pid > 0
+        ? params.pid
+        : typeof params.runtimePid === 'number' &&
+            Number.isFinite(params.runtimePid) &&
+            params.runtimePid > 0
+          ? params.runtimePid
+          : null;
+    if (!memberName || usagePid == null) {
+      return null;
+    }
+    return [memberName, usagePid, params.pidSource ?? 'unknown'].join('\0');
+  }
+
+  private recordAgentRuntimeResourceSample(params: {
+    teamName: string;
+    memberName: string;
+    timestamp: string;
+    cpuPercent?: number;
+    rssBytes?: number;
+    pidSource?: TeamAgentRuntimePidSource;
+    pid?: number;
+    runtimePid?: number;
+    activeKeys?: Set<string>;
+  }): TeamAgentRuntimeResourceSample[] | undefined {
+    const key = this.buildAgentRuntimeResourceHistoryKey(params);
+    if (!key) {
+      return undefined;
+    }
+    params.activeKeys?.add(key);
+
+    const cpuPercent =
+      typeof params.cpuPercent === 'number' &&
+      Number.isFinite(params.cpuPercent) &&
+      params.cpuPercent >= 0
+        ? params.cpuPercent
+        : undefined;
+    const rssBytes =
+      typeof params.rssBytes === 'number' &&
+      Number.isFinite(params.rssBytes) &&
+      params.rssBytes >= 0
+        ? params.rssBytes
+        : undefined;
+    let historyByKey = this.agentRuntimeResourceHistoryByTeam.get(params.teamName);
+    if (!historyByKey) {
+      historyByKey = new Map<string, TeamAgentRuntimeResourceSample[]>();
+      this.agentRuntimeResourceHistoryByTeam.set(params.teamName, historyByKey);
+    }
+    const existingHistory = historyByKey.get(key) ?? [];
+    if (cpuPercent == null && rssBytes == null) {
+      return existingHistory.length > 0
+        ? existingHistory.map((sample) => ({ ...sample }))
+        : undefined;
+    }
+
+    const sample: TeamAgentRuntimeResourceSample = {
+      timestamp: params.timestamp,
+      ...(cpuPercent != null ? { cpuPercent } : {}),
+      ...(rssBytes != null ? { rssBytes } : {}),
+      ...(params.pidSource ? { pidSource: params.pidSource } : {}),
+      ...(params.pid ? { pid: params.pid } : {}),
+      ...(params.runtimePid ? { runtimePid: params.runtimePid } : {}),
+    };
+    const nextHistory = [...existingHistory, sample].slice(
+      -TeamProvisioningService.AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT
+    );
+    historyByKey.set(key, nextHistory);
+    return nextHistory.map((entry) => ({ ...entry }));
+  }
+
+  private pruneAgentRuntimeResourceHistory(
+    teamName: string,
+    activeKeys: ReadonlySet<string>
+  ): void {
+    const historyByKey = this.agentRuntimeResourceHistoryByTeam.get(teamName);
+    if (!historyByKey) {
+      return;
+    }
+    for (const key of historyByKey.keys()) {
+      if (!activeKeys.has(key)) {
+        historyByKey.delete(key);
+      }
+    }
+    if (historyByKey.size === 0) {
+      this.agentRuntimeResourceHistoryByTeam.delete(teamName);
+    }
+  }
+
+  private normalizeRuntimeProcessUsageStats(
+    stat: { memory?: number; cpu?: number } | undefined
+  ): RuntimeProcessUsageStats | undefined {
+    const rssBytes = stat?.memory;
+    const cpuPercent = stat?.cpu;
+    const normalized: RuntimeProcessUsageStats = {
+      ...(typeof rssBytes === 'number' && Number.isFinite(rssBytes) && rssBytes >= 0
+        ? { rssBytes }
+        : {}),
+      ...(typeof cpuPercent === 'number' && Number.isFinite(cpuPercent) && cpuPercent >= 0
+        ? { cpuPercent }
+        : {}),
+    };
+    return normalized.rssBytes != null || normalized.cpuPercent != null ? normalized : undefined;
+  }
+
+  private async readProcessUsageStatsByPid(
+    pids: readonly number[]
+  ): Promise<Map<number, RuntimeProcessUsageStats>> {
     const uniquePids = [...new Set(pids.filter((pid) => Number.isFinite(pid) && pid > 0))];
     if (uniquePids.length === 0) {
       return new Map();
     }
 
-    const rssBytesByPid = new Map<number, number>();
+    const usageStatsByPid = new Map<number, RuntimeProcessUsageStats>();
     const options = RUNTIME_PIDUSAGE_OPTIONS;
     try {
       const statsByPid = await pidusage(uniquePids, options);
       for (const [rawPid, stat] of Object.entries(statsByPid)) {
         const pid = Number.parseInt(rawPid, 10);
-        const rssBytes = stat?.memory;
-        if (Number.isFinite(pid) && pid > 0 && Number.isFinite(rssBytes) && rssBytes >= 0) {
-          rssBytesByPid.set(pid, rssBytes);
+        const usageStats = this.normalizeRuntimeProcessUsageStats(stat);
+        if (Number.isFinite(pid) && pid > 0 && usageStats) {
+          usageStatsByPid.set(pid, usageStats);
         }
       }
-      return rssBytesByPid;
+      return usageStatsByPid;
     } catch (error) {
       logger.debug(
         `pidusage batch runtime snapshot failed; falling back to per-pid reads: ${
@@ -25654,15 +25811,16 @@ export class TeamProvisioningService {
       uniquePids.map(async (pid) => {
         try {
           const stat = await pidusage(pid, options);
-          if (Number.isFinite(stat.memory) && stat.memory >= 0) {
-            rssBytesByPid.set(pid, stat.memory);
+          const usageStats = this.normalizeRuntimeProcessUsageStats(stat);
+          if (usageStats) {
+            usageStatsByPid.set(pid, usageStats);
           }
         } catch {
           // Process likely exited between discovery and sampling.
         }
       })
     );
-    return rssBytesByPid;
+    return usageStatsByPid;
   }
 
   private async clearPersistedLaunchState(
