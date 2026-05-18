@@ -40,6 +40,22 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.controlText).toContain('relayOfMessageId="msg-1"');
   });
 
+  it('keeps no-assistant response repair available for a bounded max-attempt recovery retry', () => {
+    const decision = decideOpenCodePromptDeliveryRepair(
+      base({
+        status: 'retry_scheduled',
+        attempts: 3,
+        maxAttempts: 3,
+        responseState: 'prompt_delivered_no_assistant_message',
+        pendingReason: 'prompt_delivered_no_assistant_message',
+      })
+    );
+
+    expect(decision.kind).toBe('no_assistant_response');
+    expect(decision.retryable).toBe(true);
+    expect(decision.controlText).toContain('You must not end this turn empty.');
+  });
+
   it('requires member work sync status and report for work-sync nudges', () => {
     const decision = decideOpenCodePromptDeliveryRepair(
       base({

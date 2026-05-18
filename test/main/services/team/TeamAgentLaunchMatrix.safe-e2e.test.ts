@@ -39,9 +39,11 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
 import {
   getOpenCodeRuntimeManifestPath,
   getOpenCodeRuntimeLaneIndexPath,
+  readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
   setOpenCodeRuntimeActiveRunManifest,
   upsertOpenCodeRuntimeLaneIndexEntry,
@@ -10229,7 +10231,7 @@ describe('Team agent launch matrix safe e2e', () => {
     addGeminiPrimaryToMixedRun(currentRun);
     staleRun.runId = `run-${teamName}-stale`;
     currentRun.runId = `run-${teamName}-current`;
-    markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
     trackLiveRun(svc, staleRun);
     trackLiveRun(svc, currentRun);
 
@@ -10255,6 +10257,89 @@ describe('Team agent launch matrix safe e2e', () => {
       messageId: 'msg-current-direct-opencode',
     });
     expect(adapter.messageInputs[0]?.runId).not.toBe(staleRun.runId);
+  });
+
+  it('refreshes stale mixed OpenCode secondary session evidence before direct delivery when MCP transport changed', async () => {
+    const teamName = 'mixed-opencode-secondary-transport-refresh-safe-e2e';
+    await writeMixedTeamConfig({
+      teamName,
+      projectPath,
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, {
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    addGeminiPrimaryToMixedRun(run);
+    run.runId = `run-${teamName}-current`;
+    await markMixedOpenCodeLaneConfirmedForTest(run, 'bob', {
+      sessionId: 'oc-session-bob-stale-mixed-transport',
+      appMcpTransportHash: 'old-mixed-safe-e2e-transport-hash',
+    });
+    trackLiveRun(svc, run);
+
+    const transportSpy = vi
+      .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+      .mockReturnValue({
+        url: 'http://127.0.0.1:43126/mcp',
+        port: 43126,
+        child: { pid: 43126 },
+        generation: 5,
+        urlHash: 'current-mixed-safe-e2e-transport-hash',
+        transportEvidence: {
+          schemaVersion: 1,
+          transport: 'httpStream',
+          host: '127.0.0.1',
+          port: 43126,
+          endpoint: '/mcp',
+          url: 'http://127.0.0.1:43126/mcp',
+          urlHash: 'current-mixed-safe-e2e-transport-hash',
+          generation: 5,
+          observedAt: '2026-04-23T10:00:00.000Z',
+        },
+        diagnostics: [],
+      } as any);
+
+    try {
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'bob',
+          text: 'refresh stale mixed transport before opencode send',
+          messageId: 'msg-mixed-transport-refresh-safe-e2e',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+    } finally {
+      transportSpy.mockRestore();
+    }
+
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: run.runId,
+      teamName,
+      laneId: 'secondary:opencode:bob',
+      memberName: 'bob',
+      forceSessionRefreshReason:
+        'opencode_app_mcp_transport_changed:old-mixed-safe-e2e-transport-hash->current-mixed-safe-e2e-transport-hash',
+    });
+
+    const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'secondary:opencode:bob',
+    });
+    expect(evidence.sessions[0]).toMatchObject({
+      id: 'session-bob',
+      appMcpTransportHash: 'current-mixed-safe-e2e-transport-hash',
+    });
   });
 
   it('routes direct OpenCode member messages only to the targeted live mixed OpenCode lane', async () => {
@@ -10299,7 +10384,7 @@ describe('Team agent launch matrix safe e2e', () => {
     addGeminiPrimaryToMixedRun(secondRun);
     firstRun.child = { stdin: { writable: true } };
     secondRun.child = { stdin: { writable: true } };
-    markMixedOpenCodeLaneConfirmedForTest(secondRun, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(secondRun, 'bob');
     trackLiveRun(svc, firstRun);
     trackLiveRun(svc, secondRun);
 
@@ -10590,7 +10675,7 @@ describe('Team agent launch matrix safe e2e', () => {
     const currentRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
     addGeminiPrimaryToMixedRun(currentRun);
     currentRun.runId = `run-${teamName}-current`;
-    markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
     trackLiveRun(svc, currentRun);
     injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
@@ -10667,6 +10752,90 @@ describe('Team agent launch matrix safe e2e', () => {
       messageId: 'msg-current-pure-opencode',
     });
     expect(adapter.messageInputs[0]?.runId).not.toBe(first.runId);
+  });
+
+  it('refreshes stale OpenCode session evidence before direct delivery when MCP transport changed', async () => {
+    const teamName = 'pure-opencode-direct-message-transport-refresh-safe-e2e';
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const launch = await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+    await writeOpenCodeBootstrapSessionEvidenceForTest({
+      teamName,
+      laneId: 'primary',
+      runId: launch.runId,
+      memberName: 'alice',
+      sessionId: 'oc-session-alice-stale-transport',
+      appMcpTransportHash: 'old-safe-e2e-transport-hash',
+    });
+
+    const transportSpy = vi
+      .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+      .mockReturnValue({
+        url: 'http://127.0.0.1:43125/mcp',
+        port: 43125,
+        child: { pid: 43125 },
+        generation: 4,
+        urlHash: 'current-safe-e2e-transport-hash',
+        transportEvidence: {
+          schemaVersion: 1,
+          transport: 'httpStream',
+          host: '127.0.0.1',
+          port: 43125,
+          endpoint: '/mcp',
+          url: 'http://127.0.0.1:43125/mcp',
+          urlHash: 'current-safe-e2e-transport-hash',
+          generation: 4,
+          observedAt: '2026-04-23T10:00:00.000Z',
+        },
+        diagnostics: [],
+      } as any);
+
+    try {
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'alice',
+          text: 'refresh stale transport before pure opencode send',
+          messageId: 'msg-transport-refresh-safe-e2e',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+    } finally {
+      transportSpy.mockRestore();
+    }
+
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: launch.runId,
+      teamName,
+      laneId: 'primary',
+      memberName: 'alice',
+      forceSessionRefreshReason:
+        'opencode_app_mcp_transport_changed:old-safe-e2e-transport-hash->current-safe-e2e-transport-hash',
+    });
+
+    const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'primary',
+    });
+    expect(evidence.sessions[0]).toMatchObject({
+      id: 'session-alice',
+      appMcpTransportHash: 'current-safe-e2e-transport-hash',
+    });
   });
 
   it('routes direct OpenCode member messages only to the targeted live pure OpenCode team', async () => {
@@ -13265,7 +13434,7 @@ describe('Team agent launch matrix safe e2e', () => {
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
     const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
     addGeminiPrimaryToMixedRun(run);
-    markMixedOpenCodeLaneConfirmedForTest(run, 'tom');
+    await markMixedOpenCodeLaneConfirmedForTest(run, 'tom');
     trackLiveRun(svc, run);
 
     await expect(
@@ -13321,7 +13490,7 @@ describe('Team agent launch matrix safe e2e', () => {
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
     const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
     addGeminiPrimaryToMixedRun(run);
-    markMixedOpenCodeLaneConfirmedForTest(run, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(run, 'bob');
     trackLiveRun(svc, run);
 
     await expect(
@@ -18457,6 +18626,7 @@ async function writeOpenCodeBootstrapSessionEvidenceForTest(input: {
   runId?: string | null;
   memberName?: string;
   sessionId?: string;
+  appMcpTransportHash?: string;
 }): Promise<void> {
   const runId = input.runId ?? null;
   const descriptor = OPENCODE_RUNTIME_STORE_DESCRIPTORS.find(
@@ -18507,6 +18677,9 @@ async function writeOpenCodeBootstrapSessionEvidenceForTest(input: {
               runId,
               observedAt: '2026-04-23T10:00:00.000Z',
               source: 'runtime_bootstrap_checkin',
+              ...(input.appMcpTransportHash
+                ? { appMcpTransportHash: input.appMcpTransportHash }
+                : {}),
             },
           ],
         },
@@ -18686,9 +18859,17 @@ function createMixedLiveRun(input: {
   };
 }
 
-function markMixedOpenCodeLaneConfirmedForTest(run: any, memberName: string): void {
+async function markMixedOpenCodeLaneConfirmedForTest(
+  run: any,
+  memberName: string,
+  options: {
+    sessionId?: string;
+    appMcpTransportHash?: string;
+  } = {}
+): Promise<void> {
   const now = '2026-04-23T10:00:00.000Z';
   const laneId = `secondary:opencode:${memberName}`;
+  const sessionId = options.sessionId ?? `session-${memberName}`;
   const lane = run.mixedSecondaryLanes?.find((candidate: any) => candidate.laneId === laneId);
   if (!lane) {
     throw new Error(`Missing mixed OpenCode lane fixture for ${memberName}`);
@@ -18709,7 +18890,7 @@ function markMixedOpenCodeLaneConfirmedForTest(run: any, memberName: string): vo
         runtimeAlive: true,
         bootstrapConfirmed: true,
         hardFailure: false,
-        sessionId: `session-${memberName}`,
+        sessionId,
         runtimePid: 10_000,
         livenessKind: 'confirmed_bootstrap',
         pidSource: 'opencode_bridge',
@@ -18720,6 +18901,14 @@ function markMixedOpenCodeLaneConfirmedForTest(run: any, memberName: string): vo
     warnings: [],
     diagnostics: ['fake OpenCode launch ready'],
   };
+  await writeOpenCodeBootstrapSessionEvidenceForTest({
+    teamName: run.teamName,
+    laneId,
+    runId: run.runId,
+    memberName,
+    sessionId,
+    appMcpTransportHash: options.appMcpTransportHash,
+  });
 }
 
 function removeMixedOpenCodeLaneForTest(run: any, memberName: string): void {

@@ -128,6 +128,43 @@ function maybeString(value: string | undefined): string | undefined {
   return boundedString(value, 240);
 }
 
+function isRuntimeDiagnosticCardError(params: {
+  runtimeDiagnostic?: string;
+  runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
+  launchState?: MemberLaunchState;
+  spawnStatus?: MemberSpawnStatus;
+  hardFailure?: boolean;
+}): boolean {
+  if (!params.runtimeDiagnostic) {
+    return false;
+  }
+  return (
+    params.runtimeDiagnosticSeverity === 'error' ||
+    params.launchState === 'failed_to_start' ||
+    params.spawnStatus === 'error' ||
+    params.hardFailure === true
+  );
+}
+
+function isRecoverableOpenCodeSessionRefreshText(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase() ?? '';
+  return (
+    normalized.includes('resolved_behavior_changed:') ||
+    normalized.includes('opencode_app_mcp_transport_changed:') ||
+    normalized.includes('opencode session changed; refreshing the session before retry') ||
+    normalized.includes('opencode_session_refresh_scheduled_after_resolved_behavior_changed')
+  );
+}
+
+function isRuntimeAdvisoryCardError(runtimeAdvisory: MemberRuntimeAdvisory | undefined): boolean {
+  if (isRecoverableOpenCodeSessionRefreshText(runtimeAdvisory?.message)) {
+    return false;
+  }
+  return (
+    runtimeAdvisory?.kind === 'api_error' && runtimeAdvisory.reasonCode !== 'protocol_proof_missing'
+  );
+}
+
 export function normalizeMemberLaunchFailureReason(value: string | undefined): string | null {
   const normalized = value
     ?.replace(/\s+/g, ' ')
@@ -257,7 +294,29 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
   const runtimeAdvisoryLabel = boundedString(params.runtimeAdvisoryLabel ?? undefined);
   const runtimeAdvisoryMessage = boundedString(runtimeAdvisory?.message);
   const runtimeAdvisoryCardError =
-    runtimeAdvisoryTitle ?? runtimeAdvisoryLabel ?? runtimeAdvisoryMessage;
+    isRuntimeAdvisoryCardError(runtimeAdvisory) &&
+    ![runtimeAdvisoryTitle, runtimeAdvisoryLabel, runtimeAdvisoryMessage].some(
+      isRecoverableOpenCodeSessionRefreshText
+    )
+      ? (runtimeAdvisoryTitle ?? runtimeAdvisoryLabel ?? runtimeAdvisoryMessage)
+      : undefined;
+  const runtimeDiagnosticSeverity =
+    spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity;
+  const spawnRuntimeDiagnosticCardError = isRuntimeDiagnosticCardError({
+    runtimeDiagnostic: spawnEntry?.runtimeDiagnostic,
+    runtimeDiagnosticSeverity: spawnEntry?.runtimeDiagnosticSeverity,
+    launchState: spawnEntry?.launchState,
+    spawnStatus: spawnEntry?.status,
+    hardFailure: spawnEntry?.hardFailure,
+  })
+    ? spawnEntry?.runtimeDiagnostic
+    : undefined;
+  const runtimeEntryDiagnosticCardError = isRuntimeDiagnosticCardError({
+    runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+    runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+  })
+    ? runtimeEntry?.runtimeDiagnostic
+    : undefined;
   const runtimeDiagnostic =
     boundedString(spawnEntry?.runtimeDiagnostic) ??
     boundedString(runtimeEntry?.runtimeDiagnostic) ??
@@ -269,8 +328,8 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
       normalizeMemberLaunchFailureReason(
         spawnEntry?.error ??
           spawnEntry?.hardFailureReason ??
-          spawnEntry?.runtimeDiagnostic ??
-          runtimeEntry?.runtimeDiagnostic
+          spawnRuntimeDiagnosticCardError ??
+          runtimeEntryDiagnosticCardError
       ) ?? undefined
     ) ?? runtimeAdvisoryCardError;
   const diagnostics = uniqueDiagnostics(
@@ -384,10 +443,9 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
       ? { rssBytes: boundedNumber(runtimeEntry?.rssBytes) }
       : {}),
     ...(runtimeDiagnostic ? { runtimeDiagnostic } : {}),
-    ...((spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity)
+    ...(runtimeDiagnosticSeverity
       ? {
-          runtimeDiagnosticSeverity:
-            spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity,
+          runtimeDiagnosticSeverity,
         }
       : {}),
     ...(runtimeAdvisory?.kind ? { runtimeAdvisoryKind: runtimeAdvisory.kind } : {}),

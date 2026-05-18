@@ -38,6 +38,15 @@ function readControl() {
 
 function isUnhealthy() {
   const control = readControl();
+  if (control === 'unhealthy-once:' + port) {
+    try {
+      fs.writeFileSync(controlFile, 'healthy');
+    } catch {}
+    return true;
+  }
+  if (control === 'unhealthy-pid:' + process.pid) {
+    return true;
+  }
   return control === 'unhealthy-all' || control === 'unhealthy-port:' + port;
 }
 
@@ -304,11 +313,12 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const server = createControlledServer({ scriptPath, controlFile });
 
     const first = await server.ensureStarted();
+    const warnCountAfterFirstStart = vi.mocked(console.warn).mock.calls.length;
     const second = await server.ensureStarted();
 
     expect(second).toEqual(first);
     expect(await readHealthStatus(first.url)).toBe(200);
-    expect(vi.mocked(console.warn).mock.calls).toEqual([]);
+    expect(vi.mocked(console.warn).mock.calls.slice(warnCountAfterFirstStart)).toEqual([]);
   });
 
   it('restarts a stale but still-running MCP HTTP child when cached URL health turns unhealthy', async () => {
@@ -323,12 +333,13 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     });
 
     const first = await server.ensureStarted();
-    await writeFile(controlFile, `unhealthy-port:${first.port}`, 'utf8');
-    expect(await readHealthStatus(first.url)).toBe(503);
+    expect(first.pid).toEqual(expect.any(Number));
+    await writeFile(controlFile, `unhealthy-pid:${first.pid}`, 'utf8');
 
     const second = await server.ensureStarted();
 
-    expect(second.port).not.toBe(first.port);
+    expect(second.port).toBe(first.port);
+    expect(second.url).toBe(first.url);
     expect(second.pid).not.toBe(first.pid);
     expect(await readHealthStatus(second.url)).toBe(200);
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
@@ -358,7 +369,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     expect(await readHealthStatus(second.url)).toBe(200);
   });
 
-  it('passes a refreshed MCP URL into a real bridge child process after the cached URL goes stale', async () => {
+  it('passes a refreshed healthy MCP URL into a real bridge child process after cached health goes stale', async () => {
     const scriptPath = await writeFakeMcpHttpServer(tempDir!);
     const bridgeBinaryPath = await writeFakeOpenCodeBridgeBinary(tempDir!);
     const controlFile = path.join(tempDir!, 'health-control.txt');
@@ -404,12 +415,13 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     if (!firstResult.ok) {
       throw new Error(firstResult.error.message);
     }
+    const firstHandle = server.getCurrentHandle();
+    expect(firstHandle?.pid).toEqual(expect.any(Number));
     await writeFile(
       controlFile,
-      `unhealthy-port:${new URL(firstResult.data.observedMcpUrl).port}`,
+      `unhealthy-pid:${firstHandle?.pid}`,
       'utf8'
     );
-    expect(await readHealthStatus(firstResult.data.observedMcpUrl)).toBe(503);
 
     const secondResult = await client.execute<{ runId: string }, { observedMcpUrl: string }>(
       'opencode.launchTeam',
@@ -424,7 +436,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     if (!secondResult.ok) {
       throw new Error(secondResult.error.message);
     }
-    expect(secondResult.data.observedMcpUrl).not.toBe(firstResult.data.observedMcpUrl);
+    expect(secondResult.data.observedMcpUrl).toBe(firstResult.data.observedMcpUrl);
     expect(await readHealthStatus(secondResult.data.observedMcpUrl)).toBe(200);
   });
 

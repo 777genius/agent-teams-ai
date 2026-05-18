@@ -5,9 +5,11 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  buildOpenCodePromptDeliveryAttemptId,
   createOpenCodePromptDeliveryLedgerStore,
   hashOpenCodePromptDeliveryPayload,
   isOpenCodePromptDeliveryAttemptDue,
+  isOpenCodeSessionRefreshResponseState,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 
 describe('OpenCodePromptDeliveryLedger', () => {
@@ -456,6 +458,67 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(retryAccepted.attempts).toBe(2);
     expect(retryAccepted.runtimePromptMessageIds).toEqual(['msg_prompt_1', 'msg_prompt_2']);
     expect(retryAccepted.lastRuntimePromptMessageId).toBe('msg_prompt_2');
+  });
+
+  it('tracks session refresh retries without consuming normal delivery attempts', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-session-stale',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:session-stale',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+
+    expect(buildOpenCodePromptDeliveryAttemptId(record)).toBe(
+      `${record.id}:1:${record.payloadHash.slice(0, 12)}`
+    );
+
+    const stale = await store.applyDeliveryResult({
+      id: record.id,
+      accepted: false,
+      attempted: true,
+      responseObservation: {
+        state: 'session_stale',
+        deliveredUserMessageId: null,
+        assistantMessageId: null,
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: null,
+        reason: 'resolved_behavior_changed:old->new',
+      },
+      diagnostics: ['OpenCode session reconcile skipped because the stored session is stale'],
+      now: '2026-04-25T10:00:05.000Z',
+    });
+
+    expect(stale.attempts).toBe(0);
+    expect(stale.responseState).toBe('session_stale');
+    expect(stale.lastSessionRefreshReason).toBe('resolved_behavior_changed:old->new');
+
+    const scheduled = await store.markSessionRefreshScheduled({
+      id: record.id,
+      nextAttemptAt: '2026-04-25T10:00:10.000Z',
+      reason: 'resolved_behavior_changed:old->new',
+      scheduledAt: '2026-04-25T10:00:06.000Z',
+    });
+
+    expect(scheduled.status).toBe('retry_scheduled');
+    expect(scheduled.attempts).toBe(0);
+    expect(scheduled.sessionRefreshAttempts).toBe(1);
+    expect(buildOpenCodePromptDeliveryAttemptId(scheduled)).toBe(
+      `${record.id}:1:${record.payloadHash.slice(0, 12)}:refresh1`
+    );
+    expect(
+      isOpenCodeSessionRefreshResponseState({
+        reason: 'opencode_app_mcp_transport_changed:old->new',
+      })
+    ).toBe(true);
   });
 
   it('keeps schema-1 legacy prompt-id fields compatible and normalizes when touched', async () => {

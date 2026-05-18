@@ -65,10 +65,23 @@ describe('AgentTeamsMcpHttpServer', () => {
 
     const handle = await server.ensureStarted();
 
-    expect(handle).toEqual({
+    expect(handle).toMatchObject({
       url: 'http://127.0.0.1:41001/mcp',
       port: 41001,
       pid: 43123,
+      generation: 1,
+      diagnostics: [],
+    });
+    expect(handle.urlHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(handle.transportEvidence).toMatchObject({
+      schemaVersion: 1,
+      transport: 'httpStream',
+      host: '127.0.0.1',
+      port: 41001,
+      endpoint: '/mcp',
+      url: 'http://127.0.0.1:41001/mcp',
+      urlHash: handle.urlHash,
+      generation: 1,
     });
     expect(spawnProcess).toHaveBeenCalledWith(
       'node',
@@ -201,18 +214,92 @@ describe('AgentTeamsMcpHttpServer', () => {
     const second = await server.ensureStarted();
 
     expect(first.url).toBe('http://127.0.0.1:41007/mcp');
-    expect(second).toEqual({
-      url: 'http://127.0.0.1:41008/mcp',
-      port: 41008,
+    expect(second).toMatchObject({
+      url: 'http://127.0.0.1:41007/mcp',
+      port: 41007,
       pid: 43124,
+      generation: 2,
+      diagnostics: ['opencode_app_mcp_restart_reason:health_reuse_failed'],
+    });
+    expect(second.transportEvidence).toMatchObject({
+      port: 41007,
+      url: 'http://127.0.0.1:41007/mcp',
+      urlHash: second.urlHash,
+      generation: 2,
     });
     expect(spawnProcess).toHaveBeenCalledTimes(2);
+    expect(allocatePort).toHaveBeenCalledTimes(1);
     expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(firstChild, 'SIGKILL');
     expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 5_000);
     expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 3_000);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41008, 5_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 5_000);
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
+    expect(vi.mocked(console.warn).mock.calls[1]?.join(' ')).toContain(
+      'opencode_app_mcp_restart_reason:health_reuse_failed'
+    );
     vi.mocked(console.warn).mockClear();
+  });
+
+  it('falls back without killing unknown processes when the preferred restart port stays occupied', async () => {
+    const firstChild = new FakeChildProcess(43123);
+    const secondChild = new FakeChildProcess(43124);
+    const blocker = net.createServer();
+    const blockedPort = await new Promise<number>((resolve, reject) => {
+      blocker.once('error', reject);
+      blocker.listen(0, '127.0.0.1', () => {
+        const address = blocker.address();
+        if (!address || typeof address === 'string') {
+          reject(new Error('Failed to allocate blocked test port'));
+          return;
+        }
+        resolve(address.port);
+      });
+    });
+    const fallbackPort = blockedPort === 65_535 ? blockedPort - 1 : blockedPort + 1;
+    const spawnProcess = vi
+      .fn()
+      .mockReturnValueOnce(firstChild as any)
+      .mockReturnValueOnce(secondChild as any);
+    const allocatePort = vi
+      .fn()
+      .mockResolvedValueOnce(blockedPort)
+      .mockResolvedValueOnce(fallbackPort);
+    const waitForPort = vi.fn(async (_host: string, port: number, timeoutMs: number) => {
+      if (port === blockedPort && timeoutMs === 3_000) {
+        throw new Error('stale health check');
+      }
+    });
+    const server = new AgentTeamsMcpHttpServer({
+      resolveLaunchSpec: async () => ({
+        command: 'node',
+        args: ['mcp-server/dist/index.js'],
+      }),
+      allocatePort,
+      spawnProcess,
+      waitForPort,
+    });
+
+    try {
+      const first = await server.ensureStarted();
+      const second = await server.ensureStarted();
+
+      expect(first.url).toBe(`http://127.0.0.1:${blockedPort}/mcp`);
+      expect(second).toMatchObject({
+        url: `http://127.0.0.1:${fallbackPort}/mcp`,
+        port: fallbackPort,
+        pid: 43124,
+        generation: 2,
+      });
+      expect(second.diagnostics).toContain('opencode_app_mcp_public_url_changed');
+      expect(second.diagnostics).toContain(
+        `opencode_app_mcp_preferred_port_unavailable:${blockedPort}`
+      );
+      expect(hoisted.killProcessTreeMock).toHaveBeenCalledTimes(1);
+      expect(allocatePort).toHaveBeenCalledTimes(2);
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+      vi.mocked(console.warn).mockClear();
+    }
   });
 
   it('fails startup promptly when the child exits before readiness', async () => {

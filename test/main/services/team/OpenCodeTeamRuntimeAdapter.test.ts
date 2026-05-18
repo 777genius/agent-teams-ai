@@ -531,6 +531,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         messageId: 'msg-1',
         replyRecipient: 'alice',
         actionMode: 'delegate',
+        forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
         taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
       })
     ).resolves.toEqual({
@@ -553,6 +554,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       messageId: 'msg-1',
       settlementMode: 'acceptance',
       actionMode: 'delegate',
+      forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
       taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
       agent: 'teammate',
     });

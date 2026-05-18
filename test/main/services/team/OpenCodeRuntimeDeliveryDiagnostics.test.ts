@@ -66,6 +66,41 @@ describe('OpenCodeRuntimeDeliveryDiagnostics', () => {
     );
   });
 
+  it('formats resolved behavior changes as recoverable session refresh state', () => {
+    const record = {
+      diagnostics: [
+        'OpenCode session reconcile skipped because the stored session is stale',
+        'resolved_behavior_changed:old->new',
+      ],
+      lastReason: 'resolved_behavior_changed:old->new',
+      responseState: 'session_stale',
+      status: 'retry_scheduled',
+    } as Parameters<typeof selectOpenCodeRuntimeDeliveryReason>[0];
+
+    expect(selectOpenCodeRuntimeDeliveryReason(record)).toBe(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+    expect(
+      isActionRequiredOpenCodeRuntimeDeliveryReason(selectOpenCodeRuntimeDeliveryReason(record))
+    ).toBe(false);
+  });
+
+  it('formats app MCP transport changes as recoverable session refresh state', () => {
+    const record = {
+      diagnostics: ['opencode_app_mcp_transport_changed:old->new'],
+      lastReason: 'opencode_app_mcp_transport_changed:old->new',
+      responseState: 'session_stale',
+      status: 'retry_scheduled',
+    } as Parameters<typeof selectOpenCodeRuntimeDeliveryReason>[0];
+
+    expect(selectOpenCodeRuntimeDeliveryReason(record)).toBe(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+    expect(
+      isActionRequiredOpenCodeRuntimeDeliveryReason(selectOpenCodeRuntimeDeliveryReason(record))
+    ).toBe(false);
+  });
+
   it('prioritizes local disk-full diagnostics over secondary aborted assistant errors', () => {
     const record = {
       diagnostics: [

@@ -258,9 +258,6 @@ export function decideOpenCodePromptDeliveryRepair(
   if (input.status === 'failed_terminal') {
     return none('terminal_record');
   }
-  if (input.attempts >= input.maxAttempts) {
-    return none('max_attempts_reached');
-  }
   if (input.hardFailureKind !== 'none') {
     return none(`hard_failure:${input.hardFailureKind}`);
   }
@@ -337,6 +334,10 @@ export function decideOpenCodePromptDeliveryRepair(
       input.pendingReason,
       noAssistantControlLines(input)
     );
+  }
+
+  if (input.attempts >= input.maxAttempts) {
+    return none('max_attempts_reached');
   }
 
   if (

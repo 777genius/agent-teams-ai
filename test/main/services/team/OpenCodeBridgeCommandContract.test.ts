@@ -277,7 +277,7 @@ describe('OpenCodeBridgeCommandContract', () => {
     ).toEqual({
       ok: false,
       reason:
-        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 1. Falling back to observed delivery mode is required.',
+        `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
     });
 
     server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =

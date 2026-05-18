@@ -3,6 +3,7 @@ import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { type ChildProcess } from 'child_process';
+import { createHash } from 'crypto';
 import http from 'http';
 import net from 'net';
 
@@ -14,11 +15,32 @@ const MCP_HTTP_ENDPOINT = '/mcp';
 const MCP_HTTP_READY_TIMEOUT_MS = 5_000;
 const MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS = 3_000;
 const MCP_HTTP_READY_POLL_MS = 100;
+const MCP_HTTP_PORT_RELEASE_TIMEOUT_MS = 3_000;
+const MCP_HTTP_STABLE_PORT_BASE = 43_100;
+const MCP_HTTP_STABLE_PORT_SPAN = 700;
+const MCP_HTTP_STABLE_PORT_SCAN_LIMIT = 20;
+const MCP_HTTP_PORT_ENV = 'CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT';
+
+export interface AgentTeamsMcpHttpTransportEvidence {
+  schemaVersion: 1;
+  transport: 'httpStream';
+  host: string;
+  port: number;
+  endpoint: string;
+  url: string;
+  urlHash: string;
+  generation: number;
+  observedAt: string;
+}
 
 export interface AgentTeamsMcpHttpServerHandle {
   url: string;
   port: number;
   pid: number | null;
+  generation: number;
+  urlHash: string;
+  transportEvidence: AgentTeamsMcpHttpTransportEvidence;
+  diagnostics: string[];
 }
 
 export interface AgentTeamsMcpHttpServerDeps {
@@ -46,6 +68,18 @@ async function allocateLoopbackPort(): Promise<number> {
         }
         resolve(address.port);
       });
+    });
+  });
+}
+
+async function canListenOnLoopbackPort(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => {
+      resolve(false);
+    });
+    server.listen(port, host, () => {
+      server.close(() => resolve(true));
     });
   });
 }
@@ -91,6 +125,21 @@ async function waitForLoopbackPort(host: string, port: number, timeoutMs: number
   );
 }
 
+async function waitForLoopbackPortAvailable(
+  host: string,
+  port: number,
+  timeoutMs: number
+): Promise<boolean> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (await canListenOnLoopbackPort(host, port)) {
+      return true;
+    }
+    await sleep(MCP_HTTP_READY_POLL_MS);
+  }
+  return await canListenOnLoopbackPort(host, port);
+}
+
 function defaultSpawnProcess(
   command: string,
   args: string[],
@@ -117,10 +166,56 @@ function buildHttpServerArgs(launchSpec: McpLaunchSpec, port: number): string[] 
   ];
 }
 
+function sha256Hex(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function parseConfiguredStablePort(value: string | undefined): number | null {
+  if (!value?.trim()) {
+    return null;
+  }
+  const parsed = Number(value.trim());
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65_535) {
+    logger.warn(`Ignoring invalid ${MCP_HTTP_PORT_ENV} value: ${value}`);
+    return null;
+  }
+  return parsed;
+}
+
+function resolveDefaultStablePort(): number {
+  const configured = parseConfiguredStablePort(process.env[MCP_HTTP_PORT_ENV]);
+  if (configured) {
+    return configured;
+  }
+  const basis = `${getClaudeBasePath()}|agent-teams-opencode-mcp-http`;
+  const hashPrefix = sha256Hex(basis).slice(0, 8);
+  const offset = Number.parseInt(hashPrefix, 16) % MCP_HTTP_STABLE_PORT_SPAN;
+  return MCP_HTTP_STABLE_PORT_BASE + offset;
+}
+
+function buildTransportEvidence(
+  port: number,
+  generation: number
+): AgentTeamsMcpHttpTransportEvidence {
+  const url = `http://${MCP_HTTP_HOST}:${port}${MCP_HTTP_ENDPOINT}`;
+  return {
+    schemaVersion: 1,
+    transport: 'httpStream',
+    host: MCP_HTTP_HOST,
+    port,
+    endpoint: MCP_HTTP_ENDPOINT,
+    url,
+    urlHash: sha256Hex(url),
+    generation,
+    observedAt: new Date().toISOString(),
+  };
+}
+
 export class AgentTeamsMcpHttpServer {
   private startPromise: Promise<AgentTeamsMcpHttpServerHandle> | null = null;
   private child: ChildProcess | null = null;
   private handle: AgentTeamsMcpHttpServerHandle | null = null;
+  private generation = 0;
   private readonly expectedStopChildren = new WeakSet<ChildProcess>();
 
   constructor(private readonly deps: AgentTeamsMcpHttpServerDeps = {}) {}
@@ -140,12 +235,24 @@ export class AgentTeamsMcpHttpServer {
 
   async stop(): Promise<void> {
     const child = this.child;
+    const releasePort = this.handle?.port ?? null;
     this.child = null;
     this.handle = null;
     if (child) {
       this.expectedStopChildren.add(child);
       killProcessTree(child, 'SIGKILL');
     }
+    if (releasePort) {
+      await waitForLoopbackPortAvailable(
+        MCP_HTTP_HOST,
+        releasePort,
+        MCP_HTTP_PORT_RELEASE_TIMEOUT_MS
+      );
+    }
+  }
+
+  getCurrentHandle(): AgentTeamsMcpHttpServerHandle | null {
+    return this.handle;
   }
 
   private async reuseOrRestartExistingHandle(
@@ -164,20 +271,72 @@ export class AgentTeamsMcpHttpServer {
             error instanceof Error ? error.message : String(error)
           }`
         );
+        const restartPort = handle.port;
+        const previousUrlHash = handle.urlHash;
         await this.stop();
+        return this.startOnce({
+          preferredPort: restartPort,
+          previousUrlHash,
+          reason: 'health_reuse_failed',
+        });
       }
     }
 
     return this.startOnce();
   }
 
-  private async startOnce(): Promise<AgentTeamsMcpHttpServerHandle> {
-    const resolveLaunchSpec = this.deps.resolveLaunchSpec ?? resolveAgentTeamsMcpLaunchSpec;
+  private async resolveStartPort(preferredPort?: number | null): Promise<{
+    port: number;
+    diagnostics: string[];
+  }> {
+    const diagnostics: string[] = [];
+    if (preferredPort && (await canListenOnLoopbackPort(MCP_HTTP_HOST, preferredPort))) {
+      return { port: preferredPort, diagnostics };
+    }
+    if (preferredPort) {
+      diagnostics.push(`opencode_app_mcp_preferred_port_unavailable:${preferredPort}`);
+    }
+
+    if (this.deps.allocatePort && (!preferredPort || diagnostics.length > 0)) {
+      return { port: await this.deps.allocatePort(), diagnostics };
+    }
+
+    const stablePort = resolveDefaultStablePort();
+    for (let offset = 0; offset < MCP_HTTP_STABLE_PORT_SCAN_LIMIT; offset += 1) {
+      const candidate = stablePort + offset;
+      if (candidate > 65_535) {
+        break;
+      }
+      if (preferredPort === candidate) {
+        continue;
+      }
+      if (await canListenOnLoopbackPort(MCP_HTTP_HOST, candidate)) {
+        if (candidate !== stablePort) {
+          diagnostics.push(`opencode_app_mcp_preferred_port_unavailable:${stablePort}`);
+        }
+        return { port: candidate, diagnostics };
+      }
+    }
+
     const allocatePort = this.deps.allocatePort ?? allocateLoopbackPort;
+    const port = await allocatePort();
+    diagnostics.push('opencode_app_mcp_stable_port_range_unavailable');
+    return { port, diagnostics };
+  }
+
+  private async startOnce(
+    input: {
+      preferredPort?: number | null;
+      previousUrlHash?: string | null;
+      reason?: string;
+    } = {}
+  ): Promise<AgentTeamsMcpHttpServerHandle> {
+    const resolveLaunchSpec = this.deps.resolveLaunchSpec ?? resolveAgentTeamsMcpLaunchSpec;
     const spawnProcess = this.deps.spawnProcess ?? defaultSpawnProcess;
     const waitForPort = this.deps.waitForPort ?? waitForLoopbackPort;
     const launchSpec = await resolveLaunchSpec();
-    const port = await allocatePort();
+    const selectedPort = await this.resolveStartPort(input.preferredPort ?? null);
+    const port = selectedPort.port;
     const args = buildHttpServerArgs(launchSpec, port);
     const childEnv = applyAgentTeamsIdentityEnv({
       ...process.env,
@@ -254,14 +413,35 @@ export class AgentTeamsMcpHttpServer {
     }
 
     startupSettled = true;
+    const generation = this.generation + 1;
+    const transportEvidence = buildTransportEvidence(port, generation);
+    this.generation = generation;
+    const diagnostics = [...selectedPort.diagnostics];
+    if (input.previousUrlHash && input.previousUrlHash !== transportEvidence.urlHash) {
+      diagnostics.push('opencode_app_mcp_public_url_changed');
+    }
+    if (input.reason) {
+      diagnostics.push(`opencode_app_mcp_restart_reason:${input.reason}`);
+    }
     this.handle = {
-      url: `http://${MCP_HTTP_HOST}:${port}${MCP_HTTP_ENDPOINT}`,
+      url: transportEvidence.url,
       port,
       pid: child.pid ?? null,
+      generation,
+      urlHash: transportEvidence.urlHash,
+      transportEvidence,
+      diagnostics,
     };
     logger.info(`Agent Teams MCP HTTP server running at ${this.handle.url}`);
+    for (const diagnostic of diagnostics) {
+      logger.warn(`Agent Teams MCP HTTP diagnostic: ${diagnostic}`);
+    }
     return this.handle;
   }
 }
 
 export const agentTeamsMcpHttpServer = new AgentTeamsMcpHttpServer();
+
+export function getCurrentAgentTeamsMcpHttpTransportEvidence(): AgentTeamsMcpHttpTransportEvidence | null {
+  return agentTeamsMcpHttpServer.getCurrentHandle()?.transportEvidence ?? null;
+}

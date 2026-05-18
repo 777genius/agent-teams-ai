@@ -9,7 +9,7 @@ import type {
 export const OPEN_CODE_BRIDGE_SCHEMA_VERSION = 1 as const;
 export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
-export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 1 as const;
+export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 2 as const;
 
 export type OpenCodeBridgeCommandName =
   | 'opencode.handshake'
@@ -172,6 +172,7 @@ export interface OpenCodeSendMessageCommandBody {
   text: string;
   messageId?: string;
   deliveryAttemptId?: string;
+  forceSessionRefreshReason?: string;
   payloadHash?: string;
   settlementMode?: 'observed' | 'acceptance';
   fileParts?: {
@@ -690,8 +691,7 @@ export function validateOpenCodeBridgeHandshake(input: {
   ) {
     return {
       ok: false,
-      reason:
-        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 1. Falling back to observed delivery mode is required.',
+      reason: `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
     };
   }
 

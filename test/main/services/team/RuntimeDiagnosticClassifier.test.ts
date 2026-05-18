@@ -144,4 +144,21 @@ describe('RuntimeDiagnosticClassifier', () => {
       generic: true,
     });
   });
+
+  it('classifies resolved OpenCode behavior changes as recoverable generic refresh state', () => {
+    expect(classifyRuntimeDiagnostic('resolved_behavior_changed:old->new')).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('opencode_app_mcp_transport_changed:old->new')
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+  });
 });

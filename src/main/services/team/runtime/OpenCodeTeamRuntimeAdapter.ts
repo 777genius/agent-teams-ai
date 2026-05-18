@@ -71,6 +71,7 @@ export interface OpenCodeTeamRuntimeMessageInput {
   workSyncReviewRequestEventIds?: string[];
   controlUrl?: string;
   taskRefs?: TaskRef[];
+  forceSessionRefreshReason?: string;
   bootstrapCheckinRetry?: {
     runtimeSessionId: string;
     reason?: string;
@@ -381,6 +382,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       text: buildOpenCodeRuntimeMessageText(input),
       messageId: input.messageId,
       ...(input.deliveryAttemptId ? { deliveryAttemptId: input.deliveryAttemptId } : {}),
+      ...(input.forceSessionRefreshReason
+        ? { forceSessionRefreshReason: input.forceSessionRefreshReason }
+        : {}),
       settlementMode: resolveOpenCodeRuntimeSettlementMode(input),
       fileParts: input.fileParts,
       actionMode: input.actionMode,

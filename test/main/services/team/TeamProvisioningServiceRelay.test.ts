@@ -2508,8 +2508,15 @@ Messages:
     vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
     vi.spyOn(
       service as any,
-      'hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence'
-    ).mockResolvedValue(true);
+      'findDeliverableOpenCodeRuntimeBootstrapSessionEvidence'
+    ).mockResolvedValue({
+      id: 'session-jack',
+      teamName,
+      memberName: 'jack',
+      laneId,
+      runId: 'opencode-run-1',
+      source: 'runtime_bootstrap_checkin',
+    });
     vi.spyOn(service as any, 'applyOpenCodeVisibleDestinationProof').mockImplementation(
       async (input: any) => ({
         ledgerRecord: input.ledgerRecord,

@@ -132,6 +132,7 @@ import {
   getMixedLaunchFallbackRecoveryError,
   TeamProvisioningService,
 } from '@main/services/team/TeamProvisioningService';
+import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { TeamTaskActivityIntervalService } from '@main/services/team/TeamTaskActivityIntervalService';
 import {
   clearAutoResumeService,
@@ -148,10 +149,13 @@ import {
   getTeamLaunchSummaryPath,
 } from '@main/services/team/TeamLaunchStateStore';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { OPEN_CODE_BRIDGE_SCHEMA_VERSION } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeManifestPath,
   OpenCodeRuntimeManifestEvidenceReader,
+  readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
   setOpenCodeRuntimeActiveRunManifest,
   upsertOpenCodeRuntimeLaneIndexEntry,
@@ -164,6 +168,7 @@ import {
   RuntimeStoreBatchWriter,
 } from '@main/services/team/opencode/store/RuntimeStoreManifest';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import { spawnCli } from '@main/utils/childProcess';
 import { killProcessByPid } from '@main/utils/processKill';
@@ -448,6 +453,7 @@ async function writeCommittedOpenCodeSessionStore(input: {
   teamName: string;
   laneId: string;
   runId: string;
+  batchKey?: string;
   sessions: unknown[];
 }): Promise<void> {
   const descriptor = OPENCODE_RUNTIME_STORE_DESCRIPTORS.find(
@@ -465,8 +471,9 @@ async function writeCommittedOpenCodeSessionStore(input: {
     }),
     {
       clock: () => new Date('2026-04-22T12:00:00.000Z'),
-      batchIdFactory: () => `batch-${input.runId}`,
-      receiptIdFactory: () => `receipt-${input.runId}`,
+      batchIdFactory: () => `batch-${input.runId}${input.batchKey ? `-${input.batchKey}` : ''}`,
+      receiptIdFactory: () =>
+        `receipt-${input.runId}${input.batchKey ? `-${input.batchKey}` : ''}`,
     }
   );
   await writer.writeBatch({
@@ -765,6 +772,133 @@ describe('TeamProvisioningService', () => {
           policyImpact: { state: 'none' },
         })
       ).toEqual({ state: 'none' });
+    });
+
+    it('schedules one bounded recovery retry before terminalizing no-assistant OpenCode delivery', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).scheduleOpenCodePromptDeliveryWatchdog = vi.fn();
+      const record = {
+        id: 'opencode-prompt:test',
+        teamName: 'team-a',
+        memberName: 'atlas',
+        laneId: 'secondary:opencode:atlas',
+        runId: 'run-1',
+        runtimeSessionId: 'ses-1',
+        inboxMessageId: 'msg-1',
+        inboxTimestamp: '2026-05-18T08:31:00.000Z',
+        source: 'watcher',
+        messageKind: null,
+        replyRecipient: 'team-lead',
+        actionMode: null,
+        taskRefs: [],
+        payloadHash: 'sha256:test',
+        status: 'accepted',
+        responseState: 'prompt_delivered_no_assistant_message',
+        attempts: 3,
+        maxAttempts: 3,
+        acceptanceUnknown: false,
+        nextAttemptAt: null,
+        lastAttemptAt: '2026-05-18T08:31:30.000Z',
+        lastObservedAt: '2026-05-18T08:31:45.000Z',
+        acceptedAt: '2026-05-18T08:31:30.000Z',
+        respondedAt: null,
+        failedAt: null,
+        inboxReadCommittedAt: null,
+        inboxReadCommitError: null,
+        prePromptCursor: null,
+        postPromptCursor: null,
+        deliveredUserMessageId: 'delivered-1',
+        observedAssistantMessageId: null,
+        observedAssistantPreview: null,
+        observedToolCallNames: [],
+        observedVisibleMessageId: null,
+        visibleReplyMessageId: null,
+        visibleReplyInbox: null,
+        visibleReplyCorrelation: null,
+        lastReason: 'prompt_delivered_no_assistant_message',
+        diagnostics: ['prompt_delivered_no_assistant_message'],
+        createdAt: '2026-05-18T08:31:00.000Z',
+        updatedAt: '2026-05-18T08:31:45.000Z',
+      };
+      const ledger = {
+        markFailedTerminal: vi.fn(),
+        markNextAttemptScheduled: vi.fn(async (input: any) => ({
+          ...record,
+          status: input.status,
+          nextAttemptAt: input.nextAttemptAt,
+          lastReason: input.reason,
+          updatedAt: input.scheduledAt,
+        })),
+      };
+
+      const nextRecord = await (svc as any).scheduleOpenCodePromptLedgerFollowUp({
+        ledger,
+        ledgerRecord: record,
+        teamName: 'team-a',
+        memberName: 'atlas',
+        retry: true,
+        reason: 'prompt_delivered_no_assistant_message',
+      });
+
+      expect(ledger.markFailedTerminal).not.toHaveBeenCalled();
+      expect(ledger.markNextAttemptScheduled).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: record.id,
+          status: 'retry_scheduled',
+          reason: 'prompt_delivered_no_assistant_message',
+        })
+      );
+      expect(nextRecord.status).toBe('retry_scheduled');
+    });
+
+    it('does not requeue terminal no-assistant delivery after the bounded recovery retry is exhausted', async () => {
+      const svc = new TeamProvisioningService();
+      const record = {
+        status: 'failed_terminal',
+        responseState: 'prompt_delivered_no_assistant_message',
+        attempts: 4,
+        maxAttempts: 3,
+        inboxReadCommittedAt: null,
+        lastReason: 'prompt_delivered_no_assistant_message',
+        diagnostics: ['prompt_delivered_no_assistant_message'],
+      };
+      const ledger = {
+        markNextAttemptScheduled: vi.fn(),
+      };
+
+      const nextRecord = await (svc as any).requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded({
+        ledger,
+        ledgerRecord: record,
+      });
+
+      expect(nextRecord).toBe(record);
+      expect(ledger.markNextAttemptScheduled).not.toHaveBeenCalled();
+    });
+
+    it('does not requeue terminal no-assistant delivery when diagnostics contain action-required provider errors', async () => {
+      const svc = new TeamProvisioningService();
+      const record = {
+        status: 'failed_terminal',
+        responseState: 'empty_assistant_turn',
+        attempts: 3,
+        maxAttempts: 3,
+        inboxReadCommittedAt: null,
+        lastReason: 'empty_assistant_turn',
+        diagnostics: [
+          'Insufficient credits. Add more using https://openrouter.ai/settings/credits',
+        ],
+      };
+      const ledger = {
+        markNextAttemptScheduled: vi.fn(),
+      };
+
+      const nextRecord = await (svc as any).requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded({
+        ledger,
+        ledgerRecord: record,
+      });
+
+      expect(nextRecord).toBe(record);
+      expect(ledger.markNextAttemptScheduled).not.toHaveBeenCalled();
     });
   });
 
@@ -7375,6 +7509,8 @@ describe('TeamProvisioningService', () => {
       ).resolves.toMatchObject({
         delivered: true,
         responsePending: true,
+        responseState: 'session_stale',
+        ledgerStatus: 'retry_scheduled',
       });
 
       expect(observeMessageDelivery).toHaveBeenCalledTimes(1);
@@ -7385,6 +7521,38 @@ describe('TeamProvisioningService', () => {
           prePromptCursor: 'cursor-1',
         })
       );
+      expect(sendMessageToMember).toHaveBeenCalledTimes(1);
+
+      const scheduledEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          nextAttemptAt: string | null;
+          sessionRefreshAttempts?: number;
+          attempts: number;
+          maxAttempts: number;
+        }>;
+      };
+      expect(scheduledEnvelope.data[0]).toMatchObject({
+        attempts: 1,
+        maxAttempts: 3,
+        sessionRefreshAttempts: 1,
+      });
+      scheduledEnvelope.data[0].nextAttemptAt = '2000-01-01T00:00:00.000Z';
+      await fsPromises.writeFile(ledgerPath, JSON.stringify(scheduledEnvelope, null, 2), 'utf8');
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-stale-session',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        responsePending: true,
+        responseState: 'pending',
+      });
+
       expect(sendMessageToMember).toHaveBeenCalledTimes(2);
       expect(sendMessageToMember.mock.calls[1]?.[0]).toMatchObject({
         runId: 'opencode-run-bob',
@@ -7393,6 +7561,581 @@ describe('TeamProvisioningService', () => {
         memberName: 'bob',
         cwd: '/repo',
         messageId: 'msg-stale-session',
+        deliveryAttemptId: expect.stringContaining(':refresh1'),
+      });
+    });
+
+    it('forces an OpenCode session refresh before send when app MCP transport evidence changed', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob-refreshed',
+        runtimePromptMessageId: 'msg_prompt_refreshed',
+        prePromptCursor: 'cursor-refreshed',
+        responseObservation: {
+          state: 'pending',
+          deliveredUserMessageId: 'oc-user-refreshed',
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: 'assistant_response_pending',
+        },
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+      await writeCommittedOpenCodeSessionStore({
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-bob',
+        batchKey: 'transport-refresh',
+        sessions: [
+          {
+            id: 'oc-session-bob',
+            teamName: 'team-a',
+            memberName: 'bob',
+            laneId: 'secondary:opencode:bob',
+            runId: 'opencode-run-bob',
+            source: 'app_managed_bootstrap',
+            appMcpTransportHash: 'old-transport-hash',
+          },
+        ],
+      });
+
+      const currentTransportEvidence = {
+        schemaVersion: 1,
+        transport: 'httpStream',
+        host: '127.0.0.1',
+        port: 43123,
+        endpoint: '/mcp',
+        url: 'http://127.0.0.1:43123/mcp',
+        urlHash: 'current-transport-hash',
+        generation: 2,
+        observedAt: '2026-04-25T10:00:00.000Z',
+      };
+      const transportSpy = vi
+        .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+        .mockReturnValue({
+          url: currentTransportEvidence.url,
+          port: currentTransportEvidence.port,
+          child: { pid: 43123 },
+          generation: currentTransportEvidence.generation,
+          urlHash: currentTransportEvidence.urlHash,
+          transportEvidence: currentTransportEvidence,
+          diagnostics: [],
+        } as any);
+
+      try {
+        await expect(
+          svc.deliverOpenCodeMemberMessage('team-a', {
+            memberName: 'bob',
+            text: 'hello refreshed bob',
+            messageId: 'msg-refresh-transport',
+            source: 'watcher',
+            inboxTimestamp: '2026-04-25T10:00:00.000Z',
+          })
+        ).resolves.toMatchObject({
+          delivered: true,
+          responsePending: true,
+          responseState: 'pending',
+        });
+      } finally {
+        transportSpy.mockRestore();
+      }
+
+      expect(sendMessageToMember).toHaveBeenCalledTimes(1);
+      expect(sendMessageToMember.mock.calls[0]?.[0]).toMatchObject({
+        runId: 'opencode-run-bob',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        forceSessionRefreshReason:
+          'opencode_app_mcp_transport_changed:old-transport-hash->current-transport-hash',
+      });
+
+      const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+      });
+      expect(evidence.sessions[0]).toMatchObject({
+        id: 'oc-session-bob-refreshed',
+        appMcpTransportHash: 'current-transport-hash',
+      });
+    });
+
+    it('routes app MCP transport mismatch through the production OpenCode adapter and bridge command', async () => {
+      const svc = new TeamProvisioningService();
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember: vi.fn() });
+      await writeCommittedOpenCodeSessionStore({
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-bob',
+        batchKey: 'production-adapter-refresh',
+        sessions: [
+          {
+            id: 'oc-session-bob',
+            teamName: 'team-a',
+            memberName: 'bob',
+            laneId: 'secondary:opencode:bob',
+            runId: 'opencode-run-bob',
+            source: 'app_managed_bootstrap',
+            appMcpTransportHash: 'old-production-transport-hash',
+          },
+        ],
+      });
+
+      const currentTransportEvidence = {
+        schemaVersion: 1,
+        transport: 'httpStream',
+        host: '127.0.0.1',
+        port: 43124,
+        endpoint: '/mcp',
+        url: 'http://127.0.0.1:43124/mcp',
+        urlHash: 'current-production-transport-hash',
+        generation: 3,
+        observedAt: '2026-04-25T10:00:00.000Z',
+      };
+      const transportSpy = vi
+        .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+        .mockReturnValue({
+          url: currentTransportEvidence.url,
+          port: currentTransportEvidence.port,
+          child: { pid: 43124 },
+          generation: currentTransportEvidence.generation,
+          urlHash: currentTransportEvidence.urlHash,
+          transportEvidence: currentTransportEvidence,
+          diagnostics: [],
+        } as any);
+      const directBridgeExecute = vi.fn(async () => {
+        throw new Error('direct OpenCode bridge executor should not be used for acceptance send');
+      });
+      const stateChangingExecute = vi.fn(async (input: {
+        command: string;
+        body: Record<string, unknown>;
+      }) => ({
+        ok: true as const,
+        schemaVersion: OPEN_CODE_BRIDGE_SCHEMA_VERSION,
+        requestId: 'send-refresh-command',
+        command: input.command as any,
+        completedAt: '2026-04-25T10:00:01.000Z',
+        durationMs: 10,
+        runtime: {
+          providerId: 'opencode' as const,
+          binaryPath: '/opt/homebrew/bin/opencode',
+          binaryFingerprint: 'test-opencode-binary',
+          version: '1.0.0',
+          capabilitySnapshotId: 'test-capability-snapshot',
+        },
+        diagnostics: [],
+        data: {
+          accepted: true,
+          memberName: 'bob',
+          sessionId: 'oc-session-bob-production-refresh',
+          runtimePid: 456,
+          runtimePromptMessageId: 'msg_prompt_production_refresh',
+          prePromptCursor: 'cursor-production-refresh',
+          responseObservation: {
+            state: 'pending',
+            deliveredUserMessageId: 'oc-user-production-refresh',
+            assistantMessageId: null,
+            toolCallNames: [],
+            visibleMessageToolCallId: null,
+            visibleReplyMessageId: null,
+            visibleReplyCorrelation: null,
+            latestAssistantPreview: null,
+            reason: 'assistant_response_pending',
+          },
+          diagnostics: [],
+        },
+      }));
+      const productionBridge = new OpenCodeReadinessBridge(
+        { execute: directBridgeExecute },
+        { stateChangingCommands: { execute: stateChangingExecute as any } }
+      );
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([new OpenCodeTeamRuntimeAdapter(productionBridge)])
+      );
+
+      try {
+        await expect(
+          svc.deliverOpenCodeMemberMessage('team-a', {
+            memberName: 'bob',
+            text: 'hello production bob',
+            messageId: 'msg-production-refresh-transport',
+            source: 'watcher',
+            inboxTimestamp: '2026-04-25T10:00:00.000Z',
+          })
+        ).resolves.toMatchObject({
+          delivered: true,
+          responsePending: true,
+          responseState: 'pending',
+        });
+      } finally {
+        transportSpy.mockRestore();
+      }
+
+      expect(directBridgeExecute).not.toHaveBeenCalled();
+      expect(stateChangingExecute).toHaveBeenCalledTimes(1);
+      const commandInput = stateChangingExecute.mock.calls[0]?.[0] as {
+        command: string;
+        teamName: string;
+        laneId: string;
+        runId: string;
+        cwd: string;
+        body: Record<string, unknown>;
+      };
+      expect(commandInput).toMatchObject({
+        command: 'opencode.sendMessage',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-bob',
+        cwd: '/repo',
+      });
+      expect(commandInput.body).toMatchObject({
+        runId: 'opencode-run-bob',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        projectPath: '/repo',
+        memberName: 'bob',
+        messageId: 'msg-production-refresh-transport',
+        settlementMode: 'acceptance',
+        forceSessionRefreshReason:
+          'opencode_app_mcp_transport_changed:old-production-transport-hash->current-production-transport-hash',
+      });
+      expect(commandInput.body.payloadHash).toEqual(expect.any(String));
+      expect(commandInput.body.deliveryAttemptId).toEqual(expect.any(String));
+      expect(String(commandInput.body.text)).toContain('hello production bob');
+
+      const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+      });
+      expect(evidence.sessions[0]).toMatchObject({
+        id: 'oc-session-bob-production-refresh',
+        appMcpTransportHash: 'current-production-transport-hash',
+      });
+    });
+
+    it('stamps current transport evidence when forced refresh succeeds with the same OpenCode session id', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_same_session_refresh',
+        prePromptCursor: 'cursor-same-session-refresh',
+        responseObservation: {
+          state: 'pending',
+          deliveredUserMessageId: 'oc-user-same-session-refresh',
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: 'assistant_response_pending',
+        },
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+      await writeCommittedOpenCodeSessionStore({
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-bob',
+        batchKey: 'same-session-transport-refresh',
+        sessions: [
+          {
+            id: 'oc-session-bob',
+            teamName: 'team-a',
+            memberName: 'bob',
+            laneId: 'secondary:opencode:bob',
+            runId: 'opencode-run-bob',
+            source: 'app_managed_bootstrap',
+            appMcpTransportHash: 'old-same-session-transport-hash',
+          },
+        ],
+      });
+
+      const currentTransportEvidence = {
+        schemaVersion: 1,
+        transport: 'httpStream',
+        host: '127.0.0.1',
+        port: 43128,
+        endpoint: '/mcp',
+        url: 'http://127.0.0.1:43128/mcp',
+        urlHash: 'current-same-session-transport-hash',
+        generation: 7,
+        observedAt: '2026-04-25T10:00:00.000Z',
+      };
+      const transportSpy = vi
+        .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+        .mockReturnValue({
+          url: currentTransportEvidence.url,
+          port: currentTransportEvidence.port,
+          child: { pid: 43128 },
+          generation: currentTransportEvidence.generation,
+          urlHash: currentTransportEvidence.urlHash,
+          transportEvidence: currentTransportEvidence,
+          diagnostics: [],
+        } as any);
+
+      try {
+        await expect(
+          svc.deliverOpenCodeMemberMessage('team-a', {
+            memberName: 'bob',
+            text: 'hello same session refresh bob',
+            messageId: 'msg-same-session-refresh-transport',
+            source: 'watcher',
+            inboxTimestamp: '2026-04-25T10:00:00.000Z',
+          })
+        ).resolves.toMatchObject({
+          delivered: true,
+          responsePending: true,
+          responseState: 'pending',
+        });
+      } finally {
+        transportSpy.mockRestore();
+      }
+
+      expect(sendMessageToMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          forceSessionRefreshReason:
+            'opencode_app_mcp_transport_changed:old-same-session-transport-hash->current-same-session-transport-hash',
+        })
+      );
+      const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+      });
+      expect(evidence.sessions[0]).toMatchObject({
+        id: 'oc-session-bob',
+        appMcpTransportHash: 'current-same-session-transport-hash',
+      });
+    });
+
+    it('fails closed through the delivery ledger when forced refresh reaches an old OpenCode bridge contract', async () => {
+      const svc = new TeamProvisioningService();
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember: vi.fn() });
+      await writeCommittedOpenCodeSessionStore({
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        runId: 'opencode-run-bob',
+        batchKey: 'production-adapter-refresh-contract-missing',
+        sessions: [
+          {
+            id: 'oc-session-bob',
+            teamName: 'team-a',
+            memberName: 'bob',
+            laneId: 'secondary:opencode:bob',
+            runId: 'opencode-run-bob',
+            source: 'app_managed_bootstrap',
+            appMcpTransportHash: 'old-contract-transport-hash',
+          },
+        ],
+      });
+
+      const currentTransportEvidence = {
+        schemaVersion: 1,
+        transport: 'httpStream',
+        host: '127.0.0.1',
+        port: 43127,
+        endpoint: '/mcp',
+        url: 'http://127.0.0.1:43127/mcp',
+        urlHash: 'current-contract-transport-hash',
+        generation: 6,
+        observedAt: '2026-04-25T10:00:00.000Z',
+      };
+      const transportSpy = vi
+        .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+        .mockReturnValue({
+          url: currentTransportEvidence.url,
+          port: currentTransportEvidence.port,
+          child: { pid: 43127 },
+          generation: currentTransportEvidence.generation,
+          urlHash: currentTransportEvidence.urlHash,
+          transportEvidence: currentTransportEvidence,
+          diagnostics: [],
+        } as any);
+      const directBridgeExecute = vi.fn(async () => {
+        throw new Error('direct OpenCode bridge executor should not be used for acceptance send');
+      });
+      const stateChangingExecute = vi.fn(async (input: { command: string }) => ({
+        ok: false as const,
+        schemaVersion: OPEN_CODE_BRIDGE_SCHEMA_VERSION,
+        requestId: 'send-refresh-contract-missing',
+        command: input.command as any,
+        completedAt: '2026-04-25T10:00:01.000Z',
+        durationMs: 10,
+        error: {
+          kind: 'contract_violation' as const,
+          message:
+            'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.',
+          retryable: false,
+        },
+        diagnostics: [],
+      }));
+      const productionBridge = new OpenCodeReadinessBridge(
+        { execute: directBridgeExecute },
+        { stateChangingCommands: { execute: stateChangingExecute as any } }
+      );
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([new OpenCodeTeamRuntimeAdapter(productionBridge)])
+      );
+
+      try {
+        await expect(
+          svc.deliverOpenCodeMemberMessage('team-a', {
+            memberName: 'bob',
+            text: 'hello old contract bob',
+            messageId: 'msg-production-refresh-contract-missing',
+            source: 'watcher',
+            inboxTimestamp: '2026-04-25T10:00:00.000Z',
+          })
+        ).resolves.toMatchObject({
+          delivered: false,
+          accepted: false,
+          responsePending: false,
+          responseState: 'session_stale',
+          ledgerStatus: 'retry_scheduled',
+          diagnostics: expect.arrayContaining([
+            expect.stringContaining(
+              'OpenCode forced session refresh requires delivery acceptance contract version 2'
+            ),
+            'opencode_session_refresh_scheduled_after_resolved_behavior_changed',
+          ]),
+        });
+      } finally {
+        transportSpy.mockRestore();
+      }
+
+      expect(directBridgeExecute).not.toHaveBeenCalled();
+      expect(stateChangingExecute).toHaveBeenCalledTimes(1);
+      const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+      });
+      expect(evidence.sessions[0]).toMatchObject({
+        id: 'oc-session-bob',
+        appMcpTransportHash: 'old-contract-transport-hash',
+      });
+    });
+
+    it('stops repeated OpenCode session refresh loops at the refresh cap', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_refresh_cap',
+        prePromptCursor: 'cursor-refresh-cap',
+        responseObservation: {
+          state: 'pending',
+          deliveredUserMessageId: 'oc-user-refresh-cap',
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: 'assistant_response_pending',
+        },
+        diagnostics: [],
+      }));
+      const observeMessageDelivery = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        responseObservation: {
+          state: 'session_stale',
+          deliveredUserMessageId: null,
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: 'resolved_behavior_changed:old->new',
+        },
+        diagnostics: ['OpenCode session reconcile skipped because the stored session is stale'],
+      }));
+      await configureOpenCodeBobDeliveryService({
+        svc,
+        sendMessageToMember,
+        observeMessageDelivery,
+      });
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-stale-session-cap',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        responsePending: true,
+        responseState: 'pending',
+      });
+
+      const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<Record<string, unknown>>;
+      };
+      Object.assign(ledgerEnvelope.data[0], {
+        status: 'accepted',
+        responseState: 'session_stale',
+        nextAttemptAt: '2000-01-01T00:00:00.000Z',
+        lastReason: 'resolved_behavior_changed:old->new',
+        sessionRefreshAttempts: 5,
+        maxSessionRefreshAttempts: 5,
+      });
+      await fsPromises.writeFile(ledgerPath, JSON.stringify(ledgerEnvelope, null, 2), 'utf8');
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-stale-session-cap',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: false,
+        accepted: true,
+        responsePending: false,
+        responseState: 'session_stale',
+        ledgerStatus: 'failed_terminal',
+        reason: 'opencode_session_refresh_loop_after_resolved_behavior_changed',
+      });
+
+      expect(sendMessageToMember).toHaveBeenCalledTimes(1);
+      expect(observeMessageDelivery).toHaveBeenCalledTimes(1);
+      const terminalEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<Record<string, unknown>>;
+      };
+      expect(terminalEnvelope.data[0]).toMatchObject({
+        status: 'failed_terminal',
+        attempts: 1,
+        sessionRefreshAttempts: 5,
+        maxSessionRefreshAttempts: 5,
+        lastReason: 'opencode_session_refresh_loop_after_resolved_behavior_changed',
       });
     });
 
@@ -9696,7 +10439,7 @@ describe('TeamProvisioningService', () => {
       });
     });
 
-    it('marks OpenCode delivery terminal after max attempts instead of leaving it pending', async () => {
+    it('marks OpenCode delivery terminal after bounded recovery instead of leaving it pending', async () => {
       const svc = new TeamProvisioningService();
       const emptyResponseObservation = {
         state: 'empty_assistant_turn' as const,
@@ -9812,6 +10555,15 @@ describe('TeamProvisioningService', () => {
       });
       await forceDue();
       await expect(deliver()).resolves.toMatchObject({
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        responseState: 'empty_assistant_turn',
+        ledgerStatus: 'retry_scheduled',
+        reason: 'empty_assistant_turn',
+      });
+      await forceDue();
+      await expect(deliver()).resolves.toMatchObject({
         delivered: false,
         accepted: true,
         responsePending: false,
@@ -9850,8 +10602,8 @@ describe('TeamProvisioningService', () => {
         visibleReplyMessageId: 'reply-after-terminal',
         visibleReplyCorrelation: 'relayOfMessageId',
       });
-      expect(sendMessageToMember).toHaveBeenCalledTimes(3);
-      expect(observeMessageDelivery).toHaveBeenCalledTimes(2);
+      expect(sendMessageToMember).toHaveBeenCalledTimes(4);
+      expect(observeMessageDelivery).toHaveBeenCalledTimes(3);
     });
 
     it('queues newer OpenCode deliveries behind one active unresolved member delivery', async () => {

@@ -44,7 +44,12 @@ function isInformationalOpenCodeRuntimeDeliveryDiagnostic(
     normalized ===
       'opencode prompt_async accepted; response observation will continue through durable app-side ledger reconciliation.' ||
     normalized === 'opencode session status busy' ||
-    normalized === 'opencode_delivery_response_pending'
+    normalized === 'opencode_delivery_response_pending' ||
+    normalized === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed' ||
+    Boolean(
+      normalized?.startsWith('resolved_behavior_changed:') ||
+      normalized?.includes('opencode_app_mcp_transport_changed:')
+    )
   );
 }
 
@@ -86,6 +91,13 @@ function getOpenCodeRuntimeDeliveryStateFallback(
     normalizedReason === 'prompt_delivered_no_assistant_message'
   ) {
     return 'OpenCode accepted the prompt, but no assistant turn was recorded.';
+  }
+  if (
+    state === 'session_stale' ||
+    normalizedReason?.startsWith('resolved_behavior_changed:') ||
+    normalizedReason?.startsWith('opencode_app_mcp_transport_changed:')
+  ) {
+    return 'OpenCode session changed; refreshing the session before retry.';
   }
   if (
     normalizedReason === 'visible_reply_destination_not_found_yet' ||

@@ -190,16 +190,20 @@ import {
   parseBootstrapRuntimeProofDetail,
   validateBootstrapRuntimeProofEnvelope,
 } from './bootstrap/BootstrapProofValidation';
+import { getCurrentAgentTeamsMcpHttpTransportEvidence } from './AgentTeamsMcpHttpServer';
 import {
   buildNativeAppManagedBootstrapSpecs,
   buildNativeAppManagedBootstrapSpecsWithDiagnostics,
   type NativeAppManagedBootstrapSpec,
 } from './bootstrap/NativeAppManagedBootstrapContextBuilder';
 import {
+  buildOpenCodePromptDeliveryAttemptId,
   createOpenCodePromptDeliveryLedgerStore,
   hashOpenCodePromptDeliveryPayload,
   isOpenCodePromptDeliveryAttemptDue,
   isOpenCodePromptResponseStateResponded,
+  isOpenCodeSessionRefreshResponseState,
+  OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryStatus,
@@ -8210,6 +8214,80 @@ export class TeamProvisioningService {
     );
   }
 
+  private isOpenCodeNoAssistantDeliveryFailure(
+    record: OpenCodePromptDeliveryLedgerRecord
+  ): boolean {
+    if (record.inboxReadCommittedAt) {
+      return false;
+    }
+
+    const noAssistantState =
+      record.responseState === 'empty_assistant_turn' ||
+      record.responseState === 'prompt_delivered_no_assistant_message';
+    const reasonText = [record.responseState, record.lastReason, ...record.diagnostics]
+      .filter((reason): reason is string => typeof reason === 'string' && reason.trim().length > 0)
+      .join('\n')
+      .toLowerCase();
+    if (
+      !noAssistantState &&
+      !reasonText.includes('empty_assistant_turn') &&
+      !reasonText.includes('prompt_delivered_no_assistant_message') &&
+      !reasonText.includes('accepted the prompt, but no assistant turn was recorded')
+    ) {
+      return false;
+    }
+
+    return ![record.lastReason, ...record.diagnostics].some((reason) => {
+      const reasonCode = classifyOpenCodeRuntimeDeliveryReasonCode(reason ?? undefined);
+      return (
+        reasonCode === 'quota_exhausted' ||
+        reasonCode === 'auth_error' ||
+        reasonCode === 'filesystem_error'
+      );
+    });
+  }
+
+  private isOpenCodeNoAssistantTerminalDeliveryFailure(
+    record: OpenCodePromptDeliveryLedgerRecord
+  ): boolean {
+    return (
+      record.status === 'failed_terminal' &&
+      record.attempts <= record.maxAttempts &&
+      this.isOpenCodeNoAssistantDeliveryFailure(record)
+    );
+  }
+
+  private async requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded(input: {
+    ledger: OpenCodePromptDeliveryLedgerStore;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    if (!this.isOpenCodeNoAssistantTerminalDeliveryFailure(input.ledgerRecord)) {
+      return input.ledgerRecord;
+    }
+
+    const scheduledAt = nowIso();
+    const requeued = await input.ledger.markNextAttemptScheduled({
+      id: input.ledgerRecord.id,
+      status: 'retry_scheduled',
+      nextAttemptAt: scheduledAt,
+      reason: 'opencode_prompt_delivery_requeued_after_terminal_no_assistant_response',
+      scheduledAt,
+    });
+    logger.info(
+      'opencode_prompt_delivery_requeued_after_terminal_no_assistant_response',
+      JSON.stringify({
+        teamName: requeued.teamName,
+        memberName: requeued.memberName,
+        laneId: requeued.laneId,
+        runId: requeued.runId,
+        inboxMessageId: requeued.inboxMessageId,
+        attempts: requeued.attempts,
+        maxAttempts: requeued.maxAttempts,
+      })
+    );
+    return requeued;
+  }
+
   private async requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input: {
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
@@ -9259,7 +9337,69 @@ export class TeamProvisioningService {
     reason: string;
   }): Promise<OpenCodePromptDeliveryLedgerRecord> {
     const now = nowIso();
-    if (input.retry && input.ledgerRecord.attempts >= input.ledgerRecord.maxAttempts) {
+    const sessionRefreshRetry =
+      input.retry &&
+      isOpenCodeSessionRefreshResponseState({
+        responseState: input.ledgerRecord.responseState,
+        reason: input.reason,
+        diagnostics: input.ledgerRecord.diagnostics,
+      });
+    if (sessionRefreshRetry) {
+      const maxSessionRefreshAttempts =
+        input.ledgerRecord.maxSessionRefreshAttempts ??
+        OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
+      if ((input.ledgerRecord.sessionRefreshAttempts ?? 0) >= maxSessionRefreshAttempts) {
+        return await input.ledger.markFailedTerminal({
+          id: input.ledgerRecord.id,
+          reason: 'opencode_session_refresh_loop_after_resolved_behavior_changed',
+          diagnostics: [
+            input.reason,
+            `OpenCode session stayed stale after ${maxSessionRefreshAttempts} session refresh attempt(s).`,
+          ],
+          failedAt: now,
+        });
+      }
+      const delayMs = this.getOpenCodeDeliveryNextDelayMs({
+        responseState: input.ledgerRecord.responseState,
+        retry: input.retry,
+        ledgerRecord: input.ledgerRecord,
+      });
+      const nextAttemptAt = new Date(Date.now() + delayMs).toISOString();
+      const ledgerRecord = await input.ledger.markSessionRefreshScheduled({
+        id: input.ledgerRecord.id,
+        nextAttemptAt,
+        reason: input.reason,
+        scheduledAt: now,
+        maxSessionRefreshAttempts,
+        diagnostics: ['opencode_session_refresh_scheduled_after_resolved_behavior_changed'],
+      });
+      this.logOpenCodePromptDeliveryEvent(
+        'opencode_prompt_delivery_session_refresh_scheduled',
+        ledgerRecord,
+        {
+          retry: true,
+          reason: input.reason,
+          sessionRefreshAttempts: ledgerRecord.sessionRefreshAttempts ?? 0,
+          maxSessionRefreshAttempts,
+        }
+      );
+      this.scheduleOpenCodePromptDeliveryWatchdog({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        messageId: input.ledgerRecord.inboxMessageId,
+        delayMs,
+      });
+      return ledgerRecord;
+    }
+    const canScheduleNoAssistantRecoveryRetry =
+      input.retry &&
+      input.ledgerRecord.attempts === input.ledgerRecord.maxAttempts &&
+      this.isOpenCodeNoAssistantDeliveryFailure(input.ledgerRecord);
+    if (
+      input.retry &&
+      input.ledgerRecord.attempts >= input.ledgerRecord.maxAttempts &&
+      !canScheduleNoAssistantRecoveryRetry
+    ) {
       return await input.ledger.markFailedTerminal({
         id: input.ledgerRecord.id,
         reason: input.reason,
@@ -10108,21 +10248,41 @@ export class TeamProvisioningService {
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
 
-    if (laneIdentity.laneKind === 'secondary' && laneIdentity.laneOwnerProviderId === 'opencode') {
-      const bootstrapReady = await this.hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
+    let legacyOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
+      null;
+    let refreshedOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
+      null;
+    let forceOpenCodeSessionRefreshReason: string | undefined;
+    if (laneIdentity.laneOwnerProviderId === 'opencode') {
+      const bootstrapSession = await this.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
         teamName,
         runId: runtimeRunId,
         laneId: laneIdentity.laneId,
         memberName: canonicalMemberName,
       });
-      if (!bootstrapReady) {
-        return {
-          delivered: false,
-          reason: 'opencode_runtime_not_active',
-          diagnostics: [
-            `OpenCode runtime bootstrap is not confirmed for ${canonicalMemberName}. Message was saved and will be retried after runtime check-in.`,
-          ],
-        };
+      if (!bootstrapSession) {
+        if (laneIdentity.laneKind === 'secondary') {
+          return {
+            delivered: false,
+            reason: 'opencode_runtime_not_active',
+            diagnostics: [
+              `OpenCode runtime bootstrap is not confirmed for ${canonicalMemberName}. Message was saved and will be retried after runtime check-in.`,
+            ],
+          };
+        }
+      } else {
+        if (!bootstrapSession.appMcpTransportHash?.trim()) {
+          legacyOpenCodeBootstrapSessionToStamp = bootstrapSession;
+        }
+        const appMcpTransportMismatch =
+          this.getOpenCodeAppMcpTransportMismatchDiagnostic(bootstrapSession);
+        if (appMcpTransportMismatch) {
+          refreshedOpenCodeBootstrapSessionToStamp = bootstrapSession;
+          forceOpenCodeSessionRefreshReason = appMcpTransportMismatch;
+          logger.info(
+            `[${teamName}] OpenCode delivery detected stale app MCP transport for ${canonicalMemberName}; requesting bridge session refresh before send. ${appMcpTransportMismatch}`
+          );
+        }
       }
     }
 
@@ -10178,6 +10338,7 @@ export class TeamProvisioningService {
         workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
         controlUrl: controlUrl ?? undefined,
         taskRefs: input.taskRefs,
+        forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
       });
       await this.rememberOpenCodeRuntimePidFromBridge({
         teamName,
@@ -10188,6 +10349,20 @@ export class TeamProvisioningService {
         runtimePid: result.runtimePid,
         reason: 'opencode_delivery_runtime_pid_observed',
       });
+      if (result.ok && legacyOpenCodeBootstrapSessionToStamp) {
+        await this.stampOpenCodeAppMcpTransportEvidenceIfMissing(
+          legacyOpenCodeBootstrapSessionToStamp
+        );
+      }
+      if (result.ok && result.sessionId && refreshedOpenCodeBootstrapSessionToStamp) {
+        await this.stampOpenCodeAppMcpTransportEvidenceIfMissing(
+          refreshedOpenCodeBootstrapSessionToStamp,
+          {
+            overwriteExistingHash: true,
+            runtimeSessionId: result.sessionId,
+          }
+        );
+      }
       const responseObservation = this.normalizeOpenCodeDeliveryResponseObservation(
         result.responseObservation
       );
@@ -10301,9 +10476,7 @@ export class TeamProvisioningService {
       this.logOpenCodePromptDeliveryEvent('opencode_prompt_delivery_ledger_created', ledgerRecord);
     }
     const deliveryAttemptId = ledgerRecord
-      ? [ledgerRecord.id, ledgerRecord.attempts + 1, ledgerRecord.payloadHash.slice(0, 12)].join(
-          ':'
-        )
+      ? buildOpenCodePromptDeliveryAttemptId(ledgerRecord)
       : undefined;
 
     if (ledgerRecord && ledger && messageId) {
@@ -10422,7 +10595,19 @@ export class TeamProvisioningService {
         attemptDue,
         ledgerRecord,
       });
-      if (ledgerRecord.status !== 'pending' && adapter.observeMessageDelivery) {
+      const retryShouldRefreshSessionBeforeObserve =
+        retryDueBeforeObserve &&
+        ledgerRecord.status === 'retry_scheduled' &&
+        isOpenCodeSessionRefreshResponseState({
+          responseState: ledgerRecord.responseState,
+          reason: ledgerRecord.lastReason ?? undefined,
+          diagnostics: ledgerRecord.diagnostics,
+        });
+      if (
+        ledgerRecord.status !== 'pending' &&
+        adapter.observeMessageDelivery &&
+        !retryShouldRefreshSessionBeforeObserve
+      ) {
         const observed = await adapter.observeMessageDelivery({
           ...(runtimeRunId ? { runId: runtimeRunId } : {}),
           teamName,
@@ -10530,6 +10715,54 @@ export class TeamProvisioningService {
           readAllowed,
         });
         const retryDue = retryDueBeforeObserve;
+        if (
+          retryDue &&
+          retryable &&
+          isOpenCodeSessionRefreshResponseState({
+            responseState: ledgerRecord.responseState,
+            reason: pendingReason,
+            diagnostics: ledgerRecord.diagnostics,
+          })
+        ) {
+          ledgerRecord = await this.scheduleOpenCodePromptLedgerFollowUp({
+            ledger,
+            ledgerRecord,
+            teamName,
+            memberName: canonicalMemberName,
+            retry: true,
+            reason: pendingReason,
+          });
+          if (ledgerRecord.status === 'failed_terminal') {
+            return {
+              delivered: false,
+              accepted: true,
+              responsePending: false,
+              responseState: ledgerRecord.responseState,
+              ledgerStatus: ledgerRecord.status,
+              ledgerRecordId: ledgerRecord.id,
+              laneId: laneIdentity.laneId,
+              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+              reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+              diagnostics: ledgerRecord.diagnostics.length
+                ? ledgerRecord.diagnostics
+                : [ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal'],
+            };
+          }
+          return {
+            delivered: true,
+            accepted: true,
+            responsePending: true,
+            responseState: ledgerRecord.responseState,
+            ledgerStatus: ledgerRecord.status,
+            ledgerRecordId: ledgerRecord.id,
+            laneId: laneIdentity.laneId,
+            visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+            visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+            reason: ledgerRecord.lastReason ?? 'opencode_delivery_response_pending',
+            diagnostics: ledgerRecord.diagnostics,
+          };
+        }
         if (!retryDue || !retryable) {
           ledgerRecord = await this.scheduleOpenCodePromptLedgerFollowUp({
             ledger,
@@ -10604,6 +10837,7 @@ export class TeamProvisioningService {
         workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
         controlUrl: controlUrl ?? undefined,
         taskRefs: input.taskRefs,
+        forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
       });
     } catch (error) {
       const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;
@@ -10670,6 +10904,20 @@ export class TeamProvisioningService {
       runtimePid: result.runtimePid,
       reason: 'opencode_delivery_runtime_pid_observed',
     });
+    if (result.ok && legacyOpenCodeBootstrapSessionToStamp) {
+      await this.stampOpenCodeAppMcpTransportEvidenceIfMissing(
+        legacyOpenCodeBootstrapSessionToStamp
+      );
+    }
+    if (result.ok && result.sessionId && refreshedOpenCodeBootstrapSessionToStamp) {
+      await this.stampOpenCodeAppMcpTransportEvidenceIfMissing(
+        refreshedOpenCodeBootstrapSessionToStamp,
+        {
+          overwriteExistingHash: true,
+          runtimeSessionId: result.sessionId,
+        }
+      );
+    }
     const responseObservation = this.normalizeOpenCodeDeliveryResponseObservation(
       result.responseObservation
     );
@@ -12843,6 +13091,8 @@ export class TeamProvisioningService {
     const sessionStorePath = path.join(runtimeDirectory, descriptor.relativePath);
     const existingSessions = await this.readOpenCodeRuntimeSessionStore(sessionStorePath);
     const source = input.source ?? 'runtime_bootstrap_checkin';
+    const appMcpTransportEvidence =
+      source === 'app_managed_bootstrap' ? getCurrentAgentTeamsMcpHttpTransportEvidence() : null;
     const session = {
       id: input.runtimeSessionId,
       teamName: input.teamName,
@@ -12854,6 +13104,12 @@ export class TeamProvisioningService {
       source,
       ...(source === 'app_managed_bootstrap' && input.appManagedBootstrapCandidate
         ? { appManagedBootstrapCandidate: input.appManagedBootstrapCandidate }
+        : {}),
+      ...(appMcpTransportEvidence
+        ? {
+            appMcpTransportHash: appMcpTransportEvidence.urlHash,
+            appMcpTransportEvidence,
+          }
         : {}),
     };
     const sessions = this.mergeOpenCodeRuntimeSessionRecords(existingSessions, session);
@@ -12942,29 +13198,159 @@ export class TeamProvisioningService {
     });
   }
 
-  private async hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input: {
+  private getOpenCodeAppMcpTransportMismatchDiagnostic(
+    session: OpenCodeCommittedBootstrapSessionRecord
+  ): string | null {
+    const committedHash = session.appMcpTransportHash?.trim();
+    const currentHash = getCurrentAgentTeamsMcpHttpTransportEvidence()?.urlHash?.trim();
+    if (!committedHash || !currentHash || committedHash === currentHash) {
+      return null;
+    }
+    return `opencode_app_mcp_transport_changed:${committedHash}->${currentHash}`;
+  }
+
+  private async stampOpenCodeAppMcpTransportEvidenceIfMissing(
+    session: OpenCodeCommittedBootstrapSessionRecord,
+    options: {
+      overwriteExistingHash?: boolean;
+      runtimeSessionId?: string | null;
+    } = {}
+  ): Promise<void> {
+    const overwriteExistingHash = options.overwriteExistingHash === true;
+    const runtimeSessionId = options.runtimeSessionId?.trim() || null;
+    if (session.appMcpTransportHash?.trim() && !overwriteExistingHash) {
+      return;
+    }
+    const appMcpTransportEvidence = getCurrentAgentTeamsMcpHttpTransportEvidence();
+    if (!appMcpTransportEvidence) {
+      return;
+    }
+    const descriptor = OPENCODE_RUNTIME_STORE_DESCRIPTORS.find(
+      (candidate) => candidate.schemaName === 'opencode.sessionStore'
+    );
+    if (!descriptor) {
+      return;
+    }
+
+    try {
+      const manifestPath = getOpenCodeRuntimeManifestPath(
+        getTeamsBasePath(),
+        session.teamName,
+        session.laneId
+      );
+      const runtimeDirectory = path.dirname(manifestPath);
+      const sessionStorePath = path.join(runtimeDirectory, descriptor.relativePath);
+      const existingSessions = await this.readOpenCodeRuntimeSessionStore(sessionStorePath);
+      let changed = false;
+      const sessions = existingSessions
+        .filter((record) => {
+          if (!runtimeSessionId || runtimeSessionId === session.id) {
+            return true;
+          }
+          const recordId = typeof record.id === 'string' ? record.id : '';
+          const recordRunId = typeof record.runId === 'string' ? record.runId : null;
+          const recordLaneId = typeof record.laneId === 'string' ? record.laneId : '';
+          const recordMemberName = typeof record.memberName === 'string' ? record.memberName : '';
+          return !(
+            recordId === runtimeSessionId &&
+            recordRunId === session.runId &&
+            recordLaneId === session.laneId &&
+            namesMatchCaseInsensitive(recordMemberName, session.memberName)
+          );
+        })
+        .map((record) => {
+          const recordId = typeof record.id === 'string' ? record.id : '';
+          const recordRunId = typeof record.runId === 'string' ? record.runId : null;
+          const recordLaneId = typeof record.laneId === 'string' ? record.laneId : '';
+          const recordMemberName = typeof record.memberName === 'string' ? record.memberName : '';
+          const hasTransportHash =
+            typeof record.appMcpTransportHash === 'string' &&
+            record.appMcpTransportHash.trim().length > 0;
+          if (
+            recordId !== session.id ||
+            recordRunId !== session.runId ||
+            recordLaneId !== session.laneId ||
+            !namesMatchCaseInsensitive(recordMemberName, session.memberName) ||
+            (hasTransportHash && !overwriteExistingHash)
+          ) {
+            return record;
+          }
+          changed = true;
+          return {
+            ...record,
+            ...(runtimeSessionId ? { id: runtimeSessionId } : {}),
+            appMcpTransportHash: appMcpTransportEvidence.urlHash,
+            appMcpTransportEvidence,
+          };
+        });
+      if (!changed) {
+        return;
+      }
+
+      const manifestStore = createRuntimeStoreManifestStore({
+        filePath: manifestPath,
+        teamName: session.teamName,
+        lockOptions: OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS,
+      });
+      const receiptStore = createRuntimeStoreReceiptStore({
+        filePath: path.join(runtimeDirectory, 'opencode-runtime-receipts.json'),
+        lockOptions: OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS,
+      });
+      const writer = new RuntimeStoreBatchWriter(runtimeDirectory, manifestStore, receiptStore);
+      await writer.writeBatch({
+        teamName: session.teamName,
+        runId: session.runId,
+        capabilitySnapshotId: null,
+        behaviorFingerprint: null,
+        reason: 'delivery_commit',
+        writes: [
+          {
+            descriptor,
+            data: { sessions },
+          },
+        ],
+      });
+    } catch (error) {
+      logger.warn(
+        `[${session.teamName}] Failed to stamp OpenCode app MCP transport evidence for ${session.memberName}: ${getErrorMessage(error)}`
+      );
+    }
+  }
+
+  private async findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input: {
     teamName: string;
     runId: string | null;
     laneId: string;
     memberName: string;
-  }): Promise<boolean> {
+  }): Promise<OpenCodeCommittedBootstrapSessionRecord | null> {
     const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
       teamsBasePath: getTeamsBasePath(),
       teamName: input.teamName,
       laneId: input.laneId,
     }).catch(() => null);
     if (!evidence?.committed) {
-      return false;
+      return null;
     }
     const activeRunId = evidence.activeRunId?.trim() || null;
     if (activeRunId !== input.runId) {
-      return false;
+      return null;
     }
-    return evidence.sessions.some(
-      (session) =>
-        session.runId === input.runId &&
-        namesMatchCaseInsensitive(session.memberName, input.memberName)
+    return (
+      evidence.sessions.find(
+        (session) =>
+          session.runId === input.runId &&
+          namesMatchCaseInsensitive(session.memberName, input.memberName)
+      ) ?? null
     );
+  }
+
+  private async hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input: {
+    teamName: string;
+    runId: string | null;
+    laneId: string;
+    memberName: string;
+  }): Promise<boolean> {
+    return (await this.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input)) != null;
   }
 
   private async readOpenCodeRuntimeSessionStore(
@@ -23374,6 +23760,15 @@ export class TeamProvisioningService {
               ledgerRecord: existingRecord,
             }
           );
+          if (requeuedRecord.status !== 'failed_terminal') {
+            existingRecord = requeuedRecord;
+          }
+        }
+        if (existingRecord?.status === 'failed_terminal') {
+          const requeuedRecord = await this.requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded({
+            ledger: promptLedger,
+            ledgerRecord: existingRecord,
+          });
           if (requeuedRecord.status !== 'failed_terminal') {
             existingRecord = requeuedRecord;
           }

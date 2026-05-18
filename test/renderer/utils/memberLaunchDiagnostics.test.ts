@@ -114,4 +114,128 @@ describe('member launch diagnostics', () => {
     );
     expect(hasMemberLaunchDiagnosticsDetails(payload)).toBe(true);
   });
+
+  it('does not turn healthy info liveness diagnostics into member card errors', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      teamName: 'atlas-hq-5',
+      runId: '5a9ee2e5-a8cb-4559-b624-0dbf13ee4d11',
+      memberName: 'atlas',
+      spawnEntry: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        agentToolAccepted: true,
+        livenessKind: 'runtime_process',
+        livenessSource: 'heartbeat',
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+        runtimeDiagnosticSeverity: 'info',
+        updatedAt: '2026-05-18T08:13:23.902Z',
+      },
+      runtimeEntry: {
+        memberName: 'atlas',
+        providerId: 'opencode',
+        alive: true,
+        restartable: false,
+        livenessKind: 'runtime_process',
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+        runtimeDiagnosticSeverity: 'info',
+        diagnostics: [
+          'OpenCode runtime process detected after bootstrap confirmation',
+          'matched OpenCode runtime pid and process identity',
+          'bootstrap confirmed',
+        ],
+        updatedAt: '2026-05-18T08:34:47.845Z',
+      },
+    });
+
+    expect(payload.memberCardError).toBeUndefined();
+    expect(payload.runtimeDiagnostic).toBe(
+      'OpenCode runtime process detected after bootstrap confirmation'
+    );
+    expect(payload.runtimeDiagnosticSeverity).toBe('info');
+    expect(payload.diagnostics).toContain(
+      'OpenCode runtime process detected after bootstrap confirmation'
+    );
+  });
+
+  it('prefers advisory errors over healthy info liveness diagnostics', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      memberName: 'atlas',
+      runtimeAdvisoryLabel: 'OpenCode delivery error',
+      runtimeAdvisoryTitle:
+        'OpenCode runtime delivery error. OpenCode accepted the prompt, but no assistant turn was recorded.',
+      spawnEntry: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        livenessKind: 'runtime_process',
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+        runtimeDiagnosticSeverity: 'info',
+        updatedAt: '2026-05-18T08:13:23.902Z',
+      },
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-05-18T08:31:46.075Z',
+        reasonCode: 'backend_error',
+        message: 'OpenCode accepted the prompt, but no assistant turn was recorded.',
+      },
+    });
+
+    expect(payload.memberCardError).toBe(
+      'OpenCode runtime delivery error. OpenCode accepted the prompt, but no assistant turn was recorded.'
+    );
+    expect(payload.memberCardError).not.toBe(
+      'OpenCode runtime process detected after bootstrap confirmation'
+    );
+  });
+
+  it('does not surface recoverable OpenCode session refresh advisory as card error', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      memberName: 'tom',
+      runtimeAdvisoryLabel: 'OpenCode session refresh',
+      runtimeAdvisoryTitle: 'OpenCode session changed; refreshing the session before retry.',
+      spawnEntry: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
+        runtimeDiagnosticSeverity: 'info',
+        updatedAt: '2026-05-18T08:13:23.902Z',
+      },
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-05-18T08:31:46.075Z',
+        reasonCode: 'backend_error',
+        message: 'OpenCode session changed; refreshing the session before retry.',
+      },
+    });
+
+    expect(payload.memberCardError).toBeUndefined();
+    expect(payload.diagnostics).toContain(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+  });
+
+  it('does not surface recoverable OpenCode transport refresh advisory as card error', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      memberName: 'tom',
+      runtimeAdvisoryLabel: 'OpenCode session refresh',
+      runtimeAdvisoryTitle:
+        'OpenCode session changed; refreshing the session before retry.',
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-05-18T08:31:46.075Z',
+        reasonCode: 'backend_error',
+        message: 'opencode_app_mcp_transport_changed:old->new',
+      },
+    });
+
+    expect(payload.memberCardError).toBeUndefined();
+  });
 });

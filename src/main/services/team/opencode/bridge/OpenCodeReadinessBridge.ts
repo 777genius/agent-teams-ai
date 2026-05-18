@@ -1,6 +1,9 @@
 import { randomUUID } from 'crypto';
 
-import { stableHash } from './OpenCodeBridgeCommandContract';
+import {
+  OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  stableHash,
+} from './OpenCodeBridgeCommandContract';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -296,6 +299,9 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       ) {
         throw error;
       }
+      if (body.forceSessionRefreshReason?.trim()) {
+        return buildOpenCodeForceSessionRefreshUnsupportedData(body, error);
+      }
       activeRequestId = `${commandRequestId}-observed`;
       activeBody = {
         ...body,
@@ -312,6 +318,9 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       activeBody.settlementMode === 'acceptance' &&
       isOpenCodeAcceptanceContractMissingError(result.error.message)
     ) {
+      if (body.forceSessionRefreshReason?.trim()) {
+        return buildOpenCodeForceSessionRefreshUnsupportedData(body, result.error.message);
+      }
       activeRequestId = `${commandRequestId}-observed`;
       activeBody = {
         ...body,
@@ -642,6 +651,36 @@ function formatDiagnosticEvent(event: OpenCodeBridgeDiagnosticEvent): string {
 function isOpenCodeAcceptanceContractMissingError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes('OpenCode delivery acceptance mode is required');
+}
+
+function buildOpenCodeForceSessionRefreshUnsupportedData(
+  body: OpenCodeSendMessageCommandBody,
+  error: unknown
+): OpenCodeSendMessageCommandData {
+  const detail = error instanceof Error ? error.message : String(error);
+  const reason = `OpenCode forced session refresh requires delivery acceptance contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`;
+  return {
+    accepted: false,
+    memberName: body.memberName,
+    responseObservation: {
+      state: 'session_stale',
+      deliveredUserMessageId: null,
+      assistantMessageId: null,
+      toolCallNames: [],
+      visibleMessageToolCallId: null,
+      visibleReplyMessageId: null,
+      visibleReplyCorrelation: null,
+      latestAssistantPreview: null,
+      reason,
+    },
+    diagnostics: [
+      {
+        code: 'opencode_force_session_refresh_contract_missing',
+        severity: 'error',
+        message: `${reason} ${detail}`,
+      },
+    ],
+  };
 }
 
 function isOpenCodeCompletedCommandRecoveryError(error: unknown): boolean {

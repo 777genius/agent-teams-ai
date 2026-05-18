@@ -366,6 +366,106 @@ describe('OpenCodeReadinessBridge', () => {
     });
   });
 
+  it('does not fall back to observed mode when forced session refresh contract is missing', async () => {
+    const execute = vi.fn().mockRejectedValueOnce(
+      new Error(
+        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.'
+      )
+    );
+    const executor = {
+      execute: execute as unknown as OpenCodeReadinessBridgeCommandExecutor['execute'] &
+        ReturnType<typeof vi.fn>,
+    };
+    const bridge = new OpenCodeReadinessBridge(executor);
+
+    await expect(
+      bridge.sendOpenCodeTeamMessage({
+        teamId: 'team-a',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        projectPath: '/repo',
+        memberName: 'bob',
+        text: 'hello',
+        messageId: 'message-1',
+        deliveryAttemptId: 'ledger-1:1:payload',
+        forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
+        settlementMode: 'acceptance',
+      })
+    ).resolves.toMatchObject({
+      accepted: false,
+      memberName: 'bob',
+      responseObservation: {
+        state: 'session_stale',
+      },
+      diagnostics: [
+        expect.objectContaining({
+          code: 'opencode_force_session_refresh_contract_missing',
+          severity: 'error',
+        }),
+      ],
+    });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0]?.[1]).toMatchObject({
+      settlementMode: 'acceptance',
+      forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
+    });
+  });
+
+  it('includes forced session refresh reason in send payload hash', async () => {
+    const executor = fakeSequenceExecutor([
+      bridgeCommandSuccess({
+        command: 'opencode.sendMessage',
+        requestId: 'send-req-1',
+        data: {
+          accepted: true,
+          memberName: 'bob',
+          sessionId: 'session-bob-1',
+          diagnostics: [],
+        },
+      }),
+      bridgeCommandSuccess({
+        command: 'opencode.sendMessage',
+        requestId: 'send-req-2',
+        data: {
+          accepted: true,
+          memberName: 'bob',
+          sessionId: 'session-bob-2',
+          diagnostics: [],
+        },
+      }),
+    ]);
+    const bridge = new OpenCodeReadinessBridge(executor);
+    const base = {
+      teamId: 'team-a',
+      teamName: 'team-a',
+      laneId: 'secondary:opencode:bob',
+      projectPath: '/repo',
+      memberName: 'bob',
+      text: 'hello',
+      messageId: 'message-1',
+      deliveryAttemptId: 'ledger-1:1:payload',
+    };
+
+    await bridge.sendOpenCodeTeamMessage(base);
+    await bridge.sendOpenCodeTeamMessage({
+      ...base,
+      forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
+    });
+
+    const firstBody = executor.execute.mock.calls[0]?.[1] as { payloadHash?: string };
+    const secondBody = executor.execute.mock.calls[1]?.[1] as {
+      payloadHash?: string;
+      forceSessionRefreshReason?: string;
+    };
+    expect(secondBody.forceSessionRefreshReason).toBe(
+      'opencode_app_mcp_transport_changed:old->new'
+    );
+    expect(firstBody.payloadHash).toEqual(expect.any(String));
+    expect(secondBody.payloadHash).toEqual(expect.any(String));
+    expect(secondBody.payloadHash).not.toBe(firstBody.payloadHash);
+  });
+
   it('recovers accepted OpenCode sendMessage after bridge timeout through commandStatus by default', async () => {
     const executor = fakeSequenceExecutor([
       bridgeFailure('timeout', 'OpenCode bridge command timed out', []),
@@ -752,6 +852,54 @@ describe('OpenCodeReadinessBridge', () => {
         cwd: '/repo',
       })
     );
+  });
+
+  it('does not use observed guarded fallback when forced session refresh contract is missing', async () => {
+    const executor = fakeExecutor(
+      bridgeFailure('internal_error', 'direct observed bridge must not run', [])
+    );
+    const stateChangingExecute = vi
+      .fn()
+      .mockResolvedValueOnce(
+        bridgeCommandFailure({
+          command: 'opencode.sendMessage',
+          requestId: 'guarded-send-acceptance',
+          kind: 'internal_error',
+          message:
+            'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.',
+        })
+      );
+    const bridge = new OpenCodeReadinessBridge(executor, {
+      stateChangingCommands: { execute: stateChangingExecute },
+    });
+
+    await expect(
+      bridge.sendOpenCodeTeamMessage({
+        runId: 'run-1',
+        teamId: 'team-a',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        projectPath: '/repo',
+        memberName: 'bob',
+        text: 'hello',
+        messageId: 'message-1',
+        deliveryAttemptId: 'ledger-1:1:payload',
+        forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
+        settlementMode: 'acceptance',
+      })
+    ).resolves.toMatchObject({
+      accepted: false,
+      responseObservation: { state: 'session_stale' },
+      diagnostics: [
+        expect.objectContaining({
+          code: 'opencode_force_session_refresh_contract_missing',
+          severity: 'error',
+        }),
+      ],
+    });
+
+    expect(stateChangingExecute).toHaveBeenCalledTimes(1);
+    expect(executor.execute).not.toHaveBeenCalled();
   });
 
   it('routes state-changing launch commands through the guarded command service when configured', async () => {
