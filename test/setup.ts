@@ -23,6 +23,49 @@ vi.mock('@sentry/electron/main', () => sentryNoOp);
 vi.mock('@sentry/electron/renderer', () => sentryNoOp);
 vi.mock('@sentry/react', () => sentryNoOp);
 
+function createInMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+
+  return {
+    get length() {
+      return values.size;
+    },
+    clear() {
+      values.clear();
+    },
+    getItem(key: string) {
+      return values.get(key) ?? null;
+    },
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      values.delete(key);
+    },
+    setItem(key: string, value: string) {
+      values.set(key, String(value));
+    },
+  };
+}
+
+function hasStorageApi(value: unknown): value is Storage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Storage).getItem === 'function' &&
+    typeof (value as Storage).setItem === 'function' &&
+    typeof (value as Storage).removeItem === 'function' &&
+    typeof (value as Storage).clear === 'function'
+  );
+}
+
+if (!hasStorageApi(globalThis.localStorage)) {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: createInMemoryStorage(),
+  });
+}
+
 // Mock HOME for tests that need a predictable home path. It must be writable:
 // some services persist state in best-effort background writes after a test has
 // already reset path overrides.
