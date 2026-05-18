@@ -1,10 +1,31 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '../../../../src/main/services/runtime/openCodeBridgeRuntimeEnv';
 
 describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
+  let tempDir: string | null = null;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-bridge-runtime-env-'));
+  });
+
+  afterEach(async () => {
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
+  });
+
+  async function writeExecutable(relativePath: string): Promise<string> {
+    const binaryPath = path.join(tempDir!, relativePath);
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    return binaryPath;
+  }
+
   it('makes an app-managed OpenCode binary visible to PATH-based bridge inventory', async () => {
     const binaryPath = path.join(process.cwd(), 'managed opencode', 'bin', 'opencode');
     const env: NodeJS.ProcessEnv = {
@@ -13,7 +34,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
 
     await ensureOpenCodeBridgeRuntimeBinaryEnv({
       targetEnv: env,
-      resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: () => Promise.resolve(binaryPath),
+      resolveVerifiedOpenCodeRuntimeBinaryPath: () => Promise.resolve(binaryPath),
     });
 
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
@@ -35,7 +56,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     await ensureOpenCodeBridgeRuntimeBinaryEnv({
       targetEnv: bridgeEnv,
       bridgeEnv,
-      resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: resolver,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
     });
 
     expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBeUndefined();
@@ -45,7 +66,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     await ensureOpenCodeBridgeRuntimeBinaryEnv({
       targetEnv: commandEnv,
       bridgeEnv,
-      resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: resolver,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
     });
 
     expect(commandEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
@@ -57,7 +78,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
   });
 
   it('honors a legacy OpenCode binary override already present in the command env', async () => {
-    const binaryPath = path.join(process.cwd(), 'legacy opencode', 'opencode');
+    const binaryPath = await writeExecutable('legacy-opencode');
     const env: NodeJS.ProcessEnv = {
       OPENCODE_BIN_PATH: binaryPath,
       PATH: '/usr/bin',
@@ -66,7 +87,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
 
     await ensureOpenCodeBridgeRuntimeBinaryEnv({
       targetEnv: env,
-      resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: resolver,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
     });
 
     expect(resolver).not.toHaveBeenCalled();
@@ -75,7 +96,52 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     expect(env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(binaryPath));
   });
 
-  it('keeps bridge startup non-fatal when the managed resolver fails', async () => {
+  it('normalizes a relative OpenCode binary override before exposing it to the bridge', async () => {
+    const binaryPath = await writeExecutable('relative-opencode');
+    const relativeBinaryPath = path.relative(process.cwd(), binaryPath);
+    const env: NodeJS.ProcessEnv = {
+      OPENCODE_BIN_PATH: relativeBinaryPath,
+      PATH: '/usr/bin',
+    };
+    const resolver = vi.fn<() => Promise<string | null>>();
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: env,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+    });
+
+    expect(resolver).not.toHaveBeenCalled();
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(env.OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(binaryPath));
+  });
+
+  it('replaces stale bridge-owned OpenCode binary env with a fresh verified resolver result', async () => {
+    const staleBinaryPath = path.join(tempDir!, 'missing-opencode');
+    const binaryPath = path.join(process.cwd(), 'fresh managed opencode', 'opencode');
+    const bridgeEnv: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: staleBinaryPath,
+      OPENCODE_BIN_PATH: staleBinaryPath,
+      PATH: '/usr/bin',
+    };
+    const commandEnv = { ...bridgeEnv };
+    const resolver = vi.fn<() => Promise<string | null>>().mockResolvedValue(binaryPath);
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: commandEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+    });
+
+    expect(resolver).toHaveBeenCalledTimes(1);
+    expect(commandEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(commandEnv.OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(commandEnv.PATH?.split(path.delimiter)[0]).toBe(path.dirname(binaryPath));
+  });
+
+  it('keeps bridge startup non-fatal when the runtime binary resolver fails', async () => {
     const onWarning = vi.fn();
     const env: NodeJS.ProcessEnv = {
       PATH: '/usr/bin',
@@ -84,14 +150,14 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     await expect(
       ensureOpenCodeBridgeRuntimeBinaryEnv({
         targetEnv: env,
-        resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: () =>
+        resolveVerifiedOpenCodeRuntimeBinaryPath: () =>
           Promise.reject(new Error('manifest unreadable')),
         onWarning,
       })
     ).resolves.toBeUndefined();
 
     expect(onWarning).toHaveBeenCalledWith(
-      '[OpenCode] Runtime adapter bundled OpenCode binary unresolved: manifest unreadable'
+      '[OpenCode] Runtime adapter OpenCode binary unresolved: manifest unreadable'
     );
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBeUndefined();
     expect(env.OPENCODE_BIN_PATH).toBeUndefined();

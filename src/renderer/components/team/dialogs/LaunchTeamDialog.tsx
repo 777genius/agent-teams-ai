@@ -2981,8 +2981,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium">
-                        CLI environment is not available - {isRelaunch ? 'relaunch' : 'launch'} is
-                        blocked
+                        Runtime environment is not available - {isRelaunch ? 'relaunch' : 'launch'}{' '}
+                        is blocked
                       </p>
                       <p className="mt-0.5 text-red-300/80">
                         {effectivePrepare.message ?? 'Failed to prepare environment'}

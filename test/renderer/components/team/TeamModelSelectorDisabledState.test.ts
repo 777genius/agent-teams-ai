@@ -369,7 +369,13 @@ describe('TeamModelSelector disabled Codex models', () => {
           },
           models: ['opencode/big-pickle'],
           modelCatalog: null,
-          modelCatalogRefreshState: 'loading',
+          modelCatalogRefreshState: 'idle',
+          runtimeCapabilities: {
+            modelCatalog: {
+              dynamic: true,
+              source: 'app-server',
+            },
+          },
           modelVerificationState: 'idle',
           modelAvailability: [],
         },

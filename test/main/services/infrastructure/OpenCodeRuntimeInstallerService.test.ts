@@ -6,21 +6,33 @@ import { gzipSync } from 'zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execCliMock = vi.hoisted(() => vi.fn());
+const getCachedShellEnvMock = vi.hoisted(() => vi.fn());
+const resolveInteractiveShellEnvBestEffortMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: execCliMock,
 }));
 
+vi.mock('@main/utils/shellEnv', () => ({
+  getCachedShellEnv: () => getCachedShellEnvMock(),
+  resolveInteractiveShellEnvBestEffort: (
+    ...args: Parameters<typeof resolveInteractiveShellEnvBestEffortMock>
+  ) => resolveInteractiveShellEnvBestEffortMock(...args),
+}));
+
 import {
   extractOpenCodeRuntimeBinaryFromTarball,
   getOpenCodeRuntimePlatformCandidates,
+  OpenCodeRuntimeInstallerService,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
   verifyOpenCodeRuntimePackageIntegrity,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 let tempRoot: string | null = null;
+let originalPath: string | undefined;
 
 function writeOctal(header: Buffer, offset: number, length: number, value: number): void {
   const encoded = value
@@ -63,12 +75,24 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   beforeEach(async () => {
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-resolver-'));
     setAppDataBasePath(tempRoot);
+    originalPath = process.env.PATH;
+    process.env.PATH = '';
     execCliMock.mockReset();
     execCliMock.mockResolvedValue({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    getCachedShellEnvMock.mockReset();
+    getCachedShellEnvMock.mockReturnValue(null);
+    resolveInteractiveShellEnvBestEffortMock.mockReset();
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue(process.env);
   });
 
   afterEach(async () => {
     setAppDataBasePath(null);
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+    originalPath = undefined;
     if (tempRoot) {
       await rm(tempRoot, { recursive: true, force: true });
       tempRoot = null;
@@ -162,6 +186,46 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     execCliMock.mockRejectedValueOnce(new Error('broken binary'));
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBeNull();
+  });
+
+  it('returns a verified OpenCode binary from best-effort shell PATH when app-managed runtime is absent', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: path.dirname(binaryPath),
+    });
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      binaryPath
+    );
+    expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeoutMs: 0,
+        fallbackEnv: process.env,
+      })
+    );
+    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
+      timeout: 10_000,
+      windowsHide: true,
+    });
+  });
+
+  it('reports PATH-installed OpenCode as installed after best-effort shell env resolution', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: path.dirname(binaryPath),
+    });
+
+    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath,
+      version: 'opencode 1.0.0',
+    });
   });
 });
 

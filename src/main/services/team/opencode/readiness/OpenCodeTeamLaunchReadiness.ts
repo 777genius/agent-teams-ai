@@ -99,6 +99,9 @@ export interface OpenCodeTeamLaunchReadinessServiceOptions {
   versionPolicy?: OpenCodeSupportedVersionPolicy;
 }
 
+const OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC =
+  'OpenCode runtime binary is not installed or not reachable by launch preflight.';
+
 export class OpenCodeTeamLaunchReadinessService {
   constructor(
     private readonly inventory: OpenCodeRuntimeInventoryPort,
@@ -124,7 +127,7 @@ export class OpenCodeTeamLaunchReadinessService {
           inventory,
           modelId: input.selectedModel,
           diagnostics: appendDiagnostics(inventory.diagnostics, [
-            'OpenCode CLI not detected on PATH',
+            OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC,
           ]),
         });
       }

@@ -1328,6 +1328,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   it('keeps deep OpenCode runtime failures provider-scoped instead of model-scoped', async () => {
     const runtimeFailure =
       'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?';
+    const normalizedRuntimeFailure =
+      'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?';
     const prepare = vi.fn(async () => ({
       ok: false as const,
       providerId: 'opencode' as const,
@@ -1356,16 +1358,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result.ready).toBe(false);
-    expect(result.message).toBe(runtimeFailure);
-    expect(result.details).toEqual([runtimeFailure]);
-    expect(result.warnings).toEqual([runtimeFailure]);
+    expect(result.message).toBe(normalizedRuntimeFailure);
+    expect(result.details).toEqual([normalizedRuntimeFailure]);
+    expect(result.warnings).toEqual([normalizedRuntimeFailure]);
     expect(result.issues).toEqual([
       {
         providerId: 'opencode',
         scope: 'provider',
         severity: 'blocking',
         code: 'mcp_unavailable',
-        message: runtimeFailure,
+        message: normalizedRuntimeFailure,
       },
     ]);
   });
@@ -1414,6 +1416,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   });
 
   it('keeps shared OpenCode MCP compatibility failures provider-scoped', async () => {
+    const normalizedRuntimeFailure =
+      'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?';
     const prepare = vi.fn(async () => ({
       ok: false as const,
       providerId: 'opencode' as const,
@@ -1444,25 +1448,60 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result.ready).toBe(false);
-    expect(result.message).toBe(
-      'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?'
-    );
-    expect(result.details).toEqual([
-      'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
-    ]);
-    expect(result.warnings).toEqual([
-      'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
-    ]);
+    expect(result.message).toBe(normalizedRuntimeFailure);
+    expect(result.details).toEqual([normalizedRuntimeFailure]);
+    expect(result.warnings).toEqual([normalizedRuntimeFailure]);
     expect(result.issues).toEqual([
       {
         providerId: 'opencode',
         scope: 'provider',
         severity: 'blocking',
         code: 'mcp_unavailable',
-        message:
-          'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
+        message: normalizedRuntimeFailure,
       },
     ]);
+  });
+
+  it('restores OpenCode MCP context when the bridge reports only a plain connect failure', async () => {
+    const normalizedRuntimeFailure =
+      'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge.';
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'mcp_unavailable',
+      retryable: true,
+      diagnostics: ['Unable to connect. Is the computer able to access the url?'],
+      warnings: [],
+    }));
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'compatibility',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(normalizedRuntimeFailure);
+    expect(result.details).toEqual([normalizedRuntimeFailure]);
+    expect(result.issues?.[0]).toMatchObject({
+      providerId: 'opencode',
+      scope: 'provider',
+      severity: 'blocking',
+      code: 'mcp_unavailable',
+      message: normalizedRuntimeFailure,
+    });
   });
 
   it('normalizes unexpected OpenCode model prepare exceptions into a blocking diagnostic', async () => {

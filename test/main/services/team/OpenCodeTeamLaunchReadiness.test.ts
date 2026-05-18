@@ -29,7 +29,10 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       state: 'not_installed',
       launchAllowed: false,
       hostHealthy: false,
-      diagnostics: ['PATH checked', 'OpenCode CLI not detected on PATH'],
+      diagnostics: [
+        'PATH checked',
+        'OpenCode runtime binary is not installed or not reachable by launch preflight.',
+      ],
     });
     expect(ports.capabilities.detect).not.toHaveBeenCalled();
     expect(ports.mcpTools.prove).not.toHaveBeenCalled();
@@ -219,19 +222,19 @@ function createPorts(
 } {
   return {
     inventory: {
-      probe: vi.fn(async () => inventory(overrides.inventory)),
+      probe: vi.fn(() => Promise.resolve(inventory(overrides.inventory))),
     },
     capabilities: {
-      detect: vi.fn(async () => overrides.capabilities ?? capabilities()),
+      detect: vi.fn(() => Promise.resolve(overrides.capabilities ?? capabilities())),
     },
     mcpTools: {
-      prove: vi.fn(async () => overrides.toolProof ?? toolProof()),
+      prove: vi.fn(() => Promise.resolve(overrides.toolProof ?? toolProof())),
     },
     runtimeStores: {
-      check: vi.fn(async () => overrides.runtimeStores ?? runtimeStores()),
+      check: vi.fn(() => Promise.resolve(overrides.runtimeStores ?? runtimeStores())),
     },
     modelExecution: {
-      verify: vi.fn(async () => overrides.modelProbe ?? modelProbe()),
+      verify: vi.fn(() => Promise.resolve(overrides.modelProbe ?? modelProbe())),
     },
   };
 }

@@ -42,4 +42,34 @@ describe('runProviderPrepareDiagnostics OpenCode runtime failures', () => {
       'compatibility'
     );
   });
+
+  it('normalizes structured OpenCode provider issue messages that bypass runtime details', async () => {
+    const prepareProvisioning = vi.fn<PrepareProvisioningFn>().mockResolvedValue({
+      ready: false,
+      message: 'not_installed',
+      details: ['OpenCode CLI not detected on PATH'],
+      issues: [
+        {
+          providerId: 'opencode',
+          scope: 'provider',
+          severity: 'blocking',
+          code: 'not_installed',
+          message: 'OpenCode CLI not detected on PATH',
+        },
+      ],
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/Users/tester/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details).toEqual([
+      'OpenCode runtime binary is not installed or not reachable by launch preflight.',
+    ]);
+    expect(result.modelResultsById).toEqual({});
+  });
 });

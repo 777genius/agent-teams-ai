@@ -12,6 +12,7 @@ const logger = createLogger('Service:AgentTeamsMcpHttpServer');
 const MCP_HTTP_HOST = '127.0.0.1';
 const MCP_HTTP_ENDPOINT = '/mcp';
 const MCP_HTTP_READY_TIMEOUT_MS = 5_000;
+const MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS = 3_000;
 const MCP_HTTP_READY_POLL_MS = 100;
 
 export interface AgentTeamsMcpHttpServerHandle {
@@ -120,18 +121,18 @@ export class AgentTeamsMcpHttpServer {
   private startPromise: Promise<AgentTeamsMcpHttpServerHandle> | null = null;
   private child: ChildProcess | null = null;
   private handle: AgentTeamsMcpHttpServerHandle | null = null;
+  private readonly expectedStopChildren = new WeakSet<ChildProcess>();
 
   constructor(private readonly deps: AgentTeamsMcpHttpServerDeps = {}) {}
 
   async ensureStarted(): Promise<AgentTeamsMcpHttpServerHandle> {
-    if (this.handle) {
-      return this.handle;
-    }
     if (this.startPromise) {
       return this.startPromise;
     }
 
-    this.startPromise = this.startOnce().finally(() => {
+    this.startPromise = (
+      this.handle ? this.reuseOrRestartExistingHandle(this.handle) : this.startOnce()
+    ).finally(() => {
       this.startPromise = null;
     });
     return this.startPromise;
@@ -142,8 +143,32 @@ export class AgentTeamsMcpHttpServer {
     this.child = null;
     this.handle = null;
     if (child) {
+      this.expectedStopChildren.add(child);
       killProcessTree(child, 'SIGKILL');
     }
+  }
+
+  private async reuseOrRestartExistingHandle(
+    handle: AgentTeamsMcpHttpServerHandle
+  ): Promise<AgentTeamsMcpHttpServerHandle> {
+    const waitForPort = this.deps.waitForPort ?? waitForLoopbackPort;
+    try {
+      await waitForPort(MCP_HTTP_HOST, handle.port, MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS);
+      if (this.handle === handle) {
+        return handle;
+      }
+    } catch (error) {
+      if (this.handle === handle) {
+        logger.warn(
+          `Agent Teams MCP HTTP server at ${handle.url} failed health reuse check, restarting: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        await this.stop();
+      }
+    }
+
+    return this.startOnce();
   }
 
   private async startOnce(): Promise<AgentTeamsMcpHttpServerHandle> {
@@ -181,14 +206,21 @@ export class AgentTeamsMcpHttpServer {
     let startupSettled = false;
     const startupFailure = new Promise<never>((_, reject) => {
       child.once('exit', (code, signal) => {
+        const expectedStop = this.expectedStopChildren.delete(child);
         clearIfCurrent();
         const codeSuffix = typeof code === 'number' ? ` with code ${code}` : '';
         const signalSuffix = signal ? ` (${signal})` : '';
         const message = `Agent Teams MCP HTTP server exited before startup completed${codeSuffix}${signalSuffix}`;
-        if (!startupSettled) {
+        if (!startupSettled && !expectedStop) {
           reject(new Error(message));
+          logger.warn(message);
+          return;
         }
-        logger.warn(message);
+        if (startupSettled && !expectedStop) {
+          logger.warn(
+            `Agent Teams MCP HTTP server exited after startup${codeSuffix}${signalSuffix}`
+          );
+        }
       });
       child.once('error', (error) => {
         clearIfCurrent();
@@ -216,6 +248,7 @@ export class AgentTeamsMcpHttpServer {
         this.child = null;
         this.handle = null;
       }
+      this.expectedStopChildren.add(child);
       killProcessTree(child, 'SIGKILL');
       throw error;
     }

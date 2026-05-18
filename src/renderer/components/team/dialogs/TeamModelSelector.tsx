@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
+import { isOpenCodeCatalogHydrating } from '@renderer/components/runtime/providerConnectionUi';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { HoverTooltip } from '@renderer/components/ui/hover-tooltip';
 import { Input } from '@renderer/components/ui/input';
@@ -999,12 +1000,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const visibleConcreteModelOptionCount =
     visibleModelOptions.length - visibleDefaultModelOptions.length;
   const concreteModelOptionCount = modelOptions.filter((option) => option.value.trim()).length;
-  const shouldShowOpenCodeCatalogLoading =
-    effectiveProviderId === 'opencode' &&
-    runtimeProviderStatus?.modelCatalogRefreshState === 'loading' &&
-    runtimeProviderStatus.modelCatalog?.providerId !== 'opencode' &&
-    (runtimeProviderStatus.models.length === 0 ||
-      runtimeProviderStatus.models.every((model) => model.trim() === 'opencode/big-pickle'));
+  const shouldShowOpenCodeCatalogLoading = isOpenCodeCatalogHydrating(runtimeProviderStatus);
   const shouldShowModelSearch = !shouldShowOpenCodeCatalogLoading && concreteModelOptionCount > 8;
   const trimmedModelQuery = modelQuery.trim();
   const shouldConstrainModelListHeight = visibleModelOptions.length > 8;

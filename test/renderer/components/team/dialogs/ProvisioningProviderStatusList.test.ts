@@ -107,7 +107,7 @@ describe('ProvisioningProviderStatusList', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode (OpenCode CLI): Needs attention');
+    expect(host.textContent).toContain('OpenCode (OpenCode CLI): OpenCode app MCP unreachable');
     expect(host.textContent).not.toContain('Selected model checks');
     expect(host.textContent).not.toContain('model unavailable');
 
@@ -119,16 +119,35 @@ describe('ProvisioningProviderStatusList', () => {
 
   it('gives a concrete hint for missing OpenCode runtime binary failures', () => {
     expect(
-      getProvisioningFailureHint('CLI environment is not available - launch is blocked', [
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
         {
           providerId: 'opencode',
           status: 'failed',
           backendSummary: null,
-          details: ['OpenCode runtime binary is not installed or not reachable by launch preflight.'],
+          details: [
+            'OpenCode runtime binary is not installed or not reachable by launch preflight.',
+          ],
         },
       ])
     ).toBe(
       'Install or retry OpenCode runtime from the provider status card, then reopen this dialog.'
+    );
+  });
+
+  it('gives a concrete hint for stale OpenCode app MCP bridge failures', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?',
+          ],
+        },
+      ])
+    ).toBe(
+      'Retry launch to refresh the OpenCode app MCP bridge. If it repeats, restart the app and OpenCode runtime.'
     );
   });
 

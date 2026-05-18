@@ -99,6 +99,45 @@ export function isProviderInventoryOnlyFallback(provider: CliProviderStatus): bo
   );
 }
 
+export function isOpenCodeCatalogHydrating(
+  provider:
+    | Pick<
+        CliProviderStatus,
+        | 'providerId'
+        | 'models'
+        | 'modelCatalog'
+        | 'modelCatalogRefreshState'
+        | 'runtimeCapabilities'
+      >
+    | null
+    | undefined
+): boolean {
+  if (provider?.providerId !== 'opencode') {
+    return false;
+  }
+
+  if (provider.modelCatalog?.providerId === 'opencode' && provider.modelCatalog.models.length > 0) {
+    return false;
+  }
+
+  if (
+    provider.modelCatalogRefreshState === 'ready' ||
+    provider.modelCatalogRefreshState === 'error'
+  ) {
+    return false;
+  }
+
+  const hasOnlySummaryFallback =
+    provider.models.length === 0 ||
+    provider.models.every((model) => model.trim() === 'opencode/big-pickle');
+
+  return (
+    hasOnlySummaryFallback &&
+    (provider.modelCatalogRefreshState === 'loading' ||
+      provider.runtimeCapabilities?.modelCatalog?.dynamic === true)
+  );
+}
+
 export function isConnectionManagedRuntimeProvider(provider: CliProviderStatus): boolean {
   return provider.providerId === 'codex';
 }

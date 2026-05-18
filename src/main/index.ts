@@ -226,7 +226,7 @@ import {
   TeamTaskStallSnapshotSource,
   TeamTranscriptSourceLocator,
   UpdaterService,
-  resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
 
 import type { FileChangeEvent } from '@main/types';
@@ -343,10 +343,8 @@ function describeMemberWorkSyncReviewPickupEscalationReason(reason: string): str
 }
 
 async function resolveOpenCodeRuntimeBinaryForBridgeEnv(): Promise<string | null> {
-  const manifestBinaryPath = await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
-  if (manifestBinaryPath) {
-    return manifestBinaryPath;
-  }
+  const resolvedBinaryPath = await resolveVerifiedOpenCodeRuntimeBinaryPath();
+  if (resolvedBinaryPath) return resolvedBinaryPath;
 
   try {
     const status = await openCodeRuntimeInstallerService?.getStatus();
@@ -435,7 +433,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     await ensureOpenCodeBridgeRuntimeBinaryEnv({
       targetEnv,
       bridgeEnv,
-      resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: resolveOpenCodeRuntimeBinaryForBridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolveOpenCodeRuntimeBinaryForBridgeEnv,
       onWarning: (message) => logger.warn(message),
     });
   };

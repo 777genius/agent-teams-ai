@@ -1,7 +1,7 @@
 import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 
-import { resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath } from '../infrastructure/OpenCodeRuntimeInstallerService';
+import { resolveVerifiedOpenCodeRuntimeBinaryPath } from '../infrastructure/OpenCodeRuntimeInstallerService';
 
 import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
@@ -45,8 +45,8 @@ export async function buildProviderAwareCliEnv(
     env: options.env,
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
-    const appManagedOpenCodeBinary = await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
-    applyOpenCodeRuntimeBinaryEnv(env, appManagedOpenCodeBinary);
+    const openCodeBinary = await resolveVerifiedOpenCodeRuntimeBinaryPath();
+    applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary);
   }
   const appManagedCodexBinary = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
   if (

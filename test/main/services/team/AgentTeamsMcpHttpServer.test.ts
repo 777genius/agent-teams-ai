@@ -20,8 +20,13 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
 import { AgentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 
 class FakeChildProcess extends EventEmitter {
-  pid = 43123;
+  pid: number;
   stderr = new EventEmitter();
+
+  constructor(pid = 43123) {
+    super();
+    this.pid = pid;
+  }
 }
 
 async function allocateLoopbackPort(): Promise<number> {
@@ -143,6 +148,71 @@ describe('AgentTeamsMcpHttpServer', () => {
 
     expect(first).toBe(second);
     expect(spawnProcess).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses an existing handle only after its health check still passes', async () => {
+    const child = new FakeChildProcess();
+    const spawnProcess = vi.fn(() => child as any);
+    const waitForPort = vi.fn(async () => undefined);
+    const server = new AgentTeamsMcpHttpServer({
+      resolveLaunchSpec: async () => ({
+        command: 'node',
+        args: ['mcp-server/dist/index.js'],
+      }),
+      allocatePort: async () => 41006,
+      spawnProcess,
+      waitForPort,
+    });
+
+    const first = await server.ensureStarted();
+    const second = await server.ensureStarted();
+
+    expect(second).toBe(first);
+    expect(spawnProcess).toHaveBeenCalledTimes(1);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 5_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 3_000);
+    expect(hoisted.killProcessTreeMock).not.toHaveBeenCalled();
+  });
+
+  it('restarts a cached HTTP MCP server handle when the health check goes stale', async () => {
+    const firstChild = new FakeChildProcess(43123);
+    const secondChild = new FakeChildProcess(43124);
+    const spawnProcess = vi
+      .fn()
+      .mockReturnValueOnce(firstChild as any)
+      .mockReturnValueOnce(secondChild as any);
+    const allocatePort = vi.fn().mockResolvedValueOnce(41007).mockResolvedValueOnce(41008);
+    const waitForPort = vi.fn(async (_host: string, port: number, timeoutMs: number) => {
+      if (port === 41007 && timeoutMs === 3_000) {
+        throw new Error('stale health check');
+      }
+    });
+    const server = new AgentTeamsMcpHttpServer({
+      resolveLaunchSpec: async () => ({
+        command: 'node',
+        args: ['mcp-server/dist/index.js'],
+      }),
+      allocatePort,
+      spawnProcess,
+      waitForPort,
+    });
+
+    const first = await server.ensureStarted();
+    const second = await server.ensureStarted();
+
+    expect(first.url).toBe('http://127.0.0.1:41007/mcp');
+    expect(second).toEqual({
+      url: 'http://127.0.0.1:41008/mcp',
+      port: 41008,
+      pid: 43124,
+    });
+    expect(spawnProcess).toHaveBeenCalledTimes(2);
+    expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(firstChild, 'SIGKILL');
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 5_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 3_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41008, 5_000);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
+    vi.mocked(console.warn).mockClear();
   });
 
   it('fails startup promptly when the child exits before readiness', async () => {

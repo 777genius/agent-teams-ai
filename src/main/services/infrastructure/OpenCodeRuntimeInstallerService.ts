@@ -1,7 +1,7 @@
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
-import { getCachedShellEnv } from '@main/utils/shellEnv';
+import { getCachedShellEnv, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { createHash, randomUUID } from 'crypto';
@@ -22,6 +22,7 @@ const MAX_TARBALL_BYTES = 250 * 1024 * 1024;
 const MAX_BINARY_BYTES = 350 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 10_000;
+const PATH_SHELL_ENV_TIMEOUT_MS = 1_500;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -134,9 +135,15 @@ function splitPathEnv(pathValue: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function resolvePathOpenCodeBinary(): string | null {
+function resolvePathOpenCodeBinary(
+  additionalEnvSources: (NodeJS.ProcessEnv | null | undefined)[] = []
+): string | null {
   const shellEnv = getCachedShellEnv() ?? {};
-  const pathEntries = [...splitPathEnv(shellEnv.PATH), ...splitPathEnv(process.env.PATH)];
+  const pathEntries = [
+    ...additionalEnvSources.flatMap((env) => splitPathEnv(env?.PATH)),
+    ...splitPathEnv(shellEnv.PATH),
+    ...splitPathEnv(process.env.PATH),
+  ];
   const seen = new Set<string>();
   for (const entry of pathEntries) {
     const normalizedEntry = path.resolve(entry);
@@ -152,6 +159,57 @@ function resolvePathOpenCodeBinary(): string | null {
     }
   }
   return null;
+}
+
+type OpenCodeBinaryVersionProbe =
+  | { ok: true; version: string | null }
+  | { ok: false; error: string };
+
+async function probeOpenCodeBinaryVersion(binaryPath: string): Promise<OpenCodeBinaryVersionProbe> {
+  try {
+    const { stdout } = await execCli(binaryPath, ['--version'], {
+      timeout: VERSION_TIMEOUT_MS,
+      windowsHide: true,
+    });
+    return { ok: true, version: stdout.trim() || null };
+  } catch (error) {
+    return { ok: false, error: getErrorMessage(error) };
+  }
+}
+
+async function resolvePathOpenCodeBinaryWithBestEffortEnv(
+  options: { shellEnvTimeoutMs?: number } = {}
+): Promise<string | null> {
+  const cachedCandidate = resolvePathOpenCodeBinary();
+  if (cachedCandidate) {
+    return cachedCandidate;
+  }
+
+  const shellEnv = await resolveInteractiveShellEnvBestEffort({
+    timeoutMs: options.shellEnvTimeoutMs ?? PATH_SHELL_ENV_TIMEOUT_MS,
+    fallbackEnv: process.env,
+  });
+  return resolvePathOpenCodeBinary([shellEnv]);
+}
+
+async function resolveVerifiedPathOpenCodeBinaryPath(
+  options: { shellEnvTimeoutMs?: number } = {}
+): Promise<string | null> {
+  const binaryPath = await resolvePathOpenCodeBinaryWithBestEffortEnv(options);
+  if (!binaryPath) {
+    return null;
+  }
+
+  return (await probeOpenCodeBinaryVersion(binaryPath)).ok ? binaryPath : null;
+}
+
+export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
+  options: { shellEnvTimeoutMs?: number } = {}
+): Promise<string | null> {
+  return (
+    (await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()) ??
+    (await resolveVerifiedPathOpenCodeBinaryPath(options))
+  );
 }
 
 function isLinuxMuslRuntime(): boolean {
@@ -466,31 +524,27 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   private async getPathStatus(): Promise<OpenCodeRuntimeStatus> {
-    const binaryPath = resolvePathOpenCodeBinary();
+    const binaryPath = await resolvePathOpenCodeBinaryWithBestEffortEnv();
     if (!binaryPath) {
       return { installed: false, source: 'missing', state: 'idle' };
     }
-    try {
-      const { stdout } = await execCli(binaryPath, ['--version'], {
-        timeout: VERSION_TIMEOUT_MS,
-        windowsHide: true,
-      });
-      return {
-        installed: true,
-        binaryPath,
-        version: stdout.trim() || undefined,
-        source: 'path',
-        state: 'ready',
-      };
-    } catch (error) {
+    const version = await probeOpenCodeBinaryVersion(binaryPath);
+    if (!version.ok) {
       return {
         installed: false,
         binaryPath,
         source: 'path',
         state: 'failed',
-        error: getErrorMessage(error),
+        error: version.error,
       };
     }
+    return {
+      installed: true,
+      binaryPath,
+      version: version.version ?? undefined,
+      source: 'path',
+      state: 'ready',
+    };
   }
 
   private async installInternal(): Promise<OpenCodeRuntimeStatus> {

@@ -6,6 +6,7 @@ import {
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
   isProviderInventoryOnlyFallback,
+  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
@@ -224,6 +225,47 @@ describe('providerConnectionUi', () => {
 
     expect(formatProviderStatusText(provider)).toBe('API key configured, but not verified yet');
     expect(getProviderCredentialSummary(provider)).toBe('API key also configured in Manage');
+  });
+
+  it('treats the OpenCode summary-only big-pickle model as catalog hydration', () => {
+    const provider: CliProviderStatus = {
+      providerId: 'opencode',
+      displayName: 'OpenCode (200+ models)',
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_managed',
+      verificationState: 'verified',
+      modelCatalogRefreshState: 'idle',
+      statusMessage: null,
+      models: ['opencode/big-pickle'],
+      modelCatalog: null,
+      runtimeCapabilities: {
+        modelCatalog: {
+          dynamic: true,
+          source: 'app-server',
+        },
+      },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: false,
+        extensions: createDefaultCliExtensionCapabilities(),
+      },
+    };
+
+    expect(isOpenCodeCatalogHydrating(provider)).toBe(true);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalogRefreshState: 'ready',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        models: ['opencode/big-pickle', 'openrouter/qwen/qwen3-coder-plus'],
+      })
+    ).toBe(false);
   });
 
   it('does not describe Anthropic API key mode as subscription connected when the key is missing', () => {

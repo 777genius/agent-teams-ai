@@ -135,6 +135,8 @@ export function failIncompleteProviderChecks(
 
 type ProvisioningDetailSummary =
   | 'CLI binary missing'
+  | 'OpenCode runtime missing'
+  | 'OpenCode app MCP unreachable'
   | 'Working directory missing'
   | 'CLI binary could not be started'
   | 'CLI preflight did not complete'
@@ -197,6 +199,16 @@ function summarizeDetail(
 
   if (lower.includes('spawn ') && lower.includes(' enoent')) {
     return 'CLI binary missing';
+  }
+  if (lower.includes('opencode runtime binary is not installed')) {
+    return 'OpenCode runtime missing';
+  }
+  if (
+    lower.includes('opencode app mcp is unreachable') ||
+    (lower.includes('unable to connect') &&
+      (lower.includes('/experimental/tool') || lower.includes('mcp_unavailable')))
+  ) {
+    return 'OpenCode app MCP unreachable';
   }
   if (lower.includes('working directory does not exist:')) {
     return 'Working directory missing';
@@ -406,6 +418,8 @@ function getDisplayStatusText(check: ProvisioningProviderCheck): string {
     check.status === 'failed'
       ? (summarizedDetails.find(
           (detail) =>
+            detail === 'OpenCode app MCP unreachable' ||
+            detail === 'OpenCode runtime missing' ||
             detail === 'Selected model unavailable' ||
             detail === 'Selected model check failed' ||
             detail === 'Authentication required' ||
@@ -436,6 +450,8 @@ function getDetailTone(
     summary === 'Selected model unavailable' ||
     summary === 'Selected model check failed' ||
     summary === 'CLI binary missing' ||
+    summary === 'OpenCode runtime missing' ||
+    summary === 'OpenCode app MCP unreachable' ||
     summary === 'Working directory missing' ||
     summary === 'CLI binary could not be started' ||
     summary === 'CLI preflight did not complete' ||
@@ -696,6 +712,13 @@ export function getProvisioningFailureHint(
     combined.includes('opencode runtime binary is not installed')
   ) {
     return 'Install or retry OpenCode runtime from the provider status card, then reopen this dialog.';
+  }
+  if (
+    combined.includes('opencode app mcp is unreachable') ||
+    (combined.includes('unable to connect') &&
+      (combined.includes('/experimental/tool') || combined.includes('mcp_unavailable')))
+  ) {
+    return 'Retry launch to refresh the OpenCode app MCP bridge. If it repeats, restart the app and OpenCode runtime.';
   }
   if (
     combined.includes('spawn ') ||

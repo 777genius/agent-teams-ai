@@ -27,6 +27,7 @@ import {
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
   getProviderDisconnectAction,
+  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
@@ -868,13 +869,16 @@ const InstalledBanner = ({
                 ((provider.providerId === 'codex' && codexRateLimitsLoading) ||
                   anthropicRateLimitsLoading));
             const statusText = showSkeleton ? 'Checking...' : formatProviderStatusText(provider);
-            const modelCatalogLoading = provider.modelCatalogRefreshState === 'loading';
+            const modelCatalogLoading =
+              provider.modelCatalogRefreshState === 'loading' ||
+              isOpenCodeCatalogHydrating(provider);
             const hasDetailContent = Boolean(
               (provider.backend?.label && !runtimeSummary) ||
               runtimeSummary ||
               connectionModeSummary ||
               credentialSummary ||
-              provider.models.length === 0
+              provider.models.length === 0 ||
+              modelCatalogLoading
             );
 
             return (
@@ -936,9 +940,7 @@ const InstalledBanner = ({
                         ) : null}
                         {connectionModeSummary ? <span>{connectionModeSummary}</span> : null}
                         {credentialSummary ? <span>{credentialSummary}</span> : null}
-                        {provider.models.length === 0 && modelCatalogLoading ? (
-                          <span>Loading models...</span>
-                        ) : null}
+                        {modelCatalogLoading ? <span>Loading models...</span> : null}
                         {provider.models.length === 0 && !modelCatalogLoading && (
                           <span>Models unavailable for this runtime build</span>
                         )}
@@ -1121,7 +1123,7 @@ const InstalledBanner = ({
                     </button>
                   </div>
                 </div>
-                {!showSkeleton && provider.models.length > 0 && (
+                {!showSkeleton && !modelCatalogLoading && provider.models.length > 0 && (
                   <div className="col-span-2">
                     <ProviderModelBadges
                       providerId={provider.providerId}

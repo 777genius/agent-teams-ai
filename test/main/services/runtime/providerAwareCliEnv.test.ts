@@ -12,7 +12,7 @@ const applyConfiguredConnectionEnvMock = vi.fn();
 const applyAllConfiguredConnectionEnvMock = vi.fn();
 const getConfiguredConnectionIssuesMock = vi.fn();
 const getConfiguredConnectionLaunchArgsMock = vi.fn();
-const resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock = vi.fn();
+const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn();
 const resolveAgentTeamsMcpLaunchSpecMock = vi.fn();
 
@@ -62,8 +62,7 @@ vi.mock('../../../../src/main/services/runtime/ProviderConnectionService', () =>
 }));
 
 vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService', () => ({
-  resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath: () =>
-    resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock(),
+  resolveVerifiedOpenCodeRuntimeBinaryPath: () => resolveVerifiedOpenCodeRuntimeBinaryPathMock(),
 }));
 
 vi.mock('@features/codex-runtime-installer/main', () => ({
@@ -100,7 +99,7 @@ describe('buildProviderAwareCliEnv', () => {
     );
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([]);
     getConfiguredConnectionIssuesMock.mockResolvedValue({});
-    resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
+    resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
     resolveAgentTeamsMcpLaunchSpecMock.mockResolvedValue({
       command: 'node',
@@ -360,7 +359,7 @@ describe('buildProviderAwareCliEnv', () => {
       'current',
       'opencode'
     );
-    resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(appManagedBinaryPath);
+    resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(appManagedBinaryPath);
 
     const { buildProviderAwareCliEnv } =
       await import('../../../../src/main/services/runtime/providerAwareCliEnv');
@@ -399,7 +398,7 @@ describe('buildProviderAwareCliEnv', () => {
   });
 
   it('does not inject the app-managed OpenCode binary into non-OpenCode provider launches', async () => {
-    resolveVerifiedAppManagedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(
+    resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(
       '/Users/tester/App Support/runtimes/opencode/current/opencode'
     );
 

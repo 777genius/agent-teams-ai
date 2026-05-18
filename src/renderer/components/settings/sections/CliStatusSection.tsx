@@ -21,6 +21,7 @@ import {
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
   getProviderDisconnectAction,
+  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
@@ -524,7 +525,8 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                             ? 'Checking...'
                             : formatProviderStatusText(provider);
                           const modelCatalogLoading =
-                            provider.modelCatalogRefreshState === 'loading';
+                            provider.modelCatalogRefreshState === 'loading' ||
+                            isOpenCodeCatalogHydrating(provider);
                           const connectionModeSummary = getProviderConnectionModeSummary(provider);
                           const credentialSummary = getProviderCredentialSummary(provider);
                           const disconnectAction = getProviderDisconnectAction(provider);
@@ -533,7 +535,8 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                             runtimeSummary ||
                             connectionModeSummary ||
                             credentialSummary ||
-                            provider.models.length === 0
+                            provider.models.length === 0 ||
+                            modelCatalogLoading
                           );
 
                           return (
@@ -585,9 +588,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                         <span>{connectionModeSummary}</span>
                                       ) : null}
                                       {credentialSummary ? <span>{credentialSummary}</span> : null}
-                                      {provider.models.length === 0 && modelCatalogLoading ? (
-                                        <span>Loading models...</span>
-                                      ) : null}
+                                      {modelCatalogLoading ? <span>Loading models...</span> : null}
                                       {provider.models.length === 0 && !modelCatalogLoading && (
                                         <span>Models unavailable for this runtime build</span>
                                       )}
@@ -645,16 +646,18 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                   ) : null}
                                 </div>
                               </div>
-                              {!effectiveShowSkeleton && provider.models.length > 0 && (
-                                <div className="col-span-2">
-                                  <ProviderModelBadges
-                                    providerId={provider.providerId}
-                                    models={provider.models}
-                                    modelAvailability={provider.modelAvailability}
-                                    providerStatus={provider}
-                                  />
-                                </div>
-                              )}
+                              {!effectiveShowSkeleton &&
+                                !modelCatalogLoading &&
+                                provider.models.length > 0 && (
+                                  <div className="col-span-2">
+                                    <ProviderModelBadges
+                                      providerId={provider.providerId}
+                                      models={provider.models}
+                                      modelAvailability={provider.modelAvailability}
+                                      providerStatus={provider}
+                                    />
+                                  </div>
+                                )}
                             </>
                           );
                         })()}

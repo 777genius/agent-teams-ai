@@ -915,6 +915,10 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'mcp_unavailable',
   'adapter_disabled',
 ]);
+const OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC =
+  'OpenCode runtime binary is not installed or not reachable by launch preflight.';
+const OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC =
+  'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge.';
 
 function pushUniqueLine(lines: string[], line: string): void {
   const trimmed = line.trim();
@@ -931,8 +935,39 @@ function looksLikeOpenCodeProviderPrepareDiagnostic(value: string): boolean {
     lower.includes('mcp_unavailable') ||
     lower.includes('runtime store') ||
     lower.includes('opencode cli') ||
+    lower.includes('opencode runtime binary') ||
     lower.includes('unable to connect')
   );
+}
+
+function normalizeOpenCodePrepareDiagnostic(value: string, reason?: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  if (/opencode cli (?:not detected on path|not found)/i.test(trimmed)) {
+    return OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes('unable to connect') &&
+    (lower.includes('/experimental/tool') ||
+      lower.includes('mcp_unavailable') ||
+      reason === 'mcp_unavailable')
+  ) {
+    const detail = trimmed.includes(' - ') ? trimmed.split(' - ').pop()?.trim() : trimmed;
+    return detail && detail !== trimmed
+      ? `${OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC} Details: ${detail}`
+      : OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC;
+  }
+
+  if (reason === 'mcp_unavailable' && lower.includes('mcp_unavailable')) {
+    return 'OpenCode app MCP is unavailable. Retry launch to refresh the app MCP bridge.';
+  }
+
+  return trimmed;
 }
 
 function isRetryableOpenCodePreflightBusyDiagnostic(value: string | null | undefined): boolean {
@@ -18553,10 +18588,21 @@ export class TeamProvisioningService {
             expectedMembers: [],
             previousLaunchState: null,
           });
-          details.push(...prepare.diagnostics);
-          warnings.push(...prepare.warnings);
+          const prepareReason = prepare.ok ? undefined : prepare.reason;
+          details.push(
+            ...prepare.diagnostics.map((diagnostic) =>
+              normalizeOpenCodePrepareDiagnostic(diagnostic, prepareReason)
+            )
+          );
+          warnings.push(
+            ...prepare.warnings.map((warning) =>
+              normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
+            )
+          );
           if (!prepare.ok) {
-            blockingMessages.push(`OpenCode: ${prepare.reason}`);
+            blockingMessages.push(
+              normalizeOpenCodePrepareDiagnostic(`OpenCode: ${prepare.reason}`, prepare.reason)
+            );
           }
           continue;
         }
@@ -18876,7 +18922,12 @@ export class TeamProvisioningService {
       }
 
       const { modelId, prepare } = result;
-      warnings.push(...prepare.warnings);
+      const prepareReason = prepare.ok ? undefined : prepare.reason;
+      warnings.push(
+        ...prepare.warnings.map((warning) =>
+          normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
+        )
+      );
       if (prepare.ok) {
         details.push(
           verificationMode === 'compatibility'
@@ -18886,8 +18937,10 @@ export class TeamProvisioningService {
         continue;
       }
 
-      const primaryReason =
-        prepare.diagnostics.find((entry) => entry.trim().length > 0) ?? prepare.reason;
+      const primaryReason = normalizeOpenCodePrepareDiagnostic(
+        prepare.diagnostics.find((entry) => entry.trim().length > 0) ?? prepare.reason,
+        prepare.reason
+      );
       if (
         prepare.retryable &&
         [primaryReason, prepare.reason, ...prepare.diagnostics].some(
@@ -19031,7 +19084,12 @@ export class TeamProvisioningService {
       };
     }
 
-    warnings.push(...sharedPrepare.warnings);
+    const sharedPrepareReason = sharedPrepare.ok ? undefined : sharedPrepare.reason;
+    warnings.push(
+      ...sharedPrepare.warnings.map((warning) =>
+        normalizeOpenCodePrepareDiagnostic(warning, sharedPrepareReason)
+      )
+    );
     appendPreflightDebugLog('opencode_compatibility_batch_shared_prepare', {
       cwd,
       modelIds,
@@ -19042,8 +19100,10 @@ export class TeamProvisioningService {
     });
 
     if (!sharedPrepare.ok) {
-      const primaryReason =
-        sharedPrepare.diagnostics.find((entry) => entry.trim().length > 0) ?? sharedPrepare.reason;
+      const primaryReason = normalizeOpenCodePrepareDiagnostic(
+        sharedPrepare.diagnostics.find((entry) => entry.trim().length > 0) ?? sharedPrepare.reason,
+        sharedPrepare.reason
+      );
       if (primaryReason.trim().length > 0) {
         details.push(primaryReason);
         blockingMessages.push(primaryReason);
