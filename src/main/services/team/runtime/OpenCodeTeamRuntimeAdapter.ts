@@ -107,6 +107,66 @@ const OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS = [
   'Bridge server capability snapshot mismatch',
   'OpenCode bridge capability snapshot precondition mismatch',
 ];
+const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
+
+type OpenCodeTeamLaunchReadinessInput = Parameters<
+  OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
+>[0];
+
+function getOpenCodeReadinessDiagnosticText(readiness: OpenCodeTeamLaunchReadiness): string {
+  return [...readiness.diagnostics, ...readiness.missing].join('\n');
+}
+
+function isTransientOpenCodeReadinessTransportFailure(
+  readiness: OpenCodeTeamLaunchReadiness
+): boolean {
+  if (readiness.launchAllowed) {
+    return false;
+  }
+  if (readiness.state !== 'mcp_unavailable' && readiness.state !== 'unknown_error') {
+    return false;
+  }
+
+  const diagnosticText = getOpenCodeReadinessDiagnosticText(readiness).toLowerCase();
+  if (!diagnosticText) {
+    return false;
+  }
+
+  const hasHardFailureMarker =
+    /\b(?:401|403)\b/.test(diagnosticText) ||
+    diagnosticText.includes('unauthorized') ||
+    diagnosticText.includes('forbidden') ||
+    diagnosticText.includes('missing canonical app mcp tool id') ||
+    diagnosticText.includes('observed alias') ||
+    diagnosticText.includes('app mcp tool missing') ||
+    diagnosticText.includes('tool is absent') ||
+    diagnosticText.includes('missing required field') ||
+    diagnosticText.includes('runtime store') ||
+    diagnosticText.includes('capability snapshot') ||
+    diagnosticText.includes('contract') ||
+    diagnosticText.includes('schema') ||
+    diagnosticText.includes('invalid input') ||
+    /\b(?:404|405)\b/.test(diagnosticText) ||
+    diagnosticText.includes('not found');
+  if (hasHardFailureMarker) {
+    return false;
+  }
+
+  return (
+    diagnosticText.includes('unable to connect') ||
+    diagnosticText.includes('socket connection was closed') ||
+    diagnosticText.includes('fetch failed') ||
+    diagnosticText.includes('econnreset') ||
+    diagnosticText.includes('econnrefused') ||
+    diagnosticText.includes('socket hang up') ||
+    diagnosticText.includes('networkerror') ||
+    diagnosticText.includes('/experimental/tool/ids unavailable')
+  );
+}
+
+function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 
 function resolveOpenCodeRuntimeSettlementMode(
   input: Pick<OpenCodeTeamRuntimeMessageInput, 'messageKind'>
@@ -123,7 +183,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 
   async prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult> {
     const runtimeOnly = input.runtimeOnly === true;
-    const readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness({
+    const readiness = await this.checkOpenCodeReadinessWithTransientRetry({
       projectPath: input.cwd,
       selectedModel: input.model ?? null,
       requireExecutionProbe: !runtimeOnly,
@@ -152,6 +212,20 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 
   getLastOpenCodeTeamLaunchReadiness(projectPath: string): OpenCodeTeamLaunchReadiness | null {
     return this.lastReadinessByProjectPath.get(projectPath) ?? null;
+  }
+
+  private async checkOpenCodeReadinessWithTransientRetry(
+    input: OpenCodeTeamLaunchReadinessInput
+  ): Promise<OpenCodeTeamLaunchReadiness> {
+    let readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input);
+    for (const delayMs of OPEN_CODE_READINESS_RETRY_DELAYS_MS) {
+      if (!isTransientOpenCodeReadinessTransportFailure(readiness)) {
+        return readiness;
+      }
+      await sleepOpenCodeReadinessRetry(delayMs);
+      readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input);
+    }
+    return readiness;
   }
 
   async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {

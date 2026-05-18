@@ -670,7 +670,7 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
 
     steps:
-      - name: Upload stable-named assets for /latest/download links
+      - name: Upload compatibility aliases for older updater clients
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -681,7 +681,7 @@ jobs:
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
 
-          declare -A FILES=(
+          declare -A COMPATIBILITY_ALIASES=(
             ["Claude-Agent-Teams-UI-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
             ["Claude-Agent-Teams-UI-x64.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
             ["Claude-Agent-Teams-UI-Setup.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
@@ -691,17 +691,16 @@ jobs:
             ["Claude-Agent-Teams-UI.pacman"]="agent-teams-ai-${VERSION}.pacman"
           )
 
-          # Download versioned files and re-upload with stable names
-          for STABLE_NAME in "${!FILES[@]}"; do
-            VERSIONED_NAME="${FILES[$STABLE_NAME]}"
-            echo "Downloading ${VERSIONED_NAME} -> ${STABLE_NAME}"
+          for ALIAS_NAME in "${!COMPATIBILITY_ALIASES[@]}"; do
+            VERSIONED_NAME="${COMPATIBILITY_ALIASES[$ALIAS_NAME]}"
+            echo "Uploading compatibility alias: ${ALIAS_NAME} -> ${VERSIONED_NAME}"
             gh release download "${TAG}" \
               --repo "$REPO" \
               --pattern "${VERSIONED_NAME}" \
               --dir "$TMP_DIR" \
               --clobber
-            cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${STABLE_NAME}"
-            gh release upload "${TAG}" "${TMP_DIR}/${STABLE_NAME}" --repo "$REPO" --clobber
+            cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${ALIAS_NAME}"
+            gh release upload "${TAG}" "${TMP_DIR}/${ALIAS_NAME}" --repo "$REPO" --clobber
           done
 
       - name: Publish canonical updater metadata
@@ -734,31 +733,33 @@ jobs:
           }
 
           # Canonical Windows feed
-          download_asset "Claude-Agent-Teams-UI-Setup.exe"
-          WIN_SHA="$(sha512_base64 "Claude-Agent-Teams-UI-Setup.exe")"
-          WIN_SIZE="$(file_size "Claude-Agent-Teams-UI-Setup.exe")"
+          WIN_ASSET="Agent.Teams.AI.Setup.${VERSION}.exe"
+          download_asset "${WIN_ASSET}"
+          WIN_SHA="$(sha512_base64 "${WIN_ASSET}")"
+          WIN_SIZE="$(file_size "${WIN_ASSET}")"
           cat > latest.yml <<EOF
           version: ${VERSION}
           files:
-            - url: Claude-Agent-Teams-UI-Setup.exe
+            - url: ${WIN_ASSET}
               sha512: ${WIN_SHA}
               size: ${WIN_SIZE}
-          path: Claude-Agent-Teams-UI-Setup.exe
+          path: ${WIN_ASSET}
           sha512: ${WIN_SHA}
           releaseDate: '${RELEASE_DATE}'
           EOF
 
           # Canonical Linux feed
-          download_asset "Claude-Agent-Teams-UI.AppImage"
-          LINUX_SHA="$(sha512_base64 "Claude-Agent-Teams-UI.AppImage")"
-          LINUX_SIZE="$(file_size "Claude-Agent-Teams-UI.AppImage")"
+          LINUX_ASSET="Agent.Teams.AI-${VERSION}.AppImage"
+          download_asset "${LINUX_ASSET}"
+          LINUX_SHA="$(sha512_base64 "${LINUX_ASSET}")"
+          LINUX_SIZE="$(file_size "${LINUX_ASSET}")"
           cat > latest-linux.yml <<EOF
           version: ${VERSION}
           files:
-            - url: Claude-Agent-Teams-UI.AppImage
+            - url: ${LINUX_ASSET}
               sha512: ${LINUX_SHA}
               size: ${LINUX_SIZE}
-          path: Claude-Agent-Teams-UI.AppImage
+          path: ${LINUX_ASSET}
           sha512: ${LINUX_SHA}
           releaseDate: '${RELEASE_DATE}'
           EOF

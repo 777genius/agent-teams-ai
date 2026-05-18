@@ -36,6 +36,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       selectedModel: 'openai/gpt-5.4-mini',
       requireExecutionProbe: true,
     });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
   });
 
   it('uses runtime-only readiness for model-less preflight checks', async () => {
@@ -153,6 +154,225 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
     expect(result.members.alice?.diagnostics).toContain(
       'warning:member_reconcile: alice: sample reconcile diagnostic'
+    );
+  });
+
+  it('retries transient MCP readiness transport failures before prepare succeeds', async () => {
+    const firstReadiness = readiness({
+      state: 'mcp_unavailable',
+      launchAllowed: false,
+      diagnostics: [
+        'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
+      ],
+      missing: ['runtime_deliver_message'],
+    });
+    const finalReadiness = readiness({
+      state: 'ready',
+      launchAllowed: true,
+      diagnostics: ['OpenCode readiness recovered'],
+    });
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(firstReadiness)
+      .mockResolvedValueOnce(finalReadiness);
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    vi.useFakeTimers();
+    try {
+      const resultPromise = adapter.prepare(launchInput());
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(750);
+
+      await expect(resultPromise).resolves.toEqual({
+        ok: true,
+        providerId: 'opencode',
+        modelId: 'openai/gpt-5.4-mini',
+        diagnostics: ['OpenCode readiness recovered'],
+        warnings: [],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness('/repo')).toBe(finalReadiness);
+  });
+
+  it('retries unknown readiness failures only when diagnostics show transport failure', async () => {
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'unknown_error',
+          launchAllowed: false,
+          diagnostics: ['OpenCode readiness bridge failed: fetch failed'],
+        })
+      )
+      .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    vi.useFakeTimers();
+    try {
+      const resultPromise = adapter.prepare(launchInput());
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(750);
+
+      await expect(resultPromise).resolves.toMatchObject({
+        ok: true,
+        providerId: 'opencode',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns the final readiness failure after transient retries are exhausted', async () => {
+    const finalReadiness = readiness({
+      state: 'mcp_unavailable',
+      launchAllowed: false,
+      diagnostics: ['Final OpenCode /experimental/tool/ids unavailable - ECONNRESET'],
+      missing: ['final transport missing'],
+    });
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'mcp_unavailable',
+          launchAllowed: false,
+          diagnostics: ['First OpenCode /experimental/tool/ids unavailable - Unable to connect'],
+        })
+      )
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'unknown_error',
+          launchAllowed: false,
+          diagnostics: ['Second OpenCode readiness bridge failed: socket hang up'],
+        })
+      )
+      .mockResolvedValueOnce(finalReadiness);
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    vi.useFakeTimers();
+    try {
+      const resultPromise = adapter.prepare(launchInput());
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(750);
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(resultPromise).resolves.toEqual({
+        ok: false,
+        providerId: 'opencode',
+        reason: 'mcp_unavailable',
+        retryable: true,
+        diagnostics: [
+          'Final OpenCode /experimental/tool/ids unavailable - ECONNRESET',
+          'final transport missing',
+        ],
+        warnings: [],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(checkReadiness).toHaveBeenCalledTimes(3);
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness('/repo')).toBe(finalReadiness);
+  });
+
+  it.each([
+    {
+      state: 'not_authenticated' as const,
+      diagnostics: ['OpenCode provider returned 401 unauthorized'],
+    },
+    {
+      state: 'not_installed' as const,
+      diagnostics: ['OpenCode runtime binary is not installed'],
+    },
+    {
+      state: 'model_unavailable' as const,
+      diagnostics: ['Selected model is unavailable'],
+    },
+    {
+      state: 'mcp_unavailable' as const,
+      diagnostics: ['OpenCode /experimental/tool/ids unavailable - HTTP 403 forbidden'],
+    },
+    {
+      state: 'mcp_unavailable' as const,
+      diagnostics: ['OpenCode /experimental/tool/ids unavailable - HTTP 404 Not Found'],
+    },
+    {
+      state: 'mcp_unavailable' as const,
+      diagnostics: [
+        'OpenCode /experimental/tool/ids unavailable - fetch failed',
+        'App MCP tool missing: runtime_deliver_message',
+      ],
+    },
+    {
+      state: 'unknown_error' as const,
+      diagnostics: ['OpenCode bridge contract violation: schema mismatch'],
+    },
+  ])('does not retry $state readiness failures', async ({ state, diagnostics }) => {
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValue(readiness({ state, launchAllowed: false, diagnostics }));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    await expect(adapter.prepare(launchInput())).resolves.toMatchObject({
+      ok: false,
+      reason: state,
+    });
+    expect(checkReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('launch retries readiness before bridge launch and uses the fresh runtime snapshot', async () => {
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(
+        readiness({
+          state: 'mcp_unavailable',
+          launchAllowed: false,
+          diagnostics: ['OpenCode /experimental/tool/ids unavailable - Unable to connect'],
+        })
+      )
+      .mockResolvedValueOnce(readiness({ state: 'ready', launchAllowed: true }));
+    const getLastOpenCodeRuntimeSnapshot = vi.fn(() => runtimeSnapshot('cap-fresh'));
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(() => Promise.resolve(successfulOpenCodeLaunchData()));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+      getLastOpenCodeRuntimeSnapshot,
+      launchOpenCodeTeam,
+    });
+
+    vi.useFakeTimers();
+    try {
+      const resultPromise = adapter.launch(launchInput());
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(750);
+
+      await expect(resultPromise).resolves.toMatchObject({
+        teamLaunchState: 'clean_success',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(getLastOpenCodeRuntimeSnapshot).toHaveBeenCalledWith('/repo');
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedCapabilitySnapshotId: 'cap-fresh',
+      })
     );
   });
 

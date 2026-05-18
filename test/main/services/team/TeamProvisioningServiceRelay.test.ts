@@ -2274,6 +2274,56 @@ Messages:
     expect(rows[0].read).toBe(true);
   });
 
+  it('uses inferred task refs when relaying legacy OpenCode inbox rows without structured refs', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const taskRefs = [{ teamName, taskId: 'task-1', displayId: 'abcd1234' }];
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/mock/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'team-lead',
+        to: 'jack',
+        text: '**Comment on task #abcd1234**\n\nPlease continue.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-relay-infer-1',
+        summary: 'Comment on #abcd1234',
+      },
+    ]);
+    const inferSpy = vi
+      .spyOn(service as any, 'inferOpenCodeInboxMessageTaskRefs')
+      .mockResolvedValue(taskRefs);
+    const deliverSpy = vi
+      .spyOn(service, 'deliverOpenCodeMemberMessage')
+      .mockResolvedValue({ delivered: true, diagnostics: [] });
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+
+    expect(relay).toMatchObject({ relayed: 1, attempted: 1, delivered: 1, failed: 0 });
+    expect(inferSpy).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({ messageId: 'opencode-relay-infer-1' }),
+      expect.any(Function)
+    );
+    expect(deliverSpy).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({
+        messageId: 'opencode-relay-infer-1',
+        taskRefs,
+      })
+    );
+  });
+
   it('keeps OpenCode member inbox rows unread while runtime response is pending', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';

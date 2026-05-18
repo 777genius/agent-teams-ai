@@ -190,7 +190,6 @@ import {
   parseBootstrapRuntimeProofDetail,
   validateBootstrapRuntimeProofEnvelope,
 } from './bootstrap/BootstrapProofValidation';
-import { getCurrentAgentTeamsMcpHttpTransportEvidence } from './AgentTeamsMcpHttpServer';
 import {
   buildNativeAppManagedBootstrapSpecs,
   buildNativeAppManagedBootstrapSpecsWithDiagnostics,
@@ -245,6 +244,7 @@ import {
   openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
+import { inferOpenCodeTaskRefsFromInboxMessage } from './opencode/delivery/OpenCodeRuntimeDeliveryTaskRefInference';
 import { createRuntimeDeliveryJournalStore } from './opencode/delivery/RuntimeDeliveryJournal';
 import {
   type RuntimeDeliveryDestinationPort,
@@ -282,6 +282,7 @@ import {
 } from './opencode/store/RuntimeStoreManifest';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { buildActionModeProtocol } from './actionModeInstructions';
+import { getCurrentAgentTeamsMcpHttpTransportEvidence } from './AgentTeamsMcpHttpServer';
 import { isAgentTeamsToolUse } from './agentTeamsToolNames';
 import { atomicWriteAsync } from './atomicWrite';
 import { peekAutoResumeService } from './AutoResumeService';
@@ -23795,6 +23796,27 @@ export class TeamProvisioningService {
       : null;
   }
 
+  private async inferOpenCodeInboxMessageTaskRefs(
+    teamName: string,
+    message: InboxMessage,
+    readTasks?: () => Promise<readonly TeamTask[]>
+  ): Promise<TaskRef[]> {
+    if (Array.isArray(message.taskRefs) && message.taskRefs.length > 0) {
+      return message.taskRefs;
+    }
+
+    const tasks = await (readTasks?.() ?? new TeamTaskReader().getTasks(teamName).catch(() => []));
+    if (tasks.length === 0) {
+      return [];
+    }
+
+    return inferOpenCodeTaskRefsFromInboxMessage({
+      teamName,
+      message,
+      tasks,
+    });
+  }
+
   async relayOpenCodeMemberInboxMessages(
     teamName: string,
     memberName: string,
@@ -23936,6 +23958,12 @@ export class TeamProvisioningService {
         })
         .slice(0, 10);
 
+      let taskRefInferenceTasks: Promise<readonly TeamTask[]> | null = null;
+      const readTaskRefInferenceTasks = (): Promise<readonly TeamTask[]> => {
+        taskRefInferenceTasks ??= new TeamTaskReader().getTasks(teamName).catch(() => []);
+        return taskRefInferenceTasks;
+      };
+
       for (const message of unread) {
         let existingRecord = await promptLedger
           .getByInboxMessage({
@@ -24069,8 +24097,23 @@ export class TeamProvisioningService {
           options.deliveryMetadata?.actionMode ??
           message.actionMode ??
           null;
+        const existingTaskRefs = existingRecord?.taskRefs?.length
+          ? existingRecord.taskRefs
+          : undefined;
+        const metadataTaskRefs = options.deliveryMetadata?.taskRefs?.length
+          ? options.deliveryMetadata.taskRefs
+          : undefined;
+        const messageTaskRefs = message.taskRefs?.length ? message.taskRefs : undefined;
+        const inferredTaskRefs =
+          existingTaskRefs || metadataTaskRefs || messageTaskRefs
+            ? []
+            : await this.inferOpenCodeInboxMessageTaskRefs(
+                teamName,
+                message,
+                readTaskRefInferenceTasks
+              );
         const effectiveTaskRefs =
-          existingRecord?.taskRefs ?? options.deliveryMetadata?.taskRefs ?? message.taskRefs ?? [];
+          existingTaskRefs ?? metadataTaskRefs ?? messageTaskRefs ?? inferredTaskRefs;
         const effectiveSource = existingRecord?.source ?? options.source ?? 'watcher';
         result.attempted += 1;
         const attachmentPayloads = await this.resolveOpenCodeInboxAttachmentPayloads({
