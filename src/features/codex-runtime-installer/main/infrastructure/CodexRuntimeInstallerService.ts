@@ -1,8 +1,9 @@
 import { CODEX_RUNTIME_PROGRESS } from '@features/codex-runtime-installer/contracts';
 import { execCli } from '@main/utils/childProcess';
+import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
-import { getCachedShellEnv } from '@main/utils/shellEnv';
+import { getCachedShellEnv, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { createHash, randomUUID } from 'crypto';
@@ -27,6 +28,7 @@ const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 10_000;
+const PATH_SHELL_ENV_TIMEOUT_MS = 1_500;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -149,9 +151,16 @@ function splitPathEnv(pathValue: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function resolvePathCodexBinary(): string | null {
+function resolvePathCodexBinary(
+  additionalEnvSources: (NodeJS.ProcessEnv | null | undefined)[] = []
+): string | null {
   const shellEnv = getCachedShellEnv() ?? {};
-  const pathEntries = [...splitPathEnv(shellEnv.PATH), ...splitPathEnv(process.env.PATH)];
+  const pathEntries = [
+    ...additionalEnvSources.flatMap((env) => splitPathEnv(env?.PATH)),
+    ...splitPathEnv(shellEnv.PATH),
+    ...splitPathEnv(buildMergedCliPath(null)),
+    ...splitPathEnv(process.env.PATH),
+  ];
   const seen = new Set<string>();
   for (const entry of pathEntries) {
     const normalizedEntry = path.resolve(entry);
@@ -167,6 +176,21 @@ function resolvePathCodexBinary(): string | null {
     }
   }
   return null;
+}
+
+async function resolvePathCodexBinaryWithBestEffortEnv(
+  options: { shellEnvTimeoutMs?: number } = {}
+): Promise<string | null> {
+  const cachedCandidate = resolvePathCodexBinary();
+  if (cachedCandidate) {
+    return cachedCandidate;
+  }
+
+  const shellEnv = await resolveInteractiveShellEnvBestEffort({
+    timeoutMs: options.shellEnvTimeoutMs ?? PATH_SHELL_ENV_TIMEOUT_MS,
+    fallbackEnv: process.env,
+  });
+  return resolvePathCodexBinary([shellEnv]);
 }
 
 export function getCodexRuntimePlatformCandidates(
@@ -543,7 +567,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
   }
 
   private async getPathStatus(): Promise<CodexRuntimeStatus> {
-    const binaryPath = resolvePathCodexBinary();
+    const binaryPath = await resolvePathCodexBinaryWithBestEffortEnv();
     if (!binaryPath) {
       return { installed: false, source: 'missing', state: 'idle' };
     }

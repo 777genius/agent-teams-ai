@@ -51,7 +51,7 @@ interface AddMemberDialogProps {
   }[];
 }
 
-const DIALOG_WIDTH = 'w-[720px]';
+const DIALOG_WIDTH = 'max-w-[52rem]';
 
 function deriveExistingWorktreeDefault(
   existingMembers: AddMemberDialogProps['existingMembers']
@@ -179,7 +179,7 @@ export const AddMemberDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={`${DIALOG_WIDTH} max-w-[90vw]`}>
+      <DialogContent className={DIALOG_WIDTH}>
         <DialogHeader>
           <DialogTitle>Add Members</DialogTitle>
           <DialogDescription>Add new members to {teamName}</DialogDescription>

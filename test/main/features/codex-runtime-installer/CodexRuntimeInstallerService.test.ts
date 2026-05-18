@@ -1,17 +1,30 @@
 import { createHash } from 'crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { gzipSync } from 'zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execCliMock = vi.hoisted(() => vi.fn());
+const buildMergedCliPathMock = vi.hoisted(() => vi.fn(() => process.env.PATH ?? ''));
+const getCachedShellEnvMock = vi.hoisted(() => vi.fn<() => NodeJS.ProcessEnv | null>(() => null));
+const resolveInteractiveShellEnvBestEffortMock = vi.hoisted(() =>
+  vi.fn<(...args: unknown[]) => Promise<NodeJS.ProcessEnv>>(() => Promise.resolve({}))
+);
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: execCliMock,
 }));
+vi.mock('@main/utils/cliPathMerge', () => ({
+  buildMergedCliPath: buildMergedCliPathMock,
+}));
+vi.mock('@main/utils/shellEnv', () => ({
+  getCachedShellEnv: getCachedShellEnvMock,
+  resolveInteractiveShellEnvBestEffort: resolveInteractiveShellEnvBestEffortMock,
+}));
 
 import {
+  createCodexRuntimeInstallerFeature,
   extractCodexRuntimePackageFilesFromTarball,
   getCodexRuntimePlatformCandidates,
   resolveAppManagedCodexRuntimeBinaryPath,
@@ -21,6 +34,7 @@ import {
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 let tempRoot: string | null = null;
+const originalPath = process.env.PATH;
 
 function writeOctal(header: Buffer, offset: number, length: number, value: number): void {
   const encoded = value
@@ -65,10 +79,17 @@ describe('CodexRuntimeInstallerService resolver', () => {
     setAppDataBasePath(tempRoot);
     execCliMock.mockReset();
     execCliMock.mockResolvedValue({ stdout: 'codex-cli 1.0.0\n', stderr: '' });
+    buildMergedCliPathMock.mockReset();
+    buildMergedCliPathMock.mockImplementation(() => process.env.PATH ?? '');
+    getCachedShellEnvMock.mockReset();
+    getCachedShellEnvMock.mockReturnValue(null);
+    resolveInteractiveShellEnvBestEffortMock.mockReset();
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({});
   });
 
   afterEach(async () => {
     setAppDataBasePath(null);
+    process.env.PATH = originalPath;
     if (tempRoot) {
       await rm(tempRoot, { recursive: true, force: true });
       tempRoot = null;
@@ -167,6 +188,38 @@ describe('CodexRuntimeInstallerService resolver', () => {
     execCliMock.mockRejectedValueOnce(new Error('broken binary'));
 
     await expect(resolveVerifiedAppManagedCodexRuntimeBinaryPath()).resolves.toBeNull();
+  });
+
+  it('detects a PATH Codex binary from best-effort shell env when process PATH is cold', async () => {
+    const binDir = path.join(tempRoot!, 'shell-bin');
+    const executableName = process.platform === 'win32' ? 'codex.exe' : 'codex';
+    const binaryPath = path.join(binDir, executableName);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test uses isolated temp dir
+    await mkdir(binDir, { recursive: true });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test uses isolated temp dir
+    await writeFile(binaryPath, 'binary');
+    if (process.platform !== 'win32') {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test uses isolated temp dir
+      await chmod(binaryPath, 0o755);
+    }
+    process.env.PATH = '/usr/bin:/bin';
+    buildMergedCliPathMock.mockReturnValue('/usr/bin:/bin');
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: binDir });
+
+    const status = await createCodexRuntimeInstallerFeature().getStatus();
+
+    expect(status).toMatchObject({
+      installed: true,
+      binaryPath,
+      source: 'path',
+      state: 'ready',
+    });
+    expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fallbackEnv: process.env,
+        timeoutMs: 1_500,
+      })
+    );
   });
 });
 

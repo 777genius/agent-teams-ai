@@ -90,6 +90,7 @@ describe('CodexBinaryResolver', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     setPlatform(originalPlatform);
     process.env.PATH = originalPath;
     process.env.PATHEXT = originalPathExt;
@@ -173,6 +174,35 @@ describe('CodexBinaryResolver', () => {
     });
 
     await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
+  });
+
+  it('recovers a negative cache entry from PATH after the miss cache expires', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    setPlatform('darwin');
+    process.env.PATH = '/usr/local/bin';
+    const codexShim = path.posix.join('/usr/local/bin', 'codex');
+    buildMergedCliPathMock.mockReturnValue('/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin');
+
+    accessMock.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBeNull();
+
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === codexShim) {
+        return Promise.resolve();
+      }
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    });
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBeNull();
+
+    vi.advanceTimersByTime(30_001);
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(codexShim);
   });
 
   it('skips Windows PATH candidates that exist but cannot be launched', async () => {

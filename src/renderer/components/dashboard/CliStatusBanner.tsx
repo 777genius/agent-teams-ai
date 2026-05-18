@@ -27,8 +27,8 @@ import {
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
   getProviderDisconnectAction,
-  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
+  isOpenCodeCatalogHydrating,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
@@ -626,7 +626,6 @@ function shouldShowCodexInstallAction(
     !showSkeleton &&
     !provider.authenticated &&
     runtimeMissing &&
-    codexRuntimeStatus?.source !== 'path' &&
     !(codexRuntimeStatus?.source === 'app-managed' && codexRuntimeStatus.state !== 'failed')
   );
 }
@@ -1356,12 +1355,15 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   }, [installCli]);
 
   const handleRefresh = useCallback(() => {
-    void refreshCliStatusForCurrentMode({
-      multimodelEnabled,
-      bootstrapCliStatus,
-      fetchCliStatus,
-    });
-  }, [bootstrapCliStatus, fetchCliStatus, multimodelEnabled]);
+    void (async () => {
+      await invalidateCliStatus();
+      await refreshCliStatusForCurrentMode({
+        multimodelEnabled,
+        bootstrapCliStatus,
+        fetchCliStatus,
+      });
+    })();
+  }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
     setProvidersCollapsed((current) => {
@@ -1438,9 +1440,12 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
   const handleProviderRefresh = useCallback(
     (providerId: CliProviderId) => {
-      void fetchCliProviderStatus(providerId);
+      void (async () => {
+        await invalidateCliStatus();
+        await fetchCliProviderStatus(providerId);
+      })();
     },
-    [fetchCliProviderStatus]
+    [fetchCliProviderStatus, invalidateCliStatus]
   );
 
   const handleProviderBackendChange = useCallback(
@@ -1524,8 +1529,11 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           }
           providerStatusLoading={cliProviderStatusLoading}
           disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
+          codexRuntimeStatus={codexRuntimeStatus}
+          codexRuntimeStatusLoading={codexRuntimeStatusLoading}
+          onInstallCodexRuntime={() => installCodexRuntime()}
           onSelectBackend={handleProviderBackendChange}
-          onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
+          onRefreshProvider={handleProviderRefresh}
           onRequestLogin={(providerId) => setProviderTerminal({ providerId, action: 'login' })}
         />
         {providerTerminal && renderCliStatus.binaryPath && (

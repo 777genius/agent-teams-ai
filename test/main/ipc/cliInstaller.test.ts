@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const claudeBinaryResolverClearCacheMock = vi.hoisted(() => vi.fn());
+const codexBinaryResolverClearCacheMock = vi.hoisted(() => vi.fn());
+
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -9,6 +12,18 @@ vi.mock('@shared/utils/logger', () => ({
   }),
 }));
 
+vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
+  ClaudeBinaryResolver: {
+    clearCache: claudeBinaryResolverClearCacheMock,
+  },
+}));
+
+vi.mock('@main/services/infrastructure/codexAppServer', () => ({
+  CodexBinaryResolver: {
+    clearCache: codexBinaryResolverClearCacheMock,
+  },
+}));
+
 import {
   initializeCliInstallerHandlers,
   registerCliInstallerHandlers,
@@ -16,6 +31,7 @@ import {
 import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
   CLI_INSTALLER_GET_STATUS,
+  CLI_INSTALLER_INVALIDATE_STATUS,
 } from '@preload/constants/ipcChannels';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
@@ -24,6 +40,20 @@ import type { CliInstallationStatus, CliProviderId, CliProviderStatus, IpcResult
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+  return { promise, resolve, reject };
+}
 
 function createMockIpcMain(): IpcMain & {
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -84,6 +114,7 @@ function provider(overrides: Partial<CliProviderStatus> & { providerId: CliProvi
 }
 
 function status(providers: CliProviderStatus[]): CliInstallationStatus {
+  const authenticatedProvider = providers.find((entry) => entry.authenticated) ?? null;
   return {
     flavor: 'agent_teams_orchestrator',
     displayName: 'Multimodel runtime',
@@ -96,9 +127,9 @@ function status(providers: CliProviderStatus[]): CliInstallationStatus {
     launchError: null,
     latestVersion: null,
     updateAvailable: false,
-    authLoggedIn: false,
+    authLoggedIn: authenticatedProvider !== null,
     authStatusChecking: false,
-    authMethod: null,
+    authMethod: authenticatedProvider?.authMethod ?? null,
     providers,
   };
 }
@@ -114,7 +145,7 @@ describe('cliInstaller IPC handlers', () => {
     invalidateStatusCache: ReturnType<typeof vi.fn>;
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     ipcMain = createMockIpcMain();
     service = {
@@ -127,6 +158,8 @@ describe('cliInstaller IPC handlers', () => {
     };
     initializeCliInstallerHandlers(service as unknown as CliInstallerService);
     registerCliInstallerHandlers(ipcMain);
+    await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
+    vi.clearAllMocks();
   });
 
   it('does not let explicit hidden Gemini refresh poison cached frontend auth status', async () => {
@@ -171,5 +204,128 @@ describe('cliInstaller IPC handlers', () => {
     ]);
     expect(cached.data?.authLoggedIn).toBe(false);
     expect(cached.data?.authMethod).toBeNull();
+  });
+
+  it('clears Claude and Codex binary resolver caches when status is invalidated', async () => {
+    const result = (await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS)) as IpcResult<void>;
+
+    expect(result.success).toBe(true);
+    expect(claudeBinaryResolverClearCacheMock).toHaveBeenCalledTimes(1);
+    expect(codexBinaryResolverClearCacheMock).toHaveBeenCalledTimes(1);
+    expect(service.invalidateStatusCache).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reuse or recache a status request that was in flight before invalidation', async () => {
+    const staleStatus = status([
+      provider({
+        providerId: 'codex',
+        verificationState: 'error',
+        statusMessage: 'Codex CLI not found',
+      }),
+    ]);
+    const freshStatus = status([
+      provider({
+        providerId: 'codex',
+        authenticated: true,
+        authMethod: 'chatgpt',
+        verificationState: 'verified',
+        statusMessage: 'ChatGPT account ready',
+      }),
+    ]);
+    const staleRequest = deferred<CliInstallationStatus>();
+    const freshRequest = deferred<CliInstallationStatus>();
+    service.getStatus
+      .mockReturnValueOnce(staleRequest.promise)
+      .mockReturnValueOnce(freshRequest.promise);
+
+    const firstInvoke = ipcMain.invoke(CLI_INSTALLER_GET_STATUS) as Promise<
+      IpcResult<CliInstallationStatus>
+    >;
+    await vi.waitFor(() => expect(service.getStatus).toHaveBeenCalledTimes(1));
+
+    await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
+    const secondInvoke = ipcMain.invoke(CLI_INSTALLER_GET_STATUS) as Promise<
+      IpcResult<CliInstallationStatus>
+    >;
+    await vi.waitFor(() => expect(service.getStatus).toHaveBeenCalledTimes(2));
+
+    staleRequest.resolve(staleStatus);
+    freshRequest.resolve(freshStatus);
+
+    await expect(firstInvoke).resolves.toMatchObject({
+      success: true,
+      data: { authLoggedIn: false },
+    });
+    await expect(secondInvoke).resolves.toMatchObject({
+      success: true,
+      data: { authLoggedIn: true, authMethod: 'chatgpt' },
+    });
+
+    const cached = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+
+    expect(service.getStatus).toHaveBeenCalledTimes(2);
+    expect(cached.success).toBe(true);
+    expect(cached.data?.authLoggedIn).toBe(true);
+    expect(cached.data?.providers[0]?.statusMessage).toBe('ChatGPT account ready');
+  });
+
+  it('does not let a stale in-flight provider refresh patch the cache after invalidation', async () => {
+    const staleProviderRequest = deferred<CliProviderStatus | null>();
+    service.getStatus
+      .mockResolvedValueOnce(
+        status([
+          provider({ providerId: 'anthropic' }),
+          provider({ providerId: 'codex', statusMessage: 'Checking...' }),
+        ])
+      )
+      .mockResolvedValueOnce(
+        status([
+          provider({ providerId: 'anthropic' }),
+          provider({
+            providerId: 'codex',
+            authenticated: true,
+            authMethod: 'chatgpt',
+            verificationState: 'verified',
+            statusMessage: 'ChatGPT account ready',
+          }),
+        ])
+      );
+    service.getProviderStatus.mockReturnValueOnce(staleProviderRequest.promise);
+
+    const initial = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    expect(initial.success).toBe(true);
+    expect(initial.data?.authLoggedIn).toBe(false);
+
+    const staleProviderInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex'
+    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
+
+    await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
+    const fresh = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+    expect(fresh.success).toBe(true);
+    expect(fresh.data?.authLoggedIn).toBe(true);
+
+    staleProviderRequest.resolve(
+      provider({
+        providerId: 'codex',
+        verificationState: 'error',
+        statusMessage: 'Codex CLI not found',
+      })
+    );
+    await expect(staleProviderInvoke).resolves.toMatchObject({
+      success: true,
+      data: { statusMessage: 'Codex CLI not found' },
+    });
+
+    const cached = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+
+    expect(service.getStatus).toHaveBeenCalledTimes(2);
+    expect(cached.success).toBe(true);
+    expect(cached.data?.authLoggedIn).toBe(true);
+    expect(cached.data?.providers.find((entry) => entry.providerId === 'codex')?.statusMessage).toBe(
+      'ChatGPT account ready'
+    );
   });
 });

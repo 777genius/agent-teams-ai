@@ -27,6 +27,9 @@ interface StoreState {
   openCodeRuntimeStatus: Record<string, unknown> | null;
   openCodeRuntimeStatusLoading: boolean;
   openCodeRuntimeError: string | null;
+  codexRuntimeStatus: Record<string, unknown> | null;
+  codexRuntimeStatusLoading: boolean;
+  codexRuntimeError: string | null;
   bootstrapCliStatus: ReturnType<typeof vi.fn>;
   fetchCliStatus: ReturnType<typeof vi.fn>;
   fetchCliProviderStatus: ReturnType<typeof vi.fn>;
@@ -35,6 +38,9 @@ interface StoreState {
   fetchOpenCodeRuntimeStatus: ReturnType<typeof vi.fn>;
   installOpenCodeRuntime: ReturnType<typeof vi.fn>;
   invalidateOpenCodeRuntimeStatus: ReturnType<typeof vi.fn>;
+  fetchCodexRuntimeStatus: ReturnType<typeof vi.fn>;
+  installCodexRuntime: ReturnType<typeof vi.fn>;
+  invalidateCodexRuntimeStatus: ReturnType<typeof vi.fn>;
   appConfig: {
     general: {
       multimodelEnabled: boolean;
@@ -328,6 +334,9 @@ describe('CLI status visibility during completed install state', () => {
     storeState.openCodeRuntimeStatus = null;
     storeState.openCodeRuntimeStatusLoading = false;
     storeState.openCodeRuntimeError = null;
+    storeState.codexRuntimeStatus = null;
+    storeState.codexRuntimeStatusLoading = false;
+    storeState.codexRuntimeError = null;
     storeState.bootstrapCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliProviderStatus = vi.fn().mockResolvedValue(undefined);
@@ -336,6 +345,9 @@ describe('CLI status visibility during completed install state', () => {
     storeState.fetchOpenCodeRuntimeStatus = vi.fn().mockResolvedValue(undefined);
     storeState.installOpenCodeRuntime = vi.fn().mockResolvedValue(undefined);
     storeState.invalidateOpenCodeRuntimeStatus = vi.fn().mockResolvedValue(undefined);
+    storeState.fetchCodexRuntimeStatus = vi.fn().mockResolvedValue(undefined);
+    storeState.installCodexRuntime = vi.fn().mockResolvedValue(undefined);
+    storeState.invalidateCodexRuntimeStatus = vi.fn().mockResolvedValue(undefined);
     storeState.appConfig = {
       general: {
         multimodelEnabled: true,
@@ -490,6 +502,69 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(storeState.installOpenCodeRuntime).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows a Codex install action on the dashboard when the Codex native runtime is missing', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.125.0',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      providers: [
+        createCodexNativeRolloutProvider({
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          state: 'runtime-missing',
+          available: false,
+          selectable: false,
+          statusMessage:
+            'Codex CLI not found. Install Codex to use native account management.',
+          detailMessage: 'Codex native runtime is missing.',
+          models: [],
+        }),
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Codex');
+    expect(host.textContent).toContain('Install');
+
+    const installButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Install'
+    );
+    expect(installButton).not.toBeUndefined();
+
+    await act(async () => {
+      installButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

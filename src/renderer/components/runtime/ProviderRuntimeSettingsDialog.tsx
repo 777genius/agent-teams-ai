@@ -45,7 +45,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useStore } from '@renderer/store';
-import { AlertTriangle, Key, Link2, Loader2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Download, Key, Link2, Loader2, Trash2 } from 'lucide-react';
 
 import {
   formatProviderAuthMethodLabelForProvider,
@@ -60,6 +60,7 @@ import {
   ProviderRuntimeBackendSelector,
 } from './ProviderRuntimeBackendSelector';
 
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@shared/types';
 import type { ApiKeyEntry } from '@shared/types/extensions';
 
@@ -80,6 +81,9 @@ interface Props {
   readonly projectPath?: string | null;
   readonly providerStatusLoading?: Partial<Record<CliProviderId, boolean>>;
   readonly disabled?: boolean;
+  readonly codexRuntimeStatus?: CodexRuntimeStatus | null;
+  readonly codexRuntimeStatusLoading?: boolean;
+  readonly onInstallCodexRuntime?: () => Promise<void> | void;
   readonly onSelectBackend: (providerId: CliProviderId, backendId: string) => Promise<void> | void;
   readonly onRefreshProvider?: (providerId: CliProviderId) => Promise<void> | void;
   readonly onRequestLogin?: (providerId: CliProviderId) => void;
@@ -123,6 +127,33 @@ const API_KEY_PROVIDER_CONFIG: Record<
 
 function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProviderId {
   return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
+}
+
+function isCodexRuntimeInstalling(
+  status: CodexRuntimeStatus | null | undefined,
+  loading: boolean
+): boolean {
+  return (
+    loading ||
+    status?.state === 'checking' ||
+    status?.state === 'downloading' ||
+    status?.state === 'installing'
+  );
+}
+
+function getCodexRuntimeInstallLabel(status: CodexRuntimeStatus | null | undefined): string {
+  switch (status?.state) {
+    case 'checking':
+      return 'Checking';
+    case 'downloading':
+      return 'Downloading';
+    case 'installing':
+      return 'Installing';
+    case 'failed':
+      return 'Retry install';
+    default:
+      return 'Install Codex CLI';
+  }
 }
 
 function findPreferredApiKeyEntry(apiKeys: ApiKeyEntry[], envVarName: string): ApiKeyEntry | null {
@@ -565,6 +596,9 @@ export const ProviderRuntimeSettingsDialog = ({
   projectPath = null,
   providerStatusLoading = {},
   disabled = false,
+  codexRuntimeStatus = null,
+  codexRuntimeStatusLoading = false,
+  onInstallCodexRuntime,
   onSelectBackend,
   onRefreshProvider,
   onRequestLogin,
@@ -765,6 +799,15 @@ export const ProviderRuntimeSettingsDialog = ({
   const connectionBusy = disabled || connectionLoading;
   const codexActionBusy =
     disabled || selectedProviderLoading || connectionSaving || codexAccount.loading;
+  const codexRuntimeInstallBusy = isCodexRuntimeInstalling(
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading
+  );
+  const showCodexRuntimeInstallAction =
+    selectedProvider?.providerId === 'codex' &&
+    typeof onInstallCodexRuntime === 'function' &&
+    codexConnection?.appServerState === 'runtime-missing' &&
+    !(codexRuntimeStatus?.source === 'app-managed' && codexRuntimeStatus.state !== 'failed');
   const runtimeBusy = disabled || selectedProviderLoading || runtimeSaving;
   const anthropicFastModeCapability =
     selectedProvider?.providerId === 'anthropic'
@@ -1397,6 +1440,26 @@ export const ProviderRuntimeSettingsDialog = ({
                         >
                           Refresh
                         </Button>
+                        {showCodexRuntimeInstallAction ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={codexActionBusy || codexRuntimeInstallBusy}
+                            title={
+                              codexRuntimeStatus?.error ??
+                              codexRuntimeStatus?.progress?.detail ??
+                              'Install Codex CLI into app data'
+                            }
+                            onClick={() => void onInstallCodexRuntime?.()}
+                          >
+                            {codexRuntimeInstallBusy ? (
+                              <Loader2 className="mr-1 size-3.5 animate-spin" />
+                            ) : (
+                              <Download className="mr-1 size-3.5" />
+                            )}
+                            {getCodexRuntimeInstallLabel(codexRuntimeStatus)}
+                          </Button>
+                        ) : null}
                         {codexLoginPending ? (
                           <>
                             <CodexLoginLinkCopyButton

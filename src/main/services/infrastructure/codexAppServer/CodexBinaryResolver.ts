@@ -134,21 +134,25 @@ export class CodexBinaryResolver {
           cacheVerifiedAt = Date.now();
           return verifiedAppManagedBinaryPath;
         }
-        return null;
-      }
+        if (Date.now() - cacheVerifiedAt <= CACHE_VERIFY_TTL_MS) {
+          return null;
+        }
+        cachedBinaryPath = undefined;
+        cacheVerifiedAt = 0;
+      } else {
+        if (Date.now() - cacheVerifiedAt <= CACHE_VERIFY_TTL_MS) {
+          return cachedBinaryPath;
+        }
 
-      if (Date.now() - cacheVerifiedAt <= CACHE_VERIFY_TTL_MS) {
-        return cachedBinaryPath;
-      }
+        const verified = await verifyBinary(cachedBinaryPath);
+        if (verified) {
+          cacheVerifiedAt = Date.now();
+          return verified;
+        }
 
-      const verified = await verifyBinary(cachedBinaryPath);
-      if (verified) {
-        cacheVerifiedAt = Date.now();
-        return verified;
+        cachedBinaryPath = undefined;
+        cacheVerifiedAt = 0;
       }
-
-      cachedBinaryPath = undefined;
-      cacheVerifiedAt = 0;
     }
 
     if (!resolveInFlight) {

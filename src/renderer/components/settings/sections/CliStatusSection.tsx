@@ -21,8 +21,8 @@ import {
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
   getProviderDisconnectAction,
-  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
+  isOpenCodeCatalogHydrating,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
@@ -201,9 +201,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     downloadTotal,
     installerError,
     completedVersion,
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading,
     bootstrapCliStatus,
     fetchCliStatus,
     fetchCliProviderStatus,
+    installCodexRuntime,
     installCli,
     isBusy,
     cliStatusLoading,
@@ -286,12 +289,25 @@ export const CliStatusSection = (): React.JSX.Element | null => {
   }, [installCli]);
 
   const handleRefresh = useCallback(() => {
-    void refreshCliStatusForCurrentMode({
-      multimodelEnabled,
-      bootstrapCliStatus,
-      fetchCliStatus,
-    });
-  }, [bootstrapCliStatus, fetchCliStatus, multimodelEnabled]);
+    void (async () => {
+      await invalidateCliStatus();
+      await refreshCliStatusForCurrentMode({
+        multimodelEnabled,
+        bootstrapCliStatus,
+        fetchCliStatus,
+      });
+    })();
+  }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
+
+  const handleProviderRefresh = useCallback(
+    (providerId: CliProviderId) => {
+      void (async () => {
+        await invalidateCliStatus();
+        await fetchCliProviderStatus(providerId);
+      })();
+    },
+    [fetchCliProviderStatus, invalidateCliStatus]
+  );
 
   const handleProviderLogout = useCallback(
     async (providerId: CliProviderId) => {
@@ -673,8 +689,11 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                   initialProviderId={manageProviderId}
                   providerStatusLoading={cliProviderStatusLoading}
                   disabled={!effectiveCliStatus.binaryPath || isBusy || cliStatusLoading}
+                  codexRuntimeStatus={codexRuntimeStatus}
+                  codexRuntimeStatusLoading={codexRuntimeStatusLoading}
+                  onInstallCodexRuntime={() => installCodexRuntime()}
                   onSelectBackend={handleRuntimeBackendChange}
-                  onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
+                  onRefreshProvider={handleProviderRefresh}
                   onRequestLogin={(providerId) =>
                     setProviderTerminal({ providerId, action: 'login' })
                   }
