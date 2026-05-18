@@ -38,25 +38,39 @@ const rootGuide: DefaultTheme.SidebarItem[] = [
   {
     text: "Start",
     items: [
-      { text: "Quickstart", link: "/guide/quickstart" },
       { text: "Installation", link: "/guide/installation" },
-      { text: "Create a team", link: "/guide/create-team" }
+      { text: "Quickstart", link: "/guide/quickstart" },
+      { text: "Runtime setup", link: "/guide/runtime-setup" }
     ]
   },
   {
-    text: "Workflows",
+    text: "Guide",
     items: [
-      { text: "Runtime setup", link: "/guide/runtime-setup" },
+      { text: "Create a team", link: "/guide/create-team" },
       { text: "Agent workflow", link: "/guide/agent-workflow" },
       { text: "Code review", link: "/guide/code-review" },
+      { text: "MCP integration", link: "/guide/mcp-integration" },
+      { text: "Team brief examples", link: "/guide/team-brief-examples" }
+    ]
+  },
+  {
+    text: "Operations",
+    items: [
+      { text: "Git and worktree strategy", link: "/guide/git-worktree-strategy" },
       { text: "Troubleshooting", link: "/guide/troubleshooting" }
     ]
+  },
+  {
+    text: "Developers",
+    items: [{ text: "Developer hub", link: "/developers/" }]
   },
   {
     text: "Reference",
     items: [
       { text: "Concepts", link: "/reference/concepts" },
       { text: "Providers and runtimes", link: "/reference/providers-runtimes" },
+      { text: "Contributor architecture", link: "/reference/contributor-architecture" },
+      { text: "Release notes", link: "/reference/release-notes" },
       { text: "Privacy and local data", link: "/reference/privacy-local-data" },
       { text: "FAQ", link: "/reference/faq" }
     ]
@@ -67,25 +81,39 @@ const ruGuide: DefaultTheme.SidebarItem[] = [
   {
     text: "Старт",
     items: [
-      { text: "Быстрый старт", link: "/ru/guide/quickstart" },
       { text: "Установка", link: "/ru/guide/installation" },
-      { text: "Создание команды", link: "/ru/guide/create-team" }
+      { text: "Быстрый старт", link: "/ru/guide/quickstart" },
+      { text: "Настройка рантайма", link: "/ru/guide/runtime-setup" }
     ]
   },
   {
-    text: "Рабочие процессы",
+    text: "Руководство",
     items: [
-      { text: "Настройка рантайма", link: "/ru/guide/runtime-setup" },
+      { text: "Создание команды", link: "/ru/guide/create-team" },
       { text: "Работа агентов", link: "/ru/guide/agent-workflow" },
       { text: "Код-ревью", link: "/ru/guide/code-review" },
+      { text: "Интеграция MCP", link: "/ru/guide/mcp-integration" },
+      { text: "Примеры брифов", link: "/ru/guide/team-brief-examples" }
+    ]
+  },
+  {
+    text: "Операции",
+    items: [
+      { text: "Стратегия Git и worktree", link: "/ru/guide/git-worktree-strategy" },
       { text: "Диагностика", link: "/ru/guide/troubleshooting" }
     ]
+  },
+  {
+    text: "Разработчикам",
+    items: [{ text: "Хаб разработчика", link: "/ru/developers/" }]
   },
   {
     text: "Справочник",
     items: [
       { text: "Концепции", link: "/ru/reference/concepts" },
       { text: "Провайдеры и рантаймы", link: "/ru/reference/providers-runtimes" },
+      { text: "Архитектура для контрибьюторов", link: "/ru/reference/contributor-architecture" },
+      { text: "Релизы", link: "/ru/reference/release-notes" },
       { text: "Приватность и локальные данные", link: "/ru/reference/privacy-local-data" },
       { text: "FAQ", link: "/ru/reference/faq" }
     ]
@@ -94,6 +122,7 @@ const ruGuide: DefaultTheme.SidebarItem[] = [
 
 const rootNav: DefaultTheme.NavItem[] = [
   { text: "Guide", link: "/guide/quickstart", activeMatch: "^/guide/(?!troubleshooting(?:/|$))" },
+  { text: "Developers", link: "/developers/", activeMatch: "^/developers/" },
   { text: "Reference", link: "/reference/concepts", activeMatch: "^/reference/" },
   {
     text: "Troubleshooting",
@@ -109,6 +138,7 @@ const ruNav: DefaultTheme.NavItem[] = [
     link: "/ru/guide/quickstart",
     activeMatch: "^/ru/guide/(?!troubleshooting(?:/|$))"
   },
+  { text: "Разработчикам", link: "/ru/developers/", activeMatch: "^/ru/developers/" },
   { text: "Справочник", link: "/ru/reference/concepts", activeMatch: "^/ru/reference/" },
   {
     text: "Диагностика",
@@ -124,6 +154,7 @@ export default defineConfig({
   description: SITE_DESCRIPTION,
   base,
   cleanUrls: true,
+  ignoreDeadLinks: [/\/download/],
   lastUpdated: true,
   sitemap: {
     hostname: docsUrl,

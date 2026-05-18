@@ -14,6 +14,12 @@ import type { MemberWorkSyncAgendaSourceResult, MemberWorkSyncUseCaseDeps } from
 export interface MemberWorkSyncReconcileContext {
   reconciledBy?: 'request' | 'queue';
   triggerReasons?: string[];
+  recovery?: {
+    kind: 'proof_missing';
+    intentKey: string;
+    originalMessageId: string;
+    taskIds?: string[];
+  };
 }
 
 export function finalizeMemberWorkSyncAgenda(
@@ -106,6 +112,16 @@ export class MemberWorkSyncReconciler {
           : {}),
         ...(context.triggerReasons?.length
           ? { triggerReasons: [...new Set(context.triggerReasons)].sort() }
+          : {}),
+        ...(context.recovery
+          ? {
+              recovery: {
+                kind: context.recovery.kind,
+                intentKey: context.recovery.intentKey,
+                originalMessageId: context.recovery.originalMessageId,
+                taskIds: [...new Set(context.recovery.taskIds ?? [])].sort(),
+              },
+            }
           : {}),
       },
       evaluatedAt: nowIso,

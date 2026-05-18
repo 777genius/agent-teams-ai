@@ -55,7 +55,7 @@ lang: ru-RU
 Пример request-changes comment:
 
 ```text
-Please keep the copy improvements, but revert the unrelated runtime wording in the provider table. Add a docs build result before resubmitting.
+Please keep the copy improvements, but revert the unrelated runtime wording in the provider table. Add the `pnpm --dir landing docs:build` result before resubmitting.
 ```
 
 ## Состояния ревью
@@ -86,6 +86,8 @@ Team lead — ревьюер по умолчанию. Вы можете наст
 - **Git и worktree behavior** — проверяйте имена веток, коммиты и push
 - **Parsing и task lifecycle logic** — изменения в task references, chunking или filtering могут сломать доставку сообщений
 - **Persistence и code review flows** — изменения в хранении задач или review state должны оставаться консистентными через IPC layers
+
+Canonical feature layout и hard guardrail links смотрите в [Архитектуре для контрибьюторов](/ru/reference/contributor-architecture).
 
 ## Верификация
 

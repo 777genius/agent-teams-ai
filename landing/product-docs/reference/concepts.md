@@ -1,5 +1,5 @@
 ---
-title: Concepts
+title: Concepts – Agent Teams Docs
 description: Core vocabulary for Agent Teams — teams, leads, teammates, tasks, kanban, inboxes, runtimes, and review.
 ---
 
@@ -45,7 +45,7 @@ Messages are durable local records. Delivery still depends on the selected runti
 
 An agent block is hidden, agent-only instruction text wrapped with `<info_for_agent>...</info_for_agent>`. The UI strips these blocks from normal human-facing display, but agents and runtime delivery can use them for coordination details.
 
-The current canonical marker is `info_for_agent`; older documents may still contain legacy agent block formats.
+The current canonical marker is `info_for_agent`. Older documents may use fenced code blocks with an `info_for_agent` marker, or XML-style `<agent_block>` tags — these are legacy patterns and should be migrated to `info_for_agent` when encountered. (The original tag name was `agent-block`; the underscore form `<agent_block>` is used in VitePress source to avoid HTML parsing.)
 
 ## Context Phase
 

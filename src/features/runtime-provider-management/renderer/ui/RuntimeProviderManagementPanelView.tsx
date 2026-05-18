@@ -19,7 +19,6 @@ import {
 } from '@renderer/utils/openCodeModelRecommendations';
 import {
   AlertTriangle,
-  ArrowLeft,
   CheckCircle2,
   KeyRound,
   Loader2,
@@ -45,7 +44,6 @@ import type {
 import type {
   RuntimeProviderConnectionDto,
   RuntimeProviderDirectoryEntryDto,
-  RuntimeProviderDirectoryFilterDto,
   RuntimeProviderModelDto,
   RuntimeProviderModelTestResultDto,
   RuntimeProviderSetupPromptDto,
@@ -76,15 +74,6 @@ interface ProviderRowProps {
   readonly disabled: boolean;
   readonly actions: RuntimeProviderManagementActions;
 }
-
-const DIRECTORY_FILTERS: { id: RuntimeProviderDirectoryFilterDto; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'connectable', label: 'Connectable' },
-  { id: 'connected', label: 'Connected' },
-  { id: 'configured', label: 'Configured' },
-  { id: 'manual', label: 'Manual setup' },
-  { id: 'has-models', label: 'Has models' },
-];
 
 function getDirectoryAction(
   provider: RuntimeProviderDirectoryEntryDto,
@@ -118,6 +107,10 @@ function getDirectoryModelsLabel(provider: RuntimeProviderDirectoryEntryDto): st
     return 'models not reported';
   }
   return `${provider.modelCount} model${provider.modelCount === 1 ? '' : 's'}`;
+}
+
+function formatOpenCodeProviderCount(count: number): string {
+  return `${count} OpenCode provider${count === 1 ? '' : 's'}`;
 }
 
 function directoryEntryMatchesQuery(
@@ -223,12 +216,25 @@ function setupPromptVisible(
 
 function setupFormCanSubmit(state: RuntimeProviderManagementState, providerId: string): boolean {
   const form = state.setupForm?.providerId === providerId ? state.setupForm : null;
-  if (!form?.supported || !form.secret || !state.apiKeyValue.trim()) {
+  if (!form?.supported) {
+    return false;
+  }
+  if (form.secret?.required && !state.apiKeyValue.trim()) {
     return false;
   }
   return form.prompts
     .filter((prompt) => setupPromptVisible(prompt, state.setupMetadata))
     .every((prompt) => !prompt.required || Boolean(state.setupMetadata[prompt.key]?.trim()));
+}
+
+function eventStartedInInteractiveChild(
+  currentTarget: HTMLElement,
+  target: EventTarget | null
+): boolean {
+  if (!(target instanceof HTMLElement) || target === currentTarget) {
+    return false;
+  }
+  return Boolean(target.closest('button, input, select, textarea, a, [role="button"], [tabindex]'));
 }
 
 function ProviderSetupFormPanel({
@@ -637,31 +643,28 @@ function ProviderActions({
   const forget = getProviderAction(provider, 'forget');
   const configure = getProviderAction(provider, 'configure');
 
-  if (connect) {
-    return (
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={disabled || busy || !connect.enabled}
-        title={connect.disabledReason ?? undefined}
-        onClick={(event) => {
-          event.stopPropagation();
-          onStartConnect();
-        }}
-      >
-        {busy ? (
-          <Loader2 className="mr-1 size-3.5 animate-spin" />
-        ) : (
-          <KeyRound className="mr-1 size-3.5" />
-        )}
-        {connect.label}
-      </Button>
-    );
-  }
-
   return (
     <div className="flex flex-wrap justify-end gap-1.5">
+      {connect ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={disabled || busy || !connect.enabled}
+          title={connect.disabledReason ?? undefined}
+          onClick={(event) => {
+            event.stopPropagation();
+            onStartConnect();
+          }}
+        >
+          {busy ? (
+            <Loader2 className="mr-1 size-3.5 animate-spin" />
+          ) : (
+            <KeyRound className="mr-1 size-3.5" />
+          )}
+          {connect.label}
+        </Button>
+      ) : null}
       {forget ? (
         <Button
           type="button"
@@ -721,11 +724,23 @@ function ProviderRow({
     }
     actions.selectProvider(provider.providerId);
   };
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    if (eventStartedInInteractiveChild(event.currentTarget, event.target)) {
+      return;
+    }
+    event.preventDefault();
+    handleActivate();
+  };
 
   return (
     <div
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : -1}
       data-testid={`runtime-provider-row-${provider.providerId}`}
-      className={`rounded-lg border p-3 transition-all ${
+      className={`rounded-lg border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 ${
         clickable
           ? 'cursor-pointer hover:border-sky-300/60 hover:bg-sky-400/[0.08] hover:shadow-[0_0_0_1px_rgba(125,211,252,0.18)]'
           : 'cursor-default'
@@ -735,6 +750,7 @@ function ProviderRow({
           : 'border-[var(--color-border-subtle)] bg-white/[0.02]'
       }`}
       onClick={handleActivate}
+      onKeyDown={handleKeyDown}
     >
       <div className="grid w-full grid-cols-[1fr_auto] items-start gap-3">
         <div className="min-w-0 text-left">
@@ -846,7 +862,7 @@ function DirectoryProviderRow({
 
   return (
     <div
-      role="button"
+      role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : -1}
       data-testid={`runtime-provider-directory-row-${provider.providerId}`}
       className={`rounded-lg border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 ${
@@ -861,6 +877,9 @@ function DirectoryProviderRow({
       onClick={handleActivate}
       onKeyDown={(event) => {
         if (!clickable || (event.key !== 'Enter' && event.key !== ' ')) {
+          return;
+        }
+        if (eventStartedInInteractiveChild(event.currentTarget, event.target)) {
           return;
         }
         event.preventDefault();
@@ -940,7 +959,7 @@ function DirectoryProviderRow({
               {forget.label}
             </Button>
           ) : null}
-          {!connect && configure ? (
+          {configure ? (
             <Button
               type="button"
               size="sm"
@@ -972,133 +991,6 @@ function DirectoryProviderRow({
           provider={directoryEntryToProviderConnection(provider)}
           disabled={disabled || busy}
         />
-      ) : null}
-    </div>
-  );
-}
-
-function ProviderDirectoryPanel({
-  state,
-  actions,
-  disabled,
-}: {
-  readonly state: RuntimeProviderManagementState;
-  readonly actions: RuntimeProviderManagementActions;
-  readonly disabled: boolean;
-}): JSX.Element {
-  return (
-    <div
-      className="rounded-lg border p-3"
-      style={{
-        borderColor: 'var(--color-border-subtle)',
-        backgroundColor: 'rgba(255,255,255,0.018)',
-      }}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button type="button" size="sm" variant="ghost" onClick={actions.closeDirectory}>
-          <ArrowLeft className="mr-1 size-3.5" />
-          Providers
-        </Button>
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-[var(--color-text-muted)]">
-            {state.directoryTotalCount === null
-              ? 'All OpenCode providers'
-              : `${state.directoryTotalCount} OpenCode providers`}
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={disabled || state.directoryLoading || state.directoryRefreshing}
-            onClick={() => void actions.refreshDirectory()}
-          >
-            {state.directoryRefreshing ? (
-              <Loader2 className="mr-1 size-3.5 animate-spin" />
-            ) : (
-              <RefreshCcw className="mr-1 size-3.5" />
-            )}
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          <Input
-            data-testid="runtime-provider-directory-search"
-            value={state.directoryQuery}
-            disabled={disabled || state.directoryLoading}
-            onChange={(event) => actions.setDirectoryQuery(event.target.value)}
-            placeholder="Search all OpenCode providers"
-            className="h-9 pr-3 text-sm"
-            style={{ paddingLeft: 40 }}
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {DIRECTORY_FILTERS.map((filter) => (
-            <Button
-              key={filter.id}
-              type="button"
-              size="sm"
-              variant={state.directoryFilter === filter.id ? 'default' : 'outline'}
-              className="h-7 px-2 text-xs"
-              disabled={disabled || state.directoryLoading}
-              onClick={() => actions.setDirectoryFilter(filter.id)}
-            >
-              {filter.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {state.directoryError ? (
-        <div className="mt-3 rounded-md border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-200">
-          {state.directoryError}
-        </div>
-      ) : null}
-
-      <div className="mt-3 max-h-[48vh] space-y-2 overflow-y-auto pr-1">
-        {state.directoryLoading && state.directoryEntries.length === 0 ? (
-          <RuntimeProviderLoadingPlaceholder />
-        ) : null}
-        {state.directoryEntries.map((provider) => {
-          const active = state.directorySelectedProviderId === provider.providerId;
-          return (
-            <div key={provider.providerId}>
-              <DirectoryProviderRow
-                provider={provider}
-                state={state}
-                active={active}
-                formOpen={state.activeFormProviderId === provider.providerId}
-                disabled={disabled || state.directoryLoading}
-                busy={state.savingProviderId === provider.providerId}
-                actions={actions}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {!state.directoryLoading && state.directoryEntries.length === 0 && !state.directoryError ? (
-        <div className="mt-3 rounded-md border border-white/10 px-3 py-3 text-sm text-[var(--color-text-muted)]">
-          No providers match this search.
-        </div>
-      ) : null}
-
-      {state.directoryNextCursor ? (
-        <div className="mt-3 flex justify-center">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={disabled || state.directoryRefreshing}
-            onClick={() => void actions.loadMoreDirectory()}
-          >
-            {state.directoryRefreshing ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-            Load more
-          </Button>
-        </div>
       ) : null}
     </div>
   );
@@ -1209,6 +1101,9 @@ function ModelRow({
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
     }
+    if (eventStartedInInteractiveChild(event.currentTarget, event.target)) {
+      return;
+    }
     event.stopPropagation();
     event.preventDefault();
     chooseModel();
@@ -1216,11 +1111,14 @@ function ModelRow({
 
   return (
     <div
-      role="button"
+      role={disabled ? undefined : 'button'}
       tabIndex={disabled ? -1 : 0}
-      aria-pressed={selected}
+      aria-disabled={disabled || undefined}
+      aria-pressed={disabled ? undefined : selected}
       data-testid={`runtime-provider-model-row-${model.modelId}`}
-      className="cursor-pointer rounded-md border px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45"
+      className={`rounded-md border px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45 ${
+        disabled ? 'cursor-default' : 'cursor-pointer'
+      }`}
       onClick={(event) => {
         event.stopPropagation();
         chooseModel();
@@ -1378,7 +1276,7 @@ function ProviderModelList({
                 model={model}
                 selected={state.selectedModelId === model.modelId}
                 disabled={disabled}
-                testing={state.testingModelId === model.modelId}
+                testing={state.testingModelIds.includes(model.modelId)}
                 result={state.modelResults[model.modelId]}
                 actions={actions}
               />
@@ -1417,11 +1315,12 @@ export function RuntimeProviderManagementPanelView({
   const visibleDirectoryRows = state.directoryEntries.filter((provider) =>
     directoryEntryMatchesQuery(provider, providerQuery)
   );
-  const providerCountLabel = state.directoryTotalCount
-    ? `${state.directoryTotalCount} OpenCode providers`
-    : state.directorySupported
-      ? 'OpenCode provider catalog'
-      : 'OpenCode providers';
+  const providerCountLabel =
+    state.directoryTotalCount !== null
+      ? formatOpenCodeProviderCount(state.directoryTotalCount)
+      : state.directorySupported
+        ? 'OpenCode provider catalog'
+        : 'OpenCode providers';
 
   return (
     <div className="space-y-3">

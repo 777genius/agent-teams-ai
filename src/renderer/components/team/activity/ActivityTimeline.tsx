@@ -15,7 +15,7 @@ import {
 } from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Layers } from 'lucide-react';
+import { Layers, Loader2 } from 'lucide-react';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
@@ -126,6 +126,8 @@ interface ActivityTimelineProps {
   onExpandItem?: (key: string) => void;
   /** Called when ExpandableContent is expanded via "Show more" in any ActivityItem. */
   onExpandContent?: () => void;
+  /** True while the initial message page is loading and no cached rows are available yet. */
+  loading?: boolean;
   /**
    * Optional viewport contract. When provided, IntersectionObserver uses the
    * passed `observerRoot` instead of the document viewport, which is required
@@ -166,6 +168,31 @@ const ROW_SIZE_ESTIMATES: Record<TimelineRow['kind'], number> = {
   'lead-thought-group': 220,
   'message-row': 140,
 };
+
+const TimelineLoadingState = (): React.JSX.Element => (
+  <div
+    className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]"
+    aria-busy="true"
+    aria-live="polite"
+  >
+    <div className="flex items-center gap-2">
+      <Loader2 size={13} className="animate-spin" />
+      <span>Loading messages...</span>
+    </div>
+    <div className="mt-3 space-y-2" aria-hidden="true">
+      <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--color-surface-raised)]" />
+      <div className="h-3 w-1/2 animate-pulse rounded bg-[var(--color-surface-raised)]" />
+      <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--color-surface-raised)]" />
+    </div>
+  </div>
+);
+
+const TimelineEmptyState = (): React.JSX.Element => (
+  <div className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]">
+    <p>No messages</p>
+    <p className="mt-1 text-[11px]">Send a message to a member to see activity.</p>
+  </div>
+);
 
 function collectScrollMarginObserverTargets(
   rootElement: HTMLElement,
@@ -419,6 +446,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onTeamClick,
   onExpandItem,
   onExpandContent,
+  loading = false,
   viewport,
 }: ActivityTimelineProps): React.JSX.Element {
   const observerRoot = viewport?.observerRoot ?? viewport?.scrollElementRef;
@@ -858,9 +886,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   if (messages.length === 0) {
     return (
-      <div className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]">
-        <p>No messages</p>
-        <p className="mt-1 text-[11px]">Send a message to a member to see activity.</p>
+      <div ref={rootRef} className="space-y-1">
+        {loading ? <TimelineLoadingState /> : <TimelineEmptyState />}
       </div>
     );
   }

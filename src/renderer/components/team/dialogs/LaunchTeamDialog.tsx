@@ -79,6 +79,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   Info,
   Loader2,
   X,
@@ -98,6 +99,10 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import {
+  isDeletedProjectPathSelection,
+  isSelectableProjectPathProject,
+} from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
@@ -230,6 +235,8 @@ export type LaunchTeamDialogProps =
   | LaunchDialogScheduleMode;
 
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
+  'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
 
 // =============================================================================
 // Helpers
@@ -438,7 +445,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const [selectedEffort, setSelectedEffortRaw] = useState(() => {
     const stored = localStorage.getItem('team:lastSelectedEffort');
-    return stored === null ? 'medium' : stored;
+    return stored === null ? '' : stored;
   });
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
@@ -787,7 +794,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       );
       setSelectedProviderIdRaw(storedProviderId);
       setSelectedModelRaw(getStoredTeamModel(storedProviderId));
-      setSelectedEffortRaw('medium');
+      setSelectedEffortRaw('');
       setSelectedFastModeRaw(getStoredTeamFastMode());
       setSavedLaunchProviderBackendId(null);
       setScheduleHydrationKey(null);
@@ -837,7 +844,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         previousLaunchParams,
         multimodelEnabled,
         storedProviderId,
-        storedEffort: storedEffort === null ? 'medium' : storedEffort,
+        storedEffort: storedEffort === null ? '' : storedEffort,
         storedFastMode: getStoredTeamFastMode(),
         storedLimitContext: localStorage.getItem('team:lastLimitContext') === 'true',
         getStoredModel: getStoredTeamModel,
@@ -1363,9 +1370,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Launch-only effects
   // ---------------------------------------------------------------------------
 
-  const selectedProjectCwd = isEphemeralProjectPath(selectedProjectPath)
-    ? ''
-    : selectedProjectPath.trim();
+  const selectedProjectPathDeleted = useMemo(
+    () =>
+      cwdMode === 'project' &&
+      selectedProjectPath.length > 0 &&
+      isDeletedProjectPathSelection(projects, selectedProjectPath),
+    [cwdMode, projects, selectedProjectPath]
+  );
+  const selectedProjectCwd =
+    isEphemeralProjectPath(selectedProjectPath) || selectedProjectPathDeleted
+      ? ''
+      : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const hasSelectedWorktreeIsolation =
     isLaunchMode &&
@@ -1697,7 +1712,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
     if (cwdMode !== 'project') return;
-    const selectableProjects = projects.filter((project) => !isEphemeralProjectPath(project.path));
+    const selectableProjects = projects.filter(isSelectableProjectPathProject);
     if (selectableProjects.length === 0) return;
     if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
       const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
@@ -1726,17 +1741,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }
     }
     setSelectedProjectPath(selectableProjects[0].path);
-  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
   useEffect(() => {
     if (!open || cwdMode !== 'project' || !selectedProjectPath) {
       return;
     }
-    if (!isEphemeralProjectPath(selectedProjectPath)) {
+    if (
+      !isEphemeralProjectPath(selectedProjectPath) &&
+      !isDeletedProjectPathSelection(projects, selectedProjectPath)
+    ) {
       return;
     }
     setSelectedProjectPath('');
-  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
 
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);
@@ -1874,7 +1892,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
-    if (!effectiveCwd) errors.push('Working directory is required');
+    if (selectedProjectPathDeleted) {
+      errors.push('Project folder no longer exists');
+    } else if (!effectiveCwd) {
+      errors.push('Working directory is required');
+    }
     if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
     if (isSchedule) {
       if (!effectiveTeamName) errors.push('Team is required');
@@ -1884,6 +1906,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return errors;
   }, [
     effectiveCwd,
+    selectedProjectPathDeleted,
     worktreeGitBlockingMessage,
     isSchedule,
     effectiveTeamName,
@@ -2358,16 +2381,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           </div>
         ) : null}
 
-        {isLaunchMode ? (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              closeDialog();
-              openDashboard();
-            }}
-          />
-        ) : null}
-
         <div className="space-y-4">
           {/* ═══════════════════════════════════════════════════════════════════
               Schedule-only: Team selector (standalone mode)
@@ -2612,8 +2625,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   softDeleteMembers
                   disableGeminiOption={isGeminiUiFrozen()}
                   headerBottom={
-                    hasSelectedWorktreeIsolation ? (
-                      <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+                    teammateRuntimeCompatibility.visible || hasSelectedWorktreeIsolation ? (
+                      <div className="space-y-2">
+                        <TeammateRuntimeCompatibilityNotice
+                          analysis={teammateRuntimeCompatibility}
+                          onOpenDashboard={() => {
+                            closeDialog();
+                            openDashboard();
+                          }}
+                        />
+                        {hasSelectedWorktreeIsolation ? (
+                          <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+                        ) : null}
+                      </div>
                     ) : null
                   }
                 />
@@ -2729,6 +2753,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   This prompt will be passed to <code className="font-mono">claude -p</code> for
                   one-shot execution
                 </p>
+                {selectedProviderId === 'anthropic' ? (
+                  <div className="flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] leading-relaxed text-amber-100">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <p>
+                      Starting June 15, 2026, Anthropic bills <code>claude -p</code> and Agent SDK
+                      usage from the monthly Agent SDK credit, separate from interactive Claude Code
+                      limits. The credit resets each billing cycle and unused credit does not roll
+                      over.{' '}
+                      <a
+                        href={ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:text-white"
+                      >
+                        Read Anthropic article
+                        <ExternalLink className="size-3" />
+                      </a>
+                      .
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <div>

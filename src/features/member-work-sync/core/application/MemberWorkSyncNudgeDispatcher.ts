@@ -61,6 +61,17 @@ function isReviewPickupOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
   return item.payload.workSyncIntent === 'review_pickup';
 }
 
+function getProofMissingRecoveryOriginalMessageId(item: MemberWorkSyncOutboxItem): string | null {
+  const prefix = 'proof-missing:';
+  const intentKey = item.payload.workSyncIntentKey?.trim();
+  if (!intentKey?.startsWith(prefix)) {
+    return null;
+  }
+
+  const originalMessageId = intentKey.slice(prefix.length).trim();
+  return originalMessageId.length > 0 ? originalMessageId : null;
+}
+
 function getPayloadReviewRequestEventIds(item: MemberWorkSyncOutboxItem): string[] {
   return [...new Set(item.payload.workSyncReviewRequestEventIds ?? [])]
     .filter((id) => id.length > 0)
@@ -463,6 +474,11 @@ export class MemberWorkSyncNudgeDispatcher {
       }
     }
 
+    const proofMissingRecovery = await this.revalidateProofMissingRecovery(item, nowIso);
+    if (!proofMissingRecovery.ok) {
+      return proofMissingRecovery;
+    }
+
     const recentDelivered = await this.deps.outboxStore?.countRecentDelivered({
       teamName: item.teamName,
       memberName: item.memberName,
@@ -485,6 +501,7 @@ export class MemberWorkSyncNudgeDispatcher {
       memberName: item.memberName,
       nowIso,
       workSyncIntent: item.payload.workSyncIntent,
+      workSyncIntentKey: item.payload.workSyncIntentKey,
       taskRefs: item.payload.taskRefs,
     });
     if (busy?.busy) {
@@ -510,6 +527,32 @@ export class MemberWorkSyncNudgeDispatcher {
     }
 
     return { ok: true, ...(providerId ? { providerId } : {}) };
+  }
+
+  private async revalidateProofMissingRecovery(
+    item: MemberWorkSyncOutboxItem,
+    nowIso: string
+  ): Promise<
+    { ok: true } | { ok: false; reason: string; retryable: boolean; nextAttemptAt?: string }
+  > {
+    const originalMessageId = getProofMissingRecoveryOriginalMessageId(item);
+    if (!originalMessageId) {
+      return { ok: true };
+    }
+
+    const guard = this.deps.proofMissingRecoveryGuard;
+    if (!guard) {
+      return { ok: true };
+    }
+
+    return guard.shouldDispatch({
+      teamName: item.teamName,
+      memberName: item.memberName,
+      intentKey: item.payload.workSyncIntentKey ?? '',
+      originalMessageId,
+      taskIds: item.payload.taskRefs.map((taskRef) => taskRef.taskId),
+      nowIso,
+    });
   }
 
   private async scheduleDeliveryWake(

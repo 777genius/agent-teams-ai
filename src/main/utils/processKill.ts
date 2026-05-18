@@ -21,8 +21,8 @@ export function killProcessByPid(pid: number): void {
         'System32',
         'taskkill.exe'
       );
-      execFile(taskkillPath, ['/T', '/F', '/PID', String(pid)], () => {
-        // Best-effort — ignore errors (process may have already exited)
+      execFile(taskkillPath, ['/T', '/F', '/PID', String(pid)], { windowsHide: true }, () => {
+        // Best-effort - ignore errors (process may have already exited)
       });
     } catch {
       // taskkill failed to spawn, fall through to process.kill()

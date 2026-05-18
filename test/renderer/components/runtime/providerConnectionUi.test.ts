@@ -184,10 +184,10 @@ describe('providerConnectionUi', () => {
     expect(getProviderConnectionModeSummary(provider)).toBeNull();
   });
 
-  it('shows Anthropic API key as the effective connection when API key mode is pinned', () => {
+  it('shows Anthropic API key as the effective connection after runtime verification', () => {
     const provider = createAnthropicProvider({
       authenticated: true,
-      authMethod: 'claude.ai',
+      authMethod: 'api_key',
       configuredAuthMode: 'api_key',
       apiKeyConfigured: true,
       apiKeySource: 'stored',
@@ -196,6 +196,34 @@ describe('providerConnectionUi', () => {
 
     expect(formatProviderStatusText(provider)).toBe('Connected via API key');
     expect(getProviderCredentialSummary(provider)).toBe('Stored in app');
+  });
+
+  it('shows Anthropic API key helper as verified API-key mode', () => {
+    const provider = createAnthropicProvider({
+      authenticated: true,
+      authMethod: 'api_key_helper',
+      configuredAuthMode: 'api_key',
+      apiKeyConfigured: true,
+      apiKeySource: 'stored',
+      apiKeySourceLabel: 'Stored in app',
+    });
+
+    expect(formatProviderStatusText(provider)).toBe('Connected via API key');
+    expect(getProviderCredentialSummary(provider)).toBe('Stored in app');
+  });
+
+  it('does not show API key mode as connected when only a stored key is known', () => {
+    const provider = createAnthropicProvider({
+      authenticated: false,
+      authMethod: null,
+      configuredAuthMode: 'api_key',
+      apiKeyConfigured: true,
+      apiKeySource: 'stored',
+      apiKeySourceLabel: 'Stored in app',
+    });
+
+    expect(formatProviderStatusText(provider)).toBe('API key configured, but not verified yet');
+    expect(getProviderCredentialSummary(provider)).toBe('API key also configured in Manage');
   });
 
   it('does not describe Anthropic API key mode as subscription connected when the key is missing', () => {

@@ -53,15 +53,12 @@ function createState(
     providers: [],
     selectedProviderId: 'openrouter',
     providerQuery: '',
-    directoryOpen: false,
     directoryLoading: false,
     directoryRefreshing: false,
     directoryError: null,
     directoryEntries: [],
     directoryTotalCount: null,
     directoryNextCursor: null,
-    directoryQuery: '',
-    directoryFilter: 'all',
     directoryLoaded: false,
     directorySelectedProviderId: null,
     directorySupported: true,
@@ -79,7 +76,7 @@ function createState(
     modelsLoading: false,
     modelsError: null,
     selectedModelId: null,
-    testingModelId: null,
+    testingModelIds: [],
     savingDefaultModelId: null,
     modelResults: {},
     loading: false,
@@ -95,10 +92,6 @@ function createActions(): RuntimeProviderManagementActions {
     refresh: vi.fn(() => Promise.resolve()),
     selectProvider: vi.fn(),
     setProviderQuery: vi.fn(),
-    openDirectory: vi.fn(),
-    closeDirectory: vi.fn(),
-    setDirectoryQuery: vi.fn(),
-    setDirectoryFilter: vi.fn(),
     loadMoreDirectory: vi.fn(() => Promise.resolve()),
     refreshDirectory: vi.fn(() => Promise.resolve()),
     selectDirectoryProvider: vi.fn(),
@@ -248,6 +241,146 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).not.toContain('sk-secret-value');
   });
 
+  it('allows supported setup forms that do not require a secret to submit', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const submitButton = Array.from(host.querySelectorAll('button'))
+      .filter((button) => button.textContent?.trim() === 'Connect')
+      .at(-1);
+    expect(submitButton?.disabled).toBe(false);
+  });
+
+  it('renders multiple compact provider actions without hiding forget behind connect', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const provider = {
+      ...createState().view!.providers[0],
+      actions: [
+        {
+          id: 'connect' as const,
+          label: 'Connect',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: true,
+          ownershipScope: 'managed' as const,
+        },
+        {
+          id: 'forget' as const,
+          label: 'Forget',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'managed' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [provider],
+            },
+            providers: [provider],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(host.querySelectorAll('button'));
+    expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
+    expect(buttons.some((button) => button.textContent?.includes('Forget'))).toBe(true);
+
+    await act(async () => {
+      buttons
+        .find((button) => button.textContent?.includes('Forget'))
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).not.toHaveBeenCalled();
+
+    await act(async () => {
+      buttons
+        .find((button) => button.textContent?.includes('Forget'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.forgetProvider).toHaveBeenCalledWith('openrouter');
+    expect(actions.startConnect).not.toHaveBeenCalled();
+  });
+
+  it('supports keyboard activation for compact provider rows', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: { ...state, providers: state.view?.providers ?? [] },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-row-openrouter"]');
+    expect(row?.getAttribute('role')).toBe('button');
+    expect(row?.getAttribute('tabindex')).toBe('0');
+
+    await act(async () => {
+      row?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
+  });
+
   it('filters providers from the local provider search', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -353,7 +486,6 @@ describe('RuntimeProviderManagementPanelView', () => {
       root.render(
         React.createElement(RuntimeProviderManagementPanelView, {
           state: createState({
-            directoryOpen: true,
             directoryLoaded: true,
             directoryTotalCount: 115,
             directoryEntries: [
@@ -452,6 +584,127 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(actions.startConnect).toHaveBeenCalledWith('cloudflare-workers-ai');
     expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
+  });
+
+  it('shows an explicit zero-provider catalog count', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 0,
+            directoryEntries: [],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('0 OpenCode providers');
+    expect(host.textContent).not.toContain('OpenCode provider catalog.');
+  });
+
+  it('uses singular provider catalog copy for one provider', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('1 OpenCode provider.');
+    expect(host.textContent).not.toContain('1 OpenCode providers');
+  });
+
+  it('renders every advertised directory action instead of hiding configure behind connect', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'manual-connectable',
+                displayName: 'Manual Connectable',
+                state: 'not-connected',
+                setupKind: 'connect-api-key',
+                ownership: [],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [
+                  {
+                    id: 'connect',
+                    label: 'Connect',
+                    enabled: true,
+                    disabledReason: null,
+                    requiresSecret: true,
+                    ownershipScope: 'managed',
+                  },
+                  {
+                    id: 'configure',
+                    label: 'Configure manually',
+                    enabled: false,
+                    disabledReason: 'Manual fallback is also available',
+                    requiresSecret: false,
+                    ownershipScope: 'runtime',
+                  },
+                ],
+                sources: ['opencode-provider'],
+                sourceLabel: 'OpenCode catalog',
+                providerSource: 'models.dev',
+                detail: null,
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: true,
+                  supportedInlineAuth: true,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector(
+      '[data-testid="runtime-provider-directory-row-manual-connectable"]'
+    );
+    const actionLabels = Array.from(row?.querySelectorAll('button') ?? []).map((button) =>
+      button.textContent?.trim()
+    );
+
+    expect(actionLabels).toContain('Connect');
+    expect(actionLabels).toContain('Configure manually');
   });
 
   it('uses the unified provider search when compact search has no matches', async () => {
@@ -665,12 +918,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     const modelList = host.querySelector<HTMLElement>(
       '[data-testid="runtime-provider-model-list"]'
     );
-    expect(
-      modelSearch?.style.paddingLeft
-    ).toBe('42px');
-    expect(
-      modelList?.style.maxHeight
-    ).toBe('300px');
+    expect(modelSearch?.style.paddingLeft).toBe('42px');
+    expect(modelList?.style.maxHeight).toBe('300px');
     expect(host.textContent).not.toContain('OpenRouterfree');
     const firstTestButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Test'
@@ -709,6 +958,21 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.selectProvider).not.toHaveBeenCalled();
 
     vi.mocked(actions.useModelForNewTeams).mockClear();
+    await act(async () => {
+      const notRecommendedRow = host.querySelector(
+        '[data-testid="runtime-provider-model-row-openrouter/openai/gpt-oss-20b:free"]'
+      );
+      const notRecommendedTestButton = Array.from(
+        notRecommendedRow?.querySelectorAll('button') ?? []
+      ).find((button) => button.textContent?.trim() === 'Test');
+      notRecommendedTestButton?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      );
+      await Promise.resolve();
+    });
+
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+
     await act(async () => {
       const notRecommendedRow = host.querySelector(
         '[data-testid="runtime-provider-model-row-openrouter/openai/gpt-oss-20b:free"]'
@@ -781,6 +1045,66 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')).not.toBe(
       null
     );
+  });
+
+  it('does not expose disabled model rows as active buttons', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 1,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/google/gemini-3-flash-preview',
+                displayName: 'google/gemini-3-flash-preview',
+                sourceLabel: 'OpenRouter',
+                free: false,
+                default: false,
+                availability: 'untested',
+              },
+            ],
+          }),
+          actions,
+          disabled: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-openrouter/google/gemini-3-flash-preview"]'
+    );
+
+    expect(row?.getAttribute('role')).toBeNull();
+    expect(row?.getAttribute('aria-disabled')).toBe('true');
+    expect(row?.tabIndex).toBe(-1);
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
   });
 
   it('keeps directory provider models visible when a model row is selected', async () => {

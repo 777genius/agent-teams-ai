@@ -164,12 +164,13 @@ onUnmounted(() => {
       class="hero-video__player"
       :class="{ 'hero-video__player--loaded': isLoaded }"
       preload="auto"
+      poster="/screenshots/2.jpg"
       muted
       playsinline
       @timeupdate="onTimeUpdate"
       @click="togglePlay"
     >
-      <source :src="videoSrc" type="video/mp4" />
+      <source :src="videoSrc" type="video/mp4">
     </video>
 
     <!-- Play overlay (when paused) -->
@@ -203,17 +204,17 @@ onUnmounted(() => {
         </div>
 
         <div class="hero-video__controls-row">
-          <button class="hero-video__control-btn" @click.stop="togglePlay" :aria-label="isPlaying ? 'Pause' : 'Play'">
+          <button class="hero-video__control-btn" :aria-label="isPlaying ? 'Pause' : 'Play'" @click.stop="togglePlay">
             <v-icon :icon="isPlaying ? mdiPause : mdiPlay" size="18" />
           </button>
 
-          <button class="hero-video__control-btn" @click.stop="toggleMute" :aria-label="isMuted ? 'Unmute' : 'Mute'">
+          <button class="hero-video__control-btn" :aria-label="isMuted ? 'Unmute' : 'Mute'" @click.stop="toggleMute">
             <v-icon :icon="isMuted ? mdiVolumeOff : mdiVolumeHigh" size="18" />
           </button>
 
           <div class="hero-video__spacer" />
 
-          <button class="hero-video__control-btn" @click.stop="toggleFullscreen" aria-label="Fullscreen">
+          <button class="hero-video__control-btn" aria-label="Fullscreen" @click.stop="toggleFullscreen">
             <v-icon :icon="mdiFullscreen" size="18" />
           </button>
         </div>
@@ -262,8 +263,34 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 16px;
-  background: rgba(10, 10, 15, 0.95);
+  background: rgba(6, 10, 18, 0.96);
   z-index: 2;
+}
+
+.hero-video__skeleton::before,
+.hero-video__skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-video__skeleton::before {
+  background:
+    linear-gradient(90deg, rgba(2, 6, 16, 0.18), rgba(2, 6, 16, 0.36)),
+    linear-gradient(180deg, rgba(0, 234, 255, 0.08), rgba(255, 43, 255, 0.08)),
+    url("/screenshots/2.jpg") center / cover;
+  opacity: 0.82;
+  filter: saturate(0.98) contrast(1.14) brightness(0.72);
+  transform: scale(1.035);
+}
+
+.hero-video__skeleton::after {
+  background:
+    linear-gradient(90deg, transparent 0 48%, rgba(0, 234, 255, 0.14) 48.2% 48.6%, transparent 48.8%),
+    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 4px);
+  mix-blend-mode: screen;
+  opacity: 0.34;
 }
 
 .hero-video__skeleton-pulse {
@@ -271,10 +298,11 @@ onUnmounted(() => {
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(0, 240, 255, 0.03) 0%,
-    rgba(255, 0, 255, 0.03) 50%,
-    rgba(0, 240, 255, 0.03) 100%
+    rgba(0, 240, 255, 0.12) 0%,
+    rgba(255, 0, 255, 0.08) 50%,
+    rgba(0, 240, 255, 0.1) 100%
   );
+  mix-blend-mode: screen;
   animation: skeletonPulse 2s ease-in-out infinite;
 }
 
@@ -282,25 +310,31 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   z-index: 1;
 }
 
 .hero-video__skeleton-spinner {
-  width: 40px;
-  height: 40px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  border: 2px solid rgba(0, 240, 255, 0.15);
-  border-top-color: rgba(0, 240, 255, 0.7);
+  border: 2px solid rgba(0, 240, 255, 0.28);
+  border-top-color: rgba(0, 240, 255, 0.92);
+  background: rgba(2, 8, 18, 0.56);
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 255, 0.14) inset,
+    0 0 28px rgba(0, 240, 255, 0.34);
   animation: spinnerRotate 0.8s linear infinite;
 }
 
 .hero-video__skeleton-label {
   font-size: 13px;
-  font-weight: 600;
-  color: rgba(0, 240, 255, 0.6);
+  font-weight: 800;
+  color: rgba(0, 240, 255, 0.88);
   font-family: "JetBrains Mono", monospace;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.42);
 }
 
 .hero-video__skeleton-bar {

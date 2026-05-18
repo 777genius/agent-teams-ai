@@ -23,7 +23,7 @@ export const useDownloadStore = defineStore("download", {
   },
   actions: {
     init() {
-      if (!process.client) return;
+      if (!import.meta.client) return;
       const ua = navigator.userAgent;
       const os = detectPlatform(ua);
       this.os = os === "unknown" ? "unknown" : os;

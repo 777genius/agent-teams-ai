@@ -44,6 +44,8 @@ export type MessageCategory = 'user' | 'system' | 'hardNoise' | 'ai' | 'compact'
 /**
  * Project information derived from ~/.claude/projects/ directory.
  */
+export type ProjectFilesystemState = 'available' | 'deleted';
+
 export interface Project {
   /** Encoded directory name (e.g., "-Users-username-projectname") */
   id: string;
@@ -62,6 +64,8 @@ export interface Project {
   createdAt: number;
   /** Unix timestamp of most recent session activity */
   mostRecentSession?: number;
+  /** Filesystem state for the decoded working directory. */
+  filesystemState?: ProjectFilesystemState;
 }
 
 /**
@@ -202,6 +206,8 @@ export interface Worktree {
   createdAt: number;
   /** Unix timestamp of most recent session activity */
   mostRecentSession?: number;
+  /** Filesystem state for this worktree path. */
+  filesystemState?: ProjectFilesystemState;
 }
 
 /**

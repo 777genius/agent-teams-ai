@@ -5,17 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ClaudeLogsController } from '@renderer/components/team/useClaudeLogsController';
 
 const cliLogsRichViewState = vi.hoisted(() => ({
-  calls: [] as Array<Record<string, unknown>>,
+  calls: [] as Record<string, unknown>[],
 }));
 
 vi.mock('@renderer/components/team/CliLogsRichView', () => ({
   CliLogsRichView: (props: Record<string, unknown>) => {
     cliLogsRichViewState.calls.push(props);
-    return React.createElement(
-      'div',
-      { 'data-testid': 'cli-logs-rich-view' },
-      String(props.cliLogsTail ?? '')
-    );
+    const cliLogsTail = typeof props.cliLogsTail === 'string' ? props.cliLogsTail : '';
+    return React.createElement('div', { 'data-testid': 'cli-logs-rich-view' }, cliLogsTail);
   },
 }));
 
@@ -58,8 +55,8 @@ function createController(overrides: Partial<ClaudeLogsController> = {}): Claude
     setFilterOpen: vi.fn(),
     viewerState: {} as ClaudeLogsController['viewerState'],
     onViewerStateChange: vi.fn(),
-    applyPending: vi.fn(async () => {}),
-    loadOlderLogs: vi.fn(async () => {}),
+    applyPending: vi.fn(() => Promise.resolve()),
+    loadOlderLogs: vi.fn(() => Promise.resolve()),
     containerRefCallback: vi.fn(),
     handleScroll: vi.fn(),
     ...overrides,
@@ -87,7 +84,7 @@ describe('ClaudeLogsPanel', () => {
         updatedAt: '2026-04-19T10:00:01.000Z',
       },
       filteredText: '[stdout]\nfirst line\nsecond line',
-      badge: 2,
+      badge: '2 raw',
     });
 
     await act(async () => {
@@ -127,6 +124,41 @@ describe('ClaudeLogsPanel', () => {
 
     expect(host.textContent).toContain('Team is not running.');
     expect(host.querySelector('[data-testid="cli-logs-rich-view"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('explains raw-only logs instead of showing an empty displayable-log message', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const ctrl = createController({
+      isAlive: true,
+      data: {
+        lines: [
+          '[stdout] {"type":"system","subtype":"init"}',
+          '[stdout] {"type":"thread.started","thread_id":"thread-1"}',
+        ],
+        total: 16,
+        hasMore: false,
+      },
+      filteredText: '[stdout]\n{"type":"thread.started","thread_id":"thread-1"}',
+      badge: '16 raw',
+    });
+
+    await act(async () => {
+      root.render(React.createElement(ClaudeLogsPanel, { ctrl }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('16 raw lines captured');
+    expect(cliLogsRichViewState.calls.at(-1)?.emptyMessageOverride).toBe(
+      '16 raw lines captured; none are assistant/tool output yet.'
+    );
 
     await act(async () => {
       root.unmount();

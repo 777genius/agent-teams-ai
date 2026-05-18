@@ -143,7 +143,7 @@ export function getTeamEffortSelectorPresentation(params: {
 }): TeamEffortSelectorPresentation {
   const options = getTeamEffortOptions(params);
   const defaultHelperText =
-    "Controls how much reasoning the selected provider invests before responding. Default uses the provider's standard behavior for the selected model.";
+    "Controls how much reasoning the selected provider invests before responding. Higher levels can use more tokens. Default uses the provider's standard behavior for the selected model.";
 
   if (params.providerId !== 'anthropic') {
     return {

@@ -10,6 +10,10 @@ import {
   normalizeMemberName,
   withSegmentSource,
 } from './memberLogStreamSourceUtils';
+import {
+  type OpenCodeMemberVisibleActivityEntry,
+  OpenCodeMemberVisibleActivityReader,
+} from './OpenCodeMemberVisibleActivityReader';
 
 import type { MemberLogStreamWarning } from '../../../../contracts';
 import type {
@@ -19,26 +23,39 @@ import type {
 } from '../../../../core/application/ports/MemberLogStreamSource';
 import type { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import type { BoardTaskExactLogChunkBuilder } from '@main/services/team/taskLogs/exact/BoardTaskExactLogChunkBuilder';
+import type { ParsedMessage } from '@main/types';
 
 interface BinaryResolverLike {
   resolve(): Promise<string | null>;
 }
 
 const CACHE_TTL_MS = 1_500;
+const DEFAULT_VISIBLE_ACTIVITY_READER = new OpenCodeMemberVisibleActivityReader();
 
 function classifyOpenCodeError(error: unknown): MemberLogStreamWarning {
   const message = error instanceof Error ? error.message : String(error);
-  const normalized = message.toLowerCase();
-  if (normalized.includes('timed out') || normalized.includes('timeout')) {
+  const record = error && typeof error === 'object' ? (error as Record<string, unknown>) : null;
+  const code = typeof record?.code === 'string' ? record.code : '';
+  const signal = typeof record?.signal === 'string' ? record.signal : '';
+  const killed = record?.killed === true ? 'killed' : '';
+  const normalized = [message, code, signal, killed].join(' ').toLowerCase();
+  if (
+    normalized.includes('timed out') ||
+    normalized.includes('timeout') ||
+    normalized.includes('code 143') ||
+    normalized.includes('signal sigterm') ||
+    normalized.includes('killed')
+  ) {
     return {
       code: 'opencode_runtime_timeout',
       message: 'OpenCode runtime transcript timed out; showing other member logs only.',
     };
   }
   if (
-    normalized.includes('--lane') ||
-    normalized.includes('multiple') ||
-    normalized.includes('ambiguous')
+    normalized.includes('ambiguous') ||
+    normalized.includes('without a safe lane') ||
+    normalized.includes('requires --lane') ||
+    (normalized.includes('multiple') && normalized.includes('lane'))
   ) {
     return {
       code: 'opencode_ambiguous_lane',
@@ -62,7 +79,8 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
   constructor(
     private readonly runtimeBridge: ClaudeMultimodelBridgeService,
     private readonly chunkBuilder: BoardTaskExactLogChunkBuilder,
-    private readonly binaryResolver: BinaryResolverLike = ClaudeBinaryResolver
+    private readonly binaryResolver: BinaryResolverLike = ClaudeBinaryResolver,
+    private readonly visibleActivityReader: OpenCodeMemberVisibleActivityReader = DEFAULT_VISIBLE_ACTIVITY_READER
   ) {}
 
   async load(input: MemberLogStreamSourceInput): Promise<MemberLogStreamSourceResult> {
@@ -102,8 +120,14 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
   ): Promise<MemberLogStreamSourceResult> {
     const binaryPath = await this.binaryResolver.resolve();
     if (!binaryPath) {
-      return this.skipped(
-        'opencode_runtime_unavailable',
+      return this.loadVisibleActivityFallback(
+        input,
+        [
+          {
+            code: 'opencode_runtime_unavailable',
+            message: 'OpenCode runtime bridge is unavailable.',
+          },
+        ],
         'OpenCode runtime bridge is unavailable.'
       );
     }
@@ -121,38 +145,17 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         projectedMessages
       ).sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime());
       if (parsedMessages.length === 0) {
-        return {
-          provider: this.provider,
-          status: 'skipped',
-          reason: 'opencode_missing_runtime_session',
-          participants: [],
-          segments: [],
-          warnings: [],
-        };
+        return this.loadVisibleActivityFallback(input, [], 'opencode_missing_runtime_session');
       }
 
       const budgeted = applyMemberLogMessageBudget(parsedMessages, input.budget);
       if (budgeted.messages.length === 0) {
-        return {
-          provider: this.provider,
-          status: 'skipped',
-          reason: 'opencode_no_renderable_chunks',
-          participants: [],
-          segments: [],
-          warnings: [],
-        };
+        return this.loadVisibleActivityFallback(input, [], 'opencode_no_renderable_chunks');
       }
 
       const chunks = this.chunkBuilder.buildBundleChunks(budgeted.messages);
       if (chunks.length === 0) {
-        return {
-          provider: this.provider,
-          status: 'skipped',
-          reason: 'opencode_no_renderable_chunks',
-          participants: [],
-          segments: [],
-          warnings: [],
-        };
+        return this.loadVisibleActivityFallback(input, [], 'opencode_no_renderable_chunks');
       }
 
       const first = budgeted.messages[0];
@@ -228,14 +231,143 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
       };
     } catch (error) {
       const warning = classifyOpenCodeError(error);
-      return this.skipped(warning.code, warning.message, warning);
+      return this.loadVisibleActivityFallback(input, [warning], warning.message);
     }
+  }
+
+  private async loadVisibleActivityFallback(
+    input: MemberLogStreamSourceInput,
+    warnings: readonly MemberLogStreamWarning[],
+    skippedReason: string
+  ): Promise<MemberLogStreamSourceResult> {
+    try {
+      const entries = await this.visibleActivityReader.list({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        forceRefresh: input.forceRefresh,
+      });
+      if (entries.length === 0) {
+        return this.skippedFromWarnings(skippedReason, warnings);
+      }
+
+      const messages = entries
+        .map((entry) => toVisibleActivityParsedMessage(entry, input.memberName))
+        .sort((left, right) => left.timestamp.getTime() - right.timestamp.getTime());
+      const budgeted = applyMemberLogMessageBudget(messages, input.budget);
+      if (budgeted.messages.length === 0) {
+        return this.skippedFromWarnings(skippedReason, warnings);
+      }
+
+      const chunks = this.chunkBuilder.buildBundleChunks(budgeted.messages);
+      if (chunks.length === 0) {
+        return this.skippedFromWarnings(skippedReason, warnings);
+      }
+
+      const first = budgeted.messages[0];
+      const last = budgeted.messages[budgeted.messages.length - 1];
+      if (!first || !last) {
+        return this.skippedFromWarnings(skippedReason, warnings);
+      }
+
+      const participant = buildMemberParticipant(input.memberName);
+      const sessionId = `opencode-visible:${normalizeMemberName(input.memberName)}`;
+      const segment = withSegmentSource(
+        {
+          id: buildSegmentId({
+            provider: this.provider,
+            teamName: input.teamName,
+            memberName: input.memberName,
+            sessionId,
+            fingerprint: `${sessionId}:${input.laneId ?? ''}:${budgeted.messages.length}`,
+            startTimestamp: first.timestamp.toISOString(),
+          }),
+          participantKey: participant.key,
+          actor: buildMemberActor({
+            memberName: input.memberName,
+            sessionId,
+            role: 'member',
+          }),
+          startTimestamp: first.timestamp.toISOString(),
+          endTimestamp: last.timestamp.toISOString(),
+          chunks,
+        },
+        {
+          provider: this.provider,
+          label: 'OpenCode visible activity',
+          sessionId,
+          ...(input.laneId ? { laneId: input.laneId } : {}),
+          messageCount: budgeted.messages.length,
+          truncated:
+            budgeted.droppedMessageCount > 0 ||
+            budgeted.segmentWindowLimited ||
+            budgeted.contentLimited,
+        }
+      );
+
+      const resultWarnings = [...warnings];
+      if (budgeted.segmentWindowLimited) {
+        resultWarnings.push({
+          code: 'segment_message_window_limited',
+          message: 'OpenCode visible activity was trimmed to recent messages.',
+        });
+      }
+      if (budgeted.contentLimited) {
+        resultWarnings.push({
+          code: 'message_content_limited',
+          message: 'Some large OpenCode visible activity content was truncated before rendering.',
+        });
+      }
+
+      return {
+        provider: this.provider,
+        status: 'included',
+        participants: [participant],
+        segments: [segment],
+        warnings: resultWarnings,
+        metadata: {
+          droppedMessageCount: budgeted.droppedMessageCount,
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return this.skippedFromWarnings(skippedReason, [
+        ...warnings,
+        {
+          code: 'opencode_runtime_unavailable',
+          message: `OpenCode visible activity fallback is unavailable: ${message}`,
+        },
+      ]);
+    }
+  }
+
+  private skippedFromWarnings(
+    reason: string,
+    warnings: readonly MemberLogStreamWarning[]
+  ): MemberLogStreamSourceResult {
+    if (warnings.length === 0) {
+      return {
+        provider: this.provider,
+        status: 'skipped',
+        reason,
+        participants: [],
+        segments: [],
+        warnings: [],
+      };
+    }
+    const firstWarning = warnings[0];
+    return this.skipped(
+      firstWarning?.code ?? 'opencode_runtime_unavailable',
+      reason,
+      firstWarning,
+      [...warnings.slice(1)]
+    );
   }
 
   private skipped(
     code: MemberLogStreamWarning['code'],
     reason: string,
-    warning: MemberLogStreamWarning = { code, message: reason }
+    warning: MemberLogStreamWarning = { code, message: reason },
+    extraWarnings: readonly MemberLogStreamWarning[] = []
   ): MemberLogStreamSourceResult {
     return {
       provider: this.provider,
@@ -243,7 +375,27 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
       reason,
       participants: [],
       segments: [],
-      warnings: [warning],
+      warnings: [warning, ...extraWarnings],
     };
   }
+}
+
+function toVisibleActivityParsedMessage(
+  entry: OpenCodeMemberVisibleActivityEntry,
+  memberName: string
+): ParsedMessage {
+  return {
+    uuid: entry.id,
+    parentUuid: null,
+    type: 'assistant',
+    timestamp: new Date(entry.timestamp),
+    role: 'assistant',
+    content: `${entry.title}: ${entry.text}`,
+    isSidechain: true,
+    isMeta: false,
+    sessionId: `opencode-visible:${normalizeMemberName(memberName)}`,
+    agentName: memberName,
+    toolCalls: [],
+    toolResults: [],
+  };
 }

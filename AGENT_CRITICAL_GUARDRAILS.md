@@ -4,6 +4,7 @@ These are the hard rules to keep agent work predictable and safe in this repo.
 
 - Read `CLAUDE.md` first, then follow `docs/FEATURE_ARCHITECTURE_STANDARD.md` for new medium and large features.
 - Use `pnpm` for project commands. Do not switch to `npm` or `yarn`.
+- Use the desktop Electron app (`pnpm dev`) for normal local development and smoke checks unless browser-mode internals are explicitly requested.
 - Do not run `pnpm lint:fix` unless the user explicitly asks for broad formatting changes.
 - Keep main, preload, renderer, and shared responsibilities separate.
 - Use `wrapAgentBlock(text)` instead of manually concatenating agent block markers.

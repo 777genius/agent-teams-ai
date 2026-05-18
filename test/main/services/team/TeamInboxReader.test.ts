@@ -177,6 +177,60 @@ describe('TeamInboxReader', () => {
     });
   });
 
+  it('preserves member-work-sync payload hash without changing visible message fields', async () => {
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'system',
+          to: 'alice',
+          text: 'Please reconcile current work.',
+          timestamp: '2026-01-01T02:30:00.000Z',
+          read: false,
+          messageId: 'member-work-sync:my-team:alice:agenda',
+          source: 'system_notification',
+          messageKind: 'member_work_sync_nudge',
+          workSyncIntent: 'agenda_sync',
+          workSyncPayloadHash: 'sha256:work-sync',
+        },
+      ])
+    );
+
+    const messages = await reader.getMessagesFor('my-team', 'alice');
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      messageId: 'member-work-sync:my-team:alice:agenda',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncPayloadHash: 'sha256:work-sync',
+    });
+  });
+
+  it('preserves task-stall remediation semantic kind', async () => {
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'system',
+          to: 'alice',
+          text: 'Please continue the stalled task or report a blocker.',
+          timestamp: '2026-01-01T02:45:00.000Z',
+          read: false,
+          messageId: 'task-stall:my-team:alice:task-a',
+          source: 'system_notification',
+          messageKind: 'task_stall_remediation',
+        },
+      ])
+    );
+
+    const messages = await reader.getMessagesFor('my-team', 'alice');
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      messageId: 'task-stall:my-team:alice:task-a',
+      messageKind: 'task_stall_remediation',
+    });
+  });
+
   it('preserves agent error semantic kind from the team lead inbox', async () => {
     hoisted.files.set(
       '/mock/teams/my-team/inboxes/team-lead.json',

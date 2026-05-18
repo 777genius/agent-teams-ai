@@ -14,7 +14,6 @@ import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
 import {
-  createDefaultClaudeLogsSidebarUiState,
   getTeamClaudeLogsSidebarUiState,
   setTeamClaudeLogsSidebarUiState,
 } from './sidebar/teamSidebarUiState';
@@ -58,7 +57,7 @@ export interface ClaudeLogsController {
   // Computed
   filteredText: string;
   online: boolean;
-  badge: number | undefined;
+  badge: string | undefined;
   showMoreVisible: boolean;
   lastLogPreview: LastLogPreview | null;
 
@@ -365,14 +364,6 @@ function filterStreamJsonText(
 }
 
 // =============================================================================
-// Default viewer state
-// =============================================================================
-
-function createDefaultViewerState(): ClaudeLogsViewerState {
-  return createDefaultClaudeLogsSidebarUiState().viewerState;
-}
-
-// =============================================================================
 // Hook
 // =============================================================================
 
@@ -608,7 +599,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
     return filterStreamJsonText(data.lines, searchQuery, filter);
   }, [data.lines, normalizedText, searchQuery, filter]);
 
-  const badge = data.total > 0 ? data.total : undefined;
+  const badge = data.total > 0 ? `${data.total.toLocaleString()} raw` : undefined;
 
   // ── Container ref callback ────────────────────────────────────────────
   const containerRefCallback = useCallback((el: HTMLDivElement | null) => {

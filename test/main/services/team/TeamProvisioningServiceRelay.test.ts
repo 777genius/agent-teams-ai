@@ -157,6 +157,7 @@ vi.mock('agent-teams-controller', () => ({
 
 import { buildLegacyInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import * as OpenCodeRuntimeStore from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { getTeamsBasePath } from '../../../../src/main/utils/pathDecoder';
@@ -241,6 +242,107 @@ function attachAliveRun(
   });
 
   return { writeSpy, runId };
+}
+
+function buildOpenCodeProofMissingRecord(input: {
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  inboxMessageId: string;
+  taskRefs: Array<{ teamName: string; taskId: string; displayId: string }>;
+}): Record<string, unknown> {
+  return {
+    id: `opencode-prompt:${input.inboxMessageId}`,
+    teamName: input.teamName,
+    memberName: input.memberName,
+    laneId: input.laneId,
+    runId: null,
+    runtimeSessionId: null,
+    inboxMessageId: input.inboxMessageId,
+    inboxTimestamp: '2026-02-23T17:31:00.000Z',
+    source: 'watcher',
+    messageKind: 'default',
+    replyRecipient: 'team-lead',
+    actionMode: 'do',
+    taskRefs: input.taskRefs,
+    payloadHash: 'sha256:test',
+    status: 'failed_terminal',
+    responseState: 'responded_non_visible_tool',
+    attempts: 3,
+    maxAttempts: 3,
+    acceptanceUnknown: false,
+    nextAttemptAt: null,
+    lastAttemptAt: '2026-02-23T17:31:10.000Z',
+    lastObservedAt: '2026-02-23T17:31:15.000Z',
+    acceptedAt: '2026-02-23T17:31:05.000Z',
+    respondedAt: '2026-02-23T17:31:15.000Z',
+    failedAt: '2026-02-23T17:31:20.000Z',
+    inboxReadCommittedAt: null,
+    inboxReadCommitError: null,
+    prePromptCursor: null,
+    postPromptCursor: null,
+    deliveredUserMessageId: 'msg-user',
+    observedAssistantMessageId: 'msg-assistant',
+    observedAssistantPreview: null,
+    observedToolCallNames: ['task_get', 'glob'],
+    observedVisibleMessageId: null,
+    visibleReplyMessageId: null,
+    visibleReplyInbox: null,
+    visibleReplyCorrelation: null,
+    lastReason: 'non_visible_tool_without_task_progress',
+    diagnostics: ['non_visible_tool_without_task_progress'],
+    createdAt: '2026-02-23T17:31:00.000Z',
+    updatedAt: '2026-02-23T17:31:20.000Z',
+  };
+}
+
+function seedOpenCodeBusyStatusFixture(input: {
+  service: TeamProvisioningService;
+  teamName: string;
+  laneId: string;
+  inboxMessages: unknown[];
+  memberName?: string;
+  laneState?: 'active' | 'stopped';
+  ledgerRecords?: Record<string, unknown>[];
+  activeRecord?: Record<string, unknown> | null;
+}): void {
+  const memberName = input.memberName ?? 'jack';
+  const teamsBasePath = getTeamsBasePath();
+  hoisted.files.set(
+    `${teamsBasePath}/${input.teamName}/config.json`,
+    JSON.stringify({
+      name: input.teamName,
+      projectPath: '/tmp/my-team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: memberName, role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+      ],
+    })
+  );
+  hoisted.files.set(
+    `${teamsBasePath}/${input.teamName}/inboxes/${memberName}.json`,
+    JSON.stringify(input.inboxMessages)
+  );
+  (input.service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+    ok: true,
+    canonicalMemberName: memberName,
+    laneId: input.laneId,
+  }));
+  vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    version: 1,
+    updatedAt: '2026-02-23T17:30:00.000Z',
+    lanes: {
+      [input.laneId]: {
+        laneId: input.laneId,
+        state: input.laneState ?? 'active',
+        updatedAt: '2026-02-23T17:30:00.000Z',
+      },
+    },
+  });
+  vi.spyOn(input.service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+    list: vi.fn(async () => input.ledgerRecords ?? []),
+    getActiveForMember: vi.fn(async () => input.activeRecord ?? null),
+  });
 }
 
 async function waitForCapture(service: TeamProvisioningService): Promise<any> {
@@ -2373,6 +2475,214 @@ Messages:
     );
   });
 
+  it('records and schedules a retry when the OpenCode bridge throws during prompt delivery', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    const sendMessageToMember = vi.fn(async () => {
+      throw new Error('bridge crashed');
+    });
+    service.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+          sendMessageToMember,
+        } as any,
+      ])
+    );
+    vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
+    vi.spyOn(
+      service as any,
+      'hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence'
+    ).mockResolvedValue(true);
+    vi.spyOn(service as any, 'applyOpenCodeVisibleDestinationProof').mockImplementation(
+      async (input: any) => ({
+        ledgerRecord: input.ledgerRecord,
+        visibleReply: null,
+      })
+    );
+    vi.spyOn(service as any, 'materializeOpenCodePlainTextReplyIfNeeded').mockImplementation(
+      async (input: any) => ({
+        ledgerRecord: input.ledgerRecord,
+        visibleReply: null,
+      })
+    );
+    const watchdogSpy = vi
+      .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
+      .mockImplementation(() => undefined);
+    const records: any[] = [];
+    const ledger = {
+      getActiveForMember: vi.fn(async () => null),
+      ensurePending: vi.fn(async (input: Record<string, unknown>) => {
+        const record = {
+          id: 'ledger-send-exception-1',
+          teamName,
+          memberName: 'jack',
+          laneId,
+          runId: 'opencode-run-1',
+          runtimeSessionId: null,
+          runtimePromptMessageId: null,
+          runtimePromptMessageIds: [],
+          lastRuntimePromptMessageId: null,
+          lastDeliveryAttemptIdWithAcceptedPrompt: null,
+          inboxMessageId: 'opencode-send-exception-1',
+          inboxTimestamp: '2026-02-23T17:00:00.000Z',
+          source: 'watcher',
+          messageKind: 'default',
+          workSyncIntent: null,
+          replyRecipient: 'team-lead',
+          actionMode: 'do',
+          taskRefs: [],
+          payloadHash: 'sha256:test',
+          status: 'pending',
+          responseState: 'not_observed',
+          attempts: 0,
+          maxAttempts: 3,
+          acceptanceUnknown: false,
+          nextAttemptAt: null,
+          lastAttemptAt: null,
+          lastObservedAt: null,
+          acceptedAt: null,
+          respondedAt: null,
+          failedAt: null,
+          inboxReadCommittedAt: null,
+          inboxReadCommitError: null,
+          prePromptCursor: null,
+          postPromptCursor: null,
+          deliveredUserMessageId: null,
+          observedAssistantMessageId: null,
+          observedAssistantPreview: null,
+          observedToolCallNames: [],
+          observedVisibleMessageId: null,
+          visibleReplyMessageId: null,
+          visibleReplyInbox: null,
+          visibleReplyCorrelation: null,
+          lastReason: null,
+          diagnostics: [] as string[],
+          createdAt: '2026-02-23T17:00:00.000Z',
+          updatedAt: '2026-02-23T17:00:00.000Z',
+          ...input,
+        };
+        records.push(record);
+        return record;
+      }),
+      applyDeliveryResult: vi.fn(async (input: Record<string, unknown>) => {
+        const record = records[0];
+        Object.assign(record, {
+          status: 'failed_retryable',
+          responseState: 'reconcile_failed',
+          attempts: 1,
+          lastAttemptAt: input.now,
+          lastReason: input.reason,
+          diagnostics: input.diagnostics,
+          updatedAt: input.now,
+        });
+        return record;
+      }),
+      markNextAttemptScheduled: vi.fn(async (input: Record<string, unknown>) => {
+        const record = records[0];
+        Object.assign(record, {
+          status: input.status,
+          nextAttemptAt: input.nextAttemptAt,
+          lastReason: input.reason,
+          updatedAt: input.scheduledAt,
+        });
+        return record;
+      }),
+      markFailedTerminal: vi.fn(),
+    };
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue(ledger);
+
+    const delivery = await service.deliverOpenCodeMemberMessage(teamName, {
+      memberName: 'jack',
+      text: 'Please continue task.',
+      messageId: 'opencode-send-exception-1',
+      source: 'watcher',
+      replyRecipient: 'team-lead',
+      actionMode: 'do',
+      inboxTimestamp: '2026-02-23T17:00:00.000Z',
+    });
+
+    expect(sendMessageToMember).toHaveBeenCalledTimes(1);
+    expect(ledger.applyDeliveryResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accepted: false,
+        attempted: true,
+        reason: expect.stringContaining('bridge crashed'),
+      })
+    );
+    expect(ledger.markNextAttemptScheduled).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'retry_scheduled',
+        reason: expect.stringContaining('bridge crashed'),
+      })
+    );
+    expect(watchdogSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        memberName: 'jack',
+        messageId: 'opencode-send-exception-1',
+      })
+    );
+    expect(delivery).toMatchObject({
+      delivered: false,
+      accepted: false,
+      responsePending: true,
+      ledgerStatus: 'retry_scheduled',
+      ledgerRecordId: 'ledger-send-exception-1',
+      reason: expect.stringContaining('bridge crashed'),
+    });
+  });
+
+  it('does not postpone an earlier OpenCode prompt watchdog wake when rescheduled later', async () => {
+    vi.useFakeTimers();
+    try {
+      const service = new TeamProvisioningService();
+      const relaySpy = vi
+        .spyOn(service, 'relayOpenCodeMemberInboxMessages')
+        .mockResolvedValue({ attempted: 1, delivered: 0, failed: 0 } as any);
+      vi.spyOn(service as any, 'canDeliverToOpenCodeRuntimeForTeam').mockReturnValue(true);
+
+      (service as any).scheduleOpenCodePromptDeliveryWatchdog({
+        teamName: 'my-team',
+        memberName: 'jack',
+        messageId: 'message-1',
+        delayMs: 500,
+      });
+      (service as any).scheduleOpenCodePromptDeliveryWatchdog({
+        teamName: 'my-team',
+        memberName: 'jack',
+        messageId: 'message-1',
+        delayMs: 60_000,
+      });
+
+      await vi.advanceTimersByTimeAsync(501);
+
+      expect(relaySpy).toHaveBeenCalledTimes(1);
+      expect(relaySpy).toHaveBeenCalledWith('my-team', 'jack', {
+        onlyMessageId: 'message-1',
+        source: 'watchdog',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('ignores stale OpenCode watchdog jobs after the runtime lane is no longer active', async () => {
     vi.useFakeTimers();
     try {
@@ -2521,6 +2831,96 @@ Messages:
     );
     const rows = JSON.parse(hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]');
     expect(rows.map((row: { read?: boolean }) => row.read)).toEqual([false, true]);
+  });
+
+  it('retries failed-terminal OpenCode rows caused by stale runtime manifest watermark', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+    expect(identity.ok).toBe(true);
+    const staleRecord = {
+      id: 'ledger-terminal-stale-manifest',
+      teamName,
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      runId: 'run-1',
+      status: 'failed_terminal',
+      responseState: 'reconcile_failed',
+      attempts: 3,
+      maxAttempts: 3,
+      inboxMessageId: 'opencode-terminal-stale-manifest',
+      replyRecipient: 'team-lead',
+      actionMode: null,
+      taskRefs: [],
+      source: 'watcher',
+      lastReason:
+        'opencode_message_delivery_exception: Bridge server runtime manifest high watermark is stale',
+      diagnostics: [
+        'opencode_message_delivery_exception: Bridge server runtime manifest high watermark is stale',
+      ],
+    };
+    const markNextAttemptScheduled = vi.fn(async (input: Record<string, unknown>) => ({
+      ...staleRecord,
+      status: input.status,
+      nextAttemptAt: input.nextAttemptAt,
+      lastReason: input.reason,
+    }));
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getByInboxMessage: vi.fn(async (input: { inboxMessageId: string }) =>
+        input.inboxMessageId === 'opencode-terminal-stale-manifest' ? staleRecord : null
+      ),
+      markNextAttemptScheduled,
+    });
+    seedMemberInbox(teamName, 'jack', [
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'Old stale manifest row.',
+        timestamp: '2026-02-23T17:00:00.000Z',
+        read: false,
+        messageId: 'opencode-terminal-stale-manifest',
+      },
+      {
+        from: 'bob',
+        to: 'jack',
+        text: 'New row should wait behind the retried old row.',
+        timestamp: '2026-02-23T17:00:02.000Z',
+        read: false,
+        messageId: 'opencode-terminal-new',
+      },
+    ]);
+    const deliverSpy = vi
+      .spyOn(service, 'deliverOpenCodeMemberMessage')
+      .mockResolvedValue({ delivered: true, diagnostics: [] });
+
+    const relay = await service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+
+    expect(markNextAttemptScheduled).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'ledger-terminal-stale-manifest',
+        status: 'retry_scheduled',
+        reason: 'opencode_prompt_delivery_requeued_after_runtime_manifest_high_watermark_fix',
+      })
+    );
+    expect(relay).toMatchObject({ relayed: 1, attempted: 1, delivered: 1, failed: 0 });
+    expect(deliverSpy).toHaveBeenCalledTimes(1);
+    expect(deliverSpy).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({ messageId: 'opencode-terminal-stale-manifest' })
+    );
+    const rows = JSON.parse(hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]');
+    expect(rows.map((row: { read?: boolean }) => row.read)).toEqual([true, false]);
   });
 
   it('fails OpenCode secondary rows with missing attachment payloads terminally without text-only delivery', async () => {
@@ -2706,7 +3106,7 @@ Messages:
     }
   });
 
-  it('does not let an older in-flight OpenCode relay mask a specific UI-send message', async () => {
+  it('schedules existing pending OpenCode prompt ledger rows with no next attempt on startup scan', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     hoisted.files.set(
@@ -2720,76 +3120,145 @@ Messages:
         ],
       })
     );
-    seedMemberInbox(teamName, 'jack', [
-      {
-        from: 'bob',
-        to: 'jack',
-        text: 'Older watcher message.',
-        timestamp: '2026-02-23T17:00:00.000Z',
-        read: false,
-        messageId: 'opencode-inflight-old',
-      },
-    ]);
+    const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+    expect(identity.ok).toBe(true);
+    const laneId = identity.laneId;
+    const scheduleSpy = vi
+      .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
+      .mockImplementation(() => undefined);
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      pruneTerminalRecords: vi.fn(async () => ({ pruned: 0, remaining: 1 })),
+      list: vi.fn(async () => [
+        {
+          id: 'ledger-existing-pending-1',
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'opencode-existing-pending-1',
+          status: 'pending',
+          responseState: 'not_observed',
+          attempts: 0,
+          maxAttempts: 3,
+          nextAttemptAt: null,
+          diagnostics: [],
+          createdAt: '2026-02-23T17:00:00.000Z',
+        },
+      ]),
+      getByInboxMessage: vi.fn(async () => null),
+    });
 
-    const oldDeliveryStarted = createDeferred<void>();
-    const releaseOldDelivery = createDeferred<void>();
-    const deliverSpy = vi
-      .spyOn(service, 'deliverOpenCodeMemberMessage')
-      .mockImplementation(async (_teamName, input) => {
-        if (input.messageId === 'opencode-inflight-old') {
-          oldDeliveryStarted.resolve(undefined);
-          await releaseOldDelivery.promise;
-        }
-        return { delivered: true, diagnostics: [] };
+    const scheduled = await (service as any).scanOpenCodePromptDeliveryWatchdogForActiveLanes(
+      teamName,
+      [laneId]
+    );
+
+    expect(scheduled).toBe(1);
+    expect(scheduleSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        memberName: 'jack',
+        messageId: 'opencode-existing-pending-1',
+        delayMs: expect.any(Number),
+      })
+    );
+  });
+
+  it('queues a specific OpenCode relay behind an active member relay without duplicate prompts', async () => {
+    vi.useFakeTimers();
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    try {
+      hoisted.files.set(
+        `/mock/teams/${teamName}/config.json`,
+        JSON.stringify({
+          name: teamName,
+          projectPath: '/tmp/my-team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+          ],
+        })
+      );
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Older watcher message.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-inflight-old',
+        },
+      ]);
+
+      const oldDeliveryStarted = createDeferred<void>();
+      const releaseOldDelivery = createDeferred<void>();
+      const deliverSpy = vi
+        .spyOn(service, 'deliverOpenCodeMemberMessage')
+        .mockImplementation(async (_teamName, input) => {
+          if (input.messageId === 'opencode-inflight-old') {
+            oldDeliveryStarted.resolve(undefined);
+            await releaseOldDelivery.promise;
+          }
+          return { delivered: true, diagnostics: [] };
+        });
+
+      const watcherRelay = service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
+      await oldDeliveryStarted.promise;
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Older watcher message.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-inflight-old',
+        },
+        {
+          from: 'user',
+          to: 'jack',
+          text: 'New UI message.',
+          timestamp: '2026-02-23T17:00:01.000Z',
+          read: false,
+          messageId: 'opencode-inflight-new',
+        },
+      ]);
+
+      await expect(
+        service.relayOpenCodeMemberInboxMessages(teamName, 'jack', {
+          onlyMessageId: 'opencode-inflight-new',
+          source: 'ui-send',
+          deliveryMetadata: { replyRecipient: 'user' },
+        })
+      ).resolves.toMatchObject({
+        attempted: 1,
+        delivered: 0,
+        failed: 0,
+        lastDelivery: {
+          delivered: true,
+          accepted: false,
+          responsePending: true,
+          queuedBehindMessageId: 'opencode-inflight-new',
+          reason: 'opencode_inbox_relay_queued_behind_active_relay',
+        },
       });
+      releaseOldDelivery.resolve(undefined);
 
-    const watcherRelay = service.relayOpenCodeMemberInboxMessages(teamName, 'jack');
-    await oldDeliveryStarted.promise;
-    seedMemberInbox(teamName, 'jack', [
-      {
-        from: 'bob',
-        to: 'jack',
-        text: 'Older watcher message.',
-        timestamp: '2026-02-23T17:00:00.000Z',
-        read: false,
-        messageId: 'opencode-inflight-old',
-      },
-      {
-        from: 'user',
-        to: 'jack',
-        text: 'New UI message.',
-        timestamp: '2026-02-23T17:00:01.000Z',
-        read: false,
-        messageId: 'opencode-inflight-new',
-      },
-    ]);
-
-    const uiRelay = service.relayOpenCodeMemberInboxMessages(teamName, 'jack', {
-      onlyMessageId: 'opencode-inflight-new',
-      source: 'ui-send',
-      deliveryMetadata: { replyRecipient: 'user' },
-    });
-    releaseOldDelivery.resolve(undefined);
-
-    await expect(watcherRelay).resolves.toMatchObject({
-      attempted: 1,
-      delivered: 1,
-    });
-    await expect(uiRelay).resolves.toMatchObject({
-      attempted: 1,
-      delivered: 1,
-      failed: 0,
-    });
-    expect(deliverSpy).toHaveBeenCalledWith(
-      teamName,
-      expect.objectContaining({ messageId: 'opencode-inflight-old' })
-    );
-    expect(deliverSpy).toHaveBeenCalledWith(
-      teamName,
-      expect.objectContaining({ messageId: 'opencode-inflight-new' })
-    );
-    const rows = JSON.parse(hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]');
-    expect(rows.map((row: { read?: boolean }) => row.read)).toEqual([true, true]);
+      await expect(watcherRelay).resolves.toMatchObject({
+        attempted: 1,
+        delivered: 1,
+      });
+      expect(deliverSpy).toHaveBeenCalledTimes(1);
+      expect(deliverSpy).toHaveBeenCalledWith(
+        teamName,
+        expect.objectContaining({ messageId: 'opencode-inflight-old' })
+      );
+      const rows = JSON.parse(
+        hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]'
+      );
+      expect(rows.map((row: { read?: boolean }) => row.read)).toEqual([true, false]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('treats an already-read specific OpenCode inbox row as delivered for UI-send relay', async () => {
@@ -3088,6 +3557,9 @@ Messages:
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     const teamsBasePath = getTeamsBasePath();
+    const wakeSpy = vi
+      .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
+      .mockImplementation(() => undefined);
     hoisted.files.set(
       `${teamsBasePath}/${teamName}/config.json`,
       JSON.stringify({
@@ -3124,6 +3596,1270 @@ Messages:
       busy: true,
       reason: 'opencode_foreground_inbox_unread',
       activeMessageId: 'foreground-message-1',
+    });
+    expect(wakeSpy).toHaveBeenCalledWith({
+      teamName,
+      memberName: 'jack',
+      messageId: 'foreground-message-1',
+      delayMs: 500,
+    });
+  });
+
+  it('wakes an active OpenCode foreground delivery instead of blocking work-sync on unread inbox state', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const wakeSpy = vi
+      .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
+      .mockImplementation(() => undefined);
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'New task assigned to you.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'foreground-message-1',
+          messageKind: 'default',
+        },
+      ],
+      activeRecord: {
+        inboxMessageId: 'foreground-message-1',
+        messageKind: 'default',
+        nextAttemptAt: '2026-02-23T17:33:00.000Z',
+      },
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_prompt_delivery_active:default',
+      activeMessageId: 'foreground-message-1',
+      retryAfterIso: '2026-02-23T17:33:00.000Z',
+    });
+    expect(wakeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        memberName: 'jack',
+        messageId: 'foreground-message-1',
+      })
+    );
+  });
+
+  it('prioritizes an active OpenCode prompt ledger over newer unread foreground messages', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const wakeSpy = vi
+      .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
+      .mockImplementation(() => undefined);
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Follow-up comment after assignment.',
+          timestamp: '2026-02-23T17:32:00.000Z',
+          read: false,
+          messageId: 'foreground-comment-1',
+          messageKind: 'default',
+        },
+      ],
+      activeRecord: {
+        inboxMessageId: 'foreground-assignment-1',
+        messageKind: 'default',
+        nextAttemptAt: '2026-02-23T17:33:00.000Z',
+      },
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:10.000Z',
+      workSyncIntent: 'agenda_sync',
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_prompt_delivery_active:default',
+      activeMessageId: 'foreground-assignment-1',
+      retryAfterIso: '2026-02-23T17:33:00.000Z',
+    });
+    expect(wakeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        memberName: 'jack',
+        messageId: 'foreground-assignment-1',
+      })
+    );
+  });
+
+  it('recovers a missing OpenCode lane before using an active prompt ledger as busy state', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const memberName = 'jack';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: memberName, role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/${memberName}.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: memberName,
+          text: 'New task assigned to you.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'foreground-message-1',
+          messageKind: 'default',
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: memberName,
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex')
+      .mockResolvedValueOnce({
+        version: 1,
+        updatedAt: '2026-02-23T17:30:00.000Z',
+        lanes: {},
+      })
+      .mockResolvedValue({
+        version: 1,
+        updatedAt: '2026-02-23T17:30:01.000Z',
+        lanes: {
+          [laneId]: {
+            laneId,
+            state: 'active',
+            updatedAt: '2026-02-23T17:30:01.000Z',
+          },
+        },
+      });
+    const recoverySpy = vi
+      .spyOn(service as any, 'tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery')
+      .mockResolvedValue(true);
+    const wakeSpy = vi
+      .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
+      .mockImplementation(() => undefined);
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getActiveForMember: vi.fn(async () => ({
+        id: 'ledger-foreground-message-1',
+        teamName,
+        memberName,
+        laneId,
+        inboxMessageId: 'foreground-message-1',
+        messageKind: 'default',
+        status: 'pending',
+        responseState: 'not_observed',
+        nextAttemptAt: '2026-02-23T17:33:00.000Z',
+      })),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName,
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+    });
+
+    expect(recoverySpy).toHaveBeenCalledWith({ teamName, memberName });
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_prompt_delivery_active:default',
+      activeMessageId: 'foreground-message-1',
+    });
+    expect(wakeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName, memberName, messageId: 'foreground-message-1' })
+    );
+  });
+
+  it('does not use an active OpenCode prompt ledger when recovery leaves the lane inactive', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const memberName = 'jack';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: memberName, role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/${memberName}.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: memberName,
+          text: 'New task assigned to you.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'foreground-message-1',
+          messageKind: 'default',
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: memberName,
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {},
+    });
+    const recoverySpy = vi
+      .spyOn(service as any, 'tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery')
+      .mockResolvedValue(true);
+    const wakeSpy = vi
+      .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
+      .mockImplementation(() => undefined);
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getActiveForMember: vi.fn(async () => ({
+        id: 'ledger-foreground-message-1',
+        teamName,
+        memberName,
+        laneId,
+        inboxMessageId: 'foreground-message-1',
+        messageKind: 'default',
+        status: 'pending',
+        responseState: 'not_observed',
+        nextAttemptAt: '2026-02-23T17:33:00.000Z',
+      })),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName,
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+    });
+
+    expect(recoverySpy).toHaveBeenCalledWith({ teamName, memberName });
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'foreground-message-1',
+    });
+    expect(wakeSpy).toHaveBeenCalledWith({
+      teamName,
+      memberName,
+      messageId: 'foreground-message-1',
+      delayMs: 500,
+    });
+  });
+
+  it('recovers a missing OpenCode lane before treating work-sync delivery as unavailable', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const memberName = 'jack';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: memberName, role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(`${teamsBasePath}/${teamName}/inboxes/${memberName}.json`, JSON.stringify([]));
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: memberName,
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex')
+      .mockResolvedValueOnce({
+        version: 1,
+        updatedAt: '2026-02-23T17:30:00.000Z',
+        lanes: {},
+      })
+      .mockResolvedValue({
+        version: 1,
+        updatedAt: '2026-02-23T17:30:01.000Z',
+        lanes: {
+          [laneId]: {
+            laneId,
+            state: 'active',
+            updatedAt: '2026-02-23T17:30:01.000Z',
+          },
+        },
+      });
+    const recoverySpy = vi
+      .spyOn(service as any, 'tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery')
+      .mockResolvedValue(true);
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName,
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+    });
+
+    expect(recoverySpy).toHaveBeenCalledWith({ teamName, memberName });
+    expect(busy).toEqual({ busy: false });
+  });
+
+  it('keeps OpenCode work-sync busy when recovery reports success but lane index is still inactive', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const memberName = 'jack';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: memberName, role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(`${teamsBasePath}/${teamName}/inboxes/${memberName}.json`, JSON.stringify([]));
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: memberName,
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {},
+    });
+    const recoverySpy = vi
+      .spyOn(service as any, 'tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery')
+      .mockResolvedValue(true);
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName,
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+    });
+
+    expect(recoverySpy).toHaveBeenCalledWith({ teamName, memberName });
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_no_active_lane',
+    });
+  });
+
+  it('does not let proof-missing recovery get blocked by its original unread message', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'user',
+          to: 'jack',
+          text: 'Please check the current issue.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'foreground-message-1',
+          messageKind: 'direct',
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {
+        [laneId]: {
+          laneId,
+          state: 'active',
+          updatedAt: '2026-02-23T17:30:00.000Z',
+        },
+      },
+    });
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const sameMessageRecoveryBusy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+      workSyncIntentKey: 'proof-missing:foreground-message-1',
+    });
+
+    expect(sameMessageRecoveryBusy).toEqual({ busy: false });
+
+    const unrelatedRecoveryBusy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+      workSyncIntentKey: 'proof-missing:another-message',
+    });
+
+    expect(unrelatedRecoveryBusy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'foreground-message-1',
+    });
+  });
+
+  it('allows OpenCode agenda-sync recovery past the exact proof-missing foreground message', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {
+        [laneId]: {
+          laneId,
+          state: 'active',
+          updatedAt: '2026-02-23T17:30:00.000Z',
+        },
+      },
+    });
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      list: vi.fn(async () => [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ]),
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toEqual({ busy: false });
+  });
+
+  it('allows OpenCode agenda-sync proof-missing bypass after recovering a missing lane index', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex')
+      .mockResolvedValueOnce({
+        version: 1,
+        updatedAt: '2026-02-23T17:30:00.000Z',
+        lanes: {},
+      })
+      .mockResolvedValue({
+        version: 1,
+        updatedAt: '2026-02-23T17:30:01.000Z',
+        lanes: {
+          [laneId]: {
+            laneId,
+            state: 'active',
+            updatedAt: '2026-02-23T17:30:01.000Z',
+          },
+        },
+      });
+    const recoverySpy = vi
+      .spyOn(service as any, 'tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery')
+      .mockResolvedValue(true);
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      list: vi.fn(async () => [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ]),
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(recoverySpy).toHaveBeenCalledWith({ teamName, memberName: 'jack' });
+    expect(busy).toEqual({ busy: false });
+  });
+
+  it('keeps OpenCode agenda-sync proof-missing bypass disabled when lane index is unreadable', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockRejectedValue(
+      new Error('temporary read failure')
+    );
+    const recoverySpy = vi
+      .spyOn(service as any, 'tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery')
+      .mockResolvedValue(true);
+
+    const bypass = await (service as any).getOpenCodeAgendaSyncRecoveryBypassMessageIds({
+      teamName,
+      memberName: 'jack',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+      foregroundMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+    });
+
+    expect(recoverySpy).not.toHaveBeenCalled();
+    expect(bypass).toEqual(new Set());
+  });
+
+  it('allows OpenCode agenda-sync recovery for legacy proof-missing foreground ids', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    const legacyMessage = {
+      from: 'team-lead',
+      to: 'jack',
+      text: 'Please continue task #task1234.',
+      timestamp: '2026-02-23T17:31:00.000Z',
+      read: false,
+      messageKind: 'default',
+      taskRefs: [taskRef],
+    };
+    const legacyMessageId = buildLegacyInboxMessageId(
+      legacyMessage.from,
+      legacyMessage.timestamp,
+      legacyMessage.text
+    );
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [legacyMessage],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: legacyMessageId,
+          taskRefs: [taskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toEqual({ busy: false });
+  });
+
+  it('keeps newer same-task OpenCode foreground messages busy during agenda-sync recovery', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Dependency resolved. Please re-check #task1234.',
+          timestamp: '2026-02-23T17:31:40.000Z',
+          read: false,
+          messageId: 'same-task-follow-up-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'same-task-follow-up-1',
+    });
+  });
+
+  it('keeps OpenCode agenda-sync busy when proof-missing recovery evidence is absent', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'foreground-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {
+        [laneId]: {
+          laneId,
+          state: 'active',
+          updatedAt: '2026-02-23T17:30:00.000Z',
+        },
+      },
+    });
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      list: vi.fn(async () => []),
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:31:10.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'foreground-message-1',
+    });
+  });
+
+  it('keeps unrelated unread OpenCode foreground messages busy during agenda-sync recovery', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+        {
+          from: 'user',
+          to: 'jack',
+          text: 'Unrelated direct instruction.',
+          timestamp: '2026-02-23T17:31:20.000Z',
+          read: false,
+          messageId: 'unrelated-message-1',
+          messageKind: 'direct',
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {
+        [laneId]: {
+          laneId,
+          state: 'active',
+          updatedAt: '2026-02-23T17:30:00.000Z',
+        },
+      },
+    });
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      list: vi.fn(async () => [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ]),
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:31:30.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'unrelated-message-1',
+    });
+  });
+
+  it('keeps OpenCode agenda-sync busy when an active prompt ledger record exists after recovery bypass', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    const proofMissingRecord = buildOpenCodeProofMissingRecord({
+      teamName,
+      memberName: 'jack',
+      laneId,
+      inboxMessageId: 'proof-missing-message-1',
+      taskRefs: [taskRef],
+    });
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {
+        [laneId]: {
+          laneId,
+          state: 'active',
+          updatedAt: '2026-02-23T17:30:00.000Z',
+        },
+      },
+    });
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      list: vi.fn(async () => [proofMissingRecord]),
+      getActiveForMember: vi.fn(async () => ({
+        ...proofMissingRecord,
+        id: 'opencode-prompt:active-nudge-1',
+        inboxMessageId: 'active-nudge-1',
+        messageKind: 'member_work_sync_nudge',
+        status: 'accepted',
+        nextAttemptAt: '2026-02-23T17:33:00.000Z',
+      })),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_prompt_delivery_active:member_work_sync_nudge',
+      activeMessageId: 'active-nudge-1',
+      retryAfterIso: '2026-02-23T17:33:00.000Z',
+    });
+  });
+
+  it('keeps OpenCode agenda-sync busy for same-task proof-missing messages with attachments', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const teamsBasePath = getTeamsBasePath();
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/config.json`,
+      JSON.stringify({
+        name: teamName,
+        projectPath: '/tmp/my-team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+        ],
+      })
+    );
+    hoisted.files.set(
+      `${teamsBasePath}/${teamName}/inboxes/jack.json`,
+      JSON.stringify([
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+          attachments: [{ id: 'attachment-1', filename: 'notes.txt', mimeType: 'text/plain' }],
+        },
+      ])
+    );
+    (service as any).resolveOpenCodeMemberDeliveryIdentity = vi.fn(async () => ({
+      ok: true,
+      canonicalMemberName: 'jack',
+      laneId,
+    }));
+    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+      version: 1,
+      updatedAt: '2026-02-23T17:30:00.000Z',
+      lanes: {
+        [laneId]: {
+          laneId,
+          state: 'active',
+          updatedAt: '2026-02-23T17:30:00.000Z',
+        },
+      },
+    });
+    vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      list: vi.fn(async () => [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ]),
+      getActiveForMember: vi.fn(async () => null),
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'proof-missing-message-1',
+    });
+  });
+
+  it('keeps OpenCode proof-missing foreground messages busy outside agenda-sync recovery', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'proof-missing-message-1',
+    });
+  });
+
+  it('keeps OpenCode agenda-sync busy when proof-missing record task refs do not overlap', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    const otherTaskRef = { teamName, taskId: 'task-9999', displayId: 'task9999' };
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [otherTaskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'proof-missing-message-1',
+    });
+  });
+
+  it('keeps OpenCode agenda-sync busy when terminal ledger reason is not proof missing', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'terminal-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+      ledgerRecords: [
+        {
+          ...buildOpenCodeProofMissingRecord({
+            teamName,
+            memberName: 'jack',
+            laneId,
+            inboxMessageId: 'terminal-message-1',
+            taskRefs: [taskRef],
+          }),
+          responseState: 'permission_blocked',
+          lastReason: 'permission_blocked',
+          diagnostics: ['permission_blocked'],
+        },
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'terminal-message-1',
+    });
+  });
+
+  it('keeps OpenCode agenda-sync busy when the proof-missing lane is inactive', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const laneId = 'secondary:opencode:jack';
+    const taskRef = { teamName, taskId: 'task-1234', displayId: 'task1234' };
+    seedOpenCodeBusyStatusFixture({
+      service,
+      teamName,
+      laneId,
+      laneState: 'stopped',
+      inboxMessages: [
+        {
+          from: 'team-lead',
+          to: 'jack',
+          text: 'Please continue task #task1234.',
+          timestamp: '2026-02-23T17:31:00.000Z',
+          read: false,
+          messageId: 'proof-missing-message-1',
+          messageKind: 'default',
+          taskRefs: [taskRef],
+        },
+      ],
+      ledgerRecords: [
+        buildOpenCodeProofMissingRecord({
+          teamName,
+          memberName: 'jack',
+          laneId,
+          inboxMessageId: 'proof-missing-message-1',
+          taskRefs: [taskRef],
+        }),
+      ],
+    });
+
+    const busy = await service.getOpenCodeMemberDeliveryBusyStatus({
+      teamName,
+      memberName: 'jack',
+      nowIso: '2026-02-23T17:32:00.000Z',
+      workSyncIntent: 'agenda_sync',
+      taskRefs: [taskRef],
+    });
+
+    expect(busy).toMatchObject({
+      busy: true,
+      reason: 'opencode_foreground_inbox_unread',
+      activeMessageId: 'proof-missing-message-1',
     });
   });
 

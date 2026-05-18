@@ -61,7 +61,7 @@ interface TeamRosterEditorSectionProps {
   onTeammateWorktreeDefaultChange?: (enabled: boolean) => void;
 }
 
-export const TeamRosterEditorSection = ({
+const TeamRosterEditorSectionImpl = ({
   members,
   onMembersChange,
   fieldError,
@@ -197,3 +197,6 @@ export const TeamRosterEditorSection = ({
     />
   );
 };
+
+export const TeamRosterEditorSection = React.memo(TeamRosterEditorSectionImpl);
+TeamRosterEditorSection.displayName = 'TeamRosterEditorSection';

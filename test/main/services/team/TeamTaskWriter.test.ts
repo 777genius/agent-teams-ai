@@ -210,16 +210,29 @@ describe('TeamTaskWriter', () => {
       const writtenPath = '/mock/tasks/my-team/11.json';
       const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
       expect(persisted.historyEvents).toHaveLength(1);
-      expect(persisted.historyEvents[0]).toMatchObject({
-        type: 'task_created',
-        status: 'in_progress',
-        actor: 'bob',
-      });
+    expect(persisted.historyEvents[0]).toMatchObject({
+      type: 'task_created',
+      status: 'in_progress',
+      actor: 'bob',
+    });
+  });
+
+  it('createTask records in_progress workIntervals as status time, not runtime activity', async () => {
+    await writer.createTask('my-team', {
+      id: '14',
+      subject: 'Already assigned',
+      status: 'in_progress',
+      createdAt: '2026-05-14T10:00:00.000Z',
     });
 
-    it('createTask without createdBy omits actor', async () => {
-      await writer.createTask('my-team', {
-        id: '13',
+    const writtenPath = '/mock/tasks/my-team/14.json';
+    const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
+    expect(persisted.workIntervals).toEqual([{ startedAt: '2026-05-14T10:00:00.000Z' }]);
+  });
+
+  it('createTask without createdBy omits actor', async () => {
+    await writer.createTask('my-team', {
+      id: '13',
         subject: 'No author',
         status: 'pending',
       });

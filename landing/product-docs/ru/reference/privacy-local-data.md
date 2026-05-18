@@ -1,9 +1,4 @@
 ---
-title: Приватность и локальные данные
-description: Что desktop-приложение Agent Teams хранит локально и какие данные могут покинуть машину через provider-backed models.
----
-
----
 title: Приватность и локальные данные – Документация Agent Teams
 description: Что Agent Teams хранит локально, что может покинуть машину через provider-backed model calls, и практические рекомендации по приватности.
 lang: ru-RU
@@ -28,13 +23,16 @@ Desktop app работает на вашей машине и читает local 
 
 Важные local locations:
 
-| Location | Purpose |
-| --- | --- |
-| `~/.claude/teams/<team>/` | Team config, member metadata, inboxes, launch state, bootstrap evidence, runtime diagnostics, sent-message records, kanban state и review-related team files. |
-| `~/.claude/tasks/<team>/` | Durable task JSON files для team board. |
-| `~/.claude/projects/<encoded-project>/` | Claude/Codex-style project session files для session history, context analysis и transcript-backed UI. |
+| Платформа | Location | Purpose |
+| --- | --- | --- |
+| macOS/Linux | `~/.claude/teams/<team>/` | Team config, member metadata, inboxes, launch state, bootstrap evidence, runtime diagnostics, sent-message records, kanban state и review-related team files. |
+| Windows | `%APPDATA%\Claude\teams\<team>\` | То же — team config, member metadata, inboxes, launch state и diagnostics. |
+| macOS/Linux | `~/.claude/tasks/<team>/` | Durable task JSON files для team board. |
+| Windows | `%APPDATA%\Claude\tasks\<team>\` | То же — durable task JSON files. |
+| macOS/Linux | `~/.claude/projects/<encoded-project>/` | Claude/Codex-style project session files для session history, context analysis и transcript-backed UI. |
+| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | То же — project session files. |
 
-Точные файлы зависят от runtime и версии app. Для launch debugging самые свежие evidence обычно лежат в соответствующей папке `~/.claude/teams/<team>/`.
+Точные файлы зависят от runtime и версии app. Для launch debugging самые свежие evidence обычно лежат в соответствующей папке `~/.claude/teams/<team>/` (или `%APPDATA%\Claude\teams\<team>\`).
 
 ## Что может выйти с машины
 

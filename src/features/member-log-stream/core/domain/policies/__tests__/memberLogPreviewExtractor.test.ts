@@ -134,6 +134,75 @@ API Error: 500 hidden MCP protocol instructions.
     expect(result.items[1]?.preview).not.toContain('{"type"');
   });
 
+  it('marks OpenCode system runtime errors as latest error previews', () => {
+    const result = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      sourceId: 'ses-real-opencode',
+      sourceLabel: 'OpenCode runtime',
+      sessionId: 'ses-real-opencode',
+      laneId: 'secondary:opencode:bob',
+      messages: [
+        message({
+          uuid: 'assistant-before-error',
+          timestamp: '2026-05-13T17:04:24.347Z',
+          content: [
+            {
+              type: 'text',
+              text: 'All done. Task #622701b8 completed and approved.',
+            },
+          ],
+        }),
+        message({
+          uuid: 'opencode-system-error',
+          type: 'system',
+          role: 'system',
+          timestamp: '2026-05-13T17:04:45.546Z',
+          content: 'OpenCode runtime error - UnknownError: database or disk is full',
+        }),
+      ],
+    });
+
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'Runtime error',
+      preview: 'OpenCode runtime error - UnknownError: database or disk is full',
+      tone: 'error',
+      sourceLabel: 'OpenCode runtime',
+      sessionId: 'ses-real-opencode',
+      laneId: 'secondary:opencode:bob',
+    });
+    expect(result.items[1]).toMatchObject({
+      title: 'Assistant',
+      tone: 'neutral',
+    });
+  });
+
+  it('does not flag normal runtime-error discussion as a runtime failure', () => {
+    const result = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'normal-runtime-error-discussion',
+          timestamp: '2026-05-13T17:04:24.347Z',
+          content: [
+            { type: 'text', text: 'Fixed OpenCode runtime error handling for the preview.' },
+          ],
+        }),
+      ],
+    });
+
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'Assistant',
+      preview: 'Fixed OpenCode runtime error handling for the preview.',
+      tone: 'neutral',
+    });
+  });
+
   it('extracts readable inbound task and comment messages without agent-only blocks', () => {
     const result = extractMemberLogPreviewItems({
       provider: 'opencode_runtime',

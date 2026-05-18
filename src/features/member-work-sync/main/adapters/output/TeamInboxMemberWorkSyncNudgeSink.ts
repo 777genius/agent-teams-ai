@@ -11,7 +11,11 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
 
   async insertIfAbsent(input: Parameters<MemberWorkSyncInboxNudgePort['insertIfAbsent']>[0]) {
     const existing = await this.inboxReader.getMessagesFor(input.teamName, input.memberName);
-    if (existing.some((message) => message.messageId === input.messageId)) {
+    const existingMessage = existing.find((message) => message.messageId === input.messageId);
+    if (existingMessage) {
+      if (existingMessage.workSyncPayloadHash !== input.payloadHash) {
+        return { inserted: false, messageId: input.messageId, conflict: true };
+      }
       return { inserted: false, messageId: input.messageId };
     }
 
@@ -30,6 +34,7 @@ export class TeamInboxMemberWorkSyncNudgeSink implements MemberWorkSyncInboxNudg
       workSyncIntent: input.payload.workSyncIntent,
       workSyncIntentKey: input.payload.workSyncIntentKey,
       workSyncReviewRequestEventIds: input.payload.workSyncReviewRequestEventIds,
+      workSyncPayloadHash: input.payloadHash,
     });
 
     return {

@@ -1,4 +1,5 @@
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
+import { normalizePathForComparison } from '@shared/utils/platformPath';
 
 import type { DashboardRecentProject } from '@features/recent-projects/contracts';
 
@@ -34,7 +35,7 @@ function normalizeHistoryPath(projectPath: string): string | null {
       normalizedPath = normalizedPath.slice(0, -1);
     }
   }
-  return normalizedPath;
+  return normalizedPath ? normalizePathForComparison(normalizedPath) : null;
 }
 
 function foldHistoryPath(projectPath: string): string {

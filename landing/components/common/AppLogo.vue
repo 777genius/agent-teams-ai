@@ -10,7 +10,7 @@ const { baseURL } = useRuntimeConfig().app;
       class="app-logo__img"
       width="36"
       height="36"
-    />
+    >
     <span class="app-logo__text">Agent Teams</span>
   </NuxtLink>
 </template>

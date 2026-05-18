@@ -150,6 +150,7 @@ describe('cliInstallerSlice', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -299,6 +300,49 @@ describe('cliInstallerSlice', () => {
       });
     });
 
+    it('does not let stale OpenCode missing-CLI status overwrite a refreshed model list', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          models: ['opencode/minimax-m2.5-free'],
+          canLoginFromUi: false,
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusMessage: 'OpenCode CLI not found',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+          backend: null,
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
+        {
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          models: ['opencode/minimax-m2.5-free'],
+        }
+      );
+    });
+
     it('still allows real OpenCode runtime errors to replace previous ready status', () => {
       const current = createMultimodelStatus([
         createMultimodelProvider({
@@ -396,6 +440,72 @@ describe('cliInstallerSlice', () => {
         source: 'app-managed',
         state: 'ready',
       });
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'opencode')
+      ).toMatchObject({
+        supported: true,
+        authenticated: true,
+        models: ['opencode/big-pickle'],
+      });
+    });
+
+    it('retries OpenCode provider refresh after install until models appear', async () => {
+      vi.useFakeTimers();
+
+      const stale = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusMessage: 'OpenCode CLI not found',
+        models: [],
+        canLoginFromUi: false,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+        backend: null,
+      });
+      const refreshed = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        models: ['opencode/big-pickle'],
+        canLoginFromUi: false,
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      });
+
+      useStore.setState({
+        cliStatus: createMultimodelStatus([stale]),
+      });
+      vi.mocked(api.openCodeRuntime.install).mockResolvedValue({
+        installed: true,
+        binaryPath: '/Users/tester/App Support/runtimes/opencode/current/opencode',
+        version: '1.14.48',
+        source: 'app-managed',
+        state: 'ready',
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(stale)
+        .mockResolvedValueOnce(refreshed);
+
+      const installPromise = useStore.getState().installOpenCodeRuntime();
+
+      await vi.waitFor(() => {
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      });
+      await vi.runOnlyPendingTimersAsync();
+      await installPromise;
+
+      expect(api.cliInstaller.invalidateStatus).toHaveBeenCalledTimes(2);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
       expect(
         useStore
           .getState()

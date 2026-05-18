@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterFileSuggestions, formatFileMentionPath } from '@renderer/hooks/useFileSuggestions';
+import {
+  extractDirectories,
+  filterFileSuggestions,
+  filterFolderSuggestions,
+  formatFileMentionPath,
+} from '@renderer/hooks/useFileSuggestions';
 
 import type { QuickOpenFile } from '@shared/types/editor';
 
@@ -91,14 +96,42 @@ describe('filterFileSuggestions', () => {
     expect(results.map((r) => r.name)).toEqual(['auth.ts', 'database.ts']);
   });
 
+  it('matches Windows backslash queries against normalized relative paths', () => {
+    const results = filterFileSuggestions(FILES, 'services\\auth');
+    expect(results).toHaveLength(1);
+    expect(results[0].relativePath).toBe('src/services/auth.ts');
+  });
+
   it('returns results in file list order', () => {
     const results = filterFileSuggestions(FILES, '.ts');
     expect(results[0].name).toBe('index.ts');
   });
 
   it('quotes inserted paths that contain spaces', () => {
-    expect(formatFileMentionPath('src/My Component/App.tsx')).toBe(
-      '"src/My Component/App.tsx"'
+    expect(formatFileMentionPath('src/My Component/App.tsx')).toBe('"src/My Component/App.tsx"');
+  });
+});
+
+describe('folder suggestions', () => {
+  it('derives stable folders from Windows relative paths', () => {
+    const folders = extractDirectories(
+      [
+        {
+          name: 'auth.ts',
+          relativePath: 'src\\services\\auth.ts',
+          path: 'C:\\Repo\\src\\services\\auth.ts',
+        },
+      ],
+      'C:\\Repo'
     );
+
+    expect(folders.map((f) => [f.name, f.relativePath, f.absolutePath])).toEqual([
+      ['src', 'src/', 'C:\\Repo\\src'],
+      ['services', 'src/services/', 'C:\\Repo\\src\\services'],
+    ]);
+
+    const suggestions = filterFolderSuggestions(folders, 'src\\services\\');
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0].insertText).toBe('src/services/');
   });
 });

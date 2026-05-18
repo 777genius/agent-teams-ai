@@ -1,9 +1,4 @@
 ---
-title: Провайдеры и рантаймы
-description: Поддерживаемые runtime paths, provider ids, model ids, multi-provider стратегия и capability checks в Agent Teams.
----
-
----
 title: Провайдеры и рантаймы – Документация Agent Teams
 description: Поддерживаемые runtime paths (Claude Code, Codex, OpenCode), provider IDs, модели, multi-provider стратегии и capability checks.
 lang: ru-RU
@@ -44,7 +39,7 @@ Runtime отвечает за:
 | Codex | Codex / OpenAI-backed models | Для Codex-native workflows | Использует Codex runtime integration и Codex auth/account state, когда они доступны. Часть diagnostics отличается от Claude transcripts. |
 | OpenCode | OpenCode-managed model routing | Для multi-provider teams и широкой model coverage | OpenCode может маршрутизировать через множество model providers. Agent Teams считает OpenCode lanes runtime-specific evidence и не угадывает attribution при ambiguous lane identity. |
 
-Gemini provider ids существуют во внутренних configuration paths, но Gemini сейчас скрыт из основного team creation UI, пока launch flow остаётся in development.
+Gemini — поддерживаемый провайдер с Google ADC, Gemini CLI и API key аутентификацией. Он доступен в UI создания команд и настройки рантайма, когда runtime сообщает о его доступности.
 
 ## Provider ids
 
@@ -54,7 +49,7 @@ Gemini provider ids существуют во внутренних configuration
 | --- | --- |
 | `anthropic` | Anthropic / Claude Code path |
 | `codex` | Codex path |
-| `gemini` | Gemini provider path, когда его отдаёт runtime |
+| `gemini` | Gemini provider path (Google ADC, Gemini CLI или API key) |
 | `opencode` | OpenCode path, включая OpenCode-managed provider routing |
 
 Эта таблица не гарантирует, что каждый provider authenticated, installed или доступен для каждой модели на каждой машине. Runtime status и capability checks - source of truth для конкретного launch.
@@ -81,6 +76,8 @@ Agent Teams остаётся provider-aware, но не provider-owned:
 - каждый member может нести provider/model settings через team launch metadata
 - model availability, auth, rate limits и tool behavior остаются ответственностью runtime/provider
 - OpenCode - основной путь, когда одной team нужны разные provider/model lanes
+
+Contributor-facing границы и canonical implementation guidance смотрите в [Архитектуре для контрибьюторов](/ru/reference/contributor-architecture).
 
 Рекомендуемые patterns:
 

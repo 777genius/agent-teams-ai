@@ -1435,6 +1435,64 @@ a[href],
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+.team-row-zebra-card,
+.project-row-zebra-card {
+  --row-card-bg: color-mix(in srgb, var(--color-surface) 50%, var(--color-surface-raised) 50%);
+  --row-zebra-bg: color-mix(in srgb, var(--color-surface-raised) 99%, var(--color-text) 1%);
+  --row-zebra-hover-bg: color-mix(in srgb, var(--row-zebra-bg) 97%, var(--color-text) 3%);
+  background-color: var(--row-card-bg);
+}
+
+.team-row-zebra-card:hover,
+.project-row-zebra-card:hover {
+  background-color: var(--row-zebra-hover-bg) !important;
+}
+
+@media (max-width: 767.98px) {
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(even) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(4n + 3),
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(4n + 4) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(6n + 4),
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(6n + 5),
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(6n + 6) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(4n + 3),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(4n + 4) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(6n + 4),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(6n + 5),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(6n + 6) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 5),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 6),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 7),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 8) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
 .message-composer-orbit-svg {
   overflow: visible;
 }

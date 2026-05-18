@@ -4,6 +4,11 @@ import * as path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type {
+  WorkspaceTrustCoordinator,
+  WorkspaceTrustExecutionPlan,
+} from '../../../../src/features/workspace-trust/core/application/WorkspaceTrustCoordinator';
+import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import {
   getMixedLaunchFallbackRecoveryError,
@@ -51,14 +56,29 @@ import {
 import type { InboxMessage, TaskRef, TeamProvisioningProgress } from '../../../../src/shared/types';
 
 const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = 60_000;
+const WORKSPACE_TRUST_TEST_ENV_NAMES = [
+  'AGENT_TEAMS_WORKSPACE_TRUST',
+  'AGENT_TEAMS_WORKSPACE_TRUST_PREFLIGHT',
+  'AGENT_TEAMS_WORKSPACE_TRUST_CLAUDE_PTY',
+  'AGENT_TEAMS_WORKSPACE_TRUST_CODEX_ARGS',
+  'AGENT_TEAMS_WORKSPACE_TRUST_CODEX_SETTINGS',
+  'AGENT_TEAMS_WORKSPACE_TRUST_RETRY',
+] as const;
+
+type WorkspaceTrustTestEnvName = (typeof WORKSPACE_TRUST_TEST_ENV_NAMES)[number];
 
 describe('Team agent launch matrix safe e2e', () => {
   let tempDir: string;
   let tempClaudeRoot: string;
   let projectPath: string;
+  let originalClaudeCliPath: string | undefined;
+  let originalWorkspaceTrustEnv: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
 
   beforeEach(async () => {
     TeamConfigReader.clearCacheForTests();
+    ClaudeBinaryResolver.clearCache();
+    originalClaudeCliPath = process.env.CLAUDE_CLI_PATH;
+    originalWorkspaceTrustEnv = snapshotWorkspaceTrustTestEnv();
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-launch-matrix-e2e-'));
     tempClaudeRoot = path.join(tempDir, '.claude');
     projectPath = path.join(tempDir, 'project');
@@ -69,6 +89,9 @@ describe('Team agent launch matrix safe e2e', () => {
 
   afterEach(async () => {
     TeamConfigReader.clearCacheForTests();
+    restoreOptionalEnvValue('CLAUDE_CLI_PATH', originalClaudeCliPath);
+    restoreWorkspaceTrustTestEnv(originalWorkspaceTrustEnv);
+    ClaudeBinaryResolver.clearCache();
     setClaudeBasePathOverride(null);
     await removeTempDirWithRetries(tempDir);
   });
@@ -335,6 +358,193 @@ describe('Team agent launch matrix safe e2e', () => {
       pendingPermissionRequestIds: ['perm-alice'],
     });
     expect(statuses.summary?.pendingCount).toBe(1);
+  });
+
+  it('blocks createTeam at workspace trust preflight before spawn and preserves existing launch state', async () => {
+    forceWorkspaceTrustPreflightEnv();
+    process.env.CLAUDE_CLI_PATH = await writeFakeClaudeCli(tempDir);
+    ClaudeBinaryResolver.clearCache();
+
+    const teamName = 'workspace-trust-create-blocked-safe-e2e';
+    const staleLaunchStatePath = path.join(getTeamsBasePath(), teamName, 'launch-state.json');
+    const staleLaunchState = {
+      version: 2,
+      teamName,
+      updatedAt: '2026-05-13T00:00:00.000Z',
+      leadSessionId: 'previous-lead-session',
+      launchPhase: 'finished',
+      expectedMembers: ['alice'],
+      bootstrapExpectedMembers: ['alice'],
+      members: {},
+      summary: {
+        confirmedCount: 1,
+        pendingCount: 0,
+        failedCount: 0,
+        runtimeAlivePendingCount: 0,
+        shellOnlyPendingCount: 0,
+        runtimeProcessPendingCount: 0,
+        runtimeCandidatePendingCount: 0,
+        noRuntimePendingCount: 0,
+        permissionPendingCount: 0,
+      },
+      teamLaunchState: 'clean_success',
+    };
+    await writeJsonFile(staleLaunchStatePath, staleLaunchState);
+
+    const errorMessage = `Claude workspace trust was not confirmed for ${projectPath}`;
+    const { coordinator, execute, planFull } = createBlockedWorkspaceTrustCoordinator({
+      errorMessage,
+      rawTail: 'Unexpected Claude startup screen',
+    });
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator(coordinator);
+    const progressEvents: TeamProvisioningProgress[] = [];
+
+    await expect(
+      svc.createTeam(
+        {
+          teamName,
+          cwd: projectPath,
+          providerId: 'anthropic',
+          model: 'sonnet',
+          skipPermissions: true,
+          members: [{ name: 'alice', role: 'Reviewer', providerId: 'anthropic', model: 'haiku' }],
+        },
+        (progress) => progressEvents.push(progress)
+      )
+    ).rejects.toThrow(errorMessage);
+
+    expect(progressEvents.map((progress) => progress.message)).toContain(
+      'Preparing workspace trust'
+    );
+    expect(progressEvents.at(-1)).toMatchObject({
+      state: 'failed',
+      message: 'Workspace trust required',
+      error: errorMessage,
+    });
+    expect(progressEvents.at(-1)?.launchDiagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        code: 'workspace_trust_preflight',
+        label: 'Workspace trust preflight blocked launch',
+        detail: errorMessage,
+      }),
+    ]);
+    expect(planFull).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(1);
+    const executePlan = execute.mock.calls[0]?.[0];
+    expect(executePlan).toBeDefined();
+    expect(executePlan?.workspaces.map((workspace) => workspace.cwd)).toContain(projectPath);
+
+    await expect(fs.readFile(staleLaunchStatePath, 'utf8')).resolves.toBe(
+      `${JSON.stringify(staleLaunchState, null, 2)}\n`
+    );
+    await expect(
+      fs.access(path.join(getTeamsBasePath(), teamName, 'config.json'))
+    ).rejects.toThrow();
+
+    const manifest = await readLatestLaunchFailureManifest(teamName);
+    expect(manifest).toMatchObject({
+      reason: 'launch_progress_failed',
+      classification: { code: 'workspace_trust_required' },
+      progress: {
+        state: 'failed',
+        message: 'Workspace trust required',
+        error: errorMessage,
+      },
+      flags: {
+        isLaunch: false,
+        workspaceTrustPreflight: {
+          strategyResults: [
+            expect.objectContaining({
+              status: 'blocked',
+              errorCode: 'workspace_trust_preflight_not_confirmed',
+              errorMessage,
+              rawTail: 'Unexpected Claude startup screen',
+            }),
+          ],
+        },
+      },
+    });
+    expect(manifest.launchDiagnostics).toEqual([
+      expect.objectContaining({
+        code: 'workspace_trust_preflight',
+        severity: 'error',
+        detail: errorMessage,
+      }),
+    ]);
+  });
+
+  it('blocks launchTeam at workspace trust preflight and restores the prelaunch config backup', async () => {
+    forceWorkspaceTrustPreflightEnv();
+    process.env.CLAUDE_CLI_PATH = await writeFakeClaudeCli(tempDir);
+    ClaudeBinaryResolver.clearCache();
+
+    const teamName = 'workspace-trust-launch-blocked-safe-e2e';
+    const originalProjectPath = path.join(tempDir, 'original-project');
+    const nextProjectPath = path.join(tempDir, 'next-project');
+    await fs.mkdir(originalProjectPath, { recursive: true });
+    await fs.mkdir(nextProjectPath, { recursive: true });
+    const originalConfig = await writeAnthropicTeamConfig({
+      teamName,
+      projectPath: originalProjectPath,
+      members: ['alice', 'bob'],
+    });
+
+    const errorMessage = `Claude workspace trust was not confirmed for ${nextProjectPath}`;
+    const { coordinator, execute } = createBlockedWorkspaceTrustCoordinator({
+      errorMessage,
+      evidence: ['workspace trust preflight blocked launch'],
+    });
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator(coordinator);
+    const progressEvents: TeamProvisioningProgress[] = [];
+
+    await expect(
+      svc.launchTeam(
+        {
+          teamName,
+          cwd: nextProjectPath,
+          providerId: 'anthropic',
+          model: 'sonnet',
+          skipPermissions: true,
+        },
+        (progress) => progressEvents.push(progress)
+      )
+    ).rejects.toThrow(errorMessage);
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(progressEvents.at(-1)).toMatchObject({
+      state: 'failed',
+      message: 'Workspace trust required',
+      error: errorMessage,
+    });
+    await expect(
+      fs.readFile(path.join(getTeamsBasePath(), teamName, 'config.json'), 'utf8')
+    ).resolves.toBe(originalConfig);
+
+    const manifest = await readLatestLaunchFailureManifest(teamName);
+    expect(manifest).toMatchObject({
+      classification: { code: 'workspace_trust_required' },
+      flags: {
+        isLaunch: true,
+        workspaceTrustPreflight: {
+          strategyResults: [
+            expect.objectContaining({
+              status: 'blocked',
+              errorMessage,
+            }),
+          ],
+        },
+      },
+    });
+    expect(manifest.progress.launchDiagnostics).toEqual([
+      expect.objectContaining({
+        code: 'workspace_trust_preflight',
+        severity: 'error',
+        detail: errorMessage,
+      }),
+    ]);
   });
 
   it('preserves mixed OpenCode per-member outcomes after a partial runtime adapter launch', async () => {
@@ -11746,6 +11956,130 @@ describe('Team agent launch matrix safe e2e', () => {
     ]);
   });
 
+  it('recovers a missing mixed OpenCode lane index from committed session evidence before watchdog scans unread inbox', async () => {
+    const teamName = 'mixed-opencode-watchdog-recovers-session-evidence-safe-e2e';
+    const laneId = 'secondary:opencode:bob';
+    const runId = 'session-evidence-opencode-run';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    await writeOpenCodeBootstrapSessionEvidenceForTest({
+      teamName,
+      laneId,
+      runId,
+      memberName: 'bob',
+      sessionId: 'ses_bob_committed_session_only',
+    });
+    const inboxDir = path.join(getTeamsBasePath(), teamName, 'inboxes');
+    await fs.mkdir(inboxDir, { recursive: true });
+    await fs.writeFile(
+      path.join(inboxDir, 'bob.json'),
+      `${JSON.stringify(
+        [
+          {
+            from: 'user',
+            to: 'bob',
+            text: 'recover this unread OpenCode message from committed session evidence',
+            timestamp: '2026-04-23T10:01:00.000Z',
+            read: false,
+            messageId: 'msg-watchdog-recovers-session-evidence-bob',
+          },
+        ],
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+    const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', { bob: 'confirmed' });
+    const restartedService = new TeamProvisioningService();
+    restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const scheduledWatchdogJobs: unknown[] = [];
+    (restartedService as any).scheduleOpenCodePromptDeliveryWatchdog = (input: unknown): void => {
+      scheduledWatchdogJobs.push(input);
+    };
+
+    await expect(
+      readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+    ).resolves.toMatchObject({ lanes: {} });
+
+    await expect(restartedService.scanOpenCodePromptDeliveryWatchdog(teamName)).resolves.toBe(1);
+
+    expect(adapter.reconcileInputs).toHaveLength(1);
+    expect(adapter.reconcileInputs[0]).toMatchObject({
+      teamName,
+      laneId,
+      reason: 'startup_recovery',
+    });
+    await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject(
+      {
+        lanes: {
+          [laneId]: {
+            state: 'active',
+            diagnostics: expect.arrayContaining([
+              'Recovered missing OpenCode runtime lane index from committed session evidence.',
+            ]),
+          },
+        },
+      }
+    );
+    expect(scheduledWatchdogJobs).toEqual([
+      expect.objectContaining({
+        teamName,
+        memberName: 'bob',
+        messageId: 'msg-watchdog-recovers-session-evidence-bob',
+        delayMs: 500,
+      }),
+    ]);
+  });
+
+  it('does not recover committed OpenCode session evidence when the parent process registry is explicitly stopped', async () => {
+    const teamName = 'mixed-opencode-watchdog-stopped-session-evidence-safe-e2e';
+    const laneId = 'secondary:opencode:bob';
+    const runId = 'stopped-session-evidence-opencode-run';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    await writeOpenCodeBootstrapSessionEvidenceForTest({
+      teamName,
+      laneId,
+      runId,
+      memberName: 'bob',
+      sessionId: 'ses_bob_stopped_committed_session',
+    });
+    await writeStoppedProcessRegistry(teamName);
+    const inboxDir = path.join(getTeamsBasePath(), teamName, 'inboxes');
+    await fs.mkdir(inboxDir, { recursive: true });
+    await fs.writeFile(
+      path.join(inboxDir, 'bob.json'),
+      `${JSON.stringify(
+        [
+          {
+            from: 'user',
+            to: 'bob',
+            text: 'must not recover this stopped OpenCode message',
+            timestamp: '2026-04-23T10:01:00.000Z',
+            read: false,
+            messageId: 'msg-watchdog-stopped-session-evidence-bob',
+          },
+        ],
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+    const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', { bob: 'confirmed' });
+    const restartedService = new TeamProvisioningService();
+    restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    await expect(restartedService.scanOpenCodePromptDeliveryWatchdog(teamName)).resolves.toBe(0);
+    expect(adapter.reconcileInputs).toEqual([]);
+    await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject(
+      {
+        lanes: {},
+      }
+    );
+  });
+
   it('recovers one missing mixed OpenCode lane before watchdog scans while sibling lane is active', async () => {
     const teamName = 'mixed-opencode-watchdog-recovers-one-missing-lane-safe-e2e';
     await writeMixedTeamConfig({ teamName, projectPath });
@@ -12416,6 +12750,53 @@ describe('Team agent launch matrix safe e2e', () => {
       messageId: 'msg-recovered-mixed-opencode',
     });
     expect(adapter.messageInputs[0]?.runId).toBeUndefined();
+  });
+
+  it('delivers direct OpenCode member messages after recovering a missing mixed lane from committed session evidence', async () => {
+    const teamName = 'mixed-opencode-direct-message-committed-session-recovery-safe-e2e';
+    const laneId = 'secondary:opencode:bob';
+    const runId = 'committed-session-direct-opencode-run';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    await writeOpenCodeBootstrapSessionEvidenceForTest({
+      teamName,
+      laneId,
+      runId,
+      memberName: 'bob',
+      sessionId: 'ses_bob_direct_committed_session',
+    });
+    const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', { bob: 'confirmed' });
+    const restartedService = new TeamProvisioningService();
+    restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    await expect(
+      restartedService.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'bob',
+        text: 'message recovered from committed session evidence',
+        messageId: 'msg-recovered-committed-session-mixed-opencode',
+      })
+    ).resolves.toEqual({
+      delivered: true,
+      diagnostics: [],
+    });
+    expect(adapter.reconcileInputs).toHaveLength(1);
+    expect(adapter.reconcileInputs[0]).toMatchObject({
+      teamName,
+      laneId,
+      reason: 'startup_recovery',
+    });
+    expect(adapter.reconcileInputs[0]?.runId).toEqual(expect.any(String));
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId,
+      teamName,
+      laneId,
+      memberName: 'bob',
+      cwd: projectPath,
+      text: 'message recovered from committed session evidence',
+      messageId: 'msg-recovered-committed-session-mixed-opencode',
+    });
   });
 
   it('does not deliver direct OpenCode member messages to a removed mixed teammate despite stale active lane index after service restart', async () => {
@@ -17117,6 +17498,9 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       providerId: 'opencode',
       memberName: input.memberName,
       sessionId: `session-${input.memberName}`,
+      runtimePromptMessageId: input.messageId
+        ? `prompt-${input.messageId}`
+        : `prompt-${input.memberName}-${this.messageInputs.length}`,
       runtimePid: 12_000 + this.messageInputs.length,
       diagnostics: [],
     };
@@ -17822,6 +18206,28 @@ async function writeAliveProcessRegistry(teamName: string): Promise<void> {
   );
 }
 
+async function writeStoppedProcessRegistry(teamName: string): Promise<void> {
+  const teamDir = path.join(getTeamsBasePath(), teamName);
+  await fs.mkdir(teamDir, { recursive: true });
+  await fs.writeFile(
+    path.join(teamDir, 'processes.json'),
+    `${JSON.stringify(
+      [
+        {
+          id: 'lead-process',
+          label: 'Team Lead',
+          pid: 987_654,
+          registeredAt: '2026-04-23T10:00:00.000Z',
+          stoppedAt: '2026-04-23T10:05:00.000Z',
+        },
+      ],
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
 function expectDirectChildKillCount(actual: number, expected: number): void {
   // Windows uses taskkill.exe for process-tree termination, so fake child.kill is not called.
   expect(actual).toBe(process.platform === 'win32' ? 0 : expected);
@@ -17894,6 +18300,256 @@ async function writeOpenCodeTeamConfig(input: {
     )}\n`,
     'utf8'
   );
+}
+
+async function writeAnthropicTeamConfig(input: {
+  teamName: string;
+  projectPath: string;
+  members: string[];
+}): Promise<string> {
+  const teamDir = path.join(getTeamsBasePath(), input.teamName);
+  const config = {
+    name: input.teamName,
+    projectPath: input.projectPath,
+    color: 'blue',
+    members: [
+      {
+        name: 'team-lead',
+        agentType: 'team-lead',
+        providerId: 'anthropic',
+        model: 'sonnet',
+      },
+      ...input.members.map((name) => ({
+        name,
+        role: 'Developer',
+        providerId: 'anthropic',
+        model: name === 'alice' ? 'haiku' : 'sonnet',
+      })),
+    ],
+  };
+  const raw = `${JSON.stringify(config, null, 2)}\n`;
+  await fs.mkdir(teamDir, { recursive: true });
+  await fs.writeFile(path.join(teamDir, 'config.json'), raw, 'utf8');
+  return raw;
+}
+
+async function writeJsonFile(filePath: string, value: unknown): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+async function writeFakeClaudeCli(rootDir: string): Promise<string> {
+  const binDir = path.join(rootDir, 'fake-bin');
+  const cliPath = path.join(binDir, process.platform === 'win32' ? 'claude.cmd' : 'claude');
+  const script = `#!/usr/bin/env node
+const args = process.argv.slice(2);
+const providerIndex = args.lastIndexOf('--provider');
+const provider = providerIndex >= 0 ? args[providerIndex + 1] : 'anthropic';
+
+function hasCommand(...parts) {
+  return parts.every((part) => args.includes(part));
+}
+
+function modelCatalog(providerId) {
+  const base = {
+    schemaVersion: 1,
+    providerId,
+    source: 'runtime',
+    status: 'ready',
+    fetchedAt: '2026-05-13T00:00:00.000Z',
+    staleAt: '2026-05-13T01:00:00.000Z',
+    diagnostics: {
+      configReadState: 'ready',
+      appServerState: 'healthy',
+    },
+  };
+  if (providerId === 'anthropic') {
+    return {
+      ...base,
+      defaultModelId: 'sonnet',
+      defaultLaunchModel: 'sonnet',
+      models: [
+        {
+          id: 'sonnet',
+          launchModel: 'sonnet',
+          displayName: 'Sonnet',
+          supportedReasoningEfforts: ['low', 'medium', 'high'],
+          defaultReasoningEffort: 'medium',
+          supportsFastMode: false,
+        },
+        {
+          id: 'haiku',
+          launchModel: 'haiku',
+          displayName: 'Haiku',
+          supportedReasoningEfforts: ['low', 'medium'],
+          defaultReasoningEffort: 'medium',
+          supportsFastMode: false,
+        },
+      ],
+    };
+  }
+  return {
+    ...base,
+    defaultModelId: 'gpt-5.5',
+    defaultLaunchModel: 'gpt-5.5',
+    models: [
+      {
+        id: 'gpt-5.5',
+        launchModel: 'gpt-5.5',
+        displayName: 'GPT-5.5',
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+      },
+    ],
+  };
+}
+
+if (hasCommand('model', 'list')) {
+  const catalog = modelCatalog(provider);
+  console.log(JSON.stringify({
+    schemaVersion: 1,
+    providers: {
+      [provider]: {
+        defaultModel: catalog.defaultLaunchModel,
+        models: catalog.models.map((model) => ({ id: model.launchModel, label: model.displayName })),
+      },
+    },
+  }));
+  process.exit(0);
+}
+
+if (hasCommand('runtime', 'status')) {
+  const catalog = modelCatalog(provider);
+  console.log(JSON.stringify({
+    providers: {
+      [provider]: {
+        providerId: provider,
+        displayName: provider,
+        supported: true,
+        authenticated: true,
+        authMethod: 'test',
+        verificationState: 'verified',
+        models: catalog.models.map((model) => model.launchModel),
+        modelCatalog: catalog,
+        runtimeCapabilities: {
+          modelCatalog: { dynamic: false, source: 'runtime' },
+          reasoningEffort: {
+            supported: true,
+            values: ['low', 'medium', 'high'],
+            configPassthrough: true,
+          },
+          fastMode: {
+            supported: true,
+            available: false,
+            reason: 'test runtime',
+            source: 'runtime',
+          },
+        },
+        canLoginFromUi: false,
+        capabilities: {
+          teamLaunch: true,
+          oneShot: true,
+          extensions: {},
+        },
+      },
+    },
+  }));
+  process.exit(0);
+}
+
+console.log(JSON.stringify({ ok: true }));
+`;
+  await fs.mkdir(binDir, { recursive: true });
+  await fs.writeFile(cliPath, script, 'utf8');
+  if (process.platform !== 'win32') {
+    await fs.chmod(cliPath, 0o755);
+  }
+  return cliPath;
+}
+
+function createBlockedWorkspaceTrustCoordinator(input: {
+  errorMessage: string;
+  evidence?: string[];
+  rawTail?: string;
+}) {
+  const planArgsOnly = vi.fn(
+    async (_request: Parameters<WorkspaceTrustCoordinator['planArgsOnly']>[0]) => ({
+      launchArgPatches: [],
+    })
+  );
+  const planFull = vi.fn(async (request: Parameters<WorkspaceTrustCoordinator['planFull']>[0]) => ({
+    workspaces: request.workspaces,
+    launchArgPatches: [],
+  }));
+  const execute = vi.fn(async (_plan: WorkspaceTrustExecutionPlan) => ({
+    id: 'claude-pty-workspace-trust',
+    provider: 'claude' as const,
+    status: 'blocked' as const,
+    workspaceIds: ['workspace-trust-1'],
+    errorCode: 'workspace_trust_preflight_not_confirmed',
+    errorMessage: input.errorMessage,
+    evidence: input.evidence ?? ['workspace trust was not confirmed'],
+    ...(input.rawTail ? { rawTail: input.rawTail } : {}),
+  }));
+  const coordinator: WorkspaceTrustCoordinator = { planArgsOnly, planFull, execute };
+
+  return {
+    coordinator,
+    planArgsOnly,
+    planFull,
+    execute,
+  };
+}
+
+async function readLatestLaunchFailureManifest(teamName: string): Promise<Record<string, any>> {
+  const latestPath = path.join(
+    getTeamsBasePath(),
+    teamName,
+    'launch-failure-artifacts',
+    'latest.json'
+  );
+  await waitForCondition(async () => {
+    try {
+      await fs.access(latestPath);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  const latest = JSON.parse(await fs.readFile(latestPath, 'utf8')) as { manifestPath?: string };
+  expect(latest.manifestPath).toEqual(expect.any(String));
+  return JSON.parse(await fs.readFile(latest.manifestPath!, 'utf8')) as Record<string, any>;
+}
+
+function snapshotWorkspaceTrustTestEnv(): Partial<
+  Record<WorkspaceTrustTestEnvName, string | undefined>
+> {
+  return Object.fromEntries(
+    WORKSPACE_TRUST_TEST_ENV_NAMES.map((name) => [name, process.env[name]])
+  ) as Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
+}
+
+function restoreOptionalEnvValue(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
+}
+
+function restoreWorkspaceTrustTestEnv(
+  snapshot: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>
+): void {
+  for (const name of WORKSPACE_TRUST_TEST_ENV_NAMES) {
+    restoreOptionalEnvValue(name, snapshot[name]);
+  }
+}
+
+function forceWorkspaceTrustPreflightEnv(): void {
+  process.env.AGENT_TEAMS_WORKSPACE_TRUST_PREFLIGHT = '1';
+  process.env.AGENT_TEAMS_WORKSPACE_TRUST_CLAUDE_PTY = '1';
+  process.env.AGENT_TEAMS_WORKSPACE_TRUST_CODEX_SETTINGS = '1';
+  process.env.AGENT_TEAMS_WORKSPACE_TRUST_RETRY = '0';
 }
 
 async function writeOpenCodeMembersMeta(

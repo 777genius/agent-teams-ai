@@ -22,8 +22,8 @@ import type {
 
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
-const PROVIDER_STATUS_TIMEOUT_MS = 10_000;
-const PROVIDER_MODELS_TIMEOUT_MS = 10_000;
+const PROVIDER_STATUS_TIMEOUT_MS = 25_000;
+const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
@@ -326,7 +326,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode (75+ LLM providers)';
+      return 'OpenCode (200+ models)';
     case 'kilocode':
       return 'KiloCode';
   }
@@ -1014,6 +1014,7 @@ export class ClaudeMultimodelBridgeService {
       memberName: string;
       limit?: number;
       laneId?: string;
+      sessionId?: string;
       timeoutMs?: number;
     }
   ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
@@ -1035,6 +1036,9 @@ export class ClaudeMultimodelBridgeService {
     }
     if (typeof params.laneId === 'string' && params.laneId.trim().length > 0) {
       args.push('--lane', params.laneId.trim());
+    }
+    if (typeof params.sessionId === 'string' && params.sessionId.trim().length > 0) {
+      args.push('--session-id', params.sessionId.trim());
     }
 
     const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));

@@ -273,6 +273,110 @@ describe('BoardTaskLogStreamService', () => {
     });
   });
 
+  it('does not suppress exact OpenCode fallback because of unrelated execution records', async () => {
+    const lead = {
+      role: 'lead' as const,
+      sessionId: 'session-lead',
+      isSidechain: false,
+    };
+    const baseCandidate = makeCandidate(
+      'c1',
+      '2026-04-12T16:00:00.000Z',
+      lead,
+      'tool-board'
+    );
+    const executionRecord: BoardTaskActivityRecord = {
+      ...baseCandidate.records[0]!,
+      linkKind: 'execution',
+    };
+    const candidate: BoardTaskExactLogBundleCandidate = {
+      ...baseCandidate,
+      records: [executionRecord],
+      linkKinds: ['execution'],
+    };
+    const runtimeFallbackSource = {
+      getTaskLogStream: vi.fn(async () => ({
+        participants: [
+          {
+            key: 'member:jack',
+            label: 'jack',
+            role: 'member' as const,
+            isLead: false,
+            isSidechain: true,
+          },
+        ],
+        defaultFilter: 'member:jack',
+        segments: [
+          {
+            id: 'opencode:demo:task-a:jack:session-opencode',
+            participantKey: 'member:jack',
+            actor: {
+              memberName: 'jack',
+              role: 'member' as const,
+              sessionId: 'session-opencode',
+              isSidechain: true,
+            },
+            startTimestamp: '2026-04-12T16:01:00.000Z',
+            endTimestamp: '2026-04-12T16:02:00.000Z',
+            chunks: [{ id: 'chunk-exact-opencode' }],
+          },
+        ],
+        source: 'opencode_runtime_attribution' as const,
+        runtimeProjection: {
+          provider: 'opencode' as const,
+          mode: 'attribution' as const,
+          attributionRecordCount: 1,
+          projectedMessageCount: 2,
+        },
+      })),
+    };
+    const service = new BoardTaskLogStreamService(
+      {
+        getTaskRecords: vi.fn(async () => candidate.records),
+      } as never,
+      {
+        selectSummaries: vi.fn(() => [candidate]),
+      } as never,
+      {
+        parseFiles: vi.fn(async () => new Map([['/tmp/task.jsonl', []]])),
+      } as never,
+      {
+        selectDetail: vi.fn(() => ({
+          id: 'c1',
+          timestamp: '2026-04-12T16:00:00.000Z',
+          actor: lead,
+          source: candidate.source,
+          records: candidate.records,
+          filteredMessages: [makeMessage('c1', '2026-04-12T16:00:00.000Z', 'lead execution')],
+        })),
+      } as never,
+      {
+        buildBundleChunks: vi.fn((messages: ParsedMessage[]) => [{ id: messages[0]?.uuid }]),
+      } as never,
+      {
+        getTasks: vi.fn(async () => [{ id: 'task-a', owner: 'jack' }]),
+        getDeletedTasks: vi.fn(async () => []),
+      } as never,
+      undefined as never,
+      runtimeFallbackSource as never,
+      {
+        getMembers: vi.fn(async () => [{ name: 'jack', providerId: 'opencode' }]),
+      } as never,
+      {
+        getConfig: vi.fn(async () => null),
+      } as never
+    );
+
+    const response = await service.getTaskLogStream('demo', 'task-a');
+
+    expect(runtimeFallbackSource.getTaskLogStream).toHaveBeenCalledWith('demo', 'task-a');
+    expect(response.source).toBe('mixed_transcript_opencode_runtime');
+    expect(response.segments.map((segment) => segment.id)).toEqual([
+      'lead:c1:c1',
+      'opencode:demo:task-a:jack:session-opencode',
+    ]);
+  });
+
   it('does not probe OpenCode runtime for non-OpenCode task owners', async () => {
     const lead = {
       role: 'lead' as const,

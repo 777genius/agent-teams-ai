@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildProjectPathOptions } from '@renderer/components/team/dialogs/projectPathOptions';
+import {
+  buildProjectPathOptions,
+  isDeletedProjectPathSelection,
+  isSelectableProjectPathProject,
+} from '@renderer/components/team/dialogs/projectPathOptions';
 
 import type { Project } from '@shared/types';
 
@@ -87,5 +91,59 @@ describe('buildProjectPathOptions', () => {
         description: '/Users/belief/dev/projects/claude/claude_team',
       },
     ]);
+  });
+
+  it('marks deleted project paths as disabled options', () => {
+    const options = buildProjectPathOptions([
+      createProject({
+        id: 'project-deleted',
+        name: 'my-tes',
+        path: '/Users/belief/dev/projects/my-tes',
+        filesystemState: 'deleted',
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/my-tes',
+        label: 'my-tes',
+        description: '/Users/belief/dev/projects/my-tes',
+        disabled: true,
+        meta: {
+          filesystemState: 'deleted',
+        },
+      },
+    ]);
+  });
+
+  it('does not treat deleted project paths as selectable launch targets', () => {
+    const deletedProject = createProject({
+      id: 'project-deleted',
+      name: 'my-tes',
+      path: '/Users/belief/dev/projects/my-tes',
+      filesystemState: 'deleted',
+    });
+
+    expect(isSelectableProjectPathProject(deletedProject)).toBe(false);
+    expect(
+      isDeletedProjectPathSelection([deletedProject], '/Users/belief/dev/projects/my-tes')
+    ).toBe(true);
+  });
+
+  it('keeps available project paths selectable', () => {
+    const availableProject = createProject({
+      id: 'project-available',
+      name: 'claude_team',
+      path: '/Users/belief/dev/projects/claude/claude_team',
+      filesystemState: 'available',
+    });
+
+    expect(isSelectableProjectPathProject(availableProject)).toBe(true);
+    expect(
+      isDeletedProjectPathSelection(
+        [availableProject],
+        '/Users/belief/dev/projects/claude/claude_team'
+      )
+    ).toBe(false);
   });
 });

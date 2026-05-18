@@ -91,6 +91,7 @@ import { type MemberActivityFilter, type MemberDetailTab } from './members/membe
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
+import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { ComponentProps, CSSProperties, RefObject } from 'react';
 
@@ -174,6 +175,7 @@ interface CreateTaskDialogState {
 }
 
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
+const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 
 function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number {
   if (!summary) {
@@ -449,12 +451,16 @@ const TeamLoadingSectionHeader = ({
 
 type TeamContentLoadingSkeletonProps = Readonly<{
   teamName: string;
+  headerColorSet: TeamColorSet;
+  isLight: boolean;
   contentRef: RefObject<HTMLDivElement | null>;
   provisioningBannerRef: RefObject<HTMLDivElement | null>;
 }>;
 
 const TeamContentLoadingSkeleton = ({
   teamName,
+  headerColorSet,
+  isLight,
   contentRef,
   provisioningBannerRef,
 }: TeamContentLoadingSkeletonProps): React.JSX.Element => (
@@ -465,28 +471,32 @@ const TeamContentLoadingSkeleton = ({
     role="status"
     aria-label="Loading team"
   >
-    <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] bg-purple-950/20 px-4 py-3">
-      <div className="flex items-start justify-between gap-2">
+    <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] px-4 py-3">
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{ backgroundColor: getThemedBadge(headerColorSet, isLight) }}
+      />
+      <div className="relative z-10 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex h-6 items-center gap-2">
             <SkeletonPill className="h-5 w-44" />
-            <SkeletonPill className="h-6 w-20 bg-emerald-500/15" />
-          </div>
-          <SkeletonPill className="mt-3 h-4 w-72" />
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <SkeletonPill className="h-4 w-28" />
-            <SkeletonPill className="h-6 w-24 rounded-md" />
-            <SkeletonPill className="h-4 w-16" />
+            <SkeletonPill className="h-5 w-20 bg-emerald-500/15" />
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <SkeletonPill className="h-7 w-16" />
           <SkeletonPill className="size-7 rounded" />
           <SkeletonPill className="size-7 rounded" />
         </div>
       </div>
-      <div className="mt-4 flex justify-end">
-        <SkeletonPill className="h-11 w-40 rounded-full border border-cyan-300/25 bg-cyan-500/10" />
+      <SkeletonPill className="relative z-10 mt-0.5 h-3 w-72 max-w-full" />
+      <div className="relative z-10 mt-1 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+          <SkeletonPill className="h-3 w-28" />
+          <SkeletonPill className="h-5 w-24 rounded-md" />
+          <SkeletonPill className="h-3 w-16" />
+        </div>
+        <SkeletonPill className="-mt-2 h-8 w-36 shrink-0 rounded-full border border-cyan-300/25 bg-cyan-500/10" />
       </div>
     </div>
 
@@ -592,6 +602,8 @@ type TeamLoadingSkeletonProps = Readonly<{
   isActive: boolean | undefined;
   isFocused: boolean | undefined;
   messagesPanelMode: TeamMessagesPanelMode;
+  headerColorSet: TeamColorSet;
+  isLight: boolean;
   contentRef: RefObject<HTMLDivElement | null>;
   provisioningBannerRef: RefObject<HTMLDivElement | null>;
 }>;
@@ -601,6 +613,8 @@ const TeamLoadingSkeleton = ({
   isActive,
   isFocused,
   messagesPanelMode,
+  headerColorSet,
+  isLight,
   contentRef,
   provisioningBannerRef,
 }: TeamLoadingSkeletonProps): React.JSX.Element => (
@@ -618,6 +632,8 @@ const TeamLoadingSkeleton = ({
     <div className="relative min-h-0 min-w-0 flex-1">
       <TeamContentLoadingSkeleton
         teamName={teamName}
+        headerColorSet={headerColorSet}
+        isLight={isLight}
         contentRef={contentRef}
         provisioningBannerRef={provisioningBannerRef}
       />
@@ -1635,6 +1651,8 @@ export const TeamDetailView = memo(function TeamDetailView({
     pendingReviewRequest,
     setPendingReviewRequest,
     summaryKnownTeammateCount,
+    teamSummaryColor,
+    teamSummaryDisplayName,
   } = useStore(
     useShallow((s) => ({
       projects: s.projects,
@@ -1672,6 +1690,8 @@ export const TeamDetailView = memo(function TeamDetailView({
       summaryKnownTeammateCount: teamName
         ? getSummaryKnownTeammateCount(s.teamByName[teamName])
         : 0,
+      teamSummaryColor: teamName ? s.teamByName[teamName]?.color : undefined,
+      teamSummaryDisplayName: teamName ? s.teamByName[teamName]?.displayName : undefined,
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
       error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
       refreshTeamData: s.refreshTeamData,
@@ -1701,6 +1721,14 @@ export const TeamDetailView = memo(function TeamDetailView({
   const tabId = useTabIdOptional();
   const isThisTabActive = isActive;
   const wasInteractiveRef = useRef(false);
+  const memberRosterHydrationRetryRef = useRef<string | null>(null);
+  const loadingHeaderColorSet = useMemo(
+    () =>
+      teamSummaryColor
+        ? getTeamColorSet(teamSummaryColor)
+        : nameColorSet(teamSummaryDisplayName || teamName),
+    [teamName, teamSummaryColor, teamSummaryDisplayName]
+  );
 
   // Messages panel resize
   const { isResizing: isMessagesPanelResizing, handleProps: messagesPanelHandleProps } =
@@ -2055,13 +2083,77 @@ export const TeamDetailView = memo(function TeamDetailView({
     return filterKanbanTasks(filteredTasks, kanbanSearchQuery);
   }, [filteredTasks, kanbanSearchQuery]);
 
+  const resolvedActiveTeammateCount = useMemo(
+    () => activeMembers.filter((m) => !isLeadMember(m)).length,
+    [activeMembers]
+  );
   const activeTeammateCount = useMemo(() => {
-    const resolvedCount = activeMembers.filter((m) => !isLeadMember(m)).length;
     if (membersWithLiveBranches.some((m) => m.removedAt)) {
-      return resolvedCount;
+      return resolvedActiveTeammateCount;
     }
-    return resolvedCount > 0 ? resolvedCount : summaryKnownTeammateCount;
-  }, [activeMembers, membersWithLiveBranches, summaryKnownTeammateCount]);
+    return resolvedActiveTeammateCount > 0
+      ? resolvedActiveTeammateCount
+      : summaryKnownTeammateCount;
+  }, [membersWithLiveBranches, resolvedActiveTeammateCount, summaryKnownTeammateCount]);
+
+  const memberRosterHydrationRetryKey = useMemo(() => {
+    if (
+      !isThisTabActive ||
+      !teamName ||
+      !data ||
+      summaryKnownTeammateCount <= 0 ||
+      resolvedActiveTeammateCount > 0
+    ) {
+      return null;
+    }
+
+    return [
+      teamName,
+      data.teamName,
+      data.members.length,
+      data.config.members?.length ?? 0,
+      data.config.sessionHistory?.join(',') ?? '',
+      summaryKnownTeammateCount,
+      loading ? 'loading' : 'settled',
+      isTeamProvisioning ? 'provisioning' : 'ready',
+    ].join('|');
+  }, [
+    data,
+    isTeamProvisioning,
+    isThisTabActive,
+    loading,
+    resolvedActiveTeammateCount,
+    summaryKnownTeammateCount,
+    teamName,
+  ]);
+
+  useEffect(() => {
+    if (!memberRosterHydrationRetryKey) {
+      return;
+    }
+    if (memberRosterHydrationRetryRef.current === memberRosterHydrationRetryKey) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const state = useStore.getState();
+      if (state.selectedTeamName !== teamName) {
+        return;
+      }
+
+      const currentMembers = selectResolvedMembersForTeamName(state, teamName);
+      const hasResolvedTeammate = currentMembers.some(
+        (member) => !member.removedAt && !isLeadMember(member)
+      );
+      const expectedTeammateCount = getSummaryKnownTeammateCount(state.teamByName[teamName]);
+      if (!hasResolvedTeammate && expectedTeammateCount > 0) {
+        memberRosterHydrationRetryRef.current = memberRosterHydrationRetryKey;
+        void refreshTeamData(teamName, { withDedup: false });
+      }
+    }, MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [memberRosterHydrationRetryKey, refreshTeamData, teamName]);
   const leadProviderId = useMemo<TeamProviderId | undefined>(() => {
     const activeLeadProviderId = activeMembers.find(isLeadMember)?.providerId;
     if (activeLeadProviderId) return activeLeadProviderId;
@@ -2509,6 +2601,8 @@ export const TeamDetailView = memo(function TeamDetailView({
           isActive={isThisTabActive}
           isFocused={isPaneFocused}
           messagesPanelMode={messagesPanelMode}
+          headerColorSet={loadingHeaderColorSet}
+          isLight={isLight}
           contentRef={contentRef}
           provisioningBannerRef={provisioningBannerRef}
         />
@@ -3529,9 +3623,18 @@ export const TeamDetailView = memo(function TeamDetailView({
               ref={setMessagesPanelMountPoint}
               className="pointer-events-none absolute inset-0 z-30"
             />
-            {messagesPanelMode === 'bottom-sheet' && (
+            {messagesPanelMode === 'bottom-sheet' && !graphOpen && (
               <TeamMessagesPanelBridge position="bottom-sheet" {...sharedMessagesPanelProps} />
             )}
+            {messagesPanelMode === 'floating-composer' &&
+              isThisTabActive &&
+              isPaneFocused &&
+              !graphOpen && (
+                <TeamMessagesPanelBridge
+                  position="floating-composer"
+                  {...sharedMessagesPanelProps}
+                />
+              )}
           </div>
         </div>
 
@@ -3556,6 +3659,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                   .getState()
                   .openTab({ type: 'graph', label: `${data.config.name} Graph`, teamName });
               }}
+              messagesPanelEnabled={
+                (messagesPanelMode === 'floating-composer' ||
+                  messagesPanelMode === 'bottom-sheet') &&
+                isThisTabActive &&
+                isPaneFocused
+              }
               onSendMessage={(memberName) => {
                 setSendDialogRecipient(memberName);
                 setSendDialogDefaultText(undefined);

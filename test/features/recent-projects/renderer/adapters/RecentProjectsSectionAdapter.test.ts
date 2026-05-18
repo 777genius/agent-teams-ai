@@ -21,6 +21,7 @@ describe('adaptRecentProjectsSection', () => {
         worktreeId: 'wt-alpha',
       },
       primaryBranch: 'main',
+      filesystemState: 'deleted',
     };
 
     const activeTeam: TeamSummary = {
@@ -52,11 +53,11 @@ describe('adaptRecentProjectsSection', () => {
       taskCounts: { pending: 5, inProgress: 7, completed: 9 },
       additionalPathCount: 1,
       primaryBranch: 'main',
+      filesystemState: 'deleted',
       activeTeams: [activeTeam],
       pathSummary: {
         badgeLabel: '2 paths',
-        description:
-          'This card merges recent activity from related worktrees and project paths.',
+        description: 'This card merges recent activity from related worktrees and project paths.',
         paths: [
           {
             label: 'Primary path',

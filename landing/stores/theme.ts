@@ -9,7 +9,7 @@ export const useThemeStore = defineStore("theme", {
   }),
   actions: {
     getInitialTheme(): ThemeName {
-      if (!process.client) return "dark";
+      if (!import.meta.client) return "dark";
       const saved = localStorage.getItem("theme");
       if (saved === "dark" || saved === "light") {
         this.userSelected = true;
@@ -22,7 +22,7 @@ export const useThemeStore = defineStore("theme", {
     },
     setTheme(theme: ThemeName, fromUser: boolean) {
       this.current = theme;
-      if (process.client && fromUser) {
+      if (import.meta.client && fromUser) {
         this.userSelected = true;
         localStorage.setItem("theme", theme);
       }

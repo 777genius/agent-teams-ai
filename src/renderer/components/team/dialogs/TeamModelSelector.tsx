@@ -2,16 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Checkbox } from '@renderer/components/ui/checkbox';
+import { HoverTooltip } from '@renderer/components/ui/hover-tooltip';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -82,6 +77,21 @@ interface OpenCodeModelGroup {
   options: TeamRuntimeModelOption[];
 }
 
+type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
+
+interface OpenCodeModelCostRates {
+  input: number | null;
+  output: number | null;
+  cacheRead: number | null;
+  cacheWrite: number | null;
+}
+
+interface OpenCodeModelPricingInfo {
+  free: boolean;
+  summary: string | null;
+  title: string | undefined;
+}
+
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
   { id: 'codex', label: 'Codex', comingSoon: false },
@@ -98,6 +108,97 @@ function getOpenCodeSourceInfo(model: string): { id: string; label: string } | n
   return {
     id: parsed.sourceId,
     label: getTeamModelSourceBadgeLabel('opencode', model) ?? parsed.sourceId,
+  };
+}
+
+function getRecordValue(record: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    if (key in record) {
+      return record[key];
+    }
+  }
+  return undefined;
+}
+
+function getFiniteCostNumber(record: Record<string, unknown>, keys: string[]): number | null {
+  const value = getRecordValue(record, keys);
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function extractOpenCodeCostRates(cost: unknown): OpenCodeModelCostRates | null {
+  if (!cost || typeof cost !== 'object' || Array.isArray(cost)) {
+    return null;
+  }
+
+  const record = cost as Record<string, unknown>;
+  const rates: OpenCodeModelCostRates = {
+    input: getFiniteCostNumber(record, ['input']),
+    output: getFiniteCostNumber(record, ['output']),
+    cacheRead: getFiniteCostNumber(record, ['cache_read', 'cacheRead', 'cached_read']),
+    cacheWrite: getFiniteCostNumber(record, ['cache_write', 'cacheWrite', 'cached_write']),
+  };
+
+  return Object.values(rates).some((rate) => rate !== null) ? rates : null;
+}
+
+function formatOpenCodeCostRate(rate: number): string {
+  if (rate === 0) {
+    return 'Free';
+  }
+
+  const formatted = rate.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: rate >= 1 ? 2 : 4,
+  });
+  return `$${formatted}`;
+}
+
+function formatOpenCodeCostSummary(rates: OpenCodeModelCostRates): string | null {
+  const summaryParts: string[] = [];
+  if (rates.input !== null) {
+    summaryParts.push(`in ${formatOpenCodeCostRate(rates.input)}`);
+  }
+  if (rates.output !== null) {
+    summaryParts.push(`out ${formatOpenCodeCostRate(rates.output)}`);
+  }
+
+  if (summaryParts.length === 0) {
+    return null;
+  }
+
+  return `${summaryParts.join(' · ')} / 1M`;
+}
+
+function formatOpenCodeCostTitle(rates: OpenCodeModelCostRates): string {
+  const titleParts: string[] = [];
+  if (rates.input !== null) {
+    titleParts.push(`Input: ${formatOpenCodeCostRate(rates.input)} per 1M tokens`);
+  }
+  if (rates.output !== null) {
+    titleParts.push(`Output: ${formatOpenCodeCostRate(rates.output)} per 1M tokens`);
+  }
+  if (rates.cacheRead !== null) {
+    titleParts.push(`Cache read: ${formatOpenCodeCostRate(rates.cacheRead)} per 1M tokens`);
+  }
+  if (rates.cacheWrite !== null) {
+    titleParts.push(`Cache write: ${formatOpenCodeCostRate(rates.cacheWrite)} per 1M tokens`);
+  }
+  return titleParts.join('\n');
+}
+
+function getOpenCodeModelPricingInfo(
+  catalogModel: ProviderModelCatalogItem | null | undefined
+): OpenCodeModelPricingInfo | null {
+  const metadata = catalogModel?.metadata;
+  if (!metadata) {
+    return null;
+  }
+
+  const rates = extractOpenCodeCostRates(metadata.cost);
+  return {
+    free: metadata.free === true,
+    summary: rates ? formatOpenCodeCostSummary(rates) : null,
+    title: rates ? formatOpenCodeCostTitle(rates) : undefined,
   };
 }
 
@@ -352,6 +453,26 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return getAvailableTeamProviderModelOptions(effectiveProviderId, runtimeProviderStatus);
   }, [effectiveProviderId, runtimeProviderStatus, shouldAwaitRuntimeModelList]);
+  const openCodeCatalogModelById = useMemo(() => {
+    const catalog = runtimeProviderStatus?.modelCatalog;
+    const modelById = new Map<string, ProviderModelCatalogItem>();
+    if (effectiveProviderId !== 'opencode' || catalog?.providerId !== 'opencode') {
+      return modelById;
+    }
+
+    for (const model of catalog.models) {
+      const launchModel = model.launchModel.trim();
+      const id = model.id.trim();
+      if (launchModel) {
+        modelById.set(launchModel, model);
+      }
+      if (id) {
+        modelById.set(id, model);
+      }
+    }
+
+    return modelById;
+  }, [effectiveProviderId, runtimeProviderStatus?.modelCatalog]);
   const hasRecommendedOpenCodeModels = useMemo(
     () =>
       effectiveProviderId === 'opencode' &&
@@ -474,6 +595,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         return true;
       }
       const modelRecommendation = getTeamModelRecommendation(effectiveProviderId, option.value);
+      const openCodePricingInfo = getOpenCodeModelPricingInfo(
+        openCodeCatalogModelById.get(option.value)
+      );
       return [
         option.value,
         option.label,
@@ -481,6 +605,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         getOpenCodeSourceInfo(option.value)?.label ?? '',
         modelRecommendation?.label ?? '',
         modelRecommendation?.reason ?? '',
+        openCodePricingInfo?.free ? 'free' : '',
+        openCodePricingInfo?.summary ?? '',
       ]
         .join(' ')
         .toLowerCase()
@@ -524,7 +650,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       ...modelOptions.filter((option) => option.value.trim().length === 0),
       ...concreteOptions,
     ].filter(matchesModelQuery);
-  }, [effectiveProviderId, modelOptions, modelQuery, recommendedOnly, selectedOpenCodeSourceIds]);
+  }, [
+    effectiveProviderId,
+    modelOptions,
+    modelQuery,
+    openCodeCatalogModelById,
+    recommendedOnly,
+    selectedOpenCodeSourceIds,
+  ]);
   const visibleOpenCodeModelGroups = useMemo<OpenCodeModelGroup[]>(() => {
     if (effectiveProviderId !== 'opencode') {
       return [];
@@ -598,6 +731,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       availabilityReason ??
       null;
     const modelRecommendation = getTeamModelRecommendation(effectiveProviderId, opt.value);
+    const openCodePricingInfo =
+      effectiveProviderId === 'opencode'
+        ? getOpenCodeModelPricingInfo(openCodeCatalogModelById.get(opt.value))
+        : null;
+    const modelButtonTitle =
+      modelStatusMessage ?? (opt.value === '' ? defaultModelTooltip : undefined);
 
     return (
       <button
@@ -605,7 +744,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         type="button"
         id={opt.value === normalizedValue ? id : undefined}
         aria-disabled={!modelSelectable}
-        title={modelStatusMessage ?? undefined}
+        title={modelButtonTitle}
         className={cn(
           'flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border bg-[var(--color-surface)] px-3 py-2 text-center text-xs font-medium transition-[background-color,border-color,color,box-shadow] duration-150',
           hasModelIssue && normalizedValue === opt.value
@@ -617,7 +756,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 : modelSelectable
                   ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
                   : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
-          !modelSelectable && 'cursor-not-allowed opacity-45',
+          !modelSelectable && 'cursor-not-allowed',
           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
         )}
         onClick={() => {
@@ -626,9 +765,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         }}
       >
         <span className="flex flex-col items-center justify-center gap-0.5">
-          <span className={cn('leading-tight', opt.value === 'gpt-5.5' && 'font-bold')}>
+          <span
+            className={cn(
+              'max-w-full break-words leading-tight',
+              opt.value === 'gpt-5.5' && 'font-bold'
+            )}
+          >
             {opt.label}
           </span>
+          {openCodePricingInfo?.summary ? (
+            <span
+              data-testid="team-model-selector-model-pricing"
+              className="max-w-full text-balance text-[9px] font-normal leading-[1.1] text-[var(--color-text-muted)]"
+              title={openCodePricingInfo.title}
+            >
+              {openCodePricingInfo.summary}
+            </span>
+          ) : null}
+          {openCodePricingInfo?.free ? (
+            <span
+              data-testid="team-model-selector-model-free-badge"
+              className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-200"
+              title="OpenCode marks this model as free."
+            >
+              Free
+            </span>
+          ) : null}
           {modelRecommendation ? (
             <span
               className={cn(
@@ -659,25 +821,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               <span>{modelRecommendation.label}</span>
             </span>
           ) : null}
-          {opt.value === '' && (
+          {opt.value === '' ? (
             <span className="flex items-center justify-center gap-1">
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <Info className="size-3 shrink-0 opacity-40 transition-opacity hover:opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[240px] text-xs">
-                    {defaultModelTooltip.split('\n').map((line, index) => (
-                      <React.Fragment key={line}>
-                        {index > 0 ? <br /> : null}
-                        {line}
-                      </React.Fragment>
-                    ))}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <HoverTooltip
+                content={defaultModelTooltip}
+                title={defaultModelTooltip}
+                stopClickPropagation
+                contentClassName="max-w-[240px]"
+              >
+                <Info className="size-3 shrink-0 opacity-45 transition-opacity hover:opacity-75" />
+              </HoverTooltip>
             </span>
-          )}
+          ) : null}
           {hasModelIssue && (
             <span
               className="flex items-center justify-center gap-1 text-[10px] font-normal text-red-300"
@@ -685,16 +840,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             >
               <AlertTriangle className="size-3 shrink-0" />
               <span>{modelUnavailableReason ? 'Unavailable' : 'Issue'}</span>
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <Info className="size-3 shrink-0 opacity-50 transition-opacity hover:opacity-80" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[240px] text-xs">
-                    {modelStatusMessage}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {modelStatusMessage ? (
+                <HoverTooltip
+                  content={modelStatusMessage}
+                  title={modelStatusMessage}
+                  stopClickPropagation
+                  contentClassName="max-w-[240px]"
+                >
+                  <Info className="size-3 shrink-0 opacity-55 transition-opacity hover:opacity-85" />
+                </HoverTooltip>
+              ) : null}
             </span>
           )}
           {!hasModelIssue && modelDisabledReason && (
@@ -703,16 +858,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               title={modelDisabledReason}
             >
               <span>{TEAM_MODEL_UI_DISABLED_BADGE_LABEL}</span>
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                    <Info className="size-3 shrink-0 opacity-40 transition-opacity hover:opacity-70" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[240px] text-xs">
-                    {modelDisabledReason}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <HoverTooltip
+                content={modelDisabledReason}
+                title={modelDisabledReason}
+                stopClickPropagation
+                contentClassName="max-w-[240px]"
+              >
+                <Info className="size-3 shrink-0 opacity-45 transition-opacity hover:opacity-75" />
+              </HoverTooltip>
             </span>
           )}
         </span>

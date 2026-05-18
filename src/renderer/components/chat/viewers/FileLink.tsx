@@ -57,21 +57,20 @@ export function resolveFileLinkPath(filePath: string, projectPath: string): stri
 function normalizePathSegments(filePath: string): string {
   const hasBackslash = filePath.includes('\\') && !filePath.includes('/');
   const separator = hasBackslash ? '\\' : '/';
-  const normalized = filePath.replace(/[/\\]+/g, separator);
 
   let prefix = '';
-  let body = normalized;
+  let body = filePath;
 
-  const driveMatch = /^([A-Za-z]:)[\\/]/.exec(normalized);
+  const driveMatch = /^([A-Za-z]:)[\\/]/.exec(filePath);
   if (driveMatch) {
     prefix = `${driveMatch[1]}${separator}`;
-    body = normalized.slice(prefix.length);
-  } else if (normalized.startsWith(`${separator}${separator}`)) {
+    body = filePath.slice(driveMatch[0].length);
+  } else if (filePath.startsWith('\\\\') || filePath.startsWith('//')) {
     prefix = `${separator}${separator}`;
-    body = normalized.slice(2);
-  } else if (normalized.startsWith(separator)) {
+    body = filePath.slice(2);
+  } else if (filePath.startsWith('/') || filePath.startsWith('\\')) {
     prefix = separator;
-    body = normalized.slice(1);
+    body = filePath.slice(1);
   }
 
   const segments: string[] = [];

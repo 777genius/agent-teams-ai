@@ -81,6 +81,8 @@ export interface ProvisioningProgressBlockProps {
   assistantOutput?: string;
   /** Bounded structured launch diagnostics */
   launchDiagnostics?: TeamLaunchDiagnosticItem[];
+  /** Non-fatal warnings that should stay visible while the run continues. */
+  warnings?: string[];
   /** Bounded per-member launch/runtime diagnostics for copy payloads. */
   memberDiagnostics?: MemberLaunchDiagnosticsPayload[];
   /** Visual surface chrome for the outer block */
@@ -173,6 +175,73 @@ function formatOptionalValue(value: string | number | null | undefined): string 
   return String(value);
 }
 
+function formatBooleanValue(value: boolean | null | undefined): string {
+  if (value === null || value === undefined) {
+    return '(unknown)';
+  }
+  return value ? 'yes' : 'no';
+}
+
+function formatDetailsBlock(summary: string, content: string): string {
+  return [
+    '<details>',
+    `<summary>${summary}</summary>`,
+    '',
+    content.trim() || '(empty)',
+    '',
+    '</details>',
+  ].join('\n');
+}
+
+function formatListOrNone(values: readonly string[] | undefined): string {
+  const lines = values?.map((value) => value.trim()).filter(Boolean) ?? [];
+  if (lines.length === 0) {
+    return '(none)';
+  }
+  return lines.map((line) => `- ${line}`).join('\n');
+}
+
+function parseJsonRecord(value: string | undefined): Record<string, unknown> | null {
+  if (!value?.trim()) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function findArtifactManifest(
+  bundle: TeamLaunchFailureDiagnosticsBundle | null | undefined
+): Record<string, unknown> | null {
+  const manifestFile = bundle?.files.find(
+    (file) => file.label === 'launch-failure-artifacts/manifest.json'
+  );
+  return parseJsonRecord(manifestFile?.content);
+}
+
+function getArrayLength(value: unknown): number | null {
+  return Array.isArray(value) ? value.length : null;
+}
+
+function getObjectKeyCount(value: unknown): number | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.keys(value).length
+    : null;
+}
+
+function getStringField(value: unknown, key: string): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const raw = (value as Record<string, unknown>)[key];
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+}
+
 function formatLaunchDiagnosticsCopy(
   items: readonly TeamLaunchDiagnosticItem[] | undefined
 ): string {
@@ -249,6 +318,109 @@ function formatLaunchFailureArtifactCopy(
   return parts.join('\n');
 }
 
+function formatArtifactManifestSummary(manifest: Record<string, unknown> | null): string {
+  if (!manifest) {
+    return '(manifest unavailable)';
+  }
+  const progress =
+    manifest.progress && typeof manifest.progress === 'object' && !Array.isArray(manifest.progress)
+      ? (manifest.progress as Record<string, unknown>)
+      : null;
+  const lines = [
+    `expectedMembers: ${formatOptionalValue(getArrayLength(manifest.expectedMembers))}`,
+    `effectiveMembers: ${formatOptionalValue(getArrayLength(manifest.effectiveMembers))}`,
+    `memberSpawnStatuses: ${formatOptionalValue(getObjectKeyCount(manifest.memberSpawnStatuses))}`,
+    `progress.state: ${formatOptionalValue(getStringField(progress, 'state'))}`,
+    `progress.message: ${formatOptionalValue(getStringField(progress, 'message'))}`,
+    `progress.error: ${formatOptionalValue(getStringField(progress, 'error'))}`,
+    `progress.warnings: ${formatOptionalValue(getArrayLength(progress?.warnings))}`,
+    `launchDiagnostics: ${formatOptionalValue(getArrayLength(manifest.launchDiagnostics))}`,
+  ];
+  return lines.join('\n');
+}
+
+function hasNoBootstrapEventSignal(message: string | null | undefined): boolean {
+  const normalized = message?.toLowerCase() ?? '';
+  return (
+    normalized.includes('no team_bootstrap event') ||
+    normalized.includes('before deterministic team bootstrap started')
+  );
+}
+
+function formatConfidence(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '(unknown)';
+  }
+  return value.toFixed(2);
+}
+
+function buildDiagnosticsQuickTriage(input: {
+  title: string;
+  message?: string | null;
+  tone: 'default' | 'error';
+  startedAt?: string;
+  elapsed?: string | null;
+  pid?: number;
+  currentStepIndex: number;
+  errorStepIndex?: number;
+  warnings?: string[];
+  launchDiagnostics?: TeamLaunchDiagnosticItem[];
+  memberDiagnostics?: MemberLaunchDiagnosticsPayload[];
+  launchFailureArtifact?: TeamLaunchFailureDiagnosticsBundle | null;
+  launchFailureArtifactError?: string | null;
+  cliLogsTail?: string;
+  liveOutput?: string | null;
+}): string {
+  const bundle = input.launchFailureArtifact;
+  const artifactManifest = findArtifactManifest(bundle);
+  const manifestProgress =
+    artifactManifest?.progress &&
+    typeof artifactManifest.progress === 'object' &&
+    !Array.isArray(artifactManifest.progress)
+      ? (artifactManifest.progress as Record<string, unknown>)
+      : null;
+  const classification = bundle?.classification;
+  const breadcrumb = bundle?.bootstrapTransportBreadcrumb;
+  const warningCount = input.warnings?.filter((warning) => warning.trim()).length ?? 0;
+  const launchDiagnosticCount = input.launchDiagnostics?.length ?? 0;
+  const memberDiagnosticCount = input.memberDiagnostics?.length ?? 0;
+  const artifactFileCount = bundle?.files.length ?? 0;
+  const hasRawCliLogs = Boolean(input.cliLogsTail?.trim());
+  const hasLiveOutput = Boolean(input.liveOutput?.trim());
+  const largeTeamWarning = input.warnings?.find((warning) =>
+    warning.toLowerCase().includes('large codex team launch')
+  );
+  const noBootstrapEvent = hasNoBootstrapEventSignal(input.message);
+
+  const facts = [
+    `- User-visible title: ${input.title}`,
+    `- User-visible message: ${formatOptionalValue(input.message)}`,
+    `- Tone: ${input.tone}`,
+    `- Started at: ${formatOptionalValue(input.startedAt)}; elapsed: ${formatOptionalValue(input.elapsed)}; pid: ${formatOptionalValue(input.pid)}`,
+    `- Step index: current=${input.currentStepIndex}; error=${formatOptionalValue(input.errorStepIndex)}`,
+    `- Classification: ${classification?.code ?? '(none)'}; confidence=${formatConfidence(classification?.confidence)}`,
+    `- Bootstrap transport: submitted=${formatBooleanValue(breadcrumb?.bootstrapSubmitted)}; rejected=${formatBooleanValue(breadcrumb?.submitRejected)}; noStdinWarning=${formatBooleanValue(breadcrumb?.noStdinWarning)}; lastStage=${formatOptionalValue(breadcrumb?.lastTransportStage)}`,
+    `- Counts: warnings=${warningCount}; launchDiagnostics=${launchDiagnosticCount}; memberSnapshots=${memberDiagnosticCount}; artifactFiles=${artifactFileCount}`,
+    `- Manifest counts: expectedMembers=${formatOptionalValue(getArrayLength(artifactManifest?.expectedMembers))}; effectiveMembers=${formatOptionalValue(getArrayLength(artifactManifest?.effectiveMembers))}; spawnStatuses=${formatOptionalValue(getObjectKeyCount(artifactManifest?.memberSpawnStatuses))}`,
+    `- Manifest progress: state=${formatOptionalValue(getStringField(manifestProgress, 'state'))}; message=${formatOptionalValue(getStringField(manifestProgress, 'message'))}; error=${formatOptionalValue(getStringField(manifestProgress, 'error'))}`,
+    `- Raw CLI logs present: ${formatBooleanValue(hasRawCliLogs)}; live output present: ${formatBooleanValue(hasLiveOutput)}`,
+  ];
+
+  if (noBootstrapEvent) {
+    facts.push(
+      '- Bootstrap signal: no `system/team_bootstrap` event reached the app before process exit.'
+    );
+  }
+  if (largeTeamWarning) {
+    facts.push(`- Large-team signal: ${largeTeamWarning}`);
+  }
+  if (input.launchFailureArtifactError) {
+    facts.push(`- Artifact read error: ${input.launchFailureArtifactError}`);
+  }
+
+  return facts.join('\n');
+}
+
 function buildProvisioningDiagnosticsCopy(input: {
   title: string;
   message?: string | null;
@@ -261,13 +433,28 @@ function buildProvisioningDiagnosticsCopy(input: {
   errorStepIndex?: number;
   liveOutput?: string | null;
   cliLogsTail?: string;
+  warnings?: string[];
   launchDiagnostics?: TeamLaunchDiagnosticItem[];
   memberDiagnostics?: MemberLaunchDiagnosticsPayload[];
   launchFailureArtifact?: TeamLaunchFailureDiagnosticsBundle | null;
   launchFailureArtifactError?: string | null;
 }): string {
+  const warningsCopy = formatListOrNone(input.warnings);
+  const launchDiagnosticsCopy = formatLaunchDiagnosticsCopy(input.launchDiagnostics);
+  const memberDiagnosticsCopy = formatMemberDiagnosticsCopy(input.memberDiagnostics);
+  const artifactManifest = findArtifactManifest(input.launchFailureArtifact);
+  const artifactManifestSummary = formatArtifactManifestSummary(artifactManifest);
+  const artifactCopy = formatLaunchFailureArtifactCopy(
+    input.launchFailureArtifact,
+    input.launchFailureArtifactError
+  );
+  const liveOutputCopy = input.liveOutput?.trim() || '(empty)';
+  const cliLogsCopy = input.cliLogsTail?.trim() || '(empty)';
   const payload = [
     '# Team provisioning diagnostics',
+    '',
+    '## Quick triage',
+    buildDiagnosticsQuickTriage(input),
     '',
     '## Summary',
     `Title: ${input.title}`,
@@ -280,20 +467,23 @@ function buildProvisioningDiagnosticsCopy(input: {
     `Current step index: ${input.currentStepIndex}`,
     `Error step index: ${formatOptionalValue(input.errorStepIndex)}`,
     '',
+    '## Warnings',
+    warningsCopy,
+    '',
     '## Launch diagnostics',
-    formatLaunchDiagnosticsCopy(input.launchDiagnostics),
+    launchDiagnosticsCopy,
     '',
-    '## Member launch snapshots',
-    formatMemberDiagnosticsCopy(input.memberDiagnostics),
+    '## Artifact manifest summary',
+    artifactManifestSummary,
     '',
-    '## Launch failure artifact bundle',
-    formatLaunchFailureArtifactCopy(input.launchFailureArtifact, input.launchFailureArtifactError),
+    '## Full details',
+    formatDetailsBlock('Member launch snapshots', memberDiagnosticsCopy),
     '',
-    '## Live output',
-    input.liveOutput?.trim() || '(empty)',
+    formatDetailsBlock('Launch failure artifact bundle', artifactCopy),
     '',
-    '## CLI logs tail',
-    input.cliLogsTail?.trim() || '(empty)',
+    formatDetailsBlock('Live output', liveOutputCopy),
+    '',
+    formatDetailsBlock('CLI logs tail', cliLogsCopy),
   ].join('\n');
 
   return redactProvisioningDiagnosticsCopy(payload).trim();
@@ -320,6 +510,7 @@ export const ProvisioningProgressBlock = ({
   cliLogsTail,
   assistantOutput,
   launchDiagnostics,
+  warnings,
   memberDiagnostics,
   surface = 'raised',
   className,
@@ -336,6 +527,10 @@ export const ProvisioningProgressBlock = ({
   const visibleLaunchDiagnostics =
     launchDiagnostics?.filter((item) => item.severity === 'warning' || item.severity === 'error') ??
     [];
+  const visibleWarnings =
+    warnings
+      ?.map((warning) => warning.trim())
+      .filter((warning) => warning && !warning.startsWith('Launch runtime:')) ?? [];
 
   // Auto-scroll assistant output
   useEffect(() => {
@@ -399,6 +594,7 @@ export const ProvisioningProgressBlock = ({
       errorStepIndex,
       liveOutput: displayAssistantOutput,
       cliLogsTail,
+      warnings,
       launchDiagnostics,
       memberDiagnostics,
       launchFailureArtifact,
@@ -518,6 +714,21 @@ export const ProvisioningProgressBlock = ({
           })}
         </div>
       ) : null}
+      {visibleWarnings.length > 0 ? (
+        <div className="mt-2 flex gap-2 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-300">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          <div className="min-w-0 space-y-1">
+            {visibleWarnings.slice(0, 3).map((warning) => (
+              <p key={warning} className="whitespace-pre-wrap">
+                {warning}
+              </p>
+            ))}
+            {visibleWarnings.length > 3 ? (
+              <p>{visibleWarnings.length - 3} more warnings hidden</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <div className="mt-2 px-2">
         <StepProgressBar
           steps={PROVISIONING_STEPS}
@@ -574,14 +785,24 @@ export const ProvisioningProgressBlock = ({
           </button>
           <Button
             type="button"
-            variant="ghost"
+            variant={isError ? 'outline' : 'ghost'}
             size="sm"
-            className="h-6 shrink-0 gap-1 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className={cn(
+              'shrink-0 gap-1',
+              isError
+                ? 'h-8 animate-pulse border-red-500/60 bg-red-500/15 px-3 text-xs font-medium text-[var(--step-error-text)] shadow-[0_0_0_1px_rgba(248,113,113,0.25)] hover:bg-red-500/20 hover:text-red-100'
+                : 'h-6 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
+              isError && diagnosticsCopied && 'animate-none'
+            )}
             title={diagnosticsCopied ? 'Diagnostics copied' : 'Copy diagnostics'}
             aria-label={diagnosticsCopied ? 'Diagnostics copied' : 'Copy diagnostics'}
             onClick={() => void copyDiagnostics()}
           >
-            {diagnosticsCopied ? <Check size={12} /> : <ClipboardList size={12} />}
+            {diagnosticsCopied ? (
+              <Check size={isError ? 14 : 12} />
+            ) : (
+              <ClipboardList size={isError ? 14 : 12} />
+            )}
             <span>{diagnosticsCopied ? 'Copied' : 'Copy diagnostics'}</span>
           </Button>
         </div>

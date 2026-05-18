@@ -94,7 +94,11 @@ export type MemberWorkSyncAuditEventName =
   | 'member_busy'
   | 'team_inactive'
   | 'index_repaired'
-  | 'legacy_fallback_used';
+  | 'legacy_fallback_used'
+  | 'proof_missing_recovery_scheduled'
+  | 'proof_missing_recovery_coalesced'
+  | 'proof_missing_recovery_suppressed'
+  | 'proof_missing_recovery_conflict';
 
 export interface MemberWorkSyncAuditEvent {
   timestamp: string;
@@ -161,6 +165,18 @@ export interface MemberWorkSyncOutboxStorePort {
     memberName: string;
     reviewRequestEventIds: string[];
   }): Promise<string[]>;
+  findRecentRecoveryByIntent?(input: {
+    teamName: string;
+    memberName: string;
+    intentKey: string;
+    sinceIso: string;
+  }): Promise<{
+    id: string;
+    status: MemberWorkSyncOutboxItem['status'];
+    deliveredMessageId?: string;
+    payloadHash: string;
+    updatedAt: string;
+  } | null>;
 }
 
 export interface MemberWorkSyncInboxNudgePort {
@@ -189,8 +205,22 @@ export interface MemberWorkSyncBusySignalPort {
     memberName: string;
     nowIso: string;
     workSyncIntent?: MemberWorkSyncOutboxItem['payload']['workSyncIntent'];
+    workSyncIntentKey?: MemberWorkSyncOutboxItem['payload']['workSyncIntentKey'];
     taskRefs?: MemberWorkSyncOutboxItem['payload']['taskRefs'];
   }): Promise<{ busy: boolean; reason?: string; retryAfterIso?: string }>;
+}
+
+export interface MemberWorkSyncProofMissingRecoveryGuardPort {
+  shouldDispatch(input: {
+    teamName: string;
+    memberName: string;
+    intentKey: string;
+    originalMessageId: string;
+    taskIds: string[];
+    nowIso: string;
+  }): Promise<
+    { ok: true } | { ok: false; reason: string; retryable: boolean; nextAttemptAt?: string }
+  >;
 }
 
 export interface MemberWorkSyncNudgeDeliveryWakePort {
@@ -264,6 +294,7 @@ export interface MemberWorkSyncUseCaseDeps {
   inboxNudge?: MemberWorkSyncInboxNudgePort;
   watchdogCooldown?: MemberWorkSyncWatchdogCooldownPort;
   busySignal?: MemberWorkSyncBusySignalPort;
+  proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
   nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;

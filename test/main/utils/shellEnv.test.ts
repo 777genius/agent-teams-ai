@@ -117,13 +117,13 @@ describe('shellEnv', () => {
       1,
       '/bin/zsh',
       ['-lic', 'env -0'],
-      expect.any(Object)
+      expect.objectContaining({ windowsHide: true })
     );
     expect(hoisted.spawn).toHaveBeenNthCalledWith(
       2,
       '/bin/zsh',
       ['-ic', 'env -0'],
-      expect.any(Object)
+      expect.objectContaining({ windowsHide: true })
     );
   });
 

@@ -52,6 +52,8 @@ interface CliLogsRichViewProps {
   style?: React.CSSProperties;
   /** Content rendered at the very bottom of the scroll container (e.g. "Show more" button). */
   footer?: React.ReactNode;
+  /** Optional message for non-empty raw input that produces no renderable log entries. */
+  emptyMessageOverride?: string;
   /** When true, hide compact inline metadata and expose it via hover tooltip instead. */
   compactMetaInTooltip?: boolean;
 
@@ -354,6 +356,7 @@ export const CliLogsRichView = ({
   className,
   style,
   footer,
+  emptyMessageOverride,
   compactMetaInTooltip = false,
   viewerState: controlledState,
   onViewerStateChange,
@@ -378,7 +381,7 @@ export const CliLogsRichView = ({
   const entries = useMemo(() => groupBySubagent(groups), [groups]);
   const emptyMessage =
     cliLogsTail.trim().length > 0
-      ? 'No displayable assistant/runtime logs yet.'
+      ? (emptyMessageOverride ?? 'Raw log lines captured, but none are displayable yet.')
       : 'Waiting for response...';
 
   // Derive expanded state: all groups expanded unless manually collapsed

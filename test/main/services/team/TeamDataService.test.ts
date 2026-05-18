@@ -183,7 +183,9 @@ function createResolverBackedService(): TeamDataService {
   );
 }
 
-function createLeadSessionCachingService(): TeamDataService {
+function createLeadSessionCachingService(
+  configOverrides: Partial<TeamConfig> = {}
+): TeamDataService {
   return new TeamDataService(
     {
       listTeams: vi.fn(),
@@ -191,6 +193,7 @@ function createLeadSessionCachingService(): TeamDataService {
         name: 'My team',
         members: [{ name: 'team-lead', role: 'Lead' }],
         leadSessionId: 'lead-1',
+        ...configOverrides,
       })),
     } as never,
     {
@@ -4709,6 +4712,247 @@ describe('TeamDataService', () => {
     expect(secondSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('uses live base context for lead_session messages without full transcript discovery', async () => {
+    const service = createLeadSessionCachingService();
+    const projectResolver = {
+      getLiveBaseContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/fast-project',
+          projectId: 'fast-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'fast-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-1',
+          },
+        })
+      ),
+      getContext: vi.fn(() => {
+        return Promise.reject(new Error('full transcript discovery should not be used'));
+      }),
+    };
+    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
+      projectResolver;
+    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockResolvedValue(
+      new Map([['lead-1', '/fast-project/lead-1.jsonl']])
+    );
+    vi.spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never).mockResolvedValue([
+      {
+        from: 'fast-lead',
+        text: 'Fast path recovered lead thought from the known lead session.',
+        timestamp: '2026-04-18T10:00:00.000Z',
+        read: true,
+        source: 'lead_session',
+        leadSessionId: 'lead-1',
+        messageId: 'lead-fast-1',
+      },
+    ]);
+
+    const feed = await service.getMessageFeed('my-team');
+
+    expect(projectResolver.getLiveBaseContext).toHaveBeenCalledWith('my-team');
+    expect(projectResolver.getContext).not.toHaveBeenCalled();
+    expect(feed.messages.some((message) => message.messageId === 'lead-fast-1')).toBe(true);
+  });
+
+  it('falls back to lightweight transcript context when live base context lacks the lead session file', async () => {
+    const service = createLeadSessionCachingService();
+    const projectResolver = {
+      getLiveBaseContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/stale-project',
+          projectId: 'stale-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'stale-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-1',
+          },
+        })
+      ),
+      getContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/actual-project',
+          projectId: 'actual-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'actual-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-1',
+          },
+          sessionIds: ['lead-1'],
+        })
+      ),
+    };
+    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
+      projectResolver;
+    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockImplementation(
+      (...args: unknown[]) => {
+        const [projectDir] = args as [string];
+        if (projectDir === '/actual-project') {
+          return Promise.resolve(new Map([['lead-1', '/actual-project/lead-1.jsonl']]));
+        }
+        return Promise.resolve(new Map());
+      }
+    );
+    vi.spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never).mockResolvedValue([
+      {
+        from: 'actual-lead',
+        text: 'Fallback path recovered lead thought from the repaired context.',
+        timestamp: '2026-04-18T10:00:00.000Z',
+        read: true,
+        source: 'lead_session',
+        leadSessionId: 'lead-1',
+        messageId: 'lead-fallback-1',
+      },
+    ]);
+
+    const feed = await service.getMessageFeed('my-team');
+
+    expect(projectResolver.getLiveBaseContext).toHaveBeenCalledWith('my-team');
+    expect(projectResolver.getContext).toHaveBeenCalledWith('my-team', {
+      includeTeamSubagentSessionDiscovery: false,
+    });
+    expect(feed.messages.some((message) => message.messageId === 'lead-fallback-1')).toBe(true);
+  });
+
+  it('falls back when the fast context only contains older sessionHistory but not the current lead session', async () => {
+    const service = createLeadSessionCachingService({
+      leadSessionId: 'lead-current',
+      sessionHistory: ['lead-history'],
+    });
+    const projectResolver = {
+      getLiveBaseContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/history-project',
+          projectId: 'history-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'history-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-current',
+            sessionHistory: ['lead-history'],
+          },
+        })
+      ),
+      getContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/current-project',
+          projectId: 'current-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'current-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-current',
+            sessionHistory: ['lead-history'],
+          },
+          sessionIds: ['lead-current', 'lead-history'],
+        })
+      ),
+    };
+    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
+      projectResolver;
+    vi.spyOn(service as never, 'getLeadSessionJsonlPaths' as never).mockImplementation(
+      (...args: unknown[]) => {
+        const [projectDir] = args as [string];
+        if (projectDir === '/current-project') {
+          return Promise.resolve(
+            new Map([['lead-current', '/current-project/lead-current.jsonl']])
+          );
+        }
+        return Promise.resolve(new Map([['lead-history', '/history-project/lead-history.jsonl']]));
+      }
+    );
+    const extractSpy = vi
+      .spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never)
+      .mockResolvedValue([
+        {
+          from: 'current-lead',
+          text: 'Current lead session wins over older session history.',
+          timestamp: '2026-04-18T10:00:00.000Z',
+          read: true,
+          source: 'lead_session',
+          leadSessionId: 'lead-current',
+          messageId: 'lead-current-1',
+        },
+      ]);
+
+    const feed = await service.getMessageFeed('my-team');
+
+    expect(projectResolver.getContext).toHaveBeenCalledWith('my-team', {
+      includeTeamSubagentSessionDiscovery: false,
+    });
+    expect(extractSpy).toHaveBeenCalledWith(
+      '/current-project/lead-current.jsonl',
+      'current-lead',
+      'lead-current',
+      150
+    );
+    expect(feed.messages.some((message) => message.messageId === 'lead-current-1')).toBe(true);
+  });
+
+  it('refreshes lead jsonl paths when lightweight fallback keeps the same project directory', async () => {
+    const service = createLeadSessionCachingService({
+      leadSessionId: 'lead-current',
+      sessionHistory: ['lead-history'],
+    });
+    const projectResolver = {
+      getLiveBaseContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/same-project',
+          projectId: 'same-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'history-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-current',
+            sessionHistory: ['lead-history'],
+          },
+        })
+      ),
+      getContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/same-project',
+          projectId: 'same-project',
+          config: {
+            name: 'My team',
+            members: [{ name: 'current-lead', agentType: 'lead' }],
+            leadSessionId: 'lead-current',
+            sessionHistory: ['lead-history'],
+          },
+          sessionIds: ['lead-current', 'lead-history'],
+        })
+      ),
+    };
+    (service as unknown as { projectResolver: typeof projectResolver }).projectResolver =
+      projectResolver;
+    const getPathsSpy = vi
+      .spyOn(service as never, 'getLeadSessionJsonlPaths' as never)
+      .mockResolvedValueOnce(new Map([['lead-history', '/same-project/lead-history.jsonl']]))
+      .mockResolvedValueOnce(new Map([['lead-current', '/same-project/lead-current.jsonl']]));
+    const extractSpy = vi
+      .spyOn(service as never, 'extractLeadSessionTextsFromJsonl' as never)
+      .mockResolvedValue([
+        {
+          from: 'current-lead',
+          text: 'Same-directory fallback refreshed the lead session path list.',
+          timestamp: '2026-04-18T10:00:00.000Z',
+          read: true,
+          source: 'lead_session',
+          leadSessionId: 'lead-current',
+          messageId: 'lead-same-project-1',
+        },
+      ]);
+
+    const feed = await service.getMessageFeed('my-team');
+
+    expect(projectResolver.getContext).toHaveBeenCalledWith('my-team', {
+      includeTeamSubagentSessionDiscovery: false,
+    });
+    expect(getPathsSpy).toHaveBeenCalledTimes(2);
+    expect(extractSpy).toHaveBeenCalledWith(
+      '/same-project/lead-current.jsonl',
+      'current-lead',
+      'lead-current',
+      150
+    );
+    expect(feed.messages.some((message) => message.messageId === 'lead-same-project-1')).toBe(true);
+  });
+
   it('loads durable lead_session messages through the transcript resolver when projectPath is stale', async () => {
     const fixture = await createResolverBackedLeadFixture();
     const service = createResolverBackedService();
@@ -4885,9 +5129,7 @@ describe('TeamDataService', () => {
 
     expect(getBranchSpy).toHaveBeenCalledWith(rootRepoPath);
     expect(getBranchSpy).toHaveBeenCalledWith(aliceRepoPath);
-    expect(data.members.find((member) => member.name === 'alice')?.gitBranch).toBe(
-      'feature/alice'
-    );
+    expect(data.members.find((member) => member.name === 'alice')?.gitBranch).toBe('feature/alice');
   });
 
   it('keeps member branch enrichment on for explicit full UI team data snapshots', async () => {
@@ -4916,9 +5158,7 @@ describe('TeamDataService', () => {
 
     expect(getBranchSpy).toHaveBeenCalledWith(rootRepoPath);
     expect(getBranchSpy).toHaveBeenCalledWith(aliceRepoPath);
-    expect(data.members.find((member) => member.name === 'alice')?.gitBranch).toBe(
-      'feature/alice'
-    );
+    expect(data.members.find((member) => member.name === 'alice')?.gitBranch).toBe('feature/alice');
   });
 
   it('uses snapshot config reads for UI message feed snapshots', async () => {

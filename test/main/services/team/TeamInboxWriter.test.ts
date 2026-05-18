@@ -157,6 +157,25 @@ describe('TeamInboxWriter', () => {
     expect(persisted[0].source).toBe('system_notification');
   });
 
+  it('persists member-work-sync payload hash when provided', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'sync your work state',
+      source: 'system_notification',
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncPayloadHash: 'sha256:work-sync',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]).toMatchObject({
+      messageKind: 'member_work_sync_nudge',
+      workSyncIntent: 'agenda_sync',
+      workSyncPayloadHash: 'sha256:work-sync',
+    });
+  });
+
   it('preserves provided message identity fields for dedup across live and persisted rows', async () => {
     const result = await writer.sendMessage('my-team', {
       member: 'alice',

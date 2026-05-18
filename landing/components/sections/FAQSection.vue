@@ -59,7 +59,7 @@ const faqIcons = [
                 </div>
               </v-expansion-panel-title>
               <v-expansion-panel-text class="faq-section__panel-text">
-                <div class="faq-section__answer" v-html="item.answer" />
+                <div class="faq-section__answer">{{ item.answer }}</div>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>

@@ -147,6 +147,34 @@ describe('team model availability Codex catalog integration', () => {
         availabilityStatus: 'available',
         availabilityReason: null,
       },
+      {
+        value: 'gpt-5.3-codex-spark',
+        label: '5.3 Codex Spark',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.2-codex',
+        label: '5.2 Codex',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.1-codex-mini',
+        label: '5.1 Codex Mini',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.1-codex-max',
+        label: '5.1 Codex Max',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
     ]);
   });
 
@@ -224,7 +252,16 @@ describe('team model availability Codex catalog integration', () => {
 
     expect(
       getAvailableTeamProviderModelOptions('codex', providerStatus).map((model) => model.value)
-    ).toEqual(['', 'gpt-5.5', 'gpt-5.4', 'gpt-5.2']);
+    ).toEqual([
+      '',
+      'gpt-5.5',
+      'gpt-5.4',
+      'gpt-5.3-codex-spark',
+      'gpt-5.2',
+      'gpt-5.2-codex',
+      'gpt-5.1-codex-mini',
+      'gpt-5.1-codex-max',
+    ]);
   });
 
   it('keeps existing disabled model policy on top of the dynamic catalog', () => {

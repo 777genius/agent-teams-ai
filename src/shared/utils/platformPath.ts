@@ -22,6 +22,18 @@ export function isWindowsishPath(filePath: string): boolean {
   return /^[A-Za-z]:\//.test(p) || p.startsWith('//');
 }
 
+/** True for filesystem-absolute paths and home-relative `~` paths. */
+export function isAbsoluteOrHomePath(filePath: string): boolean {
+  return (
+    filePath.startsWith('/') ||
+    filePath.startsWith('~/') ||
+    filePath.startsWith('~\\') ||
+    filePath === '~' ||
+    filePath.startsWith('\\\\') ||
+    /^[A-Za-z]:[\\/]/.test(filePath)
+  );
+}
+
 /**
  * Normalize for comparisons:
  * - Convert `\` → `/`
@@ -78,11 +90,32 @@ export function joinPath(base: string, ...segments: string[]): string {
 export function isPathPrefix(prefix: string, fullPath: string): boolean {
   const p = stripTrailingSeparators(normalizePathForComparison(prefix));
   const f = stripTrailingSeparators(normalizePathForComparison(fullPath));
+  if (!p) return false;
   if (f === p) return true;
   // Root prefixes are special: p already ends with "/" ("/" or "c:/").
   if (p === '/') return f.startsWith('/');
   if (/^[a-z]:\/$/.test(p)) return f.startsWith(p);
   return f.startsWith(p + '/');
+}
+
+/** Return fullPath relative to prefix when fullPath is inside prefix, preserving fullPath style. */
+export function getRelativePathWithinPrefix(prefix: string, fullPath: string): string | null {
+  const cleanPrefix = stripTrailingSeparators(prefix);
+  if (!isPathPrefix(cleanPrefix, fullPath)) {
+    return null;
+  }
+
+  const normalizedPrefix = stripTrailingSeparators(normalizePathForComparison(cleanPrefix));
+  const normalizedFullPath = stripTrailingSeparators(normalizePathForComparison(fullPath));
+  if (normalizedFullPath === normalizedPrefix) {
+    return '';
+  }
+
+  let relativePath = fullPath.slice(cleanPrefix.length);
+  while (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+    relativePath = relativePath.slice(1);
+  }
+  return relativePath;
 }
 
 /** Get the last segment (filename) from a path. */

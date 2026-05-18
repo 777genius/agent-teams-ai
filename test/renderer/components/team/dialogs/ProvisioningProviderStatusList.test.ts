@@ -82,6 +82,40 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('keeps OpenCode runtime connectivity failures out of selected-model summaries', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'failed',
+              backendSummary: 'OpenCode CLI',
+              details: [
+                'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode (OpenCode CLI): Needs attention');
+    expect(host.textContent).not.toContain('Selected model checks');
+    expect(host.textContent).not.toContain('model unavailable');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('picks the first real failure detail instead of a verified line', () => {
     expect(
       getPrimaryProvisioningFailureDetail([
@@ -124,6 +158,43 @@ describe('ProvisioningProviderStatusList', () => {
       'Codex (Codex native): Selected model checks - 1 model timed out'
     );
     expect(host.textContent).toContain('5.3 Codex - check failed - Model verification timed out');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('summarizes OpenCode advisory ping misses without failure wording', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'notes',
+              backendSummary: 'OpenCode CLI',
+              details: ['big-pickle - ping not confirmed'],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): Selected model checks - 1 ping not confirmed'
+    );
+    expect(host.textContent).not.toContain('model check failed');
+    expect(host.textContent).not.toContain('Needs attention');
+
+    const detailLines = Array.from(host.querySelectorAll('p'));
+    expect(detailLines[0]?.className).toContain('text-[var(--color-text-muted)]');
 
     await act(async () => {
       root.unmount();

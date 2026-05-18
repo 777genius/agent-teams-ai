@@ -48,6 +48,9 @@ const currentFlagIcon = computed(() => {
 const iconMenuOpen = ref(false);
 const searchQuery = ref("");
 const searchInputRef = ref<HTMLInputElement | null>(null);
+type RuntimeI18n = {
+  setLocale?: (code: LocaleCode) => Promise<void> | void;
+};
 
 const filteredDropdownItems = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
@@ -73,8 +76,9 @@ const onChange = async (value: string | LocaleCode) => {
   iconMenuOpen.value = false;
   trackLanguageSwitch(locale.value as string, nextLocale);
   localeStore.setLocale(nextLocale, true);
-  if ((nuxtApp.$i18n as any)?.setLocale) {
-    await (nuxtApp.$i18n as any).setLocale(nextLocale);
+  const runtimeI18n = nuxtApp.$i18n as RuntimeI18n | undefined;
+  if (runtimeI18n?.setLocale) {
+    await runtimeI18n.setLocale(nextLocale);
   } else {
     locale.value = nextLocale;
   }
@@ -102,7 +106,7 @@ const onChange = async (value: string | LocaleCode) => {
           class="language-switcher__search-input"
           :placeholder="t('language.search')"
           @keydown.esc="iconMenuOpen = false"
-        />
+        >
       </div>
       <v-list density="compact" class="language-switcher__menu-list">
         <v-list-item
@@ -119,7 +123,7 @@ const onChange = async (value: string | LocaleCode) => {
         </v-list-item>
         <v-list-item v-if="filteredDropdownItems.length === 0" disabled>
           <template #title>
-            <span class="language-switcher__no-results">—</span>
+            <span class="language-switcher__no-results">-</span>
           </template>
         </v-list-item>
       </v-list>
@@ -138,7 +142,6 @@ const onChange = async (value: string | LocaleCode) => {
     hide-details
     auto-select-first
     :menu-props="{ contentClass: 'language-switcher__dropdown' }"
-    @update:model-value="onChange"
     :style="props.fullWidth ? { maxWidth: '100%', width: '100%' } : { maxWidth: '220px' }"
     :class="{
       'language-switcher--full': props.fullWidth,
@@ -146,6 +149,7 @@ const onChange = async (value: string | LocaleCode) => {
     }"
     :aria-label="t('language.label')"
     :single-line="props.compact"
+    @update:model-value="onChange"
   >
     <template #selection>
       <Icon :name="currentFlagIcon" class="language-switcher__flag-icon" />

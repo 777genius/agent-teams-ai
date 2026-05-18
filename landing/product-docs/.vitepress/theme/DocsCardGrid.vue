@@ -15,6 +15,7 @@ const cards = computed(() => {
       ? [
           { icon: "◈", title: "Концепции", desc: "Команды, задачи, роли и уровни автономности.", link: "/ru/reference/concepts" },
           { icon: "⌁", title: "Рантаймы", desc: "Claude, Codex, OpenCode и multimodel-режим.", link: "/ru/reference/providers-runtimes" },
+          { icon: "▦", title: "Архитектура", desc: "Feature layout, guardrails и границы runtime/provider.", link: "/ru/reference/contributor-architecture" },
           { icon: "⌘", title: "Локальные данные", desc: "Что хранится на машине и что уходит провайдерам.", link: "/ru/reference/privacy-local-data" },
           { icon: "?", title: "FAQ", desc: "Короткие ответы на частые вопросы.", link: "/ru/reference/faq" }
         ]
@@ -30,6 +31,7 @@ const cards = computed(() => {
     ? [
         { icon: "◈", title: "Concepts", desc: "Teams, tasks, roles, and autonomy levels.", link: "/reference/concepts" },
         { icon: "⌁", title: "Runtimes", desc: "Claude, Codex, OpenCode, and multimodel mode.", link: "/reference/providers-runtimes" },
+        { icon: "▦", title: "Architecture", desc: "Feature layout, guardrails, and runtime/provider boundaries.", link: "/reference/contributor-architecture" },
         { icon: "⌘", title: "Local data", desc: "What stays on disk and what providers receive.", link: "/reference/privacy-local-data" },
         { icon: "?", title: "FAQ", desc: "Short answers to common questions.", link: "/reference/faq" }
       ]

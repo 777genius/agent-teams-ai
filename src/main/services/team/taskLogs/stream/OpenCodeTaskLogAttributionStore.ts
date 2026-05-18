@@ -13,12 +13,17 @@ const logger = createLogger('OpenCodeTaskLogAttributionStore');
 const MAX_ATTRIBUTION_FILE_BYTES = 512 * 1024;
 
 export type OpenCodeTaskLogAttributionScope = 'task_session' | 'member_session_window';
-export type OpenCodeTaskLogAttributionSource = 'manual' | 'launch_runtime' | 'reconcile';
+export type OpenCodeTaskLogAttributionSource =
+  | 'manual'
+  | 'launch_runtime'
+  | 'reconcile'
+  | 'delivery_ledger';
 
 export interface OpenCodeTaskLogAttributionRecord {
   taskId: string;
   memberName: string;
   scope: OpenCodeTaskLogAttributionScope;
+  laneId?: string;
   sessionId?: string;
   since?: string;
   until?: string;
@@ -66,7 +71,10 @@ function normalizeScope(value: unknown): OpenCodeTaskLogAttributionScope {
 }
 
 function normalizeSource(value: unknown): OpenCodeTaskLogAttributionSource | undefined {
-  return value === 'manual' || value === 'launch_runtime' || value === 'reconcile'
+  return value === 'manual' ||
+    value === 'launch_runtime' ||
+    value === 'reconcile' ||
+    value === 'delivery_ledger'
     ? value
     : undefined;
 }
@@ -86,6 +94,7 @@ function normalizeRecord(
     return null;
   }
   const sessionId = trimString(raw.sessionId);
+  const laneId = trimString(raw.laneId);
   const startMessageUuid = trimString(raw.startMessageUuid);
   const endMessageUuid = trimString(raw.endMessageUuid);
   const source = normalizeSource(raw.source);
@@ -96,6 +105,7 @@ function normalizeRecord(
     taskId,
     memberName,
     scope: normalizeScope(raw.scope),
+    ...(laneId ? { laneId } : {}),
     ...(sessionId ? { sessionId } : {}),
     ...(since ? { since } : {}),
     ...(until ? { until } : {}),

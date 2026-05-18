@@ -291,6 +291,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
     expect(bridge.getOpenCodeTranscript).toHaveBeenCalledWith('/tmp/agent_teams_orchestrator', {
       teamId: 'relay-works-10',
       memberName: 'jack',
+      sessionId: 'ses_23edf9243ffeSNYPWObDloBJyQ',
       limit: 500,
     });
   });
@@ -361,6 +362,7 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
       {
         teamId: 'relay-works-10',
         memberName: 'jack',
+        sessionId: 'stale-session-id',
         limit: 500,
       }
     );

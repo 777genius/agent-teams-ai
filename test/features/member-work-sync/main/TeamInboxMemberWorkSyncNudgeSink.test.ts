@@ -31,7 +31,9 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
   it('returns inserted=false when the inbox already contains the stable messageId', async () => {
     const input = makeInput();
     const inboxReader = {
-      getMessagesFor: vi.fn(async () => [{ messageId: input.messageId }]),
+      getMessagesFor: vi.fn(async () => [
+        { messageId: input.messageId, workSyncPayloadHash: input.payloadHash },
+      ]),
     };
     const inboxWriter = {
       sendMessage: vi.fn(),
@@ -44,6 +46,52 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
     });
 
     expect(inboxReader.getMessagesFor).toHaveBeenCalledWith('team-a', 'bob');
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the existing stable messageId has a different payload hash', async () => {
+    const input = makeInput();
+    const inboxReader = {
+      getMessagesFor: vi.fn(async () => [
+        { messageId: input.messageId, workSyncPayloadHash: 'different-payload-hash' },
+      ]),
+    };
+    const inboxWriter = {
+      sendMessage: vi.fn(),
+    };
+    const sink = new TeamInboxMemberWorkSyncNudgeSink(inboxReader as never, inboxWriter as never);
+
+    await expect(sink.insertIfAbsent(input)).resolves.toEqual({
+      inserted: false,
+      messageId: input.messageId,
+      conflict: true,
+    });
+
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('treats legacy work-sync rows without payload hash as conflicts', async () => {
+    const input = makeInput();
+    const inboxReader = {
+      getMessagesFor: vi.fn(async () => [
+        {
+          messageId: input.messageId,
+          messageKind: 'member_work_sync_nudge',
+          workSyncIntent: input.payload.workSyncIntent,
+        },
+      ]),
+    };
+    const inboxWriter = {
+      sendMessage: vi.fn(),
+    };
+    const sink = new TeamInboxMemberWorkSyncNudgeSink(inboxReader as never, inboxWriter as never);
+
+    await expect(sink.insertIfAbsent(input)).resolves.toEqual({
+      inserted: false,
+      messageId: input.messageId,
+      conflict: true,
+    });
+
     expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
   });
 
@@ -77,6 +125,7 @@ describe('TeamInboxMemberWorkSyncNudgeSink', () => {
       workSyncIntent: 'agenda_sync',
       workSyncIntentKey: undefined,
       workSyncReviewRequestEventIds: undefined,
+      workSyncPayloadHash: input.payloadHash,
     });
   });
 

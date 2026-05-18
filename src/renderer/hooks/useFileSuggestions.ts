@@ -13,6 +13,7 @@ import {
   onQuickOpenCacheInvalidated,
   setQuickOpenCache,
 } from '@renderer/utils/quickOpenCache';
+import { joinPath, splitPath } from '@shared/utils/platformPath';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { QuickOpenFile } from '@shared/types/editor';
@@ -53,12 +54,12 @@ export function formatFileMentionPath(relativePath: string): string {
  * Extracts unique directories from a list of file paths.
  * Returns directories sorted by depth (shallower first), then alphabetically.
  */
-function extractDirectories(files: QuickOpenFile[], projectPath: string): DerivedFolder[] {
+export function extractDirectories(files: QuickOpenFile[], projectPath: string): DerivedFolder[] {
   const dirSet = new Set<string>();
 
   for (const f of files) {
     // Walk up the directory chain from each file's relative path
-    const parts = f.relativePath.split('/');
+    const parts = splitPath(f.relativePath);
     // Remove the file name — keep only directory segments
     for (let i = 1; i < parts.length; i++) {
       dirSet.add(parts.slice(0, i).join('/'));
@@ -67,19 +68,19 @@ function extractDirectories(files: QuickOpenFile[], projectPath: string): Derive
 
   const folders: DerivedFolder[] = [];
   for (const relDir of dirSet) {
-    const segments = relDir.split('/');
+    const segments = splitPath(relDir);
     const name = segments[segments.length - 1];
     folders.push({
       name,
       relativePath: relDir + '/',
-      absolutePath: projectPath + '/' + relDir,
+      absolutePath: joinPath(projectPath, ...splitPath(relDir)),
     });
   }
 
   // Sort: shallower first, then alphabetically
   folders.sort((a, b) => {
-    const depthA = a.relativePath.split('/').length;
-    const depthB = b.relativePath.split('/').length;
+    const depthA = splitPath(a.relativePath).length;
+    const depthB = splitPath(b.relativePath).length;
     if (depthA !== depthB) return depthA - depthB;
     return a.relativePath.localeCompare(b.relativePath);
   });
@@ -94,13 +95,14 @@ function extractDirectories(files: QuickOpenFile[], projectPath: string): Derive
 export function filterFileSuggestions(files: QuickOpenFile[], query: string): MentionSuggestion[] {
   if (!query || files.length === 0) return [];
 
-  const lower = query.toLowerCase();
+  const lower = query.replace(/\\/g, '/').toLowerCase();
   const results: MentionSuggestion[] = [];
 
   for (const f of files) {
     if (results.length >= MAX_FILE_SUGGESTIONS) break;
 
-    if (f.name.toLowerCase().includes(lower) || f.relativePath.toLowerCase().includes(lower)) {
+    const relativePathForMatch = f.relativePath.replace(/\\/g, '/').toLowerCase();
+    if (f.name.toLowerCase().includes(lower) || relativePathForMatch.includes(lower)) {
       results.push({
         id: `file:${f.path}`,
         name: f.name,
@@ -127,14 +129,15 @@ export function filterFolderSuggestions(
   if (!query || folders.length === 0) return [];
 
   // Strip trailing slash from query for matching (e.g. "ui/" -> "ui")
-  const cleanQuery = query.endsWith('/') ? query.slice(0, -1) : query;
-  const lower = cleanQuery.toLowerCase();
+  const cleanQuery = query.endsWith('/') || query.endsWith('\\') ? query.slice(0, -1) : query;
+  const lower = cleanQuery.replace(/\\/g, '/').toLowerCase();
   const results: MentionSuggestion[] = [];
 
   for (const f of folders) {
     if (results.length >= MAX_FOLDER_SUGGESTIONS) break;
 
-    if (f.name.toLowerCase().includes(lower) || f.relativePath.toLowerCase().includes(lower)) {
+    const relativePathForMatch = f.relativePath.replace(/\\/g, '/').toLowerCase();
+    if (f.name.toLowerCase().includes(lower) || relativePathForMatch.includes(lower)) {
       results.push({
         id: `folder:${f.absolutePath}`,
         name: f.name + '/',

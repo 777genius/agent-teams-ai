@@ -9,7 +9,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 
 import * as ContextMenu from '@radix-ui/react-context-menu';
-import { lastSeparatorIndex } from '@shared/utils/platformPath';
+import { getRelativePathWithinPrefix, lastSeparatorIndex } from '@shared/utils/platformPath';
 import {
   ClipboardCopy,
   FilePlus,
@@ -87,6 +87,8 @@ export const EditorContextMenu = ({
       ? target.path
       : target.path.substring(0, lastSeparatorIndex(target.path))
     : null;
+  const targetRelativePath =
+    projectPath && target ? getRelativePathWithinPrefix(projectPath, target.path) : null;
 
   return (
     <ContextMenu.Root>
@@ -154,12 +156,11 @@ export const EditorContextMenu = ({
                 Copy Path
               </ContextMenu.Item>
 
-              {projectPath && target.path.startsWith(projectPath) && (
+              {targetRelativePath !== null && (
                 <ContextMenu.Item
                   className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-text outline-none hover:bg-surface-raised focus:bg-surface-raised"
                   onSelect={() => {
-                    const relative = target.path.slice(projectPath.length + 1);
-                    void navigator.clipboard.writeText(relative);
+                    void navigator.clipboard.writeText(targetRelativePath);
                   }}
                 >
                   <ClipboardCopy className="size-3.5 text-text-muted" />

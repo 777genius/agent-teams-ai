@@ -147,6 +147,7 @@ type ProvisioningDetailSummary =
   | 'Selected model unavailable'
   | 'Selected model verification timed out'
   | 'Selected model check failed'
+  | 'Selected model ping not confirmed'
   | 'Ready with notes'
   | 'Needs attention';
 
@@ -161,7 +162,8 @@ function isFormattedModelDetail(lower: string): boolean {
     lower.includes(' - available for launch') ||
     lower.includes(' - compatible, deep verification pending') ||
     lower.includes(' - unavailable') ||
-    lower.includes(' - check failed')
+    lower.includes(' - check failed') ||
+    lower.includes(' - ping not confirmed')
   );
 }
 
@@ -257,6 +259,9 @@ function summarizeDetail(
   if (lower.includes(' - check failed -')) {
     return 'Selected model check failed';
   }
+  if (lower.includes(' - ping not confirmed')) {
+    return 'Selected model ping not confirmed';
+  }
 
   if (status === 'notes') {
     return 'Ready with notes';
@@ -274,6 +279,7 @@ function getModelDetailSummary(details: string[]): string | null {
   let unavailableCount = 0;
   let timedOutCount = 0;
   let checkFailedCount = 0;
+  let pingNotConfirmedCount = 0;
   let checkingCount = 0;
 
   for (const detail of details) {
@@ -321,6 +327,10 @@ function getModelDetailSummary(details: string[]): string | null {
       checkFailedCount += 1;
       continue;
     }
+    if (lower.includes(' - ping not confirmed')) {
+      pingNotConfirmedCount += 1;
+      continue;
+    }
     if (lower.includes(' - checking...')) {
       checkingCount += 1;
     }
@@ -335,6 +345,9 @@ function getModelDetailSummary(details: string[]): string | null {
   }
   if (timedOutCount > 0) {
     parts.push(`${timedOutCount} model${timedOutCount === 1 ? '' : 's'} timed out`);
+  }
+  if (pingNotConfirmedCount > 0) {
+    parts.push(`${pingNotConfirmedCount} ping not confirmed`);
   }
   if (compatibilityPendingCount > 0) {
     parts.push(`${compatibilityPendingCount} compatible, deep verification pending`);
@@ -395,6 +408,9 @@ function getDetailTone(
     return 'success';
   }
   if (summary === 'Selected model verification timed out') {
+    return 'neutral';
+  }
+  if (summary === 'Selected model ping not confirmed') {
     return 'neutral';
   }
   if (

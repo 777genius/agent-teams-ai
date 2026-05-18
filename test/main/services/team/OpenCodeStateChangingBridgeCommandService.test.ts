@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+  OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   createOpenCodeBridgeHandshakeIdentityHash,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeHandshake,
@@ -85,6 +86,88 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
+  it('requires delivery acceptance contract only for acceptance-mode sendMessage', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    const service = createService();
+
+    await expect(service.execute(buildSendInput('acceptance'))).rejects.toThrow(
+      'OpenCode delivery acceptance mode is required'
+    );
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+    await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('does not apply runtime-store high watermark preconditions to sendMessage delivery', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator', {
+      runtimeStoreManifestHighWatermark: 0,
+    });
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+        },
+      });
+    const service = createService();
+
+    await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body.preconditions).toMatchObject({
+      expectedManifestHighWatermark: null,
+      idempotencyKey: expect.stringMatching(
+        /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
+      ),
+    });
+    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
+      .resolves.toMatchObject({
+        requestId: 'cmd-1',
+        status: 'completed',
+        retryable: false,
+      });
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
   it('adds preconditions, commits ledger, and releases lease on success', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({
@@ -123,6 +206,50 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         retryable: false,
         completedAt: '2026-04-21T12:00:00.000Z',
       });
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('waits briefly for an active lane lease instead of failing near-concurrent sends', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
+    );
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+    const service = createService({
+      leaseAcquireTimeoutMs: 200,
+      leaseAcquireRetryDelayMs: 5,
+    });
+    const activeLease = await leaseStore.acquire({
+      teamName: 'team-a',
+      laneId: 'secondary:opencode:bob',
+      runId: 'run-1',
+      command: 'opencode.sendMessage',
+      ttlMs: 10_000,
+    });
+
+    const resultPromise = service.execute(buildSendInput('acceptance'));
+    await sleep(20);
+    expect(bridge.calls).toHaveLength(0);
+
+    await leaseStore.release(activeLease.leaseId);
+
+    await expect(resultPromise).resolves.toMatchObject({ ok: true });
+    expect(bridge.calls).toHaveLength(1);
+    expect(bridge.calls[0].body.preconditions.commandLeaseId).toBe('lease-2');
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -198,7 +325,12 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
-  function createService(): OpenCodeStateChangingBridgeCommandService {
+  function createService(
+    overrides: {
+      leaseAcquireTimeoutMs?: number;
+      leaseAcquireRetryDelayMs?: number;
+    } = {}
+  ): OpenCodeStateChangingBridgeCommandService {
     return new OpenCodeStateChangingBridgeCommandService({
       expectedClientIdentity: clientIdentity,
       handshakePort,
@@ -210,6 +342,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       requestIdFactory: () => 'cmd-1',
       diagnosticIdFactory: () => 'diag-1',
       clock: () => now,
+      ...overrides,
     });
   }
 });
@@ -222,6 +355,32 @@ function buildLaunchInput(): Parameters<OpenCodeStateChangingBridgeCommandServic
     capabilitySnapshotId: 'cap-1',
     behaviorFingerprint: 'behavior-1',
     body: { prompt: 'launch' },
+    cwd: '/tmp/project',
+    timeoutMs: 10_000,
+  };
+}
+
+function buildSendInput(
+  settlementMode: 'observed' | 'acceptance'
+): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
+  return {
+    command: 'opencode.sendMessage',
+    teamName: 'team-a',
+    laneId: 'secondary:opencode:bob',
+    runId: 'run-1',
+    capabilitySnapshotId: null,
+    behaviorFingerprint: null,
+    body: {
+      runId: 'run-1',
+      laneId: 'secondary:opencode:bob',
+      teamId: 'team-a',
+      teamName: 'team-a',
+      projectPath: '/tmp/project',
+      memberName: 'bob',
+      text: 'hello',
+      messageId: 'msg-1',
+      settlementMode,
+    },
     cwd: '/tmp/project',
     timeoutMs: 10_000,
   };
@@ -313,15 +472,38 @@ function buildHandshake(input: {
   };
 }
 
+function buildHandshakeWithAcceptedCommands(
+  input: {
+    client: OpenCodeBridgePeerIdentity;
+    server: OpenCodeBridgePeerIdentity;
+  },
+  acceptedCommands: OpenCodeBridgeHandshake['acceptedCommands']
+): OpenCodeBridgeHandshake {
+  const withoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
+    schemaVersion: 1,
+    requestId: 'handshake-1',
+    client: input.client,
+    server: input.server,
+    agreedProtocolVersion: 1,
+    acceptedCommands,
+    serverTime: '2026-04-21T12:00:00.000Z',
+  };
+
+  return {
+    ...withoutHash,
+    identityHash: createOpenCodeBridgeHandshakeIdentityHash(withoutHash),
+  };
+}
+
 class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
   calls: Array<{
     command: OpenCodeBridgeCommandName;
-    body: { prompt: string; preconditions: { idempotencyKey: string } };
+    body: { prompt: string; preconditions: { idempotencyKey: string; commandLeaseId?: string } };
     options: { cwd: string; timeoutMs: number; requestId?: string };
   }> = [];
   resultFactory: (input: {
     command: OpenCodeBridgeCommandName;
-    body: { prompt: string; preconditions: { idempotencyKey: string } };
+    body: { prompt: string; preconditions: { idempotencyKey: string; commandLeaseId?: string } };
     options: { cwd: string; timeoutMs: number; requestId?: string };
   }) => OpenCodeBridgeResult<unknown> = ({ body, options }) =>
     bridgeSuccess({
@@ -340,7 +522,10 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
   ): Promise<OpenCodeBridgeResult<TData>> {
     const call = {
       command,
-      body: body as { prompt: string; preconditions: { idempotencyKey: string } },
+      body: body as {
+        prompt: string;
+        preconditions: { idempotencyKey: string; commandLeaseId?: string };
+      },
       options,
     };
     this.calls.push(call);
@@ -370,4 +555,8 @@ class FakeManifestReader implements RuntimeStoreManifestReader {
 
 class FakeDiagnosticsSink implements OpenCodeStateChangingBridgeDiagnosticsSink {
   readonly append = vi.fn(async () => {});
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

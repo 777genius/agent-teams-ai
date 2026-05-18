@@ -77,6 +77,7 @@ export class TeamInboxWriter {
       ...(request.workSyncReviewRequestEventIds?.length
         ? { workSyncReviewRequestEventIds: request.workSyncReviewRequestEventIds }
         : {}),
+      ...(request.workSyncPayloadHash ? { workSyncPayloadHash: request.workSyncPayloadHash } : {}),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
     };

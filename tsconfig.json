@@ -22,6 +22,11 @@
     },
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*", "test/**/*", "scripts/team-changes-real-data-smoke.ts"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "scripts/team-changes-real-data-smoke.ts",
+    "scripts/smoke/codex-runtime-install.ts"
+  ],
   "exclude": ["node_modules", "dist", "dist-electron"]
 }

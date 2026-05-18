@@ -2201,10 +2201,6 @@ export class BoardTaskLogStreamService {
     taskId: string,
     records: BoardTaskActivityRecord[]
   ): Promise<boolean> {
-    if (records.some((record) => record.linkKind === 'execution')) {
-      return false;
-    }
-
     try {
       const [activeTasks, deletedTasks, metaMembers, config] = await Promise.all([
         this.taskReader.getTasks(teamName).catch(() => []),
@@ -2219,6 +2215,15 @@ export class BoardTaskLogStreamService {
       }
 
       const normalizedOwner = normalizeMemberName(ownerName);
+      const hasOwnerExecution = records.some(
+        (record) =>
+          record.linkKind === 'execution' &&
+          normalizeMemberName(record.actor.memberName ?? '') === normalizedOwner
+      );
+      if (hasOwnerExecution) {
+        return false;
+      }
+
       const member = [...metaMembers, ...(config?.members ?? [])].find(
         (candidate) => normalizeMemberName(candidate.name) === normalizedOwner
       );

@@ -670,6 +670,8 @@ export interface InboxMessage {
   workSyncIntentKey?: string;
   /** Concrete review_requested event IDs covered by this nudge. */
   workSyncReviewRequestEventIds?: string[];
+  /** Durable hash for idempotent hidden member-work-sync automation rows. */
+  workSyncPayloadHash?: string;
   /** Structured slash-command metadata for sent command rows. */
   slashCommand?: SlashCommandMeta;
   /** Structured command-output metadata for session-derived result rows. */
@@ -717,6 +719,7 @@ export interface SendMessageRequest {
   workSyncIntent?: InboxMessage['workSyncIntent'];
   workSyncIntentKey?: string;
   workSyncReviewRequestEventIds?: string[];
+  workSyncPayloadHash?: string;
   slashCommand?: SlashCommandMeta;
   commandOutput?: CommandOutputMeta;
 }
@@ -1430,11 +1433,24 @@ export interface TeamCreateResponse {
 
 export type TeamProvisioningModelVerificationMode = 'compatibility' | 'deep';
 
+export type TeamProvisioningPrepareIssueScope = 'provider' | 'model';
+export type TeamProvisioningPrepareIssueSeverity = 'blocking' | 'warning';
+
+export interface TeamProvisioningPrepareIssue {
+  providerId?: TeamProviderId;
+  modelId?: string;
+  scope: TeamProvisioningPrepareIssueScope;
+  severity: TeamProvisioningPrepareIssueSeverity;
+  code: string;
+  message: string;
+}
+
 export interface TeamProvisioningPrepareResult {
   ready: boolean;
   message: string;
   details?: string[];
   warnings?: string[];
+  issues?: TeamProvisioningPrepareIssue[];
 }
 
 export interface TeamProvisioningProgress {
@@ -1472,6 +1488,7 @@ export interface TeamLaunchDiagnosticItem {
     | 'permission_pending'
     | 'bootstrap_confirmed'
     | 'bootstrap_stalled'
+    | 'workspace_trust_preflight'
     | 'stale_runtime_event_rejected'
     | 'process_table_unavailable';
   label: string;

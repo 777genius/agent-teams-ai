@@ -759,6 +759,23 @@ const ACTIVE_PROVISIONING_STATES = new Set([
 ]);
 const TERMINAL_PROVISIONING_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
 
+function shouldIgnoreProvisioningProgressRegression(
+  currentState: TeamProvisioningProgress['state'],
+  nextState: TeamProvisioningProgress['state']
+): boolean {
+  if (currentState === 'ready') {
+    return nextState !== 'ready' && nextState !== 'disconnected';
+  }
+  if (
+    currentState === 'failed' ||
+    currentState === 'cancelled' ||
+    currentState === 'disconnected'
+  ) {
+    return nextState !== currentState;
+  }
+  return false;
+}
+
 function isPendingProvisioningRunId(runId: string): boolean {
   return runId.startsWith('pending:');
 }
@@ -4310,10 +4327,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       queuedFullTeamDataRefreshesAfterThin.delete(teamName);
       const isProvisioning = isTeamProvisioningActive(currentState, teamName);
+      const existingSelectedTeamData =
+        currentState.selectedTeamData?.teamName === teamName ? currentState.selectedTeamData : null;
 
       const msg = error instanceof Error ? error.message : String(error);
       // IPC can report provisioning state explicitly.
       if (msg === 'TEAM_PROVISIONING' || (msg.includes('TEAM_PROVISIONING') && isProvisioning)) {
+        if (existingSelectedTeamData) {
+          set({
+            selectedTeamLoading: false,
+            selectedTeamData: existingSelectedTeamData,
+            selectedTeamError: null,
+          });
+          return;
+        }
         set({
           selectedTeamLoading: true,
           selectedTeamData: null,
@@ -4338,6 +4365,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to fetch team data';
+      if (existingSelectedTeamData) {
+        set({
+          selectedTeamLoading: false,
+          selectedTeamData: existingSelectedTeamData,
+          selectedTeamError: null,
+        });
+        return;
+      }
       set({
         selectedTeamLoading: false,
         selectedTeamData: null,
@@ -5803,6 +5838,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       existingProgress?.error === progress.error &&
       existingProgress?.pid === progress.pid;
     if (isDuplicateProgress && currentRunId === progress.runId) {
+      return;
+    }
+    if (
+      existingProgress &&
+      currentRunId === progress.runId &&
+      shouldIgnoreProvisioningProgressRegression(existingProgress.state, progress.state)
+    ) {
       return;
     }
 

@@ -8,6 +8,7 @@
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CliInstallationStatus, CliProviderId, OpenCodeRuntimeStatus } from '@shared/types';
 
 export function useCliInstaller(): {
@@ -33,6 +34,9 @@ export function useCliInstaller(): {
   openCodeRuntimeStatus: OpenCodeRuntimeStatus | null;
   openCodeRuntimeStatusLoading: boolean;
   openCodeRuntimeError: string | null;
+  codexRuntimeStatus: CodexRuntimeStatus | null;
+  codexRuntimeStatusLoading: boolean;
+  codexRuntimeError: string | null;
   bootstrapCliStatus: (options?: { multimodelEnabled?: boolean }) => Promise<void>;
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
@@ -44,6 +48,9 @@ export function useCliInstaller(): {
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
   installOpenCodeRuntime: () => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
+  fetchCodexRuntimeStatus: () => Promise<void>;
+  installCodexRuntime: () => Promise<void>;
+  invalidateCodexRuntimeStatus: () => Promise<void>;
   isBusy: boolean;
 } {
   const {
@@ -62,6 +69,9 @@ export function useCliInstaller(): {
     openCodeRuntimeStatus,
     openCodeRuntimeStatusLoading,
     openCodeRuntimeError,
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading,
+    codexRuntimeError,
     bootstrapCliStatus,
     fetchCliStatus,
     fetchCliProviderStatus,
@@ -70,6 +80,9 @@ export function useCliInstaller(): {
     fetchOpenCodeRuntimeStatus,
     installOpenCodeRuntime,
     invalidateOpenCodeRuntimeStatus,
+    fetchCodexRuntimeStatus,
+    installCodexRuntime,
+    invalidateCodexRuntimeStatus,
   } = useStore(
     useShallow((s) => ({
       cliStatus: s.cliStatus,
@@ -87,6 +100,9 @@ export function useCliInstaller(): {
       openCodeRuntimeStatus: s.openCodeRuntimeStatus,
       openCodeRuntimeStatusLoading: s.openCodeRuntimeStatusLoading,
       openCodeRuntimeError: s.openCodeRuntimeError,
+      codexRuntimeStatus: s.codexRuntimeStatus,
+      codexRuntimeStatusLoading: s.codexRuntimeStatusLoading,
+      codexRuntimeError: s.codexRuntimeError,
       bootstrapCliStatus: s.bootstrapCliStatus,
       fetchCliStatus: s.fetchCliStatus,
       fetchCliProviderStatus: s.fetchCliProviderStatus,
@@ -95,6 +111,9 @@ export function useCliInstaller(): {
       fetchOpenCodeRuntimeStatus: s.fetchOpenCodeRuntimeStatus,
       installOpenCodeRuntime: s.installOpenCodeRuntime,
       invalidateOpenCodeRuntimeStatus: s.invalidateOpenCodeRuntimeStatus,
+      fetchCodexRuntimeStatus: s.fetchCodexRuntimeStatus,
+      installCodexRuntime: s.installCodexRuntime,
+      invalidateCodexRuntimeStatus: s.invalidateCodexRuntimeStatus,
     }))
   );
 
@@ -117,6 +136,9 @@ export function useCliInstaller(): {
     openCodeRuntimeStatus,
     openCodeRuntimeStatusLoading,
     openCodeRuntimeError,
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading,
+    codexRuntimeError,
     bootstrapCliStatus,
     fetchCliStatus,
     fetchCliProviderStatus,
@@ -125,6 +147,9 @@ export function useCliInstaller(): {
     fetchOpenCodeRuntimeStatus,
     installOpenCodeRuntime,
     invalidateOpenCodeRuntimeStatus,
+    fetchCodexRuntimeStatus,
+    installCodexRuntime,
+    invalidateCodexRuntimeStatus,
     isBusy,
   };
 }

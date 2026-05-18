@@ -25,10 +25,14 @@ function uniqueProviders(providerIds: readonly ProviderId[]): ProviderId[] {
 function selectPreferredCandidate(
   candidates: readonly RecentProjectCandidate[]
 ): RecentProjectCandidate {
-  const existingWorktreeCandidates = candidates.filter(
+  const availableCandidates = candidates.filter(
+    (candidate) => candidate.filesystemState !== 'deleted'
+  );
+  const candidatePool = availableCandidates.length > 0 ? availableCandidates : candidates;
+  const existingWorktreeCandidates = candidatePool.filter(
     (candidate) => candidate.openTarget.type === 'existing-worktree'
   );
-  const pool = existingWorktreeCandidates.length > 0 ? existingWorktreeCandidates : candidates;
+  const pool = existingWorktreeCandidates.length > 0 ? existingWorktreeCandidates : candidatePool;
 
   return [...pool].sort((left, right) => {
     if (right.lastActivityAt !== left.lastActivityAt) {
@@ -81,6 +85,7 @@ export function mergeRecentProjectCandidates(
       source: sourceKinds.size > 1 ? 'mixed' : sourceKinds.has('codex') ? 'codex' : 'claude',
       openTarget: preferred.openTarget,
       branchName: mergeBranchName(group),
+      filesystemState: preferred.filesystemState ?? 'available',
     };
   });
 

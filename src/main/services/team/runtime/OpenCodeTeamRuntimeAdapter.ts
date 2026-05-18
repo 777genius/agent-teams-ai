@@ -69,6 +69,7 @@ export interface OpenCodeTeamRuntimeMessageInput {
   messageKind?: InboxMessageKind;
   workSyncIntent?: InboxMessage['workSyncIntent'];
   workSyncReviewRequestEventIds?: string[];
+  controlUrl?: string;
   taskRefs?: TaskRef[];
   bootstrapCheckinRetry?: {
     runtimeSessionId: string;
@@ -83,6 +84,7 @@ export interface OpenCodeTeamRuntimeMessageResult {
   sessionId?: string;
   runtimePid?: number;
   prePromptCursor?: string | null;
+  runtimePromptMessageId?: string;
   responseObservation?: OpenCodeSendMessageCommandData['responseObservation'];
   diagnostics: string[];
 }
@@ -98,6 +100,12 @@ const SECRET_FLAG_PATTERN =
   /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const BEARER_TOKEN_PATTERN = /\bBearer\s+\S+/gi;
 const SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
+
+function resolveOpenCodeRuntimeSettlementMode(
+  input: Pick<OpenCodeTeamRuntimeMessageInput, 'messageKind'>
+): OpenCodeSendMessageCommandBody['settlementMode'] {
+  return input.messageKind === 'member_work_sync_nudge' ? 'observed' : 'acceptance';
+}
 
 export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
@@ -333,6 +341,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       text: buildOpenCodeRuntimeMessageText(input),
       messageId: input.messageId,
       ...(input.deliveryAttemptId ? { deliveryAttemptId: input.deliveryAttemptId } : {}),
+      settlementMode: resolveOpenCodeRuntimeSettlementMode(input),
       fileParts: input.fileParts,
       actionMode: input.actionMode,
       messageKind: input.messageKind,
@@ -347,13 +356,18 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       sessionId: data.sessionId,
       runtimePid: data.runtimePid,
       prePromptCursor: data.prePromptCursor,
+      runtimePromptMessageId: data.runtimePromptMessageId,
       responseObservation: data.responseObservation,
       diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
     };
   }
 
   async observeMessageDelivery(
-    input: OpenCodeTeamRuntimeMessageInput & { prePromptCursor?: string | null }
+    input: OpenCodeTeamRuntimeMessageInput & {
+      prePromptCursor?: string | null;
+      sessionId?: string;
+      runtimePromptMessageId?: string;
+    }
   ): Promise<OpenCodeTeamRuntimeMessageResult> {
     if (!this.bridge.observeOpenCodeTeamMessageDelivery) {
       return {
@@ -380,6 +394,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       projectPath: input.cwd,
       memberName: input.memberName,
       messageId: input.messageId,
+      sessionId: input.sessionId,
+      runtimePromptMessageId: input.runtimePromptMessageId,
       prePromptCursor: input.prePromptCursor ?? null,
     });
 
@@ -389,6 +405,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       memberName: input.memberName,
       sessionId: data.sessionId,
       runtimePid: data.runtimePid,
+      runtimePromptMessageId: data.runtimePromptMessageId,
       responseObservation: data.responseObservation,
       diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
     };
@@ -914,6 +931,7 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
       : null;
   const isWorkSyncNudge = input.messageKind === 'member_work_sync_nudge';
   const isReviewPickupNudge = isWorkSyncNudge && input.workSyncIntent === 'review_pickup';
+  const workSyncToolArgs = buildOpenCodeWorkSyncToolArgs(input);
   const taskIds =
     input.taskRefs
       ?.map((ref) => ref.taskId?.trim())
@@ -928,7 +946,7 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
         'Process the current review request now if it is still assigned to you. Open the task, verify reviewState/status, then use the review workflow tools to start or continue the review.',
         'Do not mark the review complete from this prompt alone.',
         'A visible agent-teams_message_send reply is optional. Concrete review progress, review tool usage, or agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) is sufficient response proof.',
-        `If you cannot pick up the review now, call agent-teams_member_work_sync_status (or mcp__agent-teams__member_work_sync_status) with teamName="${input.teamName}" and memberName="${input.memberName}", then report state "blocked" or "still_working" only for the real current state.`,
+        `If you cannot pick up the review now, call agent-teams_member_work_sync_status (or mcp__agent-teams__member_work_sync_status) with ${workSyncToolArgs}, then report state "blocked" or "still_working" only for the real current state.`,
         taskIds.length ? `Relevant taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.` : null,
         `Do not use provider names, runtime names, or team names as memberName; use exactly "${input.memberName}".`,
         'Do not reply only with acknowledgement.',
@@ -937,8 +955,8 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
       ? [
           'This delivered app message is a member-work-sync nudge.',
           'A visible agent-teams_message_send reply is optional. Concrete task progress or agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) is sufficient response proof.',
-          `Call agent-teams_member_work_sync_status (or mcp__agent-teams__member_work_sync_status) with teamName="${input.teamName}" and memberName="${input.memberName}".`,
-          `Then call agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) with teamName="${input.teamName}", memberName="${input.memberName}", the returned agendaFingerprint/reportToken, and state "still_working" or "blocked".`,
+          `Call agent-teams_member_work_sync_status (or mcp__agent-teams__member_work_sync_status) with ${workSyncToolArgs}.`,
+          `Then call agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) with ${workSyncToolArgs}, the returned agendaFingerprint/reportToken, and state "still_working" or "blocked".`,
           taskIds.length
             ? `When reporting, include taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.`
             : null,
@@ -982,6 +1000,15 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
   ]
     .filter((line): line is string => line !== null)
     .join('\n');
+}
+
+function buildOpenCodeWorkSyncToolArgs(input: OpenCodeTeamRuntimeMessageInput): string {
+  const args = [`teamName="${input.teamName}"`, `memberName="${input.memberName}"`];
+  const controlUrl = input.controlUrl?.trim();
+  if (controlUrl) {
+    args.push(`controlUrl=${JSON.stringify(controlUrl)}`);
+  }
+  return args.join(', ');
 }
 
 function validateOpenCodeRuntimeMembers(

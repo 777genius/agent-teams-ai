@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getReleaseApiUrls,
   getExpectedLatestMacArtifacts,
   getExpectedReleaseAssetUrl,
   getExpectedReleaseAssetUrls,
@@ -8,6 +9,7 @@ import {
   getLatestMacMetadataUrls,
   isLatestMacMetadataCompatible,
   parseReleaseMetadataAssetNames,
+  shouldSkipReleaseForUpdater,
 } from '../../../../src/main/services/infrastructure/updaterReleaseMetadata';
 
 describe('updaterReleaseMetadata', () => {
@@ -31,6 +33,28 @@ describe('updaterReleaseMetadata', () => {
       'https://github.com/777genius/agent-teams-ai/releases/download/v1.2.3/Agent.Teams.AI-1.2.3-arm64.dmg',
       'https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.2.3/Agent.Teams.AI-1.2.3-arm64.dmg',
     ]);
+    expect(getReleaseApiUrls('1.2.3')).toEqual([
+      'https://api.github.com/repos/777genius/agent-teams-ai/releases/tags/v1.2.3',
+      'https://api.github.com/repos/777genius/claude_agent_teams_ui/releases/tags/v1.2.3',
+    ]);
+  });
+
+  it('detects releases that must be hidden from auto-updater', () => {
+    expect(shouldSkipReleaseForUpdater({ tag_name: 'v1.2.3', name: 'v1.2.3' })).toBe(false);
+    expect(shouldSkipReleaseForUpdater({ tag_name: 'v1.2.4', prerelease: true })).toBe(true);
+    expect(shouldSkipReleaseForUpdater({ tag_name: 'v1.2.5', draft: true })).toBe(true);
+    expect(
+      shouldSkipReleaseForUpdater({
+        tag_name: 'v1.2.6',
+        name: 'Internal smoke [skip-updater]',
+      })
+    ).toBe(true);
+    expect(
+      shouldSkipReleaseForUpdater({
+        tag_name: 'v1.2.7',
+        body: 'Temporary QA build [test-release]',
+      })
+    ).toBe(true);
   });
 
   it('extracts updater asset names from latest-mac.yml text', () => {
@@ -47,10 +71,7 @@ path: Agent.Teams.AI-1.2.3-arm64-mac.zip
 `;
 
     expect(parseReleaseMetadataAssetNames(metadata)).toEqual(
-      new Set([
-        'Agent.Teams.AI-1.2.3-arm64-mac.zip',
-        'Agent.Teams.AI-1.2.3-arm64.dmg',
-      ])
+      new Set(['Agent.Teams.AI-1.2.3-arm64-mac.zip', 'Agent.Teams.AI-1.2.3-arm64.dmg'])
     );
   });
 

@@ -14,22 +14,23 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
-import electronUpdater from 'electron-updater';
-
-const { autoUpdater } = electronUpdater;
-
 import { app, net } from 'electron';
+import electronUpdater from 'electron-updater';
 
 import {
   getExpectedReleaseAssetUrls,
   getLatestMacMetadataUrls,
+  getReleaseApiUrls,
   isLatestMacMetadataCompatible,
+  shouldSkipReleaseForUpdater,
 } from './updaterReleaseMetadata';
 
+import type { GithubReleaseMetadata } from './updaterReleaseMetadata';
 import type { UpdaterStatus } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 
 const logger = createLogger('UpdaterService');
+const { autoUpdater } = electronUpdater;
 
 function shouldSkipDevUpdateCheck(): boolean {
   return (
@@ -67,6 +68,21 @@ async function fetchText(url: string): Promise<string | null> {
       return null;
     }
     return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  try {
+    const response = await net.fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as T;
   } catch {
     return null;
   }
@@ -194,6 +210,20 @@ export class UpdaterService {
     return false;
   }
 
+  private async isSkippedRelease(version: string): Promise<boolean> {
+    const metadataUrls = getReleaseApiUrls(version);
+    for (const metadataUrl of metadataUrls) {
+      const release = await fetchJson<GithubReleaseMetadata>(metadataUrl);
+      if (!release) {
+        continue;
+      }
+      return shouldSkipReleaseForUpdater(release);
+    }
+
+    logger.warn(`GitHub release metadata is not available for ${version}, allowing updater check`);
+    return false;
+  }
+
   /**
    * Verify that the platform-specific asset exists before notifying the renderer.
    * If CI hasn't finished uploading the artifact for this OS yet, suppress the
@@ -201,12 +231,29 @@ export class UpdaterService {
    */
   private async verifyAndNotify(info: {
     version: string;
-    releaseNotes?: string | unknown;
+    releaseName?: unknown;
+    releaseNotes?: unknown;
   }): Promise<void> {
     if (!this.isNewerThanCurrent(info.version)) {
       logger.warn(
         `Suppressing non-newer update notification. current=${app.getVersion()} candidate=${info.version}`
       );
+      return;
+    }
+
+    if (
+      shouldSkipReleaseForUpdater({
+        tag_name: `v${info.version}`,
+        name: typeof info.releaseName === 'string' ? info.releaseName : undefined,
+        body: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
+      })
+    ) {
+      logger.warn(`Suppressing updater notification for locally marked release ${info.version}`);
+      return;
+    }
+
+    if (await this.isSkippedRelease(info.version)) {
+      logger.warn(`Suppressing updater notification for skipped release ${info.version}`);
       return;
     }
 

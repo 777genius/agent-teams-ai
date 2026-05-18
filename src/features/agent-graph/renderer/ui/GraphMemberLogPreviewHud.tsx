@@ -108,13 +108,45 @@ function itemIcon(item: MemberLogPreviewItem): React.JSX.Element {
   return <MessageSquareText className={`${className} text-slate-300`} />;
 }
 
+function hasOpenCodeRuntimeWarning(preview: MemberLogPreviewMember | undefined): boolean {
+  return (
+    preview?.warnings.some(
+      (warning) =>
+        warning.code === 'opencode_runtime_timeout' ||
+        warning.code === 'opencode_runtime_unavailable' ||
+        warning.code === 'opencode_ambiguous_lane'
+    ) === true
+  );
+}
+
+function hasOpenCodeDeliveryDelayedWarning(preview: MemberLogPreviewMember | undefined): boolean {
+  return preview?.warnings.some((warning) => warning.code === 'opencode_delivery_delayed') === true;
+}
+
+function hasOpenCodeEmptyStateWarning(preview: MemberLogPreviewMember | undefined): boolean {
+  return hasOpenCodeDeliveryDelayedWarning(preview) || hasOpenCodeRuntimeWarning(preview);
+}
+
 function resolveEmptyText(
   preview: MemberLogPreviewMember | undefined,
   loading: boolean,
   error: string | null
 ): string {
-  if (preview?.warnings.some((warning) => warning.code === 'codex_member_wide_not_supported')) {
+  const hasCodexUnsupportedWarning = preview?.warnings.some(
+    (warning) => warning.code === 'codex_member_wide_not_supported'
+  );
+  const hasOnlyCodexUnsupportedCoverage =
+    hasCodexUnsupportedWarning === true &&
+    (preview?.coverage.length ?? 0) > 0 &&
+    preview?.coverage.every((coverage) => coverage.provider === 'codex_native_trace');
+  if (hasOnlyCodexUnsupportedCoverage) {
     return 'Unsupported provider';
+  }
+  if ((preview?.items.length ?? 0) === 0 && hasOpenCodeDeliveryDelayedWarning(preview)) {
+    return 'OpenCode logs delayed';
+  }
+  if ((preview?.items.length ?? 0) === 0 && hasOpenCodeRuntimeWarning(preview)) {
+    return 'Logs unavailable';
   }
   if (loading && !preview) return 'Loading logs';
   if (error && !preview) return 'Logs unavailable';
@@ -552,7 +584,8 @@ export const GraphMemberLogPreviewHud = ({
             : node.label;
         const preview = previewsByMember.get(normalizeMemberName(memberName));
         const items = preview?.items ?? [];
-        const isInitialLoading = loading && !preview;
+        const isEmptyLoading =
+          loading && (!preview || (items.length === 0 && hasOpenCodeEmptyStateWarning(preview)));
 
         return (
           <div
@@ -578,7 +611,7 @@ export const GraphMemberLogPreviewHud = ({
               <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                 {items.length > 0 ? (
                   items.slice(0, 3).map((item) => renderItem(memberName, item))
-                ) : isInitialLoading ? (
+                ) : isEmptyLoading ? (
                   <button
                     type="button"
                     className="flex min-h-0 flex-1 rounded-md text-left text-[11px] text-slate-400/60"

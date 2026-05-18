@@ -73,6 +73,7 @@ import {
 } from './providerDashboardRateLimits';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type {
   CliProviderAuthMode,
   CliProviderId,
@@ -122,7 +123,10 @@ const DashboardRateLimitChips = ({
           >
             {item.label}
           </span>
-          <span className="text-xs font-medium" style={{ color: '#86efac' }}>
+          <span
+            className="text-xs font-medium"
+            style={{ color: item.isDepleted ? '#f87171' : '#86efac' }}
+          >
             {item.remaining}
           </span>
           <span
@@ -357,9 +361,12 @@ interface InstalledBannerProps {
   anthropicRateLimitsRefreshing: boolean;
   openCodeRuntimeStatus: OpenCodeRuntimeStatus | null;
   openCodeRuntimeStatusLoading: boolean;
+  codexRuntimeStatus: CodexRuntimeStatus | null;
+  codexRuntimeStatusLoading: boolean;
   isBusy: boolean;
   onInstall: () => void;
   onOpenCodeInstall: () => void;
+  onCodexInstall: () => void;
   onRefresh: () => void;
   onToggleProvidersCollapsed: () => void;
   onProviderLogin: (providerId: CliProviderId) => void;
@@ -381,7 +388,7 @@ function getProviderLabel(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode (75+ LLM providers)';
+      return 'OpenCode (200+ models)';
     case 'kilocode':
       return 'KiloCode';
   }
@@ -594,8 +601,41 @@ function shouldShowOpenCodeInstallAction(
   );
 }
 
-function isOpenCodeRuntimeInstalling(
-  status: OpenCodeRuntimeStatus | null,
+function shouldShowCodexInstallAction(
+  provider: CliProviderStatus,
+  showSkeleton: boolean,
+  codexRuntimeStatus: CodexRuntimeStatus | null
+): boolean {
+  const codexNativeBackend = provider.availableBackends?.find(
+    (backend) => backend.id === 'codex-native'
+  );
+  const runtimeMissingText = [
+    provider.statusMessage,
+    provider.detailMessage,
+    codexNativeBackend?.statusMessage,
+    codexNativeBackend?.detailMessage,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const runtimeMissing =
+    provider.verificationState === 'error' &&
+    (codexNativeBackend?.state === 'runtime-missing' ||
+      runtimeMissingText.includes('codex cli not found') ||
+      runtimeMissingText.includes('runtime missing'));
+
+  return (
+    provider.providerId === 'codex' &&
+    !showSkeleton &&
+    !provider.authenticated &&
+    runtimeMissing &&
+    codexRuntimeStatus?.source !== 'path' &&
+    !(codexRuntimeStatus?.source === 'app-managed' && codexRuntimeStatus.state !== 'failed')
+  );
+}
+
+function isRuntimeInstalling(
+  status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null,
   loading: boolean
 ): boolean {
   return (
@@ -606,7 +646,7 @@ function isOpenCodeRuntimeInstalling(
   );
 }
 
-function getOpenCodeInstallLabel(status: OpenCodeRuntimeStatus | null): string {
+function getRuntimeInstallLabel(status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null): string {
   if (status?.state === 'downloading') {
     const percent = status.progress?.percent;
     return typeof percent === 'number' ? `Downloading ${percent}%` : 'Downloading';
@@ -643,9 +683,12 @@ const InstalledBanner = ({
   anthropicRateLimitsRefreshing,
   openCodeRuntimeStatus,
   openCodeRuntimeStatusLoading,
+  codexRuntimeStatus,
+  codexRuntimeStatusLoading,
   isBusy,
   onInstall,
   onOpenCodeInstall,
+  onCodexInstall,
   onRefresh,
   onToggleProvidersCollapsed,
   onProviderLogin,
@@ -959,6 +1002,33 @@ const InstalledBanner = ({
                     ) : null}
                   </div>
                   <div className="flex shrink-0 items-start gap-2">
+                    {shouldShowCodexInstallAction(provider, showSkeleton, codexRuntimeStatus) ? (
+                      <button
+                        type="button"
+                        onClick={onCodexInstall}
+                        disabled={isRuntimeInstalling(
+                          codexRuntimeStatus,
+                          codexRuntimeStatusLoading
+                        )}
+                        className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+                        style={{
+                          borderColor: 'rgba(34, 197, 94, 0.34)',
+                          color: '#86efac',
+                        }}
+                        title={
+                          codexRuntimeStatus?.error ??
+                          codexRuntimeStatus?.progress?.detail ??
+                          'Install Codex CLI into app data'
+                        }
+                      >
+                        {isRuntimeInstalling(codexRuntimeStatus, codexRuntimeStatusLoading) ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Download className="size-3" />
+                        )}
+                        {getRuntimeInstallLabel(codexRuntimeStatus)}
+                      </button>
+                    ) : null}
                     {shouldShowOpenCodeInstallAction(
                       provider,
                       showSkeleton,
@@ -967,7 +1037,7 @@ const InstalledBanner = ({
                       <button
                         type="button"
                         onClick={onOpenCodeInstall}
-                        disabled={isOpenCodeRuntimeInstalling(
+                        disabled={isRuntimeInstalling(
                           openCodeRuntimeStatus,
                           openCodeRuntimeStatusLoading
                         )}
@@ -982,7 +1052,7 @@ const InstalledBanner = ({
                           'Install OpenCode CLI into app data'
                         }
                       >
-                        {isOpenCodeRuntimeInstalling(
+                        {isRuntimeInstalling(
                           openCodeRuntimeStatus,
                           openCodeRuntimeStatusLoading
                         ) ? (
@@ -990,7 +1060,7 @@ const InstalledBanner = ({
                         ) : (
                           <Download className="size-3" />
                         )}
-                        {getOpenCodeInstallLabel(openCodeRuntimeStatus)}
+                        {getRuntimeInstallLabel(openCodeRuntimeStatus)}
                       </button>
                     ) : null}
                     <button
@@ -1108,12 +1178,15 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     completedVersion,
     openCodeRuntimeStatus,
     openCodeRuntimeStatusLoading,
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading,
     bootstrapCliStatus,
     fetchCliStatus,
     fetchCliProviderStatus,
     invalidateCliStatus,
     installCli,
     installOpenCodeRuntime,
+    installCodexRuntime,
     isBusy,
   } = useCliInstaller();
 
@@ -1548,9 +1621,12 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
           openCodeRuntimeStatus={openCodeRuntimeStatus}
           openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+          codexRuntimeStatus={codexRuntimeStatus}
+          codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
           onInstall={handleInstall}
           onOpenCodeInstall={() => void installOpenCodeRuntime()}
+          onCodexInstall={() => void installCodexRuntime()}
           onRefresh={handleRefresh}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
@@ -1780,9 +1856,12 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
             openCodeRuntimeStatus={openCodeRuntimeStatus}
             openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+            codexRuntimeStatus={codexRuntimeStatus}
+            codexRuntimeStatusLoading={codexRuntimeStatusLoading}
             isBusy={isBusy}
             onInstall={handleInstall}
             onOpenCodeInstall={() => void installOpenCodeRuntime()}
+            onCodexInstall={() => void installCodexRuntime()}
             onRefresh={handleRefresh}
             onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
             onProviderLogin={handleProviderLogin}
@@ -1846,9 +1925,12 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
           openCodeRuntimeStatus={openCodeRuntimeStatus}
           openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+          codexRuntimeStatus={codexRuntimeStatus}
+          codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
           onInstall={handleInstall}
           onOpenCodeInstall={() => void installOpenCodeRuntime()}
+          onCodexInstall={() => void installCodexRuntime()}
           onRefresh={handleRefresh}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
@@ -2072,9 +2154,12 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
         openCodeRuntimeStatus={openCodeRuntimeStatus}
         openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+        codexRuntimeStatus={codexRuntimeStatus}
+        codexRuntimeStatusLoading={codexRuntimeStatusLoading}
         isBusy={isBusy}
         onInstall={handleInstall}
         onOpenCodeInstall={() => void installOpenCodeRuntime()}
+        onCodexInstall={() => void installCodexRuntime()}
         onRefresh={handleRefresh}
         onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
         onProviderLogin={handleProviderLogin}

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   classifyLaunchFailureArtifact,
   extractLaunchBootstrapTransportBreadcrumb,
+  isWorkspaceTrustLaunchFailureText,
   readTeamLaunchFailureDiagnosticsBundle,
   redactLaunchFailureArtifactText,
   writeTeamLaunchFailureArtifactPack,
@@ -210,6 +211,51 @@ describe('TeamLaunchFailureArtifactPack', () => {
     expect(classification.evidence.join('\n')).toContain('workspace trust is not accepted');
   });
 
+  it('classifies workspace trust preflight blocks separately', () => {
+    const classification = classifyLaunchFailureArtifact({
+      teamName: 'artifact-team',
+      runId: 'run-workspace-trust-preflight',
+      reason: 'Claude workspace trust was not confirmed for /tmp/project',
+      launchDiagnostics: [
+        {
+          id: 'workspace-trust:preflight',
+          severity: 'error',
+          code: 'workspace_trust_preflight',
+          label: 'Workspace trust preflight blocked launch',
+          detail: 'Claude workspace trust was not confirmed for /tmp/project',
+          observedAt: '2026-05-13T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(classification.code).toBe('workspace_trust_required');
+    expect(classification.evidence.join('\n')).toContain('workspace trust was not confirmed');
+  });
+
+  it('prioritizes workspace trust over auth and transport-looking fallback text', () => {
+    const classification = classifyLaunchFailureArtifact({
+      teamName: 'artifact-team',
+      runId: 'run-workspace-trust-priority',
+      reason:
+        'Token refresh failed after bootstrap_submit_rejected, but Claude workspace trust was not confirmed for /tmp/project',
+      progressTraceLines: [
+        '401 Unauthorized',
+        'workspace_trust_preflight_not_confirmed',
+        'last transport stage: bootstrap_submit_rejected retryable=true',
+      ],
+    });
+
+    expect(classification.code).toBe('workspace_trust_required');
+    expect(classification.confidence).toBeGreaterThan(0.9);
+  });
+
+  it('matches only explicit workspace trust failure text', () => {
+    expect(
+      isWorkspaceTrustLaunchFailureText('Claude workspace trust was not confirmed for /tmp/project')
+    ).toBe(true);
+    expect(isWorkspaceTrustLaunchFailureText('workspace trust preflight disabled')).toBe(false);
+  });
+
   it.each([
     {
       name: 'stdin warning',
@@ -224,6 +270,11 @@ describe('TeamLaunchFailureArtifactPack', () => {
     {
       name: 'model bootstrap timeout',
       text: 'bob: Teammate was registered but did not bootstrap-confirm before timeout.',
+      code: 'model_no_bootstrap',
+    },
+    {
+      name: 'sanitized launch bootstrap fallback',
+      text: 'Bootstrap was not confirmed before the Codex runtime exited. Pending teammates: alice.',
       code: 'model_no_bootstrap',
     },
     {

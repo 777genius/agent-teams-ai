@@ -1537,6 +1537,50 @@ describe('teamSlice actions', () => {
     expect(selectResolvedMembersForTeamName(store.getState(), 'my-team')).toHaveLength(1);
   });
 
+  it('does not let a late failed selectTeam request clear members loaded by a full refresh', async () => {
+    const store = createSliceStore();
+    const thinRequest = createDeferredPromise<ReturnType<typeof createTeamSnapshot>>();
+    const fullRequest = createDeferredPromise<ReturnType<typeof createTeamSnapshot>>();
+    const fullSnapshot = createTeamSnapshot({
+      config: { name: 'Full Team' },
+      members: [{ name: 'alice', role: 'developer', currentTaskId: null, gitBranch: 'feature/a' }],
+    });
+
+    store.setState({
+      teamByName: {
+        'my-team': {
+          teamName: 'my-team',
+          displayName: 'My Team',
+          description: '',
+          memberCount: 1,
+          members: [{ name: 'alice', role: 'developer' }],
+          taskCount: 0,
+          lastActivity: null,
+        },
+      },
+    });
+    hoisted.getData
+      .mockImplementationOnce(() => thinRequest.promise)
+      .mockImplementationOnce(() => fullRequest.promise);
+
+    const selectPromise = store.getState().selectTeam('my-team');
+    await flushMicrotasks();
+    const fullPromise = store.getState().refreshTeamData('my-team', { withDedup: false });
+
+    fullRequest.resolve(fullSnapshot);
+    await fullPromise;
+    expect(store.getState().selectedTeamData).toEqual(fullSnapshot);
+    expect(store.getState().selectedTeamLoading).toBe(true);
+
+    thinRequest.reject(new Error('Timeout after 30000ms: team:getData(my-team,mode=thin)'));
+    await selectPromise;
+
+    expect(store.getState().selectedTeamData).toEqual(fullSnapshot);
+    expect(store.getState().teamDataCacheByName['my-team']).toEqual(fullSnapshot);
+    expect(store.getState().selectedTeamLoading).toBe(false);
+    expect(store.getState().selectedTeamError).toBeNull();
+  });
+
   it('preserves an earlier full refresh even when the cached baseline had the same member names', async () => {
     const store = createSliceStore();
     const thinRequest = createDeferredPromise<ReturnType<typeof createTeamSnapshot>>();

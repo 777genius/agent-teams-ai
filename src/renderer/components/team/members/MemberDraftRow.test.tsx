@@ -27,18 +27,32 @@ vi.mock('@renderer/components/team/RoleSelect', () => ({
 vi.mock('@renderer/components/ui/button', () => ({
   Button: ({
     children,
+    className,
     onClick,
     disabled,
+    title,
+    'aria-describedby': ariaDescribedBy,
     'aria-label': ariaLabel,
   }: {
     children: React.ReactNode;
+    className?: string;
     onClick?: React.MouseEventHandler<HTMLButtonElement>;
     disabled?: boolean;
+    title?: string;
+    'aria-describedby'?: string;
     'aria-label'?: string;
   }) =>
     React.createElement(
       'button',
-      { type: 'button', onClick, disabled, 'aria-label': ariaLabel },
+      {
+        type: 'button',
+        className,
+        onClick,
+        disabled,
+        title,
+        'aria-describedby': ariaDescribedBy,
+        'aria-label': ariaLabel,
+      },
       children
     ),
 }));
@@ -80,15 +94,6 @@ vi.mock('@renderer/components/ui/label', () => ({
 
 vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
   MentionableTextarea: () => React.createElement('textarea'),
-}));
-
-vi.mock('@renderer/components/ui/tooltip', () => ({
-  Tooltip: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  TooltipContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
 }));
 
 vi.mock('@renderer/hooks/useDraftPersistence', () => ({
@@ -198,6 +203,64 @@ describe('MemberDraftRow', () => {
 
     expect(host.textContent).toContain('Anthropic context is team-wide for this launch');
     expect(host.textContent).toContain('200K limit enabled');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows model launch issues inline and keeps model controls expandable', () => {
+    const issueText =
+      'Member alice uses Anthropic effort "medium", but Haiku 4.5 does not support it in the current runtime.';
+    const { host, root } = renderMemberDraftRow({
+      member: createMemberDraft({
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        providerId: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+        effort: 'medium',
+      }),
+      modelIssueText: issueText,
+    });
+
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="anthropic provider, claude-haiku-4-5-20251001"]'
+    )!;
+
+    expect(host.textContent).toContain(issueText);
+    expect(modelButton.getAttribute('aria-describedby')).toContain('member-member-1-model-issue');
+    expect(modelButton.parentElement?.getAttribute('title')).toBe(issueText);
+
+    act(() => {
+      modelButton.click();
+    });
+
+    expect(host.textContent).toContain('team-model-selector');
+    expect(host.textContent).toContain('effort-selector');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('renders worktree isolation help without a Radix tooltip trigger', () => {
+    const { host, root } = renderMemberDraftRow({
+      showWorktreeIsolationControls: true,
+      worktreeIsolationDisabledReason: 'Worktree isolation is disabled for this project.',
+    });
+
+    const worktreeControl = host.querySelector<HTMLInputElement>(
+      '#member-member-1-worktree-isolation'
+    )!;
+    const descriptionId = 'member-member-1-worktree-isolation-description';
+    const wrapper = worktreeControl.closest('[title]');
+
+    expect(worktreeControl.getAttribute('aria-describedby')).toBe(descriptionId);
+    expect(wrapper?.getAttribute('title')).toBe('Worktree isolation is disabled for this project.');
+    expect(host.querySelector(`#${descriptionId}`)?.textContent).toBe(
+      'Worktree isolation is disabled for this project.'
+    );
 
     act(() => {
       root.unmount();

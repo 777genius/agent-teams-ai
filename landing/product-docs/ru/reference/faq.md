@@ -1,9 +1,4 @@
 ---
-title: FAQ
-description: Часто задаваемые вопросы об Agent Teams — цена, доступ к моделям, рантаймы, приватность, ревью и диагностика.
----
-
----
 title: FAQ – Документация Agent Teams
 description: Часто задаваемые вопросы о цене, доступе к моделям, настройке рантаймов, приватности данных, worktree isolation и код-ревью.
 lang: ru-RU
@@ -47,7 +42,7 @@ opencode --version
 
 ## Где хранятся team files?
 
-Team coordination data хранится локально в `~/.claude/teams/<team>/`, task files - в `~/.claude/tasks/<team>/`, а project session data - в `~/.claude/projects/<encoded-project>/`, когда она доступна.
+Team coordination data хранится локально в `~/.claude/teams/<team>/` (macOS/Linux) или `%APPDATA%\Claude\teams\<team>\` (Windows), task files - в `~/.claude/tasks/<team>/` или `%APPDATA%\Claude\tasks\<team>\`, а project session data - в `~/.claude/projects/<encoded-project>/`, когда она доступна.
 
 ## Что может выйти с моей машины?
 
@@ -62,7 +57,7 @@ Prompt context, selected file contents, tool results, command output, task text,
 Дайте lead конкретный outcome, file или feature boundaries, risk limits и verification expectations. Например:
 
 ```text
-Improve the docs quickstart. Keep edits inside landing/product-docs, add practical examples, and run the docs build before marking work done.
+Improve the docs quickstart. Keep edits inside landing/product-docs, add practical examples, and run `pnpm --dir landing docs:build` before marking work done.
 ```
 
 ## Можно ревьюить код перед принятием?

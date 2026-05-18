@@ -1,6 +1,6 @@
 import { TeamTaskStatusSummary } from '@renderer/components/team/TeamTaskStatusSummary';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, UsersRound } from 'lucide-react';
 
 import { useRunningTeamsSection } from '../hooks/useRunningTeamsSection';
 
@@ -40,11 +40,13 @@ export function RunningTeamsSection({
             key={row.id}
             type="button"
             onClick={() => openRunningTeam(row)}
-            className="bg-surface/50 group relative flex min-w-0 items-start overflow-hidden rounded-lg border border-border px-3 py-2.5 pr-8 text-left transition-all duration-200 hover:border-border-emphasis hover:bg-surface-raised"
-            style={{ borderLeftColor: row.accentColor }}
+            className="bg-surface/50 group relative flex min-w-0 items-start gap-2.5 overflow-hidden rounded-lg border border-border px-3 py-2.5 pr-8 text-left transition-all duration-200 hover:border-border-emphasis hover:bg-surface-raised"
             title={getRowTitle(row)}
           >
             <ActivePulseIndicator className="absolute right-3 top-3" />
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-overlay transition-colors group-hover:border-border-emphasis">
+              <UsersRound className="size-4 transition-colors" style={{ color: row.iconColor }} />
+            </span>
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-sm font-medium text-text">{row.displayName}</span>

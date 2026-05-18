@@ -7,13 +7,58 @@ description: Get from a fresh install to a running AI agent team in a few minute
 
 This guide gets you from a fresh install to a running team in a few minutes.
 
-## 1. Install Agent Teams
+## Shortest path
 
-Download the latest release for your platform from the <a href="https://github.com/777genius/agent-teams-ai/releases" target="_self">download page</a> or [GitHub releases](https://github.com/777genius/agent-teams-ai/releases).
+```bash
+# 1. Install prerequisites
+node --version    # need 20+
+pnpm --version    # need 10+
 
-::: tip
-The app is free and open source. The agent runtime you choose may still require provider access — see [Installation](/guide/installation) for details.
-:::
+# 2. Clone and install
+git clone https://github.com/777genius/agent-teams-ai.git
+cd agent-teams-ai
+pnpm install
+
+# 3. Start the desktop app (default workflow)
+pnpm dev
+
+# 4. Verify a docs-only change
+pnpm --dir landing docs:build
+```
+
+The desktop Electron app (`pnpm dev`) is the primary target — do not use the browser/web dev server for normal development. The browser path lacks desktop IPC, terminal, provider auth, and team lifecycle behavior.
+
+## Before you begin
+
+You need:
+
+- **A computer** running macOS, Windows, or Linux
+- **(Recommended) A Git-tracked project** — worktree isolation and diff review rely on Git
+- **(Optional) Provider access** — runtime setup detects available providers from the UI, but some paths need existing auth (Anthropic, OpenAI, etc.)
+
+If a step below does not work, check the [troubleshooting guide](/guide/troubleshooting#team-does-not-launch) for common fixes.
+
+For project conventions and architecture guidance, refer to these canonical files before making changes:
+
+- [AGENTS.md](https://github.com/777genius/agent-teams-ai/blob/main/AGENTS.md) — repo navigation and architecture pointers
+- [CLAUDE.md](https://github.com/777genius/agent-teams-ai/blob/main/CLAUDE.md) — working conventions and project rules
+- [Feature architecture standard](https://github.com/777genius/agent-teams-ai/blob/main/docs/FEATURE_ARCHITECTURE_STANDARD.md) — structure for new features
+- [Debugging runbook](https://github.com/777genius/agent-teams-ai/blob/main/docs/team-management/debugging-agent-teams.md) — launch and teammate diagnostics
+
+## 1. Run from source or download
+
+**Download the packaged app** for macOS, Windows, or Linux from the <a href="/download/" target="_self">download page</a> — no prerequisites needed. The app guides runtime detection and provider authentication from the UI.
+
+**Or run from source** for development:
+
+```bash
+git clone https://github.com/777genius/agent-teams-ai.git
+cd agent-teams-ai
+pnpm install
+pnpm dev
+```
+
+`pnpm dev` starts the desktop Electron app with hot reload. This is the default development target. Do not start a browser web dev server for normal development — the browser path lacks the full desktop IPC, terminal, provider auth, and team lifecycle behavior.
 
 ## 2. Open or create a project
 
@@ -42,20 +87,25 @@ The setup flow auto-detects installed runtimes on your machine. A common first s
 | OpenCode | Multi-model teams and many provider backends    |
 
 ::: info
-Gemini support is in development and will appear in the runtime list when available.
+Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current provider status.
 :::
 
 See [Runtime setup](/guide/runtime-setup) for detailed configuration per provider.
 
-To verify the selected runtime outside the app, run its version command:
+To verify the selected runtime outside the app, check the binary and test auth:
 
 ```bash
-claude --version
-codex --version
-opencode --version
+# Check that the runtime is installed and on PATH
+command -v claude && claude --version
+command -v codex && codex --version
+command -v opencode && opencode --version
 ```
 
-If the command fails in your terminal, fix the runtime installation or `PATH` first. Team prompts cannot work around a missing binary or missing provider auth.
+If the command fails, fix the runtime installation or `PATH` first. Team prompts cannot work around a missing binary or missing provider auth.
+
+::: tip
+If the binary is found but the app reports "not logged in", the environment may differ between your terminal and the app. See the [auth diagnostic log](/guide/troubleshooting#auth-diagnostic-log) to compare them.
+:::
 
 ## 4. Create your first team
 
@@ -84,10 +134,14 @@ Improve the onboarding flow. Split the work into tasks, keep changes small, and 
 Good first prompts include concrete scope, safety boundaries, and verification:
 
 ```text
-Improve the docs quickstart. Keep edits inside landing/product-docs. Add practical examples, preserve existing VitePress syntax, and run the docs build before marking tasks done.
+Improve the docs quickstart. Keep edits inside landing/product-docs. Add practical examples, preserve existing VitePress syntax, and run `pnpm --dir landing docs:build` before marking tasks done.
 ```
 
 Avoid vague prompts such as "make the app better" for the first run. The lead can break down large goals, but better input produces smaller tasks and cleaner review.
+
+::: tip
+If the team launches but no tasks appear, check whether the lead received your prompt. See [agent replies are missing](/guide/troubleshooting#agent-replies-are-missing) for diagnostics.
+:::
 
 The lead creates tasks, assigns work, and coordinates teammates. You can watch progress on the kanban board and intervene with comments or direct messages at any time.
 
@@ -103,8 +157,34 @@ Before approving the first task, check three things:
 2. The changed files match the task scope
 3. The verification result is visible in the task comment or logs
 
+## Common pitfalls
+
+| Symptom | Likely cause | Check |
+| --- | --- | --- |
+| App does not detect a runtime | Binary not on `PATH`, or app and terminal see different environments | Run `command -v <runtime>` in a terminal, then use the same terminal env to launch the app |
+| Team launch hangs | Missing provider auth, wrong model string, or runtime binary not found | See [Troubleshooting](/guide/troubleshooting#team-does-not-launch) |
+| OpenCode lane stuck on `registered` | Lane evidence not committed yet, or model string mismatch | Inspect `~/.claude/teams/<team>/.opencode-runtime/lanes/` |
+| Agent replies missing | Runtime delivery retry, parsing, or task attribution issue | Open task logs and check the delivery ledger |
+| Provider returns 429s | Rate limit reached | Wait for reset or switch model/provider |
+
 ## Next steps
 
 - [Create a team](/guide/create-team) — recommended team shapes and brief writing
 - [Runtime setup](/guide/runtime-setup) — provider auth and model selection
 - [Code review](/guide/code-review) — review, approve, or request changes
+
+### For contributors
+
+If you are modifying Agent Teams or these docs, start with the canonical project files at the repo root:
+
+- [CLAUDE.md](https://github.com/777genius/agent-teams-ai/blob/main/CLAUDE.md) — working conventions and project rules
+- [AGENTS.md](https://github.com/777genius/agent-teams-ai/blob/main/AGENTS.md) — navigation layer for architecture and implementation guidance
+- [AGENT_CRITICAL_GUARDRAILS.md](https://github.com/777genius/agent-teams-ai/blob/main/AGENT_CRITICAL_GUARDRAILS.md) — hard implementation guardrails
+- [Feature architecture standard](https://github.com/777genius/agent-teams-ai/blob/main/docs/FEATURE_ARCHITECTURE_STANDARD.md) — structure for new features
+- [Agent team debugging runbook](https://github.com/777genius/agent-teams-ai/blob/main/docs/team-management/debugging-agent-teams.md) — launch, bootstrap, and teammate diagnostics
+
+To verify this documentation site builds correctly:
+
+```bash
+pnpm --dir landing docs:build
+```

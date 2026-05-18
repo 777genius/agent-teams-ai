@@ -14,11 +14,16 @@ import {
   stableHash,
   validateOpenCodeBridgeHandshake,
 } from './OpenCodeBridgeCommandContract';
+import { OpenCodeBridgeCommandLeaseError } from './OpenCodeBridgeCommandLedgerStore';
 
 import type {
+  OpenCodeBridgeCommandLease,
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from './OpenCodeBridgeCommandLedgerStore';
+
+const DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS = 10_000;
+const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
 
 export interface OpenCodeBridgeCommandExecutor {
   execute<TBody, TData>(
@@ -63,6 +68,8 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   requestIdFactory?: () => string;
   diagnosticIdFactory?: () => string;
   clock?: () => Date;
+  leaseAcquireTimeoutMs?: number;
+  leaseAcquireRetryDelayMs?: number;
 }
 
 export class OpenCodeStateChangingBridgeCommandService {
@@ -76,6 +83,8 @@ export class OpenCodeStateChangingBridgeCommandService {
   private readonly requestIdFactory: () => string;
   private readonly diagnosticIdFactory: () => string;
   private readonly clock: () => Date;
+  private readonly leaseAcquireTimeoutMs: number;
+  private readonly leaseAcquireRetryDelayMs: number;
 
   constructor(options: OpenCodeStateChangingBridgeCommandServiceOptions) {
     this.expectedClientIdentity = options.expectedClientIdentity;
@@ -89,6 +98,10 @@ export class OpenCodeStateChangingBridgeCommandService {
     this.diagnosticIdFactory =
       options.diagnosticIdFactory ?? (() => `opencode-bridge-diagnostic-${randomUUID()}`);
     this.clock = options.clock ?? (() => new Date());
+    this.leaseAcquireTimeoutMs =
+      options.leaseAcquireTimeoutMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS;
+    this.leaseAcquireRetryDelayMs =
+      options.leaseAcquireRetryDelayMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS;
   }
 
   async execute<TBody, TData>(input: {
@@ -104,11 +117,17 @@ export class OpenCodeStateChangingBridgeCommandService {
   }): Promise<OpenCodeBridgeResult<TData>> {
     const normalizedLaneId = input.laneId ?? null;
     const manifest = await this.manifestReader.read(input.teamName, normalizedLaneId);
+    const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
+      input.command
+    );
+    const expectedManifestHighWatermark = enforceManifestHighWatermark
+      ? manifest.highWatermark
+      : null;
     const handshake = await this.handshakePort.handshake({
       requiredCommand: input.command,
       expectedRunId: input.runId,
       expectedCapabilitySnapshotId: input.capabilitySnapshotId,
-      expectedManifestHighWatermark: manifest.highWatermark,
+      expectedManifestHighWatermark,
       cwd: input.cwd,
     });
     const handshakeValidation = validateOpenCodeBridgeHandshake({
@@ -116,8 +135,12 @@ export class OpenCodeStateChangingBridgeCommandService {
       expectedClient: this.expectedClientIdentity,
       requiredCommand: input.command,
       expectedCapabilitySnapshotId: input.capabilitySnapshotId,
-      expectedManifestHighWatermark: manifest.highWatermark,
+      expectedManifestHighWatermark,
       expectedRunId: input.runId,
+      requiresDeliveryAcceptanceContract: requiresOpenCodeDeliveryAcceptanceContract(
+        input.command,
+        input.body
+      ),
     });
 
     if (!handshakeValidation.ok) {
@@ -132,7 +155,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       body: input.body,
     });
     const commandRequestId = this.requestIdFactory();
-    const lease = await this.leaseStore.acquire({
+    const lease = await this.acquireLease({
       teamName: input.teamName,
       laneId: normalizedLaneId,
       runId: input.runId,
@@ -147,7 +170,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         expectedRunId: input.runId,
         expectedCapabilitySnapshotId: input.capabilitySnapshotId,
         expectedBehaviorFingerprint: input.behaviorFingerprint,
-        expectedManifestHighWatermark: manifest.highWatermark,
+        expectedManifestHighWatermark,
         commandLeaseId: lease.leaseId,
         idempotencyKey,
       });
@@ -166,7 +189,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
           behaviorFingerprint: input.behaviorFingerprint,
-          manifestHighWatermark: manifest.highWatermark,
+          manifestHighWatermark: expectedManifestHighWatermark,
           body: input.body,
         }),
       });
@@ -221,6 +244,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           capabilitySnapshotId: input.capabilitySnapshotId,
           manifest,
           idempotencyKey,
+          enforceManifestHighWatermark,
         });
       } catch (error) {
         await this.ledger.markFailed({
@@ -237,6 +261,37 @@ export class OpenCodeStateChangingBridgeCommandService {
       await this.leaseStore.release(lease.leaseId).catch(() => undefined);
       throw error;
     }
+  }
+
+  private async acquireLease(input: {
+    teamName: string;
+    laneId: string | null;
+    runId: string | null;
+    command: OpenCodeBridgeCommandName;
+    ttlMs: number;
+  }): Promise<OpenCodeBridgeCommandLease> {
+    const deadlineMs = Date.now() + Math.max(0, this.leaseAcquireTimeoutMs);
+    let lastError: unknown = null;
+
+    do {
+      try {
+        return await this.leaseStore.acquire(input);
+      } catch (error) {
+        if (
+          !(error instanceof OpenCodeBridgeCommandLeaseError) ||
+          !isActiveOpenCodeBridgeCommandLeaseError(error)
+        ) {
+          throw error;
+        }
+        lastError = error;
+        if (Date.now() >= deadlineMs) {
+          throw error;
+        }
+        await sleep(Math.max(1, this.leaseAcquireRetryDelayMs));
+      }
+    } while (Date.now() < deadlineMs);
+
+    throw lastError instanceof Error ? lastError : new Error('OpenCode bridge lease unavailable');
   }
 
   private async appendUnknownOutcomeDiagnostic(input: {
@@ -299,6 +354,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function requiresOpenCodeDeliveryAcceptanceContract(
+  command: OpenCodeBridgeCommandName,
+  body: unknown
+): boolean {
+  if (command !== 'opencode.sendMessage' || !isRecord(body)) {
+    return false;
+  }
+  return body.settlementMode === 'acceptance';
+}
+
+function commandRequiresRuntimeStoreManifestPrecondition(
+  command: OpenCodeBridgeCommandName
+): boolean {
+  return command !== 'opencode.sendMessage';
+}
+
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isActiveOpenCodeBridgeCommandLeaseError(error: OpenCodeBridgeCommandLeaseError): boolean {
+  return error.message.startsWith('OpenCode bridge command lease already active:');
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

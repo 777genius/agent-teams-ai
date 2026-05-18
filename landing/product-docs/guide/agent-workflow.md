@@ -18,23 +18,41 @@ Both modes share the same kanban, task logs, and code review surfaces.
 
 ## Task lifecycle
 
+Agent Teams tracks each task along two independent dimensions: work status and review state.
+
+| Dimension | States | Description |
+| --- | --- | --- |
+| Work status | `pending`, `in_progress`, `completed` | Tracks whether the task is waiting, actively being worked on, or finished by the owner |
+| Review state | `none`, `review`, `needsFix`, `approved` | Tracks where the task is in the post-completion review flow |
+
+The kanban board shows the combined view, but the two dimensions move independently.
+
+### Work status flow
+
 | Stage | What happens | Owner |
 | --- | --- | --- |
-| Provisioning | The app starts the runtime, confirms the process is alive, and waits for bootstrap confirmation | App |
-| Planning | The lead creates tasks, optionally assigns teammates, and sets dependencies | Lead or user |
-| In progress | Agents work in parallel and update task state via board MCP tools | Teammates |
-| Review | Changes are reviewed by agents or by you before final acceptance | Team lead or user |
-| Done | Accepted work stays linked to its task history and can still be inspected later | User |
+| Pending | Task is created and ready but no one has started work yet | Lead or user |
+| In progress | Agents work and update task state via board MCP tools | Teammates |
+| Completed | The owner posts a result comment and marks the task done | Teammate |
+
+### Review state flow
+
+| Stage | What happens | Owner |
+| --- | --- | --- |
+| None | Task is not yet in review (may be pending, in progress, or newly completed) | — |
+| Review | Review has been requested; a reviewer inspects the diff and result | Reviewer |
+| Needs fix | Changes were requested during review; the owner must update | Teammate (owner) |
+| Approved | Review passed; the task is finalized | Reviewer |
 
 ### Planning → In progress
 
-When a teammate starts a task, the board status becomes `in_progress`. The agent creates a task comment with its plan and continues working. All native tool actions (read, bash, edit, write) are streamed into a task log.
+When a teammate starts a task, the work status becomes `in_progress`. The agent creates a task comment with its plan and continues working. All native tool actions (read, bash, edit, write) are streamed into a task log.
 
-### In progress → Review
+### Completed → Review
 
-When the teammate finishes work, it posts a result comment and marks the task `completed`. The lead can then decide whether to accept it immediately or move it into review.
+When the teammate finishes work, it posts a result comment and marks the work status `completed`. The lead or reviewer can then request a review to start the review flow.
 
-### Review → Done
+### Review → Approved
 
 If the review surface shows acceptable changes, approve the review. The task is finalized and linked to its diff.
 
@@ -76,6 +94,18 @@ Task-specific logs isolate runtime output, actions, and messages for one assignm
 - Why did it change this file?
 - Did it ask another teammate for help?
 - Which task produced this diff?
+
+### Validation checklist
+
+When a task looks stuck or its diff looks detached, verify the lifecycle in this order:
+
+1. The task has the expected owner and moved to `in_progress`.
+2. The owner posted a task comment with the plan or first progress update.
+3. Task logs show runtime activity inside the task window.
+4. File changes are linked to the same task, owner, and session.
+5. The final task comment includes the verification command and result.
+
+For deeper debugging, use the persisted evidence commands in [Troubleshooting](/guide/troubleshooting#task-log-triage). The UI is the working surface, but persisted task files, inboxes, and runtime evidence are the source for hard launch or attribution bugs.
 
 ## Parallel work patterns
 

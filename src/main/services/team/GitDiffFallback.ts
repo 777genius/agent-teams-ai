@@ -54,6 +54,7 @@ export class GitDiffFallback {
         cwd: projectPath,
         maxBuffer: GIT_MAX_BUFFER,
         timeout: GIT_TIMEOUT,
+        windowsHide: true,
       });
       return stdout;
     } catch {
@@ -75,7 +76,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync(
         'git',
         ['log', '--format=%H', '--before', timestamp, '-1', '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true }
       );
       return stdout.trim() || null;
     } catch {
@@ -98,7 +99,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync(
         'git',
         ['diff', fromCommit, toCommit, '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true }
       );
       return stdout || null;
     } catch {
@@ -120,7 +121,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync(
         'git',
         ['log', `--max-count=${maxCount}`, '--format=%H|%aI|%s', '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true }
       );
 
       return stdout
@@ -148,6 +149,7 @@ export class GitDiffFallback {
       await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {
         cwd: projectPath,
         timeout: GIT_TIMEOUT,
+        windowsHide: true,
       });
       this.gitRepoCache.set(projectPath, true);
       return true;

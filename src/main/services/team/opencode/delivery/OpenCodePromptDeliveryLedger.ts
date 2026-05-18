@@ -29,6 +29,10 @@ export interface OpenCodePromptDeliveryLedgerRecord {
   laneId: string;
   runId: string | null;
   runtimeSessionId: string | null;
+  runtimePromptMessageId?: string | null;
+  runtimePromptMessageIds?: string[];
+  lastRuntimePromptMessageId?: string | null;
+  lastDeliveryAttemptIdWithAcceptedPrompt?: string | null;
   inboxMessageId: string;
   inboxTimestamp: string;
   source: 'watcher' | 'ui-send' | 'manual' | 'watchdog' | 'member-work-sync-review-pickup';
@@ -136,6 +140,8 @@ export interface ApplyOpenCodePromptDeliveryResultInput {
   attempted?: boolean;
   responseObservation?: OpenCodeDeliveryResponseObservation;
   sessionId?: string | null;
+  runtimePromptMessageId?: string | null;
+  deliveryAttemptId?: string | null;
   runtimePid?: number;
   prePromptCursor?: string | null;
   diagnostics?: string[];
@@ -210,6 +216,10 @@ export class OpenCodePromptDeliveryLedgerStore {
         laneId: input.laneId,
         runId: input.runId ?? null,
         runtimeSessionId: null,
+        runtimePromptMessageId: null,
+        runtimePromptMessageIds: [],
+        lastRuntimePromptMessageId: null,
+        lastDeliveryAttemptIdWithAcceptedPrompt: null,
         inboxMessageId: input.inboxMessageId,
         inboxTimestamp: input.inboxTimestamp,
         source: input.source,
@@ -302,6 +312,37 @@ export class OpenCodePromptDeliveryLedgerStore {
         observation?.state ?? (input.accepted ? record.responseState : 'not_observed');
       const responded = isOpenCodePromptResponseStateResponded(responseState);
       const unanswered = isOpenCodePromptDeliveryUnansweredResponseState(responseState);
+      const acceptedRuntimePromptMessageId =
+        input.accepted && input.runtimePromptMessageId?.trim()
+          ? input.runtimePromptMessageId.trim()
+          : null;
+      const previousRuntimePromptMessageIds = getOpenCodeRuntimePromptMessageIds(record);
+      const runtimePromptMessageIds =
+        acceptedRuntimePromptMessageId &&
+        !previousRuntimePromptMessageIds.includes(acceptedRuntimePromptMessageId)
+          ? [...previousRuntimePromptMessageIds, acceptedRuntimePromptMessageId]
+          : previousRuntimePromptMessageIds;
+      const acceptedDeliveryAttemptId = input.deliveryAttemptId?.trim() || null;
+      const acceptedAttemptAlreadyRecorded = Boolean(
+        input.accepted &&
+        acceptedDeliveryAttemptId &&
+        record.lastDeliveryAttemptIdWithAcceptedPrompt === acceptedDeliveryAttemptId
+      );
+      const acceptedPromptAlreadyRecorded = Boolean(
+        input.accepted &&
+        acceptedRuntimePromptMessageId &&
+        previousRuntimePromptMessageIds.includes(acceptedRuntimePromptMessageId)
+      );
+      const shouldIncrementAttempts =
+        (input.accepted || input.attempted === true) &&
+        !acceptedAttemptAlreadyRecorded &&
+        !acceptedPromptAlreadyRecorded;
+      const lastRuntimePromptMessageId =
+        acceptedRuntimePromptMessageId ??
+        record.lastRuntimePromptMessageId ??
+        record.runtimePromptMessageId ??
+        runtimePromptMessageIds[runtimePromptMessageIds.length - 1] ??
+        null;
       return {
         ...record,
         status: input.accepted
@@ -312,9 +353,15 @@ export class OpenCodePromptDeliveryLedgerStore {
               : 'accepted'
           : 'failed_retryable',
         responseState,
-        attempts:
-          input.accepted || input.attempted === true ? record.attempts + 1 : record.attempts,
+        attempts: shouldIncrementAttempts ? record.attempts + 1 : record.attempts,
         runtimeSessionId: input.sessionId ?? record.runtimeSessionId,
+        runtimePromptMessageId: lastRuntimePromptMessageId,
+        runtimePromptMessageIds,
+        lastRuntimePromptMessageId,
+        lastDeliveryAttemptIdWithAcceptedPrompt:
+          input.accepted && acceptedDeliveryAttemptId
+            ? acceptedDeliveryAttemptId
+            : (record.lastDeliveryAttemptIdWithAcceptedPrompt ?? null),
         acceptanceUnknown: input.accepted ? false : record.acceptanceUnknown,
         lastAttemptAt: input.now,
         lastObservedAt: observation ? input.now : record.lastObservedAt,
@@ -343,6 +390,8 @@ export class OpenCodePromptDeliveryLedgerStore {
   async applyObservation(input: {
     id: string;
     responseObservation: OpenCodeDeliveryResponseObservation;
+    sessionId?: string | null;
+    runtimePromptMessageId?: string | null;
     diagnostics?: string[];
     observedAt: string;
   }): Promise<OpenCodePromptDeliveryLedgerRecord> {
@@ -351,17 +400,48 @@ export class OpenCodePromptDeliveryLedgerStore {
       const unanswered = isOpenCodePromptDeliveryUnansweredResponseState(
         input.responseObservation.state
       );
+      const previousRuntimePromptMessageIds = getOpenCodeRuntimePromptMessageIds(record);
+      const deliveredRuntimePromptMessageId =
+        input.responseObservation.deliveredUserMessageId?.trim() || null;
+      const requestedRuntimePromptMessageId = input.runtimePromptMessageId?.trim() || null;
+      const requestedRuntimePromptMessageIdIsKnown = Boolean(
+        requestedRuntimePromptMessageId &&
+        previousRuntimePromptMessageIds.includes(requestedRuntimePromptMessageId)
+      );
+      const observedRuntimePromptMessageId =
+        deliveredRuntimePromptMessageId ||
+        (requestedRuntimePromptMessageIdIsKnown ? requestedRuntimePromptMessageId : null);
+      const runtimePromptMessageIds =
+        observedRuntimePromptMessageId &&
+        !previousRuntimePromptMessageIds.includes(observedRuntimePromptMessageId)
+          ? [...previousRuntimePromptMessageIds, observedRuntimePromptMessageId]
+          : previousRuntimePromptMessageIds;
+      const promptAcceptedByObservation = Boolean(deliveredRuntimePromptMessageId);
+      const lastRuntimePromptMessageId =
+        observedRuntimePromptMessageId ??
+        record.lastRuntimePromptMessageId ??
+        record.runtimePromptMessageId ??
+        runtimePromptMessageIds[runtimePromptMessageIds.length - 1] ??
+        null;
       return {
         ...record,
         status: responded
           ? 'responded'
           : unanswered
             ? 'unanswered'
-            : record.status === 'pending'
+            : record.status === 'pending' || promptAcceptedByObservation
               ? 'accepted'
               : record.status,
         responseState: input.responseObservation.state,
+        runtimeSessionId: input.sessionId ?? record.runtimeSessionId,
+        runtimePromptMessageId: lastRuntimePromptMessageId,
+        runtimePromptMessageIds,
+        lastRuntimePromptMessageId,
+        acceptanceUnknown: promptAcceptedByObservation ? false : record.acceptanceUnknown,
         lastObservedAt: input.observedAt,
+        acceptedAt: promptAcceptedByObservation
+          ? (record.acceptedAt ?? input.observedAt)
+          : record.acceptedAt,
         respondedAt: responded ? (record.respondedAt ?? input.observedAt) : record.respondedAt,
         deliveredUserMessageId:
           input.responseObservation.deliveredUserMessageId ?? record.deliveredUserMessageId,
@@ -655,6 +735,41 @@ export function hashOpenCodePromptDeliveryPayload(input: {
   })}`;
 }
 
+export function getOpenCodeRuntimePromptMessageIds(
+  record: Pick<
+    OpenCodePromptDeliveryLedgerRecord,
+    'runtimePromptMessageId' | 'runtimePromptMessageIds' | 'lastRuntimePromptMessageId'
+  >
+): string[] {
+  const ids: string[] = [];
+  for (const value of [
+    ...(Array.isArray(record.runtimePromptMessageIds) ? record.runtimePromptMessageIds : []),
+    record.runtimePromptMessageId,
+    record.lastRuntimePromptMessageId,
+  ]) {
+    const id = typeof value === 'string' ? value.trim() : '';
+    if (id && !ids.includes(id)) {
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+export function getLatestOpenCodeRuntimePromptMessageId(
+  record: Pick<
+    OpenCodePromptDeliveryLedgerRecord,
+    'runtimePromptMessageId' | 'runtimePromptMessageIds' | 'lastRuntimePromptMessageId'
+  >
+): string | null {
+  const explicit =
+    record.lastRuntimePromptMessageId?.trim() || record.runtimePromptMessageId?.trim();
+  if (explicit) {
+    return explicit;
+  }
+  const ids = getOpenCodeRuntimePromptMessageIds(record);
+  return ids[ids.length - 1] ?? null;
+}
+
 export function isOpenCodePromptResponseStateResponded(
   state: OpenCodeDeliveryResponseState
 ): boolean {
@@ -714,6 +829,10 @@ function isOpenCodePromptDeliveryLedgerRecord(
     typeof record.laneId === 'string' &&
     isOptionalNullableString(record.runId) &&
     isOptionalNullableString(record.runtimeSessionId) &&
+    isOptionalNullableString(record.runtimePromptMessageId) &&
+    isOptionalStringArray(record.runtimePromptMessageIds) &&
+    isOptionalNullableString(record.lastRuntimePromptMessageId) &&
+    isOptionalNullableString(record.lastDeliveryAttemptIdWithAcceptedPrompt) &&
     typeof record.inboxMessageId === 'string' &&
     typeof record.inboxTimestamp === 'string' &&
     isOpenCodePromptDeliverySource(record.source) &&
@@ -806,6 +925,7 @@ function isOptionalNullableInboxMessageKind(
     value === 'slash_command' ||
     value === 'slash_command_result' ||
     value === 'task_comment_notification' ||
+    value === 'task_stall_remediation' ||
     value === 'member_work_sync_nudge' ||
     value === 'agent_error'
   );
@@ -817,6 +937,10 @@ function isOptionalNullableString(value: unknown): value is string | null | unde
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isOptionalStringArray(value: unknown): value is string[] | undefined {
+  return value === undefined || isStringArray(value);
 }
 
 function isNonNegativeInteger(value: unknown): value is number {

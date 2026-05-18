@@ -1,9 +1,4 @@
 ---
-title: Диагностика
-description: Исправление ошибок запуска, пропавших ответов агентов, rate limits, проблем auth и lane bootstrap в Agent Teams.
----
-
----
 title: Диагностика – Документация Agent Teams
 description: Решение проблем с запуском команд, отсутствующими ответами агентов, rate limits, CLI auth и lane bootstrap stalls через локальные диагностики.
 lang: ru-RU
@@ -31,6 +26,8 @@ lang: ru-RU
 
 Если OpenCode показывает `registered`, но bootstrap не подтверждён, сначала inspect artifacts, прежде чем менять team prompts.
 
+Contributor/debugging details находятся в [Архитектуре для контрибьюторов](/ru/reference/contributor-architecture), где есть ссылка на canonical debugging runbook для agent teams.
+
 Посмотрите на последний artifact неудачного запуска:
 
 ```bash
@@ -54,6 +51,57 @@ jq '.activeRunId, .entries' ~/.claude/teams/<team>/.opencode-runtime/lanes/<lane
 ::: tip Не гадайте по UI
 Всегда сопоставляйте UI-диагностику с сохранёнными файлами (`launch-state.json`, `bootstrap-journal.jsonl`) и runtime-специфичными доказательствами.
 :::
+
+## Общая диагностика
+
+Начинайте с сохранённых файлов на диске, а не только с UI.
+
+### Корневая директория команды
+
+```bash
+~/.claude/teams/<team>/
+```
+
+Ключевые файлы и что они показывают:
+
+- `launch-state.json` — состояние запуска/активности участников (`.teamLaunchState`, `.summary`, `.members`)
+- `bootstrap-journal.jsonl` — упорядоченные события bootstrap от CLI/runtime (`tail -80`)
+- `bootstrap-state.json` — сводка фазы bootstrap
+- `config.json` — конфигурация провайдера, модели и проекта
+- `inboxes/*.json` и `sentMessages.json` — состояние доставки сообщений
+
+```bash
+jq '.teamLaunchState, .summary, .members' ~/.claude/teams/<team>/launch-state.json
+tail -80 ~/.claude/teams/<team>/bootstrap-journal.jsonl 2>/dev/null
+```
+
+### OpenCode runtime evidence
+
+Для OpenCode участников доказательство сессии находится в lane runtime store:
+
+- `.opencode-runtime/lanes.json` — индекс lane с состоянием
+- `.opencode-runtime/lanes/<lane>/manifest.json` — `activeRunId` и записи evidence
+- `.opencode-runtime/lanes/<lane>/opencode-sessions.json` — зафиксированные записи сессий
+
+Ожидаемое здоровое состояние: состояние lane `active`, manifest содержит `activeRunId` хотя бы с одной записью evidence, участник имеет `bootstrapConfirmed: true`.
+
+```bash
+jq '.lanes' ~/.claude/teams/<team>/.opencode-runtime/lanes.json 2>/dev/null
+find ~/.claude/teams/<team>/.opencode-runtime -maxdepth 3 -type f | sort
+```
+
+### Артефакты неудачного запуска
+
+Когда запуск помечен как неудачный, проверьте `latest.json`:
+
+```bash
+~/.claude/teams/<team>/launch-failure-artifacts/latest.json
+```
+
+Манифест включает:
+- `classification` — почему запуск считался неудачным
+- `bootstrapTransportBreadcrumb` — использованный путь доставки
+- Статусы старта участников и редактированные логи/трейсы
 
 ## Не видны ответы агента
 

@@ -7,8 +7,8 @@ import { X } from 'lucide-react';
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
-const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
+const DialogPortal = DialogPrimitive.Portal;
 
 const DialogOverlay = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Overlay>,

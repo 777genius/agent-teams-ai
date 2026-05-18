@@ -179,6 +179,69 @@ async function seedBlockingShadowCollectingMetrics(input: {
   );
 }
 
+async function seedNativeStaleInProgressBlockingMetrics(input: {
+  teamsBasePath: string;
+  teamName: string;
+  memberName: string;
+  agendaFingerprint: string;
+}): Promise<void> {
+  const nowMs = Date.now();
+  const staleObservedAt = new Date(nowMs - 6 * 60_000 - 1_000).toISOString();
+  const metricsPath = path.join(
+    input.teamsBasePath,
+    input.teamName,
+    '.member-work-sync',
+    'indexes',
+    'metrics.json'
+  );
+  await fs.promises.mkdir(path.dirname(metricsPath), { recursive: true });
+  await fs.promises.writeFile(
+    metricsPath,
+    `${JSON.stringify(
+      {
+        schemaVersion: 2,
+        members: {
+          [input.memberName]: {
+            memberName: input.memberName,
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            actionableCount: 1,
+            evaluatedAt: staleObservedAt,
+            providerId: 'codex',
+          },
+        },
+        recentEvents: [
+          {
+            id: 'native-stale-status',
+            teamName: input.teamName,
+            memberName: input.memberName,
+            kind: 'status_evaluated',
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            recordedAt: staleObservedAt,
+            actionableCount: 1,
+            providerId: 'codex',
+          },
+          ...Array.from({ length: 12 }, (_, index) => ({
+            id: `native-stale-would-nudge-${index}`,
+            teamName: input.teamName,
+            memberName: input.memberName,
+            kind: 'would_nudge',
+            state: 'needs_sync',
+            agendaFingerprint: input.agendaFingerprint,
+            recordedAt: new Date(nowMs - 5 * 60_000 + index * 5_000).toISOString(),
+            actionableCount: 1,
+            providerId: 'codex',
+          })),
+        ],
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
 async function waitForAssertion(assertion: () => Promise<void> | void): Promise<void> {
   const deadline = Date.now() + 5_000;
   let lastError: unknown;
@@ -311,6 +374,162 @@ async function forceRetryableOutboxDue(input: {
 }
 
 describe('createMemberWorkSyncFeature composition', () => {
+  it('schedules proof-missing recovery through the work-sync queue', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })),
+      } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    });
+
+    try {
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName,
+          memberName,
+          originalMessageId: 'message-1',
+          taskRefs: [{ taskId: 'task-1', displayId: '11111111', teamName }],
+          reason: 'OpenCode proof missing',
+        })
+      ).resolves.toMatchObject({
+        scheduled: true,
+        reason: 'scheduled',
+        intentKey: 'proof-missing:message-1',
+      });
+
+      expect(feature.getQueueDiagnostics()).toMatchObject({
+        queued: 1,
+        queuedItems: [
+          {
+            teamName,
+            memberName,
+            triggerReasons: ['proof_missing_recovery'],
+          },
+        ],
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+        []
+      );
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('coalesces proof-missing recovery when a recent matching outbox item exists', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })),
+      } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    });
+
+    try {
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await store.ensurePending({
+        id: 'member-work-sync:team-a:bob:proof-missing:message-1',
+        teamName,
+        memberName,
+        agendaFingerprint: 'agenda:v1:test',
+        payloadHash: 'payload-hash',
+        payload: {
+          from: 'system',
+          to: memberName,
+          messageKind: 'member_work_sync_nudge',
+          source: 'member-work-sync',
+          actionMode: 'do',
+          workSyncIntent: 'agenda_sync',
+          workSyncIntentKey: 'proof-missing:message-1',
+          text: 'Recover proof',
+          taskRefs: [{ taskId: 'task-1', displayId: '11111111', teamName }],
+        },
+        nowIso: new Date().toISOString(),
+      });
+
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName,
+          memberName,
+          originalMessageId: 'message-1',
+          taskRefs: [{ taskId: 'task-1', displayId: '11111111', teamName }],
+        })
+      ).resolves.toMatchObject({
+        scheduled: false,
+        reason: 'coalesced_recent',
+        existingOutboxId: 'member-work-sync:team-a:bob:proof-missing:message-1',
+      });
+      expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 0 });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('does not schedule broad proof-missing recovery without task refs', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })),
+      } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    });
+
+    try {
+      await expect(
+        feature.scheduleProofMissingRecovery({
+          teamName,
+          memberName,
+          originalMessageId: 'message-1',
+        })
+      ).resolves.toMatchObject({
+        scheduled: false,
+        reason: 'invalid',
+      });
+      expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 0 });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+        []
+      );
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('dispatches a due nudge through the real outbox and inbox by default', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -383,6 +602,188 @@ describe('createMemberWorkSyncFeature composition', () => {
           encoding: 'utf8',
         })
       ).resolves.toContain(outboxInput!.id);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('suppresses queued proof-missing recovery when the original delivery is no longer proof-missing', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    const proofMissingRecoveryGuard = {
+      shouldDispatch: vi.fn(async () => ({
+        ok: false as const,
+        reason: 'proof_missing_recovery_suppressed',
+        retryable: false,
+      })),
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      proofMissingRecoveryGuard,
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const status = await feature.refreshStatus({ teamName, memberName });
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await expect(
+        store.ensurePending({
+          id: 'member-work-sync:team-a:bob:proof-missing:message-1',
+          teamName,
+          memberName,
+          agendaFingerprint: status.agenda.fingerprint,
+          payloadHash: 'payload-hash',
+          payload: {
+            from: 'system',
+            to: memberName,
+            messageKind: 'member_work_sync_nudge',
+            source: 'member-work-sync',
+            actionMode: 'do',
+            workSyncIntent: 'agenda_sync',
+            workSyncIntentKey: 'proof-missing:message-1',
+            text: 'Recover proof',
+            taskRefs: [{ taskId: 'task-1', displayId: '11111111', teamName }],
+          },
+          nowIso: status.evaluatedAt,
+        })
+      ).resolves.toMatchObject({
+        ok: true,
+        outcome: 'created',
+      });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 0,
+        superseded: 1,
+        retryable: 0,
+        terminal: 0,
+      });
+      expect(proofMissingRecoveryGuard.shouldDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName,
+          memberName,
+          intentKey: 'proof-missing:message-1',
+          originalMessageId: 'message-1',
+          taskIds: ['task-1'],
+        })
+      );
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+        []
+      );
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('does not deliver pending nudges until the team is ready for nudge dispatch', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-a';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      canDispatchNudges: vi.fn(async () => canDispatchNudges),
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      const status = await feature.refreshStatus({ teamName, memberName });
+      const outboxInput = buildMemberWorkSyncOutboxEnsureInput({
+        status,
+        hash: new NodeHashAdapter(),
+        nowIso: status.evaluatedAt,
+      });
+      expect(outboxInput).not.toBeNull();
+      const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      await expect(store.ensurePending(outboxInput!)).resolves.toMatchObject({
+        ok: true,
+        outcome: 'created',
+      });
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 0,
+        delivered: 0,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+      await expect(
+        readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+      ).resolves.toMatchObject({
+        [outboxInput!.id]: { status: 'pending' },
+      });
+
+      canDispatchNudges = true;
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 1,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      await expect(
+        readInboxMessages({ teamsBasePath, teamName, memberName })
+      ).resolves.toMatchObject([{ messageId: outboxInput!.id }]);
     } finally {
       await feature.dispose();
     }
@@ -729,7 +1130,131 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('blocks targeted OpenCode nudges when phase2 metrics are unsafe', async () => {
+  it('delivers native stale in-progress recovery nudges despite noisy global metrics', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-native-stale-in-progress';
+    const memberName = 'alice';
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Review landing',
+            status: 'in_progress',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      nudgeDeliveryWake,
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      let agendaFingerprint = '';
+      await waitForAssertion(async () => {
+        const status = await feature.getStatus({ teamName, memberName });
+        expect(status).toMatchObject({
+          state: 'needs_sync',
+          providerId: 'codex',
+          diagnostics: expect.arrayContaining(['no_current_report']),
+          agenda: {
+            items: [
+              expect.objectContaining({
+                reason: 'owned_in_progress_task',
+                evidence: expect.objectContaining({ status: 'in_progress' }),
+              }),
+            ],
+          },
+        });
+        agendaFingerprint = status.agenda.fingerprint;
+      });
+      expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
+      expect(nudgeDeliveryWake.schedule).not.toHaveBeenCalled();
+
+      await seedNativeStaleInProgressBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        agendaFingerprint,
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('Work sync check');
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+          teamName,
+          memberName,
+          messageId: nudges[0]?.messageId,
+          providerId: 'codex',
+          reason: 'member_work_sync_nudge_inserted',
+          delayMs: 500,
+        });
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            reasons: expect.arrayContaining(['would_nudge_rate_high']),
+          },
+        });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([
+          expect.objectContaining({
+            status: 'delivered',
+            deliveredMessageId: nudges[0]?.messageId,
+          }),
+        ]);
+      });
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).toContain('"reason":"created"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('delivers targeted OpenCode nudges even when global phase2 metrics are noisy', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -751,7 +1276,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           {
             id: 'task-1',
             displayId: '11111111',
-            subject: 'Do not nudge when metrics are unsafe',
+            subject: 'Nudge OpenCode despite noisy global metrics',
             status: 'pending',
             owner: memberName,
           },
@@ -778,9 +1303,20 @@ describe('createMemberWorkSyncFeature composition', () => {
 
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
-        expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
-        expect(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).toEqual({});
-        expect(nudgeDeliveryWake.schedule).not.toHaveBeenCalled();
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+          teamName,
+          memberName,
+          messageId: nudges[0]?.messageId,
+          providerId: 'opencode',
+          reason: 'member_work_sync_nudge_inserted',
+          delayMs: 500,
+        });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
           phase2Readiness: {
             reasons: expect.arrayContaining(['would_nudge_rate_high']),
@@ -799,15 +1335,102 @@ describe('createMemberWorkSyncFeature composition', () => {
         ),
         'utf8'
       );
-      expect(journal).toContain('"event":"nudge_skipped"');
-      expect(journal).toContain('"reason":"blocking_metrics"');
-      expect(journal).not.toContain('"event":"nudge_delivered"');
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
     } finally {
       await feature.dispose();
     }
   });
 
-  it('recovers targeted OpenCode nudge delivery after unsafe metrics become ready', async () => {
+  it('delivers targeted lead nudges even when global phase2 metrics are noisy', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-lead-blocking-metrics';
+    const memberName = 'team-lead';
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex', agentType: 'team-lead' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Resolve lead clarification',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      nudgeDeliveryWake,
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+          teamName,
+          memberName,
+          messageId: nudges[0]?.messageId,
+          providerId: 'codex',
+          reason: 'member_work_sync_nudge_inserted',
+          delayMs: 500,
+        });
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            reasons: expect.arrayContaining(['would_nudge_rate_high']),
+          },
+        });
+      });
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('keeps targeted OpenCode nudge idempotent after noisy metrics become ready', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -829,7 +1452,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           {
             id: 'task-1',
             displayId: '11111111',
-            subject: 'Recover OpenCode nudge after metrics ready',
+            subject: 'Keep OpenCode nudge idempotent after metrics ready',
             status: 'pending',
             owner: memberName,
           },
@@ -856,9 +1479,11 @@ describe('createMemberWorkSyncFeature composition', () => {
 
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
-        expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
-        expect(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).toEqual({});
-        expect(nudgeDeliveryWake.schedule).not.toHaveBeenCalled();
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
       });
 
       await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
@@ -871,7 +1496,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         expect(nudges).toHaveLength(1);
         expect(nudges[0]?.text).toContain('11111111');
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
-        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+        expect(nudgeDeliveryWake.schedule).toHaveBeenLastCalledWith({
           teamName,
           memberName,
           messageId: nudges[0]?.messageId,

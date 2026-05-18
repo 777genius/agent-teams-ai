@@ -221,7 +221,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(providers[3]).toMatchObject({
       providerId: 'opencode',
-      displayName: 'OpenCode (75+ LLM providers)',
+      displayName: 'OpenCode (200+ models)',
       supported: false,
       authenticated: false,
       models: [],
@@ -1100,6 +1100,65 @@ describe('ClaudeMultimodelBridgeService', () => {
       '/mock/agent_teams_orchestrator',
       expect.arrayContaining(['--lane', 'secondary:opencode:alice']),
       expect.objectContaining({ timeout: 1_234 })
+    );
+  });
+
+  it('passes exact OpenCode session id to the runtime transcript command', async () => {
+    execCliMock.mockImplementation(async (_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+
+      if (
+        normalizedArgs.startsWith(
+          'runtime transcript --json --provider opencode --team team-a --member alice --projection-only --limit 20 --session-id session-exact --output '
+        )
+      ) {
+        const outputIndex = Array.isArray(args) ? args.indexOf('--output') : -1;
+        const outputPath =
+          outputIndex >= 0 && Array.isArray(args) ? String(args[outputIndex + 1] ?? '') : '';
+        await writeFile(
+          outputPath,
+          JSON.stringify({
+            schemaVersion: 1,
+            providerId: 'opencode',
+            transcript: {
+              sessionId: 'session-exact',
+              durableState: 'idle',
+              messages: [],
+              diagnostics: [],
+              logProjection: {
+                sessionId: 'session-exact',
+                messages: [],
+              },
+            },
+          }),
+          'utf8'
+        );
+        return Promise.resolve({
+          stdout: '',
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const transcript = await service.getOpenCodeTranscript('/mock/agent_teams_orchestrator', {
+      teamId: 'team-a',
+      memberName: 'alice',
+      limit: 20,
+      sessionId: ' session-exact ',
+    });
+
+    expect(transcript?.sessionId).toBe('session-exact');
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/mock/agent_teams_orchestrator',
+      expect.arrayContaining(['--session-id', 'session-exact']),
+      expect.any(Object)
     );
   });
 

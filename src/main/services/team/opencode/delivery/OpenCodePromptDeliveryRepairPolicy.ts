@@ -41,6 +41,7 @@ export interface OpenCodePromptDeliveryRepairInput {
   toolCallNames: string[];
   acceptanceUnknown: boolean;
   hardFailureKind: OpenCodePromptDeliveryHardFailureKind;
+  controlUrl?: string | null;
 }
 
 const SIDE_EFFECT_TOOL_NAMES = new Set([
@@ -134,6 +135,15 @@ function taskIdList(taskRefs: TaskRef[]): string | null {
   return ids.length > 0 ? ids.map((id) => `"${id}"`).join(', ') : null;
 }
 
+function workSyncToolArgs(input: OpenCodePromptDeliveryRepairInput): string {
+  const args = [`teamName="${input.teamName}"`, `memberName="${input.memberName}"`];
+  const controlUrl = input.controlUrl?.trim();
+  if (controlUrl) {
+    args.push(`controlUrl=${JSON.stringify(controlUrl)}`);
+  }
+  return args.join(', ');
+}
+
 function messageSendControlLines(input: OpenCodePromptDeliveryRepairInput): string[] {
   const replyRecipient = input.replyRecipient.trim() || 'user';
   const taskRefsJson = input.taskRefs.length > 0 ? JSON.stringify(input.taskRefs) : null;
@@ -148,19 +158,20 @@ function messageSendControlLines(input: OpenCodePromptDeliveryRepairInput): stri
 
 function workSyncControlLines(input: OpenCodePromptDeliveryRepairInput): string[] {
   const taskIds = taskIdList(input.taskRefs);
+  const args = workSyncToolArgs(input);
   if (input.workSyncIntent === 'review_pickup') {
     return [
       'This is a targeted member-work-sync review pickup control message. A plain acknowledgement is not sufficient proof.',
       'Open the current task, verify reviewState/status, then start or continue the review only if it is still assigned to you.',
       'Do not mark the review complete from this retry text alone.',
-      `If you cannot pick up the review now, call agent-teams_member_work_sync_status or mcp__agent-teams__member_work_sync_status with teamName="${input.teamName}" and memberName="${input.memberName}", then report state "blocked" or "still_working" only for the real current state.`,
+      `If you cannot pick up the review now, call agent-teams_member_work_sync_status or mcp__agent-teams__member_work_sync_status with ${args}, then report state "blocked" or "still_working" only for the real current state.`,
       taskIds ? `Relevant taskIds: ${taskIds}.` : null,
       'Do not invent or reuse a raw report token from this retry text.',
     ].filter((line): line is string => line !== null);
   }
   return [
     'This is a member-work-sync control message. A plain acknowledgement is not sufficient proof.',
-    `Call agent-teams_member_work_sync_status or mcp__agent-teams__member_work_sync_status with teamName="${input.teamName}" and memberName="${input.memberName}".`,
+    `Call agent-teams_member_work_sync_status or mcp__agent-teams__member_work_sync_status with ${args}.`,
     'Then call agent-teams_member_work_sync_report or mcp__agent-teams__member_work_sync_report using the agendaFingerprint/reportToken returned by status.',
     taskIds ? `Include taskIds ${taskIds} when reporting if those tasks are still relevant.` : null,
     'Use state "still_working", "blocked", or "caught_up" according to the status result. Do not invent or reuse a raw report token from this retry text.',

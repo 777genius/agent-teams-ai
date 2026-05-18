@@ -32,6 +32,7 @@ import {
   isPathPrefix,
   joinPath,
   lastSeparatorIndex,
+  normalizePathForComparison,
   splitPath,
 } from '@shared/utils/platformPath';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -80,6 +81,17 @@ const ITEM_HEIGHT = 28;
 const INDENT_PX = 12;
 const MAX_DEPTH = 12;
 const AUTO_EXPAND_DELAY_MS = 500;
+
+function treePathsEqual(
+  left: string | null | undefined,
+  right: string | null | undefined
+): boolean {
+  return (
+    typeof left === 'string' &&
+    typeof right === 'string' &&
+    normalizePathForComparison(left) === normalizePathForComparison(right)
+  );
+}
 
 // =============================================================================
 // Component
@@ -204,7 +216,7 @@ export const EditorFileTree = ({
   // Scroll to file when selectedFilePath changes (e.g. from revealFileInEditor)
   useEffect(() => {
     if (!selectedFilePath) return;
-    const idx = flatItems.findIndex((fi) => fi.node.fullPath === selectedFilePath);
+    const idx = flatItems.findIndex((fi) => treePathsEqual(fi.node.fullPath, selectedFilePath));
     if (idx >= 0) {
       virtualizer.scrollToIndex(idx, { align: 'center' });
     }
@@ -633,7 +645,7 @@ const DraggableTreeItem = React.memo(
     onRenameCancel,
   }: DraggableTreeItemProps): React.ReactElement => {
     const { node, depth, isExpanded } = item;
-    const isSelected = activeNodePath === node.fullPath;
+    const isSelected = treePathsEqual(activeNodePath, node.fullPath);
     const visualDepth = Math.min(depth, MAX_DEPTH);
     const isSensitive = node.data?.isSensitive;
 

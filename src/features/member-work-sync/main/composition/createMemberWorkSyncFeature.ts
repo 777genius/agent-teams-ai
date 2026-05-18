@@ -51,6 +51,7 @@ import type {
   MemberWorkSyncBusySignalPort,
   MemberWorkSyncLoggerPort,
   MemberWorkSyncNudgeDeliveryWakePort,
+  MemberWorkSyncProofMissingRecoveryGuardPort,
   MemberWorkSyncReviewPickupDeliveryPort,
   MemberWorkSyncReviewPickupEscalationPort,
 } from '../../core/application';
@@ -62,6 +63,7 @@ import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 import type { TeamChangeEvent } from '@shared/types';
 
 const STALE_STATUS_MAX_AGE_MS = 2 * 60_000;
+const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
 
 function getStatusStalenessDiagnostics(status: MemberWorkSyncStatus, nowMs: number): string[] {
   const diagnostics: string[] = [];
@@ -103,6 +105,9 @@ export interface MemberWorkSyncFeatureFacade {
   refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
   getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
   report(request: MemberWorkSyncReportRequest): Promise<MemberWorkSyncReportResult>;
+  scheduleProofMissingRecovery(
+    request: MemberWorkSyncProofMissingRecoveryScheduleRequest
+  ): Promise<MemberWorkSyncProofMissingRecoveryScheduleResult>;
   noteTeamChange(event: TeamChangeEvent): void;
   enqueueStartupScan(teamNames: string[]): Promise<void>;
   replayPendingReports(teamNames: string[]): Promise<MemberWorkSyncPendingReportReplaySummary>;
@@ -118,6 +123,45 @@ export interface MemberWorkSyncFeatureFacade {
   dispose(): Promise<void>;
 }
 
+export interface MemberWorkSyncProofMissingRecoveryScheduleRequest {
+  teamName: string;
+  memberName: string;
+  originalMessageId: string;
+  taskRefs?: { taskId: string; displayId?: string; teamName?: string }[];
+  reason?: string;
+}
+
+export interface MemberWorkSyncProofMissingRecoveryScheduleResult {
+  scheduled: boolean;
+  reason: 'scheduled' | 'coalesced_recent' | 'invalid';
+  intentKey?: string;
+  existingOutboxId?: string;
+}
+
+function buildProofMissingRecoveryIntentKey(originalMessageId: string): string {
+  return `proof-missing:${originalMessageId}`;
+}
+
+function normalizeRecoveryTaskRefs(
+  taskRefs: MemberWorkSyncProofMissingRecoveryScheduleRequest['taskRefs']
+): { taskId: string; displayId?: string; teamName?: string }[] {
+  const seen = new Set<string>();
+  const normalized: { taskId: string; displayId?: string; teamName?: string }[] = [];
+  for (const taskRef of taskRefs ?? []) {
+    const taskId = taskRef.taskId.trim();
+    if (!taskId || seen.has(taskId)) {
+      continue;
+    }
+    seen.add(taskId);
+    normalized.push({
+      taskId,
+      ...(taskRef.displayId?.trim() ? { displayId: taskRef.displayId.trim() } : {}),
+      ...(taskRef.teamName?.trim() ? { teamName: taskRef.teamName.trim() } : {}),
+    });
+  }
+  return normalized.sort((left, right) => left.taskId.localeCompare(right.taskId));
+}
+
 export function createMemberWorkSyncFeature(deps: {
   teamsBasePath: string;
   configReader: TeamConfigReader;
@@ -125,10 +169,12 @@ export function createMemberWorkSyncFeature(deps: {
   kanbanManager: TeamKanbanManager;
   membersMetaStore: TeamMembersMetaStore;
   isTeamActive?: (teamName: string) => Promise<boolean> | boolean;
+  canDispatchNudges?: (teamName: string) => Promise<boolean> | boolean;
   listLifecycleActiveTeamNames?: () => Promise<string[]>;
   queueQuietWindowMs?: number;
   runtimeTurnSettledTargetResolver?: RuntimeTurnSettledTargetResolverPort;
   extraBusySignals?: MemberWorkSyncBusySignalPort[];
+  proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
   nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
@@ -194,6 +240,9 @@ export function createMemberWorkSyncFeature(deps: {
     inboxNudge,
     watchdogCooldown,
     busySignal,
+    ...(deps.proofMissingRecoveryGuard
+      ? { proofMissingRecoveryGuard: deps.proofMissingRecoveryGuard }
+      : {}),
     ...(deps.nudgeDeliveryWake ? { nudgeDeliveryWake: deps.nudgeDeliveryWake } : {}),
     ...(deps.reviewPickupDelivery ? { reviewPickupDelivery: deps.reviewPickupDelivery } : {}),
     ...(deps.reviewPickupEscalation ? { reviewPickupEscalation: deps.reviewPickupEscalation } : {}),
@@ -208,13 +257,51 @@ export function createMemberWorkSyncFeature(deps: {
   const reconciler = new MemberWorkSyncReconciler(useCaseDeps);
   const pendingReportReplayer = new MemberWorkSyncPendingReportIntentReplayer(useCaseDeps);
   const nudgeDispatcher = new MemberWorkSyncNudgeDispatcher(useCaseDeps);
+  const emptyNudgeDispatchSummary = (): MemberWorkSyncNudgeDispatchSummary => ({
+    claimed: 0,
+    delivered: 0,
+    superseded: 0,
+    retryable: 0,
+    terminal: 0,
+  });
+  const filterNudgeDispatchReadyTeamNames = async (teamNames: string[]): Promise<string[]> => {
+    const uniqueTeamNames = [...new Set(teamNames.map((name) => name.trim()).filter(Boolean))];
+    if (!deps.canDispatchNudges) {
+      return uniqueTeamNames;
+    }
+
+    const readiness = await Promise.all(
+      uniqueTeamNames.map(async (teamName) => {
+        try {
+          return { teamName, ready: await deps.canDispatchNudges!(teamName) };
+        } catch (error) {
+          deps.logger?.warn('member work sync nudge dispatch readiness check failed', {
+            teamName,
+            error: String(error),
+          });
+          return { teamName, ready: false };
+        }
+      })
+    );
+    return readiness.filter((item) => item.ready).map((item) => item.teamName);
+  };
+  const dispatchNudgesForReadyTeams = async (
+    teamNames: string[],
+    claimedBy: string
+  ): Promise<MemberWorkSyncNudgeDispatchSummary> => {
+    const readyTeamNames = await filterNudgeDispatchReadyTeamNames(teamNames);
+    if (readyTeamNames.length === 0) {
+      return emptyNudgeDispatchSummary();
+    }
+    return nudgeDispatcher.dispatchDue({
+      teamNames: readyTeamNames,
+      claimedBy,
+    });
+  };
   const queue = new MemberWorkSyncEventQueue({
     reconcile: async (request, context: MemberWorkSyncReconcileContext) => {
       await reconciler.execute(request, context);
-      await nudgeDispatcher.dispatchDue({
-        teamNames: [request.teamName],
-        claimedBy: `member-work-sync:${process.pid}`,
-      });
+      await dispatchNudgesForReadyTeams([request.teamName], `member-work-sync:${process.pid}`);
     },
     isTeamActive: deps.isTeamActive ?? (() => true),
     ...(deps.queueQuietWindowMs != null ? { quietWindowMs: deps.queueQuietWindowMs } : {}),
@@ -264,10 +351,7 @@ export function createMemberWorkSyncFeature(deps: {
     ? new MemberWorkSyncNudgeDispatchScheduler({
         listLifecycleActiveTeamNames: deps.listLifecycleActiveTeamNames,
         dispatchDue: (teamNames) =>
-          nudgeDispatcher.dispatchDue({
-            teamNames,
-            claimedBy: `member-work-sync:${process.pid}:scheduled`,
-          }),
+          dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}:scheduled`),
         logger: deps.logger,
       })
     : null;
@@ -293,11 +377,97 @@ export function createMemberWorkSyncFeature(deps: {
     };
   };
 
+  const scheduleProofMissingRecovery = async (
+    request: MemberWorkSyncProofMissingRecoveryScheduleRequest
+  ): Promise<MemberWorkSyncProofMissingRecoveryScheduleResult> => {
+    const teamName = request.teamName.trim();
+    const memberName = request.memberName.trim();
+    const originalMessageId = request.originalMessageId.trim();
+    if (!teamName || !memberName || !originalMessageId) {
+      return { scheduled: false, reason: 'invalid' };
+    }
+
+    const taskRefs = normalizeRecoveryTaskRefs(request.taskRefs);
+    if (taskRefs.length === 0) {
+      await auditJournal.append({
+        timestamp: clock.now().toISOString(),
+        teamName,
+        memberName,
+        event: 'proof_missing_recovery_suppressed',
+        source: 'proof_missing_recovery_scheduler',
+        reason: 'missing_task_refs',
+        metadata: {
+          originalMessageId,
+        },
+      });
+      return { scheduled: false, reason: 'invalid' };
+    }
+
+    const intentKey = buildProofMissingRecoveryIntentKey(originalMessageId);
+    const sinceIso = new Date(
+      clock.now().getTime() - PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS
+    ).toISOString();
+    const existing = await store.findRecentRecoveryByIntent?.({
+      teamName,
+      memberName,
+      intentKey,
+      sinceIso,
+    });
+    if (existing) {
+      await auditJournal.append({
+        timestamp: clock.now().toISOString(),
+        teamName,
+        memberName,
+        event: 'proof_missing_recovery_coalesced',
+        source: 'proof_missing_recovery_scheduler',
+        reason: existing.status,
+        metadata: {
+          intentKey,
+          originalMessageId,
+          existingOutboxId: existing.id,
+        },
+      });
+      return {
+        scheduled: false,
+        reason: 'coalesced_recent',
+        intentKey,
+        existingOutboxId: existing.id,
+      };
+    }
+
+    await auditJournal.append({
+      timestamp: clock.now().toISOString(),
+      teamName,
+      memberName,
+      event: 'proof_missing_recovery_scheduled',
+      source: 'proof_missing_recovery_scheduler',
+      reason: request.reason?.trim() || 'protocol_proof_missing',
+      taskRefs,
+      metadata: {
+        intentKey,
+        originalMessageId,
+      },
+    });
+    queue.enqueue({
+      teamName,
+      memberName,
+      triggerReason: 'proof_missing_recovery',
+      recovery: {
+        kind: 'proof_missing',
+        intentKey,
+        originalMessageId,
+        taskIds: taskRefs.map((taskRef) => taskRef.taskId),
+      },
+    });
+    return { scheduled: true, reason: 'scheduled', intentKey };
+  };
+
   return {
     getStatus: readStatusWithStaleRefresh,
     refreshStatus: (request) => reconciler.execute(request, { reconciledBy: 'request' }),
     getMetrics: (request) => metricsReader.execute(request),
     report: (request) => reporter.execute(request),
+    scheduleProofMissingRecovery,
     noteTeamChange: (event) => {
       toolActivityBusySignal.noteTeamChange(event);
       router.noteTeamChange(event);
@@ -322,10 +492,7 @@ export function createMemberWorkSyncFeature(deps: {
       );
     },
     dispatchDueNudges: (teamNames) =>
-      nudgeDispatcher.dispatchDue({
-        teamNames,
-        claimedBy: `member-work-sync:${process.pid}`,
-      }),
+      dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}`),
     buildRuntimeTurnSettledHookSettings: async ({ provider }) =>
       runtimeTurnSettledSpool.buildHookSettings({ provider }),
     buildRuntimeTurnSettledEnvironment: async ({ provider }) =>

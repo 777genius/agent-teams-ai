@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-05-09T23:16:07.760Z",
-  "runsPerModel": 3,
+  "generatedAt": "2026-05-14T06:34:47.601Z",
+  "runsPerModel": 1,
   "qualification": {
-    "minimumAverageScore": 90,
-    "minimumSuccessfulRuns": 3,
+    "minimumAverageScore": 70,
+    "minimumSuccessfulRuns": 1,
     "minimumConsistencyScore": 85,
     "requireNoHardFailures": true
   },
@@ -11,93 +11,93 @@
     {
       "model": "opencode/big-pickle",
       "verdict": "recommended",
-      "confidence": "high",
+      "confidence": "low",
       "qualified": true,
       "readinessScore": 100,
       "averageScore": 100,
       "consistencyScore": 100,
       "behavioralAverageScore": 100,
       "minScore": 100,
-      "successfulRuns": 3,
-      "countedRuns": 3,
+      "successfulRuns": 1,
+      "countedRuns": 1,
       "hardFailures": 0,
       "providerInfraFailures": 0,
       "runtimeTransportFailures": 0,
       "modelBehaviorFailures": 0,
       "harnessFailures": 0,
-      "p50DurationMs": 112355,
-      "p95DurationMs": 116891,
+      "p50DurationMs": 132968,
+      "p95DurationMs": 132968,
       "stagePassRates": {
         "launchBootstrap": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "directReply": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "peerRelayAB": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "peerRelayBC": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "concurrentReplies": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "taskRefs": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "cleanTranscript": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "noDuplicateTokens": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "latencyStable": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         }
       },
       "taskRefPassRates": {
         "directReply": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "peerRelayAB": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "peerRelayBC": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "concurrentBob": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         },
         "concurrentTom": {
-          "passed": 3,
-          "total": 3,
+          "passed": 1,
+          "total": 1,
           "rate": 100
         }
       },
@@ -112,8 +112,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -122,8 +122,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -132,8 +132,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -142,8 +142,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -152,8 +152,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -162,8 +162,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -172,8 +172,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -182,8 +182,8 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         },
@@ -192,14 +192,14 @@
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
-            "passed": 3,
-            "total": 3,
+            "passed": 1,
+            "total": 1,
             "rate": 100
           }
         }
       ],
       "scoreStability": {
-        "sampleSize": 3,
+        "sampleSize": 1,
         "minScore": 100,
         "maxScore": 100,
         "spread": 0,
@@ -217,16 +217,16 @@
           "outcome": "passed",
           "failureCategory": "none",
           "primaryFailure": null,
-          "durationMs": 112344,
+          "durationMs": 132968,
           "hardFailure": false,
           "stageDurationsMs": {
-            "setup": 183,
-            "launchBootstrap": 19933,
-            "materializeTasks": 35,
-            "directReply": 15430,
-            "peerRelayAB": 25001,
-            "peerRelayBC": 28154,
-            "concurrentReplies": 15551,
+            "setup": 2770,
+            "launchBootstrap": 49092,
+            "materializeTasks": 85,
+            "directReply": 13760,
+            "peerRelayAB": 22730,
+            "peerRelayBC": 21484,
+            "concurrentReplies": 14023,
             "hygiene": 1
           },
           "stageFailures": {},
@@ -253,455 +253,7 @@
             "latencyStable": true
           },
           "diagnostics": [
-            "runId=d9d27eb0-2798-4980-a0fa-f082a6edd705"
-          ]
-        },
-        {
-          "runIndex": 2,
-          "passed": true,
-          "score": 100,
-          "countedForRecommendation": true,
-          "outcome": "passed",
-          "failureCategory": "none",
-          "primaryFailure": null,
-          "durationMs": 112355,
-          "hardFailure": false,
-          "stageDurationsMs": {
-            "setup": 11,
-            "launchBootstrap": 18682,
-            "materializeTasks": 36,
-            "directReply": 15126,
-            "peerRelayAB": 24835,
-            "peerRelayBC": 28580,
-            "concurrentReplies": 17164,
-            "hygiene": 1
-          },
-          "stageFailures": {},
-          "taskRefChecks": {
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentBob": true,
-            "concurrentTom": true
-          },
-          "protocolViolations": {
-            "badMessages": 0,
-            "duplicateOrMissingTokens": []
-          },
-          "stages": {
-            "launchBootstrap": true,
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentReplies": true,
-            "taskRefs": true,
-            "cleanTranscript": true,
-            "noDuplicateTokens": true,
-            "latencyStable": true
-          },
-          "diagnostics": [
-            "runId=97364154-e06d-460c-94ae-65b73cb1b6f9"
-          ]
-        },
-        {
-          "runIndex": 3,
-          "passed": true,
-          "score": 100,
-          "countedForRecommendation": true,
-          "outcome": "passed",
-          "failureCategory": "none",
-          "primaryFailure": null,
-          "durationMs": 116891,
-          "hardFailure": false,
-          "stageDurationsMs": {
-            "setup": 8,
-            "launchBootstrap": 18926,
-            "materializeTasks": 31,
-            "directReply": 17061,
-            "peerRelayAB": 27842,
-            "peerRelayBC": 27262,
-            "concurrentReplies": 15437,
-            "hygiene": 1
-          },
-          "stageFailures": {},
-          "taskRefChecks": {
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentBob": true,
-            "concurrentTom": true
-          },
-          "protocolViolations": {
-            "badMessages": 0,
-            "duplicateOrMissingTokens": []
-          },
-          "stages": {
-            "launchBootstrap": true,
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentReplies": true,
-            "taskRefs": true,
-            "cleanTranscript": true,
-            "noDuplicateTokens": true,
-            "latencyStable": true
-          },
-          "diagnostics": [
-            "runId=7bdd4b2e-dbd6-4474-a8a0-9418df433671"
-          ]
-        }
-      ]
-    },
-    {
-      "model": "opencode/minimax-m2.5-free",
-      "verdict": "strong-candidate",
-      "confidence": "high",
-      "qualified": false,
-      "readinessScore": 88.6,
-      "averageScore": 98.3,
-      "consistencyScore": 93.1,
-      "behavioralAverageScore": 98.3,
-      "minScore": 95,
-      "successfulRuns": 2,
-      "countedRuns": 3,
-      "hardFailures": 1,
-      "providerInfraFailures": 0,
-      "runtimeTransportFailures": 0,
-      "modelBehaviorFailures": 1,
-      "harnessFailures": 0,
-      "p50DurationMs": 108862,
-      "p95DurationMs": 118757,
-      "stagePassRates": {
-        "launchBootstrap": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "directReply": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "peerRelayAB": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "peerRelayBC": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "concurrentReplies": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "taskRefs": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "cleanTranscript": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "noDuplicateTokens": {
-          "passed": 2,
-          "total": 3,
-          "rate": 66.7
-        },
-        "latencyStable": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        }
-      },
-      "taskRefPassRates": {
-        "directReply": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "peerRelayAB": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "peerRelayBC": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "concurrentBob": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        },
-        "concurrentTom": {
-          "passed": 3,
-          "total": 3,
-          "rate": 100
-        }
-      },
-      "protocolViolationTotals": {
-        "badMessages": 0,
-        "duplicateOrMissingTokens": 2,
-        "affectedRuns": 1
-      },
-      "stageFailureImpact": [
-        {
-          "stage": "noDuplicateTokens",
-          "failedRuns": 1,
-          "weightedLoss": 5,
-          "passRate": {
-            "passed": 2,
-            "total": 3,
-            "rate": 66.7
-          }
-        },
-        {
-          "stage": "cleanTranscript",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "concurrentReplies",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "directReply",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "latencyStable",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "launchBootstrap",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "peerRelayAB",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "peerRelayBC",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        },
-        {
-          "stage": "taskRefs",
-          "failedRuns": 0,
-          "weightedLoss": 0,
-          "passRate": {
-            "passed": 3,
-            "total": 3,
-            "rate": 100
-          }
-        }
-      ],
-      "scoreStability": {
-        "sampleSize": 3,
-        "minScore": 95,
-        "maxScore": 100,
-        "spread": 5,
-        "standardDeviation": 2.4,
-        "consistencyScore": 93.1
-      },
-      "dominantFailureCategory": "model-behavior",
-      "recommendationBlockers": [
-        "successful runs 2 < 3",
-        "hard failures 1",
-        "model-behavior failures 1",
-        "highest weighted stage loss noDuplicateTokens=5",
-        "protocol violations in 1 runs"
-      ],
-      "runs": [
-        {
-          "runIndex": 1,
-          "passed": true,
-          "score": 100,
-          "countedForRecommendation": true,
-          "outcome": "passed",
-          "failureCategory": "none",
-          "primaryFailure": null,
-          "durationMs": 91530,
-          "hardFailure": false,
-          "stageDurationsMs": {
-            "setup": 10,
-            "launchBootstrap": 18716,
-            "materializeTasks": 31,
-            "directReply": 11557,
-            "peerRelayAB": 16323,
-            "peerRelayBC": 27370,
-            "concurrentReplies": 9606,
-            "hygiene": 1
-          },
-          "stageFailures": {},
-          "taskRefChecks": {
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentBob": true,
-            "concurrentTom": true
-          },
-          "protocolViolations": {
-            "badMessages": 0,
-            "duplicateOrMissingTokens": []
-          },
-          "stages": {
-            "launchBootstrap": true,
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentReplies": true,
-            "taskRefs": true,
-            "cleanTranscript": true,
-            "noDuplicateTokens": true,
-            "latencyStable": true
-          },
-          "diagnostics": [
-            "runId=23ae85d2-e79d-41c9-93a6-e843acea6d9e"
-          ]
-        },
-        {
-          "runIndex": 2,
-          "passed": true,
-          "score": 100,
-          "countedForRecommendation": true,
-          "outcome": "passed",
-          "failureCategory": "none",
-          "primaryFailure": null,
-          "durationMs": 108862,
-          "hardFailure": false,
-          "stageDurationsMs": {
-            "setup": 10,
-            "launchBootstrap": 18359,
-            "materializeTasks": 35,
-            "directReply": 7236,
-            "peerRelayAB": 30664,
-            "peerRelayBC": 26124,
-            "concurrentReplies": 18477,
-            "hygiene": 0
-          },
-          "stageFailures": {},
-          "taskRefChecks": {
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentBob": true,
-            "concurrentTom": true
-          },
-          "protocolViolations": {
-            "badMessages": 0,
-            "duplicateOrMissingTokens": []
-          },
-          "stages": {
-            "launchBootstrap": true,
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentReplies": true,
-            "taskRefs": true,
-            "cleanTranscript": true,
-            "noDuplicateTokens": true,
-            "latencyStable": true
-          },
-          "diagnostics": [
-            "runId=c3a55d8a-4028-4af7-9e1a-8ae8c87a95e5"
-          ]
-        },
-        {
-          "runIndex": 3,
-          "passed": false,
-          "score": 95,
-          "countedForRecommendation": true,
-          "outcome": "behavioral-fail",
-          "failureCategory": "model-behavior",
-          "primaryFailure": "duplicateOrMissingTokens=GAUNTLET_JACK_USER_OK_3,GAUNTLET_TOM_USER_OK_3",
-          "durationMs": 118757,
-          "hardFailure": true,
-          "stageDurationsMs": {
-            "setup": 9,
-            "launchBootstrap": 19986,
-            "materializeTasks": 37,
-            "directReply": 8036,
-            "peerRelayAB": 37430,
-            "peerRelayBC": 36219,
-            "concurrentReplies": 8551,
-            "hygiene": 0
-          },
-          "stageFailures": {},
-          "taskRefChecks": {
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentBob": true,
-            "concurrentTom": true
-          },
-          "protocolViolations": {
-            "badMessages": 0,
-            "duplicateOrMissingTokens": [
-              "GAUNTLET_JACK_USER_OK_3",
-              "GAUNTLET_TOM_USER_OK_3"
-            ]
-          },
-          "stages": {
-            "launchBootstrap": true,
-            "directReply": true,
-            "peerRelayAB": true,
-            "peerRelayBC": true,
-            "concurrentReplies": true,
-            "taskRefs": true,
-            "cleanTranscript": true,
-            "noDuplicateTokens": false,
-            "latencyStable": true
-          },
-          "diagnostics": [
-            "runId=2b0610e0-7b10-49fc-88dd-ab30b37abce9",
-            "duplicateOrMissingTokens=GAUNTLET_JACK_USER_OK_3,GAUNTLET_TOM_USER_OK_3"
+            "runId=5f3d0b1b-17eb-44d6-8b61-644e6f8673c6"
           ]
         }
       ]

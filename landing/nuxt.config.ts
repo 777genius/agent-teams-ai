@@ -13,6 +13,7 @@ const basePrefixedDocsPath = `${baseURL.replace(/\/?$/, "/")}docs`;
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-01-19",
+  devtools: { enabled: false },
   ssr: true,
   app: {
     baseURL,

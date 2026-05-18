@@ -8,8 +8,12 @@
  */
 
 import {
+  isAbsoluteOrHomePath,
+  isPathPrefix,
   lastSeparatorIndex,
+  normalizePathForComparison,
   splitPath as splitPathCrossPlatform,
+  stripTrailingSeparators,
 } from '@shared/utils/platformPath';
 
 import { extractFileReferences } from './groupTransformer';
@@ -61,13 +65,6 @@ export function getDisplayName(path: string, _source: ClaudeMdSource): string {
 }
 
 /**
- * Check if a path is absolute (starts with /).
- */
-function isAbsolutePath(path: string): boolean {
-  return path.startsWith('/') || path.startsWith('\\\\') || /^[a-zA-Z]:[\\/]/.test(path);
-}
-
-/**
  * Join paths, handling various path formats properly.
  * Handles:
  * - Absolute paths: /full/path/file.tsx (returned as-is)
@@ -77,34 +74,38 @@ function isAbsolutePath(path: string): boolean {
  * - Paths with @ prefix: @apps/foo/bar.tsx (strips @ then joins)
  */
 function joinPaths(base: string, relative: string): string {
-  if (isAbsolutePath(relative)) {
+  if (isAbsoluteOrHomePath(relative)) {
     return relative;
   }
 
   // Remove trailing slash from base if present
-  const cleanBase = trimTrailingSeparator(base);
+  const cleanBase = stripTrailingSeparators(base);
 
   // Handle @ prefix (file mention marker) - strip it if present
   let cleanRelative = relative;
   if (cleanRelative.startsWith('@')) {
     cleanRelative = cleanRelative.slice(1);
   }
+  if (isAbsoluteOrHomePath(cleanRelative)) {
+    return cleanRelative;
+  }
 
   // Handle ./ prefix (current directory)
-  if (cleanRelative.startsWith('./')) {
+  if (cleanRelative.startsWith('./') || cleanRelative.startsWith('.\\')) {
     cleanRelative = cleanRelative.slice(2);
   }
 
   // Handle ../ prefixes (parent directory)
   const separator = cleanBase.includes('\\') ? '\\' : '/';
-  const hasUnixRoot = cleanBase.startsWith('/');
-  const hasUncRoot = cleanBase.startsWith('\\\\');
+  const hasUncRoot = cleanBase.startsWith('\\\\') || cleanBase.startsWith('//');
+  const hasUnixRoot = !hasUncRoot && cleanBase.startsWith('/');
+  const minRootParts = hasUncRoot ? 2 : 1;
   const normalizedRelative = normalizeSeparators(cleanRelative, separator);
   const baseParts = splitPath(cleanBase);
   let remainingRelative = normalizedRelative;
   while (remainingRelative.startsWith(`..${separator}`)) {
     remainingRelative = remainingRelative.slice(3);
-    if (baseParts.length > 1) {
+    if (baseParts.length > minRootParts) {
       baseParts.pop();
     }
   }
@@ -114,22 +115,10 @@ function joinPaths(base: string, relative: string): string {
   if (hasUnixRoot && !normalizedBase.startsWith('/')) {
     normalizedBase = `/${normalizedBase}`;
   }
-  if (hasUncRoot && !normalizedBase.startsWith('\\\\')) {
-    normalizedBase = `\\\\${normalizedBase}`;
+  if (hasUncRoot && !normalizedBase.startsWith(`${separator}${separator}`)) {
+    normalizedBase = `${separator}${separator}${normalizedBase}`;
   }
   return remainingRelative ? `${normalizedBase}${separator}${remainingRelative}` : normalizedBase;
-}
-
-function trimTrailingSeparator(input: string): string {
-  let end = input.length;
-  while (end > 0) {
-    const char = input[end - 1];
-    if (char !== '/' && char !== '\\') {
-      break;
-    }
-    end--;
-  }
-  return input.slice(0, end);
 }
 
 function normalizeSeparators(input: string, separator: '/' | '\\'): string {
@@ -158,7 +147,19 @@ function splitPath(input: string): string[] {
 }
 
 function normalizeForComparison(input: string): string {
-  return input.replace(/\\/g, '/');
+  return normalizePathForComparison(input);
+}
+
+function createSeenPathSet(paths: string[]): Set<string> {
+  return new Set(paths.map(normalizeForComparison));
+}
+
+function hasSeenPath(seenPaths: Set<string>, path: string): boolean {
+  return seenPaths.has(normalizeForComparison(path));
+}
+
+function rememberPath(seenPaths: Set<string>, path: string): void {
+  seenPaths.add(normalizeForComparison(path));
 }
 
 /**
@@ -183,11 +184,7 @@ export function getParentDirectory(dirPath: string): string | null {
  * Check if dirPath is at or above stopPath in the directory tree.
  */
 function isAtOrAbove(dirPath: string, stopPath: string): boolean {
-  const normDir = normalizeForComparison(dirPath).replace(/\/$/, '');
-  const normStop = normalizeForComparison(stopPath).replace(/\/$/, '');
-
-  // dirPath is at or above stopPath if stopPath starts with dirPath
-  return normStop === normDir || normStop.startsWith(normDir + '/');
+  return isPathPrefix(dirPath, stopPath);
 }
 
 // =============================================================================
@@ -229,7 +226,9 @@ export function extractUserMentionPaths(
   for (const ref of fileReferences) {
     if (ref.path) {
       // Convert to absolute if relative
-      const absolutePath = isAbsolutePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
+      const absolutePath = isAbsoluteOrHomePath(ref.path)
+        ? ref.path
+        : joinPaths(projectRoot, ref.path);
       paths.push(absolutePath);
     }
   }
@@ -485,7 +484,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
   } = params;
 
   const newInjections: ClaudeMdInjection[] = [];
-  const previousPaths = new Set(previousInjections.map((inj) => inj.path));
+  const previousPaths = createSeenPathSet(previousInjections.map((inj) => inj.path));
 
   // For the first group, add global injections
   // Use "ai-N" format for firstSeenInGroup to enable turn navigation in SessionClaudeMdPanel
@@ -493,9 +492,9 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
   if (isFirstGroup) {
     const globalInjections = createGlobalInjections(projectRoot, turnGroupId, tokenData);
     for (const injection of globalInjections) {
-      if (!previousPaths.has(injection.path)) {
+      if (!hasSeenPath(previousPaths, injection.path)) {
         newInjections.push(injection);
-        previousPaths.add(injection.path);
+        rememberPath(previousPaths, injection.path);
       }
     }
   }
@@ -515,7 +514,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
   const responseRefs = extractFileRefsFromResponses(aiGroup.responses);
   for (const ref of responseRefs) {
     if (ref.path) {
-      const absPath = isAbsolutePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
+      const absPath = isAbsoluteOrHomePath(ref.path) ? ref.path : joinPaths(projectRoot, ref.path);
       allFilePaths.push(absPath);
     }
   }
@@ -526,7 +525,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
 
     for (const claudeMdPath of claudeMdPaths) {
       // Skip if already seen
-      if (previousPaths.has(claudeMdPath)) {
+      if (hasSeenPath(previousPaths, claudeMdPath)) {
         continue;
       }
 
@@ -546,7 +545,7 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
       // Create directory injection
       const injection = createDirectoryInjection(claudeMdPath, turnGroupId);
       newInjections.push(injection);
-      previousPaths.add(claudeMdPath);
+      rememberPath(previousPaths, claudeMdPath);
     }
   }
 

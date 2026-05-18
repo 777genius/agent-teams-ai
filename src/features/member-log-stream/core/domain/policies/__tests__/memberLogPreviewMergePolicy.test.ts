@@ -45,6 +45,7 @@ describe('memberLogPreviewMergePolicy', () => {
       'claude_transcript',
       'opencode_runtime',
     ]);
+    expect(member.warnings).toEqual([{ code: 'large_log_window_limited', message: 'limited' }]);
     expect(member.truncated).toBe(true);
     expect(member.overflowCount).toBe(2);
   });

@@ -54,7 +54,7 @@ A healthy review loop looks like this:
 Example request-changes comment:
 
 ```text
-Please keep the copy improvements, but revert the unrelated runtime wording in the provider table. Add a docs build result before resubmitting.
+Please keep the copy improvements, but revert the unrelated runtime wording in the provider table. Add the `pnpm --dir landing docs:build` result before resubmitting.
 ```
 
 ## Review states
@@ -72,6 +72,15 @@ Teams can review each other's work before you make the final call. This catches 
 
 Agent review is most useful when the reviewer has a clear rubric. For example, tell a reviewer to check only docs clarity, only IPC safety, or only test coverage. Broad "review everything" requests tend to produce weaker feedback.
 
+### MCP-driven review state
+
+Review state changes (request review, request changes, approve) are tool-driven. Leaving a "request changes" comment on a task does **not** move the kanban column to `needsFix` — a lead or agent must call the appropriate MCP tool:
+
+- `review_request_changes` — moves the task to `needsFix` and notifies the owner
+- `review_approve` — moves the task to `approved` and finalizes the review
+
+Comments alone are insufficient for state transitions. For the full list of review MCP tools and their parameters, see [MCP Integration](/guide/mcp-integration).
+
 ## Review participants
 
 The team lead is the default reviewer. You can configure additional reviewers in the Kanban settings if you want peers to review each other's work.
@@ -82,9 +91,11 @@ Prioritize these areas when reviewing:
 
 - **Provider auth and runtime detection** — did the agent change runtime setup in a way that would break other paths?
 - **IPC, preload, and filesystem boundaries** — keep Electron responsibilities separated
-- **Git and worktree behavior** — verify branch naming, commits, and pushes
+- **Git and worktree behavior** - verify branch naming, commits, and pushes; see [Git and worktree strategy](/guide/git-worktree-strategy) for isolation patterns.
 - **Parsing and task lifecycle logic** — changes to task references, chunking, or filtering can break message delivery
 - **Persistence and code review flows** — changes to task storage or review state must stay consistent across IPC layers
+
+For the canonical feature layout and hard guardrail links, use [Contributor Architecture](/reference/contributor-architecture).
 
 ## Verification
 

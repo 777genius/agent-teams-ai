@@ -142,6 +142,7 @@ export class TeamInboxReader {
           row.messageKind === 'slash_command' ||
           row.messageKind === 'slash_command_result' ||
           row.messageKind === 'task_comment_notification' ||
+          row.messageKind === 'task_stall_remediation' ||
           row.messageKind === 'member_work_sync_nudge' ||
           row.messageKind === 'agent_error'
             ? row.messageKind
@@ -159,6 +160,8 @@ export class TeamInboxReader {
               (id): id is string => typeof id === 'string' && id.length > 0
             )
           : undefined,
+        workSyncPayloadHash:
+          typeof row.workSyncPayloadHash === 'string' ? row.workSyncPayloadHash : undefined,
         slashCommand:
           row.slashCommand &&
           typeof row.slashCommand === 'object' &&

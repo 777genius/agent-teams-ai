@@ -12,10 +12,10 @@ import {
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
+import { HoverTooltip } from '@renderer/components/ui/hover-tooltip';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
@@ -234,6 +234,13 @@ export const MemberDraftRow = ({
       : undefined;
   const worktreeIsolationDisabled =
     isRemoved || Boolean(worktreeIsolationDisabledReason && member.isolation !== 'worktree');
+  const worktreeIsolationDescription =
+    worktreeIsolationDisabledReason && member.isolation !== 'worktree'
+      ? worktreeIsolationDisabledReason
+      : 'Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.';
+  const worktreeIsolationDescriptionId = showWorktreeIsolationControls
+    ? `member-${member.id}-worktree-isolation-description`
+    : undefined;
   const effectiveModelKey = effectiveModel?.trim() ?? '';
   const selectedModelIssueText =
     effectiveModelKey && modelIssueReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
@@ -247,6 +254,30 @@ export const MemberDraftRow = ({
   const currentModelIssueText =
     modelIssueText ?? selectedModelUnavailableText ?? selectedModelIssueText ?? null;
   const hasModelIssue = Boolean(currentModelIssueText);
+  const modelButtonDisabled = (lockProviderModel && !canOpenLockedModelPanel) || isRemoved;
+  const modelButtonTitle =
+    [currentModelIssueText, modelTooltipText]
+      .filter((message): message is string => Boolean(message))
+      .join('\n') || undefined;
+  const modelIssueDescriptionId = hasModelIssue ? `member-${member.id}-model-issue` : undefined;
+  const modelHelpDescriptionId = modelTooltipText ? `member-${member.id}-model-help` : undefined;
+  const modelButtonDescribedBy =
+    [modelIssueDescriptionId, modelHelpDescriptionId].filter(Boolean).join(' ') || undefined;
+  const modelButtonTooltipContent =
+    currentModelIssueText || modelTooltipText ? (
+      <>
+        {currentModelIssueText ? (
+          <span className="block text-red-300">{currentModelIssueText}</span>
+        ) : null}
+        {modelTooltipText ? (
+          <span
+            className={cn('block', currentModelIssueText && 'mt-1 border-t border-white/10 pt-1')}
+          >
+            {modelTooltipText}
+          </span>
+        ) : null}
+      </>
+    ) : null;
   const hasCustomProviderOrModel =
     !forceInheritedModelSettings && Boolean(member.providerId || member.model?.trim());
   const showSonnetExtraUsageWarning =
@@ -342,66 +373,74 @@ export const MemberDraftRow = ({
             </Button>
           ) : null}
           <div className="w-full min-w-0 space-y-1 sm:w-[150px] sm:min-w-[150px]">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex w-full">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                      hasModelIssue &&
-                        'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50'
-                    )}
-                    aria-label={modelButtonAriaLabel}
-                    disabled={(lockProviderModel && !canOpenLockedModelPanel) || isRemoved}
-                    onClick={() => setModelExpanded((prev) => !prev)}
-                  >
-                    {modelExpanded ? (
-                      <ChevronDown className="size-3.5" />
-                    ) : (
-                      <ChevronRight className="size-3.5" />
-                    )}
-                    <ProviderBrandLogo
-                      providerId={effectiveProviderId}
-                      className="size-3.5 shrink-0"
-                    />
-                    <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
-                    {hasModelIssue ? (
-                      <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
-                    ) : null}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {modelTooltipText || currentModelIssueText ? (
-                <TooltipContent side="top" className="max-w-64 text-xs leading-relaxed">
-                  {currentModelIssueText ? (
-                    <p className="text-red-300">{currentModelIssueText}</p>
-                  ) : null}
-                  {modelTooltipText ? (
-                    <p
-                      className={currentModelIssueText ? 'mt-1 border-t border-white/10 pt-1' : ''}
-                    >
-                      {modelTooltipText}
-                    </p>
-                  ) : null}
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
+            <HoverTooltip
+              content={modelButtonTooltipContent}
+              title={modelButtonTitle}
+              disabled={!modelButtonTooltipContent}
+              className="w-full"
+              contentClassName="max-w-64"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+                  hasModelIssue &&
+                    'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50'
+                )}
+                aria-label={modelButtonAriaLabel}
+                aria-describedby={modelButtonDescribedBy}
+                disabled={modelButtonDisabled}
+                onClick={() => setModelExpanded((prev) => !prev)}
+              >
+                {modelExpanded ? (
+                  <ChevronDown className="size-3.5" />
+                ) : (
+                  <ChevronRight className="size-3.5" />
+                )}
+                <ProviderBrandLogo providerId={effectiveProviderId} className="size-3.5 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+                {hasModelIssue ? (
+                  <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
+                ) : null}
+              </Button>
+            </HoverTooltip>
+            {modelTooltipText ? (
+              <span id={modelHelpDescriptionId} className="sr-only">
+                {modelTooltipText}
+              </span>
+            ) : null}
+            {currentModelIssueText ? (
+              <p
+                id={modelIssueDescriptionId}
+                className="flex items-start gap-1 text-[10px] leading-snug text-red-300"
+              >
+                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                <span>{currentModelIssueText}</span>
+              </p>
+            ) : null}
           </div>
           {showWorktreeIsolationControls ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <div className="space-y-0.5">
+              <HoverTooltip
+                as="div"
+                content={worktreeIsolationDescription}
+                title={worktreeIsolationDescription}
+                className="shrink-0"
+                contentClassName="max-w-64"
+              >
                 <div
                   className={cn(
-                    'flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 text-xs text-[var(--color-text-secondary)]',
+                    'flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 text-xs text-[var(--color-text-secondary)]',
                     worktreeIsolationDisabled && 'cursor-not-allowed opacity-50'
                   )}
+                  aria-describedby={worktreeIsolationDescriptionId}
                 >
                   <Checkbox
                     id={`member-${member.id}-worktree-isolation`}
                     checked={member.isolation === 'worktree'}
                     disabled={worktreeIsolationDisabled}
+                    aria-describedby={worktreeIsolationDescriptionId}
                     onCheckedChange={(checked) =>
                       onWorktreeIsolationChange?.(member.id, checked === true)
                     }
@@ -417,13 +456,11 @@ export const MemberDraftRow = ({
                     <span>Worktree</span>
                   </Label>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-64 text-xs leading-relaxed">
-                {worktreeIsolationDisabledReason && member.isolation !== 'worktree'
-                  ? worktreeIsolationDisabledReason
-                  : 'Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.'}
-              </TooltipContent>
-            </Tooltip>
+              </HoverTooltip>
+              <span id={worktreeIsolationDescriptionId} className="sr-only">
+                {worktreeIsolationDescription}
+              </span>
+            </div>
           ) : null}
           {hideActionButton ? null : isRemoved ? (
             <Button

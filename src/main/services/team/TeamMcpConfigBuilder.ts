@@ -1,10 +1,10 @@
+import { execCli } from '@main/utils/childProcess';
 import {
   getClaudeBasePath,
   getMcpConfigsBasePath,
   getMcpServerBasePath,
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import { execFile } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -185,17 +185,11 @@ async function resolveNodePath(options?: McpLaunchSpecResolveOptions): Promise<s
 
   try {
     emitProgress(options, 'node-runtime', 'Resolving Node.js runtime for MCP server...');
-    const resolved = await new Promise<string>((resolve, reject) => {
-      execFile(
-        'node',
-        ['-e', 'process.stdout.write(process.execPath)'],
-        {
-          encoding: 'utf-8',
-          timeout: 5000,
-        },
-        (err, stdout) => (err ? reject(err) : resolve(stdout.trim()))
-      );
+    const { stdout } = await execCli('node', ['-e', 'process.stdout.write(process.execPath)'], {
+      encoding: 'utf-8',
+      timeout: 5000,
     });
+    const resolved = stdout.trim();
     if (resolved) {
       _resolvedNodePath = resolved;
       emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');

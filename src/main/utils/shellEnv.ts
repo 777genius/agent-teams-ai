@@ -87,6 +87,7 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
     const child = spawn(shellPath, args, {
       env: process.env,
       stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
     });
     const chunks: Buffer[] = [];
     let settled = false;

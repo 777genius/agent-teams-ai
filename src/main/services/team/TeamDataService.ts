@@ -3351,12 +3351,6 @@ export class TeamDataService {
     teamName: string,
     config: TeamConfig
   ): Promise<InboxMessage[]> {
-    const transcriptContext = await this.projectResolver.getContext(teamName);
-    if (!transcriptContext) {
-      return [];
-    }
-    const leadName =
-      transcriptContext.config.members?.find((m) => isLeadMember(m))?.name ?? 'team-lead';
     const knownLeadSessionIds = this.getRecentLeadSessionIds(config);
     if (knownLeadSessionIds.length === 0) {
       return [];
@@ -3365,11 +3359,36 @@ export class TeamDataService {
     if (sessionIds.length === 0) {
       return [];
     }
-    const availableJsonlPaths = await this.getLeadSessionJsonlPaths(transcriptContext.projectDir);
+
+    let transcriptContext = await this.projectResolver.getLiveBaseContext(teamName);
+    if (!transcriptContext) {
+      transcriptContext = await this.projectResolver.getContext(teamName, {
+        includeTeamSubagentSessionDiscovery: false,
+      });
+    }
+    if (!transcriptContext) {
+      return [];
+    }
+
+    let availableJsonlPaths = await this.getLeadSessionJsonlPaths(transcriptContext.projectDir);
+    const primaryLeadSessionId = sessionIds[0];
+    const hasPrimaryLeadSessionPath = (): boolean =>
+      Boolean(primaryLeadSessionId && availableJsonlPaths.has(primaryLeadSessionId));
+    if (!hasPrimaryLeadSessionPath()) {
+      const fallbackContext = await this.projectResolver.getContext(teamName, {
+        includeTeamSubagentSessionDiscovery: false,
+      });
+      if (fallbackContext) {
+        transcriptContext = fallbackContext;
+        availableJsonlPaths = await this.getLeadSessionJsonlPaths(transcriptContext.projectDir);
+      }
+    }
     if (availableJsonlPaths.size === 0) {
       return [];
     }
 
+    const leadName =
+      transcriptContext.config.members?.find((m) => isLeadMember(m))?.name ?? 'team-lead';
     const texts: InboxMessage[] = [];
     for (const sessionId of sessionIds) {
       if (texts.length >= MAX_LEAD_TEXTS) break;

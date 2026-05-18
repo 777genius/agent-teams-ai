@@ -9,19 +9,7 @@ const hoisted = vi.hoisted(() => ({
     isPackaged: false,
     version: '9.9.9-test',
   },
-  execFileMock: vi.fn(
-    (
-      _file: string,
-      _args: readonly string[],
-      _options:
-        | { encoding?: string; timeout?: number }
-        | ((error: Error | null, stdout: string, stderr: string) => void),
-      callback?: (error: Error | null, stdout: string, stderr: string) => void
-    ) => {
-      const cb = typeof _options === 'function' ? _options : callback;
-      cb?.(null, '/mock/node', '');
-    }
-  ),
+  execCliMock: vi.fn(async () => ({ stdout: '/mock/node', stderr: '' })),
 }));
 
 let mockHomeDir = '';
@@ -29,11 +17,11 @@ type ModuleLoad = (request: string, parent: NodeModule | undefined, isMain: bool
 const moduleInternal = Module as unknown as { _load: ModuleLoad };
 const originalModuleLoad = moduleInternal._load;
 
-vi.mock('child_process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('child_process')>();
+vi.mock('@main/utils/childProcess', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
   return {
     ...actual,
-    execFile: hoisted.execFileMock,
+    execCli: hoisted.execCliMock,
   };
 });
 
@@ -189,7 +177,7 @@ describe('TeamMcpConfigBuilder', () => {
     setAppDataBasePath(tempAppData);
     setPackagedMode(false);
     setResourcesPath(undefined);
-    hoisted.execFileMock.mockClear();
+    hoisted.execCliMock.mockClear();
   });
 
   afterEach(() => {
@@ -281,6 +269,21 @@ describe('TeamMcpConfigBuilder', () => {
 
     const server = parsed.mcpServers?.['agent-teams'];
     expectNodeEntry(server, builtEntry);
+  });
+
+  it('uses the shared CLI helper for the Node.js runtime resolver', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    const builder = new TeamMcpConfigBuilder();
+
+    const configPath = await builder.writeConfigFile();
+    createdPaths.push(configPath);
+
+    expect(readGeneratedServer(configPath)?.command).toBe('/mock/node');
+    expect(hoisted.execCliMock).toHaveBeenCalledWith(
+      'node',
+      ['-e', 'process.stdout.write(process.execPath)'],
+      expect.objectContaining({ encoding: 'utf-8', timeout: 5000 })
+    );
   });
 
   it('keeps generated team MCP config minimal and does not inline top-level user MCP', async () => {

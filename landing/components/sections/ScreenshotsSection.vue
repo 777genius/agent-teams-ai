@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { register } from 'swiper/element/bundle';
 import { mdiChevronLeft, mdiChevronRight, mdiClose, mdiArrowExpand } from '@mdi/js';
 import { screenshots as screenshotData } from '~/data/screenshots';
@@ -11,6 +11,16 @@ register();
 
 const publicPath = (path: string) => `${baseURL}${path.replace(/^\//, '')}`;
 
+type SwiperApi = {
+  slidePrev: () => void;
+  slideNext: () => void;
+};
+
+type SwiperContainerElement = HTMLElement & {
+  initialize: () => void;
+  swiper?: SwiperApi;
+};
+
 const screenshots = screenshotData.map((s) => ({
   src: publicPath(s.path),
   alt: s.alt,
@@ -18,7 +28,7 @@ const screenshots = screenshotData.map((s) => ({
   height: s.height,
 }));
 
-const swiperRef = ref<HTMLElement | null>(null);
+const swiperRef = ref<SwiperContainerElement | null>(null);
 const swiperReady = ref(false);
 const lightboxOpen = ref(false);
 const lightboxIndex = ref(0);
@@ -107,7 +117,7 @@ onMounted(() => {
         },
       },
     });
-    (swiperRef.value as any).initialize();
+    swiperRef.value.initialize();
     swiperReady.value = true;
   }
 });
@@ -120,11 +130,11 @@ onUnmounted(() => {
 });
 
 function slidePrev() {
-  (swiperRef.value as any)?.swiper?.slidePrev();
+  swiperRef.value?.swiper?.slidePrev();
 }
 
 function slideNext() {
-  (swiperRef.value as any)?.swiper?.slideNext();
+  swiperRef.value?.swiper?.slideNext();
 }
 </script>
 
@@ -161,7 +171,7 @@ function slideNext() {
               class="screenshots-section__img"
               loading="lazy"
               decoding="async"
-            />
+            >
             <div class="screenshots-section__card-overlay">
               <v-icon :icon="mdiArrowExpand" size="24" />
             </div>
@@ -208,7 +218,7 @@ function slideNext() {
               :alt="screenshots[lightboxIndex].alt"
               class="screenshots-lightbox__img"
               decoding="async"
-            />
+            >
             <div class="screenshots-lightbox__counter">
               {{ lightboxIndex + 1 }} / {{ screenshots.length }}
             </div>

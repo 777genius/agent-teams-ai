@@ -49,6 +49,18 @@ function uniqueNonEmpty(items) {
   return [...new Set(items.filter((item) => typeof item === 'string' && item.trim()))];
 }
 
+function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
+  const explicit =
+    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
+    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
+    '';
+  return [
+    `explicit=${explicit ? 'set' : 'missing'}`,
+    `stateFile=${stateFileUrl ? 'set' : `missing:${getControlApiStatePath(context)}`}`,
+    `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
+  ].join(', ');
+}
+
 function resolveControlBaseUrls(context, flags = {}) {
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
@@ -63,7 +75,12 @@ function resolveControlBaseUrls(context, flags = {}) {
 
   if (candidates.length === 0) {
     throw new Error(
-      'Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL.'
+      `Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL. Lookup: ${describeControlApiLookup(
+        context,
+        flags,
+        stateFileUrl,
+        envUrl
+      )}.`
     );
   }
 

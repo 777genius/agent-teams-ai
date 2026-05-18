@@ -111,16 +111,44 @@ describe('teamModelAvailability', () => {
     );
   });
 
-  it('builds Codex model options from the runtime list instead of the hardcoded fallback', () => {
+  it('builds Codex model options from the runtime list plus disabled safety entries', () => {
     const providerStatus = createCodexProviderStatus(['gpt-5.4', 'gpt-5.3-codex']);
 
     expect(getAvailableTeamProviderModelOptions('codex', providerStatus)).toEqual([
       { value: '', label: 'Default', badgeLabel: 'Default' },
-      { value: 'gpt-5.4', label: '5.4', availabilityStatus: 'available', availabilityReason: null },
+      {
+        value: 'gpt-5.4',
+        label: '5.4',
+        badgeLabel: undefined,
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
       {
         value: 'gpt-5.3-codex',
         label: '5.3 Codex',
+        badgeLabel: undefined,
         availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.3-codex-spark',
+        label: '5.3 Codex Spark',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.2-codex',
+        label: '5.2 Codex',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.1-codex-mini',
+        label: '5.1 Codex Mini',
+        badgeLabel: undefined,
+        availabilityStatus: null,
         availabilityReason: null,
       },
     ]);
@@ -148,8 +176,30 @@ describe('teamModelAvailability', () => {
       {
         value: 'gpt-5.4',
         label: '5.4',
+        badgeLabel: undefined,
         availabilityStatus: 'unavailable',
         availabilityReason: 'No access for this account',
+      },
+      {
+        value: 'gpt-5.3-codex-spark',
+        label: '5.3 Codex Spark',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.2-codex',
+        label: '5.2 Codex',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
+      },
+      {
+        value: 'gpt-5.1-codex-mini',
+        label: '5.1 Codex Mini',
+        badgeLabel: undefined,
+        availabilityStatus: null,
+        availabilityReason: null,
       },
     ]);
   });

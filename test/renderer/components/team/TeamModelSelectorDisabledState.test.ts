@@ -4,17 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 
-vi.mock('@renderer/components/ui/tooltip', () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  Tooltip: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  TooltipContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
-}));
-
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
   let currentOnValueChange: ((value: string) => void) | null = null;
@@ -131,6 +120,12 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('Default');
     expect(host.textContent).not.toContain('5.1 Codex Mini');
     expect(host.textContent).not.toContain('5.3 Codex Spark');
+    const defaultButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.trim().startsWith('Default')
+    );
+    expect(defaultButton?.getAttribute('title')).toBe(
+      'Uses the runtime default for the selected provider.'
+    );
 
     await act(async () => {
       root.unmount();
@@ -223,7 +218,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(onValueChange).toHaveBeenCalledWith('');
     expect(host.textContent).toContain('5.4');
     expect(host.textContent).toContain('5.3 Codex');
-    expect(host.textContent).not.toContain('5.2 Codex');
+    const disabledCodexButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('5.2 Codex')
+    );
+    expect(disabledCodexButton).not.toBeNull();
+    expect(disabledCodexButton?.getAttribute('aria-disabled')).toBe('true');
 
     await act(async () => {
       root.unmount();
@@ -697,6 +696,66 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     await act(async () => {
       disabledButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps known disabled Codex tiles visible when the runtime omits them', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'codex',
+          models: ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.2'],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const disabledButtons = ['5.3 Codex Spark', '5.2 Codex', '5.1 Codex Mini'].map((label) => {
+      const button = Array.from(host.querySelectorAll('button')).find((candidate) =>
+        candidate.textContent?.includes(label)
+      );
+      expect(button, `${label} should stay visible as a disabled option`).not.toBeNull();
+      expect(button?.getAttribute('aria-disabled')).toBe('true');
+      expect(button?.textContent).toContain('Disabled');
+      expect(button?.getAttribute('title')).toContain('Temporarily disabled for team agents');
+      return button;
+    });
+
+    const activeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('5.2')
+    );
+    expect(activeButton?.textContent).toContain('Recommended');
+    expect(activeButton?.getAttribute('aria-disabled')).toBe('false');
+
+    await act(async () => {
+      disabledButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
@@ -1375,6 +1434,118 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onValueChange).toHaveBeenCalledWith('openrouter/moonshotai/kimi-k2');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders OpenCode free badges and tiny model pricing from runtime catalog metadata', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: ['opencode/big-pickle', 'opencode/minimax-m2.7'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-13T00:00:00.000Z',
+            staleAt: '2026-05-13T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  cost: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
+                  context: 200000,
+                  limits: null,
+                  free: true,
+                },
+              },
+              {
+                id: 'opencode/minimax-m2.7',
+                launchModel: 'opencode/minimax-m2.7',
+                displayName: 'minimax-m2.7',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  cost: { input: 0.3, output: 1.2, cache_read: 0.06, cache_write: 0.375 },
+                  context: 200000,
+                  limits: null,
+                  free: false,
+                },
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+              message: null,
+              code: null,
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('in Free · out Free / 1M');
+    expect(host.textContent).toContain('in $0.30 · out $1.20 / 1M');
+    expect(host.textContent).toContain('Free');
+
+    const pricingRows = Array.from(
+      host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-pricing"]')
+    );
+    expect(pricingRows).toHaveLength(2);
+    expect(pricingRows[0]?.className).toContain('text-[9px]');
+    expect(pricingRows[1]?.getAttribute('title')).toContain('Cache write: $0.375 per 1M tokens');
+
+    const freeBadges = host.querySelectorAll(
+      '[data-testid="team-model-selector-model-free-badge"]'
+    );
+    expect(freeBadges).toHaveLength(1);
 
     await act(async () => {
       root.unmount();

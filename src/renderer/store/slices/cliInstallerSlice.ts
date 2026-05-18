@@ -7,6 +7,7 @@ import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { AppState } from '../types';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type {
   CliInstallationStatus,
   CliProviderId,
@@ -19,6 +20,11 @@ const logger = createLogger('Store:cliInstaller');
 
 /** Max log lines to keep in UI (reserved for future use) */
 const _MAX_LOG_LINES = 50;
+const OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
+const OPENCODE_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
+const CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
+const CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
+
 export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = [
   'anthropic',
   'codex',
@@ -32,7 +38,7 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
       { providerId: 'anthropic', displayName: 'Anthropic' },
       { providerId: 'codex', displayName: 'Codex' },
       { providerId: 'gemini', displayName: 'Gemini' },
-      { providerId: 'opencode', displayName: 'OpenCode (75+ LLM providers)' },
+      { providerId: 'opencode', displayName: 'OpenCode (200+ models)' },
     ] as const
   ).map((provider) => ({
     ...provider,
@@ -106,6 +112,66 @@ function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefi
   );
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
+  cliProviderStatusInFlight.delete(`${providerId}:status`);
+  cliProviderStatusInFlight.delete(`${providerId}:verify`);
+}
+
+function getProviderStatus(
+  status: CliInstallationStatus | null | undefined,
+  providerId: CliProviderId
+): CliProviderStatus | undefined {
+  return status?.providers.find((provider) => provider.providerId === providerId);
+}
+
+function hasOpenCodeModels(provider: CliProviderStatus | undefined): boolean {
+  return provider?.providerId === 'opencode' && provider.models.length > 0;
+}
+
+function hasCodexRuntimeReady(provider: CliProviderStatus | undefined): boolean {
+  return (
+    provider?.providerId === 'codex' &&
+    provider.availableBackends?.some((backend) => backend.id === 'codex-native') === true
+  );
+}
+
+function isOpenCodeRuntimeMissingSnapshot(provider: CliProviderStatus | undefined): boolean {
+  if (!provider || provider.providerId !== 'opencode' || provider.models.length > 0) {
+    return false;
+  }
+
+  const message = `${provider.statusMessage ?? ''} ${provider.detailMessage ?? ''}`.toLowerCase();
+  return (
+    provider.verificationState === 'error' &&
+    message.includes('opencode cli') &&
+    (message.includes('not found') ||
+      message.includes('not installed') ||
+      message.includes('missing'))
+  );
+}
+
+function shouldPreserveCurrentProviderStatus(
+  currentProvider: CliProviderStatus | undefined,
+  incomingProvider: CliProviderStatus
+): boolean {
+  if (!currentProvider) {
+    return false;
+  }
+
+  if (hasOpenCodeModels(currentProvider) && isOpenCodeRuntimeMissingSnapshot(incomingProvider)) {
+    return true;
+  }
+
+  return (
+    isHydratedMultimodelProviderStatus(currentProvider) &&
+    !isHydratedMultimodelProviderStatus(incomingProvider)
+  );
+}
+
 export function getIncompleteMultimodelProviderIds(
   status: CliInstallationStatus | null
 ): CliProviderId[] {
@@ -148,6 +214,142 @@ export function reconcileMultimodelProviderLoading(
   );
 }
 
+function areArraysEqual<T>(
+  a: readonly T[],
+  b: readonly T[],
+  isEqual: (left: T, right: T) => boolean
+): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (!isEqual(a[i], b[i])) return false;
+  }
+  return true;
+}
+
+/**
+ * Content-level equality for cloned IPC DTO values. The provider snapshot is
+ * serialised by `CliInstallerService.cloneCliInstallationStatus()` and
+ * `publishStatusSnapshot()` before reaching the renderer, so every nested
+ * array/object arrives as a fresh reference even when nothing changed. These
+ * values are plain JSON-serialisable DTOs, so a stringify-based comparator is
+ * acceptable: false negatives are fine (we just produce a new merged status
+ * unnecessarily), but false positives are not (we must never preserve stale
+ * data).
+ */
+function areDtoValuesEqual<T>(a: T | null | undefined, b: T | null | undefined): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return a == null && b == null;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function areExtensionCapabilitiesEqual(
+  a: CliProviderStatus['capabilities']['extensions']['plugins'],
+  b: CliProviderStatus['capabilities']['extensions']['plugins']
+): boolean {
+  if (a === b) return true;
+  return (
+    a.status === b.status &&
+    a.ownership === b.ownership &&
+    (a.reason ?? null) === (b.reason ?? null)
+  );
+}
+
+function areProviderCapabilitiesEqual(
+  a: CliProviderStatus['capabilities'],
+  b: CliProviderStatus['capabilities']
+): boolean {
+  if (a === b) return true;
+  return (
+    a.teamLaunch === b.teamLaunch &&
+    a.oneShot === b.oneShot &&
+    areExtensionCapabilitiesEqual(a.extensions.plugins, b.extensions.plugins) &&
+    areExtensionCapabilitiesEqual(a.extensions.mcp, b.extensions.mcp) &&
+    areExtensionCapabilitiesEqual(a.extensions.skills, b.extensions.skills) &&
+    areExtensionCapabilitiesEqual(a.extensions.apiKeys, b.extensions.apiKeys)
+  );
+}
+
+function areProviderBackendsEqual(
+  a: CliProviderStatus['backend'],
+  b: CliProviderStatus['backend']
+): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  return (
+    a.kind === b.kind &&
+    a.label === b.label &&
+    (a.endpointLabel ?? null) === (b.endpointLabel ?? null) &&
+    (a.projectId ?? null) === (b.projectId ?? null) &&
+    (a.authMethodDetail ?? null) === (b.authMethodDetail ?? null)
+  );
+}
+
+/**
+ * Content-level equality check for a single CliProviderStatus.
+ *
+ * Compares all scalar fields explicitly, the well-typed nested structures
+ * (capabilities, backend) via dedicated comparators, and the cloned DTO
+ * fields (modelCatalog, modelAvailability, runtimeCapabilities,
+ * subscriptionRateLimits, connection, availableBackends,
+ * externalRuntimeDiagnostics) by content. This is necessary because the
+ * IPC path (`CliInstallerService.cloneCliInstallationStatus()` then
+ * `publishStatusSnapshot()`) hands the renderer freshly-deserialised
+ * provider objects on every tick — reference equality on those nested
+ * fields would never hold even when the snapshot is structurally
+ * identical.
+ */
+function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatus): boolean {
+  if (a === b) return true;
+  return (
+    a.providerId === b.providerId &&
+    a.displayName === b.displayName &&
+    a.supported === b.supported &&
+    a.authenticated === b.authenticated &&
+    a.authMethod === b.authMethod &&
+    a.verificationState === b.verificationState &&
+    (a.modelVerificationState ?? null) === (b.modelVerificationState ?? null) &&
+    (a.statusMessage ?? null) === (b.statusMessage ?? null) &&
+    (a.detailMessage ?? null) === (b.detailMessage ?? null) &&
+    a.canLoginFromUi === b.canLoginFromUi &&
+    (a.selectedBackendId ?? null) === (b.selectedBackendId ?? null) &&
+    (a.resolvedBackendId ?? null) === (b.resolvedBackendId ?? null) &&
+    areArraysEqual(a.models, b.models, (left, right) => left === right) &&
+    areProviderCapabilitiesEqual(a.capabilities, b.capabilities) &&
+    areProviderBackendsEqual(a.backend ?? null, b.backend ?? null) &&
+    areDtoValuesEqual(a.modelCatalog ?? null, b.modelCatalog ?? null) &&
+    areDtoValuesEqual(a.modelAvailability ?? [], b.modelAvailability ?? []) &&
+    areDtoValuesEqual(a.runtimeCapabilities ?? null, b.runtimeCapabilities ?? null) &&
+    areDtoValuesEqual(a.subscriptionRateLimits ?? null, b.subscriptionRateLimits ?? null) &&
+    areDtoValuesEqual(a.connection ?? null, b.connection ?? null) &&
+    areDtoValuesEqual(a.availableBackends ?? [], b.availableBackends ?? []) &&
+    areDtoValuesEqual(a.externalRuntimeDiagnostics ?? [], b.externalRuntimeDiagnostics ?? [])
+  );
+}
+
+function isCliInstallationStatusContentEqual(
+  a: CliInstallationStatus,
+  b: CliInstallationStatus
+): boolean {
+  return (
+    a.flavor === b.flavor &&
+    a.displayName === b.displayName &&
+    a.supportsSelfUpdate === b.supportsSelfUpdate &&
+    a.showVersionDetails === b.showVersionDetails &&
+    a.showBinaryPath === b.showBinaryPath &&
+    a.installed === b.installed &&
+    a.installedVersion === b.installedVersion &&
+    a.binaryPath === b.binaryPath &&
+    (a.launchError ?? null) === (b.launchError ?? null) &&
+    a.latestVersion === b.latestVersion &&
+    a.updateAvailable === b.updateAvailable &&
+    a.authLoggedIn === b.authLoggedIn &&
+    a.authStatusChecking === b.authStatusChecking &&
+    a.authMethod === b.authMethod &&
+    areArraysEqual(a.providers, b.providers, Object.is)
+  );
+}
+
 export function mergeCliStatusPreservingHydratedProviders(
   current: CliInstallationStatus | null,
   incoming: CliInstallationStatus
@@ -156,6 +358,9 @@ export function mergeCliStatusPreservingHydratedProviders(
     current?.flavor !== 'agent_teams_orchestrator' ||
     incoming.flavor !== 'agent_teams_orchestrator'
   ) {
+    if (current && isCliInstallationStatusContentEqual(current, incoming)) {
+      return current;
+    }
     return incoming;
   }
 
@@ -165,11 +370,15 @@ export function mergeCliStatusPreservingHydratedProviders(
   const incomingProviderIds = new Set(incoming.providers.map((provider) => provider.providerId));
   const providers = incoming.providers.map((incomingProvider) => {
     const currentProvider = currentProvidersById.get(incomingProvider.providerId);
-    if (
-      currentProvider &&
-      isHydratedMultimodelProviderStatus(currentProvider) &&
-      !isHydratedMultimodelProviderStatus(incomingProvider)
-    ) {
+    if (!currentProvider) {
+      return incomingProvider;
+    }
+    if (shouldPreserveCurrentProviderStatus(currentProvider, incomingProvider)) {
+      return currentProvider;
+    }
+    // Preserve the current reference when content is identical so the
+    // providers array stays reference-stable across steady-state IPC polls.
+    if (areProviderStatusContentEqual(currentProvider, incomingProvider)) {
       return currentProvider;
     }
     return incomingProvider;
@@ -186,12 +395,68 @@ export function mergeCliStatusPreservingHydratedProviders(
 
   const authenticatedProvider = providers.find((provider) => provider.authenticated) ?? null;
 
-  return {
+  const mergedProviders = areArraysEqual(providers, current.providers, Object.is)
+    ? current.providers
+    : providers;
+
+  const merged: CliInstallationStatus = {
     ...incoming,
-    providers,
-    authLoggedIn: providers.some((provider) => provider.authenticated),
+    providers: mergedProviders,
+    authLoggedIn: mergedProviders.some((provider) => provider.authenticated),
     authMethod: authenticatedProvider?.authMethod ?? null,
   };
+
+  if (isCliInstallationStatusContentEqual(current, merged)) {
+    return current;
+  }
+
+  return merged;
+}
+
+export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+): Promise<void> {
+  if (!api.cliInstaller) {
+    return;
+  }
+
+  for (let attempt = 1; attempt <= OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
+    await api.cliInstaller.invalidateStatus();
+    clearCliProviderStatusInFlight('opencode');
+    const epoch = ++cliStatusEpoch;
+    await get().fetchCliProviderStatus('opencode', { silent: false, epoch });
+
+    if (hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
+      return;
+    }
+
+    if (attempt < OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS) {
+      await sleep(OPENCODE_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS);
+    }
+  }
+}
+
+export async function refreshCodexProviderStatusAfterRuntimeInstall(
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+): Promise<void> {
+  if (!api.cliInstaller) {
+    return;
+  }
+
+  for (let attempt = 1; attempt <= CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
+    await api.cliInstaller.invalidateStatus();
+    clearCliProviderStatusInFlight('codex');
+    const epoch = ++cliStatusEpoch;
+    await get().fetchCliProviderStatus('codex', { silent: false, epoch });
+
+    if (hasCodexRuntimeReady(getProviderStatus(get().cliStatus, 'codex'))) {
+      return;
+    }
+
+    if (attempt < CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS) {
+      await sleep(CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS);
+    }
+  }
 }
 
 function isMultimodelCliStatus(
@@ -235,7 +500,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode (75+ LLM providers)';
+      return 'OpenCode (200+ models)';
     case 'kilocode':
       return 'KiloCode';
   }
@@ -293,6 +558,9 @@ export interface CliInstallerSlice {
   openCodeRuntimeStatus: OpenCodeRuntimeStatus | null;
   openCodeRuntimeStatusLoading: boolean;
   openCodeRuntimeError: string | null;
+  codexRuntimeStatus: CodexRuntimeStatus | null;
+  codexRuntimeStatusLoading: boolean;
+  codexRuntimeError: string | null;
 
   // Actions
   bootstrapCliStatus: (options?: { multimodelEnabled?: boolean }) => Promise<void>;
@@ -306,6 +574,9 @@ export interface CliInstallerSlice {
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
   installOpenCodeRuntime: () => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
+  fetchCodexRuntimeStatus: () => Promise<void>;
+  installCodexRuntime: () => Promise<void>;
+  invalidateCodexRuntimeStatus: () => Promise<void>;
 }
 
 let cliStatusInFlight: Promise<void> | null = null;
@@ -313,6 +584,7 @@ const cliProviderStatusInFlight = new Map<string, Promise<void>>();
 let cliStatusEpoch = 0;
 const cliProviderStatusSeq = new Map<CliProviderId, number>();
 let openCodeRuntimeStatusInFlight: Promise<void> | null = null;
+let codexRuntimeStatusInFlight: Promise<void> | null = null;
 
 // =============================================================================
 // Slice Creator
@@ -339,6 +611,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   openCodeRuntimeStatus: null,
   openCodeRuntimeStatusLoading: false,
   openCodeRuntimeError: null,
+  codexRuntimeStatus: null,
+  codexRuntimeStatusLoading: false,
+  codexRuntimeError: null,
 
   bootstrapCliStatus: async (options) => {
     if (!api.cliInstaller) return;
@@ -755,9 +1030,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
       if (status.installed) {
         await api.openCodeRuntime.invalidateStatus();
-        await api.cliInstaller?.invalidateStatus();
-        const epoch = ++cliStatusEpoch;
-        await get().fetchCliProviderStatus('opencode', { silent: false, epoch });
+        await refreshOpenCodeProviderStatusAfterRuntimeInstall(get);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
@@ -771,5 +1044,64 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   invalidateOpenCodeRuntimeStatus: async () => {
     await api.openCodeRuntime?.invalidateStatus();
     set({ openCodeRuntimeStatus: null });
+  },
+
+  fetchCodexRuntimeStatus: async () => {
+    if (!api.codexRuntime) return;
+    if (codexRuntimeStatusInFlight) return codexRuntimeStatusInFlight;
+
+    codexRuntimeStatusInFlight = (async () => {
+      set({ codexRuntimeStatusLoading: true, codexRuntimeError: null });
+      try {
+        const status = await api.codexRuntime.getStatus();
+        set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to check Codex runtime status';
+        logger.error('Failed to fetch Codex runtime status:', error);
+        set({ codexRuntimeError: message });
+      } finally {
+        set({ codexRuntimeStatusLoading: false });
+        codexRuntimeStatusInFlight = null;
+      }
+    })();
+
+    return codexRuntimeStatusInFlight;
+  },
+
+  installCodexRuntime: async () => {
+    if (!api.codexRuntime) return;
+    set({
+      codexRuntimeStatusLoading: true,
+      codexRuntimeError: null,
+      codexRuntimeStatus: {
+        installed: false,
+        source: 'missing',
+        state: 'checking',
+        progress: {
+          phase: 'checking',
+          detail: 'Resolving latest Codex package...',
+        },
+      },
+    });
+    try {
+      const status = await api.codexRuntime.install();
+      set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
+      if (status.installed) {
+        await api.codexRuntime.invalidateStatus();
+        await refreshCodexProviderStatusAfterRuntimeInstall(get);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to install Codex runtime';
+      logger.error('Failed to install Codex runtime:', error);
+      set({ codexRuntimeError: message });
+    } finally {
+      set({ codexRuntimeStatusLoading: false });
+    }
+  },
+
+  invalidateCodexRuntimeStatus: async () => {
+    await api.codexRuntime?.invalidateStatus();
+    set({ codexRuntimeStatus: null });
   },
 });

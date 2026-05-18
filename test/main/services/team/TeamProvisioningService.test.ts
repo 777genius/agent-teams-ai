@@ -6,6 +6,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildWorkspaceTrustPathCandidates } from '@features/workspace-trust/main';
 
 const hoisted = vi.hoisted(() => ({
   paths: {
@@ -175,6 +176,9 @@ import {
 } from '@features/tmux-installer/main';
 import pidusage from 'pidusage';
 
+const EXPECTED_RUNTIME_PIDUSAGE_OPTIONS =
+  process.platform === 'win32' ? { maxage: 10_000 } : { maxage: 0 };
+
 function allowConsoleLogs() {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -247,6 +251,55 @@ function writeLaunchConfig(
     }),
     'utf8'
   );
+}
+
+async function startDeterministicLaunchCloseHarness(options?: {
+  teamName?: string;
+  leadSessionId?: string;
+  members?: string[];
+}) {
+  const teamName = options?.teamName ?? `launch-close-${Date.now()}`;
+  const leadSessionId = options?.leadSessionId ?? `lead-session-${teamName}`;
+  const members = options?.members ?? ['alice'];
+  writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, members);
+
+  vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+  const child = createRunningChild();
+  vi.mocked(spawnCli).mockReturnValue(child as any);
+
+  const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+    writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+    removeConfigFile: vi.fn(async () => {}),
+  } as any);
+  (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+    env: { CODEX_API_KEY: 'test' },
+    authSource: 'codex_runtime',
+  }));
+  (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+    members: members.map((name) => ({ name })),
+    source: 'members-meta',
+    warning: undefined,
+  }));
+  (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+  (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+  (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+  (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+  (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+  (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+  (svc as any).startFilesystemMonitor = vi.fn();
+  (svc as any).waitForValidConfig = vi.fn(async () => ({ ok: false }));
+  (svc as any).pathExists = vi.fn(async (targetPath: string) =>
+    targetPath.endsWith(`${leadSessionId}.jsonl`)
+  );
+
+  const progressUpdates: any[] = [];
+  const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, (progress) => {
+    progressUpdates.push(progress);
+  });
+  const run = (svc as any).runs.get(runId);
+  expect(run).toBeTruthy();
+
+  return { child, members, progressUpdates, run, runId, svc, teamName };
 }
 
 function writeLaunchState(
@@ -771,8 +824,7 @@ describe('TeamProvisioningService', () => {
             teamEventType: 'team_launched',
             teamName: 'late-all-joined-team',
             dedupeKey: 'team_launched:late-all-joined-team:run-late-all-joined',
-            body:
-              'Team "late-all-joined-team" has been launched - all 2 teammates joined and are ready for tasks.',
+            body: 'Team "late-all-joined-team" has been launched - all 2 teammates joined and are ready for tasks.',
           })
         );
 
@@ -2004,6 +2056,17 @@ describe('TeamProvisioningService', () => {
   });
 
   describe('launch-state no-op persistence guard', () => {
+    it('does not clear persisted launch state for an expected run after tracking is gone', () => {
+      const svc = new TeamProvisioningService();
+
+      expect(
+        (svc as any).canClearPersistedLaunchStateForRun(
+          'workspace-trust-stale-clear-team',
+          'run-stale'
+        )
+      ).toBe(false);
+    });
+
     it('does not rewrite launch-state or invalidate runtime cache for a recent semantic no-op', async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-05-02T10:00:05.000Z'));
@@ -2430,7 +2493,7 @@ describe('TeamProvisioningService', () => {
 
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
 
-      expect(pidusage).toHaveBeenCalledWith([111, 222], { maxage: 0 });
+      expect(pidusage).toHaveBeenCalledWith([111, 222], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
       expect(snapshot.members['team-lead']).toMatchObject({
         pid: 111,
         rssBytes: 123_000_000,
@@ -2570,9 +2633,9 @@ describe('TeamProvisioningService', () => {
 
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
 
-      expect(pidusage).toHaveBeenNthCalledWith(1, [111, 222], { maxage: 0 });
-      expect(pidusage).toHaveBeenNthCalledWith(2, 111, { maxage: 0 });
-      expect(pidusage).toHaveBeenNthCalledWith(3, 222, { maxage: 0 });
+      expect(pidusage).toHaveBeenNthCalledWith(1, [111, 222], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
+      expect(pidusage).toHaveBeenNthCalledWith(2, 111, EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
+      expect(pidusage).toHaveBeenNthCalledWith(3, 222, EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
       expect(snapshot.members['team-lead']?.rssBytes).toBe(123_000_000);
       expect(snapshot.members.alice?.rssBytes).toBe(456_000_000);
     });
@@ -2684,7 +2747,7 @@ describe('TeamProvisioningService', () => {
 
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('nice-team');
 
-      expect(pidusage).toHaveBeenCalledWith([111, 333], { maxage: 0 });
+      expect(pidusage).toHaveBeenCalledWith([111, 333], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
       expect(snapshot.members.alice).toMatchObject({
         alive: true,
         providerId: 'anthropic',
@@ -3196,8 +3259,8 @@ describe('TeamProvisioningService', () => {
 
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
 
-      expect(pidusage).toHaveBeenCalledWith([111, 333], { maxage: 0 });
-      expect(pidusage).toHaveBeenCalledWith(333, { maxage: 0 });
+      expect(pidusage).toHaveBeenCalledWith([111, 333], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
+      expect(pidusage).toHaveBeenCalledWith(333, EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
       expect(snapshot.members.bob).toMatchObject({
         memberName: 'bob',
         alive: false,
@@ -3272,7 +3335,7 @@ describe('TeamProvisioningService', () => {
 
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('runtime-team');
 
-      expect(pidusage).toHaveBeenCalledWith([333], { maxage: 0 });
+      expect(pidusage).toHaveBeenCalledWith([333], EXPECTED_RUNTIME_PIDUSAGE_OPTIONS);
       expect(snapshot.members.bob).toMatchObject({
         memberName: 'bob',
         alive: false,
@@ -5325,9 +5388,9 @@ describe('TeamProvisioningService', () => {
       ];
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
-      await vi.waitFor(() => {
-        expect(adapterLaunch).toHaveBeenCalledTimes(1);
-      });
+      await run.mixedSecondaryLaneLaunchQueue;
+
+      expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
           laneId: 'secondary:opencode:bob',
@@ -5415,6 +5478,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_direct_lane',
         runtimePid: 456,
         diagnostics: [],
       }));
@@ -5489,6 +5553,39 @@ describe('TeamProvisioningService', () => {
       );
     });
 
+    it('does not deliver direct OpenCode messages when recovery leaves the lane inactive', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_direct_lane',
+        runtimePid: 456,
+        diagnostics: [],
+      }));
+      await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+      (svc as any).deleteSecondaryRuntimeRun('team-a', 'secondary:opencode:bob');
+      vi.spyOn(svc as any, 'tryRecoverOpenCodeRuntimeLaneBeforeDelivery').mockResolvedValue(false);
+      const committedRecoverySpy = vi
+        .spyOn(svc as any, 'tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery')
+        .mockResolvedValue(true);
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-1',
+        })
+      ).resolves.toMatchObject({
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+      });
+
+      expect(committedRecoverySpy).toHaveBeenCalled();
+      expect(sendMessageToMember).not.toHaveBeenCalled();
+    });
+
     it('persists verified OpenCode bridge runtime pids so member cards can show memory', async () => {
       const svc = new TeamProvisioningService();
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
@@ -5496,6 +5593,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_verified_pid',
         runtimePid: 456,
         diagnostics: [],
       }));
@@ -5621,6 +5719,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_unverified_pid',
         runtimePid: 456,
         diagnostics: [],
       }));
@@ -5723,6 +5822,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_snapshot_config',
         diagnostics: [],
       }));
       svc.setRuntimeAdapterRegistry(
@@ -5813,6 +5913,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_worktree_cwd',
         diagnostics: [],
       }));
       svc.setRuntimeAdapterRegistry(
@@ -6039,6 +6140,110 @@ describe('TeamProvisioningService', () => {
       );
     });
 
+    it('emits a narrow task-log signal when OpenCode prompt delivery records exact session evidence', async () => {
+      const svc = new TeamProvisioningService();
+      const emitter = vi.fn();
+      svc.setTeamChangeEmitter(emitter);
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        prePromptCursor: 'cursor-before',
+        responseObservation: {
+          state: 'pending',
+          deliveredUserMessageId: 'oc-user-1',
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: 'assistant_response_pending',
+        },
+        diagnostics: [],
+      }));
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+          sendMessageToMember,
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).getTrackedRunId = vi.fn(() => 'run-1');
+      (svc as any).provisioningRunByTeam.set('team-a', 'run-1');
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: 'team-a',
+        runId: 'opencode-run-bob',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/repo',
+      });
+      await writeDefaultBobOpenCodeBootstrapEvidence();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          projectPath: '/repo',
+          members: [
+            { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
+            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({
+          launchIdentity: { providerId: 'codex' },
+          providerId: 'codex',
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'hello bob',
+          messageId: 'msg-ledger-session',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+          taskRefs: [
+            {
+              taskId: 'task-a',
+              displayId: 'task-a',
+              teamName: 'team-a',
+            },
+          ],
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        responsePending: true,
+        responseState: 'pending',
+      });
+
+      expect(emitter).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'task-log-change',
+          teamName: 'team-a',
+          runId: 'opencode-run-bob',
+          taskId: 'task-a',
+          detail: 'opencode-prompt-delivery-session-evidence',
+          taskSignalKind: 'log',
+        })
+      );
+    });
+
     it('retries due stale OpenCode sessions instead of observing forever', async () => {
       const svc = new TeamProvisioningService();
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
@@ -6046,6 +6251,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: `msg_prompt_${sendMessageToMember.mock.calls.length}`,
         prePromptCursor: `cursor-${sendMessageToMember.mock.calls.length}`,
         responseObservation: {
           state: 'pending',
@@ -6178,6 +6384,13 @@ describe('TeamProvisioningService', () => {
       });
 
       expect(observeMessageDelivery).toHaveBeenCalledTimes(1);
+      expect(observeMessageDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: 'oc-session-bob',
+          runtimePromptMessageId: 'msg_prompt_1',
+          prePromptCursor: 'cursor-1',
+        })
+      );
       expect(sendMessageToMember).toHaveBeenCalledTimes(2);
       expect(sendMessageToMember.mock.calls[1]?.[0]).toMatchObject({
         runId: 'opencode-run-bob',
@@ -6946,6 +7159,109 @@ describe('TeamProvisioningService', () => {
         lastReason: 'opencode_prompt_acceptance_unknown_after_bridge_timeout',
       });
       expect(ledgerEnvelope.data[0].nextAttemptAt).toBeTruthy();
+    });
+
+    it('keeps accepted OpenCode responses without exact prompt identity acceptance-unknown', async () => {
+      const svc = new TeamProvisioningService();
+      const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
+        ok: true,
+        providerId: 'opencode',
+        memberName: String(input.memberName),
+        sessionId: 'oc-session-bob',
+        prePromptCursor: 'cursor-before',
+        diagnostics: [],
+      }));
+      const registry = new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+          sendMessageToMember,
+          observeMessageDelivery: vi.fn(),
+        } as any,
+      ]);
+      svc.setRuntimeAdapterRegistry(registry);
+
+      (svc as any).getTrackedRunId = vi.fn(() => 'run-1');
+      (svc as any).provisioningRunByTeam.set('team-a', 'run-1');
+      (svc as any).setSecondaryRuntimeRun({
+        teamName: 'team-a',
+        runId: 'opencode-run-bob',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/repo',
+      });
+      await writeDefaultBobOpenCodeBootstrapEvidence();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          projectPath: '/repo',
+          members: [
+            { name: 'team-lead', providerId: 'codex', model: 'gpt-5.4' },
+            { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          ],
+        })),
+      };
+      (svc as any).teamMetaStore = {
+        getMeta: vi.fn(async () => ({
+          launchIdentity: { providerId: 'codex' },
+          providerId: 'codex',
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'opencode/minimax-m2.5-free',
+          },
+        ]),
+      };
+
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'Please handle this.',
+          messageId: 'msg-accepted-missing-prompt-id',
+          replyRecipient: 'user',
+          actionMode: 'ask',
+          source: 'watcher',
+          inboxTimestamp: '2026-04-25T10:00:00.000Z',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        acceptanceUnknown: true,
+        reason: 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id',
+      });
+
+      const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        fileName: 'opencode-prompt-delivery-ledger.json',
+      });
+      const ledgerEnvelope = JSON.parse(await fsPromises.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          acceptanceUnknown: boolean;
+          status: string;
+          runtimePromptMessageId: string | null;
+          lastReason: string | null;
+          diagnostics: string[];
+        }>;
+      };
+      expect(ledgerEnvelope.data[0]).toMatchObject({
+        acceptanceUnknown: true,
+        status: 'failed_retryable',
+        runtimePromptMessageId: null,
+        lastReason: 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id',
+      });
+      expect(ledgerEnvelope.data[0].diagnostics).toContain(
+        'opencode_prompt_acceptance_missing_runtime_prompt_id'
+      );
     });
 
     it('marks OpenCode payload hash mismatch terminal without sending a duplicate prompt', async () => {
@@ -8198,11 +8514,12 @@ describe('TeamProvisioningService', () => {
         diagnostics: [],
       }));
       await configureOpenCodeBobDeliveryService({ svc, sendMessageToMember });
+      svc.setControlApiBaseUrlResolver(async () => 'http://127.0.0.1:43123');
 
-    await expect(
-      svc.deliverOpenCodeMemberMessage('team-a', {
-        memberName: 'bob',
-        text: 'Work sync check for #task-1.',
+      await expect(
+        svc.deliverOpenCodeMemberMessage('team-a', {
+          memberName: 'bob',
+          text: 'Work sync check for #task-1.',
           messageId: 'msg-work-sync-report',
           replyRecipient: 'team-lead',
           actionMode: 'do',
@@ -8224,6 +8541,11 @@ describe('TeamProvisioningService', () => {
         responseState: 'responded_non_visible_tool',
         ledgerStatus: 'responded',
       });
+      expect(sendMessageToMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          controlUrl: 'http://127.0.0.1:43123',
+        })
+      );
     });
 
     it('accepts review workflow tools as review pickup delivery response proof', async () => {
@@ -8800,6 +9122,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_after_restart',
         diagnostics: [],
       }));
       const registry = new TeamRuntimeAdapterRegistry([
@@ -8892,6 +9215,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_live_lane',
         diagnostics: [],
       }));
       svc.setRuntimeAdapterRegistry(
@@ -9255,6 +9579,7 @@ describe('TeamProvisioningService', () => {
         providerId: 'opencode',
         memberName: String(input.memberName),
         sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_manifest_fallback',
         diagnostics: [],
       }));
       const registry = new TeamRuntimeAdapterRegistry([
@@ -12525,7 +12850,7 @@ describe('TeamProvisioningService', () => {
   });
 
   describe('safe app launch matrix', () => {
-    it('does not wait for OpenCode secondary inboxes before completing primary filesystem readiness', async () => {
+    it('does not wait for OpenCode secondary inboxes before marking primary filesystem readiness', async () => {
       const teamName = 'mixed-secondary-fs-readiness';
       const teamDir = path.join(tempTeamsBase, teamName);
       fs.mkdirSync(path.join(teamDir, 'inboxes'), { recursive: true });
@@ -12575,8 +12900,8 @@ describe('TeamProvisioningService', () => {
         ],
       });
 
-      await vi.waitFor(() => expect(complete).toHaveBeenCalledTimes(1));
-      expect(run.fsPhase).toBe('all_files_found');
+      await vi.waitFor(() => expect(run.fsPhase).toBe('all_files_found'));
+      expect(complete).not.toHaveBeenCalled();
       expect(run.onProgress).not.toHaveBeenCalledWith(
         expect.objectContaining({
           message: 'Prepared communication channels for 1/2 members',
@@ -13261,7 +13586,9 @@ describe('TeamProvisioningService', () => {
         });
 
         if (adapterLaunch.mock.calls.length === 1) {
-          throw new Error('OpenCode bridge failed: Bridge server runtime manifest high watermark is stale');
+          throw new Error(
+            'OpenCode bridge failed: Bridge server runtime manifest high watermark is stale'
+          );
         }
 
         await writeCommittedOpenCodeSessionStore({
@@ -14023,6 +14350,8 @@ describe('TeamProvisioningService', () => {
       getConfig,
       getConfigSnapshot,
     } as any);
+    const persistInboxMessage = vi.fn();
+    (svc as any).persistInboxMessage = persistInboxMessage;
 
     await (svc as any).respondToTeammatePermission(
       { teamName: 'ops-team' },
@@ -14051,6 +14380,13 @@ describe('TeamProvisioningService', () => {
     expect(settings.permissions?.allow).not.toContain('mcp__agent-teams__kanban_clear');
     expect(getConfig).toHaveBeenCalledWith('ops-team');
     expect(getConfigSnapshot).not.toHaveBeenCalled();
+    expect(persistInboxMessage).toHaveBeenCalledWith(
+      'ops-team',
+      'alice',
+      expect.objectContaining({
+        text: expect.stringContaining('"type":"permission_response"'),
+      })
+    );
   });
 
   it('does not broaden admin/runtime teammate permission suggestions', async () => {
@@ -14061,6 +14397,7 @@ describe('TeamProvisioningService', () => {
         members: [{ cwd: tempClaudeRoot }],
       })),
     } as any);
+    (svc as any).persistInboxMessage = vi.fn();
 
     await (svc as any).respondToTeammatePermission(
       { teamName: 'ops-team' },
@@ -14083,6 +14420,213 @@ describe('TeamProvisioningService', () => {
       permissions?: { allow?: string[] };
     };
     expect(settings.permissions?.allow).toEqual(['mcp__agent-teams__team_stop']);
+  });
+
+  it('builds teammate AskUserQuestion permission responses with answers', () => {
+    const svc = new TeamProvisioningService();
+    const toolInput = {
+      questions: [
+        {
+          question: 'What type of calculator app would you like?',
+          header: 'App type',
+          options: [
+            { label: 'Web UI (Recommended)', description: 'Browser app' },
+            { label: 'CLI', description: 'Terminal app' },
+          ],
+          multiSelect: false,
+        },
+      ],
+    };
+
+    expect(
+      (svc as any).buildTeammatePermissionUpdatedInput(
+        'AskUserQuestion',
+        toolInput,
+        JSON.stringify({
+          'What type of calculator app would you like?': 'Web UI (Recommended)',
+        })
+      )
+    ).toEqual({
+      ...toolInput,
+      answers: {
+        'What type of calculator app would you like?': 'Web UI (Recommended)',
+      },
+    });
+  });
+
+  it('preserves blank teammate AskUserQuestion answers', () => {
+    const svc = new TeamProvisioningService();
+    const toolInput = {
+      questions: [
+        {
+          question: 'Anything else?',
+          options: [{ label: 'Skip', description: 'No extra details' }],
+        },
+      ],
+    };
+
+    expect((svc as any).buildTeammatePermissionUpdatedInput('AskUserQuestion', toolInput, ''))
+      .toEqual({
+        ...toolInput,
+        answers: {
+          'Anything else?': '',
+        },
+      });
+  });
+
+  it('sends teammate AskUserQuestion permission responses to the teammate inbox', async () => {
+    const svc = new TeamProvisioningService();
+    const persistInboxMessage = vi.fn();
+    (svc as any).persistInboxMessage = persistInboxMessage;
+    const toolInput = {
+      questions: [
+        {
+          question: 'What type of calculator app would you like?',
+          options: [{ label: 'Web UI (Recommended)', description: 'Browser app' }],
+        },
+      ],
+    };
+
+    await (svc as any).respondToTeammatePermission(
+      { teamName: 'ops-team', runId: 'run-1' },
+      'bob',
+      'perm-1',
+      true,
+      JSON.stringify({
+        'What type of calculator app would you like?': 'Web UI (Recommended)',
+      }),
+      [],
+      'AskUserQuestion',
+      toolInput
+    );
+
+    expect(persistInboxMessage).toHaveBeenCalledTimes(1);
+    const [, recipient, message] = persistInboxMessage.mock.calls[0];
+    expect(recipient).toBe('bob');
+    expect(JSON.parse(message.text)).toEqual({
+      type: 'permission_response',
+      request_id: 'perm-1',
+      subtype: 'success',
+      response: {
+        updated_input: {
+          ...toolInput,
+          answers: {
+            'What type of calculator app would you like?': 'Web UI (Recommended)',
+          },
+        },
+        permission_updates: [],
+      },
+    });
+  });
+
+  it('sends teammate denial responses to the teammate inbox', async () => {
+    const svc = new TeamProvisioningService();
+    const persistInboxMessage = vi.fn();
+    (svc as any).persistInboxMessage = persistInboxMessage;
+
+    await (svc as any).respondToTeammatePermission(
+      { teamName: 'ops-team', runId: 'run-1' },
+      'bob',
+      'perm-deny',
+      false,
+      'Denied by test',
+      [],
+      'Bash',
+      { command: 'echo blocked' }
+    );
+
+    expect(persistInboxMessage).toHaveBeenCalledTimes(1);
+    const [, recipient, message] = persistInboxMessage.mock.calls[0];
+    expect(recipient).toBe('bob');
+    expect(JSON.parse(message.text)).toEqual({
+      type: 'permission_response',
+      request_id: 'perm-deny',
+      subtype: 'error',
+      error: 'Denied by test',
+    });
+  });
+
+  it('keeps AskUserQuestion answers in teammate fallback control responses', async () => {
+    const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
+      cb?.();
+      return true;
+    });
+    const svc = new TeamProvisioningService({
+      getConfig: vi.fn(async () => ({
+        projectPath: tempClaudeRoot,
+        members: [{ cwd: tempClaudeRoot }],
+      })),
+    } as any);
+    (svc as any).persistInboxMessage = vi.fn();
+    const toolInput = {
+      questions: [
+        {
+          question: 'What features do you need?',
+          options: [{ label: 'Basic', description: 'Arithmetic' }],
+        },
+      ],
+    };
+
+    await (svc as any).respondToTeammatePermission(
+      {
+        teamName: 'ops-team',
+        runId: 'run-1',
+        child: { stdin: { writable: true, write } },
+      },
+      'bob',
+      'perm-2',
+      true,
+      JSON.stringify({ 'What features do you need?': 'Basic' }),
+      [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }],
+      'AskUserQuestion',
+      toolInput
+    );
+
+    expect(write).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(write.mock.calls[0][0]);
+    expect(payload.response.response.updatedInput).toEqual({
+      ...toolInput,
+      answers: { 'What features do you need?': 'Basic' },
+    });
+  });
+
+  it('sends teammate fallback control responses without permission suggestions', async () => {
+    const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
+      cb?.();
+      return true;
+    });
+    const svc = new TeamProvisioningService();
+    (svc as any).persistInboxMessage = vi.fn();
+    const toolInput = {
+      questions: [
+        {
+          question: 'Anything else?',
+          options: [{ label: 'Skip', description: 'No extra details' }],
+        },
+      ],
+    };
+
+    await (svc as any).respondToTeammatePermission(
+      {
+        teamName: 'ops-team',
+        runId: 'run-1',
+        child: { stdin: { writable: true, write } },
+      },
+      'bob',
+      'perm-3',
+      true,
+      '',
+      [],
+      'AskUserQuestion',
+      toolInput
+    );
+
+    expect(write).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(write.mock.calls[0][0]);
+    expect(payload.response.response.updatedInput).toEqual({
+      ...toolInput,
+      answers: { 'Anything else?': '' },
+    });
   });
 
   it('uses a non-alarming model delay message before 2 minutes of silence', () => {
@@ -14527,7 +15071,7 @@ describe('TeamProvisioningService', () => {
     await svc.cancelProvisioning(runId);
   });
 
-  it('flushes a final newline-less bootstrap completion event before handling launch close', async () => {
+  it('flushes a final newline-less bootstrap completion event without promoting launch ready', async () => {
     allowConsoleLogs();
     const teamName = 'launch-close-flushes-final-json-team';
     const leadSessionId = 'lead-session-final-json-flush';
@@ -14562,11 +15106,11 @@ describe('TeamProvisioningService', () => {
     );
     const complete = vi
       .spyOn(svc as any, 'handleProvisioningTurnComplete')
-      .mockImplementation(async (run: any) => {
-        run.provisioningComplete = true;
-      });
+      .mockResolvedValue(undefined);
 
     const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
+    const run = (svc as any).runs.get(runId);
+    expect(run).toBeTruthy();
 
     child.stdout.emit(
       'data',
@@ -14586,14 +15130,236 @@ describe('TeamProvisioningService', () => {
     await Promise.resolve();
     expect(complete).not.toHaveBeenCalled();
 
+    (svc as any).flushStdoutParserCarry(run);
+
+    expect(complete).not.toHaveBeenCalled();
+    expect(run.lastDeterministicBootstrapSeq).toBe(1);
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('flushes a final newline-less success result and completes deterministic launch', async () => {
+    allowConsoleLogs();
+    const teamName = 'launch-close-flushes-final-success-team';
+    const leadSessionId = 'lead-session-final-success-flush';
+    writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, ['alice']);
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    const child = createRunningChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    } as any);
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice' }],
+      source: 'members-meta',
+      warning: undefined,
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async (targetPath: string) =>
+      targetPath.endsWith(`${leadSessionId}.jsonl`)
+    );
+    const complete = vi
+      .spyOn(svc as any, 'handleProvisioningTurnComplete')
+      .mockImplementation(async (run: any) => {
+        expect(run.processClosed).toBe(false);
+        expect(run.firstRealTurnSucceeded).toBe(true);
+        run.provisioningComplete = true;
+      });
+
+    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
+
+    child.stdout.emit(
+      'data',
+      Buffer.from(
+        JSON.stringify({
+          type: 'result',
+          subtype: 'success',
+        }),
+        'utf8'
+      )
+    );
+    await Promise.resolve();
+    expect(complete).not.toHaveBeenCalled();
+
     child.emit('close', 0);
 
     await vi.waitFor(() => expect(complete).toHaveBeenCalledTimes(1));
   });
 
-  it('recovers ready progress when deterministic create finalization stalls after completed bootstrap-state', async () => {
+  it('does not promote deterministic launch from bootstrap completed before first real turn succeeds', async () => {
     allowConsoleLogs();
-    vi.useFakeTimers();
+    const teamName = 'bootstrap-completed-before-first-turn-team';
+    const leadSessionId = 'lead-session-bootstrap-only';
+    writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, ['alice']);
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    const child = createRunningChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    } as any);
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice' }],
+      source: 'members-meta',
+      warning: undefined,
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async (targetPath: string) =>
+      targetPath.endsWith(`${leadSessionId}.jsonl`)
+    );
+    const complete = vi
+      .spyOn(svc as any, 'handleProvisioningTurnComplete')
+      .mockResolvedValue(undefined);
+
+    let runId = '';
+    try {
+      const launch = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {});
+      runId = launch.runId;
+
+      child.stdout.emit(
+        'data',
+        Buffer.from(
+          `${JSON.stringify({
+            type: 'system',
+            subtype: 'team_bootstrap',
+            event: 'completed',
+            run_id: runId,
+            team_name: teamName,
+            seq: 1,
+            failed_members: [],
+          })}\n`,
+          'utf8'
+        )
+      );
+
+      await Promise.resolve();
+      expect(complete).not.toHaveBeenCalled();
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId).catch(() => undefined);
+      }
+    }
+  });
+
+  it('promotes deterministic create bootstrap completion when no first turn was enqueued', async () => {
+    allowConsoleLogs();
+    const teamName = 'bootstrap-completed-no-first-turn-team';
+    const child = createRunningChild();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const mcpConfigBuilder = {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    };
+    const membersMetaStore = {
+      writeMembers: vi.fn(async () => {}),
+      getMembers: vi.fn(async () => []),
+    };
+    const teamMetaStore = {
+      writeMeta: vi.fn(async () => {}),
+      deleteMeta: vi.fn(async () => {}),
+      getMeta: vi.fn(async () => null),
+    };
+
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      membersMetaStore as any,
+      undefined,
+      mcpConfigBuilder as any,
+      teamMetaStore as any
+    );
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { CODEX_API_KEY: 'test' },
+      authSource: 'codex_runtime',
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).startStallWatchdog = vi.fn();
+    (svc as any).stopStallWatchdog = vi.fn();
+    (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      selectedModel: 'gpt-5.5',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'gpt-5.5',
+      catalogId: 'gpt-5.5',
+      catalogSource: 'test',
+      catalogFetchedAt: '2026-05-07T00:00:00.000Z',
+      selectedEffort: 'medium',
+      resolvedEffort: 'medium',
+      selectedFastMode: null,
+      resolvedFastMode: null,
+      fastResolutionReason: null,
+    }));
+    const complete = vi
+      .spyOn(svc as any, 'handleProvisioningTurnComplete')
+      .mockResolvedValue(undefined);
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName,
+        cwd: tempClaudeRoot,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        members: [{ name: 'alice' }],
+      },
+      () => {}
+    );
+    const run = (svc as any).runs.get(runId);
+    expect(run).toBeTruthy();
+    expect(run.requiresFirstRealTurnSuccess).toBe(false);
+
+    child.stdout.emit(
+      'data',
+      Buffer.from(
+        `${JSON.stringify({
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'completed',
+          run_id: runId,
+          team_name: teamName,
+          seq: 1,
+          failed_members: [],
+        })}\n`,
+        'utf8'
+      )
+    );
+
+    await vi.waitFor(() => expect(complete).toHaveBeenCalledTimes(1));
+    expect(complete).toHaveBeenCalledWith(run);
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('recovers ready progress when deterministic finalization stalls after first real turn success', async () => {
+    allowConsoleLogs();
     const teamName = 'create-completed-bootstrap-finalization-stall';
     const child = createRunningChild();
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
@@ -14645,9 +15411,6 @@ describe('TeamProvisioningService', () => {
       resolvedFastMode: null,
       fastResolutionReason: null,
     }));
-    const waitForValidConfig = vi.fn(() => new Promise(() => {}));
-    (svc as any).waitForValidConfig = waitForValidConfig;
-
     const progressStates: string[] = [];
     const { runId } = await svc.createTeam(
       {
@@ -14665,10 +15428,9 @@ describe('TeamProvisioningService', () => {
     const run = (svc as any).runs.get(runId);
     expect(run).toBeTruthy();
     run.deterministicBootstrap = true;
-    const scheduleRecovery = vi.spyOn(
-      svc as any,
-      'scheduleDeterministicBootstrapCompletionRecovery'
-    );
+    run.requiresFirstRealTurnSuccess = true;
+    run.firstRealTurnSucceeded = true;
+    run.provisioningComplete = true;
 
     writeBootstrapState(
       teamName,
@@ -14679,32 +15441,98 @@ describe('TeamProvisioningService', () => {
       new Date(Date.now() + 1_000).toISOString()
     );
 
-    child.stdout.emit(
-      'data',
-      Buffer.from(
-        `${JSON.stringify({
-          type: 'system',
-          subtype: 'team_bootstrap',
-          event: 'completed',
-          run_id: runId,
-          team_name: teamName,
-          seq: 1,
-          failed_members: [],
-        })}\n`,
-        'utf8'
-      )
-    );
-
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(waitForValidConfig).toHaveBeenCalledTimes(1);
-    expect(scheduleRecovery).toHaveBeenCalledWith(run);
     expect(progressStates.at(-1)).not.toBe('ready');
 
     await (svc as any).recoverDeterministicBootstrapCompletion(run);
     expect(progressStates.at(-1)).toBe('ready');
     expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
     expect((svc as any).aliveRunByTeam.get(teamName)).toBe(runId);
+  });
+
+  it('does not recover ready progress from completed bootstrap-state when the lead child is gone', async () => {
+    allowConsoleLogs();
+    const teamName = 'create-completed-bootstrap-dead-lead';
+    const child = createRunningChild();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const mcpConfigBuilder = {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    };
+    const membersMetaStore = {
+      writeMembers: vi.fn(async () => {}),
+      getMembers: vi.fn(async () => []),
+    };
+    const teamMetaStore = {
+      writeMeta: vi.fn(async () => {}),
+      deleteMeta: vi.fn(async () => {}),
+      getMeta: vi.fn(async () => null),
+    };
+
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      membersMetaStore as any,
+      undefined,
+      mcpConfigBuilder as any,
+      teamMetaStore as any
+    );
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { CODEX_API_KEY: 'test' },
+      authSource: 'codex_runtime',
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).startStallWatchdog = vi.fn();
+    (svc as any).stopStallWatchdog = vi.fn();
+    (svc as any).resolveAndValidateLaunchIdentity = vi.fn(async () => ({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      selectedModel: 'gpt-5.5',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'gpt-5.5',
+      catalogId: 'gpt-5.5',
+      catalogSource: 'test',
+      catalogFetchedAt: '2026-05-07T00:00:00.000Z',
+      selectedEffort: 'medium',
+      resolvedEffort: 'medium',
+      selectedFastMode: null,
+      resolvedFastMode: null,
+      fastResolutionReason: null,
+    }));
+
+    const progressStates: string[] = [];
+    const { runId } = await svc.createTeam(
+      {
+        teamName,
+        cwd: tempClaudeRoot,
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        members: [{ name: 'alice' }],
+      },
+      (progress) => {
+        progressStates.push(progress.state);
+      }
+    );
+    const run = (svc as any).runs.get(runId);
+    expect(run).toBeTruthy();
+    run.deterministicBootstrap = true;
+    run.provisioningComplete = true;
+    run.child = null;
+
+    writeBootstrapState(
+      teamName,
+      [{ name: 'alice', status: 'bootstrap_confirmed' }],
+      new Date(Date.now() + 1_000).toISOString()
+    );
+
+    await (svc as any).recoverDeterministicBootstrapCompletion(run);
+
+    expect(progressStates).not.toContain('ready');
+    expect((svc as any).aliveRunByTeam.get(teamName)).toBeUndefined();
   });
 
   it('does not verify provisioning again after flushing a final newline-less error result', async () => {
@@ -14831,6 +15659,214 @@ describe('TeamProvisioningService', () => {
     expect(respawnAfterAuthFailure).toHaveBeenCalledWith(run);
     expect(waitForValidConfig).not.toHaveBeenCalled();
     expect(progressStates).not.toContain('verifying');
+  });
+
+  it('warns but still starts deterministic launch with more than eight primary teammates', async () => {
+    allowConsoleLogs();
+    const members = Array.from({ length: 9 }, (_, index) => `member-${index + 1}`);
+    const { progressUpdates } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-large-primary-team-warning',
+      members,
+    });
+
+    expect(spawnCli).toHaveBeenCalled();
+    expect(progressUpdates[0]?.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('9 primary teammates')])
+    );
+    expect(progressUpdates[0]?.warnings?.join('\n')).toContain('Launches above 8 teammates');
+  });
+
+  it('fails before spawning when deterministic launch exceeds the current primary teammate cap', async () => {
+    allowConsoleLogs();
+    const members = Array.from({ length: 17 }, (_, index) => `member-${index + 1}`);
+
+    await expect(
+      startDeterministicLaunchCloseHarness({
+        teamName: 'launch-too-many-primary-members',
+        members,
+      })
+    ).rejects.toThrow(/up to 16 primary teammates/);
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('keeps SessionStart hook payloads out of user-facing launch errors', async () => {
+    allowConsoleLogs();
+    const { child, progressUpdates } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-hook-payload-sanitized',
+      members: ['alice'],
+    });
+    const hookPayload = [
+      '<EXTREMELY_IMPORTANT>',
+      'You have superpowers.',
+      'digraph skill_flow {',
+      'Might any skill apply?',
+      'Invoke Skill tool',
+      'TodoWrite',
+      'superpowers:using-superpowers',
+      '</EXTREMELY_IMPORTANT>',
+    ].join('\n');
+
+    child.stdout.emit(
+      'data',
+      Buffer.from(
+        `${JSON.stringify({
+          type: 'system',
+          subtype: 'hook_started',
+          hook_name: 'SessionStart:startup',
+        })}\n${JSON.stringify({
+          type: 'system',
+          subtype: 'hook_response',
+          hook_name: 'SessionStart:startup',
+          output: JSON.stringify({
+            hookSpecificOutput: {
+              hookEventName: 'SessionStart',
+              additionalContext: hookPayload,
+            },
+          }),
+          exit_code: 0,
+          outcome: 'success',
+        })}\n`,
+        'utf8'
+      )
+    );
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressUpdates.at(-1)?.state).toBe('failed'));
+    const finalProgress = progressUpdates.at(-1);
+    expect(finalProgress.message).toBe('Launch bootstrap was not confirmed');
+    expect(finalProgress.error).toContain('No team_bootstrap event was received');
+    expect(finalProgress.error).not.toMatch(
+      /skill_flow|EXTREMELY_IMPORTANT|additionalContext|TodoWrite|Skill tool/
+    );
+    expect(finalProgress.cliLogsTail).toMatch(/skill_flow|EXTREMELY_IMPORTANT|additionalContext/);
+  });
+
+  it('does not leak a mid-buffer hook payload when stdout starts inside hook JSON', async () => {
+    allowConsoleLogs();
+    const { child, progressUpdates, run } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-hook-mid-buffer-sanitized',
+      members: ['alice'],
+    });
+    run.claudeLogLines = [];
+    run.stdoutBuffer =
+      'evant or requested skills BEFORE any response or action. digraph skill_flow { EXTREMELY_IMPORTANT TodoWrite Skill tool }';
+    run.stderrBuffer = '';
+
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressUpdates.at(-1)?.state).toBe('failed'));
+    const finalProgress = progressUpdates.at(-1);
+    expect(finalProgress.error).toContain('No team_bootstrap event was received');
+    expect(finalProgress.error).not.toMatch(/skill_flow|EXTREMELY_IMPORTANT|TodoWrite|Skill tool/);
+    expect(finalProgress.cliLogsTail).toContain('skill_flow');
+  });
+
+  it('reports the last bootstrap phase when Codex exits before spawning teammates', async () => {
+    allowConsoleLogs();
+    const { child, progressUpdates, runId, teamName } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-bootstrap-phase-before-spawn',
+      members: ['alice'],
+    });
+
+    child.stdout.emit(
+      'data',
+      Buffer.from(
+        `${JSON.stringify({
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'started',
+          run_id: runId,
+          team_name: teamName,
+          seq: 1,
+        })}\n${JSON.stringify({
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'phase_changed',
+          phase: 'acquiring_bootstrap_lock',
+          run_id: runId,
+          team_name: teamName,
+          seq: 2,
+        })}\n`,
+        'utf8'
+      )
+    );
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressUpdates.at(-1)?.state).toBe('failed'));
+    const finalProgress = progressUpdates.at(-1);
+    expect(finalProgress.message).toBe('Launch bootstrap was not confirmed');
+    expect(finalProgress.error).toContain('before teammate spawning started');
+    expect(finalProgress.error).toContain('phase_changed/acquiring_bootstrap_lock');
+  });
+
+  it('reports pending teammates when Codex exits after member spawning starts', async () => {
+    allowConsoleLogs();
+    const { child, progressUpdates, runId, teamName } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-bootstrap-pending-members',
+      members: ['alice', 'bob'],
+    });
+
+    child.stdout.emit(
+      'data',
+      Buffer.from(
+        `${JSON.stringify({
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'started',
+          run_id: runId,
+          team_name: teamName,
+          seq: 1,
+        })}\n${JSON.stringify({
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'member_spawn_started',
+          member_name: 'alice',
+          run_id: runId,
+          team_name: teamName,
+          seq: 2,
+        })}\n`,
+        'utf8'
+      )
+    );
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressUpdates.at(-1)?.state).toBe('failed'));
+    const finalProgress = progressUpdates.at(-1);
+    expect(finalProgress.message).toBe('Launch bootstrap was not confirmed');
+    expect(finalProgress.error).toContain('Pending teammates: alice, bob');
+  });
+
+  it('preserves real stderr as the user-facing launch error', async () => {
+    allowConsoleLogs();
+    const { child, progressUpdates } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-real-stderr-preserved',
+      members: ['alice'],
+    });
+
+    child.stderr.emit('data', Buffer.from('Fatal runtime exploded before bootstrap\n', 'utf8'));
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressUpdates.at(-1)?.state).toBe('failed'));
+    const finalProgress = progressUpdates.at(-1);
+    expect(finalProgress.error).toBe('Fatal runtime exploded before bootstrap');
+    expect(finalProgress.message).not.toBe('Launch bootstrap was not confirmed');
+  });
+
+  it('preserves the CLI login hint on launch process exit', async () => {
+    allowConsoleLogs();
+    const { child, progressUpdates, svc } = await startDeterministicLaunchCloseHarness({
+      teamName: 'launch-login-hint-preserved',
+      members: ['alice'],
+    });
+    vi.spyOn(svc as any, 'handleAuthFailureInOutput').mockImplementation(() => {});
+
+    child.stderr.emit('data', Buffer.from('Please run /login to continue\n', 'utf8'));
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressUpdates.at(-1)?.state).toBe('failed'));
+    const finalProgress = progressUpdates.at(-1);
+    expect(finalProgress.error).toContain('reports it is not authenticated');
+    expect(finalProgress.error).toContain('Please run /login');
   });
 
   it('clears stale team-scoped transient state before starting a new launch run', async () => {
@@ -17606,6 +18642,479 @@ describe('TeamProvisioningService', () => {
       status: 'error',
       launchState: 'failed_to_start',
       hardFailureReason: reason,
+    });
+  });
+
+  it('includes legacy member provider fields when planning workspace trust providers', () => {
+    const svc = new TeamProvisioningService();
+
+    expect(
+      (svc as any).collectWorkspaceTrustProviders({
+        leadProviderId: 'anthropic',
+        members: [{ name: 'alice', provider: 'codex' }],
+      })
+    ).toEqual(['claude', 'codex']);
+  });
+
+  it('dedupes workspace trust providers across lead, member providerId, and legacy provider fields', () => {
+    const svc = new TeamProvisioningService();
+
+    expect(
+      (svc as any).collectWorkspaceTrustProviders({
+        leadProviderId: 'codex',
+        members: [
+          { name: 'alice', providerId: 'anthropic' },
+          { name: 'bob', providerId: 'codex' },
+          { name: 'cara', provider: 'gemini' },
+          { name: 'drew', providerId: 'opencode' },
+        ],
+      })
+    ).toEqual(['claude', 'codex', 'gemini', 'opencode']);
+  });
+
+  it('degrades workspace trust planning failures without blocking launch preparation', async () => {
+    const svc = new TeamProvisioningService();
+    const workspaces = buildWorkspaceTrustPathCandidates({
+      cwd: '/tmp/workspace-trust-planning-fallback',
+      platform: 'posix',
+    });
+    svc.setWorkspaceTrustCoordinator({
+      planArgsOnly: vi.fn(async () => {
+        throw new Error('args planning crashed');
+      }),
+      planFull: vi.fn(async () => {
+        throw new Error('full planning crashed');
+      }),
+      execute: vi.fn(),
+    } as any);
+
+    await expect(
+      (svc as any).planWorkspaceTrustArgsOnlySafely({
+        providers: ['claude', 'codex'],
+        workspaces,
+        featureFlags: {
+          enabled: true,
+          claudePty: true,
+          codexArgs: true,
+          retry: false,
+          fileLock: false,
+        },
+      })
+    ).resolves.toEqual({ launchArgPatches: [] });
+
+    await expect(
+      (svc as any).planWorkspaceTrustFullSafely({
+        providers: ['claude', 'codex'],
+        workspaces,
+        featureFlags: {
+          enabled: true,
+          claudePty: true,
+          codexArgs: true,
+          retry: false,
+          fileLock: false,
+        },
+      })
+    ).resolves.toEqual({ workspaces, launchArgPatches: [] });
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      expect.stringContaining(
+        'Workspace trust args-only planning failed; continuing without trust arg patches'
+      ),
+      expect.stringContaining(
+        'Workspace trust full planning failed; continuing without trust arg patches'
+      ),
+    ]);
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('keeps launch moving with info diagnostics when workspace trust preflight succeeds', async () => {
+    const progressUpdates: any[] = [];
+    const run = createMemberSpawnRun({
+      runId: 'run-workspace-trust-preflight-ok',
+      teamName: 'workspace-trust-preflight-ok-team',
+      expectedMembers: ['alice'],
+    });
+    Object.assign(run, {
+      cancelRequested: false,
+      processKilled: false,
+      progress: {
+        runId: run.runId,
+        teamName: run.teamName,
+        state: 'validating',
+        message: 'Validating launch',
+        warnings: [],
+        startedAt: '2026-05-12T10:00:00.000Z',
+        updatedAt: '2026-05-12T10:00:00.000Z',
+      },
+      onProgress: (progress: any) => {
+        progressUpdates.push(progress);
+      },
+    });
+    const execute = vi.fn(async () => ({
+      id: 'claude-pty-workspace-trust',
+      provider: 'claude',
+      status: 'ok',
+      workspaceIds: ['workspace-trust-1'],
+      evidence: ['trusted project key'],
+    }));
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator({
+      planArgsOnly: vi.fn(),
+      planFull: vi.fn(),
+      execute,
+    } as any);
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+      mode: 'create',
+      run,
+      claudePath: '/usr/local/bin/claude',
+      shellEnv: {},
+      stopAllGenerationAtStart: (svc as any).stopAllTeamsGeneration,
+      workspaceTrustPlan: {
+        launchArgPatches: [],
+        workspaces: buildWorkspaceTrustPathCandidates({
+          cwd: '/tmp/workspace-trust-preflight-ok-team',
+          platform: 'posix',
+        }),
+      },
+      featureFlags: {
+        enabled: true,
+        claudePty: true,
+        codexArgs: true,
+        retry: false,
+        fileLock: false,
+      },
+      provisioningEnv: {
+        anthropicApiKeyHelper: null,
+      },
+    });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(run.workspaceTrustExecution).toMatchObject({ status: 'ok' });
+    expect(run.progress.warnings).toEqual([]);
+    expect(progressUpdates.at(-1).launchDiagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'info',
+        code: 'workspace_trust_preflight',
+        label: 'Workspace trust preflight completed',
+        detail: 'trusted project key',
+      }),
+    ]);
+  });
+
+  it('keeps launch alive with diagnostics when workspace trust preflight throws', async () => {
+    const progressUpdates: any[] = [];
+    const run = createMemberSpawnRun({
+      runId: 'run-workspace-trust-preflight-throw',
+      teamName: 'workspace-trust-preflight-team',
+      expectedMembers: ['alice'],
+    });
+    Object.assign(run, {
+      cancelRequested: false,
+      processKilled: false,
+      progress: {
+        runId: run.runId,
+        teamName: run.teamName,
+        state: 'validating',
+        message: 'Validating launch',
+        warnings: [],
+        startedAt: '2026-05-12T10:00:00.000Z',
+        updatedAt: '2026-05-12T10:00:00.000Z',
+      },
+      onProgress: (progress: any) => {
+        progressUpdates.push(progress);
+      },
+    });
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator({
+      planArgsOnly: vi.fn(),
+      planFull: vi.fn(),
+      execute: vi.fn(async () => {
+        throw new Error('preflight adapter crashed');
+      }),
+    } as any);
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+      mode: 'create',
+      run,
+      claudePath: '/usr/local/bin/claude',
+      shellEnv: {
+        CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP: '1',
+        CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH: '/tmp/helper.json',
+      },
+      stopAllGenerationAtStart: (svc as any).stopAllTeamsGeneration,
+      workspaceTrustPlan: {
+        launchArgPatches: [],
+        workspaces: buildWorkspaceTrustPathCandidates({
+          cwd: '/tmp/workspace-trust-preflight-team',
+          platform: 'posix',
+        }),
+      },
+      featureFlags: {
+        enabled: true,
+        claudePty: true,
+        codexArgs: true,
+        retry: false,
+        fileLock: false,
+      },
+      provisioningEnv: {
+        anthropicApiKeyHelper: null,
+      },
+    });
+
+    expect(run.workspaceTrustExecution).toMatchObject({
+      status: 'soft_failed',
+      errorCode: 'workspace_trust_preflight_error',
+      errorMessage: 'preflight adapter crashed',
+    });
+    expect(run.workspaceTrustDiagnostics).toMatchObject({
+      attempt: 1,
+      strategyResults: [
+        expect.objectContaining({
+          status: 'soft_failed',
+          errorMessage: 'preflight adapter crashed',
+        }),
+      ],
+    });
+    expect(run.progress.warnings).toContain('preflight adapter crashed');
+    expect(progressUpdates.at(0)).toMatchObject({
+      state: 'spawning',
+      message: 'Preparing workspace trust',
+    });
+    expect(progressUpdates.at(-1).warnings).toContain('preflight adapter crashed');
+    expect(progressUpdates.at(-1).launchDiagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'warning',
+        code: 'workspace_trust_preflight',
+        label: 'Workspace trust preflight could not verify trust',
+        detail: 'preflight adapter crashed',
+      }),
+    ]);
+  });
+
+  it('blocks launch with structured workspace trust diagnostics when preflight is blocked', async () => {
+    const progressUpdates: any[] = [];
+    const run = createMemberSpawnRun({
+      runId: 'run-workspace-trust-preflight-blocked',
+      teamName: 'workspace-trust-preflight-blocked-team',
+      expectedMembers: ['alice'],
+    });
+    Object.assign(run, {
+      cancelRequested: false,
+      processKilled: false,
+      progress: {
+        runId: run.runId,
+        teamName: run.teamName,
+        state: 'validating',
+        message: 'Validating launch',
+        warnings: [],
+        startedAt: '2026-05-12T10:00:00.000Z',
+        updatedAt: '2026-05-12T10:00:00.000Z',
+      },
+      onProgress: (progress: any) => {
+        progressUpdates.push(progress);
+      },
+    });
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator({
+      planArgsOnly: vi.fn(),
+      planFull: vi.fn(),
+      execute: vi.fn(async () => ({
+        id: 'claude-pty-workspace-trust',
+        provider: 'claude',
+        status: 'blocked',
+        workspaceIds: ['workspace-trust-1'],
+        errorCode: 'workspace_trust_preflight_not_confirmed',
+        errorMessage: 'Claude workspace trust was not confirmed for /tmp/project',
+        evidence: ['claude workspace trust prompt'],
+      })),
+    } as any);
+    vi.spyOn(svc as any, 'cleanupRun').mockImplementation(() => {});
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    await expect(
+      (svc as any).prepareWorkspaceTrustForDeterministicRun({
+        mode: 'create',
+        run,
+        claudePath: '/usr/local/bin/claude',
+        shellEnv: {},
+        stopAllGenerationAtStart: (svc as any).stopAllTeamsGeneration,
+        workspaceTrustPlan: {
+          launchArgPatches: [],
+          workspaces: buildWorkspaceTrustPathCandidates({
+            cwd: '/tmp/project',
+            platform: 'posix',
+          }),
+        },
+        featureFlags: {
+          enabled: true,
+          claudePty: true,
+          codexArgs: true,
+          retry: false,
+          fileLock: false,
+        },
+        provisioningEnv: {
+          anthropicApiKeyHelper: null,
+        },
+      })
+    ).rejects.toThrow('Claude workspace trust was not confirmed for /tmp/project');
+
+    expect(progressUpdates.at(-1)).toMatchObject({
+      state: 'failed',
+      message: 'Workspace trust required',
+      error: 'Claude workspace trust was not confirmed for /tmp/project',
+    });
+    expect(progressUpdates.at(-1).launchDiagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        code: 'workspace_trust_preflight',
+        label: 'Workspace trust preflight blocked launch',
+        detail: 'Claude workspace trust was not confirmed for /tmp/project',
+      }),
+    ]);
+  });
+
+  it('cancels launch before spawn when workspace trust preflight is cancelled', async () => {
+    const progressUpdates: any[] = [];
+    const run = createMemberSpawnRun({
+      runId: 'run-workspace-trust-preflight-cancelled',
+      teamName: 'workspace-trust-preflight-cancelled-team',
+      expectedMembers: ['alice'],
+    });
+    Object.assign(run, {
+      cancelRequested: false,
+      processKilled: false,
+      progress: {
+        runId: run.runId,
+        teamName: run.teamName,
+        state: 'validating',
+        message: 'Validating launch',
+        warnings: [],
+        startedAt: '2026-05-12T10:00:00.000Z',
+        updatedAt: '2026-05-12T10:00:00.000Z',
+      },
+      onProgress: (progress: any) => {
+        progressUpdates.push(progress);
+      },
+    });
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator({
+      planArgsOnly: vi.fn(),
+      planFull: vi.fn(),
+      execute: vi.fn(async () => ({
+        id: 'claude-pty-workspace-trust',
+        provider: 'claude',
+        status: 'cancelled',
+        workspaceIds: ['workspace-trust-1'],
+        errorCode: 'workspace_trust_lock_cancelled',
+      })),
+    } as any);
+    vi.spyOn(svc as any, 'cleanupRun').mockImplementation(() => {});
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    await expect(
+      (svc as any).prepareWorkspaceTrustForDeterministicRun({
+        mode: 'create',
+        run,
+        claudePath: '/usr/local/bin/claude',
+        shellEnv: {},
+        stopAllGenerationAtStart: (svc as any).stopAllTeamsGeneration,
+        workspaceTrustPlan: {
+          launchArgPatches: [],
+          workspaces: buildWorkspaceTrustPathCandidates({
+            cwd: '/tmp/workspace-trust-preflight-cancelled-team',
+            platform: 'posix',
+          }),
+        },
+        featureFlags: {
+          enabled: true,
+          claudePty: true,
+          codexArgs: true,
+          retry: false,
+          fileLock: false,
+        },
+        provisioningEnv: {
+          anthropicApiKeyHelper: null,
+        },
+      })
+    ).rejects.toThrow('Team launch cancelled');
+
+    expect(run.cancelRequested).toBe(true);
+    expect(progressUpdates.at(-1)).toMatchObject({
+      state: 'cancelled',
+      message: 'Team launch cancelled',
+    });
+    expect(progressUpdates.at(-1).launchDiagnostics).toBeUndefined();
+  });
+
+  it('does not execute workspace trust preflight when the feature is disabled', async () => {
+    const progressUpdates: any[] = [];
+    const run = createMemberSpawnRun({
+      runId: 'run-workspace-trust-disabled',
+      teamName: 'workspace-trust-disabled-team',
+      expectedMembers: ['alice'],
+    });
+    Object.assign(run, {
+      cancelRequested: false,
+      processKilled: false,
+      progress: {
+        runId: run.runId,
+        teamName: run.teamName,
+        state: 'validating',
+        message: 'Validating launch',
+        warnings: [],
+        startedAt: '2026-05-12T10:00:00.000Z',
+        updatedAt: '2026-05-12T10:00:00.000Z',
+      },
+      onProgress: (progress: any) => {
+        progressUpdates.push(progress);
+      },
+    });
+    const execute = vi.fn();
+    const svc = new TeamProvisioningService();
+    svc.setWorkspaceTrustCoordinator({
+      planArgsOnly: vi.fn(),
+      planFull: vi.fn(),
+      execute,
+    } as any);
+
+    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+      mode: 'create',
+      run,
+      claudePath: '/usr/local/bin/claude',
+      shellEnv: {},
+      stopAllGenerationAtStart: (svc as any).stopAllTeamsGeneration,
+      workspaceTrustPlan: {
+        launchArgPatches: [],
+        workspaces: buildWorkspaceTrustPathCandidates({
+          cwd: '/tmp/workspace-trust-disabled-team',
+          platform: 'posix',
+        }),
+      },
+      featureFlags: {
+        enabled: false,
+        claudePty: false,
+        codexArgs: false,
+        retry: false,
+        fileLock: false,
+      },
+      provisioningEnv: {
+        anthropicApiKeyHelper: null,
+      },
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(progressUpdates).toEqual([]);
+    expect(run.workspaceTrustExecution).toBeUndefined();
+    expect(run.workspaceTrustDiagnostics).toBeUndefined();
+    expect(run.progress).toMatchObject({
+      state: 'validating',
+      message: 'Validating launch',
     });
   });
 

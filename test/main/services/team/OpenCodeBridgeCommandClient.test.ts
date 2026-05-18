@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   OpenCodeBridgeCommandClient,
   redactBridgeDiagnosticText,
+  resolveOpenCodeBridgeProcessCwd,
   type OpenCodeBridgeDiagnosticsSink,
   type OpenCodeBridgeProcessRunInput,
   type OpenCodeBridgeProcessRunResult,
@@ -41,10 +42,14 @@ describe('OpenCodeBridgeCommandClient', () => {
     };
     const client = createClient();
 
-    const result = await client.execute('opencode.launchTeam', { runId: 'run-1' }, {
-      cwd: '/tmp/project',
-      timeoutMs: 10_000,
-    });
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
 
     expect(result).toMatchObject({
       ok: true,
@@ -83,10 +88,14 @@ describe('OpenCodeBridgeCommandClient', () => {
     };
     const client = createClient();
 
-    const result = await client.execute('opencode.launchTeam', { runId: 'run-1' }, {
-      cwd: '/tmp/project',
-      timeoutMs: 10_000,
-    });
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
 
     expect(result).toMatchObject({
       ok: false,
@@ -116,10 +125,14 @@ describe('OpenCodeBridgeCommandClient', () => {
     };
     const client = createClient();
 
-    const result = await client.execute('opencode.launchTeam', { runId: 'run-1' }, {
-      cwd: '/tmp/project',
-      timeoutMs: 10_000,
-    });
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
 
     expect(result).toMatchObject({
       ok: false,
@@ -148,10 +161,14 @@ describe('OpenCodeBridgeCommandClient', () => {
     };
     const client = createClient();
 
-    const result = await client.execute('opencode.launchTeam', { runId: 'run-1' }, {
-      cwd: '/tmp/project',
-      timeoutMs: 10_000,
-    });
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
 
     expect(result).toMatchObject({
       ok: false,
@@ -175,10 +192,14 @@ describe('OpenCodeBridgeCommandClient', () => {
     };
     const client = createClient();
 
-    const result = await client.execute('opencode.launchTeam', { runId: 'run-1' }, {
-      cwd: '/tmp/project',
-      timeoutMs: 10_000,
-    });
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
 
     expect(result).toMatchObject({
       ok: false,
@@ -187,6 +208,81 @@ describe('OpenCodeBridgeCommandClient', () => {
         message: 'OpenCode bridge requestId mismatch',
         retryable: false,
       },
+    });
+  });
+
+  it('resolves command env lazily for each bridge command', async () => {
+    runner.nextResult = {
+      stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    };
+    let envVersion = 0;
+    const client = createClient({
+      envProvider: () => {
+        envVersion += 1;
+        return {
+          PATH: '/usr/bin',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: `http://127.0.0.1:${5000 + envVersion}/mcp`,
+        };
+      },
+    });
+
+    await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+    await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-2' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(runner.calls[0].env).toMatchObject({
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
+      OPENCODE_DISABLE_AUTOUPDATE: '1',
+    });
+    expect(runner.calls[1].env).toMatchObject({
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5002/mcp',
+      OPENCODE_DISABLE_AUTOUPDATE: '1',
+    });
+  });
+
+  it('runs Windows batch launchers from their launcher directory while preserving envelope cwd', async () => {
+    runner.nextResult = {
+      stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    };
+    const client = createClient({
+      binaryPath: 'C:\\runtime\\agent_teams_orchestrator\\cli-dev.cmd',
+    });
+
+    await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: 'C:\\projects\\team workspace',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(runner.calls[0].cwd).toBe(
+      process.platform === 'win32'
+        ? 'C:\\runtime\\agent_teams_orchestrator'
+        : 'C:\\projects\\team workspace'
+    );
+    expect(JSON.parse(await runner.readInputEnvelope(0))).toMatchObject({
+      cwd: 'C:\\projects\\team workspace',
     });
   });
 });
@@ -205,7 +301,37 @@ describe('redactBridgeDiagnosticText', () => {
   });
 });
 
-function createClient(): OpenCodeBridgeCommandClient {
+describe('resolveOpenCodeBridgeProcessCwd', () => {
+  it('keeps non-Windows launchers on the requested project cwd', () => {
+    expect(
+      resolveOpenCodeBridgeProcessCwd('/usr/local/bin/claude-multimodel', '/repo', 'linux')
+    ).toBe('/repo');
+  });
+
+  it('uses the launcher directory for Windows batch launchers', () => {
+    expect(
+      resolveOpenCodeBridgeProcessCwd(
+        'C:\\runtime\\agent_teams_orchestrator\\cli-dev.cmd',
+        'C:\\projects\\team workspace',
+        'win32'
+      )
+    ).toBe('C:\\runtime\\agent_teams_orchestrator');
+  });
+
+  it('keeps Windows exe launchers on the requested project cwd', () => {
+    expect(
+      resolveOpenCodeBridgeProcessCwd(
+        'C:\\runtime-cache\\claude-multimodel.exe',
+        'C:\\projects\\team workspace',
+        'win32'
+      )
+    ).toBe('C:\\projects\\team workspace');
+  });
+});
+
+function createClient(
+  overrides: Partial<ConstructorParameters<typeof OpenCodeBridgeCommandClient>[0]> = {}
+): OpenCodeBridgeCommandClient {
   return new OpenCodeBridgeCommandClient({
     binaryPath: '/usr/local/bin/agent-teams-controller',
     tempDirectory: tempDir,
@@ -215,6 +341,7 @@ function createClient(): OpenCodeBridgeCommandClient {
     diagnosticIdFactory: () => 'diag-1',
     clock: () => new Date('2026-04-21T12:00:00.000Z'),
     env: { PATH: '/usr/bin' },
+    ...overrides,
   });
 }
 

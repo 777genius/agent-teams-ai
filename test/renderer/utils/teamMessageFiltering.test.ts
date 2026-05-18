@@ -660,7 +660,7 @@ Messages:
     ]);
   });
 
-  it('can include member work sync nudges for the activity timeline', () => {
+  it('keeps member work sync nudges hidden from the activity timeline by default', () => {
     const messages = [
       makeMessage({
         messageId: 'member-work-sync:demo:jack:agenda-a',
@@ -675,6 +675,30 @@ Messages:
 
     const result = filterTeamMessages(messages, {
       includeAutomationEvents: true,
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it('can include member work sync nudges for diagnostics when explicitly requested', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'member-work-sync:demo:jack:agenda-a',
+        from: 'system',
+        to: 'jack',
+        source: 'system_notification',
+        messageKind: 'member_work_sync_nudge',
+        summary: 'Work sync check',
+        text: 'Work sync check: call member_work_sync_status.',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      includeAutomationEvents: true,
+      includeMemberWorkSyncNudges: true,
       timeWindow: null,
       filter: { from: new Set(), to: new Set(), showNoise: true },
       searchQuery: '',

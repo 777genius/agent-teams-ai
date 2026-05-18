@@ -3,6 +3,8 @@
 **Дата**: 2026-03-25
 **Вопрос**: стоит ли взять готовый multi-agent оркестратор и посадить наш Electron UI сверху, вместо того чтобы развивать собственный TeamProvisioningService?
 
+**Связанная заметка**: [будущий оркестратор: паттерны из Gas City, GoClaw и Gas Town](future-orchestrator-competitor-patterns.md)
+
 ---
 
 ## 1. Что мы бы заменяли (наш текущий стек)

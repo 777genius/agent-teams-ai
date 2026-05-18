@@ -13,7 +13,7 @@ export interface RunningTeamRowModel {
   projectLabel: string;
   status: RunningTeamDashboardEntry['status'];
   statusLabel: string;
-  accentColor: string;
+  iconColor: string;
   taskCounts?: TaskStatusCounts;
 }
 
@@ -47,7 +47,7 @@ export function adaptRunningTeamsSection(
     projectLabel: getProjectLabel(team.projectPath),
     status: team.status,
     statusLabel: getStatusLabel(team.status),
-    accentColor: team.color
+    iconColor: team.color
       ? getTeamColorSet(team.color).border
       : nameColorSet(team.displayName).border,
     taskCounts: team.taskCounts,

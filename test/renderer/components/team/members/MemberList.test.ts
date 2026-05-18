@@ -140,7 +140,8 @@ describe('MemberList spawn-status memoization', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Team members are loading');
+    expect(host.querySelector('[aria-label="Loading team members"]')).not.toBeNull();
+    expect(host.textContent).not.toContain('Team members are loading');
     expect(host.textContent).not.toContain('Solo team');
 
     await act(async () => {
@@ -173,7 +174,8 @@ describe('MemberList spawn-status memoization', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Team members are loading');
+    expect(host.querySelector('[aria-label="Loading team members"]')).not.toBeNull();
+    expect(host.textContent).not.toContain('Team members are loading');
     expect(host.querySelector('[data-testid="member-team-lead"]')).toBeNull();
     expect(host.textContent).not.toContain('Solo team');
 

@@ -27,6 +27,7 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { resolveFilePath } from '@renderer/store/utils/pathResolution';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
@@ -318,9 +319,8 @@ function isAllowedElement(element: { tagName: string }): boolean {
 }
 
 /** Resolve a relative path to an absolute path given a base directory */
-function resolveRelativePath(relativeSrc: string, baseDir: string): string {
-  const cleaned = relativeSrc.startsWith('./') ? relativeSrc.slice(2) : relativeSrc;
-  return `${baseDir}/${cleaned}`;
+export function resolveRelativePath(relativeSrc: string, baseDir: string): string {
+  return resolveFilePath(baseDir, relativeSrc);
 }
 
 // =============================================================================

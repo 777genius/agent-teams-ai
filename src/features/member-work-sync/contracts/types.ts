@@ -104,6 +104,12 @@ export interface MemberWorkSyncShadowDiagnostics {
   fingerprintChanged: boolean;
   previousFingerprint?: string;
   triggerReasons?: string[];
+  recovery?: {
+    kind: 'proof_missing';
+    intentKey: string;
+    originalMessageId: string;
+    taskIds: string[];
+  };
 }
 
 export interface MemberWorkSyncStatus {

@@ -242,12 +242,16 @@ export function killTrackedCliProcesses(signal: NodeJS.Signals = 'SIGKILL'): voi
   }
 }
 
-/** Merge CLI_ENV_DEFAULTS into spawn/exec options.env (or process.env if absent). */
-function withCliEnv<T extends { env?: NodeJS.ProcessEnv | Record<string, string | undefined> }>(
-  options: T
-): T {
+/** Apply shared CLI process defaults without overriding explicit caller choices. */
+function withCliProcessDefaults<
+  T extends {
+    env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+    windowsHide?: boolean;
+  },
+>(options: T): T & { windowsHide: boolean } {
   return {
     ...options,
+    windowsHide: options.windowsHide ?? true,
     env: { ...(options.env ?? process.env), ...CLI_ENV_DEFAULTS },
   };
 }
@@ -270,7 +274,7 @@ export async function execCli(
     );
   }
   const target = binaryPath;
-  const opts = withCliEnv(options);
+  const opts = withCliProcessDefaults(options);
   const directLauncher = resolveDirectWindowsLauncher(target);
   if (directLauncher) {
     const result = await execFileAsync(
@@ -316,7 +320,7 @@ export function spawnCli(
   args: string[],
   options: SpawnOptions = {}
 ): ReturnType<typeof spawn> {
-  const opts = withCliEnv(options);
+  const opts = withCliProcessDefaults(options);
   const directLauncher = resolveDirectWindowsLauncher(binaryPath);
   if (directLauncher) {
     const directOpts = { ...opts };
@@ -372,8 +376,8 @@ export function killProcessTree(
         'System32',
         'taskkill.exe'
       );
-      execFile(taskkillPath, ['/T', '/F', '/PID', String(child.pid)], () => {
-        // Best-effort — ignore errors (process may have already exited)
+      execFile(taskkillPath, ['/T', '/F', '/PID', String(child.pid)], { windowsHide: true }, () => {
+        // Best-effort - ignore errors (process may have already exited)
       });
       return;
     } catch {

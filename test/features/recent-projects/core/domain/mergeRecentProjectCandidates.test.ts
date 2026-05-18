@@ -96,4 +96,40 @@ describe('mergeRecentProjectCandidates', () => {
     expect(result[0].identity).toBe('repo:beta');
     expect(result[0].branchName).toBeUndefined();
   });
+
+  it('prefers an available candidate over a newer deleted path', () => {
+    const result = mergeRecentProjectCandidates([
+      makeCandidate({
+        lastActivityAt: 1_000,
+        primaryPath: '/workspace/alpha',
+        associatedPaths: ['/workspace/alpha'],
+        filesystemState: 'available',
+        openTarget: {
+          type: 'synthetic-path',
+          path: '/workspace/alpha',
+        },
+      }),
+      makeCandidate({
+        lastActivityAt: 5_000,
+        primaryPath: '/workspace/alpha-deleted',
+        associatedPaths: ['/workspace/alpha-deleted'],
+        filesystemState: 'deleted',
+        openTarget: {
+          type: 'synthetic-path',
+          path: '/workspace/alpha-deleted',
+        },
+      }),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      primaryPath: '/workspace/alpha',
+      lastActivityAt: 5_000,
+      filesystemState: 'available',
+      openTarget: {
+        type: 'synthetic-path',
+        path: '/workspace/alpha',
+      },
+    });
+  });
 });

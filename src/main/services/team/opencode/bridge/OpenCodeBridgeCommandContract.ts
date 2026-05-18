@@ -9,6 +9,7 @@ import type {
 export const OPEN_CODE_BRIDGE_SCHEMA_VERSION = 1 as const;
 export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
+export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 1 as const;
 
 export type OpenCodeBridgeCommandName =
   | 'opencode.handshake'
@@ -172,6 +173,7 @@ export interface OpenCodeSendMessageCommandBody {
   messageId?: string;
   deliveryAttemptId?: string;
   payloadHash?: string;
+  settlementMode?: 'observed' | 'acceptance';
   fileParts?: {
     type: 'file';
     mime: 'image/png' | 'image/jpeg' | 'image/webp';
@@ -229,12 +231,17 @@ export interface OpenCodeDeliveryResponseObservation {
 
 export interface OpenCodeSendMessageCommandData {
   accepted: boolean;
+  runId?: string;
   sessionId?: string;
   memberName: string;
   runtimePid?: number;
   prePromptCursor?: string | null;
+  runtimePromptMessageId?: string;
   responseObservation?: OpenCodeDeliveryResponseObservation;
   diagnostics: OpenCodeTeamBridgeDiagnostic[];
+  idempotencyKey?: string;
+  manifestHighWatermark?: number | null;
+  runtimeStoreManifestHighWatermark?: number | null;
 }
 
 export interface OpenCodeCommandStatusCommandBody {
@@ -284,6 +291,8 @@ export interface OpenCodeObserveMessageDeliveryCommandBody {
   projectPath: string;
   memberName: string;
   messageId: string;
+  sessionId?: string;
+  runtimePromptMessageId?: string;
   prePromptCursor?: string | null;
 }
 
@@ -292,6 +301,7 @@ export interface OpenCodeObserveMessageDeliveryCommandData {
   sessionId?: string;
   memberName: string;
   runtimePid?: number;
+  runtimePromptMessageId?: string;
   responseObservation: OpenCodeDeliveryResponseObservation;
   diagnostics: OpenCodeTeamBridgeDiagnostic[];
 }
@@ -432,6 +442,7 @@ export interface OpenCodeBridgePeerIdentity {
     supportedCommands: OpenCodeBridgeCommandName[];
     opencodeTaskLedgerEvidenceContractVersion?: number;
     opencodeAppManagedBootstrapContractVersion?: number;
+    opencodeDeliveryAcceptanceContractVersion?: number;
   };
   runtime: {
     providerId: 'opencode';
@@ -612,6 +623,7 @@ export function validateOpenCodeBridgeHandshake(input: {
   expectedCapabilitySnapshotId: string | null;
   expectedManifestHighWatermark: number | null;
   expectedRunId: string | null;
+  requiresDeliveryAcceptanceContract?: boolean;
 }): { ok: true } | { ok: false; reason: string } {
   const shape = validateOpenCodeBridgeHandshakeShape(input.handshake);
   if (!shape.ok) {
@@ -671,6 +683,19 @@ export function validateOpenCodeBridgeHandshake(input: {
   }
 
   if (
+    input.requiredCommand === 'opencode.sendMessage' &&
+    input.requiresDeliveryAcceptanceContract === true &&
+    input.handshake.server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion !==
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION
+  ) {
+    return {
+      ok: false,
+      reason:
+        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 1. Falling back to observed delivery mode is required.',
+    };
+  }
+
+  if (
     input.expectedCapabilitySnapshotId &&
     input.handshake.server.runtime.capabilitySnapshotId !== input.expectedCapabilitySnapshotId
   ) {
@@ -717,6 +742,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
   capabilitySnapshotId: string | null;
   manifest: RuntimeStoreManifestEvidence;
   idempotencyKey: string;
+  enforceManifestHighWatermark?: boolean;
 }): asserts input is {
   result: OpenCodeBridgeSuccess<unknown>;
   requestId: string;
@@ -735,6 +761,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
 
   const resultManifestHighWatermark = extractManifestHighWatermark(input.result.data);
   if (
+    input.enforceManifestHighWatermark !== false &&
     typeof resultManifestHighWatermark === 'number' &&
     resultManifestHighWatermark < input.manifest.highWatermark
   ) {
@@ -942,7 +969,10 @@ function isPeerIdentity(value: unknown): value is OpenCodeBridgePeerIdentity {
         (bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion as number) < 1)) ||
     (bridgeProtocol.opencodeAppManagedBootstrapContractVersion !== undefined &&
       (!Number.isInteger(bridgeProtocol.opencodeAppManagedBootstrapContractVersion) ||
-        (bridgeProtocol.opencodeAppManagedBootstrapContractVersion as number) < 1))
+        (bridgeProtocol.opencodeAppManagedBootstrapContractVersion as number) < 1)) ||
+    (bridgeProtocol.opencodeDeliveryAcceptanceContractVersion !== undefined &&
+      (!Number.isInteger(bridgeProtocol.opencodeDeliveryAcceptanceContractVersion) ||
+        (bridgeProtocol.opencodeDeliveryAcceptanceContractVersion as number) < 1))
   ) {
     return false;
   }

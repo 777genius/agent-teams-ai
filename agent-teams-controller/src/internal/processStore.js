@@ -1,7 +1,7 @@
 const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
+const { writeJsonFileSync } = require('./atomicFile.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 
 function nowIso() {
@@ -17,10 +17,7 @@ function readJson(filePath, fallbackValue) {
 }
 
 function writeJson(filePath, value) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(value, null, 2));
-  fs.renameSync(tempPath, filePath);
+  writeJsonFileSync(filePath, value);
 }
 
 function readProcesses(paths) {

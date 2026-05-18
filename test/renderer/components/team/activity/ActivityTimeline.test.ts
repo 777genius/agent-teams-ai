@@ -86,6 +86,42 @@ describe('ActivityTimeline session separators', () => {
     });
   });
 
+  it('renders loading state instead of empty state while the initial message page is loading', () => {
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages: [],
+          loading: true,
+          teamName: 'demo-team',
+        })
+      );
+    });
+
+    expect(container.textContent).toContain('Loading messages...');
+    expect(container.textContent).not.toContain('No messages');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('renders empty state after loading settles with no messages', () => {
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(React.createElement(ActivityTimeline, { messages: [], teamName: 'demo-team' }));
+    });
+
+    expect(container.textContent).toContain('No messages');
+    expect(container.textContent).not.toContain('Loading messages...');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('renders New session between lead thought groups from different sessions', async () => {
     const root = createRoot(container);
     const messages: InboxMessage[] = [
@@ -348,9 +384,7 @@ describe('ActivityTimeline session separators', () => {
 describe('ActivityTimeline viewport observerRoot', () => {
   let container: HTMLDivElement;
   let capturedRoots: Array<Element | Document | null>;
-  let originalIntersectionObserver:
-    | typeof globalThis.IntersectionObserver
-    | undefined;
+  let originalIntersectionObserver: typeof globalThis.IntersectionObserver | undefined;
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -363,10 +397,7 @@ describe('ActivityTimeline viewport observerRoot', () => {
       public readonly root: Element | Document | null;
       public readonly rootMargin: string;
       public readonly thresholds: ReadonlyArray<number>;
-      constructor(
-        _callback: IntersectionObserverCallback,
-        options?: IntersectionObserverInit
-      ) {
+      constructor(_callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
         this.root = options?.root ?? null;
         this.rootMargin = options?.rootMargin ?? '0px';
         this.thresholds = Array.isArray(options?.threshold)
@@ -514,7 +545,9 @@ describe('ActivityTimeline virtualization threshold', () => {
 
     // Virtualized path wraps items in an absolute-position container; the
     // direct path does not. Assert the wrapper is absent.
-    const absoluteWrapper = container.querySelector<HTMLDivElement>('div[style*="position: relative"]');
+    const absoluteWrapper = container.querySelector<HTMLDivElement>(
+      'div[style*="position: relative"]'
+    );
     expect(absoluteWrapper).toBeNull();
     // Sanity check: direct render still emits at least one activity item.
     expect(container.textContent).toContain('message 0');
@@ -536,7 +569,9 @@ describe('ActivityTimeline virtualization threshold', () => {
       );
     });
 
-    const absoluteWrapper = container.querySelector<HTMLDivElement>('div[style*="position: relative"]');
+    const absoluteWrapper = container.querySelector<HTMLDivElement>(
+      'div[style*="position: relative"]'
+    );
     expect(absoluteWrapper).toBeNull();
     expect(container.textContent).toContain('message 0');
 
@@ -569,8 +604,8 @@ describe('ActivityTimeline virtualization threshold', () => {
     // Default pagination caps visible rows at 30, which stays below the
     // threshold, so the direct render path is in effect here. Click "show
     // all" to expose every message — that pushes row count past the gate.
-    const showAllButton = [...container.querySelectorAll('button')].find(
-      (b) => b.textContent?.toLowerCase().includes('show all')
+    const showAllButton = [...container.querySelectorAll('button')].find((b) =>
+      b.textContent?.toLowerCase().includes('show all')
     );
     expect(showAllButton).toBeDefined();
 

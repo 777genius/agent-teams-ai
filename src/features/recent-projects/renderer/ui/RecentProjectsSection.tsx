@@ -141,10 +141,12 @@ export const RecentProjectsSection = ({
     );
   }
 
+  const hasSelectFolderCard = !searchQuery.trim() && isElectron;
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-        {!searchQuery.trim() && isElectron && (
+      <div className="project-row-zebra-grid grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+        {hasSelectFolderCard && (
           <SelectProjectFolderCard onClick={() => void selectProjectFolder()} />
         )}
         {cards.map((card) => (

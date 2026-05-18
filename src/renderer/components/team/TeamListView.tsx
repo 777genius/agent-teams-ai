@@ -12,7 +12,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
+import {
+  getTeamColorSet,
+  getThemedBadge,
+  getThemedBorder,
+  type TeamColorSet,
+} from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
@@ -25,13 +30,27 @@ import {
   getWorktreeNavigationState,
 } from '@renderer/store/utils/stateResetHelpers';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
+import {
+  buildTaskCountsByTeam,
+  normalizePath,
+  type TaskStatusCounts,
+} from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { Copy, FolderOpen, GitBranch, Play, RotateCcw, Search, Square, Trash2 } from 'lucide-react';
+import {
+  Copy,
+  FolderOpen,
+  GitBranch,
+  Play,
+  RotateCcw,
+  Search,
+  Square,
+  Trash2,
+  UsersRound,
+} from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamEmptyState } from './TeamEmptyState';
@@ -133,23 +152,28 @@ function renderTeamRecentPaths(
   team: TeamSummary,
   status: TeamStatus,
   matchesCurrentProject: boolean,
-  isLight: boolean
+  isLight: boolean,
+  selectedProjectPath: string | null
 ): React.JSX.Element | null {
   const recentPaths = getRecentProjects(team);
-  if (recentPaths.length === 0) return null;
+  const visibleRecentPaths =
+    matchesCurrentProject && selectedProjectPath
+      ? recentPaths.filter((path) => normalizePath(path) !== normalizePath(selectedProjectPath))
+      : recentPaths;
+  if (visibleRecentPaths.length === 0) return null;
   return (
     <div className="mt-2 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-      {matchesCurrentProject ? (
+      {matchesCurrentProject && !selectedProjectPath ? (
         <span
           className={`inline-flex items-center gap-1 truncate rounded-full px-2 py-0.5 text-[12px] font-medium ${
             isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/15 text-emerald-400'
           }`}
         >
           <FolderOpen size={12} className="shrink-0" />
-          {recentPaths.map((p, i) => (
+          {visibleRecentPaths.map((p, i) => (
             <span key={p} title={p}>
               {folderName(p)}
-              {i < recentPaths.length - 1 ? ', ' : ''}
+              {i < visibleRecentPaths.length - 1 ? ', ' : ''}
             </span>
           ))}
         </span>
@@ -157,14 +181,14 @@ function renderTeamRecentPaths(
         <>
           <FolderOpen size={10} className="shrink-0" />
           <span className="truncate">
-            {recentPaths.map((p, i) => (
+            {visibleRecentPaths.map((p, i) => (
               <span key={p} title={p}>
                 {i === 0 && (status === 'active' || status === 'idle') ? (
                   <span className="text-emerald-400">{folderName(p)}</span>
                 ) : (
                   folderName(p)
                 )}
-                {i < recentPaths.length - 1 ? ', ' : ''}
+                {i < visibleRecentPaths.length - 1 ? ', ' : ''}
               </span>
             ))}
           </span>
@@ -226,6 +250,213 @@ const StatusBadge = ({ status }: { status: TeamStatus }): React.JSX.Element => {
         </span>
       );
   }
+};
+
+interface ActiveTeamCardProps {
+  team: TeamSummary;
+  status: TeamStatus;
+  teamColorSet: TeamColorSet;
+  isLight: boolean;
+  matchesCurrentProject: boolean;
+  currentProjectPath: string | null;
+  branchName?: string;
+  taskCounts?: TaskStatusCounts;
+  launchingTeamName: string | null;
+  stoppingTeamName: string | null;
+  onOpenTeam: (teamName: string, projectPath?: string) => void;
+  onLaunchTeam: (
+    teamName: string,
+    projectPath: string | undefined,
+    event: React.MouseEvent
+  ) => void;
+  onStopTeam: (teamName: string, event: React.MouseEvent) => void;
+  onCopyTeam: (teamName: string, event: React.MouseEvent) => void;
+  onDeleteTeam: (teamName: string, pendingCreate: boolean, event: React.MouseEvent) => void;
+}
+
+const ActiveTeamCard = ({
+  team,
+  status,
+  teamColorSet,
+  isLight,
+  matchesCurrentProject,
+  currentProjectPath,
+  branchName,
+  taskCounts,
+  launchingTeamName,
+  stoppingTeamName,
+  onOpenTeam,
+  onLaunchTeam,
+  onStopTeam,
+  onCopyTeam,
+  onDeleteTeam,
+}: Readonly<ActiveTeamCardProps>): React.JSX.Element => {
+  const canLaunch =
+    (status === 'offline' ||
+      status === 'partial_failure' ||
+      status === 'partial_skipped' ||
+      status === 'partial_pending') &&
+    Boolean(team.projectPath);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      className="team-row-zebra-card group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-[var(--color-border)] p-4 transition-colors duration-200 hover:border-[var(--color-border-emphasis)]"
+      onClick={() => onOpenTeam(team.teamName, team.projectPath ?? undefined)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenTeam(team.teamName, team.projectPath ?? undefined);
+        }
+      }}
+    >
+      <div className="pointer-events-none absolute right-4 top-4 z-10">
+        <StatusBadge status={status} />
+      </div>
+      <div className="flex flex-1 flex-col">
+        <div className="space-y-2">
+          <div className="flex items-start gap-2.5 pr-44">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] transition-colors group-hover:border-[var(--color-border-emphasis)]">
+              <UsersRound
+                className="size-4 transition-colors"
+                style={{ color: getThemedBorder(teamColorSet, isLight) }}
+              />
+            </div>
+            <h3 className="min-w-0 flex-1 break-words text-sm font-semibold leading-snug text-[var(--color-text)]">
+              {team.displayName}
+            </h3>
+          </div>
+          <div className="flex min-h-6 items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {branchName ? (
+                <span
+                  className="flex max-w-full items-center gap-1 rounded bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
+                  title={branchName}
+                >
+                  <GitBranch size={10} className="shrink-0" />
+                  <span className="truncate">{branchName}</span>
+                </span>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 gap-1">
+              {canLaunch ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50 group-hover:opacity-100"
+                      onClick={(event) =>
+                        onLaunchTeam(team.teamName, team.projectPath ?? undefined, event)
+                      }
+                      disabled={launchingTeamName === team.teamName}
+                      aria-label="Launch team"
+                    >
+                      <Play size={14} fill="currentColor" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {launchingTeamName === team.teamName ? 'Launching…' : 'Launch team'}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              {status === 'active' || status === 'idle' ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50 group-hover:opacity-100"
+                      onClick={(event) => onStopTeam(team.teamName, event)}
+                      disabled={stoppingTeamName === team.teamName}
+                      aria-label="Stop team"
+                    >
+                      <Square size={14} fill="currentColor" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {stoppingTeamName === team.teamName ? 'Stopping…' : 'Stop team'}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              {!team.pendingCreate ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-blue-500/10 hover:text-blue-300 group-hover:opacity-100"
+                      onClick={(event) => onCopyTeam(team.teamName, event)}
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Copy team</TooltipContent>
+                </Tooltip>
+              ) : null}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
+                    onClick={(event) => onDeleteTeam(team.teamName, !!team.pendingCreate, event)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Delete team</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 flex min-h-10 items-start gap-2">
+          <p className="line-clamp-2 min-w-0 flex-1 text-xs text-[var(--color-text-muted)]">
+            {team.description || 'No description'}
+          </p>
+        </div>
+        {team.teamLaunchState === 'partial_pending' ? (
+          <p className="mt-2 text-[11px] text-amber-300">
+            {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
+              ? buildPendingRuntimeSummaryCopy({
+                  confirmedCount: team.confirmedCount,
+                  expectedMemberCount: team.expectedMemberCount,
+                  memberCount: team.memberCount,
+                  runtimeProcessPendingCount: team.runtimeProcessPendingCount,
+                  includePeriod: true,
+                })
+              : 'Last launch is still reconciling.'}
+          </p>
+        ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
+          <p className="mt-2 text-[11px] text-amber-400">
+            {team.missingMembers?.length
+              ? `Last launch stopped before ${team.missingMembers.length}/${team.expectedMemberCount ?? team.missingMembers.length} teammate${team.missingMembers.length === 1 ? '' : 's'} joined.`
+              : 'Last launch stopped before all teammates joined.'}
+          </p>
+        ) : team.teamLaunchState === 'partial_skipped' ? (
+          <p className="mt-2 text-[11px] text-sky-300">
+            {team.skippedMembers?.length
+              ? `Last launch skipped ${team.skippedMembers.length}/${team.expectedMemberCount ?? team.skippedMembers.length} teammate${team.skippedMembers.length === 1 ? '' : 's'}.`
+              : 'Last launch has skipped teammates.'}
+          </p>
+        ) : null}
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+          {team.members && team.members.length > 0 ? (
+            renderMemberChips(team.members, isLight)
+          ) : team.memberCount === 0 ? (
+            <Badge variant="secondary" className="text-[10px] font-normal">
+              Solo
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="text-[10px] font-normal">
+              Members: {team.memberCount}
+            </Badge>
+          )}
+        </div>
+        <div className="mt-auto">
+          <TeamTaskStatusSummary counts={taskCounts} />
+          {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
@@ -862,186 +1093,88 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
     const activeFiltered = filteredTeams.filter((t) => !t.deletedAt);
     const deletedFiltered = filteredTeams.filter((t) => t.deletedAt);
+    const activeSections = currentProjectPath
+      ? [
+          {
+            key: 'project',
+            title: `Teams for ${folderName(currentProjectPath) || 'selected project'}`,
+            teams: activeFiltered.filter((team) =>
+              teamMatchesProjectSelection(team, currentProjectPath)
+            ),
+          },
+          {
+            key: 'other',
+            title: 'Other teams',
+            teams: activeFiltered.filter(
+              (team) => !teamMatchesProjectSelection(team, currentProjectPath)
+            ),
+          },
+        ].filter((section) => section.teams.length > 0)
+      : [
+          {
+            key: 'all',
+            title: null,
+            teams: activeFiltered,
+          },
+        ];
 
     return (
       <>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {activeFiltered.map((team) => {
-            const status = resolveTeamStatus(
-              team,
-              team.teamName,
-              aliveTeams,
-              getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-              leadActivityByTeam
-            );
-            const teamColorSet = team.color
-              ? getTeamColorSet(team.color)
-              : nameColorSet(team.displayName);
-            const matchesCurrentProject = currentProjectPath
-              ? teamMatchesProjectSelection(team, currentProjectPath)
-              : false;
-            return (
-              <div
-                key={team.teamName}
-                role="button"
-                tabIndex={0}
-                className="group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:bg-[var(--color-surface-raised)]"
-                style={teamColorSet ? { borderLeftColor: teamColorSet.border } : undefined}
-                onClick={() => openTeamTab(team.teamName, team.projectPath)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    openTeamTab(team.teamName, team.projectPath);
-                  }
-                }}
-              >
-                <div className="flex flex-1 flex-col">
-                  <div className="flex items-start justify-between">
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <h3 className="truncate text-sm font-semibold text-[var(--color-text)]">
-                        {team.displayName}
-                      </h3>
-                      <StatusBadge status={status} />
-                      {team.projectPath &&
-                        (() => {
-                          const branch = branchByPath[normalizePath(team.projectPath)];
-                          if (!branch) return null;
-                          return (
-                            <span
-                              className="flex shrink-0 items-center gap-1 rounded bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
-                              title={branch}
-                            >
-                              <GitBranch size={10} />
-                              <span className="max-w-24 truncate">{branch}</span>
-                            </span>
-                          );
-                        })()}
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      {(status === 'offline' ||
-                        status === 'partial_failure' ||
-                        status === 'partial_skipped' ||
-                        status === 'partial_pending') &&
-                        team.projectPath && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50 group-hover:opacity-100"
-                                onClick={(e) =>
-                                  handleLaunchTeam(team.teamName, team.projectPath, e)
-                                }
-                                disabled={launchingTeamName === team.teamName}
-                                aria-label="Launch team"
-                              >
-                                <Play size={14} fill="currentColor" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              {launchingTeamName === team.teamName ? 'Launching…' : 'Launch team'}
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      {(status === 'active' || status === 'idle') && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50 group-hover:opacity-100"
-                              onClick={(e) => handleStopTeam(team.teamName, e)}
-                              disabled={stoppingTeamName === team.teamName}
-                              aria-label="Stop team"
-                            >
-                              <Square size={14} fill="currentColor" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            {stoppingTeamName === team.teamName ? 'Stopping…' : 'Stop team'}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {!team.pendingCreate && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-blue-500/10 hover:text-blue-300 group-hover:opacity-100"
-                              onClick={(e) => handleCopyTeam(team.teamName, e)}
-                            >
-                              <Copy size={14} />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Copy team</TooltipContent>
-                        </Tooltip>
-                      )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
-                            onClick={(e) =>
-                              handleDeleteTeam(team.teamName, !!team.pendingCreate, e)
-                            }
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Delete team</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex min-h-10 items-start gap-2">
-                    <p className="line-clamp-2 min-w-0 flex-1 text-xs text-[var(--color-text-muted)]">
-                      {team.description || 'No description'}
-                    </p>
-                  </div>
-                  {team.teamLaunchState === 'partial_pending' ? (
-                    <p className="mt-2 text-[11px] text-amber-300">
-                      {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
-                        ? buildPendingRuntimeSummaryCopy({
-                            confirmedCount: team.confirmedCount,
-                            expectedMemberCount: team.expectedMemberCount,
-                            memberCount: team.memberCount,
-                            runtimeProcessPendingCount: team.runtimeProcessPendingCount,
-                            includePeriod: true,
-                          })
-                        : 'Last launch is still reconciling.'}
-                    </p>
-                  ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
-                    <p className="mt-2 text-[11px] text-amber-400">
-                      {team.missingMembers?.length
-                        ? `Last launch stopped before ${team.missingMembers.length}/${team.expectedMemberCount ?? team.missingMembers.length} teammate${team.missingMembers.length === 1 ? '' : 's'} joined.`
-                        : 'Last launch stopped before all teammates joined.'}
-                    </p>
-                  ) : team.teamLaunchState === 'partial_skipped' ? (
-                    <p className="mt-2 text-[11px] text-sky-300">
-                      {team.skippedMembers?.length
-                        ? `Last launch skipped ${team.skippedMembers.length}/${team.expectedMemberCount ?? team.skippedMembers.length} teammate${team.skippedMembers.length === 1 ? '' : 's'}.`
-                        : 'Last launch has skipped teammates.'}
-                    </p>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    {team.members && team.members.length > 0 ? (
-                      renderMemberChips(team.members, isLight)
-                    ) : team.memberCount === 0 ? (
-                      <Badge variant="secondary" className="text-[10px] font-normal">
-                        Solo
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-[10px] font-normal">
-                        Members: {team.memberCount}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="mt-auto">
-                    <TeamTaskStatusSummary counts={taskCountsByTeam.get(team.teamName)} />
-                    {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight)}
-                  </div>
-                </div>
+        {activeSections.map((section, sectionIndex) => (
+          <section key={section.key} className={sectionIndex > 0 ? 'mt-6' : undefined}>
+            {section.title ? (
+              <div className="mb-2 flex items-center gap-2">
+                <h3 className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                  {section.title}
+                </h3>
+                <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-1.5 py-0.5 text-[10px] font-medium leading-none text-[var(--color-text-secondary)]">
+                  {section.teams.length}
+                </span>
               </div>
-            );
-          })}
-        </div>
+            ) : null}
+            <div className="team-row-zebra-grid grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {section.teams.map((team) => {
+                const status = resolveTeamStatus(
+                  team,
+                  team.teamName,
+                  aliveTeams,
+                  getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
+                  leadActivityByTeam
+                );
+                const teamColorSet = team.color
+                  ? getTeamColorSet(team.color)
+                  : nameColorSet(team.displayName);
+                const matchesCurrentProject = currentProjectPath
+                  ? teamMatchesProjectSelection(team, currentProjectPath)
+                  : false;
+                return (
+                  <ActiveTeamCard
+                    key={team.teamName}
+                    team={team}
+                    status={status}
+                    teamColorSet={teamColorSet}
+                    isLight={isLight}
+                    matchesCurrentProject={matchesCurrentProject}
+                    currentProjectPath={currentProjectPath}
+                    branchName={
+                      team.projectPath
+                        ? (branchByPath[normalizePath(team.projectPath)] ?? undefined)
+                        : undefined
+                    }
+                    taskCounts={taskCountsByTeam.get(team.teamName)}
+                    launchingTeamName={launchingTeamName}
+                    stoppingTeamName={stoppingTeamName}
+                    onOpenTeam={openTeamTab}
+                    onLaunchTeam={handleLaunchTeam}
+                    onStopTeam={handleStopTeam}
+                    onCopyTeam={handleCopyTeam}
+                    onDeleteTeam={handleDeleteTeam}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        ))}
 
         {deletedFiltered.length > 0 && (
           <>
@@ -1105,7 +1238,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                       {team.description || 'No description'}
                     </p>
                     {team.members && team.members.length > 0 && (
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
                         {renderMemberChips(team.members, isLight)}
                       </div>
                     )}

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const runtimeHelpers = require('./runtimeHelpers.js');
+const { writeJsonFileSync } = require('./atomicFile.js');
 const { withFileLockSync } = require('./fileLock.js');
 
 const DEFAULT_WAIT_TIMEOUT_MS = 10000;
@@ -30,6 +31,20 @@ function readControlApiState(context) {
   }
 }
 
+function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
+  const explicit =
+    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
+    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
+    '';
+  return [
+    `explicit=${explicit ? 'set' : 'missing'}`,
+    `stateFile=${
+      stateFileUrl ? 'set' : `missing:${path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE)}`
+    }`,
+    `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
+  ].join(', ');
+}
+
 function resolveControlBaseUrls(context, flags = {}) {
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
@@ -43,7 +58,12 @@ function resolveControlBaseUrls(context, flags = {}) {
   const candidates = [...new Set([explicit, stateFileUrl, envUrl].filter(Boolean))];
   if (candidates.length === 0) {
     throw new Error(
-      'Team control API is unavailable. Start the desktop app team runtime first so it can validate member work sync reports.'
+      `Team control API is unavailable. Start the desktop app team runtime first so it can validate member work sync reports. Lookup: ${describeControlApiLookup(
+        context,
+        flags,
+        stateFileUrl,
+        envUrl
+      )}.`
     );
   }
   return candidates;
@@ -139,7 +159,9 @@ function buildPendingIntentId(body) {
     : [];
   const payload = {
     teamName: body.teamName,
-    memberName: String(body.memberName || '').trim().toLowerCase(),
+    memberName: String(body.memberName || '')
+      .trim()
+      .toLowerCase(),
     state: body.state,
     agendaFingerprint: body.agendaFingerprint,
     reportToken: body.reportToken || '',
@@ -176,10 +198,7 @@ function readPendingReportFile(filePath) {
 }
 
 function writePendingReportFile(filePath, data) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tempPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-  fs.renameSync(tempPath, filePath);
+  writeJsonFileSync(filePath, data, { trailingNewline: true });
 }
 
 function appendPendingReportIntent(context, body, reason) {

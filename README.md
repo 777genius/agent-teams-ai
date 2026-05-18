@@ -5,7 +5,7 @@
   <a href="docs/screenshots/8.png"><img src="docs/screenshots/8.png" width="75" alt="Task Detail" /></a>&nbsp;
   <img src="resources/icons/png/1024x1024.png" alt="Agent Teams" width="80" />&nbsp;
   <a href="docs/screenshots/9.png"><img src="docs/screenshots/9.png" width="75" alt="Execution Logs" /></a>&nbsp;
-  <a href="docs/screenshots/3.jpg"><img src="docs/screenshots/3.png" width="75" alt="Agent Comments" /></a>&nbsp;
+  <a href="docs/screenshots/3.png"><img src="docs/screenshots/3.png" width="75" alt="Agent Comments" /></a>&nbsp;
   <a href="docs/screenshots/4.png"><img src="docs/screenshots/4.png" width="75" alt="Create Team" /></a>&nbsp;
   <a href="docs/screenshots/6.png"><img src="docs/screenshots/6.png" width="65" alt="Settings" /></a>
 </p>
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <sub>Free desktop app for AI agent teams. Auto-detects Claude/Codex/OpenCode (75+ LLM providers). Use the provider access you already have - subscriptions or API keys. Not just coding agents.</sub>
+  <sub>Free desktop app for AI agent teams. Auto-detects Claude/Codex/OpenCode (200+ models). Use the provider access you already have - subscriptions or API keys. Not just coding agents.</sub>
 </p>
 
 <img width="1304" height="820" alt="image" src="https://github.com/user-attachments/assets/dea53a01-68b3-4c36-bcf6-e4d1ad4cdb31" />
@@ -191,19 +191,21 @@ For feature architecture and implementation guidance:
 | **Git worktree isolation** | ✅ Optional | ✅ Core primitive | ✅ Worktrees / branches | ⚠️ Background branches/VMs | ⚠️ Manual worktrees |
 | **Multi-agent backend** | ✅ Claude, Codex + OpenCode teammates | ✅ Claude, Codex, Gemini, Copilot + more | ✅ BYO agents: Claude, Codex, Cursor/OpenCode, HTTP | ⚠️ Multi-model agents, no team backend | ⚠️ Claude-only experimental teams |
 | **Org chart / governance** | ⚠️ Roles + approvals, no org chart | ⚠️ Roles + escalation | ✅ Org chart + board governance | ⚠️ Team admin only | ❌ |
-| **Budget controls** | ⚠️ Cost/token visibility, no hard caps | ⚠️ Cost tiers + digest, no hard caps | ✅ Per-agent budgets + hard stops | ⚠️ Usage + BG spend limits | ⚠️ `/cost` + workspace limits |
+| **Budget controls** | ⚠️ Cost/token visibility, no hard caps | ⚠️ Cost tiers + digest, no hard caps | ✅ Per-agent budgets + hard stops | ⚠️ Usage + BG spend limits | ⚠️ `/usage` + workspace limits |
 | **Price** | **Free OSS UI**, provider access needed | Free OSS, runtime plans needed | Free OSS, self-hosted + infra | Free + paid usage | Claude plan or API usage |
 
-Fact sources checked on May 5, 2026: [detailed research notes](docs/research/gastown-paperclip-comparison-2026-05-05.md), [Gastown README](https://github.com/gastownhall/gastown), [Gastown provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [Gastown scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [Paperclip README](https://github.com/paperclipai/paperclip), [Paperclip adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [Paperclip budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [Paperclip runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Paperclip Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [Cursor Background Agents](https://docs.cursor.com/en/background-agents), [Cursor Diffs & Review](https://docs.cursor.com/en/agent/review), [Cursor Bugbot](https://docs.cursor.com/en/bugbot), [Cursor pricing](https://docs.cursor.com/en/account/usage), [Claude Code agent teams](https://code.claude.com/docs/en/agent-teams), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents), [Claude Code workflows](https://code.claude.com/docs/en/common-workflows), [Claude Code costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing).
+Fact sources checked on May 16, 2026: [detailed research notes](docs/research/gastown-paperclip-comparison-2026-05-16.md), [Gastown README](https://github.com/gastownhall/gastown), [Gastown provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [Gastown scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [Gastown release](https://github.com/gastownhall/gastown/releases/tag/v1.1.0), [Paperclip README](https://github.com/paperclipai/paperclip), [Paperclip adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [Paperclip budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [Paperclip runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Paperclip Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [Paperclip work products](https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts), [Paperclip release](https://github.com/paperclipai/paperclip/releases/tag/v2026.513.0), [Cursor Background Agents](https://docs.cursor.com/en/background-agents), [Cursor Diffs & Review](https://docs.cursor.com/en/agent/review), [Cursor Bugbot](https://docs.cursor.com/en/bugbot), [Cursor pricing](https://docs.cursor.com/en/account/usage), [Claude Code agent teams](https://code.claude.com/docs/en/agent-teams), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents), [Claude Code workflows](https://code.claude.com/docs/en/common-workflows), [Claude Code costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing).
 
 ---
 
 ## Quick start
 
 1. **Download** the app for your platform (see [Installation](#installation))
-2. **Launch** — On first run, the setup wizard will detect the runtime and guide provider authentication
+2. **Launch the desktop app** - On first run, the setup wizard will detect the runtime and guide provider authentication
 3. **Create a team** — Pick a project, define roles, write a provisioning prompt
 4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
+
+Use the desktop app as the primary product. The browser/web path is not needed for normal use and does not provide the full desktop runtime, IPC, terminal, provider auth, or team lifecycle behavior.
 
 
 ---
@@ -274,7 +276,9 @@ pnpm install
 pnpm dev
 ```
 
-The app auto-discovers Claude Code projects from `~/.claude/`.
+`pnpm dev` starts the desktop Electron app. Do not start a browser/web dev server for normal development; that path is limited and is not the supported way to run agent teams locally.
+
+The desktop app auto-discovers Claude Code projects from `~/.claude/`.
 
 ### Debug teammate runtimes
 
@@ -296,14 +300,18 @@ pnpm dist:mac:arm64  # macOS Apple Silicon (.dmg)
 pnpm dist:mac:x64    # macOS Intel (.dmg)
 pnpm dist:win        # Windows (.exe)
 pnpm dist:linux      # Linux (AppImage/.deb/.rpm/.pacman)
-pnpm dist            # macOS + Windows + Linux
+pnpm dist            # Current platform
 ```
+
+Distribution scripts run the production build and stage the bundled multimodel runtime from
+`runtime.lock.json` before packaging. Use `pnpm clean:runtime` to remove staged runtime files after
+local packaging.
 
 ### Scripts
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Development with hot reload |
+| `pnpm dev` | Desktop app development with hot reload |
 | `pnpm build` | Production build |
 | `pnpm typecheck` | TypeScript type checking |
 | `pnpm lint` | Lint (no auto-fix) |

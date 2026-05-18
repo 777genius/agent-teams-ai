@@ -1,13 +1,19 @@
 import { computed, watch, onUnmounted } from "vue";
+import type { Ref } from "vue";
 import { useThemeStore } from "~/stores/theme";
+
+type VuetifyThemeInstance = {
+  global: {
+    name: Ref<string>;
+    current: Ref<unknown>;
+  };
+  change?: (name: string) => void;
+};
 
 export const useBrowserTheme = () => {
   const themeStore = useThemeStore();
   const { $vuetifyTheme } = useNuxtApp();
-  const vuetifyTheme = $vuetifyTheme as {
-    global: { name: import("vue").Ref<string>; current: import("vue").Ref<any> };
-    change: (name: string) => void;
-  } | null;
+  const vuetifyTheme = $vuetifyTheme as VuetifyThemeInstance | null;
   let mediaQueryHandler: ((event: MediaQueryListEvent) => void) | null = null;
   let mediaQuery: MediaQueryList | null = null;
 
@@ -26,12 +32,12 @@ export const useBrowserTheme = () => {
   };
 
   const initTheme = () => {
-    if (!process.client) return;
+    if (!import.meta.client) return;
     const initialTheme = themeStore.getInitialTheme();
     themeStore.setTheme(initialTheme, false);
     applyVuetifyTheme(initialTheme);
 
-    if (process.client && !themeStore.userSelected) {
+    if (!themeStore.userSelected) {
       mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       mediaQueryHandler = (event: MediaQueryListEvent) => {
         if (!themeStore.userSelected) {

@@ -13,6 +13,7 @@ describe('resolveFilePath', () => {
 
   it('resolves dot-prefixed relative paths', () => {
     expect(resolveFilePath('/repo', './src/app.ts')).toBe('/repo/src/app.ts');
+    expect(resolveFilePath('C:\\repo', '.\\src\\app.ts')).toBe('C:\\repo\\src\\app.ts');
   });
 
   it('resolves parent relative paths on unix', () => {
@@ -27,12 +28,25 @@ describe('resolveFilePath', () => {
     );
   });
 
+  it('preserves Windows drive-root separators when resolving child paths', () => {
+    expect(resolveFilePath('C:\\', 'src\\app.ts')).toBe('C:\\src\\app.ts');
+    expect(resolveFilePath('C:/', 'src/app.ts')).toBe('C:/src/app.ts');
+  });
+
   it('passes through tilde paths as-is', () => {
     expect(resolveFilePath('/repo', '~/some/directory')).toBe('~/some/directory');
   });
 
   it('passes through tilde paths with @ prefix as-is', () => {
     expect(resolveFilePath('/repo', '@~/some/file.ts')).toBe('~/some/file.ts');
+  });
+
+  it('passes through @-prefixed absolute paths after stripping the mention marker', () => {
+    expect(resolveFilePath('/repo', '@/outside/file.ts')).toBe('/outside/file.ts');
+    expect(resolveFilePath('C:\\repo', '@C:\\outside\\file.ts')).toBe('C:\\outside\\file.ts');
+    expect(resolveFilePath('C:\\repo', '@\\\\server\\share\\file.ts')).toBe(
+      '\\\\server\\share\\file.ts'
+    );
   });
 
   it('passes through bare tilde as-is', () => {
@@ -42,6 +56,24 @@ describe('resolveFilePath', () => {
   it('passes through tilde paths with backslash separator (Windows)', () => {
     expect(resolveFilePath('C:\\repo', '~\\.claude\\agents\\file.md')).toBe(
       '~\\.claude\\agents\\file.md'
+    );
+  });
+
+  it('resolves relative paths under Windows UNC roots', () => {
+    expect(resolveFilePath('\\\\server\\share\\repo', 'src\\index.ts')).toBe(
+      '\\\\server\\share\\repo\\src\\index.ts'
+    );
+    expect(resolveFilePath('//server/share/repo', 'src/index.ts')).toBe(
+      '//server/share/repo/src/index.ts'
+    );
+  });
+
+  it('does not resolve parent paths above a Windows UNC share root', () => {
+    expect(resolveFilePath('\\\\server\\share', '..\\outside\\file.ts')).toBe(
+      '\\\\server\\share\\outside\\file.ts'
+    );
+    expect(resolveFilePath('//server/share', '../outside/file.ts')).toBe(
+      '//server/share/outside/file.ts'
     );
   });
 

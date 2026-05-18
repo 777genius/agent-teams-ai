@@ -135,6 +135,10 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
         diagnostics: [],
       },
     })),
+    scheduleProofMissingRecovery: vi.fn(async () => ({
+      scheduled: true,
+      reason: 'scheduled' as const,
+    })),
     noteTeamChange: vi.fn(),
     enqueueStartupScan: vi.fn(),
     replayPendingReports: vi.fn(),

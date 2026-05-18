@@ -451,6 +451,78 @@ const MemberCardRow = memo(function MemberCardRow({
   );
 });
 
+const MEMBER_LOADING_ACCENTS = ['#46d93b', '#3b82f6', '#facc15', '#14b8a6', '#ef4444'];
+
+function getMemberLoadingSkeletonCount(expectedTeammateCount: number | undefined): number {
+  if (!Number.isFinite(expectedTeammateCount) || !expectedTeammateCount) {
+    return 3;
+  }
+  return Math.min(Math.max(1, Math.floor(expectedTeammateCount)), MEMBER_LOADING_ACCENTS.length);
+}
+
+const MemberListLoadingSkeleton = ({
+  expectedTeammateCount,
+}: Readonly<{
+  expectedTeammateCount?: number;
+}>): React.JSX.Element => {
+  const skeletonCount = getMemberLoadingSkeletonCount(expectedTeammateCount);
+
+  return (
+    <div
+      className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-sidebar)] p-3"
+      role="status"
+      aria-label="Loading team members"
+    >
+      <div className="grid grid-cols-1 gap-1">
+        {Array.from({ length: skeletonCount }, (_, index) => {
+          const accent = MEMBER_LOADING_ACCENTS[index] ?? MEMBER_LOADING_ACCENTS[0];
+          return (
+            <div key={index} className="flex min-h-[52px] min-w-0 items-center gap-3">
+              <div className="relative size-7 shrink-0">
+                <div
+                  className="absolute inset-0 rounded-full border-2 bg-[var(--color-surface-raised)]"
+                  style={{ borderColor: accent }}
+                />
+                <div
+                  className="absolute bottom-0 right-0 size-2 rounded-full border border-[var(--color-surface)]"
+                  style={{ backgroundColor: accent }}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div
+                  className="skeleton-shimmer h-4 rounded-sm"
+                  style={{
+                    width: index % 2 === 0 ? '3.5rem' : '4.25rem',
+                    backgroundColor: 'var(--skeleton-base)',
+                  }}
+                />
+                <div
+                  className="skeleton-shimmer mt-1.5 h-2.5 rounded-sm"
+                  style={{
+                    width: index % 3 === 0 ? '13rem' : index % 3 === 1 ? '15rem' : '11rem',
+                    maxWidth: '76%',
+                    backgroundColor: 'var(--skeleton-base-dim)',
+                  }}
+                />
+              </div>
+              <div className="hidden shrink-0 items-center gap-3 sm:flex">
+                <div
+                  className="skeleton-shimmer h-[18px] w-[62px] rounded-full border border-[var(--color-border)]"
+                  style={{ backgroundColor: 'var(--skeleton-base-dim)' }}
+                />
+                <div
+                  className="skeleton-shimmer h-[18px] w-[62px] rounded-full border border-[var(--color-border)]"
+                  style={{ backgroundColor: 'var(--skeleton-base-dim)' }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export const MemberList = memo(function MemberList({
   teamName = '__unknown_team__',
   members,
@@ -657,11 +729,7 @@ export const MemberList = memo(function MemberList({
 
   if (members.length === 0 || hasOnlyLeadWhileTeammatesLoad) {
     if (expectsTeammates) {
-      return (
-        <div className="rounded-md border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
-          Team members are loading
-        </div>
-      );
+      return <MemberListLoadingSkeleton expectedTeammateCount={expectedTeammateCount} />;
     }
 
     return (

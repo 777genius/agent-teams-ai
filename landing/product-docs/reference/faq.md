@@ -41,7 +41,7 @@ No. Agent Teams is not a cloud code-sync service. Provider-backed model calls ma
 
 ## Where are team files stored?
 
-Team coordination data is stored locally under `~/.claude/teams/<team>/`, task files under `~/.claude/tasks/<team>/`, and project session data under `~/.claude/projects/<encoded-project>/` when available.
+Team coordination data is stored locally under `~/.claude/teams/<team>/` (macOS/Linux) or `%APPDATA%\Claude\teams\<team>\` (Windows), task files under `~/.claude/tasks/<team>/` or `%APPDATA%\Claude\tasks\<team>\`, and project session data under `~/.claude/projects/<encoded-project>/` when available.
 
 ## What can leave my machine?
 
@@ -56,7 +56,7 @@ Yes. Agents can message teammates, comment on tasks, coordinate across teams, an
 Give the lead a concrete outcome, file or feature boundaries, risk limits, and verification expectations. For example:
 
 ```text
-Improve the docs quickstart. Keep edits inside landing/product-docs, add practical examples, and run the docs build before marking work done.
+Improve the docs quickstart. Keep edits inside landing/product-docs, add practical examples, and run `pnpm --dir landing docs:build` before marking work done.
 ```
 
 ## Can I review code before accepting it?

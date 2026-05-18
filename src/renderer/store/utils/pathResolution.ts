@@ -2,6 +2,8 @@
  * Path resolution utilities for the store.
  */
 
+import { isAbsoluteOrHomePath, stripTrailingSeparators } from '@shared/utils/platformPath';
+
 /**
  * Resolves a relative path against a base path, handling various path formats.
  * Handles:
@@ -13,11 +15,11 @@
  */
 export function resolveFilePath(base: string, relativePath: string): string {
   // If already absolute, return as-is
-  if (isAbsolutePath(relativePath)) {
+  if (isAbsoluteOrHomePath(relativePath)) {
     return relativePath;
   }
 
-  const cleanBase = trimTrailingSeparator(base);
+  const cleanBase = stripTrailingSeparators(base);
 
   // Handle @ prefix (file mention marker) - strip it if present
   let cleanRelative = relativePath;
@@ -25,28 +27,27 @@ export function resolveFilePath(base: string, relativePath: string): string {
     cleanRelative = cleanRelative.slice(1);
   }
 
-  // Tilde paths (~/) are home-relative absolute paths - pass through as-is
-  // The main process will expand ~ to the actual home directory
-  if (cleanRelative.startsWith('~/') || cleanRelative.startsWith('~\\') || cleanRelative === '~') {
+  if (isAbsoluteOrHomePath(cleanRelative)) {
     return cleanRelative;
   }
 
   // Handle ./ prefix (current directory)
-  if (cleanRelative.startsWith('./')) {
+  if (cleanRelative.startsWith('./') || cleanRelative.startsWith('.\\')) {
     cleanRelative = cleanRelative.slice(2);
   }
 
   // Handle ../ prefixes (parent directory)
   const separator = cleanBase.includes('\\') ? '\\' : '/';
-  const hasUnixRoot = cleanBase.startsWith('/');
-  const hasUncRoot = cleanBase.startsWith('\\\\');
+  const hasUncRoot = cleanBase.startsWith('\\\\') || cleanBase.startsWith('//');
+  const hasUnixRoot = !hasUncRoot && cleanBase.startsWith('/');
+  const minRootParts = hasUncRoot ? 2 : 1;
   const normalizedRelative = normalizeSeparators(cleanRelative, separator);
   const baseParts = splitPath(cleanBase);
   let remainingRelative = normalizedRelative;
 
   while (remainingRelative.startsWith(`..${separator}`)) {
     remainingRelative = remainingRelative.slice(3);
-    if (baseParts.length > 1) {
+    if (baseParts.length > minRootParts) {
       baseParts.pop();
     }
   }
@@ -56,26 +57,10 @@ export function resolveFilePath(base: string, relativePath: string): string {
   if (hasUnixRoot && !normalizedBase.startsWith('/')) {
     normalizedBase = `/${normalizedBase}`;
   }
-  if (hasUncRoot && !normalizedBase.startsWith('\\\\')) {
-    normalizedBase = `\\\\${normalizedBase}`;
+  if (hasUncRoot && !normalizedBase.startsWith(`${separator}${separator}`)) {
+    normalizedBase = `${separator}${separator}${normalizedBase}`;
   }
   return remainingRelative ? `${normalizedBase}${separator}${remainingRelative}` : normalizedBase;
-}
-
-function isAbsolutePath(input: string): boolean {
-  return input.startsWith('/') || input.startsWith('\\\\') || /^[a-zA-Z]:[\\/]/.test(input);
-}
-
-function trimTrailingSeparator(input: string): string {
-  let end = input.length;
-  while (end > 0) {
-    const char = input[end - 1];
-    if (char !== '/' && char !== '\\') {
-      break;
-    }
-    end--;
-  }
-  return input.slice(0, end);
 }
 
 function normalizeSeparators(input: string, separator: '/' | '\\'): string {

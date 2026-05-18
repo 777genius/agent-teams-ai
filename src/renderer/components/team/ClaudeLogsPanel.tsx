@@ -65,6 +65,11 @@ export const ClaudeLogsPanel = ({
     handleScroll,
   } = ctrl;
 
+  const rawLineLabel = data.total === 1 ? '1 raw line' : `${data.total.toLocaleString()} raw lines`;
+  const rawLinesCapturedLabel = `${rawLineLabel} captured`;
+  const emptyRawLogsMessage =
+    data.total > 0 ? `${rawLinesCapturedLabel}; none are assistant/tool output yet.` : undefined;
+
   return (
     <div className={cn('min-w-0', className)}>
       {/* Toolbar */}
@@ -72,8 +77,8 @@ export const ClaudeLogsPanel = ({
         <span className="text-[11px] text-[var(--color-text-muted)]">
           {data.total > 0 ? (
             <>
-              <span className="font-mono">{data.total}</span> raw line
-              {data.total === 1 ? '' : 's'}
+              <span className="font-mono">{data.total.toLocaleString()}</span> raw line
+              {data.total === 1 ? '' : 's'} captured
             </>
           ) : isAlive ? (
             'No logs yet.'
@@ -138,6 +143,7 @@ export const ClaudeLogsPanel = ({
             containerRefCallback={containerRefCallback}
             onScroll={handleScroll}
             compactMetaInTooltip={compactMetaInTooltip}
+            emptyMessageOverride={emptyRawLogsMessage}
             viewerState={viewerState}
             onViewerStateChange={onViewerStateChange}
             footer={

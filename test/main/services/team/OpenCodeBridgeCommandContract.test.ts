@@ -7,6 +7,7 @@ import {
   createOpenCodeBridgeIdempotencyKey,
   isOpenCodeBridgeCommandName,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+  OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
   parseSingleBridgeJsonResult,
   stableHash,
@@ -240,6 +241,66 @@ describe('OpenCodeBridgeCommandContract', () => {
     });
   });
 
+  it('requires the delivery acceptance contract only for acceptance-mode sendMessage', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    client.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    let handshake = withAcceptedCommands(buildHandshake({ client, server }), [
+      'opencode.launchTeam',
+      'opencode.stopTeam',
+      'opencode.sendMessage',
+    ]);
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: false,
+      })
+    ).toEqual({ ok: true });
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: true,
+      })
+    ).toEqual({
+      ok: false,
+      reason:
+        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 1. Falling back to observed delivery mode is required.',
+    });
+
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshake = withAcceptedCommands(buildHandshake({ client, server }), [
+      'opencode.launchTeam',
+      'opencode.stopTeam',
+      'opencode.sendMessage',
+    ]);
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: true,
+      })
+    ).toEqual({ ok: true });
+  });
+
   it('creates deterministic idempotency keys for equivalent JSON bodies', () => {
     const first = createOpenCodeBridgeIdempotencyKey({
       command: 'opencode.launchTeam',
@@ -347,6 +408,21 @@ function buildHandshake(input: {
     serverTime: '2026-04-21T12:00:00.000Z',
   };
 
+  return {
+    ...withoutHash,
+    identityHash: createOpenCodeBridgeHandshakeIdentityHash(withoutHash),
+  };
+}
+
+function withAcceptedCommands(
+  handshake: OpenCodeBridgeHandshake,
+  acceptedCommands: OpenCodeBridgeHandshake['acceptedCommands']
+): OpenCodeBridgeHandshake {
+  const { identityHash: _identityHash, ...rest } = handshake;
+  const withoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
+    ...rest,
+    acceptedCommands,
+  };
   return {
     ...withoutHash,
     identityHash: createOpenCodeBridgeHandshakeIdentityHash(withoutHash),

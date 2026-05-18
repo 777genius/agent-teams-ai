@@ -9,8 +9,12 @@ const downloadStore = useDownloadStore();
 const { data: releaseData, resolve } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { repoUrl, releaseDownloadUrl } = useGithubRepo();
+const isMounted = ref(false);
 
-onMounted(() => downloadStore.init());
+onMounted(() => {
+  isMounted.value = true;
+  downloadStore.init();
+});
 
 const platformIcons: Record<string, string> = {
   macos: mdiApple,
@@ -45,6 +49,7 @@ const visibleAssets = computed(() => {
 });
 
 const getDownloadUrl = (asset: { os: string; arch: string; fileName: string }) => {
+  if (!isMounted.value) return releaseDownloadUrl(asset.fileName);
   const arch = (asset.os === 'macos' ? downloadStore.macArch : asset.arch) as DownloadArch;
   return resolve(asset.os as DownloadOs, arch)?.url || releaseDownloadUrl(asset.fileName);
 };
@@ -149,7 +154,7 @@ const devBranchNote = computed(() =>
         {{ devBranchNote }}
       </a>
 
-      <p v-if="releaseVersion" class="download-section__release-info">
+      <p v-if="isMounted && releaseVersion" class="download-section__release-info">
         v{{ releaseVersion }} · {{ releaseDate }}
       </p>
     </v-container>

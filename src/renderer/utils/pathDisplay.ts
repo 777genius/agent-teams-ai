@@ -9,7 +9,7 @@
  * Also provides resolveAbsolutePath() for clipboard copy (~ → real home, relative → absolute).
  */
 
-import { splitPath } from '@shared/utils/platformPath';
+import { getRelativePathWithinPrefix, splitPath } from '@shared/utils/platformPath';
 
 function isWindowsAbsolutePath(input: string): boolean {
   return /^[A-Za-z]:[/\\]/.test(input) || input.startsWith('\\\\') || input.startsWith('//');
@@ -38,15 +38,9 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
 
   // 1. Make relative to project root
   if (projectRoot) {
-    const root = projectRoot.replace(/[/\\]$/, '');
-    const caseInsensitive = isWindowsAbsolutePath(p) || isWindowsAbsolutePath(root);
-    const pathForCompare = caseInsensitive ? p.toLowerCase() : p;
-    const rootForCompare = caseInsensitive ? root.toLowerCase() : root;
-    if (
-      pathForCompare.startsWith(rootForCompare + '/') ||
-      pathForCompare.startsWith(rootForCompare + '\\')
-    ) {
-      p = p.slice(root.length + 1);
+    const relativePath = getRelativePathWithinPrefix(projectRoot, p);
+    if (relativePath) {
+      p = relativePath;
     }
   }
 
@@ -54,7 +48,7 @@ export function shortenDisplayPath(fullPath: string, projectRoot?: string, maxLe
   p = p
     .replace(/^\/Users\/[^/]+/, '~')
     .replace(/^\/home\/[^/]+/, '~')
-    .replace(/^[A-Z]:\\Users\\[^\\]+/i, '~');
+    .replace(/^[A-Z]:[/\\]Users[/\\][^/\\]+/i, '~');
 
   // 3. If short enough, return as-is
   if (p.length <= maxLength) return p;
@@ -84,7 +78,7 @@ function inferHomeDir(projectRoot: string): string | null {
   const match =
     /^(\/Users\/[^/]+)/.exec(projectRoot) ??
     /^(\/home\/[^/]+)/.exec(projectRoot) ??
-    /^([A-Z]:\\Users\\[^\\]+)/i.exec(projectRoot);
+    /^([A-Z]:[/\\]Users[/\\][^/\\]+)/i.exec(projectRoot);
   return match?.[1] ?? null;
 }
 
@@ -122,11 +116,7 @@ export function formatProjectPath(path: string): string {
 }
 
 function isWindowsUserPath(input: string): boolean {
-  if (input.length < 10) return false;
-  const drive = input.charCodeAt(0);
-  const hasDriveLetter =
-    ((drive >= 65 && drive <= 90) || (drive >= 97 && drive <= 122)) && input[1] === ':';
-  return hasDriveLetter && input.slice(2, 9).toLowerCase() === '\\users\\';
+  return /^[A-Z]:[/\\]Users[/\\]/i.test(input);
 }
 
 export function resolveAbsolutePath(filePath: string, projectRoot?: string): string {

@@ -635,7 +635,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
 
     expect(host.textContent).toContain('Workflow History');
-    expect(host.textContent).toContain('Work time 5m 00s');
+    expect(host.textContent).toContain('In progress time 5m 00s');
 
     const workflowButton = [...host.querySelectorAll('button')].find(
       (button) => button.textContent?.startsWith('Workflow History') === true

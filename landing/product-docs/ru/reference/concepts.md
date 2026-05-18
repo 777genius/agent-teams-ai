@@ -1,11 +1,6 @@
 ---
-title: Концепции
-description: Основной словарь Agent Teams — команды, lead-агенты, teammates, задачи, канбан, inboxes, рантаймы и review.
----
-
----
 title: Концепции – Документация Agent Teams
-description: Основные термины Agent Teams: teams, leads, teammates, tasks, kanban, inboxes, agent blocks, context phases, runtimes, providers.
+description: "Основные термины Agent Teams: teams, leads, teammates, tasks, kanban, inboxes, agent blocks, context phases, runtimes, providers."
 lang: ru-RU
 ---
 
@@ -51,7 +46,7 @@ Messages - долговечные локальные записи. Но дост
 
 Agent Block - скрытый agent-only instruction text, обёрнутый в `<info_for_agent>...</info_for_agent>`. UI убирает такие блоки из обычного human-facing display, но agents и runtime delivery могут использовать их для coordination details.
 
-Текущий canonical marker - `info_for_agent`; в старых документах могут встречаться legacy agent block formats.
+Текущий canonical marker — `info_for_agent`. В старых документах могут встречаться fenced code blocks с маркером ````info_for_agent```` или XML-подобные теги `<agent_block>` — это устаревшие паттерны, которые стоит заменить на `info_for_agent` при встрече.
 
 ## Context Phase
 

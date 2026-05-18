@@ -1,13 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { writeJsonFileSync } = require('./atomicFile.js');
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
 }
 
 function readJson(filePath, fallbackValue) {
@@ -19,10 +16,7 @@ function readJson(filePath, fallbackValue) {
 }
 
 function writeJson(filePath, value) {
-  ensureDir(path.dirname(filePath));
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(value, null, 2));
-  fs.renameSync(tempPath, filePath);
+  writeJsonFileSync(filePath, value);
 }
 
 function getInboxPath(paths, memberName) {

@@ -1,0 +1,228 @@
+import { buildClaudeWorkspaceTrustPreflightArgs } from './ClaudePreflightCommand';
+import { runPtyDialogEngine } from './PtyDialogEngine';
+import { detectClaudeStartupState, normalizeTerminalText } from './StartupDialogRules';
+
+import type { WorkspaceTrustDiagnosticStrategyResult, WorkspaceTrustWorkspace } from '../domain';
+import type {
+  ProviderStateProbe,
+  PtyProcessPort,
+  TempEmptyMcpConfigStore,
+  TerminalSnapshot,
+} from './ports';
+
+const WORKSPACE_TRUST_RAW_TAIL_LIMIT = 4096;
+
+export interface ClaudePtyWorkspaceTrustStrategyInput {
+  claudePath: string;
+  workspaces: WorkspaceTrustWorkspace[];
+  env: Record<string, string | undefined>;
+  ptyProcess?: PtyProcessPort;
+  stateProbe?: ProviderStateProbe;
+  tempEmptyMcpConfigStore?: TempEmptyMcpConfigStore;
+  isCancelled(): boolean;
+  timeoutMs?: number;
+  pollIntervalMs?: number;
+}
+
+function toPtyEnv(env: Record<string, string | undefined>): Record<string, string> {
+  const output: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === 'string') {
+      output[key] = value;
+    }
+  }
+  return output;
+}
+
+function buildRawTail(snapshot: TerminalSnapshot | undefined): string | undefined {
+  if (!snapshot) {
+    return undefined;
+  }
+  const normalized = normalizeTerminalText(snapshot.text).trim();
+  if (!normalized) {
+    return undefined;
+  }
+  return normalized.slice(-WORKSPACE_TRUST_RAW_TAIL_LIMIT);
+}
+
+function worseStatus(
+  current: WorkspaceTrustDiagnosticStrategyResult['status'],
+  next: WorkspaceTrustDiagnosticStrategyResult['status']
+): WorkspaceTrustDiagnosticStrategyResult['status'] {
+  const rank: Record<WorkspaceTrustDiagnosticStrategyResult['status'], number> = {
+    skipped: 0,
+    ok: 1,
+    soft_failed: 2,
+    blocked: 3,
+    cancelled: 4,
+  };
+  return rank[next] > rank[current] ? next : current;
+}
+
+export class ClaudePtyWorkspaceTrustStrategy {
+  constructor(
+    private readonly defaults: {
+      ptyProcess?: PtyProcessPort;
+      stateProbe?: ProviderStateProbe;
+      tempEmptyMcpConfigStore?: TempEmptyMcpConfigStore;
+    } = {}
+  ) {}
+
+  async execute(
+    input: ClaudePtyWorkspaceTrustStrategyInput
+  ): Promise<WorkspaceTrustDiagnosticStrategyResult> {
+    const ptyProcess = input.ptyProcess ?? this.defaults.ptyProcess;
+    const stateProbe = input.stateProbe ?? this.defaults.stateProbe;
+    const tempEmptyMcpConfigStore =
+      input.tempEmptyMcpConfigStore ?? this.defaults.tempEmptyMcpConfigStore;
+    if (!ptyProcess || !stateProbe || !tempEmptyMcpConfigStore) {
+      return {
+        id: 'claude-pty-workspace-trust',
+        provider: 'claude',
+        status: 'soft_failed',
+        workspaceIds: input.workspaces.map((workspace) => workspace.id),
+        errorCode: 'workspace_trust_strategy_not_configured',
+        errorMessage: 'Claude workspace trust strategy ports are not configured.',
+      };
+    }
+
+    const startedAt = Date.now();
+    const workspaceIds: string[] = [];
+    const matchedRuleIds: string[] = [];
+    const actions: string[] = [];
+    const evidence: string[] = [];
+    let status: WorkspaceTrustDiagnosticStrategyResult['status'] = 'ok';
+    let errorCode: string | undefined;
+    let errorMessage: string | undefined;
+    let rawTail: string | undefined;
+
+    for (const workspace of input.workspaces) {
+      workspaceIds.push(workspace.id);
+      if (input.isCancelled()) {
+        status = 'cancelled';
+        break;
+      }
+
+      if (!workspace.persistable) {
+        status = worseStatus(status, 'blocked');
+        errorCode = `workspace_trust_not_persistable_${workspace.nonPersistableReason ?? 'unknown'}`;
+        evidence.push(`${workspace.id}:${errorCode}`);
+        continue;
+      }
+
+      const before = await stateProbe.readTrustState(workspace);
+      if (before.status === 'trusted') {
+        evidence.push(...before.evidence);
+        continue;
+      }
+
+      let mcpConfigHandle: Awaited<ReturnType<TempEmptyMcpConfigStore['create']>> | null = null;
+      try {
+        mcpConfigHandle = await tempEmptyMcpConfigStore.create();
+        const command = buildClaudeWorkspaceTrustPreflightArgs({
+          emptyMcpConfigPath: mcpConfigHandle.path,
+        });
+        if (!command.ok) {
+          status = worseStatus(status, 'soft_failed');
+          errorCode = command.code;
+          errorMessage = command.message;
+          evidence.push(command.message);
+          continue;
+        }
+
+        const spawnResult = await ptyProcess.spawn({
+          command: input.claudePath,
+          args: command.args,
+          cwd: workspace.cwd,
+          env: toPtyEnv(input.env),
+          cols: 120,
+          rows: 36,
+          name: 'xterm-256color',
+        });
+        if (!spawnResult.ok) {
+          status = worseStatus(status, 'soft_failed');
+          errorCode = spawnResult.code;
+          errorMessage = spawnResult.message;
+          evidence.push(spawnResult.message);
+          continue;
+        }
+
+        try {
+          const engineResult = await runPtyDialogEngine({
+            session: spawnResult.session,
+            detect: detectClaudeStartupState,
+            isCancelled: input.isCancelled,
+            timeoutMs: input.timeoutMs,
+            pollIntervalMs: input.pollIntervalMs,
+            afterDialogAction: async ({ ruleId }) => {
+              if (ruleId !== 'claude.workspace_trust') {
+                return { action: 'continue' };
+              }
+              const after = await stateProbe.readTrustState(workspace);
+              if (after.status === 'trusted') {
+                evidence.push(...after.evidence);
+                return { action: 'stop', reason: 'workspace_trust_persisted' };
+              }
+              return { action: 'continue' };
+            },
+          });
+          matchedRuleIds.push(...engineResult.matchedRuleIds);
+          actions.push(...engineResult.actions);
+          if (engineResult.status !== 'ok') {
+            rawTail = buildRawTail(engineResult.lastSnapshot) ?? rawTail;
+          }
+
+          if (engineResult.status === 'cancelled') {
+            status = 'cancelled';
+            break;
+          }
+          if (engineResult.status === 'blocked') {
+            // Dialog-engine blocks are preflight uncertainty; only non-persistable paths block launch.
+            status = worseStatus(status, 'soft_failed');
+            errorCode = engineResult.code;
+            errorMessage = engineResult.evidence[0] ?? engineResult.code;
+            evidence.push(...engineResult.evidence);
+            continue;
+          }
+
+          const after = await stateProbe.readTrustState(workspace);
+          if (after.status === 'trusted') {
+            evidence.push(...after.evidence);
+            continue;
+          }
+
+          status = worseStatus(status, 'soft_failed');
+          errorCode =
+            engineResult.status === 'timeout'
+              ? 'workspace_trust_preflight_timeout'
+              : 'workspace_trust_preflight_not_confirmed';
+          errorMessage = `Claude workspace trust was not confirmed for ${workspace.configKeyCwd}`;
+          evidence.push(errorMessage);
+        } finally {
+          await spawnResult.session.kill().catch(() => undefined);
+        }
+      } catch (error) {
+        status = worseStatus(status, 'soft_failed');
+        errorCode = 'workspace_trust_preflight_error';
+        errorMessage = error instanceof Error ? error.message : String(error);
+        evidence.push(errorMessage);
+      } finally {
+        await mcpConfigHandle?.cleanup().catch(() => undefined);
+      }
+    }
+
+    return {
+      id: 'claude-pty-workspace-trust',
+      provider: 'claude',
+      status,
+      workspaceIds,
+      matchedRuleIds: [...new Set(matchedRuleIds)],
+      actions,
+      evidence,
+      elapsedMs: Date.now() - startedAt,
+      errorCode,
+      errorMessage,
+      rawTail,
+    };
+  }
+}

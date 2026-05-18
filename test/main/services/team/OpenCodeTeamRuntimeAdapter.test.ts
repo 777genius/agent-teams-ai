@@ -484,6 +484,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       sessionId: 'oc-session-bob',
       memberName: 'bob',
       runtimePid: 456,
+      runtimePromptMessageId: 'msg_prompt_1',
       diagnostics: [],
     }));
     const adapter = new OpenCodeTeamRuntimeAdapter(
@@ -511,6 +512,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       memberName: 'bob',
       sessionId: 'oc-session-bob',
       runtimePid: 456,
+      runtimePromptMessageId: 'msg_prompt_1',
       diagnostics: [],
     });
     expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith({
@@ -522,6 +524,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       memberName: 'bob',
       text: expect.stringContaining('agent-teams_message_send'),
       messageId: 'msg-1',
+      settlementMode: 'acceptance',
       actionMode: 'delegate',
       taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
       agent: 'teammate',
@@ -540,6 +543,108 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).not.toContain('The inbound app messageId is');
     expect(sentText).toContain('Do not use SendMessage or runtime_deliver_message');
     expect(sentText).toContain('never use #00000000');
+  });
+
+  it('uses observed settlement for member-work-sync nudges so turn-settled can drive reconcile', async () => {
+    const sendOpenCodeTeamMessage = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
+    >(async () => ({
+      accepted: true,
+      sessionId: 'oc-session-bob',
+      memberName: 'bob',
+      runtimePid: 456,
+      runtimePromptMessageId: 'msg_prompt_1',
+      diagnostics: [],
+    }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+        sendOpenCodeTeamMessage,
+      })
+    );
+
+    await expect(
+      adapter.sendMessageToMember({
+        runId: 'run-1',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/repo',
+        text: 'sync your current work state',
+        messageId: 'sync-1',
+        messageKind: 'member_work_sync_nudge',
+        taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      runtimePromptMessageId: 'msg_prompt_1',
+    });
+
+    expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: 'sync-1',
+        messageKind: 'member_work_sync_nudge',
+        settlementMode: 'observed',
+      })
+    );
+  });
+
+  it('observes direct teammate messages by exact accepted runtime prompt id', async () => {
+    const observeOpenCodeTeamMessageDelivery = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['observeOpenCodeTeamMessageDelivery']>
+    >(async () => ({
+      observed: true,
+      sessionId: 'oc-session-bob',
+      memberName: 'bob',
+      runtimePid: 456,
+      runtimePromptMessageId: 'msg_prompt_1',
+      responseObservation: {
+        state: 'responded_plain_text',
+        deliveredUserMessageId: 'msg_prompt_1',
+        assistantMessageId: 'oc-assistant-1',
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: 'done',
+        reason: null,
+      },
+      diagnostics: [],
+    }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+        observeOpenCodeTeamMessageDelivery,
+      })
+    );
+
+    await expect(
+      adapter.observeMessageDelivery({
+        runId: 'run-1',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        memberName: 'bob',
+        cwd: '/repo',
+        text: 'hello bob',
+        messageId: 'msg-1',
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_1',
+        prePromptCursor: 'cursor-before',
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      sessionId: 'oc-session-bob',
+      runtimePromptMessageId: 'msg_prompt_1',
+      responseObservation: {
+        deliveredUserMessageId: 'msg_prompt_1',
+      },
+    });
+
+    expect(observeOpenCodeTeamMessageDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_1',
+        prePromptCursor: 'cursor-before',
+      })
+    );
   });
 
   it('sends member work sync nudges with report-oriented response instructions', async () => {
@@ -568,6 +673,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       replyRecipient: 'team-lead',
       actionMode: 'do',
       messageKind: 'member_work_sync_nudge',
+      controlUrl: 'http://127.0.0.1:43123',
       taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
     });
 
@@ -585,6 +691,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('mcp__agent-teams__member_work_sync_report');
     expect(sentText).toContain('teamName="team-a"');
     expect(sentText).toContain('memberName="bob"');
+    expect(sentText).toContain('controlUrl="http://127.0.0.1:43123"');
     expect(sentText).toContain('taskIds: "task-1"');
     expect(sentText).toContain(
       'Do not use provider names, runtime names, or team names as memberName'

@@ -14,8 +14,15 @@ vi.mock('@renderer/api', () => ({
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
-  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
-    React.createElement('button', { type: 'button', onClick }, children),
+  Button: ({
+    children,
+    variant: _variant,
+    size: _size,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: string;
+    size?: string;
+  }) => React.createElement('button', { type: 'button', ...props }, children),
 }));
 
 vi.mock('@renderer/components/chat/viewers/MarkdownViewer', () => ({
@@ -92,6 +99,36 @@ describe('ProvisioningProgressBlock', () => {
     expect(host.querySelector('[data-stepper-active]')?.getAttribute('data-stepper-active')).toBe(
       'true'
     );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders non-fatal provisioning warnings in the progress panel', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProgressBlock, {
+          title: 'Launching team',
+          currentStepIndex: 1,
+          loading: true,
+          warnings: [
+            'Large Codex team launch: 9 primary teammates will bootstrap in one runtime.',
+          ],
+          defaultLiveOutputOpen: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Large Codex team launch');
+    expect(host.textContent).toContain('9 primary teammates');
 
     await act(async () => {
       root.unmount();
@@ -235,6 +272,7 @@ describe('ProvisioningProgressBlock', () => {
           pid: 321,
           assistantOutput: 'Launch trace line',
           cliLogsTail: '[stderr] OPENAI_API_KEY=secret-value\n[stdout] booted',
+          warnings: ['Large Codex team launch: 9 primary teammates will bootstrap in one runtime.'],
           launchDiagnostics: [
             {
               id: 'alice:runtime_not_found',
@@ -264,16 +302,57 @@ describe('ProvisioningProgressBlock', () => {
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = String(writeText.mock.calls[0]?.[0] ?? '');
     expect(copied).toContain('# Team provisioning diagnostics');
+    expect(copied).toContain('## Quick triage');
     expect(copied).toContain('Title: Launching team');
     expect(copied).toContain('Message: Starting Claude CLI process');
     expect(copied).toContain('PID: 321');
+    expect(copied).toContain('Counts: warnings=1; launchDiagnostics=1; memberSnapshots=0; artifactFiles=0');
+    expect(copied).toContain('Large-team signal: Large Codex team launch');
+    expect(copied).toContain('## Warnings');
+    expect(copied).toContain('- Large Codex team launch');
     expect(copied).toContain('alice - waiting for runtime');
+    expect(copied).toContain('<summary>Live output</summary>');
+    expect(copied).toContain('<summary>CLI logs tail</summary>');
     expect(copied).toContain('Launch trace line');
     expect(copied).toContain('[stdout] booted');
     expect(copied).toContain('OPENAI_API_KEY=[redacted]');
     expect(copied).toContain('--api-key [redacted]');
     expect(copied).not.toContain('secret-value');
     expect(copied).not.toContain('hidden-value');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('emphasizes the copy diagnostics CTA when launch has failed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProgressBlock, {
+          title: 'Workspace trust required',
+          message: 'Claude workspace trust was not confirmed',
+          tone: 'error',
+          messageSeverity: 'error',
+          currentStepIndex: -1,
+          loading: false,
+          defaultLiveOutputOpen: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const button = host.querySelector('[aria-label="Copy diagnostics"]');
+    expect(button).toBeTruthy();
+    expect(button?.className).toContain('h-8');
+    expect(button?.className).toContain('border-red-500/60');
+    expect(button?.className).toContain('bg-red-500/15');
+    expect(button?.className).toContain('animate-pulse');
 
     await act(async () => {
       root.unmount();

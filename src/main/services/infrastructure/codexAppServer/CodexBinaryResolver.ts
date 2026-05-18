@@ -2,10 +2,13 @@ import { constants as fsConstants } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
 
+import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
 import { execCli } from '@main/utils/childProcess';
+import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 const CACHE_VERIFY_TTL_MS = 30_000;
 const VERSION_CACHE_TTL_MS = 30_000;
+const BINARY_LAUNCH_VERIFY_TIMEOUT_MS = 3_000;
 
 let cachedBinaryPath: string | null | undefined;
 let cacheVerifiedAt = 0;
@@ -15,6 +18,18 @@ const versionCache = new Map<string, { version: string | null; observedAt: numbe
 async function fileExists(filePath: string): Promise<boolean> {
   try {
     await fsp.access(filePath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function binaryCanLaunch(candidate: string): Promise<boolean> {
+  try {
+    await execCli(candidate, ['--version'], {
+      timeout: BINARY_LAUNCH_VERIFY_TIMEOUT_MS,
+      windowsHide: true,
+    });
     return true;
   } catch {
     return false;
@@ -52,7 +67,18 @@ function isPathLikeCandidate(candidate: string): boolean {
 
 function getPathEntries(): string[] {
   const delimiter = process.platform === 'win32' ? ';' : path.delimiter;
-  return (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  const shellEnv = getCachedShellEnv() ?? {};
+  const seen = new Set<string>();
+  return [shellEnv.PATH, process.env.PATH]
+    .flatMap((pathValue) => (pathValue ?? '').split(delimiter))
+    .map((entry) => entry.trim())
+    .filter((entry) => {
+      if (!entry || seen.has(entry)) {
+        return false;
+      }
+      seen.add(entry);
+      return true;
+    });
 }
 
 function resolvePathEntryCandidate(pathEntry: string, candidate: string): string {
@@ -67,7 +93,7 @@ async function verifyBinary(candidate: string): Promise<string | null> {
 
   if (isPathLikeCandidate(candidate)) {
     for (const expandedCandidate of expandedCandidates) {
-      if (await fileExists(expandedCandidate)) {
+      if ((await fileExists(expandedCandidate)) && (await binaryCanLaunch(expandedCandidate))) {
         return expandedCandidate;
       }
     }
@@ -78,7 +104,7 @@ async function verifyBinary(candidate: string): Promise<string | null> {
   for (const pathEntry of pathEntries) {
     for (const expandedCandidate of expandedCandidates) {
       const resolvedCandidate = resolvePathEntryCandidate(pathEntry, expandedCandidate);
-      if (await fileExists(resolvedCandidate)) {
+      if ((await fileExists(resolvedCandidate)) && (await binaryCanLaunch(resolvedCandidate))) {
         return resolvedCandidate;
       }
     }
@@ -98,6 +124,13 @@ export class CodexBinaryResolver {
   static async resolve(): Promise<string | null> {
     if (cachedBinaryPath !== undefined) {
       if (cachedBinaryPath === null) {
+        const verifiedAppManagedBinaryPath =
+          await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
+        if (verifiedAppManagedBinaryPath) {
+          cachedBinaryPath = verifiedAppManagedBinaryPath;
+          cacheVerifiedAt = Date.now();
+          return verifiedAppManagedBinaryPath;
+        }
         return null;
       }
 
@@ -126,7 +159,12 @@ export class CodexBinaryResolver {
 
   private static async runResolve(): Promise<string | null> {
     const override = process.env.CODEX_CLI_PATH?.trim();
-    const candidates = override ? [override, 'codex'] : ['codex'];
+    const appManagedBinaryPath = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
+    const candidates = [
+      ...(override ? [override] : []),
+      ...(appManagedBinaryPath ? [appManagedBinaryPath] : []),
+      'codex',
+    ];
 
     for (const candidate of candidates) {
       const resolved = await verifyBinary(candidate);

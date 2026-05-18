@@ -254,7 +254,9 @@ export const GeneralSection = ({
   const resolvedClaudeRootPath = claudeRootInfo?.resolvedPath ?? '~/.claude';
   const defaultClaudeRootPath = claudeRootInfo?.defaultPath ?? '~/.claude';
   const isWindowsStyleDefaultPath =
-    /^[a-zA-Z]:\\/.test(defaultClaudeRootPath) || defaultClaudeRootPath.startsWith('\\\\');
+    /^[a-zA-Z]:[/\\]/.test(defaultClaudeRootPath) ||
+    defaultClaudeRootPath.startsWith('\\\\') ||
+    defaultClaudeRootPath.startsWith('//');
 
   const isElectron = useMemo(() => isElectronMode(), []);
 

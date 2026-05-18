@@ -135,10 +135,11 @@ vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
 }));
 
 vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
-  ActivityTimeline: ({ messages }: { messages: InboxMessage[] }) =>
+  ActivityTimeline: ({ messages, loading }: { messages: InboxMessage[]; loading?: boolean }) =>
     React.createElement(
       'div',
       { 'data-testid': 'activity-timeline' },
+      loading ? React.createElement('div', null, 'timeline-loading') : null,
       messages.map((message) =>
         React.createElement(
           'div',
@@ -223,6 +224,78 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.expandedItemKey = null;
     sidebarUiState.messagesScrollTop = 0;
     sidebarUiState.bottomSheetSnapIndex = 2;
+  });
+
+  it('shows timeline loading before the initial message page has a cache entry', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('timeline-loading');
+    expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not keep timeline loading forever after an empty failed head attempt settles', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [],
+        optimisticMessages: [],
+        feedRevision: null,
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: null,
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: false,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('timeline-loading');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('hides passive peer summaries by default while unread badge only counts filtered unread messages', async () => {

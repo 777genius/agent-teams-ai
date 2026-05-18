@@ -1,5 +1,5 @@
 /**
- * Tests for atomicWriteAsync — tmp + fsync + rename atomic write pattern.
+ * Tests for atomicWriteAsync - tmp + fsync + rename atomic write pattern.
  */
 
 import * as fs from 'fs';
@@ -130,11 +130,54 @@ describe('atomicWriteAsync', () => {
     expect(mockCopyFile).toHaveBeenCalled();
   });
 
-  it('re-throws non-EXDEV rename errors and cleans tmp', async () => {
-    const permError = Object.assign(new Error('Permission denied'), { code: 'EACCES' });
-    mockRename.mockRejectedValue(permError);
+  it.each(['EPERM', 'EACCES', 'EBUSY'])(
+    'retries transient %s rename failures before publishing',
+    async (code) => {
+      const transientError = Object.assign(new Error(`Transient ${code}`), { code });
+      mockRename
+        .mockRejectedValueOnce(transientError)
+        .mockRejectedValueOnce(transientError)
+        .mockResolvedValue(undefined);
 
-    await expect(atomicWriteAsync(TARGET_PATH, CONTENT)).rejects.toThrow('Permission denied');
+      await atomicWriteAsync(TARGET_PATH, CONTENT);
+
+      const tmpPath = getTmpPath();
+      expect(mockRename).toHaveBeenCalledTimes(3);
+      expect(mockRename).toHaveBeenLastCalledWith(tmpPath, TARGET_PATH);
+      expect(mockUnlink).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not retry ENOENT rename failures and cleans tmp', async () => {
+    const missingError = Object.assign(new Error('No such file or directory'), { code: 'ENOENT' });
+    mockRename.mockRejectedValue(missingError);
+
+    await expect(atomicWriteAsync(TARGET_PATH, CONTENT)).rejects.toThrow(
+      'No such file or directory'
+    );
+    expect(mockRename).toHaveBeenCalledTimes(1);
+    expect(mockUnlink).toHaveBeenCalled();
+  });
+
+  it('cleans tmp after retryable rename failures are exhausted', async () => {
+    const transientError = Object.assign(new Error('Transient lock stayed active'), {
+      code: 'EBUSY',
+    });
+    mockRename.mockRejectedValue(transientError);
+
+    await expect(atomicWriteAsync(TARGET_PATH, CONTENT)).rejects.toThrow(
+      'Transient lock stayed active'
+    );
+    expect(mockRename).toHaveBeenCalledTimes(8);
+    expect(mockUnlink).toHaveBeenCalled();
+  });
+
+  it('re-throws non-retryable rename errors and cleans tmp', async () => {
+    const writeError = Object.assign(new Error('Disk unavailable'), { code: 'ENOSPC' });
+    mockRename.mockRejectedValue(writeError);
+
+    await expect(atomicWriteAsync(TARGET_PATH, CONTENT)).rejects.toThrow('Disk unavailable');
+    expect(mockRename).toHaveBeenCalledTimes(1);
     expect(mockUnlink).toHaveBeenCalled();
   });
 

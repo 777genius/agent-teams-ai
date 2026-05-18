@@ -1,134 +1,135 @@
 # Team Management Feature
 
-Интерфейс для управления командами тиммейтов Claude Code внутри Agent Teams (Electron).
+UI for managing AI teammate teams inside Agent Teams (Electron), including Claude, Codex, and OpenCode runtime paths.
 
-## Что делает
+## What It Does
 
-- Видеть состав команды и роли участников
-- Kanban-доска с 5 колонками: TODO, IN PROGRESS, REVIEW, DONE, APPROVED
-- Отправка сообщений тиммейтам через inbox-файлы
-- Review flow: запрос ревью, ручное ревью и прямое manual approval из DONE
-- Live updates через file watcher
+- Shows team members and their roles.
+- Provides a Kanban board with 5 columns: TODO, IN PROGRESS, REVIEW, DONE, APPROVED.
+- Sends messages to teammates through inbox files and runtime-aware delivery for OpenCode.
+- Supports review flow: review requests, manual review, and direct manual approval from DONE.
+- Provides live updates through the file watcher.
 
-## Документация
+## Documentation
 
-| Файл                                                                         | Содержание                                                                                           |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [research-inbox.md](./research-inbox.md)                                     | Формат inbox-файлов, race conditions, atomic write, доставка сообщений                               |
-| [research-tasks.md](./research-tasks.md)                                     | Формат task-файлов, .lock, .highwatermark, конкурентный доступ                                       |
-| [research-messaging.md](./research-messaging.md)                             | Сравнение подходов (inbox vs SDK vs CLI), почему выбрали inbox                                       |
-| [kanban-design.md](./kanban-design.md)                                       | Kanban flow, колонки, review mechanism, kanban-state.json                                            |
-| [implementation.md](./implementation.md)                                     | Техплан: файлы, шаги, verification                                                                   |
-| [openclaw-agent-teams-integration.md](./openclaw-agent-teams-integration.md) | How to connect OpenClaw or another outside AI through Agent Teams MCP and REST control API           |
-| [research-worktrees.md](./research-worktrees.md)                             | Git worktrees + teams, запуск Claude процессов из UI (Phase 2)                                       |
-| [task-queue-derived-agenda-plan.md](./task-queue-derived-agenda-plan.md)     | Подробный rollout-plan по разделению queue/inventory, derived actionOwner и phased agenda/delta sync |
-| [debugging-agent-teams.md](./debugging-agent-teams.md)                       | Runtime debugging runbook, включая `CLAUDE_TEAM_TEAMMATE_MODE=tmux` для pane-backed teammate debug   |
+| File | Contents |
+| ---- | -------- |
+| [research-inbox.md](./research-inbox.md) | Inbox file format, race conditions, atomic writes, message delivery |
+| [research-tasks.md](./research-tasks.md) | Task file format, .lock, .highwatermark, concurrent access |
+| [research-messaging.md](./research-messaging.md) | Comparison of inbox, SDK, and CLI approaches, and why inbox was chosen |
+| [kanban-design.md](./kanban-design.md) | Kanban flow, columns, review mechanism, kanban-state.json |
+| [implementation.md](./implementation.md) | Technical plan: files, steps, verification |
+| [openclaw-agent-teams-integration.md](./openclaw-agent-teams-integration.md) | How to connect OpenClaw or another outside AI through Agent Teams MCP and REST control API |
+| [research-worktrees.md](./research-worktrees.md) | Git worktrees + teams, launching Claude processes from the UI (Phase 2) |
+| [task-queue-derived-agenda-plan.md](./task-queue-derived-agenda-plan.md) | Detailed rollout plan for queue/inventory split, derived actionOwner, and phased agenda/delta sync |
+| [debugging-agent-teams.md](./debugging-agent-teams.md) | Runtime debugging runbook, including `CLAUDE_TEAM_TEAMMATE_MODE=tmux` for pane-backed teammate debug |
+| [adaptive-task-graphs-research-note.md](./adaptive-task-graphs-research-note.md) | Research note on LATTE/AgentConductor: dynamic task graphs, frontier scheduling, selective verify, release stragglers |
 
-## Ключевые решения
+## Key Decisions
 
-⚠️ `docs/iterations/*` - это исторические planning notes. Они полезны для контекста, но не являются source-of-truth для текущего поведения продукта. Актуальный контракт review flow описан в этом файле и в [kanban-design.md](./kanban-design.md).
+Warning: `docs/iterations/*` contains historical planning notes. These files are useful for context, but they are not the source of truth for current product behavior. The current review-flow contract is documented here and in [kanban-design.md](./kanban-design.md).
 
-⚠️ `agent-attachments-*.md` (architecture plan + phase 1-5 plans) - это исторические дизайн-документы для feature attachments. Фактическая реализация в `src/features/agent-attachments/` может отличаться от описанной архитектуры. Для актуального состояния см. код в `src/features/agent-attachments/core/domain/` и тесты.
+Warning: `agent-attachments-*.md` files (architecture plan + phase 1-5 plans) are historical design documents for feature attachments. The actual implementation in `src/features/agent-attachments/` may differ from that architecture. For current behavior, see the code in `src/features/agent-attachments/core/domain/` and the tests.
 
-### 1. Messaging: Inbox-файлы
+### 1. Messaging: Inbox + Runtime Delivery
 
-Единственный способ общаться с **запущенными** тиммейтами. SDK и CLI создают новые сессии, а не подключаются к существующим. Подробности: [research-messaging.md](./research-messaging.md)
+For native Claude/Codex-style teammates, the primary path is durable inbox files. Lead inbox delivery uses `relayLeadInboxMessages()` because the lead reads stdin. OpenCode secondary lanes do not read `inboxes/{member}.json` directly, so the UI first persists the message to the inbox and then delivers it through the runtime bridge with delivery proof. Details: [research-messaging.md](./research-messaging.md) and [debugging-agent-teams.md](./debugging-agent-teams.md).
 
-### 1.1 Roster source: members.meta.json + inboxes
+### 1.1 Roster Source: members.meta.json + inboxes
 
-- `config.json` не используется как полный реестр участников (он может содержать только team-lead и служебные поля CLI).
-- Источник метаданных участников (role/color/agentType): `members.meta.json`.
-- Источник runtime-состава и адресации сообщений: `inboxes/{member}.json`.
+- `config.json` is not used as the complete member registry. It may contain only the team lead and CLI service fields.
+- Member metadata source (role/color/agentType): `members.meta.json`.
+- Runtime membership and message-addressing source: `inboxes/{member}.json`.
 
-### 2. Kanban Storage: Собственный файл
+### 2. Kanban Storage: Dedicated File
 
-Kanban-позиция (REVIEW, APPROVED) хранится в `kanban-state.json`, а не в task metadata. Причина: metadata может быть перезаписан агентом при TaskUpdate. Подробности: [kanban-design.md](./kanban-design.md)
+Kanban position (REVIEW, APPROVED) is stored in `kanban-state.json`, not task metadata. Reason: task metadata may be overwritten by an agent during TaskUpdate. Details: [kanban-design.md](./kanban-design.md).
 
 ### 3. Review Flow: Approve / Request Changes
 
-- Есть ревьюверы в команде → автоматическое назначение через inbox
-- Юзер также может вручную одобрить задачу напрямую из `DONE` без отдельного захода в `REVIEW`
-- Нет ревьюверов → ручное ревью юзером (Approve / Request Changes в UI)
-- При Request Changes → юзер описывает проблему (опционально) → задача возвращается owner'у в `pending` с `needsFix`
+- Reviewers exist in the team -> automatic assignment through inbox.
+- The user can also manually approve a task directly from `DONE` without entering `REVIEW`.
+- No reviewers -> manual user review (Approve / Request Changes in the UI).
+- Request Changes -> the user optionally describes the issue -> the task returns to its owner in `pending` with `needsFix`.
 
 ### 4. Atomic Write
 
-Все записи через tmp + rename для предотвращения corrupted JSON.
+All writes use tmp + rename to prevent corrupted JSON.
 
 ### 5. Sender Identity
 
-Отправляем `from: "user"`. Fallback на `from: "team-lead"` если не работает.
+Messages are sent with `from: "user"`. Fallback to `from: "team-lead"` exists only if needed.
 
-## Финальные решения после ревью
+## Final Decisions After Review
 
-По итогам 3 раундов ревью (13 экспертов) приняты следующие решения:
+After 3 review rounds with 13 experts, the following decisions were accepted.
 
-### Inbox: Atomic write + messageId verify
+### Inbox: Atomic Write + messageId Verify
 
-- Atomic write (tmp + rename) предотвращает corrupted JSON
-- После записи читаем файл обратно и проверяем наличие нашего `messageId`
-- Полный CAS/retry-цикл — не нужен на MVP: проверка при следующем read достаточна
-- Риск race condition с агентом реален, но вероятность низкая
+- Atomic write (tmp + rename) prevents corrupted JSON.
+- After writing, read the file back and verify that our `messageId` is present.
+- A full CAS/retry loop is not needed for MVP. Verification on the next read is enough.
+- Race condition risk with an agent is real, but probability is low.
 
-### Kanban: kanban-state.json с безопасным GC
+### Kanban: kanban-state.json With Safe GC
 
-- GC устаревших записей kanban-state выполняется ТОЛЬКО ПОСЛЕ полной загрузки tasks
-- Иначе при startup возможна race condition: GC удаляет запись до того как task-файл прочитан
+- Stale `kanban-state` entries are garbage-collected only after all tasks are fully loaded.
+- Otherwise, startup can race: GC may delete an entry before the task file has been read.
 
 ### Review Flow: Approve / Request Changes
 
-- Кнопки переименованы: **Approve** (вместо OK) и **Request Changes** (вместо Error)
-- Комментарий при Request Changes — опционален
-- Manual UI допускает два valid path:
+- Buttons were renamed: **Approve** instead of OK, and **Request Changes** instead of Error.
+- Request Changes comment is optional.
+- Manual UI allows two valid paths:
   - `DONE -> REVIEW -> APPROVED`
-  - `DONE -> APPROVED` как быстрый manual approval
-- `Request Changes` снимает kanban-state запись и возвращает задачу в `pending` с `needsFix`
-- `reviewHistory` и round-robin балансировка → Phase 2, не MVP
+  - `DONE -> APPROVED` as fast manual approval
+- `Request Changes` removes the kanban-state entry and returns the task to `pending` with `needsFix`.
+- `reviewHistory` and round-robin balancing are Phase 2, not MVP.
 
-### Members: полный список через union
+### Members: Complete List Through Union
 
-- `union(config members + inbox filenames + task owners)` — единственный способ получить полный список
-- `owner` в task-файлах — опционален (агент может не иметь owner до назначения)
+- `union(members.meta.json + config members + inbox filenames + task owners)` is the only way to get the complete member list.
+- `owner` in task files is optional. An agent may not have an owner before assignment.
 
 ### Graceful Degradation
 
-- `try/catch` везде в TeamDataService — при ошибке чтения возвращаем безопасные дефолты
-- 3 состояния участника: `ACTIVE` / `IDLE` / `TERMINATED`
-  - `ACTIVE`: idle < 5 минут
-  - `IDLE`: idle > 5 минут
-  - `TERMINATED`: получен `shutdown_response` с `approve: true`
+- `try/catch` is used throughout `TeamDataService`; read errors return safe defaults.
+- Member has 3 states: `ACTIVE` / `IDLE` / `TERMINATED`.
+  - `ACTIVE`: idle < 5 minutes
+  - `IDLE`: idle > 5 minutes
+  - `TERMINATED`: received `shutdown_response` with `approve: true`
 
-### @dnd-kit and review transitions
+### @dnd-kit and Review Transitions
 
-- Переходы между review-колонками делаются через card actions в UI
-- `@dnd-kit` сейчас используется в первую очередь для перестановки задач внутри колонки
-- Phase 2: полноценный D&D через `@dnd-kit`
+- Transitions between review columns happen through card actions in the UI.
+- `@dnd-kit` is currently used primarily for reordering tasks inside a column.
+- Phase 2: full drag-and-drop through `@dnd-kit`.
 
 ---
 
-## Открытые вопросы
+## Open Questions
 
-- **FileWatcher расширение**: FileWatcher.ts уже 1243 строк — добавление teams/tasks watchers нетривиально, требует отдельного спайка
-- **Windows atomic rename**: `fs.renameSync` на Windows бросает `EXDEV`/`EBUSY` при кросс-устройственном rename — нужна обёртка
-- **leadSessionId интеграция**: config.json содержит `leadSessionId`, но интеграция с session viewer (переход к сессии лида) — открытый вопрос
-- **Hard Interrupt**: сообщения доставляются между turns (1-30с задержка). В будущем нужен способ прервать mid-turn
-- **Архивация**: inbox не чистится автоматически, нужна кнопка "Архивировать"
+- **FileWatcher extension**: FileWatcher.ts is already 1243 lines. Adding teams/tasks watchers is non-trivial and needs a separate spike.
+- **Windows atomic rename**: `fs.renameSync` on Windows can throw `EXDEV`/`EBUSY` for cross-device rename. A wrapper is needed.
+- **leadSessionId integration**: config.json contains `leadSessionId`, but integration with the session viewer (navigating to the lead session) remains open.
+- **Hard Interrupt**: messages are delivered between turns with a 1-30 second delay. A future mechanism is needed to interrupt mid-turn.
+- **Archival**: inbox is not cleaned automatically. An "Archive" button is needed.
 
-## Файловая структура Claude Code
+## Claude Code File Structure
 
-```
+```text
 ~/.claude/
 ├── teams/{teamName}/
-│   ├── config.json              # Конфиг команды (lead + служебные поля)
-│   ├── members.meta.json        # Роли/цвета/типы участников (teammates)
-│   └── inboxes/{memberName}.json  # Inbox каждого участника
+│   ├── config.json                # Team config (lead + service fields)
+│   ├── members.meta.json          # Member roles/colors/types (teammates)
+│   └── inboxes/{memberName}.json  # Inbox for each member
 └── tasks/{teamName}/
-    ├── {id}.json                # Файл задачи
-    ├── .lock                    # Lock-файл (0 байт)
-    └── .highwatermark           # Последний ID задачи
+    ├── {id}.json                  # Task file
+    ├── .lock                      # Lock file (0 bytes)
+    └── .highwatermark             # Latest task ID
 ```
 
-**ВАЖНО**:
+**Important**:
 
-- `config.json` не является source-of-truth для полного roster.
-- Полный roster для UI формируется как `members.meta.json + inbox filenames (+ lead из config)`.
+- `config.json` is not the source of truth for the complete roster.
+- The UI builds the complete roster from `members.meta.json + inbox filenames (+ lead from config)`.

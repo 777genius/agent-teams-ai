@@ -306,6 +306,32 @@ function getVisibleRuntimeModels(
   );
 }
 
+function withSupplementalDisabledRuntimeModels(
+  providerId: SupportedProviderId,
+  models: readonly string[],
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): string[] {
+  if (providerId !== 'codex') {
+    return [...models];
+  }
+
+  const modelSet = new Set(models);
+  const supplementalDisabledModels = getTeamProviderModelOptions(providerId)
+    .map((option) => option.value.trim())
+    .filter(
+      (model) =>
+        model.length > 0 &&
+        !modelSet.has(model) &&
+        getTeamModelUiDisabledReason(providerId, model, providerStatus) !== null
+    );
+
+  return sortTeamProviderModels(
+    providerId,
+    [...models, ...supplementalDisabledModels],
+    providerStatus
+  );
+}
+
 function getModelAvailabilityMap(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): Map<string, CliProviderModelAvailability> {
@@ -416,7 +442,11 @@ export function getAvailableTeamProviderModelOptions(
     return getFallbackTeamProviderModelOptions(providerId, providerStatus);
   }
 
-  const visibleModels = getRuntimeSelectorModels(providerId, providerStatus);
+  const visibleModels = withSupplementalDisabledRuntimeModels(
+    providerId,
+    getRuntimeSelectorModels(providerId, providerStatus),
+    providerStatus
+  );
   return [
     { value: '', label: 'Default', badgeLabel: 'Default' },
     ...visibleModels.map((model) => {

@@ -28,7 +28,7 @@ function execGit(args: string[], cwd: string): Promise<string> {
     execFile(
       'git',
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024 },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true },
       (error, stdout, stderr) => {
         if (error) {
           const message = String(stderr || error.message || 'git command failed').trim();

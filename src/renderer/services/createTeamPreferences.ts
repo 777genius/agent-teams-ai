@@ -263,7 +263,7 @@ export function setStoredCreateTeamSkipPermissions(value: boolean): void {
 export function getStoredCreateTeamEffort(): string {
   return (
     readCreateTeamPreference(CREATE_TEAM_EFFORT_KEY, `${LEGACY_TEAM_PREFIX}lastSelectedEffort`) ??
-    'medium'
+    ''
   );
 }
 

@@ -1,4 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import * as path from 'node:path';
+
+import {
+  OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
+  type OpenCodePromptDeliveryLedgerRecord,
+} from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_MEMBER_LOG_PREVIEW_BUDGET } from '../../../../../core/domain/models/MemberLogPreviewBudget';
 import { DEFAULT_MEMBER_LOG_STREAM_BUDGET } from '../../../../../core/domain/models/MemberLogStreamBudget';
@@ -8,10 +17,12 @@ import { CodexNativeMemberTracePreviewSource } from '../CodexNativeMemberTracePr
 import { CodexNativeMemberTraceStreamSource } from '../CodexNativeMemberTraceStreamSource';
 import { OpenCodeMemberRuntimePreviewSource } from '../OpenCodeMemberRuntimePreviewSource';
 import { OpenCodeMemberRuntimeStreamSource } from '../OpenCodeMemberRuntimeStreamSource';
+import { OpenCodeMemberVisibleActivityReader } from '../OpenCodeMemberVisibleActivityReader';
 
 import type { MemberLogPreviewSourceInput } from '../../../../../core/application/ports/MemberLogPreviewSource';
 import type { MemberLogStreamSourceInput } from '../../../../../core/application/ports/MemberLogStreamSource';
 import type { EnhancedChunk, ParsedMessage } from '@main/types';
+import type { InboxMessage } from '@shared/types';
 
 function parsedMessage(uuid: string, timestamp: string): ParsedMessage {
   return {
@@ -74,6 +85,137 @@ function previewInput(
     budget: DEFAULT_MEMBER_LOG_PREVIEW_BUDGET,
     maxItems: 3,
     textLimit: 200,
+    ...overrides,
+  };
+}
+
+const tempClaudeRoots: string[] = [];
+
+afterEach(async () => {
+  setClaudeBasePathOverride(null);
+  const roots = tempClaudeRoots.splice(0);
+  await Promise.all(roots.map((root) => rm(root, { recursive: true, force: true })));
+});
+
+async function createTempClaudeRoot(): Promise<string> {
+  const root = await mkdtemp(path.join(tmpdir(), 'member-log-source-'));
+  tempClaudeRoots.push(root);
+  setClaudeBasePathOverride(root);
+  return root;
+}
+
+async function writeOpenCodePromptLedger(input: {
+  claudeRoot: string;
+  teamName: string;
+  laneId: string;
+  records: OpenCodePromptDeliveryLedgerRecord[];
+}): Promise<string> {
+  const ledgerPath = path.join(
+    input.claudeRoot,
+    'teams',
+    input.teamName,
+    '.opencode-runtime',
+    'lanes',
+    encodeURIComponent(input.laneId),
+    'opencode-prompt-delivery-ledger.json'
+  );
+  await mkdir(path.dirname(ledgerPath), { recursive: true });
+  await writeFile(
+    ledgerPath,
+    `${JSON.stringify(
+      {
+        schemaVersion: OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
+        updatedAt: '2026-04-04T00:00:00.000Z',
+        data: input.records,
+      },
+      null,
+      2
+    )}\n`
+  );
+  return ledgerPath;
+}
+
+async function writeTeamLeadInbox(input: {
+  claudeRoot: string;
+  teamName: string;
+  messages: InboxMessage[];
+}): Promise<string> {
+  const inboxPath = path.join(
+    input.claudeRoot,
+    'teams',
+    input.teamName,
+    'inboxes',
+    'team-lead.json'
+  );
+  await mkdir(path.dirname(inboxPath), { recursive: true });
+  await writeFile(inboxPath, `${JSON.stringify(input.messages, null, 2)}\n`);
+  return inboxPath;
+}
+
+function inboxMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
+  return {
+    from: overrides.from ?? 'alice',
+    to: overrides.to ?? 'team-lead',
+    text: overrides.text ?? '#abc12345 done. Implemented visible team activity.',
+    timestamp: overrides.timestamp ?? '2026-04-04T00:00:00.000Z',
+    read: overrides.read ?? false,
+    taskRefs: overrides.taskRefs ?? [
+      { taskId: 'task-1', displayId: 'abc12345', teamName: 'alpha-team' },
+    ],
+    summary: overrides.summary ?? '#abc12345 done - visible activity',
+    messageId: overrides.messageId ?? 'visible-message-1',
+    source: overrides.source ?? 'runtime_delivery',
+    messageKind: overrides.messageKind,
+    ...overrides,
+  };
+}
+
+function openCodeLedgerRecord(
+  overrides: Partial<OpenCodePromptDeliveryLedgerRecord> = {}
+): OpenCodePromptDeliveryLedgerRecord {
+  const now = overrides.updatedAt ?? '2026-04-04T00:00:00.000Z';
+  return {
+    id: overrides.id ?? 'opencode-prompt:record-1',
+    teamName: overrides.teamName ?? 'alpha-team',
+    memberName: overrides.memberName ?? 'alice',
+    laneId: overrides.laneId ?? 'secondary:opencode:alice',
+    runId: 'opencode-run-1',
+    runtimeSessionId: 'opencode-session',
+    inboxMessageId: 'inbox-message-1',
+    inboxTimestamp: now,
+    source: 'watcher',
+    messageKind: null,
+    replyRecipient: 'team-lead',
+    actionMode: 'do',
+    taskRefs: [{ taskId: 'task-1', displayId: 'abc12345', teamName: 'alpha-team' }],
+    payloadHash: 'sha256:test',
+    status: 'responded',
+    responseState: 'responded_visible_message',
+    attempts: 1,
+    maxAttempts: 3,
+    acceptanceUnknown: false,
+    nextAttemptAt: null,
+    lastAttemptAt: now,
+    lastObservedAt: now,
+    acceptedAt: now,
+    respondedAt: now,
+    failedAt: null,
+    inboxReadCommittedAt: null,
+    inboxReadCommitError: null,
+    prePromptCursor: null,
+    postPromptCursor: null,
+    deliveredUserMessageId: 'opencode-user-message',
+    observedAssistantMessageId: 'opencode-assistant-message',
+    observedAssistantPreview: 'Implemented the calculator updates and verified tests.',
+    observedToolCallNames: [],
+    observedVisibleMessageId: null,
+    visibleReplyMessageId: 'visible-reply-1',
+    visibleReplyInbox: 'team-lead',
+    visibleReplyCorrelation: 'plain_assistant_text',
+    lastReason: null,
+    diagnostics: [],
+    createdAt: now,
+    updatedAt: now,
     ...overrides,
   };
 }
@@ -326,6 +468,110 @@ describe('OpenCodeMemberRuntimeStreamSource', () => {
       ],
     });
   });
+
+  it('falls back to visible OpenCode team activity when runtime transcript is empty', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    await writeTeamLeadInbox({
+      claudeRoot,
+      teamName: 'alpha-team',
+      messages: [
+        inboxMessage({
+          from: 'bob',
+          messageId: 'other-member',
+          text: 'Wrong member should not appear.',
+        }),
+        inboxMessage({
+          messageId: 'visible-message-1',
+          text: '#abc12345 done. <info_for_agent>hidden</info_for_agent> Verified docs.',
+          summary: '#abc12345 completed - docs verified',
+          timestamp: '2026-04-04T00:03:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn().mockResolvedValue({
+      sessionId: 'opencode-session',
+      logProjection: { messages: [] },
+    });
+    const buildBundleChunks = vi.fn((messages: ParsedMessage[]) => [
+      fakeChunk(messages[0]?.uuid ?? 'chunk'),
+    ]);
+    const source = new OpenCodeMemberRuntimeStreamSource(
+      { getOpenCodeTranscript } as never,
+      { buildBundleChunks } as never,
+      { resolve: vi.fn().mockResolvedValue('/mock/orchestrator') }
+    );
+
+    const result = await source.load(sourceInput({ memberName: 'alice' }));
+
+    expect(result.status).toBe('included');
+    expect(result.segments[0]?.source).toMatchObject({
+      provider: 'opencode_runtime',
+      label: 'OpenCode visible activity',
+      messageCount: 1,
+    });
+    expect(buildBundleChunks).toHaveBeenCalledWith([
+      expect.objectContaining({
+        uuid: expect.stringMatching(/^opencode-visible:/),
+        content: expect.stringContaining('#abc12345 completed - docs verified'),
+      }),
+    ]);
+    expect(JSON.stringify(buildBundleChunks.mock.calls[0]?.[0])).not.toContain('info_for_agent');
+  });
+
+  it('uses visible OpenCode team activity when the runtime bridge is unavailable', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    await writeTeamLeadInbox({
+      claudeRoot,
+      teamName: 'alpha-team',
+      messages: [
+        inboxMessage({
+          from: 'jack',
+          messageId: 'jack-visible-message',
+          summary: '#e54d70b9 completed - release notes page added',
+          text: 'Task #e54d70b9 completed: added release notes page.',
+          timestamp: '2026-04-04T00:04:00.000Z',
+        }),
+      ],
+    });
+    const source = new OpenCodeMemberRuntimeStreamSource(
+      { getOpenCodeTranscript: vi.fn() } as never,
+      { buildBundleChunks: vi.fn(() => [fakeChunk('visible-activity-chunk')]) } as never,
+      { resolve: vi.fn().mockResolvedValue(null) }
+    );
+
+    const result = await source.load(sourceInput({ memberName: 'jack' }));
+
+    expect(result.status).toBe('included');
+    expect(result.warnings.map((warning) => warning.code)).toEqual([
+      'opencode_runtime_unavailable',
+    ]);
+    expect(result.segments[0]?.source.label).toBe('OpenCode visible activity');
+  });
+});
+
+describe('OpenCodeMemberVisibleActivityReader', () => {
+  it('reuses one team inbox read across member lookups and respects force refresh', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const getMessages = vi.fn(async () => [
+      inboxMessage({ from: 'alice', messageId: 'alice-message' }),
+      inboxMessage({ from: 'bob', messageId: 'bob-message' }),
+    ]);
+    const reader = new OpenCodeMemberVisibleActivityReader({ getMessages });
+
+    const alice = await reader.list({ teamName: 'alpha-team', memberName: 'alice' });
+    const bob = await reader.list({ teamName: 'alpha-team', memberName: 'bob' });
+    const aliceForced = await reader.list({
+      teamName: 'alpha-team',
+      memberName: 'alice',
+      forceRefresh: true,
+    });
+
+    expect(claudeRoot).toContain('member-log-source-');
+    expect(alice.map((entry) => entry.message.messageId)).toEqual(['alice-message']);
+    expect(bob.map((entry) => entry.message.messageId)).toEqual(['bob-message']);
+    expect(aliceForced.map((entry) => entry.message.messageId)).toEqual(['alice-message']);
+    expect(getMessages).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('OpenCodeMemberRuntimePreviewSource', () => {
@@ -347,6 +593,852 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
     });
     expect(resolve).not.toHaveBeenCalled();
     expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('uses lane delivery ledger previews before touching the runtime bridge', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          observedAssistantPreview:
+            'Finished #abc12345 after reading context. <system-reminder>hidden</system-reminder>',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const resolve = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve,
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'OpenCode reply',
+      preview: 'Finished #abc12345 after reading context.',
+      sourceLabel: 'OpenCode delivery',
+      sessionId: 'opencode-session',
+      laneId,
+    });
+    expect(result.truncated).toBe(false);
+    expect(result.overflowCount).toBe(0);
+    expect(resolve).not.toHaveBeenCalled();
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('renders OpenCode non-visible tool activity from the delivery ledger', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          responseState: 'responded_non_visible_tool',
+          observedAssistantPreview: null,
+          observedToolCallNames: ['task_get', 'read', 'bash', 'read'],
+        }),
+      ],
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript: vi.fn() } as never,
+      { resolve: vi.fn() }
+    );
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Tool activity',
+      preview: 'task_get, read, bash',
+      tone: 'neutral',
+    });
+  });
+
+  it('merges visible team activity with ledger previews before using runtime transcript', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          responseState: 'responded_non_visible_tool',
+          observedAssistantPreview: null,
+          observedToolCallNames: ['task_get', 'glob', 'bash'],
+          updatedAt: '2026-04-04T00:02:00.000Z',
+        }),
+      ],
+    });
+    await writeTeamLeadInbox({
+      claudeRoot,
+      teamName: 'alpha-team',
+      messages: [
+        inboxMessage({
+          messageId: 'visible-message-newer',
+          summary: '#abc12345 completed - visible reply',
+          text: '#abc12345 done. <system-reminder>hidden</system-reminder> Full result posted.',
+          timestamp: '2026-04-04T00:03:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn(),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items.map((item) => item.title)).toEqual(['Task completed', 'Tool activity']);
+    expect(result.items[0]?.preview).toContain('#abc12345 completed - visible reply');
+    expect(result.items[0]?.preview).not.toContain('system-reminder');
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('uses visible team activity instead of delayed empty state for warning-only ledger records', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          status: 'failed_terminal',
+          responseState: 'session_stale',
+          observedAssistantPreview: null,
+          observedToolCallNames: [],
+          failedAt: '2026-04-04T00:03:00.000Z',
+          updatedAt: '2026-04-04T00:03:00.000Z',
+        }),
+      ],
+    });
+    await writeTeamLeadInbox({
+      claudeRoot,
+      teamName: 'alpha-team',
+      messages: [
+        inboxMessage({
+          messageId: 'visible-message-after-stale-session',
+          summary: '#abc12345 done - visible fallback',
+          text: '#abc12345 done. Runtime session was stale but the team message is visible.',
+          timestamp: '2026-04-04T00:04:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn(),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      title: 'Task completed',
+      preview: expect.stringContaining('#abc12345 done - visible fallback'),
+    });
+    expect(result.warnings.map((warning) => warning.code)).toEqual(['opencode_delivery_delayed']);
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('keeps assistant evidence from terminal ledger records and reports delayed delivery', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          status: 'failed_terminal',
+          responseState: 'responded_plain_text',
+          observedAssistantPreview: 'I completed the requested update.',
+          failedAt: '2026-04-04T00:01:00.000Z',
+          updatedAt: '2026-04-04T00:01:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn(),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'OpenCode reply',
+      preview: 'I completed the requested update.',
+      tone: 'neutral',
+    });
+    expect(result.warnings.map((warning) => warning.code)).toEqual(['opencode_delivery_delayed']);
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('turns terminal ledger failures without evidence into delayed warnings and falls back', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          status: 'failed_terminal',
+          responseState: 'tool_error',
+          observedAssistantPreview: null,
+          lastReason: 'tool failed with stderr output',
+          diagnostics: ['stderr: permission denied'],
+          failedAt: '2026-04-04T00:01:00.000Z',
+          updatedAt: '2026-04-04T00:01:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn().mockResolvedValue({
+      sessionId: 'opencode-session',
+      logProjection: {
+        messages: [
+          {
+            uuid: 'opencode-transcript-1',
+            parentUuid: null,
+            type: 'assistant',
+            timestamp: '2026-04-04T00:02:00.000Z',
+            role: 'assistant',
+            content: 'Transcript recovered after delayed delivery.',
+            toolCalls: [],
+            toolResults: [],
+            isMeta: false,
+            sessionId: 'opencode-session',
+          },
+        ],
+      },
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'Assistant',
+      preview: 'Transcript recovered after delayed delivery.',
+    });
+    expect(result.warnings).toEqual([
+      {
+        code: 'opencode_delivery_delayed',
+        message: 'OpenCode logs are delayed while message delivery is being confirmed.',
+      },
+    ]);
+    expect(getOpenCodeTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves delayed ledger warnings when transcript fallback times out', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          laneId,
+          status: 'failed_terminal',
+          responseState: 'reconcile_failed',
+          observedAssistantPreview: null,
+          observedToolCallNames: [],
+          lastReason:
+            'opencode_message_delivery_exception: Bridge server runtime manifest high watermark is stale',
+          failedAt: '2026-04-04T00:01:00.000Z',
+          updatedAt: '2026-04-04T00:01:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn().mockRejectedValue(
+      Object.assign(new Error(`Command failed: runtime transcript --lane ${laneId}`), {
+        killed: true,
+        signal: 'SIGTERM',
+      })
+    );
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('skipped');
+    expect(result.items).toEqual([]);
+    expect(result.warnings.map((warning) => warning.code)).toEqual([
+      'opencode_delivery_delayed',
+      'opencode_runtime_timeout',
+    ]);
+  });
+
+  it('keeps delayed ledger warnings when transcript is empty', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:session-error',
+          laneId,
+          status: 'accepted',
+          responseState: 'session_error',
+          observedAssistantPreview: null,
+          observedToolCallNames: [],
+          lastReason: 'Key limit exceeded',
+        }),
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:empty-turn',
+          laneId,
+          status: 'failed_terminal',
+          responseState: 'empty_assistant_turn',
+          observedAssistantPreview: null,
+          observedToolCallNames: [],
+          lastReason: 'empty_assistant_turn',
+          failedAt: '2026-04-04T00:01:00.000Z',
+          updatedAt: '2026-04-04T00:01:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn().mockResolvedValue({
+      sessionId: 'opencode-session',
+      logProjection: { messages: [] },
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('skipped');
+    expect(result.items).toEqual([]);
+    expect(result.warnings).toEqual([
+      {
+        code: 'opencode_delivery_delayed',
+        message: 'OpenCode logs are delayed while message delivery is being confirmed.',
+      },
+    ]);
+    expect(getOpenCodeTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the real relay-works bob ledger shape as tool activity without runtime transcript', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const teamName = 'relay-works';
+    const memberName = 'bob';
+    const laneId = 'secondary:opencode:bob';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName,
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:relay-bob-real-shape',
+          teamName,
+          memberName,
+          laneId,
+          runId: 'relay-bob-run',
+          runtimeSessionId: 'relay-bob-session',
+          inboxMessageId: 'relay-bob-inbox-message',
+          inboxTimestamp: '2026-05-06T21:55:58.077Z',
+          actionMode: null,
+          taskRefs: [
+            {
+              taskId: '20eb14b4-144d-4c52-89c1-bdeb7b9a14ef',
+              displayId: '20eb14b4',
+              teamName,
+            },
+          ],
+          status: 'responded',
+          responseState: 'responded_non_visible_tool',
+          attempts: 2,
+          nextAttemptAt: '2026-05-06T21:56:26.767Z',
+          lastAttemptAt: '2026-05-06T21:57:03.644Z',
+          lastObservedAt: '2026-05-06T21:57:03.644Z',
+          acceptedAt: '2026-05-06T21:56:11.751Z',
+          respondedAt: '2026-05-06T21:56:11.751Z',
+          inboxReadCommittedAt: '2026-05-06T21:57:03.692Z',
+          observedAssistantPreview: null,
+          observedToolCallNames: ['task_get', 'bash', 'task_start', 'read', 'glob'],
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          lastReason: 'non_visible_tool_without_task_progress',
+          diagnostics: [
+            'OpenCode app MCP was reattached before message delivery.',
+            'OpenCode bootstrap MCP did not complete required tools before assistant response: runtime_bootstrap_checkin, member_briefing',
+          ],
+          createdAt: '2026-05-06T21:55:58.224Z',
+          updatedAt: '2026-05-06T21:57:03.692Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn(),
+    });
+
+    const result = await source.loadPreview(
+      previewInput({ teamName, memberName, laneId, textLimit: 160 })
+    );
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Tool activity',
+      preview: 'task_get, bash, task_start, read, glob',
+      tone: 'neutral',
+      sessionId: 'relay-bob-session',
+      laneId,
+    });
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('renders the real relay-works jack visible-reply failure as activity with a warning', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const teamName = 'relay-works';
+    const memberName = 'jack';
+    const laneId = 'secondary:opencode:jack';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName,
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:relay-jack-real-shape',
+          teamName,
+          memberName,
+          laneId,
+          runId: 'relay-jack-run',
+          runtimeSessionId: 'relay-jack-session',
+          inboxMessageId: 'relay-jack-stall-message',
+          inboxTimestamp: '2026-05-06T22:06:32.842Z',
+          source: 'watchdog',
+          replyRecipient: 'user',
+          actionMode: 'do',
+          taskRefs: [
+            {
+              taskId: '32cc252b-7c6f-4f1d-af0a-c13c18861a4e',
+              displayId: '32cc252b',
+              teamName,
+            },
+          ],
+          status: 'failed_terminal',
+          responseState: 'responded_visible_message',
+          attempts: 3,
+          nextAttemptAt: null,
+          lastAttemptAt: '2026-05-06T22:08:03.447Z',
+          lastObservedAt: '2026-05-06T22:08:03.447Z',
+          acceptedAt: '2026-05-06T22:07:00.236Z',
+          respondedAt: '2026-05-06T22:07:00.236Z',
+          failedAt: '2026-05-06T22:08:03.471Z',
+          inboxReadCommittedAt: null,
+          observedAssistantPreview: null,
+          observedToolCallNames: ['task_get', 'message_send'],
+          observedVisibleMessageId: 'functions.agent-teams_message_send:1',
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: 'direct_child_message_send',
+          lastReason: 'visible_reply_destination_not_found_yet',
+          diagnostics: [
+            'OpenCode app MCP was reattached before message delivery.',
+            'visible_reply_destination_not_found_yet',
+          ],
+          createdAt: '2026-05-06T22:06:32.865Z',
+          updatedAt: '2026-05-06T22:08:03.471Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn(),
+    });
+
+    const result = await source.loadPreview(previewInput({ teamName, memberName, laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'tool_use',
+      title: 'Tool activity',
+      preview: 'task_get, message_send',
+      tone: 'neutral',
+      sessionId: 'relay-jack-session',
+      laneId,
+    });
+    expect(result.warnings).toEqual([
+      {
+        code: 'opencode_delivery_delayed',
+        message: 'OpenCode logs are delayed while message delivery is being confirmed.',
+      },
+    ]);
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('reports ledger overflow from the full filtered lane record count', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: Array.from({ length: 5 }, (_, index) =>
+        openCodeLedgerRecord({
+          id: `opencode-prompt:record-${index}`,
+          laneId,
+          observedAssistantPreview: `Ledger event ${index}`,
+          updatedAt: `2026-04-04T00:00:0${index}.000Z`,
+        })
+      ),
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript: vi.fn() } as never,
+      { resolve: vi.fn() }
+    );
+
+    const result = await source.loadPreview(previewInput({ laneId, maxItems: 3 }));
+
+    expect(result.status).toBe('included');
+    expect(result.truncated).toBe(true);
+    expect(result.overflowCount).toBe(2);
+    expect(result.items.map((item) => item.preview)).toEqual([
+      'Ledger event 4',
+      'Ledger event 3',
+      'Ledger event 2',
+    ]);
+  });
+
+  it('does not count warning-only ledger records as preview overflow', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        ...Array.from({ length: 5 }, (_, index) =>
+          openCodeLedgerRecord({
+            id: `opencode-prompt:warning-only-${index}`,
+            laneId,
+            status: 'failed_terminal',
+            responseState: 'reconcile_failed',
+            observedAssistantPreview: null,
+            observedToolCallNames: [],
+            lastReason:
+              'opencode_message_delivery_exception: Bridge server runtime manifest high watermark is stale',
+            failedAt: `2026-04-04T00:00:0${index}.000Z`,
+            updatedAt: `2026-04-04T00:00:0${index}.000Z`,
+          })
+        ),
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:visible',
+          laneId,
+          observedAssistantPreview: 'Visible event',
+          updatedAt: '2026-04-04T00:01:00.000Z',
+        }),
+      ],
+    });
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn(),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId, maxItems: 3 }));
+
+    expect(result.status).toBe('included');
+    expect(result.items.map((item) => item.preview)).toEqual(['Visible event']);
+    expect(result.truncated).toBe(false);
+    expect(result.overflowCount).toBe(0);
+    expect(result.warnings.map((warning) => warning.code)).toEqual(['opencode_delivery_delayed']);
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('falls back to OpenCode transcript when the delivery ledger has no renderable records', async () => {
+    await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    const getOpenCodeTranscript = vi.fn().mockResolvedValue({
+      sessionId: 'opencode-session',
+      logProjection: {
+        messages: [
+          {
+            uuid: 'opencode-transcript-1',
+            parentUuid: null,
+            type: 'assistant',
+            timestamp: '2026-04-04T00:00:00.000Z',
+            role: 'assistant',
+            content: 'Transcript response from OpenCode.',
+            toolCalls: [],
+            toolResults: [],
+            isMeta: false,
+            sessionId: 'opencode-session',
+          },
+        ],
+      },
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'Assistant',
+      preview: 'Transcript response from OpenCode.',
+    });
+    expect(result.warnings).toEqual([]);
+    expect(getOpenCodeTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports runtime unavailable when no ledger exists and the OpenCode binary is missing', async () => {
+    await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    const getOpenCodeTranscript = vi.fn();
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue(null),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result).toMatchObject({
+      provider: 'opencode_runtime',
+      status: 'skipped',
+      reason: 'OpenCode runtime bridge is unavailable.',
+      warnings: [
+        {
+          code: 'opencode_runtime_unavailable',
+          message: 'OpenCode runtime bridge is unavailable.',
+        },
+      ],
+    });
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
+  it('renders the real comet-hub OpenCode transcript error shape when no ledger exists', async () => {
+    await createTempClaudeRoot();
+    const teamName = 'comet-hub';
+    const memberName = 'bob';
+    const laneId = 'secondary:opencode:bob';
+    const getOpenCodeTranscript = vi.fn().mockResolvedValue({
+      sessionId: 'ses_1ddb71a6affexQQR3lRdHRfAOX',
+      logProjection: {
+        messages: [
+          {
+            uuid: 'msg_e224bf71b0017NamfjVeIoBdP7',
+            parentUuid: null,
+            type: 'assistant',
+            timestamp: '2026-05-13T17:04:24.347Z',
+            role: 'assistant',
+            content: [
+              {
+                type: 'thinking',
+                thinking:
+                  'I need to stop. The protocol instruction says to stop after the message_send succeeds.',
+                signature: 'opencode',
+              },
+              {
+                type: 'text',
+                text: 'All done. Task #622701b8 completed and approved.',
+              },
+            ],
+            toolCalls: [],
+            toolResults: [],
+            isMeta: false,
+            sessionId: 'ses_1ddb71a6affexQQR3lRdHRfAOX',
+          },
+          {
+            uuid: 'msg_e224c0ae2001F76RknnkihymsV::error',
+            parentUuid: 'msg_e224bf71b0017NamfjVeIoBdP7',
+            type: 'system',
+            timestamp: '2026-05-13T17:04:45.546Z',
+            role: 'system',
+            content: 'OpenCode runtime error - UnknownError: database or disk is full',
+            toolCalls: [],
+            toolResults: [],
+            isMeta: false,
+            sessionId: 'ses_1ddb71a6affexQQR3lRdHRfAOX',
+          },
+        ],
+      },
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ teamName, memberName, laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]).toMatchObject({
+      kind: 'text',
+      title: 'Runtime error',
+      preview: 'OpenCode runtime error - UnknownError: database or disk is full',
+      tone: 'error',
+      sourceLabel: 'OpenCode runtime',
+      sessionId: 'ses_1ddb71a6affexQQR3lRdHRfAOX',
+      laneId,
+    });
+    expect(getOpenCodeTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not classify command text containing --lane as an ambiguous lane failure', async () => {
+    await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    const getOpenCodeTranscript = vi
+      .fn()
+      .mockRejectedValue(
+        new Error(`Command failed: runtime transcript --lane ${laneId} exited with code 1`)
+      );
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('skipped');
+    expect(result.warnings[0]?.code).toBe('opencode_runtime_unavailable');
+  });
+
+  it('classifies killed OpenCode transcript calls as timeouts even when command text includes --lane', async () => {
+    await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    const getOpenCodeTranscript = vi
+      .fn()
+      .mockRejectedValue(
+        new Error(`Command failed: runtime transcript --lane ${laneId} exited with code 143`)
+      );
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('skipped');
+    expect(result.warnings[0]?.code).toBe('opencode_runtime_timeout');
+  });
+
+  it('classifies exec timeout objects as OpenCode runtime timeouts', async () => {
+    await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    const timeoutError = Object.assign(
+      new Error(`Command failed: runtime transcript --lane ${laneId}`),
+      {
+        killed: true,
+        signal: 'SIGTERM',
+      }
+    );
+    const getOpenCodeTranscript = vi.fn().mockRejectedValue(timeoutError);
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('skipped');
+    expect(result.warnings[0]?.code).toBe('opencode_runtime_timeout');
+  });
+
+  it('keeps batch preview working when the delivery ledger is corrupt', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:alice';
+    const ledgerPath = path.join(
+      claudeRoot,
+      'teams',
+      'alpha-team',
+      '.opencode-runtime',
+      'lanes',
+      encodeURIComponent(laneId),
+      'opencode-prompt-delivery-ledger.json'
+    );
+    await mkdir(path.dirname(ledgerPath), { recursive: true });
+    await writeFile(ledgerPath, '{not-json');
+    const getOpenCodeTranscript = vi.fn().mockResolvedValue({
+      sessionId: 'opencode-session',
+      logProjection: {
+        messages: [
+          {
+            uuid: 'opencode-transcript-1',
+            parentUuid: null,
+            type: 'assistant',
+            timestamp: '2026-04-04T00:00:00.000Z',
+            role: 'assistant',
+            content: 'Transcript still works.',
+            toolCalls: [],
+            toolResults: [],
+            isMeta: false,
+            sessionId: 'opencode-session',
+          },
+        ],
+      },
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
+      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+    });
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(result.status).toBe('included');
+    expect(result.items[0]?.preview).toBe('Transcript still works.');
+    expect(result.warnings.map((warning) => warning.code)).toContain(
+      'opencode_runtime_unavailable'
+    );
+  });
+
+  it('uses encoded lane-specific ledger paths and filters unrelated records', async () => {
+    const claudeRoot = await createTempClaudeRoot();
+    const laneId = 'secondary:opencode:ali/ce?x';
+    const ledgerPath = await writeOpenCodePromptLedger({
+      claudeRoot,
+      teamName: 'alpha-team',
+      laneId,
+      records: [
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:other-member',
+          laneId,
+          memberName: 'bob',
+          observedAssistantPreview: 'Wrong member',
+        }),
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:other-lane',
+          laneId: 'secondary:opencode:other',
+          observedAssistantPreview: 'Wrong lane',
+        }),
+        openCodeLedgerRecord({
+          id: 'opencode-prompt:valid',
+          laneId,
+          observedAssistantPreview: 'Correct lane preview',
+        }),
+      ],
+    });
+    const source = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript: vi.fn() } as never,
+      { resolve: vi.fn() }
+    );
+
+    const result = await source.loadPreview(previewInput({ laneId }));
+
+    expect(ledgerPath).toContain(encodeURIComponent(laneId));
+    expect(result.status).toBe('included');
+    expect(result.items.map((item) => item.preview)).toEqual(['Correct lane preview']);
   });
 
   it('uses bounded OpenCode projection messages and preserves safe lane ids', async () => {
@@ -376,9 +1468,15 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
         ],
       },
     });
-    const source = new OpenCodeMemberRuntimePreviewSource({ getOpenCodeTranscript } as never, {
-      resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
-    });
+    const source = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript } as never,
+      {
+        resolve: vi.fn().mockResolvedValue('/mock/orchestrator'),
+      },
+      {
+        list: vi.fn().mockResolvedValue([]),
+      }
+    );
 
     const result = await source.loadPreview(previewInput({ laneId: 'secondary:opencode:alice' }));
 

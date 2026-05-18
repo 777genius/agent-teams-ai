@@ -315,6 +315,8 @@ describe('OpenCodePromptDeliveryLedger', () => {
       id: unanswered.id,
       accepted: true,
       attempted: true,
+      sessionId: 'oc-session-1',
+      runtimePromptMessageId: 'msg_prompt_1',
       responseObservation: {
         state: 'empty_assistant_turn',
         deliveredUserMessageId: 'oc-user-1',
@@ -332,6 +334,8 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(emptyResult.status).toBe('unanswered');
     expect(emptyResult.responseState).toBe('empty_assistant_turn');
     expect(emptyResult.attempts).toBe(1);
+    expect(emptyResult.runtimeSessionId).toBe('oc-session-1');
+    expect(emptyResult.runtimePromptMessageId).toBe('msg_prompt_1');
 
     const noAssistant = await store.ensurePending({
       teamName: 'team-a',
@@ -394,6 +398,169 @@ describe('OpenCodePromptDeliveryLedger', () => {
 
     expect(observed.status).toBe('responded');
     expect(observed.observedAssistantPreview).toBe('Понял');
+  });
+
+  it('tracks accepted runtime prompt ids without double-counting recovered command status', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-accepted',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:accepted',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+
+    const firstAccepted = await store.applyDeliveryResult({
+      id: record.id,
+      accepted: true,
+      attempted: true,
+      sessionId: 'oc-session-1',
+      runtimePromptMessageId: 'msg_prompt_1',
+      deliveryAttemptId: 'attempt-1',
+      now: '2026-04-25T10:00:05.000Z',
+    });
+    expect(firstAccepted).toMatchObject({
+      status: 'accepted',
+      attempts: 1,
+      runtimePromptMessageId: 'msg_prompt_1',
+      lastRuntimePromptMessageId: 'msg_prompt_1',
+      lastDeliveryAttemptIdWithAcceptedPrompt: 'attempt-1',
+    });
+    expect(firstAccepted.runtimePromptMessageIds).toEqual(['msg_prompt_1']);
+
+    const recoveredSamePrompt = await store.applyDeliveryResult({
+      id: record.id,
+      accepted: true,
+      attempted: true,
+      sessionId: 'oc-session-1',
+      runtimePromptMessageId: 'msg_prompt_1',
+      deliveryAttemptId: 'attempt-1',
+      now: '2026-04-25T10:00:06.000Z',
+    });
+    expect(recoveredSamePrompt.attempts).toBe(1);
+    expect(recoveredSamePrompt.runtimePromptMessageIds).toEqual(['msg_prompt_1']);
+
+    const retryAccepted = await store.applyDeliveryResult({
+      id: record.id,
+      accepted: true,
+      attempted: true,
+      sessionId: 'oc-session-2',
+      runtimePromptMessageId: 'msg_prompt_2',
+      deliveryAttemptId: 'attempt-2',
+      now: '2026-04-25T10:01:00.000Z',
+    });
+    expect(retryAccepted.attempts).toBe(2);
+    expect(retryAccepted.runtimePromptMessageIds).toEqual(['msg_prompt_1', 'msg_prompt_2']);
+    expect(retryAccepted.lastRuntimePromptMessageId).toBe('msg_prompt_2');
+  });
+
+  it('keeps schema-1 legacy prompt-id fields compatible and normalizes when touched', async () => {
+    const store = createStore();
+    const legacy = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-legacy-runtime-prompt',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:legacy-runtime-prompt',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+
+    const envelope = JSON.parse(await fs.readFile(ledgerPath(), 'utf8')) as {
+      data: Record<string, unknown>[];
+    };
+    delete envelope.data[0].runtimePromptMessageIds;
+    delete envelope.data[0].lastRuntimePromptMessageId;
+    delete envelope.data[0].lastDeliveryAttemptIdWithAcceptedPrompt;
+    await fs.writeFile(ledgerPath(), `${JSON.stringify(envelope, null, 2)}\n`, 'utf8');
+
+    await expect(store.list()).resolves.toHaveLength(1);
+
+    const touched = await store.applyDeliveryResult({
+      id: legacy.id,
+      accepted: true,
+      attempted: true,
+      runtimePromptMessageId: 'msg_prompt_legacy_touch',
+      deliveryAttemptId: 'attempt-legacy-touch',
+      now: '2026-04-25T10:00:05.000Z',
+    });
+    expect(touched.runtimePromptMessageIds).toEqual(['msg_prompt_legacy_touch']);
+    expect(touched.lastRuntimePromptMessageId).toBe('msg_prompt_legacy_touch');
+    expect(touched.lastDeliveryAttemptIdWithAcceptedPrompt).toBe('attempt-legacy-touch');
+  });
+
+  it('accepts task stall remediation message kind across ledger validation', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'task-stall:team-a:jack:task-a',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watchdog',
+      messageKind: 'task_stall_remediation',
+      replyRecipient: 'team-lead',
+      actionMode: 'do',
+      payloadHash: 'sha256:task-stall',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+
+    expect(record.messageKind).toBe('task_stall_remediation');
+    await expect(store.list()).resolves.toMatchObject([
+      { messageKind: 'task_stall_remediation' },
+    ]);
+  });
+
+  it('upgrades acceptance-unknown records when exact observation finds the prompt', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-observed-later',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:observed-later',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const unknown = await store.markAcceptanceUnknown({
+      id: record.id,
+      reason: 'opencode_prompt_acceptance_unknown_after_bridge_timeout',
+      nextAttemptAt: '2026-04-25T10:01:00.000Z',
+      markedAt: '2026-04-25T10:00:45.000Z',
+    });
+    expect(unknown.acceptanceUnknown).toBe(true);
+
+    const observed = await store.applyObservation({
+      id: record.id,
+      sessionId: 'oc-session-recovered',
+      runtimePromptMessageId: 'msg_prompt_recovered',
+      responseObservation: {
+        state: 'pending',
+        deliveredUserMessageId: 'msg_prompt_recovered',
+        assistantMessageId: null,
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: null,
+        reason: 'assistant_response_pending',
+      },
+      observedAt: '2026-04-25T10:00:50.000Z',
+    });
+
+    expect(observed.status).toBe('accepted');
+    expect(observed.acceptanceUnknown).toBe(false);
+    expect(observed.acceptedAt).toBe('2026-04-25T10:00:50.000Z');
+    expect(observed.runtimeSessionId).toBe('oc-session-recovered');
+    expect(observed.runtimePromptMessageIds).toEqual(['msg_prompt_recovered']);
   });
 
   it('keeps plain-text responses active until their visible inbox reply is materialized', async () => {

@@ -8,7 +8,7 @@ export const useLocation = () => {
   const cookie = useCookie("i18n_redirected", { default: () => "" });
 
   const getBrowserLocale = () => {
-    if (!process.client) return "en";
+    if (!import.meta.client) return "en";
     const browserLocale = navigator.language || "en";
     const normalized = browserLocale.split("-")[0].toLowerCase();
     const supported: readonly string[] = supportedLocales.map((item) => item.code);

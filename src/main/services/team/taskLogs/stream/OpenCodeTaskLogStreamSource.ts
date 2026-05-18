@@ -1,3 +1,4 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
@@ -8,12 +9,14 @@ import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBu
 
 import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from './OpenCodeRuntimeProjectionMapper';
 import { OpenCodeTaskLogAttributionStore } from './OpenCodeTaskLogAttributionStore';
+import { TaskLogOpenCodeSessionEvidenceSource } from './TaskLogOpenCodeSessionEvidenceSource';
 
 import type { OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';
 import type {
   OpenCodeTaskLogAttributionReader,
   OpenCodeTaskLogAttributionRecord,
 } from './OpenCodeTaskLogAttributionStore';
+import type { OpenCodeTaskLogSessionEvidenceReader } from './TaskLogOpenCodeSessionEvidenceSource';
 import type { ParsedMessage } from '@main/types';
 import type {
   BoardTaskLogActor,
@@ -148,6 +151,11 @@ function buildParticipantKey(memberName: string): string {
   return `member:${normalizeMemberName(memberName)}`;
 }
 
+function buildSessionSegmentKey(sessionId: string | undefined): string {
+  const normalized = sessionId?.trim();
+  return normalized ? normalized.replace(/[^a-zA-Z0-9_.:-]/g, '_') : 'unknown-session';
+}
+
 function buildParticipant(memberName: string): BoardTaskLogParticipant {
   return {
     key: buildParticipantKey(memberName),
@@ -186,6 +194,7 @@ function stableAttributionKey(records: OpenCodeTaskLogAttributionRecord[]): stri
       JSON.stringify([
         normalizeMemberName(record.memberName),
         record.scope,
+        record.laneId ?? '',
         record.sessionId ?? '',
         record.since ?? '',
         record.until ?? '',
@@ -195,6 +204,34 @@ function stableAttributionKey(records: OpenCodeTaskLogAttributionRecord[]): stri
     )
     .sort()
     .join('|');
+}
+
+function mergeTaskLogAttributionRecords(
+  attributionRecords: OpenCodeTaskLogAttributionRecord[],
+  sessionEvidenceRecords: OpenCodeTaskLogAttributionRecord[]
+): OpenCodeTaskLogAttributionRecord[] {
+  const merged: OpenCodeTaskLogAttributionRecord[] = [];
+  const seen = new Set<string>();
+  for (const record of [...attributionRecords, ...sessionEvidenceRecords]) {
+    const key = JSON.stringify([
+      record.taskId,
+      normalizeMemberName(record.memberName),
+      record.scope,
+      record.laneId ?? '',
+      record.sessionId ?? '',
+      record.since ?? '',
+      record.until ?? '',
+      record.startMessageUuid ?? '',
+      record.endMessageUuid ?? '',
+      record.source ?? '',
+    ]);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(record);
+  }
+  return merged;
 }
 
 function normalizeTaskRef(value: unknown): string | null {
@@ -954,7 +991,12 @@ export class OpenCodeTaskLogStreamSource {
     private readonly binaryResolver: BinaryResolverLike = ClaudeBinaryResolver,
     private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
     private readonly chunkBuilder: BoardTaskExactLogChunkBuilder = new BoardTaskExactLogChunkBuilder(),
-    private readonly attributionStore: OpenCodeTaskLogAttributionReader = new OpenCodeTaskLogAttributionStore()
+    private readonly attributionStore: OpenCodeTaskLogAttributionReader = new OpenCodeTaskLogAttributionStore(),
+    private readonly sessionEvidenceSource: OpenCodeTaskLogSessionEvidenceReader = new TaskLogOpenCodeSessionEvidenceSource(
+      {
+        teamsBasePath: getTeamsBasePath(),
+      }
+    )
   ) {}
 
   private async resolveTask(teamName: string, taskId: string): Promise<TeamTask | null> {
@@ -974,12 +1016,26 @@ export class OpenCodeTaskLogStreamSource {
       return null;
     }
 
-    const attributionRecords = await this.attributionStore.readTaskRecords(teamName, taskId);
-    if (!task.owner?.trim() && attributionRecords.length === 0) {
+    const [attributionRecords, sessionEvidenceRecords] = await Promise.all([
+      this.attributionStore.readTaskRecords(teamName, taskId),
+      this.sessionEvidenceSource.readTaskRecords(teamName, task).catch((error) => {
+        logger.warn(
+          `[${teamName}/${task.id}] OpenCode task-log session evidence lookup failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return [];
+      }),
+    ]);
+    const taskLogRecords = mergeTaskLogAttributionRecords(
+      attributionRecords,
+      sessionEvidenceRecords
+    );
+    if (!task.owner?.trim() && taskLogRecords.length === 0) {
       return null;
     }
 
-    const cacheKey = `${teamName}::${stableTaskWindowKey(task)}::${stableAttributionKey(attributionRecords)}`;
+    const cacheKey = `${teamName}::${stableTaskWindowKey(task)}::${stableAttributionKey(taskLogRecords)}`;
     const cached = this.cache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.response;
@@ -990,7 +1046,7 @@ export class OpenCodeTaskLogStreamSource {
       return await existingPromise;
     }
 
-    const promise = this.buildTaskLogStream(teamName, task, attributionRecords)
+    const promise = this.buildTaskLogStream(teamName, task, taskLogRecords)
       .catch((error) => {
         logger.warn(
           `[${teamName}/${task.id}] OpenCode task-log fallback failed: ${
@@ -1109,7 +1165,9 @@ export class OpenCodeTaskLogStreamSource {
     const actor = buildActor(ownerName, transcript?.sessionId ?? firstMessage.sessionId);
     const participant = buildParticipant(ownerName);
     const segment: BoardTaskLogSegment = {
-      id: `opencode:${teamName}:${task.id}:${normalizeMemberName(ownerName)}`,
+      id: `opencode:${teamName}:${task.id}:${normalizeMemberName(ownerName)}:${buildSessionSegmentKey(
+        transcript?.sessionId ?? firstMessage.sessionId
+      )}`,
       participantKey: participant.key,
       actor,
       startTimestamp: firstMessage.timestamp.toISOString(),
@@ -1162,18 +1220,25 @@ export class OpenCodeTaskLogStreamSource {
       }
 
       const memberKey = normalizeMemberName(memberName);
-      if (!transcriptCache.has(memberKey)) {
+      const laneId = record.laneId?.trim();
+      const sessionId = record.sessionId?.trim();
+      const transcriptCacheKey = `${memberKey}::${laneId ?? 'current-lane'}::${
+        sessionId ?? 'current'
+      }`;
+      if (!transcriptCache.has(transcriptCacheKey)) {
         transcriptCache.set(
-          memberKey,
+          transcriptCacheKey,
           await this.runtimeBridge.getOpenCodeTranscript(binaryPath, {
             teamId: teamName,
             memberName,
             limit: ATTRIBUTED_TRANSCRIPT_LIMIT,
+            ...(laneId ? { laneId } : {}),
+            ...(sessionId ? { sessionId } : {}),
           })
         );
       }
 
-      const transcript = transcriptCache.get(memberKey);
+      const transcript = transcriptCache.get(transcriptCacheKey);
       if (!transcript) {
         continue;
       }
@@ -1181,31 +1246,41 @@ export class OpenCodeTaskLogStreamSource {
         continue;
       }
 
-      const filteredMessages = filterMessagesForAttribution(
-        transcript.logProjection?.messages ?? [],
-        record
-      );
+      const projectedMessages = transcript.logProjection?.messages ?? [];
+      const markerProjection =
+        record.source === 'delivery_ledger'
+          ? buildTaskMarkerProjection(projectedMessages, teamName, task)
+          : null;
+      const filteredMessages =
+        markerProjection?.messages ?? filterMessagesForAttribution(projectedMessages, record);
       if (filteredMessages.length === 0) {
         continue;
       }
 
       const participantKey = buildParticipantKey(memberName);
-      const existing = projectedByParticipant.get(participantKey);
+      const projectedSessionId = transcript.sessionId ?? record.sessionId;
+      const segmentKey = `${participantKey}::${projectedSessionId ?? 'unknown-session'}`;
+      const existing = projectedByParticipant.get(segmentKey);
       if (existing) {
-        const seen = new Set(existing.messages.map((message) => message.uuid));
+        const seen = new Set(
+          existing.messages.map(
+            (message) => `${message.sessionId || projectedSessionId || ''}::${message.uuid}`
+          )
+        );
         for (const message of filteredMessages) {
-          if (!seen.has(message.uuid)) {
+          const messageKey = `${message.sessionId || projectedSessionId || ''}::${message.uuid}`;
+          if (!seen.has(messageKey)) {
             existing.messages.push(message);
-            seen.add(message.uuid);
+            seen.add(messageKey);
           }
         }
         existing.messages.sort(
           (left, right) => left.timestamp.getTime() - right.timestamp.getTime()
         );
       } else {
-        projectedByParticipant.set(participantKey, {
+        projectedByParticipant.set(segmentKey, {
           memberName,
-          sessionId: transcript.sessionId ?? record.sessionId,
+          sessionId: projectedSessionId,
           messages: filteredMessages,
         });
       }
@@ -1252,7 +1327,9 @@ export class OpenCodeTaskLogStreamSource {
       nativeToolCount += memberToolCounts.nativeToolCount;
       participants.push(participant);
       segments.push({
-        id: `opencode-attributed:${teamName}:${task.id}:${normalizeMemberName(member.memberName)}`,
+        id: `opencode-attributed:${teamName}:${task.id}:${normalizeMemberName(
+          member.memberName
+        )}:${buildSessionSegmentKey(member.sessionId ?? firstMessage.sessionId)}`,
         participantKey: participant.key,
         actor: buildActor(member.memberName, member.sessionId ?? firstMessage.sessionId),
         startTimestamp: firstMessage.timestamp.toISOString(),

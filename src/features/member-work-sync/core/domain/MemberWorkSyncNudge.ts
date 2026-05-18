@@ -88,6 +88,24 @@ function buildAgendaPreview(status: MemberWorkSyncStatus): string {
     .join('; ');
 }
 
+function hasLeadClarificationItem(status: MemberWorkSyncStatus): boolean {
+  return status.agenda.items.some(
+    (item) => item.kind === 'clarification' && item.evidence.needsClarification === 'lead'
+  );
+}
+
+function buildProofMissingRecoveryText(status: MemberWorkSyncStatus): string[] {
+  const recovery = status.shadow?.recovery;
+  if (recovery?.kind !== 'proof_missing') {
+    return [];
+  }
+
+  return [
+    `This also repairs OpenCode delivery proof for original messageId "${recovery.originalMessageId}".`,
+    'If you already completed the work, do not duplicate it; instead create the missing visible reply or task progress proof for the current agenda.',
+  ];
+}
+
 function buildReviewPickupNudgePayload(status: MemberWorkSyncStatus): MemberWorkSyncNudgePayload {
   const taskRefs = buildTaskRefs(status);
   const preview = buildAgendaPreview(status);
@@ -133,6 +151,7 @@ export function buildMemberWorkSyncNudgePayload(
     .map((item) => `${item.displayId ?? item.taskId.slice(0, 8)} ${item.subject}`)
     .join('; ');
   const taskIds = status.agenda.items.map((item) => item.taskId).filter(Boolean);
+  const hasLeadClarification = hasLeadClarificationItem(status);
 
   return {
     from: 'system',
@@ -141,9 +160,13 @@ export function buildMemberWorkSyncNudgePayload(
     source: 'member-work-sync',
     actionMode: 'do',
     workSyncIntent: 'agenda_sync',
+    ...(status.shadow?.recovery?.intentKey
+      ? { workSyncIntentKey: status.shadow.recovery.intentKey }
+      : {}),
     taskRefs,
     text: [
       'Work sync check: you have current actionable work assigned.',
+      ...buildProofMissingRecoveryText(status),
       preview ? `Current agenda: ${preview}.` : '',
       `Required sync action: call member_work_sync_status with teamName "${status.teamName}" and memberName "${status.memberName}", then call member_work_sync_report with the same teamName/memberName and the returned agendaFingerprint and reportToken.`,
       taskIds.length
@@ -151,6 +174,9 @@ export function buildMemberWorkSyncNudgePayload(
         : '',
       `Do not use provider names, runtime names, or team names as memberName; use exactly "${status.memberName}".`,
       'If you are still working, report state "still_working"; if you are blocked, report state "blocked" and record the blocker on the task.',
+      hasLeadClarification
+        ? 'If a lead clarification was already escalated to the user, update the task board first with task_set_clarification value "user"; do not rely on a message alone.'
+        : '',
       'Continue concrete task work, report a real blocker with task tools, or sync your current fingerprint before going idle.',
       'Do not reply only with acknowledgement.',
     ]
@@ -181,8 +207,7 @@ export function buildMemberWorkSyncOutboxEnsureInput(input: {
   }
 
   const payload = buildMemberWorkSyncNudgePayload(status);
-  const intentKey =
-    payload.workSyncIntent === 'review_pickup' ? payload.workSyncIntentKey : undefined;
+  const intentKey = payload.workSyncIntentKey;
   return {
     id: buildMemberWorkSyncNudgeId({
       teamName: status.teamName,

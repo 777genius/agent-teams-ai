@@ -7,6 +7,17 @@ description: Configure Claude Code, Codex, or OpenCode runtimes. Covers auth, pr
 
 Agent Teams is a coordination layer. The actual model work runs through supported local runtimes and providers.
 
+::: tip Quick start - choosing your first runtime
+| If you ... | Start with |
+| --- | --- |
+| Already use Claude Code or have Anthropic access | **Claude** - familiar auth, minimal setup |
+| Use Codex or OpenAI-based workflows | **Codex** - native integration |
+| Want multi-model routing or broad provider coverage | **OpenCode** - most flexible, one config for many backends |
+| Are not sure which runtime fits | **OpenCode** - covers the most provider options and lets you switch later |
+
+Start with one runtime and one teammate. Confirm one launch works before expanding to multimodel.
+:::
+
 ## Prerequisites
 
 Before launching a team, make sure:
@@ -40,7 +51,7 @@ Run the command for the runtime you plan to use. If it prints nothing, install t
 
 The app detects supported runtimes and guides setup from the UI when possible.
 
-Gemini appears in some internal provider lists but is currently hidden from the main team creation UI while its launch experience is still marked in development.
+Gemini is available as a supported provider path with Google ADC (`gcloud auth`), Gemini CLI OAuth, and API key authentication. Configure it from the runtime setup UI when the Gemini backend is detected.
 
 ## Provider access
 
@@ -108,6 +119,16 @@ Example model strings:
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 If OpenCode launches but a teammate never becomes deliverable, inspect lane evidence before assuming the model ignored the prompt. See [Troubleshooting](/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
+
+### Gemini
+
+Gemini supports three authentication methods:
+
+- **Google ADC** — run `gcloud auth application-default login` to authenticate via Google Application Default Credentials.
+- **Gemini CLI** — run `gemini login` if the Gemini CLI is installed.
+- **API key** — set `GEMINI_API_KEY` in your environment or configure it through the app's Manage Providers UI.
+
+The app auto-detects which auth method is available and shows the Gemini provider in the runtime setup and team creation UI when the backend is reachable.
 
 ## Multimodel mode
 

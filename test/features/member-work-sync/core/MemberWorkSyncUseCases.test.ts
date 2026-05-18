@@ -868,6 +868,7 @@ describe('MemberWorkSync use cases', () => {
         memberName: 'bob',
         nowIso: '2026-04-29T00:00:00.000Z',
         workSyncIntent: 'review_pickup',
+        workSyncIntentKey: 'review-pickup:evt-review-request',
         taskRefs: [{ taskId: 'task-review', displayId: '22222222', teamName: 'team-a' }],
       },
     ]);

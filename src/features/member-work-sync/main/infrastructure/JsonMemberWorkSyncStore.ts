@@ -980,6 +980,46 @@ export class JsonMemberWorkSyncStore
     return [...delivered].sort();
   }
 
+  async findRecentRecoveryByIntent(input: {
+    teamName: string;
+    memberName: string;
+    intentKey: string;
+    sinceIso: string;
+  }): Promise<{
+    id: string;
+    status: MemberWorkSyncOutboxItem['status'];
+    deliveredMessageId?: string;
+    payloadHash: string;
+    updatedAt: string;
+  } | null> {
+    const intentKey = input.intentKey.trim();
+    if (!intentKey) {
+      return null;
+    }
+
+    const memberOutbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
+    const matches = Object.values(memberOutbox.items)
+      .filter(
+        (item) =>
+          item.payload.workSyncIntentKey === intentKey &&
+          item.updatedAt >= input.sinceIso &&
+          item.status !== 'failed_terminal'
+      )
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const latest = matches[0];
+    if (!latest) {
+      return null;
+    }
+
+    return {
+      id: latest.id,
+      status: latest.status,
+      ...(latest.deliveredMessageId ? { deliveredMessageId: latest.deliveredMessageId } : {}),
+      payloadHash: latest.payloadHash,
+      updatedAt: latest.updatedAt,
+    };
+  }
+
   private async readLegacyStatusFile(teamName: string): Promise<LegacyStatusFile> {
     return readJsonFile(
       this.paths.getLegacyStatusPath(teamName),

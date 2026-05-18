@@ -1,0 +1,38 @@
+diff --git a/dist/index.js b/dist/index.js
+index c91ae9196280060974778cbb1164839d5610e7d0..a2dd82afe79d7d0a6640e983166b4b205686dae9 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -58,7 +58,13 @@ var FocusScope = React.forwardRef((props, forwardedRef) => {
+   const onMountAutoFocus = (0, import_react_use_callback_ref.useCallbackRef)(onMountAutoFocusProp);
+   const onUnmountAutoFocus = (0, import_react_use_callback_ref.useCallbackRef)(onUnmountAutoFocusProp);
+   const lastFocusedElementRef = React.useRef(null);
+-  const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, (node) => setContainer(node));
++  const containerRef = React.useRef(null);
++  const setContainerRef = React.useCallback((node) => {
++    if (containerRef.current === node) return;
++    containerRef.current = node;
++    setContainer(node);
++  }, []);
++  const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setContainerRef);
+   const focusScope = React.useRef({
+     paused: false,
+     pause() {
+diff --git a/dist/index.mjs b/dist/index.mjs
+index e39d5c9105b3f8060d037bf5490843d20d1c859a..70781360acc81bff33c36b8ebd8d6b278df58450 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -22,7 +22,13 @@ var FocusScope = React.forwardRef((props, forwardedRef) => {
+   const onMountAutoFocus = useCallbackRef(onMountAutoFocusProp);
+   const onUnmountAutoFocus = useCallbackRef(onUnmountAutoFocusProp);
+   const lastFocusedElementRef = React.useRef(null);
+-  const composedRefs = useComposedRefs(forwardedRef, (node) => setContainer(node));
++  const containerRef = React.useRef(null);
++  const setContainerRef = React.useCallback((node) => {
++    if (containerRef.current === node) return;
++    containerRef.current = node;
++    setContainer(node);
++  }, []);
++  const composedRefs = useComposedRefs(forwardedRef, setContainerRef);
+   const focusScope = React.useRef({
+     paused: false,
+     pause() {

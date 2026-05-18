@@ -1455,7 +1455,7 @@ export const TaskDetailDialog = ({
                       title="Implementation time from persisted work intervals"
                     >
                       <Clock size={10} />
-                      <span>Work time {taskImplementationDurationLabel}</span>
+                      <span>In progress time {taskImplementationDurationLabel}</span>
                     </span>
                   ) : undefined
                 }
