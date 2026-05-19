@@ -152,7 +152,11 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
     providers: status.providers.map((provider) => ({
       ...provider,
       modelVerificationState: provider.modelVerificationState ?? 'idle',
+      modelCatalog: provider.modelCatalog ? structuredClone(provider.modelCatalog) : null,
       modelAvailability: provider.modelAvailability?.map((item) => ({ ...item })) ?? [],
+      runtimeCapabilities: provider.runtimeCapabilities
+        ? structuredClone(provider.runtimeCapabilities)
+        : null,
       capabilities: {
         ...provider.capabilities,
         extensions: {

@@ -2,6 +2,7 @@ import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRole
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
@@ -120,10 +121,7 @@ export function normalizeMemberDraftForProviderMode(
 }
 
 function normalizeDraftEffort(value: string | undefined): EffortLevel | undefined {
-  if (value === 'low' || value === 'medium' || value === 'high') {
-    return value;
-  }
-  return undefined;
+  return isTeamEffortLevel(value) ? value : undefined;
 }
 
 interface ExistingMemberColorInput {

@@ -111,3 +111,53 @@ export type CodexAppServerCancelLoginAccountStatus = 'canceled' | 'notFound';
 export interface CodexAppServerCancelLoginAccountResponse {
   status: CodexAppServerCancelLoginAccountStatus;
 }
+
+export type CodexAppServerReasoningEffort =
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh';
+
+export interface CodexAppServerReasoningEffortOption {
+  reasoningEffort?: string;
+  description?: string | null;
+}
+
+export interface CodexAppServerModel {
+  id?: string;
+  model?: string;
+  displayName?: string;
+  hidden?: boolean;
+  supportedReasoningEfforts?: (string | CodexAppServerReasoningEffortOption)[];
+  defaultReasoningEffort?: string | null;
+  inputModalities?: string[] | null;
+  supportsPersonality?: boolean;
+  isDefault?: boolean;
+  upgrade?: boolean | string | null;
+  upgradeInfo?: unknown;
+}
+
+export interface CodexAppServerListModelsParams {
+  cursor?: string | null;
+  limit?: number | null;
+  includeHidden?: boolean;
+}
+
+export interface CodexAppServerListModelsResponse {
+  data?: CodexAppServerModel[];
+  models?: CodexAppServerModel[];
+  nextCursor?: string | null;
+  truncated?: boolean;
+}
+
+export interface CodexAppServerReadConfigParams {
+  cwd?: string;
+  profile?: string;
+}
+
+export interface CodexAppServerReadConfigResponse {
+  config?: Record<string, unknown>;
+  origins?: Record<string, unknown>;
+}

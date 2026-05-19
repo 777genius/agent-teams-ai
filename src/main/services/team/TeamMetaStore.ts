@@ -6,6 +6,8 @@ import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
 
+import type { ProviderModelLaunchIdentity, TeamProviderId } from '@shared/types';
+
 /**
  * Persisted team-level metadata saved by the UI before CLI provisioning.
  * CLI does not know about this file — it only reads/writes config.json.
@@ -27,6 +29,7 @@ export interface TeamMetaFile {
   worktree?: string;
   extraCliArgs?: string;
   limitContext?: boolean;
+  launchIdentity?: ProviderModelLaunchIdentity;
   createdAt: number;
 }
 
@@ -38,6 +41,70 @@ function normalizeOptionalBackendId(value: unknown): string | undefined {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeProviderId(value: unknown): TeamProviderId | undefined {
+  return value === 'anthropic' || value === 'codex' || value === 'gemini' ? value : undefined;
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const raw = value as Partial<ProviderModelLaunchIdentity>;
+  const providerId = normalizeProviderId(raw.providerId);
+  const selectedModelKind =
+    raw.selectedModelKind === 'default' || raw.selectedModelKind === 'explicit'
+      ? raw.selectedModelKind
+      : null;
+  if (!providerId || !selectedModelKind) {
+    return undefined;
+  }
+
+  const catalogSource =
+    raw.catalogSource === 'app-server' ||
+    raw.catalogSource === 'static-fallback' ||
+    raw.catalogSource === 'runtime' ||
+    raw.catalogSource === 'unavailable'
+      ? raw.catalogSource
+      : 'unavailable';
+  const selectedEffort =
+    raw.selectedEffort === 'none' ||
+    raw.selectedEffort === 'minimal' ||
+    raw.selectedEffort === 'low' ||
+    raw.selectedEffort === 'medium' ||
+    raw.selectedEffort === 'high' ||
+    raw.selectedEffort === 'xhigh'
+      ? raw.selectedEffort
+      : null;
+  const resolvedEffort =
+    raw.resolvedEffort === 'none' ||
+    raw.resolvedEffort === 'minimal' ||
+    raw.resolvedEffort === 'low' ||
+    raw.resolvedEffort === 'medium' ||
+    raw.resolvedEffort === 'high' ||
+    raw.resolvedEffort === 'xhigh'
+      ? raw.resolvedEffort
+      : null;
+
+  return {
+    providerId,
+    providerBackendId:
+      migrateProviderBackendId(providerId, normalizeOptionalString(raw.providerBackendId)) ?? null,
+    selectedModel: normalizeOptionalString(raw.selectedModel),
+    selectedModelKind,
+    resolvedLaunchModel: normalizeOptionalString(raw.resolvedLaunchModel),
+    catalogId: normalizeOptionalString(raw.catalogId),
+    catalogSource,
+    catalogFetchedAt: normalizeOptionalString(raw.catalogFetchedAt),
+    selectedEffort,
+    resolvedEffort,
+  };
 }
 
 export class TeamMetaStore {
@@ -110,6 +177,7 @@ export class TeamMetaStore {
       extraCliArgs:
         typeof file.extraCliArgs === 'string' ? file.extraCliArgs.trim() || undefined : undefined,
       limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
+      launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
       createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
     };
   }
@@ -133,6 +201,7 @@ export class TeamMetaStore {
       worktree: data.worktree?.trim() || undefined,
       extraCliArgs: data.extraCliArgs?.trim() || undefined,
       limitContext: data.limitContext,
+      launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
       createdAt: data.createdAt,
     };
     await atomicWriteAsync(this.getMetaPath(teamName), JSON.stringify(payload, null, 2));

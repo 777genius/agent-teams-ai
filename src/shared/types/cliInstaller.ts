@@ -117,6 +117,57 @@ export interface CliProviderModelAvailability {
   checkedAt?: string | null;
 }
 
+export type CliProviderReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+
+export type CliProviderModelCatalogSource = 'app-server' | 'static-fallback';
+export type CliProviderModelCatalogStatus = 'ready' | 'stale' | 'degraded' | 'unavailable';
+
+export interface CliProviderModelCatalogItem {
+  id: string;
+  launchModel: string;
+  displayName: string;
+  hidden: boolean;
+  supportedReasoningEfforts: CliProviderReasoningEffort[];
+  defaultReasoningEffort: CliProviderReasoningEffort | null;
+  inputModalities: string[];
+  supportsPersonality: boolean;
+  isDefault: boolean;
+  upgrade: boolean;
+  source: CliProviderModelCatalogSource;
+  badgeLabel?: string | null;
+  statusMessage?: string | null;
+}
+
+export interface CliProviderModelCatalog {
+  schemaVersion: 1;
+  providerId: CliProviderId;
+  source: CliProviderModelCatalogSource;
+  status: CliProviderModelCatalogStatus;
+  fetchedAt: string;
+  staleAt: string;
+  defaultModelId: string | null;
+  defaultLaunchModel: string | null;
+  models: CliProviderModelCatalogItem[];
+  diagnostics: {
+    configReadState: 'ready' | 'unsupported' | 'failed' | 'skipped';
+    appServerState: 'healthy' | 'degraded' | 'runtime-missing' | 'incompatible';
+    message?: string | null;
+    code?: string | null;
+  };
+}
+
+export interface CliProviderRuntimeCapabilities {
+  modelCatalog?: {
+    dynamic: boolean;
+    source?: CliProviderModelCatalogSource | 'runtime';
+  };
+  reasoningEffort?: {
+    supported: boolean;
+    values: CliProviderReasoningEffort[];
+    configPassthrough?: boolean;
+  };
+}
+
 export interface CliProviderStatus {
   providerId: CliProviderId;
   displayName: string;
@@ -127,7 +178,9 @@ export interface CliProviderStatus {
   modelVerificationState?: 'idle' | 'verifying' | 'verified';
   statusMessage?: string | null;
   models: string[];
+  modelCatalog?: CliProviderModelCatalog | null;
   modelAvailability?: CliProviderModelAvailability[];
+  runtimeCapabilities?: CliProviderRuntimeCapabilities | null;
   canLoginFromUi: boolean;
   capabilities: {
     teamLaunch: boolean;
