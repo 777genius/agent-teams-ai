@@ -1,8 +1,10 @@
 import { KANBAN_ZONE, TASK_PILL } from '../constants/canvas-constants';
-import type { GraphLayoutPort, GraphNode, GraphOwnerSlotAssignment } from '../ports/types';
+
 import { ACTIVITY_LANE } from './activityLane';
-import type { WorldBounds } from './launchAnchor';
 import { STABLE_SLOT_GEOMETRY, STABLE_SLOT_SECTOR_VECTORS } from './stableSlotGeometry';
+
+import type { GraphLayoutPort, GraphNode, GraphOwnerSlotAssignment } from '../ports/types';
+import type { WorldBounds } from './launchAnchor';
 
 export type StableSlotWidthBucket = 'S' | 'M' | 'L';
 
@@ -138,7 +140,11 @@ const SLOT_GEOMETRY = {
   boardColumnGap: 24,
   processRailMinWidth: STABLE_SLOT_GEOMETRY.processRailWidth,
   kanbanBandHeight:
-    KANBAN_ZONE.headerHeight + STABLE_SLOT_GEOMETRY.taskMaxVisibleRows * KANBAN_ZONE.rowHeight,
+    KANBAN_ZONE.headerHeight +
+    (STABLE_SLOT_GEOMETRY.taskMaxVisibleRows - 1) * KANBAN_ZONE.rowHeight +
+    TASK_PILL.height / 2 +
+    (KANBAN_ZONE.rowHeight - TASK_PILL.height) +
+    KANBAN_ZONE.overflowHeight,
   centralPadding: STABLE_SLOT_GEOMETRY.centralSafetyPadding,
 } as const;
 
@@ -1455,7 +1461,7 @@ function buildRowOrbitSlotFrames(
     const rowTop = rowTopByIndex.get(row[0]!.rowIndex) ?? 0;
     const columnCount = rowCounts[row[0]!.rowIndex] ?? row.length;
     const columnWidths = resolveRowOrbitColumnWidths(row, columnCount, fallbackColumnWidth);
-    let nextLeft = -getRowOrbitRowWidth(columnWidths) / 2;
+    const nextLeft = -getRowOrbitRowWidth(columnWidths) / 2;
     for (const config of row) {
       const ownerX =
         nextLeft +

@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Legacy dialog mocks use broad DTO shapes. */
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const openDashboard = vi.fn();
@@ -238,10 +240,18 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
 vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
   TeamRosterEditorSection: (props: any) => {
     teamRosterEditorSectionMock.lastProps = props;
+    const leadProviderNotice = props.leadProviderNoticeById?.[props.providerId] ?? null;
     return React.createElement(
       'div',
       null,
       props.headerTop,
+      leadProviderNotice
+        ? React.createElement(
+            'div',
+            { 'data-testid': 'mock-lead-provider-notice' },
+            leadProviderNotice
+          )
+        : null,
       'team-roster-editor',
       props.headerBottom
     );
@@ -463,7 +473,7 @@ vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
     [providerId, model, effort].filter(Boolean).join(' '),
   OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL: 'team only',
   OPENCODE_ONE_SHOT_DISABLED_REASON:
-    'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.',
+    'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.',
 }));
 
 vi.mock('@renderer/components/team/dialogs/EffortLevelSelector', () => ({
@@ -1314,6 +1324,11 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(host.textContent).toContain('OpenCode cannot lead mixed-provider teams');
+    const providerNotice = host.querySelector('[data-testid="mock-lead-provider-notice"]');
+    expect(providerNotice?.textContent).toContain('OpenCode cannot lead mixed-provider teams');
+    expect(providerNotice?.textContent).toContain(
+      'OpenCode can be added as a teammate under an Anthropic or Codex lead'
+    );
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );

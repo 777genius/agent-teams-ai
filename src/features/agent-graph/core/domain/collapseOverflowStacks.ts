@@ -72,8 +72,8 @@ export function collapseOverflowStacksWithMeta(
       continue;
     }
 
-    const keptTasks = groupTasks.slice(0, maxVisibleRows - 1);
-    const hiddenTasks = groupTasks.slice(maxVisibleRows - 1);
+    const keptTasks = groupTasks.slice(0, maxVisibleRows);
+    const hiddenTasks = groupTasks.slice(maxVisibleRows);
     const representative = hiddenTasks[0] ?? groupTasks[groupTasks.length - 1];
     const columnKey = resolveOverflowColumnKey(representative);
     const ownerMemberName = extractOwnerMemberName(representative, teamName);
@@ -96,10 +96,10 @@ export function collapseOverflowStacksWithMeta(
     visibleTasks.push({
       id: `task:${teamName}:overflow:${groupKey}`,
       kind: 'task',
-      label: `+${hiddenTasks.length}`,
+      label: `+${hiddenTasks.length} more`,
       state: representative.state,
-      displayId: `+${hiddenTasks.length}`,
-      sublabel: `${hiddenTasks.length} more tasks`,
+      displayId: `+${hiddenTasks.length} more`,
+      sublabel: undefined,
       ownerId: representative.ownerId ?? null,
       taskStatus: representative.taskStatus,
       reviewState: representative.reviewState,

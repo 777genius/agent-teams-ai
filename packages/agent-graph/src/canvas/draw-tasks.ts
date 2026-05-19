@@ -3,13 +3,15 @@
  * NEW — not from agent-flow. Custom renderer for our task nodes.
  */
 
-import type { GraphNode } from '../ports/types';
-import { COLORS, getTaskStatusColor, getReviewStateColor } from '../constants/colors';
-import { TASK_PILL, MIN_VISIBLE_OPACITY, ANIM } from '../constants/canvas-constants';
-import { truncateText, wrapTextLines } from './draw-misc';
-import { drawPillShell, drawPillStackLayer } from './draw-pill-shell';
+import { ANIM, KANBAN_ZONE, MIN_VISIBLE_OPACITY, TASK_PILL } from '../constants/canvas-constants';
+import { COLORS, getReviewStateColor, getTaskStatusColor } from '../constants/colors';
+
+import { wrapTextLines } from './draw-misc';
+import { drawPillShell } from './draw-pill-shell';
 import { hexWithAlpha } from './render-cache';
+
 import type { KanbanZoneInfo } from '../layout/kanbanLayout';
+import type { GraphNode } from '../ports/types';
 
 const KANBAN_HEADER_FONT = '600 10px monospace';
 const KANBAN_HEADER_ALPHA = 0.92;
@@ -82,7 +84,7 @@ function drawTaskPill(
   ctx.translate(x, y);
 
   if (node.isOverflowStack) {
-    drawOverflowStack(ctx, halfW, halfH, r, node, isSelected, isHovered);
+    drawOverflowStack(ctx, halfW, r, node, time, isSelected, isHovered);
     ctx.restore();
     return;
   }
@@ -200,8 +202,8 @@ function drawTaskPill(
 
   // Comment count badge — on the bottom-right border edge, 1.5x bigger
   if (node.totalCommentCount && node.totalCommentCount > 0) {
-    const badgeX = halfW - 6;
-    const badgeY = halfH;
+    const badgeX = halfW - 36;
+    const badgeY = halfH - 30;
 
     // Speech bubble background
     const bw = 20;
@@ -265,7 +267,7 @@ function drawTaskPillLod(
   ctx.translate(x, y);
 
   if (node.isOverflowStack) {
-    drawOverflowStack(ctx, halfW, halfH, r, node, isSelected, isHovered);
+    drawOverflowStack(ctx, halfW, r, node, time, isSelected, isHovered);
     ctx.restore();
     return;
   }
@@ -336,52 +338,41 @@ function drawLiveTaskLogIndicator(
 function drawOverflowStack(
   ctx: CanvasRenderingContext2D,
   halfW: number,
-  halfH: number,
   r: number,
   node: GraphNode,
+  time: number,
   isSelected: boolean,
   isHovered: boolean
 ): void {
-  for (const [offset, alpha] of [
-    [6, 0.18],
-    [3, 0.28],
-  ] as const) {
-    drawPillStackLayer(ctx, {
-      width: TASK_PILL.width,
-      height: TASK_PILL.height,
-      radius: r,
-      offsetX: offset,
-      offsetY: -offset,
-      fillColor: '#334155',
-      fillAlpha: alpha,
-    });
-  }
+  const footerHeight = KANBAN_ZONE.overflowHeight;
 
   drawPillShell(ctx, {
     width: TASK_PILL.width,
-    height: TASK_PILL.height,
-    radius: r,
+    height: footerHeight,
+    radius: Math.min(r, footerHeight / 2),
     fillStyle: isSelected
       ? COLORS.cardBgSelected
       : isHovered
-        ? 'rgba(15, 20, 40, 0.78)'
-        : COLORS.cardBg,
+        ? 'rgba(12, 20, 40, 0.78)'
+        : 'rgba(8, 14, 28, 0.64)',
     borderColor: node.isBlocked
       ? hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.85 : 0.65)
-      : hexWithAlpha(COLORS.taskPending, isSelected ? 0.85 : 0.55),
-    borderWidth: node.isBlocked ? (isSelected ? 2.4 : 1.5) : isSelected ? 2 : 1,
+      : isSelected
+        ? hexWithAlpha(COLORS.holoBright, 0.45)
+        : 'rgba(255, 255, 255, 0.10)',
+    borderWidth: node.isBlocked ? (isSelected ? 2.4 : 1.5) : isSelected ? 1.5 : 1,
     accentColor: node.isBlocked ? hexWithAlpha(COLORS.edgeBlocking, 0.6) : undefined,
   });
 
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'left';
+  ctx.font = '600 11px sans-serif';
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = COLORS.textPrimary;
-  ctx.fillText(node.label, -halfW + 14, -8);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText(node.label, 0, 0.5);
 
-  ctx.font = '10px monospace';
-  ctx.fillStyle = COLORS.textDim;
-  ctx.fillText('more tasks', -halfW + 14, 12);
+  if (node.hasLiveTaskLogs) {
+    drawLiveTaskLogIndicator(ctx, -halfW + 16, 0, time, true);
+  }
 }
 
 function drawReviewChip(
@@ -451,6 +442,24 @@ function drawCenteredSpacedText(
   ctx.textAlign = previousAlign;
 }
 
+function drawLeftSpacedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  letterSpacing: number
+): void {
+  const chars = Array.from(text);
+  const previousAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
+  let cursorX = x;
+  for (const char of chars) {
+    ctx.fillText(char, cursorX, y);
+    cursorX += ctx.measureText(char).width + letterSpacing;
+  }
+  ctx.textAlign = previousAlign;
+}
+
 /**
  * Draw kanban column headers above task columns.
  */
@@ -470,41 +479,21 @@ export function drawColumnHeaders(
       const labelY = (zone.headers[0]?.y ?? zone.ownerY + 60) + 10;
       drawCenteredSpacedText(ctx, 'Unassigned', zone.ownerX, labelY, KANBAN_HEADER_LETTER_SPACING);
 
-      // Overflow badge
-      for (const header of zone.headers) {
-        if (header.overflowCount > 0) {
-          ctx.font = '7px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          ctx.fillStyle = hexWithAlpha(header.color, 0.45);
-          ctx.fillText(`+${header.overflowCount} more`, header.x, header.overflowY + 4);
-        }
-      }
       continue;
     }
 
     for (const header of zone.headers) {
       ctx.font = KANBAN_HEADER_FONT;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
       ctx.fillStyle = hexWithAlpha(header.color, KANBAN_HEADER_ALPHA);
-      drawCenteredSpacedText(
+      drawLeftSpacedText(
         ctx,
         header.label,
-        header.x,
-        header.y + 10,
+        header.x - TASK_PILL.width / 2 + 4,
+        header.y + 4,
         KANBAN_HEADER_LETTER_SPACING
       );
-
-      // Overflow badge: "+N more"
-      if (header.overflowCount > 0) {
-        const badgeText = `+${header.overflowCount} more`;
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = hexWithAlpha(header.color, 0.45);
-        ctx.fillText(badgeText, header.x, header.overflowY + 4);
-      }
     }
   }
 }

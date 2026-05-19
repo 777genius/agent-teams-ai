@@ -42,6 +42,7 @@ interface TeamRosterEditorSectionProps {
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
   headerTop?: React.ReactNode;
   headerBottom?: React.ReactNode;
+  leadProviderNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
   softDeleteMembers?: boolean;
   leadWarningText?: string | null;
   memberWarningById?: Record<string, string | null | undefined>;
@@ -97,6 +98,7 @@ const TeamRosterEditorSectionImpl = ({
   onSyncModelsWithTeammatesChange,
   headerTop,
   headerBottom,
+  leadProviderNoticeById,
   softDeleteMembers = false,
   leadWarningText,
   memberWarningById,
@@ -188,6 +190,7 @@ const TeamRosterEditorSectionImpl = ({
             onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
             warningText={leadWarningText}
             disableGeminiOption={disableGeminiOption}
+            providerNoticeById={leadProviderNoticeById}
             modelIssueText={leadModelIssueText}
             modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
             modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}

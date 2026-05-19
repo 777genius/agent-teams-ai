@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
@@ -45,6 +45,7 @@ interface LeadModelRowProps {
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
   warningText?: string | null;
   disableGeminiOption?: boolean;
+  providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
   modelIssueText?: string | null;
   modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
@@ -66,6 +67,7 @@ export const LeadModelRow = ({
   onSyncModelsWithTeammatesChange,
   warningText,
   disableGeminiOption = false,
+  providerNoticeById,
   modelIssueText,
   modelAdvisoryReasonByValue,
   modelIssueReasonByValue,
@@ -74,7 +76,8 @@ export const LeadModelRow = ({
   disableAnthropicContextLimit,
 }: LeadModelRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
-  const [modelExpanded, setModelExpanded] = useState(false);
+  const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
+  const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
@@ -108,6 +111,12 @@ export const LeadModelRow = ({
   const contextLimitDisabled =
     disableAnthropicContextLimit ??
     (providerId === 'anthropic' && isAnthropicHaikuTeamModel(model));
+
+  useEffect(() => {
+    if (hasActiveProviderNotice && !modelExpanded) {
+      setModelExpanded(true);
+    }
+  }, [hasActiveProviderNotice, modelExpanded]);
 
   return (
     <div
@@ -204,6 +213,7 @@ export const LeadModelRow = ({
             onValueChange={onModelChange}
             id="lead-model"
             disableGeminiOption={disableGeminiOption}
+            providerNoticeById={providerNoticeById}
             modelAdvisoryReasonByValue={modelAdvisoryReasonByValue}
             modelIssueReasonByValue={{
               ...(modelIssueReasonByValue ?? {}),

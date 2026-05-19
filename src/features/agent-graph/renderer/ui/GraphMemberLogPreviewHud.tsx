@@ -605,7 +605,7 @@ export const GraphMemberLogPreviewHud = ({
             }}
           >
             <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden">
-              <div className="flex h-4 min-h-4 items-center gap-1 px-1 text-[9px] font-semibold tracking-[0.18em] text-slate-400/70">
+              <div className="mb-1 flex h-4 min-h-4 items-center gap-1 px-1 text-[9px] font-semibold tracking-[0.18em] text-slate-400/70">
                 <Wrench className="size-2.5 text-slate-500" />
                 Logs
               </div>

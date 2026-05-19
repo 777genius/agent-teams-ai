@@ -684,23 +684,6 @@ export const CreateTeamDialog = ({
   const lastPrepareRequestSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const generation = ++prepareUnmountGenerationRef.current;
-    return () => {
-      // React StrictMode replays effect cleanup/setup in development; defer
-      // invalidation so the replay does not cancel the live prepare request.
-      queueMicrotask(() => {
-        if (!isCurrentPrepareGeneration(prepareUnmountGenerationRef, generation)) {
-          return;
-        }
-        cancelScheduledIdle(prepareIdleHandleRef.current);
-        prepareIdleHandleRef.current = null;
-        prepareRequestSeqRef.current += 1;
-        lastPrepareRequestSignatureRef.current = null;
-      });
-    };
-  }, []);
-
-  useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
 
@@ -1366,6 +1349,23 @@ export const CreateTeamDialog = ({
       tmuxRuntime.status,
     ]
   );
+  const teammateRuntimeProviderNoticeById:
+    | Partial<Record<TeamProviderId, React.ReactNode>>
+    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
+    ? {
+        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
+          <TeammateRuntimeCompatibilityNotice
+            analysis={teammateRuntimeCompatibility}
+            onOpenDashboard={() => {
+              onClose();
+              openDashboard();
+            }}
+          />
+        ),
+      }
+    : undefined;
+  const showRosterTeammateRuntimeCompatibility =
+    teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
@@ -1895,17 +1895,19 @@ export const CreateTeamDialog = ({
 
   const rosterHeaderBottom = useMemo(
     () =>
-      teammateRuntimeCompatibility.visible ||
+      showRosterTeammateRuntimeCompatibility ||
       soloTeam ||
       (canCreate && hasSelectedWorktreeIsolation) ? (
         <div className="space-y-2">
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              onClose();
-              openDashboard();
-            }}
-          />
+          {showRosterTeammateRuntimeCompatibility ? (
+            <TeammateRuntimeCompatibilityNotice
+              analysis={teammateRuntimeCompatibility}
+              onOpenDashboard={() => {
+                onClose();
+                openDashboard();
+              }}
+            />
+          ) : null}
           {soloTeam ? (
             <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
               <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
@@ -1928,6 +1930,7 @@ export const CreateTeamDialog = ({
       hasSelectedWorktreeIsolation,
       onClose,
       openDashboard,
+      showRosterTeammateRuntimeCompatibility,
       soloTeam,
       teammateRuntimeCompatibility,
       worktreeGitReadiness,
@@ -2065,6 +2068,7 @@ export const CreateTeamDialog = ({
               model={selectedModel}
               effort={(selectedEffort as EffortLevel) || undefined}
               limitContext={effectiveAnthropicRuntimeLimitContext}
+              leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}
               onEffortChange={setSelectedEffort}

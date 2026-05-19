@@ -183,7 +183,7 @@ describe('planTeamRuntimeLanes', () => {
       ok: false,
       reason: 'unsupported_opencode_led_mixed_team',
       message:
-        'Mixed teams with an OpenCode lead are not supported in this phase. Keep the team lead on Anthropic, Codex, or Gemini when you mix OpenCode with other providers.',
+        'Mixed teams with an OpenCode lead are not supported in this phase. Keep the team lead on Anthropic or Codex when you mix OpenCode with other providers.',
     });
   });
 });

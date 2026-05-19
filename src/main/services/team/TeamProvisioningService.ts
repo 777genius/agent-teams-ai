@@ -1697,7 +1697,7 @@ function isPureOpenCodeProvisioningRequest(request: {
 export function getOpenCodeMixedProviderProvisioningError(): string {
   return (
     'This OpenCode mixed-team request is outside the current support scope. ' +
-    'Supported mixed teams keep the lead on Anthropic, Codex, or Gemini. OpenCode-led mixed teams still remain blocked in this phase.'
+    'Supported mixed teams keep the lead on Anthropic or Codex. OpenCode-led mixed teams still remain blocked in this phase.'
   );
 }
 

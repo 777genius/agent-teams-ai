@@ -34,6 +34,7 @@ export interface TeammateRuntimeCompatibility {
   visible: boolean;
   blocksSubmission: boolean;
   checking: boolean;
+  providerNoticeProviderId: TeamProviderId | null;
   title: string;
   message: string;
   details: string[];
@@ -189,6 +190,7 @@ export function analyzeTeammateRuntimeCompatibility({
       visible: false,
       blocksSubmission: false,
       checking: false,
+      providerNoticeProviderId: null,
       title: '',
       message: '',
       details: [],
@@ -208,6 +210,7 @@ export function analyzeTeammateRuntimeCompatibility({
       visible: false,
       blocksSubmission: false,
       checking: false,
+      providerNoticeProviderId: null,
       title: '',
       message: '',
       details: [],
@@ -221,6 +224,7 @@ export function analyzeTeammateRuntimeCompatibility({
       visible: false,
       blocksSubmission: false,
       checking: false,
+      providerNoticeProviderId: null,
       title: '',
       message: '',
       details: [],
@@ -273,7 +277,7 @@ export function analyzeTeammateRuntimeCompatibility({
   }
   if (hasOpenCodeLeadMixedUnsupported) {
     details.push(
-      'Fix: keep the team lead on Anthropic, Codex, or Gemini when mixing OpenCode with other providers.'
+      'Fix: keep the team lead on Anthropic or Codex when mixing OpenCode with other providers.'
     );
   } else if (hasExplicitInProcess) {
     details.push(
@@ -307,6 +311,7 @@ export function analyzeTeammateRuntimeCompatibility({
     visible: blocksSubmission || checking,
     blocksSubmission,
     checking,
+    providerNoticeProviderId: hasOpenCodeLeadMixedUnsupported ? 'opencode' : null,
     title: checking
       ? 'Checking tmux runtime for explicit teammate mode'
       : hasOpenCodeLeadMixedUnsupported
@@ -317,12 +322,12 @@ export function analyzeTeammateRuntimeCompatibility({
     message: checking
       ? 'Custom CLI args request tmux teammates. The app is checking whether tmux is available.'
       : hasOpenCodeLeadMixedUnsupported
-        ? 'OpenCode can be added as a teammate under an Anthropic, Codex, or Gemini lead, but mixed teams cannot use OpenCode as the lead in this phase.'
+        ? 'OpenCode can be added as a teammate under an Anthropic or Codex lead, but mixed teams cannot use OpenCode as the lead in this phase.'
         : hasExplicitInProcess
           ? 'Some teammates require separate processes. Remove --teammate-mode in-process so the app can use native process transport.'
           : 'Custom CLI args force --teammate-mode tmux, but tmux is not ready. Remove that arg to use native process transport on Windows, or install tmux/WSL tmux.',
     details,
-    tmuxDetail: getTmuxDetail(tmuxStatus, tmuxStatusError),
+    tmuxDetail: hasOpenCodeLeadMixedUnsupported ? null : getTmuxDetail(tmuxStatus, tmuxStatusError),
     memberWarningById,
   };
 }

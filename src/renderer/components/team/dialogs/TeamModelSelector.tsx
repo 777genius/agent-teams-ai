@@ -135,8 +135,8 @@ const OPENCODE_MODEL_ROW_ESTIMATE_PX = 92;
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
   { id: 'codex', label: 'Codex', comingSoon: false },
-  { id: 'gemini', label: 'Gemini', comingSoon: false },
   { id: 'opencode', label: 'OpenCode', comingSoon: false },
+  { id: 'gemini', label: 'Gemini', comingSoon: false },
 ];
 
 function getOpenCodeSourceInfo(model: string): OpenCodeSourceInfo | null {
@@ -330,7 +330,7 @@ function getOpenCodeModelPricingInfo(
 
 const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
 export const OPENCODE_ONE_SHOT_DISABLED_REASON =
-  'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.';
+  'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.';
 export const OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL = 'team only';
 
 function getOpenCodeReadinessBadgeLabel(
@@ -610,6 +610,7 @@ export interface TeamModelSelectorProps {
   onValueChange: (value: string) => void;
   id?: string;
   disableGeminiOption?: boolean;
+  providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
   providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
   providerDisabledBadgeLabelById?: Partial<Record<TeamProviderId, string | null | undefined>>;
   modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
@@ -624,6 +625,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onValueChange,
   id,
   disableGeminiOption = false,
+  providerNoticeById,
   providerDisabledReasonById,
   providerDisabledBadgeLabelById,
   modelAdvisoryReasonByValue,
@@ -1022,7 +1024,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       if (!normalizedModelQuery) {
         return true;
       }
-      const modelRecommendation = getTeamModelRecommendation(effectiveProviderId, option.value);
+      const modelRecommendation =
+        effectiveProviderId === 'opencode'
+          ? getTeamModelRecommendation(effectiveProviderId, option.value)
+          : null;
       return [
         option.value,
         option.label,
@@ -1110,6 +1115,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             actionLabel: 'Use OpenCode',
           }
         : null;
+  const activeProviderNotice = providerNoticeById?.[effectiveProviderId] ?? null;
   const getModelAdvisoryBadgeLabel = (reason: string | null): string =>
     reason?.toLowerCase().includes('ping not confirmed') ? 'Ping not confirmed' : 'Note';
   const renderModelOption = (opt: TeamRuntimeModelOption): React.JSX.Element => {
@@ -1156,9 +1162,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       null;
     const openCodeMetadata =
       effectiveProviderId === 'opencode' ? openCodeModelMetadataByValue.get(opt.value) : null;
-    const modelRecommendation =
-      openCodeMetadata?.recommendation ??
-      getTeamModelRecommendation(effectiveProviderId, opt.value);
+    let modelRecommendation: ReturnType<typeof getTeamModelRecommendation> = null;
+    if (effectiveProviderId === 'opencode') {
+      modelRecommendation =
+        openCodeMetadata?.recommendation ??
+        getTeamModelRecommendation(effectiveProviderId, opt.value);
+    }
     const openCodePricingInfo =
       effectiveProviderId === 'opencode' ? (openCodeMetadata?.pricingInfo ?? null) : null;
     const modelButtonTitle =
@@ -1333,6 +1342,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           if (!isTeamProviderId(nextValue)) {
             return;
           }
+          if (isInspectingInactiveProvider && nextValue === selectedProviderId) {
+            setInspectedProviderId(null);
+            return;
+          }
           if (isProviderSelectable(nextValue)) {
             setInspectedProviderId(null);
             onProviderChange(nextValue);
@@ -1408,6 +1421,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             ) : null}
 
             <div className="p-3">
+              {activeProviderNotice ? (
+                <div data-testid="team-model-selector-provider-notice" className="mb-3">
+                  {activeProviderNotice}
+                </div>
+              ) : null}
               {activeProviderStatusPanel ? (
                 <div
                   data-testid="team-model-selector-provider-status"

@@ -8,6 +8,17 @@
  * Class-based with ES #private fields and DI-ready constructor.
  */
 
+import {
+  type GraphDataPort,
+  type GraphEdge,
+  type GraphLayoutMode,
+  type GraphLayoutPort,
+  type GraphNode,
+  type GraphNodeState,
+  type GraphOwnerSlotAssignment,
+  type GraphParticle,
+  TASK_COLUMN_MAX_VISIBLE_ROWS,
+} from '@claude-teams/agent-graph';
 import { getUnreadCount } from '@renderer/services/commentReadStorage';
 import {
   agentAvatarUrl,
@@ -51,19 +62,10 @@ import {
 } from '../../core/domain/taskGraphSemantics';
 
 import type {
-  GraphDataPort,
-  GraphEdge,
-  GraphLayoutMode,
-  GraphLayoutPort,
-  GraphNode,
-  GraphNodeState,
-  GraphOwnerSlotAssignment,
-  GraphParticle,
-} from '@claude-teams/agent-graph';
-import type {
   ActiveToolCall,
   InboxMessage,
   LeadActivityState,
+  LeadContextUsage,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
   ResolvedTeamMember,
@@ -72,7 +74,6 @@ import type {
   TeamProvisioningProgress,
   TeamViewSnapshot,
 } from '@shared/types/team';
-import type { LeadContextUsage } from '@shared/types/team';
 
 export interface TeamGraphData extends TeamViewSnapshot {
   members: ResolvedTeamMember[];
@@ -759,7 +760,7 @@ export class TeamGraphAdapter {
     }
 
     const { visibleNodes: visibleTaskNodes, visibleNodeIdByTaskId } =
-      collapseOverflowStacksWithMeta(rawTaskNodes, teamName, 5);
+      collapseOverflowStacksWithMeta(rawTaskNodes, teamName, TASK_COLUMN_MAX_VISIBLE_ROWS);
     const visibleTaskIds = new Set(
       visibleTaskNodes.flatMap((taskNode) =>
         taskNode.domainRef.kind === 'task' ? [taskNode.domainRef.taskId] : []

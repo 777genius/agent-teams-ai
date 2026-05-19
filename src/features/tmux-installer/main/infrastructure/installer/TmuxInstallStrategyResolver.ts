@@ -171,7 +171,7 @@ export class TmuxInstallStrategyResolver {
     if (input.effective.available) {
       return input.effective.location === 'wsl'
         ? 'tmux is available inside WSL on Windows.'
-        : 'tmux is available as an optional pane transport for teammate sessions.';
+        : 'tmux is available.';
     }
 
     if (input.platform === 'darwin') {

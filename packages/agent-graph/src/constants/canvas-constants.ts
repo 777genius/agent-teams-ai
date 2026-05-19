@@ -258,17 +258,22 @@ export const BACKGROUND = {
 
 // ─── Kanban zone layout ─────────────────────────────────────────────────────
 
+/** Max visible task rows per column. Includes the overflow stack row when present. */
+export const TASK_COLUMN_MAX_VISIBLE_ROWS = STABLE_SLOT_GEOMETRY.taskMaxVisibleRows;
+
 export const KANBAN_ZONE = {
   /** Column width: task card (260) + gap (20) */
   columnWidth: 280,
   /** Row height: task card (72) + gap (8) */
   rowHeight: 80,
+  /** Compact overflow footer height, matching activity/log more buttons */
+  overflowHeight: 32,
   /** Task center offset from band top: header (20) + gap (4) + half card */
   headerHeight: 60,
   /** Zone starts this far below member node center */
   offsetY: 70,
   /** Column sequence: pending → wip → done → review → approved */
   columns: ['todo', 'wip', 'done', 'review', 'approved'] as const,
-  /** Max tasks shown per column (overflow hidden) */
-  maxVisibleRows: STABLE_SLOT_GEOMETRY.taskMaxVisibleRows,
+  /** Max task rows shown per column. Includes the overflow stack row when present. */
+  maxVisibleRows: TASK_COLUMN_MAX_VISIBLE_ROWS,
 } as const;

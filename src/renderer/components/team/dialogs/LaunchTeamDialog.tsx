@@ -955,6 +955,23 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       tmuxRuntime.status,
     ]
   );
+  const teammateRuntimeProviderNoticeById:
+    | Partial<Record<TeamProviderId, React.ReactNode>>
+    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
+    ? {
+        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
+          <TeammateRuntimeCompatibilityNotice
+            analysis={teammateRuntimeCompatibility}
+            onOpenDashboard={() => {
+              closeDialog();
+              openDashboard();
+            }}
+          />
+        ),
+      }
+    : undefined;
+  const showRosterTeammateRuntimeCompatibility =
+    teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
@@ -2613,6 +2630,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   model={selectedModel}
                   effort={(selectedEffort as EffortLevel) || undefined}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
+                  leadProviderNoticeById={teammateRuntimeProviderNoticeById}
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
                   onEffortChange={setSelectedEffort}
@@ -2640,15 +2658,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   softDeleteMembers
                   disableGeminiOption={isGeminiUiFrozen()}
                   headerBottom={
-                    teammateRuntimeCompatibility.visible || hasSelectedWorktreeIsolation ? (
+                    showRosterTeammateRuntimeCompatibility || hasSelectedWorktreeIsolation ? (
                       <div className="space-y-2">
-                        <TeammateRuntimeCompatibilityNotice
-                          analysis={teammateRuntimeCompatibility}
-                          onOpenDashboard={() => {
-                            closeDialog();
-                            openDashboard();
-                          }}
-                        />
+                        {showRosterTeammateRuntimeCompatibility ? (
+                          <TeammateRuntimeCompatibilityNotice
+                            analysis={teammateRuntimeCompatibility}
+                            onOpenDashboard={() => {
+                              closeDialog();
+                              openDashboard();
+                            }}
+                          />
+                        ) : null}
                         {hasSelectedWorktreeIsolation ? (
                           <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
                         ) : null}

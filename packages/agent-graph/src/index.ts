@@ -7,31 +7,32 @@
  */
 
 // ─── Components ──────────────────────────────────────────────────────────────
-export { GraphView } from './ui/GraphView';
-export type { GraphViewProps } from './ui/GraphView';
+export { TASK_COLUMN_MAX_VISIBLE_ROWS } from './constants/canvas-constants';
 export { ACTIVITY_ANCHOR_LAYOUT, ACTIVITY_LANE } from './layout/activityLane';
-export { getTransientHandoffCardAlpha } from './ui/transientHandoffs';
-export type { TransientHandoffCard } from './ui/transientHandoffs';
 
 // ─── Port Interfaces (for adapters in host project) ─────────────────────────
+export type { GraphConfigPort } from './ports/GraphConfigPort';
 export type { GraphDataPort } from './ports/GraphDataPort';
 export type { GraphEventPort } from './ports/GraphEventPort';
-export type { GraphConfigPort } from './ports/GraphConfigPort';
 
 // ─── Port Types ──────────────────────────────────────────────────────────────
 export type {
-  GraphNode,
-  GraphEdge,
-  GraphParticle,
   GraphActivityItem,
-  GraphOwnerSlotAssignment,
-  GraphLayoutPort,
+  GraphDomainRef,
+  GraphEdge,
+  GraphEdgeType,
+  GraphLaunchVisualState,
   GraphLayoutMode,
+  GraphLayoutPort,
   GraphLayoutVersion,
+  GraphNode,
   GraphNodeKind,
   GraphNodeState,
-  GraphLaunchVisualState,
-  GraphEdgeType,
+  GraphOwnerSlotAssignment,
+  GraphParticle,
   GraphParticleKind,
-  GraphDomainRef,
 } from './ports/types';
+export type { GraphViewProps } from './ui/GraphView';
+export { GraphView } from './ui/GraphView';
+export type { TransientHandoffCard } from './ui/transientHandoffs';
+export { getTransientHandoffCardAlpha } from './ui/transientHandoffs';

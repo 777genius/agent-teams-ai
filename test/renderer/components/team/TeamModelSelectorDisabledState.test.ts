@@ -211,6 +211,65 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('hides recommendation badges for Anthropic and Codex model tiles', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'codex',
+          models: ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.2'],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const anthropicButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Opus 4.6')
+    );
+    expect(anthropicButton).toBeDefined();
+    expect(anthropicButton?.textContent).not.toContain('Recommended');
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const codexButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('5.2')
+    );
+    expect(codexButton).toBeDefined();
+    expect(codexButton?.textContent).not.toContain('Recommended');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses the runtime-reported Codex list and clears stale unsupported selections', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -899,7 +958,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const activeButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('5.2')
     );
-    expect(activeButton?.textContent).toContain('Recommended');
+    expect(activeButton?.textContent).not.toContain('Recommended');
     expect(activeButton?.getAttribute('aria-disabled')).toBe('false');
 
     await act(async () => {
@@ -1593,6 +1652,144 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('returns from OpenCode diagnostics to the selected provider without reselecting it', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onProviderChange = vi.fn();
+    const onValueChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange,
+          value: 'claude-opus-4-7[1m]',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const getTab = (label: string): HTMLButtonElement | undefined =>
+      Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes(label)
+      );
+
+    await act(async () => {
+      getTab('OpenCode')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(getTab('OpenCode')?.getAttribute('data-state')).toBe('active');
+
+    await act(async () => {
+      getTab('Anthropic')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(getTab('Anthropic')?.getAttribute('data-state')).toBe('active');
+    expect(onProviderChange).not.toHaveBeenCalled();
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('commits the Anthropic fallback when a frozen Gemini selection is corrected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onProviderChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'gemini',
+          onProviderChange,
+          value: '',
+          onValueChange: () => undefined,
+          disableGeminiOption: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const anthropicTab = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Anthropic')
+    );
+    expect(anthropicTab?.getAttribute('data-state')).toBe('active');
+
+    await act(async () => {
+      anthropicTab?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onProviderChange).toHaveBeenCalledWith('anthropic');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders active provider notices inside the provider tab panel', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: ['opencode/minimax-m2.5-free'],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+          providerNoticeById: {
+            opencode: React.createElement('p', null, 'OpenCode cannot lead mixed-provider teams'),
+          },
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const notice = host.querySelector('[data-testid="team-model-selector-provider-notice"]');
+    const modelGrid = host.querySelector('[data-testid="team-model-selector-model-grid"]');
+    expect(notice?.textContent).toContain('OpenCode cannot lead mixed-provider teams');
+    expect(modelGrid).not.toBeNull();
+    if (!notice || !modelGrid) {
+      throw new Error('Expected provider notice and model grid to render.');
+    }
+    expect(
+      Boolean(notice.compareDocumentPosition(modelGrid) & Node.DOCUMENT_POSITION_FOLLOWING)
+    ).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses role-specific provider disabled copy before OpenCode readiness gating', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -1624,7 +1821,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           onValueChange: () => undefined,
           providerDisabledReasonById: {
             opencode:
-              'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.',
+              'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.',
           },
           providerDisabledBadgeLabelById: {
             opencode: 'team only',
@@ -1639,7 +1836,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(openCodeButton?.hasAttribute('disabled')).toBe(true);
     expect(openCodeButton?.getAttribute('title')).toBe(
-      'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic, Codex, or Gemini for one-shot schedules.'
+      'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.'
     );
     expect(openCodeButton?.textContent).toContain('team only');
 
@@ -1729,9 +1926,12 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     const codexTab = buttons.find((button) => button.textContent?.trim() === 'Codex');
+    const providerTabIndex = (label: string): number =>
+      buttons.findIndex((button) => button.textContent?.includes(label));
     expect(codexTab).not.toBeNull();
     expect(host.textContent).toContain('Anthropic');
     expect(host.textContent).toContain('Codex');
+    expect(providerTabIndex('OpenCode')).toBeLessThan(providerTabIndex('Gemini'));
 
     await act(async () => {
       codexTab?.click();
