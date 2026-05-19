@@ -58,6 +58,8 @@ export interface OpenCodeBridgeCommandClientOptions {
 const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
 const DEFAULT_STDERR_LIMIT_BYTES = 256_000;
 const WINDOWS_BATCH_EXTENSIONS = new Set(['.cmd', '.bat']);
+const EMPTY_STDOUT_READINESS_MAX_ATTEMPTS = 2;
+const EMPTY_STDOUT_READINESS_RETRY_DELAY_MS = 250;
 
 export function resolveOpenCodeBridgeProcessCwd(
   binaryPath: string,
@@ -162,54 +164,77 @@ export class OpenCodeBridgeCommandClient {
     const inputPath = await this.writeInputFile(envelope);
 
     try {
-      const processResult = await this.processRunner.run({
-        binaryPath: this.binaryPath,
-        args: ['runtime', 'opencode-command', '--json', '--input', inputPath],
-        cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
-        timeoutMs: options.timeoutMs,
-        stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
-        stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
-        env: await this.resolveEnv(),
-      });
-
-      if (processResult.timedOut) {
-        return this.contractFailure(
-          envelope,
-          'timeout',
-          'OpenCode bridge command timed out',
-          true,
-          {
-            stderr: redactBridgeDiagnosticText(processResult.stderr),
-          }
-        );
-      }
-
-      if (processResult.exitCode !== 0) {
-        return this.contractFailure(
-          envelope,
-          'provider_error',
-          'OpenCode bridge command failed',
-          true,
-          {
-            exitCode: processResult.exitCode,
-            stderr: redactBridgeDiagnosticText(processResult.stderr),
-          }
-        );
-      }
-
-      const parsed = parseSingleBridgeJsonResult<TData>(processResult.stdout);
-      if (!parsed.ok) {
-        return this.contractFailure(envelope, 'contract_violation', parsed.error, false, {
-          stdoutPreview: redactBridgeDiagnosticText(processResult.stdout.slice(0, 2_000)),
+      const maxAttempts =
+        command === 'opencode.readiness' ? EMPTY_STDOUT_READINESS_MAX_ATTEMPTS : 1;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const processResult = await this.processRunner.run({
+          binaryPath: this.binaryPath,
+          args: ['runtime', 'opencode-command', '--json', '--input', inputPath],
+          cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
+          timeoutMs: options.timeoutMs,
+          stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
+          stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
+          env: await this.resolveEnv(),
         });
+
+        if (processResult.timedOut) {
+          return this.contractFailure(
+            envelope,
+            'timeout',
+            'OpenCode bridge command timed out',
+            true,
+            {
+              stderr: redactBridgeDiagnosticText(processResult.stderr),
+              attempts: attempt,
+            }
+          );
+        }
+
+        if (processResult.exitCode !== 0) {
+          return this.contractFailure(
+            envelope,
+            'provider_error',
+            'OpenCode bridge command failed',
+            true,
+            {
+              exitCode: processResult.exitCode,
+              stderr: redactBridgeDiagnosticText(processResult.stderr),
+              attempts: attempt,
+            }
+          );
+        }
+
+        const parsed = parseSingleBridgeJsonResult<TData>(processResult.stdout);
+        if (!parsed.ok) {
+          if (shouldRetryEmptyReadinessStdout(command, parsed.error, attempt, maxAttempts)) {
+            await sleep(EMPTY_STDOUT_READINESS_RETRY_DELAY_MS);
+            continue;
+          }
+
+          return this.contractFailure(envelope, 'contract_violation', parsed.error, false, {
+            stdoutPreview: redactBridgeDiagnosticText(processResult.stdout.slice(0, 2_000)),
+            stderrPreview: redactBridgeDiagnosticText(processResult.stderr.slice(0, 2_000)),
+            attempts: attempt,
+          });
+        }
+
+        const validation = validateBridgeResultEnvelope(parsed.value, envelope);
+        if (!validation.ok) {
+          return this.contractFailure(envelope, 'contract_violation', validation.reason, false, {
+            attempts: attempt,
+          });
+        }
+
+        return parsed.value;
       }
 
-      const validation = validateBridgeResultEnvelope(parsed.value, envelope);
-      if (!validation.ok) {
-        return this.contractFailure(envelope, 'contract_violation', validation.reason, false, {});
-      }
-
-      return parsed.value;
+      return this.contractFailure(
+        envelope,
+        'contract_violation',
+        'Bridge stdout was empty after retry',
+        false,
+        { attempts: maxAttempts }
+      );
     } finally {
       if (!this.keepInputFile) {
         await fs.unlink(inputPath).catch(() => undefined);
@@ -283,6 +308,21 @@ export function redactBridgeDiagnosticText(value: string): string {
   return capped
     .replace(/(authorization:\s*bearer\s+)[^\s]+/gi, '$1[redacted]')
     .replace(/((?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s"'`]+/gi, '$1[redacted]');
+}
+
+function shouldRetryEmptyReadinessStdout(
+  command: OpenCodeBridgeCommandName,
+  error: string,
+  attempt: number,
+  maxAttempts: number
+): boolean {
+  return (
+    command === 'opencode.readiness' && error === 'Bridge stdout was empty' && attempt < maxAttempts
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function bufferToString(value: string | Buffer | undefined): string {
