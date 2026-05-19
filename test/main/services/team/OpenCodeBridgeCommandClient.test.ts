@@ -109,9 +109,9 @@ describe('OpenCodeBridgeCommandClient', () => {
         type: 'opencode_bridge_contract_violation',
         severity: 'error',
         runId: 'run-1',
-        data: {
+        data: expect.objectContaining({
           stdoutPreview: 'debug token=[redacted]\n{"ok":true}\n',
-        },
+        }),
       })
     );
   });
@@ -181,6 +181,81 @@ describe('OpenCodeBridgeCommandClient', () => {
         },
       },
     });
+  });
+
+  it('retries empty stdout once for readiness because it is read-only', async () => {
+    runner.nextResults = [
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+      {
+        stdout: `${JSON.stringify(
+          bridgeSuccess({
+            command: 'opencode.readiness',
+            data: { state: 'ready', launchAllowed: true },
+          })
+        )}\n`,
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+    ];
+    const client = createClient();
+
+    const result = await client.execute(
+      'opencode.readiness',
+      { projectPath: '/tmp/project' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      requestId: 'req-1',
+      command: 'opencode.readiness',
+    });
+    expect(runner.calls).toHaveLength(2);
+  });
+
+  it('does not retry empty stdout for state-changing bridge commands', async () => {
+    runner.nextResults = [
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+      {
+        stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+    ];
+    const client = createClient();
+
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'contract_violation',
+        message: 'Bridge stdout was empty',
+      },
+    });
+    expect(runner.calls).toHaveLength(1);
   });
 
   it('rejects bridge result envelope mismatches before caller can mutate state', async () => {
@@ -373,6 +448,7 @@ function bridgeSuccess(
 class FakeBridgeProcessRunner implements OpenCodeBridgeProcessRunner {
   calls: OpenCodeBridgeProcessRunInput[] = [];
   inputEnvelopes: string[] = [];
+  nextResults: OpenCodeBridgeProcessRunResult[] = [];
   nextResult: OpenCodeBridgeProcessRunResult = {
     stdout: '',
     stderr: '',
@@ -383,7 +459,7 @@ class FakeBridgeProcessRunner implements OpenCodeBridgeProcessRunner {
   async run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult> {
     this.calls.push(input);
     this.inputEnvelopes.push(await fs.readFile(input.args[4], 'utf8'));
-    return this.nextResult;
+    return this.nextResults.shift() ?? this.nextResult;
   }
 
   async readInputEnvelope(index: number): Promise<string> {
