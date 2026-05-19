@@ -31,6 +31,10 @@ export interface NativeAppManagedBootstrapBuildResult {
 const MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS = 18_000;
 const MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS = 24_000;
 export const MAX_NATIVE_BOOTSTRAP_TOTAL_CONTEXT_CHARS = 256_000;
+const MIN_NATIVE_BOOTSTRAP_CONTEXT_CHARS = 6_000;
+const NATIVE_BOOTSTRAP_COMPACT_ROSTER_MEMBER_COUNT = 10;
+const NATIVE_BOOTSTRAP_SPEC_JSON_OVERHEAD_MIN_CHARS = 64_000;
+const NATIVE_BOOTSTRAP_SPEC_JSON_OVERHEAD_PER_MEMBER_CHARS = 4_000;
 const NATIVE_BOOTSTRAP_LARGE_ROSTER_MEMBER_COUNT = 7;
 const NATIVE_BOOTSTRAP_NEAR_LIMIT_RATIO = 0.85;
 
@@ -72,6 +76,7 @@ function buildContextText(params: {
   providerId?: TeamProviderId;
   cwd: string;
   briefing: string;
+  maxContextChars?: number;
 }): string {
   const briefing = boundText(
     redactNativeBootstrapContextText(params.briefing),
@@ -90,7 +95,39 @@ function buildContextText(params: {
       '</member_briefing_context_data>',
       '</agent_teams_native_bootstrap_context>',
     ].join('\n'),
-    MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS
+    params.maxContextChars ?? MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS
+  );
+}
+
+function shouldUseCompactNativeBootstrapContext(nativeMemberCount: number): boolean {
+  if (nativeMemberCount >= NATIVE_BOOTSTRAP_COMPACT_ROSTER_MEMBER_COUNT) {
+    return true;
+  }
+  const reservedSpecOverhead = Math.max(
+    NATIVE_BOOTSTRAP_SPEC_JSON_OVERHEAD_MIN_CHARS,
+    nativeMemberCount * NATIVE_BOOTSTRAP_SPEC_JSON_OVERHEAD_PER_MEMBER_CHARS
+  );
+  return (
+    nativeMemberCount * MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS >
+    MAX_NATIVE_BOOTSTRAP_TOTAL_CONTEXT_CHARS - reservedSpecOverhead
+  );
+}
+
+function getNativeBootstrapContextCharLimit(nativeMemberCount: number): number {
+  if (!shouldUseCompactNativeBootstrapContext(nativeMemberCount)) {
+    return MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS;
+  }
+  const reservedSpecOverhead = Math.max(
+    NATIVE_BOOTSTRAP_SPEC_JSON_OVERHEAD_MIN_CHARS,
+    nativeMemberCount * NATIVE_BOOTSTRAP_SPEC_JSON_OVERHEAD_PER_MEMBER_CHARS
+  );
+  const aggregateContextBudget = Math.max(
+    MIN_NATIVE_BOOTSTRAP_CONTEXT_CHARS * nativeMemberCount,
+    MAX_NATIVE_BOOTSTRAP_TOTAL_CONTEXT_CHARS - reservedSpecOverhead
+  );
+  return Math.min(
+    MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS,
+    Math.floor(aggregateContextBudget / Math.max(1, nativeMemberCount))
   );
 }
 
@@ -162,6 +199,63 @@ function buildLocalNativeMemberBriefing(params: {
     .join('\n');
 }
 
+function formatCompactField(label: string, value: string | undefined, maxChars: number): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return '';
+  }
+  return `${label}: ${boundText(redactNativeBootstrapContextText(trimmed), maxChars)}`;
+}
+
+async function readCompactTaskBriefing(params: {
+  controller: ReturnType<typeof createController>;
+  memberName: string;
+}): Promise<string> {
+  try {
+    return String(await params.controller.tasks.taskBriefing(params.memberName));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `Task briefing unavailable during startup context generation: ${message}`;
+  }
+}
+
+function buildCompactNativeMemberBriefing(params: {
+  teamName: string;
+  cwd: string;
+  providerId?: TeamProviderId;
+  member: TeamCreateRequest['members'][number];
+  taskBriefing: string;
+  maxContextChars: number;
+}): string {
+  const member = params.member;
+  const taskBriefingLimit = Math.max(1_200, Math.floor(params.maxContextChars * 0.55));
+  return [
+    `You are ${member.name}, a teammate in team ${params.teamName}.`,
+    `Provider: ${params.providerId ?? 'anthropic'}`,
+    `Project: ${member.cwd?.trim() || params.cwd}`,
+    formatCompactField('Role', member.role, 700),
+    formatCompactField('Workflow', member.workflow, 1_200),
+    formatCompactField('Model', member.model, 300),
+    formatCompactField('Effort', member.effort, 100),
+    '',
+    'The app loaded compact startup context for a large native team.',
+    '',
+    'Startup rules:',
+    '- This bootstrap turn is private. Reply locally once, then stop and wait for real work.',
+    '- Do not call member_briefing for launch readiness in this flow.',
+    '- Do not send messages to the user, lead, or teammates during bootstrap.',
+    '- Before real task work, use task_briefing as your working queue.',
+    '- Start real work only from an assigned task or a direct app-delivered instruction.',
+    '- Post durable task results as task comments before completing tasks.',
+    '- Ask the lead when blocked instead of guessing.',
+    '',
+    'Current task briefing:',
+    boundText(redactNativeBootstrapContextText(params.taskBriefing), taskBriefingLimit),
+  ]
+    .filter((line) => line.length > 0)
+    .join('\n');
+}
+
 export async function buildNativeAppManagedBootstrapSpecs(params: {
   teamName: string;
   cwd: string;
@@ -182,39 +276,52 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
   });
   const result = new Map<string, NativeAppManagedBootstrapSpec>();
   let totalContextChars = 0;
-  let nativeMemberCount = 0;
+  const nativeMembers = params.members
+    .map((member) => ({
+      member,
+      providerId: normalizeOptionalTeamProviderId(member.providerId) ?? 'anthropic',
+    }))
+    .filter(({ providerId }) => isNativeAppManagedBootstrapProvider(providerId));
+  const nativeMemberCount = nativeMembers.length;
+  const compactContext = shouldUseCompactNativeBootstrapContext(nativeMemberCount);
+  const maxContextChars = getNativeBootstrapContextCharLimit(nativeMemberCount);
 
-  for (const member of params.members) {
-    const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? 'anthropic';
-    if (!isNativeAppManagedBootstrapProvider(providerId)) {
-      continue;
-    }
-    nativeMemberCount += 1;
-
+  for (const { member, providerId } of nativeMembers) {
     let briefing: string;
-    try {
-      briefing = String(
-        await controller.tasks.memberBriefing(member.name, {
-          runtimeProvider: 'native',
-          includeActiveProcesses: false,
-        })
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('Member not found in team metadata or inboxes')) {
-        throw error;
-      }
-      // In createTeam, the orchestrator's canonical config/inboxes may not
-      // exist until after the lead process runs. Fail-closed would break team
-      // creation, so use bounded request metadata while keeping readiness tied
-      // to the private bootstrap proof, never to this context load.
-      briefing = buildLocalNativeMemberBriefing({
+    if (compactContext) {
+      briefing = buildCompactNativeMemberBriefing({
         teamName: params.teamName,
         cwd: params.cwd,
         providerId,
         member,
-        unavailableReason: message,
+        taskBriefing: await readCompactTaskBriefing({ controller, memberName: member.name }),
+        maxContextChars,
       });
+    } else {
+      try {
+        briefing = String(
+          await controller.tasks.memberBriefing(member.name, {
+            runtimeProvider: 'native',
+            includeActiveProcesses: false,
+          })
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('Member not found in team metadata or inboxes')) {
+          throw error;
+        }
+        // In createTeam, the orchestrator's canonical config/inboxes may not
+        // exist until after the lead process runs. Fail-closed would break team
+        // creation, so use bounded request metadata while keeping readiness tied
+        // to the private bootstrap proof, never to this context load.
+        briefing = buildLocalNativeMemberBriefing({
+          teamName: params.teamName,
+          cwd: params.cwd,
+          providerId,
+          member,
+          unavailableReason: message,
+        });
+      }
     }
     const boundedBriefing = boundText(
       redactNativeBootstrapContextText(briefing),
@@ -229,6 +336,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
       providerId,
       cwd: member.cwd?.trim() || params.cwd,
       briefing: boundedBriefing,
+      maxContextChars,
     });
     totalContextChars += contextText.length;
     if (totalContextChars > MAX_NATIVE_BOOTSTRAP_TOTAL_CONTEXT_CHARS) {

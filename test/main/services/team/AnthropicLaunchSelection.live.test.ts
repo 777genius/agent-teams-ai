@@ -55,6 +55,7 @@ liveDescribe('Anthropic launch selection live e2e', () => {
   let previousAnthropicAuthToken: string | undefined;
   let previousDisableAppBootstrap: string | undefined;
   let previousDisableRuntimeBootstrap: string | undefined;
+  let previousRuntimeReadyTimeout: string | undefined;
   let previousClaudeJsonConfig: string | null | undefined;
   let svc: TeamProvisioningService | null;
   let teamName: string | null;
@@ -98,10 +99,13 @@ liveDescribe('Anthropic launch selection live e2e', () => {
     previousAnthropicAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
     previousDisableAppBootstrap = process.env.CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP;
     previousDisableRuntimeBootstrap = process.env.CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP;
+    previousRuntimeReadyTimeout = process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS;
 
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH =
       process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
     process.env.CLAUDE_TEAM_CLI_FLAVOR = 'agent_teams_orchestrator';
+    process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS =
+      process.env.CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS?.trim() || '90000';
     process.env.HOME = subscriptionAuth ? os.userInfo().homedir : tempHome;
     process.env.USERPROFILE = subscriptionAuth ? os.userInfo().homedir : tempHome;
     process.env.NODE_ENV = 'production';
@@ -117,6 +121,7 @@ liveDescribe('Anthropic launch selection live e2e', () => {
   });
 
   afterEach(async () => {
+    const preserveArtifacts = process.env.ANTHROPIC_LAUNCH_SELECTION_KEEP_TEMP === '1';
     const beforeStopSnapshot = svc && teamName ? await safeRuntimeSnapshot(svc, teamName) : null;
     if (svc && teamName) {
       await svc.stopTeam(teamName).catch(() => undefined);
@@ -125,10 +130,10 @@ liveDescribe('Anthropic launch selection live e2e', () => {
     const afterStopSnapshot = svc && teamName ? await safeRuntimeSnapshot(svc, teamName) : null;
     await terminateSmokeOwnedProcessBackends(afterStopSnapshot);
 
-    if (subscriptionAuth && projectPath) {
+    if (!preserveArtifacts && subscriptionAuth && projectPath) {
       await removeClaudeProjectArtifacts(tempClaudeRoot, projectPath);
     }
-    if (subscriptionAuth && teamName) {
+    if (!preserveArtifacts && subscriptionAuth && teamName) {
       await removeTeamArtifacts(teamName);
     }
     if (subscriptionAuth && previousClaudeJsonConfig !== undefined) {
@@ -145,25 +150,26 @@ liveDescribe('Anthropic launch selection live e2e', () => {
     restoreEnv('ANTHROPIC_AUTH_TOKEN', previousAnthropicAuthToken);
     restoreEnv('CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP', previousDisableAppBootstrap);
     restoreEnv('CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP', previousDisableRuntimeBootstrap);
+    restoreEnv('CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS', previousRuntimeReadyTimeout);
 
-    if (process.env.ANTHROPIC_LAUNCH_SELECTION_KEEP_TEMP === '1') {
+    if (preserveArtifacts) {
       process.stderr.write(`[AnthropicLaunchSelection.live] preserved temp dir: ${tempDir}\n`);
     } else {
       await removeTempDirWithRetries(tempDir);
     }
-    if (subscriptionAuth && projectPath) {
+    if (!preserveArtifacts && subscriptionAuth && projectPath) {
       await removeClaudeProjectArtifacts(tempClaudeRoot, projectPath);
     }
-    if (subscriptionAuth && teamName) {
+    if (!preserveArtifacts && subscriptionAuth && teamName) {
       await removeTeamArtifacts(teamName);
     }
-    if (subscriptionAuth && (projectPath || teamName)) {
+    if (!preserveArtifacts && subscriptionAuth && (projectPath || teamName)) {
       await new Promise((resolve) => setTimeout(resolve, 10_000));
     }
-    if (subscriptionAuth && projectPath) {
+    if (!preserveArtifacts && subscriptionAuth && projectPath) {
       await removeClaudeProjectArtifacts(tempClaudeRoot, projectPath);
     }
-    if (subscriptionAuth && teamName) {
+    if (!preserveArtifacts && subscriptionAuth && teamName) {
       await removeTeamArtifacts(teamName);
     }
     discardKnownAnthropicLaunchSelectionWarnings();

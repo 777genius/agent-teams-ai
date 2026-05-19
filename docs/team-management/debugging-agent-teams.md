@@ -95,6 +95,9 @@ export CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claud
 
 The source launcher executes `src/entrypoints/cli.tsx` through Bun. It is the right default for local
 debug loops, live model/provider checks, and cross-repo runtime fixes.
+Source-mode teammate startup can be slower than bundled startup, so live smoke harnesses may set
+`CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS` to a larger value when they are validating source
+behavior instead of watchdog latency.
 
 Release or production-like smoke checks must validate the built wrapper:
 
