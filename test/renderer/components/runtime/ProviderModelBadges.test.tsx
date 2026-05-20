@@ -171,6 +171,82 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent?.match(/Free/g)).toHaveLength(1);
   });
 
+  it('uses the OpenCode catalog when provider models are summary-only', () => {
+    const host = render(
+      <ProviderModelBadges
+        providerId="opencode"
+        models={['opencode/big-pickle']}
+        providerStatus={{
+          providerId: 'opencode',
+          authMethod: 'opencode_managed',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-12T00:00:00.000Z',
+            staleAt: '2026-05-12T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'opencode/big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+              },
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'openai/gpt-5.4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: null,
+              },
+              {
+                id: 'openrouter/hidden-model',
+                launchModel: 'openrouter/hidden-model',
+                displayName: 'openrouter/hidden-model',
+                hidden: true,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: null,
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        }}
+      />
+    );
+
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('GPT-5.4');
+    expect(host.textContent).not.toContain('hidden-model');
+  });
+
   it('renders OpenCode free badges from metadata when badgeLabel is absent', () => {
     const host = render(
       <ProviderModelBadges
