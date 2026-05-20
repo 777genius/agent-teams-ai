@@ -712,6 +712,145 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelVerificationState).toBe('idle');
       expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
+
+    it('does not shrink cached OpenCode models when a provider refresh returns summary-only models', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+      vi.mocked(execCli).mockImplementation(async (_binaryPath, args) => {
+        const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+        if (normalizedArgs === '--version') {
+          return { stdout: '2.3.4', stderr: '' };
+        }
+        throw new Error(`Unexpected execCli call: ${normalizedArgs}`);
+      });
+
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockResolvedValue([
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'idle',
+          statusMessage: null,
+          detailMessage: null,
+          models: [
+            'opencode/big-pickle',
+            'openai/gpt-5.4',
+            'openrouter/openai/gpt-oss-20b:free',
+          ],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-20T00:00:00.000Z',
+            staleAt: '2026-05-20T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'opencode/big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+              },
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'openai/gpt-5.4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+          modelCatalogRefreshState: 'ready',
+          modelAvailability: [],
+          runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: false, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          connection: null,
+        },
+      ] as never);
+
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus').mockResolvedValue({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        verificationState: 'verified',
+        modelVerificationState: 'idle',
+        statusMessage: null,
+        detailMessage: null,
+        models: ['opencode/big-pickle'],
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading',
+        modelAvailability: [],
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+        canLoginFromUi: false,
+        capabilities: { teamLaunch: true, oneShot: false, extensions: undefined as never },
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        connection: null,
+      } as never);
+
+      await service.getStatus();
+      await service.getProviderStatus('opencode');
+
+      const latestSnapshot = (
+        service as unknown as {
+          latestStatusSnapshot?: Awaited<ReturnType<CliInstallerService['getStatus']>>;
+        }
+      ).latestStatusSnapshot;
+      const opencode = latestSnapshot?.providers.find(
+        (provider) => provider.providerId === 'opencode'
+      );
+      expect(opencode?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
+      expect(opencode?.modelCatalog?.models.map((model) => model.id)).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+      ]);
+      expect(opencode?.modelCatalogRefreshState).toBe('ready');
+    });
   });
 
   describe('install mutex', () => {

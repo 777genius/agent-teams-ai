@@ -1486,6 +1486,111 @@ describe('cliInstallerSlice', () => {
       expect(provider?.modelCatalog?.defaultModelId).toBe('gpt-5.4');
     });
 
+    it('keeps cached OpenCode model list when summary refresh only reports big-pickle', async () => {
+      const currentProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        statusMessage: null,
+        models: [
+          'opencode/big-pickle',
+          'openai/gpt-5.4',
+          'openrouter/openai/gpt-oss-20b:free',
+        ],
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-05-20T00:00:00.000Z',
+          staleAt: '2026-05-20T00:10:00.000Z',
+          defaultModelId: 'opencode/big-pickle',
+          defaultLaunchModel: 'opencode/big-pickle',
+          models: [
+            {
+              id: 'opencode/big-pickle',
+              launchModel: 'opencode/big-pickle',
+              displayName: 'opencode/big-pickle',
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: true,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+              badgeLabel: 'Free',
+            },
+            {
+              id: 'openai/gpt-5.4',
+              launchModel: 'openai/gpt-5.4',
+              displayName: 'openai/gpt-5.4',
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: true,
+              isDefault: false,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
+          diagnostics: {
+            configReadState: 'ready',
+            appServerState: 'healthy',
+          },
+        },
+        runtimeCapabilities: {
+          modelCatalog: {
+            dynamic: true,
+            source: 'app-server',
+          },
+        },
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      });
+
+      useStore.setState({
+        cliStatus: createMultimodelStatus([currentProvider]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          statusMessage: null,
+          models: ['opencode/big-pickle'],
+          modelCatalog: null,
+          modelCatalogRefreshState: 'loading',
+          runtimeCapabilities: {
+            modelCatalog: {
+              dynamic: true,
+              source: 'app-server',
+            },
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        })
+      );
+
+      await useStore.getState().fetchCliProviderStatus('opencode');
+
+      const provider = useStore
+        .getState()
+        .cliStatus?.providers.find((candidate) => candidate.providerId === 'opencode');
+      expect(provider?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
+      expect(provider?.modelCatalog?.models.map((model) => model.id)).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+      ]);
+      expect(provider?.modelCatalogRefreshState).toBe('ready');
+    });
+
     it('keeps OpenCode refresh status-only even when model verification is requested', async () => {
       const nextProvider = createMultimodelProvider({
         providerId: 'opencode',
