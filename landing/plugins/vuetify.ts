@@ -18,13 +18,8 @@ function isThemeName(value: string | null | undefined): value is ThemeName {
 }
 
 function resolveInitialTheme(cookieTheme: ThemeName | null): ThemeName {
-  if (import.meta.client) {
-    const saved = localStorage.getItem("theme");
-    if (isThemeName(saved)) return saved;
-    if (cookieTheme) return cookieTheme;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  }
-
+  // Keep the first client render identical to SSR. Browser-only sources
+  // are applied after mount by init-theme-locale.client.ts.
   return cookieTheme ?? "light";
 }
 

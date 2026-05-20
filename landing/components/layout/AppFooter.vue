@@ -5,6 +5,7 @@ const { t, locale } = useI18n();
 const { repoUrl } = useGithubRepo();
 const { baseURL } = useRuntimeConfig().app;
 const year = new Date().getFullYear();
+const authorLabel = computed(() => locale.value === 'ru' ? 'Автор' : 'Author');
 const docsHref = computed(() => {
   const base = baseURL.replace(/\/?$/, '/');
   return `${base}${locale.value === 'ru' ? 'docs/ru/' : 'docs/'}`;
@@ -31,7 +32,7 @@ const docsHref = computed(() => {
         >{{ t('footer.copyright', { year }) }} · {{ t('footer.tagline') }}</span
       >
       <div class="app-footer__links">
-        <a class="app-footer__link" href="https://github.com/777genius" target="_blank">Author</a>
+        <a class="app-footer__link" href="https://github.com/777genius" target="_blank">{{ authorLabel }}</a>
         <span class="app-footer__divider" />
         <a class="app-footer__link" :href="repoUrl" target="_blank">GitHub</a>
         <span class="app-footer__divider" />

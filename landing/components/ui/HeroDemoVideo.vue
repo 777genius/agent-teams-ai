@@ -1,21 +1,37 @@
 <script setup lang="ts">
-import { nextTick, ref, onMounted, onUnmounted } from 'vue';
-import { mdiPlay, mdiPause, mdiVolumeHigh, mdiVolumeOff, mdiFullscreen } from '@mdi/js';
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { mdiPlay } from "@mdi/js";
 
-const { t } = useI18n();
-const videoSrc = 'https://github.com/user-attachments/assets/9cae73cd-7f42-46e5-a8fb-ad6d41737ff8';
-const videoRef = ref<HTMLVideoElement | null>(null);
-const containerRef = ref<HTMLElement | null>(null);
-const isPlaying = ref(false);
-const isMuted = ref(true);
-const showControls = ref(true);
-const isLoaded = ref(true);
+const { t, locale } = useI18n();
+const config = useRuntimeConfig();
+const muxAccentColor = "#00f0ff";
+const muxPrimaryColor = "#e6fbff";
+const muxSecondaryColor = "#020617";
+
+const muxPlaybackId = computed(() => String(config.public.muxPlaybackId || "").trim());
+const videoTitle = computed(() => (
+  locale.value === "ru" ? "Демо-видео Agent Teams" : "Agent Teams demo video"
+));
+const muxVideoTitle = computed(() => (
+  locale.value === "ru" ? "Демо Agent Teams" : "Agent Teams demo"
+));
+const muxPlayerUrl = computed(() => {
+  if (!muxPlaybackId.value) return "";
+
+  const url = new URL(`https://player.mux.com/${encodeURIComponent(muxPlaybackId.value)}`);
+  url.searchParams.set("accent-color", muxAccentColor);
+  url.searchParams.set("primary-color", muxPrimaryColor);
+  url.searchParams.set("secondary-color", muxSecondaryColor);
+  url.searchParams.set("metadata-video-id", "agent-teams-demo");
+  url.searchParams.set("metadata-video-title", muxVideoTitle.value);
+  url.searchParams.set("metadata-player-name", "Landing hero");
+  url.searchParams.set("title", muxVideoTitle.value);
+  url.searchParams.set("video-title", muxVideoTitle.value);
+  return url.toString();
+});
+const isLoaded = ref(false);
 const hasError = ref(false);
-const progress = ref(0);
-const loadProgress = ref(0);
-const hideTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
-let intObserver: IntersectionObserver | null = null;
 let loadFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clearLoadFallback() {
@@ -28,7 +44,6 @@ function markLoaded() {
   if (hasError.value) return;
   isLoaded.value = true;
   clearLoadFallback();
-  updateLoadProgress();
 }
 
 function markError() {
@@ -36,270 +51,220 @@ function markError() {
   clearLoadFallback();
 }
 
-function onVideoEnded() {
-  const video = videoRef.value;
-  isPlaying.value = false;
-  showControls.value = true;
-  progress.value = 0;
-  if (video) video.currentTime = 0;
-}
-
-function togglePlay() {
-  const video = videoRef.value;
-  if (!video) return;
-  if (video.paused) {
-    markLoaded();
-    video.play()
-      .then(() => {
-        isPlaying.value = true;
-      })
-      .catch(markError);
-  } else {
-    video.pause();
-    isPlaying.value = false;
-  }
-  showControlsBriefly();
-}
-
-function toggleMute() {
-  const video = videoRef.value;
-  if (!video) return;
-  video.muted = !video.muted;
-  isMuted.value = video.muted;
-  showControlsBriefly();
-}
-
-function toggleFullscreen() {
-  const container = containerRef.value;
-  if (!container) return;
-  if (document.fullscreenElement) {
-    document.exitFullscreen();
-  } else {
-    container.requestFullscreen();
-  }
-  showControlsBriefly();
-}
-
-function onTimeUpdate() {
-  const video = videoRef.value;
-  if (!video || !video.duration) return;
-  progress.value = (video.currentTime / video.duration) * 100;
-}
-
-function onSeek(e: MouseEvent) {
-  const video = videoRef.value;
-  const target = e.currentTarget as HTMLElement;
-  if (!video || !target) return;
-  const rect = target.getBoundingClientRect();
-  const ratio = (e.clientX - rect.left) / rect.width;
-  video.currentTime = ratio * video.duration;
-  showControlsBriefly();
-}
-
-function updateLoadProgress() {
-  const video = videoRef.value;
-  if (!video || !video.duration || !video.buffered.length) return;
-  const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-  loadProgress.value = Math.round((bufferedEnd / video.duration) * 100);
-}
-
-function showControlsBriefly() {
-  showControls.value = true;
-  if (hideTimer.value) clearTimeout(hideTimer.value);
-  hideTimer.value = setTimeout(() => {
-    if (isPlaying.value) showControls.value = false;
-  }, 3000);
-}
-
-function onMouseEnter() {
-  showControls.value = true;
-  if (hideTimer.value) clearTimeout(hideTimer.value);
-}
-
-function onMouseLeave() {
-  if (isPlaying.value) {
-    hideTimer.value = setTimeout(() => {
-      showControls.value = false;
-    }, 1500);
-  }
-}
-
-onMounted(async () => {
-  await nextTick();
-  const video = videoRef.value;
-  if (video) {
-    isMuted.value = video.muted;
-    video.addEventListener('loadedmetadata', markLoaded, { once: true });
-    video.addEventListener('loadeddata', markLoaded, { once: true });
-    video.addEventListener('canplay', markLoaded, { once: true });
-    video.addEventListener('canplaythrough', markLoaded, { once: true });
-    video.addEventListener('error', markError);
-    video.addEventListener('progress', updateLoadProgress);
-    video.addEventListener('ended', onVideoEnded);
-
-    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-      markLoaded();
-    } else {
-      video.load();
-      loadFallbackTimer = setTimeout(markLoaded, 1800);
-    }
-  }
-
-  intObserver = new IntersectionObserver(
-    ([entry]) => {
-      if (!entry.isIntersecting && videoRef.value && !videoRef.value.paused) {
-        videoRef.value.pause();
-        isPlaying.value = false;
-      }
-    },
-    { threshold: 0.2 },
-  );
-  if (containerRef.value) intObserver.observe(containerRef.value);
+onMounted(() => {
+  loadFallbackTimer = setTimeout(markLoaded, 2500);
 });
 
-onUnmounted(() => {
-  if (hideTimer.value) clearTimeout(hideTimer.value);
-  clearLoadFallback();
-  if (intObserver) { intObserver.disconnect(); intObserver = null; }
-  videoRef.value?.removeEventListener('loadedmetadata', markLoaded);
-  videoRef.value?.removeEventListener('loadeddata', markLoaded);
-  videoRef.value?.removeEventListener('canplay', markLoaded);
-  videoRef.value?.removeEventListener('canplaythrough', markLoaded);
-  videoRef.value?.removeEventListener('error', markError);
-  videoRef.value?.removeEventListener('progress', updateLoadProgress);
-  videoRef.value?.removeEventListener('ended', onVideoEnded);
-});
+onUnmounted(clearLoadFallback);
 </script>
 
 <template>
-  <div
-    ref="containerRef"
-    class="hero-video"
-    @mouseenter="onMouseEnter"
-    @mouseleave="onMouseLeave"
-  >
-    <!-- Loading skeleton -->
-    <div v-if="!isLoaded && !hasError" class="hero-video__skeleton">
+  <div class="hero-video">
+    <div class="hero-video__ambient" aria-hidden="true" />
+    <div class="hero-video__edge hero-video__edge--top" aria-hidden="true" />
+    <div class="hero-video__edge hero-video__edge--bottom" aria-hidden="true" />
+    <div class="hero-video__corner hero-video__corner--tl" aria-hidden="true" />
+    <div class="hero-video__corner hero-video__corner--tr" aria-hidden="true" />
+    <div class="hero-video__corner hero-video__corner--bl" aria-hidden="true" />
+    <div class="hero-video__corner hero-video__corner--br" aria-hidden="true" />
+
+    <ClientOnly>
+      <iframe
+        v-if="muxPlayerUrl && !hasError"
+        class="hero-video__player"
+        :class="{ 'hero-video__player--loaded': isLoaded }"
+        :src="muxPlayerUrl"
+        :title="videoTitle"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+        allowfullscreen
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+        @load="markLoaded"
+        @error="markError"
+      />
+
+      <template #fallback>
+        <div class="hero-video__skeleton">
+          <div class="hero-video__skeleton-pulse" />
+          <div class="hero-video__skeleton-content">
+            <div class="hero-video__skeleton-spinner" />
+            <span class="hero-video__skeleton-label">{{ t("hero.watchDemo") }}</span>
+          </div>
+        </div>
+      </template>
+    </ClientOnly>
+
+    <div v-if="!isLoaded && !hasError && muxPlayerUrl" class="hero-video__skeleton">
       <div class="hero-video__skeleton-pulse" />
       <div class="hero-video__skeleton-content">
         <div class="hero-video__skeleton-spinner" />
-        <span class="hero-video__skeleton-label">
-          {{ loadProgress > 0 ? `${loadProgress}%` : t('hero.watchDemo') }}
-        </span>
-      </div>
-      <div class="hero-video__skeleton-bar">
-        <div
-          class="hero-video__skeleton-bar-fill"
-          :style="{ width: `${loadProgress}%` }"
-        />
+        <span class="hero-video__skeleton-label">{{ t("hero.watchDemo") }}</span>
       </div>
     </div>
 
-    <!-- Error fallback -->
-    <div v-if="hasError" class="hero-video__error">
+    <div v-if="hasError || !muxPlayerUrl" class="hero-video__error">
       <v-icon :icon="mdiPlay" size="36" class="hero-video__error-icon" />
-      <span class="hero-video__error-text">{{ t('hero.videoUnavailable') }}</span>
+      <span class="hero-video__error-text">{{ t("hero.videoUnavailable") }}</span>
     </div>
 
-    <!-- Video element -->
-    <video
-      v-show="!hasError"
-      ref="videoRef"
-      class="hero-video__player"
-      :class="{ 'hero-video__player--loaded': isLoaded }"
-      preload="metadata"
-      poster="/screenshots/2.jpg"
-      muted
-      playsinline
-      @timeupdate="onTimeUpdate"
-      @click="togglePlay"
-    >
-      <source :src="videoSrc" type="video/mp4">
-    </video>
-
-    <!-- Play overlay (when paused) -->
-    <Transition name="fade">
-      <div
-        v-if="!isPlaying && isLoaded"
-        class="hero-video__play-overlay"
-        @click="togglePlay"
-      >
-        <div class="hero-video__play-btn">
-          <v-icon :icon="mdiPlay" size="36" color="white" />
-        </div>
-        <span class="hero-video__play-label">{{ t('hero.watchDemo') }}</span>
-      </div>
-    </Transition>
-
-    <!-- Controls bar -->
-    <Transition name="slide-up">
-      <div
-        v-if="isLoaded && showControls"
-        class="hero-video__controls"
-      >
-        <!-- Progress bar -->
-        <div class="hero-video__progress" @click="onSeek">
-          <div class="hero-video__progress-track">
-            <div
-              class="hero-video__progress-fill"
-              :style="{ width: `${progress}%` }"
-            />
-          </div>
-        </div>
-
-        <div class="hero-video__controls-row">
-          <button class="hero-video__control-btn" :aria-label="isPlaying ? 'Pause' : 'Play'" @click.stop="togglePlay">
-            <v-icon :icon="isPlaying ? mdiPause : mdiPlay" size="18" />
-          </button>
-
-          <button class="hero-video__control-btn" :aria-label="isMuted ? 'Unmute' : 'Mute'" @click.stop="toggleMute">
-            <v-icon :icon="isMuted ? mdiVolumeOff : mdiVolumeHigh" size="18" />
-          </button>
-
-          <div class="hero-video__spacer" />
-
-          <button class="hero-video__control-btn" aria-label="Fullscreen" @click.stop="toggleFullscreen">
-            <v-icon :icon="mdiFullscreen" size="18" />
-          </button>
-        </div>
-      </div>
-    </Transition>
+    <div class="hero-video__scan" aria-hidden="true" />
   </div>
 </template>
 
 <style scoped>
 .hero-video {
+  --hero-video-cyan: #00f0ff;
+  --hero-video-cyan-soft: rgba(0, 240, 255, 0.22);
+  --hero-video-magenta: #ff2bff;
+  --hero-video-magenta-soft: rgba(255, 43, 255, 0.18);
+  --hero-video-dark: rgba(2, 6, 23, 0.96);
+
   position: relative;
   z-index: 1;
   aspect-ratio: 16 / 9;
   border-radius: 16px;
-  background: rgba(10, 10, 15, 0.95);
+  background:
+    radial-gradient(circle at 18% 0%, var(--hero-video-cyan-soft), transparent 42%),
+    radial-gradient(circle at 88% 100%, var(--hero-video-magenta-soft), transparent 38%),
+    var(--hero-video-dark);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(0, 240, 255, 0.34);
   overflow: hidden;
-  cursor: pointer;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.6),
-    0 0 30px rgba(0, 240, 255, 0.05),
-    inset 0 1px 0 rgba(0, 240, 255, 0.1);
+    0 0 34px rgba(0, 240, 255, 0.18),
+    0 0 52px rgba(255, 43, 255, 0.1),
+    inset 0 1px 0 rgba(230, 251, 255, 0.18);
 }
 
-/* ─── Video player ─── */
+.hero-video::before,
+.hero-video::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.hero-video::before {
+  inset: 0;
+  border: 1px solid rgba(230, 251, 255, 0.16);
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 28px rgba(0, 240, 255, 0.08),
+    inset 0 -26px 42px rgba(2, 6, 23, 0.44);
+}
+
+.hero-video::after {
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0 7%, rgba(0, 240, 255, 0.1) 7.2% 7.55%, transparent 7.8%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 18%, transparent 78%, rgba(0, 240, 255, 0.1));
+  mix-blend-mode: screen;
+  opacity: 0.32;
+}
+
+.hero-video__ambient,
+.hero-video__scan,
+.hero-video__edge,
+.hero-video__corner {
+  position: absolute;
+  pointer-events: none;
+}
+
+.hero-video__ambient {
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(135deg, rgba(0, 240, 255, 0.14), transparent 28%, transparent 68%, rgba(255, 43, 255, 0.16)),
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.34));
+  mix-blend-mode: screen;
+  opacity: 0.74;
+}
+
+.hero-video__scan {
+  inset: 0;
+  z-index: 5;
+  background:
+    repeating-linear-gradient(to bottom, rgba(230, 251, 255, 0.1) 0 1px, transparent 1px 5px),
+    linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.12), transparent);
+  mix-blend-mode: soft-light;
+  opacity: 0.22;
+}
+
+.hero-video__edge {
+  left: 18px;
+  right: 18px;
+  z-index: 6;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hero-video-cyan), var(--hero-video-magenta), transparent);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
+  opacity: 0.9;
+}
+
+.hero-video__edge--top {
+  top: 9px;
+}
+
+.hero-video__edge--bottom {
+  bottom: 9px;
+  opacity: 0.58;
+}
+
+.hero-video__corner {
+  z-index: 6;
+  width: 28px;
+  height: 28px;
+  border-color: var(--hero-video-cyan);
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.54));
+}
+
+.hero-video__corner--tl {
+  top: 8px;
+  left: 8px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.hero-video__corner--tr {
+  top: 8px;
+  right: 8px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+
+.hero-video__corner--bl {
+  bottom: 8px;
+  left: 8px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+
+.hero-video__corner--br {
+  right: 8px;
+  bottom: 8px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+}
+
 .hero-video__player {
+  position: relative;
+  z-index: 2;
   display: block;
   width: 100%;
-  height: auto;
-  border-radius: 16px;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
   opacity: 0;
   transition: opacity 0.5s ease;
+  border: none;
+  background: #020617;
 }
 
 .hero-video__player--loaded {
   opacity: 1;
 }
 
-/* ─── Loading skeleton ─── */
 .hero-video__skeleton {
   position: absolute;
   inset: 0;
@@ -308,7 +273,8 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 16px;
   background: rgba(6, 10, 18, 0.96);
-  z-index: 2;
+  z-index: 7;
+  pointer-events: none;
 }
 
 .hero-video__skeleton::before,
@@ -381,26 +347,9 @@ onUnmounted(() => {
   text-shadow: 0 0 16px rgba(0, 240, 255, 0.42);
 }
 
-.hero-video__skeleton-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 0 0 16px 16px;
-  overflow: hidden;
-}
-
-.hero-video__skeleton-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #00f0ff, #ff00ff);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
 @keyframes skeletonPulse {
-  0%, 100% { opacity: 0.3; }
+  0%,
+  100% { opacity: 0.3; }
   50% { opacity: 0.8; }
 }
 
@@ -408,15 +357,19 @@ onUnmounted(() => {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Error fallback ─── */
 .hero-video__error {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  min-height: 280px;
   padding: 32px;
+  background:
+    linear-gradient(135deg, rgba(0, 234, 255, 0.08), rgba(255, 43, 255, 0.05)),
+    rgba(2, 6, 16, 0.94);
 }
 
 .hero-video__error-icon {
@@ -430,137 +383,6 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* ─── Play overlay ─── */
-.hero-video__play-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 3;
-  cursor: pointer;
-}
-
-.hero-video__play-btn {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(0, 240, 255, 0.15);
-  border: 2px solid rgba(0, 240, 255, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
-}
-
-.hero-video__play-btn:hover {
-  background: rgba(0, 240, 255, 0.25);
-  border-color: rgba(0, 240, 255, 0.6);
-  box-shadow: 0 0 40px rgba(0, 240, 255, 0.35);
-  transform: scale(1.05);
-}
-
-.hero-video__play-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: "JetBrains Mono", monospace;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-/* ─── Controls bar ─── */
-.hero-video__controls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  padding: 16px 12px 8px;
-  z-index: 4;
-}
-
-.hero-video__controls-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.hero-video__control-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hero-video__control-btn:hover {
-  background: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
-}
-
-.hero-video__spacer {
-  flex: 1;
-}
-
-/* ─── Progress bar ─── */
-.hero-video__progress {
-  padding: 4px 0;
-  cursor: pointer;
-  margin-bottom: 4px;
-}
-
-.hero-video__progress-track {
-  width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-  overflow: hidden;
-  transition: height 0.2s ease;
-}
-
-.hero-video__progress:hover .hero-video__progress-track {
-  height: 5px;
-}
-
-.hero-video__progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #00f0ff, #ff00ff);
-  border-radius: 2px;
-  transition: width 0.1s linear;
-}
-
-/* ─── Transitions ─── */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.3s ease;
-}
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-/* ─── Responsive ─── */
 @media (max-width: 960px) {
   .hero-video {
     max-width: 100%;
@@ -573,16 +395,17 @@ onUnmounted(() => {
   }
 
   .hero-video__player {
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
-  .hero-video__play-btn {
-    width: 52px;
-    height: 52px;
+  .hero-video__edge {
+    left: 12px;
+    right: 12px;
   }
 
-  .hero-video__play-label {
-    font-size: 11px;
+  .hero-video__corner {
+    width: 20px;
+    height: 20px;
   }
 }
 </style>

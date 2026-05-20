@@ -8,6 +8,8 @@ declare const process: {
 const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || "https://777genius.github.io/agent-teams-ai";
 const githubRepo = process.env.NUXT_PUBLIC_GITHUB_REPO || "777genius/agent-teams-ai";
 const githubReleasesUrl = `https://github.com/${githubRepo}/releases`;
+const muxPlaybackId = process.env.NUXT_PUBLIC_MUX_PLAYBACK_ID || "qyeNuDjFqoDALK8eB02jMTOWUz006BdIhiqiAip3U00x7I";
+const muxBackgroundPlaybackId = process.env.NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID || muxPlaybackId;
 const baseURL = process.env.NUXT_APP_BASE_URL || "/";
 const basePrefixedDocsPath = `${baseURL.replace(/\/?$/, "/")}docs`;
 
@@ -50,7 +52,7 @@ export default defineNuxtConfig({
   },
   vue: {
     compilerOptions: {
-      isCustomElement: (tag: string) => tag.startsWith("swiper-")
+      isCustomElement: (tag: string) => tag.startsWith("swiper-") || tag === "mux-video"
     }
   },
   vite: {
@@ -108,7 +110,9 @@ export default defineNuxtConfig({
     public: {
       siteUrl,
       githubRepo,
-      githubReleasesUrl
+      githubReleasesUrl,
+      muxPlaybackId,
+      muxBackgroundPlaybackId
     }
   }
 });

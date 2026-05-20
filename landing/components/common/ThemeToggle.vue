@@ -33,7 +33,7 @@ const onToggle = () => {
         :icon="mdiWeatherSunny"
         variant="text"
         size="small"
-        aria-label="Toggle theme"
+        :aria-label="t('theme.light')"
       />
     </template>
   </ClientOnly>

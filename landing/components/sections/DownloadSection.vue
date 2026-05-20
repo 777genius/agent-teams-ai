@@ -275,6 +275,7 @@ const releaseDate = computed(() => {
     day: 'numeric',
   });
 });
+const linuxRobotBubble = computed(() => locale.value === 'ru' ? 'Готов начать!' : 'Ready to start!');
 
 </script>
 
@@ -319,7 +320,7 @@ const releaseDate = computed(() => {
                 class="download-section__card-robot-bubble"
                 tail="right"
               >
-                Готов начать!
+                {{ linuxRobotBubble }}
               </RobotSpeechBubble>
             </Transition>
             <img

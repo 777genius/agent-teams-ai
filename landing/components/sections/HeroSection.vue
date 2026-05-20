@@ -3,7 +3,7 @@ import {
   mdiBookOpenPageVariantOutline,
   mdiDownload,
 } from "@mdi/js";
-import { heroMessages, type HeroMessagePhase } from "~/data/heroScene";
+import { getLocalizedHeroMessages, type HeroMessagePhase } from "~/data/heroScene";
 
 const { content } = useLandingContent();
 const { t, locale } = useI18n();
@@ -33,7 +33,35 @@ const releaseDate = computed(() => {
     day: "numeric",
   });
 });
-const activeHeroMessage = computed(() => heroMessages[activeHeroMessageIndex.value] ?? null);
+const localizedHeroMessages = computed(() => getLocalizedHeroMessages(locale.value));
+const activeHeroMessage = computed(() => localizedHeroMessages.value[activeHeroMessageIndex.value] ?? null);
+const supportedProviders = [
+  {
+    id: "codex",
+    name: "Codex",
+    accent: "cyan",
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    accent: "amber",
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    accent: "magenta",
+  },
+] as const;
+const supportedProvidersLabel = computed(() => (
+  locale.value === "ru"
+    ? "Поддерживаем AI-провайдеры"
+    : "Supported AI providers"
+));
+const heroSlogan = computed(() => (
+  locale.value === "ru"
+    ? "Делайте много, почти ничего не делая"
+    : "Get a lot done by doing very little"
+));
 
 const heroDownloadUrl = computed(() => {
   const asset = downloadStore.selectedAsset;
@@ -57,7 +85,7 @@ function setHeroMessageTimer(callback: () => void, delay: number) {
 function runHeroMessageCycle() {
   clearHeroMessageTimers();
 
-  if (!isHeroVisible.value || heroReducedMotion.value || heroMessages.length === 0) {
+  if (!isHeroVisible.value || heroReducedMotion.value || localizedHeroMessages.value.length === 0) {
     heroMessagePhase.value = "cooldown";
     return;
   }
@@ -73,7 +101,7 @@ function runHeroMessageCycle() {
     heroMessagePhase.value = "cooldown";
   }, 3900);
   setHeroMessageTimer(() => {
-    activeHeroMessageIndex.value = (activeHeroMessageIndex.value + 1) % heroMessages.length;
+    activeHeroMessageIndex.value = (activeHeroMessageIndex.value + 1) % localizedHeroMessages.value.length;
     runHeroMessageCycle();
   }, 4700);
 }
@@ -138,12 +166,33 @@ onUnmounted(() => {
           </h1>
 
           <p class="cyber-hero__slogan cyber-panel">
-            Get a lot done by doing very little
+            {{ heroSlogan }}
           </p>
 
           <p class="cyber-hero__description">
             {{ content.hero.subtitle }}
           </p>
+
+          <div
+            class="cyber-hero__providers"
+            :aria-label="supportedProvidersLabel"
+          >
+            <div class="cyber-hero__provider-list">
+              <div
+                v-for="provider in supportedProviders"
+                :key="provider.id"
+                class="cyber-hero__provider"
+                :class="`cyber-hero__provider--${provider.accent}`"
+              >
+                <span class="cyber-hero__provider-icon" aria-hidden="true">
+                  <CyberProviderIcon :provider="provider.id" />
+                </span>
+                <span class="cyber-hero__provider-name">
+                  {{ provider.name }}
+                </span>
+              </div>
+            </div>
+          </div>
 
           <div class="cyber-hero__actions">
             <v-btn

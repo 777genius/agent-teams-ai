@@ -196,3 +196,114 @@ export const heroFeatureRail = [
     text: "Local-first workflow with task logs, process control, and Git visibility.",
   },
 ] as const;
+
+const ruHeroAgentCopy: Record<HeroAgentRole, Pick<HeroAgent, "label" | "status" | "tasks"> & { compactLabel?: string }> = {
+  planner: {
+    label: "Планировщик",
+    compactLabel: "План",
+    status: "Планирует",
+    tasks: ["Анализ требований", "Декомпозиция задач", "Создание плана"],
+  },
+  lead: {
+    label: "Лид",
+    compactLabel: "Лид",
+    status: "Координирует",
+    tasks: ["Архитектура", "Приоритеты", "Координация команды"],
+  },
+  developer: {
+    label: "Разработчик",
+    compactLabel: "Код",
+    status: "Пишет код",
+    tasks: ["Реализация фичи", "Обновление кода", "Запуск проверок"],
+  },
+  reviewer: {
+    label: "Ревьюер",
+    status: "Ревьюит",
+    tasks: ["Ревью кода", "Проверка качества", "Запрос правок"],
+  },
+  tester: { label: "Тестировщик", status: "Тестирует", tasks: [] },
+  researcher: { label: "Ресёрчер", status: "Исследует", tasks: [] },
+  docs: { label: "Документация", status: "Документирует", tasks: [] },
+  ops: { label: "Операции", status: "Следит", tasks: [] },
+  security: { label: "Безопасность", status: "Проверяет", tasks: [] },
+  fixer: { label: "Фиксер", status: "Исправляет", tasks: [] },
+};
+
+const ruHeroMessages: Record<string, Pick<HeroMessage, "text" | "response">> = {
+  "plan-ready": { text: "План готов.", response: "Приоритет задан." },
+  "build-ready": { text: "Скоуп задан.", response: "Кодинг начат." },
+  "review-build": { text: "Проверь сборку.", response: "Проверяю качество." },
+  "review-pass": { text: "Ревью пройдено.", response: "Готово к релизу." },
+};
+
+const ruHeroFeatureRail: Record<string, { title: string; text: string }> = {
+  autonomous: {
+    title: "Дайте команде цель",
+    text: "Агенты сами разобьют её на задачи и начнут двигаться без микроменеджмента.",
+  },
+  kanban: {
+    title: "Канбан обновляется сам",
+    text: "Карточки двигаются, пока агенты пишут, тестируют, ревьюят и разблокируют друг друга.",
+  },
+  developers: {
+    title: "Подключайте свой AI-стек",
+    text: "Claude, Codex и OpenCode в одном десктопном центре управления.",
+  },
+  secure: {
+    title: "Оставайтесь в контуре",
+    text: "Подключайтесь через комментарии, подтверждения, прямые сообщения и быстрые действия.",
+  },
+  local: {
+    title: "Ваша машина, ваш код",
+    text: "Локальный рабочий процесс с логами задач, управлением процессами и видимостью Git.",
+  },
+};
+
+const isRuLocale = (locale: string) => locale.toLowerCase().startsWith("ru");
+
+export function getLocalizedHeroAgents(locale: string): readonly HeroAgent[] {
+  if (!isRuLocale(locale)) return heroAgents;
+
+  return heroAgents.map((agent) => {
+    const copy = ruHeroAgentCopy[agent.id];
+    return {
+      ...agent,
+      label: copy.label,
+      status: copy.status,
+      tasks: copy.tasks,
+      mobile: {
+        ...agent.mobile,
+        compactLabel: copy.compactLabel ?? agent.mobile.compactLabel,
+      },
+    };
+  });
+}
+
+export function getLocalizedHeroReviewerFeatureCard(locale: string): typeof heroReviewerFeatureCard {
+  if (!isRuLocale(locale)) return heroReviewerFeatureCard;
+  const copy = ruHeroAgentCopy.reviewer;
+  return {
+    ...heroReviewerFeatureCard,
+    label: copy.label,
+    status: copy.status,
+    tasks: copy.tasks,
+  };
+}
+
+export function getLocalizedHeroMessages(locale: string): readonly HeroMessage[] {
+  if (!isRuLocale(locale)) return heroMessages;
+
+  return heroMessages.map((message) => ({
+    ...message,
+    ...(ruHeroMessages[message.id] ?? {}),
+  }));
+}
+
+export function getLocalizedHeroFeatureRail(locale: string): typeof heroFeatureRail {
+  if (!isRuLocale(locale)) return heroFeatureRail;
+
+  return heroFeatureRail.map((feature) => ({
+    ...feature,
+    ...(ruHeroFeatureRail[feature.id] ?? {}),
+  })) as typeof heroFeatureRail;
+}

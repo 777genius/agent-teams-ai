@@ -8,8 +8,8 @@ import {
 } from "@mdi/js";
 import {
   heroCollaborationFeature,
-  heroFeatureRail,
-  heroReviewerFeatureCard,
+  getLocalizedHeroFeatureRail,
+  getLocalizedHeroReviewerFeatureCard,
   type HeroMessage,
   type HeroMessagePhase,
 } from "~/data/heroScene";
@@ -19,6 +19,11 @@ const props = defineProps<{
   phase?: HeroMessagePhase;
   reducedMotion?: boolean;
 }>();
+
+const { locale } = useI18n();
+const localizedHeroFeatureRail = computed(() => getLocalizedHeroFeatureRail(locale.value));
+const localizedHeroReviewerFeatureCard = computed(() => getLocalizedHeroReviewerFeatureCard(locale.value));
+const statusLabel = computed(() => locale.value === "ru" ? "Статус:" : "Status:");
 
 const icons = [
   mdiRobotOutline,
@@ -76,18 +81,18 @@ const reviewerBubbleText = computed(() => {
         </RobotSpeechBubble>
       </Transition>
       <div class="cyber-feature-rail__reviewer-card cyber-panel">
-        <div class="cyber-feature-rail__reviewer-label">{{ heroReviewerFeatureCard.label }}</div>
+        <div class="cyber-feature-rail__reviewer-label">{{ localizedHeroReviewerFeatureCard.label }}</div>
         <ul class="cyber-feature-rail__reviewer-tasks">
-          <li v-for="task in heroReviewerFeatureCard.tasks" :key="task">{{ task }}</li>
+          <li v-for="task in localizedHeroReviewerFeatureCard.tasks" :key="task">{{ task }}</li>
         </ul>
         <div class="cyber-feature-rail__reviewer-status">
-          <span>Status:</span>
-          <strong>{{ heroReviewerFeatureCard.status }}</strong>
+          <span>{{ statusLabel }}</span>
+          <strong>{{ localizedHeroReviewerFeatureCard.status }}</strong>
         </div>
       </div>
       <img
         class="cyber-feature-rail__robot"
-        :src="heroReviewerFeatureCard.asset"
+        :src="localizedHeroReviewerFeatureCard.asset"
         alt=""
         loading="lazy"
         decoding="async"
@@ -95,7 +100,7 @@ const reviewerBubbleText = computed(() => {
     </div>
     <div class="cyber-feature-rail cyber-panel">
       <div
-        v-for="(feature, index) in heroFeatureRail"
+        v-for="(feature, index) in localizedHeroFeatureRail"
         :key="feature.id"
         class="cyber-feature-rail__item"
       >

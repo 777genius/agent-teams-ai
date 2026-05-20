@@ -34,8 +34,13 @@
   --cyber-monterey-after-bg:
     linear-gradient(180deg, rgba(2, 5, 13, 0.92) 0%, rgba(2, 5, 13, 0.62) 15%, rgba(2, 5, 13, 0.08) 44%, rgba(2, 5, 13, 0.68) 100%),
     radial-gradient(circle at 64% 42%, transparent 0 26%, rgba(2, 5, 13, 0.24) 70%, rgba(2, 5, 13, 0.54) 100%);
-  --cyber-monterey-canvas-opacity: 0.42;
-  --cyber-monterey-canvas-filter: blur(4px) saturate(0.78) brightness(0.62) contrast(1.08);
+  --cyber-monterey-video-opacity: 1;
+  --cyber-monterey-video-filter: blur(0.8px) saturate(1.12) contrast(1.04);
+  --cyber-monterey-video-blend: normal;
+  --cyber-monterey-video-position: 74% 50%;
+  --cyber-monterey-video-scale: 1.16;
+  --cyber-monterey-canvas-opacity: 0.36;
+  --cyber-monterey-canvas-filter: blur(0.5px) saturate(0.92) brightness(0.78) contrast(1.08);
   --cyber-monterey-canvas-blend: normal;
   --cyber-background-bg:
     radial-gradient(circle at 72% 28%, rgba(0, 234, 255, 0.1), transparent 30%),
@@ -116,113 +121,6 @@
   --cyber-frame-cut: 18px;
 }
 
-.v-theme--light .cyber-hero {
-  --cyber-bg-0: #f8fcff;
-  --cyber-bg-1: #eaf7fb;
-  --cyber-panel-weak: rgba(255, 255, 255, 0.68);
-  --cyber-panel: rgba(255, 255, 255, 0.78);
-  --cyber-panel-strong: rgba(255, 255, 255, 0.92);
-  --cyber-cyan: #008fb3;
-  --cyber-blue: #2563eb;
-  --cyber-magenta: #b832d8;
-  --cyber-violet: #7c3aed;
-  --cyber-text: #132238;
-  --cyber-muted: #596b83;
-  --cyber-border-cyan: rgba(8, 145, 178, 0.34);
-  --cyber-border-magenta: rgba(184, 50, 216, 0.28);
-  --cyber-panel-bg:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(237, 249, 252, 0.68));
-  --cyber-panel-shadow:
-    0 0 0 1px rgba(8, 145, 178, 0.1) inset,
-    0 18px 48px rgba(8, 145, 178, 0.12),
-    0 0 22px rgba(184, 50, 216, 0.07);
-  --cyber-hero-bg:
-    radial-gradient(circle at 76% 30%, rgba(0, 178, 214, 0.14), transparent 32%),
-    radial-gradient(circle at 86% 70%, rgba(184, 50, 216, 0.13), transparent 36%),
-    linear-gradient(180deg, #fbfdff 0%, #edf8fb 56%, #f8fcff 100%);
-  --cyber-monterey-bg:
-    radial-gradient(circle at 78% 24%, rgba(113, 185, 255, 0.28), transparent 31%),
-    radial-gradient(circle at 22% 72%, rgba(221, 170, 255, 0.24), transparent 38%),
-    radial-gradient(circle at 8% 32%, rgba(101, 218, 255, 0.18), transparent 34%),
-    linear-gradient(180deg, #f8fcff 0%, #eaf7fb 48%, #fbf7ff 100%);
-  --cyber-monterey-before-bg:
-    radial-gradient(circle at 18% 34%, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.14) 34%, transparent 62%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0.03) 64%, rgba(237, 247, 252, 0.2) 100%);
-  --cyber-monterey-after-bg:
-    linear-gradient(180deg, rgba(248, 252, 255, 0.52) 0%, rgba(248, 252, 255, 0.22) 18%, rgba(248, 252, 255, 0.04) 48%, rgba(248, 252, 255, 0.58) 100%),
-    radial-gradient(circle at 64% 42%, transparent 0 26%, rgba(255, 255, 255, 0.16) 70%, rgba(235, 247, 252, 0.42) 100%);
-  --cyber-monterey-canvas-opacity: 1;
-  --cyber-monterey-canvas-filter: blur(1px) saturate(1.34) brightness(1.12) contrast(1.16);
-  --cyber-monterey-canvas-blend: multiply;
-  --cyber-background-bg:
-    radial-gradient(circle at 72% 28%, rgba(0, 178, 214, 0.12), transparent 31%),
-    radial-gradient(circle at 88% 62%, rgba(184, 50, 216, 0.1), transparent 33%),
-    linear-gradient(90deg, transparent 0 64px, rgba(8, 145, 178, 0.06) 65px 66px, transparent 67px 160px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(237, 247, 252, 0.64) 100%);
-  --cyber-background-opacity: 0.5;
-  --cyber-background-before-bg:
-    linear-gradient(90deg, transparent 0 8%, rgba(8, 145, 178, 0.16) 8.1% 8.22%, transparent 8.34% 18%, rgba(184, 50, 216, 0.12) 18.1% 18.22%, transparent 18.34% 31%, rgba(8, 145, 178, 0.13) 31.1% 31.24%, transparent 31.36% 44%, rgba(37, 99, 235, 0.12) 44.1% 44.2%, transparent 44.34% 62%, rgba(184, 50, 216, 0.1) 62.1% 62.22%, transparent 62.34% 78%, rgba(8, 145, 178, 0.12) 78.1% 78.22%, transparent 78.34%),
-    repeating-linear-gradient(90deg, transparent 0 78px, rgba(8, 145, 178, 0.06) 80px 82px, transparent 84px 116px),
-    linear-gradient(to top, rgba(8, 145, 178, 0.12) 0%, rgba(8, 145, 178, 0.07) 13%, transparent 31%),
-    linear-gradient(to top, rgba(184, 50, 216, 0.1) 0%, rgba(184, 50, 216, 0.05) 16%, transparent 38%),
-    linear-gradient(to top, rgba(37, 99, 235, 0.09) 0%, rgba(37, 99, 235, 0.04) 20%, transparent 48%);
-  --cyber-background-before-opacity: 0.58;
-  --cyber-background-before-blend: multiply;
-  --cyber-background-after-bg:
-    repeating-linear-gradient(90deg, transparent 0 34px, rgba(8, 145, 178, 0.1) 35px 36px, transparent 37px 110px),
-    repeating-linear-gradient(180deg, transparent 0 28px, rgba(184, 50, 216, 0.08) 29px 30px, transparent 31px 78px),
-    linear-gradient(90deg, transparent, rgba(8, 145, 178, 0.07), transparent);
-  --cyber-background-after-opacity: 0.18;
-  --cyber-background-after-blend: multiply;
-  --cyber-wash-bg:
-    radial-gradient(circle at 18% 44%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12) 36%, transparent 60%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0%, rgba(237, 248, 252, 0.1) 36%, rgba(255, 255, 255, 0.03) 68%, rgba(251, 247, 255, 0.16) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(248, 252, 255, 0.04) 58%, rgba(248, 252, 255, 0.72));
-  --cyber-gridlines-bg:
-    linear-gradient(rgba(8, 145, 178, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(8, 145, 178, 0.045) 1px, transparent 1px);
-  --cyber-gridlines-opacity: 0.2;
-  --cyber-scanlines-bg: repeating-linear-gradient(
-    to bottom,
-    rgba(8, 35, 50, 0.035) 0,
-    rgba(8, 35, 50, 0.035) 1px,
-    transparent 1px,
-    transparent 4px
-  );
-  --cyber-scanlines-opacity: 0.08;
-  --cyber-copy-aura: radial-gradient(circle at 28% 38%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.38) 58%, transparent 78%);
-  --cyber-title-color: rgba(19, 34, 56, 0.98);
-  --cyber-description-color: rgba(50, 65, 88, 0.82);
-  --cyber-action-primary-color: #061722;
-  --cyber-action-secondary-bg: rgba(255, 255, 255, 0.62);
-  --cyber-action-secondary-hover-bg: rgba(8, 145, 178, 0.08);
-  --cyber-release-color: rgba(50, 65, 88, 0.68);
-  --cyber-scene-floor-bg:
-    radial-gradient(ellipse at 58% 84%, rgba(184, 50, 216, 0.16), transparent 18%),
-    radial-gradient(ellipse at 56% 84%, rgba(8, 145, 178, 0.14), transparent 32%),
-    repeating-radial-gradient(ellipse at 58% 84%, rgba(8, 145, 178, 0.08) 0 1px, transparent 1px 20px);
-  --cyber-scene-floor-opacity: 0.38;
-  --cyber-scene-foreground-bg:
-    linear-gradient(90deg, transparent 0 4%, rgba(8, 145, 178, 0.07) 4.1%, transparent 4.4%),
-    linear-gradient(180deg, transparent 0 88%, rgba(184, 50, 216, 0.06));
-  --cyber-scene-foreground-opacity: 0.48;
-  --cyber-video-frame-bg: rgba(255, 255, 255, 0.7);
-  --cyber-video-content-bg: rgba(8, 20, 34, 0.9);
-  --cyber-card-text: rgba(19, 34, 56, 0.88);
-  --cyber-card-muted: rgba(67, 82, 105, 0.76);
-  --cyber-card-subtle: rgba(67, 82, 105, 0.64);
-  --cyber-card-inset: rgba(255, 255, 255, 0.62);
-  --cyber-feature-shell-bg: transparent;
-  --cyber-feature-rail-bg: transparent;
-  --cyber-feature-rail-shadow:
-    0 0 0 1px rgba(8, 145, 178, 0.12) inset,
-    0 -1px 0 rgba(8, 145, 178, 0.18),
-    0 1px 0 rgba(8, 145, 178, 0.16);
-  --cyber-feature-divider: rgba(8, 145, 178, 0.18);
-  --cyber-feature-title: rgba(19, 34, 56, 0.94);
-  --cyber-feature-text: rgba(67, 82, 105, 0.72);
-}
-
 .cyber-panel {
   position: relative;
   border: 1px solid var(--cyber-border-cyan);
@@ -292,6 +190,65 @@
 .cyber-hero__monterey::after {
   z-index: 3;
   background: var(--cyber-monterey-after-bg);
+}
+
+.cyber-hero__background,
+.cyber-hero__wash,
+.cyber-hero__monterey::before,
+.cyber-hero__monterey::after {
+  display: none;
+}
+
+.cyber-hero__monterey-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  opacity: var(--cyber-monterey-video-opacity);
+  filter: var(--cyber-monterey-video-filter);
+  mix-blend-mode: var(--cyber-monterey-video-blend);
+  background:
+    var(--cyber-monterey-video-poster) var(--cyber-monterey-video-position) / cover no-repeat,
+    var(--cyber-monterey-bg);
+  transform: scale(var(--cyber-monterey-video-scale));
+  will-change: opacity, transform;
+}
+
+.cyber-hero__monterey-video::after {
+  display: none;
+}
+
+.cyber-hero__monterey-video-player {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  opacity: 0;
+  background: transparent;
+  object-fit: cover;
+  object-position: var(--cyber-monterey-video-position);
+  --media-object-fit: cover;
+  --media-object-position: var(--cyber-monterey-video-position);
+  transition: opacity 0.45s ease;
+}
+
+.cyber-hero__monterey-video-player::part(video) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--cyber-monterey-video-position);
+}
+
+.cyber-hero__monterey-video-player--ready {
+  opacity: 1;
 }
 
 .cyber-hero__monterey-canvas {
@@ -490,10 +447,70 @@
 
 .cyber-hero__description {
   max-width: 560px;
-  margin: 0 0 30px;
+  margin: 0 0 20px;
   color: var(--cyber-description-color);
   font-size: clamp(1rem, 1.08vw, 1.22rem);
   line-height: 1.7;
+}
+
+.cyber-hero__providers {
+  width: min(680px, 100%);
+  margin: 0 0 20px;
+}
+
+.cyber-hero__provider-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 26px;
+}
+
+.cyber-hero__provider {
+  --provider-accent: var(--cyber-cyan);
+
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 9px;
+  color: var(--cyber-text);
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--provider-accent) 26%, transparent),
+    0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.cyber-hero__provider--cyan {
+  --provider-accent: var(--cyber-cyan);
+}
+
+.cyber-hero__provider--amber {
+  --provider-accent: #ffcf5a;
+}
+
+.cyber-hero__provider--magenta {
+  --provider-accent: var(--cyber-magenta);
+}
+
+.cyber-hero__provider-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--provider-accent);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--provider-accent) 44%, transparent));
+}
+
+.cyber-hero__provider-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.cyber-hero__provider-name {
+  overflow-wrap: anywhere;
+  color: var(--cyber-text);
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 .cyber-hero__actions {
@@ -1628,6 +1645,32 @@
   .cyber-hero__description {
     font-size: 1rem;
     line-height: 1.62;
+  }
+
+  .cyber-hero__providers {
+    margin-bottom: 22px;
+  }
+
+  .cyber-hero__provider-list {
+    gap: 12px 18px;
+  }
+
+  .cyber-hero__provider {
+    gap: 7px;
+  }
+
+  .cyber-hero__provider-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cyber-hero__provider-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cyber-hero__provider-name {
+    font-size: 0.82rem;
   }
 
   .cyber-hero__actions {

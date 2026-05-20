@@ -12,7 +12,7 @@ const isRu = computed(() => locale.value === 'ru');
 
 const navItems = computed(() => [
   { href: '#screenshots', label: t('nav.screenshots'), shortLabel: isRu.value ? 'Скрины' : 'Shots' },
-  { href: docsHref.value, label: 'Docs', shortLabel: 'Docs' },
+  { href: docsHref.value, label: t('nav.docs'), shortLabel: isRu.value ? 'Док' : 'Docs' },
   { href: '#download', label: t('nav.download'), shortLabel: isRu.value ? 'Скачать' : 'Get' },
   { href: '#comparison', label: t('nav.comparison'), shortLabel: isRu.value ? 'Сравн.' : 'Compare' },
   { href: '#pricing', label: t('nav.pricing'), shortLabel: isRu.value ? 'Беспл.' : 'Free' },
@@ -126,10 +126,10 @@ const navItems = computed(() => [
           :href="repoUrl"
           target="_blank"
           class="app-header__github-btn"
-          aria-label="GitHub"
+          :aria-label="t('nav.viewOnGithub')"
         >
           <v-icon :icon="mdiGithub" class="app-header__github-icon" />
-          <span class="app-header__github-text">GitHub</span>
+          <span class="app-header__github-text">{{ t('nav.viewOnGithub') }}</span>
         </v-btn>
         <ThemeToggle />
       </div>
@@ -186,7 +186,7 @@ const navItems = computed(() => [
   --header-height: 126px;
   --header-panel-height: 86px;
   --header-action-size: clamp(54px, 3.25vw, 66px);
-  --header-github-width: clamp(150px, 9.7vw, 204px);
+  --header-github-width: clamp(190px, 12vw, 236px);
   --header-brand-icon: clamp(52px, 3.7vw, 68px);
   --header-brand-text: clamp(23px, 1.42vw, 32px);
 
@@ -503,8 +503,8 @@ const navItems = computed(() => [
   color: var(--header-cyan) !important;
   font-family: var(--at-font-mono);
   font-weight: 800 !important;
-  font-size: clamp(14px, 1vw, 19px) !important;
-  letter-spacing: 0.08em !important;
+  font-size: clamp(13px, 0.86vw, 16px) !important;
+  letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
   background: rgba(0, 234, 255, 0.035) !important;
   box-shadow:
@@ -519,6 +519,8 @@ const navItems = computed(() => [
   justify-content: center;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .app-header__github-icon {
@@ -527,7 +529,10 @@ const navItems = computed(() => [
 }
 
 .app-header__github-text {
+  min-width: 0;
+  overflow: hidden;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .app-header__github-btn:hover {
@@ -551,7 +556,7 @@ const navItems = computed(() => [
     --header-height: 112px;
     --header-panel-height: 72px;
     --header-action-size: 54px;
-    --header-github-width: 124px;
+    --header-github-width: 158px;
     --header-brand-icon: 44px;
     --header-brand-text: 15px;
   }
@@ -591,7 +596,13 @@ const navItems = computed(() => [
   }
 
   .app-header__github-btn {
-    font-size: 13px !important;
+    padding-inline: 8px !important;
+    font-size: 12px !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .app-header__github-btn :deep(.v-btn__content) {
+    gap: 6px;
   }
 }
 
