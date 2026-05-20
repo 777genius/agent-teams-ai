@@ -194,6 +194,22 @@ EOF
 
 Write changelog entries from the **user's perspective**, not the developer's.
 
+Release notes must stay short, concrete, and user-facing. Do not include internal
+maintenance details unless they directly change what users can do or clearly fix
+a user-visible problem.
+
+Avoid entries about:
+
+- CI/lint/test gates, smoke tests, or validation infrastructure.
+- README/docs cleanup, roadmap checkbox changes, or release-process polish.
+- Runtime artifact internals, bundled runtime version numbers, stable aliases,
+  compatibility aliases, or updater plumbing.
+- Refactors, dependency bumps, or workflow changes without a user-visible effect.
+
+If a change only made future releases, tests, packaging, or developer validation
+more reliable, keep it out of the public notes or fold it into one concise
+user-facing line only when it explains a real fix.
+
 **Good:**
 
 - "Add team member activity timeline with live status tracking"
@@ -205,6 +221,11 @@ Write changelog entries from the **user's perspective**, not the developer's.
 - "Refactor ChunkBuilder to use new pipeline"
 - "Update dependencies"
 - "Fix bug in useEffect cleanup"
+- "Fix CI lint gate"
+- "Stabilize provider smoke tests"
+- "Update README install guidance"
+- "Bundled runtime remains vX.Y.Z"
+- "Compatibility aliases are still included"
 
 Group entries by type: `What's New` > `Improvements` > `Bug Fixes` > `Breaking Changes` (if any).
 
