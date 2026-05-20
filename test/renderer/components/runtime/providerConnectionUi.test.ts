@@ -1,16 +1,15 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   formatProviderStatusText,
   getProviderConnectionModeSummary,
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
-  isProviderInventoryOnlyFallback,
-  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
+  isOpenCodeCatalogHydrating,
+  isProviderInventoryOnlyFallback,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -259,11 +258,17 @@ describe('providerConnectionUi', () => {
         ...provider,
         modelCatalogRefreshState: 'ready',
       })
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isOpenCodeCatalogHydrating({
         ...provider,
         models: ['opencode/big-pickle', 'openrouter/qwen/qwen3-coder-plus'],
+      })
+    ).toBe(true);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalogRefreshState: 'error',
       })
     ).toBe(false);
   });

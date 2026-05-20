@@ -93,12 +93,28 @@ function isModelOnlyFallbackProviderStatus(provider: CliProviderStatus | undefin
   );
 }
 
+function isOpenCodeSummaryOnlyCatalogStatus(provider: CliProviderStatus | undefined): boolean {
+  if (provider?.providerId !== 'opencode') {
+    return false;
+  }
+
+  if (provider.modelCatalog?.providerId === 'opencode' && provider.modelCatalog.models.length > 0) {
+    return false;
+  }
+
+  return provider.runtimeCapabilities?.modelCatalog?.dynamic === true;
+}
+
 function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefined): boolean {
   if (!provider) {
     return false;
   }
 
   if (isModelOnlyFallbackProviderStatus(provider)) {
+    return false;
+  }
+
+  if (isOpenCodeSummaryOnlyCatalogStatus(provider)) {
     return false;
   }
 
@@ -131,7 +147,11 @@ function getProviderStatus(
 }
 
 function hasOpenCodeModels(provider: CliProviderStatus | undefined): boolean {
-  return provider?.providerId === 'opencode' && provider.models.length > 0;
+  return (
+    provider?.providerId === 'opencode' &&
+    provider.models.length > 0 &&
+    !isOpenCodeSummaryOnlyCatalogStatus(provider)
+  );
 }
 
 function hasCodexRuntimeReady(provider: CliProviderStatus | undefined): boolean {
