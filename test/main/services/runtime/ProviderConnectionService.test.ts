@@ -38,6 +38,7 @@ describe('ProviderConnectionService', () => {
   const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
   const originalCodexApiKey = process.env.CODEX_API_KEY;
   const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const originalAnthropicAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
   const originalAnthropicBaseUrl = process.env.ANTHROPIC_BASE_URL;
 
   function createConfig(authMode: 'auto' | 'oauth' | 'api_key' = 'auto') {
@@ -128,6 +129,7 @@ describe('ProviderConnectionService', () => {
     delete process.env.OPENAI_API_KEY;
     delete process.env.CODEX_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
     delete process.env.ANTHROPIC_BASE_URL;
   });
 
@@ -148,6 +150,12 @@ describe('ProviderConnectionService', () => {
       delete process.env.ANTHROPIC_API_KEY;
     } else {
       process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
+    }
+
+    if (originalAnthropicAuthToken === undefined) {
+      delete process.env.ANTHROPIC_AUTH_TOKEN;
+    } else {
+      process.env.ANTHROPIC_AUTH_TOKEN = originalAnthropicAuthToken;
     }
 
     if (originalAnthropicBaseUrl === undefined) {
@@ -182,6 +190,33 @@ describe('ProviderConnectionService', () => {
     expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
   });
 
+  it('preserves Anthropic-compatible bearer token env even when OAuth mode is selected', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('oauth'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv(
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_API_KEY: '',
+        ANTHROPIC_AUTH_TOKEN: 'ollama',
+      },
+      'anthropic'
+    );
+
+    expect(result.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.ANTHROPIC_API_KEY).toBe('');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+  });
+
   it('injects the stored Anthropic API key when api_key mode is selected', async () => {
     const lookupPreferred = vi.fn().mockResolvedValue({
       envVarName: 'ANTHROPIC_API_KEY',
@@ -210,6 +245,37 @@ describe('ProviderConnectionService', () => {
     expect(lookupPreferred).toHaveBeenCalledWith('ANTHROPIC_API_KEY');
     expect(result.ANTHROPIC_API_KEY).toBe('stored-key');
     expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+  });
+
+  it('does not replace Anthropic-compatible bearer token env with stored API key mode credentials', async () => {
+    const lookupPreferred = vi.fn().mockResolvedValue({
+      envVarName: 'ANTHROPIC_API_KEY',
+      value: 'stored-key',
+    });
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred,
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const result = await service.applyConfiguredConnectionEnv(
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_API_KEY: '',
+        ANTHROPIC_AUTH_TOKEN: 'ollama',
+      },
+      'anthropic'
+    );
+
+    expect(lookupPreferred).not.toHaveBeenCalled();
+    expect(result.ANTHROPIC_API_KEY).toBe('');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
   });
 
   it('does not decrypt stored Anthropic keys when metadata-only env building is requested', async () => {
@@ -277,6 +343,31 @@ describe('ProviderConnectionService', () => {
 
     expect(issue).toContain('Anthropic API key mode is enabled');
     expect(issue).toContain('ANTHROPIC_API_KEY');
+  });
+
+  it('does not report a missing Anthropic API key for Anthropic-compatible bearer token env', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_API_KEY: '',
+        ANTHROPIC_AUTH_TOKEN: 'ollama',
+      },
+      'anthropic'
+    );
+
+    expect(issue).toBeNull();
   });
 
   it('treats a stored Anthropic API key as configured even when env is empty', async () => {

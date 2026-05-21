@@ -39,7 +39,7 @@ export const usePageSeo = (titleKey: string, descriptionKey: string, options: Pa
   const resolvedImage = computed<PageSeoImage>(() => {
     if (options.image) return options.image;
     return {
-      url: "/og-image.png",
+      url: "/og-image-agent-teams-v5.png",
       width: 1200,
       height: 630,
       type: "image/png",

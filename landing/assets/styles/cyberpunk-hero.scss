@@ -586,6 +586,25 @@
   opacity: 0.62;
 }
 
+.cyber-action-button--primary .cyber-action-button__glow::after {
+  position: absolute;
+  inset: -42% -58%;
+  content: "";
+  background:
+    linear-gradient(
+      108deg,
+      transparent 0 42%,
+      rgba(255, 255, 255, 0.18) 47%,
+      rgba(255, 255, 255, 0.58) 50%,
+      rgba(0, 234, 255, 0.24) 53%,
+      transparent 59% 100%
+    );
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: translate3d(-64%, 0, 0) skewX(-18deg);
+  animation: cyberActionButtonShine 4.8s cubic-bezier(0.25, 0.1, 0.22, 1) infinite;
+}
+
 .cyber-action-button__frame {
   position: absolute;
   inset: 0;
@@ -1714,6 +1733,28 @@
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.1) inset,
       0 0 36px var(--agent-accent-soft);
+  }
+}
+
+@keyframes cyberActionButtonShine {
+  0%,
+  54% {
+    opacity: 0;
+    transform: translate3d(-64%, 0, 0) skewX(-18deg);
+  }
+
+  61% {
+    opacity: 0.8;
+  }
+
+  76% {
+    opacity: 0.5;
+  }
+
+  84%,
+  100% {
+    opacity: 0;
+    transform: translate3d(64%, 0, 0) skewX(-18deg);
   }
 }
 

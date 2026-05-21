@@ -128,6 +128,7 @@ export type CliProviderReasoningEffort =
 
 export type CliProviderModelCatalogSource =
   | 'anthropic-models-api'
+  | 'anthropic-compatible-api'
   | 'app-server'
   | 'static-fallback';
 export type CliProviderModelCatalogStatus = 'ready' | 'stale' | 'degraded' | 'unavailable';

@@ -377,7 +377,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     const groupLabels = Array.from(
       host.querySelectorAll('[data-testid="team-model-selector-opencode-group"] h4')
     ).map((heading) => heading.textContent ?? '');
-    expect(groupLabels).toContain('Other OpenCode catalog');
+    expect(groupLabels).toContain('OpenCode');
+    expect(groupLabels).toContain('OpenRouter');
     expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('OpenRouter');
 
@@ -1401,6 +1402,60 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('points missing OpenCode runtime users to the home page install button', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: false,
+          authenticated: false,
+          statusMessage: 'OpenCode runtime missing',
+          detailMessage: 'No JSON object found in CLI output',
+          capabilities: { teamLaunch: false },
+          models: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onProviderChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('OpenCode')
+    );
+
+    await act(async () => {
+      openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onProviderChange).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).toContain(
+      'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.'
+    );
+    expect(host.textContent).toContain('Reason: No JSON object found in CLI output');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses backend OpenCode readiness detail as the disabled reason', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -2111,6 +2166,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
 
     expect(openRouterButton).toBeTruthy();
+    expect(openRouterButton?.textContent).not.toContain('OpenRouter');
 
     await act(async () => {
       openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -2409,10 +2465,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).toContain('moonshotai/kimi-k2');
+    expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('OpenAI');
     expect(host.textContent).toContain('OpenRouter');
-    expect(host.textContent).toContain('Free built-in');
-    expect(host.textContent).toContain('Other OpenCode catalog');
 
     await act(async () => {
       root.unmount();
@@ -2420,7 +2475,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('groups OpenCode catalog routes by configured, free, connected, and other sources', async () => {
+  it('groups OpenCode catalog routes by source provider and keeps route badges', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       providers: [
@@ -2581,10 +2636,14 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode config');
-    expect(host.textContent).toContain('Free built-in');
-    expect(host.textContent).toContain('Connected providers');
-    expect(host.textContent).toContain('Other OpenCode catalog');
+    const sourceGroupLabels = Array.from(
+      host.querySelectorAll('[data-testid="team-model-selector-opencode-group"] h4')
+    ).map((heading) => heading.textContent ?? '');
+    expect(sourceGroupLabels).toEqual(
+      expect.arrayContaining(['llama.cpp', 'OpenCode', 'OpenRouter', 'DeepSeek'])
+    );
+    expect(sourceGroupLabels).not.toContain('OpenCode config');
+    expect(sourceGroupLabels).not.toContain('Connected providers');
     expect(host.textContent).toContain('Local');
     expect(host.textContent).toContain('Needs test');
     expect(host.textContent).toContain('Connected');

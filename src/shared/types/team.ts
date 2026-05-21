@@ -985,6 +985,7 @@ export interface ProviderModelLaunchIdentity {
   catalogId: string | null;
   catalogSource:
     | 'anthropic-models-api'
+    | 'anthropic-compatible-api'
     | 'app-server'
     | 'static-fallback'
     | 'runtime'

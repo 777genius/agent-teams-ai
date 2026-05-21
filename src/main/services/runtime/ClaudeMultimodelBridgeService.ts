@@ -44,7 +44,12 @@ interface RuntimeExtensionCapabilitiesResponse {
 interface RuntimeProviderCapabilitiesResponse {
   modelCatalog?: {
     dynamic?: boolean;
-    source?: 'anthropic-models-api' | 'app-server' | 'static-fallback' | 'runtime';
+    source?:
+      | 'anthropic-models-api'
+      | 'anthropic-compatible-api'
+      | 'app-server'
+      | 'static-fallback'
+      | 'runtime';
   };
   reasoningEffort?: {
     supported?: boolean;
@@ -82,7 +87,7 @@ interface RuntimeProviderModelCatalogItemResponse {
   supportsPersonality?: boolean;
   isDefault?: boolean;
   upgrade?: boolean;
-  source?: 'anthropic-models-api' | 'app-server' | 'static-fallback';
+  source?: 'anthropic-models-api' | 'anthropic-compatible-api' | 'app-server' | 'static-fallback';
   badgeLabel?: string | null;
   statusMessage?: string | null;
   metadata?: Record<string, unknown> | null;
@@ -91,7 +96,7 @@ interface RuntimeProviderModelCatalogItemResponse {
 interface RuntimeProviderModelCatalogResponse {
   schemaVersion?: number;
   providerId?: CliProviderId;
-  source?: 'anthropic-models-api' | 'app-server' | 'static-fallback';
+  source?: 'anthropic-models-api' | 'anthropic-compatible-api' | 'app-server' | 'static-fallback';
   status?: 'ready' | 'stale' | 'degraded' | 'unavailable';
   fetchedAt?: string;
   staleAt?: string;
@@ -573,6 +578,7 @@ function mapRuntimeProviderModelCatalog(
     !fetchedAt ||
     !staleAt ||
     (source !== 'anthropic-models-api' &&
+      source !== 'anthropic-compatible-api' &&
       source !== 'app-server' &&
       source !== 'static-fallback') ||
     (status !== 'ready' && status !== 'stale' && status !== 'degraded' && status !== 'unavailable')
@@ -597,6 +603,7 @@ function mapRuntimeProviderModelCatalog(
       );
       const itemSource =
         model.source === 'anthropic-models-api' ||
+        model.source === 'anthropic-compatible-api' ||
         model.source === 'app-server' ||
         model.source === 'static-fallback'
           ? model.source

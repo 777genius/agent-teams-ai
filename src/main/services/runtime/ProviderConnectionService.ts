@@ -154,6 +154,28 @@ function buildAnthropicModelsUrl(baseUrl?: string | null): string {
   return url.toString();
 }
 
+function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
+  const trimmed = baseUrl?.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  try {
+    const host = new URL(trimmed).host;
+    return host !== 'api.anthropic.com' && host !== 'api-staging.anthropic.com';
+  } catch {
+    return true;
+  }
+}
+
+function hasAnthropicCompatibleAuthEnv(env: NodeJS.ProcessEnv): boolean {
+  if (!isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL)) {
+    return false;
+  }
+
+  return Boolean(env.ANTHROPIC_AUTH_TOKEN?.trim() || env.ANTHROPIC_API_KEY?.trim());
+}
+
 async function verifyAnthropicApiKeyWithApi(
   apiKey: string,
   baseUrl?: string | null
@@ -376,6 +398,10 @@ export class ProviderConnectionService {
       return null;
     }
 
+    if (hasAnthropicCompatibleAuthEnv(env)) {
+      return null;
+    }
+
     const storedKey = await this.apiKeyService.lookupPreferred('ANTHROPIC_API_KEY');
     if (storedKey?.value.trim()) {
       return storedKey.value.trim();
@@ -392,6 +418,10 @@ export class ProviderConnectionService {
     options?: StoredApiKeyAccessOptions
   ): Promise<NodeJS.ProcessEnv> {
     if (providerId === 'anthropic') {
+      if (hasAnthropicCompatibleAuthEnv(env)) {
+        return env;
+      }
+
       const authMode = this.getConfiguredAuthMode(providerId);
       if (authMode === 'oauth') {
         delete env.ANTHROPIC_API_KEY;
@@ -559,6 +589,10 @@ export class ProviderConnectionService {
   ): Promise<string | null> {
     if (providerId === 'anthropic') {
       if (this.getConfiguredAuthMode(providerId) !== 'api_key') {
+        return null;
+      }
+
+      if (hasAnthropicCompatibleAuthEnv(env)) {
         return null;
       }
 

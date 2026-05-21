@@ -108,6 +108,11 @@ export interface ProjectScannerOptions {
   sessionIndexPersistDelayMs?: number;
 }
 
+interface ScanInFlight {
+  generation: number;
+  promise: Promise<Project[]>;
+}
+
 function splitPathSegments(value: string): string[] {
   return value.split(/[/\\]+/).filter(Boolean);
 }
@@ -184,6 +189,8 @@ export class ProjectScanner {
   // Short-lived scan cache to prevent duplicate scans within the same request cycle.
   // Both getProjects() and getRepositoryGroups() call scan() — the cache deduplicates.
   private scanCache: { projects: Project[]; timestamp: number } | null = null;
+  private scanInFlight: ScanInFlight | null = null;
+  private scanGeneration = 0;
   private static readonly SCAN_CACHE_TTL_MS = 2000;
 
   /** Cached project list for search — avoids re-scanning disk on every query */
@@ -243,6 +250,31 @@ export class ProjectScanner {
       return this.scanCache.projects;
     }
 
+    const generation = this.scanGeneration;
+    const inFlight = this.scanInFlight;
+    if (inFlight) {
+      if (inFlight.generation === generation) {
+        return inFlight.promise;
+      }
+      await inFlight.promise.catch(() => undefined);
+      if (this.scanInFlight?.promise === inFlight.promise) {
+        this.scanInFlight = null;
+      }
+      return this.scan();
+    }
+
+    const promise = this.performScan(generation);
+    this.scanInFlight = { generation, promise };
+    try {
+      return await promise;
+    } finally {
+      if (this.scanInFlight?.promise === promise) {
+        this.scanInFlight = null;
+      }
+    }
+  }
+
+  private async performScan(generation: number): Promise<Project[]> {
     const startedAt = Date.now();
     let stage = 'start';
     const slowWarnAfterMs = 10_000;
@@ -263,7 +295,7 @@ export class ProjectScanner {
 
       stage = 'readdirProjectsDir';
       const readdirStartedAt = Date.now();
-      const entries = await this.fsProvider.readdir(this.projectsDir);
+      const entries = await this.readdirForProjectDiscovery(this.projectsDir);
       const readdirMs = Date.now() - readdirStartedAt;
       if (readdirMs >= 2000) {
         logger.warn(`[scan] readdir slow ms=${readdirMs} entries=${entries.length}`);
@@ -298,7 +330,9 @@ export class ProjectScanner {
           `[scan] completed slow ms=${ms} projectDirs=${projectDirs.length} projects=${validProjects.length}`
         );
       }
-      this.scanCache = { projects: validProjects, timestamp: Date.now() };
+      if (this.scanGeneration === generation) {
+        this.scanCache = { projects: validProjects, timestamp: Date.now() };
+      }
       return validProjects;
     } catch (error) {
       logger.error('Error scanning projects directory:', error);
@@ -314,6 +348,14 @@ export class ProjectScanner {
    */
   clearScanCache(): void {
     this.scanCache = null;
+    this.scanGeneration += 1;
+  }
+
+  private async readdirForProjectDiscovery(dirPath: string): Promise<FsDirent[]> {
+    if (this.fsProvider instanceof LocalFileSystemProvider) {
+      return this.fsProvider.readdir(dirPath, { prefetchEntryStats: false });
+    }
+    return this.fsProvider.readdir(dirPath);
   }
 
   // ===========================================================================
@@ -459,7 +501,7 @@ export class ProjectScanner {
     try {
       const projectPath = path.join(this.projectsDir, encodedName);
       const readdirStart = Date.now();
-      const entries = await this.fsProvider.readdir(projectPath);
+      const entries = await this.readdirForProjectDiscovery(projectPath);
       const readdirMs = Date.now() - readdirStart;
 
       // Get session files (.jsonl at root level)

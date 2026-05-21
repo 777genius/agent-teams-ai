@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
+import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   formatTeamModelSummary,
   getProviderScopedTeamModelLabel,
@@ -874,6 +875,7 @@ export const MemberDraftRow = ({
                 model={effectiveModel}
                 limitContext={limitContext}
               />
+              {effectiveProviderId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
               {effectiveProviderId === 'anthropic' ? (
                 <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
                   <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />

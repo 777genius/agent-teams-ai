@@ -87,6 +87,8 @@ interface OpenCodeModelGroup {
   groupId: string;
   groupLabel: string;
   rank: number;
+  sortLabel: string;
+  firstIndex: number;
   options: TeamRuntimeModelOption[];
 }
 
@@ -446,7 +448,7 @@ function getOpenCodeReadinessMessage(providerStatus: CliProviderStatus | null | 
     return 'The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.';
   }
   if (!providerStatus.supported) {
-    return 'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status.';
+    return 'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.';
   }
   if (!providerStatus.authenticated) {
     if (hasFreeOpenCodeModelRoute(providerStatus)) {
@@ -1150,21 +1152,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         continue;
       }
 
-      const routeGroup = metadata.routeGroup;
-      const existingGroup = groups.get(routeGroup.id);
+      const sourceGroup = metadata.sourceInfo;
+      const groupId = sourceGroup ? `source:${sourceGroup.id}` : `route:${metadata.routeGroup.id}`;
+      const groupLabel = sourceGroup?.label ?? metadata.routeGroup.label;
+      const existingGroup = groups.get(groupId);
       if (existingGroup) {
         existingGroup.options.push(option);
+        existingGroup.rank = Math.min(existingGroup.rank, metadata.routeGroup.rank);
+        existingGroup.firstIndex = Math.min(existingGroup.firstIndex, metadata.index);
       } else {
-        groups.set(routeGroup.id, {
-          groupId: routeGroup.id,
-          groupLabel: routeGroup.label,
-          rank: routeGroup.rank,
+        groups.set(groupId, {
+          groupId,
+          groupLabel,
+          rank: metadata.routeGroup.rank,
+          sortLabel: groupLabel.toLowerCase(),
+          firstIndex: metadata.index,
           options: [option],
         });
       }
     }
 
-    return Array.from(groups.values()).sort((left, right) => left.rank - right.rank);
+    return Array.from(groups.values()).sort(
+      (left, right) =>
+        left.rank - right.rank ||
+        left.sortLabel.localeCompare(right.sortLabel, undefined, { sensitivity: 'base' }) ||
+        left.firstIndex - right.firstIndex
+    );
   }, [effectiveProviderId, visibleOpenCodeModelMetadata]);
   const visibleDefaultModelOptions = visibleModelOptions.filter((option) => !option.value.trim());
   const visibleConcreteModelOptionCount =
@@ -1318,11 +1331,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           >
             {opt.label}
           </span>
-          {openCodeMetadata?.sourceInfo ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0 text-[9px] font-semibold uppercase text-[var(--color-text-secondary)]">
-              {openCodeMetadata.sourceInfo.label}
-            </span>
-          ) : null}
           {openCodePricingInfo?.summary ? (
             <span
               data-testid="team-model-selector-model-pricing"

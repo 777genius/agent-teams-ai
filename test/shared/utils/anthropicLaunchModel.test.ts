@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
+import { describe, expect, it } from 'vitest';
 
 describe('resolveAnthropicLaunchModel', () => {
   it('keeps legacy long-context fallback behavior when no runtime catalog is available', () => {
@@ -82,6 +81,22 @@ describe('resolveAnthropicLaunchModel', () => {
     expect(
       resolveAnthropicLaunchModel({ selectedModel: 'opus[1m][1m]', limitContext: false })
     ).toBe('opus[1m]');
+  });
+
+  it('preserves explicit Anthropic-compatible model ids instead of manufacturing 1M variants', () => {
+    expect(
+      resolveAnthropicLaunchModel({
+        selectedModel: 'qwen3.6',
+        limitContext: false,
+      })
+    ).toBe('qwen3.6');
+    expect(
+      resolveAnthropicLaunchModel({
+        selectedModel: 'qwen3.6',
+        limitContext: false,
+        availableLaunchModels: ['qwen3.6'],
+      })
+    ).toBe('qwen3.6');
   });
 
   it('honors explicit 1M Sonnet selections unless 200K context is requested', () => {

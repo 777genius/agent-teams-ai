@@ -476,6 +476,32 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.args).toContain('--anthropic-safe-passthrough');
   });
 
+  it('passes Anthropic-compatible bearer env to non-Anthropic leads without injecting ANTHROPIC_API_KEY', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
+      env: {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_AUTH_TOKEN: 'ollama',
+        ANTHROPIC_API_KEY: '',
+      },
+      authSource: 'anthropic_auth_token',
+      geminiRuntimeAuth: null,
+      providerArgs: ['--anthropic-compatible-passthrough'],
+    });
+
+    const result = await (svc as any).buildCrossProviderMemberArgs(
+      'codex',
+      [{ name: 'bob', providerId: 'anthropic', model: 'qwen3.6' }],
+      { teamRuntimeAuth: { teamName: 'mixed-team', authMaterialId: 'run-1' } }
+    );
+
+    expect(result.usesAnthropicApiKeyHelper).toBe(false);
+    expect(result.envPatch.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.envPatch.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+    expect(result.envPatch.ANTHROPIC_API_KEY).toBe('');
+    expect(result.args).toContain('--anthropic-compatible-passthrough');
+  });
+
   it('does not inherit lead effort for an Anthropic teammate with an explicit model', async () => {
     const svc = new TeamProvisioningService();
 
@@ -3159,6 +3185,24 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     expect(result.authSource).toBe('anthropic_auth_token');
     expect(result.env.ANTHROPIC_API_KEY).toBe('proxy-token');
+  });
+
+  it('preserves Anthropic-compatible Ollama auth token without mapping it into ANTHROPIC_API_KEY', async () => {
+    const svc = new TeamProvisioningService();
+    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://localhost:11434',
+      ANTHROPIC_AUTH_TOKEN: 'ollama',
+      ANTHROPIC_API_KEY: '',
+      PATH: '/usr/bin',
+      SHELL: '/bin/zsh',
+    });
+
+    const result = await (svc as any).buildProvisioningEnv();
+
+    expect(result.authSource).toBe('anthropic_auth_token');
+    expect(result.env.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.env.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+    expect(result.env.ANTHROPIC_API_KEY).toBe('');
   });
 
   it('prefers explicit ANTHROPIC_API_KEY over ANTHROPIC_AUTH_TOKEN', async () => {

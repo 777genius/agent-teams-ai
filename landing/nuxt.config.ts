@@ -12,6 +12,9 @@ const muxPlaybackId = process.env.NUXT_PUBLIC_MUX_PLAYBACK_ID || "qyeNuDjFqoDALK
 const muxBackgroundPlaybackId = process.env.NUXT_PUBLIC_MUX_BACKGROUND_PLAYBACK_ID || muxPlaybackId;
 const baseURL = process.env.NUXT_APP_BASE_URL || "/";
 const basePrefixedDocsPath = `${baseURL.replace(/\/?$/, "/")}docs`;
+const defaultSeoTitle = "Agent Teams - AI Agent Orchestration for Developers";
+const defaultSeoDescription = "Free, open-source desktop app for AI agent teams. Start with a free model with no auth, then connect Claude, Codex, or OpenCode when you need more models.";
+const defaultSeoImage = `${siteUrl.replace(/\/+$/, "")}/og-image-agent-teams-v5.png`;
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-01-19",
@@ -20,6 +23,25 @@ export default defineNuxtConfig({
   app: {
     baseURL,
     head: {
+      title: defaultSeoTitle,
+      meta: [
+        { name: "description", content: defaultSeoDescription },
+        { name: "robots", content: "noindex, nofollow" },
+        { property: "og:title", content: defaultSeoTitle },
+        { property: "og:description", content: defaultSeoDescription },
+        { property: "og:type", content: "website" },
+        { property: "og:site_name", content: "Agent Teams" },
+        { property: "og:image", content: defaultSeoImage },
+        { property: "og:image:type", content: "image/png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "Agent Teams - AI agent orchestration" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: defaultSeoTitle },
+        { name: "twitter:description", content: defaultSeoDescription },
+        { name: "twitter:image", content: defaultSeoImage },
+        { name: "twitter:image:alt", content: "Agent Teams - AI agent orchestration" }
+      ],
       link: [
         { rel: "icon", type: "image/x-icon", href: `${baseURL}favicon.ico` },
         { rel: "icon", type: "image/png", sizes: "32x32", href: `${baseURL}favicon-32.png` },

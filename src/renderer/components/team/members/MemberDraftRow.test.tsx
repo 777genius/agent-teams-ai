@@ -418,6 +418,37 @@ describe('MemberDraftRow', () => {
     });
   });
 
+  it('shows the OpenCode context config hint inside OpenCode teammate provider settings after effort', () => {
+    const { host, root } = renderMemberDraftRow({
+      member: createMemberDraft({
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        providerId: 'opencode',
+        model: 'local/model',
+      }),
+    });
+
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="opencode provider, local/model"]'
+    )!;
+    act(() => {
+      modelButton.click();
+    });
+
+    const text = host.textContent ?? '';
+    const effortIndex = text.indexOf('effort-selector');
+    const hintIndex = text.indexOf('OpenCode local models can use an OpenCode context budget');
+
+    expect(hintIndex).toBeGreaterThan(-1);
+    expect(effortIndex).toBeGreaterThan(-1);
+    expect(hintIndex).toBeGreaterThan(effortIndex);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('shows model launch issues inline and keeps model controls expandable', () => {
     const issueText =
       'Member alice uses Anthropic effort "medium", but Haiku 4.5 does not support it in the current runtime.';

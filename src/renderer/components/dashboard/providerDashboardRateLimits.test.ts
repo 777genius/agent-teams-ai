@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import {
   getAnthropicDashboardRateLimits,
   getCodexDashboardRateLimits,
+  getDashboardRateLimitsForProvider,
   shouldShowDashboardRateLimitSkeleton,
 } from './providerDashboardRateLimits';
 
@@ -195,6 +196,31 @@ describe('providerDashboardRateLimits', () => {
     ]);
   });
 
+  test('routes dashboard rate limits through the provider-specific formatter', () => {
+    const items = getDashboardRateLimitsForProvider(
+      createProvider({
+        authMethod: 'claude.ai',
+        subscriptionRateLimits: {
+          primary: {
+            usedPercent: 25,
+            windowDurationMins: 300,
+            resetsAt: null,
+          },
+          secondary: null,
+        },
+      })
+    );
+
+    expect(items).toEqual([
+      {
+        label: '5h left',
+        remaining: '75%',
+        resetsAt: 'reset unknown',
+        isDepleted: false,
+      },
+    ]);
+  });
+
   test('marks fully depleted limits when no quota remains', () => {
     const connection = createCodexConnection();
 
@@ -238,8 +264,43 @@ describe('providerDashboardRateLimits', () => {
         configuredAuthModes: {
           anthropic: 'oauth',
         },
+        hasRateLimits: false,
+        loading: true,
       })
     ).toBe(true);
+  });
+
+  test('keeps Anthropic rate limit skeletons visible while subscription limits are missing', () => {
+    expect(
+      shouldShowDashboardRateLimitSkeleton({
+        provider: createProvider({
+          authenticated: true,
+          authMethod: 'claude.ai',
+          subscriptionRateLimits: null,
+        }),
+        configuredAuthModes: {
+          anthropic: 'oauth',
+        },
+        hasRateLimits: false,
+        loading: true,
+      })
+    ).toBe(true);
+  });
+
+  test('hides rate limit skeletons when formatted limit data is present', () => {
+    expect(
+      shouldShowDashboardRateLimitSkeleton({
+        provider: createProvider({
+          authenticated: true,
+          authMethod: 'claude.ai',
+        }),
+        configuredAuthModes: {
+          anthropic: 'oauth',
+        },
+        hasRateLimits: true,
+        loading: true,
+      })
+    ).toBe(false);
   });
 
   test('hides Anthropic rate limit skeletons when API key mode is selected', () => {
@@ -258,6 +319,8 @@ describe('providerDashboardRateLimits', () => {
         configuredAuthModes: {
           anthropic: 'api_key',
         },
+        hasRateLimits: false,
+        loading: true,
       })
     ).toBe(false);
   });
@@ -276,6 +339,8 @@ describe('providerDashboardRateLimits', () => {
         configuredAuthModes: {
           codex: 'chatgpt',
         },
+        hasRateLimits: false,
+        loading: true,
       })
     ).toBe(true);
   });
@@ -300,6 +365,8 @@ describe('providerDashboardRateLimits', () => {
         configuredAuthModes: {
           codex: 'api_key',
         },
+        hasRateLimits: false,
+        loading: true,
       })
     ).toBe(false);
   });

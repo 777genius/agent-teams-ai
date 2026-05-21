@@ -44,6 +44,7 @@ import type {
 } from '../hooks/useRuntimeProviderManagement';
 import type {
   RuntimeProviderConnectionDto,
+  RuntimeProviderDefaultModelSourceDto,
   RuntimeProviderDefaultScopeDto,
   RuntimeProviderDirectoryEntryDto,
   RuntimeProviderModelDto,
@@ -140,12 +141,46 @@ function getProjectContextName(projectPath: string | null | undefined): string |
 
 function getDefaultScopeDescription(scope: RuntimeProviderDefaultScopeDto): string {
   return scope === 'all_projects'
-    ? 'Used by project contexts without their own OpenCode default. Local models are tested per project.'
-    : 'Applies only to the selected project context.';
+    ? 'Default for every project that does not have its own OpenCode override.'
+    : 'Override only the selected project. Running teams are not changed.';
 }
 
 function getDefaultScopeButtonLabel(scope: RuntimeProviderDefaultScopeDto): string {
   return scope === 'all_projects' ? 'Set all-projects default' : 'Set project default';
+}
+
+function getContextControlLabel(scope: RuntimeProviderDefaultScopeDto): string {
+  return scope === 'all_projects' ? 'Validation context' : 'Project override context';
+}
+
+function getContextControlHint(
+  scope: RuntimeProviderDefaultScopeDto,
+  projectPath: string | null | undefined
+): string {
+  const projectName = getProjectContextName(projectPath) ?? projectPath?.trim();
+  if (!projectName) {
+    return 'Select a project before testing local models or saving defaults.';
+  }
+  return scope === 'all_projects'
+    ? `Tests use ${projectName}. Default applies unless a project has an override.`
+    : `Saving overrides only ${projectName}.`;
+}
+
+function getDefaultModelSourceLabel(
+  source: RuntimeProviderDefaultModelSourceDto | null | undefined
+): string | null {
+  switch (source) {
+    case 'project':
+      return 'project override';
+    case 'all_projects':
+      return 'all projects';
+    case 'opencode_config':
+      return 'OpenCode config';
+    case 'fallback':
+      return 'fallback';
+    default:
+      return null;
+  }
 }
 
 function isDefaultForScope(
@@ -443,12 +478,12 @@ function RuntimeSummary({
   state,
   onRefresh,
   disabled,
-  projectPath,
-}: Pick<RuntimeProviderManagementPanelViewProps, 'state' | 'disabled' | 'projectPath'> & {
+}: Pick<RuntimeProviderManagementPanelViewProps, 'state' | 'disabled'> & {
   onRefresh: () => void;
 }): JSX.Element {
   const runtime = state.view?.runtime;
   const loadingWithoutRuntime = state.loading && !runtime;
+  const defaultSourceLabel = getDefaultModelSourceLabel(state.view?.defaultModelSource);
   return (
     <div
       className="rounded-lg border p-3"
@@ -482,19 +517,9 @@ function RuntimeSummary({
                 OpenCode default: {state.view.defaultModel}
               </span>
             ) : null}
-          </div>
-          <div
-            className="mt-1 truncate text-[11px]"
-            style={{ color: 'var(--color-text-muted)' }}
-            title={
-              projectPath
-                ? `Current project context: ${projectPath}`
-                : 'No project context selected; using the fallback OpenCode management context.'
-            }
-          >
-            {projectPath
-              ? `Project context: ${getProjectContextName(projectPath) ?? 'current project'}`
-              : 'No project context selected'}
+            {defaultSourceLabel ? (
+              <span style={{ color: 'var(--color-text-muted)' }}>Source: {defaultSourceLabel}</span>
+            ) : null}
           </div>
           {state.loading ? (
             <div
@@ -1208,6 +1233,28 @@ function getOpenCodeRouteUnavailableTitle(model: RuntimeProviderModelDto): strin
   return undefined;
 }
 
+function getOpenCodeModelSearchText(model: RuntimeProviderModelDto): string {
+  const recommendation = getOpenCodeTeamModelRecommendation(model.modelId);
+  return [
+    model.providerId,
+    model.modelId,
+    model.displayName,
+    model.sourceLabel,
+    model.accessKind,
+    model.routeKind,
+    model.proofState,
+    model.availability,
+    model.accessReason ?? '',
+    model.free ? 'free' : '',
+    model.default ? 'default' : '',
+    model.requiresExecutionProof ? 'needs test needs probe' : '',
+    recommendation?.label ?? '',
+    recommendation?.level ?? '',
+  ]
+    .join(' ')
+    .toLowerCase();
+}
+
 function ModelResult({
   result,
 }: {
@@ -1370,6 +1417,11 @@ function OpenCodeModelScopeControls({
     }
     return options;
   }, [projectPath, projects]);
+  const contextPlaceholder = loading
+    ? 'Loading contexts...'
+    : defaultScope === 'all_projects'
+      ? 'Select validation context'
+      : 'Select project context';
 
   return (
     <div
@@ -1381,13 +1433,13 @@ function OpenCodeModelScopeControls({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-medium text-[var(--color-text)]">OpenCode model scope</div>
+          <div className="text-sm font-medium text-[var(--color-text)]">OpenCode defaults</div>
           <div className="mt-1 text-xs text-[var(--color-text-muted)]">
             {getDefaultScopeDescription(defaultScope)}
           </div>
         </div>
         <div className="inline-flex shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-          {(['project', 'all_projects'] as const).map((scope) => (
+          {(['all_projects', 'project'] as const).map((scope) => (
             <button
               key={scope}
               type="button"
@@ -1404,9 +1456,11 @@ function OpenCodeModelScopeControls({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <div className="mt-3">
         <div className="min-w-0">
-          <Label className="text-xs text-[var(--color-text-secondary)]">Project context</Label>
+          <Label className="text-xs text-[var(--color-text-secondary)]">
+            {getContextControlLabel(defaultScope)}
+          </Label>
           <div className="mt-1">
             <Select
               value={selectedValue}
@@ -1416,12 +1470,10 @@ function OpenCodeModelScopeControls({
               }}
             >
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue
-                  placeholder={loading ? 'Loading project contexts...' : 'Select project context'}
-                />
+                <SelectValue placeholder={contextPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_PROJECT_CONTEXT_VALUE}>Select project context</SelectItem>
+                <SelectItem value={NO_PROJECT_CONTEXT_VALUE}>{contextPlaceholder}</SelectItem>
                 {projectOptions.map((project) => (
                   <SelectItem key={project.path} value={project.path}>
                     {project.name || getProjectContextName(project.path) || project.path}
@@ -1432,12 +1484,10 @@ function OpenCodeModelScopeControls({
           </div>
         </div>
         <div
-          className="min-w-0 truncate text-[11px] text-[var(--color-text-muted)] md:max-w-[280px]"
+          className="mt-1 text-[11px] leading-4 text-[var(--color-text-muted)]"
           title={projectPath?.trim() || undefined}
         >
-          {projectPath
-            ? `Current context: ${getProjectContextName(projectPath) ?? projectPath}`
-            : 'Select a project before testing or saving OpenCode defaults.'}
+          {getContextControlHint(defaultScope, projectPath)}
         </div>
       </div>
 
@@ -1463,7 +1513,16 @@ function ConfiguredOpenCodeModelsPanel({
   readonly defaultScope: RuntimeProviderDefaultScopeDto;
   readonly hasProjectContext: boolean;
 }): JSX.Element | null {
-  const models = state.view?.configuredModels ?? [];
+  const models = useMemo(() => state.view?.configuredModels ?? [], [state.view?.configuredModels]);
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleModels = useMemo(
+    () =>
+      normalizedQuery
+        ? models.filter((model) => getOpenCodeModelSearchText(model).includes(normalizedQuery))
+        : models,
+    [models, normalizedQuery]
+  );
   if (models.length === 0) {
     return null;
   }
@@ -1486,10 +1545,25 @@ function ConfiguredOpenCodeModelsPanel({
             current default.
           </div>
         </div>
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search model routes"
+            className="h-9 pl-10 pr-3 text-sm leading-5"
+            style={{ paddingLeft: 40 }}
+          />
+        </div>
       </div>
 
       <div className="mt-3 space-y-2">
-        {models.map((model) => {
+        {visibleModels.length === 0 ? (
+          <div className="rounded-md border border-dashed border-white/10 px-3 py-3 text-sm text-[var(--color-text-muted)]">
+            No OpenCode model routes match “{query.trim()}”.
+          </div>
+        ) : null}
+        {visibleModels.map((model) => {
           const selected = state.selectedModelId === model.modelId;
           const testing = state.testingModelIds.includes(model.modelId);
           const savingDefault = state.savingDefaultModelId === model.modelId;
@@ -1729,7 +1803,7 @@ export function RuntimeProviderManagementPanelView({
   onProjectContextChange,
 }: RuntimeProviderManagementPanelViewProps): JSX.Element {
   const [selectedSection, setSelectedSection] = useState<OpenCodeSettingsSection | null>(null);
-  const [defaultScope, setDefaultScope] = useState<RuntimeProviderDefaultScopeDto>('project');
+  const [defaultScope, setDefaultScope] = useState<RuntimeProviderDefaultScopeDto>('all_projects');
   const providerQuery = state.providerQuery.trim().toLowerCase();
   const filteredProviders = providerQuery
     ? state.providers.filter((provider) =>
@@ -1759,17 +1833,14 @@ export function RuntimeProviderManagementPanelView({
         ? 'OpenCode provider catalog'
         : 'OpenCode providers';
   const launchableModelCount = state.view?.configuredModels?.length ?? 0;
-  const activeSection = selectedSection ?? (launchableModelCount > 0 ? 'models' : 'providers');
+  const modelsLoading = state.loading && launchableModelCount === 0;
+  const activeSection =
+    selectedSection ?? (modelsLoading || launchableModelCount > 0 ? 'models' : 'providers');
   const hasProjectContext = Boolean(projectPath?.trim());
 
   return (
     <div className="space-y-3">
-      <RuntimeSummary
-        state={state}
-        disabled={disabled}
-        projectPath={projectPath}
-        onRefresh={() => void actions.refresh()}
-      />
+      <RuntimeSummary state={state} disabled={disabled} onRefresh={() => void actions.refresh()} />
 
       {state.error ? (
         <div
@@ -1847,7 +1918,22 @@ export function RuntimeProviderManagementPanelView({
             defaultScope={defaultScope}
             hasProjectContext={hasProjectContext}
           />
-          {launchableModelCount === 0 ? (
+          {modelsLoading ? (
+            <div
+              className="rounded-lg border p-3"
+              style={{
+                borderColor: 'var(--color-border-subtle)',
+                backgroundColor: 'rgba(255,255,255,0.02)',
+              }}
+            >
+              <div className="mb-3 flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                <Loader2 className="size-3.5 animate-spin" />
+                Loading OpenCode model routes...
+              </div>
+              <RuntimeProviderModelLoadingSkeleton />
+            </div>
+          ) : null}
+          {!modelsLoading && launchableModelCount === 0 ? (
             <div className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[var(--color-text-muted)]">
               No launchable OpenCode model routes were reported yet. Configure a local route in
               OpenCode or use the Providers tab to inspect catalog providers.

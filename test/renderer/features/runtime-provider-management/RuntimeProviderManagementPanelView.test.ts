@@ -113,6 +113,16 @@ function createActions(): RuntimeProviderManagementActions {
   };
 }
 
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  if (!setter) {
+    throw new Error('HTMLInputElement value setter not found');
+  }
+
+  setter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 describe('RuntimeProviderManagementPanelView', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -146,17 +156,21 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.textContent).toContain('Checking runtime');
     expect(host.textContent).toContain('Loading managed OpenCode runtime');
-    expect(host.textContent).toContain('Loading OpenCode providers');
-    expect(host.querySelector('[data-testid="runtime-provider-loading-skeleton"]')).not.toBeNull();
-    expect(host.querySelectorAll('.skeleton-shimmer').length).toBeGreaterThanOrEqual(10);
+    expect(host.textContent).toContain('Loading OpenCode model routes');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).not.toBeNull();
+    expect(host.querySelectorAll('.skeleton-shimmer').length).toBeGreaterThanOrEqual(8);
     expect(host.textContent).toContain('Checking...');
     const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Checking...')
     );
     expect(refreshButton?.disabled).toBe(true);
+
+    expect(host.textContent).not.toContain('No launchable OpenCode model routes were reported yet');
   });
 
-  it('shows the project as a compact operation context, not a selected global profile', async () => {
+  it('keeps project context out of the runtime summary and labels it as validation context', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -164,7 +178,27 @@ describe('RuntimeProviderManagementPanelView', () => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState(),
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [
+                {
+                  providerId: 'llama.cpp',
+                  modelId: 'llama.cpp/qwen-test:0.5b',
+                  displayName: 'qwen-test:0.5b',
+                  sourceLabel: 'llama.cpp',
+                  free: false,
+                  default: false,
+                  availability: 'available',
+                  accessKind: 'verified',
+                  routeKind: 'configured_local',
+                  proofState: 'verified',
+                  requiresExecutionProof: false,
+                  accessReason: null,
+                },
+              ],
+            },
+          }),
           actions: createActions(),
           disabled: false,
           projectPath: '/Users/belief/dev/projects/321',
@@ -173,12 +207,13 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Project context: 321');
+    expect(host.textContent).toContain('OpenCode defaults');
+    expect(host.textContent).toContain('Validation context');
+    expect(host.textContent).toContain('Tests use 321. Default applies unless');
+    expect(host.textContent).not.toContain('Project context: 321');
+    expect(host.textContent).not.toContain('Current context: 321');
     expect(host.textContent).not.toContain('Managing selected project profile');
     expect(host.textContent).not.toContain('/Users/belief/dev/projects/321');
-    expect(
-      host.querySelector('[title="Current project context: /Users/belief/dev/projects/321"]')
-    ).not.toBeNull();
   });
 
   it('renders configured OpenCode model routes with local proof actions', async () => {
@@ -237,7 +272,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
     await act(async () => {
-      buttons.find((button) => button.textContent?.includes('Set project default'))?.click();
+      buttons.find((button) => button.textContent?.includes('Set all-projects default'))?.click();
       await Promise.resolve();
     });
 
@@ -246,7 +281,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.setDefaultModel).toHaveBeenCalledWith(
       'llama.cpp',
       'llama.cpp/qwen-test:0.5b',
-      'project'
+      'all_projects'
     );
   });
 
@@ -289,23 +324,94 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await act(async () => {
       Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent?.includes('All projects'))
-        ?.click();
-      await Promise.resolve();
-    });
-    await act(async () => {
-      Array.from(host.querySelectorAll('button'))
         .find((button) => button.textContent?.includes('Set all-projects default'))
         ?.click();
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Used by project contexts without their own OpenCode default');
+    expect(host.textContent).toContain(
+      'Default for every project that does not have its own OpenCode override'
+    );
+    expect(host.textContent).toContain('Validation context');
     expect(actions.setDefaultModel).toHaveBeenCalledWith(
       'llama.cpp',
       'llama.cpp/qwen-test:0.5b',
       'all_projects'
     );
+  });
+
+  it('filters launchable OpenCode model routes by route text', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const localModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'verified' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+    const freeModel = {
+      providerId: 'opencode',
+      modelId: 'opencode/big-pickle',
+      displayName: 'big-pickle',
+      sourceLabel: 'OpenCode',
+      free: true,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'builtin_free' as const,
+      routeKind: 'builtin_free' as const,
+      proofState: 'not_required' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [localModel, freeModel],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/tmp/project-a',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const searchInput = host.querySelector<HTMLInputElement>(
+      'input[placeholder="Search model routes"]'
+    );
+    expect(searchInput).not.toBeNull();
+    expect(host.textContent).toContain('qwen-test:0.5b');
+    expect(host.textContent).toContain('big-pickle');
+
+    await act(async () => {
+      setInputValue(searchInput!, 'pickle');
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('qwen-test:0.5b');
+    expect(host.textContent).toContain('big-pickle');
+
+    await act(async () => {
+      setInputValue(searchInput!, 'missing-route');
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('No OpenCode model routes match');
+    expect(host.textContent).toContain('missing-route');
   });
 
   it('opens launchable routes first when they exist and keeps providers in a separate tab', async () => {
