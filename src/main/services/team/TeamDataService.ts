@@ -2,12 +2,7 @@ import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
-import {
-  AGENT_BLOCK_CLOSE,
-  AGENT_BLOCK_OPEN,
-  stripAgentBlocks,
-  wrapAgentBlock,
-} from '@shared/constants/agentBlocks';
+import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
@@ -2053,11 +2048,14 @@ export class TeamDataService {
             parts.push(`\nDetails:\n${task.description.trim()}`);
           }
           parts.push(
-            `\n${AGENT_BLOCK_OPEN}`,
-            `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-            `Update task status using the board MCP tools:`,
-            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
-            AGENT_BLOCK_CLOSE
+            '',
+            wrapAgentBlock(
+              [
+                `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
+                `Update task status using the board MCP tools:`,
+                `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+              ].join('\n')
+            )
           );
           await this.sendMessage(teamName, {
             member: task.owner,

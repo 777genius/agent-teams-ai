@@ -94,10 +94,9 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
-import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN, wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
-import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import {
   extractFlagsFromHelp,
   extractUserFlags,
@@ -111,7 +110,6 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import {
   buildStandaloneSlashCommandMeta,
   parseStandaloneSlashCommand,
@@ -133,7 +131,6 @@ import {
 import {
   getAutoResumeService,
   initializeAutoResumeService,
-  planRateLimitAutoResume,
 } from '../services/team/AutoResumeService';
 import {
   cloneLaunchIoGovernorPayload,
@@ -156,6 +153,7 @@ import {
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
+import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import {
   validateFromField,
   validateMemberName,
@@ -301,14 +299,6 @@ function validateTeamGetDataOptions(
   };
 }
 
-/**
- * In-memory set of rate-limit message keys already processed.
- * Independent of NotificationManager storage — survives notification deletion/pruning.
- * Without this, deleted rate-limit notifications would re-appear on next getData() scan.
- */
-const seenRateLimitKeys = new Set<string>();
-const SEEN_RATE_LIMIT_KEYS_MAX = 500;
-
 async function withTimeoutValue<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -440,178 +430,6 @@ function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string |
       'After that visible acknowledgement, continue with delegation/orchestration in the same turn.',
     ].join('\n')
   );
-}
-
-/**
- * In-memory set of API error message keys already processed.
- * Independent of NotificationManager storage — survives notification deletion/pruning.
- */
-const seenApiErrorKeys = new Set<string>();
-const SEEN_API_ERROR_KEYS_MAX = 500;
-
-function formatNotificationClockTime(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
-}
-
-function buildRateLimitNotificationBody(plan: ReturnType<typeof planRateLimitAutoResume>): string {
-  if (plan.kind === 'scheduled') {
-    return `Auto-resume scheduled at ${formatNotificationClockTime(new Date(plan.fireAtMs))}`;
-  }
-  return 'Manual restart needed';
-}
-
-/**
- * Check messages for rate limit indicators and fire notifications for new ones.
- * Uses both in-memory seenRateLimitKeys (to prevent resurrection after deletion)
- * and NotificationManager dedupeKey (to prevent storage duplicates).
- */
-function checkRateLimitMessages(
-  messages: readonly {
-    messageId?: string;
-    from: string;
-    text: string;
-    timestamp: string;
-    to?: string;
-    source?: string;
-    leadSessionId?: string;
-  }[],
-  teamName: string,
-  teamDisplayName: string,
-  projectPath?: string,
-  teamIsAlive = true,
-  currentLeadSessionId: string | null = null
-): void {
-  const observedAt = new Date();
-  const autoResumeEnabled =
-    ConfigManager.getInstance().getConfig().notifications.autoResumeOnRateLimit;
-
-  for (const msg of messages) {
-    if (msg.from === 'user') continue;
-    if (!isRateLimitMessage(msg.text)) continue;
-
-    const rawKey = msg.messageId ?? `${msg.from}:${msg.timestamp}`;
-    const dedupeKey = `rate-limit:${teamName}:${rawKey}`;
-    const isLeadAutoResumeCandidate =
-      !msg.to && (msg.source === 'lead_process' || msg.source === 'lead_session');
-    const autoResumeSessionMatches =
-      msg.source !== 'lead_session' ||
-      (Boolean(currentLeadSessionId) && msg.leadSessionId === currentLeadSessionId);
-    const autoResumePlan = planRateLimitAutoResume({
-      enabled: autoResumeEnabled,
-      canAutoResume: teamIsAlive && isLeadAutoResumeCandidate && autoResumeSessionMatches,
-      messageText: msg.text,
-      observedAt,
-      messageTimestamp: new Date(msg.timestamp),
-    });
-
-    // In-memory guard: prevents resurrection after user deletes the notification.
-    if (!seenRateLimitKeys.has(dedupeKey)) {
-      seenRateLimitKeys.add(dedupeKey);
-
-      // Evict oldest entries to prevent unbounded growth
-      if (seenRateLimitKeys.size > SEEN_RATE_LIMIT_KEYS_MAX) {
-        const first = seenRateLimitKeys.values().next().value;
-        if (first) seenRateLimitKeys.delete(first);
-      }
-
-      void NotificationManager.getInstance()
-        .addTeamNotification({
-          teamEventType: 'rate_limit',
-          teamName,
-          teamDisplayName,
-          from: msg.from,
-          summary: 'Rate limit',
-          body: buildRateLimitNotificationBody(autoResumePlan),
-          dedupeKey,
-          target: { kind: 'member', teamName, memberName: msg.from, focus: 'logs' },
-          projectPath,
-        })
-        .catch(() => undefined);
-    }
-
-    // Only schedule auto-resume while a live team run currently exists.
-    // Persisted history for an offline/stopped team may still contain the old
-    // rate-limit message, but arming a new timer from that stale history would
-    // resurrect the nudge into a later manual restart.
-    if (autoResumePlan.kind === 'scheduled') {
-      // Only let persisted lead_session history rebuild auto-resume when it
-      // clearly belongs to the currently running lead session. Otherwise an old
-      // rate-limit from a previous manual run can resurrect into a newer restart.
-      // Pass the original message timestamp so relative reset windows survive restarts
-      // and old history does not rebuild a fresh auto-resume timer from "now".
-      getAutoResumeService().handleRateLimitMessage(
-        teamName,
-        msg.text,
-        observedAt,
-        new Date(msg.timestamp)
-      );
-    }
-  }
-}
-
-/**
- * Check messages for API errors (e.g. "API Error: 429 ...") and fire OS notifications.
- * Mirrors the rate-limit approach: in-memory dedup + NotificationManager dedupeKey.
- * Skips rate-limit messages (they have their own notification path).
- */
-function checkApiErrorMessages(
-  messages: readonly { messageId?: string; from: string; text: string; timestamp: string }[],
-  teamName: string,
-  teamDisplayName: string,
-  projectPath?: string
-): void {
-  for (const msg of messages) {
-    if (msg.from === 'user') continue;
-    if (!isApiErrorMessage(msg.text)) continue;
-    // Don't double-notify if it's also a rate limit message
-    if (isRateLimitMessage(msg.text)) continue;
-
-    const rawKey = msg.messageId ?? `${msg.from}:${msg.timestamp}`;
-    const dedupeKey = `api-error:${teamName}:${rawKey}`;
-
-    if (seenApiErrorKeys.has(dedupeKey)) continue;
-    seenApiErrorKeys.add(dedupeKey);
-
-    if (seenApiErrorKeys.size > SEEN_API_ERROR_KEYS_MAX) {
-      const first = seenApiErrorKeys.values().next().value;
-      if (first) seenApiErrorKeys.delete(first);
-    }
-
-    // Extract status code for summary
-    const statusMatch = /^API Error:\s*(\d{3})/.exec(msg.text);
-    const statusCode = statusMatch?.[1] ?? '???';
-
-    void NotificationManager.getInstance()
-      .addTeamNotification({
-        teamEventType: 'api_error',
-        teamName,
-        teamDisplayName,
-        from: msg.from,
-        summary: `API Error ${statusCode}`,
-        body: 'Manual restart needed',
-        dedupeKey,
-        target: { kind: 'member', teamName, memberName: msg.from, focus: 'logs' },
-        projectPath,
-      })
-      .catch(() => undefined);
-  }
-}
-
-function scanTeamMessageNotifications(
-  messages: readonly { messageId?: string; from: string; text: string; timestamp: string }[],
-  teamName: string,
-  teamDisplayName: string,
-  projectPath?: string
-): void {
-  if (messages.length === 0) {
-    return;
-  }
-  checkRateLimitMessages(messages, teamName, teamDisplayName, projectPath);
-  checkApiErrorMessages(messages, teamName, teamDisplayName, projectPath);
 }
 
 let teamDataService: TeamDataService | null = null;
@@ -1145,17 +963,24 @@ async function handleGetData(
 
   if (live.length === 0) {
     if (durableMessages.length > 0) {
-      checkRateLimitMessages(
-        durableMessages,
-        tn,
-        displayName,
+      teamMessageNotificationScanner.checkRateLimitMessages(durableMessages, {
+        teamName: tn,
+        teamDisplayName: displayName,
         projectPath,
-        isAlive,
-        currentLeadSessionId
-      );
-      checkApiErrorMessages(durableMessages, tn, displayName, projectPath);
+        teamIsAlive: isAlive,
+        currentLeadSessionId,
+      });
+      teamMessageNotificationScanner.checkApiErrorMessages(durableMessages, {
+        teamName: tn,
+        teamDisplayName: displayName,
+        projectPath,
+      });
     } else {
-      scanTeamMessageNotifications(live, tn, displayName, projectPath);
+      teamMessageNotificationScanner.scan(live, {
+        teamName: tn,
+        teamDisplayName: displayName,
+        projectPath,
+      });
     }
     return { success: true, data: { ...data, isAlive } };
   }
@@ -1177,8 +1002,18 @@ async function handleGetData(
     }
   }
 
-  checkRateLimitMessages(merged, tn, displayName, projectPath, isAlive, currentLeadSessionId);
-  checkApiErrorMessages(merged, tn, displayName, projectPath);
+  teamMessageNotificationScanner.checkRateLimitMessages(merged, {
+    teamName: tn,
+    teamDisplayName: displayName,
+    projectPath,
+    teamIsAlive: isAlive,
+    currentLeadSessionId,
+  });
+  teamMessageNotificationScanner.checkApiErrorMessages(merged, {
+    teamName: tn,
+    teamDisplayName: displayName,
+    projectPath,
+  });
   return { success: true, data: { ...data, isAlive } };
 }
 
@@ -2786,27 +2621,27 @@ function buildMessageDeliveryText(
           'Do NOT answer only with normal assistant text because that will not appear in the UI message thread.',
         ];
     hiddenBlocks.push(
-      [
-        AGENT_BLOCK_OPEN,
-        `You received a direct message from ${senderDescriptor} via the UI.`,
-        ...replyInstructionLines,
-        `Please reply back to recipient "${replyRecipient}" with a short, human-readable answer.`,
-        'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
-        ...(canUseAgentTeamsMessageSend
-          ? [
-              'If neither Agent Teams MCP message_send tool name is available before any visible-message tool attempt, write exactly the concise reply text as normal assistant text so the runtime can relay it.',
-            ]
-          : []),
-        ...(isUserReplyRecipient
-          ? [
-              'CRITICAL: If the user asks you to check with the lead or another teammate before you can fully answer, FIRST send a short acknowledgement to "user" so the human sees you started (for example: "Принял, сейчас уточню и вернусь с ответом.").',
-              'Only after that first acknowledgement may you message the lead or another teammate.',
-              'After you get the needed information, send the final answer back to "user".',
-              'Do NOT stay silent while you go ask someone else.',
-            ]
-          : []),
-        AGENT_BLOCK_CLOSE,
-      ].join('\n')
+      wrapAgentBlock(
+        [
+          `You received a direct message from ${senderDescriptor} via the UI.`,
+          ...replyInstructionLines,
+          `Please reply back to recipient "${replyRecipient}" with a short, human-readable answer.`,
+          'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
+          ...(canUseAgentTeamsMessageSend
+            ? [
+                'If neither Agent Teams MCP message_send tool name is available before any visible-message tool attempt, write exactly the concise reply text as normal assistant text so the runtime can relay it.',
+              ]
+            : []),
+          ...(isUserReplyRecipient
+            ? [
+                'CRITICAL: If the user asks you to check with the lead or another teammate before you can fully answer, FIRST send a short acknowledgement to "user" so the human sees you started (for example: "Принял, сейчас уточню и вернусь с ответом.").',
+                'Only after that first acknowledgement may you message the lead or another teammate.',
+                'After you get the needed information, send the final answer back to "user".',
+                'Do NOT stay silent while you go ask someone else.',
+              ]
+            : []),
+        ].join('\n')
+      )
     );
   }
 
@@ -2844,12 +2679,11 @@ async function handleGetMessagesPage(
           .catch(() => ({ displayName: teamName }));
       void notificationContextPromise
         .then((notificationContext) => {
-          scanTeamMessageNotifications(
-            messagesPage.messages,
+          teamMessageNotificationScanner.scan(messagesPage.messages, {
             teamName,
-            notificationContext.displayName,
-            notificationContext.projectPath
-          );
+            teamDisplayName: notificationContext.displayName,
+            projectPath: notificationContext.projectPath,
+          });
         })
         .catch((error: unknown) => {
           logger.debug(
@@ -3062,10 +2896,12 @@ async function handleSendMessage(
             `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
             ...(rosterContextBlock ? [rosterContextBlock] : []),
             ...(delegateAckBlock ? [delegateAckBlock] : []),
-            AGENT_BLOCK_OPEN,
-            `MessageId: ${preGeneratedMessageId}`,
-            `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
-            AGENT_BLOCK_CLOSE,
+            wrapAgentBlock(
+              [
+                `MessageId: ${preGeneratedMessageId}`,
+                `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
+              ].join('\n')
+            ),
             ``,
             `Message from user:`,
             buildMessageDeliveryText(payload.text!, {
