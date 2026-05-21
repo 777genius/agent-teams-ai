@@ -75,7 +75,9 @@ interface ActiveSessionFile {
 
 type RecursiveWatcherType = 'projects' | 'todos' | 'teams' | 'tasks';
 type PollingWatcherType = 'teams' | 'tasks';
-type CloseableWatcher = { close: () => void | Promise<void> };
+interface CloseableWatcher {
+  close: () => void | Promise<void>;
+}
 
 export class FileWatcher extends EventEmitter {
   private projectsWatcher: fs.FSWatcher | null = null;
