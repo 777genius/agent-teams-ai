@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { GlobalTask } from '../../../../src/shared/types';
+import type { GlobalTask, TeamSummary } from '../../../../src/shared/types';
 
 interface StoreState {
   globalTasks: GlobalTask[];
@@ -19,7 +19,7 @@ interface StoreState {
     totalSessions: number;
     worktrees: { path: string }[];
   }[];
-  teams: { teamName: string; displayName: string }[];
+  teams: (Pick<TeamSummary, 'teamName' | 'displayName'> & Partial<TeamSummary>)[];
   provisioningRuns: Record<string, { state: string; runId: string; updatedAt: string }>;
   currentProvisioningRunIdByTeam: Record<string, string | null>;
   leadActivityByTeam: Record<string, 'active' | 'idle' | 'offline'>;
@@ -317,6 +317,41 @@ describe('GlobalTaskList project grouping', () => {
       await flushMicrotasks();
     });
 
+    expect(
+      host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
+    ).toBe('true');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('marks task cards as offline when the owning team has a partial launch failure', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const aliveList = vi.fn(() => Promise.resolve([]));
+    setElectronApiForTest({ teams: { aliveList } });
+    storeState.globalTasks = [makeTask(1)];
+    storeState.teams = [
+      {
+        teamName: 'alpha-team',
+        displayName: 'Alpha Team',
+        partialLaunchFailure: true,
+        teamLaunchState: 'partial_failure',
+      },
+    ];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(aliveList).toHaveBeenCalled();
     expect(
       host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
     ).toBe('true');

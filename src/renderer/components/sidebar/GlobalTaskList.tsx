@@ -18,7 +18,7 @@ import {
   NO_PROJECT_KEY,
   sortTasksByFreshness,
 } from '@renderer/utils/taskGrouping';
-import { resolveTeamStatus } from '@renderer/utils/teamListStatus';
+import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import {
   Archive,
@@ -361,7 +361,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
           getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
           leadActivityByTeam
         );
-        if (status === 'offline') {
+        if (!isTeamListStatusRunning(status)) {
           result.add(team.teamName);
         }
       }
