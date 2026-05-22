@@ -687,17 +687,53 @@ jobs:
             ["agent-teams-ai.pacman"]="agent-teams-ai-${VERSION}.pacman"
           )
 
-          for ALIAS_NAME in "${!STABLE_ALIASES[@]}"; do
-            VERSIONED_NAME="${STABLE_ALIASES[$ALIAS_NAME]}"
-            echo "Uploading stable alias: ${ALIAS_NAME} -> ${VERSIONED_NAME}"
+          declare -A LEGACY_STABLE_ALIASES=(
+            ["Claude-Agent-Teams-UI-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
+            ["Claude-Agent-Teams-UI-x64.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
+            ["Claude-Agent-Teams-UI-Setup.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
+            ["Claude-Agent-Teams-UI.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
+            ["Claude-Agent-Teams-UI-amd64.deb"]="agent-teams-ai_${VERSION}_amd64.deb"
+            ["Claude-Agent-Teams-UI-x86_64.rpm"]="agent-teams-ai-${VERSION}.x86_64.rpm"
+            ["Claude-Agent-Teams-UI.pacman"]="agent-teams-ai-${VERSION}.pacman"
+          )
+
+          declare -A LEGACY_UPDATER_ALIASES=(
+            ["Claude.Agent.Teams.UI-${VERSION}-arm64-mac.zip"]="Agent.Teams.AI-${VERSION}-arm64-mac.zip"
+            ["Claude.Agent.Teams.UI-${VERSION}-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
+            ["Claude.Agent.Teams.UI-${VERSION}-mac.zip"]="Agent.Teams.AI-${VERSION}-x64-mac.zip"
+            ["Claude.Agent.Teams.UI-${VERSION}.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
+            ["Claude.Agent.Teams.UI.Setup.${VERSION}.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
+            ["Claude.Agent.Teams.UI-${VERSION}.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
+          )
+
+          upload_aliases() {
+            local label="$1"
+            local -n aliases="$2"
+
+            for ALIAS_NAME in "${!aliases[@]}"; do
+              VERSIONED_NAME="${aliases[$ALIAS_NAME]}"
+              echo "Uploading ${label} alias: ${ALIAS_NAME} -> ${VERSIONED_NAME}"
+              download_once "${VERSIONED_NAME}"
+              cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${ALIAS_NAME}"
+              gh release upload "${TAG}" "${TMP_DIR}/${ALIAS_NAME}" --repo "$REPO" --clobber
+            done
+          }
+
+          download_once() {
+            local name="$1"
+            if [[ -f "${TMP_DIR}/${name}" ]]; then
+              return
+            fi
             gh release download "${TAG}" \
               --repo "$REPO" \
-              --pattern "${VERSIONED_NAME}" \
+              --pattern "${name}" \
               --dir "$TMP_DIR" \
               --clobber
-            cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${ALIAS_NAME}"
-            gh release upload "${TAG}" "${TMP_DIR}/${ALIAS_NAME}" --repo "$REPO" --clobber
-          done
+          }
+
+          upload_aliases "stable" STABLE_ALIASES
+          upload_aliases "legacy stable" LEGACY_STABLE_ALIASES
+          upload_aliases "legacy updater" LEGACY_UPDATER_ALIASES
 
       - name: Publish canonical updater metadata
         env:
@@ -761,26 +797,37 @@ jobs:
           EOF
 
           # Canonical macOS feed.
-          # electron-updater on GitHub still consumes a single latest-mac.yml, so we
-          # publish the Apple Silicon feed here and suppress Intel auto-update in-app
-          # until we switch to universal packaging or an arch-aware provider.
+          # Include both architectures so legacy Intel builds can see the
+          # update without downloading the Apple Silicon zip.
           download_asset "Agent.Teams.AI-${VERSION}-arm64-mac.zip"
           download_asset "Agent.Teams.AI-${VERSION}-arm64.dmg"
-          MAC_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
-          MAC_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
-          MAC_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64.dmg")"
-          MAC_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          download_asset "Agent.Teams.AI-${VERSION}-x64-mac.zip"
+          download_asset "Agent.Teams.AI-${VERSION}-x64.dmg"
+          MAC_ARM64_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
+          MAC_ARM64_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
+          MAC_ARM64_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          MAC_ARM64_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          MAC_X64_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-x64-mac.zip")"
+          MAC_X64_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-x64-mac.zip")"
+          MAC_X64_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-x64.dmg")"
+          MAC_X64_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-x64.dmg")"
           cat > latest-mac.yml <<EOF
           version: ${VERSION}
           files:
             - url: Agent.Teams.AI-${VERSION}-arm64-mac.zip
-              sha512: ${MAC_ZIP_SHA}
-              size: ${MAC_ZIP_SIZE}
+              sha512: ${MAC_ARM64_ZIP_SHA}
+              size: ${MAC_ARM64_ZIP_SIZE}
             - url: Agent.Teams.AI-${VERSION}-arm64.dmg
-              sha512: ${MAC_DMG_SHA}
-              size: ${MAC_DMG_SIZE}
+              sha512: ${MAC_ARM64_DMG_SHA}
+              size: ${MAC_ARM64_DMG_SIZE}
+            - url: Agent.Teams.AI-${VERSION}-x64-mac.zip
+              sha512: ${MAC_X64_ZIP_SHA}
+              size: ${MAC_X64_ZIP_SIZE}
+            - url: Agent.Teams.AI-${VERSION}-x64.dmg
+              sha512: ${MAC_X64_DMG_SHA}
+              size: ${MAC_X64_DMG_SIZE}
           path: Agent.Teams.AI-${VERSION}-arm64-mac.zip
-          sha512: ${MAC_ZIP_SHA}
+          sha512: ${MAC_ARM64_ZIP_SHA}
           releaseDate: '${RELEASE_DATE}'
           EOF
 
