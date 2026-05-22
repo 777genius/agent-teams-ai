@@ -59,6 +59,12 @@ import {
   recordMemberSpawnStatusesIpcRetryBackoff,
 } from '../team/teamMemberSpawnStatusBackoff';
 import {
+  clearAllMemberSpawnUiEqualLastWarns,
+  clearMemberSpawnUiEqualLastWarn,
+  hasMemberSpawnUiEqualLastWarn,
+  shouldLogMemberSpawnUiEqualSuppressed,
+} from '../team/teamMemberSpawnUiEqualWarningThrottle';
+import {
   areInboxMessageArraysEquivalent,
   clearTeamMessageSelectorCaches,
   clearTeamMessageSelectorCachesForTeam,
@@ -184,7 +190,6 @@ const teamRefreshBurstDiagnostics = new Map<
   string,
   { windowStartedAt: number; count: number; lastWarnAt: number }
 >();
-const memberSpawnUiEqualLastWarnAtByTeam = new Map<string, number>();
 interface RefreshTeamDataOptions {
   withDedup?: boolean;
 }
@@ -249,7 +254,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   clearAllTeamLocalStateEpochs();
   clearAllMemberSpawnStatusesIpcBackoffs();
   teamRefreshBurstDiagnostics.clear();
-  memberSpawnUiEqualLastWarnAtByTeam.clear();
+  clearAllMemberSpawnUiEqualLastWarns();
   resolvedMembersSelectorCache.clear();
   resolvedMemberSelectorCache.clear();
   clearTeamMessageSelectorCaches();
@@ -282,7 +287,7 @@ function clearTeamScopedTransientState(teamName: string): void {
   clearLastResolvedTeamDataRefreshAt(teamName);
   clearMemberSpawnStatusesIpcBackoff(teamName);
   teamRefreshBurstDiagnostics.delete(teamName);
-  memberSpawnUiEqualLastWarnAtByTeam.delete(teamName);
+  clearMemberSpawnUiEqualLastWarn(teamName);
   clearTeamScopedSelectorCaches(teamName);
 }
 
@@ -668,7 +673,7 @@ export function __getTeamScopedTransientStateForTests(teamName: string): {
     hasCurrentLocalStateEpoch: hasTeamLocalStateEpoch(teamName),
     hasMemberSpawnStatusesIpcBackoff: hasMemberSpawnStatusesIpcBackoff(teamName),
     hasTeamRefreshBurstDiagnostics: teamRefreshBurstDiagnostics.has(teamName),
-    hasMemberSpawnUiEqualLastWarn: memberSpawnUiEqualLastWarnAtByTeam.has(teamName),
+    hasMemberSpawnUiEqualLastWarn: hasMemberSpawnUiEqualLastWarn(teamName),
   };
 }
 
@@ -957,12 +962,14 @@ function maybeLogMemberSpawnUiEqualSuppressed(
   teamName: string,
   runId: string | null | undefined
 ): void {
-  const now = Date.now();
-  const lastWarnAt = memberSpawnUiEqualLastWarnAtByTeam.get(teamName) ?? 0;
-  if (now - lastWarnAt < MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS) {
+  if (
+    !shouldLogMemberSpawnUiEqualSuppressed(
+      teamName,
+      MEMBER_SPAWN_UI_EQUAL_WARN_THROTTLE_MS
+    )
+  ) {
     return;
   }
-  memberSpawnUiEqualLastWarnAtByTeam.set(teamName, now);
   logger.debug(
     `[perf] member-spawn snapshot suppressed team=${teamName} runId=${runId ?? 'none'} reason=member-spawn-ui-equal`
   );
