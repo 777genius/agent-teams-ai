@@ -2,9 +2,17 @@ import React from 'react';
 
 import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
-import { AlertTriangle, CheckCircle2, Loader2, SlidersHorizontal } from 'lucide-react';
+import {
+  isOpenCodeWindowsAccessDeniedDiagnostic,
+  OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+} from '@shared/utils/openCodeWindowsAccessDenied';
+import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, SlidersHorizontal } from 'lucide-react';
 
-import type { CliProviderStatus, TeamProviderId } from '@shared/types';
+import type {
+  CliProviderStatus,
+  TeamProviderId,
+  TeamProvisioningSupportDiagnostic,
+} from '@shared/types';
 
 export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
 export type ProvisioningPrepareState = 'idle' | 'loading' | 'ready' | 'failed';
@@ -14,6 +22,7 @@ export interface ProvisioningProviderCheck {
   status: ProvisioningProviderCheckStatus;
   backendSummary?: string | null;
   details: string[];
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
 export function getProvisioningProviderLabel(providerId: TeamProviderId): string {
@@ -151,6 +160,8 @@ export function getProvisioningProviderProgressMessage(
 type ProvisioningDetailSummary =
   | 'CLI binary missing'
   | 'OpenCode runtime missing'
+  | 'OpenCode Windows access blocked'
+  | 'OpenCode runtime check returned no output'
   | 'OpenCode app MCP unreachable'
   | 'Working directory missing'
   | 'CLI binary could not be started'
@@ -172,6 +183,16 @@ type ProvisioningDetailSummary =
 
 function isSelectedModelDetail(lower: string): boolean {
   return lower.includes('selected model');
+}
+
+function isOpenCodeBridgeNoOutputDiagnostic(value: string | null | undefined): boolean {
+  const lower = value?.trim().toLowerCase() ?? '';
+  return (
+    lower.includes('opencode runtime check returned no output') ||
+    lower.includes('bridge stdout was empty') ||
+    lower.includes('opencode_bridge_contract_violation') ||
+    (lower.includes('opencode readiness bridge failed') && lower.includes('contract_violation'))
+  );
 }
 
 function isFormattedModelDetail(lower: string): boolean {
@@ -219,10 +240,17 @@ function getStatusLabel(status: ProvisioningProviderCheckStatus): string {
 
 function summarizeDetail(
   detail: string,
-  status: ProvisioningProviderCheckStatus
+  status: ProvisioningProviderCheckStatus,
+  providerId?: TeamProviderId
 ): ProvisioningDetailSummary | null {
   const lower = detail.toLowerCase();
 
+  if (providerId === 'opencode' && isOpenCodeWindowsAccessDeniedDiagnostic(detail)) {
+    return 'OpenCode Windows access blocked';
+  }
+  if (providerId === 'opencode' && isOpenCodeBridgeNoOutputDiagnostic(detail)) {
+    return 'OpenCode runtime check returned no output';
+  }
   if (lower.includes('spawn ') && lower.includes(' enoent')) {
     return 'CLI binary missing';
   }
@@ -449,13 +477,15 @@ function getDisplayStatusText(check: ProvisioningProviderCheck): string {
   }
 
   const summarizedDetails = publicDetails
-    .map((detail) => summarizeDetail(detail, check.status))
+    .map((detail) => summarizeDetail(detail, check.status, check.providerId))
     .filter((detail): detail is ProvisioningDetailSummary => Boolean(detail));
 
   const summary =
     check.status === 'failed'
       ? (summarizedDetails.find(
           (detail) =>
+            detail === 'OpenCode Windows access blocked' ||
+            detail === 'OpenCode runtime check returned no output' ||
             detail === 'OpenCode app MCP unreachable' ||
             detail === 'OpenCode runtime missing' ||
             detail === 'Selected model unavailable' ||
@@ -472,9 +502,10 @@ function getDisplayStatusText(check: ProvisioningProviderCheck): string {
 
 function getDetailTone(
   detail: string,
-  status: ProvisioningProviderCheckStatus
+  status: ProvisioningProviderCheckStatus,
+  providerId?: TeamProviderId
 ): 'success' | 'failure' | 'checking' | 'neutral' {
-  const summary = summarizeDetail(detail, status);
+  const summary = summarizeDetail(detail, status, providerId);
   if (
     summary === 'Selected model verified' ||
     summary === 'Selected model available' ||
@@ -493,6 +524,8 @@ function getDetailTone(
     summary === 'Selected model check failed' ||
     summary === 'CLI binary missing' ||
     summary === 'OpenCode runtime missing' ||
+    summary === 'OpenCode Windows access blocked' ||
+    summary === 'OpenCode runtime check returned no output' ||
     summary === 'OpenCode app MCP unreachable' ||
     summary === 'Working directory missing' ||
     summary === 'CLI binary could not be started' ||
@@ -510,8 +543,12 @@ function getDetailTone(
   return 'neutral';
 }
 
-function getDetailColorClass(detail: string, status: ProvisioningProviderCheckStatus): string {
-  switch (getDetailTone(detail, status)) {
+function getDetailColorClass(
+  detail: string,
+  status: ProvisioningProviderCheckStatus,
+  providerId?: TeamProviderId
+): string {
+  switch (getDetailTone(detail, status, providerId)) {
     case 'success':
       return 'text-emerald-400';
     case 'failure':
@@ -551,14 +588,14 @@ export function getPrimaryProvisioningFailureDetail(
 
     const publicDetails = getPublicProvisioningDetails(check.details);
     const preferredFailure = publicDetails.find(
-      (detail) => getDetailTone(detail, check.status) === 'failure'
+      (detail) => getDetailTone(detail, check.status, check.providerId) === 'failure'
     );
     if (preferredFailure) {
       return preferredFailure;
     }
 
     const nonSuccessDetail = publicDetails.find(
-      (detail) => getDetailTone(detail, check.status) !== 'success'
+      (detail) => getDetailTone(detail, check.status, check.providerId) !== 'success'
     );
     if (nonSuccessDetail) {
       return nonSuccessDetail;
@@ -715,6 +752,16 @@ function getProvisioningProviderSettingsActionLabel(
     : null;
 }
 
+function getSupportDiagnosticsPayload(check: ProvisioningProviderCheck): string | null {
+  if (check.providerId !== 'opencode') {
+    return null;
+  }
+  const payloads = (check.supportDiagnostics ?? [])
+    .map((diagnostic) => diagnostic.copyText.trim())
+    .filter(Boolean);
+  return payloads.length > 0 ? payloads.join('\n\n---\n\n') : null;
+}
+
 export const ProvisioningProviderStatusList = ({
   checks,
   className = '',
@@ -726,9 +773,28 @@ export const ProvisioningProviderStatusList = ({
   suppressDetailsMatching?: string | null;
   onOpenProviderSettings?: (providerId: TeamProviderId) => void;
 }): React.JSX.Element | null => {
+  const [copiedDiagnosticsKey, setCopiedDiagnosticsKey] = React.useState<string | null>(null);
+
   if (checks.length === 0) {
     return null;
   }
+
+  const copySupportDiagnostics = async (copyKey: string, payload: string): Promise<void> => {
+    try {
+      const writeText = globalThis.navigator?.clipboard?.writeText;
+      if (typeof writeText !== 'function') {
+        setCopiedDiagnosticsKey(null);
+        return;
+      }
+      await writeText.call(globalThis.navigator.clipboard, payload);
+      setCopiedDiagnosticsKey(copyKey);
+      globalThis.setTimeout(() => {
+        setCopiedDiagnosticsKey((currentKey) => (currentKey === copyKey ? null : currentKey));
+      }, 1500);
+    } catch {
+      setCopiedDiagnosticsKey(null);
+    }
+  };
 
   return (
     <div className={`space-y-1 pl-5 ${className}`.trim()}>
@@ -740,6 +806,12 @@ export const ProvisioningProviderStatusList = ({
         const settingsActionLabel = onOpenProviderSettings
           ? getProvisioningProviderSettingsActionLabel(check)
           : null;
+        const supportDiagnosticsPayload = getSupportDiagnosticsPayload(check);
+        const supportDiagnosticsKey =
+          supportDiagnosticsPayload && check.supportDiagnostics?.[0]
+            ? `${check.providerId}:${check.supportDiagnostics[0].id}`
+            : check.providerId;
+        const copiedDiagnostics = copiedDiagnosticsKey === supportDiagnosticsKey;
 
         return (
           <div key={check.providerId}>
@@ -758,7 +830,11 @@ export const ProvisioningProviderStatusList = ({
                 {visibleDetails.map((detail, index) => (
                   <p
                     key={`${check.providerId}:${index}:${detail}`}
-                    className={`text-[10px] ${getDetailColorClass(detail, check.status)}`}
+                    className={`text-[10px] ${getDetailColorClass(
+                      detail,
+                      check.status,
+                      check.providerId
+                    )}`}
                   >
                     {detail}
                   </p>
@@ -781,6 +857,24 @@ export const ProvisioningProviderStatusList = ({
                 </button>
               </div>
             ) : null}
+            {supportDiagnosticsPayload ? (
+              <div className="mt-1 pl-4">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5"
+                  style={{
+                    borderColor: 'var(--color-border-subtle)',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                  onClick={() =>
+                    void copySupportDiagnostics(supportDiagnosticsKey, supportDiagnosticsPayload)
+                  }
+                >
+                  {copiedDiagnostics ? <Check className="size-3" /> : <Copy className="size-3" />}
+                  {copiedDiagnostics ? 'Copied' : 'Copy diagnostics'}
+                </button>
+              </div>
+            ) : null}
           </div>
         );
       })}
@@ -792,6 +886,34 @@ export function getProvisioningFailureHint(
   message: string | null | undefined,
   checks: ProvisioningProviderCheck[]
 ): string {
+  const failedOpenCodeChecks = checks.filter(
+    (check) => check.providerId === 'opencode' && check.status === 'failed'
+  );
+  const hasFailedNonOpenCodeCheck = checks.some(
+    (check) => check.providerId !== 'opencode' && check.status === 'failed'
+  );
+  const hasOpenCodeAccessDeniedDetail = failedOpenCodeChecks.some((check) =>
+    check.details.some(isOpenCodeWindowsAccessDeniedDiagnostic)
+  );
+  const hasOpenCodeBridgeNoOutputDetail = failedOpenCodeChecks.some((check) =>
+    check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
+  );
+  const normalizedMessage = message?.trim() ?? '';
+  const hasOpenCodeAccessDeniedMessage =
+    failedOpenCodeChecks.length > 0 &&
+    (normalizedMessage === OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE ||
+      (!hasFailedNonOpenCodeCheck && isOpenCodeWindowsAccessDeniedDiagnostic(normalizedMessage)));
+  if (hasOpenCodeAccessDeniedDetail || hasOpenCodeAccessDeniedMessage) {
+    return 'Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.';
+  }
+  const hasOpenCodeBridgeNoOutputMessage =
+    failedOpenCodeChecks.length > 0 &&
+    !hasFailedNonOpenCodeCheck &&
+    isOpenCodeBridgeNoOutputDiagnostic(normalizedMessage);
+  if (hasOpenCodeBridgeNoOutputDetail || hasOpenCodeBridgeNoOutputMessage) {
+    return 'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.';
+  }
+
   const combined = [message ?? '', ...checks.flatMap((check) => check.details)]
     .join('\n')
     .toLowerCase();

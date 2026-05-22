@@ -1,3 +1,4 @@
+import { OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE } from '@shared/utils/openCodeWindowsAccessDenied';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -97,7 +98,10 @@ vi.mock('@main/utils/childProcess', () => ({
 
 import { ProviderConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
-import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime';
+import {
+  type TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+} from '@main/services/team/runtime';
 import {
   buildDirectTmuxRestartEnvAssignments,
   TeamProvisioningService,
@@ -886,15 +890,14 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       diagnostics: [],
       warnings: [],
     }));
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -929,6 +932,78 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         runtimeOnly: false,
       })
     );
+  });
+
+  it('uses OpenCode access-denied warnings as the model-less prepare failure message', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: [],
+      warnings: ['EPERM: operation not permitted, mkdir C:\\Program Files\\locked-project'],
+    }));
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+  });
+
+  it('keeps OpenCode access-denied selected-model failures provider-scoped', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: ['EPERM: operation not permitted, mkdir C:\\Program Files\\locked-project'],
+      warnings: [],
+    }));
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE);
+    expect(result.details).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+    expect(result.issues).toEqual([
+      {
+        providerId: 'opencode',
+        scope: 'provider',
+        severity: 'blocking',
+        code: 'unknown_error',
+        message: OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+      },
+    ]);
   });
 
   it('coalesces duplicate OpenCode compatibility preflight requests while prepare is in flight', async () => {

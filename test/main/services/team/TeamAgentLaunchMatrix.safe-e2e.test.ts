@@ -1,48 +1,13 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  WorkspaceTrustCoordinator,
-  WorkspaceTrustExecutionPlan,
-} from '../../../../src/features/workspace-trust/core/application/WorkspaceTrustCoordinator';
-import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
-import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
-import {
-  getMixedLaunchFallbackRecoveryError,
-  TeamProvisioningService,
-} from '../../../../src/main/services/team/TeamProvisioningService';
-import type {
-  OpenCodeTeamRuntimeMessageInput,
-  OpenCodeTeamRuntimeMessageResult,
-} from '../../../../src/main/services/team/runtime';
-import {
-  TeamRuntimeAdapterRegistry,
-  type TeamLaunchRuntimeAdapter,
-  type TeamRuntimeLaunchInput,
-  type TeamRuntimeMemberLaunchEvidence,
-  type TeamRuntimeMemberSpec,
-  type TeamRuntimeLaunchResult,
-  type TeamRuntimePrepareResult,
-  type TeamRuntimeReconcileInput,
-  type TeamRuntimeReconcileResult,
-  type TeamRuntimeStopInput,
-  type TeamRuntimeStopResult,
-} from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
-import {
-  encodePath,
-  extractBaseDir,
-  getProjectsBasePath,
-  getTeamsBasePath,
-  setClaudeBasePathOverride,
-} from '../../../../src/main/utils/pathDecoder';
-import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
 import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
+import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
 import {
-  getOpenCodeRuntimeManifestPath,
   getOpenCodeRuntimeLaneIndexPath,
+  getOpenCodeRuntimeManifestPath,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
   setOpenCodeRuntimeActiveRunManifest,
@@ -54,8 +19,49 @@ import {
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
+import {
+  type TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+  type TeamRuntimeLaunchInput,
+  type TeamRuntimeLaunchResult,
+  type TeamRuntimeMemberLaunchEvidence,
+  type TeamRuntimeMemberSpec,
+  type TeamRuntimePermissionAnswerInput,
+  type TeamRuntimePrepareResult,
+  type TeamRuntimeReconcileInput,
+  type TeamRuntimeReconcileResult,
+  type TeamRuntimeStopInput,
+  type TeamRuntimeStopResult,
+} from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
+import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
+import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import {
+  getMixedLaunchFallbackRecoveryError,
+  TeamProvisioningService,
+} from '../../../../src/main/services/team/TeamProvisioningService';
+import {
+  encodePath,
+  extractBaseDir,
+  getProjectsBasePath,
+  getTeamsBasePath,
+  setClaudeBasePathOverride,
+} from '../../../../src/main/utils/pathDecoder';
 
-import type { InboxMessage, TaskRef, TeamProvisioningProgress } from '../../../../src/shared/types';
+import type {
+  WorkspaceTrustCoordinator,
+  WorkspaceTrustExecutionPlan,
+} from '../../../../src/features/workspace-trust/core/application/WorkspaceTrustCoordinator';
+import type {
+  OpenCodeTeamRuntimeMessageInput,
+  OpenCodeTeamRuntimeMessageResult,
+} from '../../../../src/main/services/team/runtime';
+import type {
+  InboxMessage,
+  TaskRef,
+  TeamProvisioningProgress,
+  ToolApprovalEvent,
+  ToolApprovalRequest,
+} from '../../../../src/shared/types';
 
 const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = 60_000;
 const WORKSPACE_TRUST_TEST_ENV_NAMES = [
@@ -373,6 +379,73 @@ describe('Team agent launch matrix safe e2e', () => {
       pendingPermissionRequestIds: ['perm-alice'],
     });
     expect(statuses.summary?.pendingCount).toBe(1);
+  });
+
+  it('routes OpenCode runtime approval UI responses back through the adapter', async () => {
+    const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending');
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const approvalEvents: ToolApprovalEvent[] = [];
+    svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
+
+    const launch = await svc.createTeam(
+      {
+        teamName: 'approve-opencode-safe-e2e',
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: false,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+
+    const approval = approvalEvents.find(
+      (event): event is ToolApprovalRequest =>
+        !('dismissed' in event) && !('autoResolved' in event)
+    );
+    expect(approval).toMatchObject({
+      runId: launch.runId,
+      teamName: 'approve-opencode-safe-e2e',
+      providerId: 'opencode',
+      source: 'alice',
+      toolName: 'Bash',
+      runtimePermission: {
+        providerId: 'opencode',
+        laneId: 'primary',
+        memberName: 'alice',
+        providerRequestId: 'perm-alice',
+      },
+    });
+    expect(approval?.toolInput).toMatchObject({
+      provider: 'opencode',
+      providerRequestId: 'perm-alice',
+      command: 'git status',
+    });
+
+    await svc.respondToToolApproval(
+      'approve-opencode-safe-e2e',
+      launch.runId!,
+      approval!.requestId,
+      true
+    );
+
+    expect(adapter.permissionAnswerInputs).toEqual([
+      expect.objectContaining({
+        runId: launch.runId,
+        teamName: 'approve-opencode-safe-e2e',
+        laneId: 'primary',
+        memberName: 'alice',
+        requestId: 'perm-alice',
+        decision: 'allow',
+      }),
+    ]);
+    const statuses = await svc.getMemberSpawnStatuses('approve-opencode-safe-e2e');
+    expect(statuses.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(statuses.statuses.alice?.pendingPermissionRequestIds).toBeUndefined();
   });
 
   it('blocks createTeam at workspace trust preflight before spawn and preserves existing launch state', async () => {
@@ -18293,6 +18366,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
   readonly launchInputs: TeamRuntimeLaunchInput[] = [];
   readonly messageInputs: OpenCodeTeamRuntimeMessageInput[] = [];
+  readonly permissionAnswerInputs: TeamRuntimePermissionAnswerInput[] = [];
   readonly reconcileInputs: TeamRuntimeReconcileInput[] = [];
   readonly stopInputs: TeamRuntimeStopInput[] = [];
 
@@ -18356,6 +18430,30 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         : `prompt-${input.memberName}-${this.messageInputs.length}`,
       runtimePid: 12_000 + this.messageInputs.length,
       diagnostics: [],
+    };
+  }
+
+  async answerRuntimePermission(
+    input: TeamRuntimePermissionAnswerInput
+  ): Promise<TeamRuntimeLaunchResult> {
+    this.permissionAnswerInputs.push(input);
+    this.memberOutcomes = {
+      ...this.memberOutcomes,
+      [input.memberName]: input.decision === 'allow' ? 'confirmed' : 'failed',
+    };
+    return {
+      runId: input.runId,
+      teamName: input.teamName,
+      launchPhase: 'finished',
+      teamLaunchState: this.aggregateLaunchState(input.expectedMembers),
+      members: Object.fromEntries(
+        input.expectedMembers.map((member, index) => [
+          member.name,
+          this.buildMemberEvidence(member, index),
+        ])
+      ),
+      warnings: [],
+      diagnostics: ['fake OpenCode permission answer'],
     };
   }
 
@@ -18437,6 +18535,26 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       hardFailure: failed,
       hardFailureReason: failed ? 'fake_open_code_launch_failure' : undefined,
       pendingPermissionRequestIds: permissionPending ? [`perm-${member.name}`] : undefined,
+      pendingPermissions: permissionPending
+        ? [
+            {
+              providerId: 'opencode',
+              requestId: `perm-${member.name}`,
+              sessionId: `session-${member.name}`,
+              tool: 'bash',
+              title: `Run git status for ${member.name}`,
+              kind: 'tool',
+              raw: {
+                requestID: `perm-${member.name}`,
+                sessionID: `session-${member.name}`,
+                tool: 'bash',
+                title: `Run git status for ${member.name}`,
+                kind: 'tool',
+                patterns: ['git status'],
+              },
+            },
+          ]
+        : undefined,
       sessionId: failed ? undefined : `session-${member.name}`,
       runtimePid: failed ? undefined : 10_000 + index,
       livenessKind,

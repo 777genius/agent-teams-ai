@@ -9,15 +9,15 @@ import {
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
-  parseSingleBridgeJsonResult,
-  stableHash,
-  validateBridgeResultEnvelope,
-  validateOpenCodeBridgeHandshake,
   type OpenCodeBridgeCommandEnvelope,
   type OpenCodeBridgeHandshake,
   type OpenCodeBridgePeerIdentity,
   type OpenCodeBridgeRuntimeSnapshot,
   type OpenCodeBridgeSuccess,
+  parseSingleBridgeJsonResult,
+  stableHash,
+  validateBridgeResultEnvelope,
+  validateOpenCodeBridgeHandshake,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 
 describe('OpenCodeBridgeCommandContract', () => {
@@ -131,6 +131,51 @@ describe('OpenCodeBridgeCommandContract', () => {
         command: 'opencode.launchTeam',
         runId: 'run-1',
         capabilitySnapshotId: 'new-snapshot',
+      })
+    ).toThrow('OpenCode bridge capability snapshot mismatch');
+  });
+
+  it('allows state mutation for a launch capability recovery result', () => {
+    const result = bridgeSuccess({
+      runtime: { capabilitySnapshotId: 'new-snapshot' },
+      data: {
+        runId: 'run-1',
+        idempotencyKey: 'key-1',
+        runtimeStoreManifestHighWatermark: 10,
+        diagnostics: [
+          {
+            code: 'opencode_capability_snapshot_recovery',
+            severity: 'warning',
+            message: 'Accepted fresh OpenCode capability snapshot after app recovery attempt.',
+          },
+        ],
+      },
+    });
+
+    expect(() =>
+      assertBridgeResultCanMutateState(result, {
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'old-snapshot',
+        allowCapabilitySnapshotRecovery: true,
+      })
+    ).not.toThrow();
+  });
+
+  it('does not allow capability recovery without orchestrator recovery evidence', () => {
+    const result = bridgeSuccess({
+      runtime: { capabilitySnapshotId: 'new-snapshot' },
+      data: { runId: 'run-1' },
+    });
+
+    expect(() =>
+      assertBridgeResultCanMutateState(result, {
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'old-snapshot',
+        allowCapabilitySnapshotRecovery: true,
       })
     ).toThrow('OpenCode bridge capability snapshot mismatch');
   });

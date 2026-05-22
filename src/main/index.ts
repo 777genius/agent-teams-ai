@@ -147,6 +147,7 @@ import { clearAutoResumeService } from './services/team/AutoResumeService';
 import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer';
 import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
 import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import { OpenCodeBridgeDiagnosticsStore } from './services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
 import {
   createOpenCodeBridgeCommandLeaseStore,
   createOpenCodeBridgeCommandLedgerStore,
@@ -407,6 +408,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
       });
       const mcpEntry = mcpLaunchSpec.args[0];
       if (mcpEntry) {
+        for (const [key, value] of Object.entries(mcpLaunchSpec.env ?? {})) {
+          targetEnv[key] = value;
+        }
         targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
         targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = mcpEntry;
         targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON = JSON.stringify(mcpLaunchSpec.args);
@@ -515,13 +519,16 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }
     return nextEnv;
   };
+  const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
   const bridgeClient = new OpenCodeBridgeCommandClient({
     binaryPath,
     tempDirectory: join(app.getPath('temp'), 'claude-team-opencode-bridge'),
     env: bridgeEnv,
     envProvider: resolveBridgeCommandEnv,
+    diagnostics: new OpenCodeBridgeDiagnosticsStore({
+      directory: join(bridgeControlDir, 'diagnostics'),
+    }),
   });
-  const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
@@ -546,6 +553,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
+    appVersion: clientIdentity.appVersion,
   });
   openCodeLifecycleBridge = readinessBridge;
   return new TeamRuntimeAdapterRegistry([new OpenCodeTeamRuntimeAdapter(readinessBridge)]);

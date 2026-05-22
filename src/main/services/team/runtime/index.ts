@@ -6,11 +6,14 @@ export type {
 export { OpenCodeTeamRuntimeAdapter } from './OpenCodeTeamRuntimeAdapter';
 export type {
   TeamLaunchRuntimeAdapter,
+  TeamRuntimeApprovalProviderId,
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberLaunchEvidence,
   TeamRuntimeMemberSpec,
   TeamRuntimeMemberStopEvidence,
+  TeamRuntimePendingApproval,
+  TeamRuntimePendingPermission,
   TeamRuntimePrepareFailure,
   TeamRuntimePrepareResult,
   TeamRuntimePrepareSuccess,

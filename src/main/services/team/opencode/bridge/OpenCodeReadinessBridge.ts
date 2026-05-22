@@ -4,6 +4,7 @@ import {
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   stableHash,
 } from './OpenCodeBridgeCommandContract';
+import { buildOpenCodeBridgeSupportDiagnostic } from './OpenCodeBridgeSupportDiagnostics';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -11,6 +12,7 @@ import type {
   OpenCodeTeamLaunchReadinessState,
 } from '../readiness/OpenCodeTeamLaunchReadiness';
 import type {
+  OpenCodeAnswerPermissionCommandBody,
   OpenCodeBackfillTaskLedgerCommandBody,
   OpenCodeBackfillTaskLedgerCommandData,
   OpenCodeBridgeCommandName,
@@ -24,6 +26,8 @@ import type {
   OpenCodeCommandStatusCommandData,
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
+  OpenCodeListRuntimePermissionsCommandBody,
+  OpenCodeListRuntimePermissionsCommandData,
   OpenCodeObserveMessageDeliveryCommandBody,
   OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
@@ -62,6 +66,7 @@ export interface OpenCodeReadinessBridgeOptions {
   observeTimeoutMs?: number;
   stopTimeoutMs?: number;
   cleanupTimeoutMs?: number;
+  appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
 }
 
@@ -80,6 +85,7 @@ const DEFAULT_SEND_TIMEOUT_MS = 45_000;
 const DEFAULT_OBSERVE_TIMEOUT_MS = 20_000;
 const DEFAULT_STOP_TIMEOUT_MS = 30_000;
 const DEFAULT_CLEANUP_TIMEOUT_MS = 10_000;
+const DEFAULT_PERMISSION_TIMEOUT_MS = 30_000;
 const DEFAULT_BACKFILL_TIMEOUT_MS = 45_000;
 const DEFAULT_COMMAND_STATUS_TIMEOUT_MS = 5_000;
 const OPEN_CODE_COMPLETED_COMMAND_RECOVERY_MESSAGE =
@@ -118,6 +124,12 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     }
 
     this.lastRuntimeSnapshotsByProjectPath.delete(input.projectPath);
+    const supportDiagnostic = buildOpenCodeBridgeSupportDiagnostic({
+      result,
+      projectPath: input.projectPath,
+      selectedModel: input.selectedModel,
+      appVersion: this.options.appVersion ?? null,
+    });
     return blockedReadiness({
       state: mapBridgeFailureToReadinessState(result.error.kind),
       modelId: input.selectedModel,
@@ -126,6 +138,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         ...result.diagnostics.map(formatDiagnosticEvent),
       ],
       missing: [result.error.message],
+      supportDiagnostics: supportDiagnostic ? [supportDiagnostic] : undefined,
     });
   }
 
@@ -202,6 +215,40 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         })),
       ],
     };
+  }
+
+  async answerOpenCodeRuntimePermission(
+    input: OpenCodeAnswerPermissionCommandBody
+  ): Promise<OpenCodeLaunchTeamCommandData> {
+    const result = await this.executeStateChangingCommand<
+      OpenCodeAnswerPermissionCommandBody,
+      OpenCodeLaunchTeamCommandData
+    >('opencode.answerPermission', input, {
+      teamName: input.teamName,
+      laneId: input.laneId,
+      runId: input.runId,
+      capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
+      cwd: input.projectPath,
+      timeoutMs: DEFAULT_PERMISSION_TIMEOUT_MS,
+    });
+    return result.ok ? result.data : blockedLaunchData(input.runId, result);
+  }
+
+  async listOpenCodeRuntimePermissions(
+    input: OpenCodeListRuntimePermissionsCommandBody
+  ): Promise<OpenCodeListRuntimePermissionsCommandData> {
+    const cwd = input.projectPath ?? process.cwd();
+    const result = await this.bridge.execute<
+      OpenCodeListRuntimePermissionsCommandBody,
+      OpenCodeListRuntimePermissionsCommandData
+    >('opencode.listRuntimePermissions', input, {
+      cwd,
+      timeoutMs: DEFAULT_PERMISSION_TIMEOUT_MS,
+    });
+    if (result.ok) {
+      return result.data;
+    }
+    return { permissions: [] };
   }
 
   async cleanupOpenCodeHosts(
@@ -565,7 +612,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
 
 type OpenCodeStateChangingTeamCommandName = Extract<
   OpenCodeBridgeCommandName,
-  'opencode.launchTeam' | 'opencode.reconcileTeam' | 'opencode.stopTeam' | 'opencode.sendMessage'
+  | 'opencode.launchTeam'
+  | 'opencode.reconcileTeam'
+  | 'opencode.stopTeam'
+  | 'opencode.sendMessage'
+  | 'opencode.answerPermission'
 >;
 
 function blockedLaunchData(
@@ -600,6 +651,7 @@ function blockedReadiness(input: {
   modelId: string | null;
   diagnostics: string[];
   missing: string[];
+  supportDiagnostics?: OpenCodeTeamLaunchReadiness['supportDiagnostics'];
 }): OpenCodeTeamLaunchReadiness {
   return {
     state: input.state,
@@ -617,6 +669,9 @@ function blockedReadiness(input: {
     supportLevel: null,
     missing: dedupe(input.missing),
     diagnostics: dedupe(input.diagnostics),
+    ...(input.supportDiagnostics?.length
+      ? { supportDiagnostics: [...input.supportDiagnostics] }
+      : {}),
     evidence: {
       capabilitiesReady: false,
       mcpToolProofRoute: null,

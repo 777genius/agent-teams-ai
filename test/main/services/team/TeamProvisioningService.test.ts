@@ -17786,6 +17786,189 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('tags Codex app-server control_request approvals and replies through control_response', async () => {
+    const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
+      cb?.();
+      return true;
+    });
+    const svc = new TeamProvisioningService();
+    const events: unknown[] = [];
+    svc.setToolApprovalEventEmitter((event) => events.push(event));
+    svc.setMainWindow({
+      isDestroyed: () => false,
+      isFocused: () => true,
+    } as never);
+
+    const run = {
+      teamName: 'codex-manual-team',
+      runId: 'run-codex-manual',
+      request: { color: '#2563eb', displayName: 'Codex Manual Team' },
+      child: { stdin: { writable: true, write } },
+      pendingApprovals: new Map(),
+    };
+    const internals = svc as unknown as {
+      runs: Map<string, unknown>;
+      aliveRunByTeam: Map<string, string>;
+      handleControlRequest(run: unknown, msg: Record<string, unknown>): void;
+    };
+    internals.runs.set(run.runId, run);
+    internals.aliveRunByTeam.set(run.teamName, run.runId);
+
+    internals.handleControlRequest(run, {
+      request_id: 'codex-approval-1',
+      request: {
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        input: {
+          provider: 'codex',
+          providerRequestId: 'codex:item/commandExecution/requestApproval:item-1',
+          command: 'printf ok',
+        },
+      },
+    });
+
+    expect(events[0]).toMatchObject({
+      requestId: 'codex-approval-1',
+      runId: run.runId,
+      teamName: run.teamName,
+      providerId: 'codex',
+      toolName: 'Bash',
+      toolInput: {
+        provider: 'codex',
+        command: 'printf ok',
+      },
+    });
+
+    await svc.respondToToolApproval(run.teamName, run.runId, 'codex-approval-1', true);
+
+    expect(write).toHaveBeenCalledTimes(1);
+    const firstWrite = write.mock.calls[0]?.[0];
+    expect(typeof firstWrite).toBe('string');
+    const payload = JSON.parse(firstWrite as string) as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: 'codex-approval-1',
+        response: { behavior: 'allow', updatedInput: {} },
+      },
+    });
+  });
+
+  it('keeps control_request approvals pending when control_response write fails so retry works', async () => {
+    let failNextWrite = true;
+    const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
+      if (failNextWrite) {
+        failNextWrite = false;
+        cb?.(new Error('broken pipe'));
+        return false;
+      }
+      cb?.();
+      return true;
+    });
+    const svc = new TeamProvisioningService();
+    svc.setMainWindow({
+      isDestroyed: () => false,
+      isFocused: () => true,
+    } as never);
+
+    const run = {
+      teamName: 'anthropic-manual-team',
+      runId: 'run-anthropic-manual',
+      request: { color: '#7c3aed', displayName: 'Anthropic Manual Team' },
+      child: { stdin: { writable: true, write } },
+      pendingApprovals: new Map(),
+    };
+    const internals = svc as unknown as {
+      runs: Map<string, unknown>;
+      aliveRunByTeam: Map<string, string>;
+      handleControlRequest(run: unknown, msg: Record<string, unknown>): void;
+    };
+    internals.runs.set(run.runId, run);
+    internals.aliveRunByTeam.set(run.teamName, run.runId);
+
+    internals.handleControlRequest(run, {
+      request_id: 'anthropic-approval-retry',
+      request: {
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        input: { command: 'printf ok' },
+      },
+    });
+
+    await expect(
+      svc.respondToToolApproval(run.teamName, run.runId, 'anthropic-approval-retry', true)
+    ).rejects.toThrow('broken pipe');
+    expect(
+      vi.mocked(console.error).mock.calls.some((args) => args.join(' ').includes('broken pipe'))
+    ).toBe(true);
+    vi.mocked(console.error).mockClear();
+    expect(run.pendingApprovals.has('anthropic-approval-retry')).toBe(true);
+
+    await expect(
+      svc.respondToToolApproval(run.teamName, run.runId, 'anthropic-approval-retry', true)
+    ).resolves.toBeUndefined();
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(run.pendingApprovals.has('anthropic-approval-retry')).toBe(false);
+  });
+
+  it('leaves control_request approvals tracked while a duplicate UI response is in flight', async () => {
+    let releaseWrite: ((error?: Error | null) => void) | undefined;
+    const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
+      releaseWrite = cb;
+      return true;
+    });
+    const svc = new TeamProvisioningService();
+    svc.setMainWindow({
+      isDestroyed: () => false,
+      isFocused: () => true,
+    } as never);
+
+    const run = {
+      teamName: 'codex-duplicate-response-team',
+      runId: 'run-codex-duplicate-response',
+      request: { color: '#2563eb', displayName: 'Codex Duplicate Response Team' },
+      child: { stdin: { writable: true, write } },
+      pendingApprovals: new Map(),
+    };
+    const internals = svc as unknown as {
+      runs: Map<string, unknown>;
+      aliveRunByTeam: Map<string, string>;
+      handleControlRequest(run: unknown, msg: Record<string, unknown>): void;
+    };
+    internals.runs.set(run.runId, run);
+    internals.aliveRunByTeam.set(run.teamName, run.runId);
+
+    internals.handleControlRequest(run, {
+      request_id: 'codex-approval-duplicate',
+      request: {
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        input: {
+          provider: 'codex',
+          providerRequestId: 'codex:item/commandExecution/requestApproval:item-2',
+          command: 'printf ok',
+        },
+      },
+    });
+
+    const firstResponse = svc.respondToToolApproval(
+      run.teamName,
+      run.runId,
+      'codex-approval-duplicate',
+      true
+    );
+    await expect(
+      svc.respondToToolApproval(run.teamName, run.runId, 'codex-approval-duplicate', false)
+    ).resolves.toBeUndefined();
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(run.pendingApprovals.has('codex-approval-duplicate')).toBe(true);
+
+    releaseWrite?.();
+    await expect(firstResponse).resolves.toBeUndefined();
+    expect(run.pendingApprovals.has('codex-approval-duplicate')).toBe(false);
+  });
+
   it('keeps AskUserQuestion answers in teammate fallback control responses', async () => {
     const write = vi.fn((_line: string, cb?: (error?: Error | null) => void) => {
       cb?.();

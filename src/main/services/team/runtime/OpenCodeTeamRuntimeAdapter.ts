@@ -1,12 +1,14 @@
 import { randomUUID } from 'crypto';
 
 import type {
+  OpenCodeAnswerPermissionCommandBody,
   OpenCodeBridgeRuntimeSnapshot,
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
   OpenCodeObserveMessageDeliveryCommandBody,
   OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
+  OpenCodeRuntimePermissionCommandData,
   OpenCodeSendMessageCommandBody,
   OpenCodeSendMessageCommandData,
   OpenCodeStopTeamCommandBody,
@@ -20,6 +22,8 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberLaunchEvidence,
   TeamRuntimeMemberStopEvidence,
+  TeamRuntimePendingPermission,
+  TeamRuntimePermissionAnswerInput,
   TeamRuntimePrepareResult,
   TeamRuntimeReconcileInput,
   TeamRuntimeReconcileResult,
@@ -52,6 +56,9 @@ export interface OpenCodeTeamRuntimeBridgePort {
   observeOpenCodeTeamMessageDelivery?(
     input: OpenCodeObserveMessageDeliveryCommandBody
   ): Promise<OpenCodeObserveMessageDeliveryCommandData>;
+  answerOpenCodeRuntimePermission?(
+    input: OpenCodeAnswerPermissionCommandBody
+  ): Promise<OpenCodeLaunchTeamCommandData>;
 }
 
 export interface OpenCodeTeamRuntimeMessageInput {
@@ -199,6 +206,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         retryable: isRetryableReadinessState(readiness.state),
         diagnostics: mergeDiagnostics(readiness.diagnostics, readiness.missing),
         warnings: [],
+        ...(readiness.supportDiagnostics?.length
+          ? { supportDiagnostics: [...readiness.supportDiagnostics] }
+          : {}),
       };
     }
 
@@ -208,6 +218,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       modelId: readiness.modelId,
       diagnostics: readiness.diagnostics,
       warnings: [],
+      ...(readiness.supportDiagnostics?.length
+        ? { supportDiagnostics: [...readiness.supportDiagnostics] }
+        : {}),
     };
   }
 
@@ -290,6 +303,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       teamName: input.teamName,
       projectPath: input.cwd,
       selectedModel: model,
+      skipPermissions: input.skipPermissions,
       members: input.expectedMembers.map((member) => ({
         name: member.name,
         role: member.role?.trim() || member.workflow?.trim() || 'teammate',
@@ -547,6 +561,42 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     };
   }
 
+  async answerRuntimePermission(
+    input: TeamRuntimePermissionAnswerInput
+  ): Promise<TeamRuntimeLaunchResult> {
+    if (!this.bridge.answerOpenCodeRuntimePermission) {
+      throw new Error('OpenCode permission answer bridge is not registered.');
+    }
+
+    const data = await this.bridge.answerOpenCodeRuntimePermission({
+      runId: input.runId,
+      laneId: input.laneId?.trim() || 'primary',
+      teamId: input.teamName,
+      teamName: input.teamName,
+      projectPath: input.cwd,
+      memberName: input.memberName,
+      requestId: input.requestId,
+      decision: input.decision,
+      expectedCapabilitySnapshotId: null,
+      manifestHighWatermark: null,
+    });
+
+    return mapOpenCodeLaunchDataToRuntimeResult(
+      {
+        runId: input.runId,
+        teamName: input.teamName,
+        laneId: input.laneId,
+        cwd: input.cwd,
+        providerId: this.providerId,
+        skipPermissions: false,
+        expectedMembers: input.expectedMembers,
+        previousLaunchState: input.previousLaunchState,
+      },
+      data,
+      []
+    );
+  }
+
   async stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult> {
     if (this.bridge.stopOpenCodeTeam) {
       const projectPath = input.cwd ?? this.lastProjectPathByTeamName.get(input.teamName);
@@ -701,6 +751,7 @@ function mapOpenCodeLaunchDataToRuntimeResult(
           bridgeMember?.model,
           bridgeMember?.runtimePid,
           bridgeMember?.pendingPermissionRequestIds,
+          bridgeMember?.pendingPermissions,
           bridgeMember != null,
           memberDiagnostics,
           input.runId,
@@ -798,6 +849,33 @@ function normalizeAppManagedBootstrapCandidate(
   };
 }
 
+function normalizeOpenCodeRuntimePendingPermissions(
+  permissions: OpenCodeRuntimePermissionCommandData[] | undefined
+): TeamRuntimePendingPermission[] | undefined {
+  if (!permissions?.length) {
+    return undefined;
+  }
+  const normalized: TeamRuntimePendingPermission[] = [];
+  const seen = new Set<string>();
+  for (const permission of permissions) {
+    const requestId = permission.requestId?.trim();
+    if (!requestId || seen.has(requestId)) {
+      continue;
+    }
+    seen.add(requestId);
+    normalized.push({
+      providerId: 'opencode',
+      requestId,
+      sessionId: permission.sessionId ?? null,
+      tool: permission.tool ?? null,
+      title: permission.title ?? null,
+      kind: permission.kind ?? null,
+      ...(permission.raw ? { raw: permission.raw } : {}),
+    });
+  }
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 function mapBridgeMemberToRuntimeEvidence(
   memberName: string,
   launchState: OpenCodeTeamMemberLaunchBridgeState,
@@ -805,6 +883,7 @@ function mapBridgeMemberToRuntimeEvidence(
   model: string | undefined,
   runtimePid: number | undefined,
   pendingPermissionRequestIds: string[] | undefined,
+  pendingPermissions: OpenCodeRuntimePermissionCommandData[] | undefined,
   runtimeMaterialized: boolean,
   diagnostics: string[],
   runId: string,
@@ -863,6 +942,7 @@ function mapBridgeMemberToRuntimeEvidence(
       : pendingRuntimeObserved || launchState === 'permission_blocked' || runtimeMaterialized
         ? 'warning'
         : undefined;
+  const normalizedPendingApprovals = normalizeOpenCodeRuntimePendingPermissions(pendingPermissions);
   return {
     memberName,
     providerId: 'opencode',
@@ -887,6 +967,8 @@ function mapBridgeMemberToRuntimeEvidence(
       pendingPermissionRequestIds && pendingPermissionRequestIds.length > 0
         ? [...new Set(pendingPermissionRequestIds)]
         : undefined,
+    pendingApprovals: normalizedPendingApprovals,
+    pendingPermissions: normalizedPendingApprovals,
     sessionId,
     ...(appManagedCandidatePresent
       ? { bootstrapEvidenceSource: 'app_managed_bootstrap' as const }

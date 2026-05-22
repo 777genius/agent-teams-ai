@@ -1082,6 +1082,7 @@ export const CreateTeamDialog = ({
         status: plan.selectedModelIds.length > 0 ? plan.cachedSnapshot.status : 'checking',
         backendSummary: plan.backendSummary,
         details: plan.cachedSnapshot.details,
+        supportDiagnostics: undefined,
       });
       prepareWarningsByProviderIdRef.current.delete(plan.providerId);
     }
@@ -1150,6 +1151,7 @@ export const CreateTeamDialog = ({
                       status,
                       backendSummary: plan.backendSummary,
                       details,
+                      supportDiagnostics: undefined,
                     }
                   );
                   commitChecks(nextChecks);
@@ -1181,6 +1183,7 @@ export const CreateTeamDialog = ({
                 status: prepResult.status,
                 backendSummary: plan.backendSummary,
                 details: prepResult.details,
+                supportDiagnostics: prepResult.supportDiagnostics,
               });
               commitChecks(nextChecks);
               applyPrepareOutcome(nextChecks, loadingMessage);
@@ -1194,6 +1197,7 @@ export const CreateTeamDialog = ({
                 status: 'failed',
                 backendSummary: plan.backendSummary,
                 details: [failureMessage],
+                supportDiagnostics: undefined,
               });
               prepareWarningsByProviderIdRef.current.delete(plan.providerId);
               commitChecks(nextChecks);

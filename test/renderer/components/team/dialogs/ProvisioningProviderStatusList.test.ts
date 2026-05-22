@@ -155,6 +155,156 @@ describe('ProvisioningProviderStatusList', () => {
     );
   });
 
+  it('gives a concrete hint for OpenCode bridge no-output failures', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode readiness bridge failed: contract_violation: Bridge stdout was empty',
+          ],
+        },
+      ])
+    ).toBe(
+      'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
+    );
+  });
+
+  it('renders Copy diagnostics for OpenCode support diagnostics and copies the prepared payload', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'failed',
+              backendSummary: 'OpenCode CLI',
+              details: ['OpenCode runtime check returned no output.'],
+              supportDiagnostics: [
+                {
+                  id: 'diag-empty-stdout',
+                  providerId: 'opencode',
+                  kind: 'opencode_bridge_no_output',
+                  severity: 'error',
+                  title: 'OpenCode runtime check returned no output',
+                  summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
+                  copyText: 'Agent Teams OpenCode diagnostics\noutputReadError: ENOENT',
+                  createdAt: '2026-04-21T12:00:00.000Z',
+                },
+              ],
+            },
+            {
+              providerId: 'codex',
+              status: 'failed',
+              details: ['Codex failed'],
+              supportDiagnostics: [
+                {
+                  id: 'diag-codex',
+                  providerId: 'codex',
+                  kind: 'codex_debug',
+                  severity: 'error',
+                  title: 'Codex debug',
+                  summary: 'Codex debug summary',
+                  copyText: 'should not render',
+                  createdAt: '2026-04-21T12:00:00.000Z',
+                },
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): OpenCode runtime check returned no output'
+    );
+    expect(host.textContent).toContain('Copy diagnostics');
+    const buttons = Array.from(host.querySelectorAll('button'));
+    expect(buttons).toHaveLength(1);
+
+    await act(async () => {
+      buttons[0]?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith(
+      'Agent Teams OpenCode diagnostics\noutputReadError: ENOENT'
+    );
+    expect(host.textContent).toContain('Copied');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not show copied when the Clipboard API is unavailable', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'failed',
+              details: ['OpenCode runtime check returned no output.'],
+              supportDiagnostics: [
+                {
+                  id: 'diag-empty-stdout',
+                  providerId: 'opencode',
+                  kind: 'opencode_bridge_no_output',
+                  severity: 'error',
+                  title: 'OpenCode runtime check returned no output',
+                  summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
+                  copyText: 'Agent Teams OpenCode diagnostics',
+                  createdAt: '2026-04-21T12:00:00.000Z',
+                },
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const button = host.querySelector('button');
+    expect(button?.textContent).toContain('Copy diagnostics');
+
+    await act(async () => {
+      button?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Copy diagnostics');
+    expect(host.textContent).not.toContain('Copied');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('picks the first real failure detail instead of a verified line', () => {
     expect(
       getPrimaryProvisioningFailureDetail([

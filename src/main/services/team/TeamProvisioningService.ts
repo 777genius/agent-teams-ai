@@ -110,6 +110,10 @@ import {
 } from '@shared/utils/inboxNoise';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
+import {
+  isOpenCodeWindowsAccessDeniedDiagnostic,
+  normalizeOpenCodeWindowsAccessDeniedDiagnostic,
+} from '@shared/utils/openCodeWindowsAccessDenied';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
@@ -228,11 +232,19 @@ import {
   normalizeMemberDiagnosticText,
   shouldUseGeminiStagedLaunch,
 } from './provisioning/TeamProvisioningPromptBuilders';
+
+import type { RuntimeTurnSettledProvider } from '@features/member-work-sync/main';
 export type { RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
 export {
   buildAddMemberSpawnMessage,
   buildRestartMemberSpawnMessage,
 } from './provisioning/TeamProvisioningPromptBuilders';
+import { openCodeRuntimeApprovalProvider } from './approvals/OpenCodeRuntimeApprovalProvider';
+import {
+  RuntimeToolApprovalCoordinator,
+  type RuntimeToolApprovalEntry,
+} from './approvals/RuntimeToolApprovalCoordinator';
+import { isOpenCodeBridgeNoOutputDiagnostic } from './opencode/bridge/OpenCodeBridgeSupportDiagnostics';
 import {
   buildOpenCodePromptDeliveryAttemptId,
   createOpenCodePromptDeliveryLedgerStore,
@@ -406,10 +418,10 @@ import type {
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberLaunchEvidence,
+  TeamRuntimeMemberSpec,
   TeamRuntimePrepareResult,
   TeamRuntimeStopInput,
 } from './runtime';
-import type { RuntimeTurnSettledProvider } from '@features/member-work-sync/main';
 
 type OpenCodeRuntimeMessageAdapter = TeamLaunchRuntimeAdapter & {
   sendMessageToMember(
@@ -608,6 +620,7 @@ import type {
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamProvisioningState,
+  TeamProvisioningSupportDiagnostic,
   TeamRuntimeState,
   TeamTask,
   ToolActivityEventPayload,
@@ -962,9 +975,22 @@ function pushUniqueLine(lines: string[], line: string): void {
   }
 }
 
+function pushUniqueSupportDiagnostics(
+  diagnostics: TeamProvisioningSupportDiagnostic[],
+  incoming: readonly TeamProvisioningSupportDiagnostic[] | undefined
+): void {
+  for (const diagnostic of incoming ?? []) {
+    if (!diagnostics.some((existing) => existing.id === diagnostic.id)) {
+      diagnostics.push({ ...diagnostic });
+    }
+  }
+}
+
 function looksLikeOpenCodeProviderPrepareDiagnostic(value: string): boolean {
   const lower = value.trim().toLowerCase();
   return (
+    isOpenCodeBridgeNoOutputDiagnostic(value) ||
+    isOpenCodeWindowsAccessDeniedDiagnostic(value) ||
     lower.includes('opencode /experimental/tool') ||
     lower.includes('/experimental/tool') ||
     lower.includes('mcp_unavailable') ||
@@ -979,6 +1005,15 @@ function normalizeOpenCodePrepareDiagnostic(value: string, reason?: string): str
   const trimmed = value.trim();
   if (!trimmed) {
     return trimmed;
+  }
+
+  if (isOpenCodeBridgeNoOutputDiagnostic(trimmed)) {
+    return 'OpenCode runtime check returned no output.';
+  }
+
+  const accessDeniedDiagnostic = normalizeOpenCodeWindowsAccessDeniedDiagnostic(trimmed);
+  if (accessDeniedDiagnostic) {
+    return accessDeniedDiagnostic;
   }
 
   if (/opencode cli (?:not detected on path|not found)/i.test(trimmed)) {
@@ -1028,11 +1063,25 @@ function isOpenCodeModelVerificationTimeoutDiagnostic(value: string | null | und
 function selectOpenCodeModelPreparePrimaryReason(
   prepare: Extract<TeamRuntimePrepareResult, { ok: false }>
 ): string {
+  const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(prepare);
+  if (providerDiagnostic) {
+    return providerDiagnostic;
+  }
+
   const candidates = [...prepare.diagnostics, prepare.reason]
     .map((entry) => entry?.trim() ?? '')
     .filter(Boolean);
   const timeoutReason = candidates.find(isOpenCodeModelVerificationTimeoutDiagnostic);
   return timeoutReason ?? candidates[0] ?? prepare.reason;
+}
+
+function selectOpenCodePrepareProviderDiagnostic(
+  prepare: Pick<TeamRuntimePrepareResult, 'diagnostics' | 'warnings'>
+): string | undefined {
+  return [...prepare.diagnostics, ...prepare.warnings].find(
+    (entry) =>
+      isOpenCodeBridgeNoOutputDiagnostic(entry) || isOpenCodeWindowsAccessDeniedDiagnostic(entry)
+  );
 }
 
 function isOpenCodeModelPrepareBusyDeferred(
@@ -4997,6 +5046,16 @@ export class TeamProvisioningService {
     | undefined = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly runtimeAdapterTraceLinesByRunId = new Map<string, string[]>();
   private readonly runtimeAdapterTraceKeyByRunId = new Map<string, string>();
+  private readonly runtimeToolApprovalCoordinator = new RuntimeToolApprovalCoordinator({
+    getSettings: (teamName) => this.getToolApprovalSettings(teamName),
+    answerApproval: ({ entry, allow, message }) =>
+      this.answerRuntimeToolApproval(entry, allow, message),
+    emitApprovalEvent: (event) => this.emitToolApprovalEvent(event),
+    showApprovalNotification: (approval) =>
+      this.maybeShowToolApprovalOsNotification(undefined, approval),
+    dismissApprovalNotification: (requestId) => this.dismissApprovalNotification(requestId),
+    logWarning: (message) => logger.warn(message),
+  });
   private readonly runtimeAdapterRunByTeam = new Map<
     string,
     {
@@ -10423,6 +10482,7 @@ export class TeamProvisioningService {
   }
 
   private deleteSecondaryRuntimeRun(teamName: string, laneId: string): void {
+    this.clearOpenCodeRuntimeToolApprovals(teamName, { laneId, emitDismiss: true });
     const runs = this.secondaryRuntimeRunByTeam.get(teamName);
     if (!runs) {
       return;
@@ -10434,6 +10494,7 @@ export class TeamProvisioningService {
   }
 
   private clearSecondaryRuntimeRuns(teamName: string): void {
+    this.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
     this.secondaryRuntimeRunByTeam.delete(teamName);
   }
 
@@ -11253,6 +11314,7 @@ export class TeamProvisioningService {
 
   private resetTeamScopedTransientStateForNewRun(teamName: string): void {
     peekAutoResumeService()?.cancelPendingAutoResume(teamName);
+    this.clearOpenCodeRuntimeToolApprovals(teamName, { emitDismiss: true });
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.retainedClaudeLogsByTeam.delete(teamName);
     this.persistedTranscriptClaudeLogsCache.delete(teamName);
@@ -18260,6 +18322,7 @@ export class TeamProvisioningService {
       details: result.details ? [...result.details] : undefined,
       warnings: result.warnings ? [...result.warnings] : undefined,
       issues: result.issues?.map((issue) => ({ ...issue })),
+      supportDiagnostics: result.supportDiagnostics?.map((diagnostic) => ({ ...diagnostic })),
     };
   }
 
@@ -18304,6 +18367,7 @@ export class TeamProvisioningService {
     const details: string[] = [];
     const blockingMessages: string[] = [];
     const issues: TeamProvisioningPrepareIssue[] = [];
+    const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
     const selectedModelIds = Array.from(
       new Set((opts?.modelIds ?? []).map((modelId) => modelId.trim()).filter(Boolean))
     );
@@ -18353,9 +18417,13 @@ export class TeamProvisioningService {
               normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
             )
           );
+          pushUniqueSupportDiagnostics(supportDiagnostics, prepare.supportDiagnostics);
           if (!prepare.ok) {
+            const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(prepare);
             blockingMessages.push(
-              normalizeOpenCodePrepareDiagnostic(`OpenCode: ${prepare.reason}`, prepare.reason)
+              providerDiagnostic
+                ? normalizeOpenCodePrepareDiagnostic(providerDiagnostic, prepare.reason)
+                : normalizeOpenCodePrepareDiagnostic(`OpenCode: ${prepare.reason}`, prepare.reason)
             );
           }
           continue;
@@ -18371,6 +18439,7 @@ export class TeamProvisioningService {
         warnings.push(...openCodeModelPrepare.warnings);
         blockingMessages.push(...openCodeModelPrepare.blockingMessages);
         issues.push(...openCodeModelPrepare.issues);
+        pushUniqueSupportDiagnostics(supportDiagnostics, openCodeModelPrepare.supportDiagnostics);
         continue;
       }
 
@@ -18539,6 +18608,10 @@ export class TeamProvisioningService {
             : 'Some provider runtimes are not ready',
         warnings: failureWarnings.length > 0 ? failureWarnings : undefined,
         issues: issues.length > 0 ? issues : undefined,
+        supportDiagnostics:
+          supportDiagnostics.length > 0
+            ? supportDiagnostics.map((diagnostic) => ({ ...diagnostic }))
+            : undefined,
       };
     }
 
@@ -18555,6 +18628,10 @@ export class TeamProvisioningService {
             : 'CLI is warmed up and ready to launch',
       warnings: warnings.length > 0 ? warnings : undefined,
       issues: issues.length > 0 ? issues : undefined,
+      supportDiagnostics:
+        supportDiagnostics.length > 0
+          ? supportDiagnostics.map((diagnostic) => ({ ...diagnostic }))
+          : undefined,
     };
   }
 
@@ -18573,15 +18650,17 @@ export class TeamProvisioningService {
     warnings: string[];
     blockingMessages: string[];
     issues: TeamProvisioningPrepareIssue[];
+    supportDiagnostics: TeamProvisioningSupportDiagnostic[];
   }> {
     const details: string[] = [];
     const warnings: string[] = [];
     const blockingMessages: string[] = [];
     const issues: TeamProvisioningPrepareIssue[] = [];
+    const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
     const startedAt = Date.now();
 
     if (modelIds.length === 0) {
-      return { details, warnings, blockingMessages, issues };
+      return { details, warnings, blockingMessages, issues, supportDiagnostics };
     }
 
     if (verificationMode === 'compatibility') {
@@ -18629,6 +18708,11 @@ export class TeamProvisioningService {
           reason: prepare.ok ? null : prepare.reason,
           diagnostics: prepare.diagnostics,
           warnings: prepare.warnings,
+          supportDiagnostics: prepare.supportDiagnostics?.map((diagnostic) => ({
+            id: diagnostic.id,
+            kind: diagnostic.kind,
+            title: diagnostic.title,
+          })),
         });
         return prepare;
       } catch (error) {
@@ -18700,6 +18784,7 @@ export class TeamProvisioningService {
       }
 
       const { modelId, prepare } = result;
+      pushUniqueSupportDiagnostics(supportDiagnostics, prepare.supportDiagnostics);
       const prepareReason = prepare.ok ? undefined : prepare.reason;
       warnings.push(
         ...prepare.warnings.map((warning) =>
@@ -18800,7 +18885,7 @@ export class TeamProvisioningService {
       blockingMessages,
     });
 
-    return { details, warnings, blockingMessages, issues };
+    return { details, warnings, blockingMessages, issues, supportDiagnostics };
   }
 
   private isProviderScopedOpenCodePrepareFailure(
@@ -18829,11 +18914,13 @@ export class TeamProvisioningService {
     warnings: string[];
     blockingMessages: string[];
     issues: TeamProvisioningPrepareIssue[];
+    supportDiagnostics: TeamProvisioningSupportDiagnostic[];
   } | null> {
     const details: string[] = [];
     const warnings: string[] = [];
     const blockingMessages: string[] = [];
     const issues: TeamProvisioningPrepareIssue[] = [];
+    const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
     const startedAt = Date.now();
 
     appendPreflightDebugLog('opencode_compatibility_batch_start', {
@@ -18879,11 +18966,20 @@ export class TeamProvisioningService {
       ok: sharedPrepare.ok,
       reason: sharedPrepare.ok ? null : sharedPrepare.reason,
       diagnostics: sharedPrepare.diagnostics,
+      supportDiagnostics: sharedPrepare.supportDiagnostics?.map((diagnostic) => ({
+        id: diagnostic.id,
+        kind: diagnostic.kind,
+        title: diagnostic.title,
+      })),
     });
 
     if (!sharedPrepare.ok) {
+      pushUniqueSupportDiagnostics(supportDiagnostics, sharedPrepare.supportDiagnostics);
+      const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(sharedPrepare);
       const primaryReason = normalizeOpenCodePrepareDiagnostic(
-        sharedPrepare.diagnostics.find((entry) => entry.trim().length > 0) ?? sharedPrepare.reason,
+        providerDiagnostic ??
+          sharedPrepare.diagnostics.find((entry) => entry.trim().length > 0) ??
+          sharedPrepare.reason,
         sharedPrepare.reason
       );
       if (primaryReason.trim().length > 0) {
@@ -18899,7 +18995,7 @@ export class TeamProvisioningService {
         code: sharedPrepare.reason,
         message: primaryReason.trim() || `OpenCode: ${sharedPrepare.reason}`,
       });
-      return { details, warnings, blockingMessages, issues };
+      return { details, warnings, blockingMessages, issues, supportDiagnostics };
     }
 
     const latestReadiness =
@@ -18955,7 +19051,7 @@ export class TeamProvisioningService {
       details,
     });
 
-    return { details, warnings, blockingMessages, issues };
+    return { details, warnings, blockingMessages, issues, supportDiagnostics };
   }
 
   private resolveOpenCodeCompatibilityModel(
@@ -21517,6 +21613,19 @@ export class TeamProvisioningService {
         launchResult,
         launchInput
       );
+      const requestTeamColor = 'color' in input.request ? input.request.color : undefined;
+      const requestTeamDisplayName =
+        'displayName' in input.request ? input.request.displayName : undefined;
+      this.syncOpenCodeRuntimeToolApprovals({
+        teamName: input.request.teamName,
+        runId,
+        laneId: 'primary',
+        cwd: launchCwd,
+        members: result.members,
+        expectedMembers: launchInput.expectedMembers,
+        teamColor: requestTeamColor,
+        teamDisplayName: requestTeamDisplayName,
+      });
       const success = result.teamLaunchState === 'clean_success';
       const pending = result.teamLaunchState === 'partial_pending';
       const failed = result.teamLaunchState === 'partial_failure';
@@ -22716,6 +22825,11 @@ export class TeamProvisioningService {
     const teamName = runtimeProgress.teamName;
     const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
     this.cancelledRuntimeAdapterRunIds.add(runId);
+    this.clearOpenCodeRuntimeToolApprovals(teamName, {
+      runId,
+      laneId: 'primary',
+      emitDismiss: true,
+    });
     this.runtimeAdapterRunByTeam.delete(teamName);
     this.aliveRunByTeam.delete(teamName);
     if (this.provisioningRunByTeam.get(teamName) === runId) {
@@ -28122,6 +28236,47 @@ export class TeamProvisioningService {
     this.emitMemberSpawnChange(run, lane.member.name);
   }
 
+  private async applyOpenCodeSecondaryPermissionAnswerResult(
+    entry: RuntimeToolApprovalEntry,
+    result: TeamRuntimeLaunchResult
+  ): Promise<void> {
+    const trackedRunId = this.getTrackedRunId(entry.approval.teamName);
+    const run = trackedRunId ? this.runs.get(trackedRunId) : null;
+    if (!run) {
+      throw new Error(`Run not found for team "${entry.approval.teamName}"`);
+    }
+    const lane = (run.mixedSecondaryLanes ?? []).find(
+      (candidate) => candidate.laneId === entry.laneId
+    );
+    if (!lane) {
+      throw new Error(
+        `OpenCode secondary lane ${entry.laneId} was not found for team "${entry.approval.teamName}"`
+      );
+    }
+
+    const guarded = await this.guardCommittedOpenCodeSecondaryLaneEvidence({
+      teamName: entry.approval.teamName,
+      laneId: entry.laneId,
+      memberName: entry.memberName,
+      result,
+    });
+    lane.result = guarded;
+    lane.warnings = [...guarded.warnings];
+    lane.diagnostics = [...guarded.diagnostics];
+    lane.state = 'finished';
+    await this.publishMixedSecondaryLaneStatusChange(run, lane);
+    this.syncOpenCodeRuntimeToolApprovals({
+      teamName: entry.approval.teamName,
+      runId: entry.approval.runId,
+      laneId: entry.laneId,
+      cwd: entry.cwd ?? '',
+      members: guarded.members,
+      expectedMembers: entry.expectedMembers ?? [],
+      teamDisplayName: entry.approval.teamDisplayName,
+      teamColor: entry.approval.teamColor,
+    });
+  }
+
   private async guardCommittedOpenCodeSecondaryLaneEvidence(params: {
     teamName: string;
     laneId: string;
@@ -28637,6 +28792,18 @@ export class TeamProvisioningService {
         await finishCancelledLane();
         return;
       }
+      const laneExpectedMembers: TeamRuntimeMemberSpec[] = [
+        {
+          name: lane.member.name,
+          role: lane.member.role,
+          workflow: lane.member.workflow,
+          isolation: lane.member.isolation === 'worktree' ? ('worktree' as const) : undefined,
+          providerId: 'opencode',
+          model: lane.member.model,
+          effort: lane.member.effort,
+          cwd: laneCwd,
+        },
+      ];
       const launchOpenCodeLane = () =>
         adapter.launch({
           runId: laneRunId,
@@ -28649,18 +28816,7 @@ export class TeamProvisioningService {
           effort: lane.member.effort,
           runtimeOnly: true,
           skipPermissions: run.request.skipPermissions !== false,
-          expectedMembers: [
-            {
-              name: lane.member.name,
-              role: lane.member.role,
-              workflow: lane.member.workflow,
-              isolation: lane.member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-              providerId: 'opencode',
-              model: lane.member.model,
-              effort: lane.member.effort,
-              cwd: laneCwd,
-            },
-          ],
+          expectedMembers: laneExpectedMembers,
           previousLaunchState,
         });
       let rawResult: TeamRuntimeLaunchResult;
@@ -28753,6 +28909,16 @@ export class TeamProvisioningService {
           )
         : resultWithTiming;
       lane.result = normalizedResult;
+      this.syncOpenCodeRuntimeToolApprovals({
+        teamName: run.teamName,
+        runId: laneRunId,
+        laneId: lane.laneId,
+        cwd: laneCwd,
+        members: normalizedResult.members,
+        expectedMembers: laneExpectedMembers,
+        teamColor: run.request.color,
+        teamDisplayName: run.request.displayName,
+      });
       lane.warnings = [...normalizedResult.warnings];
       const launchDiagnostics = appendDiagnosticOnce(
         [...requestedDiagnostics, ...migration.diagnostics, ...normalizedResult.diagnostics],
@@ -31301,6 +31467,11 @@ export class TeamProvisioningService {
       startedAt: previousProgress?.startedAt ?? startedAt,
       updatedAt: startedAt,
     });
+    this.clearOpenCodeRuntimeToolApprovals(teamName, {
+      runId,
+      laneId: 'primary',
+      emitDismiss: true,
+    });
     this.runtimeAdapterRunByTeam.delete(teamName);
     this.aliveRunByTeam.delete(teamName);
     if (this.provisioningRunByTeam.get(teamName) === runId) {
@@ -32668,11 +32839,13 @@ export class TeamProvisioningService {
 
     const toolName = typeof request?.tool_name === 'string' ? request.tool_name : 'Unknown';
     const toolInput = (request?.input ?? {}) as Record<string, unknown>;
+    const providerId = toolInput.provider === 'codex' ? 'codex' : undefined;
 
     const approval: ToolApprovalRequest = {
       requestId,
       runId: run.runId,
       teamName: run.teamName,
+      ...(providerId ? { providerId } : {}),
       source: 'lead',
       toolName,
       toolInput,
@@ -32776,13 +32949,35 @@ export class TeamProvisioningService {
     this.maybeShowToolApprovalOsNotification(run, approval);
   }
 
+  private syncOpenCodeRuntimeToolApprovals(input: {
+    teamName: string;
+    runId: string;
+    laneId: string;
+    cwd: string;
+    members: Record<string, TeamRuntimeMemberLaunchEvidence>;
+    expectedMembers: TeamRuntimeMemberSpec[];
+    teamColor?: string;
+    teamDisplayName?: string;
+  }): void {
+    const entries = openCodeRuntimeApprovalProvider.collectPendingApprovals(input);
+    this.runtimeToolApprovalCoordinator.sync(
+      {
+        teamName: input.teamName,
+        runId: input.runId,
+        laneId: input.laneId,
+        providerId: 'opencode',
+      },
+      entries
+    );
+  }
+
   /**
    * Shows a native OS notification for a pending tool approval when the app
    * is not in focus. On macOS, adds Allow/Deny action buttons that respond
    * directly from the notification without switching to the app.
    */
   private maybeShowToolApprovalOsNotification(
-    run: ProvisioningRun,
+    run: ProvisioningRun | undefined,
     approval: ToolApprovalRequest
   ): void {
     const win = this.mainWindowRef;
@@ -32795,13 +32990,16 @@ export class TeamProvisioningService {
     const snoozedUntil = config.notifications.snoozedUntil;
     if (snoozedUntil && Date.now() < snoozedUntil) return;
 
-    const { Notification: ElectronNotification } = require('electron') as typeof import('electron');
-    if (!ElectronNotification.isSupported()) return;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Notification: ElectronNotification } = require('electron') as Partial<
+      typeof import('electron')
+    >;
+    if (!ElectronNotification?.isSupported?.()) return;
 
     const isMac = process.platform === 'darwin';
     const isLinux = process.platform === 'linux';
     const iconPath = isMac ? undefined : getAppIconPath();
-    const teamLabel = run.request.displayName ?? run.teamName;
+    const teamLabel = approval.teamDisplayName ?? run?.request.displayName ?? approval.teamName;
     const body = this.formatToolApprovalBody(approval.toolName, approval.toolInput);
 
     // Actions (Allow/Deny buttons) supported on macOS and Windows.
@@ -32848,17 +33046,17 @@ export class TeamProvisioningService {
         cleanup();
         const allow = index === 0;
         logger.info(
-          `[${run.teamName}] Tool approval ${allow ? 'allowed' : 'denied'} via OS notification`
+          `[${approval.teamName}] Tool approval ${allow ? 'allowed' : 'denied'} via OS notification`
         );
         void this.respondToToolApproval(
-          run.teamName,
-          run.runId,
+          approval.teamName,
+          approval.runId,
           approval.requestId,
           allow,
           allow ? undefined : 'Denied via notification'
         ).catch((err) => {
           logger.error(
-            `[${run.teamName}] Failed to respond via notification: ${err instanceof Error ? err.message : String(err)}`
+            `[${approval.teamName}] Failed to respond via notification: ${err instanceof Error ? err.message : String(err)}`
           );
         });
       });
@@ -32874,6 +33072,16 @@ export class TeamProvisioningService {
       notification.close();
       this.activeApprovalNotifications.delete(requestId);
     }
+  }
+
+  private clearOpenCodeRuntimeToolApprovals(
+    teamName: string,
+    options: { runId?: string; laneId?: string; emitDismiss?: boolean } = {}
+  ): void {
+    this.runtimeToolApprovalCoordinator.clear(teamName, {
+      ...options,
+      providerId: 'opencode',
+    });
   }
 
   private formatToolApprovalBody(toolName: string, toolInput: Record<string, unknown>): string {
@@ -33095,6 +33303,83 @@ export class TeamProvisioningService {
         this.inFlightResponses.delete(requestId);
       }
     }
+
+    this.runtimeToolApprovalCoordinator.reEvaluate();
+  }
+
+  private async answerRuntimeToolApproval(
+    entry: RuntimeToolApprovalEntry,
+    allow: boolean,
+    _message?: string
+  ): Promise<void> {
+    if (entry.providerId !== 'opencode') {
+      throw new Error(`Runtime approval provider is not supported: ${entry.providerId}`);
+    }
+    const adapter = this.getOpenCodeRuntimeAdapter();
+    if (!adapter?.answerRuntimePermission) {
+      throw new Error('OpenCode runtime permission answer bridge is not available');
+    }
+
+    const previousLaunchState = await this.launchStateStore.read(entry.approval.teamName);
+    const result = await adapter.answerRuntimePermission({
+      runId: entry.approval.runId,
+      laneId: entry.laneId,
+      teamName: entry.approval.teamName,
+      cwd: entry.cwd ?? '',
+      providerId: 'opencode',
+      memberName: entry.memberName,
+      requestId: entry.providerRequestId,
+      decision: allow ? 'allow' : 'reject',
+      expectedMembers: entry.expectedMembers ?? [],
+      previousLaunchState,
+    });
+
+    if (entry.laneId === 'primary') {
+      const launchInput: TeamRuntimeLaunchInput = {
+        runId: entry.approval.runId,
+        laneId: entry.laneId,
+        teamName: entry.approval.teamName,
+        cwd: entry.cwd ?? '',
+        providerId: 'opencode',
+        skipPermissions: false,
+        expectedMembers: entry.expectedMembers ?? [],
+        previousLaunchState,
+      };
+      const { result: committed } = await this.persistOpenCodeRuntimeAdapterLaunchResult(
+        result,
+        launchInput
+      );
+      if (committed.teamLaunchState === 'partial_failure') {
+        this.runtimeAdapterRunByTeam.delete(entry.approval.teamName);
+      } else {
+        this.runtimeAdapterRunByTeam.set(entry.approval.teamName, {
+          runId: entry.approval.runId,
+          providerId: 'opencode',
+          cwd: entry.cwd,
+          members: committed.members,
+        });
+        this.aliveRunByTeam.set(entry.approval.teamName, entry.approval.runId);
+      }
+      this.syncOpenCodeRuntimeToolApprovals({
+        teamName: entry.approval.teamName,
+        runId: entry.approval.runId,
+        laneId: entry.laneId,
+        cwd: entry.cwd ?? '',
+        members: committed.members,
+        expectedMembers: entry.expectedMembers ?? [],
+        teamDisplayName: entry.approval.teamDisplayName,
+        teamColor: entry.approval.teamColor,
+      });
+    } else {
+      await this.applyOpenCodeSecondaryPermissionAnswerResult(entry, result);
+    }
+
+    this.teamChangeEmitter?.({
+      type: 'process',
+      teamName: entry.approval.teamName,
+      runId: entry.approval.runId,
+      detail: allow ? 'permission-allowed' : 'permission-denied',
+    });
   }
 
   /**
@@ -33108,6 +33393,17 @@ export class TeamProvisioningService {
     allow: boolean,
     message?: string
   ): Promise<void> {
+    const handledByRuntime = await this.runtimeToolApprovalCoordinator.respond(
+      teamName,
+      runId,
+      requestId,
+      allow,
+      message
+    );
+    if (handledByRuntime) {
+      return;
+    }
+
     // Look in both provisioning and alive runs — control_requests arrive during provisioning too
     const currentRunId = this.getTrackedRunId(teamName);
     if (!currentRunId) throw new Error(`No active process for team "${teamName}"`);
@@ -33122,8 +33418,8 @@ export class TeamProvisioningService {
     // to handle the race where timeout already responded and deleted the approval
     this.clearApprovalTimeout(requestId);
     if (!this.tryClaimResponse(requestId)) {
-      // Timeout already responded — silently exit, UI cleanup via autoResolved event
-      run.pendingApprovals.delete(requestId);
+      // Another response is already being written; leave the pending approval tracked
+      // until that write succeeds or fails.
       return;
     }
 
@@ -33148,15 +33444,22 @@ export class TeamProvisioningService {
           approval.toolName,
           approval.toolInput
         );
-      } finally {
-        run.pendingApprovals.delete(requestId);
         this.inFlightResponses.delete(requestId);
+        run.pendingApprovals.delete(requestId);
         this.dismissApprovalNotification(requestId);
+      } catch (error) {
+        this.inFlightResponses.delete(requestId);
+        if (run.pendingApprovals.has(requestId)) {
+          this.startApprovalTimeout(run, requestId);
+        }
+        throw error;
       }
       return;
     }
 
     if (!run.child?.stdin?.writable) {
+      this.inFlightResponses.delete(requestId);
+      this.startApprovalTimeout(run, requestId);
       throw new Error(`Team "${teamName}" process stdin is not writable`);
     }
 
@@ -33222,11 +33525,16 @@ export class TeamProvisioningService {
           }
         });
       });
-    } finally {
-      run.pendingApprovals.delete(requestId);
+    } catch (error) {
       this.inFlightResponses.delete(requestId);
-      this.dismissApprovalNotification(requestId);
+      if (run.pendingApprovals.has(requestId)) {
+        this.startApprovalTimeout(run, requestId);
+      }
+      throw error;
     }
+    run.pendingApprovals.delete(requestId);
+    this.inFlightResponses.delete(requestId);
+    this.dismissApprovalNotification(requestId);
   }
 
   /**
@@ -35740,7 +36048,6 @@ export class TeamProvisioningService {
           const nextMembers: Record<string, unknown>[] = [];
           for (const m of membersRaw) {
             const name = typeof m.name === 'string' ? m.name.trim() : '';
-            const agentType = typeof m.agentType === 'string' ? m.agentType : '';
             if (!name) continue;
             if (isLeadMember(m) || name === 'user') {
               nextMembers.push(m);

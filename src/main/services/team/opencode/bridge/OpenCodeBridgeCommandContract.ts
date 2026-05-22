@@ -64,11 +64,21 @@ export interface OpenCodeLaunchTeamCommandBody {
   teamName: string;
   projectPath: string;
   selectedModel: string;
+  skipPermissions?: boolean;
   members: OpenCodeTeamLaunchMemberCommandSpec[];
   leadPrompt: string;
   expectedCapabilitySnapshotId: string | null;
   manifestHighWatermark: number | null;
   capabilitySnapshotRecoveryAttemptId?: string;
+}
+
+export interface OpenCodeRuntimePermissionCommandData {
+  requestId: string;
+  sessionId: string | null;
+  tool: string | null;
+  title: string | null;
+  kind: string | null;
+  raw?: Record<string, unknown>;
 }
 
 export interface OpenCodeTeamMemberLaunchCommandData {
@@ -78,6 +88,7 @@ export interface OpenCodeTeamMemberLaunchCommandData {
   bootstrapMode?: OpenCodeBootstrapMode;
   appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
   pendingPermissionRequestIds?: string[];
+  pendingPermissions?: OpenCodeRuntimePermissionCommandData[];
   diagnostics?: string[];
   model: string;
   runtimePid?: number;
@@ -130,6 +141,30 @@ export interface OpenCodeStopTeamCommandData {
   idempotencyKey?: string;
   manifestHighWatermark?: number | null;
   runtimeStoreManifestHighWatermark?: number | null;
+}
+
+export interface OpenCodeAnswerPermissionCommandBody {
+  runId: string;
+  laneId: string;
+  teamId: string;
+  teamName: string;
+  projectPath: string;
+  memberName?: string;
+  requestId: string;
+  decision: 'allow' | 'always' | 'reject';
+  expectedCapabilitySnapshotId?: string | null;
+  manifestHighWatermark?: number | null;
+}
+
+export interface OpenCodeListRuntimePermissionsCommandBody {
+  teamId: string;
+  teamName: string;
+  laneId?: string;
+  projectPath?: string;
+}
+
+export interface OpenCodeListRuntimePermissionsCommandData {
+  permissions: OpenCodeRuntimePermissionCommandData[];
 }
 
 export interface OpenCodeCleanupHostsCommandBody {
@@ -590,6 +625,7 @@ export function assertBridgeResultCanMutateState<TData>(
     command: OpenCodeBridgeCommandName;
     runId: string | null;
     capabilitySnapshotId: string | null;
+    allowCapabilitySnapshotRecovery?: boolean;
   }
 ): asserts result is OpenCodeBridgeSuccess<TData> {
   if (!result.ok) {
@@ -612,10 +648,26 @@ export function assertBridgeResultCanMutateState<TData>(
 
   if (
     expected.capabilitySnapshotId !== null &&
-    result.runtime.capabilitySnapshotId !== expected.capabilitySnapshotId
+    result.runtime.capabilitySnapshotId !== expected.capabilitySnapshotId &&
+    !(
+      expected.allowCapabilitySnapshotRecovery === true &&
+      hasOpenCodeBridgeDataDiagnosticCode(result.data, 'opencode_capability_snapshot_recovery')
+    )
   ) {
     throw new Error('OpenCode bridge capability snapshot mismatch');
   }
+}
+
+function hasOpenCodeBridgeDataDiagnosticCode(value: unknown, code: string): boolean {
+  if (!isRecord(value) || !Array.isArray(value.diagnostics)) {
+    return false;
+  }
+  return value.diagnostics.some((diagnostic) => {
+    if (!isRecord(diagnostic)) {
+      return false;
+    }
+    return diagnostic.code === code;
+  });
 }
 
 export function validateOpenCodeBridgeHandshake(input: {
@@ -744,6 +796,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
   manifest: RuntimeStoreManifestEvidence;
   idempotencyKey: string;
   enforceManifestHighWatermark?: boolean;
+  allowCapabilitySnapshotRecovery?: boolean;
 }): asserts input is {
   result: OpenCodeBridgeSuccess<unknown>;
   requestId: string;
@@ -758,6 +811,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
     command: input.command,
     runId: input.runId,
     capabilitySnapshotId: input.capabilitySnapshotId,
+    allowCapabilitySnapshotRecovery: input.allowCapabilitySnapshotRecovery,
   });
 
   const resultManifestHighWatermark = extractManifestHighWatermark(input.result.data);

@@ -396,11 +396,21 @@ function createRuntimeStatusErrorProviderStatus(
   error: unknown
 ): CliProviderStatus {
   const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+  const detailMessage =
+    providerId === 'opencode' && (lower.includes('timed out') || lower.includes('timeout'))
+      ? [
+          'OpenCode runtime status did not return before the desktop timeout.',
+          'This means the Agent Teams runtime process did not produce provider-status JSON in time, not necessarily that OpenCode auth is missing.',
+          'Likely causes include slow or hung OpenCode CLI startup, provider/model inventory, local OpenCode plugins, cache/profile corruption, stale bundled runtime, or Windows security software delaying child processes.',
+          `Raw timeout detail: ${message}`,
+        ].join(' ')
+      : message;
   return {
     ...createDefaultProviderStatus(providerId),
     verificationState: 'error',
     statusMessage: 'Provider status unavailable',
-    detailMessage: message,
+    detailMessage,
   };
 }
 

@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { TeamProviderId, TeamProvisioningPrepareResult } from '@shared/types';
 
@@ -71,5 +70,48 @@ describe('runProviderPrepareDiagnostics OpenCode runtime failures', () => {
       'OpenCode runtime binary is not installed or not reachable by launch preflight.',
     ]);
     expect(result.modelResultsById).toEqual({});
+  });
+
+  it('preserves support diagnostics for OpenCode bridge no-output provider failures', async () => {
+    const supportDiagnostic = {
+      id: 'diag-empty-stdout',
+      providerId: 'opencode' as const,
+      kind: 'opencode_bridge_no_output',
+      severity: 'error' as const,
+      title: 'OpenCode runtime check returned no output',
+      summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
+      copyText: 'Agent Teams OpenCode diagnostics\noutputReadError: ENOENT',
+      createdAt: '2026-04-21T12:00:00.000Z',
+    };
+    const prepareProvisioning = vi.fn<PrepareProvisioningFn>().mockResolvedValue({
+      ready: false,
+      message: 'OpenCode readiness bridge failed: contract_violation: Bridge stdout was empty',
+      details: [
+        'OpenCode readiness bridge failed: contract_violation: Bridge stdout was empty',
+      ],
+      issues: [
+        {
+          providerId: 'opencode',
+          scope: 'provider',
+          severity: 'blocking',
+          code: 'unknown_error',
+          message:
+            'OpenCode readiness bridge failed: contract_violation: Bridge stdout was empty',
+        },
+      ],
+      supportDiagnostics: [supportDiagnostic],
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/Users/tester/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/qwen3.6-2b'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details).toEqual(['OpenCode runtime check returned no output.']);
+    expect(result.modelResultsById).toEqual({});
+    expect(result.supportDiagnostics).toEqual([supportDiagnostic]);
   });
 });

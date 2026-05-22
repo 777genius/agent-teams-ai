@@ -245,6 +245,10 @@ export class OpenCodeStateChangingBridgeCommandService {
           manifest,
           idempotencyKey,
           enforceManifestHighWatermark,
+          allowCapabilitySnapshotRecovery: isOpenCodeLaunchCapabilitySnapshotRecoveryAttempt(
+            input.command,
+            input.body
+          ),
         });
       } catch (error) {
         await this.ledger.markFailed({
@@ -352,6 +356,17 @@ export function attachBridgePreconditions<TBody>(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isOpenCodeLaunchCapabilitySnapshotRecoveryAttempt(
+  command: OpenCodeBridgeCommandName,
+  body: unknown
+): boolean {
+  if (command !== 'opencode.launchTeam' || !isRecord(body)) {
+    return false;
+  }
+  const recoveryAttemptId = body.capabilitySnapshotRecoveryAttemptId;
+  return typeof recoveryAttemptId === 'string' && recoveryAttemptId.trim().length > 0;
 }
 
 function requiresOpenCodeDeliveryAcceptanceContract(

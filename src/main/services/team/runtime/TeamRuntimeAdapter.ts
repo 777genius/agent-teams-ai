@@ -11,6 +11,7 @@ import type {
   TeamAgentRuntimeLivenessKind,
   TeamAgentRuntimePidSource,
   TeamLaunchAggregateState,
+  TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
 export const TEAM_RUNTIME_PROVIDER_IDS = ['anthropic', 'codex', 'gemini', 'opencode'] as const;
@@ -26,6 +27,33 @@ export interface TeamRuntimeMemberSpec {
   model?: string;
   effort?: EffortLevel;
   cwd: string;
+}
+
+export type TeamRuntimeApprovalProviderId = 'anthropic' | 'opencode' | 'codex';
+
+export interface TeamRuntimePendingApproval {
+  providerId: Extract<TeamRuntimeApprovalProviderId, 'opencode' | 'codex'>;
+  requestId: string;
+  sessionId?: string | null;
+  tool?: string | null;
+  title?: string | null;
+  kind?: string | null;
+  raw?: Record<string, unknown>;
+}
+
+export type TeamRuntimePendingPermission = TeamRuntimePendingApproval;
+
+export interface TeamRuntimePermissionAnswerInput {
+  runId: string;
+  teamName: string;
+  laneId?: string;
+  cwd: string;
+  providerId: Extract<TeamRuntimeApprovalProviderId, 'opencode' | 'codex'>;
+  memberName: string;
+  requestId: string;
+  decision: 'allow' | 'reject';
+  expectedMembers: TeamRuntimeMemberSpec[];
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
 }
 
 export interface TeamRuntimeLaunchInput {
@@ -58,6 +86,7 @@ export interface TeamRuntimePrepareSuccess {
   modelId: string | null;
   diagnostics: string[];
   warnings: string[];
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
 export interface TeamRuntimePrepareFailure {
@@ -67,6 +96,7 @@ export interface TeamRuntimePrepareFailure {
   diagnostics: string[];
   warnings: string[];
   retryable: boolean;
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
 export type TeamRuntimePrepareResult = TeamRuntimePrepareSuccess | TeamRuntimePrepareFailure;
@@ -82,6 +112,8 @@ export interface TeamRuntimeMemberLaunchEvidence {
   hardFailure: boolean;
   hardFailureReason?: string;
   pendingPermissionRequestIds?: string[];
+  pendingApprovals?: TeamRuntimePendingApproval[];
+  pendingPermissions?: TeamRuntimePendingApproval[];
   sessionId?: string;
   bootstrapEvidenceSource?: OpenCodeBootstrapEvidenceSource;
   bootstrapMode?: OpenCodeBootstrapMode;
@@ -171,6 +203,9 @@ export interface TeamLaunchRuntimeAdapter {
   launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult>;
   reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult>;
   stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult>;
+  answerRuntimePermission?(
+    input: TeamRuntimePermissionAnswerInput
+  ): Promise<TeamRuntimeLaunchResult>;
 }
 
 export function isTeamRuntimeProviderId(value: unknown): value is TeamRuntimeProviderId {

@@ -1,13 +1,12 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createOpenCodeBridgeHandshakeIdentityHash,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
-  createOpenCodeBridgeHandshakeIdentityHash,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeHandshake,
   type OpenCodeBridgePeerIdentity,
@@ -18,13 +17,13 @@ import {
 import {
   createOpenCodeBridgeCommandLeaseStore,
   createOpenCodeBridgeCommandLedgerStore,
-  type OpenCodeBridgeCommandLedger,
   type OpenCodeBridgeCommandLeaseStore,
+  type OpenCodeBridgeCommandLedger,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
 import {
-  OpenCodeStateChangingBridgeCommandService,
   type OpenCodeBridgeCommandExecutor,
   type OpenCodeBridgeHandshakePort,
+  OpenCodeStateChangingBridgeCommandService,
   type OpenCodeStateChangingBridgeDiagnosticsSink,
   type RuntimeStoreManifestReader,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
@@ -379,6 +378,48 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       retryable: true,
     });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('commits a launch result when recovery accepted a newer capability snapshot', async () => {
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        runtime: {
+          providerId: 'opencode',
+          binaryPath: '/usr/local/bin/opencode',
+          binaryFingerprint: 'bin-1',
+          version: '1.0.0',
+          capabilitySnapshotId: 'cap-2',
+        },
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          diagnostics: [
+            {
+              code: 'opencode_capability_snapshot_recovery',
+              severity: 'warning',
+              message: 'Accepted fresh OpenCode capability snapshot after app recovery attempt.',
+            },
+          ],
+        },
+      });
+    const service = createService();
+
+    const result = await service.execute({
+      ...buildLaunchInput(),
+      body: {
+        prompt: 'launch',
+        capabilitySnapshotRecoveryAttemptId: 'opencode-capability-recovery-test',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
+    await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
+      status: 'completed',
+    });
   });
 
   function createService(

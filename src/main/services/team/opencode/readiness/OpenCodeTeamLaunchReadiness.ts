@@ -11,6 +11,7 @@ import {
 import type { OpenCodeApiCapabilities } from '../capabilities/OpenCodeApiCapabilities';
 import type { OpenCodeMcpToolProof } from '../mcp/OpenCodeMcpToolAvailability';
 import type { RuntimeStoreReadinessCheck } from '../store/RuntimeStoreManifest';
+import type { TeamProvisioningSupportDiagnostic } from '@shared/types/team';
 
 export type OpenCodeTeamLaunchReadinessState =
   | 'ready'
@@ -57,6 +58,7 @@ export interface OpenCodeTeamLaunchReadiness {
   supportLevel: OpenCodeSupportLevel | null;
   missing: string[];
   diagnostics: string[];
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
   evidence: {
     capabilitiesReady: boolean;
     mcpToolProofRoute: OpenCodeMcpToolProof['route'];

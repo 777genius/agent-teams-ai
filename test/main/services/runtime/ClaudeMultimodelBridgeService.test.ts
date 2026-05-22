@@ -1698,8 +1698,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                 plugins: {
                   status: 'unsupported',
                   ownership: 'shared',
-                  reason:
-                    'Plugins are not currently guaranteed for codex-native sessions in the multimodel runtime.',
+                  reason: 'Plugin support is not yet guaranteed for this agent.',
                 },
                 mcp: {
                   status: 'unsupported',

@@ -1500,12 +1500,24 @@ export interface TeamProvisioningPrepareIssue {
   message: string;
 }
 
+export interface TeamProvisioningSupportDiagnostic {
+  id: string;
+  providerId: TeamProviderId;
+  kind: string;
+  severity: 'info' | 'warning' | 'error';
+  title: string;
+  summary: string;
+  copyText: string;
+  createdAt: string;
+}
+
 export interface TeamProvisioningPrepareResult {
   ready: boolean;
   message: string;
   details?: string[];
   warnings?: string[];
   issues?: TeamProvisioningPrepareIssue[];
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
 export interface TeamProvisioningProgress {
@@ -1771,6 +1783,8 @@ export interface ToolApprovalRequest {
   /** Run ID — prevents stale approvals after stop→launch race. */
   runId: string;
   teamName: string;
+  /** Runtime/provider that owns the approval, when it is not the Anthropic CLI control protocol. */
+  providerId?: TeamProviderId;
   /** Which process sent this (e.g. 'lead'). */
   source: string;
   /** Tool name: 'Bash', 'Edit', 'Write', 'Read', etc. */
@@ -1783,6 +1797,14 @@ export interface ToolApprovalRequest {
   teamColor?: string;
   /** Team display name (from config or create request). */
   teamDisplayName?: string;
+  /** Provider runtime permission metadata used to answer non-Anthropic approval APIs. */
+  runtimePermission?: {
+    providerId: 'anthropic' | 'opencode' | 'codex';
+    laneId: string;
+    memberName: string;
+    providerRequestId: string;
+    sessionId?: string | null;
+  };
   /** Permission suggestions from teammate runtime (only for teammate permission_request).
    * FACT: Populated by Claude Code runtime, contains instructions to add permission rules.
    */
@@ -1837,7 +1859,7 @@ export interface ToolApprovalAutoResolved {
   requestId: string;
   runId: string;
   teamName: string;
-  reason: 'auto_allow_category' | 'timeout_allow' | 'timeout_deny';
+  reason: 'auto_allow_category' | 'timeout_allow' | 'timeout_deny' | 'runtime_resolved';
 }
 
 /** Union of approval events pushed from main to renderer. */

@@ -38,6 +38,14 @@ export interface OpenCodeBridgeProcessRunner {
   run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult>;
 }
 
+interface OpenCodeBridgeOutputReadResult {
+  content: string;
+  outputSource: 'stdout' | 'file' | 'none';
+  stdoutBytes: number;
+  outputFileBytes: number | null;
+  outputReadError: string | null;
+}
+
 export interface OpenCodeBridgeDiagnosticsSink {
   append(event: OpenCodeBridgeDiagnosticEvent): Promise<void>;
 }
@@ -185,7 +193,16 @@ export class OpenCodeBridgeCommandClient {
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
           env: await this.resolveEnv(),
         });
-        const stdout = await this.readBridgeOutput(processResult.stdout, outputPath);
+        const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
+        const processDetails = {
+          exitCode: processResult.exitCode,
+          timedOut: processResult.timedOut,
+          stdoutBytes: bridgeOutput.stdoutBytes,
+          stderrBytes: byteLength(processResult.stderr),
+          outputSource: bridgeOutput.outputSource,
+          outputFileBytes: bridgeOutput.outputFileBytes,
+          outputReadError: bridgeOutput.outputReadError,
+        };
 
         if (processResult.timedOut) {
           return this.contractFailure(
@@ -196,6 +213,7 @@ export class OpenCodeBridgeCommandClient {
             {
               stderr: redactBridgeDiagnosticText(processResult.stderr),
               attempts: attempt,
+              ...processDetails,
             }
           );
         }
@@ -207,14 +225,14 @@ export class OpenCodeBridgeCommandClient {
             'OpenCode bridge command failed',
             true,
             {
-              exitCode: processResult.exitCode,
               stderr: redactBridgeDiagnosticText(processResult.stderr),
               attempts: attempt,
+              ...processDetails,
             }
           );
         }
 
-        const parsed = parseSingleBridgeJsonResult<TData>(stdout);
+        const parsed = parseSingleBridgeJsonResult<TData>(bridgeOutput.content);
         if (!parsed.ok) {
           if (shouldRetryEmptyReadinessStdout(command, parsed.error, attempt, maxAttempts)) {
             await sleep(EMPTY_STDOUT_READINESS_RETRY_DELAY_MS);
@@ -222,9 +240,10 @@ export class OpenCodeBridgeCommandClient {
           }
 
           return this.contractFailure(envelope, 'contract_violation', parsed.error, false, {
-            stdoutPreview: redactBridgeDiagnosticText(stdout.slice(0, 2_000)),
+            stdoutPreview: redactBridgeDiagnosticText(bridgeOutput.content.slice(0, 2_000)),
             stderrPreview: redactBridgeDiagnosticText(processResult.stderr.slice(0, 2_000)),
             attempts: attempt,
+            ...processDetails,
           });
         }
 
@@ -232,6 +251,7 @@ export class OpenCodeBridgeCommandClient {
         if (!validation.ok) {
           return this.contractFailure(envelope, 'contract_violation', validation.reason, false, {
             attempts: attempt,
+            ...processDetails,
           });
         }
 
@@ -253,14 +273,38 @@ export class OpenCodeBridgeCommandClient {
     }
   }
 
-  private async readBridgeOutput(stdout: string, outputPath: string): Promise<string> {
+  private async readBridgeOutput(
+    stdout: string,
+    outputPath: string
+  ): Promise<OpenCodeBridgeOutputReadResult> {
+    const stdoutBytes = byteLength(stdout);
     if (stdout.trim().length > 0) {
-      return stdout;
+      return {
+        content: stdout,
+        outputSource: 'stdout',
+        stdoutBytes,
+        outputFileBytes: null,
+        outputReadError: null,
+      };
     }
     try {
-      return await fs.readFile(outputPath, 'utf8');
-    } catch {
-      return stdout;
+      const output = await fs.readFile(outputPath, 'utf8');
+      const outputFileBytes = byteLength(output);
+      return {
+        content: output,
+        outputSource: output.trim().length > 0 ? 'file' : 'none',
+        stdoutBytes,
+        outputFileBytes,
+        outputReadError: null,
+      };
+    } catch (error) {
+      return {
+        content: stdout,
+        outputSource: 'none',
+        stdoutBytes,
+        outputFileBytes: 0,
+        outputReadError: getBridgeOutputReadError(error),
+      };
     }
   }
 
@@ -291,6 +335,13 @@ export class OpenCodeBridgeCommandClient {
     details: Record<string, unknown>
   ): Promise<OpenCodeBridgeFailure> {
     const completedAt = this.clock().toISOString();
+    const diagnosticDetails = {
+      command: envelope.command,
+      requestId: envelope.requestId,
+      cwd: redactBridgeDiagnosticText(envelope.cwd),
+      binaryPath: redactBridgeDiagnosticText(this.binaryPath),
+      ...details,
+    };
     const diagnostic: OpenCodeBridgeDiagnosticEvent = {
       id: this.diagnosticIdFactory(),
       type:
@@ -301,11 +352,11 @@ export class OpenCodeBridgeCommandClient {
       runId: extractRunId(envelope.body) ?? undefined,
       severity: retryable ? 'warning' : 'error',
       message,
-      data: details,
+      data: diagnosticDetails,
       createdAt: completedAt,
     };
 
-    await this.diagnostics?.append(diagnostic);
+    await this.diagnostics?.append(diagnostic).catch(() => undefined);
 
     return {
       ok: false,
@@ -318,7 +369,7 @@ export class OpenCodeBridgeCommandClient {
         kind,
         message,
         retryable,
-        details,
+        details: diagnosticDetails,
       },
       diagnostics: [diagnostic],
     };
@@ -355,4 +406,18 @@ function bufferToString(value: string | Buffer | undefined): string {
     return value.toString('utf8');
   }
   return '';
+}
+
+function byteLength(value: string): number {
+  return Buffer.byteLength(value, 'utf8');
+}
+
+function getBridgeOutputReadError(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' && code.trim()) {
+      return code.trim();
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
 }
