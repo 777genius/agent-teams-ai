@@ -1336,8 +1336,8 @@ function ModelBadges({
 }): JSX.Element | null {
   const modelRecommendation = getOpenCodeTeamModelRecommendation(model.modelId);
   const localRoute = model.routeKind === 'configured_local';
-  const builtinFreeRoute = model.routeKind === 'builtin_free';
   const connectedRoute = model.routeKind === 'connected_provider';
+  const freeModel = isFreeRuntimeProviderModel(model);
   const verified =
     model.proofState === 'verified' ||
     model.availability === 'available' ||
@@ -1351,8 +1351,7 @@ function ModelBadges({
   const unknown = model.accessKind === 'unknown_model' || model.accessKind === 'no_model';
 
   if (
-    !model.free &&
-    !builtinFreeRoute &&
+    !freeModel &&
     !model.default &&
     !usedForNewTeams &&
     !modelRecommendation &&
@@ -1403,7 +1402,7 @@ function ModelBadges({
           Used in team picker
         </Badge>
       ) : null}
-      {model.free ? (
+      {freeModel ? (
         <Badge className="bg-emerald-400/15 px-1.5 py-0 text-[10px] text-emerald-200">free</Badge>
       ) : null}
       {localRoute ? (
@@ -1411,9 +1410,6 @@ function ModelBadges({
           <Badge className="bg-cyan-400/15 px-1.5 py-0 text-[10px] text-cyan-200">local</Badge>
           <Badge className="bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-200">configured</Badge>
         </>
-      ) : null}
-      {builtinFreeRoute && !model.free ? (
-        <Badge className="bg-emerald-400/15 px-1.5 py-0 text-[10px] text-emerald-200">free</Badge>
       ) : null}
       {connectedRoute ? (
         <Badge className="bg-emerald-400/15 px-1.5 py-0 text-[10px] text-emerald-100">
@@ -1438,6 +1434,19 @@ function ModelBadges({
         <Badge className="bg-amber-400/15 px-1.5 py-0 text-[10px] text-amber-200">default</Badge>
       ) : null}
     </div>
+  );
+}
+
+function isFreeRuntimeProviderModel(model: RuntimeProviderModelDto): boolean {
+  const normalizedModelId = model.modelId.trim().toLowerCase();
+  return (
+    model.free ||
+    model.routeKind === 'builtin_free' ||
+    model.accessKind === 'builtin_free' ||
+    normalizedModelId === 'opencode/big-pickle' ||
+    normalizedModelId.includes(':free') ||
+    normalizedModelId.endsWith('-free') ||
+    normalizedModelId.endsWith('/free')
   );
 }
 
@@ -1485,7 +1494,7 @@ function getOpenCodeModelSearchText(model: RuntimeProviderModelDto): string {
     model.proofState,
     model.availability,
     model.accessReason ?? '',
-    model.free ? 'free' : '',
+    isFreeRuntimeProviderModel(model) ? 'free' : '',
     model.default ? 'default' : '',
     model.requiresExecutionProof ? 'needs test needs probe' : '',
     recommendation?.label ?? '',
@@ -1928,8 +1937,13 @@ function ProviderModelList({
 }): JSX.Element {
   const pickerOpen = state.modelPickerProviderId === provider.providerId;
   const [recommendedOnly, setRecommendedOnly] = useState(false);
+  const [freeOnly, setFreeOnly] = useState(false);
   const hasRecommendedModels = useMemo(
     () => state.models.some((model) => isOpenCodeTeamModelRecommended(model.modelId)),
+    [state.models]
+  );
+  const hasFreeModels = useMemo(
+    () => state.models.some((model) => isFreeRuntimeProviderModel(model)),
     [state.models]
   );
 
@@ -1939,11 +1953,18 @@ function ProviderModelList({
     }
   }, [hasRecommendedModels]);
 
+  useEffect(() => {
+    if (!hasFreeModels) {
+      setFreeOnly(false);
+    }
+  }, [hasFreeModels]);
+
   const visibleModels = useMemo(
     () =>
       state.models
         .map((model, index) => ({ model, index }))
         .filter(({ model }) => !recommendedOnly || isOpenCodeTeamModelRecommended(model.modelId))
+        .filter(({ model }) => !freeOnly || isFreeRuntimeProviderModel(model))
         .sort((left, right) => {
           const recommendationOrder = compareOpenCodeTeamModelRecommendations(
             left.model.modelId,
@@ -1952,8 +1973,15 @@ function ProviderModelList({
           return recommendationOrder || left.index - right.index;
         })
         .map(({ model }) => model),
-    [recommendedOnly, state.models]
+    [freeOnly, recommendedOnly, state.models]
   );
+  const emptyModelListMessage = recommendedOnly
+    ? freeOnly
+      ? 'No recommended free models found.'
+      : 'No recommended models found.'
+    : freeOnly
+      ? 'No free models found.'
+      : 'No models found.';
 
   return (
     <div className="mt-4 space-y-3 border-t border-white/10 pt-3">
@@ -1993,6 +2021,27 @@ function ProviderModelList({
             </Label>
           </div>
         ) : null}
+        {hasFreeModels ? (
+          <div
+            className="flex h-10 items-center gap-2 rounded-md border border-white/10 px-3"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              id={`runtime-provider-${provider.providerId}-free-only`}
+              checked={freeOnly}
+              disabled={disabled || state.modelsLoading}
+              onCheckedChange={(checked) => setFreeOnly(checked === true)}
+              className="size-3.5"
+            />
+            <Label
+              htmlFor={`runtime-provider-${provider.providerId}-free-only`}
+              className="cursor-pointer text-xs font-normal text-[var(--color-text-secondary)]"
+            >
+              Free only
+            </Label>
+          </div>
+        ) : null}
       </div>
 
       {state.modelsError ? (
@@ -2010,9 +2059,7 @@ function ProviderModelList({
       >
         {!pickerOpen || state.modelsLoading ? <RuntimeProviderModelLoadingSkeleton /> : null}
         {pickerOpen && !state.modelsLoading && visibleModels.length === 0 && !state.modelsError ? (
-          <div className="text-sm text-[var(--color-text-muted)]">
-            {recommendedOnly ? 'No recommended models found.' : 'No models found.'}
-          </div>
+          <div className="text-sm text-[var(--color-text-muted)]">{emptyModelListMessage}</div>
         ) : null}
         {pickerOpen
           ? visibleModels.map((model) => (

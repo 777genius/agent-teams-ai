@@ -610,6 +610,21 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(notRecommendedIndex).toBeGreaterThan(unavailableIndex);
 
     expect(host.textContent).toContain('Recommended only');
+    expect(host.textContent).toContain('Free only');
+
+    const freeOnlyToggle = host.querySelector<HTMLElement>('#opencode-team-model-free-only');
+    expect(freeOnlyToggle).not.toBeNull();
+
+    await act(async () => {
+      freeOnlyToggle?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('openai/gpt-oss-120b:free');
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('openai/gpt-oss-20b:free');
+    expect(host.textContent).not.toContain('qwen/qwen3-coder-plus');
+    expect(host.textContent).not.toContain('anthropic/claude-sonnet-4.6');
 
     await act(async () => {
       root.unmount();

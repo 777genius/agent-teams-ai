@@ -104,6 +104,7 @@ interface OpenCodeModelOptionMetadata {
   pricingInfo: OpenCodeModelPricingInfo | null;
   searchText: string;
   isRecommended: boolean;
+  isFree: boolean;
 }
 
 interface OpenCodeVirtualHeadingRow {
@@ -218,6 +219,24 @@ function buildOpenCodeModelSearchText({
   ]
     .join(' ')
     .toLowerCase();
+}
+
+function isFreeOpenCodeModelOption({
+  option,
+  routeMetadata,
+  pricingInfo,
+}: {
+  option: TeamRuntimeModelOption;
+  routeMetadata: NonNullable<ProviderModelCatalogItem['metadata']>['opencode'] | null;
+  pricingInfo: OpenCodeModelPricingInfo | null;
+}): boolean {
+  const badgeLabel = option.badgeLabel?.trim().toLowerCase();
+  return (
+    pricingInfo?.free === true ||
+    routeMetadata?.routeKind === 'builtin_free' ||
+    badgeLabel === 'free' ||
+    isFreeOpenCodeModelRoute(option.value)
+  );
 }
 
 function getOpenCodeModelGridColumnCount(width: number): number {
@@ -721,6 +740,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
 }) => {
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const [recommendedOnly, setRecommendedOnly] = useState(false);
+  const [freeOnly, setFreeOnly] = useState(false);
   const [modelQuery, setModelQuery] = useState('');
   const [openCodeSourceFilterOpen, setOpenCodeSourceFilterOpen] = useState(false);
   const [openCodeSourceQuery, setOpenCodeSourceQuery] = useState('');
@@ -958,6 +978,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           pricingInfo,
         }),
         isRecommended: isRecommendedTeamModelRecommendation(recommendation),
+        isFree: isFreeOpenCodeModelOption({ option, routeMetadata, pricingInfo }),
       };
     });
   }, [effectiveProviderId, modelOptions, openCodeCatalogModelById]);
@@ -967,6 +988,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   );
   const hasRecommendedOpenCodeModels = useMemo(
     () => openCodeModelMetadata.some((metadata) => metadata.isRecommended),
+    [openCodeModelMetadata]
+  );
+  const hasFreeOpenCodeModels = useMemo(
+    () => openCodeModelMetadata.some((metadata) => metadata.isFree),
     [openCodeModelMetadata]
   );
 
@@ -983,6 +1008,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       setRecommendedOnly(false);
     }
   }, [effectiveProviderId, hasRecommendedOpenCodeModels, recommendedOnly]);
+
+  useEffect(() => {
+    if (freeOnly && (effectiveProviderId !== 'opencode' || !hasFreeOpenCodeModels)) {
+      setFreeOnly(false);
+    }
+  }, [effectiveProviderId, freeOnly, hasFreeOpenCodeModels]);
 
   useEffect(() => {
     if (previousEffectiveProviderIdRef.current === effectiveProviderId) {
@@ -1023,6 +1054,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       if (recommendedOnly && !metadata.isRecommended) {
         continue;
       }
+      if (freeOnly && !metadata.isFree) {
+        continue;
+      }
 
       const sourceInfo = metadata.sourceInfo;
       if (!sourceInfo) {
@@ -1040,7 +1074,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return Array.from(sourceOptions.values()).sort((left, right) =>
       left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
     );
-  }, [effectiveProviderId, openCodeModelMetadata, recommendedOnly]);
+  }, [effectiveProviderId, freeOnly, openCodeModelMetadata, recommendedOnly]);
 
   useEffect(() => {
     if (selectedOpenCodeSourceIds.size === 0) {
@@ -1105,6 +1139,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const concreteOptions = openCodeModelMetadata
       .filter((metadata) => metadata.option.value.trim().length > 0)
       .filter((metadata) => !recommendedOnly || metadata.isRecommended)
+      .filter((metadata) => !freeOnly || metadata.isFree)
       .filter((metadata) => {
         if (selectedOpenCodeSourceIds.size === 0) {
           return true;
@@ -1123,7 +1158,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         return recommendationOrder || left.index - right.index;
       });
 
-    if (recommendedOnly) {
+    if (recommendedOnly || freeOnly) {
       return concreteOptions;
     }
 
@@ -1135,6 +1170,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     ];
   }, [
     effectiveProviderId,
+    freeOnly,
     modelQuery,
     openCodeModelMetadata,
     recommendedOnly,
@@ -1220,6 +1256,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId === 'opencode' &&
     !shouldShowOpenCodeCatalogLoading &&
     visibleConcreteModelOptionCount > OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD;
+  const emptyModelListMessage = trimmedModelQuery
+    ? 'No models match this search.'
+    : effectiveProviderId === 'opencode' && recommendedOnly && freeOnly
+      ? 'No recommended free OpenCode models are available in the current runtime list.'
+      : effectiveProviderId === 'opencode' && freeOnly
+        ? 'No free OpenCode models are available in the current runtime list.'
+        : effectiveProviderId === 'opencode' && recommendedOnly
+          ? 'No recommended OpenCode models are available in the current runtime list.'
+          : 'No models are available in the current runtime list.';
   const activeProviderDisabledReason = activeProviderSelectable
     ? null
     : getProviderDisabledReason(effectiveProviderId);
@@ -1689,7 +1734,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               ) : null}
               {!shouldShowOpenCodeCatalogLoading &&
               ((effectiveProviderId === 'opencode' && openCodeSourceOptions.length > 1) ||
-                hasRecommendedOpenCodeModels) ? (
+                hasRecommendedOpenCodeModels ||
+                hasFreeOpenCodeModels) ? (
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   {effectiveProviderId === 'opencode' && openCodeSourceOptions.length > 1 ? (
                     <Popover
@@ -1785,6 +1831,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       </Label>
                     </div>
                   ) : null}
+                  {hasFreeOpenCodeModels ? (
+                    <div className="flex w-fit items-center gap-2">
+                      <Checkbox
+                        id="opencode-team-model-free-only"
+                        checked={freeOnly}
+                        onCheckedChange={(checked) => setFreeOnly(checked === true)}
+                        className="size-3.5"
+                      />
+                      <Label
+                        htmlFor="opencode-team-model-free-only"
+                        className="cursor-pointer text-[11px] font-normal text-[var(--color-text-secondary)]"
+                      >
+                        Free only
+                      </Label>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               {effectiveProviderId === 'opencode' ? (
@@ -1869,11 +1931,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               )}
               {visibleModelOptions.length === 0 && !shouldShowOpenCodeCatalogLoading ? (
                 <div className="rounded-md border border-white/10 px-3 py-2 text-xs text-[var(--color-text-muted)]">
-                  {trimmedModelQuery
-                    ? 'No models match this search.'
-                    : effectiveProviderId === 'opencode' && recommendedOnly
-                      ? 'No recommended OpenCode models are available in the current runtime list.'
-                      : 'No models are available in the current runtime list.'}
+                  {emptyModelListMessage}
                 </div>
               ) : null}
             </div>

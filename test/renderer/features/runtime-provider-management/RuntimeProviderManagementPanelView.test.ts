@@ -1908,6 +1908,74 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
   });
 
+  it('filters provider model picker rows to free models', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 2,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/anthropic/claude-haiku-4.5',
+                displayName: 'anthropic/claude-haiku-4.5',
+                sourceLabel: 'OpenRouter',
+                free: true,
+                default: false,
+                availability: 'untested',
+                routeKind: 'connected_provider',
+              },
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/anthropic/claude-sonnet-4.6',
+                displayName: 'anthropic/claude-sonnet-4.6',
+                sourceLabel: 'OpenRouter',
+                free: false,
+                default: false,
+                availability: 'untested',
+                routeKind: 'connected_provider',
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Free only');
+    expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
+    expect(host.textContent).toContain('anthropic/claude-sonnet-4.6');
+
+    await act(async () => {
+      host.querySelector<HTMLElement>('#runtime-provider-openrouter-free-only')?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
+    expect(host.textContent).not.toContain('anthropic/claude-sonnet-4.6');
+  });
+
   it('keeps the model search input enabled while model results are loading', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
