@@ -79,6 +79,10 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   })),
 }));
 
+vi.mock('@main/utils/cliAuthDiagLog', () => ({
+  appendCliAuthDiag: vi.fn(() => Promise.resolve(null)),
+}));
+
 import {
   CliInstallerService,
   isVersionOlder,
@@ -88,6 +92,9 @@ import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMult
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '@main/services/team/cliFlavor';
 import { execCli } from '@main/utils/childProcess';
+import { appendCliAuthDiag } from '@main/utils/cliAuthDiagLog';
+
+import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
 /**
  * Helper: allow expected console.error/warn calls in tests where service logs errors.
@@ -96,6 +103,42 @@ import { execCli } from '@main/utils/childProcess';
 function allowConsoleLogs(): void {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
+}
+
+function createTestProviderStatus(
+  providerId: CliProviderId,
+  authenticated: boolean,
+  authMethod: string | null
+): CliProviderStatus {
+  return {
+    providerId,
+    displayName: providerId,
+    supported: true,
+    authenticated,
+    authMethod,
+    verificationState: authenticated ? 'verified' : 'unknown',
+    modelVerificationState: 'idle',
+    modelCatalogRefreshState: 'idle',
+    statusMessage: null,
+    detailMessage: null,
+    models: [],
+    modelAvailability: [],
+    runtimeCapabilities: null,
+    subscriptionRateLimits: null,
+    canLoginFromUi: providerId !== 'opencode',
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: undefined as never,
+    },
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    externalRuntimeDiagnostics: [],
+    backend: null,
+    connection: null,
+    modelCatalog: null,
+  };
 }
 
 describe('CliInstallerService', () => {
@@ -126,6 +169,33 @@ describe('CliInstallerService', () => {
       expect(status.installedVersion).toBeNull();
       expect(status.binaryPath).toBeNull();
       expect(status.updateAvailable).toBe(false);
+    });
+
+    it('does not block getStatus on diagnostic file writes', async () => {
+      allowConsoleLogs();
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'Claude CLI',
+        supportsSelfUpdate: false,
+        showVersionDetails: true,
+        showBinaryPath: true,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue(null);
+
+      let resolveDiag!: (value: string | null) => void;
+      vi.mocked(appendCliAuthDiag).mockReturnValueOnce(
+        new Promise<string | null>((resolve) => {
+          resolveDiag = resolve;
+        })
+      );
+
+      const status = await service.getStatus();
+
+      expect(status.installed).toBe(false);
+      await Promise.resolve();
+      expect(appendCliAuthDiag).toHaveBeenCalledTimes(1);
+
+      resolveDiag(null);
+      await Promise.resolve();
     });
 
     it('includes frontend-visible providers in unavailable multimodel bootstrap status', async () => {
@@ -712,6 +782,145 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelVerificationState).toBe('idle');
       expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
+
+    it('does not shrink cached OpenCode models when a provider refresh returns summary-only models', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+      vi.mocked(execCli).mockImplementation(async (_binaryPath, args) => {
+        const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+        if (normalizedArgs === '--version') {
+          return { stdout: '2.3.4', stderr: '' };
+        }
+        throw new Error(`Unexpected execCli call: ${normalizedArgs}`);
+      });
+
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockResolvedValue([
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'idle',
+          statusMessage: null,
+          detailMessage: null,
+          models: [
+            'opencode/big-pickle',
+            'openai/gpt-5.4',
+            'openrouter/openai/gpt-oss-20b:free',
+          ],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-20T00:00:00.000Z',
+            staleAt: '2026-05-20T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'opencode/big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+              },
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'openai/gpt-5.4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+          modelCatalogRefreshState: 'ready',
+          modelAvailability: [],
+          runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: false, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          connection: null,
+        },
+      ] as never);
+
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus').mockResolvedValue({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        verificationState: 'verified',
+        modelVerificationState: 'idle',
+        statusMessage: null,
+        detailMessage: null,
+        models: ['opencode/big-pickle'],
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading',
+        modelAvailability: [],
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+        canLoginFromUi: false,
+        capabilities: { teamLaunch: true, oneShot: false, extensions: undefined as never },
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        connection: null,
+      } as never);
+
+      await service.getStatus();
+      await service.getProviderStatus('opencode');
+
+      const latestSnapshot = (
+        service as unknown as {
+          latestStatusSnapshot?: Awaited<ReturnType<CliInstallerService['getStatus']>>;
+        }
+      ).latestStatusSnapshot;
+      const opencode = latestSnapshot?.providers.find(
+        (provider) => provider.providerId === 'opencode'
+      );
+      expect(opencode?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
+      expect(opencode?.modelCatalog?.models.map((model) => model.id)).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+      ]);
+      expect(opencode?.modelCatalogRefreshState).toBe('ready');
+    });
   });
 
   describe('install mutex', () => {
@@ -877,6 +1086,172 @@ describe('CliInstallerService', () => {
       expect(status.installedVersion).toBe('2.5.0');
       expect(status.authLoggedIn).toBe(true);
       expect(status.authMethod).toBe('api_key');
+    });
+
+    it('returns multimodel metadata before provider status hydration finishes', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '0.0.45', stderr: '' });
+
+      let resolveProviders!: (providers: CliProviderStatus[]) => void;
+      const providerStatuses = new Promise<CliProviderStatus[]>((resolve) => {
+        resolveProviders = resolve;
+      });
+      const providerStatusesSpy = vi.spyOn(
+        ClaudeMultimodelBridgeService.prototype,
+        'getProviderStatuses'
+      ).mockReturnValue(providerStatuses);
+
+      const statusPromise = service.getStatus();
+      await vi.advanceTimersByTimeAsync(1_600);
+
+      const status = await statusPromise;
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('0.0.45');
+      expect(status.authStatusChecking).toBe(true);
+      expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
+        true
+      );
+
+      resolveProviders([
+        createTestProviderStatus('anthropic', true, 'oauth_token'),
+        createTestProviderStatus('codex', false, null),
+        createTestProviderStatus('opencode', false, null),
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const latest = service.getLatestStatusSnapshot();
+      expect(latest?.authStatusChecking).toBe(false);
+      expect(latest?.authLoggedIn).toBe(true);
+      expect(latest?.authMethod).toBe('oauth_token');
+      expect(status.authStatusChecking).toBe(true);
+      expect(status.authLoggedIn).toBe(false);
+      expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
+        true
+      );
+
+      providerStatusesSpy.mockRestore();
+      vi.useRealTimers();
+    });
+
+    it('does not publish stale background provider hydration after status invalidation', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '0.0.45', stderr: '' });
+
+      let resolveProviders!: (providers: CliProviderStatus[]) => void;
+      const providerStatuses = new Promise<CliProviderStatus[]>((resolve) => {
+        resolveProviders = resolve;
+      });
+      const providerStatusesSpy = vi.spyOn(
+        ClaudeMultimodelBridgeService.prototype,
+        'getProviderStatuses'
+      ).mockReturnValue(providerStatuses);
+
+      const statusPromise = service.getStatus();
+      await vi.advanceTimersByTimeAsync(1_600);
+      await statusPromise;
+
+      service.invalidateStatusCache();
+      expect(service.getLatestStatusSnapshot()).toBeNull();
+
+      resolveProviders([
+        createTestProviderStatus('anthropic', true, 'oauth_token'),
+        createTestProviderStatus('codex', false, null),
+        createTestProviderStatus('opencode', false, null),
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(service.getLatestStatusSnapshot()).toBeNull();
+
+      providerStatusesSpy.mockRestore();
+      vi.useRealTimers();
+    });
+
+    it('does not let stale explicit provider refresh mutate a newer status snapshot', async () => {
+      allowConsoleLogs();
+
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+      vi.mocked(execCli).mockResolvedValue({ stdout: '0.0.45', stderr: '' });
+
+      const providerStatusesSpy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockResolvedValueOnce([
+          createTestProviderStatus('anthropic', false, null),
+          {
+            ...createTestProviderStatus('codex', false, null),
+            statusMessage: 'initial codex state',
+          },
+          createTestProviderStatus('opencode', false, null),
+        ])
+        .mockResolvedValueOnce([
+          createTestProviderStatus('anthropic', false, null),
+          {
+            ...createTestProviderStatus('codex', true, 'chatgpt'),
+            statusMessage: 'fresh codex state',
+          },
+          createTestProviderStatus('opencode', false, null),
+        ]);
+
+      let resolveStaleProvider!: (provider: CliProviderStatus) => void;
+      const staleProvider = new Promise<CliProviderStatus>((resolve) => {
+        resolveStaleProvider = resolve;
+      });
+      const providerStatusSpy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+        .mockReturnValue(staleProvider);
+
+      await service.getStatus();
+      const staleRefresh = service.getProviderStatus('codex');
+      await vi.waitFor(() => {
+        expect(providerStatusSpy).toHaveBeenCalledTimes(1);
+      });
+
+      service.invalidateStatusCache();
+      await service.getStatus();
+
+      resolveStaleProvider({
+        ...createTestProviderStatus('codex', false, null),
+        verificationState: 'error',
+        statusMessage: 'stale codex state',
+      });
+      await staleRefresh;
+
+      const latestCodex = service
+        .getLatestStatusSnapshot()
+        ?.providers.find((provider) => provider.providerId === 'codex');
+      expect(latestCodex?.statusMessage).toBe('fresh codex state');
+      expect(latestCodex?.authenticated).toBe(true);
+
+      providerStatusesSpy.mockRestore();
+      providerStatusSpy.mockRestore();
     });
   });
 

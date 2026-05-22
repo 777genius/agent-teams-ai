@@ -5,7 +5,8 @@ import { filterSafeSentryIntegrations, redactSentryEvent } from '../sentryConfig
 describe('sentryConfig privacy helpers', () => {
   it('redacts high-risk event data recursively', () => {
     const event = redactSentryEvent({
-      message: 'token sk-secretsecretsecret at /Users/alice/work/private-repo',
+      message:
+        'token sk-secretsecretsecret ANTHROPIC_AUTH_TOKEN=lmstudio at /Users/alice/work/private-repo',
       user: {
         email: 'dev@example.com',
       },
@@ -17,6 +18,7 @@ describe('sentryConfig privacy helpers', () => {
 
     const serialized = JSON.stringify(event);
     expect(serialized).not.toContain('sk-secretsecretsecret');
+    expect(serialized).not.toContain('lmstudio');
     expect(serialized).not.toContain('/Users/alice');
     expect(serialized).not.toContain('private-repo');
     expect(serialized).not.toContain('dev@example.com');

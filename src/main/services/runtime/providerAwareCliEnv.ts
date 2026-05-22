@@ -20,6 +20,7 @@ export interface ProviderAwareCliEnvOptions {
   env?: NodeJS.ProcessEnv;
   connectionMode?: 'strict' | 'augment';
   allowStoredApiKeyDecryption?: boolean;
+  allowedStoredApiKeyEnvVarNames?: readonly string[];
 }
 
 export interface ProviderAwareCliEnvResult {
@@ -33,9 +34,15 @@ export async function buildProviderAwareCliEnv(
 ): Promise<ProviderAwareCliEnvResult> {
   const connectionMode = options.connectionMode ?? 'strict';
   const storedApiKeyAccessArgs =
-    options.allowStoredApiKeyDecryption === undefined
+    options.allowStoredApiKeyDecryption === undefined &&
+    options.allowedStoredApiKeyEnvVarNames === undefined
       ? []
-      : [{ allowStoredApiKeyDecryption: options.allowStoredApiKeyDecryption }];
+      : [
+          {
+            allowStoredApiKeyDecryption: options.allowStoredApiKeyDecryption,
+            allowedStoredApiKeyEnvVarNames: options.allowedStoredApiKeyEnvVarNames,
+          },
+        ];
   const shellEnv = options.shellEnv ?? getCachedShellEnv() ?? {};
   const { env, resolvedProviderId } = buildRuntimeBaseEnv({
     binaryPath: options.binaryPath,

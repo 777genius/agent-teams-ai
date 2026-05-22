@@ -1,9 +1,66 @@
 import { EventEmitter } from 'events';
-import type * as FsType from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type * as FsType from 'fs';
+
+type MockChokidarWatcher = {
+  targets: string[];
+  options: unknown;
+  handlers: Map<string, Array<(...args: unknown[]) => void>>;
+  on: (event: string, handler: (...args: unknown[]) => void) => MockChokidarWatcher;
+  close: ReturnType<typeof vi.fn>;
+  emit: (event: string, ...args: unknown[]) => void;
+};
+
+const chokidarMock = vi.hoisted(() => {
+  const instances: MockChokidarWatcher[] = [];
+
+  const createWatchImplementation = () => (targets: string | string[], options: unknown) => {
+    const watcher = {
+      targets: (Array.isArray(targets) ? targets : [targets]).map((target) => String(target)),
+      options,
+      handlers: new Map<string, Array<(...args: unknown[]) => void>>(),
+      close: vi.fn().mockResolvedValue(undefined),
+      emit(event: string, ...args: unknown[]) {
+        for (const handler of watcher.handlers.get(event) ?? []) {
+          handler(...args);
+        }
+      },
+    } as MockChokidarWatcher;
+
+    watcher.on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+      const handlers = watcher.handlers.get(event) ?? [];
+      handlers.push(handler);
+      watcher.handlers.set(event, handlers);
+      return watcher;
+    });
+
+    instances.push(watcher);
+    return watcher;
+  };
+
+  const watch = vi.fn(createWatchImplementation());
+
+  return {
+    instances,
+    watch,
+    createWatcher(targets: string | string[], options: unknown): MockChokidarWatcher {
+      return createWatchImplementation()(targets, options);
+    },
+    reset() {
+      instances.length = 0;
+      watch.mockReset();
+      watch.mockImplementation(createWatchImplementation());
+    },
+  };
+});
+
+vi.mock('chokidar', () => ({
+  watch: chokidarMock.watch,
+}));
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -63,6 +120,7 @@ import * as fsp from 'fs/promises';
 import { errorDetector } from '../../../../src/main/services/error/ErrorDetector';
 import { DataCache } from '../../../../src/main/services/infrastructure/DataCache';
 import { FileWatcher } from '../../../../src/main/services/infrastructure/FileWatcher';
+import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 import { OPENCODE_TASK_LOG_ATTRIBUTION_FILE } from '../../../../src/shared/constants/opencodeTaskLogAttribution';
 
 function createFakeWatcher(): FsType.FSWatcher {
@@ -73,10 +131,35 @@ function createFakeWatcher(): FsType.FSWatcher {
   return emitter as unknown as FsType.FSWatcher;
 }
 
+function getChokidarWatcherForRoot(rootPath: string): MockChokidarWatcher {
+  const normalizedRoot = path.normalize(rootPath);
+  const watcher = [...chokidarMock.instances]
+    .reverse()
+    .find((instance) => instance.targets.includes(normalizedRoot));
+  if (!watcher) {
+    throw new Error(`Missing chokidar watcher for ${normalizedRoot}`);
+  }
+  return watcher;
+}
+
+function expectChokidarOptions(watcher: MockChokidarWatcher): void {
+  expect(watcher.options).toEqual({
+    ignoreInitial: true,
+    ignorePermissionErrors: true,
+    followSymlinks: false,
+    depth: 0,
+  });
+}
+
 /** Make existsSync delegate to the real implementation (needed for tests with real temp files) */
 function useRealExistsSync() {
   const realFn = (fs as unknown as { __realExistsSync: typeof fs.existsSync }).__realExistsSync;
   vi.mocked(fs.existsSync).mockImplementation((p) => realFn(p));
+}
+
+function useRealAccess() {
+  const realFn = (fsp as unknown as { __realAccess: typeof fsp.access }).__realAccess;
+  vi.mocked(fsp.access).mockImplementation((p, mode) => realFn(p, mode));
 }
 
 function createMockNotificationManager() {
@@ -103,9 +186,12 @@ function jsonlLine(uuid: string, text: string): string {
 describe('FileWatcher', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    chokidarMock.reset();
   });
 
   afterEach(() => {
+    setClaudeBasePathOverride(null);
+    vi.unstubAllEnvs();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -168,6 +254,853 @@ describe('FileWatcher', () => {
 
     expect(watchMock).toHaveBeenCalledTimes(3);
     watcher.stop();
+  });
+
+  it('falls back to teams polling when the chokidar registry hits the file descriptor limit', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-team-emfile-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.writeFileSync(path.join(teamsDir, 'base-1', 'inboxes', 'user.json'), '[]', 'utf8');
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchersByPath = new Map<string, FsType.FSWatcher>([
+      [projectsDir, createFakeWatcher()],
+      [todosDir, createFakeWatcher()],
+    ]);
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation((targetPath) => {
+      const watcherForPath = watchersByPath.get(String(targetPath));
+      if (!watcherForPath) {
+        throw new Error(`Unexpected watch path: ${String(targetPath)}`);
+      }
+      return watcherForPath;
+    });
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(watchMock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    teamsWatcher.emit(
+      'error',
+      Object.assign(new Error('too many open files'), {
+        code: 'EMFILE',
+        path: path.join(teamsDir, 'base-1', 'inboxes'),
+        syscall: 'scandir',
+      })
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    const watcherAny = watcher as unknown as {
+      retryTimer: NodeJS.Timeout | null;
+      teamsPollingTimer: NodeJS.Timeout | null;
+      teamsPollingPrimed: boolean;
+    };
+    expect(watcherAny.teamsPollingTimer).not.toBeNull();
+    expect(watcherAny.retryTimer).toBeNull();
+    await vi.waitFor(() => expect(watcherAny.teamsPollingPrimed).toBe(true));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(events).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(watchMock).toHaveBeenCalledTimes(2);
+    expect(teamsWatcher.close).toHaveBeenCalled();
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it.each(['ENOSPC', 'ERR_FS_WATCHER_LIMIT', 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM'])(
+    'falls back to tasks polling when chokidar reports %s',
+    async (code) => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-task-limit-'));
+      setClaudeBasePathOverride(tempDir);
+      const projectsDir = path.join(tempDir, 'projects');
+      const todosDir = path.join(tempDir, 'todos');
+      const teamsDir = path.join(tempDir, 'teams');
+      const tasksDir = path.join(tempDir, 'tasks');
+      fs.mkdirSync(projectsDir, { recursive: true });
+      fs.mkdirSync(todosDir, { recursive: true });
+      fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+      fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+      useRealAccess();
+
+      const watchMock = vi.mocked(fs.watch);
+      watchMock.mockImplementation(() => createFakeWatcher());
+
+      const dataCache = new DataCache(50, 10, false);
+      const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+      watcher.start();
+
+      await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+      const tasksWatcher = getChokidarWatcherForRoot(tasksDir);
+      tasksWatcher.emit('error', Object.assign(new Error(code), { code }));
+      await vi.advanceTimersByTimeAsync(0);
+
+      const watcherAny = watcher as unknown as {
+        retryTimer: NodeJS.Timeout | null;
+        tasksPollingTimer: NodeJS.Timeout | null;
+      };
+      expect(watcherAny.tasksPollingTimer).not.toBeNull();
+      expect(watcherAny.retryTimer).toBeNull();
+      expect(tasksWatcher.close).toHaveBeenCalled();
+
+      watcher.stop();
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  );
+
+  it('falls back to polling when chokidar throws a known error during initial teams start', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-team-sync-limit-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+    chokidarMock.watch.mockImplementation((targets, options) => {
+      const targetList = Array.isArray(targets) ? targets : [targets];
+      if (targetList.includes(path.normalize(teamsDir))) {
+        throw Object.assign(new Error('watch limit'), { code: 'EMFILE' });
+      }
+      return chokidarMock.createWatcher(targets, options);
+    });
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    watcher.start();
+
+    await vi.waitFor(() => {
+      const watcherAny = watcher as unknown as {
+        retryTimer: NodeJS.Timeout | null;
+        teamsPollingTimer: NodeJS.Timeout | null;
+      };
+      expect(watcherAny.teamsPollingTimer).not.toBeNull();
+      expect(watcherAny.retryTimer).toBeNull();
+    });
+
+    expect(chokidarMock.watch).toHaveBeenCalledTimes(2);
+    expect(getChokidarWatcherForRoot(tasksDir)).toBeTruthy();
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('retries chokidar registry after a non-limit error without enabling polling', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-team-nonlimit-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    teamsWatcher.emit('error', Object.assign(new Error('permission denied'), { code: 'EACCES' }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    const watcherAny = watcher as unknown as {
+      retryTimer: NodeJS.Timeout | null;
+      teamsPollingTimer: NodeJS.Timeout | null;
+    };
+    expect(watcherAny.teamsPollingTimer).toBeNull();
+    expect(watcherAny.retryTimer).not.toBeNull();
+    expect(teamsWatcher.close).toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(3));
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('does not allow the legacy env var to force teams and tasks polling', async () => {
+    vi.stubEnv('AGENT_TEAMS_FILEWATCHER_TEAM_TASK_POLLING', '1');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-team-chokidar-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    watcher.start();
+
+    await vi.waitFor(() => expect(watchMock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const watcherAny = watcher as unknown as {
+      teamsPollingTimer: NodeJS.Timeout | null;
+      tasksPollingTimer: NodeJS.Timeout | null;
+    };
+    expect(watcherAny.teamsPollingTimer).toBeNull();
+    expect(watcherAny.tasksPollingTimer).toBeNull();
+    expect(watchMock).not.toHaveBeenCalledWith(teamsDir, expect.anything(), expect.anything());
+    expect(watchMock).not.toHaveBeenCalledWith(tasksDir, expect.anything(), expect.anything());
+    expectChokidarOptions(getChokidarWatcherForRoot(teamsDir));
+    expectChokidarOptions(getChokidarWatcherForRoot(tasksDir));
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('emits team and task changes from the chokidar registry with stable relative paths', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-events-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'config.json'));
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'inboxes', 'user.json'));
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'sentMessages.json'));
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'processes.json'));
+
+    const tasksWatcher = getChokidarWatcherForRoot(tasksDir);
+    tasksWatcher.emit('change', path.join(tasksDir, 'base-1', 'task-1.json'));
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([
+      { type: 'config', teamName: 'base-1', detail: 'config.json' },
+      { type: 'inbox', teamName: 'base-1', detail: 'inboxes/user.json' },
+      { type: 'inbox', teamName: 'base-1', detail: 'sentMessages.json' },
+      { type: 'process', teamName: 'base-1', detail: 'processes.json' },
+      { type: 'task', teamName: 'base-1', detail: 'task-1.json', taskId: 'task-1' },
+    ]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('emits unlink events from the chokidar registry with the same relative path contract', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-unlink-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    getChokidarWatcherForRoot(teamsDir).emit(
+      'unlink',
+      path.join(teamsDir, 'base-1', 'config.json')
+    );
+    getChokidarWatcherForRoot(tasksDir).emit(
+      'unlink',
+      path.join(tasksDir, 'base-1', 'task-1.json')
+    );
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([
+      { type: 'config', teamName: 'base-1', detail: 'config.json' },
+      { type: 'task', teamName: 'base-1', detail: 'task-1.json', taskId: 'task-1' },
+    ]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('normalizes relative chokidar paths and ignores paths outside the watched root', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-paths-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    teamsWatcher.emit('change', 'base-1/config.json');
+    teamsWatcher.emit('change', path.join(tempDir, 'outside', 'base-2', 'config.json'));
+
+    const tasksWatcher = getChokidarWatcherForRoot(tasksDir);
+    tasksWatcher.emit('change', 'base-1/task-1.json');
+    tasksWatcher.emit('change', path.join(tempDir, 'outside', 'base-2', 'task-2.json'));
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([
+      { type: 'config', teamName: 'base-1', detail: 'config.json' },
+      { type: 'task', teamName: 'base-1', detail: 'task-1.json', taskId: 'task-1' },
+    ]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('does not emit existing files from the initial chokidar registry baseline', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-baseline-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    fs.writeFileSync(path.join(teamsDir, 'base-1', 'config.json'), '{}', 'utf8');
+    fs.writeFileSync(path.join(teamsDir, 'base-1', 'inboxes', 'user.json'), '[]', 'utf8');
+    fs.writeFileSync(path.join(tasksDir, 'base-1', 'task-1.json'), '{}', 'utf8');
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('emits existing files once when reconciliation discovers new team and task directories', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-new-files-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    fs.mkdirSync(path.join(teamsDir, 'base-2', 'inboxes'), { recursive: true });
+    fs.writeFileSync(path.join(teamsDir, 'base-2', 'config.json'), '{}', 'utf8');
+    fs.writeFileSync(path.join(teamsDir, 'base-2', 'inboxes', 'user.json'), '[]', 'utf8');
+    fs.mkdirSync(path.join(tasksDir, 'base-2'), { recursive: true });
+    fs.writeFileSync(path.join(tasksDir, 'base-2', 'task-2.json'), '{}', 'utf8');
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(() => {
+      expect(events).toHaveLength(3);
+      expect(events).toEqual(
+        expect.arrayContaining([
+          { type: 'config', teamName: 'base-2', detail: 'config.json' },
+          { type: 'inbox', teamName: 'base-2', detail: 'inboxes/user.json' },
+          { type: 'task', teamName: 'base-2', detail: 'task-2.json', taskId: 'task-2' },
+        ])
+      );
+    });
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('emits existing inbox files once when reconciliation discovers a new inbox directory', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-new-inbox-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    const inboxDir = path.join(teamsDir, 'base-1', 'inboxes');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    expect(getChokidarWatcherForRoot(teamsDir).targets).not.toContain(path.normalize(inboxDir));
+
+    fs.mkdirSync(inboxDir, { recursive: true });
+    fs.writeFileSync(path.join(inboxDir, 'user.json'), '[]', 'utf8');
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(() => {
+      expect(getChokidarWatcherForRoot(teamsDir).targets).toContain(path.normalize(inboxDir));
+      expect(events).toEqual([
+        { type: 'inbox', teamName: 'base-1', detail: 'inboxes/user.json' },
+      ]);
+    });
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('reconciles new team directories immediately after an addDir event', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-adddir-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    const addedTeamDir = path.join(teamsDir, 'base-2');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+
+    fs.mkdirSync(addedTeamDir, { recursive: true });
+    fs.writeFileSync(path.join(addedTeamDir, 'config.json'), '{}', 'utf8');
+    teamsWatcher.emit('addDir', addedTeamDir);
+
+    await vi.waitFor(() => {
+      expect(chokidarMock.watch).toHaveBeenCalledTimes(3);
+      expect(getChokidarWatcherForRoot(teamsDir).targets).toContain(path.normalize(addedTeamDir));
+      expect(events).toEqual([{ type: 'config', teamName: 'base-2', detail: 'config.json' }]);
+    });
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('ignores events from an old chokidar generation after registry rebuild', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-generation-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    const oldTeamsWatcher = getChokidarWatcherForRoot(teamsDir);
+
+    fs.mkdirSync(path.join(teamsDir, 'base-2'), { recursive: true });
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(3));
+    const newTeamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    expect(newTeamsWatcher).not.toBe(oldTeamsWatcher);
+
+    oldTeamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'config.json'));
+    newTeamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'config.json'));
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([{ type: 'config', teamName: 'base-1', detail: 'config.json' }]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('ignores stale chokidar events after stop closes the registry', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-stale-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    const tasksWatcher = getChokidarWatcherForRoot(tasksDir);
+    watcher.stop();
+
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'config.json'));
+    tasksWatcher.emit('change', path.join(tasksDir, 'base-1', 'task-1.json'));
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([]);
+    expect(teamsWatcher.close).toHaveBeenCalled();
+    expect(tasksWatcher.close).toHaveBeenCalled();
+
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('creates fresh chokidar registries after stop and start', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-restart-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    const oldTeamsWatcher = getChokidarWatcherForRoot(teamsDir);
+
+    watcher.stop();
+    watcher.start();
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(4));
+    const newTeamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    expect(newTeamsWatcher).not.toBe(oldTeamsWatcher);
+
+    oldTeamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'config.json'));
+    newTeamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'config.json'));
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([{ type: 'config', teamName: 'base-1', detail: 'config.json' }]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('filters irrelevant team and task registry events before they reach FileWatcher handlers', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-filter-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const teamsWatcher = getChokidarWatcherForRoot(teamsDir);
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'members', 'member.json'));
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', '.opencode-runtime', 'state.json'));
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'runtime', 'runtime.json'));
+    teamsWatcher.emit('change', path.join(teamsDir, 'base-1', 'notes.json'));
+    teamsWatcher.emit('addDir', path.join(teamsDir, 'base-1', 'members'));
+
+    const tasksWatcher = getChokidarWatcherForRoot(tasksDir);
+    tasksWatcher.emit('change', path.join(tasksDir, 'base-1', '.lock'));
+    tasksWatcher.emit('change', path.join(tasksDir, 'base-1', '.highwatermark'));
+    tasksWatcher.emit('change', path.join(tasksDir, 'base-1', 'notes.txt'));
+    tasksWatcher.emit('change', path.join(tasksDir, 'base-1', 'nested', 'task.json'));
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('keeps the teams registry shallow and excludes irrelevant runtime directories', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-scope-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    const teamDir = path.join(teamsDir, 'base-1');
+    const inboxDir = path.join(teamDir, 'inboxes');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(inboxDir, { recursive: true });
+    fs.mkdirSync(path.join(teamDir, 'members'), { recursive: true });
+    fs.mkdirSync(path.join(teamDir, '.opencode-runtime'), { recursive: true });
+    fs.mkdirSync(path.join(teamDir, 'runtime'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+
+    const targets = getChokidarWatcherForRoot(teamsDir).targets;
+    expect(targets).toContain(path.normalize(teamsDir));
+    expect(targets).toContain(path.normalize(teamDir));
+    expect(targets).toContain(path.normalize(inboxDir));
+    expect(targets).not.toContain(path.normalize(path.join(teamDir, 'members')));
+    expect(targets).not.toContain(path.normalize(path.join(teamDir, '.opencode-runtime')));
+    expect(targets).not.toContain(path.normalize(path.join(teamDir, 'runtime')));
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('reconciles new and removed team inbox directories without content polling', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-reconcile-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    const addedTeamDir = path.join(teamsDir, 'base-2');
+    const addedInboxDir = path.join(addedTeamDir, 'inboxes');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    fs.mkdirSync(path.join(teamsDir, 'base-1', 'inboxes'), { recursive: true });
+    fs.mkdirSync(path.join(tasksDir, 'base-1'), { recursive: true });
+    useRealAccess();
+
+    const watchMock = vi.mocked(fs.watch);
+    watchMock.mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    expect(getChokidarWatcherForRoot(teamsDir).targets).not.toContain(path.normalize(addedTeamDir));
+
+    fs.mkdirSync(addedInboxDir, { recursive: true });
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(() =>
+      expect(getChokidarWatcherForRoot(teamsDir).targets).toContain(path.normalize(addedInboxDir))
+    );
+
+    fs.rmSync(addedTeamDir, { recursive: true, force: true });
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(() =>
+      expect(getChokidarWatcherForRoot(teamsDir).targets).not.toContain(
+        path.normalize(addedTeamDir)
+      )
+    );
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('emits team inbox changes from the teams polling fallback', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-team-poll-'));
+    setClaudeBasePathOverride(tempDir);
+    const teamsDir = path.join(tempDir, 'teams');
+    const inboxDir = path.join(teamsDir, 'base-1', 'inboxes');
+    fs.mkdirSync(inboxDir, { recursive: true });
+    const inboxPath = path.join(inboxDir, 'user.json');
+    fs.writeFileSync(inboxPath, '[]', 'utf8');
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(
+      dataCache,
+      path.join(tempDir, 'projects'),
+      path.join(tempDir, 'todos')
+    );
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+
+    const watcherAny = watcher as unknown as {
+      isWatching: boolean;
+      pollTeamsForChanges: () => Promise<void>;
+    };
+    watcherAny.isWatching = true;
+    await watcherAny.pollTeamsForChanges();
+    expect(events).toEqual([]);
+
+    fs.writeFileSync(inboxPath, '[{"messageId":"m1"}]', 'utf8');
+    await watcherAny.pollTeamsForChanges();
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([{ type: 'inbox', teamName: 'base-1', detail: 'inboxes/user.json' }]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('emits task changes from the tasks polling fallback', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-task-poll-'));
+    setClaudeBasePathOverride(tempDir);
+    const taskDir = path.join(tempDir, 'tasks', 'base-1');
+    fs.mkdirSync(taskDir, { recursive: true });
+    const taskPath = path.join(taskDir, 'task-1.json');
+    fs.writeFileSync(taskPath, '{"status":"queued"}', 'utf8');
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(
+      dataCache,
+      path.join(tempDir, 'projects'),
+      path.join(tempDir, 'todos')
+    );
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+
+    const watcherAny = watcher as unknown as {
+      isWatching: boolean;
+      pollTasksForChanges: () => Promise<void>;
+    };
+    watcherAny.isWatching = true;
+    await watcherAny.pollTasksForChanges();
+    expect(events).toEqual([]);
+
+    fs.writeFileSync(taskPath, '{"status":"running"}', 'utf8');
+    await watcherAny.pollTasksForChanges();
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toEqual([
+      { type: 'task', teamName: 'base-1', detail: 'task-1.json', taskId: 'task-1' },
+    ]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it('emits log-source-change when OpenCode task-log attribution manifest changes', () => {

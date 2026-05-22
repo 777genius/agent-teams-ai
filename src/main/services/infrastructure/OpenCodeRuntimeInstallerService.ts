@@ -1,12 +1,16 @@
 import { execCli } from '@main/utils/childProcess';
-import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getAppDataPath } from '@main/utils/pathDecoder';
+import {
+  collectRuntimePathBinaryCandidates,
+  isAbsoluteExistingFile,
+  RUNTIME_PATH_SHELL_ENV_TIMEOUT_MS,
+} from '@main/utils/runtimePathBinaryResolver';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
-import { getCachedShellEnv, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { createHash, randomUUID } from 'crypto';
-import { existsSync, promises as fsp, readFileSync, statSync } from 'fs';
+import { promises as fsp, readdirSync, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
@@ -23,7 +27,6 @@ const MAX_TARBALL_BYTES = 250 * 1024 * 1024;
 const MAX_BINARY_BYTES = 350 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 10_000;
-const PATH_SHELL_ENV_TIMEOUT_MS = 1_500;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -55,17 +58,6 @@ function getRuntimeRootPath(): string {
 
 function getCurrentManifestPath(): string {
   return path.join(getRuntimeRootPath(), 'current.json');
-}
-
-function isAbsoluteExistingFile(filePath: string | null | undefined): filePath is string {
-  if (!filePath || !path.isAbsolute(filePath) || !existsSync(filePath)) {
-    return false;
-  }
-  try {
-    return statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
 }
 
 function parseManifest(value: unknown): OpenCodeRuntimeManifest | null {
@@ -126,46 +118,60 @@ function getPathExecutableNames(): string[] {
     : ['opencode'];
 }
 
-function splitPathEnv(pathValue: string | undefined): string[] {
-  if (!pathValue) {
-    return [];
-  }
-  return pathValue
-    .split(path.delimiter)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
+function collectPathOpenCodeBinaryCandidates(
+  additionalEnvSources: (NodeJS.ProcessEnv | null | undefined)[] = [],
+  options: { includeFallbackPathEntries?: boolean } = {}
+): string[] {
+  return collectRuntimePathBinaryCandidates({
+    executableNames: getPathExecutableNames(),
+    additionalEnvSources,
+    includeFallbackPathEntries: options.includeFallbackPathEntries,
+    extraCandidates: collectNvmOpenCodeBinaryCandidates(),
+  });
 }
 
-function resolvePathOpenCodeBinary(
-  additionalEnvSources: (NodeJS.ProcessEnv | null | undefined)[] = []
-): string | null {
-  const shellEnv = getCachedShellEnv() ?? {};
-  const pathEntries = [
-    ...additionalEnvSources.flatMap((env) => splitPathEnv(env?.PATH)),
-    ...splitPathEnv(shellEnv.PATH),
-    ...splitPathEnv(buildMergedCliPath()),
-    ...splitPathEnv(process.env.PATH),
-  ];
-  const seen = new Set<string>();
-  for (const entry of pathEntries) {
-    const normalizedEntry = path.resolve(entry);
-    if (seen.has(normalizedEntry)) {
-      continue;
+function collectNvmOpenCodeBinaryCandidates(): string[] {
+  if (process.platform === 'win32') {
+    const appdata = process.env.APPDATA;
+    if (!appdata) {
+      return [];
     }
-    seen.add(normalizedEntry);
-    for (const executableName of getPathExecutableNames()) {
-      const candidate = path.join(normalizedEntry, executableName);
-      if (isAbsoluteExistingFile(candidate)) {
-        return candidate;
-      }
-    }
+    return collectVersionedOpenCodeBinaryCandidates(path.join(appdata, 'nvm'));
   }
-  return null;
+
+  return collectVersionedOpenCodeBinaryCandidates(
+    path.join(getShellPreferredHome(), '.nvm', 'versions', 'node'),
+    'bin'
+  );
+}
+
+function collectVersionedOpenCodeBinaryCandidates(rootPath: string, binSegment = ''): string[] {
+  let versions: string[];
+  try {
+    versions = readdirSync(rootPath);
+  } catch {
+    return [];
+  }
+
+  return versions
+    .toSorted((left, right) => right.localeCompare(left, undefined, { numeric: true }))
+    .flatMap((version) => {
+      const versionPath = binSegment
+        ? path.join(rootPath, version, binSegment)
+        : path.join(rootPath, version);
+      return getPathExecutableNames().map((executableName) =>
+        path.join(versionPath, executableName)
+      );
+    });
 }
 
 type OpenCodeBinaryVersionProbe =
   | { ok: true; version: string | null }
   | { ok: false; error: string };
+
+type VerifiedOpenCodeBinaryProbe =
+  | { ok: true; binaryPath: string; version: string | null }
+  | { ok: false; firstFailure: { binaryPath: string; error: string } | null };
 
 async function probeOpenCodeBinaryVersion(binaryPath: string): Promise<OpenCodeBinaryVersionProbe> {
   try {
@@ -179,30 +185,79 @@ async function probeOpenCodeBinaryVersion(binaryPath: string): Promise<OpenCodeB
   }
 }
 
-async function resolvePathOpenCodeBinaryWithBestEffortEnv(
-  options: { shellEnvTimeoutMs?: number } = {}
-): Promise<string | null> {
-  const cachedCandidate = resolvePathOpenCodeBinary();
-  if (cachedCandidate) {
-    return cachedCandidate;
+function normalizeBinaryCandidateForCompare(binaryPath: string): string {
+  const normalized = path.resolve(binaryPath);
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
+async function probeFirstWorkingOpenCodeBinaryCandidate(
+  candidates: string[],
+  seen: Set<string>,
+  firstFailure: { binaryPath: string; error: string } | null
+): Promise<VerifiedOpenCodeBinaryProbe> {
+  let nextFirstFailure = firstFailure;
+  for (const binaryPath of candidates) {
+    const normalized = normalizeBinaryCandidateForCompare(binaryPath);
+    if (seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    const version = await probeOpenCodeBinaryVersion(binaryPath);
+    if (version.ok) {
+      return { ok: true, binaryPath, version: version.version };
+    }
+    nextFirstFailure ??= { binaryPath, error: version.error };
   }
 
+  return { ok: false, firstFailure: nextFirstFailure };
+}
+
+async function probeFirstWorkingPathOpenCodeBinary(
+  options: { shellEnvTimeoutMs?: number } = {}
+): Promise<VerifiedOpenCodeBinaryProbe> {
+  const seenCandidates = new Set<string>();
+  let firstFailure: { binaryPath: string; error: string } | null = null;
+
+  const cachedProbe = await probeFirstWorkingOpenCodeBinaryCandidate(
+    collectPathOpenCodeBinaryCandidates([], {
+      includeFallbackPathEntries: false,
+    }),
+    seenCandidates,
+    firstFailure
+  );
+  if (cachedProbe.ok) {
+    return cachedProbe;
+  }
+  firstFailure = cachedProbe.firstFailure;
+
   const shellEnv = await resolveInteractiveShellEnvBestEffort({
-    timeoutMs: options.shellEnvTimeoutMs ?? PATH_SHELL_ENV_TIMEOUT_MS,
+    timeoutMs: options.shellEnvTimeoutMs ?? RUNTIME_PATH_SHELL_ENV_TIMEOUT_MS,
     fallbackEnv: process.env,
   });
-  return resolvePathOpenCodeBinary([shellEnv]);
+  const shellProbe = await probeFirstWorkingOpenCodeBinaryCandidate(
+    collectPathOpenCodeBinaryCandidates([shellEnv], {
+      includeFallbackPathEntries: false,
+    }),
+    seenCandidates,
+    firstFailure
+  );
+  if (shellProbe.ok) {
+    return shellProbe;
+  }
+  firstFailure = shellProbe.firstFailure;
+
+  return probeFirstWorkingOpenCodeBinaryCandidate(
+    collectPathOpenCodeBinaryCandidates([shellEnv]),
+    seenCandidates,
+    firstFailure
+  );
 }
 
 async function resolveVerifiedPathOpenCodeBinaryPath(
   options: { shellEnvTimeoutMs?: number } = {}
 ): Promise<string | null> {
-  const binaryPath = await resolvePathOpenCodeBinaryWithBestEffortEnv(options);
-  if (!binaryPath) {
-    return null;
-  }
-
-  return (await probeOpenCodeBinaryVersion(binaryPath)).ok ? binaryPath : null;
+  const result = await probeFirstWorkingPathOpenCodeBinary(options);
+  return result.ok ? result.binaryPath : null;
 }
 
 export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
@@ -526,26 +581,25 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   private async getPathStatus(): Promise<OpenCodeRuntimeStatus> {
-    const binaryPath = await resolvePathOpenCodeBinaryWithBestEffortEnv();
-    if (!binaryPath) {
-      return { installed: false, source: 'missing', state: 'idle' };
-    }
-    const version = await probeOpenCodeBinaryVersion(binaryPath);
-    if (!version.ok) {
+    const result = await probeFirstWorkingPathOpenCodeBinary();
+    if (result.ok) {
       return {
-        installed: false,
-        binaryPath,
+        installed: true,
+        binaryPath: result.binaryPath,
+        version: result.version ?? undefined,
         source: 'path',
-        state: 'failed',
-        error: version.error,
+        state: 'ready',
       };
     }
+    if (!result.firstFailure) {
+      return { installed: false, source: 'missing', state: 'idle' };
+    }
     return {
-      installed: true,
-      binaryPath,
-      version: version.version ?? undefined,
+      installed: false,
+      binaryPath: result.firstFailure.binaryPath,
       source: 'path',
-      state: 'ready',
+      state: 'failed',
+      error: result.firstFailure.error,
     };
   }
 

@@ -74,6 +74,7 @@ import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
+import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import {
   getTeamModelSelectionError,
   normalizeExplicitTeamModelForUi,
@@ -779,9 +780,27 @@ export const CreateTeamDialog = ({
     };
   }, []);
 
+  const selectedEffortForCurrentSelection = useMemo(
+    () =>
+      getAvailableTeamEffortValue({
+        providerId: selectedProviderId,
+        model: selectedModel,
+        limitContext: effectiveAnthropicRuntimeLimitContext,
+        providerStatus: runtimeProviderStatusById.get(selectedProviderId),
+        value: selectedEffort,
+      }),
+    [
+      effectiveAnthropicRuntimeLimitContext,
+      runtimeProviderStatusById,
+      selectedEffort,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+
   const selectedModelChecksByProvider = useMemo(() => {
     const modelsByProvider = new Map<TeamProviderId, TeamProvisioningModelCheckRequest[]>();
-    const leadEffort = (selectedEffort as EffortLevel | '') || undefined;
+    const leadEffort = (selectedEffortForCurrentSelection as EffortLevel | '') || undefined;
     const addModel = (
       providerId: TeamProviderId,
       model: string | undefined,
@@ -850,7 +869,7 @@ export const CreateTeamDialog = ({
     effectiveAnthropicRuntimeLimitContext,
     effectiveMemberDrafts,
     runtimeProviderStatusById,
-    selectedEffort,
+    selectedEffortForCurrentSelection,
     selectedModel,
     selectedProviderId,
   ]);
@@ -1560,13 +1579,13 @@ export const CreateTeamDialog = ({
                 selectedModel,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
               }),
-            selectedEffort,
+            selectedEffort: selectedEffortForCurrentSelection,
             selectedFastMode,
             providerFastModeDefault: anthropicProviderFastModeDefault,
             runtimeCapabilities: runtimeProviderStatusById.get('anthropic')?.runtimeCapabilities,
           })
         : {
-            nextEffort: selectedEffort,
+            nextEffort: selectedEffortForCurrentSelection,
             effortResetReason: null,
             ...reconcileCodexRuntimeSelections({
               selection:
@@ -1586,7 +1605,11 @@ export const CreateTeamDialog = ({
           };
 
     const notices: string[] = [];
-    if (reconciliation.nextEffort !== selectedEffort) {
+    if (selectedEffortForCurrentSelection !== selectedEffort) {
+      setSelectedEffortRaw(selectedEffortForCurrentSelection);
+      setStoredCreateTeamEffort(selectedEffortForCurrentSelection);
+    }
+    if (reconciliation.nextEffort !== selectedEffortForCurrentSelection) {
       setSelectedEffortRaw(reconciliation.nextEffort);
       setStoredCreateTeamEffort(reconciliation.nextEffort);
       if (reconciliation.effortResetReason) {
@@ -1608,6 +1631,7 @@ export const CreateTeamDialog = ({
     effectiveAnthropicRuntimeLimitContext,
     runtimeProviderStatusById,
     selectedEffort,
+    selectedEffortForCurrentSelection,
     selectedFastMode,
     selectedModel,
     selectedProviderId,
@@ -1634,7 +1658,7 @@ export const CreateTeamDialog = ({
       providerId: selectedProviderId,
       providerBackendId: selectedProviderBackendId ?? undefined,
       model: effectiveModel,
-      effort: (selectedEffort as EffortLevel) || undefined,
+      effort: (selectedEffortForCurrentSelection as EffortLevel) || undefined,
       fastMode:
         selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
           ? selectedFastMode
@@ -1655,7 +1679,7 @@ export const CreateTeamDialog = ({
       selectedProviderId,
       selectedProviderBackendId,
       effectiveModel,
-      selectedEffort,
+      selectedEffortForCurrentSelection,
       selectedFastMode,
       effectiveAnthropicRuntimeLimitContext,
       skipPermissions,
@@ -1768,8 +1792,8 @@ export const CreateTeamDialog = ({
     if (effectiveModel) args.push('--model', effectiveModel);
     const effectiveEffort =
       selectedProviderId === 'anthropic'
-        ? selectedEffort || anthropicRuntimeSelection?.defaultEffort || ''
-        : selectedEffort;
+        ? selectedEffortForCurrentSelection || anthropicRuntimeSelection?.defaultEffort || ''
+        : selectedEffortForCurrentSelection;
     if (effectiveEffort) args.push('--effort', effectiveEffort);
     if (selectedProviderId === 'anthropic') {
       const fastSettings = anthropicFastModeResolution?.resolvedFastMode
@@ -1785,7 +1809,7 @@ export const CreateTeamDialog = ({
     anthropicRuntimeSelection?.defaultEffort,
     codexFastModeResolution?.resolvedFastMode,
     effectiveModel,
-    selectedEffort,
+    selectedEffortForCurrentSelection,
     selectedProviderId,
     skipPermissions,
   ]);
@@ -2172,7 +2196,7 @@ export const CreateTeamDialog = ({
               defaultProviderId={selectedProviderId}
               inheritedProviderId={selectedProviderId}
               inheritedModel={selectedModel}
-              inheritedEffort={(selectedEffort as EffortLevel) || undefined}
+              inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
               inheritModelSettingsByDefault
               lockProviderModel={syncModelsWithLead}
               forceInheritedModelSettings={syncModelsWithLead}
@@ -2180,7 +2204,7 @@ export const CreateTeamDialog = ({
               hideMembersContent={soloTeam}
               providerId={selectedProviderId}
               model={selectedModel}
-              effort={(selectedEffort as EffortLevel) || undefined}
+              effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
               limitContext={effectiveAnthropicRuntimeLimitContext}
               leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}

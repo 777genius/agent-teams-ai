@@ -247,6 +247,10 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       anthropic: {
         authMode: 'auto',
         fastModeDefault: false,
+        compatibleEndpoint: {
+          enabled: false,
+          baseUrl: '',
+        },
       },
       codex: {
         preferredAuthMode: 'auto',

@@ -165,6 +165,7 @@ function workSyncControlLines(input: OpenCodePromptDeliveryRepairInput): string[
       'Open the current task, verify reviewState/status, then start or continue the review only if it is still assigned to you.',
       'Do not mark the review complete from this retry text alone.',
       `If you cannot pick up the review now, call agent-teams_member_work_sync_status or mcp__agent-teams__member_work_sync_status with ${args}, then report state "blocked" or "still_working" only for the real current state.`,
+      'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
       taskIds ? `Relevant taskIds: ${taskIds}.` : null,
       'Do not invent or reuse a raw report token from this retry text.',
     ].filter((line): line is string => line !== null);
@@ -173,6 +174,7 @@ function workSyncControlLines(input: OpenCodePromptDeliveryRepairInput): string[
     'This is a member-work-sync control message. A plain acknowledgement is not sufficient proof.',
     `Call agent-teams_member_work_sync_status or mcp__agent-teams__member_work_sync_status with ${args}.`,
     'Then call agent-teams_member_work_sync_report or mcp__agent-teams__member_work_sync_report using the agendaFingerprint/reportToken returned by status.',
+    'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
     taskIds ? `Include taskIds ${taskIds} when reporting if those tasks are still relevant.` : null,
     'Use state "still_working", "blocked", or "caught_up" according to the status result. Do not invent or reuse a raw report token from this retry text.',
   ].filter((line): line is string => line !== null);

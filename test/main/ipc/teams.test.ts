@@ -1,22 +1,23 @@
-import * as os from 'os';
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+
 import type {
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
-  BoardTaskLogStreamResponse,
   BoardTaskExactLogDetailResult,
   BoardTaskExactLogSummariesResponse,
+  BoardTaskLogStreamResponse,
   InboxMessage,
   MessagesPage,
   SendMessageResult,
-  TeamViewSnapshot,
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
   TeamProvisioningProgress,
+  TeamViewSnapshot,
 } from '@shared/types/team';
 
 vi.mock('electron', () => ({
@@ -95,66 +96,6 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
 }));
 
 import {
-  TEAM_ALIVE_LIST,
-  TEAM_STOP,
-  TEAM_CANCEL_PROVISIONING,
-  TEAM_CREATE,
-  TEAM_CREATE_CONFIG,
-  TEAM_CREATE_TASK,
-  TEAM_DELETE_TEAM,
-  TEAM_GET_DATA,
-  TEAM_GET_MEMBER_ACTIVITY_META,
-  TEAM_GET_MESSAGES_PAGE,
-  TEAM_LAUNCH,
-  TEAM_LIST,
-  TEAM_PREPARE_PROVISIONING,
-  TEAM_PROCESS_ALIVE,
-  TEAM_PROCESS_SEND,
-  TEAM_PROVISIONING_STATUS,
-  TEAM_REQUEST_REVIEW,
-  TEAM_SEND_MESSAGE,
-  TEAM_SET_CHANGE_PRESENCE_TRACKING,
-  TEAM_GET_ALL_TASKS,
-  TEAM_GET_LOGS_FOR_TASK,
-  TEAM_GET_TASK_ACTIVITY,
-  TEAM_GET_TASK_ACTIVITY_DETAIL,
-  TEAM_GET_TASK_LOG_STREAM,
-  TEAM_GET_TASK_EXACT_LOG_DETAIL,
-  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
-  TEAM_GET_MEMBER_LOGS,
-  TEAM_GET_MEMBER_STATS,
-  TEAM_START_TASK,
-  TEAM_UPDATE_CONFIG,
-  TEAM_UPDATE_KANBAN,
-  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
-  TEAM_UPDATE_TASK_STATUS,
-  TEAM_ADD_MEMBER,
-  TEAM_ADD_TASK_COMMENT,
-  TEAM_GET_ATTACHMENTS,
-  TEAM_GET_DELETED_TASKS,
-  TEAM_GET_TASK_CHANGE_PRESENCE,
-  TEAM_GET_PROJECT_BRANCH,
-  TEAM_KILL_PROCESS,
-  TEAM_LEAD_ACTIVITY,
-  TEAM_PERMANENTLY_DELETE,
-  TEAM_REMOVE_MEMBER,
-  TEAM_RESTORE,
-  TEAM_SET_TASK_CLARIFICATION,
-  TEAM_SOFT_DELETE_TASK,
-  TEAM_UPDATE_MEMBER_ROLE,
-  TEAM_ADD_TASK_RELATIONSHIP,
-  TEAM_REMOVE_TASK_RELATIONSHIP,
-  TEAM_REPLACE_MEMBERS,
-  TEAM_UPDATE_TASK_OWNER,
-  TEAM_UPDATE_TASK_FIELDS,
-  TEAM_LEAD_CONTEXT,
-  TEAM_RESTORE_TASK,
-  TEAM_SHOW_MESSAGE_NOTIFICATION,
-  TEAM_SAVE_TASK_ATTACHMENT,
-  TEAM_GET_TASK_ATTACHMENT,
-  TEAM_DELETE_TASK_ATTACHMENT,
-} from '../../../src/preload/constants/ipcChannels';
-import {
   initializeTeamHandlers,
   registerTeamHandlers,
   removeTeamHandlers,
@@ -162,6 +103,67 @@ import {
 import { ConfigManager } from '../../../src/main/services/infrastructure/ConfigManager';
 import { LaunchIoGovernor } from '../../../src/main/services/team/LaunchIoGovernor';
 import { getAppDataPath } from '../../../src/main/utils/pathDecoder';
+import {
+  TEAM_ADD_MEMBER,
+  TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_ALIVE_LIST,
+  TEAM_CANCEL_PROVISIONING,
+  TEAM_CREATE,
+  TEAM_CREATE_CONFIG,
+  TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
+  TEAM_DELETE_TEAM,
+  TEAM_GET_ALL_TASKS,
+  TEAM_GET_ATTACHMENTS,
+  TEAM_GET_DATA,
+  TEAM_GET_DELETED_TASKS,
+  TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MEMBER_LOGS,
+  TEAM_GET_MEMBER_STATS,
+  TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_KILL_PROCESS,
+  TEAM_LAUNCH,
+  TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
+  TEAM_LIST,
+  TEAM_PERMANENTLY_DELETE,
+  TEAM_PREPARE_PROVISIONING,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_PROVISIONING_STATUS,
+  TEAM_REMOVE_MEMBER,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_REQUEST_REVIEW,
+  TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
+  TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SOFT_DELETE_TASK,
+  TEAM_START_TASK,
+  TEAM_STOP,
+  TEAM_UPDATE_CONFIG,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_STATUS,
+} from '../../../src/preload/constants/ipcChannels';
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -246,6 +248,11 @@ describe('ipc teams handlers', () => {
     })),
     addMember: vi.fn(async () => undefined),
     removeMember: vi.fn(async () => undefined),
+    restoreMember: vi.fn(async () => ({
+      name: 'alice',
+      role: 'Developer',
+      providerId: 'codex' as TeamProviderId,
+    })),
     updateMemberRole: vi.fn(async () => ({ oldRole: undefined, changed: true })),
     softDeleteTask: vi.fn(async () => undefined),
     getDeletedTasks: vi.fn(async () => []),
@@ -279,6 +286,8 @@ describe('ipc teams handlers', () => {
     cancelProvisioning: vi.fn(async () => undefined),
     launchTeam: vi.fn(async () => ({ runId: 'run-2' })),
     sendMessageToTeam: vi.fn(async () => undefined),
+    prepareLiveMemberMcpLaunchConfig: vi.fn(async () => null),
+    discardLiveMemberMcpLaunchConfig: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
@@ -349,11 +358,26 @@ describe('ipc teams handlers', () => {
     handlers.clear();
     vi.clearAllMocks();
     service.listTeams.mockReset();
+    service.getTeamData.mockReset();
     service.getAllTasks.mockReset();
+    service.restoreMember.mockReset();
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
+    service.getTeamData.mockResolvedValue({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
     service.getAllTasks.mockResolvedValue([
       { id: 'task-1', teamName: 'my-team', subject: 'Task 1' },
     ]);
+    service.restoreMember.mockResolvedValue({
+      name: 'alice',
+      role: 'Developer',
+      providerId: 'codex' as TeamProviderId,
+    });
     mockGetMembersMeta.mockReset();
     mockGetMembersMeta.mockResolvedValue([]);
     mockGetMembersMetaFile.mockReset();
@@ -372,8 +396,14 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.invalidateTeamConfig.mockReset();
     mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockReset();
     mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockReset();
+    provisioningService.sendMessageToTeam.mockReset();
+    provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
     provisioningService.resolveRuntimeRecipientProviderId.mockReset();
     provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
+    provisioningService.prepareLiveMemberMcpLaunchConfig.mockReset();
+    provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValue(null);
+    provisioningService.discardLiveMemberMcpLaunchConfig.mockReset();
+    provisioningService.discardLiveMemberMcpLaunchConfig.mockResolvedValue(undefined);
     provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockReset();
     provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
@@ -439,6 +469,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(true);
     expect(handlers.has(TEAM_ADD_MEMBER)).toBe(true);
     expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(true);
+    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(true);
     expect(handlers.has(TEAM_KILL_PROCESS)).toBe(true);
     expect(handlers.has(TEAM_LEAD_ACTIVITY)).toBe(true);
@@ -2552,10 +2583,13 @@ describe('ipc teams handlers', () => {
         role: 'developer',
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(service.addMember).toHaveBeenCalledWith('my-team', {
-        name: 'alice',
-        role: 'developer',
-      });
+      expect(service.addMember).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          name: 'alice',
+          role: 'developer',
+        })
+      );
     });
 
     it('notifies a live lead to use member_briefing bootstrap for the new teammate', async () => {
@@ -2589,6 +2623,79 @@ describe('ipc teams handlers', () => {
         'my-team',
         expect.stringContaining('Their workflow: Focus on frontend polish')
       );
+    });
+
+    it('passes Agent Teams MCP only launch overrides into live add-member Agent prompt', async () => {
+      const projectPath = path.join(os.tmpdir(), 'codex live add project with spaces');
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team', projectPath },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce({
+        mcpConfigPath: '/tmp/codex live add/alice-app-only.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      } as never);
+
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'codex',
+        mcpPolicy: { mode: 'appOnly' },
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        cwd: projectPath,
+        mcpPolicy: { mode: 'appOnly' },
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining(
+          'mcp_config="/tmp/codex live add/alice-app-only.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+        )
+      );
+    });
+
+    it('discards live add-member MCP config if lead notification fails after config creation', async () => {
+      const mcpLaunchConfig = {
+        mcpConfigPath: '/tmp/codex live add/alice-orphan-risk.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      };
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce(
+        mcpLaunchConfig as never
+      );
+      provisioningService.sendMessageToTeam.mockRejectedValueOnce(new Error('lead offline'));
+
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'codex',
+        mcpPolicy: { mode: 'appOnly' },
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.discardLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        mcpLaunchConfig,
+      });
+      vi.mocked(console.warn).mockClear();
     });
 
     it('rejects invalid team name', async () => {
@@ -2712,6 +2819,7 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         model: 'minimax-m2.5-free',
         effort: undefined,
+        mcpPolicy: undefined,
       });
       expect(service.replaceMembers).not.toHaveBeenCalled();
       expect(mockWriteMembersMeta).toHaveBeenCalledWith(
@@ -2814,6 +2922,7 @@ describe('ipc teams handlers', () => {
     it('invalidates worker config cache after roster metadata mutations', async () => {
       const addHandler = handlers.get(TEAM_ADD_MEMBER)!;
       const removeHandler = handlers.get(TEAM_REMOVE_MEMBER)!;
+      const restoreMemberHandler = handlers.get(TEAM_RESTORE_MEMBER)!;
       const replaceHandler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       const updateRoleHandler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
 
@@ -2822,10 +2931,13 @@ describe('ipc teams handlers', () => {
         role: 'developer',
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(service.addMember).toHaveBeenCalledWith('my-team', {
-        name: 'alice',
-        role: 'developer',
-      });
+      expect(service.addMember).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          name: 'alice',
+          role: 'developer',
+        })
+      );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
@@ -2837,6 +2949,19 @@ describe('ipc teams handlers', () => {
       result = (await removeHandler({} as never, 'my-team', 'alice')) as { success: boolean };
       expect(result.success).toBe(true);
       expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
+        'my-team'
+      );
+
+      mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
+      mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockClear();
+
+      result = (await restoreMemberHandler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(true);
+      expect(service.restoreMember).toHaveBeenCalledWith('my-team', 'alice');
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
@@ -3030,7 +3155,260 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  describe('restoreMember', () => {
+    it('calls service on valid input', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+      expect(result.success).toBe(true);
+      expect(service.restoreMember).toHaveBeenCalledWith('my-team', 'alice');
+    });
+
+    it('rejects invalid team name', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, '../bad', 'alice')) as { success: boolean };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid member name', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', '../bad')) as { success: boolean };
+      expect(result.success).toBe(false);
+    });
+
+    it('passes Agent Teams MCP only launch overrides into live restore-member Agent prompt', async () => {
+      const projectPath = path.join(os.tmpdir(), 'codex live restore project with spaces');
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team', projectPath },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'codex',
+            role: 'Developer',
+            removedAt: Date.now(),
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      service.restoreMember.mockResolvedValueOnce({
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex',
+        mcpPolicy: { mode: 'appOnly' },
+      } as never);
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce({
+        mcpConfigPath: '/tmp/codex live restore/alice-app-only.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      } as never);
+
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        cwd: projectPath,
+        mcpPolicy: { mode: 'appOnly' },
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining(
+          'mcp_config="/tmp/codex live restore/alice-app-only.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+        )
+      );
+    });
+
+    it('reattaches a restored OpenCode teammate on a live mixed team', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      service.restoreMember.mockResolvedValueOnce({
+        name: 'alice',
+        providerId: 'opencode',
+        role: 'Developer',
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Developer',
+            removedAt: Date.now(),
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).toHaveBeenCalledWith(
+        'my-team',
+        'alice',
+        { reason: 'member_added' }
+      );
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+    });
+
+    it('blocks live restoreMember for a running OpenCode-led team before metadata is changed', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'opencode',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Developer',
+            removedAt: Date.now(),
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('running OpenCode-led team');
+      expect(service.restoreMember).not.toHaveBeenCalled();
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+  });
+
   describe('replaceMembers', () => {
+    it('passes Agent Teams MCP only launch overrides into live replace-members added teammate prompt', async () => {
+      const projectPath = path.join(os.tmpdir(), 'codex live replace project with spaces');
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team', projectPath },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce({
+        mcpConfigPath: '/tmp/codex live replace/alice-app-only.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      } as never);
+
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'codex',
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        cwd: projectPath,
+        mcpPolicy: { mode: 'appOnly' },
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining(
+          'mcp_config="/tmp/codex live replace/alice-app-only.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+        )
+      );
+    });
+
+    it('reports existing teammate MCP policy changes in live replace-members summary', async () => {
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'codex',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'codex',
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).not.toHaveBeenCalled();
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('MCP access policy changed - restart required')
+      );
+    });
+
     it('blocks live replaceMembers for a running OpenCode-led team before metadata is changed', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       service.getTeamData.mockResolvedValueOnce({
@@ -3416,6 +3794,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(false);
     expect(handlers.has(TEAM_ADD_MEMBER)).toBe(false);
     expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(false);
+    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(false);
     expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(false);
     expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(false);
     expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(false);

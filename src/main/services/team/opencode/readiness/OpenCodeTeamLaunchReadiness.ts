@@ -1,3 +1,5 @@
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+
 import {
   evaluateOpenCodeSupport,
   OPENCODE_TEAM_LAUNCH_VERSION_POLICY,
@@ -34,7 +36,7 @@ export interface OpenCodeRuntimeInventory {
 }
 
 export interface OpenCodeModelExecutionProbeResult {
-  outcome: 'available' | 'unavailable' | 'unknown';
+  outcome: 'available' | 'unavailable' | 'not_authenticated' | 'unknown';
   reason: string | null;
   diagnostics: string[];
 }
@@ -103,8 +105,20 @@ const OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC =
   'OpenCode runtime binary is not installed or not reachable by launch preflight.';
 const OPENCODE_UNAUTHENTICATED_FREE_MODEL_DIAGNOSTIC =
   'No connected OpenCode provider found. Proceeding with a free OpenCode model route that does not require provider authentication.';
+const OPENCODE_AUTHLESS_LOCAL_MODEL_DIAGNOSTIC =
+  'No connected OpenCode provider found. Proceeding with a configured local OpenCode model route after execution proof.';
 const OPENCODE_UNAUTHENTICATED_PAID_MODEL_DIAGNOSTIC =
   'No connected OpenCode provider found. Choose a free OpenCode model such as Big Pickle, or connect a provider in OpenCode for provider-backed models.';
+const AUTHLESS_LOCAL_OPEN_CODE_PROVIDER_IDS = new Set([
+  'atomic-chat',
+  'llama.cpp',
+  'llamacpp',
+  'lmstudio',
+  'lm-studio',
+  'local',
+  'ollama',
+  'vllm',
+]);
 
 export class OpenCodeTeamLaunchReadinessService {
   constructor(
@@ -155,8 +169,14 @@ export class OpenCodeTeamLaunchReadinessService {
 
       const usingFreeModelWithoutProvider =
         !hasConnectedProvider && isFreeOpenCodeModelRoute(modelId);
+      const usingConfiguredAuthlessModelWithoutProvider =
+        !hasConnectedProvider && isConfiguredAuthlessOpenCodeModelRoute(modelId);
 
-      if (!hasConnectedProvider && !usingFreeModelWithoutProvider) {
+      if (
+        !hasConnectedProvider &&
+        !usingFreeModelWithoutProvider &&
+        !(usingConfiguredAuthlessModelWithoutProvider && input.requireExecutionProbe)
+      ) {
         return readiness({
           state: 'not_authenticated',
           inventory,
@@ -233,7 +253,10 @@ export class OpenCodeTeamLaunchReadinessService {
         });
         if (modelProbe.outcome !== 'available') {
           return readiness({
-            state: 'model_unavailable',
+            state:
+              modelProbe.outcome === 'not_authenticated'
+                ? 'not_authenticated'
+                : 'model_unavailable',
             inventory,
             modelId,
             capabilities,
@@ -259,7 +282,9 @@ export class OpenCodeTeamLaunchReadinessService {
           ? appendDiagnostics(inventory.diagnostics, [
               OPENCODE_UNAUTHENTICATED_FREE_MODEL_DIAGNOSTIC,
             ])
-          : inventory.diagnostics,
+          : usingConfiguredAuthlessModelWithoutProvider
+            ? appendDiagnostics(inventory.diagnostics, [OPENCODE_AUTHLESS_LOCAL_MODEL_DIAGNOSTIC])
+            : inventory.diagnostics,
       });
     } catch (error) {
       return readiness({
@@ -280,6 +305,11 @@ function isFreeOpenCodeModelRoute(modelId: string): boolean {
     normalized.endsWith('-free') ||
     normalized.endsWith('/free')
   );
+}
+
+function isConfiguredAuthlessOpenCodeModelRoute(modelId: string): boolean {
+  const parsed = parseOpenCodeQualifiedModelRef(modelId);
+  return parsed ? AUTHLESS_LOCAL_OPEN_CODE_PROVIDER_IDS.has(parsed.sourceId) : false;
 }
 
 function readiness(input: {

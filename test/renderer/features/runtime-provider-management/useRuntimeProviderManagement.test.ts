@@ -1,24 +1,26 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  useRuntimeProviderManagement,
   type RuntimeProviderManagementActions,
   type RuntimeProviderManagementState,
+  useRuntimeProviderManagement,
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
   getStoredCreateTeamModel,
   getStoredCreateTeamProvider,
 } from '../../../../src/renderer/services/createTeamPreferences';
 
-import type { ElectronAPI } from '../../../../src/shared/types/api';
 import type {
   RuntimeProviderConnectionDto,
   RuntimeProviderDirectoryEntryDto,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementViewDto,
+  RuntimeProviderManagementViewResponse,
 } from '../../../../src/features/runtime-provider-management/contracts';
+import type { ElectronAPI } from '../../../../src/shared/types/api';
 
 function installRuntimeProviderManagementApi(
   response: RuntimeProviderManagementModelTestResponse
@@ -79,6 +81,7 @@ function createOpenAiLocalDirectoryEntry(): RuntimeProviderDirectoryEntryDto {
       hasKnownModels: true,
       requiresManualConfig: false,
       supportedInlineAuth: false,
+      configuredAuthless: false,
     },
   };
 }
@@ -168,6 +171,245 @@ describe('useRuntimeProviderManagement', () => {
     expect(loadView).toHaveBeenCalledWith({
       runtimeId: 'opencode',
       projectPath: '/tmp/project-a',
+    });
+  });
+
+  it('ignores stale provider views after project context changes', async () => {
+    let resolveProjectA:
+      | ((response: {
+          schemaVersion: 1;
+          runtimeId: 'opencode';
+          view: RuntimeProviderManagementViewDto;
+        }) => void)
+      | null = null;
+    const projectAResponse = new Promise<{
+      schemaVersion: 1;
+      runtimeId: 'opencode';
+      view: RuntimeProviderManagementViewDto;
+    }>((resolve) => {
+      resolveProjectA = resolve;
+    });
+    const loadView = vi.fn((input: { projectPath?: string | null }) => {
+      if (input.projectPath === '/tmp/project-a') {
+        return projectAResponse;
+      }
+      return Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-b',
+          defaultModel: 'opencode/project-b',
+        },
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+
+    await act(async () => {
+      resolveProjectA?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          defaultModel: 'opencode/project-a',
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.view?.defaultModel).toBe('opencode/project-b');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('drops stale model probe results after project context changes', async () => {
+    const modelId = 'llama.cpp/qwen-test:0.5b';
+    let resolveProbe: ((value: RuntimeProviderManagementModelTestResponse) => void) | null = null;
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    const testModel = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
+          resolveProbe = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          testModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    let probe: Promise<void> | null = null;
+    await act(async () => {
+      probe = actions?.testModel('llama.cpp', modelId) ?? null;
+      await Promise.resolve();
+    });
+
+    expect(testModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'llama.cpp',
+      modelId,
+      projectPath: '/tmp/project-a',
+    });
+    expect(state?.testingModelIds).toEqual([modelId]);
+
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.testingModelIds).toEqual([]);
+
+    await act(async () => {
+      resolveProbe?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'llama.cpp',
+          modelId,
+          ok: true,
+          availability: 'available',
+          message: 'Stale project A probe passed',
+          diagnostics: [],
+        },
+      });
+      await probe;
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.modelResults[modelId]).toBeUndefined();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('drops stale set-default responses after project context changes', async () => {
+    const projectAModelId = 'llama.cpp/project-a:0.5b';
+    let resolveSetDefault: ((value: RuntimeProviderManagementViewResponse) => void) | null = null;
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    const setDefaultModel = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
+          resolveSetDefault = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          setDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    let setDefault: Promise<void> | null = null;
+    await act(async () => {
+      setDefault = actions?.setDefaultModel('llama.cpp', projectAModelId, 'project') ?? null;
+      await Promise.resolve();
+    });
+
+    expect(setDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'llama.cpp',
+      modelId: projectAModelId,
+      probe: true,
+      scope: 'project',
+      projectPath: '/tmp/project-a',
+    });
+    expect(state?.savingDefaultModelId).toBe(projectAModelId);
+
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.savingDefaultModelId).toBeNull();
+
+    await act(async () => {
+      resolveSetDefault?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          defaultModel: projectAModelId,
+        },
+      });
+      await setDefault;
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.view?.defaultModel).toBe('opencode/project-b');
+    expect(state?.selectedModelId).toBeNull();
+    expect(state?.successMessage).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
     });
   });
 
@@ -613,6 +855,7 @@ describe('useRuntimeProviderManagement', () => {
               hasKnownModels: true,
               requiresManualConfig: false,
               supportedInlineAuth: false,
+              configuredAuthless: false,
             },
           },
         ],
@@ -696,6 +939,7 @@ describe('useRuntimeProviderManagement', () => {
                 hasKnownModels: true,
                 requiresManualConfig: false,
                 supportedInlineAuth: true,
+                configuredAuthless: false,
               },
             },
           ],
@@ -1228,5 +1472,161 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.error).toBeNull();
     expect(state?.modelResults[modelId]?.ok).toBe(true);
     expect(state?.modelResults[modelId]?.message).toBe('Model probe passed');
+  });
+
+  it('keeps a successful set-default probe visible as verified model state', async () => {
+    const modelId = 'llama.cpp/qwen-test:0.5b';
+    const setDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          defaultModel: modelId,
+          configuredModels: [
+            {
+              providerId: 'llama.cpp',
+              modelId,
+              displayName: 'qwen-test:0.5b',
+              sourceLabel: 'llama.cpp',
+              free: false,
+              default: true,
+              availability: 'untested',
+              accessKind: 'configured_authless',
+              routeKind: 'configured_local',
+              proofState: 'needs_probe',
+              requiresExecutionProof: true,
+              accessReason: 'Execution proof required',
+            },
+          ],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          setDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.setDefaultModel('llama.cpp', modelId);
+      await Promise.resolve();
+    });
+
+    expect(setDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'llama.cpp',
+      modelId,
+      probe: true,
+      scope: 'project',
+      projectPath: null,
+    });
+    expect(state?.view?.configuredModels?.[0]).toMatchObject({
+      modelId,
+      default: true,
+      availability: 'available',
+      accessKind: 'verified',
+      proofState: 'verified',
+      requiresExecutionProof: false,
+    });
+    expect(state?.modelResults[modelId]).toMatchObject({
+      ok: true,
+      availability: 'available',
+      message: 'Model probe passed',
+    });
+  });
+
+  it('keeps the effective project default selected when an all-projects default is shadowed', async () => {
+    const allProjectsModelId = 'llama.cpp/qwen-test:0.5b';
+    const projectModelId = 'llama.cpp/project-test:1b';
+    const setDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          defaultModel: projectModelId,
+          projectDefaultModel: projectModelId,
+          allProjectsDefaultModel: allProjectsModelId,
+          defaultModelSource: 'project',
+          configuredModels: [
+            {
+              providerId: 'llama.cpp',
+              modelId: allProjectsModelId,
+              displayName: 'qwen-test:0.5b',
+              sourceLabel: 'llama.cpp',
+              free: false,
+              default: false,
+              availability: 'untested',
+              accessKind: 'configured_authless',
+              routeKind: 'configured_local',
+              proofState: 'needs_probe',
+              requiresExecutionProof: true,
+              accessReason: 'Execution proof required',
+            },
+            {
+              providerId: 'llama.cpp',
+              modelId: projectModelId,
+              displayName: 'project-test:1b',
+              sourceLabel: 'llama.cpp',
+              free: false,
+              default: true,
+              availability: 'available',
+              accessKind: 'verified',
+              routeKind: 'configured_local',
+              proofState: 'verified',
+              requiresExecutionProof: false,
+              accessReason: null,
+            },
+          ],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          setDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.setDefaultModel('llama.cpp', allProjectsModelId, 'all_projects');
+      await Promise.resolve();
+    });
+
+    expect(state?.selectedModelId).toBe(projectModelId);
+    expect(state?.view?.defaultModel).toBe(projectModelId);
+    expect(state?.view?.defaultModelSource).toBe('project');
+    expect(
+      state?.view?.configuredModels?.find((model) => model.modelId === allProjectsModelId)
+    ).toMatchObject({
+      default: false,
+      availability: 'available',
+      accessKind: 'verified',
+      proofState: 'verified',
+    });
+    expect(
+      state?.view?.configuredModels?.find((model) => model.modelId === projectModelId)
+    ).toMatchObject({
+      default: true,
+      accessKind: 'verified',
+    });
   });
 });

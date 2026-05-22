@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -17,6 +16,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+
 import {
   formatMemberWorkSyncDiagnostics,
   formatProgressDump,
@@ -25,9 +25,9 @@ import {
 } from './memberWorkSyncLiveHarness';
 import {
   createOpenCodeLiveHarness,
+  type OpenCodeLiveHarness,
   readInboxMessages,
   waitForOpenCodeLanesStopped,
-  type OpenCodeLiveHarness,
 } from './openCodeLiveTestHarness';
 
 import type { TeamChangeEvent, TeamProvisioningProgress } from '../../../../src/shared/types';
@@ -69,7 +69,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
     } else {
       await fs.rm(tempDir, { recursive: true, force: true });
     }
-  });
+  }, 90_000);
 
   it(
     'delivers a work-sync nudge to a real OpenCode member and accepts its still-working report',

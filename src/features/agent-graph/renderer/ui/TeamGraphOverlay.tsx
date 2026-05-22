@@ -163,6 +163,7 @@ export const TeamGraphOverlay = ({
                 getViewportSize={getViewportSize}
                 focusNodeIds={focusNodeIds}
                 enabled={filters?.showActivity ?? true}
+                showConnectors={filters?.showEdges ?? false}
                 onOpenTaskDetail={interactions.openTaskDetail}
                 onOpenMemberProfile={interactions.openMemberProfile}
               />

@@ -11,6 +11,7 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(),
+  resolveInteractiveShellEnvBestEffort: vi.fn(),
 }));
 
 const buildProviderAwareCliEnvMock = vi.fn();
@@ -102,7 +103,7 @@ import {
   TeamProvisioningService,
 } from '@main/services/team/TeamProvisioningService';
 import { spawnCli } from '@main/utils/childProcess';
-import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
 function getRealAgentTeamsMcpLaunchSpec(): { command: string; args: string[] } {
   const workspaceRoot = process.cwd();
@@ -335,7 +336,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     addTeamNotificationMock.mockResolvedValue(null);
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-prepare-'));
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
-    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
       PATH: '/usr/bin',
       SHELL: '/bin/zsh',
     });
@@ -403,6 +404,57 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(assignments).toContain("ANTHROPIC_AWS_WORKSPACE_ID='wrkspc_123'");
     expect(assignments).toContain("ANTHROPIC_AWS_API_KEY='aws-platform-key'");
     expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='anthropic'");
+  });
+
+  it('preserves Anthropic-compatible direct restart env while blanking stale first-party tokens', () => {
+    const compatibleAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_AUTH_TOKEN: 'lmstudio',
+        ANTHROPIC_API_KEY: '',
+      },
+      'anthropic'
+    );
+
+    expect(compatibleAssignments).toContain("ANTHROPIC_BASE_URL='http://localhost:1234'");
+    expect(compatibleAssignments).toContain("ANTHROPIC_AUTH_TOKEN='lmstudio'");
+    expect(compatibleAssignments).toContain("ANTHROPIC_API_KEY=''");
+
+    const firstPartyAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+        ANTHROPIC_AUTH_TOKEN: 'stale-oauth-token',
+      },
+      'anthropic'
+    );
+
+    expect(firstPartyAssignments).toContain("ANTHROPIC_BASE_URL='https://api.anthropic.com'");
+    expect(firstPartyAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(firstPartyAssignments).not.toContain('stale-oauth-token');
+
+    const malformedAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'not a url',
+        ANTHROPIC_AUTH_TOKEN: 'malformed-local-token',
+      },
+      'anthropic'
+    );
+
+    expect(malformedAssignments).toContain("ANTHROPIC_BASE_URL='not a url'");
+    expect(malformedAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(malformedAssignments).not.toContain('malformed-local-token');
+
+    const credentialUrlAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'http://token@localhost:1234',
+        ANTHROPIC_AUTH_TOKEN: 'credential-url-token',
+      },
+      'anthropic'
+    );
+
+    expect(credentialUrlAssignments).toContain("ANTHROPIC_BASE_URL='http://token@localhost:1234'");
+    expect(credentialUrlAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(credentialUrlAssignments).not.toContain('credential-url-token');
   });
 
   it('does not flatten Anthropic helper settings into non-Anthropic lead cross-provider args', async () => {
@@ -474,6 +526,32 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.envPatch.ANTHROPIC_AUTH_TOKEN).toBe('');
     expect(result.envPatch.CLAUDE_CODE_OAUTH_TOKEN).toBe('');
     expect(result.args).toContain('--anthropic-safe-passthrough');
+  });
+
+  it('passes Anthropic-compatible bearer env to non-Anthropic leads without injecting ANTHROPIC_API_KEY', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
+      env: {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_AUTH_TOKEN: 'ollama',
+        ANTHROPIC_API_KEY: '',
+      },
+      authSource: 'anthropic_auth_token',
+      geminiRuntimeAuth: null,
+      providerArgs: ['--anthropic-compatible-passthrough'],
+    });
+
+    const result = await (svc as any).buildCrossProviderMemberArgs(
+      'codex',
+      [{ name: 'bob', providerId: 'anthropic', model: 'qwen3.6' }],
+      { teamRuntimeAuth: { teamName: 'mixed-team', authMaterialId: 'run-1' } }
+    );
+
+    expect(result.usesAnthropicApiKeyHelper).toBe(false);
+    expect(result.envPatch.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.envPatch.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+    expect(result.envPatch.ANTHROPIC_API_KEY).toBe('');
+    expect(result.args).toContain('--anthropic-compatible-passthrough');
   });
 
   it('does not inherit lead effort for an Anthropic teammate with an explicit model', async () => {
@@ -2821,9 +2899,335 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     vi.mocked(console.warn).mockClear();
   });
 
+  it('resolves the OpenCode default model when CLI JSON is surrounded by noisy structured logs', async () => {
+    const modelList = {
+      schemaVersion: 1,
+      providers: {
+        opencode: {
+          defaultModel: 'opencode/big-pickle',
+          models: [
+            {
+              id: 'opencode/big-pickle',
+              label: 'Big Pickle',
+              description: 'Default OpenCode free model',
+            },
+            {
+              id: 'opencode/minimax-m2.5-free',
+              label: 'MiniMax M2.5 Free',
+              description: 'Free OpenCode model',
+            },
+          ],
+        },
+      },
+    };
+    execCliMock.mockResolvedValue({
+      stdout: [
+        'debug {"event":"starting model list"}',
+        JSON.stringify(modelList),
+        'debug {"providers":"log-only"}',
+      ].join('\n'),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
+  it('falls back to OpenCode runtime status when the default model list is truncated', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        return {
+          stdout: [
+            '{',
+            '  "schemaVersion": 1,',
+            '  "providers": {',
+            '    "opencode": {',
+            '      "defaultModel": "opencode/big-pickle",',
+            '      "models": [',
+            '        {"id":"opencode/big-pickle","label":"Big Pickle","description":"Free"}',
+          ].join('\n'),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      if (args[0] === 'runtime' && args[1] === 'status' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: new Date(0).toISOString(),
+                  staleAt: new Date(60_000).toISOString(),
+                  defaultModelId: 'opencode/big-pickle',
+                  defaultLaunchModel: 'opencode/big-pickle',
+                  models: [
+                    {
+                      id: 'opencode/big-pickle',
+                      launchModel: 'opencode/big-pickle',
+                      displayName: 'Big Pickle',
+                      hidden: false,
+                      supportedReasoningEfforts: [],
+                      defaultReasoningEffort: null,
+                      inputModalities: ['text'],
+                      supportsPersonality: true,
+                      isDefault: true,
+                      upgrade: false,
+                      source: 'app-server',
+                      badgeLabel: 'Free',
+                      statusMessage: null,
+                      metadata: { free: true },
+                    },
+                  ],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
+  it('falls back to OpenCode runtime status when the default model list command fails', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        const error = new Error('stdout maxBuffer exceeded');
+        Object.assign(error, { stdout: '{"providers":', stderr: '' });
+        throw error;
+      }
+      if (args[0] === 'runtime' && args[1] === 'status' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: new Date(0).toISOString(),
+                  staleAt: new Date(60_000).toISOString(),
+                  defaultModelId: 'opencode/big-pickle',
+                  defaultLaunchModel: 'opencode/big-pickle',
+                  models: [],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
+  it('materializes pure OpenCode runtime adapter Default selections before launch', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providers: {
+              opencode: {
+                defaultModel: 'opencode/big-pickle',
+                models: [
+                  {
+                    id: 'opencode/big-pickle',
+                    label: 'Big Pickle',
+                    description: 'Free OpenCode model',
+                  },
+                ],
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithMaterializer = svc as unknown as {
+      materializeOpenCodeRuntimeAdapterDefaults: (params: {
+        request: {
+          teamName: string;
+          cwd: string;
+          providerId: 'opencode';
+          skipPermissions: boolean;
+          model?: string;
+        };
+        members: Array<{
+          name: string;
+          providerId?: 'opencode';
+          model?: string;
+        }>;
+      }) => Promise<{
+        request: { model?: string };
+        members: Array<{ name: string; model?: string }>;
+      }>;
+    };
+
+    const result = await serviceWithMaterializer.materializeOpenCodeRuntimeAdapterDefaults({
+      request: {
+        teamName: 'default-opencode-team',
+        cwd: tempRoot,
+        providerId: 'opencode',
+        skipPermissions: true,
+      },
+      members: [
+        {
+          name: 'atlas',
+          providerId: 'opencode',
+        },
+      ],
+    });
+
+    expect(result.request.model).toBe('opencode/big-pickle');
+    expect(result.members).toEqual([
+      {
+        name: 'atlas',
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        effort: undefined,
+      },
+    ]);
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/fake/claude',
+      ['model', 'list', '--json', '--provider', 'opencode'],
+      expect.objectContaining({ cwd: tempRoot })
+    );
+  });
+
+  it('materializes pure OpenCode runtime adapter root model from a saved teammate model', async () => {
+    const svc = new TeamProvisioningService();
+    const serviceWithMaterializer = svc as unknown as {
+      materializeOpenCodeRuntimeAdapterDefaults: (params: {
+        request: {
+          teamName: string;
+          cwd: string;
+          providerId: 'opencode';
+          skipPermissions: boolean;
+          model?: string;
+        };
+        members: Array<{
+          name: string;
+          providerId?: 'opencode';
+          model?: string;
+        }>;
+      }) => Promise<{
+        request: { model?: string };
+        members: Array<{ name: string; model?: string }>;
+      }>;
+    };
+
+    const result = await serviceWithMaterializer.materializeOpenCodeRuntimeAdapterDefaults({
+      request: {
+        teamName: 'saved-opencode-team',
+        cwd: tempRoot,
+        providerId: 'opencode',
+        skipPermissions: true,
+      },
+      members: [
+        {
+          name: 'atlas',
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+        },
+      ],
+    });
+
+    expect(result.request.model).toBe('opencode/big-pickle');
+    expect(result.members[0]?.model).toBe('opencode/big-pickle');
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
   it('maps ANTHROPIC_AUTH_TOKEN into ANTHROPIC_API_KEY for headless preflight', async () => {
     const svc = new TeamProvisioningService();
-    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
       ANTHROPIC_AUTH_TOKEN: 'proxy-token',
       PATH: '/usr/bin',
       SHELL: '/bin/zsh',
@@ -2835,9 +3239,63 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.env.ANTHROPIC_API_KEY).toBe('proxy-token');
   });
 
+  it('preserves Anthropic-compatible Ollama auth token without mapping it into ANTHROPIC_API_KEY', async () => {
+    const svc = new TeamProvisioningService();
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://localhost:11434',
+      ANTHROPIC_AUTH_TOKEN: 'ollama',
+      ANTHROPIC_API_KEY: '',
+      PATH: '/usr/bin',
+      SHELL: '/bin/zsh',
+    });
+
+    const result = await (svc as any).buildProvisioningEnv();
+
+    expect(result.authSource).toBe('anthropic_auth_token');
+    expect(result.env.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.env.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+    expect(result.env.ANTHROPIC_API_KEY).toBe('');
+  });
+
+  it('does not materialize the Anthropic API-key helper for compatible endpoints without a token', async () => {
+    const svc = new TeamProvisioningService();
+    const getConfiguredAnthropicApiKeyForTeamRuntime = vi.fn().mockResolvedValue(null);
+    (svc as any).providerConnectionService = {
+      getConfiguredAnthropicApiKeyForTeamRuntime,
+      augmentConfiguredConnectionEnv: vi.fn(),
+    };
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: {
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_API_KEY: '',
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      connectionIssues: {},
+      providerArgs: [],
+    });
+
+    const result = await (svc as any).buildProvisioningEnv('anthropic', undefined, {
+      teamRuntimeAuth: {
+        allowAnthropicApiKeyHelper: true,
+        teamName: 'local-team',
+        authMaterialId: 'auth-local',
+      },
+    });
+
+    expect(getConfiguredAnthropicApiKeyForTeamRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_API_KEY: '',
+      })
+    );
+    expect(result.authSource).toBe('none');
+    expect(result.providerArgs).toEqual([]);
+  });
+
   it('prefers explicit ANTHROPIC_API_KEY over ANTHROPIC_AUTH_TOKEN', async () => {
     const svc = new TeamProvisioningService();
-    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
       ANTHROPIC_API_KEY: 'real-key',
       ANTHROPIC_AUTH_TOKEN: 'proxy-token',
       PATH: '/usr/bin',
@@ -2876,6 +3334,33 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         process.env.NODE_ENV = previousNodeEnv;
       }
     }
+  });
+
+  it('uses no-background best-effort shell env for provisioning launch env', async () => {
+    const svc = new TeamProvisioningService();
+    const buildProvisioningEnv = (
+      svc as unknown as {
+        buildProvisioningEnv(): Promise<{ env: NodeJS.ProcessEnv }>;
+      }
+    ).buildProvisioningEnv.bind(svc);
+
+    await buildProvisioningEnv();
+
+    const [options] = vi.mocked(resolveInteractiveShellEnvBestEffort).mock.calls.at(-1) ?? [];
+    expect(options).toMatchObject({
+      source: 'team-provisioning',
+      timeoutMs: 1_500,
+      background: false,
+    });
+    expect(options?.fallbackEnv).toBe(process.env);
+    expect(buildProviderAwareCliEnvMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        shellEnv: expect.objectContaining({
+          PATH: '/usr/bin',
+          SHELL: '/bin/zsh',
+        }),
+      })
+    );
   });
 
   it('adds member-work-sync turn-settled spool env for Codex provisioning', async () => {

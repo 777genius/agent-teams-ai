@@ -43,7 +43,8 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
       {
         name: 'alice',
         providerId: 'anthropic',
-        role: 'Reviewer ANTHROPIC_API_KEY=sk-ant-secret',
+        role:
+          'Reviewer ANTHROPIC_API_KEY=sk-ant-secret ANTHROPIC_AUTH_TOKEN="lmstudio local token"',
       },
       {
         name: 'bob',
@@ -69,7 +70,8 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
         {
           name: 'alice',
           providerId: 'anthropic',
-          role: 'Reviewer ANTHROPIC_API_KEY=sk-ant-secret',
+          role:
+            'Reviewer ANTHROPIC_API_KEY=sk-ant-secret ANTHROPIC_AUTH_TOKEN="lmstudio local token"',
         },
         {
           name: 'bob',
@@ -95,8 +97,14 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(alice?.contextText).toContain('<agent_teams_native_bootstrap_context>');
     expect(alice?.contextText).not.toContain('sk-ant-secret');
     expect(alice?.contextText).toContain('ANTHROPIC_API_KEY=[REDACTED]');
+    expect(alice?.contextText).toContain('ANTHROPIC_AUTH_TOKEN=[REDACTED]');
+    expect(alice?.contextText).not.toContain('lmstudio');
+    expect(alice?.contextText).not.toContain('local token');
     expect(bob?.contextText).not.toContain('Bearer secret-token');
     expect(bob?.contextText).toContain('Bearer [REDACTED]');
+    expect(bob?.contextText).toContain('Codex Native visible messaging rule');
+    expect(bob?.contextText).toContain('mcp__agent-teams__task_get');
+    expect(bob?.contextText).not.toContain('notify your team lead via SendMessage');
     expect(alice?.contextHash).toBe(hashNativeBootstrapText(alice?.contextText ?? ''));
   });
 
@@ -172,6 +180,36 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(firstContext).toContain('Startup rules:');
     expect(firstContext).toContain('Current task briefing:');
     expect(firstContext).toContain('[truncated native bootstrap context]');
+  });
+
+  it('keeps Codex MCP rules in compact native startup context', async () => {
+    await new TeamMetaStore().writeMeta('large-codex-native-team', {
+      cwd: '/tmp/workspace',
+      providerId: 'codex',
+      model: 'gpt-5.4-mini',
+      createdAt: Date.now(),
+    });
+    const members = Array.from({ length: 10 }, (_, index) => ({
+      name: `member-${index}`,
+      providerId: 'codex' as const,
+      role: 'Developer',
+      model: 'gpt-5.4-mini',
+    }));
+    await new TeamMembersMetaStore().writeMembers('large-codex-native-team', members);
+
+    const result = await buildNativeAppManagedBootstrapSpecsWithDiagnostics({
+      teamName: 'large-codex-native-team',
+      cwd: '/tmp/workspace',
+      members,
+    });
+    const firstContext = result.specs.get('member-0')?.contextText ?? '';
+
+    expect(result.specs.size).toBe(10);
+    expect(firstContext).toContain('The app loaded compact startup context');
+    expect(firstContext).toContain('mcp__agent-teams__task_get');
+    expect(firstContext).toContain('mcp__agent-teams__member_work_sync_report');
+    expect(firstContext).toContain('mcp__agent-teams__message_send');
+    expect(firstContext).toContain('Do not use SendMessage');
   });
 
 });

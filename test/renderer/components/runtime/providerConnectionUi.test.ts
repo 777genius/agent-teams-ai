@@ -1,16 +1,15 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   formatProviderStatusText,
   getProviderConnectionModeSummary,
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
-  isProviderInventoryOnlyFallback,
-  isOpenCodeCatalogHydrating,
   isConnectionManagedRuntimeProvider,
+  isOpenCodeCatalogHydrating,
+  isProviderInventoryOnlyFallback,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -259,11 +258,37 @@ describe('providerConnectionUi', () => {
         ...provider,
         modelCatalogRefreshState: 'ready',
       })
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isOpenCodeCatalogHydrating({
         ...provider,
         models: ['opencode/big-pickle', 'openrouter/qwen/qwen3-coder-plus'],
+      })
+    ).toBe(true);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalogRefreshState: 'error',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-05-20T00:00:00.000Z',
+          staleAt: '2026-05-20T00:10:00.000Z',
+          defaultModelId: null,
+          defaultLaunchModel: null,
+          models: [],
+          diagnostics: {
+            configReadState: 'ready',
+            appServerState: 'healthy',
+          },
+        },
       })
     ).toBe(false);
   });

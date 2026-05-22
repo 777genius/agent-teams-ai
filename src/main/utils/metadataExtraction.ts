@@ -89,27 +89,10 @@ async function extractCwdFromLocalFile(filePath: string): Promise<string | null>
   }
 }
 
-/**
- * Extract CWD (current working directory) from the first entry.
- * Used to get the actual project path from encoded directory names.
- */
-export async function extractCwd(
+async function extractCwdFromReadableFile(
   filePath: string,
-  fsProvider: FileSystemProvider = defaultProvider
+  fsProvider: FileSystemProvider
 ): Promise<string | null> {
-  if (!(await fsProvider.exists(filePath))) {
-    return null;
-  }
-
-  try {
-    const stat = await fsProvider.stat(filePath);
-    if (!stat.isFile()) {
-      return null;
-    }
-  } catch {
-    return null;
-  }
-
   if (fsProvider.type === 'local') {
     try {
       return await extractCwdFromLocalFile(filePath);
@@ -171,6 +154,41 @@ export async function extractCwd(
   }
 
   return null;
+}
+
+/**
+ * Extract CWD from a JSONL file that the caller already discovered as a file.
+ * This skips exists/stat preflight for hot project-discovery paths.
+ */
+export async function extractCwdFromKnownJsonlFile(
+  filePath: string,
+  fsProvider: FileSystemProvider = defaultProvider
+): Promise<string | null> {
+  return extractCwdFromReadableFile(filePath, fsProvider);
+}
+
+/**
+ * Extract CWD (current working directory) from the first entry.
+ * Used to get the actual project path from encoded directory names.
+ */
+export async function extractCwd(
+  filePath: string,
+  fsProvider: FileSystemProvider = defaultProvider
+): Promise<string | null> {
+  if (!(await fsProvider.exists(filePath))) {
+    return null;
+  }
+
+  try {
+    const stat = await fsProvider.stat(filePath);
+    if (!stat.isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  return extractCwdFromReadableFile(filePath, fsProvider);
 }
 
 /**

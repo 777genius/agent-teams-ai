@@ -3,7 +3,7 @@ import {
   mdiBookOpenPageVariantOutline,
   mdiDownload,
 } from "@mdi/js";
-import { heroMessages, type HeroMessagePhase } from "~/data/heroScene";
+import { getLocalizedHeroMessages, type HeroMessagePhase } from "~/data/heroScene";
 
 const { content } = useLandingContent();
 const { t, locale } = useI18n();
@@ -20,6 +20,7 @@ let heroMotionQuery: MediaQueryList | null = null;
 const downloadStore = useDownloadStore();
 const { resolve, data: releaseData } = useReleaseDownloads();
 const { latestReleaseUrl, releaseDownloadUrl } = useGithubRepo();
+const { selectedDownloadAsset } = useDownloadAssetPresentation();
 const withBase = (path: string) => `${baseURL.replace(/\/?$/, "/")}${path.replace(/^\/+/, "")}`;
 
 useCyberHeroParallax(heroRef);
@@ -33,7 +34,35 @@ const releaseDate = computed(() => {
     day: "numeric",
   });
 });
-const activeHeroMessage = computed(() => heroMessages[activeHeroMessageIndex.value] ?? null);
+const localizedHeroMessages = computed(() => getLocalizedHeroMessages(locale.value));
+const activeHeroMessage = computed(() => localizedHeroMessages.value[activeHeroMessageIndex.value] ?? null);
+const supportedProviders = [
+  {
+    id: "codex",
+    name: "Codex",
+    accent: "cyan",
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    accent: "amber",
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    accent: "magenta",
+  },
+] as const;
+const supportedProvidersLabel = computed(() => (
+  locale.value === "ru"
+    ? "Поддерживаем AI-провайдеры"
+    : "Supported AI providers"
+));
+const heroSlogan = computed(() => (
+  locale.value === "ru"
+    ? "Делайте много, почти ничего не делая"
+    : "Get a lot done by doing very little"
+));
 
 const heroDownloadUrl = computed(() => {
   const asset = downloadStore.selectedAsset;
@@ -43,6 +72,20 @@ const heroDownloadUrl = computed(() => {
 });
 
 const docsHref = computed(() => withBase(locale.value === "ru" ? "docs/ru/" : "docs/"));
+const downloadActionSubtitle = computed(() => {
+  if (!selectedDownloadAsset.value) {
+    return locale.value === "ru"
+      ? "Для вашей платформы"
+      : "For your platform";
+  }
+
+  return selectedDownloadAsset.value.actionSubtitle;
+});
+const docsActionSubtitle = computed(() => (
+  locale.value === "ru"
+    ? "Гайды и настройка"
+    : "Guides and setup"
+));
 
 function clearHeroMessageTimers() {
   heroMessageTimers.forEach(window.clearTimeout);
@@ -57,7 +100,7 @@ function setHeroMessageTimer(callback: () => void, delay: number) {
 function runHeroMessageCycle() {
   clearHeroMessageTimers();
 
-  if (!isHeroVisible.value || heroReducedMotion.value || heroMessages.length === 0) {
+  if (!isHeroVisible.value || heroReducedMotion.value || localizedHeroMessages.value.length === 0) {
     heroMessagePhase.value = "cooldown";
     return;
   }
@@ -73,7 +116,7 @@ function runHeroMessageCycle() {
     heroMessagePhase.value = "cooldown";
   }, 3900);
   setHeroMessageTimer(() => {
-    activeHeroMessageIndex.value = (activeHeroMessageIndex.value + 1) % heroMessages.length;
+    activeHeroMessageIndex.value = (activeHeroMessageIndex.value + 1) % localizedHeroMessages.value.length;
     runHeroMessageCycle();
   }, 4700);
 }
@@ -138,33 +181,52 @@ onUnmounted(() => {
           </h1>
 
           <p class="cyber-hero__slogan cyber-panel">
-            Get a lot done by doing very little
+            {{ heroSlogan }}
           </p>
 
           <p class="cyber-hero__description">
             {{ content.hero.subtitle }}
           </p>
 
+          <div
+            class="cyber-hero__providers"
+            :aria-label="supportedProvidersLabel"
+          >
+            <div class="cyber-hero__provider-list">
+              <div
+                v-for="provider in supportedProviders"
+                :key="provider.id"
+                class="cyber-hero__provider"
+                :class="`cyber-hero__provider--${provider.accent}`"
+              >
+                <span class="cyber-hero__provider-icon" aria-hidden="true">
+                  <CyberProviderIcon :provider="provider.id" />
+                </span>
+                <span class="cyber-hero__provider-name">
+                  {{ provider.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div class="cyber-hero__actions">
-            <v-btn
-              variant="flat"
-              size="large"
+            <CyberHeroActionButton
               :href="heroDownloadUrl"
               target="_blank"
-              class="cyber-hero__action cyber-hero__action--primary"
-              :prepend-icon="mdiDownload"
+              tone="primary"
+              :icon="mdiDownload"
+              :subtitle="downloadActionSubtitle"
             >
               {{ t("hero.downloadNow") }}
-            </v-btn>
-            <v-btn
-              variant="outlined"
-              size="large"
+            </CyberHeroActionButton>
+            <CyberHeroActionButton
               :href="docsHref"
-              class="cyber-hero__action cyber-hero__action--docs"
-              :prepend-icon="mdiBookOpenPageVariantOutline"
+              tone="secondary"
+              :icon="mdiBookOpenPageVariantOutline"
+              :subtitle="docsActionSubtitle"
             >
               {{ t("hero.ctaDocs") }}
-            </v-btn>
+            </CyberHeroActionButton>
           </div>
 
           <p
@@ -190,9 +252,6 @@ onUnmounted(() => {
 
       <CyberHeroFeatureStrip
         class="cyber-hero__feature-strip"
-        :active-message="activeHeroMessage"
-        :phase="heroMessagePhase"
-        :reduced-motion="heroReducedMotion"
       />
     </v-container>
   </section>

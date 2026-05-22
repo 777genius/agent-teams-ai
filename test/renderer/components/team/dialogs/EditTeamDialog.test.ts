@@ -29,6 +29,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerId?: string;
       model?: string;
       effort?: string;
+      mcpPolicy?: { mode: 'appOnly' };
     }>;
     onChange: (
       members: Array<{
@@ -40,6 +41,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
         providerId?: string;
         model?: string;
         effort?: string;
+        mcpPolicy?: { mode: 'appOnly' };
       }>
     ) => void;
     fieldError?: string;
@@ -119,6 +121,20 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
         'button',
         {
           type: 'button',
+          'data-testid': 'change-member-mcp-policy',
+          onClick: () =>
+            onChange(
+              members.map((member, index) =>
+                index === 0 ? { ...member, mcpPolicy: { mode: 'appOnly' } } : member
+              )
+            ),
+        },
+        'change-member-mcp-policy'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
           'data-testid': 'revert-member-runtime',
           onClick: () =>
             onChange(
@@ -181,6 +197,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
         providerId?: string;
         model?: string;
         effort?: string;
+        mcpPolicy?: { mode: 'appOnly' };
       }>
     ).map((member) => ({
       name: member.name,
@@ -193,6 +210,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerId: member.providerId,
       model: member.model,
       effort: member.effort,
+      mcpPolicy: member.mcpPolicy,
     }))
   ),
   createMemberDraftsFromInputs: vi.fn((members) =>
@@ -203,6 +221,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
         providerId?: string;
         model?: string;
         effort?: string;
+        mcpPolicy?: { mode: 'appOnly' };
       }>
     ).map((member, index) => ({
       id: `draft-${index}`,
@@ -221,6 +240,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerId: member.providerId,
       model: member.model,
       effort: member.effort,
+      mcpPolicy: member.mcpPolicy,
     }))
   ),
   createMemberDraft: vi.fn((member) => member),
@@ -814,6 +834,69 @@ describe('EditTeamDialog', () => {
       await Promise.resolve();
     });
 
+    expect(api.teams.restartMember).toHaveBeenCalledWith('live-team', 'alice');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('restarts an existing live teammate when MCP policy changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+    vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(EditTeamDialog, {
+          open: true,
+          teamName: 'live-team',
+          currentName: 'Current Team',
+          currentDescription: 'desc',
+          currentColor: 'blue',
+          currentMembers: [{ name: 'alice', role: 'Developer', providerId: 'codex' }] as any,
+          isTeamAlive: true,
+          projectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onChangeLeadRuntime: vi.fn(),
+          onSaved: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      host
+        .querySelector('[data-testid="change-member-mcp-policy"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('MCP access changes');
+
+    const saveButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Save'
+    );
+
+    await act(async () => {
+      saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(api.teams.replaceMembers).toHaveBeenCalledWith('live-team', {
+      members: [
+        expect.objectContaining({
+          name: 'alice',
+          mcpPolicy: { mode: 'appOnly' },
+        }),
+      ],
+    });
     expect(api.teams.restartMember).toHaveBeenCalledWith('live-team', 'alice');
 
     await act(async () => {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import * as path from 'path';
+import { describe, expect, it } from 'vitest';
 
 import { validateConfigUpdatePayload } from '../../../src/main/ipc/configValidation';
 
@@ -235,6 +235,91 @@ describe('configValidation', () => {
     if (result.valid) {
       expect(result.data).toEqual({
         codex: {},
+      });
+    }
+  });
+
+  it('accepts Anthropic-compatible endpoint provider connection updates', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: ' http://localhost:1234/v1 ',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({
+        anthropic: {
+          compatibleEndpoint: {
+            enabled: true,
+            baseUrl: 'http://localhost:1234/v1',
+          },
+        },
+      });
+    }
+  });
+
+  it.each([
+    'https://api.anthropic.com',
+    'https://api.anthropic.com:443/v1',
+    'HTTPS://API.ANTHROPIC.COM/v1',
+    'https://api-staging.anthropic.com',
+    'http://token@localhost:1234',
+    'http://user:pass@localhost:1234',
+    'ftp://localhost:1234',
+    'not a url',
+  ])('rejects invalid Anthropic-compatible endpoint URL %s', (baseUrl) => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl,
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects UI-derived Anthropic-compatible endpoint status fields', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://localhost:1234',
+          tokenConfigured: true,
+        },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain('tokenConfigured is not a valid setting');
+    }
+  });
+
+  it('allows disabling Anthropic-compatible endpoint with an empty base URL', () => {
+    const result = validateConfigUpdatePayload('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: false,
+          baseUrl: '',
+        },
+      },
+    });
+
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({
+        anthropic: {
+          compatibleEndpoint: {
+            enabled: false,
+            baseUrl: '',
+          },
+        },
       });
     }
   });

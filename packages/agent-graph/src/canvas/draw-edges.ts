@@ -3,9 +3,10 @@
  * Adapted from agent-flow's draw-edges.ts (Apache 2.0).
  */
 
-import type { GraphNode, GraphEdge, GraphEdgeType } from '../ports/types';
-import { COLORS } from '../constants/colors';
 import { BEAM, MIN_VISIBLE_OPACITY } from '../constants/canvas-constants';
+import { COLORS } from '../constants/colors';
+
+import type { GraphEdge, GraphEdgeType, GraphNode } from '../ports/types';
 
 // ─── Edge Type → Color/Width Mapping ────────────────────────────────────────
 
@@ -93,6 +94,9 @@ export function drawEdges(
     const isActive = hasActiveParticles.has(edge.id);
     const isSelected = selectedEdgeId === edge.id;
     const isHovered = !isSelected && hoveredEdgeId === edge.id;
+    if (edge.type === 'message' && !isActive && !isSelected && !isHovered) {
+      continue;
+    }
     // Pulse alpha when particles are travelling: base 0.3 + 0.2 * sin wave
     const alpha = isActive ? BEAM.activeAlpha + 0.2 * Math.sin(_time * 6) : BEAM.idleAlpha;
     const focusAlpha = focusEdgeIds && !focusEdgeIds.has(edge.id) ? 0.1 : 1;

@@ -17,9 +17,11 @@ import {
   isGeminiUiFrozen,
 } from '@renderer/utils/geminiUiFreeze';
 import {
+  canUseCustomAnthropicCompatibleModel,
   getAvailableTeamProviderModelOptions,
   getOpenCodeOpenAiRouteAuthUnavailableReason,
   getTeamModelUiDisabledReason,
+  isAnthropicCompatibleRuntime,
   isTeamProviderModelVerificationPending,
   normalizeTeamModelForUi,
   TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
@@ -77,9 +79,18 @@ interface OpenCodeSourceInfo {
   label: string;
 }
 
+interface OpenCodeRouteGroupInfo {
+  id: string;
+  label: string;
+  rank: number;
+}
+
 interface OpenCodeModelGroup {
-  sourceId: string;
-  sourceLabel: string;
+  groupId: string;
+  groupLabel: string;
+  rank: number;
+  sortLabel: string;
+  firstIndex: number;
   options: TeamRuntimeModelOption[];
 }
 
@@ -87,6 +98,8 @@ interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
   sourceInfo: OpenCodeSourceInfo | null;
+  routeGroup: OpenCodeRouteGroupInfo;
+  routeMetadata: NonNullable<ProviderModelCatalogItem['metadata']>['opencode'] | null;
   recommendation: ReturnType<typeof getTeamModelRecommendation>;
   pricingInfo: OpenCodeModelPricingInfo | null;
   searchText: string;
@@ -151,6 +164,22 @@ function getOpenCodeSourceInfo(model: string): OpenCodeSourceInfo | null {
   };
 }
 
+function getOpenCodeRouteGroup(
+  catalogModel: ProviderModelCatalogItem | null | undefined
+): OpenCodeRouteGroupInfo {
+  const routeKind = catalogModel?.metadata?.opencode?.routeKind;
+  if (routeKind === 'configured_local') {
+    return { id: 'opencode-config', label: 'OpenCode config', rank: 0 };
+  }
+  if (routeKind === 'builtin_free') {
+    return { id: 'builtin-free', label: 'Free built-in', rank: 1 };
+  }
+  if (routeKind === 'connected_provider') {
+    return { id: 'connected-providers', label: 'Connected providers', rank: 2 };
+  }
+  return { id: 'catalog-provider', label: 'Other OpenCode catalog', rank: 3 };
+}
+
 function isRecommendedTeamModelRecommendation(
   recommendation: ReturnType<typeof getTeamModelRecommendation>
 ): boolean {
@@ -162,11 +191,15 @@ function isRecommendedTeamModelRecommendation(
 function buildOpenCodeModelSearchText({
   option,
   sourceInfo,
+  routeGroup,
+  routeMetadata,
   recommendation,
   pricingInfo,
 }: {
   option: TeamRuntimeModelOption;
   sourceInfo: OpenCodeSourceInfo | null;
+  routeGroup: OpenCodeRouteGroupInfo;
+  routeMetadata: NonNullable<ProviderModelCatalogItem['metadata']>['opencode'] | null;
   recommendation: ReturnType<typeof getTeamModelRecommendation>;
   pricingInfo: OpenCodeModelPricingInfo | null;
 }): string {
@@ -175,6 +208,9 @@ function buildOpenCodeModelSearchText({
     option.label,
     option.badgeLabel ?? '',
     sourceInfo?.label ?? '',
+    routeGroup.label,
+    routeMetadata?.proofState ?? '',
+    routeMetadata?.accessKind ?? '',
     recommendation?.label ?? '',
     recommendation?.reason ?? '',
     pricingInfo?.free ? 'free' : '',
@@ -219,15 +255,15 @@ function buildOpenCodeVirtualRows({
   for (const group of groups) {
     rows.push({
       kind: 'heading',
-      key: `heading:${group.sourceId}`,
-      sourceLabel: group.sourceLabel,
+      key: `heading:${group.groupId}`,
+      sourceLabel: group.groupLabel,
       count: group.options.length,
     });
 
     for (let start = 0; start < group.options.length; start += columnCount) {
       rows.push({
         kind: 'models',
-        key: `models:${group.sourceId}:${start}`,
+        key: `models:${group.groupId}:${start}`,
         options: group.options.slice(start, start + columnCount),
         isLastInGroup: start + columnCount >= group.options.length,
       });
@@ -414,7 +450,7 @@ function getOpenCodeReadinessMessage(providerStatus: CliProviderStatus | null | 
     return 'The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.';
   }
   if (!providerStatus.supported) {
-    return 'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status.';
+    return 'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.';
   }
   if (!providerStatus.authenticated) {
     if (hasFreeOpenCodeModelRoute(providerStatus)) {
@@ -711,6 +747,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   );
   const defaultModelTooltip = useMemo(() => {
     if (effectiveProviderId === 'anthropic') {
+      if (isAnthropicCompatibleRuntime(runtimeProviderStatus)) {
+        const defaultCompatibleModel =
+          runtimeProviderStatus?.modelCatalog?.defaultLaunchModel?.trim() ||
+          runtimeProviderStatus?.modelCatalog?.defaultModelId?.trim() ||
+          null;
+        return defaultCompatibleModel
+          ? `Uses the Anthropic-compatible endpoint default model.\nCurrently resolves to ${defaultCompatibleModel}.`
+          : 'Uses the Anthropic-compatible endpoint default model.';
+      }
+
       const defaultLongContextModel =
         getRuntimeAwareProviderScopedTeamModelLabel(
           'anthropic',
@@ -725,6 +771,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         ) ?? 'Opus 4.7';
 
       return `Uses the Claude team default model.\nResolves to ${defaultLongContextModel} with 1M context, or ${defaultLimitedContextModel} with 200K context when Limit context is enabled.`;
+    }
+    if (effectiveProviderId === 'opencode') {
+      const defaultOpenCodeModel =
+        runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
+        runtimeProviderStatus?.modelCatalog?.defaultModelId ??
+        null;
+      return defaultOpenCodeModel
+        ? `Uses the OpenCode default model.\nCurrently resolves to ${defaultOpenCodeModel}.`
+        : 'Uses the OpenCode runtime default model.';
     }
     return 'Uses the runtime default for the selected provider.';
   }, [effectiveProviderId, runtimeProviderStatus]);
@@ -836,6 +891,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return getAvailableTeamProviderModelOptions(effectiveProviderId, runtimeProviderStatus);
   }, [effectiveProviderId, runtimeProviderStatus, shouldAwaitRuntimeModelList]);
+  const showAnthropicCompatibleCustomModelInput =
+    effectiveProviderId === 'anthropic' &&
+    canUseCustomAnthropicCompatibleModel(runtimeProviderStatus);
+  const selectedModelMatchesOption = modelOptions.some(
+    (option) => option.value === normalizedValue
+  );
+  const anthropicCompatibleCustomModelValue =
+    showAnthropicCompatibleCustomModelInput && normalizedValue && !selectedModelMatchesOption
+      ? normalizedValue
+      : '';
+  const anthropicCompatibleCatalogWarning =
+    showAnthropicCompatibleCustomModelInput &&
+    runtimeProviderStatus?.modelCatalog?.providerId === 'anthropic'
+      ? (runtimeProviderStatus.modelCatalog.diagnostics.message ??
+        runtimeProviderStatus.modelCatalog.diagnostics.code ??
+        null)
+      : null;
   const openCodeCatalogModelById = useMemo(() => {
     const catalog = runtimeProviderStatus?.modelCatalog;
     const modelById = new Map<string, ProviderModelCatalogItem>();
@@ -864,17 +936,24 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return modelOptions.map((option, index) => {
       const sourceInfo = getOpenCodeSourceInfo(option.value);
       const recommendation = getTeamModelRecommendation(effectiveProviderId, option.value);
-      const pricingInfo = getOpenCodeModelPricingInfo(openCodeCatalogModelById.get(option.value));
+      const catalogModel = openCodeCatalogModelById.get(option.value);
+      const pricingInfo = getOpenCodeModelPricingInfo(catalogModel);
+      const routeGroup = getOpenCodeRouteGroup(catalogModel);
+      const routeMetadata = catalogModel?.metadata?.opencode ?? null;
 
       return {
         option,
         index,
         sourceInfo,
+        routeGroup,
+        routeMetadata,
         recommendation,
         pricingInfo,
         searchText: buildOpenCodeModelSearchText({
           option,
           sourceInfo,
+          routeGroup,
+          routeMetadata,
           recommendation,
           pricingInfo,
         }),
@@ -997,10 +1076,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
 
   const openCodeSourceFilterLabel =
     selectedOpenCodeSourceLabels.length === 0
-      ? 'All OpenCode providers'
+      ? 'All OpenCode sources'
       : selectedOpenCodeSourceLabels.length === 1
         ? selectedOpenCodeSourceLabels[0]
-        : `${selectedOpenCodeSourceLabels.length} OpenCode providers`;
+        : `${selectedOpenCodeSourceLabels.length} OpenCode sources`;
 
   const toggleOpenCodeSourceFilter = (sourceId: string): void => {
     setSelectedOpenCodeSourceIds((previous) => {
@@ -1102,24 +1181,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         continue;
       }
 
-      const sourceInfo = metadata.sourceInfo;
-      if (!sourceInfo) {
-        continue;
-      }
-
-      const existingGroup = groups.get(sourceInfo.id);
+      const sourceGroup = metadata.sourceInfo;
+      const groupId = sourceGroup ? `source:${sourceGroup.id}` : `route:${metadata.routeGroup.id}`;
+      const groupLabel = sourceGroup?.label ?? metadata.routeGroup.label;
+      const existingGroup = groups.get(groupId);
       if (existingGroup) {
         existingGroup.options.push(option);
+        existingGroup.rank = Math.min(existingGroup.rank, metadata.routeGroup.rank);
+        existingGroup.firstIndex = Math.min(existingGroup.firstIndex, metadata.index);
       } else {
-        groups.set(sourceInfo.id, {
-          sourceId: sourceInfo.id,
-          sourceLabel: sourceInfo.label,
+        groups.set(groupId, {
+          groupId,
+          groupLabel,
+          rank: metadata.routeGroup.rank,
+          sortLabel: groupLabel.toLowerCase(),
+          firstIndex: metadata.index,
           options: [option],
         });
       }
     }
 
-    return Array.from(groups.values());
+    return Array.from(groups.values()).sort(
+      (left, right) =>
+        left.rank - right.rank ||
+        left.sortLabel.localeCompare(right.sortLabel, undefined, { sensitivity: 'base' }) ||
+        left.firstIndex - right.firstIndex
+    );
   }, [effectiveProviderId, visibleOpenCodeModelMetadata]);
   const visibleDefaultModelOptions = visibleModelOptions.filter((option) => !option.value.trim());
   const visibleConcreteModelOptionCount =
@@ -1227,6 +1314,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     const openCodePricingInfo =
       effectiveProviderId === 'opencode' ? (openCodeMetadata?.pricingInfo ?? null) : null;
+    const openCodeRouteMetadata =
+      effectiveProviderId === 'opencode' ? (openCodeMetadata?.routeMetadata ?? null) : null;
+    const openCodeRouteKind = openCodeRouteMetadata?.routeKind ?? null;
+    const openCodeProofState = openCodeRouteMetadata?.proofState ?? null;
     const modelButtonTitle =
       modelStatusMessage ?? (opt.value === '' ? defaultModelTooltip : undefined);
 
@@ -1278,13 +1369,43 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               {openCodePricingInfo.summary}
             </span>
           ) : null}
-          {openCodePricingInfo?.free ? (
+          {openCodePricingInfo?.free || openCodeRouteKind === 'builtin_free' ? (
             <span
               data-testid="team-model-selector-model-free-badge"
               className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-200"
               title="OpenCode marks this model as free."
             >
               Free
+            </span>
+          ) : null}
+          {openCodeRouteKind === 'configured_local' ? (
+            <span className="inline-flex items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-cyan-200">
+              Local
+            </span>
+          ) : null}
+          {openCodeRouteKind === 'configured_local' ? (
+            <span className="inline-flex items-center justify-center rounded-full border border-sky-300/30 bg-sky-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-sky-200">
+              Configured
+            </span>
+          ) : null}
+          {openCodeRouteKind === 'connected_provider' ? (
+            <span className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-100">
+              Connected
+            </span>
+          ) : null}
+          {openCodeProofState === 'verified' ? (
+            <span className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-100">
+              Verified
+            </span>
+          ) : null}
+          {openCodeProofState === 'needs_probe' ? (
+            <span className="inline-flex items-center justify-center rounded-full border border-amber-300/30 bg-amber-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-amber-200">
+              Needs test
+            </span>
+          ) : null}
+          {openCodeProofState === 'failed' ? (
+            <span className="inline-flex items-center justify-center rounded-full border border-red-300/30 bg-red-400/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-red-200">
+              Failed
             </span>
           ) : null}
           {modelRecommendation ? (
@@ -1528,6 +1649,30 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   list is syncing.
                 </p>
               ) : null}
+              {showAnthropicCompatibleCustomModelInput ? (
+                <div className="mb-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-2">
+                  <Label
+                    htmlFor="anthropic-compatible-custom-model"
+                    className="mb-1 block text-[11px] font-medium text-[var(--color-text-secondary)]"
+                  >
+                    Custom model id
+                  </Label>
+                  <Input
+                    id="anthropic-compatible-custom-model"
+                    data-testid="team-model-selector-anthropic-compatible-custom-model"
+                    value={anthropicCompatibleCustomModelValue}
+                    onChange={(event) => onValueChange(event.currentTarget.value.trim())}
+                    placeholder="openai/gpt-oss-20b"
+                    className="h-8 text-xs"
+                    disabled={isInspectingInactiveProvider || !activeProviderSelectable}
+                  />
+                  {anthropicCompatibleCatalogWarning ? (
+                    <p className="mt-1.5 text-[10px] leading-relaxed text-amber-200">
+                      {anthropicCompatibleCatalogWarning}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {shouldShowModelSearch ? (
                 <div className="relative mb-2">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -1560,7 +1705,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             selectedOpenCodeSourceIds.size > 0 &&
                               'border-[var(--color-border-emphasis)] text-[var(--color-text)]'
                           )}
-                          aria-label="Filter OpenCode providers"
+                          aria-label="Filter OpenCode sources"
                         >
                           <Filter className="size-3.5 shrink-0" />
                           <span className="min-w-0 truncate">{openCodeSourceFilterLabel}</span>
@@ -1576,22 +1721,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             <CommandPrimitive.Input
                               value={openCodeSourceQuery}
                               onValueChange={setOpenCodeSourceQuery}
-                              placeholder="Search providers"
+                              placeholder="Search sources"
                               className="flex h-8 w-full border-0 bg-transparent px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
                             />
                           </div>
                           <CommandPrimitive.List className="max-h-72 overflow-y-auto overscroll-contain p-1">
                             <CommandPrimitive.Empty className="py-4 text-center text-xs text-[var(--color-text-muted)]">
-                              No providers found.
+                              No sources found.
                             </CommandPrimitive.Empty>
                             {selectedOpenCodeSourceIds.size > 0 && !openCodeSourceQuery.trim() ? (
                               <CommandPrimitive.Item
-                                value="__all_opencode_providers__"
+                                value="__all_opencode_sources__"
                                 onSelect={() => setSelectedOpenCodeSourceIds(new Set())}
                                 className="flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-[var(--color-text-muted)] outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]"
                               >
                                 <Check className="size-3.5 shrink-0 opacity-70" />
-                                All OpenCode providers
+                                All OpenCode sources
                               </CommandPrimitive.Item>
                             ) : null}
                             {filteredOpenCodeSourceOptions.map((source) => {
@@ -1686,13 +1831,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       </div>
                     ) : null}
                     {visibleOpenCodeModelGroups.map((group) => (
-                      <section
-                        key={group.sourceId}
-                        data-testid="team-model-selector-opencode-group"
-                      >
+                      <section key={group.groupId} data-testid="team-model-selector-opencode-group">
                         <div className="mb-1.5 flex items-center justify-between gap-2">
                           <h4 className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
-                            {group.sourceLabel}
+                            {group.groupLabel}
                           </h4>
                           <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
                             {group.options.length}

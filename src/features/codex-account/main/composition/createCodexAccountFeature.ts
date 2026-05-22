@@ -42,6 +42,8 @@ const SNAPSHOT_CACHE_TTL_MS = 5_000;
 const RATE_LIMITS_CACHE_TTL_MS = 45_000;
 const LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS = 60_000;
 const CODEX_BINARY_COLD_RETRY_TIMEOUT_MS = 12_000;
+const CODEX_CLI_NOT_FOUND_MESSAGE =
+  'Codex CLI not found. Install Codex to use native account management.';
 
 interface CodexLastKnownAccount {
   payload: CodexAppServerGetAccountResponse;
@@ -261,6 +263,7 @@ async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
   await resolveInteractiveShellEnvBestEffort({
     timeoutMs: CODEX_BINARY_COLD_RETRY_TIMEOUT_MS,
     fallbackEnv: process.env,
+    background: false,
   });
   CodexBinaryResolver.clearCache();
   return CodexBinaryResolver.resolve();
@@ -487,15 +490,48 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     const now = Date.now();
 
     if (!binaryPath) {
+      const freshRuntimeContext = this.getFreshLastKnownRuntimeContext(now);
+      if (freshRuntimeContext) {
+        const freshAccountPayload = this.getFreshLastKnownAccount(now);
+        const accountPayload = freshAccountPayload ?? null;
+        const managedAccount = asCodexManagedAccount(accountPayload?.account ?? null);
+        const readiness = evaluateCodexLaunchReadiness({
+          preferredAuthMode,
+          managedAccount,
+          apiKey,
+          appServerState: 'healthy',
+          appServerStatusMessage: null,
+          localActiveChatgptAccountPresent,
+        });
+        const snapshot = this.setSnapshot({
+          preferredAuthMode,
+          effectiveAuthMode: readiness.effectiveAuthMode,
+          launchAllowed: readiness.launchAllowed,
+          launchIssueMessage: readiness.issueMessage,
+          launchReadinessState: readiness.state,
+          appServerState: 'healthy',
+          appServerStatusMessage: null,
+          managedAccount,
+          apiKey,
+          requiresOpenaiAuth: accountPayload?.requiresOpenaiAuth ?? null,
+          localAccountArtifactsPresent,
+          localActiveChatgptAccountPresent,
+          runtimeContext: freshRuntimeContext,
+          login,
+          rateLimits: this.snapshotCache?.rateLimits ?? null,
+          updatedAt: new Date(now).toISOString(),
+        });
+        return snapshot;
+      }
+
       const snapshot = this.setSnapshot({
         preferredAuthMode,
         effectiveAuthMode: null,
         launchAllowed: false,
-        launchIssueMessage: 'Codex CLI not found. Install Codex to use native account management.',
+        launchIssueMessage: CODEX_CLI_NOT_FOUND_MESSAGE,
         launchReadinessState: 'runtime_missing',
         appServerState: 'runtime-missing',
-        appServerStatusMessage:
-          'Codex CLI not found. Install Codex to use native account management.',
+        appServerStatusMessage: CODEX_CLI_NOT_FOUND_MESSAGE,
         managedAccount: null,
         apiKey,
         requiresOpenaiAuth: null,
@@ -521,7 +557,15 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     let appServerStatusMessage: string | null = null;
     let accountPayload = this.lastKnownAccount?.payload ?? null;
     let requiresOpenaiAuth: boolean | null = accountPayload?.requiresOpenaiAuth ?? null;
-    let runtimeContext = createRuntimeContext(binaryPath, null);
+    const previousRuntimeContext = this.getFreshLastKnownRuntimeContext(now);
+    let runtimeContext = createRuntimeContext(
+      binaryPath,
+      previousRuntimeContext?.binaryPath === binaryPath ? previousRuntimeContext.codexHome : null
+    );
+    this.lastKnownRuntimeContext = {
+      payload: runtimeContext,
+      observedAt: now,
+    };
     const cachedRateLimitsAreFresh = this.hasFreshRateLimits(now);
     const shouldRequestRateLimits =
       options?.includeRateLimits === true && !cachedRateLimitsAreFresh;
@@ -704,6 +748,29 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       this.lastKnownRateLimits !== null &&
       now - this.lastKnownRateLimits.observedAt <= RATE_LIMITS_CACHE_TTL_MS
     );
+  }
+
+  private getFreshLastKnownRuntimeContext(now: number): CodexRuntimeContext | null {
+    if (
+      !this.lastKnownRuntimeContext ||
+      now - this.lastKnownRuntimeContext.observedAt > LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS ||
+      !this.lastKnownRuntimeContext.payload.binaryPath
+    ) {
+      return null;
+    }
+
+    return this.lastKnownRuntimeContext.payload;
+  }
+
+  private getFreshLastKnownAccount(now: number): CodexAppServerGetAccountResponse | null {
+    if (
+      !this.lastKnownAccount ||
+      now - this.lastKnownAccount.observedAt > LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS
+    ) {
+      return null;
+    }
+
+    return this.lastKnownAccount.payload;
   }
 
   private async emitCurrentSnapshot(): Promise<CodexAccountSnapshotDto> {

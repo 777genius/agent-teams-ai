@@ -36,6 +36,8 @@ export interface GraphConfigPort {
   showLogs?: boolean;
   showTasks?: boolean;
   showProcesses?: boolean;
+  /** Whether to show static graph edges by default */
+  showEdges?: boolean;
   showCompletedTasks?: boolean;
   showEdgeLabels?: boolean;
 

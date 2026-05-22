@@ -21,6 +21,7 @@ interface RuntimeDiagnosticRule {
 const SECRET_VALUE_PATTERNS = [
   /\bsk-[A-Z0-9_-]{12,}\b/gi,
   /\b[A-Z0-9_-]*api[_-]?key[A-Z0-9_-]*[=:]\s*['"]?[^'"\s]+/gi,
+  /\b[A-Z0-9_]*(?:AUTH_TOKEN|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*[=:]\s*['"]?[^'"\s]+/gi,
   /\bauthorization:\s*bearer\s+[^'"\s]+/gi,
 ] as const;
 

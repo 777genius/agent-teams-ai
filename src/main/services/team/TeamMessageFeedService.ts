@@ -110,7 +110,8 @@ function buildSyntheticBootstrapDisplayPrompt(
   const modelLine = member.model?.trim()
     ? `\nModel override for this teammate: ${member.model.trim()}.`
     : '';
-  const runtimeProviderField = providerId === 'opencode' ? ', runtimeProvider: "opencode"' : '';
+  const runtimeProviderField =
+    providerId === 'opencode' || providerId === 'codex' ? `, runtimeProvider: "${providerId}"` : '';
 
   return `You are ${member.name}, a ${role} on team "${displayName}" (${config.name}).${providerLine}${modelLine}
 

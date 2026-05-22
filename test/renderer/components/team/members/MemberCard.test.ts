@@ -1,8 +1,14 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { MemberSpawnStatusEntry, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  MemberSpawnStatusEntry,
+  ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 const hoisted = vi.hoisted(() => ({
   openExternal: vi.fn(),
@@ -422,6 +428,45 @@ describe('MemberCard starting-state visuals', () => {
     expect(host.querySelector('button[aria-label="Relaunch OpenCode"]')).toBeNull();
     expect(host.querySelector('button[aria-label="Copy diagnostics"]')).toBeNull();
     expect(onRestartMember).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows a restore action for removed teammates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRestoreMember = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member: {
+            ...member,
+            removedAt: Date.now(),
+          },
+          memberColor: 'blue',
+          isRemoved: true,
+          onRestoreMember,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('removed');
+    const restoreButton = host.querySelector('button[aria-label="Restore teammate"]');
+    expect(restoreButton).not.toBeNull();
+
+    await act(async () => {
+      (restoreButton as HTMLButtonElement).click();
+      await Promise.resolve();
+    });
+
+    expect(onRestoreMember).toHaveBeenCalledWith('alice');
 
     await act(async () => {
       root.unmount();
@@ -859,7 +904,7 @@ describe('MemberCard starting-state visuals', () => {
             pid: 222,
             resourceHistory: 'not-an-array',
             updatedAt: '2026-04-24T12:00:05.000Z',
-          } as any,
+          } as unknown as TeamAgentRuntimeEntry,
           isTeamAlive: true,
           isTeamProvisioning: false,
         })
@@ -908,7 +953,7 @@ describe('MemberCard starting-state visuals', () => {
               },
             ],
             updatedAt: '2026-04-24T12:00:05.000Z',
-          } as any,
+          } as unknown as TeamAgentRuntimeEntry,
           isTeamAlive: true,
           isTeamProvisioning: false,
         })

@@ -2989,6 +2989,7 @@ export interface TeamSlice {
   restartMember: (teamName: string, memberName: string) => Promise<void>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
+  restoreMember: (teamName: string, memberName: string) => Promise<void>;
   updateMemberRole: (
     teamName: string,
     memberName: string,
@@ -5402,6 +5403,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   removeMember: async (teamName: string, memberName: string) => {
     await unwrapIpc('team:removeMember', () => api.teams.removeMember(teamName, memberName));
     await get().refreshTeamData(teamName);
+  },
+
+  restoreMember: async (teamName: string, memberName: string) => {
+    await unwrapIpc('team:restoreMember', () => api.teams.restoreMember(teamName, memberName));
+    await get().refreshTeamData(teamName);
+    await Promise.allSettled([
+      get().fetchMemberSpawnStatuses(teamName),
+      get().fetchTeamAgentRuntime(teamName),
+    ]);
   },
 
   updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {

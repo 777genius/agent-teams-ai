@@ -1,6 +1,6 @@
 # OpenCode Model Gauntlet Results
 
-Generated: 2026-05-18T13:16:59.867Z
+Generated: 2026-05-20T15:44:19.975Z
 
 Runs per model: 1
 Recommended threshold: average >= 80, successful runs >= 1, consistency >= 85, hard failures = 0
@@ -13,25 +13,25 @@ Scoring weights: launchBootstrap=15, directReply=10, peerRelayAB=15, peerRelayBC
 
 | Model | Verdict | Confidence | Readiness | Consistency | Score Spread | Behavior Avg | Overall Avg | Counted | Pass Runs | Weakest Stage | Weakest TaskRef | Dominant Failure | Blockers | Provider Infra | Runtime Transport | Model Fails | Protocol Runs | p50 | p95 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `opencode/big-pickle` | Tested only | low | 54 | 100 | 0 | 35 | 35 | 1/1 | 0/1 | cleanTranscript 0/1 (0%) | directReply 1/1 (100%) | model-behavior | overall average 35 < 80; behavioral average 35 < 80; successful runs 0 < 1; hard failures 1; model-behavior failures 1; highest weighted stage loss concurrentReplies=15 | 0 | 0 | 1 | 0 | 133048ms | 133048ms |
+| `opencode/big-pickle` | Recommended | low | 100 | 100 | 0 | 100 | 100 | 1/1 | 1/1 | cleanTranscript 1/1 (100%) | concurrentBob 1/1 (100%) | none | - | 0 | 0 | 0 | 0 | 201184ms | 201184ms |
 
 ## opencode/big-pickle
 
-Readiness score: 54.
+Readiness score: 100.
 
-Score stability: consistency=100, min=35, max=35, spread=0, stdDev=0, samples=1.
+Score stability: consistency=100, min=100, max=100, spread=0, stdDev=0, samples=1.
 
-Recommendation blockers: overall average 35 < 80; behavioral average 35 < 80; successful runs 0 < 1; hard failures 1; model-behavior failures 1; highest weighted stage loss concurrentReplies=15.
+Recommendation blockers: -.
 
-Weighted stage impact: concurrentReplies:loss=15, failed=1, pass=0/1 (0%); peerRelayAB:loss=15, failed=1, pass=0/1 (0%); peerRelayBC:loss=15, failed=1, pass=0/1 (0%); cleanTranscript:loss=10, failed=1, pass=0/1 (0%); latencyStable:loss=5, failed=1, pass=0/1 (0%).
+Weighted stage impact: -.
 
-Stage pass rates: launchBootstrap:1/1 (100%), directReply:1/1 (100%), peerRelayAB:0/1 (0%), peerRelayBC:0/1 (0%), concurrentReplies:0/1 (0%), taskRefs:1/1 (100%), cleanTranscript:0/1 (0%), noDuplicateTokens:0/1 (0%), latencyStable:0/1 (0%).
+Stage pass rates: launchBootstrap:1/1 (100%), directReply:1/1 (100%), peerRelayAB:1/1 (100%), peerRelayBC:1/1 (100%), concurrentReplies:1/1 (100%), taskRefs:1/1 (100%), cleanTranscript:1/1 (100%), noDuplicateTokens:1/1 (100%), latencyStable:1/1 (100%).
 
-TaskRef pass rates: directReply:1/1 (100%), peerRelayAB:n/a, peerRelayBC:n/a, concurrentBob:n/a, concurrentTom:n/a.
+TaskRef pass rates: directReply:1/1 (100%), peerRelayAB:1/1 (100%), peerRelayBC:1/1 (100%), concurrentBob:1/1 (100%), concurrentTom:1/1 (100%).
 
 Protocol totals: badMessages=0, duplicateOrMissingTokens=0, affectedRuns=0.
 
 | Run | Outcome | Category | Score | Counted | Duration | Failed Stages | Slowest Stage | TaskRefs | Protocol | Diagnostics |
 | ---: | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
-| 1 | behavioral-fail | model-behavior | 35 | yes | 133048ms | peerRelayAB, peerRelayBC, concurrentReplies, cleanTranscript, noDuplicateTokens, latencyStable | launchBootstrap:23735ms | directReply:ok | - | Timed out waiting for OpenCode member bob to become idle. Last durableState: reply_pending |
+| 1 | passed | none | 100 | yes | 201184ms | - | peerRelayBC:47832ms | directReply:ok, peerRelayAB:ok, peerRelayBC:ok, concurrentBob:ok, concurrentTom:ok | - | runId=85e7ecb6-0767-4606-90d2-c926937b22f5 |
 

@@ -73,6 +73,8 @@ function isPathLikeCandidate(candidate: string): boolean {
 }
 
 function getPathEntries(): string[] {
+  // TODO: Consider sharing runtimePathBinaryResolver here after preserving this resolver's
+  // path-like candidate support and Windows PATHEXT normalization exactly.
   const delimiter = process.platform === 'win32' ? ';' : path.delimiter;
   const shellEnv = getCachedShellEnv() ?? {};
   const seen = new Set<string>();
@@ -232,9 +234,11 @@ export class CodexBinaryResolver {
 
   private static async runResolve(): Promise<string | null> {
     const override = process.env.CODEX_CLI_PATH?.trim();
+    const shellOverride = getCachedShellEnv()?.CODEX_CLI_PATH?.trim();
     const appManagedBinaryPath = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
     const candidates = [
       ...(override ? [override] : []),
+      ...(shellOverride && shellOverride !== override ? [shellOverride] : []),
       ...(appManagedBinaryPath ? [appManagedBinaryPath] : []),
       'codex',
     ];

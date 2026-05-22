@@ -494,23 +494,34 @@ export class OpenCodePromptDeliveryLedgerStore {
       input.visibleReplyCorrelation === 'plain_assistant_text'
         ? 'responded_plain_text'
         : 'responded_visible_message';
-    return await this.updateExisting(input.id, (record) => ({
-      ...record,
-      status: input.semanticallySufficient ? 'responded' : record.status,
-      responseState,
-      lastObservedAt: input.observedAt,
-      respondedAt: input.semanticallySufficient
-        ? (record.respondedAt ?? input.observedAt)
-        : record.respondedAt,
-      visibleReplyInbox: input.visibleReplyInbox,
-      visibleReplyMessageId: input.visibleReplyMessageId,
-      visibleReplyCorrelation: input.visibleReplyCorrelation,
-      lastReason: input.semanticallySufficient
-        ? record.lastReason
-        : selectOpenCodeDestinationProofInsufficientReason(input.diagnostics),
-      diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
-      updatedAt: input.observedAt,
-    }));
+    return await this.updateExisting(input.id, (record) => {
+      const diagnostics = input.semanticallySufficient
+        ? mergeDiagnostics(record.diagnostics, [
+            ...(record.lastReason ? [record.lastReason] : []),
+            ...(input.diagnostics ?? []),
+          ])
+        : mergeDiagnostics(record.diagnostics, input.diagnostics ?? []);
+      return {
+        ...record,
+        status: input.semanticallySufficient ? 'responded' : record.status,
+        responseState,
+        acceptanceUnknown: input.semanticallySufficient ? false : record.acceptanceUnknown,
+        nextAttemptAt: input.semanticallySufficient ? null : record.nextAttemptAt,
+        lastObservedAt: input.observedAt,
+        respondedAt: input.semanticallySufficient
+          ? (record.respondedAt ?? input.observedAt)
+          : record.respondedAt,
+        failedAt: input.semanticallySufficient ? null : record.failedAt,
+        visibleReplyInbox: input.visibleReplyInbox,
+        visibleReplyMessageId: input.visibleReplyMessageId,
+        visibleReplyCorrelation: input.visibleReplyCorrelation,
+        lastReason: input.semanticallySufficient
+          ? null
+          : selectOpenCodeDestinationProofInsufficientReason(input.diagnostics),
+        diagnostics,
+        updatedAt: input.observedAt,
+      };
+    });
   }
 
   async markAcceptanceUnknown(input: {

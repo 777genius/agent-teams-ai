@@ -22,6 +22,36 @@ vi.mock('@renderer/components/team/dialogs/LimitContextCheckbox', () => ({
     ),
 }));
 
+vi.mock('@renderer/components/ui/button', () => ({
+  Button: ({
+    children,
+    className,
+    onClick,
+    disabled,
+    'aria-expanded': ariaExpanded,
+    'aria-label': ariaLabel,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    disabled?: boolean;
+    'aria-expanded'?: boolean;
+    'aria-label'?: string;
+  }) =>
+    React.createElement(
+      'button',
+      {
+        className,
+        disabled,
+        onClick,
+        type: 'button',
+        'aria-expanded': ariaExpanded,
+        'aria-label': ariaLabel,
+      },
+      children
+    ),
+}));
+
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model || 'Default', effort].filter(Boolean).join(' · '),
@@ -245,6 +275,33 @@ describe('LeadModelRow', () => {
     });
 
     expect(host.textContent).toContain('limit-context disabled');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows the OpenCode context config hint inside OpenCode provider settings after effort', () => {
+    const { host, root } = renderLeadModelRow({
+      providerId: 'opencode',
+      model: 'local/model',
+      showAnthropicContextLimit: false,
+    });
+
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="opencode provider, local/model"]'
+    )!;
+    act(() => {
+      modelButton.click();
+    });
+
+    const text = host.textContent ?? '';
+    const effortIndex = text.indexOf('effort-selector');
+    const hintIndex = text.indexOf('OpenCode local models can use an OpenCode context budget');
+
+    expect(hintIndex).toBeGreaterThan(-1);
+    expect(effortIndex).toBeGreaterThan(-1);
+    expect(hintIndex).toBeGreaterThan(effortIndex);
 
     act(() => {
       root.unmount();

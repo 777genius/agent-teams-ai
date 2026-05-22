@@ -2,17 +2,16 @@ import * as nodeFs from 'fs';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
-import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
+import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitIdentityResolver';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
+import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
-import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitIdentityResolver';
-import type { TeamMetaFile } from '../../../../src/main/services/team/TeamMetaStore';
+import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
+import type { TeamMetaFile } from '../../../../src/main/services/team/TeamMetaStore';
 import type {
   InboxMessage,
   KanbanState,
@@ -1181,6 +1180,67 @@ describe('TeamDataService', () => {
     );
   });
 
+  it('restores a removed member without reusing the stale runtime agent id', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Developer',
+          providerId: 'codex',
+          model: 'gpt-5.4-mini',
+          effort: 'medium',
+          agentType: 'general-purpose',
+          agentId: 'alice@old-runtime-team',
+          joinedAt: 1710000000000,
+          removedAt: 1715000000000,
+        },
+        {
+          name: 'bob',
+          role: 'Reviewer',
+          providerId: 'codex',
+          agentType: 'general-purpose',
+          joinedAt: 1710000100000,
+        },
+      ]),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'runtime-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await expect(service.restoreMember('runtime-team', 'alice')).resolves.toMatchObject({
+      name: 'alice',
+      role: 'Developer',
+      agentId: undefined,
+      removedAt: undefined,
+    });
+
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'alice',
+          role: 'Developer',
+          agentId: undefined,
+          removedAt: undefined,
+        }),
+      ])
+    );
+  });
+
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
     const tasks: TeamTask[] = [
@@ -2237,6 +2297,25 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
+          tasks: {
+            getTask: vi.fn(() => ({
+              id: 'task-1',
+              status: 'completed',
+              reviewState: 'none',
+            })),
+          },
+          kanban: {
+            getKanbanState: vi.fn(() => ({
+              teamName: 'my-team',
+              reviewers: [],
+              tasks: {
+                'task-1': {
+                  column: 'review',
+                  movedAt: '2026-05-20T10:00:00.000Z',
+                },
+              },
+            })),
+          },
           review: {
             requestReview: requestReviewMock,
             approveReview: approveReviewMock,
@@ -2267,6 +2346,60 @@ describe('TeamDataService', () => {
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
+  });
+
+  it('uses direct kanban approval for completed tasks that are not in review', async () => {
+    const approveReviewMock = vi.fn();
+    const setKanbanColumnMock = vi.fn();
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'lead', role: 'team lead' }],
+          leadSessionId: 'lead-2',
+        })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          tasks: {
+            getTask: vi.fn(() => ({
+              id: 'task-1',
+              status: 'completed',
+              reviewState: 'none',
+              historyEvents: [],
+            })),
+          },
+          kanban: {
+            getKanbanState: vi.fn(() => ({
+              teamName: 'my-team',
+              reviewers: [],
+              tasks: {},
+            })),
+            setKanbanColumn: setKanbanColumnMock,
+          },
+          review: {
+            approveReview: approveReviewMock,
+          },
+        }) as never
+    );
+
+    await service.updateKanban('my-team', 'task-1', { op: 'set_column', column: 'approved' });
+
+    expect(setKanbanColumnMock).toHaveBeenCalledWith('task-1', 'approved', {
+      transition: 'manual_approve',
+    });
+    expect(approveReviewMock).not.toHaveBeenCalled();
   });
 
   it('seeds historical eligible task comments without sending when the journal is missing', async () => {

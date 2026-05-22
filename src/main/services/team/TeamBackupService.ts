@@ -76,6 +76,8 @@ const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members'];
 const ATOMIC_WRITE_TEMP_FILE_PREFIX = '.tmp.';
 const FILE_LOCK_SUFFIX = '.lock';
 const QUARANTINED_OPENCODE_LANE_INDEX_RE = /^lanes\.invalid\.\d+\.json$/;
+const MEMBER_WORK_SYNC_DIR = '.member-work-sync';
+const MEMBER_WORK_SYNC_JOURNAL_FILE = 'journal.jsonl';
 // Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
 const APP_DATA_SUBDIRS = ['attachments'];
 const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
@@ -122,6 +124,15 @@ function shouldCollectRecursiveBackupFile(relPath: string): boolean {
   if (QUARANTINED_OPENCODE_LANE_INDEX_RE.test(fileName)) {
     return false;
   }
+  const segments = relPath.split('/');
+  const workSyncIndex = segments.lastIndexOf(MEMBER_WORK_SYNC_DIR);
+  if (
+    segments[0] === 'members' &&
+    workSyncIndex >= 2 &&
+    segments[workSyncIndex + 1] === MEMBER_WORK_SYNC_JOURNAL_FILE
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -140,12 +151,13 @@ async function collectRecursiveFiles(
         continue;
       }
       if (entry.isFile()) {
-        if (!shouldCollectRecursiveBackupFile(relPath)) {
+        const descriptorRelPath = relPrefix ? `${relPrefix}/${relPath}` : relPath;
+        if (!shouldCollectRecursiveBackupFile(descriptorRelPath)) {
           continue;
         }
         files.push({
           sourcePath,
-          relPath: relPrefix ? `${relPrefix}/${relPath}` : relPath,
+          relPath: descriptorRelPath,
         });
       }
     }
@@ -167,12 +179,13 @@ function collectRecursiveFilesSync(rootDir: string, relPrefix: string): BackupFi
         continue;
       }
       if (entry.isFile()) {
-        if (!shouldCollectRecursiveBackupFile(relPath)) {
+        const descriptorRelPath = relPrefix ? `${relPrefix}/${relPath}` : relPath;
+        if (!shouldCollectRecursiveBackupFile(descriptorRelPath)) {
           continue;
         }
         files.push({
           sourcePath,
-          relPath: relPrefix ? `${relPrefix}/${relPath}` : relPath,
+          relPath: descriptorRelPath,
         });
       }
     }

@@ -26,6 +26,7 @@ const SECRET_FLAG_PATTERN =
   /(--(?:api[-_]key|token|password|secret|authorization|auth[-_]token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const SECRET_ENV_ASSIGNMENT_PATTERN =
   /\b([A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD|AUTHORIZATION)[A-Z0-9_]*\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi;
+const AUTH_HEADER_PATTERN = /\b(Authorization\s*:\s*)(Bearer\s+)?("[^"]*"|'[^']*'|\S+)/gi;
 
 /**
  * Return the trailing `maxLines` of a line-buffered CLI log, joined with "\n"
@@ -76,6 +77,7 @@ function boundRedactedText(
     .replace(PROVIDER_API_KEY_FLAG_PATTERN, '$1[redacted]')
     .replace(SECRET_FLAG_PATTERN, '$1[redacted]')
     .replace(SECRET_ENV_ASSIGNMENT_PATTERN, '$1[redacted]')
+    .replace(AUTH_HEADER_PATTERN, '$1$2[redacted]')
     .replace(/```/g, "'''");
   return redacted.length > limit ? `${redacted.slice(0, limit - 3).trimEnd()}...` : redacted;
 }

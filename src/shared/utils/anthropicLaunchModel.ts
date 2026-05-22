@@ -19,6 +19,11 @@ function isAnthropicSonnetModel(model: string): boolean {
   return baseModel === 'sonnet' || baseModel.startsWith('claude-sonnet-');
 }
 
+function isAnthropicOpusModel(model: string): boolean {
+  const baseModel = stripOneMillionSuffix(model);
+  return baseModel === 'opus' || baseModel.startsWith('claude-opus-');
+}
+
 function getStandardContextAlias(model: string): string | null {
   const baseModel = stripOneMillionSuffix(model);
   if (baseModel === 'opus' || baseModel.startsWith('claude-opus-')) {
@@ -123,6 +128,10 @@ export function resolveAnthropicLaunchModel(params: {
 
   if (isAnthropicSonnetModel(baseModel) && !selectedOneMillionContext) {
     return baseModel;
+  }
+
+  if (!isAnthropicOpusModel(baseModel)) {
+    return selectedOneMillionContext ? `${baseModel}[1m]` : baseModel;
   }
 
   const preferredLongContextModel = `${baseModel}[1m]`;

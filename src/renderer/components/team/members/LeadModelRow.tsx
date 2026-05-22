@@ -8,6 +8,7 @@ import {
 } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
+import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
@@ -229,6 +230,7 @@ export const LeadModelRow = ({
             model={model}
             limitContext={limitContext}
           />
+          {providerId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
           {showAnthropicContextLimit ? (
             <LimitContextCheckbox
               id="lead-limit-context"

@@ -65,6 +65,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
   TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -93,7 +94,7 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
-import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN, wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
@@ -148,7 +149,10 @@ import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
-import { buildAddMemberSpawnMessage } from '../services/team/TeamProvisioningService';
+import {
+  buildAddMemberSpawnMessage,
+  type RuntimeBootstrapMemberMcpLaunchConfig,
+} from '../services/team/TeamProvisioningService';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
@@ -745,6 +749,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_ADD_MEMBER, handleAddMember);
   ipcMain.handle(TEAM_REPLACE_MEMBERS, handleReplaceMembers);
   ipcMain.handle(TEAM_REMOVE_MEMBER, handleRemoveMember);
+  ipcMain.handle(TEAM_RESTORE_MEMBER, handleRestoreMember);
   ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, handleUpdateMemberRole);
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
   ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
@@ -832,6 +837,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_ADD_MEMBER);
   ipcMain.removeHandler(TEAM_REPLACE_MEMBERS);
   ipcMain.removeHandler(TEAM_REMOVE_MEMBER);
+  ipcMain.removeHandler(TEAM_RESTORE_MEMBER);
   ipcMain.removeHandler(TEAM_UPDATE_MEMBER_ROLE);
   ipcMain.removeHandler(TEAM_GET_PROJECT_BRANCH);
   ipcMain.removeHandler(TEAM_GET_ATTACHMENTS);
@@ -1560,6 +1566,7 @@ interface RuntimeRosterMutationMember {
   role?: string;
   workflow?: string;
   isolation?: 'worktree';
+  cwd?: string;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
   model?: string;
@@ -1597,6 +1604,40 @@ function isOpenCodeLedRoster(members: RuntimeRosterMutationMember[]): boolean {
     (member) => !member.removedAt && isLeadRosterMutationMember(member)
   );
   return normalizeOptionalTeamProviderId(leadMember?.providerId) === 'opencode';
+}
+
+async function sendLiveAddMemberSpawnPrompt(input: {
+  provisioning: TeamProvisioningService;
+  teamName: string;
+  displayName: string;
+  leadName: string;
+  projectPath?: string;
+  member: RuntimeRosterMutationMember;
+}): Promise<void> {
+  let mcpLaunchConfig: RuntimeBootstrapMemberMcpLaunchConfig | null = null;
+  try {
+    mcpLaunchConfig = await input.provisioning.prepareLiveMemberMcpLaunchConfig({
+      teamName: input.teamName,
+      cwd: input.member.cwd?.trim() || input.projectPath,
+      mcpPolicy: input.member.mcpPolicy,
+    });
+    const spawnMessage = buildAddMemberSpawnMessage(
+      input.teamName,
+      input.displayName,
+      input.leadName,
+      input.member,
+      mcpLaunchConfig
+    );
+    await input.provisioning.sendMessageToTeam(input.teamName, spawnMessage);
+  } catch (error) {
+    await input.provisioning
+      .discardLiveMemberMcpLaunchConfig({
+        teamName: input.teamName,
+        mcpLaunchConfig,
+      })
+      .catch(() => {});
+    throw error;
+  }
 }
 
 function didOpenCodeRosterMemberChange(
@@ -2745,27 +2786,27 @@ function buildMessageDeliveryText(
           'Do NOT answer only with normal assistant text because that will not appear in the UI message thread.',
         ];
     hiddenBlocks.push(
-      [
-        AGENT_BLOCK_OPEN,
-        `You received a direct message from ${senderDescriptor} via the UI.`,
-        ...replyInstructionLines,
-        `Please reply back to recipient "${replyRecipient}" with a short, human-readable answer.`,
-        'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
-        ...(canUseAgentTeamsMessageSend
-          ? [
-              'If neither Agent Teams MCP message_send tool name is available before any visible-message tool attempt, write exactly the concise reply text as normal assistant text so the runtime can relay it.',
-            ]
-          : []),
-        ...(isUserReplyRecipient
-          ? [
-              'CRITICAL: If the user asks you to check with the lead or another teammate before you can fully answer, FIRST send a short acknowledgement to "user" so the human sees you started (for example: "Принял, сейчас уточню и вернусь с ответом.").',
-              'Only after that first acknowledgement may you message the lead or another teammate.',
-              'After you get the needed information, send the final answer back to "user".',
-              'Do NOT stay silent while you go ask someone else.',
-            ]
-          : []),
-        AGENT_BLOCK_CLOSE,
-      ].join('\n')
+      wrapAgentBlock(
+        [
+          `You received a direct message from ${senderDescriptor} via the UI.`,
+          ...replyInstructionLines,
+          `Please reply back to recipient "${replyRecipient}" with a short, human-readable answer.`,
+          'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
+          ...(canUseAgentTeamsMessageSend
+            ? [
+                'If neither Agent Teams MCP message_send tool name is available before any visible-message tool attempt, write exactly the concise reply text as normal assistant text so the runtime can relay it.',
+              ]
+            : []),
+          ...(isUserReplyRecipient
+            ? [
+                'CRITICAL: If the user asks you to check with the lead or another teammate before you can fully answer, FIRST send a short acknowledgement to "user" so the human sees you started (for example: "Принял, сейчас уточню и вернусь с ответом.").',
+                'Only after that first acknowledgement may you message the lead or another teammate.',
+                'After you get the needed information, send the final answer back to "user".',
+                'Do NOT stay silent while you go ask someone else.',
+              ]
+            : []),
+        ].join('\n')
+      )
     );
   }
 
@@ -3021,10 +3062,12 @@ async function handleSendMessage(
             `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
             ...(rosterContextBlock ? [rosterContextBlock] : []),
             ...(delegateAckBlock ? [delegateAckBlock] : []),
-            AGENT_BLOCK_OPEN,
-            `MessageId: ${preGeneratedMessageId}`,
-            `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
-            AGENT_BLOCK_CLOSE,
+            wrapAgentBlock(
+              [
+                `MessageId: ${preGeneratedMessageId}`,
+                `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
+              ].join('\n')
+            ),
             ``,
             `Message from user:`,
             buildMessageDeliveryText(payload.text!, {
@@ -4343,8 +4386,8 @@ async function handleAddMember(
     const memberName = vName.value!;
     const teamDataService = getTeamDataService();
     const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousMembers = (await teamDataService.getTeamData(tn))
-      .members as RuntimeRosterMutationMember[];
+    const previousTeamData = await teamDataService.getTeamData(tn);
+    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
     const provisioning = getTeamProvisioningService();
     const isTeamAlive = provisioning.isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
@@ -4396,20 +4439,29 @@ async function handleAddMember(
       } catch {
         // Best-effort: fall back to default lead and team names
       }
-      const spawnMessage = buildAddMemberSpawnMessage(tn, displayName, leadName, {
-        name: memberName,
-        ...(typeof role === 'string' ? { role } : {}),
-        ...(typeof workflow === 'string' ? { workflow } : {}),
-        ...(isolation === 'worktree' ? { isolation: 'worktree' as const } : {}),
-        ...(providerValidation.value ? { providerId: providerValidation.value } : {}),
-        ...(typeof model === 'string' && model.trim() ? { model: model.trim() } : {}),
-        ...(effortValidation.value ? { effort: effortValidation.value } : {}),
-      });
       try {
-        await provisioning.sendMessageToTeam(tn, spawnMessage);
-      } catch {
+        await sendLiveAddMemberSpawnPrompt({
+          provisioning,
+          teamName: tn,
+          displayName,
+          leadName,
+          projectPath: previousTeamData.config?.projectPath,
+          member: {
+            name: memberName,
+            ...(typeof role === 'string' ? { role } : {}),
+            ...(typeof workflow === 'string' ? { workflow } : {}),
+            ...(isolation === 'worktree' ? { isolation: 'worktree' as const } : {}),
+            ...(providerValidation.value ? { providerId: providerValidation.value } : {}),
+            ...(typeof model === 'string' && model.trim() ? { model: model.trim() } : {}),
+            ...(effortValidation.value ? { effort: effortValidation.value } : {}),
+            mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy),
+          },
+        });
+      } catch (error) {
         // Best-effort: lead process may not be responsive
-        logger.warn(`Failed to notify lead about new member "${memberName}" in ${tn}`);
+        logger.warn(
+          `Failed to notify lead about new member "${memberName}" in ${tn}: ${getErrorMessage(error)}`
+        );
       }
     }
   });
@@ -4517,8 +4569,8 @@ async function handleReplaceMembers(
     const tn = vTeam.value!;
     const teamDataService = getTeamDataService();
     const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousMembers = (await teamDataService.getTeamData(tn))
-      .members as RuntimeRosterMutationMember[];
+    const previousTeamData = await teamDataService.getTeamData(tn);
+    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
     const provisioning = getTeamProvisioningService();
     const isTeamAlive = provisioning.isTeamAlive(tn);
     const useSecondaryOpenCodeLaneRouting = isTeamAlive && !isOpenCodeLedRoster(previousMembers);
@@ -4636,11 +4688,19 @@ async function handleReplaceMembers(
     }
 
     for (const addedMember of primaryDiff.added) {
-      const spawnMessage = buildAddMemberSpawnMessage(tn, displayName, leadName, addedMember);
       try {
-        await provisioning.sendMessageToTeam(tn, spawnMessage);
-      } catch {
-        logger.warn(`Failed to notify lead about new member "${addedMember.name}" in ${tn}`);
+        await sendLiveAddMemberSpawnPrompt({
+          provisioning,
+          teamName: tn,
+          displayName,
+          leadName,
+          projectPath: previousTeamData.config?.projectPath,
+          member: addedMember,
+        });
+      } catch (error) {
+        logger.warn(
+          `Failed to notify lead about new member "${addedMember.name}" in ${tn}: ${getErrorMessage(error)}`
+        );
       }
     }
 
@@ -4671,8 +4731,8 @@ async function handleRemoveMember(
     const name = vMember.value!;
     const teamDataService = getTeamDataService();
     const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-    const previousMembers = (await teamDataService.getTeamData(tn))
-      .members as RuntimeRosterMutationMember[];
+    const previousTeamData = await teamDataService.getTeamData(tn);
+    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
     const provisioning = getTeamProvisioningService();
     const isTeamAlive = provisioning.isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
@@ -4711,6 +4771,85 @@ async function handleRemoveMember(
       } catch {
         logger.warn(`Failed to notify lead about removal of "${name}" in ${tn}`);
       }
+    }
+  });
+}
+
+async function handleRestoreMember(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  memberName: unknown
+): Promise<IpcResult<void>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vMember = validateMemberName(memberName);
+  if (!vMember.valid) return { success: false, error: vMember.error ?? 'Invalid memberName' };
+
+  return wrapTeamHandler('restoreMember', async () => {
+    const tn = vTeam.value!;
+    const name = vMember.value!;
+    const teamDataService = getTeamDataService();
+    const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
+    const previousTeamData = await teamDataService.getTeamData(tn);
+    const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+    const provisioning = getTeamProvisioningService();
+    const isTeamAlive = provisioning.isTeamAlive(tn);
+    if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
+      throw new Error(OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE);
+    }
+
+    const restoredMember = await teamDataService.restoreMember(tn, name);
+    invalidateTeamRosterSnapshotCaches(tn);
+
+    if (!isTeamAlive) {
+      return;
+    }
+
+    if (isOpenCodeRosterMutationMember(restoredMember)) {
+      try {
+        await provisioning.reattachOpenCodeOwnedMemberLane(tn, name, {
+          reason: 'member_added',
+        });
+      } catch (error) {
+        await rollbackOpenCodeLiveRosterMutation({
+          teamName: tn,
+          teamDataService,
+          provisioning,
+          previousMembers,
+          previousMembersMeta,
+          detachOpenCodeMemberNames: [name],
+        });
+        throw error;
+      }
+      return;
+    }
+
+    let leadName = 'team-lead';
+    let displayName = tn;
+    try {
+      const [resolvedLeadName, resolvedDisplayName] = await Promise.all([
+        teamDataService.getLeadMemberName(tn),
+        teamDataService.getTeamDisplayName(tn),
+      ]);
+      leadName = resolvedLeadName || 'team-lead';
+      displayName = resolvedDisplayName || tn;
+    } catch {
+      // Best-effort: fall back to default lead and team names
+    }
+
+    try {
+      await sendLiveAddMemberSpawnPrompt({
+        provisioning,
+        teamName: tn,
+        displayName,
+        leadName,
+        projectPath: previousTeamData.config?.projectPath,
+        member: restoredMember,
+      });
+    } catch (error) {
+      logger.warn(
+        `Failed to notify lead about restore of "${name}" in ${tn}: ${getErrorMessage(error)}`
+      );
     }
   });
 }

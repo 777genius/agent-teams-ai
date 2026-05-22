@@ -53,6 +53,7 @@ export type TeamModelRuntimeProviderStatus = Pick<
   | 'detailMessage'
   | 'availableBackends'
   | 'externalRuntimeDiagnostics'
+  | 'connection'
 > &
   Partial<Pick<CliProviderStatus, 'verificationState' | 'statusMessage'>>;
 
@@ -65,6 +66,21 @@ export interface TeamProviderModelVerificationCounts {
   checkedCount: number;
   totalCount: number;
   verifying: boolean;
+}
+
+function mergeModelLists(primary: readonly string[], supplemental: readonly string[]): string[] {
+  const merged = new Map<string, string>();
+  for (const model of [...primary, ...supplemental]) {
+    const trimmed = model.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const key = trimmed.toLowerCase();
+    if (!merged.has(key)) {
+      merged.set(key, trimmed);
+    }
+  }
+  return Array.from(merged.values());
 }
 
 export function getOpenCodeOpenAiRouteAuthUnavailableReason(
@@ -215,6 +231,58 @@ function hasAnthropicRuntimeCatalog(
   return providerStatus?.modelCatalog?.providerId === 'anthropic';
 }
 
+function hasAnthropicCompatibleRuntimeCatalog(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): boolean {
+  return (
+    providerStatus?.modelCatalog?.providerId === 'anthropic' &&
+    providerStatus.modelCatalog.source === 'anthropic-compatible-api'
+  );
+}
+
+export function isAnthropicCompatibleRuntime(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): boolean {
+  return (
+    hasAnthropicCompatibleRuntimeCatalog(providerStatus) ||
+    providerStatus?.runtimeCapabilities?.modelCatalog?.source === 'anthropic-compatible-api' ||
+    providerStatus?.connection?.compatibleEndpoint?.enabled === true
+  );
+}
+
+function hasVisibleAnthropicCompatibleCatalogModels(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): boolean {
+  const catalog = hasAnthropicCompatibleRuntimeCatalog(providerStatus)
+    ? providerStatus?.modelCatalog
+    : null;
+  return Boolean(
+    catalog?.models.some((model) => {
+      const launchModel = model.launchModel.trim() || model.id.trim();
+      return !model.hidden && launchModel.length > 0;
+    })
+  );
+}
+
+export function canUseCustomAnthropicCompatibleModel(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): boolean {
+  if (!isAnthropicCompatibleRuntime(providerStatus)) {
+    return false;
+  }
+
+  const catalog = providerStatus?.modelCatalog;
+  if (!catalog || catalog.providerId !== 'anthropic') {
+    return true;
+  }
+
+  if (catalog.source !== 'anthropic-compatible-api') {
+    return true;
+  }
+
+  return catalog.status !== 'ready' || !hasVisibleAnthropicCompatibleCatalogModels(providerStatus);
+}
+
 function getAnthropicCatalogModel(
   model: string,
   providerStatus?: TeamModelRuntimeProviderStatus | null
@@ -232,16 +300,23 @@ function getRuntimeCatalogModels(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): string[] | null {
   if (providerId === 'anthropic') {
+    if (!hasAnthropicCompatibleRuntimeCatalog(providerStatus)) {
+      return null;
+    }
+  } else if (
+    (providerId !== 'codex' && providerId !== 'opencode') ||
+    providerStatus?.modelCatalog?.providerId !== providerId
+  ) {
     return null;
   }
 
-  if (providerId !== 'codex' || providerStatus?.modelCatalog?.providerId !== 'codex') {
+  if (!providerStatus?.modelCatalog) {
     return null;
   }
 
   const models = providerStatus.modelCatalog.models
     .filter((model) => !model.hidden)
-    .map((model) => model.launchModel.trim())
+    .map((model) => model.launchModel.trim() || model.id.trim())
     .filter(Boolean);
   return models.length > 0 ? models : null;
 }
@@ -251,7 +326,10 @@ function getRuntimeCatalogModelOption(
   model: string,
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): TeamRuntimeModelOption | null {
-  if (providerId !== 'codex' || providerStatus?.modelCatalog?.providerId !== 'codex') {
+  const canUseCatalog =
+    (providerId === 'codex' && providerStatus?.modelCatalog?.providerId === 'codex') ||
+    (providerId === 'anthropic' && hasAnthropicCompatibleRuntimeCatalog(providerStatus));
+  if (!canUseCatalog || !providerStatus?.modelCatalog) {
     return null;
   }
 
@@ -262,8 +340,9 @@ function getRuntimeCatalogModelOption(
     return null;
   }
 
+  const launchModel = catalogModel.launchModel.trim() || catalogModel.id.trim();
   return {
-    value: catalogModel.launchModel,
+    value: launchModel,
     label:
       getProviderScopedTeamModelLabel(providerId, catalogModel.displayName) ??
       catalogModel.displayName,
@@ -272,12 +351,8 @@ function getRuntimeCatalogModelOption(
       (getTeamProviderModelOptions(providerId).some((option) => option.value === model)
         ? undefined
         : 'New'),
-    availabilityStatus: getRuntimeModelAvailability(
-      providerId,
-      catalogModel.launchModel,
-      providerStatus
-    ),
-    availabilityReason: getRuntimeModelAvailabilityReason(catalogModel.launchModel, providerStatus),
+    availabilityStatus: getRuntimeModelAvailability(providerId, launchModel, providerStatus),
+    availabilityReason: getRuntimeModelAvailabilityReason(launchModel, providerStatus),
   };
 }
 
@@ -291,7 +366,19 @@ function getRuntimeSelectorModels(
 
   const catalogModels = getRuntimeCatalogModels(providerId, providerStatus);
   if (catalogModels) {
-    return getVisibleTeamProviderModels(providerId, catalogModels, providerStatus);
+    if (providerId === 'anthropic') {
+      return sortTeamProviderModels(providerId, catalogModels, providerStatus);
+    }
+
+    const sourceModels =
+      providerId === 'opencode'
+        ? mergeModelLists(catalogModels, providerStatus.models)
+        : catalogModels;
+    return getVisibleTeamProviderModels(providerId, sourceModels, providerStatus);
+  }
+
+  if (providerId === 'anthropic' && isAnthropicCompatibleRuntime(providerStatus)) {
+    return sortTeamProviderModels(providerId, providerStatus.models, providerStatus);
   }
 
   return sortTeamProviderModels(providerId, providerStatus.models, providerStatus);
@@ -362,6 +449,18 @@ function getRuntimeModelAvailability(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): CliProviderModelAvailabilityStatus | null {
   if (providerId === 'anthropic') {
+    if (isAnthropicCompatibleRuntime(providerStatus)) {
+      const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
+      if (visibleModels.includes(model)) {
+        const runtimeAvailability = getModelAvailabilityMap(providerStatus).get(model)?.status;
+        return runtimeAvailability === 'unavailable' ? 'unavailable' : 'available';
+      }
+
+      return canUseCustomAnthropicCompatibleModel(providerStatus) && model.trim()
+        ? 'available'
+        : null;
+    }
+
     if (!providerStatus || !hasAnthropicRuntimeCatalog(providerStatus)) {
       return isSupportedAnthropicTeamModel(model) ? 'available' : null;
     }
@@ -396,7 +495,9 @@ export function getTeamProviderModelVerificationCounts(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): TeamProviderModelVerificationCounts {
   if (providerId === 'anthropic') {
-    const visibleAnthropicModels = getFallbackTeamProviderModels(providerId);
+    const visibleAnthropicModels = isAnthropicCompatibleRuntime(providerStatus)
+      ? getRuntimeSelectorModels(providerId, providerStatus)
+      : getFallbackTeamProviderModels(providerId);
     return {
       checkedCount: visibleAnthropicModels.length,
       totalCount: visibleAnthropicModels.length,
@@ -418,6 +519,12 @@ export function getAvailableTeamProviderModels(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): string[] {
   if (providerId === 'anthropic') {
+    if (isAnthropicCompatibleRuntime(providerStatus)) {
+      return getVisibleRuntimeModels(providerId, providerStatus).filter(
+        (model) => getRuntimeModelAvailability(providerId, model, providerStatus) === 'available'
+      );
+    }
+
     return getFallbackTeamProviderModels(providerId).filter(
       (model) => getRuntimeModelAvailability(providerId, model, providerStatus) === 'available'
     );
@@ -439,6 +546,27 @@ export function getAvailableTeamProviderModelOptions(
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): TeamRuntimeModelOption[] {
   if (providerId === 'anthropic') {
+    if (isAnthropicCompatibleRuntime(providerStatus)) {
+      const visibleModels = getRuntimeSelectorModels(providerId, providerStatus);
+      return [
+        { value: '', label: 'Default', badgeLabel: 'Default' },
+        ...visibleModels.map((model) => {
+          const catalogOption = getRuntimeCatalogModelOption(providerId, model, providerStatus);
+          if (catalogOption) {
+            return catalogOption;
+          }
+
+          return {
+            value: model,
+            label: getProviderScopedTeamModelLabel(providerId, model) ?? model,
+            badgeLabel: getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus),
+            availabilityStatus: getRuntimeModelAvailability(providerId, model, providerStatus),
+            availabilityReason: getRuntimeModelAvailabilityReason(model, providerStatus),
+          };
+        }),
+      ];
+    }
+
     return getFallbackTeamProviderModelOptions(providerId, providerStatus).map((option) => ({
       ...option,
       availabilityStatus:
@@ -516,6 +644,13 @@ export function isTeamModelAvailableForUi(
   }
 
   if (providerId === 'anthropic') {
+    if (isAnthropicCompatibleRuntime(providerStatus)) {
+      return (
+        getRuntimeModelAvailability(providerId, trimmed, providerStatus) === 'available' ||
+        canUseCustomAnthropicCompatibleModel(providerStatus)
+      );
+    }
+
     if (!isSupportedAnthropicTeamModel(trimmed)) {
       return false;
     }
@@ -554,6 +689,10 @@ export function normalizeTeamModelForUi(
   }
 
   if (providerId === 'anthropic') {
+    if (isAnthropicCompatibleRuntime(providerStatus)) {
+      return isTeamModelAvailableForUi(providerId, trimmed, providerStatus) ? normalized : '';
+    }
+
     return isTeamModelAvailableForUi(providerId, trimmed, providerStatus) ? normalized : '';
   }
 

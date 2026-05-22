@@ -6,10 +6,9 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { AgentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const FAKE_MCP_HTTP_SERVER_SOURCE = String.raw`
 const fs = require('node:fs');
@@ -24,6 +23,23 @@ const host = readArg('--host') || '127.0.0.1';
 const endpoint = readArg('--endpoint') || '/mcp';
 const port = Number(readArg('--port'));
 const controlFile = process.env.AGENT_TEAMS_MCP_TEST_CONTROL_FILE;
+const healthIdentity =
+  process.env.AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE === 'agent-teams-mcp-http' &&
+  process.env.AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH &&
+  process.env.AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH &&
+  process.env.AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID
+    ? {
+        schemaVersion: 1,
+        service: 'agent-teams-mcp-http',
+        transport: 'httpStream',
+        host,
+        port,
+        endpoint,
+        claudeDirHash: process.env.AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH,
+        launchSpecHash: process.env.AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH,
+        ownerInstanceId: process.env.AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID,
+      }
+    : null;
 
 function readControl() {
   if (!controlFile) {
@@ -58,7 +74,7 @@ const server = http.createServer((request, response) => {
       return;
     }
     response.writeHead(200, { 'content-type': 'text/plain' });
-    response.end('ok');
+    response.end(healthIdentity ? JSON.stringify(healthIdentity) : 'ok');
     return;
   }
 
@@ -255,11 +271,13 @@ async function writeFakeOpenCodeBridgeBinary(tempDir: string): Promise<string> {
 describePosix('AgentTeamsMcpHttpServer integration', () => {
   let tempDir: string | null = null;
   let originalControlFileEnv: string | undefined;
+  let originalMcpHttpPortEnv: string | undefined;
   const servers: AgentTeamsMcpHttpServer[] = [];
 
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-http-integration-'));
     originalControlFileEnv = process.env.AGENT_TEAMS_MCP_TEST_CONTROL_FILE;
+    originalMcpHttpPortEnv = process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT;
   });
 
   afterEach(async () => {
@@ -269,6 +287,11 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
       delete process.env.AGENT_TEAMS_MCP_TEST_CONTROL_FILE;
     } else {
       process.env.AGENT_TEAMS_MCP_TEST_CONTROL_FILE = originalControlFileEnv;
+    }
+    if (originalMcpHttpPortEnv === undefined) {
+      delete process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT;
+    } else {
+      process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = originalMcpHttpPortEnv;
     }
     if (tempDir) {
       await rm(tempDir, { recursive: true, force: true });
@@ -280,8 +303,11 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     scriptPath: string;
     controlFile: string;
     allocatePort?: () => Promise<number>;
+    statePath?: string;
   }): AgentTeamsMcpHttpServer {
     const server = new AgentTeamsMcpHttpServer({
+      statePath: input.statePath ?? path.join(tempDir!, `mcp-http-state-${servers.length}.json`),
+      disableOrphanCleanup: true,
       resolveLaunchSpec: () =>
         Promise.resolve({
           command: process.execPath,
@@ -296,7 +322,10 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
   }
 
   it('starts the actual Agent Teams MCP HTTP server and proves its health endpoint', async () => {
-    const server = new AgentTeamsMcpHttpServer();
+    const server = new AgentTeamsMcpHttpServer({
+      statePath: path.join(tempDir!, 'actual-mcp-http-state.json'),
+      disableOrphanCleanup: true,
+    });
     servers.push(server);
 
     const handle = await server.ensureStarted();
@@ -319,6 +348,88 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     expect(second).toEqual(first);
     expect(await readHealthStatus(first.url)).toBe(200);
     expect(vi.mocked(console.warn).mock.calls.slice(warnCountAfterFirstStart)).toEqual([]);
+  });
+
+  it('adopts a healthy MCP HTTP child from persistent state across server managers', async () => {
+    const scriptPath = await writeFakeMcpHttpServer(tempDir!);
+    const controlFile = path.join(tempDir!, 'health-control.txt');
+    const statePath = path.join(tempDir!, 'shared-mcp-http-state.json');
+    await writeFile(controlFile, 'healthy', 'utf8');
+    const firstServer = createControlledServer({ scriptPath, controlFile, statePath });
+
+    const first = await firstServer.ensureStarted();
+    const secondServer = createControlledServer({ scriptPath, controlFile, statePath });
+    const second = await secondServer.ensureStarted();
+
+    expect(second.port).toBe(first.port);
+    expect(second.pid).toBe(first.pid);
+    expect(second.diagnostics).toContain(`opencode_app_mcp_adopted_state_server:${first.port}`);
+    expect(await readHealthStatus(second.url)).toBe(200);
+  });
+
+  it('falls back from an unknown healthy stable-port server and leaves it alive', async () => {
+    const scriptPath = await writeFakeMcpHttpServer(tempDir!);
+    const controlFile = path.join(tempDir!, 'health-control.txt');
+    await writeFile(controlFile, 'healthy', 'utf8');
+
+    let unknownServer: http.Server | null = null;
+    let stablePort = 0;
+    let fallbackPort = 0;
+    for (let candidate = 43_100; candidate < 65_534; candidate += 1) {
+      const stableCandidate = http.createServer((request, response) => {
+        if (request.url === '/health') {
+          response.writeHead(200, { 'content-type': 'text/plain' });
+          response.end('unknown-ok');
+          return;
+        }
+        response.writeHead(404);
+        response.end('not found');
+      });
+      const fallbackProbe = net.createServer();
+      try {
+        await new Promise<void>((resolve, reject) => {
+          stableCandidate.once('error', reject);
+          stableCandidate.listen(candidate, '127.0.0.1', () => resolve());
+        });
+        await new Promise<void>((resolve, reject) => {
+          fallbackProbe.once('error', reject);
+          fallbackProbe.listen(candidate + 1, '127.0.0.1', () => resolve());
+        });
+        await new Promise<void>((resolve) => fallbackProbe.close(() => resolve()));
+        unknownServer = stableCandidate;
+        stablePort = candidate;
+        fallbackPort = candidate + 1;
+        break;
+      } catch {
+        await new Promise<void>((resolve) => fallbackProbe.close(() => resolve())).catch(
+          () => undefined
+        );
+        await new Promise<void>((resolve) => stableCandidate.close(() => resolve())).catch(
+          () => undefined
+        );
+      }
+    }
+    if (!unknownServer) {
+      throw new Error('Failed to reserve contiguous ports for unknown stable-port test');
+    }
+
+    process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = String(stablePort);
+    const server = createControlledServer({ scriptPath, controlFile });
+
+    try {
+      const handle = await server.ensureStarted();
+
+      expect(handle.port).toBe(fallbackPort);
+      expect(handle.diagnostics).toContain(`opencode_app_mcp_port_occupied_unknown:${stablePort}`);
+      expect(handle.diagnostics).toContain(
+        `opencode_app_mcp_preferred_port_unavailable:${stablePort}`
+      );
+      expect(await readHealthStatus(`http://127.0.0.1:${stablePort}/mcp`)).toBe(200);
+      expect(await readHealthStatus(handle.url)).toBe(200);
+    } finally {
+      await new Promise<void>((resolve) => unknownServer?.close(() => resolve()));
+      vi.mocked(console.warn).mockClear();
+    }
   });
 
   it('restarts a stale but still-running MCP HTTP child when cached URL health turns unhealthy', async () => {

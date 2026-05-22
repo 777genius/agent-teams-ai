@@ -8,6 +8,7 @@ const { withTeamBoardLock } = require('./boardLock.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
 const {
     createMemberMessagingProtocol,
+    isCodexMember,
     isOpenCodeMember,
 } = require('./memberMessagingProtocol.js');
 
@@ -72,6 +73,12 @@ function warnNonCritical(message, error) {
     console.warn(`${message}: ${error instanceof Error ? error.message : String(error)}`);
 }
 
+function resolveMemberRuntimeProvider(member) {
+    if (isOpenCodeMember(member)) return 'opencode';
+    if (isCodexMember(member)) return 'codex';
+    return 'native';
+}
+
 function buildAssignmentMessage(context, task, options = {}) {
     const messagingProtocol = options.messagingProtocol || createMemberMessagingProtocol('native');
     const description =
@@ -104,10 +111,12 @@ function buildAssignmentMessage(context, task, options = {}) {
         text: `#${task.displayId || task.id} done. <2-4 sentence summary>. Full details in task comment <short-commentId-from-step-4>. Moving to next task.`,
         summary: `#${task.displayId || task.id} done`,
     });
-    const openCodeVisibleMessageRule =
-        messagingProtocol.runtimeProvider === 'opencode'
-            ? '\n   For normal visible replies, use agent-teams_message_send. Do not use SendMessage or runtime_deliver_message for ordinary replies.'
-            : '';
+    const runtimeVisibleMessageRule = messagingProtocol.visibleMessageRule
+        ? `\n   ${messagingProtocol.visibleMessageRule}`
+        : '';
+    const runtimeTaskToolHint = messagingProtocol.taskToolHint
+        ? `\n   ${messagingProtocol.taskToolHint}`
+        : '';
 
     lines.push(
         ``,
@@ -123,7 +132,7 @@ function buildAssignmentMessage(context, task, options = {}) {
    The response contains comment.id (UUID). Take its first 8 characters as the short commentId.
    task_complete { teamName: "${context.teamName}", taskId: "${task.id}" }
 5. After task_complete, notify your lead via ${messagingProtocol.sendLeadPhrase} with a brief summary and a pointer to the full comment (use the short commentId from step 4).
-   Example: ${notifyLeadExample}${openCodeVisibleMessageRule}`)
+   Example: ${notifyLeadExample}${runtimeVisibleMessageRule}${runtimeTaskToolHint}`)
     );
 
     return lines.join('\n');
@@ -189,9 +198,7 @@ function maybeNotifyAssignedOwner(context, task, options = {}) {
     const ownerMember = (resolved.members || []).find(
         (member) => isSameMember(member && member.name, owner)
     );
-    const messagingProtocol = createMemberMessagingProtocol(
-        isOpenCodeMember(ownerMember) ? 'opencode' : 'native'
-    );
+    const messagingProtocol = createMemberMessagingProtocol(resolveMemberRuntimeProvider(ownerMember));
 
     const summary = options.summary || `New task #${task.displayId || task.id} assigned`;
     try {
@@ -696,10 +703,12 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
         text: '#abcd1234 done. Found 3 competitors: two lack kanban, one went closed-source in Jan. Full details in task comment e5f6a7b8. Moving to #efgh5678 next.',
         summary: '#abcd1234 done',
     });
-    const openCodeVisibleMessageRule =
-        messagingProtocol.runtimeProvider === 'opencode'
-            ? '\n   - For normal visible replies, use agent-teams_message_send. Always include teamName, to, from, text, and summary. Always set from to your teammate name. Do not use SendMessage or runtime_deliver_message for ordinary replies.'
-            : '';
+    const runtimeVisibleMessageRule = messagingProtocol.visibleMessageRule
+        ? `\n   - ${messagingProtocol.visibleMessageRule}`
+        : '';
+    const runtimeTaskToolHint = messagingProtocol.taskToolHint
+        ? `\n   - ${messagingProtocol.taskToolHint}`
+        : '';
     return wrapAgentBlock(`MANDATORY TASK STATUS PROTOCOL — you MUST follow this for EVERY task:
 0. IMPORTANT ID RULE:
    - If a board/task snapshot shows a canonical taskId, prefer using that exact value in MCP tool calls.
@@ -722,7 +731,7 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    - After that, run task_complete again before your reply.
    - Never do comment-driven implementation/fix work while the task is still shown as pending, review, completed, or approved.
    - After task_complete, send a notification to your team lead via ${messagingProtocol.sendLeadPhrase}. Use the comment.id you saved earlier (first 8 characters). Your message must include: (a) which task is done, (b) a brief summary of the outcome (2-4 sentences), (c) a pointer to the full comment so the lead can fetch it, (d) what you will do next. Do NOT duplicate the entire results.
-     Example: ${notifyLeadExample}${openCodeVisibleMessageRule}
+     Example: ${notifyLeadExample}${runtimeVisibleMessageRule}${runtimeTaskToolHint}
    - After task_complete, call review_request ONLY when review is explicitly expected for THIS task and a concrete reviewer is already known.
      Example:
      { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", reviewer: "<reviewer-name>" }
@@ -891,7 +900,7 @@ async function memberBriefing(context, memberName, options = {}) {
     const leadName = runtimeHelpers.inferLeadName(context.paths);
     const effectiveMember = member;
     const messagingProtocol = createMemberMessagingProtocol(
-        options.runtimeProvider || (isOpenCodeMember(effectiveMember) ? 'opencode' : 'native')
+        options.runtimeProvider || resolveMemberRuntimeProvider(effectiveMember)
     );
 
     const role =
@@ -937,12 +946,13 @@ async function memberBriefing(context, memberName, options = {}) {
         `CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.`,
         `CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment via task_add_comment BEFORE calling task_complete. Save the comment.id from the response — you will need it in the next step. The task comment is the primary delivery channel — the user reads results on the task board. A direct message to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only send a direct message without a task comment, the user will never see your work.`,
         `After task_complete, notify your team lead via ${messagingProtocol.sendLeadPhrase}. Use the comment.id you saved (first 8 characters). Include: task ref, brief summary (2-4 sentences), pointer to full comment, and next step. Example: ${completionNotifyExample}`,
-        ...(messagingProtocol.runtimeProvider === 'opencode'
+        ...(messagingProtocol.runtimeProvider !== 'native'
             ? [
-                'OpenCode visible messaging rule: call agent-teams_message_send for normal replies to the human user, lead, or same-team teammates. Always include teamName, to, from, text, and summary. Do not use SendMessage or runtime_deliver_message for ordinary replies.',
-                'OpenCode bootstrap silence rule: if this briefing was requested because the desktop app attached or reconnected you, do not send readiness, understood, idle, or no-task acknowledgements to the user, lead, or teammates.',
+                messagingProtocol.visibleMessageRule,
+                `${messagingProtocol.runtimeProvider === 'opencode' ? 'OpenCode' : 'Codex Native'} bootstrap silence rule: if this briefing was requested because the desktop app attached or reconnected you, do not send readiness, understood, idle, or no-task acknowledgements to the user, lead, or teammates.`,
                 'This briefing already includes your current Task briefing. If it shows no actionable tasks, stop and wait silently. Do not call task_briefing again in the same bootstrap turn just to check for work.',
                 'Use agent-teams_message_send only for actual app-delivered messages, actionable task coordination, blockers, or task results.',
+                messagingProtocol.taskToolHint,
                 'For cross-team replies or messages to another team, call agent-teams_cross_team_send with toTeam/fromMember. Do not put "cross_team_send" or a remote team name into message_send.to.',
             ]
             : []),

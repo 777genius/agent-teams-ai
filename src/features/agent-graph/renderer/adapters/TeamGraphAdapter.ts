@@ -999,6 +999,7 @@ export class TeamGraphAdapter {
     memberNodeIdByAlias: ReadonlyMap<string, string>
   ): void {
     const ordered = [...messages].reverse();
+    TeamGraphAdapter.#ensureMessageEdges(messages, leadId, leadName, edges, memberNodeIdByAlias);
 
     // First call: record all existing message IDs without creating particles.
     // This prevents old messages from spawning particles when the graph opens.
@@ -1079,24 +1080,21 @@ export class TeamGraphAdapter {
         continue;
       }
 
-      const edgeId = TeamGraphAdapter.#resolveMessageEdge(
+      const edge = TeamGraphAdapter.#resolveMessageEdge(
         msg,
         leadId,
         leadName,
         edges,
         memberNodeIdByAlias
       );
-      if (!edgeId) continue;
+      if (!edge) continue;
 
-      // Determine direction: messages FROM a teammate TO lead should reverse
-      // (edges are always lead→member, but message goes member→lead)
       const fromId = TeamGraphAdapter.#resolveParticipantId(
         msg.from ?? '',
         leadId,
         leadName,
         memberNodeIdByAlias
       );
-      const isFromTeammate = fromId !== leadId;
 
       const particleLabel =
         getIdleGraphLabel(msgText) ??
@@ -1104,7 +1102,7 @@ export class TeamGraphAdapter {
 
       particles.push({
         id: `particle:msg:${teamName}:${msgKey}`,
-        edgeId,
+        edgeId: edge.id,
         progress: 0,
         kind: 'inbox_message',
         color: msg.color ?? '#66ccff',
@@ -1112,7 +1110,7 @@ export class TeamGraphAdapter {
         preview:
           getIdleGraphLabel(msgText) ??
           TeamGraphAdapter.#buildParticlePreview(msg.summary ?? msg.text),
-        reverse: isFromTeammate,
+        reverse: edge.source !== fromId,
       });
     }
 
@@ -1128,6 +1126,26 @@ export class TeamGraphAdapter {
     }
   }
 
+  static #ensureMessageEdges(
+    messages: readonly InboxMessage[],
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): void {
+    for (const msg of messages) {
+      if (!msg.from || !msg.to) continue;
+      if (msg.summary?.startsWith('Comment on ')) continue;
+      if (msg.source === 'cross_team' || msg.source === 'cross_team_sent') continue;
+
+      const msgText = msg.text ?? '';
+      const idleSemantic = classifyIdleNotificationText(msgText);
+      if (!idleSemantic && isInboxNoiseMessage(msgText)) continue;
+
+      TeamGraphAdapter.#resolveMessageEdge(msg, leadId, leadName, edges, memberNodeIdByAlias);
+    }
+  }
+
   #buildCommentParticles(
     particles: GraphParticle[],
     data: TeamGraphData,
@@ -1137,6 +1155,15 @@ export class TeamGraphAdapter {
     edges: GraphEdge[],
     memberNodeIdByAlias: ReadonlyMap<string, string>
   ): void {
+    TeamGraphAdapter.#ensureTaskCommentEdges(
+      data,
+      teamName,
+      leadId,
+      leadName,
+      edges,
+      memberNodeIdByAlias
+    );
+
     // First call: record current comment counts without creating particles.
     // This prevents pre-existing comments from spawning particles when the graph opens.
     if (!this.#initialCommentsSeen) {
@@ -1178,41 +1205,57 @@ export class TeamGraphAdapter {
             leadName,
             memberNodeIdByAlias
           );
-          const taskNodeId = `task:${teamName}:${task.id}`;
-          const authorEdge =
-            edges.find((e) => e.source === authorNodeId && e.target === taskNodeId) ??
-            edges.find((e) => e.source === taskNodeId && e.target === authorNodeId);
+          const edge = TeamGraphAdapter.#resolveTaskCommentEdge(
+            task,
+            newComment.author,
+            teamName,
+            leadId,
+            leadName,
+            edges,
+            memberNodeIdByAlias
+          );
 
-          const edgeId =
-            authorEdge?.id ??
-            (() => {
-              const syntheticEdgeId = `edge:msg:${authorNodeId}:${taskNodeId}`;
-              if (!edges.some((edge) => edge.id === syntheticEdgeId)) {
-                edges.push({
-                  id: syntheticEdgeId,
-                  source: authorNodeId,
-                  target: taskNodeId,
-                  type: 'message',
-                });
-              }
-              return syntheticEdgeId;
-            })();
-
-          if (authorNodeId) {
+          if (edge) {
             particles.push({
               id: `particle:comment:${teamName}:${task.id}:${index + 1}`,
-              edgeId,
+              edgeId: edge.id,
               progress: 0,
               kind: 'task_comment',
               color: memberColors.get(newComment.author) ?? '#cc88ff',
               label: TeamGraphAdapter.#buildParticleLabel(newComment.text, 'comment'),
               preview: TeamGraphAdapter.#buildParticlePreview(newComment.text),
+              reverse: edge.source !== authorNodeId,
             });
           }
         }
       }
 
       this.#seenCommentCounts.set(task.id, currentCount);
+    }
+  }
+
+  static #ensureTaskCommentEdges(
+    data: TeamGraphData,
+    teamName: string,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): void {
+    for (const task of data.tasks) {
+      if (task.status === 'deleted') continue;
+      for (const comment of task.comments ?? []) {
+        if (comment.type !== 'regular') continue;
+        TeamGraphAdapter.#resolveTaskCommentEdge(
+          task,
+          comment.author,
+          teamName,
+          leadId,
+          leadName,
+          edges,
+          memberNodeIdByAlias
+        );
+      }
     }
   }
 
@@ -1313,7 +1356,7 @@ export class TeamGraphAdapter {
     leadName: string,
     edges: GraphEdge[],
     memberNodeIdByAlias: ReadonlyMap<string, string>
-  ): string | null {
+  ): GraphEdge | null {
     const { from, to } = msg;
 
     if (from && to) {
@@ -1329,11 +1372,7 @@ export class TeamGraphAdapter {
         leadName,
         memberNodeIdByAlias
       );
-      return (
-        edges.find((e) => e.source === fromId && e.target === toId)?.id ??
-        edges.find((e) => e.source === toId && e.target === fromId)?.id ??
-        null
-      );
+      return TeamGraphAdapter.#resolveNodePairMessageEdge(fromId, toId, edges);
     }
 
     if (from && !to) {
@@ -1348,11 +1387,81 @@ export class TeamGraphAdapter {
           (e) =>
             (e.source === leadId && e.target === fromId) ||
             (e.source === fromId && e.target === leadId)
-        )?.id ?? null
+        ) ?? null
       );
     }
 
     return null;
+  }
+
+  static #resolveTaskCommentEdge(
+    task: TeamGraphData['tasks'][number],
+    authorName: string,
+    teamName: string,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): GraphEdge | null {
+    const authorNodeId = TeamGraphAdapter.#resolveParticipantId(
+      authorName,
+      leadId,
+      leadName,
+      memberNodeIdByAlias
+    );
+    const ownerNodeId = TeamGraphAdapter.#resolveTaskOwnerId(
+      task.owner,
+      leadId,
+      leadName,
+      memberNodeIdByAlias
+    );
+    if (ownerNodeId && ownerNodeId !== authorNodeId) {
+      return TeamGraphAdapter.#resolveNodePairMessageEdge(authorNodeId, ownerNodeId, edges);
+    }
+
+    const taskNodeId = `task:${teamName}:${task.id}`;
+    const authorEdge =
+      edges.find((e) => e.source === authorNodeId && e.target === taskNodeId) ??
+      edges.find((e) => e.source === taskNodeId && e.target === authorNodeId);
+    if (authorEdge) {
+      return authorEdge;
+    }
+
+    const syntheticEdge: GraphEdge = {
+      id: `edge:msg:${authorNodeId}:${taskNodeId}`,
+      source: authorNodeId,
+      target: taskNodeId,
+      type: 'message',
+      targetTaskIds: [task.id],
+    };
+    edges.push(syntheticEdge);
+    return syntheticEdge;
+  }
+
+  static #resolveNodePairMessageEdge(
+    fromId: string,
+    toId: string,
+    edges: GraphEdge[]
+  ): GraphEdge | null {
+    const existingEdge =
+      edges.find((e) => e.source === fromId && e.target === toId) ??
+      edges.find((e) => e.source === toId && e.target === fromId);
+    if (existingEdge) {
+      return existingEdge;
+    }
+    if (fromId === toId) {
+      return null;
+    }
+
+    const [sourceId, targetId] = fromId.localeCompare(toId) <= 0 ? [fromId, toId] : [toId, fromId];
+    const syntheticEdge: GraphEdge = {
+      id: `edge:msg:${sourceId}:${targetId}`,
+      source: sourceId,
+      target: targetId,
+      type: 'message',
+    };
+    edges.push(syntheticEdge);
+    return syntheticEdge;
   }
 
   static #resolveParticipantId(

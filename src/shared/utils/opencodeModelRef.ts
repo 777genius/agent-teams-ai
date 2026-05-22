@@ -4,7 +4,7 @@ export interface OpenCodeQualifiedModelRef {
   raw: string;
 }
 
-const OPEN_CODE_MODEL_REF_PATTERN = /^(?<source>[a-z0-9-]+)\/(?<model>\S.*)$/i;
+const OPEN_CODE_SOURCE_ID_PATTERN = /^[a-z0-9._-]+$/i;
 
 const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   anthropic: 'Anthropic',
@@ -14,6 +14,10 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   gemini: 'Gemini',
   google: 'Google',
   groq: 'Groq',
+  'llama.cpp': 'llama.cpp',
+  llamacpp: 'llama.cpp',
+  lmstudio: 'LM Studio',
+  'lm-studio': 'LM Studio',
   minimax: 'MiniMax',
   mistral: 'Mistral',
   moonshot: 'Moonshot',
@@ -24,6 +28,7 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   openrouter: 'OpenRouter',
   together: 'Together',
   vertex: 'Vertex',
+  vllm: 'vLLM',
   xai: 'xAI',
   'z-ai': 'Z.AI',
 };
@@ -40,7 +45,7 @@ function humanizeOpenCodeSourceId(sourceId: string): string {
   }
 
   return normalized
-    .split('-')
+    .split(/[-._]/g)
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(' ');
@@ -50,19 +55,25 @@ export function parseOpenCodeQualifiedModelRef(
   model: string | undefined | null
 ): OpenCodeQualifiedModelRef | null {
   const trimmed = model?.trim();
-  if (!trimmed) {
+  if (!trimmed || /\s/.test(trimmed)) {
     return null;
   }
 
-  const match = OPEN_CODE_MODEL_REF_PATTERN.exec(trimmed);
-  if (!match?.groups?.source || !match.groups.model) {
+  const separatorIndex = trimmed.indexOf('/');
+  if (separatorIndex <= 0 || separatorIndex >= trimmed.length - 1) {
+    return null;
+  }
+
+  const sourceId = trimmed.slice(0, separatorIndex).toLowerCase();
+  const modelId = trimmed.slice(separatorIndex + 1);
+  if (!OPEN_CODE_SOURCE_ID_PATTERN.test(sourceId) || !modelId) {
     return null;
   }
 
   return {
-    raw: trimmed,
-    sourceId: match.groups.source.toLowerCase(),
-    modelId: match.groups.model,
+    raw: `${sourceId}/${modelId}`,
+    sourceId,
+    modelId,
   };
 }
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-18T13:16:59.867Z",
+  "generatedAt": "2026-05-20T15:44:19.975Z",
   "runsPerModel": 1,
   "qualification": {
     "minimumAverageScore": 80,
@@ -10,23 +10,23 @@
   "models": [
     {
       "model": "opencode/big-pickle",
-      "verdict": "tested-only",
+      "verdict": "recommended",
       "confidence": "low",
-      "qualified": false,
-      "readinessScore": 54,
-      "averageScore": 35,
+      "qualified": true,
+      "readinessScore": 100,
+      "averageScore": 100,
       "consistencyScore": 100,
-      "behavioralAverageScore": 35,
-      "minScore": 35,
-      "successfulRuns": 0,
+      "behavioralAverageScore": 100,
+      "minScore": 100,
+      "successfulRuns": 1,
       "countedRuns": 1,
-      "hardFailures": 1,
+      "hardFailures": 0,
       "providerInfraFailures": 0,
       "runtimeTransportFailures": 0,
-      "modelBehaviorFailures": 1,
+      "modelBehaviorFailures": 0,
       "harnessFailures": 0,
-      "p50DurationMs": 133048,
-      "p95DurationMs": 133048,
+      "p50DurationMs": 201184,
+      "p95DurationMs": 201184,
       "stagePassRates": {
         "launchBootstrap": {
           "passed": 1,
@@ -39,19 +39,19 @@
           "rate": 100
         },
         "peerRelayAB": {
-          "passed": 0,
+          "passed": 1,
           "total": 1,
-          "rate": 0
+          "rate": 100
         },
         "peerRelayBC": {
-          "passed": 0,
+          "passed": 1,
           "total": 1,
-          "rate": 0
+          "rate": 100
         },
         "concurrentReplies": {
-          "passed": 0,
+          "passed": 1,
           "total": 1,
-          "rate": 0
+          "rate": 100
         },
         "taskRefs": {
           "passed": 1,
@@ -59,19 +59,19 @@
           "rate": 100
         },
         "cleanTranscript": {
-          "passed": 0,
+          "passed": 1,
           "total": 1,
-          "rate": 0
+          "rate": 100
         },
         "noDuplicateTokens": {
-          "passed": 0,
+          "passed": 1,
           "total": 1,
-          "rate": 0
+          "rate": 100
         },
         "latencyStable": {
-          "passed": 0,
+          "passed": 1,
           "total": 1,
-          "rate": 0
+          "rate": 100
         }
       },
       "taskRefPassRates": {
@@ -81,24 +81,24 @@
           "rate": 100
         },
         "peerRelayAB": {
-          "passed": 0,
-          "total": 0,
-          "rate": null
+          "passed": 1,
+          "total": 1,
+          "rate": 100
         },
         "peerRelayBC": {
-          "passed": 0,
-          "total": 0,
-          "rate": null
+          "passed": 1,
+          "total": 1,
+          "rate": 100
         },
         "concurrentBob": {
-          "passed": 0,
-          "total": 0,
-          "rate": null
+          "passed": 1,
+          "total": 1,
+          "rate": 100
         },
         "concurrentTom": {
-          "passed": 0,
-          "total": 0,
-          "rate": null
+          "passed": 1,
+          "total": 1,
+          "rate": 100
         }
       },
       "protocolViolationTotals": {
@@ -108,63 +108,23 @@
       },
       "stageFailureImpact": [
         {
-          "stage": "concurrentReplies",
-          "failedRuns": 1,
-          "weightedLoss": 15,
-          "passRate": {
-            "passed": 0,
-            "total": 1,
-            "rate": 0
-          }
-        },
-        {
-          "stage": "peerRelayAB",
-          "failedRuns": 1,
-          "weightedLoss": 15,
-          "passRate": {
-            "passed": 0,
-            "total": 1,
-            "rate": 0
-          }
-        },
-        {
-          "stage": "peerRelayBC",
-          "failedRuns": 1,
-          "weightedLoss": 15,
-          "passRate": {
-            "passed": 0,
-            "total": 1,
-            "rate": 0
-          }
-        },
-        {
           "stage": "cleanTranscript",
-          "failedRuns": 1,
-          "weightedLoss": 10,
+          "failedRuns": 0,
+          "weightedLoss": 0,
           "passRate": {
-            "passed": 0,
+            "passed": 1,
             "total": 1,
-            "rate": 0
+            "rate": 100
           }
         },
         {
-          "stage": "latencyStable",
-          "failedRuns": 1,
-          "weightedLoss": 5,
+          "stage": "concurrentReplies",
+          "failedRuns": 0,
+          "weightedLoss": 0,
           "passRate": {
-            "passed": 0,
+            "passed": 1,
             "total": 1,
-            "rate": 0
-          }
-        },
-        {
-          "stage": "noDuplicateTokens",
-          "failedRuns": 1,
-          "weightedLoss": 5,
-          "passRate": {
-            "passed": 0,
-            "total": 1,
-            "rate": 0
+            "rate": 100
           }
         },
         {
@@ -178,7 +138,47 @@
           }
         },
         {
+          "stage": "latencyStable",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
           "stage": "launchBootstrap",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "noDuplicateTokens",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "peerRelayAB",
+          "failedRuns": 0,
+          "weightedLoss": 0,
+          "passRate": {
+            "passed": 1,
+            "total": 1,
+            "rate": 100
+          }
+        },
+        {
+          "stage": "peerRelayBC",
           "failedRuns": 0,
           "weightedLoss": 0,
           "passRate": {
@@ -200,45 +200,42 @@
       ],
       "scoreStability": {
         "sampleSize": 1,
-        "minScore": 35,
-        "maxScore": 35,
+        "minScore": 100,
+        "maxScore": 100,
         "spread": 0,
         "standardDeviation": 0,
         "consistencyScore": 100
       },
-      "dominantFailureCategory": "model-behavior",
-      "recommendationBlockers": [
-        "overall average 35 < 80",
-        "behavioral average 35 < 80",
-        "successful runs 0 < 1",
-        "hard failures 1",
-        "model-behavior failures 1",
-        "highest weighted stage loss concurrentReplies=15"
-      ],
+      "dominantFailureCategory": "none",
+      "recommendationBlockers": [],
       "runs": [
         {
           "runIndex": 1,
-          "passed": false,
-          "score": 35,
+          "passed": true,
+          "score": 100,
           "countedForRecommendation": true,
-          "outcome": "behavioral-fail",
-          "failureCategory": "model-behavior",
-          "primaryFailure": "Timed out waiting for OpenCode member bob to become idle. Last durableState: reply_pending",
-          "durationMs": 133048,
-          "hardFailure": true,
+          "outcome": "passed",
+          "failureCategory": "none",
+          "primaryFailure": null,
+          "durationMs": 201184,
+          "hardFailure": false,
           "stageDurationsMs": {
-            "setup": 371,
-            "launchBootstrap": 23735,
-            "materializeTasks": 36,
-            "directReply": 17327
+            "setup": 322,
+            "launchBootstrap": 44102,
+            "materializeTasks": 40,
+            "directReply": 20838,
+            "peerRelayAB": 41022,
+            "peerRelayBC": 47832,
+            "concurrentReplies": 29138,
+            "hygiene": 1
           },
           "stageFailures": {},
           "taskRefChecks": {
             "directReply": true,
-            "peerRelayAB": null,
-            "peerRelayBC": null,
-            "concurrentBob": null,
-            "concurrentTom": null
+            "peerRelayAB": true,
+            "peerRelayBC": true,
+            "concurrentBob": true,
+            "concurrentTom": true
           },
           "protocolViolations": {
             "badMessages": 0,
@@ -247,17 +244,16 @@
           "stages": {
             "launchBootstrap": true,
             "directReply": true,
-            "peerRelayAB": false,
-            "peerRelayBC": false,
-            "concurrentReplies": false,
+            "peerRelayAB": true,
+            "peerRelayBC": true,
+            "concurrentReplies": true,
             "taskRefs": true,
-            "cleanTranscript": false,
-            "noDuplicateTokens": false,
-            "latencyStable": false
+            "cleanTranscript": true,
+            "noDuplicateTokens": true,
+            "latencyStable": true
           },
           "diagnostics": [
-            "runId=9fb17ac5-fc66-4b01-831e-90a04b1e2304",
-            "Timed out waiting for OpenCode member bob to become idle. Last durableState: reply_pending"
+            "runId=85e7ecb6-0767-4606-90d2-c926937b22f5"
           ]
         }
       ]

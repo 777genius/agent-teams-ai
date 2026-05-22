@@ -1,12 +1,15 @@
 // @vitest-environment node
-import type { PathLike } from 'fs';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { PathLike } from 'fs';
 
 const mockBuildMergedCliPath = vi.fn<(binaryPath: string | null) => string>();
 const mockGetShellPreferredHome = vi.fn<() => string>();
 const mockGetClaudeBasePath = vi.fn<() => string>();
-const mockResolveInteractiveShellEnv = vi.fn<() => Promise<NodeJS.ProcessEnv>>();
+const mockResolveInteractiveShellEnvBestEffort = vi.fn<
+  (options?: unknown) => Promise<NodeJS.ProcessEnv>
+>();
 const mockGetConfiguredCliFlavor = vi.fn<() => 'claude' | 'agent_teams_orchestrator'>();
 const mockGetDoctorInvokedCandidates = vi.fn<(commandName: string) => Promise<string[]>>();
 
@@ -19,7 +22,8 @@ vi.mock('@main/utils/cliPathMerge', () => ({
 
 vi.mock('@main/utils/shellEnv', () => ({
   getShellPreferredHome: () => mockGetShellPreferredHome(),
-  resolveInteractiveShellEnv: () => mockResolveInteractiveShellEnv(),
+  resolveInteractiveShellEnvBestEffort: (options?: unknown) =>
+    mockResolveInteractiveShellEnvBestEffort(options),
 }));
 
 vi.mock('@main/utils/pathDecoder', () => ({
@@ -62,7 +66,7 @@ describe('ClaudeBinaryResolver', () => {
     mockBuildMergedCliPath.mockReturnValue(['/usr/local/bin', '/usr/bin'].join(path.delimiter));
     mockGetShellPreferredHome.mockReturnValue('/Users/tester');
     mockGetClaudeBasePath.mockReturnValue('/Users/tester/.claude');
-    mockResolveInteractiveShellEnv.mockResolvedValue({});
+    mockResolveInteractiveShellEnvBestEffort.mockResolvedValue({});
     mockGetConfiguredCliFlavor.mockReturnValue('agent_teams_orchestrator');
     mockGetDoctorInvokedCandidates.mockResolvedValue([]);
     Object.defineProperty(process, 'platform', {
@@ -139,7 +143,9 @@ describe('ClaudeBinaryResolver', () => {
   it('does not wait for shell env before using an explicit absolute runtime override', async () => {
     const expectedBinary = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = expectedBinary;
-    mockResolveInteractiveShellEnv.mockRejectedValue(new Error('shell env should not be needed'));
+    mockResolveInteractiveShellEnvBestEffort.mockRejectedValue(
+      new Error('shell env should not be needed')
+    );
 
     accessMock.mockImplementation((filePath) => {
       if (filePath === expectedBinary) {
@@ -152,7 +158,7 @@ describe('ClaudeBinaryResolver', () => {
     ClaudeBinaryResolver.clearCache();
 
     await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
-    expect(mockResolveInteractiveShellEnv).not.toHaveBeenCalled();
+    expect(mockResolveInteractiveShellEnvBestEffort).not.toHaveBeenCalled();
   });
 
   it('resolves extensionless Windows explicit overrides to a real executable file first', async () => {
@@ -214,6 +220,13 @@ describe('ClaudeBinaryResolver', () => {
     ClaudeBinaryResolver.clearCache();
 
     await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
+    expect(mockResolveInteractiveShellEnvBestEffort).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeoutMs: 1_500,
+        fallbackEnv: process.env,
+        background: false,
+      })
+    );
     expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
   });
 

@@ -148,10 +148,16 @@ describe('TeamLaunchFailureArtifactPack', () => {
 
   it('redacts common bearer and token-shaped secrets', () => {
     const redacted = redactLaunchFailureArtifactText(
-      'Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456 token: abcdefghijklmnopqrstuvwxyz123456'
+      'Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456 token: abcdefghijklmnopqrstuvwxyz123456 ANTHROPIC_AUTH_TOKEN=lmstudio CODEX_API_KEY="quoted-codex-token" OPENROUTER_API_KEY=\'quoted-router-token\''
     );
     expect(redacted).toContain('Authorization: Bearer [REDACTED]');
     expect(redacted).toContain('token: [REDACTED]');
+    expect(redacted).toContain('ANTHROPIC_AUTH_TOKEN=[REDACTED]');
+    expect(redacted).toContain('CODEX_API_KEY=[REDACTED]');
+    expect(redacted).toContain('OPENROUTER_API_KEY=[REDACTED]');
+    expect(redacted).not.toContain('lmstudio');
+    expect(redacted).not.toContain('quoted-codex-token');
+    expect(redacted).not.toContain('quoted-router-token');
   });
 
   it('classifies bootstrap transport rejection and extracts breadcrumb details', () => {

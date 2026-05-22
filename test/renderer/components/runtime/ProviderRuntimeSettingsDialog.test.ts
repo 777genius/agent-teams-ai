@@ -1,15 +1,21 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CliProviderStatus } from '@shared/types';
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { CliProviderStatus } from '@shared/types';
 
 interface StoreState {
   appConfig: {
     providerConnections: {
       anthropic: {
         authMode: 'auto' | 'oauth' | 'api_key';
+        fastModeDefault: boolean;
+        compatibleEndpoint: {
+          enabled: boolean;
+          baseUrl: string;
+        };
       };
       codex: {
         preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
@@ -316,6 +322,13 @@ function createAnthropicProvider(
       apiKeyConfigured: overrides?.apiKeyConfigured ?? false,
       apiKeySource: overrides?.apiKeySource ?? null,
       apiKeySourceLabel: overrides?.apiKeySourceLabel ?? null,
+      compatibleEndpoint: overrides?.compatibleEndpoint ?? {
+        enabled: false,
+        baseUrl: '',
+        tokenConfigured: false,
+        tokenSource: null,
+        tokenSourceLabel: null,
+      },
     },
   };
 }
@@ -466,6 +479,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
       providerConnections: {
         anthropic: {
           authMode: 'auto',
+          fastModeDefault: false,
+          compatibleEndpoint: {
+            enabled: false,
+            baseUrl: '',
+          },
         },
         codex: {
           preferredAuthMode: 'auto',
@@ -492,6 +510,10 @@ describe('ProviderRuntimeSettingsDialog', () => {
             anthropic: {
               ...storeState.appConfig.providerConnections.anthropic,
               ...(nextProviderConnections.anthropic ?? {}),
+              compatibleEndpoint: {
+                ...storeState.appConfig.providerConnections.anthropic.compatibleEndpoint,
+                ...(nextProviderConnections.anthropic?.compatibleEndpoint ?? {}),
+              },
             },
             codex: {
               ...storeState.appConfig.providerConnections.codex,
@@ -681,6 +703,259 @@ describe('ProviderRuntimeSettingsDialog', () => {
         value: 'sk-ant-test-key',
       })
     );
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
+  });
+
+  it('enables and saves an Anthropic-compatible endpoint with encrypted token storage', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider()],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Local / compatible endpoint');
+
+    const baseUrlInput = host.querySelector(
+      '#anthropic-compatible-base-url'
+    ) as HTMLInputElement | null;
+    const tokenInput = host.querySelector(
+      '#anthropic-compatible-auth-token'
+    ) as HTMLInputElement | null;
+    expect(baseUrlInput).not.toBeNull();
+    expect(tokenInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(baseUrlInput!, 'http://localhost:1234');
+      setInputValue(tokenInput!, 'lmstudio');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findButtonByText(host, 'Save endpoint').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.saveApiKey).toHaveBeenCalledWith({
+      id: undefined,
+      name: 'Anthropic-compatible Auth Token',
+      envVarName: 'ANTHROPIC_AUTH_TOKEN',
+      value: 'lmstudio',
+      scope: 'user',
+    });
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://localhost:1234',
+        },
+      },
+    });
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
+    expect(tokenInput!.value).toBe('');
+  });
+
+  it('saves an Anthropic-compatible endpoint without a token and shows a warning status', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider()],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const baseUrlInput = host.querySelector(
+      '#anthropic-compatible-base-url'
+    ) as HTMLInputElement | null;
+    expect(baseUrlInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(baseUrlInput!, 'http://127.0.0.1:1234/v1');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findButtonByText(host, 'Save endpoint').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.saveApiKey).not.toHaveBeenCalled();
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://127.0.0.1:1234/v1',
+        },
+      },
+    });
+    expect(host.textContent).toContain('Endpoint saved. Auth token is not configured.');
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
+  });
+
+  it('rejects Anthropic-compatible endpoint URLs with embedded credentials', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider()],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const baseUrlInput = host.querySelector(
+      '#anthropic-compatible-base-url'
+    ) as HTMLInputElement | null;
+    expect(baseUrlInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(baseUrlInput!, 'http://token@localhost:1234');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findButtonByText(host, 'Save endpoint').click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Base URL must not include credentials');
+    expect(storeState.saveApiKey).not.toHaveBeenCalled();
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(onRefreshProvider).not.toHaveBeenCalled();
+  });
+
+  it('rejects first-party Anthropic API hosts for compatible endpoint mode', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider()],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const baseUrlInput = host.querySelector(
+      '#anthropic-compatible-base-url'
+    ) as HTMLInputElement | null;
+    expect(baseUrlInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(baseUrlInput!, 'HTTPS://API.ANTHROPIC.COM/v1');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      findButtonByText(host, 'Save endpoint').click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Use Auto, Subscription, or API key');
+    expect(storeState.saveApiKey).not.toHaveBeenCalled();
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(onRefreshProvider).not.toHaveBeenCalled();
+  });
+
+  it('disables Anthropic-compatible endpoint without deleting its saved token', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    storeState.appConfig.providerConnections.anthropic.compatibleEndpoint = {
+      enabled: true,
+      baseUrl: 'http://localhost:1234',
+    };
+    storeState.apiKeys = [
+      {
+        id: 'local-token',
+        envVarName: 'ANTHROPIC_AUTH_TOKEN',
+        scope: 'user',
+        name: 'Anthropic-compatible Auth Token',
+        maskedValue: 'lm...io',
+      },
+    ];
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createAnthropicProvider({
+              compatibleEndpoint: {
+                enabled: true,
+                baseUrl: 'http://localhost:1234',
+                tokenConfigured: true,
+                tokenSource: 'stored',
+                tokenSourceLabel: 'Stored in app',
+              },
+            }),
+          ],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('lm...io');
+
+    await act(async () => {
+      findButtonByText(host, 'Disable').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: false,
+          baseUrl: 'http://localhost:1234',
+        },
+      },
+    });
+    expect(storeState.deleteApiKey).not.toHaveBeenCalled();
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
   });
 
@@ -1588,6 +1863,9 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(panel?.getAttribute('data-open')).toBe('true');
     expect(panel?.getAttribute('data-project-path')).toBe('/tmp/project-a');
     expect(host.textContent).toContain('Runtime provider management: opencode');
+    expect(host.textContent).toContain('version 1.4.0 - live resolved-fin');
+    expect(host.textContent).not.toContain('managed teammate agent');
+    expect(host.textContent).not.toContain('behavior abc123');
     expect(host.textContent).not.toContain('Desktop currently exposes status only.');
   });
 });

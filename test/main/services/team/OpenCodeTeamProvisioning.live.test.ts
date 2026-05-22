@@ -40,6 +40,8 @@ const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_
 const DEFAULT_MODEL = 'opencode/big-pickle';
 
 liveDescribe('OpenCode team provisioning live e2e', () => {
+  const liveDefaultModelIt =
+    process.env.OPENCODE_E2E_DEFAULT_MODEL_LAUNCH === '1' ? it : it.skip;
   let tempDir: string;
   let tempClaudeRoot: string;
 
@@ -142,16 +144,41 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
         ),
         progressDump
       ).toBe(true);
+      expect(
+        progressEvents.some((progress) =>
+          progress.message.includes('Validating OpenCode team launch gate')
+        ),
+        progressDump
+      ).toBe(true);
+      expect(
+        progressEvents.some((progress) =>
+          progress.message.includes('Starting OpenCode sessions through runtime adapter')
+        ),
+        progressDump
+      ).toBe(true);
+      expect(progressDump).not.toContain('Starting Claude CLI process for team launch');
+      expect(progressDump).not.toContain('OpenCode team launch is not enabled');
 
       const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+      expect(runtimeSnapshot.runId).toBe(runId);
       expect(runtimeSnapshot.members.alice).toMatchObject({
         alive: true,
+        providerId: 'opencode',
+        laneId: 'primary',
+        laneKind: 'primary',
         runtimeModel: selectedModel,
+        historicalBootstrapConfirmed: true,
       });
       expect(runtimeSnapshot.members.bob).toMatchObject({
         alive: true,
+        providerId: 'opencode',
+        laneId: 'primary',
+        laneKind: 'primary',
         runtimeModel: selectedModel,
+        historicalBootstrapConfirmed: true,
       });
+      expect(hasOpenCodeRuntimeHandle(runtimeSnapshot.members.alice)).toBe(true);
+      expect(hasOpenCodeRuntimeHandle(runtimeSnapshot.members.bob)).toBe(true);
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
       ).resolves.toMatchObject({
@@ -180,6 +207,187 @@ liveDescribe('OpenCode team provisioning live e2e', () => {
         .catch(() => undefined);
     }
   }, 300_000);
+
+  liveDefaultModelIt(
+    'creates and stops a pure OpenCode team when all OpenCode model selections are Default',
+    async () => {
+      const orchestratorCli =
+        process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
+      await assertExecutable(orchestratorCli);
+      const projectPath = path.join(tempDir, 'default-model-project');
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.writeFile(
+        path.join(projectPath, 'opencode.json'),
+        `${JSON.stringify({ model: DEFAULT_MODEL, small_model: DEFAULT_MODEL }, null, 2)}\n`
+      );
+
+      const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
+      const bridgeEnv = {
+        ...createStableBridgeEnv(),
+        PATH: withBunOnPath(process.env.PATH ?? ''),
+        XDG_DATA_HOME: path.join(tempDir, 'xdg-data-default-model'),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: tempClaudeRoot,
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcpLaunchSpec.args),
+      };
+      const bridgeClient = new OpenCodeBridgeCommandClient({
+        binaryPath: orchestratorCli,
+        tempDirectory: path.join(tempDir, 'bridge-input-default-model'),
+        env: bridgeEnv,
+      });
+      const stateChangingCommands = createStateChangingCommands({
+        bridge: bridgeClient,
+        controlDir: path.join(tempDir, 'control-default-model'),
+      });
+      const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
+        stateChangingCommands,
+        timeoutMs: 180_000,
+        launchTimeoutMs: 180_000,
+        reconcileTimeoutMs: 90_000,
+        stopTimeoutMs: 90_000,
+      });
+      const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge);
+      const svc = new TeamProvisioningService();
+      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+      const teamName = `opencode-team-default-model-${Date.now()}`;
+      const progressEvents: TeamProvisioningProgress[] = [];
+
+      try {
+        const { runId } = await svc.createTeam(
+          {
+            teamName,
+            cwd: projectPath,
+            providerId: 'opencode',
+            skipPermissions: true,
+            members: [
+              {
+                name: 'atlas',
+                role: 'Developer',
+                providerId: 'opencode',
+              },
+            ],
+          },
+          (progress) => {
+            progressEvents.push(progress);
+          }
+        );
+
+        expect(runId).toBeTruthy();
+        const progressDump = progressEvents
+          .map((progress) =>
+            [
+              progress.state,
+              progress.message,
+              progress.messageSeverity,
+              progress.error,
+              progress.cliLogsTail,
+            ]
+              .filter(Boolean)
+              .join(' | ')
+          )
+          .join('\n');
+        expect(
+          progressEvents.some((progress) =>
+            progress.message.includes('OpenCode team launch is ready')
+          ),
+          progressDump
+        ).toBe(true);
+        expect(progressDump).not.toContain('OpenCode launch requires a selected raw model id');
+        expect(progressDump).not.toContain('Failed to parse runtime default model list');
+        expect(progressDump).not.toContain('Failed to load runtime default model list');
+
+        const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        expect(runtimeSnapshot.runId).toBe(runId);
+        expect(runtimeSnapshot.members.atlas).toMatchObject({
+          alive: true,
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneKind: 'primary',
+          runtimeModel: DEFAULT_MODEL,
+          historicalBootstrapConfirmed: true,
+        });
+        expect(hasOpenCodeRuntimeHandle(runtimeSnapshot.members.atlas)).toBe(true);
+
+        await svc.stopTeam(teamName);
+        await waitUntil(async () => {
+          const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+          return Object.keys(laneIndex.lanes).length === 0;
+        }, 90_000);
+
+        const relaunchProgressEvents: TeamProvisioningProgress[] = [];
+        const { runId: relaunchRunId } = await svc.launchTeam(
+          {
+            teamName,
+            cwd: projectPath,
+            providerId: 'opencode',
+            skipPermissions: true,
+          },
+          (progress) => {
+            relaunchProgressEvents.push(progress);
+          }
+        );
+        expect(relaunchRunId).toBeTruthy();
+        expect(relaunchRunId).not.toBe(runId);
+        const relaunchProgressDump = relaunchProgressEvents
+          .map((progress) =>
+            [
+              progress.state,
+              progress.message,
+              progress.messageSeverity,
+              progress.error,
+              progress.cliLogsTail,
+            ]
+              .filter(Boolean)
+              .join(' | ')
+          )
+          .join('\n');
+        expect(
+          relaunchProgressEvents.some((progress) =>
+            progress.message.includes('OpenCode team launch is ready')
+          ),
+          relaunchProgressDump
+        ).toBe(true);
+        expect(relaunchProgressDump).not.toContain(
+          'OpenCode launch requires a selected raw model id'
+        );
+        expect(relaunchProgressDump).not.toContain('No OpenCode model is available');
+        expect(relaunchProgressDump).not.toContain('Failed to parse runtime default model list');
+        expect(relaunchProgressDump).not.toContain('Failed to load runtime default model list');
+
+        const relaunchedSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        expect(relaunchedSnapshot.runId).toBe(relaunchRunId);
+        expect(relaunchedSnapshot.members.atlas).toMatchObject({
+          alive: true,
+          providerId: 'opencode',
+          laneId: 'primary',
+          laneKind: 'primary',
+          runtimeModel: DEFAULT_MODEL,
+          historicalBootstrapConfirmed: true,
+        });
+        expect(hasOpenCodeRuntimeHandle(relaunchedSnapshot.members.atlas)).toBe(true);
+
+        await svc.stopTeam(teamName);
+        await waitUntil(async () => {
+          const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+          return Object.keys(laneIndex.lanes).length === 0;
+        }, 90_000);
+      } finally {
+        await svc.stopTeam(teamName).catch(() => undefined);
+        await readinessBridge
+          .cleanupOpenCodeHosts({
+            reason: 'opencode-team-default-model-live-e2e-cleanup',
+            mode: 'force',
+            projectPath,
+            staleAgeMs: null,
+            leaseStaleAgeMs: null,
+          })
+          .catch(() => undefined);
+      }
+    },
+    300_000
+  );
 });
 
 function createStateChangingCommands(input: {
@@ -253,4 +461,16 @@ function createStableBridgeEnv(): NodeJS.ProcessEnv {
     HOME: realHome,
     USERPROFILE: realHome,
   };
+}
+
+function hasOpenCodeRuntimeHandle(member: {
+  readonly pid?: number;
+  readonly runtimePid?: number;
+  readonly runtimeSessionId?: string;
+}): boolean {
+  return (
+    (typeof member.pid === 'number' && member.pid > 0) ||
+    (typeof member.runtimePid === 'number' && member.runtimePid > 0) ||
+    (typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.trim().length > 0)
+  );
 }

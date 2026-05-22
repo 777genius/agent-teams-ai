@@ -3,7 +3,10 @@ import React, { useEffect, useMemo } from 'react';
 import { Label } from '@renderer/components/ui/label';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
-import { getTeamEffortSelectorPresentation } from '@renderer/utils/teamEffortOptions';
+import {
+  getAvailableTeamEffortValue,
+  getTeamEffortSelectorPresentation,
+} from '@renderer/utils/teamEffortOptions';
 import { Brain } from 'lucide-react';
 
 import type { TeamProviderId } from '@shared/types';
@@ -33,6 +36,13 @@ export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
     providerStatus,
   });
   const effortOptions = presentation.options;
+  const displayValue = getAvailableTeamEffortValue({
+    providerId,
+    model,
+    limitContext,
+    providerStatus,
+    value,
+  });
   const validValues = useMemo(
     () => new Set(effortOptions.map((option) => option.value)),
     [effortOptions]
@@ -59,13 +69,13 @@ export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
             <button
               key={opt.value || '__default__'}
               type="button"
-              id={opt.value === value ? id : undefined}
+              id={opt.value === displayValue ? id : undefined}
               disabled={presentation.disabled}
               className={cn(
                 'rounded-[3px] px-3 py-1 text-xs font-medium transition-colors',
                 presentation.disabled
                   ? 'cursor-not-allowed text-[var(--color-text-muted)] opacity-70'
-                  : value === opt.value
+                  : displayValue === opt.value
                     ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
               )}

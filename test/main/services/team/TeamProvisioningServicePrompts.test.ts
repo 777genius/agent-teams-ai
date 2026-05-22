@@ -620,6 +620,41 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(normalAddMessage).not.toContain('isolation="worktree"');
   });
 
+  it('add and restart teammate prompts can carry strict MCP launch overrides for Agent tool spawns', () => {
+    const mcpLaunchConfig = {
+      mcpConfigPath: '/tmp/team path/alice-mcp.json',
+      mcpSettingSources: 'user,project,local',
+      strictMcpConfig: true,
+    };
+    const addMessage = buildAddMemberSpawnMessage(
+      'forge-labs',
+      'Forge Labs',
+      'lead',
+      {
+        name: 'alice',
+        providerId: 'codex',
+      },
+      mcpLaunchConfig
+    );
+    const restartMessage = buildRestartMemberSpawnMessage(
+      'forge-labs',
+      'Forge Labs',
+      'lead',
+      {
+        name: 'alice',
+        providerId: 'codex',
+      },
+      mcpLaunchConfig
+    );
+
+    expect(addMessage).toContain(
+      'mcp_config="/tmp/team path/alice-mcp.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+    );
+    expect(restartMessage).toContain(
+      'mcp_config="/tmp/team path/alice-mcp.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+    );
+  });
+
   it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();

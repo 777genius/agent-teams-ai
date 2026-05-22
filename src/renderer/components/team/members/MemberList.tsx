@@ -51,6 +51,7 @@ interface MemberListProps {
   onOpenTask?: (taskId: string) => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
+  onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
 
 function areResolvedMembersEquivalent(
@@ -464,6 +465,7 @@ function areMemberListPropsEqual(
     prev.leadActivity === next.leadActivity &&
     prev.onRestartMember === next.onRestartMember &&
     prev.onSkipMemberForLaunch === next.onSkipMemberForLaunch &&
+    prev.onRestoreMember === next.onRestoreMember &&
     areLaunchParamsEquivalent(prev.launchParams, next.launchParams)
   );
 }
@@ -505,6 +507,7 @@ interface MemberCardRowProps {
   onAssignTask?: (member: ResolvedTeamMember) => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
+  onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
 
 const MemberCardRow = memo(function MemberCardRow({
@@ -540,6 +543,7 @@ const MemberCardRow = memo(function MemberCardRow({
   onAssignTask,
   onRestartMember,
   onSkipMemberForLaunch,
+  onRestoreMember,
 }: MemberCardRowProps): React.JSX.Element {
   const currentTaskId = currentTask?.id;
   const reviewTaskId = reviewTask?.id;
@@ -591,6 +595,7 @@ const MemberCardRow = memo(function MemberCardRow({
       onAssignTask={handleAssignTask}
       onRestartMember={onRestartMember}
       onSkipMemberForLaunch={onSkipMemberForLaunch}
+      onRestoreMember={onRestoreMember}
     />
   );
 });
@@ -713,6 +718,7 @@ export const MemberList = memo(function MemberList({
   onOpenTask,
   onRestartMember,
   onSkipMemberForLaunch,
+  onRestoreMember,
 }: MemberListProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isWide, setIsWide] = useState(false);
@@ -1006,6 +1012,7 @@ export const MemberList = memo(function MemberList({
               onAssignTask={onAssignTask}
               onRestartMember={onRestartMember}
               onSkipMemberForLaunch={onSkipMemberForLaunch}
+              onRestoreMember={onRestoreMember}
             />
           );
         })}
@@ -1051,6 +1058,7 @@ export const MemberList = memo(function MemberList({
                 onAssignTask={onAssignTask}
                 onRestartMember={undefined}
                 onSkipMemberForLaunch={undefined}
+                onRestoreMember={onRestoreMember}
               />
             ))}
           </div>

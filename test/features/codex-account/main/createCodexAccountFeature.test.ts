@@ -432,6 +432,93 @@ describe('createCodexAccountFeature', () => {
     }
   });
 
+  it('keeps the last known Codex account when binary discovery transiently misses after a healthy snapshot', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: '/usr/bin:/bin',
+    });
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      const firstSnapshot = await feature.refreshSnapshot();
+
+      binaryResolveMock.mockResolvedValue(null);
+      dateNowSpy.mockReturnValue(1_776_000_020_000);
+      const secondSnapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      expect(firstSnapshot.managedAccount?.email).toBe('user@example.com');
+      expect(secondSnapshot.appServerState).toBe('healthy');
+      expect(secondSnapshot.launchReadinessState).toBe('ready_chatgpt');
+      expect(secondSnapshot.launchAllowed).toBe(true);
+      expect(secondSnapshot.launchIssueMessage).toBeNull();
+      expect(secondSnapshot.managedAccount).toMatchObject({
+        type: 'chatgpt',
+        email: 'user@example.com',
+      });
+      expect(secondSnapshot.runtimeContext).toEqual({
+        binaryPath: '/usr/local/bin/codex',
+        codexHome: '/Users/test/.codex',
+      });
+      expect(readAccountMock).toHaveBeenCalledTimes(1);
+      expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledTimes(1);
+      expect(binaryClearCacheMock).toHaveBeenCalledTimes(1);
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('reports runtime-missing once the last known Codex runtime is too old to trust', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: '/usr/bin:/bin',
+    });
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      await feature.refreshSnapshot();
+
+      binaryResolveMock.mockResolvedValue(null);
+      dateNowSpy.mockReturnValue(1_776_000_060_001);
+      const snapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      expect(snapshot.appServerState).toBe('runtime-missing');
+      expect(snapshot.launchReadinessState).toBe('runtime_missing');
+      expect(snapshot.launchIssueMessage).toContain('Codex CLI not found');
+      expect(snapshot.managedAccount).toBeNull();
+      expect(readAccountMock).toHaveBeenCalledTimes(1);
+      expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledTimes(1);
+      expect(binaryClearCacheMock).toHaveBeenCalledTimes(1);
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
   it('reuses a fresh refresh snapshot when the request does not need stronger data', async () => {
     readAccountMock.mockResolvedValue({
       account: createAccountResponse(),

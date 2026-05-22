@@ -27,13 +27,29 @@ export function isValidDsn(dsn: string | undefined): dsn is string {
 
 const REDACTED = '[redacted]';
 const MAX_REDACTION_DEPTH = 8;
-const SENSITIVE_KEY_PATTERN =
-  /(token|secret|authorization|cookie|email|account|clientid|project|repo|path|cwd|teamname|sessionid|taskid|username|user_name)/i;
+const SENSITIVE_KEY_PARTS = [
+  'token',
+  'secret',
+  'authorization',
+  'cookie',
+  'email',
+  'account',
+  'clientid',
+  'project',
+  'repo',
+  'path',
+  'cwd',
+  'teamname',
+  'sessionid',
+  'taskid',
+  'username',
+  'user_name',
+];
 
-const SENSITIVE_STRING_PATTERNS: Array<[RegExp, string]> = [
+const SENSITIVE_STRING_PATTERNS: [RegExp, string][] = [
   [/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, REDACTED],
   [/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, REDACTED],
-  [/\b(?:sk|pk|rk|ghp|gho|github_pat|xoxb|xoxp|ya29)[A-Za-z0-9_\-]{12,}\b/g, REDACTED],
+  [/\b(?:sk|pk|rk|ghp|gho|github_pat|xoxb|xoxp|ya29)[A-Za-z0-9_-]{12,}\b/g, REDACTED],
   [/\/Users\/[^/\s"'`]+(?:\/[^\s"'`]+)*/g, '/Users/[redacted]/[redacted-path]'],
   [/\/home\/[^/\s"'`]+(?:\/[^\s"'`]+)*/g, '/home/[redacted]/[redacted-path]'],
   [/([A-Za-z]:\\Users\\)[^\\\s"'`]+(?:\\[^\\\s"'`]+)*/g, '$1[redacted]\\[redacted-path]'],
@@ -78,10 +94,24 @@ export function filterSafeSentryIntegrations<TIntegration extends SentryIntegrat
 }
 
 function redactSentryString(value: string): string {
-  return SENSITIVE_STRING_PATTERNS.reduce(
+  const redacted = SENSITIVE_STRING_PATTERNS.reduce(
     (current, [pattern, replacement]) => current.replace(pattern, replacement),
     value
   );
+  return redactSentryEnvAssignments(redacted);
+}
+
+function isSensitiveSentryKey(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return SENSITIVE_KEY_PARTS.some((part) => normalized.includes(part));
+}
+
+function redactSentryEnvAssignments(value: string): string {
+  return value.replace(/\b[A-Z0-9_]+\s*=\s*("[^"]*"|'[^']*'|\S+)/gi, (match) => {
+    const separatorIndex = match.indexOf('=');
+    const key = match.slice(0, separatorIndex).trim();
+    return isSensitiveSentryKey(key) ? REDACTED : match;
+  });
 }
 
 function redactSentryValue(value: unknown, depth: number, seen: WeakSet<object>): unknown {
@@ -105,7 +135,7 @@ function redactSentryValue(value: unknown, depth: number, seen: WeakSet<object>)
 
   const redacted: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
-    redacted[key] = SENSITIVE_KEY_PATTERN.test(key)
+    redacted[key] = isSensitiveSentryKey(key)
       ? REDACTED
       : redactSentryValue(entry, depth + 1, seen);
   }

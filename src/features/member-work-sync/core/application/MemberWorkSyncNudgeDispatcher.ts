@@ -72,6 +72,10 @@ function getProofMissingRecoveryOriginalMessageId(item: MemberWorkSyncOutboxItem
   return originalMessageId.length > 0 ? originalMessageId : null;
 }
 
+function isStatusOnlyRecoveryOutboxItem(item: MemberWorkSyncOutboxItem): boolean {
+  return item.payload.workSyncIntentKey?.startsWith('status-only:') === true;
+}
+
 function getPayloadReviewRequestEventIds(item: MemberWorkSyncOutboxItem): string[] {
   return [...new Set(item.payload.workSyncReviewRequestEventIds ?? [])]
     .filter((id) => id.length > 0)
@@ -504,7 +508,10 @@ export class MemberWorkSyncNudgeDispatcher {
       workSyncIntentKey: item.payload.workSyncIntentKey,
       taskRefs: item.payload.taskRefs,
     });
-    if (busy?.busy) {
+    if (
+      busy?.busy &&
+      !(isStatusOnlyRecoveryOutboxItem(item) && busy.reason === 'recent_tool_activity')
+    ) {
       return {
         ok: false,
         reason: `member_busy:${busy.reason ?? 'unknown'}`,

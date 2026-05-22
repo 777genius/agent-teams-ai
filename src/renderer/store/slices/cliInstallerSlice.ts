@@ -93,12 +93,32 @@ function isModelOnlyFallbackProviderStatus(provider: CliProviderStatus | undefin
   );
 }
 
+function isOpenCodeSummaryOnlyCatalogStatus(provider: CliProviderStatus | undefined): boolean {
+  if (provider?.providerId !== 'opencode') {
+    return false;
+  }
+
+  if (provider.modelCatalog?.providerId === 'opencode') {
+    return false;
+  }
+
+  if (provider.modelCatalogRefreshState === 'error') {
+    return false;
+  }
+
+  return provider.runtimeCapabilities?.modelCatalog?.dynamic === true;
+}
+
 function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefined): boolean {
   if (!provider) {
     return false;
   }
 
   if (isModelOnlyFallbackProviderStatus(provider)) {
+    return false;
+  }
+
+  if (isOpenCodeSummaryOnlyCatalogStatus(provider)) {
     return false;
   }
 
@@ -131,7 +151,11 @@ function getProviderStatus(
 }
 
 function hasOpenCodeModels(provider: CliProviderStatus | undefined): boolean {
-  return provider?.providerId === 'opencode' && provider.models.length > 0;
+  return (
+    provider?.providerId === 'opencode' &&
+    provider.models.length > 0 &&
+    !isOpenCodeSummaryOnlyCatalogStatus(provider)
+  );
 }
 
 function hasCodexRuntimeReady(provider: CliProviderStatus | undefined): boolean {
@@ -180,9 +204,15 @@ function mergeProviderCatalogCache(
 ): CliProviderStatus {
   const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
   const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
+  const shouldPreserveCurrentModels =
+    incomingProvider.models.length === 0 ||
+    (incomingProvider.providerId === 'opencode' &&
+      incomingProvider.modelCatalog == null &&
+      incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+      currentProvider.models.length > incomingProvider.models.length);
   return {
     ...incomingProvider,
-    models: incomingProvider.models.length > 0 ? incomingProvider.models : currentProvider.models,
+    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
     modelCatalog,
     modelCatalogRefreshState:
       modelCatalog && incomingRefreshState !== 'error'

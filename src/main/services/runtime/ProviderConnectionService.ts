@@ -12,6 +12,7 @@ import {
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
+import type { AnthropicCompatibleEndpointConfig } from '../infrastructure/ConfigManager';
 import type {
   CodexAccountAuthMode,
   CodexAccountSnapshotDto,
@@ -37,6 +38,7 @@ type ExternalCredential = {
 
 interface StoredApiKeyAccessOptions {
   allowStoredApiKeyDecryption?: boolean;
+  allowedStoredApiKeyEnvVarNames?: readonly string[];
 }
 
 const PROVIDER_CAPABILITIES: Record<
@@ -71,6 +73,8 @@ const PROVIDER_API_KEY_ENV_VARS: Partial<Record<CliProviderId, string>> = {
   gemini: 'GEMINI_API_KEY',
 };
 
+const ANTHROPIC_BASE_URL_ENV_VAR = 'ANTHROPIC_BASE_URL';
+const ANTHROPIC_AUTH_TOKEN_ENV_VAR = 'ANTHROPIC_AUTH_TOKEN';
 const CODEX_NATIVE_API_KEY_ENV_VAR = 'CODEX_API_KEY';
 const CODEX_CLI_PATH_ENV_VAR = 'CODEX_CLI_PATH';
 const CODEX_HOME_ENV_VAR = 'CODEX_HOME';
@@ -80,6 +84,7 @@ const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
 const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
+const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 
 type CodexCliLoginStatus = 'logged_in' | 'not_logged_in' | 'unknown';
 
@@ -106,6 +111,10 @@ type AnthropicApiKeyVerifier = (
   apiKey: string,
   baseUrl?: string | null
 ) => Promise<AnthropicApiKeyVerificationResult>;
+
+type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'> & {
+  refreshSnapshot?: CodexAccountFeatureFacade['refreshSnapshot'];
+};
 
 interface ProviderStatusEnrichmentOptions {
   hydrateModelCatalog?: boolean;
@@ -148,6 +157,51 @@ function buildAnthropicModelsUrl(baseUrl?: string | null): string {
   }
   url.search = '';
   return url.toString();
+}
+
+function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
+  const trimmed = baseUrl?.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      !url.username &&
+      !url.password &&
+      !FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function hasAnthropicCompatibleAuthEnv(env: NodeJS.ProcessEnv): boolean {
+  if (!isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL)) {
+    return false;
+  }
+
+  return Boolean(env.ANTHROPIC_AUTH_TOKEN?.trim() || env.ANTHROPIC_API_KEY?.trim());
+}
+
+function isUsableAnthropicCompatibleEndpoint(
+  endpoint: AnthropicCompatibleEndpointConfig | undefined
+): endpoint is AnthropicCompatibleEndpointConfig {
+  if (endpoint?.enabled !== true || !endpoint.baseUrl.trim()) {
+    return false;
+  }
+
+  try {
+    const url = new URL(endpoint.baseUrl.trim());
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      isAnthropicCompatibleBaseUrl(endpoint.baseUrl)
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function verifyAnthropicApiKeyWithApi(
@@ -307,7 +361,7 @@ async function checkCodexCliLoginStatus({
 
 export class ProviderConnectionService {
   private static instance: ProviderConnectionService | null = null;
-  private codexAccountFeature: Pick<CodexAccountFeatureFacade, 'getSnapshot'> | null = null;
+  private codexAccountFeature: CodexAccountSnapshotReader | null = null;
   private codexModelCatalogFeature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null =
     null;
   private readonly anthropicApiKeyVerificationCache = new Map<
@@ -327,7 +381,7 @@ export class ProviderConnectionService {
     return ProviderConnectionService.instance;
   }
 
-  setCodexAccountFeature(feature: Pick<CodexAccountFeatureFacade, 'getSnapshot'> | null): void {
+  setCodexAccountFeature(feature: CodexAccountSnapshotReader | null): void {
     this.codexAccountFeature = feature;
   }
 
@@ -367,8 +421,122 @@ export class ProviderConnectionService {
     return null;
   }
 
+  private getConfiguredAnthropicCompatibleEndpoint(): AnthropicCompatibleEndpointConfig | null {
+    const endpoint =
+      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint;
+    return isUsableAnthropicCompatibleEndpoint(endpoint)
+      ? { enabled: true, baseUrl: endpoint.baseUrl.trim() }
+      : null;
+  }
+
+  private getConfiguredAnthropicCompatibleEndpointIssue(): string | null {
+    const endpoint =
+      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint;
+    if (endpoint?.enabled !== true) {
+      return null;
+    }
+
+    const baseUrl = endpoint.baseUrl.trim();
+    if (!baseUrl) {
+      return 'Anthropic-compatible endpoint is enabled, but no base URL is configured.';
+    }
+
+    try {
+      const url = new URL(baseUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return 'Anthropic-compatible endpoint base URL must use http:// or https://.';
+      }
+
+      if (url.username || url.password) {
+        return 'Anthropic-compatible endpoint base URL must not include credentials.';
+      }
+
+      if (!isAnthropicCompatibleBaseUrl(baseUrl)) {
+        return 'Anthropic-compatible endpoint cannot use the first-party Anthropic API host.';
+      }
+    } catch {
+      return 'Anthropic-compatible endpoint base URL is invalid.';
+    }
+
+    return null;
+  }
+
+  private async getConfiguredAnthropicCompatibleToken(
+    options?: StoredApiKeyAccessOptions
+  ): Promise<ExternalCredential> {
+    const storedToken = await this.lookupStoredApiKeyValue(ANTHROPIC_AUTH_TOKEN_ENV_VAR, options);
+    if (storedToken?.value.trim()) {
+      return {
+        label: 'Stored in app',
+        value: storedToken.value.trim(),
+      };
+    }
+
+    const envToken = this.getExternalEnvValue(ANTHROPIC_AUTH_TOKEN_ENV_VAR);
+    return envToken
+      ? {
+          label: `Detected from ${ANTHROPIC_AUTH_TOKEN_ENV_VAR}`,
+          value: envToken,
+        }
+      : null;
+  }
+
+  private async applyConfiguredAnthropicCompatibleEndpointEnv(
+    env: NodeJS.ProcessEnv,
+    options?: StoredApiKeyAccessOptions
+  ): Promise<boolean> {
+    const endpoint = this.getConfiguredAnthropicCompatibleEndpoint();
+    if (!endpoint) {
+      return false;
+    }
+
+    env[ANTHROPIC_BASE_URL_ENV_VAR] = endpoint.baseUrl;
+    const token = await this.getConfiguredAnthropicCompatibleToken(options);
+    if (token?.value.trim()) {
+      env[ANTHROPIC_AUTH_TOKEN_ENV_VAR] = token.value.trim();
+    }
+
+    if (typeof env.ANTHROPIC_API_KEY !== 'string' || !env.ANTHROPIC_API_KEY.trim()) {
+      env.ANTHROPIC_API_KEY = '';
+    }
+
+    return true;
+  }
+
+  private async getAnthropicCompatibleEndpointConnectionInfo(): Promise<
+    NonNullable<CliProviderConnectionInfo['compatibleEndpoint']>
+  > {
+    const endpoint =
+      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint;
+    const hasStoredToken = await this.hasStoredApiKey(ANTHROPIC_AUTH_TOKEN_ENV_VAR);
+    const envToken = this.getExternalEnvValue(ANTHROPIC_AUTH_TOKEN_ENV_VAR);
+    const tokenSource = hasStoredToken ? 'stored' : envToken ? 'environment' : null;
+
+    return {
+      enabled: endpoint.enabled,
+      baseUrl: endpoint.baseUrl,
+      tokenConfigured: Boolean(tokenSource),
+      tokenSource,
+      tokenSourceLabel:
+        tokenSource === 'stored'
+          ? 'Stored in app'
+          : tokenSource === 'environment'
+            ? `Detected from ${ANTHROPIC_AUTH_TOKEN_ENV_VAR}`
+            : null,
+    };
+  }
+
   async getConfiguredAnthropicApiKeyForTeamRuntime(env: NodeJS.ProcessEnv): Promise<string | null> {
     if (this.getConfiguredAuthMode('anthropic') !== 'api_key') {
+      return null;
+    }
+
+    const configuredEndpoint =
+      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint;
+    if (
+      configuredEndpoint?.enabled === true ||
+      isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL)
+    ) {
       return null;
     }
 
@@ -388,6 +556,14 @@ export class ProviderConnectionService {
     options?: StoredApiKeyAccessOptions
   ): Promise<NodeJS.ProcessEnv> {
     if (providerId === 'anthropic') {
+      if (await this.applyConfiguredAnthropicCompatibleEndpointEnv(env, options)) {
+        return env;
+      }
+
+      if (hasAnthropicCompatibleAuthEnv(env)) {
+        return env;
+      }
+
       const authMode = this.getConfiguredAuthMode(providerId);
       if (authMode === 'oauth') {
         delete env.ANTHROPIC_API_KEY;
@@ -427,7 +603,9 @@ export class ProviderConnectionService {
       return env;
     }
 
-    const snapshot = this.mergeCodexApiKeyAvailability(await this.getCodexAccountSnapshot(), env);
+    const snapshot = await this.getCodexLaunchSnapshot(env, {
+      refreshRuntimeMissing: true,
+    });
     applyCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
@@ -480,6 +658,10 @@ export class ProviderConnectionService {
     options?: StoredApiKeyAccessOptions
   ): Promise<NodeJS.ProcessEnv> {
     if (providerId === 'anthropic') {
+      if (await this.applyConfiguredAnthropicCompatibleEndpointEnv(env, options)) {
+        return env;
+      }
+
       if (this.getConfiguredAuthMode(providerId) !== 'api_key') {
         return env;
       }
@@ -503,7 +685,9 @@ export class ProviderConnectionService {
       return env;
     }
 
-    const snapshot = this.mergeCodexApiKeyAvailability(await this.getCodexAccountSnapshot(), env);
+    const snapshot = await this.getCodexLaunchSnapshot(env, {
+      refreshRuntimeMissing: true,
+    });
     applyCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
@@ -550,7 +734,20 @@ export class ProviderConnectionService {
     runtimeBackendOverride?: string | null
   ): Promise<string | null> {
     if (providerId === 'anthropic') {
+      const compatibleEndpointIssue = this.getConfiguredAnthropicCompatibleEndpointIssue();
+      if (compatibleEndpointIssue) {
+        return compatibleEndpointIssue;
+      }
+
+      if (this.getConfiguredAnthropicCompatibleEndpoint()) {
+        return null;
+      }
+
       if (this.getConfiguredAuthMode(providerId) !== 'api_key') {
+        return null;
+      }
+
+      if (hasAnthropicCompatibleAuthEnv(env)) {
         return null;
       }
 
@@ -572,7 +769,9 @@ export class ProviderConnectionService {
       return null;
     }
 
-    const snapshot = this.mergeCodexApiKeyAvailability(await this.getCodexAccountSnapshot(), env);
+    const snapshot = await this.getCodexLaunchSnapshot(env, {
+      refreshRuntimeMissing: true,
+    });
     const runtimeEnv = { ...env };
     applyCodexRuntimeContextEnv(runtimeEnv, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
@@ -681,7 +880,9 @@ export class ProviderConnectionService {
       return [];
     }
 
-    const snapshot = this.mergeCodexApiKeyAvailability(await this.getCodexAccountSnapshot(), env);
+    const snapshot = await this.getCodexLaunchSnapshot(env, {
+      refreshRuntimeMissing: true,
+    });
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -783,6 +984,18 @@ export class ProviderConnectionService {
     provider: CliProviderStatus
   ): Promise<CliProviderStatus> {
     const connection = provider.connection;
+    if (connection?.compatibleEndpoint?.enabled === true) {
+      return {
+        ...provider,
+        subscriptionRateLimits: null,
+        statusMessage:
+          provider.statusMessage ??
+          (connection.compatibleEndpoint.tokenConfigured
+            ? 'Anthropic-compatible endpoint configured'
+            : 'Anthropic-compatible endpoint configured. Auth token is not set.'),
+      };
+    }
+
     if (connection?.configuredAuthMode !== 'api_key') {
       return provider;
     }
@@ -916,6 +1129,8 @@ export class ProviderConnectionService {
         : hasStoredApiKey
           ? 'Stored in app'
           : (externalCredential?.label ?? null);
+    const compatibleEndpoint =
+      providerId === 'anthropic' ? await this.getAnthropicCompatibleEndpointConnectionInfo() : null;
 
     return {
       ...capabilities,
@@ -924,6 +1139,7 @@ export class ProviderConnectionService {
       apiKeyConfigured,
       apiKeySource,
       apiKeySourceLabel,
+      compatibleEndpoint,
       codex:
         providerId === 'codex' && codexSnapshot
           ? {
@@ -971,7 +1187,9 @@ export class ProviderConnectionService {
     envVarName: string,
     options?: StoredApiKeyAccessOptions
   ): Promise<{ envVarName: string; value: string } | null> {
-    if (options?.allowStoredApiKeyDecryption === false) {
+    const allowedWhenMetadataOnly =
+      options?.allowedStoredApiKeyEnvVarNames?.includes(envVarName) === true;
+    if (options?.allowStoredApiKeyDecryption === false && !allowedWhenMetadataOnly) {
       return null;
     }
 
@@ -985,8 +1203,13 @@ export class ProviderConnectionService {
     return CODEX_NATIVE_BACKEND_ID;
   }
 
-  private async getCodexAccountSnapshot(): Promise<CodexAccountSnapshotDto> {
+  private async getCodexAccountSnapshot(options?: {
+    forceRefresh?: boolean;
+  }): Promise<CodexAccountSnapshotDto> {
     if (this.codexAccountFeature) {
+      if (options?.forceRefresh && this.codexAccountFeature.refreshSnapshot) {
+        return this.codexAccountFeature.refreshSnapshot({ forceRefreshToken: true });
+      }
       return this.codexAccountFeature.getSnapshot();
     }
 
@@ -1040,6 +1263,27 @@ export class ProviderConnectionService {
       rateLimits: null,
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  private async getCodexLaunchSnapshot(
+    env: NodeJS.ProcessEnv,
+    options?: { refreshRuntimeMissing?: boolean }
+  ): Promise<CodexAccountSnapshotDto> {
+    let snapshot = this.mergeCodexApiKeyAvailability(await this.getCodexAccountSnapshot(), env);
+    if (!options?.refreshRuntimeMissing || snapshot.appServerState !== 'runtime-missing') {
+      return snapshot;
+    }
+
+    try {
+      snapshot = this.mergeCodexApiKeyAvailability(
+        await this.getCodexAccountSnapshot({ forceRefresh: true }),
+        env
+      );
+    } catch {
+      // Keep the original runtime-missing snapshot so callers still report the concrete issue.
+    }
+
+    return snapshot;
   }
 
   private async resolveCodexApiKeyValue(

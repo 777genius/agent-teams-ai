@@ -194,6 +194,8 @@ export class CliProviderModelAvailabilityService {
         binaryPath: context.binaryPath,
         providerId: context.provider.providerId,
         allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames:
+          context.provider.providerId === 'anthropic' ? ['ANTHROPIC_AUTH_TOKEN'] : undefined,
       }).then((result) => ({
         env: result.env,
         providerArgs: result.providerArgs ?? [],

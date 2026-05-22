@@ -18,11 +18,13 @@ import type {
   CliProviderReasoningEffort,
   CliProviderStatus,
   CliProviderSubscriptionRateLimitSnapshot,
+  OpenCodeModelRouteMetadata,
 } from '@shared/types';
 
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
 const PROVIDER_STATUS_TIMEOUT_MS = 25_000;
+const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
@@ -43,7 +45,12 @@ interface RuntimeExtensionCapabilitiesResponse {
 interface RuntimeProviderCapabilitiesResponse {
   modelCatalog?: {
     dynamic?: boolean;
-    source?: 'anthropic-models-api' | 'app-server' | 'static-fallback' | 'runtime';
+    source?:
+      | 'anthropic-models-api'
+      | 'anthropic-compatible-api'
+      | 'app-server'
+      | 'static-fallback'
+      | 'runtime';
   };
   reasoningEffort?: {
     supported?: boolean;
@@ -81,7 +88,7 @@ interface RuntimeProviderModelCatalogItemResponse {
   supportsPersonality?: boolean;
   isDefault?: boolean;
   upgrade?: boolean;
-  source?: 'anthropic-models-api' | 'app-server' | 'static-fallback';
+  source?: 'anthropic-models-api' | 'anthropic-compatible-api' | 'app-server' | 'static-fallback';
   badgeLabel?: string | null;
   statusMessage?: string | null;
   metadata?: Record<string, unknown> | null;
@@ -90,7 +97,7 @@ interface RuntimeProviderModelCatalogItemResponse {
 interface RuntimeProviderModelCatalogResponse {
   schemaVersion?: number;
   providerId?: CliProviderId;
-  source?: 'anthropic-models-api' | 'app-server' | 'static-fallback';
+  source?: 'anthropic-models-api' | 'anthropic-compatible-api' | 'app-server' | 'static-fallback';
   status?: 'ready' | 'stale' | 'degraded' | 'unavailable';
   fetchedAt?: string;
   staleAt?: string;
@@ -483,6 +490,61 @@ function collectRuntimeReasoningEfforts(values?: string[]): CliProviderReasoning
   );
 }
 
+const OPENCODE_ACCESS_KINDS = new Set([
+  'no_model',
+  'unknown_model',
+  'credentialed',
+  'builtin_free',
+  'configured_authless',
+  'verified',
+  'not_authenticated',
+  'execution_failed',
+]);
+
+const OPENCODE_ROUTE_KINDS = new Set([
+  'connected_provider',
+  'builtin_free',
+  'configured_local',
+  'catalog_provider',
+]);
+
+const OPENCODE_PROOF_STATES = new Set(['not_required', 'needs_probe', 'verified', 'failed']);
+
+function asStringOrNull(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function mapOpenCodeModelRouteMetadata(value: unknown): OpenCodeModelRouteMetadata | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const accessKind = record.accessKind;
+  const routeKind = record.routeKind;
+  const proofState = record.proofState;
+  if (
+    typeof accessKind !== 'string' ||
+    typeof routeKind !== 'string' ||
+    typeof proofState !== 'string' ||
+    !OPENCODE_ACCESS_KINDS.has(accessKind) ||
+    !OPENCODE_ROUTE_KINDS.has(routeKind) ||
+    !OPENCODE_PROOF_STATES.has(proofState)
+  ) {
+    return null;
+  }
+
+  return {
+    providerId: asStringOrNull(record.providerId),
+    modelId: asStringOrNull(record.modelId),
+    sourceLabel: asStringOrNull(record.sourceLabel),
+    accessKind: accessKind as OpenCodeModelRouteMetadata['accessKind'],
+    routeKind: routeKind as OpenCodeModelRouteMetadata['routeKind'],
+    proofState: proofState as OpenCodeModelRouteMetadata['proofState'],
+    requiresExecutionProof: record.requiresExecutionProof === true,
+    reason: asStringOrNull(record.reason),
+  };
+}
+
 function mapRuntimeProviderModelMetadata(
   metadata?: Record<string, unknown> | null
 ): NonNullable<CliProviderStatus['modelCatalog']>['models'][number]['metadata'] {
@@ -490,11 +552,13 @@ function mapRuntimeProviderModelMetadata(
     return null;
   }
   const context = metadata.context;
+  const opencode = mapOpenCodeModelRouteMetadata(metadata.opencode);
   return {
     cost: metadata.cost ?? null,
     context: typeof context === 'number' && Number.isFinite(context) ? context : null,
     limits: metadata.limits ?? null,
     free: metadata.free === true,
+    ...(opencode ? { opencode } : {}),
   };
 }
 
@@ -515,6 +579,7 @@ function mapRuntimeProviderModelCatalog(
     !fetchedAt ||
     !staleAt ||
     (source !== 'anthropic-models-api' &&
+      source !== 'anthropic-compatible-api' &&
       source !== 'app-server' &&
       source !== 'static-fallback') ||
     (status !== 'ready' && status !== 'stale' && status !== 'degraded' && status !== 'unavailable')
@@ -539,6 +604,7 @@ function mapRuntimeProviderModelCatalog(
       );
       const itemSource =
         model.source === 'anthropic-models-api' ||
+        model.source === 'anthropic-compatible-api' ||
         model.source === 'app-server' ||
         model.source === 'static-fallback'
           ? model.source
@@ -731,7 +797,11 @@ export class ClaudeMultimodelBridgeService {
   private async buildCliEnv(
     binaryPath: string
   ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
-    return buildProviderAwareCliEnv({ binaryPath, allowStoredApiKeyDecryption: false });
+    return buildProviderAwareCliEnv({
+      binaryPath,
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+    });
   }
 
   private async buildProviderCliEnv(
@@ -742,6 +812,8 @@ export class ClaudeMultimodelBridgeService {
       binaryPath,
       providerId,
       allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames:
+        providerId === 'anthropic' ? ['ANTHROPIC_AUTH_TOKEN'] : undefined,
     });
   }
 
@@ -760,6 +832,12 @@ export class ClaudeMultimodelBridgeService {
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
     return this.isRuntimeStatusCompatibilityError(error) || lower.includes('runtime status');
+  }
+
+  private isRuntimeStatusTimeoutError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    return lower.includes('timed out') || lower.includes('timeout');
   }
 
   private mapRuntimeProviderStatus(
@@ -901,14 +979,14 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     env: NodeJS.ProcessEnv,
     connectionIssues: Partial<Record<CliProviderId, string>>,
-    options: { summary?: boolean } = {}
+    options: { summary?: boolean; timeoutMs?: number } = {}
   ): Promise<CliProviderStatus> {
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');
     }
     const { stdout } = await execCli(binaryPath, args, {
-      timeout: PROVIDER_STATUS_TIMEOUT_MS,
+      timeout: options.timeoutMs ?? PROVIDER_STATUS_TIMEOUT_MS,
       maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
       env,
     });
@@ -925,7 +1003,7 @@ export class ClaudeMultimodelBridgeService {
   private async getProviderStatusFromScopedRuntimeStatus(
     binaryPath: string,
     providerId: CliProviderId,
-    options: { summary?: boolean } = {}
+    options: { summary?: boolean; timeoutMs?: number } = {}
   ): Promise<CliProviderStatus> {
     const { env, connectionIssues } = await this.buildProviderCliEnv(binaryPath, providerId);
     return this.getProviderStatusFromRuntimeStatusCommand(
@@ -940,7 +1018,7 @@ export class ClaudeMultimodelBridgeService {
   private async getProviderStatusesFromScopedRuntimeStatus(
     binaryPath: string,
     onUpdate?: (providers: CliProviderStatus[]) => void,
-    options: { summary?: boolean; providerIds?: readonly CliProviderId[] } = {}
+    options: { summary?: boolean; timeoutMs?: number; providerIds?: readonly CliProviderId[] } = {}
   ): Promise<CliProviderStatus[] | null> {
     const providerIds = options.providerIds ?? ORDERED_PROVIDER_IDS;
     const providers = new Map<CliProviderId, CliProviderStatus>(
@@ -967,6 +1045,19 @@ export class ClaudeMultimodelBridgeService {
     }
 
     if (failures.length === providerIds.length) {
+      if (failures.every(({ error }) => this.isRuntimeStatusTimeoutError(error))) {
+        logger.warn(
+          `Provider-scoped runtime status timed out for ${failures
+            .map(({ providerId }) => providerId)
+            .join(', ')}; using error provider statuses without slower fallback probes`
+        );
+        for (const { providerId, error } of failures) {
+          providers.set(providerId, createRuntimeStatusErrorProviderStatus(providerId, error));
+        }
+        onUpdate?.(this.buildProviderStatusesSnapshot(providers, providerIds));
+        return this.buildProviderStatusesSnapshot(providers, providerIds);
+      }
+
       return null;
     }
 
@@ -1137,7 +1228,11 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     onCatalogUpdate?: (provider: CliProviderStatus) => void
   ): Promise<CliProviderStatus> {
-    await resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv: process.env });
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
 
     try {
       const generation = this.beginProviderStatusHydration([providerId]);
@@ -1353,14 +1448,22 @@ export class ClaudeMultimodelBridgeService {
     binaryPath: string,
     onUpdate?: (providers: CliProviderStatus[]) => void
   ): Promise<CliProviderStatus[]> {
-    await resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv: process.env });
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
 
     try {
       const generation = this.beginProviderStatusHydration(DEFAULT_PROVIDER_STATUS_IDS);
       const providers = await this.getProviderStatusesFromScopedRuntimeStatus(
         binaryPath,
         onUpdate,
-        { summary: true, providerIds: DEFAULT_PROVIDER_STATUS_IDS }
+        {
+          summary: true,
+          timeoutMs: PROVIDER_STATUS_SUMMARY_TIMEOUT_MS,
+          providerIds: DEFAULT_PROVIDER_STATUS_IDS,
+        }
       );
       if (providers) {
         this.hydrateProviderCatalogs(binaryPath, providers, generation, onUpdate);

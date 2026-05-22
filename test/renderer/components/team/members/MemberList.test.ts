@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberSpawnStatusEntry, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -14,6 +15,8 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
     reviewTask,
     onRestartMember,
     onSkipMemberForLaunch,
+    onRestoreMember,
+    isRemoved,
   }: {
     member: ResolvedTeamMember;
     spawnError?: string;
@@ -23,6 +26,8 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
     reviewTask?: TeamTaskWithKanban | null;
     onRestartMember?: (memberName: string) => void;
     onSkipMemberForLaunch?: (memberName: string) => void;
+    onRestoreMember?: (memberName: string) => void;
+    isRemoved?: boolean;
   }) =>
     React.createElement(
       'div',
@@ -54,6 +59,17 @@ vi.mock('@renderer/components/team/members/MemberCard', () => ({
               onClick: () => onSkipMemberForLaunch(member.name),
             },
             'skip'
+          )
+        : null,
+      onRestoreMember && isRemoved
+        ? React.createElement(
+            'button',
+            {
+              'data-testid': `restore-${member.name}`,
+              type: 'button',
+              onClick: () => onRestoreMember(member.name),
+            },
+            'restore'
           )
         : null
     ),
@@ -372,6 +388,64 @@ describe('MemberList spawn-status memoization', () => {
 
     expect(secondRestart).toHaveBeenCalledWith('bob');
     expect(firstRestart).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('passes restore callbacks to removed member cards and rerenders when the callback changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const members: ResolvedTeamMember[] = [{ ...member, removedAt: 1715000000000 }];
+    const firstRestore = vi.fn();
+    const secondRestore = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: false,
+          onRestoreMember: firstRestore,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const firstButton = host.querySelector('[data-testid="restore-bob"]') as HTMLButtonElement;
+    expect(firstButton).not.toBeNull();
+
+    await act(async () => {
+      firstButton.click();
+      await Promise.resolve();
+    });
+
+    expect(firstRestore).toHaveBeenCalledWith('bob');
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: false,
+          onRestoreMember: secondRestore,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const secondButton = host.querySelector('[data-testid="restore-bob"]') as HTMLButtonElement;
+    expect(secondButton).not.toBeNull();
+
+    await act(async () => {
+      secondButton.click();
+      await Promise.resolve();
+    });
+
+    expect(secondRestore).toHaveBeenCalledWith('bob');
+    expect(firstRestore).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

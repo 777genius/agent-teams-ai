@@ -114,6 +114,91 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
     expect(ports.mcpTools.prove).not.toHaveBeenCalled();
   });
 
+  it('requires execution probe before allowing unauthenticated configured local models', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['llama.cpp/qwen-test:0.5b'],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({
+          selectedModel: 'llama.cpp/qwen-test:0.5b',
+          requireExecutionProbe: false,
+        })
+      )
+    ).resolves.toMatchObject({
+      state: 'not_authenticated',
+      launchAllowed: false,
+      modelId: 'llama.cpp/qwen-test:0.5b',
+    });
+    expect(ports.modelExecution.verify).not.toHaveBeenCalled();
+  });
+
+  it('allows unauthenticated configured local models after execution proof', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['llama.cpp/qwen-test:0.5b'],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({
+          selectedModel: 'llama.cpp/qwen-test:0.5b',
+          requireExecutionProbe: true,
+        })
+      )
+    ).resolves.toMatchObject({
+      state: 'ready',
+      launchAllowed: true,
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      diagnostics: [
+        'No connected OpenCode provider found. Proceeding with a configured local OpenCode model route after execution proof.',
+      ],
+    });
+    expect(ports.modelExecution.verify).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      inventory: expect.objectContaining({
+        connectedProviders: [],
+      }),
+    });
+  });
+
+  it('maps execution probe authentication failures to not_authenticated', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['llama.cpp/qwen-test:0.5b'],
+      },
+      modelProbe: {
+        outcome: 'not_authenticated',
+        reason: 'local server rejected request',
+        diagnostics: ['local server rejected request'],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({
+          selectedModel: 'llama.cpp/qwen-test:0.5b',
+          requireExecutionProbe: true,
+        })
+      )
+    ).resolves.toMatchObject({
+      state: 'not_authenticated',
+      launchAllowed: false,
+      missing: ['local server rejected request'],
+    });
+  });
+
   it('blocks unsupported versions before MCP and model probes', async () => {
     const ports = createPorts({
       inventory: { version: '1.4.0' },
@@ -271,7 +356,7 @@ function createPorts(
     toolProof?: OpenCodeMcpToolProof;
     runtimeStores?: RuntimeStoreReadinessCheck;
     modelProbe?: {
-      outcome: 'available' | 'unavailable' | 'unknown';
+      outcome: 'available' | 'unavailable' | 'not_authenticated' | 'unknown';
       reason: string | null;
       diagnostics: string[];
     };

@@ -970,6 +970,50 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
     expect(advisory).toBeNull();
   });
 
+  it('does not surface advisory for recovered OpenCode records that still contain old failure metadata', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-19T12:31:00.000Z'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-advisory-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'relay-release';
+    const laneId = 'secondary:opencode:tom';
+    await writeOpenCodeDeliveryFixture({
+      baseDir: tmpDir,
+      teamName,
+      laneId,
+      records: [
+        buildOpenCodeDeliveryRecord({
+          teamName,
+          laneId,
+          status: 'responded',
+          responseState: 'responded_visible_message',
+          inboxReadCommittedAt: '2026-05-19T12:29:31.172Z',
+          visibleReplyMessageId: 'visible-reply-recovered',
+          visibleReplyInbox: 'team-lead',
+          visibleReplyCorrelation: 'relayOfMessageId',
+          respondedAt: '2026-05-19T12:29:31.126Z',
+          lastObservedAt: '2026-05-19T12:29:31.126Z',
+          failedAt: '2026-05-19T12:27:25.965Z',
+          lastReason: 'opencode_session_stale_observe_loop_after_accepted_prompt',
+          diagnostics: [
+            'opencode_session_stale_observe_loop_after_accepted_prompt',
+            'OpenCode session stayed stale while observing an accepted prompt after 5 attempt(s).',
+            'opencode_visible_reply_recovered_by_task_refs',
+          ],
+          updatedAt: '2026-05-19T12:29:31.172Z',
+        }),
+      ],
+    });
+
+    const service = new TeamMemberRuntimeAdvisoryService({
+      findMemberLogs: vi.fn(async () => []),
+    });
+    const advisory = await service.getMemberAdvisory(teamName, 'tom');
+
+    expect(advisory).toBeNull();
+  });
+
   it('suppresses stale OpenCode prompt delivery advisories after a visible runtime reply exists', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-advisory-'));
     setClaudeBasePathOverride(tmpDir);

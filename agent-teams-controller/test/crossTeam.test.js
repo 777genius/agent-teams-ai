@@ -6,8 +6,11 @@ const { createController } = require('../src/index.js');
 const { CROSS_TEAM_SOURCE, CROSS_TEAM_TAG_NAME } = require('../src/internal/crossTeamProtocol.js');
 
 describe('crossTeam module', () => {
+  const tempDirs = [];
+
   function makeClaudeDir(teams = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crossteam-test-'));
+    tempDirs.push(dir);
 
     for (const [teamName, config] of Object.entries(teams)) {
       const teamDir = path.join(dir, 'teams', teamName);
@@ -28,6 +31,9 @@ describe('crossTeam module', () => {
     // Reset cascade guard between tests
     const cascadeGuard = require('../src/internal/cascadeGuard.js');
     cascadeGuard.reset();
+    for (const dir of tempDirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   describe('sendCrossTeamMessage', () => {

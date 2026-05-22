@@ -1,13 +1,14 @@
 // @vitest-environment node
-import type { PathLike } from 'fs';
-import { readFile as readFileFixture, writeFile } from 'fs/promises';
-import * as path from 'path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getProviderConnectionModeSummary,
   getProviderCurrentRuntimeSummary,
   isConnectionManagedRuntimeProvider,
 } from '@renderer/components/runtime/providerConnectionUi';
+import { readFile as readFileFixture, writeFile } from 'fs/promises';
+import * as path from 'path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { PathLike } from 'fs';
 
 const execCliMock = vi.fn();
 const buildProviderAwareCliEnvMock = vi.fn();
@@ -374,6 +375,58 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       expect.stringContaining(
         'Provider-scoped summary runtime status unavailable for codex, returning scoped error'
+      ),
+    ]);
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('does not cascade aggregate summary timeouts into slower fallback probes', async () => {
+    execCliMock.mockImplementation((_binaryPath, args, options) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+      if (
+        normalizedArgs === 'runtime status --json --provider anthropic --summary' ||
+        normalizedArgs === 'runtime status --json --provider codex --summary' ||
+        normalizedArgs === 'runtime status --json --provider opencode --summary'
+      ) {
+        return Promise.reject(
+          new Error(
+            `Command timed out after ${options?.timeout}ms: /mock/agent_teams_orchestrator ${normalizedArgs}`
+          )
+        );
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator');
+    const calls = execCliMock.mock.calls.map((call) => call[1].join(' '));
+
+    expect(execCliMock).toHaveBeenCalledTimes(3);
+    expect(execCliMock.mock.calls.map((call) => call[2]?.timeout)).toEqual([
+      15000,
+      15000,
+      15000,
+    ]);
+    expect(calls).toEqual([
+      'runtime status --json --provider anthropic --summary',
+      'runtime status --json --provider codex --summary',
+      'runtime status --json --provider opencode --summary',
+    ]);
+    expect(providers.map((provider) => provider.providerId)).toEqual([
+      'anthropic',
+      'codex',
+      'opencode',
+    ]);
+    expect(providers.every((provider) => provider.verificationState === 'error')).toBe(true);
+    expect(providers.every((provider) => provider.statusMessage === 'Provider status unavailable'))
+      .toBe(true);
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      expect.stringContaining(
+        'Provider-scoped runtime status timed out for anthropic, codex, opencode'
       ),
     ]);
     vi.mocked(console.warn).mockClear();
@@ -1386,6 +1439,13 @@ describe('ClaudeMultimodelBridgeService', () => {
       verificationState: 'error',
     });
     expect(provider.statusMessage).toContain('ANTHROPIC_API_KEY');
+    expect(buildProviderAwareCliEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'anthropic',
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      })
+    );
   });
 
   it('falls back conservatively when the runtime omits extension capability metadata', async () => {

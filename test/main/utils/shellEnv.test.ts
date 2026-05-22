@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { EventEmitter } from 'events';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -124,6 +123,48 @@ describe('shellEnv', () => {
       '/bin/zsh',
       ['-ic', 'env -0'],
       expect.objectContaining({ windowsHide: true })
+    );
+  });
+
+  it('adds a sanitized source label to strict shell failure diagnostics', async () => {
+    const children: MockChildProcess[] = [];
+    hoisted.spawn.mockImplementation(() => {
+      const child = createChild();
+      children.push(child);
+      const attempt = children.length;
+      queueMicrotask(() => {
+        emitError(child, attempt === 1 ? 'login blocked' : 'interactive blocked');
+      });
+      return child;
+    });
+
+    const progress = vi.fn();
+    const shellEnv = await importShellEnv();
+
+    await expect(
+      shellEnv.resolveInteractiveShellEnv({
+        source: ' mcp node/runtime ',
+        onProgress: progress,
+      })
+    ).resolves.toEqual({});
+
+    expect(progress).toHaveBeenCalledWith({
+      phase: 'shell-env-login',
+      message: 'Reading login shell environment...',
+      source: 'mcp_node_runtime',
+    });
+    expect(progress).toHaveBeenCalledWith({
+      phase: 'shell-env-interactive',
+      message: 'Trying interactive shell environment...',
+      source: 'mcp_node_runtime',
+    });
+    expect(progress).toHaveBeenCalledWith({
+      phase: 'shell-env-fallback',
+      message: 'Using current process environment...',
+      source: 'mcp_node_runtime',
+    });
+    expect(hoisted.loggerWarn).toHaveBeenCalledWith(
+      'Failed to resolve shell env after login and interactive probes source=mcp_node_runtime: login=login blocked; interactive=interactive blocked'
     );
   });
 
@@ -259,6 +300,22 @@ describe('shellEnv', () => {
     });
   });
 
+  it('can return fallback without starting a background shell probe', async () => {
+    const shellEnv = await importShellEnv();
+    const fallbackEnv = { PATH: '/fallback/no-background' };
+
+    await expect(
+      shellEnv.resolveInteractiveShellEnvBestEffort({
+        timeoutMs: 0,
+        fallbackEnv,
+        background: false,
+      })
+    ).resolves.toBe(fallbackEnv);
+
+    expect(hoisted.spawn).not.toHaveBeenCalled();
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+  });
+
   it('keeps resolving in the background through the strict interactive fallback', async () => {
     const children: MockChildProcess[] = [];
     hoisted.spawn.mockImplementation(() => {
@@ -315,9 +372,7 @@ describe('shellEnv', () => {
       HOME: '/Users/tester',
     });
     expect(hoisted.spawn).toHaveBeenCalledTimes(2);
-    expect(hoisted.loggerWarn).toHaveBeenCalledWith(
-      'Failed to resolve login shell env: shell env command exited with code 42'
-    );
+    expect(hoisted.loggerWarn).not.toHaveBeenCalled();
   });
 
   it('coalesces concurrent best-effort calls behind one shell process', async () => {
@@ -443,6 +498,9 @@ describe('shellEnv', () => {
     await expect(result).resolves.toMatchObject({ PATH: '/fallback/stuck' });
     expect(children[1].kill).toHaveBeenCalledWith();
     expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(hoisted.loggerWarn).toHaveBeenCalledWith(
+      'Failed to resolve shell env after login and interactive probes: login=shell env resolve timeout; interactive=shell env resolve timeout'
+    );
 
     await vi.advanceTimersByTimeAsync(3_000);
 

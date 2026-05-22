@@ -313,6 +313,209 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('renders Anthropic-compatible catalog models instead of Claude fallback aliases', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const onValueChange = vi.fn();
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'anthropic',
+          models: [],
+          authMethod: 'auth_token',
+          authenticated: true,
+          supported: true,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          connection: {
+            supportsOAuth: true,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'oauth', 'api_key'],
+            configuredAuthMode: 'auto',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+            compatibleEndpoint: {
+              enabled: true,
+              baseUrl: 'http://localhost:1234',
+              tokenConfigured: true,
+              tokenSource: 'stored',
+              tokenSourceLabel: 'Stored in app',
+            },
+          },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'anthropic',
+            source: 'anthropic-compatible-api',
+            status: 'ready',
+            fetchedAt: '2026-05-21T00:00:00.000Z',
+            staleAt: '2026-05-21T00:10:00.000Z',
+            defaultModelId: 'openai/gpt-oss-20b',
+            defaultLaunchModel: 'openai/gpt-oss-20b',
+            models: [
+              {
+                id: 'openai/gpt-oss-20b',
+                launchModel: 'openai/gpt-oss-20b',
+                displayName: 'GPT OSS 20B',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'anthropic-compatible-api',
+                badgeLabel: 'Local',
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('GPT OSS 20B');
+    expect(host.textContent).not.toContain('Opus 4.7');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-anthropic-compatible-custom-model"]')
+    ).toBeNull();
+    const defaultModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Default')
+    );
+    expect(defaultModelButton?.getAttribute('title')).toContain(
+      'Anthropic-compatible endpoint default model'
+    );
+    expect(defaultModelButton?.getAttribute('title')).toContain('openai/gpt-oss-20b');
+    const localModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('GPT OSS 20B')
+    );
+    expect(localModelButton).toBeDefined();
+
+    await act(async () => {
+      localModelButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith('openai/gpt-oss-20b');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders Anthropic-compatible custom model input for degraded catalogs', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const onValueChange = vi.fn();
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'anthropic',
+          models: [],
+          authMethod: 'auth_token',
+          authenticated: true,
+          supported: true,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          connection: {
+            supportsOAuth: true,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'oauth', 'api_key'],
+            configuredAuthMode: 'auto',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+            compatibleEndpoint: {
+              enabled: true,
+              baseUrl: 'http://localhost:1234',
+              tokenConfigured: true,
+              tokenSource: 'stored',
+              tokenSourceLabel: 'Stored in app',
+            },
+          },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'anthropic',
+            source: 'anthropic-compatible-api',
+            status: 'degraded',
+            fetchedAt: '2026-05-21T00:00:00.000Z',
+            staleAt: '2026-05-21T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [],
+            diagnostics: {
+              configReadState: 'failed',
+              appServerState: 'degraded',
+              message: 'Local catalog unavailable',
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: 'openai/gpt-oss-20b',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const customInput = host.querySelector<HTMLInputElement>(
+      '[data-testid="team-model-selector-anthropic-compatible-custom-model"]'
+    );
+    expect(customInput).toBeTruthy();
+    expect(customInput?.value).toBe('openai/gpt-oss-20b');
+    expect(host.textContent).toContain('Local catalog unavailable');
+
+    await act(async () => {
+      const setValue = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set;
+      setValue?.call(customInput, 'qwen/qwen3-coder');
+      customInput?.dispatchEvent(new Event('input', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith('qwen/qwen3-coder');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -379,6 +582,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).map((heading) => heading.textContent ?? '');
     expect(groupLabels).toContain('OpenCode');
     expect(groupLabels).toContain('OpenRouter');
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('OpenRouter');
 
     const buttonTexts = Array.from(host.querySelectorAll('button')).map(
       (button) => button.textContent ?? ''
@@ -1400,6 +1605,60 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('points missing OpenCode runtime users to the home page install button', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: false,
+          authenticated: false,
+          statusMessage: 'OpenCode runtime missing',
+          detailMessage: 'No JSON object found in CLI output',
+          capabilities: { teamLaunch: false },
+          models: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onProviderChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('OpenCode')
+    );
+
+    await act(async () => {
+      openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onProviderChange).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).toContain(
+      'OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.'
+    );
+    expect(host.textContent).toContain('Reason: No JSON object found in CLI output');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses backend OpenCode readiness detail as the disabled reason', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -2110,6 +2369,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
 
     expect(openRouterButton).toBeTruthy();
+    expect(openRouterButton?.textContent).not.toContain('OpenRouter');
 
     await act(async () => {
       openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -2229,6 +2489,373 @@ describe('TeamModelSelector disabled Codex models', () => {
       '[data-testid="team-model-selector-model-free-badge"]'
     );
     expect(freeBadges).toHaveLength(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders OpenCode model options from a ready catalog when runtime models are empty', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: [],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-13T00:00:00.000Z',
+            staleAt: '2026-05-13T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+              },
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'openai/gpt-5.4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: null,
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+              message: null,
+              code: null,
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('GPT-5.4');
+    expect(host.textContent).not.toContain('Loading models');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps OpenCode runtime models visible when catalog metadata is partial', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: ['openai/gpt-5.4', 'openrouter/moonshotai/kimi-k2', 'opencode/big-pickle'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-13T00:00:00.000Z',
+            staleAt: '2026-05-13T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+                metadata: {
+                  free: true,
+                  opencode: {
+                    providerId: 'opencode',
+                    modelId: 'big-pickle',
+                    sourceLabel: 'opencode',
+                    accessKind: 'builtin_free',
+                    routeKind: 'builtin_free',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+              message: null,
+              code: null,
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('GPT-5.4');
+    expect(host.textContent).toContain('moonshotai/kimi-k2');
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('OpenAI');
+    expect(host.textContent).toContain('OpenRouter');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('groups OpenCode catalog routes by source provider and keeps route badges', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: [
+            'llama.cpp/qwen-test:0.5b',
+            'opencode/big-pickle',
+            'openrouter/moonshotai/kimi-k2',
+            'deepseek/deepseek-chat',
+          ],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-13T00:00:00.000Z',
+            staleAt: '2026-05-13T00:10:00.000Z',
+            defaultModelId: 'llama.cpp/qwen-test:0.5b',
+            defaultLaunchModel: 'llama.cpp/qwen-test:0.5b',
+            models: [
+              {
+                id: 'llama.cpp/qwen-test:0.5b',
+                launchModel: 'llama.cpp/qwen-test:0.5b',
+                displayName: 'qwen-test:0.5b',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  free: false,
+                  opencode: {
+                    providerId: 'llama.cpp',
+                    modelId: 'qwen-test:0.5b',
+                    sourceLabel: 'llama.cpp',
+                    accessKind: 'configured_authless',
+                    routeKind: 'configured_local',
+                    proofState: 'needs_probe',
+                    requiresExecutionProof: true,
+                    reason: 'Execution proof required',
+                  },
+                },
+              },
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  free: true,
+                  opencode: {
+                    providerId: 'opencode',
+                    modelId: 'big-pickle',
+                    sourceLabel: 'opencode',
+                    accessKind: 'builtin_free',
+                    routeKind: 'builtin_free',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+              {
+                id: 'openrouter/moonshotai/kimi-k2',
+                launchModel: 'openrouter/moonshotai/kimi-k2',
+                displayName: 'moonshotai/kimi-k2',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  free: false,
+                  opencode: {
+                    providerId: 'openrouter',
+                    modelId: 'moonshotai/kimi-k2',
+                    sourceLabel: 'OpenRouter',
+                    accessKind: 'credentialed',
+                    routeKind: 'connected_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+              {
+                id: 'deepseek/deepseek-chat',
+                launchModel: 'deepseek/deepseek-chat',
+                displayName: 'deepseek-chat',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  free: false,
+                  opencode: {
+                    providerId: 'deepseek',
+                    modelId: 'deepseek-chat',
+                    sourceLabel: 'DeepSeek',
+                    accessKind: 'not_authenticated',
+                    routeKind: 'catalog_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: 'Provider is not connected',
+                  },
+                },
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+              message: null,
+              code: null,
+            },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const sourceGroupLabels = Array.from(
+      host.querySelectorAll('[data-testid="team-model-selector-opencode-group"] h4')
+    ).map((heading) => heading.textContent ?? '');
+    expect(sourceGroupLabels).toEqual(
+      expect.arrayContaining(['llama.cpp', 'OpenCode', 'OpenRouter', 'DeepSeek'])
+    );
+    expect(sourceGroupLabels).not.toContain('OpenCode config');
+    expect(sourceGroupLabels).not.toContain('Connected providers');
+    expect(host.textContent).toContain('Local');
+    expect(host.textContent).toContain('Needs test');
+    expect(host.textContent).toContain('Connected');
+
+    const filterButton = host.querySelector<HTMLElement>(
+      '[data-testid="team-model-selector-opencode-provider-filter"]'
+    );
+    expect(filterButton?.getAttribute('aria-label')).toBe('Filter OpenCode sources');
+    expect(filterButton?.textContent).toContain('All OpenCode sources');
 
     await act(async () => {
       root.unmount();

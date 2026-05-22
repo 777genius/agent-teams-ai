@@ -127,6 +127,8 @@ function buildReviewPickupNudgePayload(status: MemberWorkSyncStatus): MemberWork
       preview ? `Review agenda: ${preview}.` : '',
       'Open the task, verify the current reviewState/status, then start or continue the review only if it is still assigned to you.',
       `If you cannot pick it up now, call member_work_sync_status with teamName "${status.teamName}" and memberName "${status.memberName}", then report "blocked" or "still_working" only for the real current state.`,
+      'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
+      'If your runtime exposes prefixed Agent Teams MCP tool names, use mcp__agent-teams__member_work_sync_status and mcp__agent-teams__member_work_sync_report.',
       'Do not mark the review complete from this prompt alone, and do not reply only with acknowledgement.',
     ]
       .filter(Boolean)
@@ -169,6 +171,8 @@ export function buildMemberWorkSyncNudgePayload(
       ...buildProofMissingRecoveryText(status),
       preview ? `Current agenda: ${preview}.` : '',
       `Required sync action: call member_work_sync_status with teamName "${status.teamName}" and memberName "${status.memberName}", then call member_work_sync_report with the same teamName/memberName and the returned agendaFingerprint and reportToken.`,
+      'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
+      'If your runtime exposes prefixed Agent Teams MCP tool names, use mcp__agent-teams__member_work_sync_status and mcp__agent-teams__member_work_sync_report. Do not search the filesystem or list MCP resources before the first direct tool attempt.',
       taskIds.length
         ? `When reporting, include taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.`
         : '',

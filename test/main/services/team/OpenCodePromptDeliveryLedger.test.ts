@@ -1,9 +1,3 @@
-import { promises as fs } from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import {
   buildOpenCodePromptDeliveryAttemptId,
   createOpenCodePromptDeliveryLedgerStore,
@@ -11,6 +5,10 @@ import {
   isOpenCodePromptDeliveryAttemptDue,
   isOpenCodeSessionRefreshResponseState,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
+import { promises as fs } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 describe('OpenCodePromptDeliveryLedger', () => {
   let tempDir = '';
@@ -297,6 +295,91 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(missingTaskRefs.responseState).toBe('responded_visible_message');
     expect(missingTaskRefs.lastReason).toBe('visible_reply_missing_task_refs');
     expect(missingTaskRefs.diagnostics).toContain('visible_reply_missing_task_refs_after_merge');
+  });
+
+  it('clears stale terminal failure state after sufficient destination proof', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-recovered',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'team-lead',
+      payloadHash: 'sha256:recovered',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const acceptanceUnknown = await store.markAcceptanceUnknown({
+      id: record.id,
+      reason: 'opencode_prompt_acceptance_unknown_after_bridge_timeout',
+      nextAttemptAt: '2026-04-25T10:00:30.000Z',
+      markedAt: '2026-04-25T10:00:01.000Z',
+    });
+    const failed = await store.markFailedTerminal({
+      id: acceptanceUnknown.id,
+      reason: 'opencode_session_stale_observe_loop_after_accepted_prompt',
+      diagnostics: ['OpenCode session stayed stale while observing an accepted prompt after 5 attempt(s).'],
+      failedAt: '2026-04-25T10:00:05.000Z',
+    });
+
+    const recovered = await store.applyDestinationProof({
+      id: failed.id,
+      visibleReplyInbox: 'team-lead',
+      visibleReplyMessageId: 'reply-recovered',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      semanticallySufficient: true,
+      diagnostics: ['opencode_visible_reply_recovered_by_task_refs'],
+      observedAt: '2026-04-25T10:01:00.000Z',
+    });
+
+    expect(recovered.status).toBe('responded');
+    expect(recovered.responseState).toBe('responded_visible_message');
+    expect(recovered.failedAt).toBeNull();
+    expect(recovered.lastReason).toBeNull();
+    expect(recovered.nextAttemptAt).toBeNull();
+    expect(recovered.acceptanceUnknown).toBe(false);
+    expect(recovered.visibleReplyMessageId).toBe('reply-recovered');
+    expect(recovered.diagnostics).toContain('opencode_session_stale_observe_loop_after_accepted_prompt');
+    expect(recovered.diagnostics).toContain('opencode_visible_reply_recovered_by_task_refs');
+  });
+
+  it('keeps terminal failure active when destination proof is not semantically sufficient', async () => {
+    const store = createStore();
+    const record = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-insufficient-proof',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'team-lead',
+      payloadHash: 'sha256:insufficient-proof',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const failed = await store.markFailedTerminal({
+      id: record.id,
+      reason: 'visible_reply_still_required',
+      diagnostics: ['OpenCode responded, but did not create a visible message_send reply.'],
+      failedAt: '2026-04-25T10:00:05.000Z',
+    });
+
+    const stillFailed = await store.applyDestinationProof({
+      id: failed.id,
+      visibleReplyInbox: 'team-lead',
+      visibleReplyMessageId: 'reply-ack-only',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      semanticallySufficient: false,
+      diagnostics: ['visible_reply_ack_only_still_requires_answer'],
+      observedAt: '2026-04-25T10:01:00.000Z',
+    });
+
+    expect(stillFailed.status).toBe('failed_terminal');
+    expect(stillFailed.responseState).toBe('responded_visible_message');
+    expect(stillFailed.failedAt).toBe('2026-04-25T10:00:05.000Z');
+    expect(stillFailed.lastReason).toBe('visible_reply_ack_only_still_requires_answer');
+    expect(stillFailed.visibleReplyMessageId).toBe('reply-ack-only');
+    expect(stillFailed.diagnostics).toContain('visible_reply_ack_only_still_requires_answer');
   });
 
   it('records empty assistant delivery results as unanswered and stores plain text previews', async () => {

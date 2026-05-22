@@ -19,6 +19,13 @@ interface SubprojectEntry {
   sessionIds: Set<string>;
 }
 
+export interface SubprojectRegistrySnapshotEntry {
+  id: string;
+  baseDir: string;
+  cwd: string;
+  sessionIds: string[];
+}
+
 class SubprojectRegistryImpl {
   private readonly entries = new Map<string, SubprojectEntry>();
 
@@ -91,6 +98,33 @@ class SubprojectRegistryImpl {
    */
   clear(): void {
     this.entries.clear();
+  }
+
+  /**
+   * Capture a deep copy of the current registry so an interrupted scan can
+   * restore the previous complete project view.
+   */
+  snapshot(): SubprojectRegistrySnapshotEntry[] {
+    return [...this.entries.entries()].map(([id, entry]) => ({
+      id,
+      baseDir: entry.baseDir,
+      cwd: entry.cwd,
+      sessionIds: [...entry.sessionIds],
+    }));
+  }
+
+  /**
+   * Replace the registry contents with a previously captured snapshot.
+   */
+  restore(snapshot: readonly SubprojectRegistrySnapshotEntry[]): void {
+    this.entries.clear();
+    for (const entry of snapshot) {
+      this.entries.set(entry.id, {
+        baseDir: entry.baseDir,
+        cwd: entry.cwd,
+        sessionIds: new Set(entry.sessionIds),
+      });
+    }
   }
 }
 

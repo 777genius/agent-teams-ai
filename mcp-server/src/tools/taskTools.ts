@@ -622,7 +622,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     parameters: z.object({
       ...toolContextSchema,
       memberName: z.string().min(1),
-      runtimeProvider: z.enum(['native', 'opencode']).optional(),
+      runtimeProvider: z.enum(['native', 'opencode', 'codex']).optional(),
       includeActiveProcesses: z.boolean().optional(),
     }),
     execute: async ({

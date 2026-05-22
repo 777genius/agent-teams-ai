@@ -34,10 +34,12 @@ export interface McpLaunchSpecResolveOptions {
 
 interface WriteMcpConfigOptions {
   mcpPolicy?: TeamMemberMcpPolicy;
+  controlApiBaseUrl?: string | null;
 }
 
 const MCP_SERVER_NAME = 'agent-teams';
 const MCP_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
+const MCP_CONTROL_URL_ENV = 'CLAUDE_TEAM_CONTROL_URL';
 const logger = createLogger('Service:TeamMcpConfigBuilder');
 const MCP_CONFIG_PREFIX = 'agent-teams-mcp-';
 const MCP_CONFIG_REMOVE_RETRY_DELAYS_MS = [25, 75, 150] as const;
@@ -218,6 +220,26 @@ function getNodeRuntimeCommandCandidates(): string[] {
   });
 }
 
+function shouldPreferShellNodeProbe(): boolean {
+  if (process.platform === 'win32') {
+    return false;
+  }
+
+  const pathValue = process.env.PATH?.trim();
+  if (!pathValue) {
+    return true;
+  }
+
+  const minimalGuiPathEntries = new Set(['/usr/bin', '/bin', '/usr/sbin', '/sbin']);
+  const entries = pathValue
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return (
+    entries.length > 0 && entries.every((entry) => minimalGuiPathEntries.has(path.resolve(entry)))
+  );
+}
+
 function mergePathValues(...values: (string | undefined)[]): string | undefined {
   const seen = new Set<string>();
   const merged: string[] = [];
@@ -236,6 +258,14 @@ function mergePathValues(...values: (string | undefined)[]): string | undefined 
   return merged.length > 0 ? merged.join(path.delimiter) : undefined;
 }
 
+function isWriteMcpConfigOptions(value: unknown): value is WriteMcpConfigOptions {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    ('mcpPolicy' in value || 'controlApiBaseUrl' in value)
+  );
+}
+
 function buildNodeResolveEnv(shellEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -248,28 +278,9 @@ function buildNodeResolveEnv(shellEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return env;
 }
 
-/**
- * Find the real `node` binary path. In Electron, process.execPath is the
- * Electron binary — NOT node — so we must resolve node separately.
- * Uses the user's shell/enriched PATH so packaged GUI launches do not depend
- * on the minimal Finder/Dock PATH.
- */
-async function resolveNodePath(options?: McpLaunchSpecResolveOptions): Promise<string> {
-  if (_resolvedNodePath) return _resolvedNodePath;
-
-  let shellEnv: NodeJS.ProcessEnv = {};
-  try {
-    emitProgress(options, 'node-runtime', 'Resolving Node.js runtime for MCP server...');
-    shellEnv = await resolveInteractiveShellEnv({
-      onProgress: options?.onProgress
-        ? ({ phase, message }) => emitProgress(options, `shell-${phase}`, message)
-        : undefined,
-    });
-  } catch (error) {
-    logger.warn(`Failed to resolve shell env before Node.js lookup: ${stringifyError(error)}`);
-  }
-
-  const env = buildNodeResolveEnv(shellEnv);
+async function probeNodeRuntimePath(
+  env: NodeJS.ProcessEnv
+): Promise<{ ok: true; path: string } | { ok: false; error: unknown }> {
   let lastError: unknown = null;
   for (const command of getNodeRuntimeCommandCandidates()) {
     try {
@@ -282,18 +293,69 @@ async function resolveNodePath(options?: McpLaunchSpecResolveOptions): Promise<s
       if (!resolved) {
         throw new Error(`${command} did not report process.execPath`);
       }
-      _resolvedNodePath = resolved;
-      emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
-      return _resolvedNodePath;
+      return { ok: true, path: resolved };
     } catch (error) {
       lastError = error;
     }
+  }
+  return { ok: false, error: lastError ?? 'no Node.js candidates were available' };
+}
+
+async function probeShellNodeRuntimePath(
+  options?: McpLaunchSpecResolveOptions
+): Promise<{ ok: true; path: string } | { ok: false; error: unknown }> {
+  let shellEnv: NodeJS.ProcessEnv = {};
+  try {
+    shellEnv = await resolveInteractiveShellEnv({
+      source: 'mcp-node-runtime',
+      onProgress: options?.onProgress
+        ? ({ phase, message }) => emitProgress(options, `shell-${phase}`, message)
+        : undefined,
+    });
+  } catch (error) {
+    logger.warn(`Failed to resolve shell env before Node.js lookup: ${stringifyError(error)}`);
+  }
+
+  return probeNodeRuntimePath(buildNodeResolveEnv(shellEnv));
+}
+
+/**
+ * Find the real `node` binary path. In Electron, process.execPath is the
+ * Electron binary — NOT node — so we must resolve node separately.
+ * Uses the user's shell/enriched PATH so packaged GUI launches do not depend
+ * on the minimal Finder/Dock PATH.
+ */
+async function resolveNodePath(options?: McpLaunchSpecResolveOptions): Promise<string> {
+  if (_resolvedNodePath) return _resolvedNodePath;
+
+  emitProgress(options, 'node-runtime', 'Resolving Node.js runtime for MCP server...');
+  if (shouldPreferShellNodeProbe()) {
+    const shellProbe = await probeShellNodeRuntimePath(options);
+    if (shellProbe.ok) {
+      _resolvedNodePath = shellProbe.path;
+      emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
+      return _resolvedNodePath;
+    }
+  }
+
+  const fastProbe = await probeNodeRuntimePath(buildNodeResolveEnv({}));
+  if (fastProbe.ok) {
+    _resolvedNodePath = fastProbe.path;
+    emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
+    return _resolvedNodePath;
+  }
+
+  const shellProbe = await probeShellNodeRuntimePath(options);
+  if (shellProbe.ok) {
+    _resolvedNodePath = shellProbe.path;
+    emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
+    return _resolvedNodePath;
   }
 
   emitProgress(options, 'node-runtime-missing', 'Node.js runtime for MCP server was not found.');
   throw new Error(
     `Node.js runtime for Agent Teams MCP was not found. Ensure Node.js is installed and available from the login shell PATH. Last error: ${
-      lastError ? stringifyError(lastError) : 'no Node.js candidates were available'
+      shellProbe.error ? stringifyError(shellProbe.error) : stringifyError(fastProbe.error)
     }`
   );
 }
@@ -440,10 +502,14 @@ export class TeamMcpConfigBuilder {
       configDir,
       `${MCP_CONFIG_PREFIX}${process.pid}-${Date.now()}-${randomUUID()}.json`
     );
-    const mcpPolicy =
-      optionsOrPolicy && 'mcpPolicy' in optionsOrPolicy
-        ? optionsOrPolicy.mcpPolicy
-        : (optionsOrPolicy as TeamMemberMcpPolicy | undefined);
+    const options = isWriteMcpConfigOptions(optionsOrPolicy)
+      ? optionsOrPolicy
+      : ({
+          mcpPolicy: optionsOrPolicy,
+        } satisfies WriteMcpConfigOptions);
+    const mcpPolicy = options.mcpPolicy;
+    const controlApiBaseUrl =
+      options.controlApiBaseUrl?.trim() || process.env[MCP_CONTROL_URL_ENV]?.trim() || '';
     // Keep the team bootstrap config minimal: recent Claude sidechain runs can
     // lose the agent-teams tool surface when we inline large user MCP bundles
     // into the generated --mcp-config. User/project/local MCP remain loaded
@@ -455,6 +521,7 @@ export class TeamMcpConfigBuilder {
       enabled: true,
       env: {
         [MCP_CLAUDE_DIR_ENV]: getClaudeBasePath(),
+        ...(controlApiBaseUrl ? { [MCP_CONTROL_URL_ENV]: controlApiBaseUrl } : {}),
       },
     };
     if (mcpPolicy?.mode === 'strictAllowlist') {

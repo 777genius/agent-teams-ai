@@ -1516,6 +1516,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     restartMember,
     skipMemberForLaunch,
     removeMember,
+    restoreMember,
     updateMemberRole,
     launchTeam,
     provisioningError,
@@ -1572,6 +1573,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       restartMember: s.restartMember,
       skipMemberForLaunch: s.skipMemberForLaunch,
       removeMember: s.removeMember,
+      restoreMember: s.restoreMember,
       updateMemberRole: s.updateMemberRole,
       launchTeam: s.launchTeam,
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
@@ -2149,6 +2151,13 @@ export const TeamDetailView = memo(function TeamDetailView({
       await skipMemberForLaunch(teamName, memberName);
     },
     [skipMemberForLaunch, teamName]
+  );
+
+  const handleRestoreMember = useCallback(
+    async (memberName: string): Promise<void> => {
+      await restoreMember(teamName, memberName);
+    },
+    [restoreMember, teamName]
   );
 
   const handleSelectMember = useCallback((member: ResolvedTeamMember) => {
@@ -2898,6 +2907,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                       onOpenTask={handleOpenTaskById}
                       onRestartMember={handleRestartMember}
                       onSkipMemberForLaunch={handleSkipMemberForLaunch}
+                      onRestoreMember={handleRestoreMember}
                     />
                   </div>
                 </CollapsibleTeamSection>

@@ -18,7 +18,7 @@ import {
   NO_PROJECT_KEY,
   sortTasksByFreshness,
 } from '@renderer/utils/taskGrouping';
-import { resolveTeamStatus } from '@renderer/utils/teamListStatus';
+import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import {
   Archive,
@@ -57,7 +57,7 @@ import {
 } from './taskFiltersState';
 
 import type { TaskFiltersState } from './taskFiltersState';
-import type { GlobalTask } from '@shared/types';
+import type { GlobalTask, TeamSummary } from '@shared/types';
 
 const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
 
@@ -175,6 +175,18 @@ function applyProjectFilter(tasks: GlobalTask[], projectPath: string | null): Gl
   if (!projectPath) return tasks;
   const normalized = normalizePath(projectPath);
   return tasks.filter((t) => t.projectPath && normalizePath(t.projectPath) === normalized);
+}
+
+function buildTaskTeamSummary(task: GlobalTask): TeamSummary {
+  return {
+    teamName: task.teamName,
+    displayName: task.teamDisplayName,
+    description: '',
+    memberCount: 0,
+    taskCount: 0,
+    lastActivity: task.updatedAt ?? task.createdAt ?? null,
+    projectPath: task.projectPath,
+  };
 }
 
 export const GlobalTaskList = memo(function GlobalTaskList({
@@ -331,7 +343,17 @@ export const GlobalTaskList = memo(function GlobalTaskList({
   const offlineTeamNames = useMemo(() => {
     const result = new Set<string>();
     if (aliveTeamsInitialized) {
+      const teamSummariesByName = new Map<string, TeamSummary>();
       for (const team of teams) {
+        teamSummariesByName.set(team.teamName, team);
+      }
+      for (const task of globalTasks) {
+        if (!teamSummariesByName.has(task.teamName)) {
+          teamSummariesByName.set(task.teamName, buildTaskTeamSummary(task));
+        }
+      }
+
+      for (const team of teamSummariesByName.values()) {
         const status = resolveTeamStatus(
           team,
           team.teamName,
@@ -339,7 +361,7 @@ export const GlobalTaskList = memo(function GlobalTaskList({
           getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
           leadActivityByTeam
         );
-        if (status === 'offline') {
+        if (!isTeamListStatusRunning(status)) {
           result.add(team.teamName);
         }
       }
@@ -350,7 +372,14 @@ export const GlobalTaskList = memo(function GlobalTaskList({
       }
     }
     return result;
-  }, [aliveTeams, aliveTeamsInitialized, leadActivityByTeam, provisioningState, teams]);
+  }, [
+    aliveTeams,
+    aliveTeamsInitialized,
+    globalTasks,
+    leadActivityByTeam,
+    provisioningState,
+    teams,
+  ]);
 
   const setGroupingMode = (mode: TaskGroupingMode): void => {
     setGroupingModeState(mode);

@@ -1,18 +1,17 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import {
-  GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
-  GPT_5_2_CODEX_UI_DISABLED_REASON,
-  GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
   getTeamModelUiDisabledReason,
+  GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
+  GPT_5_2_CODEX_UI_DISABLED_REASON,
+  GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
   normalizeTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
+import { describe, expect, it } from 'vitest';
 
 describe('formatTeamModelSummary', () => {
   it('shows cross-provider Anthropic models as backend-routed instead of brand-mismatched', () => {
@@ -246,6 +245,57 @@ describe('computeEffectiveTeamModel', () => {
     expect(computeEffectiveTeamModel('haiku', false, 'anthropic')).toBe('haiku');
     expect(computeEffectiveTeamModel('claude-haiku-4-5-20251001', false, 'anthropic')).toBe(
       'claude-haiku-4-5-20251001'
+    );
+  });
+
+  it('does not append [1m] to non-Claude Anthropic-compatible local model ids', () => {
+    expect(computeEffectiveTeamModel('openai/gpt-oss-20b', false, 'anthropic')).toBe(
+      'openai/gpt-oss-20b'
+    );
+    expect(computeEffectiveTeamModel('qwen/qwen3-coder', false, 'anthropic')).toBe(
+      'qwen/qwen3-coder'
+    );
+  });
+
+  it('uses Anthropic-compatible catalog defaults as raw launch ids', () => {
+    const providerStatus = {
+      providerId: 'anthropic' as const,
+      modelCatalog: {
+        schemaVersion: 1 as const,
+        providerId: 'anthropic' as const,
+        source: 'anthropic-compatible-api' as const,
+        status: 'ready' as const,
+        fetchedAt: '2026-05-21T00:00:00.000Z',
+        staleAt: '2026-05-21T00:10:00.000Z',
+        defaultModelId: 'openai/gpt-oss-20b',
+        defaultLaunchModel: 'openai/gpt-oss-20b',
+        models: [
+          {
+            id: 'openai/gpt-oss-20b',
+            launchModel: 'openai/gpt-oss-20b',
+            displayName: 'GPT OSS 20B',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text' as const],
+            supportsPersonality: true,
+            isDefault: true,
+            upgrade: false,
+            source: 'anthropic-compatible-api' as const,
+          },
+        ],
+        diagnostics: {
+          configReadState: 'ready' as const,
+          appServerState: 'healthy' as const,
+        },
+      },
+    };
+
+    expect(computeEffectiveTeamModel('', false, 'anthropic', providerStatus)).toBe(
+      'openai/gpt-oss-20b'
+    );
+    expect(computeEffectiveTeamModel('', true, 'anthropic', providerStatus)).toBe(
+      'openai/gpt-oss-20b'
     );
   });
 

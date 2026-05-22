@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { decideMemberWorkSyncTargetedRecovery } from '@features/member-work-sync/core/application';
+import { describe, expect, it } from 'vitest';
 
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 
@@ -61,8 +60,16 @@ describe('MemberWorkSyncTargetedRecoveryPolicy', () => {
     });
   });
 
-  it('does not allow non-lead native teammates through targeted recovery', () => {
+  it('allows non-lead native teammates through inbox-watch targeted recovery', () => {
     expect(decideMemberWorkSyncTargetedRecovery(status({ providerId: 'codex' }))).toEqual({
+      active: true,
+      capability: 'native_inbox_watch',
+      reason: 'native_targeted_shadow_collecting',
+    });
+  });
+
+  it('does not allow unknown-provider teammates through targeted recovery', () => {
+    expect(decideMemberWorkSyncTargetedRecovery(status({ providerId: undefined }))).toEqual({
       active: false,
     });
   });

@@ -159,7 +159,7 @@ const GRID_UNDER_LEAD_DEFAULT_COLUMN_COUNT = 2;
 const GRID_UNDER_LEAD_LEAD_GAP = 77.7;
 const GRID_UNDER_LEAD_ROW_GAP = 77.7;
 const ROW_ORBIT_MIN_OWNER_COUNT = 6;
-const ROW_ORBIT_MAX_OWNER_COUNT = 12;
+const ROW_ORBIT_MAX_OWNER_COUNT = 14;
 const ROW_ORBIT_HORIZONTAL_GAP = Math.max(112, STABLE_SLOT_GEOMETRY.slotHorizontalGap);
 const ROW_ORBIT_VERTICAL_GAP = Math.max(144, GRID_UNDER_LEAD_ROW_GAP);
 const ROW_ORBIT_CENTRAL_GAP = 160;
@@ -216,6 +216,7 @@ const ROW_ORBIT_ROW_COUNTS_BY_OWNER_COUNT: Readonly<Record<number, readonly numb
   10: [3, 2, 2, 3],
   11: [3, 3, 2, 3],
   12: [3, 3, 3, 3],
+  14: [3, 3, 2, 3, 3],
 };
 
 const ROW_ORBIT_ASSIGNMENTS_BY_OWNER_COUNT: Readonly<
@@ -1306,7 +1307,7 @@ function buildRowOrbitSlotConfigs(
   layout?: GraphLayoutPort
 ): RowOrbitSlotConfig[] | null {
   const rowCount = rowCounts.length;
-  const middleRowIndex = rowCount === 3 ? 1 : -1;
+  const middleRowIndex = getRowOrbitMiddleRowIndex(rowCounts);
   const configs: RowOrbitSlotConfig[] = [];
   const actualAssignments = ownerFootprints
     .map((footprint) => layout?.slotAssignments?.[footprint.ownerId])
@@ -1432,10 +1433,17 @@ function buildRowOrbitSlotFrames(
   runtimeCentralExclusion: StableRect
 ): SlotFrame[] {
   const rowConfigs = groupRowOrbitSlotConfigs(slotConfigs, rowCounts.length);
-  const middleRowIndex = rowCounts.length === 3 ? 1 : -1;
+  const middleRowIndex = getRowOrbitMiddleRowIndex(rowCounts);
   const rowTopByIndex = resolveRowOrbitRowTops(rowConfigs, middleRowIndex, runtimeCentralExclusion);
   const framesByOwnerId = new Map<string, SlotFrame>();
   const fallbackColumnWidth = Math.max(...slotConfigs.map((config) => config.footprint.slotWidth));
+  const alignedColumnCenters = resolveAlignedThreeColumnCenters(
+    rowConfigs,
+    rowCounts,
+    middleRowIndex,
+    fallbackColumnWidth,
+    runtimeCentralExclusion
+  );
 
   for (const row of rowConfigs) {
     if (row.length === 0) {
@@ -1444,8 +1452,9 @@ function buildRowOrbitSlotFrames(
 
     if (row[0]?.band === 'middle') {
       for (const config of row) {
-        const ownerX =
-          config.columnIndex === 0
+        const ownerX = alignedColumnCenters
+          ? alignedColumnCenters[config.columnIndex === 0 ? 0 : 2]!
+          : config.columnIndex === 0
             ? runtimeCentralExclusion.left - ROW_ORBIT_CENTRAL_GAP - config.footprint.slotWidth / 2
             : runtimeCentralExclusion.right +
               ROW_ORBIT_CENTRAL_GAP +
@@ -1464,10 +1473,12 @@ function buildRowOrbitSlotFrames(
     const nextLeft = -getRowOrbitRowWidth(columnWidths) / 2;
     for (const config of row) {
       const ownerX =
-        nextLeft +
-        columnWidths.slice(0, config.columnIndex).reduce((sum, width) => sum + width, 0) +
-        config.columnIndex * ROW_ORBIT_HORIZONTAL_GAP +
-        columnWidths[config.columnIndex]! / 2;
+        alignedColumnCenters && columnCount === alignedColumnCenters.length
+          ? alignedColumnCenters[config.columnIndex]!
+          : nextLeft +
+            columnWidths.slice(0, config.columnIndex).reduce((sum, width) => sum + width, 0) +
+            config.columnIndex * ROW_ORBIT_HORIZONTAL_GAP +
+            columnWidths[config.columnIndex]! / 2;
       const ownerY = rowTop + getOwnerAnchorTopOffset();
       framesByOwnerId.set(
         config.footprint.ownerId,
@@ -1480,6 +1491,79 @@ function buildRowOrbitSlotFrames(
     const frame = framesByOwnerId.get(config.footprint.ownerId);
     return frame ? [frame] : [];
   });
+}
+
+function getRowOrbitMiddleRowIndex(rowCounts: readonly number[]): number {
+  const candidateIndex = Math.floor(rowCounts.length / 2);
+  return rowCounts.length % 2 === 1 && rowCounts[candidateIndex] === 2 ? candidateIndex : -1;
+}
+
+function resolveAlignedThreeColumnCenters(
+  rowConfigs: readonly (readonly RowOrbitSlotConfig[])[],
+  rowCounts: readonly number[],
+  middleRowIndex: number,
+  fallbackColumnWidth: number,
+  runtimeCentralExclusion: StableRect
+): readonly [number, number, number] | null {
+  if (
+    rowCounts.length !== 5 ||
+    middleRowIndex < 0 ||
+    rowCounts[middleRowIndex] !== 2 ||
+    !rowCounts.every((columnCount, rowIndex) =>
+      rowIndex === middleRowIndex ? columnCount === 2 : columnCount === 3
+    )
+  ) {
+    return null;
+  }
+
+  const columnWidths: [number, number, number] = [
+    fallbackColumnWidth,
+    fallbackColumnWidth,
+    fallbackColumnWidth,
+  ];
+
+  for (const row of rowConfigs) {
+    for (const config of row) {
+      const columnIndex =
+        config.rowIndex === middleRowIndex && config.columnCount === 2
+          ? config.columnIndex === 0
+            ? 0
+            : 2
+          : config.columnIndex;
+      columnWidths[columnIndex] = Math.max(
+        columnWidths[columnIndex] ?? fallbackColumnWidth,
+        config.footprint.slotWidth
+      );
+    }
+  }
+
+  const baseCenters = resolveRowOrbitColumnCenters(columnWidths);
+  const centralClearance = ROW_ORBIT_CENTRAL_GAP + SLOT_GEOMETRY.centralHorizontalGap;
+  const minSideDistance = Math.max(
+    Math.abs(baseCenters[0]),
+    Math.abs(baseCenters[2]),
+    Math.abs(runtimeCentralExclusion.left) + centralClearance + columnWidths[0] / 2,
+    Math.abs(runtimeCentralExclusion.right) + centralClearance + columnWidths[2] / 2
+  );
+
+  return [-minSideDistance, 0, minSideDistance];
+}
+
+function resolveRowOrbitColumnCenters(
+  columnWidths: readonly [number, number, number]
+): readonly [number, number, number] {
+  const rowWidth = getRowOrbitRowWidth(columnWidths);
+  const nextLeft = -rowWidth / 2;
+  const leftCenter = nextLeft + columnWidths[0] / 2;
+  const middleCenter = nextLeft + columnWidths[0] + ROW_ORBIT_HORIZONTAL_GAP + columnWidths[1] / 2;
+  const rightCenter =
+    nextLeft +
+    columnWidths[0] +
+    columnWidths[1] +
+    ROW_ORBIT_HORIZONTAL_GAP * 2 +
+    columnWidths[2] / 2;
+
+  return [leftCenter, middleCenter, rightCenter];
 }
 
 function groupRowOrbitSlotConfigs(

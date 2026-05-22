@@ -578,6 +578,7 @@ export interface TeamsAPI {
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
+  restoreMember: (teamName: string, memberName: string) => Promise<void>;
   updateMemberRole: (
     teamName: string,
     memberName: string,

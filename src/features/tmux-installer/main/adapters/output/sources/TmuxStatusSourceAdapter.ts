@@ -6,7 +6,6 @@ import { TmuxPackageManagerResolver } from '@features/tmux-installer/main/infras
 import { TmuxPlatformResolver } from '@features/tmux-installer/main/infrastructure/platform/TmuxPlatformResolver';
 import { TmuxWslService } from '@features/tmux-installer/main/infrastructure/wsl/TmuxWslService';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import type {
@@ -83,7 +82,6 @@ export class TmuxStatusSourceAdapter implements TmuxStatusSourcePort {
   async #probeStatus(): Promise<TmuxStatus> {
     const resolvedPlatform = await this.#platformResolver.resolve();
     const checkedAt = new Date().toISOString();
-    await resolveInteractiveShellEnv();
     const env = buildEnrichedEnv();
     const plan = await this.#strategyResolver.resolve();
 

@@ -13,6 +13,7 @@ import { isElectronMode } from '@renderer/api';
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
+import { stripDownloadsSection } from '@shared/utils/releaseNotes';
 import { ExternalLink, X } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -94,10 +95,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
   const isDownloaded = updateStatus === 'downloaded';
 
-  // Strip "Downloads" section (and everything after it) from release notes
-  const filteredNotes = releaseNotes
-    ? releaseNotes.replace(/\n#{1,3}\s+Downloads[\s\S]*$/i, '').trimEnd()
-    : releaseNotes;
+  const filteredNotes = releaseNotes ? stripDownloadsSection(releaseNotes) : releaseNotes;
 
   const releaseUrl = availableVersion
     ? `https://github.com/777genius/agent-teams-ai/releases/tag/v${availableVersion}`

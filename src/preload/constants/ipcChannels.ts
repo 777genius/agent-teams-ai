@@ -389,6 +389,9 @@ export const TEAM_REPLACE_MEMBERS = 'team:replaceMembers';
 /** Soft-delete a team member */
 export const TEAM_REMOVE_MEMBER = 'team:removeMember';
 
+/** Restore a soft-deleted team member */
+export const TEAM_RESTORE_MEMBER = 'team:restoreMember';
+
 /** Update a team member's role */
 export const TEAM_UPDATE_MEMBER_ROLE = 'team:updateMemberRole';
 

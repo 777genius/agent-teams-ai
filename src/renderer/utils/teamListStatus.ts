@@ -20,6 +20,11 @@ const ACTIVE_PROVISIONING_STATES = new Set<TeamProvisioningProgress['state']>([
 
 const READY_RUNNING_GRACE_MS = 45_000;
 
+const STOPPED_PROVISIONING_STATES = new Set<TeamProvisioningProgress['state']>([
+  'cancelled',
+  'disconnected',
+]);
+
 function isRecentReadyProgress(
   currentProgress: TeamProvisioningProgress | null,
   nowMs: number
@@ -46,6 +51,13 @@ export function resolveTeamStatus(
 
   const leadActivity = leadActivityByTeam[teamName];
   if (leadActivity === 'offline') {
+    return 'offline';
+  }
+
+  // The renderer keeps an async alive-list cache. After a stop/cancel event,
+  // that cache can briefly still include the team, but terminal progress is
+  // the fresher signal and should make in-progress UI static immediately.
+  if (currentProgress && STOPPED_PROVISIONING_STATES.has(currentProgress.state)) {
     return 'offline';
   }
 

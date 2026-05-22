@@ -1440,6 +1440,49 @@ describe('runProviderPrepareDiagnostics', () => {
     });
   });
 
+  it('keeps concrete Codex runtime-missing warnings visible after model compatibility succeeds', async () => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ) => Promise<TeamProvisioningPrepareResult>
+    >((_, __, ___, selectedModels, ____, modelVerificationMode) => {
+      if (selectedModels?.length === 1 && modelVerificationMode === 'compatibility') {
+        return Promise.resolve({
+          ready: true,
+          message: 'CLI is ready to launch',
+          details: ['Selected model gpt-5.4 is available for launch.'],
+        });
+      }
+
+      return Promise.resolve({
+        ready: true,
+        message: 'CLI is ready to launch (see notes)',
+        warnings: ['Codex CLI not found. Install Codex to use native account management.'],
+      });
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      selectedModelIds: ['gpt-5.4'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('notes');
+    expect(result.details).toEqual([
+      'Codex CLI not found. Install Codex to use native account management.',
+      '5.4 - available for launch',
+    ]);
+    expect(result.warnings).toEqual([
+      'Codex CLI not found. Install Codex to use native account management.',
+    ]);
+  });
+
   it('suppresses a generic runtime preflight failure when selected models later verify', async () => {
     const prepareProvisioning = vi.fn<
       (

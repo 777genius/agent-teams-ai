@@ -1,5 +1,5 @@
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import { getShellPreferredHome, resolveInteractiveShellEnv } from '@main/utils/shellEnv';
+import { getShellPreferredHome } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 
 import type { IPty } from 'node-pty';
@@ -173,7 +173,6 @@ async function captureDoctorOutput(commandName: string): Promise<string | null> 
 }
 
 export async function getDoctorInvokedCandidates(commandName: string): Promise<string[]> {
-  await resolveInteractiveShellEnv();
   const output = await captureDoctorOutput(commandName);
   if (!output) {
     return [];

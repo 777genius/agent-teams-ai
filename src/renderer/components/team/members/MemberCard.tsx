@@ -40,6 +40,7 @@ import {
   Plus,
   RotateCcw,
   Server,
+  Undo2,
 } from 'lucide-react';
 
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
@@ -99,6 +100,7 @@ interface MemberCardProps {
   onAssignTask?: () => void;
   onRestartMember?: (memberName: string) => Promise<void> | void;
   onSkipMemberForLaunch?: (memberName: string) => Promise<void> | void;
+  onRestoreMember?: (memberName: string) => Promise<void> | void;
 }
 
 const MEMBER_ROW_SURFACE_BLEED_CLASS = '-mx-[calc(1rem-5px)] px-[calc(1rem-5px)]';
@@ -636,6 +638,7 @@ export const MemberCard = memo(function MemberCard({
   onAssignTask,
   onRestartMember,
   onSkipMemberForLaunch,
+  onRestoreMember,
 }: MemberCardProps): React.JSX.Element {
   // NOTE: lead context display disabled — usage formula is inaccurate
   // const teamName = useStore((s) => s.selectedTeamName);
@@ -647,6 +650,8 @@ export const MemberCard = memo(function MemberCard({
   const [retryLaunchError, setRetryLaunchError] = useState<string | null>(null);
   const [skippingLaunch, setSkippingLaunch] = useState(false);
   const [skipLaunchError, setSkipLaunchError] = useState<string | null>(null);
+  const [restoringMember, setRestoringMember] = useState(false);
+  const [restoreMemberError, setRestoreMemberError] = useState<string | null>(null);
   const teamMembers = useStore((s) =>
     selectedTeamName ? selectResolvedMembersForTeamName(s, selectedTeamName) : []
   );
@@ -953,6 +958,7 @@ export const MemberCard = memo(function MemberCard({
     canRelaunchOpenCode || canRelaunchRuntimeAdvisoryOpenCode
       ? 'Failed to relaunch OpenCode teammate'
       : 'Failed to retry teammate';
+  const canRestoreMember = isRemoved && !isLeadMember(member) && Boolean(onRestoreMember);
   const handleRestartMember = async (event: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
     event.preventDefault();
     event.stopPropagation();
@@ -985,6 +991,22 @@ export const MemberCard = memo(function MemberCard({
       setSkipLaunchError(error instanceof Error ? error.message : 'Failed to skip teammate');
     } finally {
       setSkippingLaunch(false);
+    }
+  };
+  const handleRestoreMember = async (event: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!onRestoreMember || restoringMember) {
+      return;
+    }
+    setRestoreMemberError(null);
+    setRestoringMember(true);
+    try {
+      await onRestoreMember(member.name);
+    } catch (error) {
+      setRestoreMemberError(error instanceof Error ? error.message : 'Failed to restore teammate');
+    } finally {
+      setRestoringMember(false);
     }
   };
 
@@ -1488,6 +1510,28 @@ export const MemberCard = memo(function MemberCard({
               </Tooltip>
             </div>
           )}
+          {canRestoreMember ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={restoringMember ? 'Restoring teammate' : 'Restore teammate'}
+                  className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={restoringMember}
+                  onClick={handleRestoreMember}
+                >
+                  {restoringMember ? (
+                    <SyncedLoader2 className="size-3.5" />
+                  ) : (
+                    <Undo2 className="size-3.5" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {restoreMemberError ?? (restoringMember ? 'Restoring teammate...' : 'Restore')}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
     </div>

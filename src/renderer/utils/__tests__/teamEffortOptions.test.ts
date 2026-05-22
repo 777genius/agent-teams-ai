@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { getTeamEffortOptions, getTeamEffortSelectorPresentation } from '../teamEffortOptions';
+import {
+  getAvailableTeamEffortValue,
+  getTeamEffortOptions,
+  getTeamEffortSelectorPresentation,
+} from '../teamEffortOptions';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -325,5 +329,30 @@ describe('team effort options', () => {
       canValidateValue: true,
       unavailableText: 'Effort is unavailable for this model.',
     });
+  });
+
+  it('omits stale Anthropic effort when the selected model has no effort support', () => {
+    const providerStatus = createProviderStatus('anthropic', {
+      id: 'haiku',
+      launchModel: 'claude-haiku-4-5-20251001',
+      displayName: 'Haiku 4.5',
+      hidden: false,
+      supportedReasoningEfforts: [],
+      defaultReasoningEffort: null,
+      inputModalities: ['text', 'image'],
+      supportsPersonality: false,
+      isDefault: false,
+      upgrade: false,
+      source: 'anthropic-models-api',
+    });
+
+    expect(
+      getAvailableTeamEffortValue({
+        providerId: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+        providerStatus,
+        value: 'medium',
+      })
+    ).toBe('');
   });
 });

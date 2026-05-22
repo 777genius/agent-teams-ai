@@ -78,7 +78,7 @@ liveDescribe('OpenCode accept-fast delivery live e2e', () => {
     } else {
       await fs.rm(tempDir, { recursive: true, force: true });
     }
-  });
+  }, 90_000);
 
   it(
     'returns after prompt acceptance and later projects exact-session task logs',

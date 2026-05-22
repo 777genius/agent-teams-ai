@@ -1,13 +1,17 @@
 import { CODEX_RUNTIME_PROGRESS } from '@features/codex-runtime-installer/contracts';
 import { execCli } from '@main/utils/childProcess';
-import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getAppDataPath } from '@main/utils/pathDecoder';
+import {
+  findFirstRuntimePathBinaryCandidate,
+  isAbsoluteExistingFile,
+  RUNTIME_PATH_SHELL_ENV_TIMEOUT_MS,
+} from '@main/utils/runtimePathBinaryResolver';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
-import { getCachedShellEnv, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { createHash, randomUUID } from 'crypto';
-import { existsSync, promises as fsp, readFileSync, statSync } from 'fs';
+import { promises as fsp, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
@@ -28,7 +32,6 @@ const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 10_000;
-const PATH_SHELL_ENV_TIMEOUT_MS = 1_500;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -69,17 +72,6 @@ function getRuntimeRootPath(): string {
 
 function getCurrentManifestPath(): string {
   return path.join(getRuntimeRootPath(), 'current.json');
-}
-
-function isAbsoluteExistingFile(filePath: string | null | undefined): filePath is string {
-  if (!filePath || !path.isAbsolute(filePath) || !existsSync(filePath)) {
-    return false;
-  }
-  try {
-    return statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
 }
 
 function parseManifest(value: unknown): CodexRuntimeManifest | null {
@@ -141,41 +133,13 @@ function getPathExecutableNames(): string[] {
     : ['codex'];
 }
 
-function splitPathEnv(pathValue: string | undefined): string[] {
-  if (!pathValue) {
-    return [];
-  }
-  return pathValue
-    .split(path.delimiter)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
 function resolvePathCodexBinary(
   additionalEnvSources: (NodeJS.ProcessEnv | null | undefined)[] = []
 ): string | null {
-  const shellEnv = getCachedShellEnv() ?? {};
-  const pathEntries = [
-    ...additionalEnvSources.flatMap((env) => splitPathEnv(env?.PATH)),
-    ...splitPathEnv(shellEnv.PATH),
-    ...splitPathEnv(buildMergedCliPath(null)),
-    ...splitPathEnv(process.env.PATH),
-  ];
-  const seen = new Set<string>();
-  for (const entry of pathEntries) {
-    const normalizedEntry = path.resolve(entry);
-    if (seen.has(normalizedEntry)) {
-      continue;
-    }
-    seen.add(normalizedEntry);
-    for (const executableName of getPathExecutableNames()) {
-      const candidate = path.join(normalizedEntry, executableName);
-      if (isAbsoluteExistingFile(candidate)) {
-        return candidate;
-      }
-    }
-  }
-  return null;
+  return findFirstRuntimePathBinaryCandidate({
+    executableNames: getPathExecutableNames(),
+    additionalEnvSources,
+  });
 }
 
 async function resolvePathCodexBinaryWithBestEffortEnv(
@@ -187,8 +151,9 @@ async function resolvePathCodexBinaryWithBestEffortEnv(
   }
 
   const shellEnv = await resolveInteractiveShellEnvBestEffort({
-    timeoutMs: options.shellEnvTimeoutMs ?? PATH_SHELL_ENV_TIMEOUT_MS,
+    timeoutMs: options.shellEnvTimeoutMs ?? RUNTIME_PATH_SHELL_ENV_TIMEOUT_MS,
     fallbackEnv: process.env,
+    background: false,
   });
   return resolvePathCodexBinary([shellEnv]);
 }
@@ -387,7 +352,11 @@ export function extractCodexRuntimePackageFilesFromTarball(
 ): CodexRuntimePackageFile[] {
   const tar = gunzipSync(tarball, { maxOutputLength: MAX_UNPACKED_BYTES });
   const targetPrefix = `package/vendor/${vendorTarget}/`;
-  const targetBinaryName = `${targetPrefix}codex/${executableName}`;
+  const targetBinaryNames = new Set(
+    getCodexRuntimeBinaryRelativePathCandidates(executableName).map(
+      (relativePath) => `${targetPrefix}${relativePath}`
+    )
+  );
   const files: CodexRuntimePackageFile[] = [];
   let foundBinary = false;
   let offset = 0;
@@ -418,7 +387,7 @@ export function extractCodexRuntimePackageFilesFromTarball(
           data: Buffer.from(tar.subarray(dataStart, dataEnd)),
           mode,
         });
-        foundBinary = foundBinary || fullName === targetBinaryName;
+        foundBinary = foundBinary || targetBinaryNames.has(fullName);
       }
     } else if (
       fullName.startsWith(targetPrefix) &&
@@ -433,9 +402,29 @@ export function extractCodexRuntimePackageFilesFromTarball(
   }
 
   if (!foundBinary) {
-    throw new Error(`Codex package did not contain ${targetBinaryName}`);
+    throw new Error(
+      `Codex package did not contain one of ${Array.from(targetBinaryNames).join(', ')}`
+    );
   }
   return files;
+}
+
+function getCodexRuntimeBinaryRelativePathCandidates(executableName: string): string[] {
+  return [`bin/${executableName}`, `codex/${executableName}`];
+}
+
+function resolveCodexRuntimeBinaryRelativePath(
+  files: readonly CodexRuntimePackageFile[],
+  executableName = getExecutableName()
+): string {
+  const filePaths = new Set(files.map((file) => file.relativePath));
+  const binaryPath = getCodexRuntimeBinaryRelativePathCandidates(executableName).find((candidate) =>
+    filePaths.has(candidate)
+  );
+  if (!binaryPath) {
+    throw new Error(`Extracted Codex package is missing ${executableName}`);
+  }
+  return binaryPath;
 }
 
 async function readCurrentManifest(): Promise<CodexRuntimeManifest | null> {
@@ -627,6 +616,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
 
       this.publishProgress({ phase: 'installing', detail: 'Extracting Codex runtime...' });
       const files = extractCodexRuntimePackageFilesFromTarball(tarball, selected.vendorTarget);
+      const binaryRelativePath = resolveCodexRuntimeBinaryRelativePath(files);
       const runtimeRoot = getRuntimeRootPath();
       tempDir = path.join(runtimeRoot, `installing-${process.pid}-${randomUUID()}`);
       const versionDir = path.join(
@@ -635,14 +625,14 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         platformMetadata.version!,
         selected.vendorTarget
       );
-      const binaryPath = path.join(versionDir, 'codex', getExecutableName());
+      const binaryPath = path.join(versionDir, binaryRelativePath);
 
       await fsp.rm(tempDir, { recursive: true, force: true });
       await fsp.mkdir(tempDir, { recursive: true });
       await writePackageFiles(tempDir, files);
 
       this.publishProgress({ phase: 'installing', detail: 'Verifying Codex binary...' });
-      const tempBinaryPath = path.join(tempDir, 'codex', getExecutableName());
+      const tempBinaryPath = path.join(tempDir, binaryRelativePath);
       const { stdout } = await execCli(tempBinaryPath, ['--version'], {
         timeout: VERSION_TIMEOUT_MS,
         windowsHide: true,

@@ -233,8 +233,11 @@ async function handleVerifyProviderModels(
   providerId: CliProviderId
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
+    const generation = statusCacheGeneration;
     const status = await service.verifyProviderModels(providerId);
-    patchCachedProviderStatus(status);
+    if (generation === statusCacheGeneration) {
+      patchCachedProviderStatus(status);
+    }
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);

@@ -6,8 +6,17 @@ const path = require('path');
 const { createController } = require('../src/index.js');
 
 describe('agent-teams-controller API', () => {
+  const tempDirs = [];
+
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   function makeClaudeDir() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-controller-'));
+    tempDirs.push(dir);
     fs.mkdirSync(path.join(dir, 'teams', 'my-team'), { recursive: true });
     fs.mkdirSync(path.join(dir, 'tasks', 'my-team'), { recursive: true });
     fs.writeFileSync(
@@ -192,6 +201,28 @@ describe('agent-teams-controller API', () => {
     expect(briefing).not.toContain('notify your team lead via SendMessage');
   });
 
+  it('uses Codex-native visible-message and prefixed task tool wording for Codex member briefing', async () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer', providerId: 'codex', model: 'gpt-5.4-mini' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const briefing = await controller.tasks.memberBriefing('bob');
+
+    expect(briefing).toContain(
+      'After task_complete, notify your team lead via MCP tool agent-teams_message_send.'
+    );
+    expect(briefing).toContain('Codex Native visible messaging rule');
+    expect(briefing).toContain('Codex Native task tool rule');
+    expect(briefing).toContain('mcp__agent-teams__task_get');
+    expect(briefing).not.toContain('notify your team lead via SendMessage');
+  });
+
   it('rejects OpenCode idle acknowledgements without explicit delivery context', () => {
     const claudeDir = makeClaudeDir();
     const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
@@ -295,7 +326,7 @@ describe('agent-teams-controller API', () => {
     expect(rows[0].summary).toBe('ready');
   });
 
-  it('does not infer OpenCode briefing from a generic provider-scoped model alone', async () => {
+  it('infers Codex-native briefing from a generic provider-scoped GPT model', async () => {
     const claudeDir = makeClaudeDir();
     const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -308,8 +339,10 @@ describe('agent-teams-controller API', () => {
     const controller = createController({ teamName: 'my-team', claudeDir });
     const briefing = await controller.tasks.memberBriefing('bob');
 
-    expect(briefing).toContain('After task_complete, notify your team lead via SendMessage.');
-    expect(briefing).not.toContain('agent-teams_message_send');
+    expect(briefing).toContain(
+      'After task_complete, notify your team lead via MCP tool agent-teams_message_send.'
+    );
+    expect(briefing).toContain('Codex Native visible messaging rule');
   });
 
   it('keeps explicit native provider metadata stronger than OpenCode-looking model labels', async () => {
@@ -318,7 +351,12 @@ describe('agent-teams-controller API', () => {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     config.members = [
       { name: 'alice', role: 'team-lead' },
-      { name: 'bob', role: 'developer', providerId: 'codex', model: 'opencode/minimax-m2.5-free' },
+      {
+        name: 'bob',
+        role: 'developer',
+        providerId: 'anthropic',
+        model: 'opencode/minimax-m2.5-free',
+      },
     ];
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
@@ -974,6 +1012,34 @@ describe('agent-teams-controller API', () => {
     expect(controller.tasks.getTask(deletedTask.id).status).toBe('deleted');
   });
 
+  it('allows direct manual approval kanban shortcut for completed tasks outside review', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({
+      subject: 'Completed manual shortcut',
+      owner: 'bob',
+    });
+
+    controller.tasks.completeTask(task.id, 'bob');
+
+    expect(() => controller.review.approveReview(task.id, { from: 'alice' })).toThrow(
+      'must be in review before approval'
+    );
+    expect(() => controller.kanban.setKanbanColumn(task.id, 'approved')).toThrow(
+      'must already be approved'
+    );
+
+    const state = controller.kanban.setKanbanColumn(task.id, 'approved', {
+      transition: 'manual_approve',
+    });
+    expect(state.tasks[task.id].column).toBe('approved');
+    const approvedTask = controller.tasks.getTask(task.id);
+    expect(approvedTask.reviewState).toBe('approved');
+    expect(
+      (approvedTask.historyEvents || []).filter((event) => event.type === 'review_approved')
+    ).toHaveLength(0);
+  });
+
   it('rejects review_start outside active review and keeps owner routing intact', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -1596,6 +1662,30 @@ describe('agent-teams-controller API', () => {
       { taskId: task.id, displayId: task.displayId, teamName: 'my-team' },
       { taskId: 'related-task', displayId: 'rel12345', teamName: 'my-team' },
     ]);
+  });
+
+  it('uses Codex-native MCP wording in owner assignment notifications for Codex members', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer', providerId: 'codex', model: 'gpt-5.4-mini' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    controller.tasks.createTask({
+      subject: 'Implement Codex handoff',
+      owner: 'bob',
+    });
+
+    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
+    expect(rows[0].text).toContain('MCP tool agent-teams_message_send');
+    expect(rows[0].text).toContain('Codex Native visible messaging rule');
+    expect(rows[0].text).toContain('mcp__agent-teams__task_get');
+    expect(rows[0].text).not.toContain('notify your lead via SendMessage');
   });
 
   it('does not wake owner for self-comments and keeps user clarification sticky until explicitly cleared', () => {

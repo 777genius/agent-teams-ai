@@ -26,6 +26,11 @@ export interface DashboardRateLimitSkeletonModeInput {
   };
 }
 
+export interface DashboardRateLimitSkeletonInput extends DashboardRateLimitSkeletonModeInput {
+  hasRateLimits: boolean;
+  loading: boolean;
+}
+
 function firstKnown<T>(...values: (T | null | undefined)[]): T | null {
   for (const value of values) {
     if (value !== null && typeof value !== 'undefined') {
@@ -143,9 +148,9 @@ export function isDashboardRateLimitSubscriptionMode({
 }
 
 export function shouldShowDashboardRateLimitSkeleton(
-  input: DashboardRateLimitSkeletonModeInput
+  input: DashboardRateLimitSkeletonInput
 ): boolean {
-  return isDashboardRateLimitSubscriptionMode(input);
+  return input.loading && !input.hasRateLimits && isDashboardRateLimitSubscriptionMode(input);
 }
 
 function buildRateLimitLabel(
@@ -271,4 +276,18 @@ export function getAnthropicDashboardRateLimits(
   }
 
   return items.length > 0 ? items : null;
+}
+
+export function getDashboardRateLimitsForProvider(
+  provider: CliProviderStatus
+): DashboardRateLimitItem[] | null {
+  switch (provider.providerId) {
+    case 'codex':
+      return getCodexDashboardRateLimits(provider);
+    case 'anthropic':
+      return getAnthropicDashboardRateLimits(provider);
+    case 'gemini':
+    case 'opencode':
+      return null;
+  }
 }

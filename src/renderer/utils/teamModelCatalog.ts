@@ -4,12 +4,7 @@ import {
   getOpenCodeQualifiedModelSourceLabel,
   parseOpenCodeQualifiedModelRef,
 } from '@shared/utils/opencodeModelRef';
-import {
-  filterVisibleProviderRuntimeModels,
-  GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
-  GPT_5_2_CODEX_UI_DISABLED_MODEL,
-  GPT_5_3_CODEX_SPARK_UI_DISABLED_MODEL,
-} from '@shared/utils/providerModelVisibility';
+import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -420,6 +415,10 @@ function isFreeOpenCodeModelForOrdering(
   }
 
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
+  if (runtimeModel?.metadata?.free === true) {
+    return true;
+  }
+
   const badgeLabel = runtimeModel?.badgeLabel?.trim().toLowerCase();
   if (badgeLabel) {
     return badgeLabel === 'free';
@@ -495,6 +494,36 @@ function isRuntimeHiddenTeamModel(
   );
 }
 
+function getRuntimeCatalogLaunchModels(
+  providerId: SupportedProviderId,
+  providerStatus?: RuntimeAwareProviderStatus | null
+): string[] | null {
+  if (providerStatus?.modelCatalog?.providerId !== providerId) {
+    return null;
+  }
+
+  const models = providerStatus.modelCatalog.models
+    .filter((model) => !model.hidden)
+    .map((model) => model.launchModel.trim() || model.id.trim())
+    .filter(Boolean);
+  return models.length > 0 ? models : null;
+}
+
+function mergeModelLists(primary: readonly string[], supplemental: readonly string[]): string[] {
+  const merged = new Map<string, string>();
+  for (const model of [...primary, ...supplemental]) {
+    const trimmed = model.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const key = trimmed.toLowerCase();
+    if (!merged.has(key)) {
+      merged.set(key, trimmed);
+    }
+  }
+  return Array.from(merged.values());
+}
+
 function getSupplementalVisibleModels(
   providerId: SupportedProviderId,
   models: readonly string[]
@@ -511,11 +540,16 @@ export function getVisibleTeamProviderModels(
   models: readonly string[],
   providerStatus?: RuntimeAwareProviderStatus | null
 ): string[] {
+  const catalogModels =
+    providerId === 'opencode' ? getRuntimeCatalogLaunchModels(providerId, providerStatus) : null;
+  const sourceModels =
+    providerId === 'opencode' && catalogModels ? mergeModelLists(catalogModels, models) : models;
+
   return sortTeamProviderModels(
     providerId,
     filterVisibleProviderRuntimeModels(
       providerId,
-      getSupplementalVisibleModels(providerId, models)
+      getSupplementalVisibleModels(providerId, sourceModels)
     ),
     providerStatus
   ).filter((model) => !isRuntimeHiddenTeamModel(providerId, model, providerStatus));

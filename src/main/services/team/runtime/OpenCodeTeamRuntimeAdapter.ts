@@ -102,11 +102,12 @@ const SECRET_FLAG_PATTERN =
 const BEARER_TOKEN_PATTERN = /\bBearer\s+\S+/gi;
 const SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
 const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_WARNING =
-  'OpenCode capability snapshot changed between readiness and launch; refreshed readiness and retried once.';
+  'OpenCode capability snapshot changed between readiness and launch; refreshed readiness and retried launch.';
 const OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS = [
   'Bridge server capability snapshot mismatch',
   'OpenCode bridge capability snapshot precondition mismatch',
 ];
+const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT = 3;
 const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
 
 type OpenCodeTeamLaunchReadinessInput = Parameters<
@@ -303,7 +304,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     let data = await this.bridge.launchOpenCodeTeam(
       buildLaunchCommand(runtimeSnapshot, selectedModel)
     );
-    if (!skipReadinessPreflight && isOpenCodePreLaunchCapabilitySnapshotMismatchData(data)) {
+    let capabilitySnapshotRefreshAttempts = 0;
+    while (
+      !skipReadinessPreflight &&
+      isOpenCodePreLaunchCapabilitySnapshotMismatchData(data) &&
+      capabilitySnapshotRefreshAttempts < OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT
+    ) {
+      capabilitySnapshotRefreshAttempts += 1;
       const refreshed = await this.prepare(input);
       if (!refreshed.ok) {
         return blockedLaunchResult(
@@ -335,6 +342,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             `opencode-capability-recovery-${randomUUID()}`
           )
         );
+      } else {
+        break;
       }
     }
 
@@ -689,6 +698,7 @@ function mapOpenCodeLaunchDataToRuntimeResult(
           member.name,
           fallbackLaunchState,
           bridgeMember?.sessionId,
+          bridgeMember?.model,
           bridgeMember?.runtimePid,
           bridgeMember?.pendingPermissionRequestIds,
           bridgeMember != null,
@@ -792,6 +802,7 @@ function mapBridgeMemberToRuntimeEvidence(
   memberName: string,
   launchState: OpenCodeTeamMemberLaunchBridgeState,
   sessionId: string | undefined,
+  model: string | undefined,
   runtimePid: number | undefined,
   pendingPermissionRequestIds: string[] | undefined,
   runtimeMaterialized: boolean,
@@ -855,6 +866,7 @@ function mapBridgeMemberToRuntimeEvidence(
   return {
     memberName,
     providerId: 'opencode',
+    ...(isNonEmptyString(model) ? { model: model.trim() } : {}),
     launchState: failed
       ? 'failed_to_start'
       : confirmed
@@ -1074,6 +1086,7 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
         'Do not mark the review complete from this prompt alone.',
         'A visible agent-teams_message_send reply is optional. Concrete review progress, review tool usage, or agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) is sufficient response proof.',
         `If you cannot pick up the review now, call agent-teams_member_work_sync_status (or mcp__agent-teams__member_work_sync_status) with ${workSyncToolArgs}, then report state "blocked" or "still_working" only for the real current state.`,
+        'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
         taskIds.length ? `Relevant taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.` : null,
         `Do not use provider names, runtime names, or team names as memberName; use exactly "${input.memberName}".`,
         'Do not reply only with acknowledgement.',
@@ -1084,6 +1097,7 @@ function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput)
           'A visible agent-teams_message_send reply is optional. Concrete task progress or agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) is sufficient response proof.',
           `Call agent-teams_member_work_sync_status (or mcp__agent-teams__member_work_sync_status) with ${workSyncToolArgs}.`,
           `Then call agent-teams_member_work_sync_report (or mcp__agent-teams__member_work_sync_report) with ${workSyncToolArgs}, the returned agendaFingerprint/reportToken, and state "still_working" or "blocked".`,
+          'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
           taskIds.length
             ? `When reporting, include taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.`
             : null,

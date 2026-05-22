@@ -275,10 +275,16 @@ export interface RuntimeConfig {
 
 export type ProviderConnectionAuthMode = 'auto' | 'oauth' | 'api_key';
 
+export interface AnthropicCompatibleEndpointConfig {
+  enabled: boolean;
+  baseUrl: string;
+}
+
 export interface ProviderConnectionsConfig {
   anthropic: {
     authMode: ProviderConnectionAuthMode;
     fastModeDefault: boolean;
+    compatibleEndpoint: AnthropicCompatibleEndpointConfig;
   };
   codex: {
     preferredAuthMode: CodexAccountAuthMode;
@@ -376,6 +382,10 @@ const DEFAULT_CONFIG: AppConfig = {
     anthropic: {
       authMode: 'auto',
       fastModeDefault: false,
+      compatibleEndpoint: {
+        enabled: false,
+        baseUrl: '',
+      },
     },
     codex: {
       preferredAuthMode: 'auto',
@@ -455,6 +465,22 @@ function normalizeCodexPreferredAuthMode(
   }
 
   return DEFAULT_CONFIG.providerConnections.codex.preferredAuthMode;
+}
+
+function normalizeAnthropicCompatibleEndpointConfig(
+  value: unknown,
+  fallback: AnthropicCompatibleEndpointConfig = DEFAULT_CONFIG.providerConnections.anthropic
+    .compatibleEndpoint
+): AnthropicCompatibleEndpointConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ...fallback };
+  }
+
+  const raw = value as Partial<AnthropicCompatibleEndpointConfig>;
+  return {
+    enabled: typeof raw.enabled === 'boolean' ? raw.enabled : fallback.enabled,
+    baseUrl: typeof raw.baseUrl === 'string' ? raw.baseUrl.trim() : fallback.baseUrl,
+  };
 }
 
 function shouldPersistNormalizedConfig(loaded: Partial<AppConfig>, normalized: AppConfig): boolean {
@@ -634,6 +660,9 @@ export class ConfigManager {
         anthropic: {
           ...DEFAULT_CONFIG.providerConnections.anthropic,
           ...(loaded.providerConnections?.anthropic ?? {}),
+          compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
+            loaded.providerConnections?.anthropic?.compatibleEndpoint
+          ),
         },
         codex: {
           preferredAuthMode: normalizeCodexPreferredAuthMode(
@@ -750,6 +779,10 @@ export class ConfigManager {
         anthropic: {
           ...this.config.providerConnections.anthropic,
           ...(connectionUpdate.anthropic ?? {}),
+          compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
+            connectionUpdate.anthropic?.compatibleEndpoint,
+            this.config.providerConnections.anthropic.compatibleEndpoint
+          ),
         },
         codex: {
           ...this.config.providerConnections.codex,

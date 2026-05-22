@@ -42,7 +42,7 @@ import {
 } from '@main/types';
 import {
   analyzeSessionFileMetadata,
-  extractCwd,
+  extractCwdFromKnownJsonlFile,
   type SessionFileMetadata,
 } from '@main/utils/jsonl';
 import {
@@ -106,6 +106,44 @@ export interface ProjectScannerOptions {
   sessionIndexDir?: string;
   /** Test hook: set to 0 to persist index files without debounce. */
   sessionIndexPersistDelayMs?: number;
+  /**
+   * Bounds local stat/read work during project discovery.
+   * This keeps startup scans from saturating libuv while other services initialize.
+   */
+  scanFileIoConcurrency?: number;
+  /**
+   * Upper bound for a full project-directory scan. If exhausted, the previous
+   * complete scan is reused when available; otherwise completed projects are
+   * returned without caching the partial result.
+   */
+  scanBudgetMs?: number;
+}
+
+interface ScanInFlight {
+  generation: number;
+  promise: Promise<Project[]>;
+}
+
+interface RepositoryGroupScanInFlight {
+  generation: number;
+  promise: Promise<RepositoryGroup[]>;
+}
+
+interface ProjectScanWithTimeoutResult {
+  projects: Project[];
+  timedOut: boolean;
+}
+
+interface ScanProjectOptions {
+  shouldCommitSubprojects?: () => boolean;
+  signal?: AbortSignal;
+}
+
+class ScanProjectAbortedError extends Error {
+  constructor() {
+    super('Project scan aborted');
+    this.name = 'ScanProjectAbortedError';
+  }
 }
 
 function splitPathSegments(value: string): string[] {
@@ -184,7 +222,12 @@ export class ProjectScanner {
   // Short-lived scan cache to prevent duplicate scans within the same request cycle.
   // Both getProjects() and getRepositoryGroups() call scan() — the cache deduplicates.
   private scanCache: { projects: Project[]; timestamp: number } | null = null;
+  private scanInFlight: ScanInFlight | null = null;
+  private repositoryGroupInFlight: RepositoryGroupScanInFlight | null = null;
+  private scanGeneration = 0;
   private static readonly SCAN_CACHE_TTL_MS = 2000;
+  private static readonly SCAN_BUDGET_MS = 24_000;
+  private static readonly MIN_SCAN_BATCH_BUDGET_MS = 1000;
 
   /** Cached project list for search — avoids re-scanning disk on every query */
   private searchProjectCache: { projects: Project[]; timestamp: number } | null = null;
@@ -192,6 +235,9 @@ export class ProjectScanner {
   // Platform-aware batch sizes to avoid UV thread pool saturation on Windows
   private static readonly LOCAL_SESSION_BATCH = process.platform === 'win32' ? 16 : 64;
   private static readonly LOCAL_PROJECT_BATCH = process.platform === 'win32' ? 4 : 12;
+  private static readonly LOCAL_SCAN_FILE_IO_CONCURRENCY = process.platform === 'win32' ? 8 : 16;
+  private static readonly EXHAUSTIVE_CWD_SPLIT_FILE_LIMIT = 12;
+  private static readonly CWD_HINT_SAMPLE_FILE_LIMIT = 1;
 
   // Delegated services
   private readonly fsProvider: FileSystemProvider;
@@ -200,6 +246,10 @@ export class ProjectScanner {
   private readonly sessionSearcher: SessionSearcher;
   private readonly projectPathResolver: ProjectPathResolver;
   private readonly sessionMetadataIndex: SessionMetadataIndex | null;
+  private readonly scanFileIoConcurrency: number;
+  private readonly scanBudgetMs: number;
+  private scanFileIoActive = 0;
+  private readonly scanFileIoQueue: Array<() => void> = [];
 
   constructor(
     projectsDir?: string,
@@ -223,6 +273,17 @@ export class ProjectScanner {
             persistDelayMs: options?.sessionIndexPersistDelayMs,
           })
         : null;
+    const configuredScanFileIoConcurrency = options?.scanFileIoConcurrency;
+    this.scanFileIoConcurrency =
+      typeof configuredScanFileIoConcurrency === 'number' &&
+      Number.isFinite(configuredScanFileIoConcurrency)
+        ? Math.max(1, Math.floor(configuredScanFileIoConcurrency))
+        : ProjectScanner.LOCAL_SCAN_FILE_IO_CONCURRENCY;
+    const configuredScanBudgetMs = options?.scanBudgetMs;
+    this.scanBudgetMs =
+      typeof configuredScanBudgetMs === 'number' && Number.isFinite(configuredScanBudgetMs)
+        ? Math.max(1, Math.floor(configuredScanBudgetMs))
+        : ProjectScanner.SCAN_BUDGET_MS;
   }
 
   // ===========================================================================
@@ -243,8 +304,34 @@ export class ProjectScanner {
       return this.scanCache.projects;
     }
 
+    const generation = this.scanGeneration;
+    const inFlight = this.scanInFlight;
+    if (inFlight) {
+      if (inFlight.generation === generation) {
+        return inFlight.promise;
+      }
+      await inFlight.promise.catch(() => undefined);
+      if (this.scanInFlight?.promise === inFlight.promise) {
+        this.scanInFlight = null;
+      }
+      return this.scan();
+    }
+
+    const promise = this.performScan(generation);
+    this.scanInFlight = { generation, promise };
+    try {
+      return await promise;
+    } finally {
+      if (this.scanInFlight?.promise === promise) {
+        this.scanInFlight = null;
+      }
+    }
+  }
+
+  private async performScan(generation: number): Promise<Project[]> {
     const startedAt = Date.now();
     let stage = 'start';
+    let previousSubprojectRegistry: ReturnType<typeof subprojectRegistry.snapshot> | null = null;
     const slowWarnAfterMs = 10_000;
     const slowWarnTimer = setTimeout(() => {
       logger.warn(
@@ -259,11 +346,12 @@ export class ProjectScanner {
       }
 
       // Clear the subproject registry on full re-scan
+      previousSubprojectRegistry = subprojectRegistry.snapshot();
       subprojectRegistry.clear();
 
       stage = 'readdirProjectsDir';
       const readdirStartedAt = Date.now();
-      const entries = await this.fsProvider.readdir(this.projectsDir);
+      const entries = await this.readdirForProjectDiscovery(this.projectsDir);
       const readdirMs = Date.now() - readdirStartedAt;
       if (readdirMs >= 2000) {
         logger.warn(`[scan] readdir slow ms=${readdirMs} entries=${entries.length}`);
@@ -276,10 +364,9 @@ export class ProjectScanner {
 
       // Process each project directory (may return multiple projects per dir)
       stage = 'scanProjects';
-      const projectArrays = await this.collectFulfilledInBatches(
+      const { projectArrays, completedAll, slowest } = await this.scanProjectDirsWithBudget(
         projectDirs,
-        this.fsProvider.type === 'ssh' ? 8 : ProjectScanner.LOCAL_PROJECT_BATCH,
-        async (dir) => this.scanProjectWithTimeout(dir.name)
+        startedAt
       );
 
       // Flatten and sort by most recent
@@ -295,12 +382,28 @@ export class ProjectScanner {
       const ms = Date.now() - startedAt;
       if (ms >= 5000) {
         logger.warn(
-          `[scan] completed slow ms=${ms} projectDirs=${projectDirs.length} projects=${validProjects.length}`
+          `[scan] completed slow ms=${ms} projectDirs=${projectDirs.length} projects=${validProjects.length} slowest=${JSON.stringify(
+            slowest.slice(0, 5)
+          )}`
         );
       }
-      this.scanCache = { projects: validProjects, timestamp: Date.now() };
+      if (!completedAll && this.scanCache) {
+        if (previousSubprojectRegistry) {
+          subprojectRegistry.restore(previousSubprojectRegistry);
+        }
+        logger.warn(
+          `[scan] returning cached complete result after budget exhaustion projects=${this.scanCache.projects.length}`
+        );
+        return this.scanCache.projects;
+      }
+      if (completedAll && this.scanGeneration === generation) {
+        this.scanCache = { projects: validProjects, timestamp: Date.now() };
+      }
       return validProjects;
     } catch (error) {
+      if (previousSubprojectRegistry && this.scanCache) {
+        subprojectRegistry.restore(previousSubprojectRegistry);
+      }
       logger.error('Error scanning projects directory:', error);
       return [];
     } finally {
@@ -314,6 +417,14 @@ export class ProjectScanner {
    */
   clearScanCache(): void {
     this.scanCache = null;
+    this.scanGeneration += 1;
+  }
+
+  private async readdirForProjectDiscovery(dirPath: string): Promise<FsDirent[]> {
+    if (this.fsProvider instanceof LocalFileSystemProvider) {
+      return this.fsProvider.readdir(dirPath, { prefetchEntryStats: false });
+    }
+    return this.fsProvider.readdir(dirPath);
   }
 
   // ===========================================================================
@@ -332,6 +443,31 @@ export class ProjectScanner {
    * @returns Promise resolving to RepositoryGroups sorted by most recent activity
    */
   async scanWithWorktreeGrouping(): Promise<RepositoryGroup[]> {
+    const generation = this.scanGeneration;
+    const inFlight = this.repositoryGroupInFlight;
+    if (inFlight) {
+      if (inFlight.generation === generation) {
+        return inFlight.promise;
+      }
+      await inFlight.promise.catch(() => undefined);
+      if (this.repositoryGroupInFlight?.promise === inFlight.promise) {
+        this.repositoryGroupInFlight = null;
+      }
+      return this.scanWithWorktreeGrouping();
+    }
+
+    const promise = this.performScanWithWorktreeGrouping();
+    this.repositoryGroupInFlight = { generation, promise };
+    try {
+      return await promise;
+    } finally {
+      if (this.repositoryGroupInFlight?.promise === promise) {
+        this.repositoryGroupInFlight = null;
+      }
+    }
+  }
+
+  private async performScanWithWorktreeGrouping(): Promise<RepositoryGroup[]> {
     try {
       // 1. Scan all projects using existing logic
       const projects = await this.scan();
@@ -432,34 +568,142 @@ export class ProjectScanner {
 
   /**
    * Scans a single project directory with a timeout guard.
-   * Returns empty array if the scan exceeds the timeout.
+   * Timeout is reported separately from an actually empty project directory so
+   * partial scans cannot be mistaken for complete results.
    */
-  private async scanProjectWithTimeout(encodedName: string): Promise<Project[]> {
+  private async scanProjectWithTimeout(
+    encodedName: string,
+    timeoutMs = ProjectScanner.SCAN_PROJECT_TIMEOUT_MS,
+    options: { logTimeout?: boolean } = {}
+  ): Promise<ProjectScanWithTimeoutResult> {
+    const abortController = new AbortController();
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const timeout = new Promise<Project[]>((resolve) => {
+    let timedOut = false;
+    const effectiveTimeoutMs = Math.max(1, Math.floor(timeoutMs));
+    const timeout = new Promise<ProjectScanWithTimeoutResult>((resolve) => {
       timer = setTimeout(() => {
-        logger.warn(
-          `[scanProject] timeout after ${ProjectScanner.SCAN_PROJECT_TIMEOUT_MS}ms project=${encodedName}`
-        );
-        resolve([]);
-      }, ProjectScanner.SCAN_PROJECT_TIMEOUT_MS);
+        timedOut = true;
+        abortController.abort();
+        if (options.logTimeout !== false) {
+          logger.warn(`[scanProject] timeout after ${effectiveTimeoutMs}ms project=${encodedName}`);
+        }
+        resolve({ projects: [], timedOut: true });
+      }, effectiveTimeoutMs);
     });
     try {
-      return await Promise.race([this.scanProject(encodedName), timeout]);
+      return await Promise.race([
+        this.scanProject(encodedName, {
+          shouldCommitSubprojects: () => !timedOut,
+          signal: abortController.signal,
+        }).then((projects) => ({ projects, timedOut })),
+        timeout,
+      ]);
     } finally {
       if (timer) clearTimeout(timer);
     }
+  }
+
+  private async scanProjectDirsWithBudget(
+    projectDirs: FsDirent[],
+    scanStartedAt: number
+  ): Promise<{
+    projectArrays: Project[][];
+    completedAll: boolean;
+    slowest: Array<{ project: string; ms: number; returned: number }>;
+  }> {
+    const workerCount = Math.max(
+      1,
+      Math.min(
+        this.fsProvider.type === 'ssh' ? 8 : ProjectScanner.LOCAL_PROJECT_BATCH,
+        projectDirs.length
+      )
+    );
+    const projectArrays: Project[][] = [];
+    const slowest: Array<{ project: string; ms: number; returned: number }> = [];
+    let nextIndex = 0;
+    let startedDirs = 0;
+    let completedAll = true;
+
+    const claimNextDir = (): { dir: FsDirent; remainingBudgetMs: number } | null => {
+      if (nextIndex >= projectDirs.length) {
+        return null;
+      }
+
+      const elapsedMs = Date.now() - scanStartedAt;
+      const remainingBudgetMs = this.scanBudgetMs - elapsedMs;
+      if (remainingBudgetMs < ProjectScanner.MIN_SCAN_BATCH_BUDGET_MS) {
+        completedAll = false;
+        return null;
+      }
+
+      const dir = projectDirs[nextIndex];
+      nextIndex += 1;
+      startedDirs += 1;
+      return { dir, remainingBudgetMs };
+    };
+
+    const workers = new Array(workerCount).fill(0).map(async () => {
+      while (true) {
+        const claimed = claimNextDir();
+        if (!claimed) {
+          return;
+        }
+        const { dir, remainingBudgetMs } = claimed;
+        const perProjectTimeoutMs = Math.min(
+          ProjectScanner.SCAN_PROJECT_TIMEOUT_MS,
+          remainingBudgetMs
+        );
+        try {
+          const projectStartedAt = Date.now();
+          const result = await this.scanProjectWithTimeout(dir.name, perProjectTimeoutMs, {
+            logTimeout: false,
+          });
+          const ms = Date.now() - projectStartedAt;
+          if (ms >= 500) {
+            slowest.push({ project: dir.name, ms, returned: result.projects.length });
+          }
+          if (result.timedOut) {
+            completedAll = false;
+          }
+          projectArrays.push(result.projects);
+        } catch {
+          completedAll = false;
+        }
+      }
+    });
+
+    await Promise.all(workers);
+
+    if (startedDirs < projectDirs.length) {
+      completedAll = false;
+    }
+
+    slowest.sort((a, b) => b.ms - a.ms);
+    if (!completedAll) {
+      logger.warn(
+        `[scan] budget exhausted ms=${Date.now() - scanStartedAt} scannedDirs=${startedDirs}/${projectDirs.length} returnedProjectArrays=${projectArrays.length} slowest=${JSON.stringify(
+          slowest.slice(0, 5)
+        )}`
+      );
+    }
+
+    return { projectArrays, completedAll, slowest };
   }
 
   /**
    * Scans a single project directory and returns project metadata.
    * If sessions have different cwd values, splits into multiple projects.
    */
-  private async scanProject(encodedName: string): Promise<Project[]> {
+  private async scanProject(
+    encodedName: string,
+    options: ScanProjectOptions = {}
+  ): Promise<Project[]> {
     try {
+      this.throwIfScanAborted(options.signal);
       const projectPath = path.join(this.projectsDir, encodedName);
       const readdirStart = Date.now();
-      const entries = await this.fsProvider.readdir(projectPath);
+      const entries = await this.readdirForProjectDiscovery(projectPath);
+      this.throwIfScanAborted(options.signal);
       const readdirMs = Date.now() - readdirStart;
 
       // Get session files (.jsonl at root level)
@@ -486,44 +730,61 @@ export class ProjectScanner {
         cwd: string | null;
       }
 
-      // Reading JSONL heads for cwd across hundreds/thousands of sessions can saturate I/O and
-      // make the renderer appear frozen while waiting for repository groups.
-      // Prefer correctness for small projects; for large ones, skip cwd splitting and fall back
-      // to encoded-path decoding / limited path probing.
-      const MAX_CWD_SPLIT_FILES = 80;
+      // Reading JSONL heads for cwd can dominate startup when cold I/O is already contended.
+      // Keep cwd splitting exact for small project dirs. For larger dirs, read only a newest-session
+      // cwd hint so the project path stays accurate without building a partial subproject split.
       const shouldSplitByCwd =
-        this.fsProvider.type !== 'ssh' && sessionFiles.length <= MAX_CWD_SPLIT_FILES;
+        this.fsProvider.type !== 'ssh' &&
+        sessionFiles.length <= ProjectScanner.EXHAUSTIVE_CWD_SPLIT_FILE_LIMIT;
 
       const sessionStatStart = Date.now();
       const sessionInfos = await this.collectFulfilledInBatches(
         sessionFiles,
         this.fsProvider.type === 'ssh' ? 32 : ProjectScanner.LOCAL_SESSION_BATCH,
         async (file) => {
+          this.throwIfScanAborted(options.signal);
           const filePath = path.join(projectPath, file.name);
-          const { mtimeMs, birthtimeMs } = await this.resolveFileDetails(file, filePath);
-          let cwd: string | null = null;
-
-          // Over SSH, avoid reading every file body during project discovery.
-          if (shouldSplitByCwd) {
-            try {
-              cwd = await extractCwd(filePath, this.fsProvider);
-            } catch {
-              // Ignore unreadable files
-            }
-          }
+          const { mtimeMs, birthtimeMs } = await this.runScanFileIo(
+            () => this.resolveFileDetails(file, filePath),
+            options.signal
+          );
 
           return {
             sessionId: extractSessionId(file.name),
             filePath,
             mtimeMs,
             birthtimeMs,
-            cwd,
+            cwd: null as string | null,
           } satisfies SessionInfo;
         }
       );
+      this.throwIfScanAborted(options.signal);
 
       if (sessionInfos.length === 0) {
         return [];
+      }
+
+      if (this.fsProvider.type !== 'ssh') {
+        const cwdCandidates = shouldSplitByCwd
+          ? sessionInfos
+          : [...sessionInfos]
+              .sort((a, b) => b.mtimeMs - a.mtimeMs)
+              .slice(0, ProjectScanner.CWD_HINT_SAMPLE_FILE_LIMIT);
+        await this.collectFulfilledInBatches(cwdCandidates, 2, async (info) => {
+          try {
+            info.cwd = await this.runScanFileIo(
+              () => extractCwdFromKnownJsonlFile(info.filePath, this.fsProvider),
+              options.signal
+            );
+          } catch (error) {
+            if (error instanceof ScanProjectAbortedError || options.signal?.aborted) {
+              throw error;
+            }
+            // Ignore unreadable files
+          }
+          return null;
+        });
+        this.throwIfScanAborted(options.signal);
       }
 
       const sessionStatMs = Date.now() - sessionStatStart;
@@ -565,11 +826,14 @@ export class ProjectScanner {
         }
 
         const sessionPaths = sessionInfos.map((s) => s.filePath);
+        this.throwIfScanAborted(options.signal);
         const actualPath = await this.projectPathResolver.resolveProjectPath(encodedName, {
           cwdHint: firstCwd ?? undefined,
           sessionPaths,
         });
+        this.throwIfScanAborted(options.signal);
         const filesystemState = await resolveProjectFilesystemState(this.fsProvider, actualPath);
+        this.throwIfScanAborted(options.signal);
 
         // Derive name from resolved path — more reliable than decodePath for
         // paths containing dashes (e.g. "test-project" encodes lossily).
@@ -590,7 +854,11 @@ export class ProjectScanner {
       }
 
       // Multiple unique cwds: split into subprojects
-      const projects: Project[] = [];
+      const pendingProjects: Array<{
+        registryCwd: string;
+        sessionIds: string[];
+        project: Omit<Project, 'id'>;
+      }> = [];
 
       // Find the "root" cwd (shortest path, or the one matching the decoded name)
       const cwdKeys = [...cwdGroups.keys()].filter((k) => !k.startsWith('__decoded__'));
@@ -602,16 +870,11 @@ export class ProjectScanner {
       const rootName = path.basename(rootCwd) || baseName;
 
       for (const [cwdKey, sessions] of cwdGroups) {
+        this.throwIfScanAborted(options.signal);
         const isDecodedFallback = cwdKey.startsWith('__decoded__');
         const actualCwd = isDecodedFallback ? null : cwdKey;
 
-        // Register in subproject registry
         const sessionIds = sessions.map((s) => s.sessionId);
-        const compositeId = subprojectRegistry.register(
-          encodedName,
-          actualCwd ?? decodedFallback,
-          sessionIds
-        );
         const exportedSessionIds = sessionIds.slice(0, MAX_SESSION_IDS_EXPORTED);
 
         // Compute timestamps
@@ -635,24 +898,41 @@ export class ProjectScanner {
           const lastSegment = path.basename(actualCwd);
           displayName = `${rootName} (${lastSegment})`;
         }
-
-        projects.push({
-          id: compositeId,
-          path: actualCwd ?? decodedFallback,
-          name: displayName,
-          sessions: exportedSessionIds,
-          totalSessions: sessionIds.length,
-          createdAt: Math.floor(createdAt),
-          mostRecentSession: mostRecentSession ? Math.floor(mostRecentSession) : undefined,
-          filesystemState: await resolveProjectFilesystemState(
-            this.fsProvider,
-            actualCwd ?? decodedFallback
-          ),
+        const filesystemState = await resolveProjectFilesystemState(
+          this.fsProvider,
+          actualCwd ?? decodedFallback
+        );
+        this.throwIfScanAborted(options.signal);
+        if (options.shouldCommitSubprojects?.() === false) {
+          return [];
+        }
+        pendingProjects.push({
+          registryCwd: actualCwd ?? decodedFallback,
+          sessionIds,
+          project: {
+            path: actualCwd ?? decodedFallback,
+            name: displayName,
+            sessions: exportedSessionIds,
+            totalSessions: sessionIds.length,
+            createdAt: Math.floor(createdAt),
+            mostRecentSession: mostRecentSession ? Math.floor(mostRecentSession) : undefined,
+            filesystemState,
+          },
         });
       }
 
-      return projects;
+      if (options.shouldCommitSubprojects?.() === false) {
+        return [];
+      }
+
+      return pendingProjects.map(({ registryCwd, sessionIds, project }) => ({
+        id: subprojectRegistry.register(encodedName, registryCwd, sessionIds),
+        ...project,
+      }));
     } catch (error) {
+      if (error instanceof ScanProjectAbortedError || options.signal?.aborted) {
+        return [];
+      }
       logger.error(`Error scanning project ${encodedName}:`, error);
       return [];
     }
@@ -1632,6 +1912,79 @@ export class ProjectScanner {
     }
 
     return results;
+  }
+
+  private throwIfScanAborted(signal?: AbortSignal): void {
+    if (signal?.aborted) {
+      throw new ScanProjectAbortedError();
+    }
+  }
+
+  private async runScanFileIo<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    this.throwIfScanAborted(signal);
+    if (this.fsProvider.type !== 'local') {
+      const result = await operation();
+      this.throwIfScanAborted(signal);
+      return result;
+    }
+
+    await this.acquireScanFileIoSlot(signal);
+    try {
+      this.throwIfScanAborted(signal);
+      const result = await operation();
+      this.throwIfScanAborted(signal);
+      return result;
+    } finally {
+      this.releaseScanFileIoSlot();
+    }
+  }
+
+  private async acquireScanFileIoSlot(signal?: AbortSignal): Promise<void> {
+    this.throwIfScanAborted(signal);
+    if (this.scanFileIoActive < this.scanFileIoConcurrency) {
+      this.scanFileIoActive += 1;
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      let resume: (() => void) | null = null;
+      const cleanup = () => {
+        signal?.removeEventListener('abort', onAbort);
+      };
+      const onAbort = () => {
+        const queuedResume = resume;
+        if (!queuedResume) {
+          return;
+        }
+        resume = null;
+        const index = this.scanFileIoQueue.indexOf(queuedResume);
+        if (index >= 0) {
+          this.scanFileIoQueue.splice(index, 1);
+        }
+        cleanup();
+        reject(new ScanProjectAbortedError());
+      };
+      resume = () => {
+        if (!resume) {
+          return;
+        }
+        resume = null;
+        cleanup();
+        resolve();
+      };
+      this.scanFileIoQueue.push(resume);
+      signal?.addEventListener('abort', onAbort, { once: true });
+    });
+    this.throwIfScanAborted(signal);
+  }
+
+  private releaseScanFileIoSlot(): void {
+    const next = this.scanFileIoQueue.shift();
+    if (next) {
+      next();
+      return;
+    }
+    this.scanFileIoActive = Math.max(0, this.scanFileIoActive - 1);
   }
 
   private getErrorCode(error: unknown): string {

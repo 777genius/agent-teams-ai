@@ -1846,6 +1846,7 @@ async function initializeServices(): Promise<void> {
         isBusy: (input) => teamProvisioningService.getOpenCodeMemberDeliveryBusyStatus(input),
       },
     ],
+    resolveControlUrl: async () => getTeamControlApiBaseUrl(),
     proofMissingRecoveryGuard: {
       shouldDispatch: async (input) => {
         const status = await teamProvisioningService.getOpenCodeRuntimeDeliveryStatus(
@@ -2246,7 +2247,7 @@ async function shutdownServices(): Promise<void> {
       10_000
     );
     await runShutdownStep('Agent Teams MCP HTTP server cleanup', () =>
-      agentTeamsMcpHttpServer.stop()
+      agentTeamsMcpHttpServer.stop({ preventRestart: true })
     );
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')

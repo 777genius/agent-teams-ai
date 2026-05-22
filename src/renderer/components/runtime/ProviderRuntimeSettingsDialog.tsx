@@ -45,7 +45,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useStore } from '@renderer/store';
-import { AlertTriangle, Download, Key, Link2, Loader2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Download, Key, Link2, Loader2, Save, Trash2 } from 'lucide-react';
 
 import {
   formatProviderAuthMethodLabelForProvider,
@@ -65,7 +65,7 @@ import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@sha
 import type { ApiKeyEntry } from '@shared/types/extensions';
 
 type ApiKeyProviderId = 'anthropic' | 'codex' | 'gemini';
-type PendingConnectionAction = 'auto' | 'oauth' | 'chatgpt' | 'api_key' | null;
+type PendingConnectionAction = 'auto' | 'oauth' | 'chatgpt' | 'api_key' | 'compatible' | null;
 
 interface ConnectionMethodCardOption {
   readonly authMode: CliProviderAuthMode;
@@ -78,6 +78,8 @@ interface Props {
   readonly onOpenChange: (open: boolean) => void;
   readonly providers: CliProviderStatus[];
   readonly initialProviderId: CliProviderId;
+  readonly initialRuntimeProviderId?: string | null;
+  readonly initialRuntimeProviderAction?: 'connect' | 'select' | null;
   readonly projectPath?: string | null;
   readonly providerStatusLoading?: Partial<Record<CliProviderId, boolean>>;
   readonly disabled?: boolean;
@@ -125,6 +127,10 @@ const API_KEY_PROVIDER_CONFIG: Record<
   },
 };
 
+const ANTHROPIC_COMPATIBLE_AUTH_TOKEN_ENV_VAR = 'ANTHROPIC_AUTH_TOKEN';
+const ANTHROPIC_COMPATIBLE_AUTH_TOKEN_NAME = 'Anthropic-compatible Auth Token';
+const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
+
 function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProviderId {
   return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
 }
@@ -159,6 +165,30 @@ function getCodexRuntimeInstallLabel(status: CodexRuntimeStatus | null | undefin
 function findPreferredApiKeyEntry(apiKeys: ApiKeyEntry[], envVarName: string): ApiKeyEntry | null {
   const matches = apiKeys.filter((entry) => entry.envVarName === envVarName);
   return matches.find((entry) => entry.scope === 'user') ?? null;
+}
+
+function validateAnthropicCompatibleBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Base URL is required';
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'Base URL must use http:// or https://';
+    }
+    if (url.username || url.password) {
+      return 'Base URL must not include credentials';
+    }
+    if (FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)) {
+      return 'Use Auto, Subscription, or API key for first-party Anthropic';
+    }
+  } catch {
+    return 'Invalid URL';
+  }
+
+  return null;
 }
 
 function getConnectionDescription(provider: CliProviderStatus): string {
@@ -219,6 +249,12 @@ function getConnectionAlert(provider: CliProviderStatus): string | null {
   const authMode = provider.connection?.configuredAuthMode;
   const hasAnthropicSubscriptionSession =
     provider.authMethod === 'oauth_token' || provider.authMethod === 'claude.ai';
+
+  if (provider.providerId === 'anthropic' && provider.connection?.compatibleEndpoint?.enabled) {
+    return provider.connection.compatibleEndpoint.tokenConfigured
+      ? null
+      : 'Auth token is not configured. Many local Anthropic-compatible endpoints require a non-empty token.';
+  }
 
   if (
     provider.providerId === 'anthropic' &&
@@ -302,6 +338,10 @@ function getConnectionAlert(provider: CliProviderStatus): string | null {
 }
 
 function getProviderUsageLabel(provider: CliProviderStatus): string {
+  if (provider.providerId === 'anthropic' && provider.connection?.compatibleEndpoint?.enabled) {
+    return 'Using compatible endpoint';
+  }
+
   if (
     provider.providerId === 'anthropic' &&
     provider.connection?.configuredAuthMode === 'api_key'
@@ -312,6 +352,24 @@ function getProviderUsageLabel(provider: CliProviderStatus): string {
   return provider.authenticated
     ? `Using ${formatProviderAuthMethodLabelForProvider(provider.providerId, provider.authMethod)}`
     : provider.statusMessage || 'Not connected';
+}
+
+function getCompactOpenCodeProviderDetailMessage(detailMessage?: string | null): string | null {
+  const trimmed = detailMessage?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const firstInternalDetailIndex = [' - auth ', ' - behavior ', ' - managed ']
+    .map((marker) => trimmed.indexOf(marker))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+
+  const compact =
+    typeof firstInternalDetailIndex === 'number'
+      ? trimmed.slice(0, firstInternalDetailIndex).trim()
+      : trimmed;
+  return compact || null;
 }
 
 function getCodexAccountPanelHint(
@@ -593,6 +651,8 @@ export const ProviderRuntimeSettingsDialog = ({
   onOpenChange,
   providers,
   initialProviderId,
+  initialRuntimeProviderId = null,
+  initialRuntimeProviderAction = null,
   projectPath = null,
   providerStatusLoading = {},
   disabled = false,
@@ -615,6 +675,10 @@ export const ProviderRuntimeSettingsDialog = ({
   const [runtimeSaving, setRuntimeSaving] = useState(false);
   const [pendingConnectionAction, setPendingConnectionAction] =
     useState<PendingConnectionAction>(null);
+  const [compatibleBaseUrl, setCompatibleBaseUrl] = useState('');
+  const [compatibleTokenValue, setCompatibleTokenValue] = useState('');
+  const [compatibleEndpointError, setCompatibleEndpointError] = useState<string | null>(null);
+  const [compatibleEndpointStatus, setCompatibleEndpointStatus] = useState<string | null>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
   const apiKeys = useStore((s) => s.apiKeys);
@@ -657,11 +721,17 @@ export const ProviderRuntimeSettingsDialog = ({
     setConnectionSaving(false);
     setRuntimeSaving(false);
     setPendingConnectionAction(null);
+    setCompatibleBaseUrl('');
+    setCompatibleTokenValue('');
+    setCompatibleEndpointError(null);
+    setCompatibleEndpointStatus(null);
   }, [open]);
 
   useEffect(() => {
     setConnectionError(null);
     setRuntimeError(null);
+    setCompatibleEndpointError(null);
+    setCompatibleEndpointStatus(null);
   }, [selectedProviderId]);
 
   useEffect(() => {
@@ -688,6 +758,15 @@ export const ProviderRuntimeSettingsDialog = ({
   const selectedApiKey = statusApiKeyConfig
     ? findPreferredApiKeyEntry(apiKeys, statusApiKeyConfig.envVarName)
     : null;
+  const anthropicCompatibleConfig = appConfig?.providerConnections?.anthropic
+    .compatibleEndpoint ?? {
+    enabled: false,
+    baseUrl: '',
+  };
+  const selectedCompatibleToken = findPreferredApiKeyEntry(
+    apiKeys,
+    ANTHROPIC_COMPATIBLE_AUTH_TOKEN_ENV_VAR
+  );
 
   const selectedProvider = useMemo(() => {
     const mergedStatusProvider =
@@ -707,6 +786,22 @@ export const ProviderRuntimeSettingsDialog = ({
       nextConnection.configuredAuthMode =
         appConfig?.providerConnections?.anthropic.authMode ??
         mergedStatusProvider.connection.configuredAuthMode;
+      nextConnection.compatibleEndpoint = {
+        ...(mergedStatusProvider.connection.compatibleEndpoint ?? {
+          enabled: false,
+          baseUrl: '',
+          tokenConfigured: false,
+          tokenSource: null,
+          tokenSourceLabel: null,
+        }),
+        enabled: anthropicCompatibleConfig.enabled,
+        baseUrl: anthropicCompatibleConfig.baseUrl,
+      };
+      if (selectedCompatibleToken) {
+        nextConnection.compatibleEndpoint.tokenConfigured = true;
+        nextConnection.compatibleEndpoint.tokenSource = 'stored';
+        nextConnection.compatibleEndpoint.tokenSourceLabel = 'Stored in app';
+      }
     }
 
     if (mergedStatusProvider.providerId === 'codex') {
@@ -732,13 +827,27 @@ export const ProviderRuntimeSettingsDialog = ({
       connection: nextConnection,
     };
   }, [
+    anthropicCompatibleConfig.baseUrl,
+    anthropicCompatibleConfig.enabled,
     appConfig?.providerConnections?.anthropic.authMode,
     appConfig?.providerConnections?.codex.preferredAuthMode,
     codexAccount.snapshot,
+    selectedCompatibleToken,
     selectedApiKey,
     statusApiKeyConfig,
     statusSelectedProvider,
   ]);
+
+  useEffect(() => {
+    if (!open || selectedProviderId !== 'anthropic') {
+      return;
+    }
+
+    setCompatibleBaseUrl(anthropicCompatibleConfig.baseUrl);
+    setCompatibleTokenValue('');
+    setCompatibleEndpointError(null);
+    setCompatibleEndpointStatus(null);
+  }, [anthropicCompatibleConfig.baseUrl, open, selectedProviderId]);
 
   const selectedProviderLoading = selectedProvider
     ? providerStatusLoading[selectedProvider.providerId] === true
@@ -862,9 +971,24 @@ export const ProviderRuntimeSettingsDialog = ({
   const canRequestSubscriptionLogin =
     selectedProvider?.providerId === 'anthropic' &&
     Boolean(selectedProvider.connection?.supportsOAuth && onRequestLogin) &&
+    selectedProvider.connection?.compatibleEndpoint?.enabled !== true &&
     configuredAuthMode !== 'api_key' &&
     selectedProvider.statusMessage !== 'Checking...' &&
     (!selectedProvider?.authenticated || hasSubscriptionSession || configuredAuthMode === 'oauth');
+  const anthropicCompatibleEndpoint =
+    selectedProvider?.providerId === 'anthropic'
+      ? (selectedProvider.connection?.compatibleEndpoint ?? null)
+      : null;
+  const anthropicCompatibleEndpointEnabled = anthropicCompatibleEndpoint?.enabled === true;
+  const anthropicCompatibleTokenConfigured = Boolean(
+    selectedCompatibleToken || anthropicCompatibleEndpoint?.tokenConfigured
+  );
+  const anthropicCompatibleTokenStatus =
+    selectedCompatibleToken?.maskedValue ??
+    anthropicCompatibleEndpoint?.tokenSourceLabel ??
+    (anthropicCompatibleTokenConfigured ? 'Configured' : null);
+  const anthropicCompatibleMissingToken =
+    anthropicCompatibleEndpointEnabled && !anthropicCompatibleTokenConfigured;
 
   useEffect(() => {
     if (!showApiKeyForm) {
@@ -887,6 +1011,14 @@ export const ProviderRuntimeSettingsDialog = ({
     }
   }
   const showSelectedProviderSummary = Boolean(selectedProvider) && !connectionManagedRuntime;
+  const selectedProviderDetailMessage =
+    selectedProvider?.providerId === 'opencode'
+      ? getCompactOpenCodeProviderDetailMessage(selectedProvider.detailMessage)
+      : (selectedProvider?.detailMessage ?? null);
+  const selectedProviderDiagnostics =
+    selectedProvider?.providerId === 'opencode'
+      ? []
+      : (selectedProvider?.externalRuntimeDiagnostics ?? []);
 
   const connectionProgressMessage = useMemo(() => {
     if (!connectionLoading || !selectedProvider) {
@@ -902,6 +1034,8 @@ export const ProviderRuntimeSettingsDialog = ({
             return 'Switching to Anthropic subscription...';
           case 'auto':
             return 'Switching to Auto...';
+          case 'compatible':
+            return 'Saving compatible endpoint...';
           default:
             return 'Applying connection changes...';
         }
@@ -1042,6 +1176,112 @@ export const ProviderRuntimeSettingsDialog = ({
           await onRefreshProvider?.(selectedProvider.providerId);
         } catch {
           setConnectionError('Connection updated, but failed to refresh provider status.');
+        }
+      }
+
+      setConnectionSaving(false);
+      setPendingConnectionAction(null);
+    }
+  };
+
+  const handleSaveAnthropicCompatibleEndpoint = async (): Promise<void> => {
+    if (selectedProvider?.providerId !== 'anthropic') {
+      return;
+    }
+
+    const baseUrl = compatibleBaseUrl.trim();
+    const validationError = validateAnthropicCompatibleBaseUrl(baseUrl);
+    if (validationError) {
+      setCompatibleEndpointError(validationError);
+      setCompatibleEndpointStatus(null);
+      return;
+    }
+
+    setConnectionSaving(true);
+    setPendingConnectionAction('compatible');
+    setConnectionError(null);
+    setCompatibleEndpointError(null);
+    setCompatibleEndpointStatus(null);
+    let updateSucceeded = false;
+
+    try {
+      if (compatibleTokenValue.trim()) {
+        await saveApiKey({
+          id: selectedCompatibleToken?.id,
+          name: ANTHROPIC_COMPATIBLE_AUTH_TOKEN_NAME,
+          envVarName: ANTHROPIC_COMPATIBLE_AUTH_TOKEN_ENV_VAR,
+          value: compatibleTokenValue.trim(),
+          scope: 'user',
+        });
+      }
+
+      await updateConfig('providerConnections', {
+        anthropic: {
+          compatibleEndpoint: {
+            enabled: true,
+            baseUrl,
+          },
+        },
+      });
+      updateSucceeded = true;
+      setCompatibleTokenValue('');
+      setCompatibleEndpointStatus(
+        compatibleTokenValue.trim() || anthropicCompatibleTokenConfigured
+          ? 'Endpoint saved'
+          : 'Endpoint saved. Auth token is not configured.'
+      );
+    } catch (error) {
+      setCompatibleEndpointError(
+        error instanceof Error ? error.message : 'Failed to save endpoint'
+      );
+    } finally {
+      if (updateSucceeded) {
+        try {
+          await onRefreshProvider?.('anthropic');
+        } catch {
+          setConnectionError('Endpoint saved, but failed to refresh provider status.');
+        }
+      }
+
+      setConnectionSaving(false);
+      setPendingConnectionAction(null);
+    }
+  };
+
+  const handleDisableAnthropicCompatibleEndpoint = async (): Promise<void> => {
+    if (selectedProvider?.providerId !== 'anthropic') {
+      return;
+    }
+
+    setConnectionSaving(true);
+    setPendingConnectionAction('compatible');
+    setConnectionError(null);
+    setCompatibleEndpointError(null);
+    setCompatibleEndpointStatus(null);
+    let updateSucceeded = false;
+
+    try {
+      await updateConfig('providerConnections', {
+        anthropic: {
+          compatibleEndpoint: {
+            enabled: false,
+            baseUrl: compatibleBaseUrl.trim(),
+          },
+        },
+      });
+      updateSucceeded = true;
+      setCompatibleTokenValue('');
+      setCompatibleEndpointStatus('Endpoint disabled. Saved token was kept.');
+    } catch (error) {
+      setCompatibleEndpointError(
+        error instanceof Error ? error.message : 'Failed to disable endpoint'
+      );
+    } finally {
+      if (updateSucceeded) {
+        try {
+          await onRefreshProvider?.('anthropic');
+        } catch {
+          setConnectionError('Endpoint disabled, but failed to refresh provider status.');
         }
       }
 
@@ -1208,18 +1448,17 @@ export const ProviderRuntimeSettingsDialog = ({
                   </span>
                 ) : null}
               </div>
-              {selectedProvider.detailMessage ? (
+              {selectedProviderDetailMessage ? (
                 <div className="mt-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  {selectedProvider.detailMessage}
+                  {selectedProviderDetailMessage}
                 </div>
               ) : null}
-              {selectedProvider.externalRuntimeDiagnostics &&
-              selectedProvider.externalRuntimeDiagnostics.length > 0 ? (
+              {selectedProviderDiagnostics.length > 0 ? (
                 <div
                   className="mt-2 space-y-1 text-[11px]"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  {selectedProvider.externalRuntimeDiagnostics.slice(0, 3).map((diagnostic) => (
+                  {selectedProviderDiagnostics.slice(0, 3).map((diagnostic) => (
                     <div key={diagnostic.id}>
                       {diagnostic.label}:{' '}
                       {diagnostic.statusMessage ?? (diagnostic.detected ? 'detected' : 'missing')}
@@ -1237,6 +1476,8 @@ export const ProviderRuntimeSettingsDialog = ({
                 runtimeId="opencode"
                 open={open}
                 projectPath={projectPath}
+                initialProviderId={initialRuntimeProviderId}
+                initialProviderAction={initialRuntimeProviderAction}
                 disabled={disabled || selectedProviderLoading}
                 onProviderChanged={() => onRefreshProvider?.('opencode')}
               />
@@ -1328,6 +1569,171 @@ export const ProviderRuntimeSettingsDialog = ({
                     </Select>
                     <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                       {getAuthModeDescription(selectedProvider.providerId, configuredAuthMode)}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedProvider.providerId === 'anthropic' ? (
+                  <div
+                    className="space-y-3 rounded-md border p-3"
+                    style={{ borderColor: 'var(--color-border-subtle)' }}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                          Local / compatible endpoint
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          Use an Anthropic-compatible local runtime endpoint.
+                        </div>
+                      </div>
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[11px]"
+                        style={{
+                          color: anthropicCompatibleEndpointEnabled
+                            ? '#86efac'
+                            : 'var(--color-text-muted)',
+                          backgroundColor: anthropicCompatibleEndpointEnabled
+                            ? 'rgba(74, 222, 128, 0.14)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                        }}
+                      >
+                        {anthropicCompatibleEndpointEnabled ? 'Enabled' : 'Off'}
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="anthropic-compatible-base-url" className="text-xs">
+                          Base URL
+                        </Label>
+                        <Input
+                          id="anthropic-compatible-base-url"
+                          value={compatibleBaseUrl}
+                          onChange={(event) => {
+                            setCompatibleBaseUrl(event.currentTarget.value);
+                            setCompatibleEndpointError(null);
+                            setCompatibleEndpointStatus(null);
+                          }}
+                          placeholder="http://localhost:1234"
+                          className="h-9 text-sm"
+                          disabled={connectionBusy}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="anthropic-compatible-auth-token" className="text-xs">
+                          Auth token
+                        </Label>
+                        <Input
+                          id="anthropic-compatible-auth-token"
+                          type="password"
+                          value={compatibleTokenValue}
+                          onChange={(event) => {
+                            setCompatibleTokenValue(event.currentTarget.value);
+                            setCompatibleEndpointError(null);
+                            setCompatibleEndpointStatus(null);
+                          }}
+                          placeholder={
+                            anthropicCompatibleTokenConfigured
+                              ? 'Leave blank to keep saved token'
+                              : 'lmstudio'
+                          }
+                          className="h-9 text-sm"
+                          disabled={connectionBusy || apiKeySaving}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span
+                        className="rounded-full px-2 py-0.5"
+                        style={{
+                          color: anthropicCompatibleTokenConfigured
+                            ? '#86efac'
+                            : 'var(--color-text-muted)',
+                          backgroundColor: anthropicCompatibleTokenConfigured
+                            ? 'rgba(74, 222, 128, 0.14)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                        }}
+                      >
+                        Token {anthropicCompatibleTokenConfigured ? 'configured' : 'not set'}
+                      </span>
+                      {anthropicCompatibleTokenStatus ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {anthropicCompatibleTokenStatus}
+                        </span>
+                      ) : null}
+                      {anthropicCompatibleEndpointEnabled &&
+                      anthropicCompatibleEndpoint?.baseUrl ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>
+                          {anthropicCompatibleEndpoint.baseUrl}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {compatibleEndpointError ? (
+                      <div
+                        className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(248, 113, 113, 0.25)',
+                          backgroundColor: 'rgba(248, 113, 113, 0.06)',
+                          color: '#fca5a5',
+                        }}
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{compatibleEndpointError}</span>
+                      </div>
+                    ) : compatibleEndpointStatus ? (
+                      <div
+                        className="rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(74, 222, 128, 0.22)',
+                          backgroundColor: 'rgba(74, 222, 128, 0.06)',
+                          color: '#86efac',
+                        }}
+                      >
+                        {compatibleEndpointStatus}
+                      </div>
+                    ) : anthropicCompatibleMissingToken ? (
+                      <div
+                        className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(245, 158, 11, 0.25)',
+                          backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                          color: '#fbbf24',
+                        }}
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>Auth token is not configured.</span>
+                      </div>
+                    ) : null}
+
+                    <div className="flex justify-end gap-2">
+                      {anthropicCompatibleEndpointEnabled ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={connectionBusy}
+                          onClick={() => void handleDisableAnthropicCompatibleEndpoint()}
+                        >
+                          Disable
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={connectionBusy || apiKeySaving || !compatibleBaseUrl.trim()}
+                        onClick={() => void handleSaveAnthropicCompatibleEndpoint()}
+                      >
+                        {connectionSaving && pendingConnectionAction === 'compatible' ? (
+                          <Loader2 className="mr-1 size-3.5 animate-spin" />
+                        ) : (
+                          <Save className="mr-1 size-3.5" />
+                        )}
+                        Save endpoint
+                      </Button>
                     </div>
                   </div>
                 ) : null}

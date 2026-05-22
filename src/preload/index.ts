@@ -178,6 +178,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
   TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -1144,6 +1145,9 @@ const electronAPI: ElectronAPI = {
     },
     removeMember: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<void>(TEAM_REMOVE_MEMBER, teamName, memberName);
+    },
+    restoreMember: async (teamName: string, memberName: string) => {
+      return invokeIpcWithResult<void>(TEAM_RESTORE_MEMBER, teamName, memberName);
     },
     updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_MEMBER_ROLE, teamName, memberName, role);

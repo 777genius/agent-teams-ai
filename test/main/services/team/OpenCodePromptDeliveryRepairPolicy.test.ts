@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   decideOpenCodePromptDeliveryRepair,
   type OpenCodePromptDeliveryRepairInput,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryRepairPolicy';
+import { describe, expect, it } from 'vitest';
 
 function base(overrides: Partial<OpenCodePromptDeliveryRepairInput> = {}) {
   return {
@@ -71,6 +70,7 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.kind).toBe('work_sync_report_required');
     expect(decision.controlText).toContain('member_work_sync_status');
     expect(decision.controlText).toContain('member_work_sync_report');
+    expect(decision.controlText).toContain('A status-only tool call is incomplete');
     expect(decision.controlText).toContain('controlUrl="http://127.0.0.1:43123"');
     expect(decision.controlText).toContain('"task-1"');
     expect(decision.controlText).not.toContain('reportToken=');
@@ -91,6 +91,7 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.kind).toBe('work_sync_report_required');
     expect(decision.controlText).toContain('review pickup control message');
     expect(decision.controlText).toContain('start or continue the review');
+    expect(decision.controlText).toContain('A status-only tool call is incomplete');
     expect(decision.controlText).toContain('"task-1"');
     expect(decision.controlText).not.toContain('Then call agent-teams_member_work_sync_report');
   });

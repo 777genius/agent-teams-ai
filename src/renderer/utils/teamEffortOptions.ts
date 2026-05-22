@@ -213,3 +213,19 @@ export function getTeamEffortSelectorPresentation(params: {
     canValidateValue: true,
   };
 }
+
+export function getAvailableTeamEffortValue(params: {
+  providerId?: TeamProviderId;
+  model?: string;
+  limitContext?: boolean;
+  providerStatus?: CliProviderStatus | null;
+  value?: string | null;
+}): string {
+  const value = params.value?.trim() ?? '';
+  if (!value) {
+    return '';
+  }
+
+  const presentation = getTeamEffortSelectorPresentation(params);
+  return presentation.disabled && presentation.canValidateValue ? '' : value;
+}

@@ -10,27 +10,10 @@
  * ALL animation state (positions, particles, effects, time) lives in refs.
  */
 
-import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+
 import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
-import type { GraphDataPort } from '../ports/GraphDataPort';
-import type { GraphEventPort } from '../ports/GraphEventPort';
-import type { GraphConfigPort } from '../ports/GraphConfigPort';
-import type {
-  GraphEdge,
-  GraphLayoutMode,
-  GraphNode,
-  GraphOwnerSlotAssignment,
-} from '../ports/types';
-import type { StableRect } from '../layout/stableSlots';
-import { GraphCanvas, type GraphCanvasHandle } from './GraphCanvas';
-import { GraphControls, type GraphFilterState } from './GraphControls';
-import { GraphOverlay } from './GraphOverlay';
-import { GraphEdgeOverlay } from './GraphEdgeOverlay';
-import { buildFocusState } from './buildFocusState';
-import type { TransientHandoffCard } from './transientHandoffs';
-import { useGraphSimulation } from '../hooks/useGraphSimulation';
-import { useGraphCamera } from '../hooks/useGraphCamera';
-import { useGraphInteraction } from '../hooks/useGraphInteraction';
+
 import {
   collectInteractiveEdgesInViewport,
   findEdgeAt,
@@ -38,7 +21,28 @@ import {
   getEdgeMidpoint,
 } from '../canvas/hit-detection';
 import { ANIM, ANIM_SPEED } from '../constants/canvas-constants';
+import { useGraphCamera } from '../hooks/useGraphCamera';
+import { useGraphInteraction } from '../hooks/useGraphInteraction';
+import { useGraphSimulation } from '../hooks/useGraphSimulation';
 import { getLaunchAnchorScreenPlacement as buildLaunchAnchorScreenPlacement } from '../layout/launchAnchor';
+
+import { buildFocusState } from './buildFocusState';
+import { GraphCanvas, type GraphCanvasHandle } from './GraphCanvas';
+import { GraphControls, type GraphFilterState } from './GraphControls';
+import { GraphEdgeOverlay } from './GraphEdgeOverlay';
+import { GraphOverlay } from './GraphOverlay';
+
+import type { StableRect } from '../layout/stableSlots';
+import type { GraphConfigPort } from '../ports/GraphConfigPort';
+import type { GraphDataPort } from '../ports/GraphDataPort';
+import type { GraphEventPort } from '../ports/GraphEventPort';
+import type {
+  GraphEdge,
+  GraphLayoutMode,
+  GraphNode,
+  GraphOwnerSlotAssignment,
+} from '../ports/types';
+import type { TransientHandoffCard } from './transientHandoffs';
 
 export interface GraphViewProps {
   data: GraphDataPort;
@@ -96,6 +100,20 @@ export interface GraphViewProps {
   }) => React.ReactNode;
 }
 
+export function filterVisibleGraphEdges(
+  edges: GraphEdge[],
+  visibleNodeIds: ReadonlySet<string>,
+  showEdges: boolean,
+  activeParticleEdgeIds?: ReadonlySet<string>
+): GraphEdge[] {
+  return edges.filter((edge) => {
+    if (!showEdges && !activeParticleEdgeIds?.has(edge.id)) {
+      return false;
+    }
+    return visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target);
+  });
+}
+
 export function GraphView({
   data,
   events,
@@ -127,7 +145,7 @@ export function GraphView({
     showLogs: config?.showLogs ?? config?.showActivity ?? true,
     showTasks: config?.showTasks ?? true,
     showProcesses: config?.showProcesses ?? true,
-    showEdges: true,
+    showEdges: config?.showEdges ?? false,
     paused: !(config?.animationEnabled ?? true),
   });
   const effectivePaused = filters.paused || suspendAnimation;
@@ -214,13 +232,12 @@ export function GraphView({
   );
 
   const getVisibleEdges = useCallback(
-    (edges: GraphEdge[], visibleNodeIds: ReadonlySet<string>): GraphEdge[] =>
-      edges.filter((edge) => {
-        if (!filters.showEdges && edge.type !== 'parent-child') {
-          return false;
-        }
-        return visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target);
-      }),
+    (
+      edges: GraphEdge[],
+      visibleNodeIds: ReadonlySet<string>,
+      activeParticleEdgeIds?: ReadonlySet<string>
+    ): GraphEdge[] =>
+      filterVisibleGraphEdges(edges, visibleNodeIds, filters.showEdges, activeParticleEdgeIds),
     [filters.showEdges]
   );
 
@@ -376,7 +393,8 @@ export function GraphView({
     const state = simulationRef.current.stateRef.current;
     const visibleNodes = getVisibleNodes(state.nodes);
     const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
-    const visibleEdges = getVisibleEdges(state.edges, visibleNodeIds);
+    const activeParticleEdgeIds = new Set(state.particles.map((particle) => particle.edgeId));
+    const visibleEdges = getVisibleEdges(state.edges, visibleNodeIds, activeParticleEdgeIds);
 
     // 4. Draw canvas imperatively (NO React re-render)
     canvasHandle.current?.draw({

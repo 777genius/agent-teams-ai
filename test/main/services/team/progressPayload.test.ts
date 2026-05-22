@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  PROGRESS_LOG_TAIL_LINES,
-  PROGRESS_OUTPUT_TAIL_PARTS,
-  PROGRESS_TRACE_TAIL_LINES,
   boundLaunchDiagnostics,
   buildProgressAssistantOutput,
   buildProgressLiveOutput,
   buildProgressLogsTail,
   buildProgressTraceLine,
   buildProgressTraceTail,
+  PROGRESS_LOG_TAIL_LINES,
+  PROGRESS_OUTPUT_TAIL_PARTS,
+  PROGRESS_TRACE_TAIL_LINES,
 } from '../../../../src/main/services/team/progressPayload';
 
 describe('buildProgressLogsTail', () => {
@@ -86,16 +86,22 @@ describe('buildProgressTraceLine', () => {
     const result = buildProgressTraceLine({
       timestamp: '2026-04-28T12:00:00.000Z',
       state: 'spawning',
-      message: 'Starting runtime --api-key sk-test',
-      detail: 'OPENAI_API_KEY=super-secret CODEX_API_KEY="also-secret" ```',
+      message: 'Starting runtime --api-key sk-test Authorization: Bearer local-bearer-token',
+      detail:
+        'OPENAI_API_KEY=super-secret CODEX_API_KEY="also-secret" ANTHROPIC_AUTH_TOKEN="lmstudio local token" ```',
     });
 
     expect(result).toContain('--api-key [redacted]');
     expect(result).toContain('OPENAI_API_KEY=[redacted]');
     expect(result).toContain('CODEX_API_KEY=[redacted]');
+    expect(result).toContain('ANTHROPIC_AUTH_TOKEN=[redacted]');
+    expect(result).toContain('Authorization: Bearer [redacted]');
     expect(result).not.toContain('sk-test');
     expect(result).not.toContain('super-secret');
     expect(result).not.toContain('also-secret');
+    expect(result).not.toContain('lmstudio');
+    expect(result).not.toContain('local token');
+    expect(result).not.toContain('local-bearer-token');
     expect(result).not.toContain('```');
   });
 });

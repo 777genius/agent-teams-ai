@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buildProviderAwareCliEnvMock = vi.fn();
 const resolveBinaryMock = vi.fn();
@@ -61,7 +62,7 @@ vi.mock('@main/utils/childProcess', () => ({
 }));
 
 vi.mock('@main/utils/shellEnv', () => ({
-  resolveInteractiveShellEnv: () => resolveInteractiveShellEnvMock(),
+  resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvMock(),
 }));
 
 import { AgentTeamsRuntimeProviderManagementCliClient } from '../../../../src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
@@ -246,6 +247,51 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       expect.objectContaining({ cwd: '/Users/test/project' })
     );
     expect(JSON.stringify(execCliMock.mock.calls[0])).not.toContain('undefined');
+  });
+
+  it('passes all-projects default scope to the runtime CLI', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          runtimeId: 'opencode',
+          title: 'OpenCode',
+          runtime: {
+            state: 'ready',
+            cliPath: '/opt/homebrew/bin/opencode',
+            version: '1.0.0',
+            managedProfile: 'active',
+            localAuth: 'synced',
+          },
+          providers: [],
+          configuredModels: [],
+          projectPath: '/Users/test/project',
+          projectDefaultModel: null,
+          allProjectsDefaultModel: 'openrouter/qwen/qwen3-coder',
+          defaultModelSource: 'all_projects',
+          defaultModel: 'openrouter/qwen/qwen3-coder',
+          fallbackModel: null,
+          diagnostics: [],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    await client.setDefaultModel({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      modelId: 'openrouter/qwen/qwen3-coder',
+      scope: 'all_projects',
+      projectPath: '/Users/test/project',
+    });
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/repo/cli-dev',
+      expect.arrayContaining(['--scope', 'all-projects']),
+      expect.objectContaining({ cwd: '/Users/test/project' })
+    );
   });
 
   it('loads provider setup forms through the CLI contract', async () => {

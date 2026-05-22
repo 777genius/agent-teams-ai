@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
+import { describe, expect, it } from 'vitest';
 
 import type { TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
@@ -82,6 +81,19 @@ describe('team list status', () => {
         ['atlas-hq-10'],
         null,
         { 'atlas-hq-10': 'offline' },
+        nowMs
+      )
+    ).toBe('offline');
+  });
+
+  it('does not let stale aliveList data override stopped runtime progress', () => {
+    expect(
+      resolveTeamStatus(
+        team(),
+        'atlas-hq-10',
+        ['atlas-hq-10'],
+        progress('disconnected', '2026-04-28T19:59:45.000Z'),
+        {},
         nowMs
       )
     ).toBe('offline');

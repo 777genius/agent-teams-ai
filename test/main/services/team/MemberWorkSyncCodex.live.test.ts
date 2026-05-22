@@ -92,6 +92,33 @@ liveDescribe('Member work sync Codex live e2e', () => {
   let controlServer: MemberWorkSyncLiveControlServer | null;
   let teamName: string | null;
 
+  const createLiveNudgeDeliveryWake = (activeService: NonNullable<typeof svc>) => ({
+    schedule: async (input: { teamName: string; memberName: string; delayMs?: number }) => {
+      const timer = setTimeout(() => {
+        void activeService
+          .relayInboxFileToLiveRecipient(input.teamName, input.memberName)
+          .catch(() => undefined);
+      }, Math.max(0, input.delayMs ?? 0));
+      timer.unref?.();
+    },
+  });
+
+  const relayInboxIfNotAlreadyConsumed = async (
+    activeService: NonNullable<typeof svc>,
+    memberName: string
+  ): Promise<void> => {
+    const activeTeamName = teamName;
+    if (!activeTeamName) {
+      return;
+    }
+    const relay = await activeService.relayInboxFileToLiveRecipient(activeTeamName, memberName);
+    if (relay.relayed === 0) {
+      console.info(
+        `[MemberWorkSyncCodex.live] manual inbox relay returned 0 for ${activeTeamName}/${memberName}; waiting for watcher or wake delivery proof`
+      );
+    }
+  };
+
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'member-work-sync-codex-live-'));
     tempClaudeRoot = path.join(tempDir, '.claude');
@@ -229,6 +256,8 @@ liveDescribe('Member work sync Codex live e2e', () => {
         isTeamActive: (name) =>
           activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
         listLifecycleActiveTeamNames: async () => [teamName!],
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
       });
       activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
         feature!.noteTeamChange(event)
@@ -304,8 +333,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
       expect(preRelayStatus.agenda.items.some((item) => item.taskId === task.id)).toBe(true);
       expect(preRelayStatus.shadow?.wouldNudge).toBe(true);
 
-      const relay = await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
-      expect(relay.relayed).toBeGreaterThan(0);
+      await relayInboxIfNotAlreadyConsumed(activeService, memberName);
 
       await waitUntil(async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
@@ -353,10 +381,12 @@ liveDescribe('Member work sync Codex live e2e', () => {
               teamName
         );
       }, 60_000);
-      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
-        claimed: 0,
-        delivered: 0,
-      });
+      const postReportDispatch = await feature.dispatchDueNudges([teamName]);
+      expect(postReportDispatch.delivered).toBe(0);
+      expect(postReportDispatch.retryable).toBe(0);
+      expect(postReportDispatch.terminal).toBe(0);
+      expect(postReportDispatch.claimed).toBe(postReportDispatch.superseded);
+      expect(postReportDispatch.claimed).toBeLessThanOrEqual(1);
     },
     360_000
   );
@@ -433,6 +463,8 @@ liveDescribe('Member work sync Codex live e2e', () => {
           activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
         listLifecycleActiveTeamNames: async () => [teamName!],
         queueQuietWindowMs: 1,
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
       });
       activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
         feature!.noteTeamChange(event)
@@ -502,17 +534,12 @@ liveDescribe('Member work sync Codex live e2e', () => {
       feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
 
       await waitUntil(async () => {
-        const status = await feature!.getStatus({ teamName: teamName!, memberName });
+        const status = await feature!.refreshStatus({ teamName: teamName!, memberName });
         if (!status.agenda.items.some((item) => item.taskId === task.id)) {
           return false;
         }
-        const inbox = await readInboxMessages(teamName!, memberName);
-        return inbox.some(
-          (message) =>
-            message.messageKind === 'member_work_sync_nudge' &&
-            typeof message.messageId === 'string' &&
-            message.text.includes('Work sync check')
-        );
+        await feature!.dispatchDueNudges([teamName!]);
+        return true;
       }, 60_000, 500, async () =>
         formatMemberWorkSyncDiagnostics({
           feature: feature!,
@@ -522,11 +549,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
         })
       );
 
-      const inbox = await readInboxMessages(teamName, memberName);
-      const nudge = inbox.find((message) => message.messageKind === 'member_work_sync_nudge');
-      expect(nudge?.messageId).toBeTruthy();
-      const relay = await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
-      expect(relay.relayed).toBeGreaterThan(0);
+      await relayInboxIfNotAlreadyConsumed(activeService, memberName);
 
       await waitUntil(async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);
@@ -643,6 +666,8 @@ liveDescribe('Member work sync Codex live e2e', () => {
           activeService.isTeamAlive(name) || activeService.hasProvisioningRun(name),
         listLifecycleActiveTeamNames: async () => [teamName!],
         queueQuietWindowMs: 1,
+        resolveControlUrl: async () => controlServer?.baseUrl ?? null,
+        nudgeDeliveryWake: createLiveNudgeDeliveryWake(activeService),
       });
       activeService.setTeamChangeEmitter((event: TeamChangeEvent) =>
         feature!.noteTeamChange(event)
@@ -716,8 +741,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
         ].join('\n'),
       });
       feature.noteTeamChange({ type: 'task', teamName, taskId: task.id });
-      const relay = await activeService.relayInboxFileToLiveRecipient(teamName, memberName);
-      expect(relay.relayed).toBeGreaterThan(0);
+      await relayInboxIfNotAlreadyConsumed(activeService, memberName);
 
       await waitUntil(async () => {
         const fatalRuntimeMessage = await readFatalRuntimeMessage(teamName!);

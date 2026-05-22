@@ -193,6 +193,47 @@ describe('buildProviderAwareCliEnv', () => {
     );
   });
 
+  it('passes a stored API key decrypt allowlist through provider env building', async () => {
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    await buildProviderAwareCliEnv({
+      providerId: 'anthropic',
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+    });
+
+    expect(applyConfiguredConnectionEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        CLAUDE_CODE_ENTRY_PROVIDER: 'anthropic',
+      }),
+      'anthropic',
+      undefined,
+      {
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      }
+    );
+  });
+
+  it('passes a stored API key decrypt allowlist through augment env building', async () => {
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    await buildProviderAwareCliEnv({
+      connectionMode: 'augment',
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+    });
+
+    expect(augmentAllConfiguredConnectionEnvMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        allowStoredApiKeyDecryption: false,
+        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
+      }
+    );
+    expect(applyAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
   it('builds shared env for generic CLI launches when no provider is specified', async () => {
     const { buildProviderAwareCliEnv } =
       await import('../../../../src/main/services/runtime/providerAwareCliEnv');
@@ -383,6 +424,75 @@ describe('buildProviderAwareCliEnv', () => {
       '--settings',
       '{"codex":{"forced_login_method":"chatgpt"}}',
     ]);
+  });
+
+  it('passes Codex env refreshed by strict credential application into launch args and issue checks', async () => {
+    applyConfiguredConnectionEnvMock.mockImplementation(
+      async (env: NodeJS.ProcessEnv, providerId: string) => {
+        expect(providerId).toBe('codex');
+        env.CODEX_CLI_PATH = '/Users/tester/.local/bin/codex';
+        env.CODEX_HOME = '/Users/tester/.codex-custom';
+        env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD = 'chatgpt';
+        delete env.OPENAI_API_KEY;
+        delete env.CODEX_API_KEY;
+        return env;
+      }
+    );
+    getConfiguredConnectionLaunchArgsMock.mockResolvedValue([
+      '-c',
+      'forced_login_method="chatgpt"',
+    ]);
+
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await buildProviderAwareCliEnv({
+      binaryPath: '/mock/claude-multimodel',
+      providerId: 'codex',
+      env: {
+        OPENAI_API_KEY: 'ambient-openai-key',
+        CODEX_API_KEY: 'ambient-codex-key',
+      },
+    });
+
+    const launchArgsEnv = getConfiguredConnectionLaunchArgsMock.mock.calls[0]?.[0] as
+      | NodeJS.ProcessEnv
+      | undefined;
+    expect(launchArgsEnv).toBeDefined();
+    expect(launchArgsEnv).toMatchObject({
+      CODEX_CLI_PATH: '/Users/tester/.local/bin/codex',
+      CODEX_HOME: '/Users/tester/.codex-custom',
+      CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+    });
+    expect(launchArgsEnv?.OPENAI_API_KEY).toBeUndefined();
+    expect(launchArgsEnv?.CODEX_API_KEY).toBeUndefined();
+    expect(getConfiguredConnectionLaunchArgsMock).toHaveBeenCalledWith(
+      launchArgsEnv,
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+    const connectionIssuesEnv = getConfiguredConnectionIssuesMock.mock.calls[0]?.[0] as
+      | NodeJS.ProcessEnv
+      | undefined;
+    expect(connectionIssuesEnv).toBeDefined();
+    expect(connectionIssuesEnv).toMatchObject({
+      CODEX_CLI_PATH: '/Users/tester/.local/bin/codex',
+      CODEX_HOME: '/Users/tester/.codex-custom',
+      CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+    });
+    expect(connectionIssuesEnv?.OPENAI_API_KEY).toBeUndefined();
+    expect(connectionIssuesEnv?.CODEX_API_KEY).toBeUndefined();
+    expect(getConfiguredConnectionIssuesMock).toHaveBeenCalledWith(
+      connectionIssuesEnv,
+      ['codex'],
+      { codex: undefined }
+    );
+    expect(result.env.CODEX_CLI_PATH).toBe('/Users/tester/.local/bin/codex');
+    expect(result.env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
+    expect(result.env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('chatgpt');
+    expect(result.env.OPENAI_API_KEY).toBeUndefined();
+    expect(result.env.CODEX_API_KEY).toBeUndefined();
+    expect(result.providerArgs).toEqual(['-c', 'forced_login_method="chatgpt"']);
   });
 
   it('injects the verified app-managed OpenCode binary for OpenCode launches', async () => {

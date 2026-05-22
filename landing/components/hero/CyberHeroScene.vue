@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import {
-  heroAgents,
+  getLocalizedHeroAgents,
   type HeroAgentRole,
   type HeroMessage,
   type HeroMessagePhase,
 } from "~/data/heroScene";
+
+const { locale } = useI18n();
+const localizedHeroAgents = computed(() => getLocalizedHeroAgents(locale.value));
 
 const props = defineProps<{
   message: HeroMessage | null;
@@ -26,7 +29,7 @@ const activeReceiver = computed<HeroAgentRole | "video" | null>(() => (
 
     <div class="cyber-scene__robots">
       <CyberHeroRobot
-        v-for="agent in heroAgents"
+        v-for="agent in localizedHeroAgents"
         :key="agent.id"
         :agent="agent"
         :active-sender="activeSender"

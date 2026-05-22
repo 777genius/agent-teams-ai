@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { promises as fsPromises } from 'fs';
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -774,6 +774,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
         messageId: 'm-work-sync-1',
         source: 'system_notification',
         messageKind: 'member_work_sync_nudge',
+        workSyncIntent: 'agenda_sync',
         taskRefs: [{ teamName, taskId: 'task-1', displayId: '11111111' }],
       },
     ]);
@@ -785,7 +786,9 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
 
     const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     expect(payload).toContain('Message kind: member_work_sync_nudge');
+    expect(payload).toContain('Work-sync intent: agenda_sync');
     expect(payload).toContain('it is actionable work-sync control traffic');
+    expect(payload).toContain('A member_work_sync_status call alone is incomplete');
     expect(payload).toContain(
       'Call member_work_sync_status with teamName=\\"my-team\\", memberName=\\"team-lead\\", controlUrl=\\"http://127.0.0.1:43123\\"'
     );
@@ -2889,6 +2892,207 @@ Messages:
     );
     const rows = JSON.parse(hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]');
     expect(rows.map((row: { read?: boolean }) => row.read)).toEqual([false, true]);
+  });
+
+  it('emits advisory refresh when a failed-terminal OpenCode row is recovered by visible reply proof', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const taskRefs = [{ teamName, taskId: 'task-recovered', displayId: 'task-rec' }];
+    const ledgerRecord = {
+      id: 'ledger-terminal-recovered',
+      teamName,
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      runId: 'run-1',
+      runtimeSessionId: 'ses-1',
+      inboxMessageId: 'opencode-terminal-recovered',
+      inboxTimestamp: '2026-02-23T17:00:00.000Z',
+      source: 'watcher',
+      messageKind: null,
+      replyRecipient: 'team-lead',
+      actionMode: null,
+      taskRefs,
+      payloadHash: 'sha256:test',
+      status: 'failed_terminal',
+      responseState: 'session_stale',
+      attempts: 1,
+      maxAttempts: 3,
+      acceptanceUnknown: false,
+      nextAttemptAt: null,
+      lastAttemptAt: '2026-02-23T17:00:03.000Z',
+      lastObservedAt: '2026-02-23T17:00:05.000Z',
+      acceptedAt: '2026-02-23T17:00:03.000Z',
+      respondedAt: null,
+      failedAt: '2026-02-23T17:00:08.000Z',
+      inboxReadCommittedAt: null,
+      inboxReadCommitError: null,
+      prePromptCursor: null,
+      postPromptCursor: null,
+      deliveredUserMessageId: 'runtime-user-1',
+      observedAssistantMessageId: null,
+      observedAssistantPreview: null,
+      observedToolCallNames: [],
+      observedVisibleMessageId: null,
+      visibleReplyMessageId: null,
+      visibleReplyInbox: null,
+      visibleReplyCorrelation: null,
+      lastReason: 'opencode_session_stale_observe_loop_after_accepted_prompt',
+      diagnostics: ['opencode_session_stale_observe_loop_after_accepted_prompt'],
+      createdAt: '2026-02-23T17:00:00.000Z',
+      updatedAt: '2026-02-23T17:00:08.000Z',
+    };
+    const visibleReply = {
+      inboxName: 'team-lead',
+      message: {
+        from: 'jack',
+        to: 'team-lead',
+        text: 'Recovered visible reply with task results.',
+        summary: '#task-rec done',
+        timestamp: '2026-02-23T17:01:00.000Z',
+        read: true,
+        source: 'runtime_delivery',
+        relayOfMessageId: 'opencode-terminal-recovered',
+        messageId: 'visible-reply-recovered',
+        taskRefs,
+      },
+    };
+    vi.spyOn(service as any, 'findOpenCodeVisibleReplyByRelayOfMessageId').mockResolvedValue(
+      visibleReply
+    );
+    const applyDestinationProof = vi.fn(async (input: Record<string, unknown>) => ({
+      ...ledgerRecord,
+      status: 'responded',
+      responseState: 'responded_visible_message',
+      failedAt: null,
+      lastReason: null,
+      visibleReplyInbox: input.visibleReplyInbox,
+      visibleReplyMessageId: input.visibleReplyMessageId,
+      visibleReplyCorrelation: input.visibleReplyCorrelation,
+      inboxReadCommittedAt: '2026-02-23T17:01:01.000Z',
+      respondedAt: input.observedAt,
+      updatedAt: input.observedAt,
+    }));
+    const advisoryInvalidator = vi.fn();
+    const teamChangeEmitter = vi.fn();
+    service.setMemberRuntimeAdvisoryInvalidator(advisoryInvalidator);
+    service.setTeamChangeEmitter(teamChangeEmitter);
+
+    const result = await (service as any).applyOpenCodeVisibleDestinationProof({
+      ledger: { applyDestinationProof },
+      ledgerRecord,
+      teamName,
+      replyRecipient: 'team-lead',
+      memberName: 'jack',
+    });
+
+    expect(result.visibleReply).toBe(visibleReply);
+    expect(result.ledgerRecord.status).toBe('responded');
+    expect(applyDestinationProof).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'ledger-terminal-recovered',
+        visibleReplyInbox: 'team-lead',
+        visibleReplyMessageId: 'visible-reply-recovered',
+        visibleReplyCorrelation: 'relayOfMessageId',
+        semanticallySufficient: true,
+      })
+    );
+    expect(advisoryInvalidator).toHaveBeenCalledWith(teamName, 'jack');
+    expect(teamChangeEmitter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'member-advisory',
+        teamName,
+        detail: 'runtime-delivery-reply:jack:opencode-terminal-recovered',
+      })
+    );
+  });
+
+  it('does not emit advisory refresh again for already proven OpenCode visible replies', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    const ledgerRecord = {
+      id: 'ledger-already-proven',
+      teamName,
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      runId: 'run-1',
+      runtimeSessionId: 'ses-1',
+      inboxMessageId: 'opencode-already-proven',
+      inboxTimestamp: '2026-02-23T17:00:00.000Z',
+      source: 'watcher',
+      messageKind: null,
+      replyRecipient: 'team-lead',
+      actionMode: null,
+      taskRefs: [],
+      payloadHash: 'sha256:test',
+      status: 'responded',
+      responseState: 'responded_visible_message',
+      attempts: 1,
+      maxAttempts: 3,
+      acceptanceUnknown: false,
+      nextAttemptAt: null,
+      lastAttemptAt: '2026-02-23T17:00:03.000Z',
+      lastObservedAt: '2026-02-23T17:01:00.000Z',
+      acceptedAt: '2026-02-23T17:00:03.000Z',
+      respondedAt: '2026-02-23T17:01:00.000Z',
+      failedAt: null,
+      inboxReadCommittedAt: '2026-02-23T17:01:01.000Z',
+      inboxReadCommitError: null,
+      prePromptCursor: null,
+      postPromptCursor: null,
+      deliveredUserMessageId: 'runtime-user-1',
+      observedAssistantMessageId: null,
+      observedAssistantPreview: null,
+      observedToolCallNames: [],
+      observedVisibleMessageId: null,
+      visibleReplyMessageId: 'visible-reply-proven',
+      visibleReplyInbox: 'team-lead',
+      visibleReplyCorrelation: 'relayOfMessageId',
+      lastReason: null,
+      diagnostics: [],
+      createdAt: '2026-02-23T17:00:00.000Z',
+      updatedAt: '2026-02-23T17:01:01.000Z',
+    };
+    const visibleReply = {
+      inboxName: 'team-lead',
+      message: {
+        from: 'jack',
+        to: 'team-lead',
+        text: 'Already proven visible reply.',
+        summary: '#done',
+        timestamp: '2026-02-23T17:01:00.000Z',
+        read: true,
+        source: 'runtime_delivery',
+        relayOfMessageId: 'opencode-already-proven',
+        messageId: 'visible-reply-proven',
+      },
+    };
+    vi.spyOn(service as any, 'findOpenCodeVisibleReplyByRelayOfMessageId').mockResolvedValue(
+      visibleReply
+    );
+    const applyDestinationProof = vi.fn(async () => ledgerRecord);
+    const advisoryInvalidator = vi.fn();
+    const teamChangeEmitter = vi.fn();
+    service.setMemberRuntimeAdvisoryInvalidator(advisoryInvalidator);
+    service.setTeamChangeEmitter(teamChangeEmitter);
+
+    const result = await (service as any).applyOpenCodeVisibleDestinationProof({
+      ledger: { applyDestinationProof },
+      ledgerRecord,
+      teamName,
+      replyRecipient: 'team-lead',
+      memberName: 'jack',
+    });
+
+    expect(result.visibleReply).toBe(visibleReply);
+    expect(applyDestinationProof).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'ledger-already-proven',
+        visibleReplyMessageId: 'visible-reply-proven',
+        semanticallySufficient: true,
+      })
+    );
+    expect(advisoryInvalidator).not.toHaveBeenCalled();
+    expect(teamChangeEmitter).not.toHaveBeenCalled();
   });
 
   it('retries failed-terminal OpenCode rows caused by stale runtime manifest watermark', async () => {

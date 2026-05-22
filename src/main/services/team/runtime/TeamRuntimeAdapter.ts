@@ -74,6 +74,7 @@ export type TeamRuntimePrepareResult = TeamRuntimePrepareSuccess | TeamRuntimePr
 export interface TeamRuntimeMemberLaunchEvidence {
   memberName: string;
   providerId: TeamRuntimeProviderId;
+  model?: string;
   launchState: MemberLaunchState;
   agentToolAccepted: boolean;
   runtimeAlive: boolean;

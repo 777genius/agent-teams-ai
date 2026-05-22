@@ -116,25 +116,17 @@ export function isOpenCodeCatalogHydrating(
     return false;
   }
 
-  if (provider.modelCatalog?.providerId === 'opencode' && provider.modelCatalog.models.length > 0) {
+  if (provider.modelCatalog?.providerId === 'opencode') {
     return false;
   }
 
-  if (
-    provider.modelCatalogRefreshState === 'ready' ||
-    provider.modelCatalogRefreshState === 'error'
-  ) {
+  if (provider.modelCatalogRefreshState === 'error') {
     return false;
   }
-
-  const hasOnlySummaryFallback =
-    provider.models.length === 0 ||
-    provider.models.every((model) => model.trim() === 'opencode/big-pickle');
 
   return (
-    hasOnlySummaryFallback &&
-    (provider.modelCatalogRefreshState === 'loading' ||
-      provider.runtimeCapabilities?.modelCatalog?.dynamic === true)
+    provider.modelCatalogRefreshState === 'loading' ||
+    provider.runtimeCapabilities?.modelCatalog?.dynamic === true
   );
 }
 
@@ -142,7 +134,7 @@ export function isConnectionManagedRuntimeProvider(provider: CliProviderStatus):
   return provider.providerId === 'codex';
 }
 
-function getCodexCurrentRuntimeLabel(provider: CliProviderStatus): string {
+function getCodexCurrentRuntimeLabel(): string {
   return CODEX_NATIVE_LABEL;
 }
 
@@ -213,7 +205,7 @@ export function getProviderCurrentRuntimeSummary(provider: CliProviderStatus): s
   }
 
   const prefix = provider.authenticated ? 'Current runtime' : 'Selected runtime';
-  return `${prefix}: ${getCodexCurrentRuntimeLabel(provider)}`;
+  return `${prefix}: ${getCodexCurrentRuntimeLabel()}`;
 }
 
 export function formatProviderStatusText(provider: CliProviderStatus): string {

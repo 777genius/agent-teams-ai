@@ -1,8 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GraphActivityHud } from '@features/agent-graph/renderer/ui/GraphActivityHud';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 import type { InboxMessage } from '@shared/types/team';
@@ -358,6 +358,91 @@ describe('GraphActivityHud', () => {
     expect(shell).not.toBeNull();
     expect((shell as HTMLDivElement).style.left).toBe(`${laneRect.left}px`);
     expect((shell as HTMLDivElement).style.top).toBe(`${laneRect.top}px`);
+    expect(host.querySelector('[data-activity-connector="member:demo-team:jack"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('hides owner-to-activity connector when static graph edges are hidden', async () => {
+    const message: InboxMessage = {
+      from: 'team-lead',
+      to: 'jack',
+      text: 'Latest log',
+      summary: 'Latest log',
+      timestamp: '2026-04-13T13:36:00.000Z',
+      read: false,
+      messageId: 'msg-latest',
+    };
+    buildInlineActivityEntries.mockReturnValue(
+      new Map([
+        [
+          'member:demo-team:jack',
+          [
+            {
+              ownerNodeId: 'member:demo-team:jack',
+              graphItem: {
+                id: 'item-1',
+                kind: 'inbox_message',
+                timestamp: message.timestamp,
+                title: message.summary ?? '',
+              },
+              message,
+            },
+          ],
+        ],
+      ])
+    );
+
+    const node: GraphNode = {
+      id: 'member:demo-team:jack',
+      kind: 'member',
+      label: 'jack',
+      state: 'active',
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'jack' },
+      activityItems: [
+        {
+          id: 'item-1',
+          kind: 'inbox_message',
+          timestamp: message.timestamp,
+          title: 'Latest log',
+        },
+      ],
+      activityOverflowCount: 0,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphActivityHud, {
+          teamName: 'demo-team',
+          nodes: [node],
+          getActivityWorldRect: () => ({
+            left: 120,
+            top: 340,
+            right: 416,
+            bottom: 632,
+            width: 296,
+            height: 292,
+          }),
+          getCameraZoom: () => 1,
+          getNodeWorldPosition: () => ({ x: 320, y: 300 }),
+          getViewportSize: () => ({ width: 1200, height: 800 }),
+          worldToScreen: (x: number, y: number) => ({ x, y }),
+          focusNodeIds: null,
+          showConnectors: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('.z-10')).not.toBeNull();
+    expect(host.querySelector('[data-activity-connector="member:demo-team:jack"]')).toBeNull();
 
     await act(async () => {
       root.unmount();

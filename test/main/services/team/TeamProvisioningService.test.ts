@@ -10460,7 +10460,7 @@ describe('TeamProvisioningService', () => {
         responseState: 'responded_visible_message',
         visibleReplyMessageId: 'reply-user-1',
         visibleReplyCorrelation: 'relayOfMessageId',
-        diagnostics: [],
+        diagnostics: ['visible_message_sent'],
       });
       expect(sendMessageToMember).toHaveBeenCalledTimes(1);
       expect(sendMessageToMember).toHaveBeenCalledWith(
@@ -15354,7 +15354,7 @@ describe('TeamProvisioningService', () => {
 
       expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
         projectPath,
-        configuredMember.mcpPolicy
+        expect.objectContaining({ mcpPolicy: configuredMember.mcpPolicy })
       );
       const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
       expect(launchArgs).toEqual(
@@ -15731,7 +15731,10 @@ describe('TeamProvisioningService', () => {
       )
     ).rejects.toThrow('spawn EINVAL');
 
-    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot);
+    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+      tempClaudeRoot,
+      expect.objectContaining({ controlApiBaseUrl: undefined })
+    );
     expect(mcpConfigBuilder.removeConfigFile).toHaveBeenCalledWith('/mock/mcp-config-create.json');
     expect(teamMetaStore.deleteMeta).toHaveBeenCalledWith('cleanup-team');
   });
@@ -15951,6 +15954,21 @@ describe('TeamProvisioningService', () => {
       };
     }
 
+    function getMockMcpPolicyMode(optionsOrPolicy: unknown): string | undefined {
+      if (!optionsOrPolicy || typeof optionsOrPolicy !== 'object') {
+        return undefined;
+      }
+      const record = optionsOrPolicy as { mode?: unknown; mcpPolicy?: unknown };
+      if (typeof record.mode === 'string') {
+        return record.mode;
+      }
+      if (record.mcpPolicy && typeof record.mcpPolicy === 'object') {
+        const policy = record.mcpPolicy as { mode?: unknown };
+        return typeof policy.mode === 'string' ? policy.mode : undefined;
+      }
+      return undefined;
+    }
+
     it('materializes members.meta.json before config normalization for a repairable legacy launch', async () => {
       allowConsoleLogs();
       const teamName = 'legacy-pure-launch-repair';
@@ -16163,10 +16181,7 @@ describe('TeamProvisioningService', () => {
 
       const { svc, mcpConfigBuilder } = createSafeLaunchService();
       mcpConfigBuilder.writeConfigFile.mockImplementation(async (_projectPath, policy) => {
-        const mode =
-          policy && typeof policy === 'object' && 'mode' in policy
-            ? (policy as { mode?: unknown }).mode
-            : undefined;
+        const mode = getMockMcpPolicyMode(policy);
         if (mode === 'appOnly') return '/mock/member-mcp-app-only.json';
         if (mode === 'inheritScopes') return '/mock/member-mcp-local-only.json';
         if (mode === 'strictAllowlist') return '/mock/member-mcp-strict.json';
@@ -16230,18 +16245,87 @@ describe('TeamProvisioningService', () => {
           strictMcpConfig: true,
         }),
       ]);
-      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot, {
-        mode: 'appOnly',
+      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+        tempClaudeRoot,
+        expect.objectContaining({ mcpPolicy: { mode: 'appOnly' } })
+      );
+      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+        tempClaudeRoot,
+        expect.objectContaining({
+          mcpPolicy: {
+            mode: 'inheritScopes',
+            scopes: { user: false, project: false, local: true },
+          },
+        })
+      );
+      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+        tempClaudeRoot,
+        expect.objectContaining({
+          mcpPolicy: {
+            mode: 'strictAllowlist',
+            serverNames: ['github'],
+          },
+        })
+      );
+      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+        tempClaudeRoot,
+        expect.objectContaining({ controlApiBaseUrl: undefined })
+      );
+
+      await svc.cancelProvisioning(runId);
+    });
+
+    it('preserves Agent Teams MCP only from members meta when relaunch config has no mcpPolicy', async () => {
+      allowConsoleLogs();
+      const teamName = 'safe-member-mcp-policy-meta-relaunch';
+      const leadSessionId = 'safe-member-mcp-policy-meta-session';
+      writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, ['alice']);
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+      vi.mocked(spawnCli).mockReturnValue(createRunningChild() as any);
+
+      const { svc, mcpConfigBuilder, membersMetaStore } = createSafeLaunchService();
+      membersMetaStore.getMembers.mockResolvedValue([
+        {
+          name: 'alice',
+          providerId: 'codex',
+          model: 'gpt-5.4-mini',
+          mcpPolicy: { mode: 'appOnly' },
+        },
+      ] as never);
+      mcpConfigBuilder.writeConfigFile.mockImplementation(async (_projectPath, policy) => {
+        const mode = getMockMcpPolicyMode(policy);
+        return mode === 'appOnly'
+          ? '/mock/member-mcp-app-only.json'
+          : '/mock/lead-mcp-config.json';
       });
-      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot, {
-        mode: 'inheritScopes',
-        scopes: { user: false, project: false, local: true },
-      });
-      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot, {
-        mode: 'strictAllowlist',
-        serverNames: ['github'],
-      });
-      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot);
+
+      const { runId } = await svc.launchTeam(
+        {
+          teamName,
+          cwd: tempClaudeRoot,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+        },
+        () => {}
+      );
+
+      const spawnArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+      const bootstrapSpec = readBootstrapSpecFromSpawnArgs(spawnArgs);
+      expect(bootstrapSpec.members).toEqual([
+        expect.objectContaining({
+          name: 'alice',
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          mcpConfigPath: '/mock/member-mcp-app-only.json',
+          mcpSettingSources: 'user,project,local',
+          strictMcpConfig: true,
+        }),
+      ]);
+      expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+        tempClaudeRoot,
+        expect.objectContaining({ mcpPolicy: { mode: 'appOnly' } })
+      );
 
       await svc.cancelProvisioning(runId);
     });
@@ -17313,7 +17397,10 @@ describe('TeamProvisioningService', () => {
       'launch spawn EINVAL'
     );
 
-    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot);
+    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
+      tempClaudeRoot,
+      expect.objectContaining({ controlApiBaseUrl: undefined })
+    );
     expect(mcpConfigBuilder.removeConfigFile).toHaveBeenCalledWith('/mock/mcp-config-launch.json');
     expect(restorePrelaunchConfig).toHaveBeenCalledWith(teamName);
   });
@@ -17387,7 +17474,11 @@ describe('TeamProvisioningService', () => {
     await vi.advanceTimersByTimeAsync(2000);
     await respawnPromise;
 
-    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenNthCalledWith(2, tempClaudeRoot);
+    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenNthCalledWith(
+      2,
+      tempClaudeRoot,
+      expect.objectContaining({ controlApiBaseUrl: undefined })
+    );
     expect(run.spawnContext.args[mcpFlagIdx + 1]).toBe('/regenerated/mcp-config.json');
     expect(run.mcpConfigPath).toBe('/regenerated/mcp-config.json');
     expect(vi.mocked(spawnCli)).toHaveBeenNthCalledWith(

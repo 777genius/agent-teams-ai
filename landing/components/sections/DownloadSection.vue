@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { mdiApple, mdiMicrosoftWindows, mdiPenguin, mdiDownload, mdiCheckCircle } from '@mdi/js';
 import robotAvatarSeatedMagenta from '~/assets/images/hero/robots/robot-avatar-seated-magenta-v1.webp';
-import { downloadAssets } from '~/data/downloads';
 import type { DownloadOs, DownloadArch } from '~/data/downloads';
 
 const { content } = useLandingContent();
@@ -10,6 +9,7 @@ const downloadStore = useDownloadStore();
 const { data: releaseData, resolve } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { releaseDownloadUrl } = useGithubRepo();
+const { getDownloadArch, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
 const isMounted = ref(false);
 const showLinuxRobotMessage = ref(false);
 const showFallingLinuxRobot = ref(false);
@@ -236,34 +236,10 @@ const platformColors: Record<string, string> = {
   linux: '#ffd700',
 };
 
-const visibleAssets = computed(() => {
-  const enriched = downloadAssets.map((asset) => {
-    if (asset.os !== 'macos') return { ...asset };
-    if (!downloadStore.isMacOs) return { ...asset };
-    return {
-      ...asset,
-      archLabel: downloadStore.macArch === 'arm64' ? 'Apple Silicon' : 'Intel',
-    };
-  });
-
-  // Reorder so detected OS is always in the center (index 1)
-  const detectedIdx = enriched.findIndex((a) => a.id === downloadStore.selectedId);
-  if (detectedIdx === -1 || detectedIdx === 1) return enriched;
-
-  const result = [...enriched];
-  const [detected] = result.splice(detectedIdx, 1);
-  const [first, ...rest] = result;
-  return [first, detected, ...rest];
-});
-
-const getDownloadUrl = (asset: { os: string; arch: string; fileName: string }) => {
+const getDownloadUrl = (asset: { os: DownloadOs; arch: DownloadArch; fileName: string }) => {
   if (!isMounted.value) return releaseDownloadUrl(asset.fileName);
-  const arch = (asset.os === 'macos' ? downloadStore.macArch : asset.arch) as DownloadArch;
-  return resolve(asset.os as DownloadOs, arch)?.url || releaseDownloadUrl(asset.fileName);
-};
-
-const getDownloadArch = (asset: { os: string; arch: string }) => {
-  return asset.os === 'macos' ? downloadStore.macArch : asset.arch;
+  const arch = getDownloadArch(asset);
+  return resolve(asset.os, arch)?.url || releaseDownloadUrl(asset.fileName);
 };
 
 const releaseVersion = computed(() => releaseData.value?.version || null);
@@ -275,6 +251,7 @@ const releaseDate = computed(() => {
     day: 'numeric',
   });
 });
+const linuxRobotBubble = computed(() => locale.value === 'ru' ? 'Готов начать!' : 'Ready to start!');
 
 </script>
 
@@ -319,7 +296,7 @@ const releaseDate = computed(() => {
                 class="download-section__card-robot-bubble"
                 tail="right"
               >
-                Готов начать!
+                {{ linuxRobotBubble }}
               </RobotSpeechBubble>
             </Transition>
             <img

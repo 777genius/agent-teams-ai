@@ -131,6 +131,10 @@ const GET_STATUS_TIMEOUT_MS = 30_000;
 /** Overall timeout for the auth status check (covers both attempts + retry delay) (ms) */
 const AUTH_TOTAL_TIMEOUT_MS = 15_000;
 
+/** Initial multimodel provider status budget for startup metadata (final status hydrates async). */
+const MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS = 1_500;
+const GET_STATUS_TIMING_LOG_THRESHOLD_MS = 2_000;
+
 /** Max retries for EBUSY (antivirus scanning the new binary) */
 const EBUSY_MAX_RETRIES = 3;
 
@@ -224,10 +228,16 @@ function mergeProviderStatusCatalogCache(
 ): CliProviderStatus {
   const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
   const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
+  const shouldPreserveCurrentModels =
+    incomingProvider.models.length === 0 ||
+    (incomingProvider.providerId === 'opencode' &&
+      incomingProvider.modelCatalog == null &&
+      incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+      currentProvider.models.length > incomingProvider.models.length);
 
   return {
     ...incomingProvider,
-    models: incomingProvider.models.length > 0 ? incomingProvider.models : currentProvider.models,
+    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
     modelCatalog,
     modelCatalogRefreshState:
       modelCatalog && incomingRefreshState !== 'error'
@@ -391,6 +401,12 @@ interface CliInstallerStatusRunDiag {
   authStdoutTail: string;
   authTimedOut: boolean;
   gatherError: string | null;
+  shellEnvMs: number | null;
+  binaryResolveMs: number | null;
+  versionProbeMs: number | null;
+  providerInitialWaitMs: number | null;
+  totalMs: number | null;
+  diagWriteScheduled: boolean;
 }
 
 function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
@@ -402,6 +418,12 @@ function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
     authStdoutTail: '',
     authTimedOut: false,
     gatherError: null,
+    shellEnvMs: null,
+    binaryResolveMs: null,
+    versionProbeMs: null,
+    providerInitialWaitMs: null,
+    totalMs: null,
+    diagWriteScheduled: false,
   };
 }
 
@@ -413,6 +435,16 @@ function resetGatherDiag(diag: CliInstallerStatusRunDiag): void {
   diag.authStdoutTail = '';
   diag.authTimedOut = false;
   diag.gatherError = null;
+  diag.shellEnvMs = null;
+  diag.binaryResolveMs = null;
+  diag.versionProbeMs = null;
+  diag.providerInitialWaitMs = null;
+  diag.totalMs = null;
+  diag.diagWriteScheduled = false;
+}
+
+function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstallerStatusRunDiag {
+  return { ...diag };
 }
 
 // =============================================================================
@@ -431,6 +463,7 @@ export class CliInstallerService {
   private latestStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusObservedAt = 0;
+  private statusGatherGeneration = 0;
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
 
   private rememberHealthyStatus(status: CliInstallationStatus): void {
@@ -518,7 +551,51 @@ export class CliInstallerService {
       authStdoutTail: clipTailForDiag(diag.authStdoutTail, DIAG_AUTH_STDOUT_TAIL),
       authProbeTimedOut: diag.authTimedOut,
       gatherThrownError: diag.gatherError,
+      shellEnvMs: diag.shellEnvMs,
+      binaryResolveMs: diag.binaryResolveMs,
+      versionProbeMs: diag.versionProbeMs,
+      providerInitialWaitMs: diag.providerInitialWaitMs,
+      totalMs: diag.totalMs,
+      diagWriteScheduled: diag.diagWriteScheduled,
     });
+  }
+
+  private scheduleCliInstallerStatusDiag(
+    r: CliInstallationStatus,
+    diag: CliInstallerStatusRunDiag
+  ): void {
+    const statusForDiag = cloneCliInstallationStatus(r);
+    const diagForWrite = cloneCliInstallerRunDiag(diag);
+
+    queueMicrotask(() => {
+      const writeStartedAt = Date.now();
+      void this.writeCliInstallerStatusDiag(statusForDiag, diagForWrite)
+        .then(() => {
+          const diagWriteMs = Date.now() - writeStartedAt;
+          if (diagWriteMs >= GET_STATUS_TIMING_LOG_THRESHOLD_MS) {
+            logger.warn(`getStatus diagnostic write slow diagWriteMs=${diagWriteMs}`);
+          }
+        })
+        .catch((diagErr) => {
+          logger.error('writeCliInstallerStatusDiag failed:', getErrorMessage(diagErr));
+        });
+    });
+  }
+
+  private logGetStatusTimingIfSlow(diag: CliInstallerStatusRunDiag): void {
+    const totalMs = diag.totalMs ?? 0;
+    if (totalMs < GET_STATUS_TIMING_LOG_THRESHOLD_MS && !diag.authTimedOut) {
+      return;
+    }
+
+    logger.warn(
+      `getStatus timing totalMs=${totalMs}` +
+        ` shellEnvMs=${diag.shellEnvMs ?? 'n/a'}` +
+        ` binaryResolveMs=${diag.binaryResolveMs ?? 'n/a'}` +
+        ` versionProbeMs=${diag.versionProbeMs ?? 'n/a'}` +
+        ` providerInitialWaitMs=${diag.providerInitialWaitMs ?? 'n/a'}` +
+        ` diagWriteScheduled=${diag.diagWriteScheduled}`
+    );
   }
 
   setMainWindow(window: BrowserWindow | null): void {
@@ -530,6 +607,7 @@ export class CliInstallerService {
   }
 
   invalidateStatusCache(): void {
+    this.statusGatherGeneration += 1;
     this.latestStatusSnapshot = null;
     this.latestProviderSignatures.clear();
     this.modelAvailabilityService.invalidate();
@@ -606,6 +684,14 @@ export class CliInstallerService {
       type: 'status',
       status: cloneCliInstallationStatus(this.latestStatusSnapshot),
     });
+  }
+
+  private publishStatusSnapshotIfCurrent(status: CliInstallationStatus, generation: number): void {
+    if (generation !== this.statusGatherGeneration) {
+      return;
+    }
+
+    this.publishStatusSnapshot(status);
   }
 
   private buildProviderModelAvailabilityContext(
@@ -734,6 +820,18 @@ export class CliInstallerService {
     };
   }
 
+  private updateLatestProviderStatusIfCurrent(
+    providerStatus: CliProviderStatus,
+    generation: number
+  ): boolean {
+    if (generation !== this.statusGatherGeneration) {
+      return false;
+    }
+
+    this.updateLatestProviderStatus(providerStatus);
+    return true;
+  }
+
   private getLatestProviderStatusForModelVerification(
     providerId: CliProviderId,
     binaryPath: string,
@@ -771,6 +869,8 @@ export class CliInstallerService {
   // ---------------------------------------------------------------------------
 
   async getStatus(): Promise<CliInstallationStatus> {
+    const statusStartedAt = Date.now();
+    const generation = ++this.statusGatherGeneration;
     const result = this.createInitialStatus();
     this.latestProviderSignatures.clear();
     this.latestStatusSnapshot = cloneCliInstallationStatus(result);
@@ -782,7 +882,7 @@ export class CliInstallerService {
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
       await Promise.race([
-        this.gatherStatus(ref, runDiag),
+        this.gatherStatus(ref, runDiag, generation),
         new Promise<void>((resolve) => {
           timer = setTimeout(() => {
             logger.warn(
@@ -800,16 +900,19 @@ export class CliInstallerService {
       if (timer) {
         clearTimeout(timer);
       }
-      try {
-        await this.writeCliInstallerStatusDiag(result, runDiag);
-      } catch (diagErr) {
-        logger.error('writeCliInstallerStatusDiag failed:', getErrorMessage(diagErr));
-      }
+      runDiag.totalMs = Date.now() - statusStartedAt;
+      runDiag.diagWriteScheduled = true;
+      this.scheduleCliInstallerStatusDiag(result, runDiag);
+      this.logGetStatusTimingIfSlow(runDiag);
     }
   }
 
   async getProviderStatus(providerId: CliProviderId): Promise<CliProviderStatus | null> {
-    await resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv: process.env });
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
 
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (!binaryPath) {
@@ -822,6 +925,7 @@ export class CliInstallerService {
       return fullStatus.providers.find((provider) => provider.providerId === providerId) ?? null;
     }
 
+    const generation = this.statusGatherGeneration;
     const versionProbe = await this.probeCliVersion(binaryPath);
     if (!versionProbe.ok) {
       return null;
@@ -831,18 +935,24 @@ export class CliInstallerService {
       binaryPath,
       providerId,
       (hydratedProviderStatus) => {
-        this.updateLatestProviderStatus(hydratedProviderStatus);
+        if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
+          return;
+        }
         if (this.latestStatusSnapshot) {
           this.publishStatusSnapshot(this.latestStatusSnapshot);
         }
       }
     );
-    this.updateLatestProviderStatus(providerStatus);
+    this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
     return providerStatus;
   }
 
   async verifyProviderModels(providerId: CliProviderId): Promise<CliProviderStatus | null> {
-    await resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv: process.env });
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
 
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (!binaryPath) {
@@ -854,6 +964,7 @@ export class CliInstallerService {
       return this.getProviderStatus(providerId);
     }
 
+    const generation = this.statusGatherGeneration;
     const versionProbe = await this.probeCliVersion(binaryPath);
     if (!versionProbe.ok) {
       return null;
@@ -869,8 +980,10 @@ export class CliInstallerService {
         modelVerificationState: 'idle' as const,
         modelAvailability: [],
       };
-      this.updateLatestProviderStatus(nextProviderStatus);
-      if (this.latestStatusSnapshot) {
+      if (
+        this.updateLatestProviderStatusIfCurrent(nextProviderStatus, generation) &&
+        this.latestStatusSnapshot
+      ) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
       return nextProviderStatus;
@@ -882,13 +995,19 @@ export class CliInstallerService {
         binaryPath,
         versionProbe.version
       ) ?? (await this.multimodelBridgeService.getProviderStatus(binaryPath, providerId));
+    if (generation !== this.statusGatherGeneration) {
+      return providerStatus;
+    }
+
     const nextProviderStatus = this.applyProviderModelAvailabilityToProvider(
       binaryPath,
       versionProbe.version,
       providerStatus
     );
-    this.updateLatestProviderStatus(nextProviderStatus);
-    if (this.latestStatusSnapshot) {
+    if (
+      this.updateLatestProviderStatusIfCurrent(nextProviderStatus, generation) &&
+      this.latestStatusSnapshot
+    ) {
       this.publishStatusSnapshot(this.latestStatusSnapshot);
     }
     return nextProviderStatus;
@@ -903,32 +1022,43 @@ export class CliInstallerService {
    */
   private async gatherStatus(
     ref: { current: CliInstallationStatus },
-    diag: CliInstallerStatusRunDiag
+    diag: CliInstallerStatusRunDiag,
+    generation: number
   ): Promise<void> {
     resetGatherDiag(diag);
-    await resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv: process.env });
+    const shellEnvStartedAt = Date.now();
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
+    diag.shellEnvMs = Date.now() - shellEnvStartedAt;
 
     const r = ref.current;
+    const binaryResolveStartedAt = Date.now();
     const binaryPath = await ClaudeBinaryResolver.resolve();
+    diag.binaryResolveMs = Date.now() - binaryResolveStartedAt;
     if (binaryPath) {
       r.binaryPath = binaryPath;
+      const versionProbeStartedAt = Date.now();
       const versionProbe = await this.probeCliVersion(binaryPath);
+      diag.versionProbeMs = Date.now() - versionProbeStartedAt;
       if (versionProbe.ok) {
         r.installed = true;
         r.installedVersion = versionProbe.version;
         r.launchError = null;
         r.authStatusChecking = true;
         this.rememberHealthyStatus(r);
-        this.publishStatusSnapshot(r);
+        this.publishStatusSnapshotIfCurrent(r, generation);
 
         // Auth and GCS version check are independent — run in parallel.
         // Both mutate `r` directly so partial results survive the outer timeout.
         await Promise.all([
-          this.checkAuthStatus(binaryPath, r, diag),
+          this.checkAuthStatus(binaryPath, r, diag, generation),
           r.supportsSelfUpdate ? this.fetchLatestVersion(r) : Promise.resolve(),
         ]);
         this.rememberHealthyStatus(r);
-        this.publishStatusSnapshot(r);
+        this.publishStatusSnapshotIfCurrent(r, generation);
       } else {
         const recoveredHealthyStatus = this.getRecoverableHealthyStatus(binaryPath);
         if (recoveredHealthyStatus) {
@@ -938,7 +1068,7 @@ export class CliInstallerService {
           Object.assign(r, recoveredHealthyStatus, {
             launchError: null,
           });
-          this.publishStatusSnapshot(r);
+          this.publishStatusSnapshotIfCurrent(r, generation);
           return;
         }
 
@@ -957,7 +1087,7 @@ export class CliInstallerService {
         if (r.supportsSelfUpdate) {
           await this.fetchLatestVersion(r);
         }
-        this.publishStatusSnapshot(r);
+        this.publishStatusSnapshotIfCurrent(r, generation);
       }
     } else {
       // No binary — still check latest version for "install" prompt
@@ -967,7 +1097,7 @@ export class CliInstallerService {
       if (r.supportsSelfUpdate) {
         await this.fetchLatestVersion(r);
       }
-      this.publishStatusSnapshot(r);
+      this.publishStatusSnapshotIfCurrent(r, generation);
     }
   }
 
@@ -1065,33 +1195,70 @@ export class CliInstallerService {
   private async checkAuthStatus(
     binaryPath: string,
     result: CliInstallationStatus,
-    diag: CliInstallerStatusRunDiag
+    diag: CliInstallerStatusRunDiag,
+    generation: number
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
-      try {
-        const providers = await this.multimodelBridgeService.getProviderStatuses(
-          binaryPath,
-          (providersSnapshot) => {
-            const frontendProviders = filterFrontendMultimodelProviders(providersSnapshot);
-            result.providers = frontendProviders;
-            result.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
-            result.authMethod =
-              getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
-            this.publishStatusSnapshot(result);
+      let statusTarget = result;
+      const applyProviders = (providersSnapshot: CliProviderStatus[], final: boolean): void => {
+        if (generation !== this.statusGatherGeneration) {
+          return;
+        }
+
+        const target = statusTarget;
+        const frontendProviders = filterFrontendMultimodelProviders(providersSnapshot);
+        target.providers = frontendProviders;
+        target.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
+        target.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
+        if (final) {
+          target.authStatusChecking = false;
+          this.rememberHealthyStatus(target);
+        }
+        this.publishStatusSnapshot(target);
+      };
+
+      const completion = this.multimodelBridgeService
+        .getProviderStatuses(binaryPath, (providersSnapshot) => {
+          applyProviders(providersSnapshot, false);
+        })
+        .then((providers) => {
+          applyProviders(providers, true);
+        })
+        .catch((error) => {
+          if (generation !== this.statusGatherGeneration) {
+            return;
           }
+
+          const msg = getErrorMessage(error);
+          diag.authLastError = msg;
+          result.authStatusChecking = false;
+          logger.warn(`Provider status check failed for claude-multimodel: ${msg}`);
+          this.publishStatusSnapshot(result);
+        });
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const timeout = new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(() => {
+          statusTarget = cloneCliInstallationStatus(result);
+          resolve('timeout');
+        }, MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS);
+        timer.unref?.();
+      });
+
+      const providerInitialWaitStartedAt = Date.now();
+      const outcome = await Promise.race([completion.then(() => 'completed' as const), timeout]);
+      diag.providerInitialWaitMs = Date.now() - providerInitialWaitStartedAt;
+      if (timer) {
+        clearTimeout(timer);
+      }
+
+      if (outcome === 'timeout') {
+        diag.authTimedOut = true;
+        logger.warn(
+          `Provider status check still running after ${MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS}ms; returning partial CLI status`
         );
-        const frontendProviders = filterFrontendMultimodelProviders(providers);
-        result.providers = frontendProviders;
-        result.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
-        result.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
-        result.authStatusChecking = false;
-        this.publishStatusSnapshot(result);
-      } catch (error) {
-        const msg = getErrorMessage(error);
-        diag.authLastError = msg;
-        result.authStatusChecking = false;
-        logger.warn(`Provider status check failed for claude-multimodel: ${msg}`);
+        this.publishStatusSnapshotIfCurrent(result, generation);
       }
       return;
     }

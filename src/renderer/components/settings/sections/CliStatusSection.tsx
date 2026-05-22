@@ -41,6 +41,7 @@ import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
+import { getVisibleTeamProviderModels } from '@renderer/utils/teamModelCatalog';
 import {
   AlertTriangle,
   CheckCircle,
@@ -491,6 +492,14 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                           const modelCatalogLoading =
                             provider.modelCatalogRefreshState === 'loading' ||
                             isOpenCodeCatalogHydrating(provider);
+                          const hasProviderModels =
+                            provider.providerId === 'opencode'
+                              ? getVisibleTeamProviderModels(
+                                  provider.providerId,
+                                  provider.models,
+                                  provider
+                                ).length > 0
+                              : provider.models.length > 0;
                           const connectionModeSummary = getProviderConnectionModeSummary(provider);
                           const credentialSummary = getProviderCredentialSummary(provider);
                           const disconnectAction = getProviderDisconnectAction(provider);
@@ -499,7 +508,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                             runtimeSummary ||
                             connectionModeSummary ||
                             credentialSummary ||
-                            provider.models.length === 0 ||
+                            !hasProviderModels ||
                             modelCatalogLoading
                           );
 
@@ -553,7 +562,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                       ) : null}
                                       {credentialSummary ? <span>{credentialSummary}</span> : null}
                                       {modelCatalogLoading ? <span>Loading models...</span> : null}
-                                      {provider.models.length === 0 && !modelCatalogLoading && (
+                                      {!hasProviderModels && !modelCatalogLoading && (
                                         <span>Models unavailable for this runtime build</span>
                                       )}
                                     </div>
@@ -612,7 +621,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                               </div>
                               {!effectiveShowSkeleton &&
                                 !modelCatalogLoading &&
-                                provider.models.length > 0 && (
+                                hasProviderModels && (
                                   <div className="col-span-2">
                                     <ProviderModelBadges
                                       providerId={provider.providerId}

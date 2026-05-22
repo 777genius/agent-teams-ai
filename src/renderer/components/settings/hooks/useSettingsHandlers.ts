@@ -332,6 +332,10 @@ export function useSettingsHandlers({
           anthropic: {
             authMode: 'auto',
             fastModeDefault: false,
+            compatibleEndpoint: {
+              enabled: false,
+              baseUrl: '',
+            },
           },
           codex: {
             preferredAuthMode: 'auto',

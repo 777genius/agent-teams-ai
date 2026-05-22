@@ -507,6 +507,7 @@ function normalizeLaunchIdentity(
       : 'default';
   const catalogSource =
     raw.catalogSource === 'anthropic-models-api' ||
+    raw.catalogSource === 'anthropic-compatible-api' ||
     raw.catalogSource === 'app-server' ||
     raw.catalogSource === 'static-fallback' ||
     raw.catalogSource === 'runtime' ||

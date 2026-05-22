@@ -354,6 +354,10 @@ export interface AppConfig {
     anthropic: {
       authMode: 'auto' | 'oauth' | 'api_key';
       fastModeDefault: boolean;
+      compatibleEndpoint: {
+        enabled: boolean;
+        baseUrl: string;
+      };
     };
     codex: {
       preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';

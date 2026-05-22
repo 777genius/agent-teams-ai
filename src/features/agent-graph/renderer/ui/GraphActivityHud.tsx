@@ -48,6 +48,7 @@ interface GraphActivityHudProps {
   getViewportSize?: () => { width: number; height: number };
   focusNodeIds: ReadonlySet<string> | null;
   enabled?: boolean;
+  showConnectors?: boolean;
   onOpenTaskDetail?: (taskId: string) => void;
   onOpenMemberProfile?: (
     memberName: string,
@@ -72,6 +73,7 @@ export const GraphActivityHud = ({
   getViewportSize,
   focusNodeIds,
   enabled = true,
+  showConnectors = true,
   onOpenTaskDetail,
   onOpenMemberProfile,
 }: GraphActivityHudProps): React.JSX.Element | null => {
@@ -87,8 +89,8 @@ export const GraphActivityHud = ({
   );
   const { teamData, teams } = useGraphActivityContext(teamName);
   const teamSnapshot = teamData;
-  const members = teamData?.members ?? [];
-  const messages = teamData?.messageFeed ?? [];
+  const members = useMemo(() => teamData?.members ?? [], [teamData?.members]);
+  const messages = useMemo(() => teamData?.messageFeed ?? [], [teamData?.messageFeed]);
 
   const ownerNodes = useMemo(
     () =>
@@ -134,11 +136,12 @@ export const GraphActivityHud = ({
   }, [teamName]);
 
   useEffect(() => {
+    const timers = highlightTimersRef.current;
     return () => {
-      for (const timer of highlightTimersRef.current.values()) {
+      for (const timer of timers.values()) {
         clearTimeout(timer);
       }
-      highlightTimersRef.current.clear();
+      timers.clear();
     };
   }, []);
 
@@ -515,24 +518,27 @@ export const GraphActivityHud = ({
 
               return (
                 <>
-                  <svg
-                    ref={(element) => {
-                      connectorRefs.current.set(lane.node.id, element);
-                    }}
-                    className="pointer-events-none absolute z-[9] overflow-visible opacity-0"
-                  >
-                    <path
+                  {showConnectors ? (
+                    <svg
                       ref={(element) => {
-                        connectorPathRefs.current.set(lane.node.id, element);
+                        connectorRefs.current.set(lane.node.id, element);
                       }}
-                      d=""
-                      fill="none"
-                      stroke="rgba(148, 163, 184, 0.3)"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                      strokeDasharray="3 4"
-                    />
-                  </svg>
+                      data-activity-connector={lane.node.id}
+                      className="pointer-events-none absolute z-[9] overflow-visible opacity-0"
+                    >
+                      <path
+                        ref={(element) => {
+                          connectorPathRefs.current.set(lane.node.id, element);
+                        }}
+                        d=""
+                        fill="none"
+                        stroke="rgba(148, 163, 184, 0.3)"
+                        strokeWidth="1.25"
+                        strokeLinecap="round"
+                        strokeDasharray="3 4"
+                      />
+                    </svg>
+                  ) : null}
                   <div
                     ref={(element) => {
                       shellRefs.current.set(lane.node.id, element);
@@ -542,9 +548,6 @@ export const GraphActivityHud = ({
                       width: `${laneWidth}px`,
                       maxWidth: `${laneWidth}px`,
                       height: `${laneHeight}px`,
-                    }}
-                    onDragStart={(event) => {
-                      event.preventDefault();
                     }}
                   >
                     <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden">

@@ -327,7 +327,22 @@
       "artifactName": "Agent.Teams.AI-${version}.${ext}"
     },
     "deb": {
-      "afterInstall": "resources/afterInstall.sh"
+      "afterInstall": "resources/afterInstall.sh",
+      "fpm": [
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ]
+    },
+    "rpm": {
+      "afterInstall": "resources/afterInstall.sh",
+      "fpm": [
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ]
+    },
+    "pacman": {
+      "afterInstall": "resources/afterInstall.sh",
+      "fpm": [
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ]
     },
     "nsis": {
       "artifactName": "Agent.Teams.AI.Setup.${version}.${ext}",

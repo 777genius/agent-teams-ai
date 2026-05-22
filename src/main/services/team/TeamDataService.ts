@@ -2,12 +2,7 @@ import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
-import {
-  AGENT_BLOCK_CLOSE,
-  AGENT_BLOCK_OPEN,
-  stripAgentBlocks,
-  wrapAgentBlock,
-} from '@shared/constants/agentBlocks';
+import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
@@ -1948,6 +1943,38 @@ export class TeamDataService {
     await this.membersMetaStore.writeMembers(teamName, members);
   }
 
+  async restoreMember(teamName: string, memberName: string): Promise<TeamMember> {
+    const normalizedName = memberName.trim().toLowerCase();
+    const members = await this.membersMetaStore.getMembers(teamName);
+    const memberIndex = members.findIndex(
+      (candidate) => candidate.name.trim().toLowerCase() === normalizedName
+    );
+    const member = memberIndex >= 0 ? members[memberIndex] : undefined;
+
+    if (!member) {
+      throw new Error(`Member "${memberName}" not found`);
+    }
+    if (member.removedAt == null) {
+      throw new Error(`Member "${memberName}" is not removed`);
+    }
+    if (isLeadMember(member)) {
+      throw new Error('Cannot restore team lead');
+    }
+
+    const restoredMember: TeamMember = {
+      ...member,
+      agentId: undefined,
+      removedAt: undefined,
+    };
+    const nextMembers = applyDistinctRosterColors(
+      members.map((candidate, index) => (index === memberIndex ? restoredMember : candidate))
+    );
+
+    await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextMembers));
+    await this.membersMetaStore.writeMembers(teamName, nextMembers);
+    return nextMembers[memberIndex] ?? restoredMember;
+  }
+
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
     const controller = this.getController(teamName);
     const blockedBy = request.blockedBy?.filter((id) => id.length > 0) ?? [];
@@ -2021,11 +2048,14 @@ export class TeamDataService {
             parts.push(`\nDetails:\n${task.description.trim()}`);
           }
           parts.push(
-            `\n${AGENT_BLOCK_OPEN}`,
-            `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-            `Update task status using the board MCP tools:`,
-            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
-            AGENT_BLOCK_CLOSE
+            '',
+            wrapAgentBlock(
+              [
+                `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
+                `Update task status using the board MCP tools:`,
+                `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+              ].join('\n')
+            )
           );
           await this.sendMessage(teamName, {
             member: task.owner,
@@ -2944,6 +2974,45 @@ export class TeamDataService {
     });
   }
 
+  private getControllerTaskWorkflowColumn(
+    controller: AgentTeamsController,
+    taskId: string
+  ): 'review' | 'approved' | undefined | null {
+    if (!controller.tasks?.getTask || !controller.kanban?.getKanbanState) {
+      return null;
+    }
+
+    const task = controller.tasks.getTask(taskId) as TeamTask | null | undefined;
+    if (!task || typeof task.status !== 'string') {
+      return null;
+    }
+
+    const kanbanState = controller.kanban.getKanbanState() as KanbanState | null | undefined;
+    const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
+    const kanbanWorkflowColumn = kanbanColumn
+      ? getTeamTaskWorkflowColumn({
+          status: task.status,
+          reviewState: 'none',
+          kanbanColumn,
+        })
+      : undefined;
+    if (kanbanWorkflowColumn) {
+      return kanbanWorkflowColumn;
+    }
+
+    const reviewState = getReviewStateFromTask({
+      historyEvents: task.historyEvents,
+      reviewState: task.reviewState,
+      status: task.status,
+      ...(kanbanColumn ? { kanbanColumn } : {}),
+    });
+    return getTeamTaskWorkflowColumn({
+      status: task.status,
+      reviewState,
+      ...(kanbanColumn ? { kanbanColumn } : {}),
+    });
+  }
+
   async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
     const teamDir = path.join(getTeamsBasePath(), request.teamName);
     const configPath = path.join(teamDir, 'config.json');
@@ -3440,12 +3509,19 @@ export class TeamDataService {
         });
       } else {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        controller.review.approveReview(taskId, {
-          from: leadName,
-          suppressTaskComment: true,
-          'notify-owner': true,
-          ...(leadSessionId ? { leadSessionId } : {}),
-        });
+        const workflowColumn = this.getControllerTaskWorkflowColumn(controller, taskId);
+        if (workflowColumn === undefined) {
+          controller.kanban.setKanbanColumn(taskId, 'approved', {
+            transition: 'manual_approve',
+          });
+        } else {
+          controller.review.approveReview(taskId, {
+            from: leadName,
+            suppressTaskComment: true,
+            'notify-owner': true,
+            ...(leadSessionId ? { leadSessionId } : {}),
+          });
+        }
       }
       return;
     }

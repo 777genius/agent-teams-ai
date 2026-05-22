@@ -163,6 +163,7 @@ export const TeamGraphTab = ({
                   getViewportSize={getViewportSize}
                   focusNodeIds={focusNodeIds}
                   enabled={isActive && (filters?.showActivity ?? true)}
+                  showConnectors={filters?.showEdges ?? false}
                   onOpenTaskDetail={interactions.openTaskDetail}
                   onOpenMemberProfile={interactions.openMemberProfile}
                 />

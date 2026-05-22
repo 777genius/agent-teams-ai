@@ -380,7 +380,7 @@ export const EditTeamDialog = ({
       members.map((member) => [
         member.id,
         restartNames.has(member.name.trim().toLowerCase())
-          ? 'Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, or effort changes.'
+          ? 'Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.'
           : null,
       ])
     );
@@ -705,8 +705,8 @@ export const EditTeamDialog = ({
             <p className="text-xs text-amber-300">
               Saving will restart or relaunch{' '}
               {liveRuntimeRefreshMemberNames.length === 1 ? 'this teammate' : 'these teammates'} to
-              apply role, workflow, worktree isolation, provider, model, or effort changes:{' '}
-              {liveRuntimeRefreshMemberNames.join(', ')}.
+              apply role, workflow, worktree isolation, provider, model, effort, or MCP access
+              changes: {liveRuntimeRefreshMemberNames.join(', ')}.
             </p>
           ) : null}
           <div>

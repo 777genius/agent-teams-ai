@@ -148,6 +148,7 @@ export interface RuntimeProviderDirectoryEntryDto {
     hasKnownModels: boolean;
     requiresManualConfig: boolean;
     supportedInlineAuth: boolean;
+    configuredAuthless: boolean;
   };
 }
 
@@ -170,10 +171,23 @@ export interface RuntimeProviderManagementViewDto {
   title: string;
   runtime: RuntimeProviderManagementRuntimeDto;
   providers: readonly RuntimeProviderConnectionDto[];
+  configuredModels?: readonly RuntimeProviderModelDto[];
+  projectPath?: string | null;
+  projectDefaultModel?: string | null;
+  allProjectsDefaultModel?: string | null;
+  defaultModelSource?: RuntimeProviderDefaultModelSourceDto | null;
   defaultModel: string | null;
   fallbackModel: string | null;
   diagnostics: readonly string[];
 }
+
+export type RuntimeProviderDefaultModelSourceDto =
+  | 'project'
+  | 'all_projects'
+  | 'opencode_config'
+  | 'fallback';
+
+export type RuntimeProviderDefaultScopeDto = 'project' | 'all_projects';
 
 export type RuntimeProviderManagementErrorCodeDto =
   | 'unsupported-runtime'
@@ -228,6 +242,28 @@ export type RuntimeProviderModelAvailabilityDto =
   | 'unknown'
   | 'untested';
 
+export type RuntimeProviderModelAccessKindDto =
+  | 'no_model'
+  | 'unknown_model'
+  | 'credentialed'
+  | 'builtin_free'
+  | 'configured_authless'
+  | 'verified'
+  | 'not_authenticated'
+  | 'execution_failed';
+
+export type RuntimeProviderModelRouteKindDto =
+  | 'connected_provider'
+  | 'builtin_free'
+  | 'configured_local'
+  | 'catalog_provider';
+
+export type RuntimeProviderModelProofStateDto =
+  | 'not_required'
+  | 'needs_probe'
+  | 'verified'
+  | 'failed';
+
 export interface RuntimeProviderModelDto {
   modelId: string;
   providerId: string;
@@ -236,6 +272,11 @@ export interface RuntimeProviderModelDto {
   free: boolean;
   default: boolean;
   availability: RuntimeProviderModelAvailabilityDto;
+  accessKind?: RuntimeProviderModelAccessKindDto;
+  routeKind?: RuntimeProviderModelRouteKindDto;
+  proofState?: RuntimeProviderModelProofStateDto;
+  requiresExecutionProof?: boolean;
+  accessReason?: string | null;
 }
 
 export interface RuntimeProviderManagementModelsDto {
@@ -332,5 +373,6 @@ export interface RuntimeProviderManagementSetDefaultModelInput {
   providerId: string;
   modelId: string;
   probe?: boolean;
+  scope?: RuntimeProviderDefaultScopeDto;
   projectPath?: string | null;
 }

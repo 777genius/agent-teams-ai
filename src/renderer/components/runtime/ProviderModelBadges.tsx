@@ -53,7 +53,11 @@ function getCatalogBadgeLabel(
   const catalogItem = providerStatus?.modelCatalog?.models.find(
     (item) => item.launchModel === model || item.id === model
   );
-  return catalogItem?.badgeLabel?.trim() || null;
+  const badgeLabel = catalogItem?.badgeLabel?.trim();
+  if (badgeLabel) {
+    return badgeLabel;
+  }
+  return catalogItem?.metadata?.free === true ? 'Free' : null;
 }
 
 function normalizeBadgeText(value: string): string {

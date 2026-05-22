@@ -32,11 +32,17 @@ import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
   CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_INVALIDATE_STATUS,
+  CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '@preload/constants/ipcChannels';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { CliInstallerService } from '@main/services';
-import type { CliInstallationStatus, CliProviderId, CliProviderStatus, IpcResult } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  IpcResult,
+} from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
@@ -320,6 +326,72 @@ describe('cliInstaller IPC handlers', () => {
     });
 
     const cached = (await ipcMain.invoke(CLI_INSTALLER_GET_STATUS)) as IpcResult<CliInstallationStatus>;
+
+    expect(service.getStatus).toHaveBeenCalledTimes(2);
+    expect(cached.success).toBe(true);
+    expect(cached.data?.authLoggedIn).toBe(true);
+    expect(cached.data?.providers.find((entry) => entry.providerId === 'codex')?.statusMessage).toBe(
+      'ChatGPT account ready'
+    );
+  });
+
+  it('does not let a stale model verification patch the cache after invalidation', async () => {
+    const staleVerificationRequest = deferred<CliProviderStatus | null>();
+    service.getStatus
+      .mockResolvedValueOnce(
+        status([
+          provider({ providerId: 'anthropic' }),
+          provider({ providerId: 'codex', statusMessage: 'Checking...' }),
+        ])
+      )
+      .mockResolvedValueOnce(
+        status([
+          provider({ providerId: 'anthropic' }),
+          provider({
+            providerId: 'codex',
+            authenticated: true,
+            authMethod: 'chatgpt',
+            verificationState: 'verified',
+            statusMessage: 'ChatGPT account ready',
+          }),
+        ])
+      );
+    service.verifyProviderModels.mockReturnValueOnce(staleVerificationRequest.promise);
+
+    const initial = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
+    expect(initial.success).toBe(true);
+    expect(initial.data?.authLoggedIn).toBe(false);
+
+    const staleVerificationInvoke = ipcMain.invoke(
+      CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
+      'codex'
+    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    await vi.waitFor(() => expect(service.verifyProviderModels).toHaveBeenCalledTimes(1));
+
+    await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
+    const fresh = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
+    expect(fresh.success).toBe(true);
+    expect(fresh.data?.authLoggedIn).toBe(true);
+
+    staleVerificationRequest.resolve(
+      provider({
+        providerId: 'codex',
+        verificationState: 'error',
+        statusMessage: 'Stale model verification failed',
+      })
+    );
+    await expect(staleVerificationInvoke).resolves.toMatchObject({
+      success: true,
+      data: { statusMessage: 'Stale model verification failed' },
+    });
+
+    const cached = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_STATUS
+    )) as IpcResult<CliInstallationStatus>;
 
     expect(service.getStatus).toHaveBeenCalledTimes(2);
     expect(cached.success).toBe(true);

@@ -135,6 +135,31 @@ describe('CodexBinaryResolver', () => {
     await expect(CodexBinaryResolver.resolve()).resolves.toBe(cmdShim);
   });
 
+  it('uses CODEX_CLI_PATH from cached shell env before app-managed and PATH lookup', async () => {
+    setPlatform('darwin');
+    delete process.env.CODEX_CLI_PATH;
+    process.env.PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
+    const shellBinary = '/Users/tester/.local/bin/codex';
+    const appManagedBinary = '/Users/tester/.agent-teams-ai/data/runtimes/codex/current/codex';
+    getCachedShellEnvMock.mockReturnValue({
+      CODEX_CLI_PATH: shellBinary,
+      PATH: '/opt/homebrew/bin:/usr/bin:/bin',
+    });
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(appManagedBinary);
+
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === shellBinary || filePath === appManagedBinary) {
+        return Promise.resolve();
+      }
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    });
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(shellBinary);
+  });
+
   it('prefers a verified app-managed Codex binary before PATH lookup', async () => {
     const appManagedBinary = 'C:\\Users\\tester\\AppData\\Roaming\\AgentTeams\\codex.exe';
     const pathBinary = 'C:\\Program Files\\nodejs\\codex.cmd';

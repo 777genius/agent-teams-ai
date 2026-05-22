@@ -36,6 +36,14 @@ function assertKanbanColumnAllowed(context, task, column, options = {}) {
   }
 
   if (column === 'approved') {
+    if (transition === 'manual_approve') {
+      if (reviewState !== 'none') {
+        throw new Error(
+          `Task ${label} is already in reviewState=${reviewState}; use review_approve instead`
+        );
+      }
+      return;
+    }
     if (transition === 'approve_review') {
       if (reviewState !== 'review' && reviewState !== 'approved') {
         throw new Error(`Task ${label} must be in review before approval`);

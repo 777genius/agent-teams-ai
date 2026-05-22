@@ -14,6 +14,7 @@ import {
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import { api, isElectronMode } from '@renderer/api';
+import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
@@ -53,6 +54,7 @@ import { isMultimodelRuntimeStatus } from '@renderer/utils/multimodelProviderVis
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getRuntimeDisplayName as getHumanRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
+import { getVisibleTeamProviderModels } from '@renderer/utils/teamModelCatalog';
 import {
   AlertTriangle,
   CheckCircle,
@@ -60,6 +62,8 @@ import {
   ChevronRight,
   ChevronUp,
   Download,
+  ExternalLink,
+  Handshake,
   HelpCircle,
   Loader2,
   LogIn,
@@ -71,8 +75,7 @@ import {
 } from 'lucide-react';
 
 import {
-  getAnthropicDashboardRateLimits,
-  getCodexDashboardRateLimits,
+  getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
   shouldShowDashboardRateLimitSkeleton,
 } from './providerDashboardRateLimits';
@@ -103,6 +106,11 @@ const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
 /** Minimum banner height — prevents layout shift between states (loading → installed → checking). */
 const BANNER_MIN_H = 'min-h-[4.25rem]';
 const ANTHROPIC_LIMIT_REFRESH_INTERVAL_MS = 60 * 1000;
+const SHOW_ATLAS_CLOUD_OPENCODE_BANNER = false;
+const ATLAS_CLOUD_OPENCODE_PROVIDER_ID = 'atlascloud';
+const ATLAS_CLOUD_CODING_PLAN_URL = 'https://www.atlascloud.ai/console/coding-plan';
+const ATLAS_CLOUD_DESCRIPTION =
+  "Atlas Cloud is a full-modal AI inference platform that gives developers a single AI API to access video generation, image generation, and LLM APIs. Instead of managing multiple vendor integrations, you connect once and get unified access to 300+ curated models across all modalities. Check out Atlas Cloud's new coding plan promotion for more budget-friendly API access.";
 
 const DashboardRateLimitChips = ({
   providerId,
@@ -377,6 +385,7 @@ interface InstalledBannerProps {
   onProviderLogin: (providerId: CliProviderId) => void;
   onProviderLogout: (providerId: CliProviderId) => void;
   onProviderManage: (providerId: CliProviderId) => void;
+  onOpenCodeProviderConnect: (providerId: string) => void;
   onProviderRefresh: (providerId: CliProviderId) => void;
   onCodexReconnect: () => void;
   onCodexDeviceCodeLogin: () => void;
@@ -631,6 +640,143 @@ function shouldShowOpenCodeProviderFreeBadge(provider: CliProviderStatus): boole
   return provider.providerId === 'opencode';
 }
 
+function getOpenCodeDashboardChips(
+  provider: CliProviderStatus
+): { label: string; title?: string }[] {
+  if (!shouldShowOpenCodeProviderFreeBadge(provider)) {
+    return [];
+  }
+
+  const catalogModels = provider.modelCatalog?.models ?? [];
+  const configuredLocalCount = new Set(
+    catalogModels
+      .filter((model) => model.metadata?.opencode?.routeKind === 'configured_local')
+      .map((model) => model.launchModel)
+  ).size;
+  const verifiedCount = new Set(
+    catalogModels
+      .filter((model) => model.metadata?.opencode?.proofState === 'verified')
+      .map((model) => model.launchModel)
+  ).size;
+
+  return [
+    {
+      label: 'Free models',
+      title: OPENCODE_PROVIDER_FREE_BADGE_TITLE,
+    },
+    ...(configuredLocalCount > 0
+      ? [
+          {
+            label: `${configuredLocalCount} configured local`,
+            title: 'Local OpenCode routes imported from your OpenCode config.',
+          },
+        ]
+      : []),
+    ...(verifiedCount > 0
+      ? [
+          {
+            label: `${verifiedCount} verified`,
+            title: 'OpenCode routes with a successful execution proof.',
+          },
+        ]
+      : []),
+  ];
+}
+
+const OpenCodeAtlasCloudBanner = ({
+  disabled,
+  onConnect,
+}: {
+  disabled: boolean;
+  onConnect: () => void;
+}): React.JSX.Element => (
+  <div
+    className="col-span-2 rounded-md border px-2.5 py-2"
+    style={{
+      borderColor: 'var(--color-border-subtle)',
+      backgroundColor: 'rgba(255, 255, 255, 0.018)',
+    }}
+  >
+    <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <img
+          src={atlasCloudLogo}
+          alt="Atlas Cloud"
+          className="h-4 w-auto shrink-0 rounded-[3px] opacity-75"
+          draggable={false}
+        />
+        <span
+          className="min-w-0 truncate text-[11px] font-medium"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          Atlas Cloud coding plan
+        </span>
+        <span
+          className="rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide"
+          style={{
+            borderColor: 'var(--color-border-subtle)',
+            color: 'var(--color-text-muted)',
+          }}
+        >
+          Sponsor
+        </span>
+        <span
+          className="rounded border px-1.5 py-0.5 text-[9px] font-medium"
+          style={{
+            borderColor: 'var(--color-border-subtle)',
+            color: 'var(--color-text-muted)',
+          }}
+        >
+          OpenCode provider
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onConnect}
+          disabled={disabled}
+          className="flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+          style={{
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          <LogIn className="size-3" />
+          Connect
+        </button>
+        <button
+          type="button"
+          onClick={() => void api.openExternal(ATLAS_CLOUD_CODING_PLAN_URL)}
+          className="flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5"
+          style={{
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-muted)',
+          }}
+        >
+          <ExternalLink className="size-3" />
+          Plan
+        </button>
+        <button
+          type="button"
+          disabled
+          className="flex cursor-not-allowed items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium disabled:opacity-50"
+          style={{
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-muted)',
+          }}
+          title="Coming soon"
+        >
+          <Handshake className="size-3" />
+          Become a sponsor
+        </button>
+      </div>
+    </div>
+    <p className="mt-1.5 text-[10.5px] leading-4" style={{ color: 'var(--color-text-muted)' }}>
+      {ATLAS_CLOUD_DESCRIPTION}
+    </p>
+  </div>
+);
+
 const InstalledBanner = ({
   cliStatus,
   sourceProviderMap,
@@ -655,6 +801,7 @@ const InstalledBanner = ({
   onProviderLogin,
   onProviderLogout,
   onProviderManage,
+  onOpenCodeProviderConnect,
   onProviderRefresh,
   onCodexReconnect,
   onCodexDeviceCodeLogin,
@@ -753,11 +900,6 @@ const InstalledBanner = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-8">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              Multimodel
-            </span>
-          </div>
           {/* Extensions button — available whenever the runtime is installed */}
           {canOpenExtensions && (
             <button
@@ -788,9 +930,7 @@ const InstalledBanner = ({
               : getProviderRuntimeBackendSummary(provider);
             const connectionModeSummary = getProviderConnectionModeSummary(provider);
             const credentialSummary = getProviderCredentialSummary(provider);
-            const codexDashboardRateLimits = getCodexDashboardRateLimits(provider);
-            const anthropicDashboardRateLimits = getAnthropicDashboardRateLimits(provider);
-            const dashboardRateLimits = codexDashboardRateLimits ?? anthropicDashboardRateLimits;
+            const dashboardRateLimits = getDashboardRateLimitsForProvider(provider);
             const hasDashboardRateLimits = Boolean(dashboardRateLimits?.length);
             const isSubscriptionRateLimitMode = isDashboardRateLimitSubscriptionMode({
               provider,
@@ -821,27 +961,34 @@ const InstalledBanner = ({
             const anthropicRateLimitsLoading =
               provider.providerId === 'anthropic' &&
               (anthropicRateLimitsRefreshing || provider.modelCatalogRefreshState === 'loading');
-            const showRateLimitSkeleton =
-              (showSkeleton &&
-                shouldShowDashboardRateLimitSkeleton({
-                  provider,
-                  sourceProvider,
-                  configuredAuthModes: providerConnectionAuthModes,
-                })) ||
-              (isSubscriptionRateLimitMode &&
-                !hasDashboardRateLimits &&
-                ((provider.providerId === 'codex' && codexRateLimitsLoading) ||
-                  anthropicRateLimitsLoading));
+            const rateLimitsLoading =
+              showSkeleton ||
+              (provider.providerId === 'codex' && codexRateLimitsLoading) ||
+              anthropicRateLimitsLoading ||
+              isSubscriptionRateLimitMode;
+            const showRateLimitSkeleton = shouldShowDashboardRateLimitSkeleton({
+              provider,
+              sourceProvider,
+              configuredAuthModes: providerConnectionAuthModes,
+              hasRateLimits: hasDashboardRateLimits,
+              loading: rateLimitsLoading,
+            });
             const statusText = showSkeleton ? 'Checking...' : formatProviderStatusText(provider);
             const modelCatalogLoading =
               provider.modelCatalogRefreshState === 'loading' ||
               isOpenCodeCatalogHydrating(provider);
+            const hasProviderModels =
+              provider.providerId === 'opencode'
+                ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
+                    .length > 0
+                : provider.models.length > 0;
+            const openCodeDashboardChips = getOpenCodeDashboardChips(provider);
             const hasDetailContent = Boolean(
               (provider.backend?.label && !runtimeSummary) ||
               runtimeSummary ||
               connectionModeSummary ||
               credentialSummary ||
-              provider.models.length === 0 ||
+              !hasProviderModels ||
               modelCatalogLoading
             );
 
@@ -867,14 +1014,15 @@ const InstalledBanner = ({
                             ? getProviderLabel(provider.providerId)
                             : provider.displayName}
                         </span>
-                        {shouldShowOpenCodeProviderFreeBadge(provider) ? (
+                        {openCodeDashboardChips.map((chip) => (
                           <span
+                            key={chip.label}
                             className="rounded bg-[rgba(34,197,94,0.14)] px-1.5 py-px text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]"
-                            title={OPENCODE_PROVIDER_FREE_BADGE_TITLE}
+                            title={chip.title}
                           >
-                            Free models
+                            {chip.label}
                           </span>
-                        ) : null}
+                        ))}
                       </span>
                       <span
                         className="text-xs"
@@ -905,7 +1053,7 @@ const InstalledBanner = ({
                         {connectionModeSummary ? <span>{connectionModeSummary}</span> : null}
                         {credentialSummary ? <span>{credentialSummary}</span> : null}
                         {modelCatalogLoading ? <span>Loading models...</span> : null}
-                        {provider.models.length === 0 && !modelCatalogLoading && (
+                        {!hasProviderModels && !modelCatalogLoading && (
                           <span>Models unavailable for this runtime build</span>
                         )}
                       </div>
@@ -1087,7 +1235,7 @@ const InstalledBanner = ({
                     </button>
                   </div>
                 </div>
-                {!showSkeleton && !modelCatalogLoading && provider.models.length > 0 && (
+                {!showSkeleton && !modelCatalogLoading && hasProviderModels && (
                   <div className="col-span-2">
                     <ProviderModelBadges
                       providerId={provider.providerId}
@@ -1099,6 +1247,14 @@ const InstalledBanner = ({
                     />
                   </div>
                 )}
+                {!showSkeleton &&
+                SHOW_ATLAS_CLOUD_OPENCODE_BANNER &&
+                provider.providerId === 'opencode' ? (
+                  <OpenCodeAtlasCloudBanner
+                    disabled={actionDisabled}
+                    onConnect={() => onOpenCodeProviderConnect(ATLAS_CLOUD_OPENCODE_PROVIDER_ID)}
+                  />
+                ) : null}
                 {!showSkeleton && dashboardRateLimits && dashboardRateLimits.length > 0 && (
                   <div className="col-span-2">
                     <DashboardRateLimitChips
@@ -1165,6 +1321,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     action: 'login' | 'logout';
   } | null>(null);
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
+  const [manageRuntimeProviderId, setManageRuntimeProviderId] = useState<string | null>(null);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
@@ -1400,7 +1557,21 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
   const handleProviderManage = useCallback((providerId: CliProviderId) => {
     setManageProviderId(providerId);
+    setManageRuntimeProviderId(null);
     setManageDialogOpen(true);
+  }, []);
+
+  const handleOpenCodeProviderConnect = useCallback((providerId: string) => {
+    setManageProviderId('opencode');
+    setManageRuntimeProviderId(providerId);
+    setManageDialogOpen(true);
+  }, []);
+
+  const handleManageDialogOpenChange = useCallback((open: boolean) => {
+    setManageDialogOpen(open);
+    if (!open) {
+      setManageRuntimeProviderId(null);
+    }
   }, []);
 
   const handleProviderRefresh = useCallback(
@@ -1484,7 +1655,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
       <>
         <ProviderRuntimeSettingsDialog
           open={manageDialogOpen}
-          onOpenChange={setManageDialogOpen}
+          onOpenChange={handleManageDialogOpenChange}
           providers={visibleCliProviders}
           projectPath={selectedProjectPath}
           initialProviderId={
@@ -1492,6 +1663,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
               ? manageProviderId
               : (visibleCliProviders[0]?.providerId ?? 'anthropic')
           }
+          initialRuntimeProviderId={manageRuntimeProviderId}
+          initialRuntimeProviderAction={manageRuntimeProviderId ? 'connect' : null}
           providerStatusLoading={cliProviderStatusLoading}
           disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
           codexRuntimeStatus={codexRuntimeStatus}
@@ -1610,6 +1783,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           onProviderLogin={handleProviderLogin}
           onProviderLogout={handleProviderLogout}
           onProviderManage={handleProviderManage}
+          onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
           onProviderRefresh={handleProviderRefresh}
           onCodexReconnect={handleCodexDashboardLogin}
           onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
@@ -1845,6 +2019,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             onProviderLogin={handleProviderLogin}
             onProviderLogout={handleProviderLogout}
             onProviderManage={handleProviderManage}
+            onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
             onProviderRefresh={handleProviderRefresh}
             onCodexReconnect={handleCodexDashboardLogin}
             onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
@@ -1914,6 +2089,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           onProviderLogin={handleProviderLogin}
           onProviderLogout={handleProviderLogout}
           onProviderManage={handleProviderManage}
+          onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
           onProviderRefresh={handleProviderRefresh}
           onCodexReconnect={handleCodexDashboardLogin}
           onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
@@ -2143,6 +2319,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         onProviderLogin={handleProviderLogin}
         onProviderLogout={handleProviderLogout}
         onProviderManage={handleProviderManage}
+        onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
         onProviderRefresh={handleProviderRefresh}
         onCodexReconnect={handleCodexDashboardLogin}
         onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}

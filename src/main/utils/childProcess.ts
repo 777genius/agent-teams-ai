@@ -291,7 +291,7 @@ const CLI_ENV_DEFAULTS: Record<string, string> = {
 
 const activeCliProcesses = new Set<ChildProcess>();
 
-function untrackCliProcess(child: ChildProcess | null): void {
+export function untrackCliProcess(child: ChildProcess | null): void {
   if (child) {
     activeCliProcesses.delete(child);
   }

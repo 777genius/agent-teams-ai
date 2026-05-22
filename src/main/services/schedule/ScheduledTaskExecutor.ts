@@ -144,7 +144,7 @@ export class ScheduledTaskExecutor {
       throw new Error('Claude CLI binary not found');
     }
 
-    const shellEnv = await resolveInteractiveShellEnv();
+    const shellEnv = await resolveInteractiveShellEnv({ source: 'scheduled-task-executor' });
 
     validateFastModeLaunchConfig(request.config);
 

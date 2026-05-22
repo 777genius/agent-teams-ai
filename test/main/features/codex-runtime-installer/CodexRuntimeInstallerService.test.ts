@@ -2,8 +2,8 @@ import { createHash } from 'crypto';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { gzipSync } from 'zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { gzipSync } from 'zlib';
 
 const execCliMock = vi.hoisted(() => vi.fn());
 const buildMergedCliPathMock = vi.hoisted(() => vi.fn(() => process.env.PATH ?? ''));
@@ -274,6 +274,29 @@ describe('CodexRuntimeInstallerService package safety helpers', () => {
       'path/rg',
     ]);
     expect(files.find((file) => file.relativePath === 'codex/codex')?.data.toString()).toBe(
+      'codex-binary'
+    );
+  });
+
+  it('extracts the current Codex platform package layout', () => {
+    const tarball = createTarball([
+      { name: 'package/vendor/x86_64-unknown-linux-musl/bin/codex', data: 'codex-binary' },
+      { name: 'package/vendor/x86_64-unknown-linux-musl/codex-path/rg', data: 'rg-binary' },
+      { name: 'package/vendor/x86_64-unknown-linux-musl/codex-resources/bwrap', data: 'bwrap' },
+    ]);
+
+    const files = extractCodexRuntimePackageFilesFromTarball(
+      tarball,
+      'x86_64-unknown-linux-musl',
+      'codex'
+    );
+
+    expect(files.map((file) => file.relativePath).sort((a, b) => a.localeCompare(b))).toEqual([
+      'bin/codex',
+      'codex-path/rg',
+      'codex-resources/bwrap',
+    ]);
+    expect(files.find((file) => file.relativePath === 'bin/codex')?.data.toString()).toBe(
       'codex-binary'
     );
   });

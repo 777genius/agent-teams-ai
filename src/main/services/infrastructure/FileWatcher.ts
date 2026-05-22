@@ -32,6 +32,7 @@ import { ConfigManager } from './ConfigManager';
 import { type DataCache } from './DataCache';
 import { LocalFileSystemProvider } from './LocalFileSystemProvider';
 import { type NotificationManager } from './NotificationManager';
+import { type TeamTaskWatchKind, TeamTaskWatchRegistry } from './TeamTaskWatchRegistry';
 
 import type { FileSystemProvider, FsDirent } from './FileSystemProvider';
 import type { TeamChangeEvent } from '@shared/types';
@@ -42,6 +43,10 @@ const logger = createLogger('Service:FileWatcher');
 const DEBOUNCE_MS = 100;
 /** Retry delay when watched directories are unavailable or watcher errors occur */
 const WATCHER_RETRY_MS = 2000;
+/** Poll interval for team metadata and inboxes when the teams watcher hits OS watcher limits */
+const TEAMS_POLL_INTERVAL_MS = 1000;
+/** Poll interval for task files, which can be much larger than team metadata/inboxes */
+const TASKS_POLL_INTERVAL_MS = 3000;
 /** Interval for periodic catch-up scan to detect missed fs.watch events */
 const CATCH_UP_INTERVAL_MS = 30_000;
 /** Only catch-up scan files modified within this window */
@@ -68,11 +73,25 @@ interface ActiveSessionFile {
   lastObservedAt: number;
 }
 
+type RecursiveWatcherType = 'projects' | 'todos' | 'teams' | 'tasks';
+type PollingWatcherType = 'teams' | 'tasks';
+interface CloseableWatcher {
+  close: () => void | Promise<void>;
+}
+
 export class FileWatcher extends EventEmitter {
   private projectsWatcher: fs.FSWatcher | null = null;
   private todosWatcher: fs.FSWatcher | null = null;
-  private teamsWatcher: fs.FSWatcher | null = null;
-  private tasksWatcher: fs.FSWatcher | null = null;
+  private teamsWatcher: TeamTaskWatchRegistry | null = null;
+  private tasksWatcher: TeamTaskWatchRegistry | null = null;
+  private teamsPollingTimer: NodeJS.Timeout | null = null;
+  private tasksPollingTimer: NodeJS.Timeout | null = null;
+  private teamsPollingInProgress = false;
+  private tasksPollingInProgress = false;
+  private teamsPollingPrimed = false;
+  private tasksPollingPrimed = false;
+  private polledTeamFiles = new Map<string, string>();
+  private polledTaskFiles = new Map<string, string>();
   private retryTimer: NodeJS.Timeout | null = null;
   private projectsPath: string;
   private todosPath: string;
@@ -202,14 +221,30 @@ export class FileWatcher extends EventEmitter {
     }
 
     if (this.teamsWatcher) {
-      this.teamsWatcher.close();
+      void this.teamsWatcher.close();
       this.teamsWatcher = null;
     }
 
     if (this.tasksWatcher) {
-      this.tasksWatcher.close();
+      void this.tasksWatcher.close();
       this.tasksWatcher = null;
     }
+
+    if (this.teamsPollingTimer) {
+      clearInterval(this.teamsPollingTimer);
+      this.teamsPollingTimer = null;
+    }
+
+    if (this.tasksPollingTimer) {
+      clearInterval(this.tasksPollingTimer);
+      this.tasksPollingTimer = null;
+    }
+    this.teamsPollingInProgress = false;
+    this.tasksPollingInProgress = false;
+    this.teamsPollingPrimed = false;
+    this.tasksPollingPrimed = false;
+    this.polledTeamFiles.clear();
+    this.polledTaskFiles.clear();
 
     // Clear any pending debounce timers
     for (const timer of this.debounceTimers.values()) {
@@ -284,6 +319,14 @@ export class FileWatcher extends EventEmitter {
       clearInterval(this.pollingTimer);
       this.pollingTimer = null;
     }
+    if (this.teamsPollingTimer) {
+      clearInterval(this.teamsPollingTimer);
+      this.teamsPollingTimer = null;
+    }
+    if (this.tasksPollingTimer) {
+      clearInterval(this.tasksPollingTimer);
+      this.tasksPollingTimer = null;
+    }
 
     // 6. Clear all tracking maps (stop() already handles most of these)
     this.lastProcessedLineCount.clear();
@@ -291,6 +334,8 @@ export class FileWatcher extends EventEmitter {
     this.activeSessionFiles.clear();
     this.catchUpStatFailures.clear();
     this.polledFileSizes.clear();
+    this.polledTeamFiles.clear();
+    this.polledTaskFiles.clear();
     this.processingInProgress.clear();
     this.pendingReprocess.clear();
 
@@ -377,7 +422,7 @@ export class FileWatcher extends EventEmitter {
    * Starts the teams directory watcher.
    */
   private async startTeamsWatcher(): Promise<void> {
-    if (this.teamsWatcher) {
+    if (this.teamsWatcher || this.teamsPollingTimer) {
       return;
     }
 
@@ -390,15 +435,28 @@ export class FileWatcher extends EventEmitter {
       // Guard: stop() may have been called while awaiting pathExists
       if (!this.isWatching) return;
 
-      this.teamsWatcher = fs.watch(this.teamsPath, { recursive: true }, (eventType, filename) => {
-        if (filename) {
-          this.handleTeamsChange(eventType, filename);
-        }
+      const registry = new TeamTaskWatchRegistry({
+        kind: 'teams',
+        rootPath: this.teamsPath,
+        onChange: (eventType, filename) => this.handleTeamsChange(eventType, filename),
+        onError: (error) => this.handleTeamTaskWatcherError('teams', error),
       });
-      this.attachWatcherRecovery(this.teamsWatcher, 'teams');
+      this.teamsWatcher = registry;
+      await registry.start();
+      if (!this.isWatching || this.teamsWatcher !== registry) {
+        void registry.close();
+        return;
+      }
       logger.info(`FileWatcher: Started watching teams at ${this.teamsPath}`);
     } catch (error) {
+      const registry = this.teamsWatcher;
+      if (this.startPollingFallbackForRecursiveWatchLimit('teams', error, registry ?? undefined)) {
+        return;
+      }
       logger.error('Error starting teams watcher:', error);
+      if (this.teamsWatcher) {
+        void this.teamsWatcher.close();
+      }
       this.teamsWatcher = null;
       this.scheduleWatcherRetry();
     }
@@ -408,7 +466,7 @@ export class FileWatcher extends EventEmitter {
    * Starts the tasks directory watcher.
    */
   private async startTasksWatcher(): Promise<void> {
-    if (this.tasksWatcher) {
+    if (this.tasksWatcher || this.tasksPollingTimer) {
       return;
     }
 
@@ -421,15 +479,28 @@ export class FileWatcher extends EventEmitter {
       // Guard: stop() may have been called while awaiting pathExists
       if (!this.isWatching) return;
 
-      this.tasksWatcher = fs.watch(this.tasksPath, { recursive: true }, (eventType, filename) => {
-        if (filename) {
-          this.handleTasksChange(eventType, filename);
-        }
+      const registry = new TeamTaskWatchRegistry({
+        kind: 'tasks',
+        rootPath: this.tasksPath,
+        onChange: (eventType, filename) => this.handleTasksChange(eventType, filename),
+        onError: (error) => this.handleTeamTaskWatcherError('tasks', error),
       });
-      this.attachWatcherRecovery(this.tasksWatcher, 'tasks');
+      this.tasksWatcher = registry;
+      await registry.start();
+      if (!this.isWatching || this.tasksWatcher !== registry) {
+        void registry.close();
+        return;
+      }
       logger.info(`FileWatcher: Started watching tasks at ${this.tasksPath}`);
     } catch (error) {
+      const registry = this.tasksWatcher;
+      if (this.startPollingFallbackForRecursiveWatchLimit('tasks', error, registry ?? undefined)) {
+        return;
+      }
       logger.error('Error starting tasks watcher:', error);
+      if (this.tasksWatcher) {
+        void this.tasksWatcher.close();
+      }
       this.tasksWatcher = null;
       this.scheduleWatcherRetry();
     }
@@ -472,7 +543,12 @@ export class FileWatcher extends EventEmitter {
       ]);
     }
 
-    if (!this.projectsWatcher || !this.todosWatcher || !this.teamsWatcher || !this.tasksWatcher) {
+    if (
+      !this.projectsWatcher ||
+      !this.todosWatcher ||
+      !this.isWatcherOrPollingActive('teams') ||
+      !this.isWatcherOrPollingActive('tasks')
+    ) {
       this.scheduleWatcherRetry();
     }
   }
@@ -488,16 +564,16 @@ export class FileWatcher extends EventEmitter {
     }, WATCHER_RETRY_MS);
   }
 
-  private attachWatcherRecovery(
-    watcher: fs.FSWatcher,
-    watcherType: 'projects' | 'todos' | 'teams' | 'tasks'
-  ): void {
+  private attachWatcherRecovery(watcher: fs.FSWatcher, watcherType: RecursiveWatcherType): void {
     watcher.on('error', (error: NodeJS.ErrnoException) => {
       // Ephemeral .lock files cause harmless ENOENT when the recursive watcher
       // tries to scandir a path that was already deleted. Log as debug and skip
-      // the teardown/retry — the watcher is still healthy.
+      // the teardown/retry - the watcher is still healthy.
       if (error.code === 'ENOENT' && error.path?.endsWith('.lock')) {
         logger.debug(`FileWatcher: ${watcherType} ignoring transient ENOENT on lock file`);
+        return;
+      }
+      if (this.startPollingFallbackForRecursiveWatchLimit(watcherType, error, watcher)) {
         return;
       }
       logger.error(`FileWatcher: ${watcherType} watcher error:`, error);
@@ -510,7 +586,9 @@ export class FileWatcher extends EventEmitter {
       } else {
         this.tasksWatcher = null;
       }
-      this.scheduleWatcherRetry();
+      if (!this.isWatcherOrPollingActive(watcherType)) {
+        this.scheduleWatcherRetry();
+      }
     });
 
     watcher.on('close', () => {
@@ -526,8 +604,293 @@ export class FileWatcher extends EventEmitter {
       } else {
         this.tasksWatcher = null;
       }
-      this.scheduleWatcherRetry();
+      if (!this.isWatcherOrPollingActive(watcherType)) {
+        this.scheduleWatcherRetry();
+      }
     });
+  }
+
+  private handleTeamTaskWatcherError(watcherType: TeamTaskWatchKind, error: unknown): void {
+    const watcher = watcherType === 'teams' ? this.teamsWatcher : this.tasksWatcher;
+    if (this.startPollingFallbackForRecursiveWatchLimit(watcherType, error, watcher ?? undefined)) {
+      return;
+    }
+
+    logger.error(`FileWatcher: ${watcherType} watcher error:`, error);
+    if (watcherType === 'teams') {
+      this.teamsWatcher = null;
+    } else {
+      this.tasksWatcher = null;
+    }
+    void watcher?.close();
+
+    if (!this.isWatcherOrPollingActive(watcherType)) {
+      this.scheduleWatcherRetry();
+    }
+  }
+
+  private isWatcherOrPollingActive(watcherType: RecursiveWatcherType): boolean {
+    if (watcherType === 'projects') {
+      return this.projectsWatcher !== null;
+    }
+    if (watcherType === 'todos') {
+      return this.todosWatcher !== null;
+    }
+    if (watcherType === 'teams') {
+      return this.teamsWatcher !== null || this.teamsPollingTimer !== null;
+    }
+    return this.tasksWatcher !== null || this.tasksPollingTimer !== null;
+  }
+
+  private startPollingFallbackForRecursiveWatchLimit(
+    watcherType: RecursiveWatcherType,
+    error: unknown,
+    watcher?: CloseableWatcher
+  ): boolean {
+    if ((watcherType !== 'teams' && watcherType !== 'tasks') || !this.isWatchLimitError(error)) {
+      return false;
+    }
+
+    const err = error as NodeJS.ErrnoException;
+    logger.warn(
+      `FileWatcher: ${watcherType} watcher hit ${err.code ?? 'a platform limit'}; falling back to polling`
+    );
+
+    if (watcherType === 'teams') {
+      this.teamsWatcher = null;
+    } else {
+      this.tasksWatcher = null;
+    }
+
+    this.startTeamTaskPolling(watcherType);
+
+    try {
+      void watcher?.close();
+    } catch (closeError) {
+      logger.debug(`FileWatcher: ${watcherType} watcher close after fallback failed`, closeError);
+    }
+    return true;
+  }
+
+  private isWatchLimitError(error: unknown): boolean {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    return (
+      code === 'EMFILE' ||
+      code === 'ENOSPC' ||
+      code === 'ERR_FS_WATCHER_LIMIT' ||
+      code === 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM'
+    );
+  }
+
+  private startTeamTaskPolling(watcherType: PollingWatcherType): void {
+    const existingTimer = watcherType === 'teams' ? this.teamsPollingTimer : this.tasksPollingTimer;
+    if (existingTimer) {
+      return;
+    }
+
+    const runPoll = (): void => {
+      if (!this.isWatching) {
+        return;
+      }
+      if (watcherType === 'teams') {
+        if (this.teamsPollingInProgress) {
+          return;
+        }
+        this.teamsPollingInProgress = true;
+        this.pollTeamsForChanges()
+          .catch((err) => {
+            logger.error('FileWatcher: Error during teams polling:', err);
+          })
+          .finally(() => {
+            this.teamsPollingInProgress = false;
+          });
+        return;
+      }
+
+      if (this.tasksPollingInProgress) {
+        return;
+      }
+      this.tasksPollingInProgress = true;
+      this.pollTasksForChanges()
+        .catch((err) => {
+          logger.error('FileWatcher: Error during tasks polling:', err);
+        })
+        .finally(() => {
+          this.tasksPollingInProgress = false;
+        });
+    };
+
+    runPoll();
+    const timer = setInterval(runPoll, this.getTeamTaskPollIntervalMs(watcherType));
+    timer.unref();
+
+    if (watcherType === 'teams') {
+      this.teamsPollingTimer = timer;
+    } else {
+      this.tasksPollingTimer = timer;
+    }
+  }
+
+  private getTeamTaskPollIntervalMs(watcherType: PollingWatcherType): number {
+    return watcherType === 'teams' ? TEAMS_POLL_INTERVAL_MS : TASKS_POLL_INTERVAL_MS;
+  }
+
+  private async pollTeamsForChanges(): Promise<void> {
+    const nextSnapshot = await this.collectTeamsPollSnapshot();
+    if (!this.isWatching) {
+      return;
+    }
+    this.emitPolledChanges(
+      'teams',
+      this.polledTeamFiles,
+      nextSnapshot,
+      this.teamsPollingPrimed,
+      (eventType, relativePath) => this.handleTeamsChange(eventType, relativePath)
+    );
+    this.polledTeamFiles = nextSnapshot;
+    this.teamsPollingPrimed = true;
+  }
+
+  private async pollTasksForChanges(): Promise<void> {
+    const nextSnapshot = await this.collectTasksPollSnapshot();
+    if (!this.isWatching) {
+      return;
+    }
+    this.emitPolledChanges(
+      'tasks',
+      this.polledTaskFiles,
+      nextSnapshot,
+      this.tasksPollingPrimed,
+      (eventType, relativePath) => this.handleTasksChange(eventType, relativePath)
+    );
+    this.polledTaskFiles = nextSnapshot;
+    this.tasksPollingPrimed = true;
+  }
+
+  private emitPolledChanges(
+    watcherType: PollingWatcherType,
+    previousSnapshot: Map<string, string>,
+    nextSnapshot: Map<string, string>,
+    isPrimed: boolean,
+    emitChange: (eventType: string, relativePath: string) => void
+  ): void {
+    if (!isPrimed) {
+      logger.info(`FileWatcher: ${watcherType} polling baseline captured`);
+      return;
+    }
+
+    for (const [relativePath, fingerprint] of nextSnapshot) {
+      const previous = previousSnapshot.get(relativePath);
+      if (previous === undefined) {
+        emitChange('rename', relativePath);
+      } else if (previous !== fingerprint) {
+        emitChange('change', relativePath);
+      }
+    }
+
+    for (const relativePath of previousSnapshot.keys()) {
+      if (!nextSnapshot.has(relativePath)) {
+        emitChange('rename', relativePath);
+      }
+    }
+  }
+
+  private async collectTeamsPollSnapshot(): Promise<Map<string, string>> {
+    const snapshot = new Map<string, string>();
+    const teamEntries = await this.safeReadDir(this.teamsPath);
+
+    for (const teamEntry of teamEntries) {
+      if (!teamEntry.isDirectory()) {
+        continue;
+      }
+
+      const teamName = teamEntry.name;
+      const teamPath = path.join(this.teamsPath, teamName);
+      await this.collectPolledDirectoryFiles(snapshot, teamPath, teamName, (fileName) =>
+        fileName.endsWith('.json')
+      );
+
+      await this.collectPolledDirectoryFiles(
+        snapshot,
+        path.join(teamPath, 'inboxes'),
+        `${teamName}/inboxes`,
+        (fileName) => fileName.endsWith('.json')
+      );
+    }
+
+    return snapshot;
+  }
+
+  private async collectTasksPollSnapshot(): Promise<Map<string, string>> {
+    const snapshot = new Map<string, string>();
+    const teamEntries = await this.safeReadDir(this.tasksPath);
+
+    for (const teamEntry of teamEntries) {
+      if (!teamEntry.isDirectory()) {
+        continue;
+      }
+
+      const teamName = teamEntry.name;
+      await this.collectPolledDirectoryFiles(
+        snapshot,
+        path.join(this.tasksPath, teamName),
+        teamName,
+        (fileName) => !fileName.startsWith('.') && fileName.endsWith('.json')
+      );
+    }
+
+    return snapshot;
+  }
+
+  private async collectPolledDirectoryFiles(
+    snapshot: Map<string, string>,
+    dirPath: string,
+    relativeRoot: string,
+    shouldInclude: (fileName: string) => boolean
+  ): Promise<void> {
+    const entries = await this.safeReadDir(dirPath);
+    for (const entry of entries) {
+      if (!entry.isFile() || !shouldInclude(entry.name)) {
+        continue;
+      }
+      await this.addPolledFile(
+        snapshot,
+        path.join(dirPath, entry.name),
+        `${relativeRoot}/${entry.name}`
+      );
+    }
+  }
+
+  private async addPolledFile(
+    snapshot: Map<string, string>,
+    absolutePath: string,
+    relativePath: string
+  ): Promise<void> {
+    try {
+      const stats = await fsp.stat(absolutePath);
+      if (!stats.isFile()) {
+        return;
+      }
+      snapshot.set(
+        relativePath,
+        `${stats.dev}:${stats.ino}:${stats.mtimeMs}:${stats.ctimeMs}:${stats.size}`
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.debug(`FileWatcher: Unable to stat polled file ${absolutePath}`, error);
+      }
+    }
+  }
+
+  private async safeReadDir(dirPath: string): Promise<fs.Dirent[]> {
+    try {
+      return await fsp.readdir(dirPath, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.debug(`FileWatcher: Unable to read polled directory ${dirPath}`, error);
+      }
+      return [];
+    }
   }
 
   // ===========================================================================
