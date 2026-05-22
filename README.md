@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/github/v/tag/777genius/agent-teams-ai?style=flat-square&label=version&color=blue" alt="Latest Release" /></a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/github/v/release/777genius/agent-teams-ai?style=flat-square&label=version&color=blue" alt="Latest Release" /></a>&nbsp;
   <a href="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml"><img src="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>&nbsp;
   <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/Discord-Join%20us-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
 </p>
@@ -29,6 +29,8 @@
 <img width="1304" height="820" alt="image" src="https://i.imgur.com/AugQy1B.jpeg" />
 
 <a href="https://777genius.github.io/agent-teams-ai/">Watch demo on the site or here:</a>
+
+
 https://github.com/user-attachments/assets/d1a85fe5-fb49-4009-b2c1-79ae8818e8c4
 
 <table>
