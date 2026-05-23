@@ -22,6 +22,7 @@ const RECONCILE_INTERVAL_MS = 30_000;
 // If a new team artifact should produce TeamChangeEvent, add it here too.
 const TEAM_ROOT_FILES = new Set([
   'config.json',
+  'kanban-state.json',
   'processes.json',
   'sentMessages.json',
   'team.meta.json',
@@ -62,7 +63,7 @@ export class TeamTaskWatchRegistry {
     if (this.closed) {
       return;
     }
-    await this.reconcileTargets();
+    await this.reconcileTargets({ rethrowErrors: true });
     if (this.closed || this.reconcileTimer) {
       return;
     }
@@ -89,11 +90,11 @@ export class TeamTaskWatchRegistry {
     this.targets.clear();
     this.targetKey = '';
     if (watcher) {
-      await watcher.close().catch(() => undefined);
+      await this.closeWatcher(watcher);
     }
   }
 
-  private async reconcileTargets(): Promise<void> {
+  private async reconcileTargets(options: { rethrowErrors?: boolean } = {}): Promise<void> {
     if (this.closed) {
       return;
     }
@@ -111,6 +112,9 @@ export class TeamTaskWatchRegistry {
         await this.rebuildWatcher(targets, nextKey, addedTargets);
       }
     } catch (error) {
+      if (options.rethrowErrors) {
+        throw error;
+      }
       if (!this.closed) {
         this.options.onError(error);
       }
@@ -135,7 +139,7 @@ export class TeamTaskWatchRegistry {
     const previousWatcher = this.watcher;
     this.watcher = null;
     if (previousWatcher) {
-      await previousWatcher.close().catch(() => undefined);
+      await this.closeWatcher(previousWatcher);
     }
 
     if (this.closed || generation !== this.generation) {
@@ -261,6 +265,15 @@ export class TeamTaskWatchRegistry {
         return [];
       }
       throw error;
+    }
+  }
+
+  private async closeWatcher(watcher: FSWatcher): Promise<void> {
+    try {
+      await watcher.close();
+    } catch {
+      // Best-effort cleanup only. Chokidar close can fail if the underlying
+      // watcher is already torn down during startup or limit-error recovery.
     }
   }
 
