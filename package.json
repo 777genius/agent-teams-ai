@@ -230,7 +230,7 @@
     "eslint-plugin-sonarjs": "^3.0.6",
     "eslint-plugin-tailwindcss": "^3.18.2",
     "globals": "^17.2.0",
-    "happy-dom": "^20.0.2",
+    "happy-dom": "^20.8.9",
     "husky": "^9.1.7",
     "knip": "^5.82.1",
     "lint-staged": "^16.2.7",
