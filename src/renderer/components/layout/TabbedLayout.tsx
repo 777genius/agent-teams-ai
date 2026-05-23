@@ -34,9 +34,9 @@ import { UpdateBanner } from '../common/UpdateBanner';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { WorkspaceIndicator } from '../common/WorkspaceIndicator';
 import { CommandPalette } from '../search/CommandPalette';
-import { GlobalTaskDetailDialog } from '../team/dialogs/GlobalTaskDetailDialog';
 
 import { CustomTitleBar } from './CustomTitleBar';
+import { GlobalTaskDetailDialogSlot } from './GlobalTaskDetailDialogSlot';
 import { PaneContainer } from './PaneContainer';
 import { Sidebar } from './Sidebar';
 import { DragOverlayTab } from './SortableTab';
@@ -186,7 +186,7 @@ export const TabbedLayout = (): React.JSX.Element => {
           {activeTab ? <DragOverlayTab tab={activeTab} /> : null}
         </DragOverlay>
       </DndContext>
-      <GlobalTaskDetailDialog />
+      <GlobalTaskDetailDialogSlot />
       <UpdateDialog />
       <WorkspaceIndicator />
     </div>

@@ -8,20 +8,25 @@
  * - Collapsible: Cmd+B to toggle (Notion-style)
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
 import { PanelLeft } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { DateGroupedSessions } from '../sidebar/DateGroupedSessions';
 import { GlobalTaskList } from '../sidebar/GlobalTaskList';
 import { defaultTaskFiltersState } from '../sidebar/taskFiltersState';
 
 import type { TaskFiltersState } from '../sidebar/taskFiltersState';
 
 type SidebarTab = 'tasks' | 'sessions';
+
+const DateGroupedSessions = lazy(() =>
+  import('../sidebar/DateGroupedSessions').then((module) => ({
+    default: module.DateGroupedSessions,
+  }))
+);
 
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
@@ -202,7 +207,11 @@ export const Sidebar = (): React.JSX.Element => {
           hidden={sidebarTab !== 'sessions'}
           className="min-w-0 flex-1 overflow-hidden"
         >
-          {hasOpenedSessionsTab && <DateGroupedSessions />}
+          {hasOpenedSessionsTab && (
+            <Suspense fallback={null}>
+              <DateGroupedSessions />
+            </Suspense>
+          )}
         </div>
       </div>
 

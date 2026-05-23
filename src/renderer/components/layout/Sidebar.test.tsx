@@ -9,6 +9,7 @@ const storeMock = vi.hoisted(() => ({
     sidebarCollapsed: false,
     toggleSidebar: vi.fn(),
   },
+  sessionsModuleLoads: 0,
 }));
 
 vi.mock('@renderer/store', () => ({
@@ -19,10 +20,13 @@ vi.mock('../sidebar/GlobalTaskList', () => ({
   GlobalTaskList: () => React.createElement('div', { 'data-testid': 'tasks-panel' }, 'Tasks panel'),
 }));
 
-vi.mock('../sidebar/DateGroupedSessions', () => ({
-  DateGroupedSessions: () =>
-    React.createElement('div', { 'data-testid': 'sessions-panel' }, 'Sessions panel'),
-}));
+vi.mock('../sidebar/DateGroupedSessions', () => {
+  storeMock.sessionsModuleLoads += 1;
+  return {
+    DateGroupedSessions: () =>
+      React.createElement('div', { 'data-testid': 'sessions-panel' }, 'Sessions panel'),
+  };
+});
 
 /* eslint-enable @typescript-eslint/naming-convention -- Re-enable after component mocks. */
 
@@ -33,6 +37,9 @@ const roots: Root[] = [];
 const flushReact = async (): Promise<void> => {
   await Promise.resolve();
   await Promise.resolve();
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 };
 
 const createHarness = (): { host: HTMLDivElement; root: Root } => {
@@ -65,6 +72,7 @@ describe('Sidebar', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeMock.state.sidebarCollapsed = false;
     storeMock.state.toggleSidebar.mockClear();
+    storeMock.sessionsModuleLoads = 0;
   });
 
   afterEach(async () => {
@@ -85,6 +93,7 @@ describe('Sidebar', () => {
 
     expect(host.querySelector('[data-testid="tasks-panel"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="sessions-panel"]')).toBeNull();
+    expect(storeMock.sessionsModuleLoads).toBe(0);
   });
 
   it('mounts the sessions panel on first activation and keeps it mounted when hidden', async () => {
