@@ -372,8 +372,11 @@ export default interface Resources {
       emptyMessage: 'No language found.';
       names: {
         en: 'English';
+        es: 'Spanish';
+        hi: 'Hindi';
         ja: 'Japanese';
         ko: 'Korean';
+        pt: 'Portuguese';
         ru: 'Russian';
         system: 'System';
         zh: 'Chinese';
