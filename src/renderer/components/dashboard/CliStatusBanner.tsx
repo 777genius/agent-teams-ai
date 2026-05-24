@@ -174,17 +174,19 @@ const DashboardRateLimitChips = ({
   );
 };
 
-const RATE_LIMIT_SKELETON_LABELS = ['5h left', 'Weekly left'] as const;
-
 const DashboardRateLimitSkeletonChips = (): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
+  const labels = [
+    t('cliStatus.rateLimits.durationLeft', { duration: '5h' }),
+    t('cliStatus.rateLimits.weeklyLeft'),
+  ];
 
   return (
     <div
       className="flex flex-wrap items-center gap-2"
       aria-label={t('cliStatus.labels.loadingRateLimits')}
     >
-      {RATE_LIMIT_SKELETON_LABELS.map((label, index) => (
+      {labels.map((label, index) => (
         <div
           key={label}
           className="w-fit max-w-full rounded-md border px-2 py-1.5"
@@ -978,7 +980,7 @@ const InstalledBanner = ({
               : getProviderRuntimeBackendSummary(provider);
             const connectionModeSummary = getProviderConnectionModeSummary(provider, settingsT);
             const credentialSummary = getProviderCredentialSummary(provider, settingsT);
-            const dashboardRateLimits = getDashboardRateLimitsForProvider(provider);
+            const dashboardRateLimits = getDashboardRateLimitsForProvider(provider, t);
             const hasDashboardRateLimits = Boolean(dashboardRateLimits?.length);
             const isSubscriptionRateLimitMode = isDashboardRateLimitSubscriptionMode({
               provider,

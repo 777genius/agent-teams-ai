@@ -72,6 +72,14 @@
       "resets": "сброс {{time}}",
       "runtimeLoginTitle": "Вход в {{runtime}}"
     },
+    "rateLimits": {
+      "durationLeft": "{{duration}} осталось",
+      "primaryLeft": "Primary осталось",
+      "secondaryLeft": "Secondary осталось",
+      "weeklyLeft": "Weekly осталось",
+      "resetUnknown": "сброс неизвестен",
+      "unknown": "Неизвестно"
+    },
     "loading": {
       "aiProviders": "Проверка AI-провайдеров...",
       "claudeCli": "Проверка Claude CLI..."

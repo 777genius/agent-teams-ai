@@ -1070,6 +1070,14 @@ export default interface Resources {
         verifiedCount_other: '{{count}} verified';
         verifiedTitle: 'OpenCode routes with a successful execution proof.';
       };
+      rateLimits: {
+        durationLeft: '{{duration}} left';
+        primaryLeft: 'Primary left';
+        resetUnknown: 'reset unknown';
+        secondaryLeft: 'Secondary left';
+        unknown: 'Unknown';
+        weeklyLeft: 'Weekly left';
+      };
       runtime: {
         configuredHealthCheckFailed: 'The configured {{runtime}} failed its startup health check.';
         configuredNotFound: 'The configured {{runtime}} was not found.';
@@ -4006,7 +4014,17 @@ export default interface Resources {
         restoreAria: 'Restore {{name}}';
       };
       addMembers: {
+        actions: {
+          addMany: 'Add {{count}} members';
+          addOne: 'Add member';
+        };
         description: 'Add new members to {{teamName}}';
+        errors: {
+          addAtLeastOne: 'Add at least one member';
+          duplicateName: 'Duplicate name in the list';
+          nameTaken: 'Name is already taken';
+          reservedName: 'Name "{{name}}" is reserved';
+        };
         title: 'Add Members';
       };
       anthropicContext: {
@@ -4334,6 +4352,20 @@ export default interface Resources {
     messages: {
       actionMode: {
         label: 'Action mode';
+        modes: {
+          ask: {
+            label: 'Ask';
+            tooltip: 'Read-only discussion mode - no code/state changes or commands';
+          };
+          delegate: {
+            label: 'Delegate';
+            tooltip: 'Lead-only orchestration - delegate everything, do not execute yourself';
+          };
+          do: {
+            label: 'Do';
+            tooltip: 'Full execution mode - can change code/state, run commands, or delegate';
+          };
+        };
       };
       actions: {
         bottomSheetActions: 'Message bottom sheet actions';
@@ -5078,6 +5110,12 @@ export default interface Resources {
       searchPlaceholder: 'Search roles...';
     };
     runningTeams: {
+      noProject: 'No project';
+      status: {
+        active: 'Active';
+        launching: 'Launching';
+        running: 'Running';
+      };
       title: 'Running Teams';
     };
     schedule: {

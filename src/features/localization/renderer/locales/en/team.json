@@ -272,7 +272,17 @@
     },
     "addMembers": {
       "title": "Add Members",
-      "description": "Add new members to {{teamName}}"
+      "description": "Add new members to {{teamName}}",
+      "actions": {
+        "addOne": "Add member",
+        "addMany": "Add {{count}} members"
+      },
+      "errors": {
+        "reservedName": "Name \"{{name}}\" is reserved",
+        "nameTaken": "Name is already taken",
+        "duplicateName": "Duplicate name in the list",
+        "addAtLeastOne": "Add at least one member"
+      }
     },
     "placeholders": {
       "name": "member-name",
@@ -714,7 +724,21 @@
       "title": "Status"
     },
     "actionMode": {
-      "label": "Action mode"
+      "label": "Action mode",
+      "modes": {
+        "do": {
+          "label": "Do",
+          "tooltip": "Full execution mode - can change code/state, run commands, or delegate"
+        },
+        "ask": {
+          "label": "Ask",
+          "tooltip": "Read-only discussion mode - no code/state changes or commands"
+        },
+        "delegate": {
+          "label": "Delegate",
+          "tooltip": "Lead-only orchestration - delegate everything, do not execute yourself"
+        }
+      }
     },
     "search": {
       "placeholder": "Search..."
@@ -2443,7 +2467,13 @@
     }
   },
   "runningTeams": {
-    "title": "Running Teams"
+    "title": "Running Teams",
+    "noProject": "No project",
+    "status": {
+      "active": "Active",
+      "launching": "Launching",
+      "running": "Running"
+    }
   },
   "layout": {
     "maxPanesReached": "Maximum of {{count}} panes reached"

@@ -8,6 +8,7 @@ import type {
   CodexAccountAuthMode,
   CodexAccountEffectiveAuthMode,
 } from '@features/codex-account/contracts';
+import type { useAppTranslation } from '@features/localization/renderer';
 import type { CliProviderAuthMode, CliProviderStatus } from '@shared/types';
 
 export interface DashboardRateLimitItem {
@@ -30,6 +31,27 @@ export interface DashboardRateLimitSkeletonInput extends DashboardRateLimitSkele
   hasRateLimits: boolean;
   loading: boolean;
 }
+
+type DashboardT = ReturnType<typeof useAppTranslation>['t'];
+
+const fallbackDashboardT = ((key: string, options?: Record<string, unknown>): string => {
+  switch (key) {
+    case 'cliStatus.rateLimits.durationLeft':
+      return `${String(options?.duration ?? '')} left`;
+    case 'cliStatus.rateLimits.primaryLeft':
+      return 'Primary left';
+    case 'cliStatus.rateLimits.secondaryLeft':
+      return 'Secondary left';
+    case 'cliStatus.rateLimits.weeklyLeft':
+      return 'Weekly left';
+    case 'cliStatus.rateLimits.resetUnknown':
+      return 'reset unknown';
+    case 'cliStatus.rateLimits.unknown':
+      return 'Unknown';
+    default:
+      return key;
+  }
+}) as DashboardT;
 
 function firstKnown<T>(...values: (T | null | undefined)[]): T | null {
   for (const value of values) {
@@ -155,27 +177,40 @@ export function shouldShowDashboardRateLimitSkeleton(
 
 function buildRateLimitLabel(
   fallbackTitle: 'Primary left' | 'Secondary left' | 'Weekly left',
-  windowDurationMins: number | null | undefined
+  windowDurationMins: number | null | undefined,
+  t: DashboardT
 ): string {
   const duration = formatCodexWindowDuration(windowDurationMins);
-  return duration ? `${duration} left` : fallbackTitle;
+  if (duration) {
+    return t('cliStatus.rateLimits.durationLeft', { duration });
+  }
+  const fallbackByTitle = {
+    'Primary left': t('cliStatus.rateLimits.primaryLeft'),
+    'Secondary left': t('cliStatus.rateLimits.secondaryLeft'),
+    'Weekly left': t('cliStatus.rateLimits.weeklyLeft'),
+  };
+  return fallbackByTitle[fallbackTitle];
 }
 
 function buildAnthropicRateLimitLabel(
   fallbackTitle: 'Primary left' | 'Secondary left' | 'Weekly left',
-  windowDurationMins: number | null | undefined
+  windowDurationMins: number | null | undefined,
+  t: DashboardT
 ): string {
   if (windowDurationMins === 10_080) {
-    return 'Weekly left';
+    return t('cliStatus.rateLimits.weeklyLeft');
   }
 
-  return buildRateLimitLabel(fallbackTitle, windowDurationMins);
+  return buildRateLimitLabel(fallbackTitle, windowDurationMins, t);
 }
 
-function formatDashboardResetTime(timestampSeconds: number | null | undefined): string {
+function formatDashboardResetTime(
+  timestampSeconds: number | null | undefined,
+  t: DashboardT
+): string {
   const normalized = normalizeCodexResetTimestamp(timestampSeconds);
   if (!normalized) {
-    return 'reset unknown';
+    return t('cliStatus.rateLimits.resetUnknown');
   }
 
   return new Date(normalized).toLocaleString(undefined, {
@@ -193,18 +228,20 @@ function isRateLimitDepleted(usedPercent: number | null | undefined): boolean {
 function buildRateLimitItem(
   label: string,
   usedPercent: number,
-  resetsAt: number | null | undefined
+  resetsAt: number | null | undefined,
+  t: DashboardT
 ): DashboardRateLimitItem {
   return {
     label,
-    remaining: formatCodexRemainingPercent(usedPercent) ?? 'Unknown',
-    resetsAt: formatDashboardResetTime(resetsAt),
+    remaining: formatCodexRemainingPercent(usedPercent) ?? t('cliStatus.rateLimits.unknown'),
+    resetsAt: formatDashboardResetTime(resetsAt, t),
     isDepleted: isRateLimitDepleted(usedPercent),
   };
 }
 
 export function getCodexDashboardRateLimits(
-  provider: CliProviderStatus
+  provider: CliProviderStatus,
+  t: DashboardT = fallbackDashboardT
 ): DashboardRateLimitItem[] | null {
   if (provider.providerId !== 'codex' || !isCodexSubscriptionActive(provider.connection)) {
     return null;
@@ -217,9 +254,10 @@ export function getCodexDashboardRateLimits(
 
   const items: DashboardRateLimitItem[] = [
     buildRateLimitItem(
-      buildRateLimitLabel('Primary left', rateLimits.primary.windowDurationMins),
+      buildRateLimitLabel('Primary left', rateLimits.primary.windowDurationMins, t),
       rateLimits.primary.usedPercent,
-      rateLimits.primary.resetsAt
+      rateLimits.primary.resetsAt,
+      t
     ),
   ];
 
@@ -228,10 +266,12 @@ export function getCodexDashboardRateLimits(
       buildRateLimitItem(
         buildRateLimitLabel(
           rateLimits.secondary.windowDurationMins === 10_080 ? 'Weekly left' : 'Secondary left',
-          rateLimits.secondary.windowDurationMins
+          rateLimits.secondary.windowDurationMins,
+          t
         ),
         rateLimits.secondary.usedPercent,
-        rateLimits.secondary.resetsAt
+        rateLimits.secondary.resetsAt,
+        t
       )
     );
   }
@@ -240,7 +280,8 @@ export function getCodexDashboardRateLimits(
 }
 
 export function getAnthropicDashboardRateLimits(
-  provider: CliProviderStatus
+  provider: CliProviderStatus,
+  t: DashboardT = fallbackDashboardT
 ): DashboardRateLimitItem[] | null {
   if (!isAnthropicSubscriptionActive(provider)) {
     return null;
@@ -255,9 +296,10 @@ export function getAnthropicDashboardRateLimits(
   if (rateLimits.primary) {
     items.push(
       buildRateLimitItem(
-        buildAnthropicRateLimitLabel('Primary left', rateLimits.primary.windowDurationMins),
+        buildAnthropicRateLimitLabel('Primary left', rateLimits.primary.windowDurationMins, t),
         rateLimits.primary.usedPercent,
-        rateLimits.primary.resetsAt
+        rateLimits.primary.resetsAt,
+        t
       )
     );
   }
@@ -267,10 +309,12 @@ export function getAnthropicDashboardRateLimits(
       buildRateLimitItem(
         buildAnthropicRateLimitLabel(
           rateLimits.secondary.windowDurationMins === 10_080 ? 'Weekly left' : 'Secondary left',
-          rateLimits.secondary.windowDurationMins
+          rateLimits.secondary.windowDurationMins,
+          t
         ),
         rateLimits.secondary.usedPercent,
-        rateLimits.secondary.resetsAt
+        rateLimits.secondary.resetsAt,
+        t
       )
     );
   }
@@ -279,13 +323,14 @@ export function getAnthropicDashboardRateLimits(
 }
 
 export function getDashboardRateLimitsForProvider(
-  provider: CliProviderStatus
+  provider: CliProviderStatus,
+  t: DashboardT = fallbackDashboardT
 ): DashboardRateLimitItem[] | null {
   switch (provider.providerId) {
     case 'codex':
-      return getCodexDashboardRateLimits(provider);
+      return getCodexDashboardRateLimits(provider, t);
     case 'anthropic':
-      return getAnthropicDashboardRateLimits(provider);
+      return getAnthropicDashboardRateLimits(provider, t);
     case 'gemini':
     case 'opencode':
       return null;

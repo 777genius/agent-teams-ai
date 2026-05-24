@@ -72,6 +72,14 @@
       "resets": "resets {{time}}",
       "runtimeLoginTitle": "{{runtime}} Login"
     },
+    "rateLimits": {
+      "durationLeft": "{{duration}} left",
+      "primaryLeft": "Primary left",
+      "secondaryLeft": "Secondary left",
+      "weeklyLeft": "Weekly left",
+      "resetUnknown": "reset unknown",
+      "unknown": "Unknown"
+    },
     "loading": {
       "aiProviders": "Checking AI Providers...",
       "claudeCli": "Checking Claude CLI..."

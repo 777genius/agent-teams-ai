@@ -96,12 +96,6 @@ export const AddMemberDialog = ({
   const [error, setError] = useState<string | null>(null);
   const wasOpenRef = useRef(open);
 
-  // Combine existing names + names already in the draft list for duplicate validation
-  const allNames = useMemo(() => {
-    const draftNames = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
-    return [...existingNames.map((n) => n.toLowerCase()), ...draftNames];
-  }, [existingNames, members]);
-
   const validateName = useCallback(
     (name: string): string | null => {
       const trimmed = name.trim().toLowerCase();
@@ -110,20 +104,24 @@ export const AddMemberDialog = ({
       const inlineError = validateMemberNameInline(name);
       if (inlineError) return inlineError;
 
-      if (trimmed === 'user' || trimmed === 'team-lead') return `Name "${trimmed}" is reserved`;
+      if (trimmed === 'user' || trimmed === 'team-lead') {
+        return t('memberDraft.addMembers.errors.reservedName', { name: trimmed });
+      }
 
       // Check against existing team members
-      if (existingNames.some((n) => n.toLowerCase() === trimmed)) return 'Name is already taken';
+      if (existingNames.some((n) => n.toLowerCase() === trimmed)) {
+        return t('memberDraft.addMembers.errors.nameTaken');
+      }
 
       // Check for duplicates within the draft list
       const draftOccurrences = members.filter(
         (m) => m.name.trim().toLowerCase() === trimmed
       ).length;
-      if (draftOccurrences > 1) return 'Duplicate name in the list';
+      if (draftOccurrences > 1) return t('memberDraft.addMembers.errors.duplicateName');
 
       return null;
     },
-    [existingNames, members]
+    [existingNames, members, t]
   );
 
   const hasValidMembers = useMemo(() => {
@@ -143,7 +141,7 @@ export const AddMemberDialog = ({
       return;
     }
     if (built.length === 0) {
-      setError('Add at least one member');
+      setError(t('memberDraft.addMembers.errors.addAtLeastOne'));
       return;
     }
     setError(null);
@@ -215,7 +213,9 @@ export const AddMemberDialog = ({
           </Button>
           <Button type="button" disabled={adding || !hasValidMembers} onClick={handleSubmit}>
             {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-            {memberCount > 1 ? `Add ${memberCount} members` : 'Add member'}
+            {memberCount > 1
+              ? t('memberDraft.addMembers.actions.addMany', { count: memberCount })
+              : t('memberDraft.addMembers.actions.addOne')}
           </Button>
         </DialogFooter>
       </DialogContent>

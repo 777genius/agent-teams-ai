@@ -1,10 +1,10 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 
 import type { AgentActionMode } from '@shared/types';
@@ -20,29 +20,35 @@ interface ActionModeSelectorProps {
 
 const MODE_CONFIG: {
   mode: ActionMode;
-  label: string;
-  tooltip: string;
+  labelKey:
+    | 'messages.actionMode.modes.do.label'
+    | 'messages.actionMode.modes.ask.label'
+    | 'messages.actionMode.modes.delegate.label';
+  tooltipKey:
+    | 'messages.actionMode.modes.do.tooltip'
+    | 'messages.actionMode.modes.ask.tooltip'
+    | 'messages.actionMode.modes.delegate.tooltip';
   activeClass: string;
   tooltipClass: string;
 }[] = [
   {
     mode: 'do',
-    label: 'Do',
-    tooltip: 'Full execution mode - can change code/state, run commands, or delegate',
+    labelKey: 'messages.actionMode.modes.do.label',
+    tooltipKey: 'messages.actionMode.modes.do.tooltip',
     activeClass: 'bg-rose-500/80 text-white',
     tooltipClass: 'bg-rose-500/80 border-rose-600 text-white',
   },
   {
     mode: 'ask',
-    label: 'Ask',
-    tooltip: 'Read-only discussion mode - no code/state changes or commands',
+    labelKey: 'messages.actionMode.modes.ask.label',
+    tooltipKey: 'messages.actionMode.modes.ask.tooltip',
     activeClass: 'bg-blue-600 text-white',
     tooltipClass: 'bg-blue-600 border-blue-700 text-white',
   },
   {
     mode: 'delegate',
-    label: 'Delegate',
-    tooltip: 'Lead-only orchestration - delegate everything, do not execute yourself',
+    labelKey: 'messages.actionMode.modes.delegate.label',
+    tooltipKey: 'messages.actionMode.modes.delegate.tooltip',
     activeClass: 'bg-amber-500/80 text-white',
     tooltipClass: 'bg-amber-500/80 border-amber-600 text-white',
   },
@@ -88,14 +94,14 @@ export const ActionModeSelector = ({
                   disabled={disabled}
                   onClick={() => onChange(cfg.mode)}
                 >
-                  {cfg.label}
+                  {t(cfg.labelKey)}
                 </button>
               </TooltipTrigger>
               <TooltipContent
                 side="top"
                 className={cn(cfg.tooltipClass, 'data-[state=closed]:animate-none')}
               >
-                {cfg.tooltip}
+                {t(cfg.tooltipKey)}
               </TooltipContent>
             </Tooltip>
           );
