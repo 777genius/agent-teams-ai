@@ -29,6 +29,7 @@ interface ClaudeLogsPanelProps {
   /** Extra className for the panel wrapper. */
   className?: string;
   compactMetaInTooltip?: boolean;
+  toolbarAccessory?: React.ReactNode;
 }
 
 // =============================================================================
@@ -41,6 +42,7 @@ export const ClaudeLogsPanel = ({
   viewerMaxHeight,
   className,
   compactMetaInTooltip = false,
+  toolbarAccessory,
 }: ClaudeLogsPanelProps): React.JSX.Element => {
   const {
     data,
@@ -86,10 +88,20 @@ export const ClaudeLogsPanel = ({
             'Team is not running.'
           )}
         </span>
-        <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            'flex items-center gap-2',
+            compactMetaInTooltip && 'min-w-0 flex-1 justify-end'
+          )}
+        >
           {data.total > 0 ? (
             <>
-              <div className="flex w-48 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1',
+                  compactMetaInTooltip ? 'min-w-0 max-w-48 flex-1' : 'w-48'
+                )}
+              >
                 <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
                 <input
                   type="text"
@@ -109,6 +121,7 @@ export const ClaudeLogsPanel = ({
                   </button>
                 )}
               </div>
+              {toolbarAccessory}
               <ClaudeLogsFilterPopover
                 filter={filter}
                 open={filterOpen}

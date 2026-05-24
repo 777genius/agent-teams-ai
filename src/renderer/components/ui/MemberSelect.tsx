@@ -8,9 +8,10 @@ import {
   agentAvatarUrl,
   buildMemberAvatarMap,
   buildMemberColorMap,
+  displayMemberName,
 } from '@renderer/utils/memberHelpers';
 import { Command as CommandPrimitive } from 'cmdk';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, UserRound } from 'lucide-react';
 
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
@@ -25,6 +26,9 @@ interface MemberSelectProps {
   allowUnassigned?: boolean;
   /** Size variant */
   size?: 'sm' | 'md';
+  /** Full select by default. Avatar mode is for dense toolbars/sidebar surfaces. */
+  triggerVariant?: 'default' | 'avatar';
+  popoverAlign?: 'start' | 'center' | 'end';
   disabled?: boolean;
   className?: string;
 }
@@ -38,6 +42,8 @@ export const MemberSelect = ({
   placeholder = 'Select member...',
   allowUnassigned = false,
   size = 'sm',
+  triggerVariant = 'default',
+  popoverAlign,
   disabled = false,
   className,
 }: MemberSelectProps): React.JSX.Element => {
@@ -57,6 +63,28 @@ export const MemberSelect = ({
   const avatarClass = size === 'md' ? 'size-6' : 'size-5';
   const textSize = size === 'md' ? 'text-xs' : 'text-[10px]';
   const triggerHeight = size === 'md' ? 'h-9' : 'h-8';
+  const isAvatarTrigger = triggerVariant === 'avatar';
+  const effectivePopoverAlign = popoverAlign ?? (isAvatarTrigger ? 'end' : 'start');
+  const avatarTriggerSize = size === 'md' ? 'size-9' : 'size-8';
+  const selectedLabel =
+    selectedMember != null
+      ? displayMemberName(selectedMember.name)
+      : value
+        ? displayMemberName(value)
+        : allowUnassigned
+          ? 'Unassigned'
+          : placeholder;
+
+  const renderAvatarByName = (name: string): React.ReactNode => (
+    <img
+      src={avatarMap.get(name) ?? agentAvatarUrl(name, avatarSize)}
+      alt=""
+      className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
+      loading="lazy"
+    />
+  );
+  const renderMemberAvatar = (member: ResolvedTeamMember): React.ReactNode =>
+    renderAvatarByName(member.name);
 
   // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
   const renderMemberInline = (member: ResolvedTeamMember): React.ReactNode => {
@@ -90,29 +118,48 @@ export const MemberSelect = ({
         <button
           type="button"
           role="combobox"
+          aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listboxId}
+          aria-label={`Select member: ${selectedLabel}`}
+          title={isAvatarTrigger ? selectedLabel : undefined}
           disabled={disabled}
           className={cn(
-            `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
+            isAvatarTrigger
+              ? `inline-flex ${avatarTriggerSize} shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent p-0 text-xs shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`
+              : `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
             className
           )}
         >
-          <span className="min-w-0 truncate text-left">
-            {selectedMember ? (
-              renderMemberInline(selectedMember)
-            ) : value === null && allowUnassigned ? (
-              <span className="text-xs text-[var(--color-text-muted)]">Unassigned</span>
+          {isAvatarTrigger ? (
+            selectedMember ? (
+              renderMemberAvatar(selectedMember)
+            ) : value ? (
+              renderAvatarByName(value)
             ) : (
-              <span className="text-[var(--color-text-muted)]">{placeholder}</span>
-            )}
-          </span>
-          <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+              <UserRound className="size-4 text-[var(--color-text-muted)]" />
+            )
+          ) : (
+            <>
+              <span className="min-w-0 truncate text-left">
+                {selectedMember ? (
+                  renderMemberInline(selectedMember)
+                ) : value === null && allowUnassigned ? (
+                  <span className="text-xs text-[var(--color-text-muted)]">Unassigned</span>
+                ) : (
+                  <span className="text-[var(--color-text-muted)]">{placeholder}</span>
+                )}
+              </span>
+              <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+            </>
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0"
-        align="start"
+        className={cn(
+          isAvatarTrigger ? 'w-56 p-0' : 'w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0'
+        )}
+        align={effectivePopoverAlign}
         sideOffset={4}
         collisionPadding={8}
         avoidCollisions

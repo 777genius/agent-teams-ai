@@ -1,12 +1,16 @@
 import { memo, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
+import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
+import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { Brain, Expand, MessageSquare, Wrench } from 'lucide-react';
 
 import { ClaudeLogsDialog } from './ClaudeLogsDialog';
 import { ClaudeLogsPanel } from './ClaudeLogsPanel';
+import { isLeadLogSourceMember } from './claudeLogsSourceMember';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { useClaudeLogsController } from './useClaudeLogsController';
 
@@ -89,10 +93,26 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
   onOpenChange,
 }: ClaudeLogsSectionProps): React.JSX.Element {
   const ctrl = useClaudeLogsController(teamName);
+  const resolvedMembers = useStore((s) => selectResolvedMembersForTeamName(s, teamName));
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const isSidebar = position === 'sidebar';
   const showHeaderSkeleton = ctrl.loading && ctrl.data.lines.length === 0 && !ctrl.error;
+  const leadLogMember = useMemo(
+    () => resolvedMembers.find((member) => !member.removedAt && isLeadLogSourceMember(member)),
+    [resolvedMembers]
+  );
+  const sidebarLogSourceSelect =
+    isSidebar && leadLogMember ? (
+      <MemberSelect
+        members={[leadLogMember]}
+        value={leadLogMember.name}
+        onChange={() => undefined}
+        size="sm"
+        triggerVariant="avatar"
+        popoverAlign="end"
+      />
+    ) : null;
 
   const sectionHeaderExtra = useMemo(
     () => (
@@ -173,6 +193,7 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
             viewerClassName={cn('max-h-[213px]', isSidebar && 'cli-logs-sidebar')}
             viewerMaxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
             compactMetaInTooltip={isSidebar}
+            toolbarAccessory={sidebarLogSourceSelect}
           />
         )}
       </CollapsibleTeamSection>
