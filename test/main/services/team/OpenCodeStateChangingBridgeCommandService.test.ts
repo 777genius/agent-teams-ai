@@ -299,6 +299,50 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
+  it('records empty bridge output as unknown outcome and blocks duplicate retry', async () => {
+    bridge.resultFactory = ({ body, command, options }) => ({
+      ok: false,
+      schemaVersion: 1,
+      requestId: options.requestId,
+      command,
+      completedAt: '2026-04-21T12:00:10.000Z',
+      durationMs: 100,
+      error: {
+        kind: 'contract_violation',
+        message: 'Bridge stdout was empty',
+        retryable: false,
+      },
+      diagnostics: [],
+      data: body,
+    } as OpenCodeBridgeResult<unknown>);
+    const service = createService();
+
+    const first = await service.execute(buildLaunchInput());
+
+    expect(first).toMatchObject({
+      ok: false,
+      error: { kind: 'contract_violation' },
+    });
+    const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
+    await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
+      status: 'unknown_after_timeout',
+      retryable: false,
+      lastError: 'Bridge stdout was empty',
+    });
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'opencode_bridge_unknown_outcome',
+        message: 'OpenCode bridge command exited without output; outcome must be reconciled before retry',
+      })
+    );
+
+    await expect(service.execute(buildLaunchInput())).rejects.toThrow(
+      'OpenCode bridge command outcome must be reconciled before retry'
+    );
+    expect(bridge.calls).toHaveLength(1);
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
   it('marks result precondition mismatch as failed and does not leave active lease', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({

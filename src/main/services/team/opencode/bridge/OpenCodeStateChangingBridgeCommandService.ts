@@ -209,7 +209,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       );
 
       if (!result.ok) {
-        if (result.error.kind === 'timeout') {
+        if (isOpenCodeBridgeUnknownOutcomeFailure(result)) {
           await this.ledger.markUnknownAfterTimeout({
             idempotencyKey,
             error: result.error.message,
@@ -331,7 +331,9 @@ export class OpenCodeStateChangingBridgeCommandService {
           }),
       runId: input.runId ?? extractRunId(input.result) ?? undefined,
       severity: 'warning',
-      message: 'OpenCode bridge command timed out; outcome must be reconciled before retry',
+      message: isOpenCodeBridgeEmptyOutputFailure(input.result)
+        ? 'OpenCode bridge command exited without output; outcome must be reconciled before retry'
+        : 'OpenCode bridge command timed out; outcome must be reconciled before retry',
       createdAt: completedAt,
     });
   }
@@ -391,6 +393,21 @@ function stringifyError(error: unknown): string {
 
 function isActiveOpenCodeBridgeCommandLeaseError(error: OpenCodeBridgeCommandLeaseError): boolean {
   return error.message.startsWith('OpenCode bridge command lease already active:');
+}
+
+function isOpenCodeBridgeUnknownOutcomeFailure(result: OpenCodeBridgeResult<unknown>): boolean {
+  return (
+    !result.ok && (result.error.kind === 'timeout' || isOpenCodeBridgeEmptyOutputFailure(result))
+  );
+}
+
+function isOpenCodeBridgeEmptyOutputFailure(result: OpenCodeBridgeResult<unknown>): boolean {
+  return (
+    !result.ok &&
+    result.error.kind === 'contract_violation' &&
+    (result.error.message === 'Bridge stdout was empty' ||
+      result.error.message === 'Bridge stdout was empty after retry')
+  );
 }
 
 function sleep(delayMs: number): Promise<void> {

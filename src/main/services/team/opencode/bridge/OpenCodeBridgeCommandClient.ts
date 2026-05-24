@@ -89,6 +89,22 @@ export function resolveOpenCodeBridgeProcessCwd(
   return launcherDirectory && launcherDirectory !== '.' ? launcherDirectory : requestedCwd;
 }
 
+function shouldPreferShellForOpenCodeBridgeCommand(
+  binaryPath: string,
+  args: string[],
+  platform: NodeJS.Platform = process.platform
+): boolean {
+  if (platform !== 'win32') {
+    return false;
+  }
+  const extension = path.win32.extname(binaryPath).toLowerCase();
+  return (
+    WINDOWS_BATCH_EXTENSIONS.has(extension) &&
+    args[0] === 'runtime' &&
+    args[1] === 'opencode-command'
+  );
+}
+
 export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcessRunner {
   async run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult> {
     try {
@@ -97,6 +113,10 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
         timeout: input.timeoutMs,
         maxBuffer: input.stdoutLimitBytes + input.stderrLimitBytes,
         env: input.env,
+        preferShellForWindowsBatch: shouldPreferShellForOpenCodeBridgeCommand(
+          input.binaryPath,
+          input.args
+        ),
       });
       return {
         stdout: result.stdout,

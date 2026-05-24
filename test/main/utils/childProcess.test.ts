@@ -425,6 +425,29 @@ describe('cli child process helpers', () => {
       }
     });
 
+    it('can force generated Bun cmd launchers through shell', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      const execMock = child.exec as unknown as Mock;
+      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: ExecCallback) => {
+        cb(null, 'ok', '');
+        return createMockProcess<ExecChild>();
+      });
+      const { dir, launcher } = createGeneratedBunLauncher();
+      try {
+        const result = await execCli(launcher, ['runtime', 'opencode-command'], {
+          preferShellForWindowsBatch: true,
+        });
+        expect(execFileMock).not.toHaveBeenCalled();
+        expect(execMock).toHaveBeenCalledTimes(1);
+        expect(execMock.mock.calls[0][0]).toContain('runtime');
+        expect(execMock.mock.calls[0][0]).toContain('opencode-command');
+        expect(result.stdout).toBe('ok');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
     it('executes extensionless npm node cmd launchers directly', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as Mock;

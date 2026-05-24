@@ -355,10 +355,18 @@ function withCliProcessDefaults<
  * The return value matches the shape of Node's `execFile` promise: an
  * object with `stdout` and `stderr` strings.
  */
+export interface ExecCliOptions extends ExecFileOptions {
+  /**
+   * Some generated Windows launchers are safe to run directly, but callers can
+   * force the .cmd/.bat path when they need the launcher environment exactly.
+   */
+  preferShellForWindowsBatch?: boolean;
+}
+
 export async function execCli(
   binaryPath: string | null,
   args: string[],
-  options: ExecFileOptions = {}
+  options: ExecCliOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
   if (!binaryPath) {
     throw new Error(
@@ -366,8 +374,12 @@ export async function execCli(
     );
   }
   const target = binaryPath;
-  const opts = withCliProcessDefaults(options);
-  const directLauncher = resolveDirectWindowsLauncher(target);
+  const { preferShellForWindowsBatch = false, ...execOptions } = options;
+  const opts = withCliProcessDefaults(execOptions);
+  const directLauncher =
+    preferShellForWindowsBatch && isWindowsBatchLauncher(target)
+      ? null
+      : resolveDirectWindowsLauncher(target);
   if (directLauncher) {
     const result = await execFileAsync(
       directLauncher.command,
