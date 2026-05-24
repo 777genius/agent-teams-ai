@@ -36,7 +36,7 @@
   "devDependencies": {
     "@mdi/font": "^7.4.47",
     "@nuxt/eslint": "^1.12.1",
-    "@shikijs/transformers": "3.22.0",
+    "@shikijs/transformers": "4.1.0",
     "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
     "medium-zoom": "^1.1.0",
