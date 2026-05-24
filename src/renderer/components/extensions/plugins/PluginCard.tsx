@@ -2,8 +2,8 @@
  * PluginCard — grid card for a single plugin in the catalog.
  */
 
-import { Badge } from '@renderer/components/ui/badge';
 import { useAppTranslation } from '@features/localization/renderer';
+import { Badge } from '@renderer/components/ui/badge';
 import { useStore } from '@renderer/store';
 import {
   getCapabilityLabel,

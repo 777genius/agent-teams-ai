@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { AnimatedHeightReveal } from '@renderer/components/team/activity/AnimatedHeightReveal';
@@ -10,7 +11,6 @@ import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useAppTranslation } from '@features/localization/renderer';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';

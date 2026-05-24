@@ -66,8 +66,9 @@ export interface OpenCodeBridgeCommandClientOptions {
 const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
 const DEFAULT_STDERR_LIMIT_BYTES = 256_000;
 const WINDOWS_BATCH_EXTENSIONS = new Set(['.cmd', '.bat']);
-const EMPTY_STDOUT_READINESS_MAX_ATTEMPTS = 2;
-const EMPTY_STDOUT_READINESS_RETRY_DELAY_MS = 250;
+const EMPTY_STDOUT_READ_ONLY_MAX_ATTEMPTS = 2;
+const EMPTY_STDOUT_READ_ONLY_STDOUT_FALLBACK_ATTEMPTS = 1;
+const EMPTY_STDOUT_READ_ONLY_RETRY_DELAY_MS = 250;
 const SAFE_BRIDGE_INPUT_FILE_REQUEST_ID = /^[A-Za-z0-9._-]{1,120}$/;
 
 export function resolveOpenCodeBridgeProcessCwd(
@@ -174,20 +175,22 @@ export class OpenCodeBridgeCommandClient {
     const outputPath = `${inputPath}.output.json`;
 
     try {
-      const maxAttempts =
-        command === 'opencode.readiness' ? EMPTY_STDOUT_READINESS_MAX_ATTEMPTS : 1;
+      const maxAttempts = isReadOnlyRetryableBridgeCommand(command)
+        ? EMPTY_STDOUT_READ_ONLY_MAX_ATTEMPTS + EMPTY_STDOUT_READ_ONLY_STDOUT_FALLBACK_ATTEMPTS
+        : 1;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const useStdoutOnlyFallback = shouldUseReadOnlyStdoutOnlyFallback(
+          command,
+          attempt,
+          maxAttempts
+        );
+        const bridgeArgs = ['runtime', 'opencode-command', '--json', '--input', inputPath];
+        if (!useStdoutOnlyFallback) {
+          bridgeArgs.push('--output', outputPath);
+        }
         const processResult = await this.processRunner.run({
           binaryPath: this.binaryPath,
-          args: [
-            'runtime',
-            'opencode-command',
-            '--json',
-            '--input',
-            inputPath,
-            '--output',
-            outputPath,
-          ],
+          args: bridgeArgs,
           cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
           timeoutMs: options.timeoutMs,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
@@ -235,8 +238,8 @@ export class OpenCodeBridgeCommandClient {
 
         const parsed = parseSingleBridgeJsonResult<TData>(bridgeOutput.content);
         if (!parsed.ok) {
-          if (shouldRetryEmptyReadinessStdout(command, parsed.error, attempt, maxAttempts)) {
-            await sleep(EMPTY_STDOUT_READINESS_RETRY_DELAY_MS);
+          if (shouldRetryEmptyReadOnlyStdout(command, parsed.error, attempt, maxAttempts)) {
+            await sleep(EMPTY_STDOUT_READ_ONLY_RETRY_DELAY_MS);
             continue;
           }
 
@@ -402,14 +405,32 @@ export function redactBridgeDiagnosticText(value: string): string {
     .replace(/((?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s"'`]+/gi, '$1[redacted]');
 }
 
-function shouldRetryEmptyReadinessStdout(
+function shouldRetryEmptyReadOnlyStdout(
   command: OpenCodeBridgeCommandName,
   error: string,
   attempt: number,
   maxAttempts: number
 ): boolean {
   return (
-    command === 'opencode.readiness' && error === 'Bridge stdout was empty' && attempt < maxAttempts
+    isReadOnlyRetryableBridgeCommand(command) &&
+    error === 'Bridge stdout was empty' &&
+    attempt < maxAttempts
+  );
+}
+
+function shouldUseReadOnlyStdoutOnlyFallback(
+  command: OpenCodeBridgeCommandName,
+  attempt: number,
+  maxAttempts: number
+): boolean {
+  return isReadOnlyRetryableBridgeCommand(command) && attempt === maxAttempts && maxAttempts > 1;
+}
+
+function isReadOnlyRetryableBridgeCommand(command: OpenCodeBridgeCommandName): boolean {
+  return (
+    command === 'opencode.handshake' ||
+    command === 'opencode.commandStatus' ||
+    command === 'opencode.readiness'
   );
 }
 

@@ -421,6 +421,8 @@ vi.mock('@renderer/utils/geminiUiFreeze', () => ({
 vi.mock('@renderer/utils/teamModelAvailability', () => ({
   getTeamModelSelectionError: vi.fn(() => null),
   isTeamModelAvailableForUi: vi.fn(() => true),
+  isTeamProviderModelVerificationPending: vi.fn(() => false),
+  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
   normalizeExplicitTeamModelForUi: vi.fn((_providerId: string, model: string) => model),
 }));
 

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 
-import { useAppTranslation } from '@features/localization/renderer';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
@@ -20,6 +19,7 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 import { X } from 'lucide-react';

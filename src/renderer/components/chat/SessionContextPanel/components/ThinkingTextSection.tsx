@@ -5,6 +5,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { ThinkingTextItem } from '../items/ThinkingTextItem';
 
 import { CollapsibleSection } from './CollapsibleSection';

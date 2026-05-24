@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -5,7 +6,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@renderer/components/ui/context-menu';
-import { useAppTranslation } from '@features/localization/renderer';
 import { Archive, ArchiveRestore, Mail, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
 
 import type { GlobalTask } from '@shared/types';

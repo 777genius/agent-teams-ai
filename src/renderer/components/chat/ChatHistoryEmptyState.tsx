@@ -1,5 +1,6 @@
-import type { JSX } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
+
+import type { JSX } from 'react';
 
 /**
  * Empty state for ChatHistory when no conversation exists.

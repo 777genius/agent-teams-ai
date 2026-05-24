@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "copied": "コピーしました",
+    "copyUrl": "URL をコピー",
+    "open": "開く",
+    "reveal": "ファイルの場所を表示",
+    "retry": "再試行",
+    "save": "保存",
+    "showLess": "少なく表示",
+    "showMore": "もっと表示",
+    "refresh": "更新",
+    "reset": "リセット",
+    "copyToClipboard": "クリップボードにコピー",
+    "moreActions": "その他の操作",
+    "closeDialog": "ダイアログを閉じる",
+    "goToDashboard": "ダッシュボードへ移動",
+    "or": "または",
+    "hide": "非表示",
+    "resetSelection": "選択をリセット"
+  },
+  "code": {
+    "line": "ライン {{line}}",
+    "lines": "ライン {{from}}-{{to}}",
+    "moreLines": "({{count}} より行...)",
+    "moreLines_few": "({{count}} より行...)",
+    "moreLines_many": "({{count}} より行...)",
+    "moreLines_one": "({{count}}よりライン...)",
+    "moreLines_other": "({{count}} より行...)",
+    "code": "コードコード",
+    "preview": "プレビュー",
+    "markdownPreview": "マークダウンプレビュー",
+    "linesParenthesized": "(ライン{{from}}-{{to}})",
+    "mermaidSyntaxError": "マーメイドの構文エラー"
+  },
+  "contextBadge": {
+    "badge": "コンテンツ",
+    "breakdown": {
+      "text": "テキスト",
+      "thinking": "考えること"
+    },
+    "detailsAria": "コンテキストの注入の細部",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}}トークン",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.mdファイル",
+      "mentionedFiles": "メンションファイル",
+      "taskCoordination": "タスクコーディネート",
+      "thinkingText": "思考+ テキスト",
+      "toolOutputs": "ツール出力",
+      "userMessages": "ユーザーメッセージ"
+    },
+    "title": "この回転で注入される新しいコンテキスト",
+    "tokenCount": "~{{tokens}}トークン",
+    "totalNewTokens": "新しいトークンの合計",
+    "turn": "回転 {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}}トークン",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}}トークン",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}}トークン",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}}トークン"
+  },
+  "locales": {
+    "emptyMessage": "言語が見つかりません。",
+    "names": {
+      "en": "英語",
+      "ru": "ロシア語",
+      "zh": "中国語",
+      "ja": "日本語",
+      "ko": "韓国語",
+      "es": "スペイン語",
+      "hi": "ヒンディー語",
+      "pt": "ポルトガル語",
+      "fr": "フランス語",
+      "ar": "アラビア語",
+      "bn": "ベンガル語",
+      "ur": "ウルドゥー語",
+      "id": "インドネシア語",
+      "de": "ドイツ語",
+      "system": "システム"
+    },
+    "searchPlaceholder": "言語を検索...",
+    "selectPlaceholder": "アプリの言語を選択...",
+    "systemWithResolved": "システム - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "メンバーが見つかりません。",
+    "searchPlaceholder": "メンバーを検索...",
+    "unassigned": "未割り当て",
+    "teammateFallback": "チームメイト"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "チェックイン",
+        "downloading": "ダウンロード",
+        "installCli": "Codex CLIをインストール",
+        "installing": "インストール",
+        "retryInstall": "再試行インストール"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "一致する候補はありません",
+    "searching": "検索中...",
+    "searchingFiles": "ファイルを検索中...",
+    "findInConversation": "会話内を検索...",
+    "resultCount": "{{current}} / {{total}}",
+    "resultCountCapped": "{{current}} / {{total}}+",
+    "noResults": "結果なし",
+    "previousResultShortcut": "前の結果 (Shift+Enter)",
+    "nextResultShortcut": "次の結果 (Enter)",
+    "closeShortcut": "閉じる (Esc)",
+    "nothingFound": "見つかりません",
+    "placeholder": "検索..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "スケジュールの追加",
+      "clearFilters": "フィルターをクリア",
+      "createSchedule": "スケジュールの作成",
+      "delete": "削除",
+      "edit": "編集",
+      "pause": "パデュース",
+      "resume": "ログイン",
+      "runNow": "今すぐ登録"
+    },
+    "empty": {
+      "description": "任意のチームでスケジュールを作成し、Claude タスクの実行を cron 式で自動化します。 チーム全員のスケジュールはこちら",
+      "noMatches": "スケジュールが現在のフィルターにマッチしない",
+      "title": "スケジュールされたタスクなし"
+    },
+    "filters": {
+      "allTeams": "すべてのチーム"
+    },
+    "item": {
+      "loadingRunHistory": "実行履歴を読み込む...",
+      "nextRun": "次へ: {{value}}",
+      "noRunsYet": "未稼働"
+    },
+    "loading": "読み込みスケジュール...",
+    "searchPlaceholder": "スケジュール検索",
+    "status": {
+      "active": "アクティブ",
+      "all": "すべて",
+      "disabled": "バリアフリー",
+      "paused": "パユース"
+    },
+    "title": "スケジュール"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "ログイン",
+      "pin": "ログイン",
+      "unhide": "ログイン"
+    },
+    "empty": {
+      "noMatchingSessions": "マッチングセッションなし",
+      "noMatchingSessionsDescription": "このプロジェクトでは、マッチングセッションはまだありません。",
+      "noMatchingSessionsFiltered": "別のクエリを試したり、プロバイダフィルターをリセットしたりしてください。",
+      "noSessions": "セッションが見つかりません",
+      "noSessionsDescription": "このプロジェクトは、まだセッションがない",
+      "selectProject": "セッションを表示するプロジェクトを選択"
+    },
+    "errors": {
+      "loading": "エラーロードセッション"
+    },
+    "loadedMatchingMore": "これまでの{{count}}マッチングセッション - スクロールダウンして読み込みます。",
+    "loadingMore": "より多くのセッションを読み込む...",
+    "pinned": "ピン留め",
+    "scrollToLoadMore": "もっと見る",
+    "search": {
+      "clear": "クリアセッション検索",
+      "placeholder": "セッションを検索..."
+    },
+    "selection": {
+      "cancel": "キャンセル選択",
+      "exitMode": "出口の選択モード",
+      "hideSelected": "選択したセッションを隠す",
+      "pinSelected": "ピン選択したセッション",
+      "selectSessions": "セッションの選択",
+      "selected": "選択される{{count}}",
+      "unhideSelected": "選択されていないセッション",
+      "selected_few": "選択される{{count}}",
+      "selected_many": "選択される{{count}}",
+      "selected_one": "選択される{{count}}",
+      "selected_other": "選択される{{count}}"
+    },
+    "sort": {
+      "byContext": "コンテキスト",
+      "byContextTooltip": "コンテキスト消費によるソート",
+      "byRecentTooltip": "最近の投稿",
+      "contextLoadedOnly": "コンテキストソートは、読み込みセッションのみをランク付けします。"
+    },
+    "title": "セッション",
+    "visibility": {
+      "hideHidden": "隠されたセッションを隠す",
+      "showHidden": "隠されたセッションを表示する"
+    },
+    "worktree": {
+      "switch": "スイッチワークツリー"
+    },
+    "loadedMatchingMore_few": "これまでの{{count}}マッチングセッション - スクロールダウンして読み込みます。",
+    "loadedMatchingMore_many": "これまでの{{count}}マッチングセッション - スクロールダウンして読み込みます。",
+    "loadedMatchingMore_one": "これまでの{{count}}マッチングセッション - スクロールダウンして読み込みます。",
+    "loadedMatchingMore_other": "これまでの{{count}}マッチングセッション - スクロールダウンして読み込みます。",
+    "failedToLoad": "セッションをロードできなかった",
+    "loading": "読み込みセッション...",
+    "filter": {
+      "title": "フィルターセッション"
+    },
+    "count": "{{count}}セッション",
+    "count_one": "{{count}}セッション",
+    "count_other": "{{count}}セッション",
+    "count_few": "{{count}}セッション",
+    "count_many": "{{count}}セッション",
+    "inProgress": "セッションは進行中です..."
+  },
+  "states": {
+    "loading": "読み込み中...",
+    "offline": "オフライン",
+    "online": "オンライン",
+    "unknown": "不明",
+    "error": "エラー"
+  },
+  "markdown": {
+    "imageFallback": "[画像: {{label}}]",
+    "largeContentNotice": "内容は非常に大きい({{count}}のchars)です。 UI の応答性を保つために生のプレビューを表示.",
+    "largeContentTitle": "大きいコンテンツは、UIの凍結を防ぐために生として示されます",
+    "raw": "ログイン",
+    "rawPreview": "生のプレビュー",
+    "renderMarkdown": "レンダリングのマークダウン",
+    "showAll": "すべて表示",
+    "showMore": "もっと表示",
+    "showRaw": "原材料を表示",
+    "showingChars": "{{shown}} / {{total}}の文字を表示",
+    "largeContentNotice_few": "内容は非常に大きい({{count}}のchars)です。 UI の応答性を保つために生のプレビューを表示.",
+    "largeContentNotice_many": "内容は非常に大きい({{count}}のchars)です。 UI の応答性を保つために生のプレビューを表示.",
+    "largeContentNotice_one": "内容は非常に大きい({{count}}のchars)です。 UI の応答性を保つために生のプレビューを表示.",
+    "largeContentNotice_other": "内容は非常に大きい({{count}}のchars)です。 UI の応答性を保つために生のプレビューを表示."
+  },
+  "terminal": {
+    "checkOutputForDetails": "上記のターミナル出力を詳細にチェック",
+    "closingInSeconds": "{{count}}Sのクローズ...",
+    "closingInSeconds_few": "{{count}}Sのクローズ...",
+    "closingInSeconds_many": "{{count}}Sのクローズ...",
+    "closingInSeconds_one": "{{count}}Sのクローズ...",
+    "closingInSeconds_other": "{{count}}Sのクローズ...",
+    "completedSuccessfully": "正常に完了",
+    "exitCode": "(exit コード {{code}})",
+    "processFailed": "プロセス失敗",
+    "title": "ターミナル"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "重複排除なしでセッション全体に蓄積",
+    "cacheRead": "キャッシュ読み取り",
+    "cacheWrite": "キャッシュ書き込み",
+    "costUsd": "コスト(USD)",
+    "inputTokens": "入力トークン",
+    "model": "モデル",
+    "outputTokens": "出力トークン",
+    "phase": "フェーズ{{phase}}/{{total}}",
+    "promptInputShare": "プロンプト入力の{{percent}}%",
+    "taskCoordination": "タスクコーディネート",
+    "thinkingText": "思考+ テキスト",
+    "toolOutputs": "ツール出力",
+    "total": "合計:",
+    "userMessages": "ユーザーメッセージ",
+    "visibleContext": "可視コンテキスト",
+    "includesClaudeMd": "詳細はこちら CLAUDE.mdの×{{count}}",
+    "claudeMd": "CLAUDE.mdの特長",
+    "mentionedFiles": "@ファイル",
+    "percentValue": "( ){{percent}}%) 1%",
+    "approxTokens": "~{{tokens}}トークン",
+    "approxTokensParenthesized": "(～){{tokens}}) )"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "コピーチーム",
+      "createTeam": "チームの作成",
+      "deleteForever": "永遠に削除",
+      "deletePermanently": "永久に削除",
+      "deleteTeam": "チーム削除",
+      "launching": "スタート...",
+      "launchTeam": "スタートチーム",
+      "relaunchTeam": "チーム紹介",
+      "restore": "リストア",
+      "restoreTeam": "チームを復元",
+      "retry": "リトリート",
+      "stopTeam": "チームの停止",
+      "stopping": "停止..."
+    },
+    "status": {
+      "active": "アクティブ",
+      "deleted": "削除された",
+      "launching": "スタート...",
+      "offline": "オフライン",
+      "partialFailure": "起動失敗したpartway",
+      "partialPending": "ブーツストラップ ペンディング",
+      "partialSkipped": "スキップされたメンバーの起動",
+      "running": "ランニング"
+    },
+    "partial": {
+      "pending": "最終起動はまだ再調整されます。",
+      "skipped": "最終起動はチームメイトをスキップしました。",
+      "skippedWithCount": "最終起動は、{{count}}/{{expected}}チームメイトをスキップしました。",
+      "skippedWithCount_few": "最終起動は、{{count}}/{{expected}}チームメイトをスキップしました。",
+      "skippedWithCount_many": "最終起動は、{{count}}/{{expected}}チームメイトをスキップしました。",
+      "skippedWithCount_one": "最終起動は、{{count}}/{{expected}}チームメイトをスキップしました。",
+      "skippedWithCount_other": "最終起動は、{{count}}/{{expected}}チームメイトをスキップしました。",
+      "stopped": "すべてのチームメイトが参加する前に、最終起動を停止しました。",
+      "stoppedWithCount": "{{count}}/{{expected}} チームメイト前の最終起動が停止しました。",
+      "stoppedWithCount_few": "{{count}}/{{expected}} チームメイト前の最終起動が停止しました。",
+      "stoppedWithCount_many": "{{count}}/{{expected}} チームメイト前の最終起動が停止しました。",
+      "stoppedWithCount_one": "{{count}}/{{expected}} チームメイト前の最終起動が停止しました。",
+      "stoppedWithCount_other": "{{count}}/{{expected}} チームメイト前の最終起動が停止しました。"
+    },
+    "noDescription": "説明なし",
+    "solo": "ソロ",
+    "membersCount": "会員: {{count}}",
+    "membersCount_few": "会員: {{count}}",
+    "membersCount_many": "会員: {{count}}",
+    "membersCount_one": "会員: {{count}}",
+    "membersCount_other": "会員: {{count}}",
+    "all": "すべて",
+    "moreCount": "+{{count}} より",
+    "moreCount_one": "+{{count}} より",
+    "moreCount_other": "+{{count}} より",
+    "moreCount_few": "+{{count}} より",
+    "moreCount_many": "+{{count}} より"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "デフォルトは、独自の OpenCode をオーバーライドしていないプロジェクトです。",
+      "scopeDescriptionProject": "選択したプロジェクトのみをオーバーライドします。 運営チームは変更されません。",
+      "setAllProjectsDefault": "すべてのプロジェクトをデフォルトで設定する",
+      "setProjectDefault": "プロジェクトのデフォルト設定",
+      "validationContext": "検証コンテキスト",
+      "projectOverrideContext": "プロジェクトオーバーライドコンテキスト",
+      "selectProjectHint": "ローカルモデルをテストしたり、デフォルト値を保存する前にプロジェクトを選択します。",
+      "allProjectsHint": "試験は{{project}}を使用します。 プロジェクトがオーバーライドされていない限りデフォルトが適用されます。",
+      "projectHint": "{{project}} のみオーバーライドを保存します。"
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "コンテンツ",
+      "closePanel": "クローズパネル",
+      "phase": "フェーズ:",
+      "current": "現在の位置:",
+      "view": "ビュー:",
+      "category": "カテゴリー",
+      "bySize": "サイズによって"
+    },
+    "metrics": {
+      "unavailable": "ご利用案内",
+      "contextUsed": "使用されるコンテキスト",
+      "promptInput": "プロンプト入力",
+      "visibleContext": "可視コンテキスト",
+      "ofContext": "コンテキスト",
+      "ofPrompt": "プロンプト",
+      "codexTelemetryUnavailable": "Codex のプロンプト側の使用は、現在のランタイムテレメトリーではまだ公開されていないため、Prompt Input と Context Used は、偽のゼロを示す代わりに利用できません。",
+      "sessionCost": "セッション費用:",
+      "parentPlus": "親 +",
+      "subagents": "サブエージェント",
+      "details": "ニュース"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "使用されるコンテキスト",
+        "description": "プロンプト入力と出力トークンは現在、モデルのコンテキストウィンドウを占めています。"
+      },
+      "promptInput": {
+        "title": "プロンプト入力",
+        "description": "生成前のモデルに送信されたトークン。 Claude には、`input_tokens + cache_creation_input_tokens + cache_read_input_tokens` が含まれています。"
+      },
+      "visibleContext": {
+        "title": "可視コンテキスト",
+        "description": "プロンプト入力の検査可能なサブセット:ファイル、CLAUDE.md、ツール出力、ユーザーメッセージ、および直接最適化できる同様の注射。"
+      },
+      "availability": {
+        "title": "交通アクセス",
+        "description": "プロバイダーのランタイムがプロンプト側の使用をまだ露出していない場合、パネルはデフォルト値ではなくメトリックを表示します。"
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}の特長",
+      "tokensApprox": "~{{tokens}}トークン",
+      "toolsCount": "{{count}} ツール",
+      "toolsCount_one": "{{count}} ツール",
+      "toolsCount_other": "{{count}} ツール",
+      "toolsCount_few": "{{count}} ツール",
+      "toolsCount_many": "{{count}} ツール",
+      "itemsCount": "{{count}}アイテム",
+      "itemsCount_one": "{{count}} アイテム",
+      "itemsCount_other": "{{count}}アイテム",
+      "itemsCount_few": "{{count}}アイテム",
+      "itemsCount_many": "{{count}}アイテム",
+      "missing": "行方不明",
+      "thinking": "考えること",
+      "text": "テキスト"
+    },
+    "empty": "このセッションで検出されたコンテキストインジェクションなし",
+    "view": {
+      "grouped": "グループ",
+      "flat": "フラット"
+    },
+    "claudeMdFiles": "CLAUDE.mdファイル",
+    "mentionedFiles": "メンションファイル"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "サブエージェント",
+      "shutdownConfirmed": "シュートダウン確認",
+      "summary": {
+        "tools": "{{count}} ツール",
+        "tools_one": "{{count}} ツール",
+        "tools_other": "{{count}} ツール",
+        "tools_few": "{{count}} ツール",
+        "tools_many": "{{count}} ツール"
+      },
+      "meta": {
+        "type": "タイプ:",
+        "duration": "スケジュール",
+        "model": "モデル",
+        "id": "インフォメーション"
+      },
+      "metrics": {
+        "contextWindow": "コンテキストウィンドウ",
+        "contextUsage": "コンテキストの使用",
+        "mainContext": "主なコンテキスト",
+        "totalOutput": "総出力",
+        "turns": "({{count}}ターン)",
+        "turns_one": "({{count}}ターン)",
+        "turns_other": "({{count}}ターン)",
+        "subagentContext": "試薬のコンテキスト",
+        "phase": "フェーズ{{phase}}",
+        "turns_few": "({{count}}ターン)",
+        "turns_many": "({{count}}ターン)"
+      },
+      "trace": {
+        "title": "実行トレース"
+      }
+    },
+    "user": {
+      "you": "お問い合わせ",
+      "showMore": "もっと表示",
+      "showLess": "少ないショー",
+      "backgroundTask": "背景タスク",
+      "exitCode": "{{code}}出口",
+      "imagesAttached": "添付の{{count}}画像",
+      "imagesAttached_one": "{{count}}画像添付",
+      "imagesAttached_few": "添付の{{count}}画像",
+      "imagesAttached_many": "添付の{{count}}画像",
+      "imagesAttached_other": "添付の{{count}}画像"
+    },
+    "compact": {
+      "toggle": "コンパクトなコンテンツをトグル",
+      "contextCompacted": "コンテクストのコンパクト化",
+      "freedTokens": "({{tokens}}フリー)",
+      "phase": "フェーズ{{phase}}",
+      "conversationCompacted": "会話 コンパクト",
+      "summary": "前のメッセージはコンテキストを保存するためにまとめられました。 会話履歴はセッションファイルに保存されます。",
+      "compacted": "コンパクト"
+    },
+    "executionTrace": {
+      "empty": "実行項目なし",
+      "nested": "ネスト: {{name}}",
+      "input": "パスワード"
+    },
+    "items": {
+      "empty": "表示する項目無し"
+    },
+    "tools": {
+      "teammateSpawned": "チームメイトスポーン",
+      "shutdownRequested": "リクエストされたシャットダウン->",
+      "noResultReceived": "結果が出ない",
+      "duration": "期間: {{duration}}",
+      "result": "結果発表",
+      "write": {
+        "createdFile": "作成されたファイル",
+        "wroteToFile": "ファイルへの書き込み"
+      },
+      "skill": {
+        "instructions": "スキルの指示",
+        "unknown": "未知のスキル"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "ユーザが中断したリクエスト",
+      "planReadyForApproval": "承認のためのプランの準備"
+    },
+    "empty": {
+      "icon": "...",
+      "title": "会話履歴なし",
+      "description": "このセッションでは、メッセージがまだ含まれていません。"
+    },
+    "context": {
+      "remainingPercent": "(左{{percent}}%)",
+      "count": "コンテキスト({{count}})",
+      "count_one": "コンテキスト({{count}})",
+      "count_other": "コンテキスト({{count}})",
+      "count_few": "コンテキスト({{count}})",
+      "count_many": "コンテキスト({{count}})"
+    },
+    "scrollToBottom": "下にスクロール",
+    "bottom": "ボトム",
+    "teammateMessage": {
+      "message": "メッセージ",
+      "resent": "ログイン",
+      "fallback": "チームメイトメッセージ"
+    },
+    "system": {
+      "label": "システム"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux がインストールされていない",
+    "detectedOs": "検出されたOS: {{os}}",
+    "runtimePath": "ランタイムパス: {{path}}",
+    "phase": "フェーズ: {{phase}}",
+    "actions": {
+      "cancel": "キャンセル",
+      "manualGuide": "マニュアルガイド",
+      "hideSetupSteps": "セットアップ手順を隠す",
+      "showSetupSteps": "セットアップ手順({{count}})を表示",
+      "showSetupSteps_one": "セットアップステップ({{count}})を表示",
+      "showSetupSteps_other": "セットアップ手順({{count}})を表示",
+      "recheck": "再確認",
+      "showSetupSteps_few": "セットアップ手順({{count}})を表示",
+      "showSetupSteps_many": "セットアップ手順({{count}})を表示"
+    },
+    "installerProgress": "インストーラの進捗",
+    "input": {
+      "placeholder": "インストーラに入力を送信",
+      "send": "入力を送信",
+      "passwordNotice": "パスワード入力はインストーラーターミナルに直接送信され、ログ出力には追加されません。"
+    },
+    "details": {
+      "show": "詳細を見る",
+      "hide": "詳細を隠す"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "最近の活動はありません",
+    "sessionsCount": "{{count}}セッション",
+    "sessionsCount_one": "{{count}}セッション",
+    "sessionsCount_other": "{{count}}セッション",
+    "mode": {
+      "searchProjects": "プロジェクトを検索",
+      "searchAcrossProjects": "すべてのプロジェクトを横断検索",
+      "searchInProject": "プロジェクトを検索"
+    },
+    "currentProject": "現在のプロジェクト",
+    "global": "グローバル",
+    "placeholders": {
+      "projects": "プロジェクトを検索",
+      "conversations": "会話を検索..."
+    },
+    "empty": {
+      "noProjectsForQuery": "\"{{query}}\" のプロジェクトが見つかりません",
+      "noProjects": "プロジェクトが見つかりません",
+      "minChars": "検索する文字を2文字以上入力",
+      "noFastResults": "\"{{query}}\" の最近のセッションで高速な結果はありません",
+      "noResults": "\"{{query}}\" の検索結果が見つかりません"
+    },
+    "footer": {
+      "projectsCount": "{{count}}プロジェクト",
+      "projectsCount_one": "{{count}}プロジェクト",
+      "projectsCount_other": "{{count}}プロジェクト",
+      "results": "{{count}} {{speed}}resultsの特長",
+      "results_one": "{{count}} {{speed}}resultの特長",
+      "results_other": "{{count}} {{speed}}resultsの特長",
+      "resultsAcrossProjects": "{{count}} {{speed}}results すべてのプロジェクトを横断",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}result すべてのプロジェクトを横断",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}results すべてのプロジェクトを横断",
+      "fastPrefix": "高速",
+      "typeToSearch": "検索の種類",
+      "navigate": "ナビゲーション",
+      "select": "選択する",
+      "open": "オープン",
+      "global": "グローバル",
+      "close": "おすすめ",
+      "results_few": "{{count}} {{speed}}resultsの特長",
+      "results_many": "{{count}} {{speed}}resultsの特長",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}results すべてのプロジェクトを横断",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}results すべてのプロジェクトを横断",
+      "projectsCount_few": "{{count}}プロジェクト",
+      "projectsCount_many": "{{count}}プロジェクト",
+      "upDownKey": "ツイート",
+      "escapeKey": "エスシー"
+    },
+    "sessionsCount_few": "{{count}}セッション",
+    "sessionsCount_many": "{{count}}セッション"
+  },
+  "tasksPanel": {
+    "title": "タスク",
+    "searchPlaceholder": "タスクを検索...",
+    "pinned": "ピン留め",
+    "groupByLabel": "グループ別:",
+    "groupByAria": "グループ別",
+    "groupModes": {
+      "none": "なし",
+      "project": "プロジェクト",
+      "time": "タイムタイム"
+    },
+    "showArchived": "アーカイブを表示",
+    "hideArchived": "アーカイブを隠す",
+    "empty": {
+      "noMatchingTasks": "マッチングタスクなし",
+      "noTasks": "タスクが見つかりません"
+    },
+    "teamLabel": "チーム: {{team}}",
+    "showMore": "もっと表示",
+    "showLess": "少ないショー",
+    "deleteConfirm": {
+      "title": "タスクの削除",
+      "message": "タスク #{{taskId}} をゴミ箱に移動しますか?",
+      "confirmLabel": "削除",
+      "cancelLabel": "キャンセル"
+    },
+    "deleteFailed": {
+      "title": "タスクを削除できなかった",
+      "fallbackMessage": "予期しないエラーが発生しました",
+      "confirmLabel": "お問い合わせ"
+    },
+    "sort": {
+      "byTime": "時間によって",
+      "byUnread": "未読で",
+      "byProject": "プロジェクト",
+      "byTeam": "チーム別"
+    }
+  },
+  "toolViewer": {
+    "input": "パスワード",
+    "replaceAll": "(すべて置換)",
+    "noInputRecorded": "このツールコールの入力は記録されません。",
+    "agent": {
+      "action": "アクション",
+      "teammate": "チームメイト",
+      "team": "スタッフ",
+      "runtime": "ランタイム",
+      "type": "タイプ:",
+      "startupInstructionsHidden": "UIで起動指示が隠されています。"
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "アンパン",
+    "pin": "ログイン",
+    "rename": "リネーム",
+    "markUnread": "未読のマーク",
+    "unarchive": "非アーカイブ",
+    "archive": "アーカイブ",
+    "deleteTask": "タスクの削除"
+  },
+  "updateDialog": {
+    "closeDialog": "ダイアログを閉じる",
+    "updateAvailable": "最新情報",
+    "updateReady": "Readyの更新",
+    "noReleaseNotes": "リリースノートはありません。",
+    "viewOnGitHub": "GitHubで見る",
+    "later": "後で",
+    "restartNow": "今すぐ再起動",
+    "download": "ダウンロード"
+  },
+  "errorBoundary": {
+    "title": "何かが間違っていた",
+    "description": "アプリケーションで予期しないエラーが発生しました。 ページのリロードやエラー状態のリセットを試みることができます。",
+    "componentStack": "コンポーネントスタック",
+    "tryAgain": "お問い合わせ",
+    "copied": "コピッド",
+    "copyErrorDetails": "コピーエラーの詳細",
+    "reportBugOnGitHub": "GitHubでバグ報告",
+    "reloadApp": "アプリをダウンロード",
+    "diagnosticsNotice": "GitHubのバグレポートとコピーされた診断には、エラーメッセージ、スタックトレース、アプリバージョン、アクティブタブ、選択したチーム、タスクコンテキスト、および環境の詳細が含まれます。"
+  },
+  "runtimeBackendSelector": {
+    "label": "Runtime バックエンド",
+    "resolved": "解決: {{backend}}",
+    "current": "現在の位置:",
+    "recommended": "おすすめ商品",
+    "unavailable": "ご利用案内",
+    "cannotSelectYet": "このバックエンドは選択できません。",
+    "auto": "オートマチック",
+    "autoCurrently": "自動(現:{{backend}})",
+    "audience": {
+      "internal": "インテリア"
+    },
+    "states": {
+      "locked": "ロック",
+      "disabled": "バリアフリー",
+      "authRequired": "Auth が必要",
+      "runtimeMissing": "実行時間欠落",
+      "degraded": "分解された",
+      "unavailable": "ご利用案内"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "チェックイン",
+    "unavailable": "ご利用案内",
+    "checkFailed": "失敗するチェック",
+    "free": "無料",
+    "freeTooltip": "OpenCodeメタデータによるレポート 空室状況と制限は変更される場合があります。"
+  },
+  "taskFilters": {
+    "status": "ステータス",
+    "clearAll": "すべてクリア",
+    "selectAll": "すべてを選択",
+    "team": "スタッフ",
+    "allTeams": "すべてのチーム",
+    "searchTeams": "チーム検索",
+    "noTeamsFound": "チームが見つかりません",
+    "project": "プロジェクト",
+    "allProjects": "すべてのプロジェクト",
+    "searchProjects": "プロジェクトを検索",
+    "noProjects": "プロジェクトなし",
+    "comments": "コメント",
+    "apply": "お問い合わせ",
+    "read": {
+      "all": "すべて",
+      "unread": "ログイン",
+      "read": "採用情報"
+    },
+    "statusOptions": {
+      "todo": "TODOの特長",
+      "inProgress": "PROGRESSで",
+      "needsFix": "NEEDS FIXESの特長",
+      "done": "DONEの特長",
+      "review": "REVIEWの特長",
+      "approved": "APPROVEDの特長"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "総コンテキスト: {{tokens}} トークン",
+    "context": "コンテキスト: {{tokens}}",
+    "phase": "フェーズ{{phase}}:",
+    "compactedTo": "({{tokens}}に相当)"
+  },
+  "notifications": {
+    "row": {
+      "team": "スタッフ",
+      "subagent": "サブエージェント",
+      "markAsRead": "マーク 読み込み",
+      "delete": "削除",
+      "viewInSession": "セッションで見る"
+    },
+    "title": "お知らせ",
+    "loading": "通知の読み込み...",
+    "actions": {
+      "markFilteredAsRead": "読まれたとしてろ過される印",
+      "markAllAsRead": "マークを読んでいる",
+      "markFilteredRead": "マークフィルタ読み取り",
+      "markAllRead": "マーク すべての読み込み",
+      "clearFilteredNotifications": "フィルターされた通知をクリア",
+      "clearAllNotifications": "すべての通知をクリアする",
+      "clickToConfirm": "クリックして確認",
+      "clearFiltered": "明確なろ過される",
+      "clearAll": "すべてクリア"
+    },
+    "counts": {
+      "unreadInFilter": "フィルターの {{count}} の未読",
+      "unreadInFilter_one": "フィルターの {{count}} の未読",
+      "unreadInFilter_few": "フィルターの {{count}} の未読",
+      "unreadInFilter_many": "フィルターの {{count}} の未読",
+      "unreadInFilter_other": "フィルターの {{count}} の未読",
+      "inFilter": "フィルターの {{count}}",
+      "inFilter_one": "フィルターの {{count}}",
+      "inFilter_few": "フィルターの {{count}}",
+      "inFilter_many": "フィルターの {{count}}",
+      "inFilter_other": "フィルターの {{count}}",
+      "unread": "{{count}} 未読",
+      "unread_one": "{{count}} 未読",
+      "unread_few": "{{count}} 未読",
+      "unread_many": "{{count}} 未読",
+      "unread_other": "{{count}} 未読",
+      "total": "{{count}}合計",
+      "total_one": "{{count}}合計",
+      "total_few": "{{count}}合計",
+      "total_many": "{{count}}合計",
+      "total_other": "{{count}}合計"
+    },
+    "filters": {
+      "other": "その他"
+    },
+    "empty": {
+      "noMatching": "マッチング通知なし",
+      "noNotifications": "通知なし",
+      "tryDifferentFilter": "別のフィルターを試みて下さい",
+      "allCaughtUp": "お問い合わせ"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "更新する再起動",
+    "updateApp": "アプリの更新",
+    "downloadedRestartTooltip": "ダウンロードした更新, 再起動を適用します",
+    "newVersionAvailable": "新バージョン対応",
+    "updatingApp": "アプリの更新",
+    "updateReady": "更新の準備",
+    "restartNow": "今すぐ再起動"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "ディスコード",
+    "expandSidebar": "サイドバーを拡張",
+    "collapseSidebarShortcut": "崩壊のサイドバー({{shortcut}})",
+    "sidebarView": "サイドバービュー",
+    "resizeSidebar": "サイドバーのサイズ変更",
+    "closeTab": "タブを閉じる",
+    "openedFromSearch": "検索から開く",
+    "pinnedSession": "ピン留めセッション",
+    "jumpToSection": "セクションへのジャンプ",
+    "newTab": "新しいタブ",
+    "newTabDashboard": "新しいタブ(ダッシュボード)",
+    "refreshSession": "リフレッシュセッション",
+    "refreshSessionWithShortcut": "リフレッシュセッション({{shortcut}})",
+    "loadingTab": "ロードタブ",
+    "menu": {
+      "teams": "チーム",
+      "settings": "コンテンツ",
+      "extensions": "エクステンション",
+      "search": "インフォメーション",
+      "schedules": "スケジュール",
+      "docs": "ドキュメント",
+      "exportMarkdown": "マークダウンとしてエクスポート",
+      "exportJson": "JSONとしてエクスポート",
+      "exportPlainText": "プレーンテキストとしてエクスポート",
+      "analyzeSession": "分析セッション"
+    },
+    "tabMenu": {
+      "closeTabs": "クローズ {{count}} タブ",
+      "closeTabs_one": "クローズ {{count}} ツイート",
+      "closeTabs_few": "クローズ {{count}} タブ",
+      "closeTabs_many": "クローズ {{count}} タブ",
+      "closeTabs_other": "クローズ {{count}} タブ",
+      "closeTab": "タブを閉じる",
+      "closeOtherTabs": "他のタブを閉じる",
+      "splitRight": "分割権",
+      "splitLeft": "スプリット 左",
+      "pinToSidebar": "サイドバーへのピン",
+      "unpinFromSidebar": "サイドバーからUnpin",
+      "hideFromSidebar": "サイドバーから隠す",
+      "unhideFromSidebar": "サイドバーからUnhide",
+      "closeAllTabs": "すべてのタブを閉じる"
+    },
+    "sections": {
+      "team": "スタッフ",
+      "sessions": "セッション",
+      "kanban": "カンバン",
+      "claudeLogs": "ログイン",
+      "messages": "メッセージ"
+    }
+  },
+  "editorFormatting": {
+    "bold": "ボールド",
+    "italic": "イタリック",
+    "strike": "ストライク",
+    "code": "コードコード"
+  },
+  "diff": {
+    "changed": "変更内容",
+    "noChangesDetected": "検出された変更無し"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPTログインリンクとコードをコピーする",
+    "copyLoginLink": "ChatGPTログインリンクをコピーする",
+    "copyFailed": "コピー失敗",
+    "copyLinkAndCode": "コピーリンク+コード",
+    "copyLink": "コピーリンク",
+    "enterCodeOnLoginPage": "ChatGPTログインページでこのコードを入力してください"
+  },
+  "window": {
+    "minimize": "最小化",
+    "maximize": "マックスマイズ",
+    "restore": "リストア"
+  },
+  "context": {
+    "local": "ローカル",
+    "switchingTo": "{{workspace}}への切り替え",
+    "loadingWorkspace": "ワークスペースの読み込み",
+    "switchWorkspace": "スイッチワークスペース"
+  },
+  "repositories": {
+    "noneAvailable": "リポジトリなし",
+    "remove": "リポジトリの削除"
+  },
+  "export": {
+    "session": "エクスポートセッション",
+    "sessionTitle": "輸出セッション"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "セッションデータなし",
+    "title": "セッションレポート"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "プロジェクトを選択"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "トピックス",
+      "updatedYesterday": "昨日更新",
+      "yesterday": "昨日"
+    },
+    "reviewState": {
+      "needsFix": "ニーズの修正"
+    },
+    "unassigned": "ログイン"
+  }
+}

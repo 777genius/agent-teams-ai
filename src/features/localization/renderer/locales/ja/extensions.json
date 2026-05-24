@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "カスタムを追加",
+      "openDashboard": "ダッシュボードを開く",
+      "refreshCatalog": "カタログ更新"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}の特長",
+      "plugins": "プラグイン: {{status}}",
+      "skills": "スキル: {{status}}"
+    },
+    "desktopOnly": "デスクトップアプリのみでご利用いただけます。",
+    "provider": {
+      "checkingStatus": "プロバイダーのステータスを確認する...",
+      "connected": "コネクテッド",
+      "loading": "ローディング...",
+      "needsSetup": "ニーズのセットアップ",
+      "readyToConfigure": "設定する準備",
+      "unsupported": "サポートされていない"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "プラグイン、MCPサーバー、スキル、プロバイダの接続を管理するための設定されたランタイムが必要です。",
+      "checkingAvailabilityTitle": "延長ランタイムの可用性を確認する",
+      "failedToStartDescription": "実行時間が起動健康チェックを通過するまで延長は無効です。 ダッシュボードを開き、修復または再インストールします。",
+      "failedToStartTitle": "設定されたランタイムが見つかりませんでしたが、起動できませんでした",
+      "multimodelCapabilitiesDescription": "プロバイダーのサポートは、セクションによって異なる場合があります。 プラグインは、ランタイムが明示的にサポートを宣言する唯一の場所を示しています。",
+      "multimodelCapabilitiesTitle": "マルチモデルのランタイム機能",
+      "needsSignInDescription": "{{runtime}} が発見されました{{version}}, しかし、プラグインのインストールは、ダッシュボードからサインインするまで無効になっています.",
+      "needsSignInTitle": "{{runtime}}はサインインを必要とします",
+      "notAvailableDescription": "実行時間がインストールされるまで延長は無効です。 Dashboard を開き、インストールして再試行します。",
+      "notAvailableTitle": "設定されたランタイムは利用できません",
+      "readyDescription": "プラグインはこのページからインストールできます。{{versionSuffix}}.",
+      "readyTitle": "{{runtime}}は準備が整います",
+      "requiredForMutations": "設定されたランタイムは、拡張子をインストールまたはアンインストールする必要があります。 ダッシュボードからインストールまたは修復します。"
+    },
+    "sessionsRestartWarning": "実行中のセッションは、再起動するまで延長変更をピックアップしません。",
+    "tabs": {
+      "apiKeys": {
+        "description": "オンラインサービスの秘密鍵。 プラグイン、サーバー、インテグレーションが接続して動作できるように、ここにそれらを追加します。",
+        "label": "APIの特長 キー"
+      },
+      "mcpServers": {
+        "description": "外部ツールやアプリへの接続。 実行時にデータを読み込み、このアプリを超えてアクションを実行できます。",
+        "label": "MCPの特長 サーバー"
+      },
+      "plugins": {
+        "description": "実行時間の小さなアドオン。 マルチモデルモードでは、現在Anthropicセッションにサポートしているときに適用されます。 ブロードワープロバイダーのサポートは開発中です。",
+        "label": "プラグイン"
+      },
+      "skills": {
+        "description": "一般的なジョブの既製の指示。 彼らは、ランタイムハンドルの繰り返し可能なタスクをより一貫して助けます。",
+        "label": "スキル"
+      }
+    },
+    "title": "エクステンション"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} アクティブ",
+    "browseByFit": "フィットでブラウズ",
+    "capabilities": "能力・能力",
+    "categories": "カテゴリー",
+    "clearAllFilters": "すべてのフィルターをクリア",
+    "clearFilters": "フィルターをクリア",
+    "counts": {
+      "capabilities": "{{count}}の機能",
+      "categories": "{{count}}カテゴリ",
+      "plugins": "{{count}}プラグイン",
+      "capabilities_few": "{{count}}の機能",
+      "capabilities_many": "{{count}}の機能",
+      "capabilities_one": "{{count}}の機能",
+      "capabilities_other": "{{count}}の機能",
+      "categories_few": "{{count}}カテゴリ",
+      "categories_many": "{{count}}カテゴリ",
+      "categories_one": "{{count}}カテゴリ",
+      "categories_other": "{{count}}カテゴリ",
+      "plugins_few": "{{count}}プラグイン",
+      "plugins_many": "{{count}}プラグイン",
+      "plugins_one": "{{count}}プラグイン",
+      "plugins_other": "{{count}}プラグイン"
+    },
+    "empty": {
+      "description": "後で新しいプラグインをチェック",
+      "filteredDescription": "検索やフィルタの基準を調整してみてください",
+      "filteredTitle": "プラグインがフィルタにマッチしない",
+      "title": "プラグインなし"
+    },
+    "filterDescription": "カテゴリ、機能、またはインストールされた状態でカタログを絞ります。",
+    "installedOnly": "インストールのみ",
+    "providerSupportNotice": "プラグインのサポートは現在、Anthropic(Claude)セッションのみで保証されています。 すべてのエージェントでプラグインをサポートしています。",
+    "resultsUpdateInstantly": "フィルターを絞り込むと、即座に結果を更新できます。",
+    "searchPlaceholder": "プラグインを検索...",
+    "selectedCount": "選択される{{count}}",
+    "showing": "{{shown}} の {{total}} プラグインの表示",
+    "sort": {
+      "category": "カテゴリー",
+      "nameAsc": "名称 A-Z",
+      "nameDesc": "名称 Z- ツイート",
+      "popular": "人気カテゴリー"
+    },
+    "activeFilters_few": "{{count}} アクティブ",
+    "activeFilters_many": "{{count}} アクティブ",
+    "activeFilters_one": "{{count}} アクティブ",
+    "activeFilters_other": "{{count}} アクティブ",
+    "selectedCount_few": "選択される{{count}}",
+    "selectedCount_many": "選択される{{count}}",
+    "selectedCount_one": "選択される{{count}}",
+    "selectedCount_other": "選択される{{count}}"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "追加する",
+      "cancel": "キャンセル",
+      "install": "インストール",
+      "installing": "インストール..."
+    },
+    "description": "カタログなしで手動でサーバーを追加します。",
+    "errors": {
+      "installFailed": "インストール失敗",
+      "invalidServerName": "無効なサーバー名。 英数字、ダッシュ、アンダースコア、ドットを使用してください。",
+      "npmPackageRequired": "npm パッケージ名が必要です",
+      "serverNameRequired": "サーバー名が必要です",
+      "serverUrlRequired": "サーバ URL が必要です"
+    },
+    "fields": {
+      "environmentVariables": "環境変数",
+      "headers": "ヘッダー",
+      "npmPackage": "npm パッケージ",
+      "scope": "スコープ",
+      "serverName": "サーバー名",
+      "serverUrl": "サーバー URL",
+      "transport": "交通アクセス",
+      "transportType": "輸送のタイプ",
+      "versionOptional": "バージョン(任意)"
+    },
+    "title": "カスタムMCPを追加 サーバー",
+    "transport": {
+      "httpSse": "HTTP/SSEの特長",
+      "stdio": "セントディオ (npm)"
+    },
+    "placeholders": {
+      "headerName": "ヘッダー名",
+      "envVarName": "ENV_VAR_NAMEの特長",
+      "serverName": "私のサーバー",
+      "latest": "最新情報",
+      "value": "バリュー",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "リモートMCPサーバーは、レジストリがそれらを記述しない場合でも、カスタムヘッダーまたはAPIキーを要求するかもしれません。 インストール後に接続が失敗した場合は、プロバイダのドキュメントを確認してください。",
+      "required": "認証が必要なサーバー"
+    },
+    "diagnostics": {
+      "launchTarget": "スタートターゲット"
+    },
+    "form": {
+      "autoFilled": "自動充填",
+      "environmentVariables": "環境変数",
+      "headers": "ヘッダー",
+      "scope": "スコープ",
+      "serverName": "サーバー名"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}の特長",
+      "manualSetupDescription": "マニュアル設定が必要です。 インストール手順のリポジトリを確認してください。",
+      "manualSetupRequired": "手動設定が必要です",
+      "npmPackage": "npm: {{package}}の特長",
+      "manage": "インストールの管理",
+      "install": "サーバのインストール"
+    },
+    "links": {
+      "glama": "グラマ",
+      "repository": "リポジトリ",
+      "website": "サイトマップ"
+    },
+    "metadata": {
+      "author": "プロフィール",
+      "githubStars": "GitHubスターズ",
+      "hosting": "ホスティング",
+      "installType": "タイプを取付けて下さい",
+      "license": "ライセンス",
+      "published": "ニュース",
+      "source": "ソース",
+      "updated": "新着情報",
+      "version": "バージョン"
+    },
+    "scope": {
+      "local": "ローカル",
+      "project": "プロジェクト"
+    },
+    "tools": {
+      "title": "ツール({{count}})",
+      "title_few": "ツール({{count}})",
+      "title_many": "ツール({{count}})",
+      "title_one": "ツール({{count}})",
+      "title_other": "ツール({{count}})"
+    },
+    "placeholders": {
+      "serverName": "私のサーバー"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "キャンセル",
+      "createSkill": "スキルを作成する",
+      "preparing": "準備...",
+      "reviewAndCreate": "レビューと作成",
+      "reviewAndSave": "レビューと保存",
+      "saveSkill": "スキルを節約"
+    },
+    "advanced": {
+      "customDescription": "このスキルはカスタムマークダウン形式を使用していますので、ここで直接編集してください。",
+      "customTitle": "2. SKILL.mdエディタ",
+      "description": "ほとんどの人はこれをスキップすることができます。 生のマークダウンファイルを直接制御したい場合にのみ開きます。",
+      "hide": "高度なエディタを隠す",
+      "resetFromStructuredFields": "構造フィールドからリセット",
+      "show": "高度なエディタを表示する",
+      "title": "4. 高度なSKILL.mdエディタ"
+    },
+    "basics": {
+      "description": "このスキルをクリアな名前で、誰が使うかを選択し、どこに住んでいるべきかを決めてください。",
+      "title": "1.基本"
+    },
+    "description": {
+      "create": "ワークフローをプレーン言語で記述し、作成したファイルを確認し、保存します。",
+      "edit": "このスキルを更新し、結果のファイルの変更を確認し、保存します。"
+    },
+    "extraFiles": {
+      "addedFiles": "ファイルを追加:",
+      "assets": "アセット",
+      "assetsDescription": "スクリーンショットやバンドルされたメディアをワークフローを説明するのに役立つだけ追加します。",
+      "description": "このスキルが本当にそれらを必要とする場合にのみ、サポートされているドキュメント、スクリプト、またはアセットを追加します。",
+      "lockedForEdits": "ルートとフォルダは編集のためにロックされています",
+      "optionalDescription": "レビューに含まれているスターターファイルを追加し、`SKILL.md` と一緒に書かれています。",
+      "optionalTitle": "オプションファイル",
+      "references": "参考文献",
+      "referencesDescription": "サポートされているドキュメント、リンク、または例を追加して実行時間を見ることができます。",
+      "scripts": "スクリプト",
+      "scriptsDescription": "ヘルパーコマンドや設定ノートを追加します。 このスキルを共有する前に慎重にレビューしてください。",
+      "title": "3. 余分なファイル"
+    },
+    "fields": {
+      "compatibility": "互換性",
+      "description": "コンテンツ",
+      "folderName": "フォルダ名",
+      "folderNameHint": "スキル名から自動的に提案し、すぐに作品をレビューします。",
+      "invocation": "使い方",
+      "license": "ライセンス",
+      "name": "スキル名",
+      "notes": "余分ノートかガードレール",
+      "root": "保管場所",
+      "scope": "誰が使えるか",
+      "steps": "続く主要なステップ",
+      "whenToUse": "そのためには"
+    },
+    "instructions": {
+      "description": "これらのセクションでは、スキルファイルを生成しますので、必要に応じてマークダウンを編集する必要はありません。",
+      "locked": "下記の`SKILL.md`編集のマニュアルに切り替えるので、構造フィールドがロックされます。",
+      "title": "2. 指示"
+    },
+    "invocation": {
+      "auto": "自動的に使用することができます",
+      "manualOnly": "お問合わせの際は"
+    },
+    "placeholders": {
+      "description": "このスキルが役立つもの",
+      "name": "簡潔なスキル名を書く",
+      "notes": "例: 行方不明のテスト、回帰、リスクのある仮定を呼び出します。",
+      "steps": "1. 関連するファイルを調べる。\n2. 主なリスクを最初に説明する。\n3. 最も安全な修正を提案して下さい。",
+      "whenToUse": "例: タスクがコードレビューやバグトリアージリクエストの場合にこれを使用します。",
+      "license": "MITの特長",
+      "compatibility": "claude-code、カーソル"
+    },
+    "review": {
+      "creating": "スキルを作る",
+      "hint": "ファイルの変更を最初に見直し、次のステップで保存を確認します。",
+      "saving": "このスキルを節約"
+    },
+    "root": {
+      "codexOnly": "- コーデックスのみ",
+      "shared": "- シェア"
+    },
+    "scope": {
+      "project": "プロジェクト: {{project}}",
+      "projectUnavailable": "未利用のプロジェクト",
+      "user": "ユーザー登録"
+    },
+    "title": {
+      "create": "スキルを作成する",
+      "edit": "編集スキル"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "キャンセル",
+      "delete": "削除",
+      "deleteSkill": "スキルの削除",
+      "deleting": "削除...",
+      "editSkill": "編集スキル",
+      "openFolder": "フォルダを開く",
+      "openSkillFile": "SKILL.mdを開く",
+      "retry": "リトリート"
+    },
+    "badges": {
+      "assets": "アセット",
+      "autoUse": "自動使用",
+      "hasScripts": "スクリプトを持っている",
+      "manualUse": "手動使用",
+      "references": "参考文献",
+      "storedIn": "{{root}}で保存"
+    },
+    "deleteDialog": {
+      "description": "このスキルを削除してゴミ箱に移動しますか?",
+      "descriptionWithName": "「{{name}}」を削除し、ゴミ箱に移動しますか? 必要に応じてゴミ箱から後で復元できます。",
+      "title": "スキルの削除"
+    },
+    "descriptionFallback": "発見されたスキルメタデータと生の指示を調べる。",
+    "errors": {
+      "deleteFailed": "スキルを削除できない",
+      "loadFailed": "このスキルをロードできません。"
+    },
+    "files": {
+      "advancedDetails": "高度なファイルの詳細",
+      "assets": "アセット",
+      "references": "参考文献",
+      "scripts": "スクリプト",
+      "storedAt": "店舗情報"
+    },
+    "includes": {
+      "assets": "アセット",
+      "instructionsOnly": "スキルの指示だけ",
+      "references": "参考文献",
+      "scripts": "スクリプト"
+    },
+    "invocation": {
+      "auto": "タスクにマッチすると自動的に実行されます。",
+      "manualOnly": "明示的に依頼する際にのみ実行します。"
+    },
+    "issues": {
+      "bundledScripts": "このスキルはバンドルされたスクリプトを含みます",
+      "reviewCarefully": "使用前にこのスキルを慎重に見直してください。"
+    },
+    "loading": "ローディングスキルの詳細...",
+    "scope": {
+      "personal": "あなたの個人的なスキル",
+      "projectOnly": "プロジェクトのみ"
+    },
+    "summary": {
+      "howUsed": "使い方",
+      "included": "お問い合わせ",
+      "whoCanUse": "誰が使えるか"
+    },
+    "titleFallback": "スキル詳細"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "スキルを作成する",
+      "import": "インポート"
+    },
+    "badges": {
+      "assets": "アセット",
+      "hasScripts": "スクリプトを持っている",
+      "needsAttention": "注意が必要",
+      "references": "参考文献",
+      "storedIn": "{{root}}で保存"
+    },
+    "configuredRuntime": "設定されたランタイム",
+    "counts": {
+      "codexOnly": "{{count}}の特長 Codex のみ",
+      "personal": "{{count}} 個人的",
+      "project": "{{count}}プロジェクト",
+      "shared": "{{count}}共有",
+      "total": "{{count}}合計",
+      "codexOnly_few": "{{count}}の特長 Codex のみ",
+      "codexOnly_many": "{{count}}の特長 Codex のみ",
+      "codexOnly_one": "{{count}}の特長 Codex のみ",
+      "codexOnly_other": "{{count}}の特長 Codex のみ",
+      "personal_few": "{{count}} 個人的",
+      "personal_many": "{{count}} 個人的",
+      "personal_one": "{{count}} 個人的",
+      "personal_other": "{{count}} 個人的",
+      "project_few": "{{count}}プロジェクト",
+      "project_many": "{{count}}プロジェクト",
+      "project_one": "{{count}}プロジェクト",
+      "project_other": "{{count}}プロジェクト",
+      "shared_few": "{{count}}共有",
+      "shared_many": "{{count}}共有",
+      "shared_one": "{{count}}共有",
+      "shared_other": "{{count}}共有",
+      "total_few": "{{count}}合計",
+      "total_many": "{{count}}合計",
+      "total_one": "{{count}}合計",
+      "total_other": "{{count}}合計"
+    },
+    "empty": {
+      "noMatches": "スキルがあなたの検索にマッチしない",
+      "noMatchesDescription": "異なる検索用語を試したり、フィルタを切り替えたりしてください。",
+      "noSkills": "スキルはまだありません",
+      "noSkillsDescription": "最初のスキルを作成して、繰り返しワークフローを教えるか、既に使用しているスキルをインポートします。"
+    },
+    "filters": {
+      "all": "すべてのスキル",
+      "codexOnly": "Codex のみ",
+      "hasScripts": "スクリプトを持っている",
+      "needsAttention": "注意が必要",
+      "personal": "パーソナル",
+      "project": "プロジェクト",
+      "shared": "シェアリング"
+    },
+    "hero": {
+      "codexAvailable": "スキルがコーデックスのみを維持する必要がある場合は、`.codex`を使用してください。",
+      "codexUnavailable": "既存の`.codex`のスキルはここで編集可能ですが、新しいCodex専用のスキルはCodexのランタイムを有効にする必要があります。",
+      "description": "スキルは、ランタイムが一貫して同じ種類のタスクを処理するのに役立つ再利用可能な指示です。",
+      "guidance": "どこでも好きな習慣にパーソナルスキルを使う。 1つのコードベースでしか意味しないワークフローのプロジェクトスキルを使う。",
+      "personalContext": "今は、あなたの個人的なスキルだけを見ています。",
+      "projectContext": "{{project}} のスキルを身につけてもらいたい。",
+      "title": "繰り返し可能な作業を教える"
+    },
+    "invocation": {
+      "auto": "フィット時に自動的に実行",
+      "manualOnly": "あなたが明示的にそれを求めるときだけ実行"
+    },
+    "loading": {
+      "loading": "ローディングスキル...",
+      "refreshing": "リフレッシュスキル..."
+    },
+    "runtimeAudience": "`.claude`、`.cursor`、`.agents`の共有スキルは{{audience}}で利用可能です。 Codex のサポートが利用できるとき `.codex` に貯えられた技術は Codex だけとどまります。",
+    "scope": {
+      "project": "プロジェクト",
+      "user": "パーソナル"
+    },
+    "searchPlaceholder": "スキル名で検索するか、またはそれが役立つもの...",
+    "sections": {
+      "personal": {
+        "description": "どこでも利用できる習慣および指示。",
+        "title": "パーソナルスキル"
+      },
+      "project": {
+        "description": "このコードベースでしか意味しないワークフロー。",
+        "title": "プロジェクトスキル"
+      }
+    },
+    "sort": {
+      "label": "ソートスキル",
+      "name": "お名前 (必須)",
+      "recent": "最近の投稿"
+    },
+    "status": {
+      "hasScripts": "スクリプトが含まれているので、慎重に検討してください",
+      "needsAttention": "あなたがそれに依存する前に注意が必要",
+      "ready": "使いやすい"
+    },
+    "success": {
+      "created": "巧妙に作成される技術。",
+      "imported": "巧妙に輸入される技術。",
+      "saved": "正常に保存されたスキル。"
+    }
+  },
+  "pluginDetail": {
+    "unknown": "未知の",
+    "metadata": {
+      "author": "プロフィール",
+      "category": "カテゴリー",
+      "source": "ソース",
+      "version": "バージョン",
+      "capabilities": "能力・能力",
+      "installs": "インストール"
+    },
+    "scope": {
+      "label": "スコープ:",
+      "options": {
+        "user": "ユーザー(グローバル)",
+        "project": "プロジェクト(共有)",
+        "local": "ローカル(登録)"
+      }
+    },
+    "links": {
+      "homepage": "サイトマップ",
+      "contact": "お問い合わせ"
+    },
+    "readme": {
+      "loading": "ロードREADME...",
+      "empty": "READMEは使用できません。"
+    }
+  },
+  "skillImport": {
+    "title": "インポートスキル",
+    "description": "既存のスキルフォルダーを選択し、コピーされたものを確認し、サポートされたスキルの場所のいずれかにインポートします。",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. スキルフォルダを選択",
+        "description": "これは既に`SKILL.md`、`Skill.md`、または`skill.md`ファイルを含むフォルダでなければなりません。"
+      },
+      "location": {
+        "title": "2. 所属する場所を決める",
+        "description": "どこでもパーソナルスキルが働きます。 プロジェクトのスキルは、一つのコードベースでのみ表示されます。"
+      }
+    },
+    "fields": {
+      "sourceFolder": "ソースフォルダ",
+      "destinationFolderName": "宛先フォルダ名",
+      "audience": "誰が使えるか",
+      "storage": "保管場所"
+    },
+    "placeholders": {
+      "defaultFolderName": "ソースフォルダ名にデフォルト"
+    },
+    "actions": {
+      "browse": "サイトマップ",
+      "cancel": "キャンセル",
+      "preparing": "準備...",
+      "reviewAndImport": "レビューとインポート",
+      "importSkill": "インポートスキル",
+      "backToImport": "インポートに戻る"
+    },
+    "scope": {
+      "user": "ユーザー登録",
+      "project": "プロジェクト: {{project}}",
+      "projectUnavailable": "未利用のプロジェクト"
+    },
+    "rootSuffix": {
+      "codexOnly": "- コーデックスのみ",
+      "shared": "- シェア"
+    },
+    "reviewHint": "コピーしたファイルを最初に見直し、次のステップでインポートを確認します。",
+    "reviewLabel": "このスキルのインポート",
+    "errors": {
+      "missingSkillFile": "このフォルダは、まだスキルのように見えません。 SKILL.md, Skill.md, または Skill.md ファイルが必要です。",
+      "symbolicLinks": "このフォルダには、シンボリックリンクが含まれています。 リンクの代わりに実際のファイルをインポートします。",
+      "tooManyFiles": "一度にインポートするには、このスキルフォルダが大きすぎます。 余計なファイルを取除き、再度試みて下さい。",
+      "tooLarge": "安全にインポートするには、このスキルフォルダが大きすぎます。 大きい資産をトリムし、再度試みて下さい。",
+      "invalidFolderName": "文字、数字、ドット、ダッシュ、またはアンダースコアを使用して、よりシンプルな宛先フォルダー名を選択します。",
+      "mustBeDirectory": "単一のファイルではなく、インポートするフォルダを選択します。",
+      "reviewFailed": "インポートの変更を確認できなかった",
+      "importFailed": "スキルをインポートできなかった"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "名称 A→Z",
+      "nameDesc": "名称 Z→A",
+      "toolsDesc": "ほとんどのツール"
+    },
+    "health": {
+      "title": "MCPの特長 健康状態",
+      "checkingViaRuntime": "MCPサーバーを{{runtime}}経由でインストールしたチェック...",
+      "lastChecked": "最終チェック {{time}}",
+      "description": "このページから診断を実行して、インストールされたMCP接続を検証します。",
+      "checking": "チェックイン",
+      "checkStatus": "ステータスの確認"
+    },
+    "diagnostics": {
+      "title": "稼働時間 MCP 診断",
+      "serversCount": "{{count}}サーバー",
+      "serversCount_one": "{{count}}サーバー",
+      "serversCount_other": "{{count}}サーバー",
+      "waiting": "診断結果の待ち合わせ",
+      "disableReasons": {
+        "checkingRuntimeStatus": "実行時間の状態を確認する...",
+        "checkingRuntimeAvailability": "稼働時間を確認する",
+        "runtimeFailedToStart": "設定されたランタイムが見つかりませんでしたが、起動できませんでした。 ダッシュボードを開き、修復または再インストールします。",
+        "runtimeRequired": "設定されたランタイムが必要です。 Dashboard からインストールまたは修復します。"
+      },
+      "serversCount_few": "{{count}}サーバー",
+      "serversCount_many": "{{count}}サーバー"
+    },
+    "searchPlaceholder": "MCPサーバーを検索...",
+    "runtime": {
+      "notAvailable": "{{runtime}}は利用できません",
+      "notInstalled": "{{runtime}}がインストールされていない",
+      "requiredDescription": "MCP健康チェックには、{{runtime}}が必要です。 ダッシュボードに移動してインストールまたは修復します。"
+    },
+    "empty": {
+      "searchTitle": "サーバーが見つかりません",
+      "title": "MCPサーバーは使用できません",
+      "searchDescription": "異なる検索用語を試す",
+      "description": "後で新しいサーバーをチェックする"
+    },
+    "loadMore": "もっと見る"
+  },
+  "apiKeys": {
+    "description": "MCPサーバをインストールする際に自動充填用のAPIキーを安全に保存します。",
+    "storage": {
+      "osKeychain": "鍵は{{backend}}を介して暗号化され、制限されたファイル権限(所有者のみ)で保存されます。",
+      "localEncryption": "OSキーホルダーは使用できません。キーはAES-256で暗号化されます。 より強い保護のために、キーホルダーサービス(gnome-keyring、kwallet)を取付けて下さい。"
+    },
+    "actions": {
+      "add": "APIキーを追加",
+      "addFirst": "最初のキーを追加",
+      "edit": "編集"
+    },
+    "empty": {
+      "title": "保存されるAPIキー無し",
+      "description": "MCPサーバをインストールする際に、自動充填環境変数にキーを追加します。"
+    },
+    "form": {
+      "addTitle": "APIキーを追加",
+      "editTitle": "APIキーの編集",
+      "addDescription": "MCPサーバーのインストールで自動充填するためのAPIキーを保存します。",
+      "editDescription": "重要な情報を更新します。 値を再入力する必要があります。",
+      "keychainUnavailable": "OSキーホルダーが利用できなくなった - ローカルのAES-256で暗号化されたキー。 OSレベルの保護のためにgnome-keyringをインストールします。",
+      "name": "お名前 (必須)",
+      "namePlaceholder": "例:OpenAI制作",
+      "environmentVariableName": "環境変数名",
+      "envVarPlaceholder": "例:OPENAI_API_KEY",
+      "value": "バリュー",
+      "reenterValue": "再入力キー値",
+      "valuePlaceholder": "スカ...",
+      "scope": "スコープ",
+      "userScopeLabel": "ユーザー(グローバル)",
+      "projectScopeLabel": "プロジェクト: {{project}}",
+      "projectUnavailable": "未利用のプロジェクト",
+      "boundTo": "{{path}} にバウンド",
+      "cancel": "キャンセル",
+      "saving": "保存...",
+      "update": "ニュース",
+      "save": "保存する",
+      "errors": {
+        "invalidEnvVarFormat": "文字、数字、アンダースコアを使用してください。 手紙やアンダースコアから始める必要があります。",
+        "nameRequired": "お名前必須",
+        "envVarRequired": "環境変数名が必要です",
+        "invalidEnvVar": "無効な環境変数名",
+        "valueRequired": "キー値が必要です",
+        "projectScopeRequiresProject": "プロジェクトスコープ付きAPIキーは、アクティブなプロジェクトが必要です",
+        "saveFailed": "保存失敗"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "スキル変更の見直し",
+    "description": "{{reviewLabel}} はファイルシステムの変更を最初にプレビューします。 確認するまでは何も書いていません。",
+    "noPreview": "プレビューはありません。",
+    "confirmPromptPrefix": "下の差分を見直し、それから使用して下さい",
+    "confirmPromptSuffix": "これらの変更を適用します。",
+    "noChanges": "ファイルがまだ検出されない。",
+    "binaryBadge": "バイナリ",
+    "binaryPreviewHidden": "バイナリファイルプレビューは表示されません。 ファイルがそのままコピーされます。",
+    "summary": {
+      "fileChanges": "{{count}}ファイル変更",
+      "fileChanges_one": "{{count}}ファイル変更",
+      "fileChanges_other": "{{count}}ファイル変更",
+      "new": "{{count}} 新機能",
+      "updated": "{{count}}アップデート",
+      "removed": "{{count}} 削除",
+      "binary": "{{count}}バイナリ",
+      "fileChanges_few": "{{count}}ファイル変更",
+      "fileChanges_many": "{{count}}ファイル変更"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} ツール",
+    "toolsCount_one": "{{count}} ツール",
+    "toolsCount_other": "{{count}} ツール",
+    "envCount": "{{count}}のenvs",
+    "envCount_one": "{{count}}のenv",
+    "envCount_other": "{{count}}のenvs",
+    "auth": "リリース",
+    "byAuthor": "によって {{author}}",
+    "hosting": {
+      "remote": "リモート",
+      "local": "ローカル",
+      "both": "両方とも"
+    },
+    "toolsCount_few": "{{count}} ツール",
+    "toolsCount_many": "{{count}} ツール",
+    "envCount_few": "{{count}}のenvs",
+    "envCount_many": "{{count}}のenvs",
+    "repository": "リポジトリ",
+    "website": "サイトマップ"
+  },
+  "installButton": {
+    "installing": "インストール...",
+    "removing": "リムーブ...",
+    "done": "ログイン",
+    "retry": "リトリート",
+    "uninstall": "アンインストール",
+    "install": "インストール"
+  },
+  "pluginCard": {
+    "official": "公式HP"
+  }
+}

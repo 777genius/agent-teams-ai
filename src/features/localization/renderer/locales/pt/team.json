@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Criar tarefa a partir da mensagem",
+      "expandMessage": "Expandir mensagem",
+      "replyToMessage": "Responder à mensagem",
+      "restartTeam": "Reiniciar a equipa"
+    },
+    "authError": {
+      "description": "A autenticação falhou. Reiniciar a equipe irá atualizar a sessão e pode resolver este problema. Se o problema persistir, verifique suas credenciais API ou tente novamente mais tarde."
+    },
+    "automation": {
+      "reviewPickup": "Pedido companheiro de equipe para pegar revisão",
+      "stallNudge": "Pedido de companheiro de equipa para continuar a tarefa parada",
+      "workSyncBody": "Foi pedido ao companheiro de equipa para sincronizar o trabalho actual"
+    },
+    "badges": {
+      "automation": "automação",
+      "bootstrap": "bootstrap",
+      "command": "comando",
+      "comment": "Comentário",
+      "live": "vivo",
+      "note": "nota",
+      "rateLimited": "Taxa Limitada",
+      "restart": "reiniciar",
+      "result": "resultado",
+      "session": "sessão",
+      "stallNudge": "empatar o empurrão",
+      "start": "início",
+      "workSync": "sincronização de trabalho"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap reconhecido",
+      "restarting": "Reiniciando companheiro de equipe",
+      "starting": "Iniciando companheiro de equipe"
+    },
+    "rawJson": "JSON",
+    "unread": "Não- Lido",
+    "thoughts": {
+      "count": "Pensamentos em {{count}}",
+      "count_one": "Pensamento de {{count}}",
+      "expand": "Expandir pensamentos",
+      "showMore": "Mostrar mais",
+      "showLess": "Mostrar menos",
+      "count_few": "Pensamentos em {{count}}",
+      "count_many": "Pensamentos em {{count}}",
+      "count_other": "Pensamentos em {{count}}",
+      "toolSummary": "{{summary}}",
+      "titleForMember": "{{name}} - pensamentos"
+    },
+    "timeline": {
+      "loadingMessages": "Carregando mensagens...",
+      "noMessages": "Nenhuma mensagem",
+      "emptyHint": "Envie uma mensagem a um membro para ver atividade.",
+      "newSession": "Nova sessão",
+      "olderCount": "+{{count}} mais velho",
+      "showMore": "Mostrar {{count}} mais",
+      "showAll": "Mostrar tudo",
+      "olderCount_one": "+{{count}} mais velho",
+      "olderCount_few": "+{{count}} mais velho",
+      "olderCount_many": "+{{count}} mais velho",
+      "olderCount_other": "+{{count}} mais velho"
+    },
+    "pendingReplies": {
+      "title": "Respostas à espera",
+      "openMember": "Membro aberto",
+      "messageSentAwaitingReply": "Mensagem enviada, aguardando resposta",
+      "awaitingReply": "aguardando resposta",
+      "externalTeam": "equipe externa",
+      "crossTeamAwaitingReply": "Mensagem de equipa cruzada enviada, aguardando resposta",
+      "user": "usuário",
+      "awaitingApproval": "que aguarda a aprovação"
+    },
+    "reply": {
+      "replyingTo": "Respondendo a",
+      "action": "Responder"
+    },
+    "activeTasks": {
+      "inProgress": "Em curso"
+    },
+    "expandDialog": {
+      "description": "Visualização de mensagens expandida"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Criar",
+      "creating": "Criando...",
+      "openExisting": "Abrir a Equipa Existente",
+      "skipPreflightAndCreate": "Ignorar o pré- voo e criar"
+    },
+    "conflict": {
+      "description": "Executar duas equipes no mesmo diretório é arriscado - eles podem entrar em conflito editando os mesmos arquivos. Considere usar um diretório diferente ou uma git worktree para isolamento.",
+      "title": "Outra equipe \"{{team}}\" já está em execução para este diretório de trabalho",
+      "workingDirectory": "Directório de trabalho:"
+    },
+    "description": {
+      "copy": "Criar uma nova equipe com base em uma existente.",
+      "create": "Configure a sua equipa e escolha como começa."
+    },
+    "errors": {
+      "nameExists": "O nome da equipa já existe",
+      "nameLaunching": "Está a lançar uma equipa com este nome",
+      "createConfigFailed": "Falha ao criar a configuração da equipe",
+      "loadProjectsFailed": "Falha ao carregar projetos"
+    },
+    "fields": {
+      "color": "Cor (opcional)",
+      "description": "Descrição (opcional)",
+      "prompt": "Pedido para o líder da equipa (opcional)",
+      "teamName": "Nome da equipa"
+    },
+    "launchAfterCreate": {
+      "description": "Inicie a equipe imediatamente através local Claude CLI.",
+      "label": "Executar o comando após criar"
+    },
+    "localOnly": "Disponível apenas no modo Electron local.",
+    "onDisk": "No disco:",
+    "placeholders": {
+      "description": "Breve descrição da finalidade da equipa",
+      "prompt": "Instruções para o líder da equipa durante o fornecimento..."
+    },
+    "saved": "Gravado",
+    "solo": {
+      "description": "Somente o líder da equipe (processo principal) será iniciado - nenhum companheiro de equipe será gerado. Funciona como uma sessão de agente regular em seu runtime escolhido (Claude Code, Codex, OpenCode, Gemini), mas com acesso ao conselho de tarefas para planejamento. Poupa fichas evitando a coordenação de colegas de equipa. Você pode adicionar membros mais tarde a partir das configurações da equipe.",
+      "label": "Equipa individual"
+    },
+    "title": {
+      "copy": "Copiar equipe",
+      "create": "Criar uma Equipa"
+    },
+    "optional": {
+      "launchSettingsTitle": "Configurações de lançamento opcionais",
+      "launchSettingsDescription": "Prompt, segurança, e CLI substitui viver aqui quando você precisa deles.",
+      "teamDetailsTitle": "Detalhes da equipe opcional",
+      "teamDetailsDescription": "Mantenha o fluxo padrão compacto e só abra isto quando quiser um contexto extra ou uma cor personalizada."
+    },
+    "prepare": {
+      "unsupportedPreload": "A versão pré-carregada atual não suporta equipe:prepareProvisioning. Reinicie o aplicativo dev.",
+      "selectWorkingDirectory": "Selecione uma pasta de trabalho para validar o ambiente de lançamento.",
+      "someProvidersNeedAttention": "Alguns provedores selecionados precisam de atenção.",
+      "readyWithNotes": "Todos os provedores selecionados estão prontos, com notas.",
+      "ready": "Todos os provedores selecionados estão prontos.",
+      "failed": "Falha ao preparar os provedores selecionados",
+      "checkingProviders": "Verificando os provedores selecionados...",
+      "preparingEnvironment": "A preparar o ambiente...",
+      "selectedProvidersReadyWithNotes": "Os fornecedores selecionados estão prontos (com notas)",
+      "selectedProvidersReady": "Os fornecedores selecionados estão prontos"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "O nome deve conter pelo menos uma letra ou algarismo",
+      "nameTooLong": "O nome é muito longo (máx. 128 caracteres)",
+      "selectWorkingDirectory": "Selecionar diretório de trabalho (cwd)",
+      "memberNameRequired": "O nome do membro não pode estar vazio",
+      "memberNameInvalid": "Nome do membro deve começar com alfanumérico, usar apenas [a-zA-Z0-9. -], máximo 128 caracteres",
+      "memberNamesUnique": "Os nomes dos membros devem ser únicos",
+      "openCodeLeadModelRequired": "OpenCode lead requer um modelo selecionado.",
+      "openCodeTeammateRequired": "OpenCode lead requer pelo menos um companheiro de equipe OpenCode.",
+      "teamLaunching": "A equipa está actualmente a lançar",
+      "teamNameExists": "O nome da equipa já existe",
+      "checkFormFields": "Verificar os campos do formulário"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Cancelar",
+      "save": "Gravar"
+    },
+    "addMemberLockReason": "Use o diálogo dedicado Adicionar membro para adicionar novos companheiros de equipe enquanto a equipe estiver ao vivo.",
+    "description": "Mudar o nome, descrição e cor da equipa",
+    "errors": {
+      "changesSavedRefreshFailed": "As alterações de equipe foram salvas, mas não foi possível atualizar a última visão: {{message}}",
+      "liveRenameBlocked": "Os companheiros de equipa existentes não podem ser renomeados enquanto a equipa estiver ao vivo. renomeado: {{names}}",
+      "memberNameEmpty": "O nome do membro não pode estar vazio",
+      "memberNameInvalid": "Nome do membro deve começar com alfanumérico, usar apenas [a-zA-Z0-9. -], máximo 128 caracteres",
+      "memberNameNumericSuffix": "Nome de membro \"{{name}}\" não é permitido (reservado para Claude CLI auto- sufixo). Use \"{{base}}\" em vez disso.",
+      "memberNameReserved": "Nome de membro \"{{name}}\" é reservado",
+      "memberNamesUnique": "Os nomes dos membros devem ser únicos antes de salvar",
+      "newLiveTeammates": "Adicione novos companheiros de equipe da janela dedicada Adicionar membro enquanto a equipe está ao vivo. Edit Team só suporta atualização de colegas de equipe existentes.",
+      "provisioning": "As configurações da equipe não podem ser editadas enquanto o provisionamento ainda está em andamento. Espere até o lançamento terminar e tente novamente.",
+      "restartFailedMany": "Equipe salva, mas falhou ao reiniciar estes companheiros de equipe: {{failures}}",
+      "restartFailedOne": "Equipe salva, mas falhou ao reiniciar este companheiro de equipe: {{failures}}",
+      "saveFailed": "Falha ao salvar",
+      "settingsChanged": "A configuração da equipa mudou enquanto esta janela estava aberta. Reabrir e rever o estado mais recente antes de salvar.",
+      "settingsSavedMembersAndRefreshFailed": "As configurações de equipe foram salvas, mas as alterações de membros falharam: {{message}}. A atualização também falhou: {{refreshError}}",
+      "settingsSavedMembersFailed": "As configurações de equipe foram salvas, mas as alterações de membros falharam: {{message}}",
+      "settingsSavedRefreshFailed": "As configurações da equipe foram salvas, mas não foi possível atualizar a última visão: {{message}}",
+      "teamNameEmpty": "O nome da equipa não pode estar vazio",
+      "unsupportedMixedPrimaryMutation": "Edições ao vivo para colegas de equipe de propriedade primária em equipes mistas do OpenCode ainda não são suportadas. Pare a equipa, edite a lista e depois relanche. Afectado: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Cor (opcional)",
+      "description": "Designação das mercadorias",
+      "name": "Nome"
+    },
+    "memberRestartWarning": "Salvar irá reiniciar este companheiro de equipe para aplicar funções, fluxo de trabalho, isolamento de worktree, provedor, modelo, esforço ou alterações de acesso MCP.",
+    "notices": {
+      "liveRenameBlocked": "O Live Save está bloqueado porque os companheiros de equipa existentes foram renomeados. Reverter essas mudanças de identidade ou parar a equipe primeiro.",
+      "newLiveTeammates": "Novos companheiros de equipe não podem ser adicionados da equipe de edição enquanto a equipe estiver ao vivo. Use a janela Adicionar membro.",
+      "provisioning": "O abastecimento da equipa ainda está em curso. A edição está temporariamente bloqueada até o lançamento terminar.",
+      "restartMany": "Salvar irá reiniciar ou relançar esses colegas de equipe para aplicar papel, fluxo de trabalho, isolamento de worktree, provedor, modelo, esforço ou alterações de acesso MCP: {{names}}.",
+      "restartOne": "Salvar irá reiniciar ou relançar este companheiro de equipe para aplicar papel, fluxo de trabalho, isolamento de worktree, provedor, modelo, esforço ou alterações de acesso MCP: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Edições/remoções ao vivo para colegas de equipe de propriedade primária em equipes mistas do OpenCode exigem parar e relançar a equipe: {{names}}."
+    },
+    "placeholders": {
+      "description": "Descrição da equipa (opcional)",
+      "teamName": "Nome da equipa"
+    },
+    "teamLead": {
+      "changeRuntime": "Mudar o tempo de execução do lead",
+      "changeRuntimeDescription": "Abra a equipe Relaunch para mudar o provedor, modelo ou esforço do líder.",
+      "modelLockReason": "O tempo de execução da equipe é gerenciado pela equipe Relaunch.",
+      "readOnlyHint": "Nome principal da equipa e papel permanecer somente leitura aqui. Abra o painel de tempo de execução na linha principal para alterar provedor, modelo ou esforço.",
+      "role": "Líder de Equipe"
+    },
+    "title": "Editar equipe"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Remover membro",
+      "removeAria": "Remover {{name}}",
+      "restore": "Restaurar membro",
+      "restoreAria": "Restaurar {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "configuração de contexto padrão",
+      "description": "O contexto antrópico é de toda a equipe para este lançamento: {{mode}}. Use a caixa de verificação Limit context do painel de execução principal para alterá-la.",
+      "limitEnabled": "Limite de 200K ativado"
+    },
+    "mcp": {
+      "buttonInherit": "MCP herdar",
+      "buttonScopes": "MCP",
+      "chooseScopes": "Escolha os escopos",
+      "inheritLead": "Herdar chumbo",
+      "lockedInfo": "Equipes de agentes MCP só está habilitado para todos os companheiros de equipe. Este companheiro de equipa vai lançar com apenas o servidor do Agente Teams.",
+      "mode": "Modo MCP",
+      "scopes": {
+        "local": "local",
+        "project": "projeto",
+        "user": "usuário"
+      },
+      "serverNames": "Nomes dos servidores",
+      "settingInfo": "Equipes Agent MCP lança este companheiro de equipe com apenas o servidor Agent Teams. Escopo e modos de lista de permissão aplicam-se apenas a este lançamento companheiro de equipe.",
+      "strictAllowlist": "Lista de permissões estritas",
+      "tooltip": "{{label}}: Controle a política de herança deste membro MCP",
+      "agentTeamsMcp": "Equipas de Agentes MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} fornecedor, {{model}}",
+      "currentLeadRuntime": "Tempo de execução do lead atual",
+      "default": "Padrão",
+      "inheritedTooltip": "O provedor, o modelo e o esforço são herdados do lead enquanto a sincronização está ativada.",
+      "leadSuffix": "{{label}} (líder)",
+      "liveDisabled": "Mudanças de provedor, modelo e esforço são desabilitadas enquanto a equipe está ao vivo. Reconectar a equipe para aplicá-los com segurança.",
+      "lockedActionFallback": "Mudanças de tempo de execução de lead aberto Relaunch Team, onde provedor, modelo e esforço podem ser atualizados.",
+      "restartWholeTeam": "Salvar essas alterações de tempo de execução reinicia toda a equipe."
+    },
+    "nameAria": "Nome do membro {{index}}",
+    "nameFallback": "membro {{index}}",
+    "noRole": "Sem papel",
+    "removed": "Removido",
+    "workflow": {
+      "addTooltip": "Adicionar o fluxo de trabalho do companheiro de equipa",
+      "editTooltip": "Editar o fluxo de trabalho do companheiro de equipa",
+      "label": "Fluxo de trabalho (opcional)",
+      "placeholder": "Como esse agente deve se comportar, interagir com os outros...",
+      "saved": "Gravado"
+    },
+    "worktree": {
+      "description": "Executa este companheiro de equipa numa árvore de trabalho. Aplicar/rejeitar os alvos de mudanças que funcionam na árvore, não no espaço de trabalho principal.",
+      "label": "Árvore de trabalho"
+    },
+    "addMembers": {
+      "title": "Adicionar Membros",
+      "description": "Adicionar novos membros ao {{teamName}}"
+    },
+    "placeholders": {
+      "name": "nome do membro",
+      "mcpServers": "github, sentinela"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Adicionar",
+      "cancel": "Cancelar",
+      "delete": "Apagar",
+      "editCode": "Editar código",
+      "launch": "Lançar",
+      "remove": "Remover",
+      "stop": "Parar",
+      "task": "Tarefa",
+      "visualize": "Visualizar"
+    },
+    "deleteTeam": {
+      "description": "Apagar a equipa \"{{team}}\"? Esta acção é irreversível. Todos os dados e tarefas da equipe serão excluídos.",
+      "title": "Apagar a equipa"
+    },
+    "draft": {
+      "descriptionPrefix": "Isto é uma equipa de recrutamento.",
+      "descriptionSuffix": "foi configurado com {{count}} {{member}} mas ainda não foi fornecido pelo CLI. Clique em Iniciar para selecionar um modelo e iniciar a equipe.",
+      "descriptionSuffix_few": "foi configurado com {{count}} {{member}} mas ainda não foi fornecido pelo CLI. Clique em Iniciar para selecionar um modelo e iniciar a equipe.",
+      "descriptionSuffix_many": "foi configurado com {{count}} {{member}} mas ainda não foi fornecido pelo CLI. Clique em Iniciar para selecionar um modelo e iniciar a equipe.",
+      "descriptionSuffix_one": "foi configurado com {{count}} {{member}} mas ainda não foi fornecido pelo CLI. Clique em Iniciar para selecionar um modelo e iniciar a equipe.",
+      "descriptionSuffix_other": "foi configurado com {{count}} {{member}} mas ainda não foi fornecido pelo CLI. Clique em Iniciar para selecionar um modelo e iniciar a equipe.",
+      "member": "membros",
+      "member_few": "membros",
+      "member_many": "membros",
+      "member_one": "membro",
+      "member_other": "membros",
+      "title": "Equipe ainda não lançada"
+    },
+    "invalidTab": "Página de equipa inválida",
+    "kanbanSafeData": "Falha ao carregar completamente o kanban. Mostrando dados seguros.",
+    "loadFailed": "Falha ao carregar a equipe",
+    "loading": "A carregar a equipa",
+    "loadingSidebar": "Carregando barra lateral da equipe",
+    "offline": {
+      "offline": "A equipa está offline",
+      "partialFailed": "O último lançamento falhou no partway",
+      "partialMissing": "O último lançamento falhou em partway -{{missing}}/{{expected}}os companheiros de equipa não se juntaram",
+      "reconciling": "O último lançamento ainda está se reconciliando"
+    },
+    "previous": "Anterior: {{paths}}",
+    "removeMember": {
+      "description": "Remover \"{{member}}\" da equipa? Tarefas e mensagens serão preservadas, mas este nome não pode ser reutilizado.",
+      "title": "Remover membro"
+    },
+    "sections": {
+      "team": "Equipa"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Activo",
+      "launching": "A lançar...",
+      "running": "Em execução"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memória"
+    },
+    "tooltips": {
+      "deleteTeam": "Apagar a equipa",
+      "editTeam": "Editar a equipa",
+      "editUnavailableProvisioning": "A equipe de edição não está disponível enquanto o provisionamento ainda está em andamento",
+      "openBuiltInEditor": "Abrir o projeto no editor incorporado",
+      "openTeamGraph": "Abrir gráfico de equipe",
+      "stopTeam": "Parar a equipa"
+    },
+    "waitingForProvisioning": "Os dados da equipe aparecerão assim que o provimento terminar",
+    "context": {
+      "title": "Contexto"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Aceitar",
+        "discard": "Descartar",
+        "discardTooltip": "Descartar todas as edições deste ficheiro",
+        "keepMyDraft": "Fica com o meu rascunho.",
+        "reject": "Rejeitar",
+        "reloadFromDisk": "Recarregar do disco",
+        "restore": "Restaurar",
+        "restoreTooltip": "Criar/restaurar este ficheiro no disco a partir da antevisão",
+        "saveFile": "Gravar o Ficheiro",
+        "saveFileTooltip": "Gravar o ficheiro no disco"
+      },
+      "badges": {
+        "deleted": "DELETED",
+        "manualReview": "ZXCVTOKEN0ZCV REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Disco Actual",
+        "file-history": "Histórico de arquivos",
+        "git-fallback": "Git Fallback",
+        "ledger-exact": "Registo de Tarefas",
+        "ledger-snapshot": "Imagem do Ledger",
+        "snippet-reconstruction": "Reconstruído",
+        "unavailable": "Conteúdo não disponível"
+      },
+      "contentUnavailable": {
+        "badge": "Conteúdo não disponível",
+        "description": "O livro de registros registrou metadados para esta alteração, mas o conteúdo do texto completo não está disponível. Isso geralmente significa conteúdo binário, grande, ou hash-somente.",
+        "safety": "A aceitação/rejeição automática está desactivada para que este ficheiro evite gravações de disco inseguras.",
+        "title": "O conteúdo do texto não está disponível"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Aceitar/Rejeitar está desativado porque o conteúdo do texto completo está indisponível.",
+        "acceptRejectMissingOnDisk": "Aceitar/Rejeitar está desativado enquanto o arquivo está faltando no disco.",
+        "rejectBaselineUnavailable": "A rejeição está desactivada porque a linha de base original não está disponível.",
+        "rejectContentUnavailable": "A rejeição está desactivada porque o conteúdo do texto completo não está disponível.",
+        "rejectManualLedgerReview": "A rejeição está desativada porque esta alteração no livro de registros tem conteúdo binário, grande ou indisponível."
+      },
+      "externalChange": {
+        "changedOnDisk": "Alterado no disco",
+        "deletedOnDisk": "Excluído no disco",
+        "recreatedOnDisk": "Recriado no disco"
+      },
+      "missingOnDisk": {
+        "badge": "Faltando no disco",
+        "description": "Ainda podemos mostrar uma antevisão dos registos de agentes, mas o sistema de ficheiros está dessincronizado.",
+        "restorePrefix": "Utilização",
+        "restoreSuffix": "para escrever o conteúdo de visualização de volta para o disco.",
+        "restoreUnavailable": "O conteúdo completo do arquivo não está disponível para restaurar automaticamente.",
+        "title": "Falta o arquivo no disco"
+      },
+      "pathChange": {
+        "from": "De {{path}}",
+        "to": "A {{path}}"
+      },
+      "worktree": {
+        "isolated": "Árvore de trabalho isolada"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} pendente",
+        "pending_one": "{{count}} pendente",
+        "pending_other": "{{count}} pendente",
+        "accepted": "{{count}} aceite",
+        "accepted_one": "{{count}} aceite",
+        "accepted_other": "{{count}} aceite",
+        "rejected": "{{count}} rejeitado",
+        "rejected_one": "{{count}} rejeitado",
+        "rejected_other": "{{count}} rejeitado",
+        "acrossFiles": "através de arquivos {{count}}",
+        "acrossFiles_one": "através do arquivo {{count}}",
+        "acrossFiles_other": "através de arquivos {{count}}",
+        "edited": "{{count}} editado",
+        "edited_one": "{{count}} editado",
+        "edited_other": "{{count}} editado",
+        "pending_few": "{{count}} pendente",
+        "pending_many": "{{count}} pendente",
+        "accepted_few": "{{count}} aceite",
+        "accepted_many": "{{count}} aceite",
+        "rejected_few": "{{count}} rejeitado",
+        "rejected_many": "{{count}} rejeitado",
+        "acrossFiles_few": "através de arquivos {{count}}",
+        "acrossFiles_many": "através de arquivos {{count}}",
+        "edited_few": "{{count}} editado",
+        "edited_many": "{{count}} editado"
+      },
+      "actions": {
+        "auto": "Automático",
+        "undo": "Desfazer",
+        "acceptAll": "Aceitar Tudo",
+        "rejectAll": "Rejeitar Tudo",
+        "applying": "Aplicando...",
+        "applyRejections": "Aplicar Rejeições"
+      },
+      "tooltips": {
+        "autoOn": "Marcar automaticamente os ficheiros como visualizados ao terminar (ON)",
+        "autoOff": "Marcar automaticamente os arquivos como vistos quando rolados para o fim (OFF)",
+        "undo": "Desfazer a última operação de revisão (Ctrl+Z)",
+        "acceptAll": "Aceitar todas as alterações em todos os ficheiros",
+        "rejectAll": "Rejeitar todas as alterações com segurança rejeitáveis em todos os arquivos",
+        "rejectAllDisabled": "Nenhum arquivo pendente tem uma linha de base original segura para rejeitar.",
+        "applyRejections": "Aplicar blocos rejeitados no disco; as alterações aceites são mantidas como está"
+      }
+    },
+    "diffError": {
+      "title": "Falha ao renderizar a área de diferenças",
+      "unexpected": "Ocorreu um erro inesperado ao renderizar o diff.",
+      "actions": {
+        "retry": "Repetir"
+      },
+      "raw": {
+        "show": "Mostrar os dados de diferenças em bruto",
+        "file": "Arquivo: {{file}}",
+        "original": "--- Original",
+        "modified": "+++ Modificado",
+        "charsTotal": "... (total de caracteres {{count}})",
+        "charsTotal_one": "... (total de caracteres {{count}})",
+        "charsTotal_other": "... (total de caracteres {{count}})",
+        "charsTotal_few": "... (total de caracteres {{count}})",
+        "charsTotal_many": "... (total de caracteres {{count}})"
+      }
+    },
+    "fileTree": {
+      "viewed": "Visualizado",
+      "badges": {
+        "new": "novo",
+        "deleted": "apagado"
+      },
+      "collapseFolder": "Recolher {{name}}",
+      "expandFolder": "Expandir {{name}}",
+      "empty": {
+        "noChangedFiles": "Nenhum arquivo alterado",
+        "noMatchingFiles": "Sem arquivos correspondentes"
+      },
+      "searchPlaceholder": "Procurar os ficheiros...",
+      "filters": {
+        "unresolved": "Não resolvido",
+        "rejected": "Rejeitado",
+        "new": "Novo",
+        "clear": "Limpar"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Bloco anterior",
+      "nextChunk": "Próximo bloco",
+      "rejectChange": "Rejeitar a alteração",
+      "acceptChange": "Aceitar alteração (Y)",
+      "undo": "Desfazer",
+      "keep": "Manter",
+      "rejectShortcut": "□N",
+      "acceptShortcut": "□Y"
+    },
+    "conflict": {
+      "title": "Conflito Detectado",
+      "description": "Este ficheiro foi modificado desde as alterações do agente",
+      "cancel": "Cancelar",
+      "saveResolution": "Salvar resolução",
+      "editManually": "Editar manualmente",
+      "useOriginal": "Usar o Original",
+      "keepCurrent": "Manter Actual"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Preparando Diferenças Completas",
+      "titleMany": "Preparação das diferenças completas do {{count}}",
+      "subtitleForFile": "Finalizando o diff do editor exato para {{file}}.",
+      "subtitleCurrentFile": "Finalizando o diff exato do editor para o arquivo atual.",
+      "subtitleMany": "Resolvendo exatamente antes/depois das linhas de base para os arquivos atualmente carregados.",
+      "previewsReady": "{{count}} antevisões prontas",
+      "previewsReady_one": "A antevisão do {{count}} está pronta",
+      "editorViewLoading": "Carregamento da visão do editor",
+      "filesInProgress": "Arquivos {{count}} em andamento",
+      "filesInProgress_one": "Arquivo {{count}} em andamento",
+      "filesReady": "Arquivos {{ready}}/{{total}} prontos",
+      "progressDescription": "{{ready}} pronto, {{loading}} ainda carregando. As diferenças de visualização permanecem visíveis abaixo enquanto as linhas de base restantes são resolvidas.",
+      "singleDescription": "As diferenças de visualização permanecem visíveis abaixo enquanto a linha de base exata é resolvida.",
+      "previewsReady_few": "{{count}} antevisões prontas",
+      "previewsReady_many": "{{count}} antevisões prontas",
+      "previewsReady_other": "{{count}} antevisões prontas",
+      "filesInProgress_few": "Arquivos {{count}} em andamento",
+      "filesInProgress_many": "Arquivos {{count}} em andamento",
+      "filesInProgress_other": "Arquivos {{count}} em andamento"
+    },
+    "fileMissingPrefix": "Falta o arquivo no disco. Este diff pode ser apenas uma visualização dos logs do agente. Utilização",
+    "restore": "Restaurar",
+    "fileMissingSuffix": "para criar o arquivo no disco.",
+    "filePlaceholder": {
+      "loading": "Carregando",
+      "description": "Preparando um diff completo do editor para este arquivo."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} livros de objetos processados",
+      "ledgerObjectsProcessed_one": "{{count}} objeto de registro processado",
+      "ledgerObjectsProcessed_other": "{{count}} livros de objetos processados",
+      "ledgerObjectsProcessed_few": "{{count}} livros de objetos processados",
+      "ledgerObjectsProcessed_many": "{{count}} livros de objetos processados",
+      "phases": {
+        "readingLedger": "A ler o livro de tarefas...",
+        "resolvingFiles": "Resolvendo os estados do arquivo...",
+        "checkingWorktree": "Verificando o contexto da árvore de trabalho...",
+        "preparingDiffs": "Preparando diferenças de revisão..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} visualizado"
+    },
+    "scope": {
+      "readMore": "Ler mais",
+      "tiers": {
+        "exact": {
+          "title": "Âmbito da tarefa determinado com precisão",
+          "detail": "Tanto marcadores de início como de conclusão encontrados no log da sessão. O diff inclui apenas alterações feitas durante esta tarefa específica - outras tarefas que modificaram os mesmos arquivos estão excluídas."
+        },
+        "endEstimated": {
+          "title": "Limite final estimado",
+          "detail": "Apenas o marcador inicial foi encontrado - a tarefa ainda não tem marcador de conclusão. Alterações mostradas do início da tarefa ao fim da sessão. Se outras tarefas foram executadas após esta na mesma sessão, suas alterações também podem ser incluídas."
+        },
+        "startEstimated": {
+          "title": "Limite inicial estimado",
+          "detail": "Apenas o marcador de preenchimento foi encontrado - o início do trabalho não foi capturado. Se outras tarefas foram executadas antes desta na mesma sessão, suas alterações para os mesmos arquivos também podem ser incluídas."
+        },
+        "allSession": {
+          "title": "Mostrando todas as alterações de sessão",
+          "detail": "Não foram encontrados marcadores de tarefas no registo da sessão. Não é possível isolar esta tarefa - todas as alterações de ficheiro de toda a sessão são mostradas, incluindo alterações de outras tarefas. Isso pode acontecer com versões CLI mais antigas ou fluxos de trabalho não padrão."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Alterações capturadas pelo livro de tarefas",
+          "detail": "O orquestrador captou estas alterações de arquivo enquanto o agente estava trabalhando nesta tarefa.",
+          "badge": "Ledger exato"
+        },
+        "limited": {
+          "title": "Alterações captadas com revisão limitada",
+          "detail": "O orquestrador captou estas alterações de arquivo para esta tarefa, mas pelo menos uma mudança foi capturada de uma fonte de instantâneo ou metadados. Reveja as diferenças de texto exatas quando disponíveis; o conteúdo binário ou não disponível pode requerer revisão manual.",
+          "mixedBadge": "Revisão mista",
+          "needsReviewBadge": "Necessita de revisão"
+        }
+      },
+      "workInterval": {
+        "title": "Âmbito de aplicação pelo intervalo de trabalho persistente",
+        "detail": "O marcador de início da tarefa não estava disponível no log da sessão, então o diff é escopo pelo intervalo de trabalho da tarefa armazenado no tabuleiro.",
+        "badge": "Âmbito de aplicação do intervalo"
+      },
+      "confidence": {
+        "high": "Alta confiança",
+        "medium": "Confiança média",
+        "low": "Baixa confiança",
+        "bestEffort": "Melhor esforço"
+      }
+    },
+    "shortcuts": {
+      "title": "Atalhos do Teclado",
+      "actions": {
+        "nextChange": "Próxima alteração",
+        "previousChange": "Alteração anterior",
+        "nextFile": "Próximo arquivo",
+        "previousFile": "Ficheiro anterior",
+        "acceptChange": "Aceitar alteração",
+        "rejectChange": "Rejeitar a alteração",
+        "saveFile": "Gravar o ficheiro",
+        "undo": "Desfazer",
+        "redo": "Refazer",
+        "toggleShortcuts": "Alternar atalhos",
+        "closeDialog": "Fechar a janela"
+      }
+    },
+    "timeline": {
+      "empty": "Sem eventos de edição",
+      "titleWithCount": "Editar a Linha do Tempo ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "Sem alterações de ficheiros passíveis de revisão"
+    },
+    "empty": {
+      "noSafeDiff": "Sem diferenças seguras disponíveis",
+      "noFileChangesRecorded": "Nenhuma alteração de ficheiro gravada",
+      "noSafeDiffDescription": "O livro de tarefas não expôs um arquivo seguro diff para esta tarefa.",
+      "noSafeDiffDiagnosticsDescription": "O livro de tarefas não expôs um arquivo seguro diff para esta tarefa. Os diagnósticos abaixo explicam porquê.",
+      "noFileEventsYet": "O livro de tarefas ainda não tem eventos de arquivos para esta tarefa.",
+      "noFileEvents": "O livro de tarefas não possui eventos de arquivos para esta tarefa."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Acções da folha inferior da mensagem",
+      "collapseAll": "Recolher todas as mensagens",
+      "collapseSheet": "Folha de colapso",
+      "expandAll": "Expandir todas as mensagens",
+      "expandSheet": "Expandir a folha",
+      "floatComposer": "Compositor flutuante",
+      "floatMessagesComposer": "Compositor de mensagens flutuantes",
+      "hideSearch": "Ocultar pesquisa",
+      "loadOlder": "Carregar mensagens antigas",
+      "markAllRead": "Marcar todos como lidos",
+      "messageActions": "Acções da mensagem",
+      "moveMessagesToBottomSheet": "Mover as mensagens para a folha inferior",
+      "moveMessagesToSidebar": "Mover as mensagens para a barra lateral",
+      "moveToBottomSheet": "Mover para a folha inferior",
+      "moveToInline": "Mover para em linha",
+      "moveToSidebar": "Mover para a barra lateral",
+      "panelActions": "Acções do painel de mensagens",
+      "searchMessages": "Procurar mensagens"
+    },
+    "delivery": {
+      "copied": "Copiado",
+      "copyDebugDetails": "Copiar detalhes de depuração",
+      "details": "Detalhes",
+      "fields": {
+        "acceptanceUnknown": "aceitaçãoDesconhecido",
+        "delivered": "entregue",
+        "diagnostics": "diagnóstico",
+        "ledgerStatus": "registroStatus",
+        "messageId": "messageId",
+        "providerId": "provedorId",
+        "queuedBehindMessageId": "fila atrás deMessageId",
+        "reason": "razão",
+        "responsePending": "respostaPendente",
+        "responseState": "respostaState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "usuárioVisibleState",
+        "visibleReplyCorrelation": "visívelReplyCorrelation",
+        "visibleReplyMessageId": "visívelReplyMessageId"
+      }
+    },
+    "panelMode": "Modo do painel de mensagens",
+    "title": "Mensagens",
+    "unread": {
+      "new": "{{count}} novo",
+      "unread": "{{count}} não lido",
+      "new_few": "{{count}} novo",
+      "new_many": "{{count}} novo",
+      "new_one": "{{count}} novo",
+      "new_other": "{{count}} novo",
+      "unread_few": "{{count}} não lido",
+      "unread_many": "{{count}} não lido",
+      "unread_one": "{{count}} não lido",
+      "unread_other": "{{count}} não lido"
+    },
+    "filter": {
+      "ariaLabel": "Filtrar mensagens",
+      "tooltip": "Filtrar mensagens",
+      "from": "De",
+      "to": "Para",
+      "noData": "Sem dados",
+      "showStatusUpdates": "Mostrar as actualizações de estado (idle/shutdown)",
+      "actions": {
+        "reset": "Reiniciar",
+        "save": "Gravar"
+      }
+    },
+    "status": {
+      "title": "Estado"
+    },
+    "actionMode": {
+      "label": "Modo de ação"
+    },
+    "search": {
+      "placeholder": "Procurar..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Configurado",
+      "connected": "Ligado",
+      "failed": "Falha",
+      "free": "Livre",
+      "local": "Local",
+      "needsTest": "Precisa de teste",
+      "verified": "Verificado",
+      "unavailable": "Indisponível",
+      "issue": "Questão"
+    },
+    "customModelId": "ID do modelo personalizado",
+    "label": "Modelo (opcional)",
+    "multimodelRequired": "Codex e Gemini requerem modo Multimodel.",
+    "openCode": {
+      "allSources": "Todas as fontes do OpenCode",
+      "filterSource": "Filtro {{source}}",
+      "filterSources": "Filtrar fontes do OpenCode",
+      "freeOnly": "Apenas livre",
+      "freeTooltip": "OpenCode marca este modelo como livre.",
+      "loadingModels": "Carregando modelos OpenCode...",
+      "noSourcesFound": "Nenhuma fonte encontrada.",
+      "recommendedOnly": "Apenas recomendado",
+      "searchSources": "Fontes de pesquisa",
+      "sourcesCount": "{{count}} Fontes do OpenCode",
+      "sourcesCount_few": "{{count}} Fontes do OpenCode",
+      "sourcesCount_many": "{{count}} Fontes do OpenCode",
+      "sourcesCount_one": "{{count}} Fontes do OpenCode",
+      "sourcesCount_other": "{{count}} Fontes do OpenCode"
+    },
+    "reason": "Razão: {{reason}}",
+    "runtimeModelsSyncing": "Modelos explícitos carregam a partir do tempo de execução atual. O padrão permanece disponível enquanto a lista está sincronizando.",
+    "fastMode": {
+      "codexLabel": "Modo rápido (2 créditos x)",
+      "optionalLabel": "Modo rápido (opcional)",
+      "defaultOff": "Padrão (Off)",
+      "fast": "Rápido",
+      "off": "Desligado",
+      "defaultFast": "Padrão (Fast)",
+      "defaultResolvesTo": "O padrão atualmente se resolve em {{mode}}.",
+      "runtimeBackedHint": "O modo rápido é executado e só desbloqueia quando o modelo de lançamento Anthropic resolvido o suporta."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Leia documentos de preços antrópicos"
+    },
+    "searchModels": "Pesquisar modelos",
+    "defaultModel": "Padrão",
+    "empty": {
+      "noSearchMatches": "Nenhum modelo corresponde a esta pesquisa.",
+      "recommendedFreeOpenCode": "Nenhum modelo OpenCode gratuito recomendado está disponível na lista atual de execução.",
+      "freeOpenCode": "Nenhum modelo OpenCode gratuito está disponível na lista de execução atual.",
+      "recommendedOpenCode": "Nenhum modelo OpenCode recomendado está disponível na lista de execução atual.",
+      "noModels": "Nenhum modelo está disponível na lista de execução atual."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "O OpenCode não está pronto para o lançamento da equipa",
+      "freeModelsAvailableTitle": "OpenCode modelos livres estão disponíveis",
+      "providerNotConnectedTitle": "O provedor OpenCode não está conectado",
+      "readyTitle": "OpenCode está pronto",
+      "readyMessage": "OpenCode passou a prontidão do provedor. Selecione-o para usar modelos OpenCode para esta equipe.",
+      "useOpenCode": "Usar o OpenCode",
+      "badges": {
+        "check": "Verificar",
+        "install": "Instalar",
+        "free": "Livre",
+        "setup": "Configurar"
+      },
+      "summary": {
+        "checking": "Estado do OpenCode: verificando o tempo de execução",
+        "status": "Estado do OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "lançamento da equipe bloqueado",
+        "providerOptional": "conexão do provedor opcional",
+        "providerModelsNeedSetup": "modelos apoiados pelo provedor precisam de configuração",
+        "teamLaunchReady": "lançamento da equipa pronto",
+        "runtimeDetected": "tempo de execução detectado",
+        "runtimeMissing": "Falta o tempo de execução",
+        "freeWithoutAuth": "modelos livres disponíveis sem autorização",
+        "providerConnected": "provedor conectado",
+        "providerNotConnected": "provedor não conectado"
+      },
+      "messages": {
+        "checking": "O aplicativo ainda está verificando o tempo de execução do OpenCode. Espere pelo status do provedor terminar e tente novamente.",
+        "unsupported": "O OpenCode não está instalado, não foi encontrado, ou o tempo de execução detectado não é suportado. Instale ou atualize o OpenCode e refresque o status do provedor. Você também pode usar o botão Instalar na página inicial.",
+        "freeAvailable": "OpenCode é detectado. Você pode usar modelos OpenCode gratuitos, como Big Pickle sem conectar um provedor. Conecte um provedor apenas quando você quiser modelos apoiados pelo provedor.",
+        "noFreeListed": "OpenCode é detectado, mas nenhum modelo livre OpenCode está listado ainda. Atualizar o status do provedor, ou conectar um provedor no OpenCode para modelos apoiados pelo provedor.",
+        "launchBlocked": "O OpenCode está instalado e autenticado, mas a prontidão de lançamento do Agent Teams está bloqueada.",
+        "ready": "OpenCode está pronto para o lançamento da equipe."
+      },
+      "loadingRuntime": "O status de execução do OpenCode ainda está carregando."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping não confirmado",
+      "note": "Nota"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "Configuração do OpenCode",
+      "builtinFree": "Incorporado gratuitamente",
+      "connectedProviders": "Fornecedores conectados",
+      "otherCatalog": "Outro catálogo OpenCode"
+    },
+    "pricing": {
+      "free": "Livre",
+      "inputShort": "em {{rate}}",
+      "outputShort": "{{rate}}",
+      "perMillionSummary": "{{summary}}/ 1M",
+      "inputTitle": "Entrada: {{rate}} por fichas de 1M",
+      "outputTitle": "Saída: {{rate}} por fichas de 1M",
+      "cacheReadTitle": "Leu-se Cache: {{rate}} por fichas de 1M",
+      "cacheWriteTitle": "Escrita de cache: {{rate}} por fichas de 1M"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Utiliza o modelo padrão de endpoint compatível com antrópicos.\nAtualmente se resolve para {{model}}.",
+      "anthropicCompatible": "Utiliza o modelo padrão de endpoint compatível com antrópicos.",
+      "anthropic": "Usa o modelo padrão da equipe Claude.\nResolve para {{longContextModel}} com contexto 1M, ou {{limitedContextModel}} com contexto 200K quando o contexto Limite é ativado.",
+      "openCodeWithResolved": "Usa o modelo padrão OpenCode.\nAtualmente se resolve para {{model}}.",
+      "openCode": "Usa o modelo padrão do OpenCode.",
+      "runtime": "Usa o padrão de tempo de execução para o provedor selecionado."
+    },
+    "multimodelOff": "Multimodelo desligado",
+    "unavailableInRuntime": "Indisponível no tempo de execução atual"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Cancelar",
+      "delete": "Apagar",
+      "markResolved": "Marcar resolvido",
+      "save": "Gravar"
+    },
+    "attachments": {
+      "commentAttachment": "Anexo de comentários",
+      "fromComments": "Das observações",
+      "preview": "Visualização {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "atenção",
+        "noSafeDiff": "sem diferenças seguras"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Nenhuma alteração de ficheiro gravada",
+        "noFileChangesRecordedYet": "Ainda não foram gravadas alterações de ficheiros",
+        "noReviewableChangesRecovered": "Não foram recuperadas alterações de ficheiros passíveis de revisão",
+        "noSafeDiffAvailable": "Sem diferenças seguras disponíveis"
+      },
+      "loadFailed": "Não foi possível carregar o resumo das alterações da tarefa",
+      "loading": "A carregar as alterações...",
+      "fileCount": "Arquivos {{count}}",
+      "fileRowsHidden": "Filas de arquivos {{count}} escondidas",
+      "moreDiagnostics": "{{count}} mais diagnósticos",
+      "moreFiles": "{{count}} mais arquivos",
+      "openInEditor": "Abrir no editor",
+      "openTask": "Abrir a tarefa {{subject}}",
+      "refresh": "Actualizar as alterações",
+      "refreshFailed": "Falha na atualização: {{error}}",
+      "refreshing": "Atualizando",
+      "refreshingChanges": "Atualizando as alterações...",
+      "refreshTeamChanges": "Actualizar as alterações da equipa",
+      "refreshShort": "Actualizar",
+      "reviewDiff": "Revisão diff",
+      "reviewTaskDiff": "Rever o diff da tarefa",
+      "scannedCandidateTasks": "{{requested}} digitalizado de tarefas de candidato {{eligible}}",
+      "tasksDeferred": "As tarefas do {{count}} diferiram esta passagem",
+      "title": "Alterações",
+      "fileCount_few": "Arquivos {{count}}",
+      "fileCount_many": "Arquivos {{count}}",
+      "fileCount_one": "Arquivos {{count}}",
+      "fileCount_other": "Arquivos {{count}}",
+      "fileRowsHidden_few": "Filas de arquivos {{count}} escondidas",
+      "fileRowsHidden_many": "Filas de arquivos {{count}} escondidas",
+      "fileRowsHidden_one": "Filas de arquivos {{count}} escondidas",
+      "fileRowsHidden_other": "Filas de arquivos {{count}} escondidas",
+      "moreDiagnostics_few": "{{count}} mais diagnósticos",
+      "moreDiagnostics_many": "{{count}} mais diagnósticos",
+      "moreDiagnostics_one": "{{count}} mais diagnósticos",
+      "moreDiagnostics_other": "{{count}} mais diagnósticos",
+      "moreFiles_few": "{{count}} mais arquivos",
+      "moreFiles_many": "{{count}} mais arquivos",
+      "moreFiles_one": "{{count}} mais arquivos",
+      "moreFiles_other": "{{count}} mais arquivos",
+      "tasksDeferred_few": "As tarefas do {{count}} diferiram esta passagem",
+      "tasksDeferred_many": "As tarefas do {{count}} diferiram esta passagem",
+      "tasksDeferred_one": "As tarefas do {{count}} diferiram esta passagem",
+      "tasksDeferred_other": "As tarefas do {{count}} diferiram esta passagem"
+    },
+    "clarification": {
+      "awaitingLead": "Aguardando esclarecimento da liderança da equipe",
+      "awaitingUser": "Aguardando esclarecimentos de você"
+    },
+    "description": {
+      "add": "Carregue para adicionar a descrição...",
+      "edit": "Editar a descrição",
+      "placeholder": "Descrição da tarefa (suporta a marcação)"
+    },
+    "loading": {
+      "fetchingTeamData": "Obtendo dados da equipe",
+      "title": "A carregar a tarefa..."
+    },
+    "logs": {
+      "newArriving": "Chegam novos logs de tarefas"
+    },
+    "notFound": "Tarefa não encontrada",
+    "related": {
+      "blockedBy": "Bloqueado por",
+      "blocks": "Blocos",
+      "linkedFrom": "Ligado de",
+      "links": "Ligações",
+      "title": "Tarefas relacionadas"
+    },
+    "review": {
+      "reviewer": "Revisor: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Anexos",
+      "changes": "Alterações",
+      "comments": "Observações",
+      "description": "Designação das mercadorias",
+      "taskLogs": "Registos de Tarefas",
+      "workflowHistory": "Histórico de fluxo de trabalho"
+    },
+    "unassigned": "Não atribuído",
+    "workflow": {
+      "implementationTimeTitle": "Tempo de execução dos intervalos de trabalho persistentes",
+      "inProgressTime": "Em tempo de progresso {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Mostrando os comentários mais recentes do {{formattedCount}} para manter a interface responsiva.",
+      "badges": {
+        "approved": "Aprovado",
+        "reviewRequested": "Pedido de reexame"
+      },
+      "unknownTime": "tempo desconhecido",
+      "actions": {
+        "reply": "Responder",
+        "replyToComment": "Responder ao comentário",
+        "showMore": "Mostrar mais comentários ({{visible}}/{{total}})",
+        "cancelReply": "Cancelar resposta",
+        "comment": "Comentário"
+      },
+      "attachments": {
+        "previewAlt": "Visualização do anexo",
+        "downloadFailed": "A transferência falhou"
+      },
+      "replyingTo": "Respondendo a",
+      "input": {
+        "placeholder": "Adicionar um comentário... (Enter para enviar)",
+        "charsLeft": "{{count}} chars esquerda",
+        "charsLeft_one": "{{count}} char esquerda",
+        "charsLeft_other": "{{count}} chars esquerda",
+        "charsLeft_few": "{{count}} chars esquerda",
+        "charsLeft_many": "{{count}} chars esquerda"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Nenhum histórico de fluxo de trabalho gravado",
+      "currentImplementationInterval": "Intervalo de implementação atual",
+      "implementationIntervalEnded": "Intervalo de implementação terminado nesta transição",
+      "runningPrefix": "em execução",
+      "createdAs": "Criado como",
+      "by": "por",
+      "reassigned": "Reatribuído",
+      "assignedTo": "Atribuído a",
+      "unassignedFrom": "Não atribuído de",
+      "ownerChanged": "O proprietário foi alterado",
+      "reviewRequested": "Pedido de reexame",
+      "reviewStarted": "Iniciada a revisão",
+      "changesRequested": "Alterações solicitadas",
+      "approved": "Aprovado",
+      "unknownEvent": "Evento desconhecido"
+    },
+    "reviewStates": {
+      "approved": "Aprovado",
+      "needsFix": "Precisa de correção",
+      "inReview": "Em reexame"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Destinatário",
+      "assigneeOptional": "Destinatário (facultativo)",
+      "blockedByOptional": "Bloqueado por tarefas (opcional)",
+      "blockedBySummary": "A tarefa será bloqueada por: {{tasks}}",
+      "cancel": "Cancelar",
+      "create": "Criar",
+      "creating": "Criando...",
+      "description": "A tarefa será criada nas tarefas/ diretório da equipe e aparecerá no tabuleiro Kanban.",
+      "descriptionOptional": "Descrição (opcional)",
+      "detailsPlaceholder": "Detalhes da tarefa (suporta marcação)",
+      "hideOptionalFields": "Ocultar campos opcionais",
+      "offlineNotice": {
+        "after": "- lançar a equipa para começar a execução.",
+        "before": "A equipa está desligada. A tarefa será adicionada ao"
+      },
+      "promptOptional": "Pedido para o cessionário (opcional)",
+      "promptPlaceholder": "Instruções personalizadas para o membro da equipa...",
+      "relatedOptional": "Tarefas relacionadas (opcional)",
+      "relatedSummary": "Relacionados: {{tasks}}",
+      "saved": "Gravado",
+      "searchTasks": "Procurar tarefas...",
+      "selectMember": "Selecionar um membro",
+      "selectMemberOptional": "Selecionar membro...",
+      "showOptionalFields": "Mostrar campos opcionais",
+      "startImmediately": "Iniciar imediatamente",
+      "startOfflineHint": "A equipa está desligada. Inicie a equipe primeiro para iniciar tarefas imediatamente.",
+      "subject": "Assunto",
+      "subjectPlaceholder": "O que precisa ser feito?",
+      "title": "Criar Tarefa",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Bloqueado por",
+        "blocks": "Blocos",
+        "id": "ID",
+        "owner": "Dono",
+        "status": "Estado",
+        "subject": "Assunto"
+      },
+      "empty": "Nenhuma tarefa nesta equipa",
+      "filters": {
+        "allOwners": "Todos os proprietários",
+        "allStatuses": "Todos os estados",
+        "ownerAria": "Filtrar tarefas pelo proprietário",
+        "statusAria": "Filtrar as tarefas pelo estado"
+      },
+      "showing": "Mostrando {{shown}} de {{total}}"
+    },
+    "status": {
+      "completed": "completo",
+      "deleted": "apagado",
+      "inProgress": "em  progresso",
+      "pending": "pendente"
+    },
+    "statusSummary": {
+      "progressAria": "Tarefas {{completed}}/{{total}} concluídas",
+      "inProgress": "{{count}} em progresso",
+      "inProgress_one": "{{count}} em progresso",
+      "inProgress_other": "{{count}} em progresso",
+      "inProgress_few": "{{count}} em progresso",
+      "inProgress_many": "{{count}} em progresso",
+      "pending": "{{count}} pendente",
+      "pending_one": "{{count}} pendente",
+      "pending_other": "{{count}} pendente",
+      "pending_few": "{{count}} pendente",
+      "pending_many": "{{count}} pendente",
+      "completed": "{{count}} concluída",
+      "completed_one": "{{count}} concluída",
+      "completed_other": "{{count}} concluída",
+      "completed_few": "{{count}} concluída",
+      "completed_many": "{{count}} concluída"
+    },
+    "unassigned": "Não atribuído",
+    "teamPrefix": "Equipa:",
+    "openTask": "Abrir tarefa",
+    "deleteConfirm": {
+      "title": "Apagar tarefa",
+      "message": "Mover a tarefa #{{taskId}} para o lixo?",
+      "confirmLabel": "Apagar",
+      "cancelLabel": "Cancelar"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Cancelar",
+      "closeEditor": "Fechar editor",
+      "closeTab": "Fechar página",
+      "closeTooltip": "Fechar o editor (Esc)",
+      "discard": "Descartar",
+      "discardAndClose": "Descartar & Fechar",
+      "keep": "Manter",
+      "keepMine": "Fica com o meu.",
+      "keyboardShortcuts": "Atalhos de teclado",
+      "overwrite": "Sobrescrever",
+      "refreshAria": "Atualizar (F5)",
+      "refreshTooltip": "Actualizar o estado do git (F5)",
+      "reload": "Recarregar",
+      "retry": "Repetir",
+      "save": "Gravar",
+      "saveAllAndClose": "Salvar Todos & Fechar"
+    },
+    "ariaLabel": "Editor de Projeto",
+    "dialogs": {
+      "conflictDescription": "O ficheiro foi modificado externamente desde que o abriu. Sobrescrever com suas mudanças?",
+      "conflictTitle": "Salvar conflito",
+      "unsavedDescription": "Você tem mudanças não salvas. O que gostarias de fazer?",
+      "unsavedFileDescription": "Este ficheiro tem alterações por gravar. O que gostarias de fazer?",
+      "unsavedTitle": "Alterações por Gravar"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "O nome não pode estar vazio",
+        "invalidName": "Nome inválido",
+        "invalidCharacters": "O nome contém caracteres inválidos",
+        "nameTooLong": "O nome é muito comprido"
+      },
+      "placeholders": {
+        "fileName": "Nome do arquivo...",
+        "folderName": "Nome da pasta..."
+      },
+      "aria": {
+        "newFileName": "Novo nome do ficheiro",
+        "newFolderName": "Novo nome da pasta"
+      }
+    },
+    "draftRecovered": "Alterações não salvas recuperadas de uma sessão anterior.",
+    "externalChange": {
+      "changed": "O ficheiro foi alterado no disco.",
+      "deleted": "O ficheiro já não existe no disco."
+    },
+    "saveFailed": "Falha ao salvar: {{error}}",
+    "sidebar": {
+      "explorer": "Explorador",
+      "hide": "Esconder a barra lateral",
+      "hideWithShortcut": "Ocultar barra lateral ({{shortcut}})",
+      "show": "Mostrar barra lateral",
+      "showWithShortcut": "Mostrar a barra lateral ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Procurar em Ficheiros",
+      "closeSearch": "Fechar a pesquisa",
+      "closeSearchShortcut": "Fechar a pesquisa (Esc)",
+      "searchPlaceholder": "Procurar...",
+      "matchCase": "Coincidir na Caixa",
+      "matchCaseToggle": "Aa",
+      "noResults": "Não foram encontrados resultados",
+      "resultsSummary": "{{count}} corresponde aos ficheiros {{fileCount}}",
+      "resultsSummary_one": "{{count}} corresponde aos ficheiros {{fileCount}}",
+      "truncated": "(truncado)",
+      "resultsSummary_few": "{{count}} corresponde aos ficheiros {{fileCount}}",
+      "resultsSummary_many": "{{count}} corresponde aos ficheiros {{fileCount}}",
+      "resultsSummary_other": "{{count}} corresponde aos ficheiros {{fileCount}}"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Falha ao carregar arquivos: {{error}}",
+      "loading": "A carregar os ficheiros...",
+      "empty": "Nenhum arquivo encontrado",
+      "dropForProjectRoot": "Largar aqui para a raiz do projeto",
+      "moveToTrash": "Mover para o Lixo",
+      "moveToTrashConfirm": "Mover \"{{name}}\" para Lixo?",
+      "cancel": "Cancelar"
+    },
+    "goToLine": {
+      "title": "Ir para a Linha",
+      "position": "(atual: {{current}}, total: {{total}})",
+      "placeholder": "Número da linha, +offset, -offset, ou %",
+      "go": "Vai."
+    },
+    "searchPanel": {
+      "previousMatch": "Correspondência Anterior",
+      "nextMatch": "Próxima Correspondência",
+      "close": "Fechar",
+      "replacePlaceholder": "Substituir",
+      "replace": "Substituir",
+      "replaceNext": "Substituir o Seguinte",
+      "all": "Tudo",
+      "replaceAll": "Substituir Tudo"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, Coronel {{col}}",
+      "enableWatcher": "Activar o vigia de ficheiros",
+      "disableWatcher": "Desactivar o vigia de ficheiros",
+      "watch": "observar",
+      "watching": "observando",
+      "watchExternalChanges": "Vigiar as alterações externas",
+      "disableExternalWatcher": "Desactivar o vigia externo de alterações",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Espaços: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "A carregar a antevisão...",
+      "openFullSize": "Abrir a antevisão em tamanho completo",
+      "openSystemViewer": "Abrir no Visualizador de Sistema"
+    },
+    "quickOpen": {
+      "title": "Abertura Rápida",
+      "searchPlaceholder": "Procurar os ficheiros pelo nome...",
+      "loading": "A carregar os ficheiros...",
+      "empty": "Nenhum arquivo encontrado"
+    },
+    "errorBoundary": {
+      "crashed": "O editor caiu",
+      "unknownError": "Erro desconhecido"
+    },
+    "binaryPlaceholder": {
+      "file": "Ficheiro binário ({{size}})"
+    },
+    "unsavedChanges": "Alterações não salvas",
+    "empty": {
+      "selectFile": "Selecione um arquivo da árvore a editar"
+    },
+    "search": {
+      "toggleReplace": "Alternar Substituir",
+      "placeholder": "Procurar"
+    },
+    "shortcuts": {
+      "title": "Atalhos do Teclado",
+      "groups": {
+        "fileOperations": "Operações de Ficheiros",
+        "search": "Procurar",
+        "navigation": "Navegação",
+        "editing": "Edição",
+        "markdown": "Marcação",
+        "general": "Geral"
+      },
+      "actions": {
+        "quickOpen": "Abertura Rápida",
+        "save": "Gravar",
+        "saveAll": "Gravar Tudo",
+        "closeTab": "Fechar aba",
+        "findInFile": "Procurar no Ficheiro",
+        "searchInFiles": "Procurar em Ficheiros",
+        "goToLine": "Ir para a Linha",
+        "nextTab": "Página Seguinte",
+        "previousTab": "Página Anterior",
+        "cycleTabs": "Páginas do Ciclo",
+        "toggleSidebar": "Alternar barra lateral",
+        "undo": "Desfazer",
+        "redo": "Refazer",
+        "selectNextMatch": "Seleccionar a Próxima Correspondência",
+        "toggleComment": "Alternar o Comentário",
+        "splitPreview": "Dividir a Visualização",
+        "fullPreview": "Antevisão Completa",
+        "closeEditor": "Fechar o Editor"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Activar a quebra de linha",
+      "disableWordWrap": "Desactivar a quebra de linha",
+      "closeSplitPreview": "Fechar a antevisão da divisão",
+      "closePreview": "Fechar a antevisão"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Criar agendamento",
+      "creating": "Criando...",
+      "goToDashboard": "Ir para o Painel",
+      "launchTeam": "Equipa de lançamento",
+      "launching": "A lançar...",
+      "relaunchTeam": "Reencaminhar a equipa",
+      "relaunching": "A retransmitir...",
+      "saveChanges": "Salvar alterações",
+      "saving": "A gravar..."
+    },
+    "billing": {
+      "prefix": "A partir de 15 de junho de 2026, notas antrópicas",
+      "readArticle": "Leia o artigo Antrópico",
+      "suffix": "e o uso do agente SDK do crédito mensal do agente SDK, separado dos limites interativos do Código Claude. O crédito repõe cada ciclo de faturamento e o crédito não utilizado não rola."
+    },
+    "conflict": {
+      "description": "Executar duas equipes no mesmo diretório é arriscado - eles podem entrar em conflito editando os mesmos arquivos. Considere usar um diretório diferente ou uma git worktree para isolamento.",
+      "title": "Outra equipe \"{{team}}\" já está em execução para este diretório de trabalho",
+      "workingDirectory": "Directório de trabalho:"
+    },
+    "description": {
+      "createSchedule": "Agendar a execução automática da tarefa Claude",
+      "createScheduleForTeam": "Agendar corridas automáticas para a equipe \"{{team}}\"",
+      "editSchedule": "Programa de edição da equipa \"{{team}}\"",
+      "launchPrefix": "Iniciar a equipa",
+      "launchSuffix": "via local Claude CLI.",
+      "relaunchPrefix": "Parar a execução actual para",
+      "relaunchSuffix": "e começar novamente através local Claude CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "lançamento",
+        "relaunch": "relançamento"
+      },
+      "blocked": "Ambiente de execução não está disponível - {{action}} está bloqueado",
+      "checkingProviders": "Verificando os provedores selecionados...",
+      "failed": "Falha ao preparar os provedores selecionados",
+      "preflight": "Verificação pré-voo para detectar erros antes de {{action}}",
+      "preparingEnvironment": "A preparar o ambiente...",
+      "ready": "Todos os provedores selecionados estão prontos.",
+      "readyWithNotes": "Todos os provedores selecionados estão prontos, com notas.",
+      "unsupportedPreload": "A versão pré-carregada atual não suporta equipe:prepareProvisioning. Reinicie o aplicativo dev.",
+      "selectWorkingDirectory": "Selecione uma pasta de trabalho para validar o ambiente de lançamento.",
+      "someProvidersNeedAttention": "Alguns provedores selecionados precisam de atenção."
+    },
+    "prompt": {
+      "label": "Perguntar",
+      "oneShotPrefix": "Este prompt será passado para",
+      "oneShotSuffix": "para execução de um tiro",
+      "saved": "Gravado",
+      "schedulePlaceholder": "Instruções para Claude executar no horário...",
+      "teamLeadOptional": "Pedido para o líder da equipa (opcional)",
+      "teamLeadPlaceholder": "Instruções para liderar a equipa..."
+    },
+    "providerChanged": "O fornecedor mudou de {{from}} para {{to}}. A sessão anterior não será retomada, e o lead começará com um novo contexto, para que o novo tempo de execução seja aplicado corretamente.",
+    "relaunchFreshSession": "O relançamento da equipa começa uma nova sessão. Estado de equipe durável, placa de tarefas e configuração de membro são reidratados no prompt de lançamento.",
+    "relaunchWarning": {
+      "description": "Salvar essas configurações irá parar o processo de equipe atual, persistir na lista atualizada e lançar a equipe novamente com o novo tempo de execução.",
+      "title": "O relaunch irá reiniciar a execução da equipa actual"
+    },
+    "schedule": {
+      "labelOptional": "Rótulo (opcional)",
+      "labelPlaceholder": "Por exemplo, revisão diária do código, testes noturnos...",
+      "maxBudgetUsd": "Orçamento máximo (USD)",
+      "maxTurns": "Max voltas",
+      "noLimit": "Sem limite",
+      "noMatches": "Nenhuma equipa corresponde à sua busca.",
+      "noTeams": "Não há equipas disponíveis. Criar uma equipa primeiro.",
+      "searchTeams": "Equipas de busca...",
+      "selectTeam": "Selecionar uma equipe...",
+      "team": "Equipa",
+      "title": "Agendar"
+    },
+    "title": {
+      "createSchedule": "Criar agendamento",
+      "editSchedule": "Editar agendamento",
+      "launch": "Equipa de Lançamento",
+      "relaunch": "Reenviar a Equipa"
+    },
+    "errors": {
+      "loadProjectsFailed": "Falha ao carregar projetos",
+      "saveScheduleFailed": "Falha ao salvar o agendamento",
+      "relaunchFailed": "Falha ao reiniciar a equipa",
+      "launchFailed": "Falha ao lançar a equipa"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode lead requer um modelo selecionado.",
+      "openCodeTeammateRequired": "OpenCode lead requer pelo menos um companheiro de equipe OpenCode.",
+      "selectWorkingDirectory": "Selecionar diretório de trabalho (cwd)",
+      "fixMemberNames": "Corrigir os nomes dos membros antes do lançamento",
+      "memberNamesUnique": "Os nomes dos membros devem ser únicos antes do lançamento"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Configuração da retransmissão",
+      "title": "Configurações de lançamento opcionais",
+      "relaunchDescription": "Reveja a lista e lidere o tempo de execução antes de reiniciar a equipe.",
+      "description": "Mantenha o fluxo de lançamento focado no caminho do projeto e apenas expanda isso quando você quiser controle extra."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Copiar a equipa",
+      "createTeam": "Criar uma Equipa",
+      "deleteForever": "Apagar para sempre",
+      "deletePermanently": "Apagar permanentemente",
+      "deleteTeam": "Apagar a equipa",
+      "launching": "A lançar...",
+      "launchTeam": "Equipa de lançamento",
+      "relaunchTeam": "Reencaminhar a equipa",
+      "restore": "Restaurar",
+      "restoreTeam": "Restaurar a equipe",
+      "retry": "Repetir",
+      "stopTeam": "Parar a equipa",
+      "stopping": "Parar..."
+    },
+    "electronOnly": {
+      "description": "No modo navegador, o acesso aos diretórios locais `~/.claude/teams` não está disponível.",
+      "title": "As equipes só estão disponíveis no modo Electron"
+    },
+    "empty": {
+      "description": "Crie uma equipe aqui para começar. Aparecerá na lista automaticamente.",
+      "localOnly": "A criação da equipe só está disponível no modo Electron local.",
+      "title": "Nenhuma equipe encontrada"
+    },
+    "filter": {
+      "clearAll": "Limpar tudo",
+      "label": "Equipas de filtragem",
+      "projectPriority": "Prioridade do projecto",
+      "status": "Estado"
+    },
+    "loadFailed": "Falha ao carregar as equipes",
+    "loading": "Carregando equipes...",
+    "localOnly": "Apenas disponível no modo Electron local.",
+    "membersCount": "Membros: {{count}}",
+    "membersCount_few": "Membros: {{count}}",
+    "membersCount_many": "Membros: {{count}}",
+    "membersCount_one": "Membro: {{count}}",
+    "membersCount_other": "Membros: {{count}}",
+    "noDescription": "Sem descrição",
+    "noMatches": "Sem equipes correspondentes aos filtros atuais",
+    "partial": {
+      "pending": "O último lançamento ainda está se reconciliando.",
+      "skipped": "O último lançamento falhou.",
+      "skippedWithCount": "Último lançamento pulou {{count}}/{{expected}} companheiro de equipe.",
+      "skippedWithCount_few": "Último lançamento ignorou os companheiros de equipe {{count}}/{{expected}}.",
+      "skippedWithCount_many": "Último lançamento ignorou os companheiros de equipe {{count}}/{{expected}}.",
+      "skippedWithCount_one": "Último lançamento pulou {{count}}/{{expected}} companheiro de equipe.",
+      "skippedWithCount_other": "Último lançamento ignorou os companheiros de equipe {{count}}/{{expected}}.",
+      "stopped": "O último lançamento parou antes de todos os companheiros se juntarem.",
+      "stoppedWithCount": "O último lançamento parou antes de {{count}}/{{expected}} se juntar.",
+      "stoppedWithCount_few": "Último lançamento parado antes{{count}}/{{expected}}Os companheiros de equipa juntaram-se.",
+      "stoppedWithCount_many": "Último lançamento parado antes{{count}}/{{expected}}Os companheiros de equipa juntaram-se.",
+      "stoppedWithCount_one": "O último lançamento parou antes de {{count}}/{{expected}} se juntar.",
+      "stoppedWithCount_other": "Último lançamento parado antes{{count}}/{{expected}}Os companheiros de equipa juntaram-se."
+    },
+    "searchPlaceholder": "Equipas de busca...",
+    "sections": {
+      "otherTeams": "Outras equipas",
+      "projectTeams": "Equipas para {{project}}",
+      "selectedProject": "projeto selecionado"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Activo",
+      "deleted": "Apagado",
+      "launching": "A lançar...",
+      "offline": "Desligado",
+      "partialFailure": "O lançamento falhou no partway",
+      "partialPending": "Bootstrap pendente",
+      "partialSkipped": "Lançar o membro ignorado",
+      "running": "Em execução"
+    },
+    "title": "Selecionar equipe",
+    "trash": "Lixo ({{count}})",
+    "trash_few": "Lixo ({{count}})",
+    "trash_many": "Lixo ({{count}})",
+    "trash_one": "Lixo ({{count}})",
+    "trash_other": "Lixo ({{count}})",
+    "deleteDraft": {
+      "title": "Apagar rascunho",
+      "message": "Apagar a equipa de recrutamento \"{{teamName}}\"? Isto não pode ser desfeito.",
+      "confirmLabel": "Apagar",
+      "cancelLabel": "Cancelar"
+    },
+    "moveToTrash": {
+      "title": "Mover para o lixo",
+      "message": "Mudar a equipa \"{{teamName}}\" para o lixo? Podes restaurá-lo mais tarde.",
+      "confirmLabel": "Mover para o lixo",
+      "cancelLabel": "Cancelar"
+    },
+    "deleteForever": {
+      "title": "Apagar permanentemente",
+      "message": "Excluir a equipe \"{{teamName}}\" permanentemente? Todos os dados serão perdidos.",
+      "confirmLabel": "Apagar para sempre",
+      "cancelLabel": "Cancelar"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Dica: Mensagens cruzadas vão para a liderança da equipe alvo. Se você quer que a resposta volte para a liderança da sua equipe em vez de você, diga isso explicitamente na mensagem."
+    },
+    "attachments": {
+      "attachFiles": "Anexar arquivos (colar ou arrastar & soltar)",
+      "unavailable": "Os anexos não estão disponíveis",
+      "disabledHint": "Os anexos de arquivos são suportados para os companheiros de equipe online e OpenCode. Remover anexos ou alternar destinatário.",
+      "restrictions": {
+        "crossTeam": "Os anexos de arquivos não são suportados para mensagens de equipe cruzada",
+        "teamOffline": "A equipe deve estar online para anexar arquivos",
+        "unsupportedRecipient": "Arquivos podem ser enviados para o líder da equipe ou companheiros de equipe OpenCode",
+        "openCodeOffline": "A equipe deve estar online para anexar arquivos para companheiros de equipe do OpenCode",
+        "sending": "Aguarde a mensagem atual terminar de enviar antes de adicionar arquivos",
+        "maximumReached": "Máximo de anexos alcançados",
+        "leadOnly": "Os ficheiros só podem ser enviados para o líder da equipa"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Os comandos Slash requerem uma liderança de equipa ao vivo e não podem ser enviados com anexos",
+        "crossTeam": "Os comandos Slash só podem ser executados na liderança actual da equipa",
+        "notLead": "Os comandos Slash só podem ser enviados para o líder da equipa",
+        "leadOffline": "Comandos Slash exigem que o lead da equipe esteja online"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Reutilizar o pedido de equipa cruzada recente",
+      "teamOffline": "Equipa offline"
+    },
+    "input": {
+      "charsLeft": "{{count}} chars esquerda",
+      "charsLeft_one": "{{count}} char esquerda",
+      "charsLeft_other": "{{count}} chars esquerda",
+      "teamLaunchingPlaceholder": "A equipa está a lançar... a mensagem estará na fila para a entrega da caixa de entrada.",
+      "crossTeamPlaceholder": "Mensagem cruzada para {{team}}...",
+      "teamFallback": "equipe",
+      "placeholder": "Escreva uma mensagem... (Enter para enviar, Shift+Enter para nova linha)",
+      "slashTip": "Dica: Você pode usar \"/\" para executar qualquer comando Claude.",
+      "charsLeft_few": "{{count}} chars esquerda",
+      "charsLeft_many": "{{count}} chars esquerda"
+    },
+    "teamSelector": {
+      "thisTeam": "Esta equipa",
+      "current": "atual",
+      "online": "online",
+      "offline": "offline",
+      "onlineTitle": "Online",
+      "offlineTitle": "Desligado"
+    },
+    "recipient": {
+      "select": "Seleccionar...",
+      "searchPlaceholder": "Procurar...",
+      "noResults": "Sem resultados"
+    },
+    "actions": {
+      "voiceToText": "Voz para texto",
+      "send": "Enviar",
+      "sendingUnavailableLaunching": "Enviando indisponível enquanto a equipe está lançando"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Registos de filtros",
+      "tooltip": "Registos de filtros",
+      "sections": {
+        "stream": "Fluxo",
+        "content": "Conteúdo"
+      },
+      "kinds": {
+        "output": "Saída",
+        "thinking": "Pensar",
+        "tool": "Chamadas de ferramentas"
+      },
+      "actions": {
+        "reset": "Reiniciar",
+        "save": "Gravar"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "Linhas em bruto {{formattedCount}}",
+    "rawLineCount_one": "{{formattedCount}} linha em bruto",
+    "rawLinesCaptured": "{{count}} capturado",
+    "emptyRawLogs": "{{count}}; nenhum é assistente / saída da ferramenta ainda.",
+    "noLogsYet": "Ainda não há registos.",
+    "teamNotRunning": "A equipa não está a correr.",
+    "searchPlaceholder": "Registos de pesquisa...",
+    "clearSearch": "Limpar a pesquisa",
+    "newCount": "+{{count}} novo",
+    "loading": "Carregando...",
+    "showMore": "Mostrar mais",
+    "noLogsCaptured": "Nenhum tronco capturado.",
+    "noMatchingLogs": "Não há registos correspondentes.",
+    "rawLineCount_few": "Linhas em bruto {{formattedCount}}",
+    "rawLineCount_many": "Linhas em bruto {{formattedCount}}",
+    "rawLineCount_other": "Linhas em bruto {{formattedCount}}",
+    "openFullscreen": "Abrir os registos de ecrã completo",
+    "fullscreen": "Ecrã completo",
+    "viewingFullscreen": "Visualizando em modo de tela cheia",
+    "logsTitle": "Registos",
+    "sourceSelect": {
+      "placeholder": "Seleccionar a origem do registo...",
+      "searchPlaceholder": "Procurar fontes de registo...",
+      "emptyMessage": "Nenhuma fonte de registro encontrada.",
+      "ariaLabel": "Origem do registo",
+      "leadLabel": "Chumbo",
+      "selectSourceEmpty": "Selecione uma fonte de registro."
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "Equipa externa",
+      "process": {
+        "startedBy": "Iniciado por:",
+        "at": "Em:",
+        "openUrl": "Abrir URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Tarefas ocultas",
+        "empty": "Nenhuma tarefa oculta disponível."
+      },
+      "member": {
+        "lead": "Chumbo",
+        "workingOn": "trabalhando em",
+        "recentTools": "Ferramentas recentes",
+        "spawn": {
+          "waitingToStart": "esperando para começar",
+          "starting": "início",
+          "failed": "falhou"
+        },
+        "state": {
+          "active": "ativo",
+          "idle": "ocioso",
+          "offline": "offline",
+          "runningTool": "ferramenta de execução"
+        },
+        "activeTool": {
+          "running": "Ferramenta de execução",
+          "failed": "A ferramenta falhou",
+          "finished": "Ferramenta terminada"
+        },
+        "actions": {
+          "message": "Mensagem",
+          "profile": "Perfil",
+          "task": "Tarefa"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Registos",
+      "loading": "A carregar os registos",
+      "more": "+{{count}} mais",
+      "more_one": "+{{count}} mais",
+      "more_other": "+{{count}} mais",
+      "more_few": "+{{count}} mais",
+      "more_many": "+{{count}} mais"
+    },
+    "blockingEdge": {
+      "title": "Dependência de Bloqueamento",
+      "blocks": "blocos",
+      "close": "Fechar",
+      "blockingHiddenTasks": "Bloqueando tarefas ocultas",
+      "blockedHiddenTasks": "Tarefas ocultas bloqueadas"
+    },
+    "activityHud": {
+      "activity": "Actividade",
+      "noRecentActivity": "Nenhuma atividade recente",
+      "more": "+{{count}} mais",
+      "more_one": "+{{count}} mais",
+      "more_other": "+{{count}} mais",
+      "more_few": "+{{count}} mais",
+      "more_many": "+{{count}} mais"
+    },
+    "provisioning": {
+      "launchDetails": "Detalhes do lançamento",
+      "launchDetailsDescription": "Progress de lançamento detalhado da equipe, saída ao vivo e registros CLI."
+    }
+  },
+  "projectPath": {
+    "label": "Projeto",
+    "source": {
+      "claude": "Encontrado por Claude",
+      "codex": "Encontrado pelo Codex",
+      "mixed": "Encontrado por Claude e Codex"
+    },
+    "deleted": {
+      "title": "A pasta do projecto já não existe",
+      "label": "Apagado"
+    },
+    "mode": {
+      "projectList": "A partir da lista de projetos",
+      "customPath": "Localização personalizada"
+    },
+    "loadingProjects": "Carregando projetos...",
+    "selectProject": "Selecionar um projeto...",
+    "searchPlaceholder": "Procurar o projecto pelo nome ou localização",
+    "empty": "Nada encontrado",
+    "selectFromList": "Selecione um projeto na lista",
+    "noProjects": "Nenhum projeto encontrado, mude para o caminho personalizado.",
+    "customWorkingDirectory": "Directório de trabalho personalizado",
+    "browse": "Navegar",
+    "createAutomatically": "Se o diretório não existir, ele será criado automaticamente."
+  },
+  "members": {
+    "badges": {
+      "worktree": "árvore de trabalho"
+    },
+    "runtimeTelemetry": {
+      "title": "Carga local em tempo de execução",
+      "description": "Apenas os processos dos pais e dos filhos. A inferência remota do LLM não está incluída.",
+      "cpu": "CPU",
+      "memory": "Memória",
+      "summedRss": "RSS",
+      "sharedHost": "métrica de host OpenCode compartilhada. Não é exclusivo deste membro.",
+      "processTreeCapped": "A árvore de processo foi fechada para esta amostra.",
+      "rssHint": "RSS pode incluir páginas compartilhadas, por isso é melhor lido como um sinal de carga, não memória exclusiva."
+    },
+    "editor": {
+      "title": "Membros",
+      "addMember": "Adicionar membro",
+      "editAsJson": "Editar como JSON",
+      "runInSeparateWorktrees": "Executar companheiros de equipa em árvores de trabalho separadas",
+      "agentTeamsMcpOnly": "Equipas de Agentes MCP apenas",
+      "removedCount": "Removido ({{count}})",
+      "removedModelLockReason": "Os membros removidos são mantidos para o histórico de exclusão suave. Restaure-os para editar as configurações.",
+      "memberNamesUnique": "Os nomes dos membros devem ser únicos"
+    },
+    "stats": {
+      "computing": "Computando estatísticas...",
+      "empty": "Nenhuma estatística disponível",
+      "lines": "Linhas",
+      "linesInfo": "Aproximado. Precisão para Editar e Escrever ferramentas. O arquivo Bash escreve são estimados a partir de padrões de comando (heredoc, echo, sed) e podem ser subnotificados.",
+      "files": "Ficheiros",
+      "toolCalls": "Chamadas de Ferramentas",
+      "tokens": "Tokens",
+      "toolUsage": "Utilização da Ferramenta",
+      "filesTouched": "Arquivos tocados ({{count}})",
+      "viewAllChanges": "Ver Todas as Alterações",
+      "showLess": "Mostrar menos",
+      "moreFiles": "+{{count}} mais",
+      "footer": "Sessões {{count}} · {{computedAgo}}",
+      "footer_one": "{{count}} sessão · computado {{computedAgo}}",
+      "footer_few": "Sessões {{count}} · {{computedAgo}}",
+      "footer_many": "Sessões {{count}} · {{computedAgo}}",
+      "footer_other": "Sessões {{count}} · {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "A pesquisar os registos...",
+      "empty": "Nenhum registro encontrado",
+      "waitingForTaskActivity": "A tarefa está em andamento - à espera da actividade da sessão (auto- atualização)...",
+      "noTaskActivity": "Nenhuma atividade de sessão para esta tarefa ainda",
+      "noMemberActivity": "Este membro ainda não tem nenhuma atividade de sessão gravada",
+      "leadSessionTooltip": "Registros de sessão de liderança de equipe completa - útil para contexto global de orquestração, não específico para este agente",
+      "memberSessionTooltip": "Registros de sessão de companheiro de equipe persistentes - úteis quando o trabalho é executado em uma sessão de membro raiz em vez de um arquivo de subagente",
+      "startedAt": "começou {{time}}",
+      "active": "ativo",
+      "showDetails": "Mostrar os detalhes",
+      "hideDetails": "Ocultar detalhes",
+      "loadingDetails": "A carregar os detalhes...",
+      "failedToLoadDetails": "Não foi possível carregar os detalhes"
+    },
+    "detail": {
+      "relaunchOpenCode": "Relacionar o OpenCode",
+      "restart": "Reiniciar",
+      "legacyLogsFallback": "Recuar dos Registos Legados",
+      "copyDiagnostics": "Copiar diagnósticos",
+      "pid": "ZXCVTOKEN0ZCV {{pid}}",
+      "removedAt": "{{date}} removido",
+      "failedToRestartMember": "Falha ao reiniciar o membro",
+      "sendMessage": "Enviar mensagem",
+      "assignTask": "Atribuir Tarefa",
+      "remove": "Remover"
+    },
+    "list": {
+      "loading": "Carregando membros da equipe",
+      "unavailable": "Lista de membros não disponível",
+      "unavailableDescription": "Os companheiros de equipe {{count}} são conhecidos dos metadados da equipe, mas os detalhes da lista estão faltando.",
+      "unavailableDescription_one": "O companheiro de equipe {{count}} é conhecido pelos metadados da equipe, mas faltam detalhes da lista.",
+      "soloLeadOnly": "Equipa individual - só lidera",
+      "removedCount": "Removido ({{count}})",
+      "unavailableDescription_few": "Os companheiros de equipe {{count}} são conhecidos dos metadados da equipe, mas os detalhes da lista estão faltando.",
+      "unavailableDescription_many": "Os companheiros de equipe {{count}} são conhecidos dos metadados da equipe, mas os detalhes da lista estão faltando.",
+      "unavailableDescription_other": "Os companheiros de equipe {{count}} são conhecidos dos metadados da equipe, mas os detalhes da lista estão faltando."
+    },
+    "executionLog": {
+      "empty": "Nada a mostrar",
+      "emptyUserMessage": "{{time}} - (vazio)",
+      "agentInstructions": "Instruções do agente",
+      "memberTurn": "{{member}} turno",
+      "agentTurn": "Virar agente",
+      "turn": "virar"
+    },
+    "recentMessages": {
+      "latest": "Últimas mensagens",
+      "latestForMember": "Últimas mensagens - {{member}}",
+      "loadMore": "Carregar mais",
+      "expand": "Expandir",
+      "collapse": "Recolher"
+    },
+    "leadModel": {
+      "defaultModel": "Padrão",
+      "providerModelAria": "{{provider}} fornecedor, {{model}}",
+      "leadShort": "chumbo",
+      "teamLead": "Líder de Equipe",
+      "syncWithTeammates": "Sincronizar modelo com companheiros de equipa",
+      "anthropicTeamWide": "Ampla equipe antrópica",
+      "runtimeInheritance": "O tempo de execução do chumbo aplica-se aos companheiros de equipa, a menos que eles definam o seu próprio fornecedor ou modelo.",
+      "anthropicContextLimit": "O limite de contexto de 200K é de toda a equipe para os tempos de execução antrópicos neste lançamento, incluindo companheiros de equipe antrópicos personalizados."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Actualizar automaticamente",
+      "wrapLines": "Quebrar linhas",
+      "loadingTail": "A carregar a cauda do registo do processo...",
+      "empty": "Nenhum arquivo de registro de processo capturado para este membro ainda."
+    },
+    "tasks": {
+      "empty": "Nenhuma tarefa atribuída a este membro"
+    },
+    "messages": {
+      "loadOlder": "Carregar mensagens antigas",
+      "filters": {
+        "all": "Tudo",
+        "messages": "Mensagens",
+        "comments": "Observações"
+      },
+      "empty": {
+        "loading": "Carregando atividade...",
+        "noComments": "Sem comentários para este membro",
+        "noLoadedMessages": "Nenhuma mensagem carregada para este membro ainda",
+        "noMessages": "Nenhuma mensagem com este membro",
+        "noLoadedActivity": "Nenhuma atividade carregada para este membro ainda",
+        "noActivity": "Nenhuma atividade com este membro"
+      }
+    },
+    "actions": {
+      "openProfile": "Abrir perfil",
+      "editRole": "Editar papel",
+      "sendMessage": "Enviar mensagem",
+      "assignTask": "Atribuir tarefa"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Indique o papel personalizado..."
+    }
+  },
+  "schedule": {
+    "count": "Programações {{count}}",
+    "count_one": "Programação {{count}}",
+    "count_other": "Programações {{count}}",
+    "nextRun": "Próximo: {{next}}",
+    "actions": {
+      "runNow": "Corre agora.",
+      "edit": "Editar",
+      "pause": "Pausa",
+      "resume": "Continuar",
+      "delete": "Apagar",
+      "addSchedule": "Adicionar agendamento"
+    },
+    "runHistory": {
+      "loading": "A carregar o histórico de execução...",
+      "empty": "Nenhuma execução ainda"
+    },
+    "count_few": "Programações {{count}}",
+    "count_many": "Programações {{count}}",
+    "runLog": {
+      "title": "Executar o Registo",
+      "exitCode": "saída {{code}}",
+      "retryCount": "voltar a experimentar {{count}}/{{max}}",
+      "stillRunning": "A tarefa ainda está em execução...",
+      "loadingLogs": "A carregar os registos...",
+      "errors": "Erros",
+      "close": "Fechar"
+    },
+    "cron": {
+      "expression": "Expressão de Cron",
+      "highFrequencyWarning": "Programação de alta frequência (intervalo inferior a 5 minutos)",
+      "nextRuns": "Próxima execução:",
+      "timezone": "Fuso horário",
+      "selectTimezone": "Selecionar fuso horário",
+      "warmUpTime": "Hora de aquecimento",
+      "warmUpDescription": "Prepara os provedores selecionados antes da execução agendada",
+      "errors": {
+        "enterExpression": "Digite uma expressão cron",
+        "invalidExpression": "Expressão de cron inválido"
+      },
+      "presets": {
+        "everyHour": "A cada hora",
+        "everySixHours": "A cada 6 horas",
+        "dailyAtNine": "Diariamente às 9 da manhã",
+        "weekdaysAtNine": "Semanas às 9h",
+        "mondayAtNine": "Segunda-feira às 9h",
+        "everyThirtyMinutes": "A cada 30 min"
+      },
+      "warmUpOptions": {
+        "none": "Sem aquecimento.",
+        "fiveMinutes": "5 min",
+        "tenMinutes": "10 min",
+        "fifteenMinutes": "15 min",
+        "thirtyMinutes": "30 min"
+      }
+    },
+    "empty": {
+      "title": "Sem agendamentos ainda",
+      "description": "Crie um cronograma para executar tarefas de Claude automaticamente em um cronograma de cron."
+    },
+    "title": "Agendamentos",
+    "status": {
+      "active": "Activo",
+      "paused": "Pausa",
+      "disabled": "Desactivado"
+    },
+    "runStatus": {
+      "pending": "Pendente",
+      "warmingUp": "Aquecimento",
+      "warm": "Quente",
+      "running": "Em execução",
+      "completed": "Concluído",
+      "failed": "Falha",
+      "interrupted": "Interrompido",
+      "cancelled": "Cancelado"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Os modelos locais do OpenCode podem usar um orçamento de contexto do OpenCode em vez de limites somente prompt.",
+    "description": "Adicione limites de correspondência à configuração do OpenCode para o provedor e modelo usado por este companheiro de equipe. Isso ajuda o OpenCode a compactar e podar antes de os modelos locais transbordarem sua janela de contexto.",
+    "replacePrefix": "Substituir",
+    "and": "e",
+    "replaceSuffix": "com os IDs do provedor e do modelo de sua configuração do OpenCode. Instruções imediatas como",
+    "promptInstructionsSuffix": "são mais fracos porque o pedido é montado antes do modelo lê-los.",
+    "providerLimits": "Limites do fornecedor",
+    "compactionConfig": "Configuração da compactação"
+  },
+  "sessions": {
+    "noProjectPath": "Nenhum caminho do projecto ligado",
+    "provisioningHint": "As sessões aparecerão após o provimento da equipe",
+    "projectNotFound": "Projeto não encontrado",
+    "loading": "Carregando sessões...",
+    "empty": "Nenhuma sessão encontrada",
+    "showAllSessions": "Mostrar para todas as sessões",
+    "lead": "chumbo",
+    "removeFilter": "Remover filtro",
+    "filterBySession": "Filtrar por esta sessão",
+    "openSession": "Abrir sessão",
+    "title": "Sessões"
+  },
+  "provisioning": {
+    "pid": "ZXCVTOKEN0ZCV {{pid}}",
+    "cancel": "Cancelar",
+    "moreWarningsHidden": "{{count}} mais avisos escondidos",
+    "diagnostics": "Diagnósticos",
+    "liveOutput": "Saída ao vivo",
+    "diagnosticsCopied": "Diagnóstico copiado",
+    "copyDiagnostics": "Copiar diagnósticos",
+    "copied": "Copiado",
+    "noOutput": "Nenhuma saída capturada ainda.",
+    "cliLogs": "CLI logs",
+    "steps": {
+      "starting": "Iniciando",
+      "configuring": "Configuração da equipa",
+      "assembling": "Membros que aderiram",
+      "finalizing": "Finalizando"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "Verificando...",
+        "ready": "Está bem.",
+        "notes": "OK (notas)",
+        "failed": "ERR",
+        "pending": "espera"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Falta o binário CLI",
+        "openCodeRuntimeMissing": "Falta o tempo de execução do OpenCode",
+        "openCodeWindowsAccessBlocked": "Acesso ao Windows OpenCode bloqueado",
+        "openCodeNoOutput": "A verificação de tempo de execução do OpenCode não retornou nenhum resultado",
+        "openCodeMcpUnreachable": "Aplicativo OpenCode MCP inacessível",
+        "workingDirectoryMissing": "Pasta de trabalho em falta",
+        "cliBinaryCouldNotStart": "Não foi possível iniciar o binário CLI",
+        "cliPreflightIncomplete": "CLI pré-voo não completou",
+        "authenticationRequired": "Autenticação necessária",
+        "runtimeProviderNotConfigured": "O provedor de tempo de execução não está configurado",
+        "cliPreflightFailed": "Falha no pré- voo CLI",
+        "selectedModelCompatible": "Modelo selecionado compatível",
+        "selectedModelCompatibilityPending": "Compatibilidade de modelo selecionada pendente",
+        "selectedModelAvailable": "Modelo selecionado disponível",
+        "selectedModelVerified": "Modelo selecionado verificado",
+        "selectedModelUnavailable": "Modelo selecionado não disponível",
+        "selectedModelTimedOut": "A verificação selecionada do modelo expirou",
+        "selectedModelCheckFailed": "Falha na verificação do modelo selecionado",
+        "selectedModelDeferred": "Verificação de modelo selecionada diferida",
+        "selectedModelPingNotConfirmed": "Ping de modelo selecionado não confirmado",
+        "readyWithNotes": "Pronto com notas",
+        "needsAttention": "Precisa de atenção"
+      },
+      "modelChecksSummary": "Verificação de modelo selecionada - {{details}}",
+      "modelParts": {
+        "unavailable": "Modelo {{count}} indisponível",
+        "unavailable_one": "Modelo {{count}} indisponível",
+        "unavailable_other": "Modelos {{count}} indisponível",
+        "checkFailed": "Falha na verificação do modelo {{count}}",
+        "checkFailed_one": "Falha na verificação do modelo {{count}}",
+        "checkFailed_other": "A verificação dos modelos {{count}} falhou",
+        "timedOut": "Modelo {{count}} cronometrado",
+        "timedOut_one": "Modelo {{count}} cronometrado",
+        "timedOut_other": "Modelos {{count}} cronometrados",
+        "deferred": "Verificação {{count}} diferida",
+        "deferred_one": "Verificação {{count}} diferida",
+        "deferred_other": "Verificação {{count}} diferida",
+        "pingNotConfirmed": "{{count}} ping não confirmado",
+        "pingNotConfirmed_one": "{{count}} ping não confirmado",
+        "pingNotConfirmed_other": "{{count}} ping não confirmado",
+        "compatibilityPending": "{{count}}, verificação profunda pendente",
+        "compatibilityPending_one": "{{count}}, verificação profunda pendente",
+        "compatibilityPending_other": "{{count}}, verificação profunda pendente",
+        "compatible": "compatível com {{count}}",
+        "compatible_one": "compatível com {{count}}",
+        "compatible_other": "compatível com {{count}}",
+        "checking": "Verificação {{count}}",
+        "checking_one": "Verificação {{count}}",
+        "checking_other": "Verificação {{count}}",
+        "available": "{{count}} disponível",
+        "available_one": "{{count}} disponível",
+        "available_other": "{{count}} disponível",
+        "verified": "{{count}} verificado",
+        "verified_one": "{{count}} verificado",
+        "verified_other": "{{count}} verificado",
+        "unavailable_few": "Modelos {{count}} indisponível",
+        "unavailable_many": "Modelos {{count}} indisponível",
+        "checkFailed_few": "A verificação dos modelos {{count}} falhou",
+        "checkFailed_many": "A verificação dos modelos {{count}} falhou",
+        "timedOut_few": "Modelos {{count}} cronometrados",
+        "timedOut_many": "Modelos {{count}} cronometrados",
+        "deferred_few": "Verificação {{count}} diferida",
+        "deferred_many": "Verificação {{count}} diferida",
+        "pingNotConfirmed_few": "{{count}} ping não confirmado",
+        "pingNotConfirmed_many": "{{count}} ping não confirmado",
+        "compatibilityPending_few": "{{count}}, verificação profunda pendente",
+        "compatibilityPending_many": "{{count}}, verificação profunda pendente",
+        "compatible_few": "compatível com {{count}}",
+        "compatible_many": "compatível com {{count}}",
+        "checking_few": "Verificação {{count}}",
+        "checking_many": "Verificação {{count}}",
+        "available_few": "{{count}} disponível",
+        "available_many": "{{count}} disponível",
+        "verified_few": "{{count}} verificado",
+        "verified_many": "{{count}} verificado"
+      },
+      "openProviderSettings": "Abrir as configurações do {{provider}}",
+      "copied": "Copiado",
+      "copyDiagnostics": "Copiar diagnósticos",
+      "deepVerificationPending": "A verificação profunda ainda está a decorrer. Os modelos livres do OpenCode podem levar cerca de 20 segundos.",
+      "progress": {
+        "checkingSelectedProviders": "Verificando os provedores selecionados em paralelo...",
+        "checkingProvider": "Verificando o fornecedor {{provider}}...",
+        "checkingProviders": "A verificar os fornecedores {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Corrigir permissões de pastas ou mover o projeto para uma pasta com escrita pelo usuário. Executar como administrador é apenas uma solução temporária.",
+        "openCodeBridgeNoOutput": "Reinicie o aplicativo e o tempo de execução do OpenCode, então tente novamente. Se repetir, copie o diagnóstico.",
+        "workingDirectoryMissing": "Escolha uma pasta de trabalho existente e então reabra esta janela.",
+        "authenticationRequired": "Autentique o provedor necessário em Claude CLI e, em seguida, reabra esta janela.",
+        "runtimeProviderNotConfigured": "Configurar o tempo de execução do provedor selecionado e então reabrir esta janela.",
+        "openCodeRuntimeMissing": "Instale ou tente novamente o tempo de execução do OpenCode a partir do cartão de status do provedor e então reabra esta janela.",
+        "openCodeAppMcpUnreachable": "Repetir o lançamento para atualizar o aplicativo OpenCode MCP ponte. Se repetir, reinicie o aplicativo e o tempo de execução do OpenCode.",
+        "cliBinaryMissing": "Certifique-se de que o binário local Claude CLI exista e possa ser iniciado, e então reabra esta janela.",
+        "default": "Resolver o problema acima e depois reabrir esta janela."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} companheiro de equipe aguardando aprovação de permissão",
+      "nameListWithMore": "{{names}}, +{{count}} mais",
+      "waitingForOpenCode": "À espera do OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap parada: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; À espera do OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}:{{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap parado",
+        "shellOnly": "Apenas para Shell",
+        "waitingForBootstrap": "À espera de bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap não confirmado",
+        "awaitingPermission": "A aguardar permissão",
+        "waitingForRuntime": "À espera do tempo de execução",
+        "shellOnlyLower": "somente de shell",
+        "waitingForBootstrapLower": "à espera de bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap não confirmada",
+        "awaitingPermissionLower": "aguardando permissão",
+        "waitingForRuntimeLower": "esperando pelo tempo de execução"
+      },
+      "failed": {
+        "memberFailedToStart": "Não foi possível iniciar o {{name}}",
+        "teammatesFailedToStart": "Não foi possível iniciar os companheiros de equipa {{count}}",
+        "teammatesFailedRatio": "Não foi possível iniciar os colegas de equipa {{count}}/{{total}}"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} pulou para este lançamento",
+        "memberSkippedWithReason": "{{name}} pulou para este lançamento - {{reason}}",
+        "memberSkippedCompact": "{{name}} pulou",
+        "teammatesSkipped": "Os companheiros de equipa do {{count}} saltaram",
+        "teammatesSkippedList": "Colegas de equipa: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} companheiros de equipa saltaram para este lançamento"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} ainda se juntam",
+        "teammatesStillJoining_one": "{{count}} companheiro ainda se juntando",
+        "teammatesStillJoining_few": "{{count}} ainda se juntam",
+        "teammatesStillJoining_many": "{{count}} ainda se juntam",
+        "teammatesStillJoining_other": "{{count}} ainda se juntam",
+        "teammatesConfirmedRatio": "Companheiros de equipa de {{count}}/{{total}} confirmados"
+      },
+      "ready": {
+        "leadOnline": "Liderar online",
+        "allTeammatesJoined": "Todos os companheiros de equipa {{count}} se juntaram",
+        "teamProvisionedLeadOnline": "Equipa provida - lider online",
+        "teamProvisionedAllJoined": "Equipa provida - todos os companheiros de equipa {{count}} se juntaram",
+        "teamProvisionedStillJoining": "Equipe provida - companheiros de equipe ainda estão se juntando",
+        "launchFinishedWithErrors": "O lançamento terminou com erros -{{count}}/{{total}}Não foi possível iniciar os companheiros de equipa",
+        "launchContinuedSkipped": "O lançamento continuou - os companheiros de equipa {{count}}/{{total}} saltaram",
+        "teamLaunchedLeadOnline": "Equipa lançada - líder online",
+        "teamLaunchedAllJoined": "Equipa lançada - todos os companheiros de equipa {{count}} se juntaram"
+      },
+      "panel": {
+        "launchFailed": "O lançamento falhou",
+        "launchDetails": "Detalhes do lançamento",
+        "launchFinishedWithErrors": "O lançamento terminou com erros",
+        "launchContinuedSkipped": "O lançamento continuou com companheiros de equipa ignorados",
+        "coreTeamReady": "Equipa principal pronta",
+        "finishingLaunch": "Finalizando o lançamento",
+        "teamLaunched": "Equipa lançada",
+        "launchingTeam": "Equipa de lançamento"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Estado de execução ao vivo",
+    "description": "Batimento cardíaco e estado de lançamento. Os controles de processo permanecem abaixo.",
+    "source": "Fonte: {{source}}",
+    "lane": "{{lane}}",
+    "diagnosticOnly": "Apenas diagnóstico",
+    "updated": "{{value}} actualizado",
+    "states": {
+      "running": "Em execução",
+      "starting": "Iniciando",
+      "waiting": "Esperando",
+      "degraded": "Precisa de atenção",
+      "stopped": "Parado",
+      "unknown": "Desconhecido"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Registros de tarefas exatos",
+      "loading": "A carregar os registos exactos das tarefas...",
+      "description": "Cortes de transcrição exata renderizados com os mesmos componentes de log de execução usados em Logs.",
+      "emptyTitle": "Nenhum registro exato ainda",
+      "emptyDescription": "Os pacotes de transcrição exatos aparecerão aqui quando estiverem disponíveis metadados de transcrição explícitos ligados a tarefas.",
+      "summaryOnly": "Apenas resumo"
+    },
+    "executionSessions": {
+      "title": "Sessões de Execução",
+      "online": "Online",
+      "updating": "Actualizando...",
+      "description": "Navegação e pré-visualizações da transcrição centrada em sessões legadas."
+    },
+    "stream": {
+      "title": "Fluxo de Registo de Tarefas"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Cancelar a tarefa {{taskId}}",
+      "cancel": "Cancelar",
+      "moveBackToTodoConfirm": "Mover esta tarefa de volta para TODO e notificar a equipe?",
+      "confirm": "Confirmar",
+      "keep": "Manter",
+      "changesNeedAttention": "As mudanças precisam de atenção",
+      "changes": "Alterações",
+      "deleteTask": "Apagar tarefa",
+      "taskLogsActive": "Registos de tarefas activos",
+      "newTaskLogsArriving": "Chegam novos logs de tarefas",
+      "awaitingUser": "Aguardando usuário",
+      "awaitingLead": "Chumbo à espera",
+      "blockedBy": "Bloqueado por",
+      "blocks": "Blocos",
+      "start": "Iniciar",
+      "complete": "Completa",
+      "approve": "Aprovar",
+      "requestReview": "Pedido de reexame",
+      "manualReview": "Revisão manual",
+      "requestChanges": "Solicitar alterações"
+    },
+    "filter": {
+      "title": "Tarefas do filtro",
+      "session": "Sessão",
+      "allSessions": "Todas as sessões",
+      "teammate": "Colega de equipa",
+      "unassigned": "(não assinado)",
+      "column": "Coluna",
+      "clearAll": "Limpar tudo"
+    },
+    "board": {
+      "addTask": "Adicionar tarefa",
+      "noTasks": "Sem tarefas",
+      "showMore": "Mostrar {{count}} mais",
+      "hiddenCount": "{{count}} oculto",
+      "trash": "Lixo",
+      "gridView": "Visão da grade",
+      "columnsView": "Vista das colunas"
+    },
+    "trash": {
+      "title": "Lixo",
+      "empty": "Sem tarefas apagadas",
+      "subject": "Assunto",
+      "owner": "Dono",
+      "deleted": "Apagado",
+      "unassigned": "Não atribuído",
+      "restoreTask": "Restaurar tarefa",
+      "restore": "Restaurar",
+      "close": "Fechar"
+    },
+    "sort": {
+      "title": "Ordenar tarefas",
+      "sortBy": "Ordenar por",
+      "reset": "Reiniciar",
+      "options": {
+        "updatedAt": {
+          "label": "Última atualização",
+          "description": "Actualizado recentemente primeiro"
+        },
+        "createdAt": {
+          "label": "Criado",
+          "description": "O mais novo primeiro"
+        },
+        "owner": {
+          "label": "Dono",
+          "description": "Alfabeticamente por atribuído"
+        },
+        "manual": {
+          "label": "Manual",
+          "description": "Ordem de arrastar e soltar"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Limpar a pesquisa",
+      "tasks": "Tarefas",
+      "createdAgo": "criado {{time}}",
+      "updatedAgo": "{{time}} actualizado",
+      "placeholder": "Procurar tarefas... (#id ou texto)"
+    },
+    "grid": {
+      "addTask": "Adicionar tarefa",
+      "noTasks": "Sem tarefas"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "EM PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "A verificar o estado do repositório do Git para as árvores de trabalho do companheiro de equipa...",
+    "ready": "As worktrees estão prontas.",
+    "readyOnBranch": "Git worktrees estão prontos no ramo {{branch}}.",
+    "needsSetup": "O isolamento da árvore de trabalho precisa de configuração Git",
+    "initialCommitNotice": "A ação inicial de commit está em estágios e envia todos os arquivos atuais com mensagem",
+    "initializeRepository": "Inicializar o repositório Git",
+    "createInitialCommit": "Criar um commit inicial",
+    "initialCommitMessage": "tarefa: persistência inicial"
+  },
+  "toolApproval": {
+    "settings": "Configurações",
+    "autoAllowAllTools": "Permitir automaticamente todas as ferramentas",
+    "autoAllowFileEdits": "Permitir automaticamente as edições de arquivos (Editar, Escrever, NotebookEdit)",
+    "autoAllowSafeCommands": "Permitir automaticamente comandos seguros (git, pnpm, npm, ls...)",
+    "onTimeout": "Tempo limite:",
+    "after": "após",
+    "secondsShort": "seg",
+    "timeoutActions": {
+      "wait": "Espera para sempre.",
+      "allow": "Permitir",
+      "deny": "Negar"
+    },
+    "submit": "Enviar",
+    "allow": "Permitir",
+    "deny": "Negar",
+    "allowAll": "Permitir todos",
+    "pendingCount": "{{count}} pendente",
+    "autoActionIn": "Auto- {{action}} em {{time}}",
+    "diff": {
+      "previewChanges": "Antevisão das alterações",
+      "readingFile": "A ler o ficheiro...",
+      "binaryFile": "Ficheiro binário - não é possível antever",
+      "truncated": "Arquivo truncado em 2MB - diff pode estar incompleto",
+      "newFile": "Novo arquivo"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Sincronização do trabalho dos membros",
+      "actionableItems": "Itens acionáveis",
+      "fingerprint": "Impressão digital",
+      "report": "Relatório",
+      "none": "nenhum",
+      "shadowWouldNudge": "Sombra iria cutucar",
+      "yes": "sim",
+      "no": "não",
+      "moreActionableItems": "{{count}} item(s) mais acionáveis",
+      "diagnostics": "Diagnósticos: {{diagnostics}}"
+    },
+    "title": "Sincronização do trabalho dos membros",
+    "loadingDiagnostics": "A carregar os diagnósticos de sincronização de trabalho dos membros.",
+    "diagnosticsUnavailable": "Os diagnósticos de sincronização de trabalho dos membros não estão disponíveis."
+  },
+  "advancedCli": {
+    "title": "Avançado",
+    "useWorktree": "Usar árvore de trabalho",
+    "recent": "Recente",
+    "commandPreview": "Previsão de comandos",
+    "customArguments": "Argumentos personalizados",
+    "validate": "Validar",
+    "validation": {
+      "allFlagsValid": "Todas as bandeiras válidas",
+      "unknownFlags": "Desconhecido: {{flags}}",
+      "protectedFlags": "Protegido: {{flags}}",
+      "failed": "A validação falhou"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} atrás",
+    "stoppedAgo": "parado {{time}} há",
+    "running": "Em execução",
+    "stopped": "Parado",
+    "stopProcess": "Processo de paragem (SIGTERM)",
+    "kill": "Matar",
+    "openInBrowser": "Abrir no navegador",
+    "open": "Abrir",
+    "pid": "PID{{pid}}",
+    "title": "CLI Processos"
+  },
+  "taskActivity": {
+    "loadingDetails": "Carregando detalhes da atividade...",
+    "contextUnavailable": "O contexto detalhado da transcrição não está mais disponível para esta atividade.",
+    "loading": "A carregar a actividade da tarefa...",
+    "lowSignalOnly": "Nenhuma atividade chave foi encontrada ainda. Detalhes de execução de baixo nível estão disponíveis abaixo no fluxo de registro de tarefas.",
+    "empty": "Nenhuma atividade explícita da tarefa foi encontrada nas transcrições disponíveis ainda. Registros de sessão mais antigos ou heurísticos ainda podem estar disponíveis abaixo em Sessões de Execução.",
+    "title": "Actividade da Tarefa",
+    "description": "Atividade de execução explícita chave ligada a esta tarefa a partir de metadados transcritos."
+  },
+  "sendMessage": {
+    "title": "Enviar mensagem",
+    "description": "Enviar uma mensagem directa a um membro da equipa.",
+    "recipientLabel": "Destinatário",
+    "selectMemberPlaceholder": "Selecionar membro...",
+    "messageLabel": "Mensagem",
+    "placeholder": "Escreva a sua mensagem...",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "charsLeft": "{{count}} chars esquerda",
+    "saved": "Gravado",
+    "attachments": {
+      "teamOnlineRequired": "A equipe deve estar online para anexar arquivos",
+      "recipientUnsupported": "Arquivos podem ser enviados para o líder da equipe ou companheiros de equipe OpenCode",
+      "openCodeOnlineRequired": "A equipe deve estar online para anexar arquivos para companheiros de equipe do OpenCode",
+      "disabledHint": "Os anexos de arquivos são suportados para os companheiros de equipe online e OpenCode. Remover anexos ou alternar destinatário.",
+      "attachFiles": "Anexar arquivos (colar ou arrastar & soltar)",
+      "unavailable": "Os anexos não estão disponíveis"
+    },
+    "quote": {
+      "remove": "Remover citação",
+      "replyingTo": "Respondendo a"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Cancelar resposta",
+    "replyingTo": "Respondendo a",
+    "placeholder": "Adicionar um comentário... (Enter para enviar)",
+    "attachFile": "Anexar arquivo (ou colar)",
+    "voiceToText": "Voz para texto",
+    "comment": "Comentário",
+    "charsLeft": "{{count}} chars esquerda",
+    "saved": "Gravado",
+    "awaitingReplyFrom": "Aguardando resposta de",
+    "or": "ou"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Soltar a imagem aqui",
+    "attachImage": "Anexar imagem",
+    "pasteOrDragDrop": "ou colar / arrastar",
+    "fromOriginalMessage": "Da mensagem original",
+    "dropFilesHere": "Soltar os ficheiros aqui",
+    "loading": "Carregando anexos..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Aprovar automaticamente todas as ferramentas",
+    "autonomousModeDescription": "Modo autônomo: ferramentas de equipe executar sem confirmação. Seja cauteloso com código não confiável.",
+    "manualModeDescription": "Modo manual: você vai aprovar ou negar cada chamada de ferramenta em tempo real."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Execução",
+      "process": "Processo"
+    },
+    "filters": {
+      "all": "Tudo"
+    },
+    "logs": {
+      "title": "Registos",
+      "loading": "Carregando o fluxo de log do membro...",
+      "emptyTitle": "Ainda não foram encontrados itens de fluxo de log para este membro.",
+      "emptyDescription": "Os registros de transcrição ou execução de membros aparecerão aqui quando estiverem disponíveis."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Descreva o que precisa mudar... (Enter para enviar)",
+    "submit": "Enviar",
+    "charsLeft": "{{count}} chars esquerda",
+    "saved": "Gravado",
+    "title": "Solicitar alterações"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Abrir o Painel",
+      "openTeam": "Abrir a equipa",
+      "cancel": "Cancelar"
+    },
+    "membersJson": {
+      "hide": "Ocultar JSON"
+    },
+    "optional": {
+      "badge": "Opcional"
+    }
+  },
+  "runningTeams": {
+    "title": "Equipas em Execução"
+  },
+  "layout": {
+    "maxPanesReached": "Máximo de painéis {{count}} alcançados"
+  },
+  "codexReconnect": {
+    "description": "A tua sessão do Códice parece estar estagnada. Reconectar para continuar.",
+    "useCode": "Usar código"
+  },
+  "effortLevel": {
+    "label": "Nível de esforço (opcional)",
+    "maxDescription": "Max dá ao modelo o tempo mais racional para tarefas difíceis."
+  },
+  "contextLimit": {
+    "limitTo200k": "Limitar o contexto a 200K tokens",
+    "always200k": "(sempre 200K para este modelo)",
+    "tooltipContent": "Mantém os lançamentos dentro de uma janela de contexto de 200K-token quando suportado.",
+    "tooltipTitle": "Limite de contexto"
+  },
+  "roleSelect": {
+    "noRole": "Sem papel",
+    "customRole": "Papel personalizado...",
+    "searchPlaceholder": "Procurar papéis...",
+    "empty": "Nenhum papel encontrado.",
+    "reservedRole": "Este papel é reservado"
+  }
+}

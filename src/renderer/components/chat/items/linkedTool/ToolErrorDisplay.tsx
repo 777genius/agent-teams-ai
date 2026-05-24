@@ -7,6 +7,7 @@
 import React, { memo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { StatusDot } from '../BaseItem';
 
 import { renderOutput } from './renderHelpers';

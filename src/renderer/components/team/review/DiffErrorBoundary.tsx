@@ -46,7 +46,7 @@ class DiffErrorBoundaryInner extends Component<
 
   render(): JSX.Element {
     if (!this.state.hasError) {
-      return <>{this.props.children}</>;
+      return this.props.children as JSX.Element;
     }
 
     const { filePath, oldString, newString, onRetry, t } = this.props;
@@ -116,7 +116,18 @@ class DiffErrorBoundaryInner extends Component<
   }
 }
 
-export function DiffErrorBoundary(props: DiffErrorBoundaryProps): JSX.Element {
+export const DiffErrorBoundary = (props: DiffErrorBoundaryProps): JSX.Element => {
   const { t } = useAppTranslation('team');
-  return <DiffErrorBoundaryInner {...props} t={t} />;
-}
+  const { children, filePath, newString, oldString, onRetry } = props;
+  return (
+    <DiffErrorBoundaryInner
+      filePath={filePath}
+      newString={newString}
+      oldString={oldString}
+      onRetry={onRetry}
+      t={t}
+    >
+      {children}
+    </DiffErrorBoundaryInner>
+  );
+};

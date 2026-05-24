@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "로그인 하시겠습니까?",
+      "becomeSponsor": "후원하기",
+      "cancel": "이름 *",
+      "checkNow": "더 보기",
+      "checkUpdates": "자주 묻는 질문",
+      "checking": "기타...",
+      "connect": "연결하기",
+      "extensions": "제품정보",
+      "login": "로그인",
+      "manage": "계정 관리",
+      "manageProviders": "계정 관리",
+      "plan": "(주)",
+      "recheck": "재검사",
+      "recheckProvider": "재검사 {{provider}}",
+      "retry": "이름 *",
+      "updateTo": "v{{version}}로 업데이트",
+      "useCode": "사용 코드"
+    },
+    "atlas": {
+      "alt": "Atlas 클라우드",
+      "description": "Atlas Cloud는 개발자가 단일 AI APITOKEN0ZXCV를 제공하여 비디오 생성, 이미지 생성 및 LLM API에 액세스 할 수있는 풀 모드 AI 인워싱 플랫폼입니다. 여러 공급 업체 통합을 관리하는 대신 한 번 연결하고 모든 modalities에서 300 + curated 모델에 통합 된 액세스를 얻을 수 있습니다. Atlas Cloud의 새로운 코딩 플랜 프로모션을 확인하십시오. API 액세스.",
+      "openCodeProvider": "OpenCode 공급자",
+      "plan": "Atlas Cloud 코딩 계획",
+      "sponsor": "지원하다"
+    },
+    "errors": {
+      "checkStatusFailed": "CLI 상태를 확인하는 실패",
+      "installationFailed": "설치 실패",
+      "refreshFailed": "업데이트 확인 실패. 네트워크 연결을 확인하고 다시 시도하십시오.",
+      "runtimeUpdatedRefreshFailed": "Runtime 업데이트되었지만 공급자 상태를 새로 고침하지 못했습니다."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} 상태는 배경에서 확인할 수 있습니다.",
+      "codexApiKeyFallback": "{{hint}} API key fallback는 auth 모드를 전환하면 사용할 수 있습니다.",
+      "codexAutoApiKey": "{{hint}}자동은 ChatGPT가 연결될 때까지 API 키를 사용합니다.",
+      "codexFinishLogin": "브라우저에서 ChatGPT 로그인 완료. 표시된 코드를 입력하면 됩니다.",
+      "codexNoActiveLogin": "사용 제한은 Codex CLI가 활성 ChatGPT 계정을 참조하십시오. 이제는 Active ChatGPT 로그인이 없습니다.",
+      "codexNoActiveManagedSession": "사용 제한은 Codex CLI가 활성 ChatGPT 계정을 참조하십시오. Local Codex 계정 데이터가 존재하지만, 활성 관리 세션이 현재 선택되지 않았습니다.",
+      "codexReconnectNeeded": "사용 제한은 Codex가 선택한 ChatGPT 세션을 새로 고침한 후만 나타납니다. 현지 세션이 다시 연결되어야 합니다.",
+      "firstCheckSlow": "첫 번째 체크는 30 초까지 걸릴 수 있습니다.",
+      "loginRequiredForTeams": "Browsing 세션 및 프로젝트는 로그인없이 작동합니다. 로그인은 에이전트 팀을 실행해야 합니다.",
+      "troubleshootTitle": "당신이 로그인 한 경우,이 단계를 시도:"
+    },
+    "installer": {
+      "checkingLatest": "최신 버전 확인...",
+      "downloading": "다운로드 {{runtime}}...",
+      "installing": "{{runtime}} 설치...",
+      "success": "성공적으로 설치 {{runtime}} v{{version}}",
+      "verifying": "검증 체크섬..."
+    },
+    "labels": {
+      "apiKeyRequired": "API 키 필요",
+      "comingSoon": "곧 출시",
+      "collapseProviderDetails": "Collapse 공급자 세부사항",
+      "expandProviderDetails": "확장 공급자 세부사항",
+      "generateLink": "관련 링크",
+      "loadingRateLimits": "속도 제한 로딩",
+      "loggedOut": "관련 기사",
+      "loginAuthFailed": "인증 실패",
+      "loginAuthUpdated": "인증 업데이트",
+      "loginComplete": "로그인 완료",
+      "loginFailed": "로그인 실패",
+      "loginTitle": "로그인",
+      "logoutFailed": "로그아웃 실패",
+      "logoutTitle": "로그아웃",
+      "notLoggedIn": "로그인",
+      "openLogin": "공지사항",
+      "providerActionRequired": "법적 책임",
+      "resets": "{{time}} 재설정",
+      "runtimeLoginTitle": "{{runtime}}로그인"
+    },
+    "loading": {
+      "aiProviders": "AI 공급자 확인...",
+      "claudeCli": "클래드 CLI..."
+    },
+    "provider": {
+      "authenticated": "인증 된",
+      "backend": "백업: {{backend}}",
+      "checkingAuthentication": "인증 확인...",
+      "checkingProviders": "고객 서비스",
+      "configuredLocalCount": "{{count}} 구성 로컬",
+      "configuredLocalCount_few": "{{count}} 구성 로컬",
+      "configuredLocalCount_many": "{{count}} 구성 로컬",
+      "configuredLocalCount_one": "{{count}} 구성 로컬",
+      "configuredLocalCount_other": "{{count}} 구성 로컬",
+      "configuredLocalTitle": "OpenCode 경로는 OpenCode config에서 가져온다.",
+      "connectedCount": "공급자: 연결되는 {{connected}}/{{denominator}}",
+      "freeModels": "무료 모델",
+      "freeModelsTitle": "OpenCode는 설정에서 사용할 때 Big Pickle과 같은 무료 모델 옵션을 포함합니다. OpenCode를 통해 OpenRouter는 무료 모델을 노출 할 수 있지만, 모든 OpenCode/OpenRouter 모델은 무료입니다. 가용성과 한계는 변화할지도 모릅니다.",
+      "loadingModels": "로딩...",
+      "modelsUnavailable": "이 런타임 빌드에 사용할 수 없는 모델",
+      "runtime": "런타임: {{runtime}}",
+      "verifiedCount": "{{count}} 확인",
+      "verifiedCount_few": "{{count}} 확인",
+      "verifiedCount_many": "{{count}} 확인",
+      "verifiedCount_one": "{{count}} 확인",
+      "verifiedCount_other": "{{count}} 확인",
+      "verifiedTitle": "성공적인 실행 증명을 가진 OpenCode 경로."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "형성된 {{runtime}}는 그것의 시작 건강 검사를 실패했습니다.",
+      "configuredNotFound": "구성 {{runtime}}는 찾을 수 없습니다.",
+      "foundButFailed": "{{runtime}}가 발견되었지만 시작 실패",
+      "healthCheckFailedDescription": "이 앱은 {{runtime}}를 구성했지만 시작된 건강 검사가 실패했습니다. 수리 또는 재설치, 다음 재시.",
+      "install": "{{runtime}} 설치",
+      "installRequiredDescription": "{{runtime}}는 팀 프로비저닝 및 세션 관리에 필요한 것입니다. 시작하기",
+      "isRequired": "{{runtime}}가 필요합니다.",
+      "reinstall": "{{runtime}} 설치"
+    },
+    "runtimeInstall": {
+      "checking": "Check",
+      "codexTitle": "Codex CLI를 앱 데이터로 설치",
+      "downloading": "다운로드",
+      "downloadingPercent": "다운로드 {{percent}}%",
+      "install": "설치하기",
+      "installing": "설치하기",
+      "openCodeTitle": "OpenCode runtime을 앱 데이터로 설치",
+      "retryInstall": "Retry 설치"
+    },
+    "troubleshoot": {
+      "again": "이름 *",
+      "authStatusCommand": "구성 CLI auth 상태 명령",
+      "checkLoggedIn": "- \"로그인\"을 보여주는 경우 확인",
+      "click": "이름 *",
+      "loginCommand": "runtime 로그인 명령",
+      "logoutCommand": "runtime 로그아웃 명령",
+      "openTerminal": "터미널을 열고 실행:",
+      "reloginPrefix": "로그인 하지만 앱이 보이지 않는 경우, 시도:",
+      "sameRuntime": "터미널의 CLI가 동일한 실행시간이 앱 사용",
+      "statusCacheHint": "- 때로는 상태는 몇 초 동안 캐시됩니다.",
+      "then": "다음 것"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "하나 이상의 공급자는 API 키 모드로 설정되지만 API 키가 구성되지 않습니다. 키를 추가하거나 연결 모드를 전환 할 수있는 공급자를 엽니다.",
+      "multipleApiKeysNeedAttention": "1개 이상 공급자는 API 열쇠 형태에 놓이고 주의를 필요로 합니다. 저장된 키를 검토하거나 연결 모드를 전환 할 수있는 공급자를 엽니다.",
+      "notAuthenticated": "{{runtime}}는 설치되지만 인증되지 않습니다. 로그인은 팀 프로비저닝 및 AI 기능을 위해 필요합니다.",
+      "singleApiKeyMissing": "{{provider}}는 API 키 모드로 설정되지만 API 키가 구성되지 않습니다. key를 추가하거나 연결 모드를 전환할 수 있습니다.",
+      "singleApiKeyNeedsAttention": "{{provider}}는 API 키 모드로 설정되지만 연결되지 않습니다. 저장된 키를 검토하거나 연결 모드를 전환 할 수있는 공급자를 엽니다."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "프로젝트 폴더 선택",
+    "selectFolder": "선택 폴더",
+    "failedToLoad": "프로젝트로드 실패",
+    "retry": "이름 *",
+    "noProjects": "제안 없음",
+    "noMatches": "\"{{query}}\"에 대한 일치 없음",
+    "noRecentProjects": "최근의 프로젝트",
+    "emptyDescription": "최근 Claude와 Codex 활동이 여기에 표시됩니다.",
+    "loadMore": "더 보기",
+    "card": {
+      "deleted": "파일 형식",
+      "projectFolderMissing": "프로젝트 폴더는 더 이상 존재하지 않습니다.",
+      "taskCounts": {
+        "active": "{{count}} 활성",
+        "active_one": "{{count}} 활성",
+        "active_other": "{{count}} 활성",
+        "active_few": "{{count}} 활성",
+        "active_many": "{{count}} 활성",
+        "pending": "{{count}} 종료",
+        "pending_one": "{{count}} 종료",
+        "pending_other": "{{count}} 종료",
+        "pending_few": "{{count}} 종료",
+        "pending_many": "{{count}} 종료",
+        "done": "{{count}} 완료",
+        "done_one": "{{count}} 완료",
+        "done_other": "{{count}} 완료",
+        "done_few": "{{count}} 완료",
+        "done_many": "{{count}} 완료"
+      }
+    },
+    "title": "최근 프로젝트",
+    "searchResults": "검색 결과",
+    "searchPlaceholder": "검색..."
+  },
+  "actions": {
+    "selectTeam": "팀 선택",
+    "or": "또는",
+    "clearSearch": "자주 묻는 질문"
+  },
+  "windowsAdmin": {
+    "title": "Windows 관리자 모드 권장",
+    "description": "OpenCode 런타임 체크는 Agent Teams AI가 높을 때 시간을 확인할 수 있습니다. OpenCode 팀을 실행하기 전에 관리자로 실행하는 앱을 복원합니다."
+  },
+  "webPreview": {
+    "title": "전체 기능을 위한 데스크톱 앱 열기",
+    "description": "브라우저 버전은 여전히 개발 중입니다. 프로젝트 작업, 통합 및 실시간 상태 업데이트는 여기에 제한될 수 있습니다. 데스크톱 앱을 사용하여 모든 기능을 안정적으로 액세스하십시오."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "새 버전 사용 가능",
+    "restartNow": "지금 예약",
+    "viewDetails": "더 보기"
+  }
+}

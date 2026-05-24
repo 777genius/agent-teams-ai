@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "دخلت بالفعل؟",
+      "becomeSponsor": "كونوا راعيين",
+      "cancel": "إلغاء",
+      "checkNow": "تحقق الآن",
+      "checkUpdates": "التحقق من المستجدات",
+      "checking": "التحقق...",
+      "connect": "Connect",
+      "extensions": "التمديدات",
+      "login": "Login",
+      "manage": "Manage",
+      "manageProviders": "إدارة مقدمي الخدمة",
+      "plan": "الخطة",
+      "recheck": "إعادة التدقيق",
+      "recheckProvider": "إعادة التدقيق {{provider}}",
+      "retry": "Retry",
+      "updateTo": "Update to v{{version}}",
+      "useCode": "رمز الاستخدام"
+    },
+    "atlas": {
+      "alt": "نظام أطلس",
+      "description": "نظام (أطلس كلود) هو منصة كاملة للإستخبارات المتطورة التي تعطي المطورين API الوصول إلى إنتاج الفيديو، وتوليد الصور، LLM API(ق) بدلاً من إدارة عمليات التكامل المتعددة للبائعين، تتواصلون مرة واحدة وتحصلون على وصول موحد إلى 300+ النماذج المعالجة عبر جميع الطرائق. تحقق من خطة الترميز الجديدة لـ (أطلس كلود) API الدخول",
+      "openCodeProvider": "مقدم الخدمات المفتوحة",
+      "plan": "خطة تدوين السحاب في نظام أطلس",
+      "sponsor": "الرعاة"
+    },
+    "errors": {
+      "checkStatusFailed": "فشل في التحقق CLI الحالة",
+      "installationFailed": "فشل التركيب",
+      "refreshFailed": "فشلت في التحقق من المستجدات تحقق من اتصالك بالشبكة وحاول مرة أخرى",
+      "runtimeUpdatedRefreshFailed": "استكملت ساعات العمل، ولكنها فشلت في تجديد مركز مقدمي الخدمات."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} وسيتم فحص الحالة في الخلفية.",
+      "codexApiKeyFallback": "{{hint}} API التراجع الرئيسي متاح إذا كنت تبديل أسلوبك",
+      "codexAutoApiKey": "{{hint}} Auto will keep using the API key until ChatGPT is connected.",
+      "codexFinishLogin": "Finish ChatGPT login in the browser. Enter the shown code if prompted.",
+      "codexNoActiveLogin": "تظهر حدود الاستخدام فقط بعد أن يرى Codex CLI حساب ChatGPT نشطًا. لا يوجد حاليًا تسجيل دخول ChatGPT نشط.",
+      "codexNoActiveManagedSession": "تظهر حدود الاستخدام فقط بعد أن يرى Codex CLI حساب ChatGPT نشطًا. توجد بيانات حساب Codex محلية، لكن لا توجد جلسة مُدارة نشطة محددة الآن.",
+      "codexReconnectNeeded": "تظهر حدود الاستخدام فقط بعد أن يحدّث Codex جلسة ChatGPT المحددة حاليًا. الجلسة المحلية تحتاج الآن إلى إعادة الاتصال.",
+      "firstCheckSlow": "الشيك الأول قد يستغرق 30 ثانية",
+      "loginRequiredForTeams": "وجلسات الحشد والمشاريع تعمل بدون دخول. (لوجين) مطلوب فقط لتشغيل فرق العملاء",
+      "troubleshootTitle": "إذا كنتِ متأكدة من أنكِ مُسجلة، جربي هذه الخطوات:"
+    },
+    "installer": {
+      "checkingLatest": "التحقق من آخر نسخة...",
+      "downloading": "تحميل {{runtime}}...",
+      "installing": "التركيب {{runtime}}...",
+      "success": "تم تركيبها بنجاح {{runtime}} v{{version}}",
+      "verifying": "التحقق..."
+    },
+    "labels": {
+      "apiKeyRequired": "API المفتاح المطلوب",
+      "comingSoon": "قريبا",
+      "collapseProviderDetails": "تفاصيل المزود",
+      "expandProviderDetails": "التفاصيل الموسعة للمقدمين",
+      "generateLink": "وصلة الوراثة",
+      "loadingRateLimits": "الحد الأقصى للشحن",
+      "loggedOut": "مُسجّل",
+      "loginAuthFailed": "فشل التوثيق",
+      "loginAuthUpdated": "تحديث",
+      "loginComplete": "لوجين اكتمل",
+      "loginFailed": "(لوجين) فشل",
+      "loginTitle": "Login",
+      "logoutFailed": "فشل",
+      "logoutTitle": "Logout",
+      "notLoggedIn": "لم يسجل في",
+      "openLogin": "سجل مفتوح",
+      "providerActionRequired": "الإجراء المطلوب من مقدمي الخدمات",
+      "resets": "resets {{time}}",
+      "runtimeLoginTitle": "{{runtime}} Login"
+    },
+    "loading": {
+      "aiProviders": "تحقق من مُقدّمي \"آي آي\"...",
+      "claudeCli": "التحقق من كلود CLI..."
+    },
+    "provider": {
+      "authenticated": "مختوم",
+      "backend": "الخلفية: {{backend}}",
+      "checkingAuthentication": "التحقق من التوثيق",
+      "checkingProviders": "التحقق من مقدمي الخدمات...",
+      "configuredLocalCount": "{{count}} تم تشكيلها محلياً",
+      "configuredLocalCount_few": "{{count}} تم تشكيلها محلياً",
+      "configuredLocalCount_many": "{{count}} تم تشكيلها محلياً",
+      "configuredLocalCount_one": "{{count}} تم تشكيلها محلياً",
+      "configuredLocalCount_other": "{{count}} تم تشكيلها محلياً",
+      "configuredLocalTitle": "الطرق المحلية المفتوحة التي تم استيرادها من عقد الزواج المفتوح",
+      "connectedCount": "الجهات المقدمة: {{connected}}/{{denominator}} متصل",
+      "freeModels": "نماذج مجانية",
+      "freeModelsTitle": "الشفرة المفتوحة تتضمن خيارات نموذجية مجانية مثل بيغ بيكل عندما تكون متاحة في مؤسستك ويمكن للمنفتح من خلال البرنامج المفتوح أن يكشف أيضاً نماذج مجانية، ولكن ليس كل نموذج من نماذج &quot; أوبن راوتر &quot; متاح. وقد يتغير توافرها وحدودها.",
+      "loadingModels": "نماذج التعبئة...",
+      "modelsUnavailable": "نماذج غير متاحة لهذا البناء",
+      "runtime": "وقت العمل: {{runtime}}",
+      "verifiedCount": "{{count}} تم التحقق منها",
+      "verifiedCount_few": "{{count}} تم التحقق منها",
+      "verifiedCount_many": "{{count}} تم التحقق منها",
+      "verifiedCount_one": "{{count}} تم التحقق منها",
+      "verifiedCount_other": "{{count}} تم التحقق منها",
+      "verifiedTitle": "فتح طرق الكود مع دليل إعدام ناجح"
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "تم تشكيله {{runtime}} فشل فحصها الصحي",
+      "configuredNotFound": "تم تشكيله {{runtime}} لم يعثر عليه",
+      "foundButFailed": "{{runtime}} تم العثور عليها ولكن فشلت في البدء",
+      "healthCheckFailedDescription": "وَجدَ التطبيقَ مشوّهَ {{runtime}}لكن فحصها الصحي لم يفلح إصلاح أو إعادة تركيبه، ثم العودة.",
+      "install": "Install {{runtime}}",
+      "installRequiredDescription": "{{runtime}} ويلزم توفير الأفرقة وإدارة الدورة. ضعه ليبدأ",
+      "isRequired": "{{runtime}} مطلوب",
+      "reinstall": "Reinstall {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "التحقق",
+      "codexTitle": "تثبيت Codex CLI في بيانات التطبيق",
+      "downloading": "تحميل",
+      "downloadingPercent": "تحميل {{percent}}%",
+      "install": "Install",
+      "installing": "التركيب",
+      "openCodeTitle": "Install OpenCode runtime into app data",
+      "retryInstall": "إعادة محاولة التثبيت"
+    },
+    "troubleshoot": {
+      "again": "مرة أخرى",
+      "authStatusCommand": "خدعتك CLI القيادة العليا",
+      "checkLoggedIn": "- تحقق إذا كان يظهر \"أدخل\"",
+      "click": "Click",
+      "loginCommand": "أمر الدخول",
+      "logoutCommand": "أمر النقل",
+      "openTerminal": "افتح محطتك و اهرب",
+      "reloginPrefix": "إذا كان مكتوباً أنه تم تسجيله لكن التطبيق لا يراه، حاول",
+      "sameRuntime": "تأكد من CLI في محطتك الطرفية هو نفس الوقت الذي يستخدمه التطبيق",
+      "statusCacheHint": "-أحياناً يكون الوضع مزدحماً لبضع ثواني",
+      "then": "ثم"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "1 أو أكثر API الطريقة الرئيسية، ولكن لا API المفتاح مصمم مُقدِّمي الخدمات المفتوحة لإضافة مفاتيح أو تغيير طريقة الاتصال.",
+      "multipleApiKeysNeedAttention": "1 أو أكثر API الطريقة الرئيسية و تحتاج إلى الاهتمام قام مقدمو الخدمات المفتوحة بإعادة النظر بإنقاذ المفاتيح أو تغيير طريقة الاتصال",
+      "notAuthenticated": "{{runtime}} تم تركيبه لكنك غير موثق ويُشترط الحصول على القروض من أجل تزويد الأفرقة بملامح المعلومات الإضافية.",
+      "singleApiKeyMissing": "{{provider}} جاهز API الطريقة الرئيسية، ولكن لا API المفتاح مصمم مُقدِّمي الخدمات المفتوحة لإضافة مفتاح أو تغيير طريقة الاتصال.",
+      "singleApiKeyNeedsAttention": "{{provider}} جاهز API الطريقة الرئيسية، لكنه غير متصل. مُقدمو الخدمات المفتوحة لاستعراض المفتاح المُنقذ أو تغيير طريقة الاتصال."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "اختيار ملف المشروع",
+    "selectFolder": "Sect Folder",
+    "failedToLoad": "عدم تحميل المشاريع",
+    "retry": "Retry",
+    "noProjects": "لا توجد مشاريع",
+    "noMatches": "No matches for \"{{query}}\"",
+    "noRecentProjects": "لم توجد مشاريع حديثة",
+    "emptyDescription": "نشاط (كلود) و(كودوكس) سيظهر هنا",
+    "loadMore": "المزيد",
+    "card": {
+      "deleted": "Deleted",
+      "projectFolderMissing": "Project folder no longer exists",
+      "taskCounts": {
+        "active": "{{count}} نشطة",
+        "active_one": "{{count}} نشطة",
+        "active_other": "{{count}} نشطة",
+        "active_few": "{{count}} نشطة",
+        "active_many": "{{count}} نشطة",
+        "pending": "{{count}} معلقة",
+        "pending_one": "{{count}} معلقة",
+        "pending_other": "{{count}} معلقة",
+        "pending_few": "{{count}} معلقة",
+        "pending_many": "{{count}} معلقة",
+        "done": "{{count}} أنجز",
+        "done_one": "{{count}} أنجز",
+        "done_other": "{{count}} أنجز",
+        "done_few": "{{count}} أنجز",
+        "done_many": "{{count}} أنجز"
+      }
+    },
+    "title": "المشاريع الأخيرة",
+    "searchResults": "نتائج البحث",
+    "searchPlaceholder": "مشاريع البحث..."
+  },
+  "actions": {
+    "selectTeam": "الفريق المختار",
+    "or": "أو",
+    "clearSearch": "البحث"
+  },
+  "windowsAdmin": {
+    "title": "أسلوب مدير النوافذ الموصى به",
+    "description": "فحوصات التوقيت المفتوحة يمكن أن تنتهي عندما لا يرتفع العميلة (أى آي) أعيدي تشغيل التطبيق مع (ران) كمدير قبل إطلاق فرق (إفتتاح)"
+  },
+  "webPreview": {
+    "title": "فتح تطبيق الحاسوب المكتبي من أجل التشغيل الكامل",
+    "description": "ولا تزال صيغة بروزر قيد التطوير. ويمكن أن تكون إجراءات المشاريع، والإدماج، وتحديثات الحالة المعيشية محدودة هنا. استخدام تطبيق الحاسوب المكتبي للوصول إلى جميع المعالم بشكل موثوق."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "نسخة جديدة متاحة",
+    "restartNow": "ارجع الآن",
+    "viewDetails": "تفاصيل الرؤية"
+  }
+}

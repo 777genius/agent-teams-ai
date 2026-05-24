@@ -7,7 +7,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { useAppTranslation } from '@features/localization/renderer';
 import {
   closestCenter,
   DndContext,
@@ -18,6 +17,7 @@ import {
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { X } from 'lucide-react';

@@ -1,6 +1,37 @@
-export const APP_LOCALE_PREFERENCES = ['system', 'en', 'ru'] as const;
+export const APP_LOCALE_PREFERENCES = [
+  'system',
+  'en',
+  'ru',
+  'zh',
+  'ja',
+  'ko',
+  'es',
+  'hi',
+  'pt',
+  'fr',
+  'ar',
+  'bn',
+  'ur',
+  'id',
+  'de',
+] as const;
 
-export const RESOLVED_APP_LOCALES = ['en', 'ru'] as const;
+export const RESOLVED_APP_LOCALES = [
+  'en',
+  'ru',
+  'zh',
+  'ja',
+  'ko',
+  'es',
+  'hi',
+  'pt',
+  'fr',
+  'ar',
+  'bn',
+  'ur',
+  'id',
+  'de',
+] as const;
 
 export type AppLocalePreference = (typeof APP_LOCALE_PREFERENCES)[number];
 

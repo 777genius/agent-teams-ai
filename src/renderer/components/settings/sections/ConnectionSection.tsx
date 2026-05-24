@@ -40,6 +40,7 @@ const authMethodOptionValues: readonly SshAuthMethod[] = [
 const authMethodLabelKeys = {
   agent: 'workspaceProfiles.authMethods.agent',
   auto: 'workspaceProfiles.authMethods.auto',
+  // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- SSH auth method label key, not a credential.
   password: 'workspaceProfiles.authMethods.password',
   privateKey: 'workspaceProfiles.authMethods.privateKey',
 } as const satisfies Record<SshAuthMethod, string>;
@@ -436,7 +437,6 @@ export const ConnectionSection = (): React.JSX.Element => {
           </div>
 
           <div>
-            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- SettingsSelect is a custom dropdown without a native control */}
             <label className="mb-1 block text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {t('connection.form.authentication')}
             </label>

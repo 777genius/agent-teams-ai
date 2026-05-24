@@ -1,10 +1,10 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 
 import type { AgentActionMode } from '@shared/types';

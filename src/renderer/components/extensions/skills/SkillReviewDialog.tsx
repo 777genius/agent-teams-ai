@@ -1,5 +1,5 @@
-import { DiffViewer } from '@renderer/components/chat/viewers/DiffViewer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { DiffViewer } from '@renderer/components/chat/viewers/DiffViewer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {

@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "إنشاء مهمة من الرسالة",
+      "expandMessage": "الرسالة الموسعة",
+      "replyToMessage": "الرد على الرسالة",
+      "restartTeam": "فريق إعادة التشغيل"
+    },
+    "authError": {
+      "description": "فشل التوثيق وسينعش الفريق من جديد الدورة وقد يحل هذه المسألة. إذا استمرت المشكلة، تحقق من API وثائق التفويض أو محاولة مرة أخرى في وقت لاحق."
+    },
+    "automation": {
+      "reviewPickup": "طلب من زميل الفريق أن يُعيد النظر",
+      "stallNudge": "طلب من زميل الفريق مواصلة العمل المعطل",
+      "workSyncBody": "طلب من زميل الفريق مزامنة العمل الحالي"
+    },
+    "badges": {
+      "automation": "التشغيل الآلي",
+      "bootstrap": "الأحذية",
+      "command": "القيادة",
+      "comment": "التعليق",
+      "live": "العيش",
+      "note": "ملاحظة",
+      "rateLimited": "المعدل المحدود",
+      "restart": "راحة",
+      "result": "النتيجة",
+      "session": "الدورة",
+      "stallNudge": "كشك",
+      "start": "البدء",
+      "workSync": "تزامن العمل"
+    },
+    "bootstrap": {
+      "acknowledged": "بوتستراب اعترف",
+      "restarting": "إعادة تشكيل الفريق",
+      "starting": "بدء فريق زميل"
+    },
+    "rawJson": "راو JSON",
+    "unread": "Unread",
+    "thoughts": {
+      "count": "{{count}} الأفكار",
+      "count_one": "{{count}} الفكر",
+      "expand": "توسيع الأفكار",
+      "showMore": "أظهر المزيد",
+      "showLess": "عرض أقل",
+      "count_few": "{{count}} الأفكار",
+      "count_many": "{{count}} الأفكار",
+      "count_other": "{{count}} الأفكار",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} -الأفكار"
+    },
+    "timeline": {
+      "loadingMessages": "رسائل تحميل...",
+      "noMessages": "لا رسائل",
+      "emptyHint": "أرسل رسالة إلى عضو لرؤية النشاط",
+      "newSession": "الدورة الجديدة",
+      "olderCount": "+{{count}} كبار السن",
+      "showMore": "العرض {{count}} أكثر",
+      "showAll": "أظهر كل شيء",
+      "olderCount_one": "+{{count}} كبار السن",
+      "olderCount_few": "+{{count}} كبار السن",
+      "olderCount_many": "+{{count}} كبار السن",
+      "olderCount_other": "+{{count}} كبار السن"
+    },
+    "pendingReplies": {
+      "title": "في انتظار الردود",
+      "openMember": "عضو مفتوح العضوية",
+      "messageSentAwaitingReply": "رسالة مرسلة بانتظار الرد",
+      "awaitingReply": "في انتظار الرد",
+      "externalTeam": "الفريق الخارجي",
+      "crossTeamAwaitingReply": "إرسال رسالة عبر البريد، في انتظار الرد",
+      "user": "المستخدم",
+      "awaitingApproval": "في انتظار الموافقة"
+    },
+    "reply": {
+      "replyingTo": "الرد على",
+      "action": "الرد"
+    },
+    "activeTasks": {
+      "inProgress": "قيد التنفيذ"
+    },
+    "expandDialog": {
+      "description": "رؤية موسعة للرسالة"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "الإبداع",
+      "creating": "خلق...",
+      "openExisting": "الفريق القائم",
+      "skipPreflightAndCreate": "الأشعة المسبقة وخلق"
+    },
+    "conflict": {
+      "description": "تشغيل فريقين في الدليل نفسه خطر - قد يتضاربون في تحرير نفس الملفات. النظر في استخدام دليل مختلف أو a git worktree للعزلة.",
+      "title": "فريق آخر{{team}}\"يجري بالفعل لدليل العمل هذا\"",
+      "workingDirectory": "دليل العمل:"
+    },
+    "description": {
+      "copy": "إنشاء فريق جديد على أساس فريق قائم.",
+      "create": "أعد فريقك واختار كيف يبدأ"
+    },
+    "errors": {
+      "nameExists": "اسم الفريق موجود بالفعل",
+      "nameLaunching": "فريق بهذا الاسم يُطلق حالياً",
+      "createConfigFailed": "فشل في إنشاء فريق",
+      "loadProjectsFailed": "عدم تحميل المشاريع"
+    },
+    "fields": {
+      "color": "Color (optional)",
+      "description": "الوصف (اختياري)",
+      "prompt": "Prompt for team lead (optional)",
+      "teamName": "اسم الفريق"
+    },
+    "launchAfterCreate": {
+      "description": "ابدأوا بالفريق فوراً عبر (كلود) المحلي CLI.",
+      "label": "تشغيل القيادة بعد خلق"
+    },
+    "localOnly": "Available only in local Electron mode.",
+    "onDisk": "على قرص:",
+    "placeholders": {
+      "description": "وصف موجز لغرض الفريق",
+      "prompt": "تعليمات للفريق تقود أثناء توفير..."
+    },
+    "saved": "منقذة",
+    "solo": {
+      "description": "ولن يبدأ إلا قيادة الفريق (العملية الرئيسية) - ولن يتم فرز أي فريق. تعمل كجلسة عملاء عادية في وقتك المختار (رمز كلود، رمز، برنامج مفتوح، جيميني) ولكن مع الوصول إلى مجلس العمل للتخطيط. ينقذ التوكّنات بتجنب التنسيق بين الزملاء يمكنك إضافة أعضاء لاحقاً من الفريق",
+      "label": "فريق سولو"
+    },
+    "title": {
+      "copy": "فريق",
+      "create": "فريق الإنشاء"
+    },
+    "optional": {
+      "launchSettingsTitle": "حالات الإطلاق الاختياري",
+      "launchSettingsDescription": "السرعة والسلامة CLI التجاوزات تعيش هنا عندما تحتاجهم",
+      "teamDetailsTitle": "تفاصيل الفريق",
+      "teamDetailsDescription": "حافظ على التدفق الافتراضي وفتح هذا فقط عندما تريد سياق إضافي أو لون تقليدي"
+    },
+    "prepare": {
+      "unsupportedPreload": "والنسخة الحالية من النسخ المسبقة لا تدعم الفريق: تنقيح المشاريع. أعيدي تطبيق الدي في",
+      "selectWorkingDirectory": "اختيار دليل عمل للتحقق من بيئة الإطلاق.",
+      "someProvidersNeedAttention": "Some selected providers need attention.",
+      "readyWithNotes": "جميع المُقدّمين المُختارين مُستعدّين، مع ملاحظات.",
+      "ready": "جميع الموردين المختارين جاهزون",
+      "failed": "فشل في إعداد موردين مختارين",
+      "checkingProviders": "تحقق من مجموعة مختارة من مقدمي الخدمات...",
+      "preparingEnvironment": "تهيئة بيئة...",
+      "selectedProvidersReadyWithNotes": "مجموعة مختارة من مقدمي الخدمات جاهزة (مع ملاحظات)",
+      "selectedProvidersReady": "مجموعة مختارة من مقدمي الخدمات"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "يجب أن يحتوي الاسم على رسالة واحدة أو رقم واحد على الأقل",
+      "nameTooLong": "الاسم طويل جدا (ماكس 128 تشارز)",
+      "selectWorkingDirectory": "دليل عمل مختار",
+      "memberNameRequired": "اسم العضو لا يمكن أن يكون فارغا",
+      "memberNameInvalid": "يجب أن يبدأ اسم العضو بالألبانوميريك، ويستخدم فقط [A-zA-Z0-9.]",
+      "memberNamesUnique": "أسماء الأعضاء يجب أن تكون فريدة",
+      "openCodeLeadModelRequired": "-الخيار المفتوح يتطلب نموذجاً مختاراً",
+      "openCodeTeammateRequired": "القيادة المفتوحة تتطلب على الأقل زميل واحد من الفريق المفتوح العضوية",
+      "teamLaunching": "الفريق يشرع حاليا",
+      "teamNameExists": "اسم الفريق موجود بالفعل",
+      "checkFormFields": "الحقول الشيكة"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "إلغاء",
+      "save": "أنقذ"
+    },
+    "addMemberLockReason": "استخدمي جهاز الاتصال المخصص لإضافة أعضاء جدد بينما الفريق على الهواء",
+    "description": "تغيير اسم الفريق ووصفه ولونه",
+    "errors": {
+      "changesSavedRefreshFailed": "وأُنقذت تغييرات الأفرقة، لكنها لم تُنعش آخر وجهات النظر: {{message}}",
+      "liveRenameBlocked": "لا يمكن إعادة تسمية أعضاء الفريق الحاليين بينما الفريق على الهواء أعيدت تسميته: {{names}}",
+      "memberNameEmpty": "اسم العضو لا يمكن أن يكون فارغا",
+      "memberNameInvalid": "يجب أن يبدأ اسم العضو بالألبانوميريك، ويستخدم فقط [A-zA-Z0-9.]",
+      "memberNameNumericSuffix": "Member name \"{{name}}\" is not allowed (reserved for Claude CLI auto-suffix). Use \"{{base}}\" instead.",
+      "memberNameReserved": "اسم العضو{{name}}محجوز",
+      "memberNamesUnique": "يجب أن تكون أسماء الأعضاء فريدة من نوعها قبل إنقاذها",
+      "newLiveTeammates": "أضف فريقاً جديداً من جهاز الاتصال المخصص للأعضاء بينما الفريق على الهواء فريق (إديت) يدعم فقط تحديث زملاء الفريق الحاليين",
+      "provisioning": "ولا يمكن تحرير أوضاع الأفرقة بينما لا يزال توفيرها جاريا. انتظر ان تنهي عملية الاطلاق ثم حاول مرة اخرى",
+      "restartFailedMany": "الفريق أنقذ، ولكن فشل في إعادة تشغيل هؤلاء الشركاء: {{failures}}",
+      "restartFailedOne": "الفريق أنقذ، ولكن فشل في إعادة تشغيل هذا زميل الفريق: {{failures}}",
+      "saveFailed": "فشل في الإنقاذ",
+      "settingsChanged": "تغيرت ظروف الفريق بينما كان هذا الهاتف مفتوحاً أعد تشغيله واستعراض آخر ولاية قبل الادخار",
+      "settingsSavedMembersAndRefreshFailed": "وأُنقذت أوضاع الأفرقة، لكن تغييرات الأعضاء فشلت: {{message}}كما فشل التجديد: {{refreshError}}",
+      "settingsSavedMembersFailed": "وأُنقذت أوضاع الأفرقة، لكن تغييرات الأعضاء فشلت: {{message}}",
+      "settingsSavedRefreshFailed": "وقد تم إنقاذ مواقع الأفرقة، لكنها لم تجدد آخر نظرة: {{message}}",
+      "teamNameEmpty": "اسم الفريق لا يمكن أن يكون فارغا",
+      "unsupportedMixedPrimaryMutation": "ولم يتم حتى الآن تقديم الدعم إلى زملاء الأفرقة المملوكين الأساسيين في الأفرقة المشتركة المفتوحة. أوقفوا الفريق، حرروا القائمة ثم أعيدوا إطلاقها Affected: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Color (optional)",
+      "description": "الوصف",
+      "name": "الاسم"
+    },
+    "memberRestartWarning": "الادخار سوف يعيد هذا الفريق إلى عمله ليقوم بدوره، وسير عمله، وعزلته عن العمل، ومقدمه، أو نموذجه، أو جهده، أو MCP تغيرات الدخول",
+    "notices": {
+      "liveRenameBlocked": "الادخار الحي مغلق لأن زملاء الفريق الحاليين أعيد تسميتهم اعيدوا تغيير الهوية أو اوقفوا الفريق أولاً",
+      "newLiveTeammates": "لا يمكن إضافة زملاء جدد من فريق إديت بينما الفريق على الهواء استعملي جهاز الاتصال بدلاً من ذلك",
+      "provisioning": "ولا يزال توفير الأفرقة جاريا. التحرير مغلق مؤقتاً حتى تنتهي الإطلاق",
+      "restartMany": "الادخار سوف يعيد أو يعيد إطلاق هؤلاء الزملاء من أجل تطبيق الدور، أو سير العمل، أو عزلة العمل، أو مقدم الخدمات، أو النموذج، أو الجهد، أو MCP التغيرات في إمكانية الوصول: {{names}}.",
+      "restartOne": "الادخار سوف يعيد أو يعيد إطلاق هذا الشريك في الفريق من أجل تطبيق الدور، وسير العمل، وعزلة العمل، والمقدم، والنموذج، والجهد، أو MCP التغيرات في إمكانية الوصول: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "ويقتضي إدخال تعديلات/عمليات نقل حيّة لزملاء الأفرقة الذين يُملوك لهم في الأفرقة المشتركة المفتوحة إيقاف الفريق وإعادة إطلاقه: {{names}}."
+    },
+    "placeholders": {
+      "description": "وصف الفريق (اختياري)",
+      "teamName": "اسم الفريق"
+    },
+    "teamLead": {
+      "changeRuntime": "تغيير الوقت",
+      "changeRuntimeDescription": "(ب) فريق إعادة إطلاق مفتوح لتغيير مقدِّم الخدمات الرئيسي أو النموذج أو الجهد.",
+      "modelLockReason": "فريق العمل يُدار من فريق ريلنش",
+      "readOnlyHint": "اسم الفريق الرئيسي ودوره يبقى هنا فقط (ب) فتح الفريق على الصف الرئيسي لتغيير المزود أو النموذج أو الجهد.",
+      "role": "فريق الرصاص"
+    },
+    "title": "فريق إديت"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "عضو إزالة",
+      "removeAria": "إزالة الألغام {{name}}",
+      "restore": "عضو ريسور",
+      "restoreAria": "Restore {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "السياق الافتراضي",
+      "description": "والسياق الأنثروبيكي على نطاق الفريق لهذا الإطلاق: {{mode}}-استخدمي جهاز تحديد السياق الخاص بفريق (ليميتز) ليغيره",
+      "limitEnabled": "الحد الأقصى الممكّن"
+    },
+    "mcp": {
+      "buttonInherit": "MCP الوراثة",
+      "buttonScopes": "MCP النطاقات",
+      "chooseScopes": "نطاقات الاختيار",
+      "inheritLead": "Inherit lead",
+      "lockedInfo": "الوكيل الأفرقة MCP فقط مُتاح لجميع زملاء الفريق زميل الفريق هذا سيبدأ مع خادم الفريق فقط",
+      "mode": "MCP طريقة",
+      "scopes": {
+        "local": "المحلية",
+        "project": "المشروع",
+        "user": "المستخدم"
+      },
+      "serverNames": "أسماء الموظفين",
+      "settingInfo": "الوكيل الأفرقة MCP يُطلقُ هذا زميلِ الفريقِ مَع خادمِ فريقِ العميلِ فقط. وتنطبق أساليب النطاق والقائمة المسموح بها فقط على عملية إطلاق الفريق هذه.",
+      "strictAllowlist": "القائمة المؤقتة",
+      "tooltip": "{{label}}السيطرة على هذا العضو MCP سياسة الإرث",
+      "agentTeamsMcp": "الوكيل الأفرقة MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} مقدم الخدمات، {{model}}",
+      "currentLeadRuntime": "الوقت الحالي",
+      "default": "التقصير",
+      "inheritedTooltip": "ويرث الادخار والنموذج والجهد من الرصاص في الوقت الذي يتم فيه التمكين من التزامن.",
+      "leadSuffix": "{{label}} (يصدر)",
+      "liveDisabled": "الادخار، والنموذج، والتغييرات في الجهد معوقة بينما الفريق على قيد الحياة. إعادة ربط الفريق لتطبيقها بأمان.",
+      "lockedActionFallback": "ويُفتح فريق الإطلاق المفتوح، حيث يمكن تحديث المزود والنموذج والجهد.",
+      "restartWholeTeam": "إنقاذ تلك التغييرات المتتالية يعيد تشكيل الفريق بأكمله"
+    },
+    "nameAria": "العضو {{index}} الاسم",
+    "nameFallback": "عضو {{index}}",
+    "noRole": "لا دور",
+    "removed": "نقل",
+    "workflow": {
+      "addTooltip": "إضافة إلى تدفق العمل الجماعي",
+      "editTooltip": "عمل فريق إديت",
+      "label": "تدفق العمل (اختياري)",
+      "placeholder": "كيف يتصرف هذا العميل، ويتفاعل مع الآخرين...",
+      "saved": "منقذة"
+    },
+    "worktree": {
+      "description": "أديروا هذا الفريق في مكان منفصل التطبيق/التغييرات في الأهداف التي تعمل، وليس مجال العمل الرئيسي.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "الأعضاء",
+      "description": "إضافة أعضاء جدد إلى {{teamName}}"
+    },
+    "placeholders": {
+      "name": "اسم العضو",
+      "mcpServers": "(غيثوب)"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "مضافا إليها",
+      "cancel": "إلغاء",
+      "delete": "تحذف",
+      "editCode": "Edit code",
+      "launch": "الإطلاق",
+      "remove": "إزالة الألغام",
+      "stop": "توقف",
+      "task": "المهام",
+      "visualize": "الرؤية"
+    },
+    "deleteTeam": {
+      "description": "Delete team \"{{team}}\"? This action is irreversible. All team data and tasks will be deleted.",
+      "title": "يحذف الفريق"
+    },
+    "draft": {
+      "descriptionPrefix": "هذا فريق مشروع",
+      "descriptionSuffix": "تم تشكيلها {{count}} {{member}} ولكن لم يتم توفيرها CLI بعد قم باختيار نموذج وبدء الفريق",
+      "descriptionSuffix_few": "تم تشكيلها {{count}} {{member}} ولكن لم يتم توفيرها CLI بعد قم باختيار نموذج وبدء الفريق",
+      "descriptionSuffix_many": "تم تشكيلها {{count}} {{member}} ولكن لم يتم توفيرها CLI بعد قم باختيار نموذج وبدء الفريق",
+      "descriptionSuffix_one": "تم تشكيلها {{count}} {{member}} ولكن لم يتم توفيرها CLI بعد قم باختيار نموذج وبدء الفريق",
+      "descriptionSuffix_other": "تم تشكيلها {{count}} {{member}} ولكن لم يتم توفيرها CLI بعد قم باختيار نموذج وبدء الفريق",
+      "member": "الأعضاء",
+      "member_few": "الأعضاء",
+      "member_many": "الأعضاء",
+      "member_one": "عضو",
+      "member_other": "الأعضاء",
+      "title": "لم يبدأ الفريق بعد"
+    },
+    "invalidTab": "(ب)",
+    "kanbanSafeData": "فشلت في تحميل (كانبان) بالكامل تعطيل البيانات الآمنة",
+    "loadFailed": "فشل في تحميل الفريق",
+    "loading": "فريق التعبئة",
+    "loadingSidebar": "فريق الشحن",
+    "offline": {
+      "offline": "الفريق غير مسمى",
+      "partialFailed": "آخر عملية إطلاق فشلت",
+      "partialMissing": "آخر عملية إطلاق فشلت {{missing}}/{{expected}} زملاء الفريق لم ينضموا",
+      "reconciling": "آخر عملية إطلاق لا تزال متوافقة"
+    },
+    "previous": "سابقا: {{paths}}",
+    "removeMember": {
+      "description": "إزالة{{member}}من الفريق؟ وسيتم الحفاظ على المهام والرسائل، ولكن لا يمكن إعادة استخدام هذا الاسم.",
+      "title": "عضو إزالة"
+    },
+    "sections": {
+      "team": "الفريق"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "النشاط",
+      "launching": "إطلاق...",
+      "running": "تشغيل"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "الذاكرة"
+    },
+    "tooltips": {
+      "deleteTeam": "يحذف الفريق",
+      "editTeam": "فريق إديت",
+      "editUnavailableProvisioning": "فريق إيديت غير متاح بينما لا يزال الإمداد جاريا",
+      "openBuiltInEditor": "مشروع مفتوح في المحررة",
+      "openTeamGraph": "الفريق المفتوح",
+      "stopTeam": "الفريق"
+    },
+    "waitingForProvisioning": "ستظهر بيانات الفريق بمجرد الانتهاء من توفيرها",
+    "context": {
+      "title": "السياق"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "قبول",
+        "discard": "Discard",
+        "discardTooltip": "ابعدوا جميع الطبقات عن هذا الملف",
+        "keepMyDraft": "حافظ على مشروعي",
+        "reject": "Reject",
+        "reloadFromDisk": "Reload from disk",
+        "restore": "Restore",
+        "restoreTooltip": "إنشاء/إعادة مخزن هذا الملف على قرص من قبل",
+        "saveFile": "أنقذ (فايف)",
+        "saveFileTooltip": "حافظ على ملفك"
+      },
+      "badges": {
+        "deleted": "DELETED",
+        "manualReview": "MANUAL REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "القرص الحالي",
+        "file-history": "التاريخ",
+        "git-fallback": "Git Fallback",
+        "ledger-exact": "المهمة Ledger",
+        "ledger-snapshot": "Ledger Snapshot",
+        "snippet-reconstruction": "أعيد بناؤها",
+        "unavailable": "المحتوى غير المتاح"
+      },
+      "contentUnavailable": {
+        "badge": "المحتوى غير المتاح",
+        "description": "وقد سجل دفتر الأستاذ البيانات الوصفية لهذا التغيير، ولكن محتوى النص الكامل غير متاح. وهذا يعني عادة ما يكون ثنائيا أو كبيرا أو مجرد محتوى.",
+        "safety": "ويُعوق القبول/الاعتقال الآليين لهذا الملف لتجنب كتابة قرص غير مأمون.",
+        "title": "محتوى النصوص غير متاح"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "قبول/رفض معوق لأن محتوى النص الكامل غير متاح.",
+        "acceptRejectMissingOnDisk": "القبول/الرفض معوق بينما الملف مفقود على قرص",
+        "rejectBaselineUnavailable": "الرفض معوق لأن خط الأساس الأصلي غير متاح.",
+        "rejectContentUnavailable": "الحق معوق لأن محتوى النص الكامل غير متاح.",
+        "rejectManualLedgerReview": "Reject is disabled because this bookger change has binary, large, or unavailable content."
+      },
+      "externalChange": {
+        "changedOnDisk": "تغيرت على قرص",
+        "deletedOnDisk": "محررة على قرص",
+        "recreatedOnDisk": "مكررة على قرص"
+      },
+      "missingOnDisk": {
+        "badge": "مفقود على قرص",
+        "description": "ما زال بإمكاننا أن نعرض عرضاً مسبقاً من سجلات العملاء لكن ملفك خارج عن المزامنة",
+        "restorePrefix": "الاستخدام",
+        "restoreSuffix": "لكتابة محتوى ما قبل المقابلة إلى القرص.",
+        "restoreUnavailable": "ولا يتوفر محتوى كامل من الملفات لاستعادةه تلقائيا.",
+        "title": "الملف مفقود على قرص"
+      },
+      "pathChange": {
+        "from": "من {{path}}",
+        "to": "إلى {{path}}"
+      },
+      "worktree": {
+        "isolated": "العمل المعزول"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} معلقة",
+        "pending_one": "{{count}} معلقة",
+        "pending_other": "{{count}} معلقة",
+        "accepted": "{{count}} مقبولة",
+        "accepted_one": "{{count}} مقبولة",
+        "accepted_other": "{{count}} مقبولة",
+        "rejected": "{{count}} مرفوض",
+        "rejected_one": "{{count}} مرفوض",
+        "rejected_other": "{{count}} مرفوض",
+        "acrossFiles": "عبر {{count}} الملفات",
+        "acrossFiles_one": "عبر {{count}} ملف",
+        "acrossFiles_other": "عبر {{count}} الملفات",
+        "edited": "{{count}} محرر",
+        "edited_one": "{{count}} محرر",
+        "edited_other": "{{count}} محرر",
+        "pending_few": "{{count}} معلقة",
+        "pending_many": "{{count}} معلقة",
+        "accepted_few": "{{count}} مقبولة",
+        "accepted_many": "{{count}} مقبولة",
+        "rejected_few": "{{count}} مرفوض",
+        "rejected_many": "{{count}} مرفوض",
+        "acrossFiles_few": "عبر {{count}} الملفات",
+        "acrossFiles_many": "عبر {{count}} الملفات",
+        "edited_few": "{{count}} محرر",
+        "edited_many": "{{count}} محرر"
+      },
+      "actions": {
+        "auto": "Auto",
+        "undo": "Undo",
+        "acceptAll": "قبول جميع",
+        "rejectAll": "Reject All",
+        "applying": "تطبيق...",
+        "applyRejections": "الرفض التطبيقي"
+      },
+      "tooltips": {
+        "autoOn": "Auto-mark files as viewed when scrolled to end (ON)",
+        "autoOff": "Auto-mark files as viewed when scrolled to end (OFF)",
+        "undo": "عملية الاستعراض الأخيرة التي لم تتم بعد (Ctrl+Z)",
+        "acceptAll": "قبول جميع التغييرات في جميع الملفات",
+        "rejectAll": "رفض جميع التغييرات التي يمكن رفضها بأمان عبر جميع الملفات",
+        "rejectAllDisabled": "لا توجد ملفات معلّقة لها خط أساس أصلي آمن للرفض.",
+        "applyRejections": "Apply rejected hunks to disk; accepted changes are kept as-is"
+      }
+    },
+    "diffError": {
+      "title": "عدم نشر الرأي",
+      "unexpected": "حدث خطأ غير متوقع بينما كان ينشر",
+      "actions": {
+        "retry": "Retry"
+      },
+      "raw": {
+        "show": "بيانات الانتشار الخام",
+        "file": "الملف: {{file}}",
+        "original": "-",
+        "modified": "++",
+        "charsTotal": "... ({{count}} chars total)",
+        "charsTotal_one": "... ({{count}} char total)",
+        "charsTotal_other": "... ({{count}} chars total)",
+        "charsTotal_few": "... ({{count}} chars total)",
+        "charsTotal_many": "... ({{count}} chars total)"
+      }
+    },
+    "fileTree": {
+      "viewed": "مرئية",
+      "badges": {
+        "new": "جديدة",
+        "deleted": "حذفت"
+      },
+      "collapseFolder": "التصفيق {{name}}",
+      "expandFolder": "التوسع {{name}}",
+      "empty": {
+        "noChangedFiles": "لم تتغير الملفات",
+        "noMatchingFiles": "لا ملفات مطابقة"
+      },
+      "searchPlaceholder": "ملفات البحث...",
+      "filters": {
+        "unresolved": "لم يحل",
+        "rejected": "Rejected",
+        "new": "جديدة",
+        "clear": "آمن"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "ما قبل ذلك",
+      "nextChunk": "الشيك القادم",
+      "rejectChange": "الرفض",
+      "acceptChange": "قبول التغيير (Y)",
+      "undo": "Undo",
+      "keep": "استمر",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "♪"
+    },
+    "conflict": {
+      "title": "النزاع المكتشف",
+      "description": "هذا الملف تم تعديله منذ تغيير العميل",
+      "cancel": "إلغاء",
+      "saveResolution": "القرار",
+      "editManually": "Edit Manually",
+      "useOriginal": "الاستخدام الأصلي",
+      "keepCurrent": "استمر"
+    },
+    "fullDiffLoading": {
+      "titleOne": "الإعداد الكامل",
+      "titleMany": "الإعداد {{count}} المنحدرات الكاملة",
+      "subtitleForFile": "وضع الصيغة النهائية لنشرة التحرير الدقيقة {{file}}.",
+      "subtitleCurrentFile": "وضع الصيغة النهائية لمحرر الملف الحالي.",
+      "subtitleMany": "(أ) حل دقيق قبل/بعد خطوط الأساس للملفات التي تحمل حالياً.",
+      "previewsReady": "{{count}} استعراضات جاهزة",
+      "previewsReady_one": "{{count}} جاهز",
+      "editorViewLoading": "رئيس التحرير",
+      "filesInProgress": "{{count}} الملفات قيد التنفيذ",
+      "filesInProgress_one": "{{count}} ملف قيد التنفيذ",
+      "filesReady": "{{ready}}/{{total}} الملفات جاهزة",
+      "progressDescription": "{{ready}} جاهز {{loading}} ما زال يحمّل. وتظل الشعاب التمهيدية مرئية أدناه بينما تُحل خطوط الأساس المتبقية.",
+      "singleDescription": "وتظل الشعاب التمهيدية مرئية أدناه بينما يتم حل خط الأساس الدقيق.",
+      "previewsReady_few": "{{count}} استعراضات جاهزة",
+      "previewsReady_many": "{{count}} استعراضات جاهزة",
+      "previewsReady_other": "{{count}} استعراضات جاهزة",
+      "filesInProgress_few": "{{count}} الملفات قيد التنفيذ",
+      "filesInProgress_many": "{{count}} الملفات قيد التنفيذ",
+      "filesInProgress_other": "{{count}} الملفات قيد التنفيذ"
+    },
+    "fileMissingPrefix": "الملف مفقود على قرص هذا الانتشار قد يكون مجرد استعراض من سجلات العملاء. الاستخدام",
+    "restore": "Restore",
+    "fileMissingSuffix": "لخلق الملف على قرص.",
+    "filePlaceholder": {
+      "loading": "Loading",
+      "description": "إعداد محرر كامل لهذا الملف"
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} أجهزة دفتر الأستاذ",
+      "ledgerObjectsProcessed_one": "{{count}} دفتر الأستاذ مجهز",
+      "ledgerObjectsProcessed_other": "{{count}} أجهزة دفتر الأستاذ",
+      "ledgerObjectsProcessed_few": "{{count}} أجهزة دفتر الأستاذ",
+      "ledgerObjectsProcessed_many": "{{count}} أجهزة دفتر الأستاذ",
+      "phases": {
+        "readingLedger": "قراءة دفتر المهام...",
+        "resolvingFiles": "تسوية الملفات",
+        "checkingWorktree": "التحقق من سياق العمل...",
+        "preparingDiffs": "....."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} يُنظر إليها"
+    },
+    "scope": {
+      "readMore": "اقرأ المزيد",
+      "tiers": {
+        "exact": {
+          "title": "تحديد نطاق المهام بدقة",
+          "detail": "وكلا مؤشري بدء الدورة وإنجازها. The diff includes only changes made during this specific task - other tasks that modified the same files are excluded."
+        },
+        "endEstimated": {
+          "title": "الحدود النهائية المقدرة",
+          "detail": "ولم يتم العثور إلا على مؤشر البداية - ولم تكتمل المهمة بعد. وتبدأ التغييرات التي تظهر من المهمة في نهاية الدورة. وإذا جرت مهام أخرى بعد هذا في الدورة نفسها، يمكن أيضا إدراج تغييراتها."
+        },
+        "startEstimated": {
+          "title": "خط البداية",
+          "detail": "ولم يُعثر إلا على مؤشر الإنجاز - ولم يتم تسجيل بداية العمل. وإذا كانت هناك مهام أخرى معروضة على هذه الدورة في نفس الدورة، يمكن أيضا إدراج تغييراتها في نفس الملفات."
+        },
+        "allSession": {
+          "title": "عرض جميع التغييرات في الدورة",
+          "detail": "لا توجد علامات عمل في سجل الدورة. Cannot isolate this task - all file changes from the entire session are shown, including changes from other tasks. هذا يمكن أن يحدث مع كبار السن CLI نسخ أو تدفقات عمل غير عادية."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "التغييرات التي استولى عليها دفتر المهام",
+          "detail": "واستولى المشرف على هذه التغييرات في الملفات بينما كان العميل يعمل على هذه المهمة.",
+          "badge": "Ledger بالضبط"
+        },
+        "limited": {
+          "title": "التغييرات المأخوذة مع إمكانية المراجعة المحدودة",
+          "detail": "The orchestrator captured these file changes for this task, but at least one change was captured from a snapshot or metadata-only source. Review exact text diffs where available; binary or unavailable content may require manual review.",
+          "mixedBadge": "إعادة النظر المختلطة",
+          "needsReviewBadge": "استعراض الاحتياجات"
+        }
+      },
+      "workInterval": {
+        "title": "نطاق العمل المتواصل",
+        "detail": "The task start marker was not available in the session log, so the diff is scoped by the task work interval stored on the board.",
+        "badge": "النطاق الزمني"
+      },
+      "confidence": {
+        "high": "ثقة عالية",
+        "medium": "الثقة المتوسطة",
+        "low": "انعدام الثقة",
+        "bestEffort": "أفضل جهد"
+      }
+    },
+    "shortcuts": {
+      "title": "مختصرات لوحة المفاتيح",
+      "actions": {
+        "nextChange": "التغيير التالي",
+        "previousChange": "التغيير السابق",
+        "nextFile": "الملف التالي",
+        "previousFile": "ملف سابق",
+        "acceptChange": "قبول التغيير",
+        "rejectChange": "التغيير",
+        "saveFile": "الملف",
+        "undo": "Undo",
+        "redo": "Redo",
+        "toggleShortcuts": "الاختصار",
+        "closeDialog": "قفل الهاتف"
+      }
+    },
+    "timeline": {
+      "empty": "لا أحداث تحريرية",
+      "titleWithCount": "Edit Timeline ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "No reviewable file changes"
+    },
+    "empty": {
+      "noSafeDiff": "لا يوجد نشرة آمنة",
+      "noFileChangesRecorded": "لم تسجل أي تغييرات في الملفات",
+      "noSafeDiffDescription": "ولم يكشف دفتر الحسابات عن ملف آمن لهذه المهمة.",
+      "noSafeDiffDiagnosticsDescription": "ولم يكشف دفتر الحسابات عن ملف آمن لهذه المهمة. التشخيصات الواردة أدناه توضح السبب",
+      "noFileEventsYet": "ولا يوجد لدى دفتر حسابات هذه المهمة حتى الآن.",
+      "noFileEvents": "ودفتر المهام ليس لديه أي أحداث ملف لهذه المهمة."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "تصوّرات في الجزء السفلي",
+      "collapseAll": "كل الرسائل",
+      "collapseSheet": "صفائح التصفيق",
+      "expandAll": "توسيع جميع الرسائل",
+      "expandSheet": "ورقة موسعة",
+      "floatComposer": "مركب الطوفان",
+      "floatMessagesComposer": "أجهزة تجميع الرسائل",
+      "hideSearch": "البحث المخفي",
+      "loadOlder": "الرسائل القديمة",
+      "markAllRead": "كل شيء كما يلي:",
+      "messageActions": "إجراءات الرسائل",
+      "moveMessagesToBottomSheet": "نقل الرسائل إلى الشريحة السفلية",
+      "moveMessagesToSidebar": "نقل الرسائل إلى الجانب",
+      "moveToBottomSheet": "تحركوا إلى أسفل الغطاء",
+      "moveToInline": "الانتقال إلى الخط",
+      "moveToSidebar": "تحركوا إلى الجانب",
+      "panelActions": "إجراءات فريق الرسائل",
+      "searchMessages": "رسائل البحث"
+    },
+    "delivery": {
+      "copied": "Copied",
+      "copyDebugDetails": "تفاصيل عن",
+      "details": "التفاصيل",
+      "fields": {
+        "acceptanceUnknown": "قبول غير معروف",
+        "delivered": "تم تسليمها",
+        "diagnostics": "التشخيص",
+        "ledgerStatus": "دفتر الأستاذ",
+        "messageId": "رسالة",
+        "providerId": "مقدم",
+        "queuedBehindMessageId": "كوايد",
+        "reason": "السبب",
+        "responsePending": "الرد الوشيك",
+        "responseState": "رد الدولة",
+        "statusMessageId": "الحالة",
+        "userVisibleMessage": "المسافات المعقولة الاستعمال",
+        "userVisibleNextReviewAt": "مراجعة حسابات المستعملين",
+        "userVisibleReasonCode": "رمز المعقول المستخدم",
+        "userVisibleState": "دولة مستعملة",
+        "visibleReplyCorrelation": "تصوّر مرئي",
+        "visibleReplyMessageId": "مرئية"
+      }
+    },
+    "panelMode": "طريقة لوحة الرسائل",
+    "title": "الرسائل",
+    "unread": {
+      "new": "{{count}} جديدة",
+      "unread": "{{count}} غير متوقع",
+      "new_few": "{{count}} جديدة",
+      "new_many": "{{count}} جديدة",
+      "new_one": "{{count}} جديدة",
+      "new_other": "{{count}} جديدة",
+      "unread_few": "{{count}} غير متوقع",
+      "unread_many": "{{count}} غير متوقع",
+      "unread_one": "{{count}} غير متوقع",
+      "unread_other": "{{count}} غير متوقع"
+    },
+    "filter": {
+      "ariaLabel": "رسائل مصورة",
+      "tooltip": "رسائل مصورة",
+      "from": "من",
+      "to": "إلى",
+      "noData": "لا توجد بيانات",
+      "showStatusUpdates": "معلومات مستكملة عن حالة العرض (العدول/التخفيض)",
+      "actions": {
+        "reset": "إعادة التوطين",
+        "save": "أنقذ"
+      }
+    },
+    "status": {
+      "title": "الحالة"
+    },
+    "actionMode": {
+      "label": "أسلوب العمل"
+    },
+    "search": {
+      "placeholder": "ابحث..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "المؤمنين",
+      "connected": "Connected",
+      "failed": "فشل",
+      "free": "مجانا",
+      "local": "محلية",
+      "needsTest": "اختبار الاحتياجات",
+      "verified": "مصدق عليه",
+      "unavailable": "غير متاح",
+      "issue": "المسألة"
+    },
+    "customModelId": "النموذج العرفي",
+    "label": "نموذج (اختياري)",
+    "multimodelRequired": "الكودكس وجيميني يتطلبان أسلوباً متعدد النماذج",
+    "openCode": {
+      "allSources": "جميع المصادر المفتوحة",
+      "filterSource": "فيلم {{source}}",
+      "filterSources": "ملفات المصادر المفتوحة",
+      "freeOnly": "حر فقط",
+      "freeTooltip": "العلامة المفتوحة علامة هذا النموذج مجانا.",
+      "loadingModels": "وضع النماذج المفتوحة...",
+      "noSourcesFound": "لا توجد مصادر",
+      "recommendedOnly": "الموصى به فقط",
+      "searchSources": "مصادر البحث",
+      "sourcesCount": "{{count}} المصادر المفتوحة",
+      "sourcesCount_few": "{{count}} المصادر المفتوحة",
+      "sourcesCount_many": "{{count}} المصادر المفتوحة",
+      "sourcesCount_one": "{{count}} المصادر المفتوحة",
+      "sourcesCount_other": "{{count}} المصادر المفتوحة"
+    },
+    "reason": "السبب: {{reason}}",
+    "runtimeModelsSyncing": "نماذج موضّحة من الوقت الحالي ولا يزال التقصير متاحا في حين أن القائمة متزامنة.",
+    "fastMode": {
+      "codexLabel": "طريقة سريعة (2x)",
+      "optionalLabel": "أسلوب سريع (اختياري)",
+      "defaultOff": "التقصير (Off)",
+      "fast": "بسرعة",
+      "off": "قبالة",
+      "defaultFast": "العجز (الحالة)",
+      "defaultResolvesTo": "التخلف في الوقت الراهن مصمم على {{mode}}.",
+      "runtimeBackedHint": "والطريقة السريعة غير مدعمة بالزمن ولا تغلق إلا عندما يدعمها نموذج إطلاق الأنثروبيك المصمم."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "قراءة مطبوعات تسعير الأنثروبيك"
+    },
+    "searchModels": "نماذج البحث",
+    "defaultModel": "التقصير",
+    "empty": {
+      "noSearchMatches": "لا عارضات تطابق هذا البحث",
+      "recommendedFreeOpenCode": "ولا توجد في القائمة الحالية نماذج مجانية من قواعد البيانات المفتوحة الموصى بها.",
+      "freeOpenCode": "ولا توجد في القائمة الحالية نماذج مجانية للتصنيف المفتوح.",
+      "recommendedOpenCode": "ولا توجد في القائمة الحالية لنماذج موحدة مقترحة.",
+      "noModels": "ولا توجد نماذج في القائمة الجارية."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "\"الوحدة المفتوحة\" ليست جاهزة لإطلاق الفريق",
+      "freeModelsAvailableTitle": "نماذج مجانية متاحة",
+      "providerNotConnectedTitle": "مزود الأقراص المفتوحة غير متصل",
+      "readyTitle": "\"الوحدة المفتوحة جاهزة\"",
+      "readyMessage": "تمّت الموافقة على استعداد المُقدّم. إختارها لتستخدم نماذج الأقراص المفتوحة لهذا الفريق",
+      "useOpenCode": "Use OpenCode",
+      "badges": {
+        "check": "تحقق",
+        "install": "Install",
+        "free": "مجانا",
+        "setup": "الإنشاء"
+      },
+      "summary": {
+        "checking": "حالة العقد المفتوح: التحقق من مدة العمل",
+        "status": "حالة العقد المفتوح: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "تم وقف إطلاق الفريق",
+        "providerOptional": "الاتصال بين مقدمي الخدمات",
+        "providerModelsNeedSetup": "النماذج المدعومة من مقدمي الخدمات بحاجة إلى التجهيز",
+        "teamLaunchReady": "الفريق جاهز",
+        "runtimeDetected": "مكتشفة",
+        "runtimeMissing": "مفقود",
+        "freeWithoutAuth": "نماذج مجانية غير متاحة",
+        "providerConnected": "مورد متصل",
+        "providerNotConnected": "مقدم غير متصل"
+      },
+      "messages": {
+        "checking": "لا يزال التطبيق يفحص وقت التشغيل المفتوح في انتظار وضع المزود للانتهاء، ثم محاولة مرة أخرى.",
+        "unsupported": "ولم يتم تركيب النظام المفتوح، أو العثور عليه، أو لا يُدعم المدرج المكتشف. (ب) إنشاء أو تحديث النظام المفتوح، ثم إعادة تحديد مركز مقدمي الخدمات. يمكنك أيضا استخدام زر إنستل على الصفحة الرئيسية.",
+        "freeAvailable": "تم اكتشاف الكود المفتوح يمكنكِ استخدام نماذج \"إفتتاح\" مجاناً مثل \"بيغ بيكل\" بدون ربط مزود اتصلي بمقدمي الخدمات فقط عندما تريدين نماذج مدعمة بمقدمي الخدمات",
+        "noFreeListed": "ويُكتشف البرنامج المفتوح، ولكن لم يُدرج حتى الآن أي نموذج مفتوح. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
+        "launchBlocked": "تم تركيب و التصديق على برنامج \"الوحدة المفتوحة\" لكن تأهب الفريق مغلق",
+        "ready": "\"الوحدة المفتوحة جاهزة لإطلاق الفريق\""
+      },
+      "loadingRuntime": "لا تزال حالة التفرغ المفتوح تحمل."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping not confirmed",
+      "note": "ملاحظة"
+    },
+    "placeholders": {
+      "customModelId": "مفتوحة/مبتدئ"
+    },
+    "routeGroups": {
+      "openCodeConfig": "مجلس النواب المفتوح",
+      "builtinFree": "مجانية مبنية",
+      "connectedProviders": "مقدِّمي خدمات متصلين",
+      "otherCatalog": "كتيب آخر من مدونة قواعد البيانات المفتوحة"
+    },
+    "pricing": {
+      "free": "مجانا",
+      "inputShort": "في {{rate}}",
+      "outputShort": "اخرج {{rate}}",
+      "perMillionSummary": "{{summary}} 1M",
+      "inputTitle": "Input: {{rate}} 1M tokens",
+      "outputTitle": "الناتج: {{rate}} 1M tokens",
+      "cacheReadTitle": "كاش: {{rate}} 1M tokens",
+      "cacheWriteTitle": "(كاشي) كتب: {{rate}} 1M tokens"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "يستعمل النموذج النهائي المتوافق مع نقطة النهاية\nالعزم حاليا على {{model}}.",
+      "anthropicCompatible": "يستعمل النموذج النهائي المتوافق مع نقطة النهاية",
+      "anthropic": "Uses the Claude team default model.\nResolves to {{longContextModel}} with 1M context, or {{limitedContextModel}} with 200K context when Limit context is enabled.",
+      "openCodeWithResolved": "يستخدم النموذج الافتراضي المفتوح\nالعزم حاليا على {{model}}.",
+      "openCode": "يستعمل النموذج الافتراضي المفتوح",
+      "runtime": "ويستخدم التخلف عن الدفع في الوقت المناسب للمزود المختار."
+    },
+    "multimodelOff": "مضاعف",
+    "unavailableInRuntime": "غير متاح في الوقت الحالي"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "إلغاء",
+      "delete": "تحذف",
+      "markResolved": "(مارك)",
+      "save": "أنقذ"
+    },
+    "attachments": {
+      "commentAttachment": "التعليق",
+      "fromComments": "من التعليقات",
+      "preview": "Preview {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "الاهتمام",
+        "noSafeDiff": "لا يوجد نشرة آمنة"
+      },
+      "empty": {
+        "noFileChangesRecorded": "لم تسجل أي تغييرات في الملفات",
+        "noFileChangesRecordedYet": "لم تسجل أي تغييرات في الملفات بعد",
+        "noReviewableChangesRecovered": "No reviewable file changes recovered",
+        "noSafeDiffAvailable": "لا يوجد نشرة آمنة"
+      },
+      "loadFailed": "عدم تحميل موجز التغييرات في المهام",
+      "loading": "تغيرات الضغط...",
+      "fileCount": "{{count}} الملفات",
+      "fileRowsHidden": "{{count}} صفوف ملف مخبأة",
+      "moreDiagnostics": "{{count}} تشخيصات أكثر",
+      "moreFiles": "{{count}} المزيد من الملفات",
+      "openInEditor": "مفتوح في المحررة",
+      "openTask": "المهمة المفتوحة {{subject}}",
+      "refresh": "التغييرات الجديدة",
+      "refreshFailed": "فشل التجديد: {{error}}",
+      "refreshing": "التجديد",
+      "refreshingChanges": "تغيرات جديدة",
+      "refreshTeamChanges": "تغييرات فريق التجديد",
+      "refreshShort": "التجديد",
+      "reviewDiff": "إعادة الانتشار",
+      "reviewTaskDiff": "مهمة الاستعراض",
+      "scannedCandidateTasks": "تم فحص {{requested}} من {{eligible}} مهام مرشحة",
+      "tasksDeferred": "{{count}} المهام المؤجلة",
+      "title": "التغييرات",
+      "fileCount_few": "{{count}} الملفات",
+      "fileCount_many": "{{count}} الملفات",
+      "fileCount_one": "{{count}} الملفات",
+      "fileCount_other": "{{count}} الملفات",
+      "fileRowsHidden_few": "{{count}} صفوف ملف مخبأة",
+      "fileRowsHidden_many": "{{count}} صفوف ملف مخبأة",
+      "fileRowsHidden_one": "{{count}} صفوف ملف مخبأة",
+      "fileRowsHidden_other": "{{count}} صفوف ملف مخبأة",
+      "moreDiagnostics_few": "{{count}} تشخيصات أكثر",
+      "moreDiagnostics_many": "{{count}} تشخيصات أكثر",
+      "moreDiagnostics_one": "{{count}} تشخيصات أكثر",
+      "moreDiagnostics_other": "{{count}} تشخيصات أكثر",
+      "moreFiles_few": "{{count}} المزيد من الملفات",
+      "moreFiles_many": "{{count}} المزيد من الملفات",
+      "moreFiles_one": "{{count}} المزيد من الملفات",
+      "moreFiles_other": "{{count}} المزيد من الملفات",
+      "tasksDeferred_few": "{{count}} المهام المؤجلة",
+      "tasksDeferred_many": "{{count}} المهام المؤجلة",
+      "tasksDeferred_one": "{{count}} المهام المؤجلة",
+      "tasksDeferred_other": "{{count}} المهام المؤجلة"
+    },
+    "clarification": {
+      "awaitingLead": "في انتظار توضيح من قيادة الفريق",
+      "awaitingUser": "في انتظار التوضيح منك"
+    },
+    "description": {
+      "add": "انقر لإضافة وصف...",
+      "edit": "الوصف",
+      "placeholder": "وصف المهام (وضع علامات الدعم)"
+    },
+    "loading": {
+      "fetchingTeamData": "بيانات الفريق",
+      "title": "مهمة التحمل"
+    },
+    "logs": {
+      "newArriving": "سجلات المهام الجديدة التي تصل"
+    },
+    "notFound": "لم تجد",
+    "related": {
+      "blockedBy": "مقفلة",
+      "blocks": "حواجز",
+      "linkedFrom": "وصلة من",
+      "links": "الروابط",
+      "title": "المهام ذات الصلة"
+    },
+    "review": {
+      "reviewer": "المستعرض: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "الملاحق",
+      "changes": "التغييرات",
+      "comments": "التعليقات",
+      "description": "الوصف",
+      "taskLogs": "فرقة العمل",
+      "workflowHistory": "التاريخ"
+    },
+    "unassigned": "غير موقعة",
+    "workflow": {
+      "implementationTimeTitle": "وقت التنفيذ من فترات العمل المستمرة",
+      "inProgressTime": "الوقت الجاري {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "تظهر أحدث {{formattedCount}} تعليقات للحفاظ على استجابة UI.",
+      "badges": {
+        "approved": "الوظائف المعتمدة",
+        "reviewRequested": "الاستعراض المطلوب"
+      },
+      "unknownTime": "وقت مجهول",
+      "actions": {
+        "reply": "الرد",
+        "replyToComment": "الرد على التعليق",
+        "showMore": "Show more comments ({{visible}}/{{total}})",
+        "cancelReply": "رد إلغاء",
+        "comment": "التعليق"
+      },
+      "attachments": {
+        "previewAlt": "لمحة عامة",
+        "downloadFailed": "تفريغ"
+      },
+      "replyingTo": "الرد على",
+      "input": {
+        "placeholder": "أضف تعليق",
+        "charsLeft": "{{count}} من اليسار",
+        "charsLeft_one": "{{count}} char left",
+        "charsLeft_other": "{{count}} من اليسار",
+        "charsLeft_few": "{{count}} من اليسار",
+        "charsLeft_many": "{{count}} من اليسار"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "No workflow history recorded",
+      "currentImplementationInterval": "فترة التنفيذ الحالية",
+      "implementationIntervalEnded": "انتهت فترة التنفيذ في هذه المرحلة الانتقالية",
+      "runningPrefix": "تشغيل ",
+      "createdAs": "الإبداع",
+      "by": "من قبل",
+      "reassigned": "إعادة الانتداب",
+      "assignedTo": "مصممة",
+      "unassignedFrom": "غير موقوف من",
+      "ownerChanged": "تغير المالك",
+      "reviewRequested": "الاستعراض المطلوب",
+      "reviewStarted": "بدأ الاستعراض",
+      "changesRequested": "التغييرات المطلوبة",
+      "approved": "الوظائف المعتمدة",
+      "unknownEvent": "حدث غير معروف"
+    },
+    "reviewStates": {
+      "approved": "الوظائف المعتمدة",
+      "needsFix": "الحاجة إلى إصلاح",
+      "inReview": "قيد الاستعراض"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "المرسل إليه",
+      "assigneeOptional": "المرسل إليه (اختياري)",
+      "blockedByOptional": "مقفلة حسب المهام (اختياريا)",
+      "blockedBySummary": "وسوف تحجب المهمة عن طريق ما يلي: {{tasks}}",
+      "cancel": "إلغاء",
+      "create": "الإبداع",
+      "creating": "خلق...",
+      "description": "المهمة ستُنشأ في مهام الفريق/الدليل وتظهر على مجلس كانبان",
+      "descriptionOptional": "الوصف (اختياري)",
+      "detailsPlaceholder": "تفاصيل المهام (العمليات الداعمة)",
+      "hideOptionalFields": "إخفاء الحقول الاختيارية",
+      "offlineNotice": {
+        "after": "-اطلقوا الفريق لبدء التنفيذ",
+        "before": "الفريق غير متصل وستضاف هذه المهمة إلى"
+      },
+      "promptOptional": "Prompt for assignee (optional)",
+      "promptPlaceholder": "التعليمات العرفية لعضو الفريق...",
+      "relatedOptional": "المهام ذات الصلة (اختياري)",
+      "relatedSummary": "ذات الصلة: {{tasks}}",
+      "saved": "منقذة",
+      "searchTasks": "مهام البحث...",
+      "selectMember": "اختيار عضو",
+      "selectMemberOptional": "عضو مختار...",
+      "showOptionalFields": "المجالات الاختيارية",
+      "startImmediately": "ابدأ فوراً",
+      "startOfflineHint": "الفريق غير متصل أطلقوا الفريق أولاً لبدء المهام فوراً",
+      "subject": "الموضوع",
+      "subjectPlaceholder": "ما الذي يجب فعله؟",
+      "title": "مهمة إنشاء",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "مقفل",
+        "blocks": "حواجز",
+        "id": "الهوية",
+        "owner": "المالك",
+        "status": "الحالة",
+        "subject": "الموضوع"
+      },
+      "empty": "لا مهام في هذا الفريق",
+      "filters": {
+        "allOwners": "جميع المالكين",
+        "allStatuses": "جميع الحالات",
+        "ownerAria": "المهام الوظيفية للمالك",
+        "statusAria": "المهام الوظيفية حسب المركز"
+      },
+      "showing": "عرض {{shown}} من {{total}}"
+    },
+    "status": {
+      "completed": "أنجزت",
+      "deleted": "حذفت",
+      "inProgress": "في",
+      "pending": "معلقة"
+    },
+    "statusSummary": {
+      "progressAria": "المهام {{completed}}/{{total}} أنجزت",
+      "inProgress": "{{count}} في",
+      "inProgress_one": "{{count}} في",
+      "inProgress_other": "{{count}} في",
+      "inProgress_few": "{{count}} في",
+      "inProgress_many": "{{count}} في",
+      "pending": "{{count}} معلقة",
+      "pending_one": "{{count}} معلقة",
+      "pending_other": "{{count}} معلقة",
+      "pending_few": "{{count}} معلقة",
+      "pending_many": "{{count}} معلقة",
+      "completed": "{{count}} أنجزت",
+      "completed_one": "{{count}} أنجزت",
+      "completed_other": "{{count}} أنجزت",
+      "completed_few": "{{count}} أنجزت",
+      "completed_many": "{{count}} أنجزت"
+    },
+    "unassigned": "غير موقعة",
+    "teamPrefix": "الفريق:",
+    "openTask": "المهمة المفتوحة",
+    "deleteConfirm": {
+      "title": "تحذف المهمة",
+      "message": "مهمة التحرك{{taskId}} إلى القمامة؟",
+      "confirmLabel": "تحذف",
+      "cancelLabel": "إلغاء"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "إلغاء",
+      "closeEditor": "محرر",
+      "closeTab": "وثيقة",
+      "closeTooltip": "محرر قريب (Esc)",
+      "discard": "Discard",
+      "discardAndClose": "Discard &apos; close",
+      "keep": "استمر",
+      "keepMine": "احتفظي بي",
+      "keyboardShortcuts": "اختصار لوحة المفاتيح",
+      "overwrite": "الكتابة الكاملة",
+      "refreshAria": "التجديد (F5)",
+      "refreshTooltip": "Refresh git status (F5)",
+      "reload": "Reload",
+      "retry": "Retry",
+      "save": "أنقذ",
+      "saveAllAndClose": "Save All &apos; close"
+    },
+    "ariaLabel": "Project Editor",
+    "dialogs": {
+      "conflictDescription": "تم تعديل الملف من الخارج منذ فتحته تشرف على تغييرك؟",
+      "conflictTitle": "إنقاذ الصراع",
+      "unsavedDescription": "لديك تغيرات غير متسامحة ماذا تريد أن تفعل؟",
+      "unsavedFileDescription": "هذا الملف يحتوي على تغييرات غير مدروسة ماذا تريد أن تفعل؟",
+      "unsavedTitle": "التغييرات غير المنسَّقة"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "الاسم لا يمكن أن يكون فارغا",
+        "invalidName": "الاسم غير الرسمي",
+        "invalidCharacters": "الاسم يحتوي على شخصيات غير صحيحة",
+        "nameTooLong": "الاسم طويل"
+      },
+      "placeholders": {
+        "fileName": "اسم ملف...",
+        "folderName": "اسم الزهرة..."
+      },
+      "aria": {
+        "newFileName": "اسم الملف الجديد",
+        "newFolderName": "اسم الملف الجديد"
+      }
+    },
+    "draftRecovered": "Recovered unsaved changes from a previous session.",
+    "externalChange": {
+      "changed": "الملف تغير على القرص",
+      "deleted": "الملف لم يعد موجوداً على القرص"
+    },
+    "saveFailed": "فشل إنقاذ: {{error}}",
+    "sidebar": {
+      "explorer": "Explorer",
+      "hide": "Hide sidebar",
+      "hideWithShortcut": "Hide sidebar ({{shortcut}})",
+      "show": "عرض جانبي",
+      "showWithShortcut": "Show sidebar ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "البحث في الأفلام",
+      "closeSearch": "البحث",
+      "closeSearchShortcut": "البحث عن قرب",
+      "searchPlaceholder": "ابحث...",
+      "matchCase": "قضية ماتش",
+      "matchCaseToggle": "Aa",
+      "noResults": "لا توجد نتائج",
+      "resultsSummary": "{{count}} تطابق {{fileCount}} الملفات",
+      "resultsSummary_one": "{{count}} تطابق {{fileCount}} الملفات",
+      "truncated": "(تحطم)",
+      "resultsSummary_few": "{{count}} تطابق {{fileCount}} الملفات",
+      "resultsSummary_many": "{{count}} تطابق {{fileCount}} الملفات",
+      "resultsSummary_other": "{{count}} تطابق {{fileCount}} الملفات"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "فشل في تحميل الملفات: {{error}}",
+      "loading": "ملفات الشحن...",
+      "empty": "لا توجد ملفات",
+      "dropForProjectRoot": "تسقط هنا من جذور المشروع",
+      "moveToTrash": "الانتقال إلى تراش",
+      "moveToTrashConfirm": "تحرك{{name}}إلى تراش؟",
+      "cancel": "إلغاء"
+    },
+    "goToLine": {
+      "title": "الذهاب إلى الخط",
+      "position": "(يجري: {{current}}المجموع: {{total}})",
+      "placeholder": "رقم الخط، +offset، أو٪",
+      "go": "إذهب"
+    },
+    "searchPanel": {
+      "previousMatch": "ماتش سابقا",
+      "nextMatch": "المباراة التالية",
+      "close": "اقترب",
+      "replacePlaceholder": "يستعاض عن عبارة:",
+      "replace": "يستعاض عن عبارة:",
+      "replaceNext": "يستعاض عن التالي:",
+      "all": "كل شيء",
+      "replaceAll": "المجموع"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}كول {{col}}",
+      "enableWatcher": "مساعِد للملفات",
+      "disableWatcher": "مراقِب للملفات غير القابلة للتصرف",
+      "watch": "شاهد",
+      "watching": "مشاهدة",
+      "watchExternalChanges": "رصد التغييرات الخارجية",
+      "disableExternalWatcher": "مراقب تغيير خارجي غير قابل للتصرف",
+      "encodingUtf8": "UTF-8",
+      "spaces": "الفضاء: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "....",
+      "openFullSize": "لمحة عامة",
+      "openSystemViewer": "مفتوح في نظام المراقبة"
+    },
+    "quickOpen": {
+      "title": "بسرعة",
+      "searchPlaceholder": "ملفات البحث بالاسم",
+      "loading": "ملفات الشحن...",
+      "empty": "لا توجد ملفات"
+    },
+    "errorBoundary": {
+      "crashed": "محرر محطم",
+      "unknownError": "خطأ غير معروف"
+    },
+    "binaryPlaceholder": {
+      "file": "Binary file ({{size}})"
+    },
+    "unsavedChanges": "التغييرات غير المنسَّقة",
+    "empty": {
+      "selectFile": "اختيار ملف من الشجرة إلى التحرير"
+    },
+    "search": {
+      "toggleReplace": "يستعاض عن عبارة:",
+      "placeholder": "البحث"
+    },
+    "shortcuts": {
+      "title": "مختصرات لوحة المفاتيح",
+      "groups": {
+        "fileOperations": "العمليات المالية",
+        "search": "البحث",
+        "navigation": "الملاحة",
+        "editing": "التحرير",
+        "markdown": "نقطة الصفر",
+        "general": "معلومات عامة"
+      },
+      "actions": {
+        "quickOpen": "بسرعة",
+        "save": "أنقذ",
+        "saveAll": "أنقذوا كل شيء",
+        "closeTab": "أغلق الخط",
+        "findInFile": "البحث في الملف",
+        "searchInFiles": "البحث في الأفلام",
+        "goToLine": "الذهاب إلى الخط",
+        "nextTab": "التابوت التالي",
+        "previousTab": "Tab",
+        "cycleTabs": "Cycle Tabs",
+        "toggleSidebar": "Toggle Sidebar",
+        "undo": "Undo",
+        "redo": "Redo",
+        "selectNextMatch": "اختيار ماتش التالي",
+        "toggleComment": "Toggle Comment",
+        "splitPreview": "Splitview",
+        "fullPreview": "كاملة",
+        "closeEditor": "محرر قريب"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "مجموعة كلمات",
+      "disableWordWrap": "غلاف الكلمات المتميزة",
+      "closeSplitPreview": "اغلق المشهد",
+      "closePreview": "إقتربْ"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "الجدول الزمني المحدد",
+      "creating": "خلق...",
+      "goToDashboard": "الذهاب إلى داش لوح",
+      "launchTeam": "فريق الإطلاق",
+      "launching": "إطلاق...",
+      "relaunchTeam": "فريق الإطلاق",
+      "relaunching": "إعادة إطلاق...",
+      "saveChanges": "إنقاذ التغييرات",
+      "saving": "إنقاذ..."
+    },
+    "billing": {
+      "prefix": "ابتداء من 15 يونيو، 2026، فواتير الأنثروبيك",
+      "readArticle": "اقرأ مقالة انثروبيك",
+      "suffix": "وكيل SDK الاستخدام من العميل الشهري SDK ائتمان، منفصل عن الحدود التفاعلية لمدونة كلود. ويسدد الائتمان كل دورة من دورات الفواتير والائتمان غير المستخدم لا يتراجع."
+    },
+    "conflict": {
+      "description": "تشغيل فريقين في الدليل نفسه خطر - قد يتضاربون في تحرير نفس الملفات. النظر في استخدام دليل مختلف أو a git worktree للعزلة.",
+      "title": "فريق آخر{{team}}\"يجري بالفعل لدليل العمل هذا\"",
+      "workingDirectory": "دليل العمل:"
+    },
+    "description": {
+      "createSchedule": "الجدول التلقائي",
+      "createScheduleForTeam": "Schedule automatic runs for team \"{{team}}\"",
+      "editSchedule": "Editing schedule for team \"{{team}}\"",
+      "launchPrefix": "فريق البداية",
+      "launchSuffix": "عن طريق كلود المحلية CLI.",
+      "relaunchPrefix": "أوقفوا الركض الحالي",
+      "relaunchSuffix": "و ابدأ من جديد عبر كلود المحلية CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "الإطلاق",
+        "relaunch": "relaunch"
+      },
+      "blocked": "بيئة العمل غير متاحة {{action}} محاصرة",
+      "checkingProviders": "تحقق من مجموعة مختارة من مقدمي الخدمات...",
+      "failed": "فشل في إعداد موردين مختارين",
+      "preflight": "التحقق قبل الرحلة للقبض على الأخطاء قبل {{action}}",
+      "preparingEnvironment": "تهيئة بيئة...",
+      "ready": "جميع الموردين المختارين جاهزون",
+      "readyWithNotes": "جميع المُقدّمين المُختارين مُستعدّين، مع ملاحظات.",
+      "unsupportedPreload": "والنسخة الحالية من النسخ المسبقة لا تدعم الفريق: تنقيح المشاريع. أعيدي تطبيق الدي في",
+      "selectWorkingDirectory": "اختيار دليل عمل للتحقق من بيئة الإطلاق.",
+      "someProvidersNeedAttention": "Some selected providers need attention."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "هذه السرعة ستتم",
+      "oneShotSuffix": "من أجل الإعدام بطلق ناري واحد",
+      "saved": "منقذة",
+      "schedulePlaceholder": "تعليمات لكلود أن تنفذ في الموعد المحدد",
+      "teamLeadOptional": "Prompt for team lead (optional)",
+      "teamLeadPlaceholder": "تعليمات لقيادة الفريق"
+    },
+    "providerChanged": "المورد تغير من {{from}} إلى {{to}}- لن تستأنف الدورة الرائدة السابقة، وسيبدأ الرصاص بسياق جديد بحيث يُطبَّق الوقت الجديد على نحو صحيح.",
+    "relaunchFreshSession": "إعادة إطلاق الفريق تبدأ دورة جديدة وتتم إعادة دمج ولاية الفريق الدائم، ومجلس العمل، وتشكيلة الأعضاء في مرحلة الإطلاق.",
+    "relaunchWarning": {
+      "description": "ومن شأن توفير هذه البيئات أن يوقف عملية الفريق الحالي، ويستمر في إعداد القائمة المستكملة، ويبدأ الفريق مرة أخرى بالظهور الجديد.",
+      "title": "إعادة التشغيل سيعيد تشغيل الفريق الحالي"
+    },
+    "schedule": {
+      "labelOptional": "Label (optional)",
+      "labelPlaceholder": "على سبيل المثال، استعراض الشفرة اليومي، اختبارات ليلية...",
+      "maxBudgetUsd": "Max budget (USD)",
+      "maxTurns": "(ماكس)",
+      "noLimit": "لا حدود",
+      "noMatches": "لا فرق تطابق بحثك",
+      "noTeams": "لا فرق متاحة إنشاء فريق أولا.",
+      "searchTeams": "فرق البحث",
+      "selectTeam": "اختيار فريق...",
+      "team": "الفريق",
+      "title": "الجدول"
+    },
+    "title": {
+      "createSchedule": "الجدول الزمني المحدد",
+      "editSchedule": "الجدول الزمني",
+      "launch": "فريق الإطلاق",
+      "relaunch": "فريق إعادة التشغيل"
+    },
+    "errors": {
+      "loadProjectsFailed": "عدم تحميل المشاريع",
+      "saveScheduleFailed": "فشل في حفظ الجدول الزمني",
+      "relaunchFailed": "فشل في إعادة إطلاق الفريق",
+      "launchFailed": "فشل في فريق الإطلاق"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "-الخيار المفتوح يتطلب نموذجاً مختاراً",
+      "openCodeTeammateRequired": "القيادة المفتوحة تتطلب على الأقل زميل واحد من الفريق المفتوح العضوية",
+      "selectWorkingDirectory": "دليل عمل مختار",
+      "fixMemberNames": "أسماء الأعضاء الستة قبل الإطلاق",
+      "memberNamesUnique": "يجب أن تكون أسماء الأعضاء فريدة قبل الإطلاق"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "إعادة التشغيل",
+      "title": "حالات الإطلاق الاختياري",
+      "relaunchDescription": "Review the roster and lead runtime before restarting the team.",
+      "description": "حافظ على تدفق الإطلاق وركز على مسار المشروع ووسع هذا فقط عندما تريد السيطرة الإضافية"
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "فريق النسخ",
+      "createTeam": "فريق الإنشاء",
+      "deleteForever": "تحذف إلى الأبد",
+      "deletePermanently": "تحذف بصفة دائمة",
+      "deleteTeam": "يحذف الفريق",
+      "launching": "إطلاق...",
+      "launchTeam": "فريق الإطلاق",
+      "relaunchTeam": "فريق الإطلاق",
+      "restore": "Restore",
+      "restoreTeam": "فريق ريستو",
+      "retry": "Retry",
+      "stopTeam": "الفريق",
+      "stopping": "توقف..."
+    },
+    "electronOnly": {
+      "description": "In browser mode, access to local `~/.claude/teams` الأدلة غير متاحة.",
+      "title": "الفرق متاحة فقط في نمط إلكترون"
+    },
+    "empty": {
+      "description": "إنشاء فريق هنا للبدء وسوف تظهر في القائمة تلقائيا.",
+      "localOnly": "ولا يتوفر إنشاء الفريق إلا في نمط إلكترون المحلي.",
+      "title": "لا توجد فرق"
+    },
+    "filter": {
+      "clearAll": "خالي",
+      "label": "فرق التصوير",
+      "projectPriority": "أولوية المشروع",
+      "status": "الحالة"
+    },
+    "loadFailed": "فشل في تشكيل فرق",
+    "loading": "فرق النقل...",
+    "localOnly": "فقط متوفر في نمط إلكترون المحلي.",
+    "membersCount": "الأعضاء: {{count}}",
+    "membersCount_few": "الأعضاء: {{count}}",
+    "membersCount_many": "الأعضاء: {{count}}",
+    "membersCount_one": "العضو: {{count}}",
+    "membersCount_other": "الأعضاء: {{count}}",
+    "noDescription": "لا وصف",
+    "noMatches": "لا فرق تضاهي مرشحات",
+    "partial": {
+      "pending": "آخر عملية إطلاق لا تزال متوافقة",
+      "skipped": "آخر عملية إطلاق تخطيت زملاء الفريق",
+      "skippedWithCount": "آخر عملية إطلاق {{count}}/{{expected}} زميل الفريق",
+      "skippedWithCount_few": "آخر عملية إطلاق {{count}}/{{expected}} زملاء الفريق",
+      "skippedWithCount_many": "آخر عملية إطلاق {{count}}/{{expected}} زملاء الفريق",
+      "skippedWithCount_one": "آخر عملية إطلاق {{count}}/{{expected}} زميل الفريق",
+      "skippedWithCount_other": "آخر عملية إطلاق {{count}}/{{expected}} زملاء الفريق",
+      "stopped": "آخر عملية إطلاق توقفت قبل أن ينضم جميع زملاء الفريق",
+      "stoppedWithCount": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زميل الفريق انضم",
+      "stoppedWithCount_few": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زملاء الفريق انضموا",
+      "stoppedWithCount_many": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زملاء الفريق انضموا",
+      "stoppedWithCount_one": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زميل الفريق انضم",
+      "stoppedWithCount_other": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زملاء الفريق انضموا"
+    },
+    "searchPlaceholder": "فرق البحث",
+    "sections": {
+      "otherTeams": "أفرقة أخرى",
+      "projectTeams": "الأفرقة المعنية {{project}}",
+      "selectedProject": "مشروع مختار"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "النشاط",
+      "deleted": "Deleted",
+      "launching": "إطلاق...",
+      "offline": "Offline",
+      "partialFailure": "الإطلاق الفاشل",
+      "partialPending": "قيد النظر",
+      "partialSkipped": "عضو متقدم",
+      "running": "تشغيل"
+    },
+    "title": "الفريق المختار",
+    "trash": "Trash ({{count}})",
+    "trash_few": "Trash ({{count}})",
+    "trash_many": "Trash ({{count}})",
+    "trash_one": "Trash ({{count}})",
+    "trash_other": "Trash ({{count}})",
+    "deleteDraft": {
+      "title": "يحذف مشروع",
+      "message": "Delete draft team \"{{teamName}}\"? This cannot be undone.",
+      "confirmLabel": "تحذف",
+      "cancelLabel": "إلغاء"
+    },
+    "moveToTrash": {
+      "title": "تحركوا إلى القمامة",
+      "message": "فريق التحرك{{teamName}}إلى القمامة؟ يمكنك إعادتها لاحقاً",
+      "confirmLabel": "تحركوا إلى القمامة",
+      "cancelLabel": "إلغاء"
+    },
+    "deleteForever": {
+      "title": "تحذف بصفة دائمة",
+      "message": "يحذف الفريق{{teamName}}بشكل دائم؟ كل البيانات ستضيع",
+      "confirmLabel": "تحذف إلى الأبد",
+      "cancelLabel": "إلغاء"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "رسائل (كروس) تذهب إلى قيادة الفريق المستهدف إذا أردت الرد أن يعود إلى فريقك بدلاً منك، قل ذلك صراحة في الرسالة."
+    },
+    "attachments": {
+      "attachFiles": "ملفات الملحقات (الدفع أو السحب)",
+      "unavailable": "الملاحق غير متاحة",
+      "disabledHint": "وتُدعم ملحقات الملفات لقيادة الفريق على الإنترنت وزملاء الفريق المفتوح على الإنترنت. نقل الملحقات أو تبديل المتلقي.",
+      "restrictions": {
+        "crossTeam": "ملحقات الملفات غير مدعومة برسائل شاملة",
+        "teamOffline": "يجب أن يكون الفريق على الإنترنت لربط الملفات",
+        "unsupportedRecipient": "يمكن إرسال الملفات إلى قائد الفريق أو الفريق المفتوح العضوية",
+        "openCodeOffline": "يجب أن يكون الفريق على الإنترنت لإرفاق ملفات لشركاء الفريق المفتوح العضوية",
+        "sending": "انتظر الرسالة الحالية لإنهاء إرسالها قبل إضافة الملفات",
+        "maximumReached": "الحد الأقصى للملحقات التي تم الوصول إليها",
+        "leadOnly": "لا يمكن إرسال الملفات إلا إلى قائد الفريق"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "أوامر الصدام تتطلب قيادة فريق حي ولا يمكن إرسالها بملحقات",
+        "crossTeam": "أوامر الصدام لا يمكن تشغيلها إلا على قيادة الفريق الحالي",
+        "notLead": "لا يمكن إرسال الأوامر إلا إلى قيادة الفريق",
+        "leadOffline": "أوامر الصدام تتطلب من الفريق أن يكون على الإنترنت"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Reused recent cross-team request",
+      "teamOffline": "الفريق غير المباشر"
+    },
+    "input": {
+      "charsLeft": "{{count}} من اليسار",
+      "charsLeft_one": "{{count}} char left",
+      "charsLeft_other": "{{count}} من اليسار",
+      "teamLaunchingPlaceholder": "الفريق يُطلق... الرسالة ستُشفى من أجل توصيلة بصندوق",
+      "crossTeamPlaceholder": "رسالة عبرية إلى {{team}}...",
+      "teamFallback": "فريق",
+      "placeholder": "أكتب رسالة... (الانتر لإرسال، شيفت + إنتر لخط جديد)",
+      "slashTip": "يمكنك استخدام \"/\" لتشغيل أي أوامر كلود.",
+      "charsLeft_few": "{{count}} من اليسار",
+      "charsLeft_many": "{{count}} من اليسار"
+    },
+    "teamSelector": {
+      "thisTeam": "هذا الفريق",
+      "current": "الجارية",
+      "online": "على الإنترنت",
+      "offline": "خارج الشبكة",
+      "onlineTitle": "على الإنترنت",
+      "offlineTitle": "Offline"
+    },
+    "recipient": {
+      "select": "اختيار...",
+      "searchPlaceholder": "ابحث...",
+      "noResults": "لا نتائج"
+    },
+    "actions": {
+      "voiceToText": "صوت النص",
+      "send": "أرسل",
+      "sendingUnavailableLaunching": "إرسال غير متاح بينما الفريق يُطلق"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "سجلات الملفات",
+      "tooltip": "سجلات الملفات",
+      "sections": {
+        "stream": "Stream",
+        "content": "المضمون"
+      },
+      "kinds": {
+        "output": "الناتج",
+        "thinking": "التفكير",
+        "tool": "المكالمات الهاتفية"
+      },
+      "actions": {
+        "reset": "إعادة التوطين",
+        "save": "أنقذ"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "Stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} خطوط خام",
+    "rawLineCount_one": "{{formattedCount}} خط خام",
+    "rawLinesCaptured": "{{count}} أسر",
+    "emptyRawLogs": "{{count}}; No are Assistant/tool output yet.",
+    "noLogsYet": "لا سجلات بعد",
+    "teamNotRunning": "الفريق لا يعمل",
+    "searchPlaceholder": "سجلات البحث...",
+    "clearSearch": "البحث",
+    "newCount": "+{{count}} جديدة",
+    "loading": "التعبئة...",
+    "showMore": "أظهر المزيد",
+    "noLogsCaptured": "لا توجد سجلات",
+    "noMatchingLogs": "لا سجلات مطابقة",
+    "rawLineCount_few": "{{formattedCount}} خطوط خام",
+    "rawLineCount_many": "{{formattedCount}} خطوط خام",
+    "rawLineCount_other": "{{formattedCount}} خطوط خام",
+    "openFullscreen": "فتح سجلات كاملة",
+    "fullscreen": "الشاشة الكاملة",
+    "viewingFullscreen": "مشاهدة كاملة",
+    "logsTitle": "اللوز",
+    "sourceSelect": {
+      "placeholder": "...مصدر سجلات",
+      "searchPlaceholder": "مصادر سجل البحث...",
+      "emptyMessage": "لا توجد مصادر للسجلات",
+      "ariaLabel": "المصدر",
+      "leadLabel": "الرصاص",
+      "selectSourceEmpty": "اختيار مصدر سجل."
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "الفريق الخارجي",
+      "process": {
+        "startedBy": "بدءا من:",
+        "at": "في:",
+        "openUrl": "مفتوح URL"
+      },
+      "overflow": {
+        "hiddenTasks": "مهام خفية",
+        "empty": "لا توجد مهام خفية"
+      },
+      "member": {
+        "lead": "الرصاص",
+        "workingOn": "العمل على",
+        "recentTools": "الأدوات الحديثة",
+        "spawn": {
+          "waitingToStart": "في انتظار البدء",
+          "starting": "البدء",
+          "failed": "فشل"
+        },
+        "state": {
+          "active": "نشطة",
+          "idle": "idle",
+          "offline": "خارج الشبكة",
+          "runningTool": "أداة تشغيل"
+        },
+        "activeTool": {
+          "running": "أداة تشغيل",
+          "failed": "فشل",
+          "finished": "انتهى"
+        },
+        "actions": {
+          "message": "الرسالة",
+          "profile": "Profile",
+          "task": "المهام"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "اللوز",
+      "loading": "سجلات الشحن",
+      "more": "+{{count}} أكثر",
+      "more_one": "+{{count}} أكثر",
+      "more_other": "+{{count}} أكثر",
+      "more_few": "+{{count}} أكثر",
+      "more_many": "+{{count}} أكثر"
+    },
+    "blockingEdge": {
+      "title": "الإعالة",
+      "blocks": "اللبنات",
+      "close": "اقترب",
+      "blockingHiddenTasks": "حجب المهام الخفية",
+      "blockedHiddenTasks": "مهام خفية مقفلة"
+    },
+    "activityHud": {
+      "activity": "النشاط",
+      "noRecentActivity": "No recent activity",
+      "more": "+{{count}} أكثر",
+      "more_one": "+{{count}} أكثر",
+      "more_other": "+{{count}} أكثر",
+      "more_few": "+{{count}} أكثر",
+      "more_many": "+{{count}} أكثر"
+    },
+    "provisioning": {
+      "launchDetails": "تفاصيل الإطلاق",
+      "launchDetailsDescription": "التقدم المحرز في إطلاق الفريق التفصيلي والناتج الحي CLI سجلات"
+    }
+  },
+  "projectPath": {
+    "label": "المشروع",
+    "source": {
+      "claude": "وجدت كلود",
+      "codex": "تم العثور عليها بواسطة الشفرة",
+      "mixed": "وجدت من قبل كلود ورمز"
+    },
+    "deleted": {
+      "title": "Project folder no longer exists",
+      "label": "Deleted"
+    },
+    "mode": {
+      "projectList": "من قائمة المشاريع",
+      "customPath": "المسار العرفي"
+    },
+    "loadingProjects": "مشاريع النقل...",
+    "selectProject": "اختيار مشروع...",
+    "searchPlaceholder": "مشروع البحث بالاسم أو المسار",
+    "empty": "لا شيء",
+    "selectFromList": "اختيار مشروع من القائمة",
+    "noProjects": "لم يتم العثور على أي مشاريع، التحول إلى مسار العرف.",
+    "customWorkingDirectory": "دليل العمل العرفي",
+    "browse": "Browse",
+    "createAutomatically": "وإذا لم يكن الدليل موجودا، فإنه سيُنشأ تلقائيا."
+  },
+  "members": {
+    "badges": {
+      "worktree": "العمل"
+    },
+    "runtimeTelemetry": {
+      "title": "الحمولة المنزلية",
+      "description": "- عمليات الوالدين والأطفال فقط. Remote LLM ولم يُدرَج أي استنتاج.",
+      "cpu": "CPU",
+      "memory": "الذاكرة",
+      "summedRss": "المبلغ RSS",
+      "sharedHost": "مُستقبِل مُشترك It is not exclusive to this member.",
+      "processTreeCapped": "تم تجهيز شجرة العملية لهذه العينة",
+      "rssHint": "RSS يمكن أن تشمل صفحات مشتركة، لذلك من الأفضل قراءتها كإشارة تحميل، وليس ذاكرة حصرية."
+    },
+    "editor": {
+      "title": "الأعضاء",
+      "addMember": "العضو",
+      "editAsJson": "Edit as JSON",
+      "runInSeparateWorktrees": "يديرون زملاء في عمل منفصل",
+      "agentTeamsMcpOnly": "الوكيل الأفرقة MCP فقط",
+      "removedCount": "Removed ({{count}})",
+      "removedModelLockReason": "ويُحتفظ بالأعضاء الذين يُنقلون من أجل تاريخ الحذف الناعم. أعدهم إلى أماكن التحرير",
+      "memberNamesUnique": "أسماء الأعضاء يجب أن تكون فريدة"
+    },
+    "stats": {
+      "computing": "إحصائيات الكمبيوتر...",
+      "empty": "No stats available",
+      "lines": "خطوط",
+      "linesInfo": "تقريباً دقيقة لأدوات إيديت وكتابة ويُقدَّر ملف باش من أنماط القيادة (الهيردوك، الصدى، السد) وقد لا يُبلغ عنه بالقدر الكافي.",
+      "files": "الملفات",
+      "toolCalls": "نداءات",
+      "tokens": "Tokens",
+      "toolUsage": "Tool Usage",
+      "filesTouched": "Files Touched ({{count}})",
+      "viewAllChanges": "مشاهدة جميع التغييرات",
+      "showLess": "عرض أقل",
+      "moreFiles": "+{{count}} أكثر",
+      "footer": "{{count}} الدورات المحوسبة {{computedAgo}}",
+      "footer_one": "{{count}} الدورة المحوسبة {{computedAgo}}",
+      "footer_few": "{{count}} الدورات المحوسبة {{computedAgo}}",
+      "footer_many": "{{count}} الدورات المحوسبة {{computedAgo}}",
+      "footer_other": "{{count}} الدورات المحوسبة {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "سجلات البحث...",
+      "empty": "لا توجد سجلات",
+      "waitingForTaskActivity": "العمل جار - في انتظار نشاط الدورة (تجديد)...",
+      "noTaskActivity": "No session activity for this task yet",
+      "noMemberActivity": "هذا العضو لم يسجل نشاط الدورة بعد",
+      "leadSessionTooltip": "سجلات الدورة الرئيسية الكاملة للفريق - مفيدة لسياق التنصيب العالمي، وليس خصيصا لهذا الوكيل",
+      "memberSessionTooltip": "سجلات دورة الفريق الدائمة - مفيدة عند سير العمل في دورة أعضاء متجذرين بدلا من ملف فرعي",
+      "startedAt": "بدأت {{time}}",
+      "active": "نشطة",
+      "showDetails": "التفاصيل",
+      "hideDetails": "تفاصيل الاختباء",
+      "loadingDetails": "تفاصيل الشحن",
+      "failedToLoadDetails": "فشل في تحميل التفاصيل"
+    },
+    "detail": {
+      "relaunchOpenCode": "Relaunch OpenCode",
+      "restart": "Restart",
+      "legacyLogsFallback": "Legacy Logs Fallback",
+      "copyDiagnostics": "تشخيص النسخ",
+      "pid": "PID {{pid}}",
+      "removedAt": "نقل {{date}}",
+      "failedToRestartMember": "فشل في إعادة عضو",
+      "sendMessage": "أرسل رسالة",
+      "assignTask": "المهمة",
+      "remove": "إزالة الألغام"
+    },
+    "list": {
+      "loading": "أعضاء فريق الإقامة",
+      "unavailable": "قائمة الأعضاء غير متاحة",
+      "unavailableDescription": "{{count}} زملاء الفريق معروفون من البيانات الوصفية للفريق لكن تفاصيل القائمة مفقودة",
+      "unavailableDescription_one": "{{count}} زميل الفريق معروف من البيانات الفوقية للفريق لكن تفاصيل القائمة مفقودة",
+      "soloLeadOnly": "فريق منفرد فقط",
+      "removedCount": "Removed ({{count}})",
+      "unavailableDescription_few": "{{count}} زملاء الفريق معروفون من البيانات الوصفية للفريق لكن تفاصيل القائمة مفقودة",
+      "unavailableDescription_many": "{{count}} زملاء الفريق معروفون من البيانات الوصفية للفريق لكن تفاصيل القائمة مفقودة",
+      "unavailableDescription_other": "{{count}} زملاء الفريق معروفون من البيانات الوصفية للفريق لكن تفاصيل القائمة مفقودة"
+    },
+    "executionLog": {
+      "empty": "لا شيء للعرض",
+      "emptyUserMessage": "{{time}} - (فاري)",
+      "agentInstructions": "تعليمات العميل",
+      "memberTurn": "{{member}} دور",
+      "agentTurn": "العميل دور",
+      "turn": "دور"
+    },
+    "recentMessages": {
+      "latest": "آخر رسائل",
+      "latestForMember": "آخر رسائل {{member}}",
+      "loadMore": "المزيد",
+      "expand": "التوسع",
+      "collapse": "التصفيق"
+    },
+    "leadModel": {
+      "defaultModel": "التقصير",
+      "providerModelAria": "{{provider}} مقدم الخدمات، {{model}}",
+      "leadShort": "الرصاص",
+      "teamLead": "فريق الرصاص",
+      "syncWithTeammates": "نموذج سينك مع زملاء الفريق",
+      "anthropicTeamWide": "على نطاق الفريق",
+      "runtimeInheritance": "ويُطبق على زملاء الفريق ما لم يضعوا مزودهم أو نموذجهم.",
+      "anthropicContextLimit": "The 200K context limit is team-wide for Anthropic runtimes in this launch, including custom Anthropic teammates."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "تطهير السيارات",
+      "wrapLines": "خطوط الغضب",
+      "loadingTail": "عملية تحديد الموقع",
+      "empty": "لم يتم القبض على ملف سجل العمليات لهذا العضو بعد"
+    },
+    "tasks": {
+      "empty": "No tasks assigned to this member"
+    },
+    "messages": {
+      "loadOlder": "الرسائل القديمة",
+      "filters": {
+        "all": "كل شيء",
+        "messages": "الرسائل",
+        "comments": "التعليقات"
+      },
+      "empty": {
+        "loading": "نشاط الشحن...",
+        "noComments": "No comments for this member",
+        "noLoadedMessages": "لا رسائل محشوة لهذا العضو حتى الآن",
+        "noMessages": "لا رسائل مع هذا العضو",
+        "noLoadedActivity": "No loaded activity for this member yet",
+        "noActivity": "لا نشاط مع هذا العضو"
+      }
+    },
+    "actions": {
+      "openProfile": "نبذة مفتوحة",
+      "editRole": "دور المؤسسة",
+      "sendMessage": "رسالة",
+      "assignTask": "مهمة الانتداب"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "أدخل دور العرف"
+    }
+  },
+  "schedule": {
+    "count": "{{count}} الجداول",
+    "count_one": "{{count}} الجدول الزمني",
+    "count_other": "{{count}} الجداول",
+    "nextRun": "التالي: {{next}}",
+    "actions": {
+      "runNow": "اركض الآن",
+      "edit": "Edit",
+      "pause": "وقف",
+      "resume": "الاستهلاك",
+      "delete": "تحذف",
+      "addSchedule": "الجدول الزمني"
+    },
+    "runHistory": {
+      "loading": "التمرين على التاريخ",
+      "empty": "لا يوجد ركض حتى الآن"
+    },
+    "count_few": "{{count}} الجداول",
+    "count_many": "{{count}} الجداول",
+    "runLog": {
+      "title": "تشغيل لوغ",
+      "exitCode": "مخرج {{code}}",
+      "retryCount": "retry {{count}}/{{max}}",
+      "stillRunning": "المهمة لا تزال جارية...",
+      "loadingLogs": "سجلات الشحن...",
+      "errors": "الأخطاء",
+      "close": "اقترب"
+    },
+    "cron": {
+      "expression": "التعبير الحرفي",
+      "highFrequencyWarning": "الجدول الزمني العالي التردد (أقل من 5 دقائق)",
+      "nextRuns": "الجولة التالية:",
+      "timezone": "Timezone",
+      "selectTimezone": "الفترة المختارة",
+      "warmUpTime": "وقت الحرب",
+      "warmUpDescription": "إعداد مقدمي خدمات مختارة قبل التنفيذ المقرر",
+      "errors": {
+        "enterExpression": "أدخل تعبيراً عن القرون",
+        "invalidExpression": "Invalid cron expression"
+      },
+      "presets": {
+        "everyHour": "كل ساعة",
+        "everySixHours": "كل 6 ساعات",
+        "dailyAtNine": "Daily at 9am",
+        "weekdaysAtNine": "أيام الأسبوع في الساعة 00/9",
+        "mondayAtNine": "الاثنين الساعة 00/9",
+        "everyThirtyMinutes": "كل 30 دقيقة"
+      },
+      "warmUpOptions": {
+        "none": "لا دفء",
+        "fiveMinutes": "5 دقائق",
+        "tenMinutes": "10 دقائق",
+        "fifteenMinutes": "15 دقيقة",
+        "thirtyMinutes": "30 دقيقة"
+      }
+    },
+    "empty": {
+      "title": "لا جداول بعد",
+      "description": "وضع جدول لإدارة مهام كلود تلقائياً على جدول زمني"
+    },
+    "title": "الجداول",
+    "status": {
+      "active": "النشاط",
+      "paused": "مدفوع",
+      "disabled": "المعوقين"
+    },
+    "runStatus": {
+      "pending": "تنتهي",
+      "warmingUp": "تنبيه",
+      "warm": "الحرب",
+      "running": "تشغيل",
+      "completed": "مكتملة",
+      "failed": "فشل",
+      "interrupted": "متداخلة",
+      "cancelled": "ألغيت"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "ويمكن للنماذج المحلية المفتوحة أن تستخدم ميزانية السياق العام المفتوح بدلا من الحدود الفورية.",
+    "description": "أضف حدوداً مطابقة للثقة المفتوحة للمقدم والنموذج الذي استخدمه هذا الفريق This helps OpenCode compact and prune before local models overflow their context window.",
+    "replacePrefix": "يستعاض عن عبارة:",
+    "and": "و",
+    "replaceSuffix": "مع المزود و هويات نموذجية من منشأتك المفتوحة تعليمات صريحة مثل",
+    "promptInstructionsSuffix": "أضعف لأن الطلب مجمّع قبل أن يقرأه النموذج.",
+    "providerLimits": "حدود الادخار",
+    "compactionConfig": "العقد"
+  },
+  "sessions": {
+    "noProjectPath": "No project path linked",
+    "provisioningHint": "تُعقد الدورات بعد تزويد الأفرقة",
+    "projectNotFound": "Project not found",
+    "loading": "جلسات تحديد الموقع",
+    "empty": "No sessions found",
+    "showAllSessions": "عرض لجميع الدورات",
+    "lead": "الرصاص",
+    "removeFilter": "تصفية",
+    "filterBySession": "عرض هذه الدورة",
+    "openSession": "الدورة المفتوحة",
+    "title": "الدورات"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "إلغاء",
+    "moreWarningsHidden": "{{count}} المزيد من التحذيرات مخبأة",
+    "diagnostics": "التشخيص",
+    "liveOutput": "النواتج الحية",
+    "diagnosticsCopied": "أجهزة التشخيص",
+    "copyDiagnostics": "تشخيص النسخ",
+    "copied": "Copied",
+    "noOutput": "لم يسجل أي ناتج بعد",
+    "cliLogs": "CLI سجلات",
+    "steps": {
+      "starting": "البداية",
+      "configuring": "تشكيل الفريق",
+      "assembling": "الأعضاء",
+      "finalizing": "وضع الصيغة النهائية"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "أتفقد...",
+        "ready": "حسناً",
+        "notes": "حسناً",
+        "failed": "ERR",
+        "pending": "الانتظار"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI المفقودين ثنائيا",
+        "openCodeRuntimeMissing": "الوقت المتاح",
+        "openCodeWindowsAccessBlocked": "فتح باب الدخول من طراز Code Windows",
+        "openCodeNoOutput": "لم يعد أي ناتج",
+        "openCodeMcpUnreachable": "البرنامج المفتوح MCP لا يمكن الوصول إليه",
+        "workingDirectoryMissing": "دليل عمل مفقود",
+        "cliBinaryCouldNotStart": "CLI لم يكن من الممكن بدء العمل",
+        "cliPreflightIncomplete": "CLI لم يكتمل الطيران",
+        "authenticationRequired": "المطلوب",
+        "runtimeProviderNotConfigured": "مُقدِّم لمرور الوقت غير مُحدَّد",
+        "cliPreflightFailed": "CLI الطيران المسبق فشل",
+        "selectedModelCompatible": "نموذج مختار متوافق",
+        "selectedModelCompatibilityPending": "توافق نموذجي مختار معلق",
+        "selectedModelAvailable": "نموذج مختار متاح",
+        "selectedModelVerified": "نموذج مختار تم التحقق منه",
+        "selectedModelUnavailable": "نموذج مختار غير متاح",
+        "selectedModelTimedOut": "تم تحديد توقيت التحقق النموذجي المختار",
+        "selectedModelCheckFailed": "تحقق نموذجي مختار فشل",
+        "selectedModelDeferred": "تأجيل التحقق النموذجي المختار",
+        "selectedModelPingNotConfirmed": "Selected model ping not confirmed",
+        "readyWithNotes": "جاهزة مع الملاحظات",
+        "needsAttention": "الحاجة إلى الاهتمام"
+      },
+      "modelChecksSummary": "فحوص نموذجية مختارة {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} النموذج غير المتاح",
+        "unavailable_one": "{{count}} النموذج غير المتاح",
+        "unavailable_other": "{{count}} نماذج غير متاحة",
+        "checkFailed": "{{count}} تحقق نموذجي",
+        "checkFailed_one": "{{count}} تحقق نموذجي",
+        "checkFailed_other": "{{count}} فحص النماذج",
+        "timedOut": "{{count}} النموذج الزمني",
+        "timedOut_one": "{{count}} النموذج الزمني",
+        "timedOut_other": "{{count}} نماذج موقوتة",
+        "deferred": "{{count}} التحقق المؤجل",
+        "deferred_one": "{{count}} التحقق المؤجل",
+        "deferred_other": "{{count}} التحقق المؤجل",
+        "pingNotConfirmed": "{{count}} Ping not confirmed",
+        "pingNotConfirmed_one": "{{count}} Ping not confirmed",
+        "pingNotConfirmed_other": "{{count}} Ping not confirmed",
+        "compatibilityPending": "{{count}} التحقق المتوافق والثابت",
+        "compatibilityPending_one": "{{count}} التحقق المتوافق والثابت",
+        "compatibilityPending_other": "{{count}} التحقق المتوافق والثابت",
+        "compatible": "{{count}} متوافقة",
+        "compatible_one": "{{count}} متوافقة",
+        "compatible_other": "{{count}} متوافقة",
+        "checking": "{{count}} التحقق",
+        "checking_one": "{{count}} التحقق",
+        "checking_other": "{{count}} التحقق",
+        "available": "{{count}} متاح",
+        "available_one": "{{count}} متاح",
+        "available_other": "{{count}} متاح",
+        "verified": "{{count}} تم التحقق منها",
+        "verified_one": "{{count}} تم التحقق منها",
+        "verified_other": "{{count}} تم التحقق منها",
+        "unavailable_few": "{{count}} نماذج غير متاحة",
+        "unavailable_many": "{{count}} نماذج غير متاحة",
+        "checkFailed_few": "{{count}} فحص النماذج",
+        "checkFailed_many": "{{count}} فحص النماذج",
+        "timedOut_few": "{{count}} نماذج موقوتة",
+        "timedOut_many": "{{count}} نماذج موقوتة",
+        "deferred_few": "{{count}} التحقق المؤجل",
+        "deferred_many": "{{count}} التحقق المؤجل",
+        "pingNotConfirmed_few": "{{count}} Ping not confirmed",
+        "pingNotConfirmed_many": "{{count}} Ping not confirmed",
+        "compatibilityPending_few": "{{count}} التحقق المتوافق والثابت",
+        "compatibilityPending_many": "{{count}} التحقق المتوافق والثابت",
+        "compatible_few": "{{count}} متوافقة",
+        "compatible_many": "{{count}} متوافقة",
+        "checking_few": "{{count}} التحقق",
+        "checking_many": "{{count}} التحقق",
+        "available_few": "{{count}} متاح",
+        "available_many": "{{count}} متاح",
+        "verified_few": "{{count}} تم التحقق منها",
+        "verified_many": "{{count}} تم التحقق منها"
+      },
+      "openProviderSettings": "مفتوح {{provider}} البيئات",
+      "copied": "Copied",
+      "copyDiagnostics": "تشخيص النسخ",
+      "deepVerificationPending": "التحقق العميق لا يزال جاريا. عارضات الأقراص المفتوحة قد تستغرق حوالي 20 ثانية",
+      "progress": {
+        "checkingSelectedProviders": "تحقق من مجموعة مختارة من مقدمي الخدمات بالتوازي",
+        "checkingProvider": "التحقق {{provider}} مزود...",
+        "checkingProviders": "التحقق {{providers}} مقدّمي الخدمات..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "أصلح المطوّرات أو نقل المشروع إلى مطوّر مطلّع بالكتابة. العمل كمدير هو مجرد عمل مؤقت",
+        "openCodeBridgeNoOutput": "اعيدي تشغيل التطبيق وفتحي الوقت ثم ارجعي إذا كرر، نسخ التشخيص.",
+        "workingDirectoryMissing": "اختر دليل العمل الحالي ثم أعيد فتح هذا الرقم",
+        "authenticationRequired": "التحقق من المزود المطلوب في كلود CLIثم إعادة فتح هذا الهاتف",
+        "runtimeProviderNotConfigured": "إئتمنْ على المزودِ المختارِ، ثمّ إعادة فتح هذا الهاتفِ.",
+        "openCodeRuntimeMissing": "اثبت او اعيد تشغيل الكود المفتوح من بطاقة مركز المزود ثم اعيد فتح هذا الرقم",
+        "openCodeAppMcpUnreachable": "البدء من جديد لتنشيط طلب الموافقة المفتوحة MCP الجسر إذا كرر، إعادة تشغيل التطبيق وفتح الوقت.",
+        "cliBinaryMissing": "تأكد من كلود المحلي CLI وجود ثنائي ويمكن البدء به، ثم إعادة فتح هذا الهاتف.",
+        "default": "حل المسألة أعلاه، ثم إعادة فتح هذا الهاتف."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} زميل الفريق في انتظار الموافقة",
+      "nameListWithMore": "{{names}}, +{{count}} أكثر",
+      "waitingForOpenCode": "في انتظار القانون المفتوح: {{names}}",
+      "bootstrapStalled": "توقف بوتستراب: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Waiting for OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "تعطل بوتستراب",
+        "shellOnly": "فقط",
+        "waitingForBootstrap": "في انتظار الحذاء",
+        "bootstrapUnconfirmed": "بوتستراب غير مؤكد",
+        "awaitingPermission": "في انتظار الإذن",
+        "waitingForRuntime": "في انتظار العمل",
+        "shellOnlyLower": "فقط",
+        "waitingForBootstrapLower": "في انتظار الحذاء",
+        "bootstrapUnconfirmedLower": "حذاء غير مؤكد",
+        "awaitingPermissionLower": "في انتظار الإذن",
+        "waitingForRuntimeLower": "في انتظار وقت التشغيل"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} فشل في البدء",
+        "teammatesFailedToStart": "{{count}} زملاء الفريق فشلوا في البدء",
+        "teammatesFailedRatio": "{{count}}/{{total}} زملاء الفريق فشلوا في البدء"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} تخطيت هذا الإطلاق",
+        "memberSkippedWithReason": "{{name}} تخطيت لهذا الإطلاق {{reason}}",
+        "memberSkippedCompact": "{{name}} تخطيت",
+        "teammatesSkipped": "{{count}} زملاء الفريق هربوا",
+        "teammatesSkippedList": "زملاء الفريق المهرجين: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} تسلل زملاء الفريق لهذا الإطلاق"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} زملاء الفريق مازالوا ينضمون",
+        "teammatesStillJoining_one": "{{count}} زميل الفريق مازال ينضم",
+        "teammatesStillJoining_few": "{{count}} زملاء الفريق مازالوا ينضمون",
+        "teammatesStillJoining_many": "{{count}} زملاء الفريق مازالوا ينضمون",
+        "teammatesStillJoining_other": "{{count}} زملاء الفريق مازالوا ينضمون",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} زملاء الفريق أكدوا"
+      },
+      "ready": {
+        "leadOnline": "الرصاص على الإنترنت",
+        "allTeammatesJoined": "كل شيء {{count}} زملاء الفريق انضموا",
+        "teamProvisionedLeadOnline": "تم تزويد الفريق بالقيادة على الإنترنت",
+        "teamProvisionedAllJoined": "تم تزويد الفريق {{count}} زملاء الفريق انضموا",
+        "teamProvisionedStillJoining": "تم تزويدهم بالفريق",
+        "launchFinishedWithErrors": "انطلاقة من الأخطاء {{count}}/{{total}} زملاء الفريق فشلوا في البدء",
+        "launchContinuedSkipped": "استمر الإطلاق {{count}}/{{total}} زملاء الفريق هربوا",
+        "teamLaunchedLeadOnline": "تم إطلاق الفريق - القيادة على الإنترنت",
+        "teamLaunchedAllJoined": "انطلق الفريق {{count}} زملاء الفريق انضموا"
+      },
+      "panel": {
+        "launchFailed": "الإطلاق فشل",
+        "launchDetails": "تفاصيل الإطلاق",
+        "launchFinishedWithErrors": "الإطلاق انتهى من الأخطاء",
+        "launchContinuedSkipped": "استمر الإطلاق مع زملاء الفريق المتغيبين",
+        "coreTeamReady": "الفريق الأساسي جاهز",
+        "finishingLaunch": "الإطلاق النهائي",
+        "teamLaunched": "انطلق الفريق",
+        "launchingTeam": "فريق الإطلاق"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "الحياة",
+    "description": "ضربات القلب فقط و حالة الإطلاق ولا تزال ضوابط العملية أدنى من ذلك.",
+    "source": "المصدر: {{source}}",
+    "lane": "{{lane}} الممر",
+    "diagnosticOnly": "التشخيص فقط",
+    "updated": "مستكملة {{value}}",
+    "states": {
+      "running": "تشغيل",
+      "starting": "البداية",
+      "waiting": "الانتظار",
+      "degraded": "الحاجة إلى الاهتمام",
+      "stopped": "توقف",
+      "unknown": "غير معروف"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "فرقة العمل الخاصة",
+      "loading": "وضع سجلات المهمة بالضبط...",
+      "description": "نسخ طبق الأصل المصنوعة من نفس المكونات التي تستخدم في لوجز",
+      "emptyTitle": "لا توجد سجلات مهمة دقيقة حتى الآن",
+      "emptyDescription": "وستظهر مجموعات النصوص المستنسخة هنا عندما تتوافر بيانات مستنسخة صريحة ذات صلة بالمهمة.",
+      "summaryOnly": "موجز فقط"
+    },
+    "executionSessions": {
+      "title": "دورات التنفيذ",
+      "online": "على الإنترنت",
+      "updating": "مستيقظ...",
+      "description": "Legacy session-centric transcript browsing and previews."
+    },
+    "stream": {
+      "title": "فرقة العمل"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "مهمة الغاء {{taskId}}",
+      "cancel": "إلغاء",
+      "moveBackToTodoConfirm": "نقل هذه المهمة مرة أخرى TODO وأخطر الفريق؟",
+      "confirm": "Confirm",
+      "keep": "استمر",
+      "changesNeedAttention": "التغييرات تحتاج إلى الاهتمام",
+      "changes": "التغييرات",
+      "deleteTask": "تحذف المهمة",
+      "taskLogsActive": "سجلات المهام العاملة",
+      "newTaskLogsArriving": "سجلات المهام الجديدة التي تصل",
+      "awaitingUser": "في انتظار المستخدم",
+      "awaitingLead": "في انتظار الرصاص",
+      "blockedBy": "مقفلة",
+      "blocks": "حواجز",
+      "start": "ابدأ",
+      "complete": "اكتمل",
+      "approve": "الموافقة",
+      "requestReview": "استعراض الطلب",
+      "manualReview": "الاستعراض الدليلي",
+      "requestChanges": "التغييرات المطلوبة"
+    },
+    "filter": {
+      "title": "مهام الملفات",
+      "session": "الدورة",
+      "allSessions": "جميع الدورات",
+      "teammate": "الفريق",
+      "unassigned": "(موقعة)",
+      "column": "Column",
+      "clearAll": "خالي"
+    },
+    "board": {
+      "addTask": "المهمة",
+      "noTasks": "لا مهام",
+      "showMore": "العرض {{count}} أكثر",
+      "hiddenCount": "{{count}} مخبأ",
+      "trash": "Trash",
+      "gridView": "رؤية غريد",
+      "columnsView": "رؤية كولومز"
+    },
+    "trash": {
+      "title": "Trash",
+      "empty": "عدم حذف المهام",
+      "subject": "الموضوع",
+      "owner": "المالك",
+      "deleted": "Deleted",
+      "unassigned": "غير موقعة",
+      "restoreTask": "مهمة إعادة الإمداد",
+      "restore": "Restore",
+      "close": "اقترب"
+    },
+    "sort": {
+      "title": "المهام البسيطة",
+      "sortBy": "نوعا ما",
+      "reset": "إعادة التوطين",
+      "options": {
+        "updatedAt": {
+          "label": "آخر تحديث",
+          "description": "تم تحديثه مؤخرا أولا"
+        },
+        "createdAt": {
+          "label": "المنشأة",
+          "description": "جديدة أولا"
+        },
+        "owner": {
+          "label": "المالك",
+          "description": "ألفا"
+        },
+        "manual": {
+          "label": "الدليل",
+          "description": "طلب دراج ودروب"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "البحث",
+      "tasks": "المهام",
+      "createdAgo": "أنشئت {{time}}",
+      "updatedAgo": "مستكملة {{time}}",
+      "placeholder": "Search tasks... (#id or text)"
+    },
+    "grid": {
+      "addTask": "المهمة",
+      "noTasks": "لا مهام"
+    },
+    "title": "كانبان",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "التحقق من حالة مستودع (جيت) للعمل الجماعي",
+    "ready": "العملات الجيت جاهزة",
+    "readyOnBranch": "العملات الجيت جاهزة على الفرع {{branch}}.",
+    "needsSetup": "العزلة العمالية تحتاج إلى تركيبة جيت",
+    "initialCommitNotice": "مراحل الإجراءات الأولية للالتزام وتُلزم جميع الملفات الحالية برسالة",
+    "initializeRepository": "مستودع غيت",
+    "createInitialCommit": "الالتزام الأولي",
+    "initialCommitMessage": "الفرقة: الالتزام الأولي"
+  },
+  "toolApproval": {
+    "settings": "التركيبات",
+    "autoAllowAllTools": "جميع الأدوات",
+    "autoAllowFileEdits": "edits of Auto-allow file edits (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "\"أوامر آمنة\"",
+    "onTimeout": "في الوقت المناسب:",
+    "after": "بعد",
+    "secondsShort": "ثانية",
+    "timeoutActions": {
+      "wait": "انتظر إلى الأبد",
+      "allow": "الاستحقاق",
+      "deny": "ديني"
+    },
+    "submit": "Submit",
+    "allow": "الاستحقاق",
+    "deny": "ديني",
+    "allowAll": "السماح للجميع",
+    "pendingCount": "{{count}} معلقة",
+    "autoActionIn": "أوتوماتيكي{{action}} في {{time}}",
+    "diff": {
+      "previewChanges": "التغييرات السابقة",
+      "readingFile": "قراءه ملف",
+      "binaryFile": "ملف ملزم - لا يمكن استعراضه مسبقاً",
+      "truncated": "الملفّة في 2MB قد تكون ناقصة",
+      "newFile": "ملف جديد"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "التزامن",
+      "actionableItems": "البنود القابلة للتصرف",
+      "fingerprint": "بصمات الأصابع",
+      "report": "التقرير",
+      "none": "لا",
+      "shadowWouldNudge": "(شادو) كان يزعجني",
+      "yes": "نعم",
+      "no": "لا",
+      "moreActionableItems": "{{count}} بند (بنود) أكثر قابلية للتداول",
+      "diagnostics": "التشخيص: {{diagnostics}}"
+    },
+    "title": "التزامن",
+    "loadingDiagnostics": "التشخيصات المتزامنة",
+    "diagnosticsUnavailable": "تشخيص تزامن العمل غير متاح."
+  },
+  "advancedCli": {
+    "title": "السلف",
+    "useWorktree": "عامل استخدام",
+    "recent": "حديثة",
+    "commandPreview": "القيادة",
+    "customArguments": "الحجج العرفية",
+    "validate": "Validate",
+    "validation": {
+      "allFlagsValid": "جميع الأعلام صالحة",
+      "unknownFlags": "غير معروف: {{flags}}",
+      "protectedFlags": "محمية: {{flags}}",
+      "failed": "فشل التقييم"
+    },
+    "placeholders": {
+      "worktreeName": "اسم العمل"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} منذ",
+    "stoppedAgo": "توقف {{time}} منذ",
+    "running": "تشغيل",
+    "stopped": "توقف",
+    "stopProcess": "Stop process (SIGTERM)",
+    "kill": "قتل",
+    "openInBrowser": "مفتوح في بروزر",
+    "open": "مفتوح",
+    "pid": "PID{{pid}}",
+    "title": "CLI العمليات"
+  },
+  "taskActivity": {
+    "loadingDetails": "تفاصيل النشاط",
+    "contextUnavailable": "ولم يعد الإطار التفصيلي للمحاضر متاحاً لهذا النشاط.",
+    "loading": "نشاط مهمّة تحديد الموقع...",
+    "lowSignalOnly": "ولم يعثر بعد على أي نشاط مهم. وترد أدناه تفاصيل التنفيذ على مستوى منخفض في إطار فرقة العمل المعنية بمكافحة التلوث.",
+    "empty": "ولم يعثر بعد على أي نشاط واضح للمهام في النصوص المتاحة. وقد لا تزال سجلات الدورة القديمة أو الثانوية متاحة أدناه في دورات التنفيذ.",
+    "title": "نشاط المهام",
+    "description": "Key explicit runtime activity linked to this task from transcript metadata."
+  },
+  "sendMessage": {
+    "title": "أرسل رسالة",
+    "description": "أرسل رسالة مباشرة إلى عضو الفريق",
+    "recipientLabel": "المتلقي",
+    "selectMemberPlaceholder": "عضو مختار...",
+    "messageLabel": "الرسالة",
+    "placeholder": "أكتب رسالتك",
+    "send": "أرسل",
+    "sending": "إرسال...",
+    "charsLeft": "{{count}} من اليسار",
+    "saved": "منقذة",
+    "attachments": {
+      "teamOnlineRequired": "يجب أن يكون الفريق على الإنترنت لربط الملفات",
+      "recipientUnsupported": "يمكن إرسال الملفات إلى قائد الفريق أو الفريق المفتوح العضوية",
+      "openCodeOnlineRequired": "يجب أن يكون الفريق على الإنترنت لإرفاق ملفات لشركاء الفريق المفتوح العضوية",
+      "disabledHint": "وتُدعم ملحقات الملفات لقيادة الفريق على الإنترنت وزملاء الفريق المفتوح على الإنترنت. نقل الملحقات أو تبديل المتلقي.",
+      "attachFiles": "ملفات الملحقات (الدفع أو السحب)",
+      "unavailable": "الملاحق غير متاحة"
+    },
+    "quote": {
+      "remove": "نقل الاقتباس",
+      "replyingTo": "الرد على"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "رد إلغاء",
+    "replyingTo": "الرد على",
+    "placeholder": "أضف تعليق",
+    "attachFile": "ملف (أو معجون)",
+    "voiceToText": "صوت النص",
+    "comment": "التعليق",
+    "charsLeft": "{{count}} من اليسار",
+    "saved": "منقذة",
+    "awaitingReplyFrom": "في انتظار الرد",
+    "or": "أو"
+  },
+  "taskAttachments": {
+    "dropImageHere": "الصورة هنا",
+    "attachImage": "صورة ملحقة",
+    "pasteOrDragDrop": "أو معجون/جرف",
+    "fromOriginalMessage": "من الرسالة الأصلية",
+    "dropFilesHere": "الملفات هنا",
+    "loading": "ملحقات الشحن..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "الموافقة على جميع الأدوات",
+    "autonomousModeDescription": "أسلوب الحكم الذاتي: تنفيذ أدوات الفريق بدون تأكيد. كونوا حذرين من شفرة غير موثقة",
+    "manualModeDescription": "الطريقة اليدوية: سوف توافق أو تنكر كل مكالمة في الوقت الحقيقي."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "التنفيذ",
+      "process": "العملية"
+    },
+    "filters": {
+      "all": "كل شيء"
+    },
+    "logs": {
+      "title": "اللوز",
+      "loading": "مجرى تسجيل الأعضاء",
+      "emptyTitle": "ولم يعثر على أي قيود على تدفق الدخول لهذا العضو حتى الآن.",
+      "emptyDescription": "ستظهر هنا، عندما تكون متاحة، نسخة مستنسخة من الأعضاء أو سجلات غير متفرغة."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "صف ما يجب أن يتغير",
+    "submit": "Submit",
+    "charsLeft": "{{count}} من اليسار",
+    "saved": "منقذة",
+    "title": "التغييرات في الطلب"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "أفتح لوحة",
+      "openTeam": "الفريق المفتوح",
+      "cancel": "إلغاء"
+    },
+    "membersJson": {
+      "hide": "اختبئ JSON"
+    },
+    "optional": {
+      "badge": "الاختياري"
+    }
+  },
+  "runningTeams": {
+    "title": "الأفرقة العاملة"
+  },
+  "layout": {
+    "maxPanesReached": "الحد الأقصى {{count}} لقد وصلت"
+  },
+  "codexReconnect": {
+    "description": "جلسة كودوكس تبدو ثابتة أعيد الاتصال",
+    "useCode": "رمز الاستخدام"
+  },
+  "effortLevel": {
+    "label": "مستوى الإنفاق (اختياري)",
+    "maxDescription": "(ماكس) يعطي النموذج الوقت الأكثر منطقية للمهام الصعبة"
+  },
+  "contextLimit": {
+    "limitTo200k": "Limit context to 200K tokens",
+    "always200k": "(الطريق 200K لهذا النموذج)",
+    "tooltipContent": "يُبقي الإطلاقات في نافذة السياق المتكونة من 200 كيلو متر عند دعمها.",
+    "tooltipTitle": "حد السياق"
+  },
+  "roleSelect": {
+    "noRole": "لا دور",
+    "customRole": "دور الجمارك...",
+    "searchPlaceholder": "أدوار البحث...",
+    "empty": "لا توجد أدوار",
+    "reservedRole": "هذا الدور محجوز"
+  }
+}

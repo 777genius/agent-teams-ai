@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CARD_BG,
   CARD_BORDER_STYLE,
@@ -12,7 +13,6 @@ import {
   COLOR_TEXT_MUTED,
   COLOR_TEXT_SECONDARY,
 } from '@renderer/constants/cssVariables';
-import { useAppTranslation } from '@features/localization/renderer';
 import {
   getSubagentTypeColorSet,
   getTeamColorSet,

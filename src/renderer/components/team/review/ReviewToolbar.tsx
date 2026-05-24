@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useAppTranslation } from '@features/localization/renderer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, Undo2, X } from 'lucide-react';
 

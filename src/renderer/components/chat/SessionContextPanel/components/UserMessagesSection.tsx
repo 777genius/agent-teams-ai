@@ -5,6 +5,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { UserMessageItem } from '../items/UserMessageItem';
 
 import { CollapsibleSection } from './CollapsibleSection';

@@ -371,9 +371,21 @@ export default interface Resources {
     locales: {
       emptyMessage: 'No language found.';
       names: {
+        ar: 'Arabic';
+        bn: 'Bengali';
+        de: 'German';
         en: 'English';
+        es: 'Spanish';
+        fr: 'French';
+        hi: 'Hindi';
+        id: 'Indonesian';
+        ja: 'Japanese';
+        ko: 'Korean';
+        pt: 'Portuguese';
         ru: 'Russian';
         system: 'System';
+        ur: 'Urdu';
+        zh: 'Chinese';
       };
       searchPlaceholder: 'Search language...';
       selectPlaceholder: 'Select app language...';

@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "پہلے ہی لاگ ان؟",
+      "becomeSponsor": "سرپرست بنیں",
+      "cancel": "منسوخ",
+      "checkNow": "اب پڑتال کریں",
+      "checkUpdates": "اعادہات کا جائزہ لیں",
+      "checking": "پڑتال کی جا رہی ہے...",
+      "connect": "پرنٹ",
+      "extensions": "وسیع خط",
+      "login": "لاگ ان",
+      "manage": "پرنٹ",
+      "manageProviders": "دباؤ کا ریشو:",
+      "plan": "منصوبہ بندی",
+      "recheck": "دوبارہ شروع کریں",
+      "recheckProvider": "دوبارہ شروع کریں {{provider}}",
+      "retry": "دوبارہ کوشش",
+      "updateTo": "وی ویکیپیڈیا پر اپ لوڈ کریں{{version}}",
+      "useCode": "کوڈ استعمال کریں"
+    },
+    "atlas": {
+      "alt": "اطلس بادل",
+      "description": "Atlas Cloud is a full-modal AI inference platform that gives developers a single AI API to access video generation, image generation, and LLM APIs. Instead of managing multiple vendor integrations, you connect once and get unified access to 300+ curated models across all modalities. Check out Atlas Cloud's new coding plan promotion for more budget-friendly API access.",
+      "openCodeProvider": "کھولیں",
+      "plan": "اطلس کلاؤڈ کوڈ منصوبہ",
+      "sponsor": "سرپرست"
+    },
+    "errors": {
+      "checkStatusFailed": "چیک کرنے میں ناکامی CLI سٹیٹس",
+      "installationFailed": "غیر متصل",
+      "refreshFailed": "تجدید کے لیے چیک کرنے میں ناکامی اپنے نیٹ ورک اتصال کی ادارت کریں اور دوبارہ کوشش کریں",
+      "runtimeUpdatedRefreshFailed": "اُنہوں نے کہا : ” مَیں نے اِس بات کا تجربہ کِیا ہے کہ مَیں اُن کی مدد نہیں کر سکتا ۔"
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} پس منظر میں حالت کا جائزہ لیا جائے گا۔",
+      "codexApiKeyFallback": "{{hint}} API کلیدی توڑ بیک دستیاب ہے اگر آپ Auth موڈ تبدیل کریں.",
+      "codexAutoApiKey": "{{hint}} Auto will keep using the API key until ChatGPT is connected.",
+      "codexFinishLogin": "Finish ChatGPT login in the browser. Enter the shown code if prompted.",
+      "codexNoActiveLogin": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Right now it reports no active ChatGPT login.",
+      "codexNoActiveManagedSession": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Local Codex account data exists, but no active managed session is selected right now.",
+      "codexReconnectNeeded": "Usage limits appear only after Codex refreshes the currently selected ChatGPT session. Right now the local session needs reconnect.",
+      "firstCheckSlow": "پہلا چیک 30 سیکنڈ تک ہو سکتا ہے۔",
+      "loginRequiredForTeams": "بیٹنگ سیشن اور منصوبہ بندی کے بغیر کام کرتا ہے۔ ایجنٹ ٹیموں کو چلانے کے لیے لاگس کی ضرورت ہوتی ہے۔",
+      "troubleshootTitle": "اگر آپ کو یقین ہے کہ آپ لاگو کر رہے ہیں تو ان اقدامات کی جانچ:"
+    },
+    "installer": {
+      "checkingLatest": "تازہ ترین نسخہ چیک کریں...",
+      "downloading": "اوپر لکھیں {{runtime}}...",
+      "installing": "نصب کی جارہی ہے {{runtime}}...",
+      "success": "کامیاب نصب شدہ {{runtime}} وی{{version}}",
+      "verifying": "معاف کرنا"
+    },
+    "labels": {
+      "apiKeyRequired": "API کلید درکار",
+      "comingSoon": "جلد آنے والی",
+      "collapseProviderDetails": "وائیرڈ اتصال تفصیلات",
+      "expandProviderDetails": "غیر متصل فراہم کُنندہ تفصیلات",
+      "generateLink": "جینیاتی ربط",
+      "loadingRateLimits": "زکوٰۃ کی حدود",
+      "loggedOut": "فراہم کُنندہ انسٹال کریں",
+      "loginAuthFailed": "توثیق نہیں ہو سکی",
+      "loginAuthUpdated": "توثیقی طریقے",
+      "loginComplete": "لاگ ان مکمل",
+      "loginFailed": "لاگ ان کی ناکامی",
+      "loginTitle": "لاگ ان",
+      "logoutFailed": "لاگout ناکام",
+      "logoutTitle": "لاگ ان",
+      "notLoggedIn": "لاگ ان",
+      "openLogin": "جگہ",
+      "providerActionRequired": "فراہم کُنندہ عمل درکار ہے",
+      "resets": "دوبارہ شروع {{time}}",
+      "runtimeLoginTitle": "{{runtime}} لاگ ان"
+    },
+    "loading": {
+      "aiProviders": "آپ روزی کا جائزہ لیتے ہیں...",
+      "claudeCli": "طےشدہ CLI..."
+    },
+    "provider": {
+      "authenticated": "توثیق:",
+      "backend": "پشتو: {{backend}}",
+      "checkingAuthentication": "تصدیق کی جارہی ہے...",
+      "checkingProviders": "فراہمیوں کا جائزہ لینا...",
+      "configuredLocalCount": "{{count}} جگہ",
+      "configuredLocalCount_few": "{{count}} جگہ",
+      "configuredLocalCount_many": "{{count}} جگہ",
+      "configuredLocalCount_one": "{{count}} جگہ",
+      "configuredLocalCount_other": "{{count}} جگہ",
+      "configuredLocalTitle": "مقامی اوپنCode راستوں کو آپ کے اوپنCode Gmail سے درآمد کیا گیا ہے.",
+      "connectedCount": "فراہم کُنندہ: {{connected}}/{{denominator}} متصل",
+      "freeModels": "مفت ماڈل",
+      "freeModelsTitle": "اوپن کووڈ میں اپنے سیٹ اپ میں دستیاب ہوتے وقت مفت ماڈل کے انتخاب شامل ہوتے ہیں۔ اوپن کووڈ کے ذریعے اوپن سیریز بھی مفت ماڈل دکھا سکتی ہے، لیکن ہر اوپن سیوڈ/ اوپن ڈرافٹ ماڈل مفت نہیں ہے۔ اِس کی کیا وجہ ہے ؟",
+      "loadingModels": "ماڈل لوڈ کریں...",
+      "modelsUnavailable": "اس رنمنٹ عمارت کے لیے ماڈلز غیر ضروری ہیں۔",
+      "runtime": "چلائیں : {{runtime}}",
+      "verifiedCount": "{{count}} توثیق",
+      "verifiedCount_few": "{{count}} توثیق",
+      "verifiedCount_many": "{{count}} توثیق",
+      "verifiedCount_one": "{{count}} توثیق",
+      "verifiedCount_other": "{{count}} توثیق",
+      "verifiedTitle": "اوپن کوڈ سڑکوں پر ایک کامیاب سزائے موت کے ثبوت کے ساتھ."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "س . ع . {{runtime}} اس کی شروعاتی صحت کا چیک ناکام رہا۔",
+      "configuredNotFound": "س . ع . {{runtime}} نہیں ملا.",
+      "foundButFailed": "{{runtime}} مل گیا لیکن شروع کرنے میں ناکام رہا",
+      "healthCheckFailedDescription": "ایپ کا دایاں حصہ {{runtime}}... لیکن اس کی شروعاتی صحت کا چیک ناکام رہا۔ اسے دوبارہ بحال کرنا یا پھر بحال کرنا، پھر دوبارہ کوشش کرنا۔",
+      "install": "نصب کریں {{runtime}}",
+      "installRequiredDescription": "{{runtime}} ٹیم کی فراہمی اور سیشن ادارت کے لیے درکار ہے۔ شروع کرنے کے لئے اسے نصب کریں.",
+      "isRequired": "{{runtime}} مطلوب",
+      "reinstall": "انکار کرو {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "پڑتال",
+      "codexTitle": "نصب کریں CLI ایپ اعداد میں",
+      "downloading": "اوپر لکھیں",
+      "downloadingPercent": "اوپر لکھیں {{percent}}%",
+      "install": "نصب کریں",
+      "installing": "نصب کی جارہی ہے",
+      "openCodeTitle": "OpenCode وقت کو ایپ ڈیٹا میں انسٹال کریں",
+      "retryInstall": "تجدید نصب کریں"
+    },
+    "troubleshoot": {
+      "again": "دوبارہ",
+      "authStatusCommand": "آپ کی دادی CLI حروف علت",
+      "checkLoggedIn": "- چیک کریں کہ یہ \"لو اندر\" دکھاتا ہے۔",
+      "click": "کلک کرو",
+      "loginCommand": "تیز رفتار آغازی کمانڈ",
+      "logoutCommand": "تیز رفتار کمانڈز",
+      "openTerminal": "اپنا ٹرمینل کھولو اور بھاگو:",
+      "reloginPrefix": "اگر یہ بات کہی جاتی ہے لیکن ایپ اسے نہیں دیکھتی تو کوشش کریں:",
+      "sameRuntime": "اس بات کا یقین کر لیں کہ CLI آپ کے ٹرمینل میں وہی رن اپ استعمال ہوتا ہے",
+      "statusCacheHint": "- کبھی کچھ سیکنڈ کے لیے حالت کا آغاز کیا جاتا ہے۔",
+      "then": "پھر"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "ایک یا ایک سے زیادہ فراہم کاروں کو مقرر کیا جاتا ہے۔ API کلیدی طریقہ، لیکن کوئی نہیں API کلیدی کردار ہے ۔ کلیدوں کو شامل کرنے یا اتصال کے موڈ کو تبدیل کرنے کے لیے کھولیں.",
+      "multipleApiKeysNeedAttention": "ایک یا ایک سے زیادہ فراہم کاروں کو مقرر کیا جاتا ہے۔ API کلیدی طریقہ اور توجہ کی ضرورت ہے۔ کھلاو فا ئل کو محفوظ کردہ کلیدیں یا اتصال کے موڈ کو تبدیل کرنے کے ليے.",
+      "notAuthenticated": "{{runtime}} نصب کیا گیا ہے لیکن آپ غیر متصل نہیں ہیں. ٹیم کی فراہمی اور اے آئی اے کی خصوصیات کے لیے لاگس لازمی ہے۔",
+      "singleApiKeyMissing": "{{provider}} جگہ API کلیدی طریقہ، لیکن کوئی نہیں API کلیدی کردار ہے ۔ کلید ملانے یا اتصال مدون کو تبدیل کرنے کے لیے کھولیں",
+      "singleApiKeyNeedsAttention": "{{provider}} جگہ API کلیدی طریقہ، لیکن یہ متصل نہیں ہے۔ محفوظ کردہ کلید کا تجزیہ کرنے یا اتصال مدون کرنے کے طریقہ کو تبدیل کرنے کے لیے Open تہ بہ تہ فراہم کريں"
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "منصوبہ بندی فولڈر منتخب کریں",
+    "selectFolder": "فولڈر منتخب کریں",
+    "failedToLoad": "منصوبوں کو اٹھانے میں ناکامی",
+    "retry": "دوبارہ کوشش",
+    "noProjects": "کوئی منصوبہ بندی نہیں پائی گئی",
+    "noMatches": "\"کے لئے کوئی میچ نہیں{{query}}\"",
+    "noRecentProjects": "حالیہ منصوبے نہیں ملے",
+    "emptyDescription": "حال ہی میں یہیں نظر آئیں گے",
+    "loadMore": "مزید لوڈ کریں",
+    "card": {
+      "deleted": "حذف",
+      "projectFolderMissing": "پروجیکٹ فولڈر اب موجود نہیں",
+      "taskCounts": {
+        "active": "{{count}} فعال",
+        "active_one": "{{count}} فعال",
+        "active_other": "{{count}} فعال",
+        "active_few": "{{count}} فعال",
+        "active_many": "{{count}} فعال",
+        "pending": "{{count}} ختم",
+        "pending_one": "{{count}} ختم",
+        "pending_other": "{{count}} ختم",
+        "pending_few": "{{count}} ختم",
+        "pending_many": "{{count}} ختم",
+        "done": "{{count}} کیا ہوا",
+        "done_one": "{{count}} کیا ہوا",
+        "done_other": "{{count}} کیا ہوا",
+        "done_few": "{{count}} کیا ہوا",
+        "done_many": "{{count}} کیا ہوا"
+      }
+    },
+    "title": "حالیہ پراجیکٹ",
+    "searchResults": "تلاش کے نتائج",
+    "searchPlaceholder": "تلاش کردہ منصوبوں..."
+  },
+  "actions": {
+    "selectTeam": "منتخب کردہ ٹیم منتخب کریں",
+    "or": "یا",
+    "clearSearch": "صاف تلاش"
+  },
+  "windowsAdmin": {
+    "title": "ونڈوز ایڈمنسٹریٹر موڈ سفارش کرتا ہے۔",
+    "description": "اوپنCode runme چیک وقت نکال سکتا ہے جب ایجنٹ ٹیموں اے آئی اے بلند نہیں ہے۔ OpenCode ٹیموں کو شروع کرنے سے پہلے منتظمین کے طور پر رن کے ساتھ ایپ کو دوبارہ روشن کریں."
+  },
+  "webPreview": {
+    "title": "مکمل کاملیت کے لیے ڈیسک ٹاپ کھولو",
+    "description": "براؤزر ورژن اب بھی ترقی میں ہے۔ پروجیکٹ کاری، اندراج اور زندہ حالت تجدید یہاں محدود ہو سکتی ہے۔ تمام خصوصیات دوبارہ حاصل کرنے کے لئے ڈیسک ٹاپ app استعمال کریں."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "نیا نسخہ دستیاب ہے",
+    "restartNow": "اب",
+    "viewDetails": "تفصیلات دیکھیں"
+  }
+}

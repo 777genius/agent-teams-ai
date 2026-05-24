@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Opsi Power- user: ekspor / impor konfigurasi, reset baku, dan pengubahan konfigurasi mentah.",
+      "label": "Tingkat lanjut"
+    },
+    "general": {
+      "description": "Pilihan aplikasi inti seperti tema, bahasa, kepadatan tampilan, dan perilaku startup.",
+      "label": "Umum"
+    },
+    "infoAriaLabel": "Apa {{label}}?",
+    "notifications": {
+      "description": "Kontrol kapan dan bagaimana Anda mendapatkan diberitahu tentang aktivitas agen, penyelesaian tugas, dan kesalahan.",
+      "label": "Notifikasi"
+    }
+  },
+  "view": {
+    "description": "Kelola preferensi aplikasi Anda",
+    "loading": "Memuat pengaturan...",
+    "title": "Pengaturan"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Batal",
+      "test": "Uji"
+    },
+    "defaults": {
+      "allProjects": "Semua proyek",
+      "allProjectsHint": "Penggunaan tes {{project}}Terapan baku kecuali sebuah projek memiliki sebuah override.",
+      "loadingContexts": "Memuat konteks...",
+      "projectHint": "Hanya menyimpan overrides {{project}}.",
+      "projectOverrideContext": "Proyek menimpa konteks",
+      "scopeDescriptionAllProjects": "Baku bagi setiap proyek yang tidak memiliki OpenCode override sendiri.",
+      "scopeDescriptionProject": "Timpa hanya projek yang dipilih. Tim lari tidak berubah.",
+      "selectProjectContext": "Pilih konteks projek",
+      "selectProjectHint": "Pilih proyek sebelum menguji model lokal atau menyimpan baku.",
+      "selectValidationContext": "Pilih konteks validasi",
+      "setAllProjectsDefault": "Set semua proyek baku",
+      "setProjectDefault": "Set default projek",
+      "thisProject": "Proyek ini",
+      "title": "Default OpenCode",
+      "validationContext": "Konteks validasi"
+    },
+    "diagnostics": {
+      "copied": "Diagnostik disalin",
+      "copiedShort": "Disalin",
+      "copy": "Salin diagnosa",
+      "hints": "Petunjuk",
+      "likelyCause": "Kemungkinan menyebabkan:"
+    },
+    "models": {
+      "alreadyDefault": "Ini sudah menjadi standar OpenCode yang dipilih.",
+      "empty": "Tidak ada model yang ditemukan.",
+      "emptyFree": "Tidak ditemukan model gratis.",
+      "emptyRecommended": "Tidak ditemukan model yang direkomendasikan.",
+      "emptyRecommendedFree": "Tidak ditemukan model bebas yang direkomendasikan.",
+      "freeOnly": "Hanya Gratis",
+      "launchableDescription": "Routes yang dapat Anda uji atau gunakan dalam pemetik tim: konfigurasi lokal, pembangunan gratis dalam model, dan standar saat ini.",
+      "launchableTitle": "Model OpenCode yang dapat dieksekusi",
+      "loadingRoutes": "Memuat rute model OpenCode...",
+      "noRoutesMatch": "Tidak ada rute model OpenCode yang cocok \"{{query}}\".",
+      "noneReported": "Belum ada rute model OpenCode yang dapat diluncurkan. Atur rute lokal dalam OpenCode atau gunakan tab penyedia untuk memeriksa penyedia katalog.",
+      "recommendedOnly": "Hanya direkomendasikan",
+      "searchPlaceholder": "Cari model",
+      "selectProjectBeforeTesting": "Pilih konteks projek sebelum pengujian model.",
+      "selectProjectBeforeTestingDefaults": "Pilih konteks projek sebelum pengujian atau menyimpan baku OpenCode.",
+      "useInTeamPicker": "Gunakan dalam tim picker"
+    },
+    "providers": {
+      "catalog": "Katalog penyedia OpenCode",
+      "countFallback": "Operator OpenCode",
+      "description": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
+      "loadMore": "Muat lebih banyak penyedia",
+      "loading": "Memuat penyedia OpenCode",
+      "noMatches": "Tidak ada penyedia yang cocok dengan pencarian itu.",
+      "noneReported": "Tidak ada penyedia OpenCode yang dilaporkan oleh runtime yang dikelola.",
+      "recommended": "Disarankan",
+      "refreshCatalog": "Segarkan katalog",
+      "searchPlaceholder": "Penyedia Pencarian",
+      "description_few": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
+      "description_many": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
+      "description_one": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
+      "description_other": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama."
+    },
+    "setup": {
+      "loading": "Memuat setup penyedia..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode default: {{model}}",
+      "loading": "Memuat waktu berjalan OpenCode, penyedia terhubung, dan default model...",
+      "source": "Sumber: {{source}}",
+      "title": "OpenCode runtime"
+    },
+    "tabs": {
+      "models": "Model",
+      "providers": "Penyedia"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Rute model pencarian"
+    },
+    "badges": {
+      "usedInTeamPicker": "Digunakan dalam picker tim",
+      "free": "bebas",
+      "local": "lokal",
+      "configured": "dikonfigurasi",
+      "connected": "tersambung",
+      "verified": "Diverifikasi",
+      "needsTest": "membutuhkan tes",
+      "failed": "gagal",
+      "unknown": "tidak diketahui",
+      "default": "baku"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Bahasa untuk komunikasi agen",
+      "descriptionWithDetected": "Bahasa untuk komunikasi agen (terdeteksi: {{detected}})",
+      "emptyMessage": "Tak ada bahasa yang ditemukan.",
+      "label": "Bahasa",
+      "searchPlaceholder": "Cari bahasa...",
+      "selectPlaceholder": "Pilih bahasa...",
+      "title": "Bahasa Agen"
+    },
+    "appLanguage": {
+      "description": "Bahasa untuk antar muka aplikasi.",
+      "label": "Bahasa",
+      "title": "Bahasa App"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Otomatis memperluas perubahan respon saat membuka suatu transkrip atau menerima pesan baru",
+        "label": "Memperluas respon AI secara baku"
+      },
+      "nativeTitleBar": {
+        "description": "Gunakan bingkai jendela sistem baku daripada bilah judul gubahan",
+        "label": "Gunakan batang judul asli",
+        "restartConfirm": {
+          "confirmLabel": "Mulai Ulang",
+          "message": "Aplikasi perlu memulai ulang untuk menerapkan perubahan bilah judul. Mulai lagi sekarang?",
+          "title": "Diperlukan restart"
+        }
+      },
+      "theme": {
+        "description": "Pilih tema warna yang disukai Anda",
+        "label": "Tema",
+        "options": {
+          "dark": "Gelap",
+          "light": "Cahaya",
+          "system": "Sistem"
+        }
+      },
+      "title": "Penampilan"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Mulai HTTP server untuk mengakses UI dari peramban atau embed dalam iframe",
+        "label": "Aktifkan mode server"
+      },
+      "title": "Akses Peramban"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Pilih Folder",
+        "selectFolderManually": "Pilih Manual Folder",
+        "useAutoDetect": "Gunakan Auto- Deteksi",
+        "useFolder": "Gunakan Folder",
+        "usePath": "Gunakan Path",
+        "useThisPath": "Gunakan Path Ini",
+        "useWsl": "Menggunakan Linux /WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Folder ini tidak berisi direktori \"proyek\". Lanjutkan?",
+          "title": "Direktori projek tak ditemukan"
+        },
+        "notClaudeDir": {
+          "message": "This folder is named \"{{folderName}}\", not \".claude\". Continue anyway?",
+          "title": "Folder yang dipilih bukan .claude"
+        },
+        "noWslPaths": {
+          "message": "Tak dapat menemukan WSL distros dengan data Claude otomatis. Pilih folder secara manual?",
+          "title": "Tidak WSL Path Claude ditemukan"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\"tidak berisi\" proyek \"direktori. Lanjutkan?",
+          "title": "WSL path hilang direktori projek"
+        }
+      },
+      "current": {
+        "autoDetected": "Auto- terdeteksi: {{path}}",
+        "autoDetectedPath": "Menggunakan path otomatis yang terdeteksi",
+        "customPath": "Menggunakan path gubahan",
+        "label": "Akar Lokal Saat ini"
+      },
+      "description": "Pilih folder lokal mana yang diperlakukan sebagai root data Claude Anda",
+      "errors": {
+        "detectWslFailed": "Gagal mendeteksi WSL Path root Claude",
+        "loadFailed": "Gagal memuat pengaturan root Claude lokal",
+        "updateFailed": "Gagal memperbarui root Claude"
+      },
+      "title": "Root Claude Lokal",
+      "wslModal": {
+        "closeAriaLabel": "Tutup WSL path modal",
+        "description": "Terdeteksi WSL distribusi dan kandidat root Claude",
+        "noProjectsDir": "Tidak ada direktori projek yang terdeteksi",
+        "title": "Pilih WSL Akar Claude"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Bantu memperbaiki aplikasi dengan mengirim data kecelakaan dan kinerja anonim",
+        "label": "Kirim laporan kecelakaan"
+      },
+      "title": "Privasi"
+    },
+    "server": {
+      "runningOn": "Berjalan",
+      "standaloneModeDescription": "Berjalan dalam mode standalone. The HTTP server selalu aktif. Pemberitahuan sistem tidak tersedia - pemicu pemberitahuan yang login saja.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Otomatis memulai aplikasi ketika Anda log masuk",
+        "label": "Luncurkan saat login"
+      },
+      "showDockIcon": {
+        "description": "Tampilkan ikon aplikasi di dok (maOS)",
+        "label": "Tampilkan ikon dok"
+      },
+      "title": "Startup"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Notifications may not work in development mode. macOS identifies the app as \"Electron\" (bundle ID",
+      "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",
+      "title": "Mode Dev"
+    },
+    "ignoredRepositories": {
+      "description": "Notifikasi dari repositori ini akan diabaikan",
+      "empty": "Tidak ada repositori yang diabaikan",
+      "selectPlaceholder": "Pilih repositori untuk diabaikan...",
+      "title": "Repositor Diabaikan"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Tampilkan pemberitahuan sistem bagi kesalahan dan kejadian",
+        "label": "Aktifkan Notifikasi Sistem"
+      },
+      "sound": {
+        "description": "Putar suara ketika pemberitahuan muncul",
+        "label": "Putar suara"
+      },
+      "subagentErrors": {
+        "description": "Mendeteksi dan memberitahu tentang galat dalam sesi subagen",
+        "label": "Sertakan kesalahan subagen"
+      },
+      "title": "Pengaturan Pemberitahuan"
+    },
+    "snooze": {
+      "clear": "Bersihkan Snoze",
+      "description": "Pemberitahuan jeda sementara",
+      "descriptionWithTime": "Snozed until {{time}}",
+      "label": "Pemberitahuan snooze",
+      "options": {
+        "15": "15 menit",
+        "30": "30 menit",
+        "60": "1 jam",
+        "120": "2 jam",
+        "240": "4 jam",
+        "-1": "Sampai besok"
+      },
+      "selectDuration": "Pilih durasi..."
+    },
+    "taskCompletion": {
+      "description": "Dapatkan pemberitahuan OS asli ketika Claude menyelesaikan tugas - suara, spanduk, dan lencana Dock / taskbar. Bekerja di MacOS, Linux, dan Windows.",
+      "installPlugin": "Instal claude- notifications-go plugin",
+      "title": "Notifikasi Penyelesai Tugas"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Beritahu ketika setiap tugas dalam sebuah tim mencapai status selesai",
+        "label": "Semua tugas selesai"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Ketika Claude melaporkan waktu reset, jadwal sentuhan-up untuk tim memimpin setelah batas reset",
+        "label": "Otomatis-lanjutkan setelah batas kecepatan"
+      },
+      "clarifications": {
+        "description": "Tampilkan pemberitahuan OS asli ketika suatu tugas membutuhkan masukan Anda",
+        "label": "Pemberitahuan klarifikasi tugas"
+      },
+      "crossTeamMessage": {
+        "description": "Beritahu ketika pesan tiba dari tim lain",
+        "label": "Pemberitahuan pesan Cross- tim"
+      },
+      "leadInbox": {
+        "description": "Beritahu ketika rekan tim mengirim pesan untuk memimpin tim",
+        "label": "Pemberitahuan inbox Lead"
+      },
+      "statusChange": {
+        "description": "Tampilkan pemberitahuan OS asli ketika status tugas berubah",
+        "label": "Pemberitahuan perubahan status tugas",
+        "onlySolo": {
+          "description": "Beritahu hanya ketika tim tidak memiliki rekan tim",
+          "label": "Hanya dalam mode Solo"
+        },
+        "statuses": {
+          "description": "Target mana yang menyatakan pemicu pemberitahuan",
+          "label": "Beritahu pada status ini",
+          "options": {
+            "approved": "Disetujui",
+            "completed": "Selesai",
+            "deleted": "Dihapus",
+            "in_progress": "Dimulai",
+            "needsFix": "Kebutuhan Perbaikan",
+            "pending": "Menunggu",
+            "review": "Ulasan"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Tampilkan pemberitahuan OS asli ketika agen berkomentar pada tugas",
+        "label": "Pemberitahuan komentar tugas"
+      },
+      "taskCreated": {
+        "description": "Tampilkan pemberitahuan OS asli ketika suatu tugas baru dibuat",
+        "label": "Pemberitahuan yang dibuat tugas"
+      },
+      "teamLaunched": {
+        "description": "Beritahu ketika tim selesai meluncurkan dan siap",
+        "label": "Pemberitahuan peluncuran tim"
+      },
+      "title": "Pemberitahuan Tim",
+      "toolApproval": {
+        "description": "Beritahu ketika suatu alat membutuhkan persetujuan Anda (Ijinkan / Deny) ketika app tidak difokuskan",
+        "label": "Pesan persetujuan alat"
+      },
+      "userInbox": {
+        "description": "Beritahu ketika rekan tim mengirim pesan kepada Anda",
+        "label": "Pemberitahuan inbox pengguna"
+      }
+    },
+    "test": {
+      "action": "Kirim Tes",
+      "description": "Kirim pemberitahuan tes untuk memverifikasi pengiriman",
+      "failedToSend": "Gagal mengirim notifikasi tes",
+      "label": "Notifikasi tes",
+      "sending": "Mengirim...",
+      "sent": "Dikirim!",
+      "unknownError": "Galat tak dikenal"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Ikon App",
+      "description": "Kumpulkan tim agen AI yang bekerja secara otomatis secara paralel, berkomunikasi ke seluruh tim, dan mengelola tugas-tugas di papan kanban - dengan built-dalam tinjauan kode, proses pemantauan, dan visibilitas alat lengkap.",
+      "standalone": "Standalone",
+      "title": "Tentang",
+      "version": "Versi {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Sunting Konfigurasi",
+      "exportConfig": "Ekspor Konfigurasi",
+      "importConfig": "Impor Konfigurasi",
+      "openInEditor": "Buka dalam Penyunting",
+      "resetToDefaults": "Reset ke Baku",
+      "title": "Konfigurasi"
+    },
+    "updates": {
+      "available": "v{{version}} tersedia",
+      "check": "Periksa Pemutakhiran",
+      "checking": "Memeriksa...",
+      "ready": "Update siap",
+      "unknownVersion": "tidak diketahui",
+      "upToDate": "Up to date"
+    },
+    "appName": "Agen Tim AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Gagal memuat konfigurasi",
+      "saveFailed": "Gagal menyimpan konfigurasi"
+    },
+    "footer": {
+      "autoSave": "Perubahan otomatis -simpan setelah penyuntingan",
+      "toClose": "untuk menutup",
+      "escapeKey": "Esc"
+    },
+    "loading": "Memuat config...",
+    "status": {
+      "invalidJson": "Tidak valid JSON",
+      "saveFailed": "Simpan gagal",
+      "saved": "Tersimpan",
+      "saving": "Menyimpan..."
+    },
+    "title": "Sunting Konfigurasi"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Batal",
+      "submit": "Tambah Trigger",
+      "title": "Tambah Pemicu Ubahan"
+    },
+    "builtin": {
+      "description": "Pemicu baku yang dilengkapi dengan aplikasi. Anda dapat mengaktifkan atau menonaktifkannya dan menyesuaikan pola mereka.",
+      "title": "Built-in Triggers"
+    },
+    "card": {
+      "builtinBadge": "Builtin",
+      "collapseAriaLabel": "Kolapse",
+      "deleteAriaLabel": "Hapus pemicu",
+      "editNameAriaLabel": "Sunting nama",
+      "expandAriaLabel": "Ekspansi"
+    },
+    "color": {
+      "customHexTitle": "Warna hex gubahan",
+      "invalidHex": "Hex tidak valid"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Peringatan bila >",
+      "emptyPatternHint": "Biarkan kosong untuk mencocokkan semua isi. Menggunakan sintaks regex JavaScript.",
+      "errorStatusDescription": "Triggers ketika sebuah eksekusi alat melaporkan kesalahan (is _ error: true).",
+      "tokensUnit": "token",
+      "matchPatternPlaceholder": "mis., error 12.4; gagal exception"
+    },
+    "custom": {
+      "description": "Buat pemicu Anda sendiri untuk mendapat pemberitahuan bagi pola spesifik atau keluaran alat.",
+      "empty": "Belum ada pemicu kustom yang dikonfigurasi.",
+      "title": "Triggers Gubahan"
+    },
+    "errors": {
+      "invalidRegexPattern": "Pola regex tidak valid"
+    },
+    "fields": {
+      "contentType": "Tipe Isi",
+      "matchField": "Kolom Cocok",
+      "matchPattern": "Pola Cocok (Regex)",
+      "scopeToolName": "Nama Scope / Tool",
+      "scopeToolNameOptional": "Scope / Tool Name (opsional)",
+      "threshold": "Ambang Ambang",
+      "tokenType": "Jenis Token",
+      "triggerNamePlaceholder": "mis., Build Peringatan Kegagalan",
+      "triggerNameRequired": "Nama Trigger *"
+    },
+    "ignorePatterns": {
+      "hint": "Tekan Enter untuk menambahkan. Pemberitahuan dilewati jika ada pola yang cocok.",
+      "placeholder": "Tambahkan regex abaikan...",
+      "removeAriaLabel": "Hapus pola abaikan",
+      "summary": "Advanced:",
+      "title": "Abaikan Pola (lewati bila cocok)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Keluaran Teks",
+        "thinking": "Berpikir",
+        "tool_result": "Hasil Alat",
+        "tool_use": "Gunakan Alat"
+      },
+      "matchFields": {
+        "args": "Argumen",
+        "command": "Perintah",
+        "content": "Isi",
+        "description": "Deskripsi",
+        "file_path": "Path Berkas",
+        "fullInput": "Masukan Penuh (JSON)",
+        "glob": "Filter Glob",
+        "new_string": "String Baru",
+        "old_string": "String Lama",
+        "path": "Path",
+        "pattern": "Pola",
+        "prompt": "Prompt",
+        "query": "Query",
+        "skill": "Nama Skill",
+        "subagent_type": "Tipe Subagen",
+        "text": "Isi Teks",
+        "thinking": "Konten Berpikir",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Pola Isi",
+        "error_status": "Galat Eksekusi",
+        "token_threshold": "Penggunaan Token Tinggi"
+      },
+      "tokenTypes": {
+        "input": "Tokens Masukan",
+        "output": "Tokens Keluaran",
+        "total": "Total Tokens"
+      },
+      "toolNames": {
+        "anyTool": "Alat Apapun"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Trigger Uji",
+      "detectedSuffix": "galat akan terdeteksi",
+      "more": "... dan {{count}} lagi",
+      "more_few": "... dan {{count}} lagi",
+      "more_many": "... dan {{count}} lagi",
+      "more_one": "... dan {{count}} lagi",
+      "more_other": "... dan {{count}} lagi",
+      "testTrigger": "Trigger Uji",
+      "testing": "Testing...",
+      "title": "Pratilik",
+      "truncatedWarning": "Pencarian dihentikan lebih awal (timeout atau batas hitungan). Pertandingan yang sebenarnya mungkin lebih tinggi.",
+      "viewSession": "Tilik Sesi"
+    },
+    "repositoryScope": {
+      "empty": "Tidak ada repositori yang dipilih - pemicu berlaku untuk semua repositori",
+      "hint": "Ketika repositori dipilih, pemicu ini hanya menembak untuk kesalahan pada repositori tersebut.",
+      "placeholder": "Pilih repositori untuk ditambahkan...",
+      "summary": "Advanced: Repositori Scope",
+      "title": "Batasi ke repositori (hanya berlaku ke repositori yang dipilih)"
+    },
+    "sections": {
+      "configuration": "Konfigurasi",
+      "dotColor": "Warna Titik",
+      "generalInfo": "Info Umum",
+      "triggerCondition": "Kondisi Trigger"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Tambah Profil",
+      "cancel": "Batal",
+      "deleteProfile": "Hapus profil",
+      "editProfile": "Sunting profil",
+      "save": "Simpan"
+    },
+    "authMethods": {
+      "agent": "SSH Agen",
+      "auto": "Otomatis (dari SSH Konfigurasi)",
+      "password": "Sandi",
+      "privateKey": "Kunci Pribadi"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Hapus",
+      "message": "Anda yakin ingin menghapus \"{{name}}\"? Ini tak bisa dibatalkan.",
+      "title": "Hapus Profil"
+    },
+    "description": "Simpan SSH profil sambungan untuk koneksi ulang cepat",
+    "empty": {
+      "description": "Tambah SSH profil untuk terhubung dengan cepat",
+      "title": "Tak ada profil tersimpan"
+    },
+    "form": {
+      "authentication": "Otentikasi",
+      "host": "Host",
+      "name": "Nama",
+      "passwordPrompt": "Anda akan ditanyai kata sandi saat menyambung.",
+      "port": "Port",
+      "privateKeyPath": "Path Kunci Pribadi",
+      "username": "Nama pengguna",
+      "namePlaceholder": "Server saya",
+      "hostPlaceholder": "Nama host atau IP",
+      "usernamePlaceholder": "pengguna"
+    },
+    "loading": "Memuat profil...",
+    "title": "Profil Area Kerja"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Sambung",
+      "connecting": "Menyambung...",
+      "disconnect": "Putuskan",
+      "testConnection": "Uji Koneksi",
+      "testing": "Testing..."
+    },
+    "currentMode": {
+      "description": "Sumber data untuk berkas sesi",
+      "label": "Mode Saat Ini",
+      "local": "Lokal ({{path}})"
+    },
+    "description": "Menyambung ke mesin jauh untuk melihat sesi Claude Kode yang berjalan di sana",
+    "form": {
+      "authentication": "Otentikasi",
+      "host": "Host",
+      "password": "Sandi",
+      "port": "Port",
+      "privateKeyPath": "Path Kunci Pribadi",
+      "username": "Nama pengguna",
+      "hostPlaceholder": "Nama host atau SSH konfigurasi alias",
+      "usernamePlaceholder": "pengguna"
+    },
+    "savedProfiles": {
+      "title": "Profil Tersimpan"
+    },
+    "ssh": {
+      "title": "SSH Koneksi"
+    },
+    "status": {
+      "connectedTo": "Tersambung ke {{host}}",
+      "remoteSessions": "Melihat sesi remote via SSH"
+    },
+    "test": {
+      "failed": "Koneksi gagal: {{error}}",
+      "success": "Koneksi sukses",
+      "unknownError": "Galat tak dikenal"
+    },
+    "title": "Koneksi Jarak Jauh"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Batal",
+      "cancelLogin": "Batalkan log masuk",
+      "connectChatGpt": "Connect ChatGPT",
+      "delete": "Hapus",
+      "disable": "Matikan",
+      "disconnectAccount": "Putuskan akun",
+      "generateLink": "Buat taut",
+      "openLogin": "Buka log masuk",
+      "reconnectAnthropic": "Rekonstruksi Anthropic",
+      "refresh": "Segarkan",
+      "replaceKey": "Ganti kunci",
+      "saveEndpoint": "Simpan titik akhir",
+      "saveKey": "Simpan kunci",
+      "saving": "Menyimpan...",
+      "setApiKey": "Set API kunci",
+      "updateKey": "Mutakhirkan kunci",
+      "useCode": "Gunakan kode"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Memuat kredensial yang disimpan...",
+      "projectScope": "Projek",
+      "scope": "Scope",
+      "storedIn": "Tersimpan {{backend}}",
+      "userScope": "Pengguna",
+      "storedInApp": "Tersimpan pada aplikasi",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Kunci",
+          "title": "API kunci",
+          "description": "Gunakan suatu Anthropic langsung API kunci untuk API- Akses tagihan. Sesi langganan Anthropic Anda tetap tersedia ketika Anda beralih kembali.",
+          "placeholder": "sk- ant-..."
+        },
+        "codex": {
+          "name": "Codex API Kunci",
+          "title": "API kunci",
+          "description": "Gunakan OpenAI API kunci sebagai Codex sekunder jalur auth. If you switch Codex to API mode kunci, aplikasi akan cermin OPENAI_API_KEY ke CODEX_API_KEY untuk peluncuran asli.",
+          "placeholder": "sk- proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Kunci",
+          "title": "API akses",
+          "description": "Gunakan `GEMINI_API_KEY` untuk Gemini API Backend. CLI SDK dan ADC tidak membutuhkannya.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App- server: {{state}}",
+        "connected": "Terhubung",
+        "description": "Kelola sesi app- server Codex lokal akun bahwa kekuatan subscription-didukung launches asli.",
+        "loginInProgress": "Login sedang berlangsung",
+        "plan": "Rencana: {{plan}}",
+        "reconnectRequired": "Perlu Kembali",
+        "title": "ChatGPT account",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto will keep using the detected API key until ChatGPT is connected.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Terdeteksi API kunci hanya digunakan setelah anda menukar Codex ke API mode kunci.",
+          "localArtifactsNoSession": "Codex CLI currently reports no active ChatGPT account. Local Codex account data exists, but no active managed session is selected. Usage limits appear here only after Codex CLI sees one.",
+          "noActiveAccount": "Codex CLI currently reports no active ChatGPT account. Usage limits appear here only after Codex CLI sees one.",
+          "reconnectBeforeUsage": "Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here.",
+          "usageLimitsAfterReport": "Usage limits appear here after Codex reports them for the connected ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "Memeriksa",
+        "downloading": "Mengunduh",
+        "installCli": "Pasang Codex CLI",
+        "installing": "Memasang",
+        "retryInstall": "coba lagi instal",
+        "title": "Pasang Codex CLI kedalam data aplikasi"
+      },
+      "rateLimits": {
+        "credits": "Kredit",
+        "creditsDescription": "Kredit ditampilkan secara terpisah dari penggunaan berlangganan berbasis jendela dan mungkin tidak tersedia untuk plan-backed ChatGPT sesi.",
+        "noSecondaryWindow": "Codex tidak mengembalikan jendela sekunder untuk snapshot akun ini.",
+        "notReported": "Tidak dilaporkan",
+        "primaryReset": "Reset primer",
+        "primaryUsed": "Digunakan primer",
+        "primaryWindow": "Jendela primer",
+        "remainingLeft": "{{value}} kiri",
+        "remainingUnknown": "Sisa tak diketahui",
+        "secondaryReset": "Reset sekunder",
+        "secondaryUsed": "Digunakan sekunder",
+        "secondaryWindow": "Jendela sekunder",
+        "usedQuotaNote": "Persentase ini menunjukkan kuota yang digunakan, bukan kuota yang tersisa.",
+        "weeklyReset": "Reset mingguan",
+        "weeklyUsed": "Digunakan mingguan",
+        "weeklyUsedOneWeek": "Weekly digunakan (1w)",
+        "weeklyWindow": "Jendela mingguan",
+        "secondaryFallback": "sekunder",
+        "secondaryWindowNote": " Batas minggu ditampilkan secara terpisah di {{window}} jendela.",
+        "usageExplanationGeneric": "Tampilkan kuota yang digunakan, bukan kuota yang tersisa.",
+        "usageExplanationWindowOnly": "Tampilkan kuota yang dipakai saat ini {{window}} jendela, tidak sisa kuota.",
+        "usageExplanationWithRemaining": "{{used}} digunakan - tentang {{remaining}} kiri di saat ini {{window}} jendela."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Tanda Auth",
+      "authTokenMissing": "Auth token tidak dikonfigurasi.",
+      "baseUrl": "Dasar URL",
+      "description": "Gunakan Anthropic- kompatibel lokal titik akhir runtime.",
+      "keepSavedToken": "Tinggalkan kosong untuk menyimpan token tersimpan",
+      "title": "Titik akhir lokal / kompatibel",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "Dasar URL diperlukan",
+        "firstPartyAnthropic": "Gunakan Otomatis, Berlangganan, atau API kunci untuk pertama- partai Anthropic",
+        "httpRequired": "Dasar URL harus menggunakan http: / / atau https: / /",
+        "invalidUrl": "Tidak valid URL",
+        "noCredentials": "Dasar URL tidak boleh termasuk kredensial"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint dinonaktifkan. Uang simpanan disimpan.",
+        "endpointSaved": "Endpoint disimpan",
+        "endpointSavedTokenMissing": "Endpoint disimpan. Auth token tidak dikonfigurasi."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Metode otentikasi",
+      "descriptions": {
+        "anthropic": "Pilih bagaimana app- diluncurkan sesi Anthropic otentikasi.",
+        "codex": "Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.",
+        "gemini": "Konfigurasi opsional API Akses. CLI SDK dan ADC masih ditemukan secara otomatis.",
+        "opencode": "Otentikasi OpenCode dan persediaan penyedia dikelola oleh runtime OpenCode."
+      },
+      "method": "Metode koneksi",
+      "mode": "Mode: {{mode}}",
+      "selected": "Dipilih",
+      "switching": "Beralih...",
+      "title": "Koneksi"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API kunci"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Gunakan ANTHROPIC_API_KEY dan Anthropic API Tagihan.",
+        "autoDescription": "Gunakan waktu berjalan Anthropic default dan credential lokal terbaik tersedia.",
+        "hint": "Auto terus Anthropic pada standar resolusi kredensial lokal.",
+        "subscriptionDescription": "Gunakan sinyal Anthropic lokal Anda dalam sesi dan akses berlangganan.",
+        "subscriptionTitle": "Berlangganan Anthropic"
+      },
+      "auto": {
+        "title": "Otomatis"
+      },
+      "codex": {
+        "apiKeyDescription": "Gunakan OPENAI_API_KEY dan CODEX_API_KEY Tagihan untuk peluncuran naskah kuno.",
+        "autoDescription": "Prefer your ChatGPT account and subscription. Use API key mode only if needed.",
+        "chatgptDescription": "Use your connected ChatGPT account and Codex subscription.",
+        "chatgptTitle": "ChatGPT account",
+        "hint": "Codex always runs through the native runtime. Auto prefers your ChatGPT account before falling back to API-key credentials."
+      }
+    },
+    "description": "Kelola bagaimana setiap penyedia terhubung dan ketika didukung, yang backend waktu jalan multimodel harus digunakan.",
+    "fastMode": {
+      "defaultOff": "Baku Mati",
+      "description": "Terapkan mode cepat Claude Kode secara baku untuk tim Anthropic baru diluncurkan ketika model diselesaikan dan waktu berjalan mengizinkannya.",
+      "disabledHint": "New Anthropic meluncurkan kecepatan normal kecuali sebuah tim secara eksplisit mengaktifkan mode cepat.",
+      "enabledHint": "Peluncuran Anthropic baru akan meminta Modus Cepat secara baku ketika model yang diselesaikan mendukungnya.",
+      "notExposed": "Ini waktu berjalan Anthropic tidak mengekspos mode Cepat.",
+      "preferFast": "Lebih Cepat",
+      "title": "Mode baku cepat",
+      "unavailableForRuntime": "Mode cepat saat ini tidak tersedia untuk runtime Anthropic ini."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API mode kunci dipilih, tetapi tidak ada Anthropic API kredensial masih tersedia.",
+      "anthropicStoredKeyAvailable": "Sebuah disimpan API kunci tersedia, tetapi app-launded sesi Anthropic hanya menggunakannya setelah Anda beralih ke API mode kunci.",
+      "anthropicSubscriptionMissing": "Mode langganan anthropic dipilih. Masuk dengan Anthropic untuk menggunakan penyedia ini.",
+      "authTokenMissing": "Auth token tidak dikonfigurasi. Banyak Anthropic lokal - titik akhir yang kompatibel memerlukan sebuah tanda kosong.",
+      "chatgptLoginPending": "Waiting for ChatGPT account login to finish...",
+      "chatgptLoginStarting": "Starting ChatGPT login...",
+      "codexApiKeyMissing": "API mode kunci dipilih, tapi tidak ada OPENAI_API_KEY atau CODEX_API_KEY kredensial masih tersedia.",
+      "codexLocalArtifactsNoSession": "Codex CLI currently has no active ChatGPT account. Local Codex account data exists, but no active managed session is selected.",
+      "codexNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+      "codexNoChatgptAccount": "Codex CLI currently has no active ChatGPT account. Connect ChatGPT to use your subscription.",
+      "codexNoCredential": "No ChatGPT account or API key is available yet.",
+      "geminiApiUnavailable": "Gemini API saat ini tidak tersedia. Atur `GEMINI_API_KEY` sini atau gunakan Google yang valid ADC Kredensial.",
+      "withApiKeyFallback": "{{message}} Ganti ke API mode kunci untuk memakai terdeteksi API kunci."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Paksa app- diluncurkan sesi Anthropic untuk menggunakan API kunci kredensial.",
+        "auto": "Gunakan perilaku default runtime. Tersimpan API kunci dalam aplikasi ini hanya digunakan setelah Anda beralih ke API mode kunci.",
+        "oauth": "Paksa app- diluncurkan sesi Anthropic untuk menggunakan sesi berlangganan Anthropic lokal."
+      },
+      "codex": {
+        "apiKey": "Paksa Codex asli diluncurkan untuk digunakan OPENAI_API_KEY / CODEX_API_KEY Tagihan.",
+        "auto": "Prefer your ChatGPT account when it is available. Fall back to API key mode only when needed.",
+        "chatgpt": "Force native Codex launches to use your connected ChatGPT account and subscription."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Menerapkan perubahan sambungan...",
+      "refreshingProviderStatus": "Menyegarkan status penyedia...",
+      "savingCompatibleEndpoint": "Menyimpan titik akhir yang kompatibel...",
+      "switchingAnthropicSubscription": "Beralih ke langganan Anthropic...",
+      "switchingApiKey": "Beralih ke API kunci...",
+      "switchingApiKeyMode": "Beralih ke API mode kunci...",
+      "switchingAuto": "Beralih ke Otomatis...",
+      "switchingChatgpt": "Switching to ChatGPT account mode..."
+    },
+    "provider": "Penyedia",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic saat ini tidak memiliki pilihan backend runtime terpisah.",
+        "codex": "Codex kini hanya berjalan melalui jalur waktu-jalan asli.",
+        "gemini": "Pilih yang Gemini backend runtime multimodel harus digunakan.",
+        "opencode": "OpenCode menggunakan sendiri dikelola tuan rumah runtime. Desktop saat ini hanya mengekspos status."
+      },
+      "title": "Runtime",
+      "updating": "Memperbarui waktu berjalan..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "dikonfigurasi",
+      "enabled": "Diaktifkan",
+      "notConfigured": "Tidak dikonfigurasi",
+      "notSet": "tidak diset",
+      "off": "Mati",
+      "unknown": "Tak dikenal"
+    },
+    "title": "Pengaturan Penyedia",
+    "usage": {
+      "apiKey": "Menggunakan API kunci",
+      "apiKeyRequired": "API kunci dibutuhkan",
+      "compatibleEndpoint": "Menggunakan titik akhir yang kompatibel",
+      "notConnected": "Tidak tersambung",
+      "usingMethod": "Menggunakan {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API kunci dihapus, tapi gagal untuk menyegarkan status penyedia.",
+      "apiKeySavedRefreshFailed": "API kunci disimpan, tapi gagal untuk menyegarkan status penyedia.",
+      "connectionUpdatedRefreshFailed": "Koneksi dimutakhirkan, tapi gagal menyegarkan status penyedia.",
+      "deleteApiKey": "Gagal menghapus API kunci",
+      "disableEndpoint": "Gagal mematikan titik akhir",
+      "endpointDisabledRefreshFailed": "Endpoint dinonaktifkan, tapi gagal untuk menyegarkan status penyedia.",
+      "endpointSavedRefreshFailed": "Endpoint disimpan, tapi gagal untuk menyegarkan status penyedia.",
+      "refreshCodexAccount": "Gagal menyegarkan akun Codex",
+      "saveApiKey": "Gagal menyimpan API kunci",
+      "saveEndpoint": "Gagal menyimpan titik akhir",
+      "updateAnthropicFastMode": "Gagal memperbarui Mode Cepat Anthropic",
+      "updateConnection": "Gagal memutakhirkan koneksi",
+      "updateRuntimeBackend": "Gagal memutakhirkan backend runtime",
+      "apiKeyRequired": "API kunci dibutuhkan"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Otomatis",
+        "oauth": "Berlangganan / OAuth",
+        "chatgpt": "ChatGPT account",
+        "apiKey": "API kunci",
+        "anthropicSubscription": "Berlangganan Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "API kunci",
+        "apiKeyHelper": "API pembantu kunci",
+        "oauth": "OAuth",
+        "claudeSubscription": "berlangganan Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Akun Google",
+        "serviceAccount": "akun layanan"
+      },
+      "runtime": {
+        "codexNative": "Indeks asli",
+        "currentRuntime": "Waktu jalan saat ini",
+        "selectedRuntime": "Waktu berjalan yang dipilih",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Memeriksa...",
+        "checked": "Diperiksa",
+        "providerActivity": "Aktivitas Penyedia",
+        "notConnected": "Tidak tersambung",
+        "startingChatGptLogin": "Starting ChatGPT login...",
+        "waitingForChatGptLogin": "Waiting for ChatGPT account login...",
+        "chatGptVerificationDegraded": "ChatGPT account detected - account verification is currently degraded.",
+        "chatGptAccountReady": "ChatGPT account ready",
+        "apiKeyReady": "API kunci siap",
+        "codexLocalAccountNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+        "codexNoActiveManagedSession": "Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.",
+        "codexNoActiveChatGptLogin": "Codex CLI reports no active ChatGPT login",
+        "connectChatGptForSubscription": "Connect a ChatGPT account to use your Codex subscription.",
+        "codexNativeReady": "Kode asli siap",
+        "codexNativeUnavailable": "Indeks asli tidak tersedia",
+        "unavailableInCurrentRuntime": "Tidak tersedia dalam waktu-jalan saat ini",
+        "connectedViaApiKey": "Terhubung via API kunci",
+        "apiKeyConfiguredNotVerified": "API kunci dikonfigurasi, tapi belum diverifikasi",
+        "apiKeyModeMissingCredential": "API mode kunci dipilih, tapi tidak ada API kunci dikonfigurasi",
+        "connectedVia": "Terhubung via {{method}}",
+        "unableToVerify": "Tidak dapat memverifikasi"
+      },
+      "mode": {
+        "selectedAuth": "Auth yang dipilih: {{authMode}}",
+        "preferredAuth": "Auth yang disukai: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API kunci dikonfigurasi",
+        "savedApiKeyAvailable": "Tersimpan API kunci tersedia di Manage",
+        "apiKeyAlsoConfigured": "API kunci juga dikonfigurasi dalam Manage",
+        "apiKeyConfiguredInManage": "API kunci dikonfigurasi dalam Manage",
+        "apiKeyFallbackInManage": "API kunci juga tersedia dalam Kelola sebagai fallback",
+        "availableAsFallback": "{{summary}} - tersedia sebagai fallback",
+        "savedApiKeyAvailableIfSwitch": "Tersimpan API kunci tersedia dalam Manage jika Anda switch ke API mode kunci",
+        "availableIfSwitch": "{{summary}} - tersedia jika Anda beralih ke API mode kunci",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto will use this until ChatGPT is connected"
+      },
+      "actions": {
+        "connect": "Sambung",
+        "connectAnthropic": "Hubungkan Anthropic",
+        "connectChatGpt": "Connect ChatGPT",
+        "disconnect": "Putuskan",
+        "openLogin": "Buka Log Masuk"
+      },
+      "disconnect": {
+        "anthropicTitle": "Putuskan langganan Anthropic?",
+        "anthropic": "Ini akan menghapus sesi berlangganan Anthropic lokal dari Claude CLI waktu berjalan.",
+        "anthropicWithApiKey": "Ini akan menghapus sesi berlangganan Anthropic lokal dari Claude CLI waktu berjalan. Tersimpan API kunci di Manage tetap tersedia.",
+        "geminiTitle": "Putuskan Gemini CLI?",
+        "gemini": "Ini membersihkan Gemini lokal CLI metadata sesi. Eksternal ADC kredensial dan disimpan API kunci tidak dihapus."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Periksa Pemutakhiran",
+      "checking": "Memeriksa...",
+      "extensions": "Ekstensi",
+      "installRuntime": "Pasang {{runtime}}",
+      "manage": "Kelola",
+      "recheck": "Periksa ulang",
+      "reinstallRuntime": "Pasang ulang {{runtime}}",
+      "retry": "Coba lagi",
+      "update": "Perbarui"
+    },
+    "installer": {
+      "checkingLatest": "Memeriksa versi terbaru...",
+      "downloading": "Mengunduh...",
+      "failed": "Pemasangan gagal",
+      "installed": "v Terpasang{{version}}",
+      "installing": "Memasang...",
+      "latest": "terakhir",
+      "verifying": "Verifikasi checksum..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "Memeriksa Penyedia AI...",
+      "claudeCli": "Memeriksa Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Memuat model...",
+      "modelsUnavailable": "Model tidak tersedia untuk pembuatan runtime ini",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Otentikasi gagal",
+      "authUpdated": "Otentikasi dimutakhirkan",
+      "loggedOut": "Penyedia log keluar",
+      "login": "Log masuk",
+      "logout": "Log Keluar",
+      "logoutFailed": "Log keluar gagal"
+    },
+    "status": {
+      "configuredNotFound": "Dikonfigurasi {{runtime}} tidak ditemukan.",
+      "foundButFailed": "{{runtime}} ditemukan tapi gagal untuk memulai",
+      "healthCheckFailed": "Dikonfigurasi {{runtime}} gagal pemeriksaan kesehatan awal.",
+      "notInstalled": "{{runtime}} tidak terpasang"
+    },
+    "title": "CLI Runtime"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} - > v{{latest}}"
+  }
+}

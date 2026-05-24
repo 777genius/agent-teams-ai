@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Sudah login?",
+      "becomeSponsor": "Menjadi sponsor",
+      "cancel": "Batal",
+      "checkNow": "Periksa sekarang",
+      "checkUpdates": "Periksa Pemutakhiran",
+      "checking": "Memeriksa...",
+      "connect": "Sambung",
+      "extensions": "Ekstensi",
+      "login": "Log masuk",
+      "manage": "Kelola",
+      "manageProviders": "Kelola Penyedia",
+      "plan": "Rencana",
+      "recheck": "Periksa ulang",
+      "recheckProvider": "Periksa ulang {{provider}}",
+      "retry": "Coba lagi",
+      "updateTo": "Mutakhirkan ke v{{version}}",
+      "useCode": "Gunakan kode"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud adalah platform inferensi AI modal penuh yang memberikan pengembang AI tunggal API untuk mengakses generasi video, generasi gambar, dan LLM APIBukannya mengelola beberapa integrasi vendor, Anda terhubung sekali dan mendapatkan akses unified ke 300 + kurasi model di semua modalitas. Check out Atlas Cloud baru rencana coding promosi untuk anggaran-ramah API Akses.",
+      "openCodeProvider": "Operator OpenCode",
+      "plan": "Rencana coding Atlas Cloud",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "Gagal memeriksa CLI status",
+      "installationFailed": "Pemasangan gagal",
+      "refreshFailed": "Gagal memeriksa pemutakhiran. Periksa koneksi jaringan Anda dan coba lagi.",
+      "runtimeUpdatedRefreshFailed": "Waktu berjalan diperbarui, tapi gagal menyegarkan status penyedia."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} status akan diperiksa di latar belakang.",
+      "codexApiKeyFallback": "{{hint}} API kunci fallback tersedia jika anda switch mode auth.",
+      "codexAutoApiKey": "{{hint}} Auto will keep using the API key until ChatGPT is connected.",
+      "codexFinishLogin": "Finish ChatGPT login in the browser. Enter the shown code if prompted.",
+      "codexNoActiveLogin": "Batas penggunaan hanya muncul setelah Codex CLI lihat sebuah Percakapan aktifGPT rekening. Saat ini tidak ada laporan aktif ChatGPT login.",
+      "codexNoActiveManagedSession": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Local Codex account data exists, but no active managed session is selected right now.",
+      "codexReconnectNeeded": "Usage limits appear only after Codex refreshes the currently selected ChatGPT session. Right now the local session needs reconnect.",
+      "firstCheckSlow": "Pemeriksaan pertama mungkin memakan waktu 30 detik.",
+      "loginRequiredForTeams": "Sesi peramban dan proyek bekerja tanpa login. Login hanya diperlukan untuk menjalankan tim agen.",
+      "troubleshootTitle": "Jika Anda yakin Anda login, coba langkah-langkah ini:"
+    },
+    "installer": {
+      "checkingLatest": "Memeriksa versi terbaru...",
+      "downloading": "Mengunduh {{runtime}}...",
+      "installing": "Memasang {{runtime}}...",
+      "success": "Terinstal dengan sukses {{runtime}} v{{version}}",
+      "verifying": "Verifikasi checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "API kunci dibutuhkan",
+      "comingSoon": "Segera datang.",
+      "collapseProviderDetails": "Kerahkan rincian penyedia",
+      "expandProviderDetails": "Perluas rincian penyedia",
+      "generateLink": "Buat taut",
+      "loadingRateLimits": "Laju batas pemuatan",
+      "loggedOut": "Penyedia log keluar",
+      "loginAuthFailed": "Otentikasi gagal",
+      "loginAuthUpdated": "Otentikasi dimutakhirkan",
+      "loginComplete": "Login komplit",
+      "loginFailed": "Log masuk gagal",
+      "loginTitle": "Log masuk",
+      "logoutFailed": "Log keluar gagal",
+      "logoutTitle": "Log Keluar",
+      "notLoggedIn": "Tak log masuk",
+      "openLogin": "Buka log masuk",
+      "providerActionRequired": "Aksi penyedia diperlukan",
+      "resets": "resets {{time}}",
+      "runtimeLoginTitle": "{{runtime}} Log masuk"
+    },
+    "loading": {
+      "aiProviders": "Memeriksa Penyedia AI...",
+      "claudeCli": "Memeriksa Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Diotentikasi",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Memeriksa otentikasi...",
+      "checkingProviders": "Memeriksa penyedia...",
+      "configuredLocalCount": "{{count}} dikonfigurasi lokal",
+      "configuredLocalCount_few": "{{count}} dikonfigurasi lokal",
+      "configuredLocalCount_many": "{{count}} dikonfigurasi lokal",
+      "configuredLocalCount_one": "{{count}} dikonfigurasi lokal",
+      "configuredLocalCount_other": "{{count}} dikonfigurasi lokal",
+      "configuredLocalTitle": "Rute OpenCode lokal diimpor dari konfigurasi OpenCode Anda.",
+      "connectedCount": "Penyedia: {{connected}}/{{denominator}} tersambung",
+      "freeModels": "Model bebas",
+      "freeModelsTitle": "OpenCode termasuk opsi model bebas seperti Big Pickle ketika tersedia dalam setup Anda. OpenRouter melalui OpenCode juga dapat mengekspos model bebas, tetapi tidak semua model OpenCode / OpenRouter adalah gratis. Kemampuan dan batas mungkin berubah.",
+      "loadingModels": "Memuat model...",
+      "modelsUnavailable": "Model tidak tersedia untuk pembuatan runtime ini",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} Diverifikasi",
+      "verifiedCount_few": "{{count}} Diverifikasi",
+      "verifiedCount_many": "{{count}} Diverifikasi",
+      "verifiedCount_one": "{{count}} Diverifikasi",
+      "verifiedCount_other": "{{count}} Diverifikasi",
+      "verifiedTitle": "Rute OpenCode dengan bukti eksekusi yang sukses."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "Dikonfigurasi {{runtime}} gagal pemeriksaan kesehatan awal.",
+      "configuredNotFound": "Dikonfigurasi {{runtime}} tidak ditemukan.",
+      "foundButFailed": "{{runtime}} ditemukan tapi gagal untuk memulai",
+      "healthCheckFailedDescription": "Aplikasi menemukan konfigurasi {{runtime}}, tapi pemeriksaan kesehatan awalnya gagal. Perbaiki atau pasang ulang, lalu coba lagi.",
+      "install": "Pasang {{runtime}}",
+      "installRequiredDescription": "{{runtime}} diperlukan untuk memelihara tim dan manajemen sesi. Pasang untuk memulai.",
+      "isRequired": "{{runtime}} diperlukan",
+      "reinstall": "Pasang ulang {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Memeriksa",
+      "codexTitle": "Pasang Codex CLI kedalam data aplikasi",
+      "downloading": "Mengunduh",
+      "downloadingPercent": "Mengunduh {{percent}}%",
+      "install": "Pasang",
+      "installing": "Memasang",
+      "openCodeTitle": "Pasang waktu-jalan OpenCode ke data aplikasi",
+      "retryInstall": "coba lagi instal"
+    },
+    "troubleshoot": {
+      "again": "lagi",
+      "authStatusCommand": "Anda dikonfigurasi CLI Perintah status auth",
+      "checkLoggedIn": "- Periksa apakah itu menunjukkan \"Logged in\"",
+      "click": "Klik",
+      "loginCommand": "perintah log masuk waktu jalan",
+      "logoutCommand": "perintah logout runtime",
+      "openTerminal": "Buka terminal Anda dan jalankan:",
+      "reloginPrefix": "Jika tertulis login tapi aplikasi tidak melihatnya, coba:",
+      "sameRuntime": "Pastikan CLI dalam terminal Anda adalah waktu-jalan yang sama aplikasi menggunakan",
+      "statusCacheHint": "- Kadang-kadang status cache selama beberapa detik",
+      "then": "maka"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Satu atau lebih penyedia diatur ke API mode kunci, tapi tidak ada API kunci dikonfigurasi. Buka Manage Provider untuk menambah kunci atau menukar mode koneksi.",
+      "multipleApiKeysNeedAttention": "Satu atau lebih penyedia diatur ke API mode kunci dan perlu perhatian. Buka Manage Providers untuk mengulas kunci yang disimpan atau menukar mode sambungan.",
+      "notAuthenticated": "{{runtime}} terpasang tetapi anda tidak terotentikasi. Login diperlukan untuk penyediaan tim dan fitur AI.",
+      "singleApiKeyMissing": "{{provider}} diatur ke API mode kunci, tapi tidak ada API kunci dikonfigurasi. Buka Manage Providers untuk menambahkan kunci atau switch mode koneksi.",
+      "singleApiKeyNeedsAttention": "{{provider}} diatur ke API mode kunci, tetapi tidak terhubung. Buka Manage Provider untuk mengulas kunci yang disimpan atau menukar mode koneksi."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Pilih folder projek",
+    "selectFolder": "Pilih Folder",
+    "failedToLoad": "Gagal memuat proyek",
+    "retry": "Coba lagi",
+    "noProjects": "Tak ada proyek yang ditemukan",
+    "noMatches": "Tidak ada yang cocok untuk \"{{query}}\"",
+    "noRecentProjects": "Tak ditemukan proyek baru-baru ini",
+    "emptyDescription": "Aktivitas Claude dan Codex baru-baru ini akan muncul di sini.",
+    "loadMore": "Muat lebih banyak",
+    "card": {
+      "deleted": "Dihapus",
+      "projectFolderMissing": "Folder projek tak ada lagi",
+      "taskCounts": {
+        "active": "{{count}} aktif",
+        "active_one": "{{count}} aktif",
+        "active_other": "{{count}} aktif",
+        "active_few": "{{count}} aktif",
+        "active_many": "{{count}} aktif",
+        "pending": "{{count}} tertunda",
+        "pending_one": "{{count}} tertunda",
+        "pending_other": "{{count}} tertunda",
+        "pending_few": "{{count}} tertunda",
+        "pending_many": "{{count}} tertunda",
+        "done": "{{count}} selesai",
+        "done_one": "{{count}} selesai",
+        "done_other": "{{count}} selesai",
+        "done_few": "{{count}} selesai",
+        "done_many": "{{count}} selesai"
+      }
+    },
+    "title": "Proyek Baru-baru Ini",
+    "searchResults": "Hasil Pencarian",
+    "searchPlaceholder": "Cari proyek..."
+  },
+  "actions": {
+    "selectTeam": "Pilih Tim",
+    "or": "atau",
+    "clearSearch": "Bersihkan pencarian"
+  },
+  "windowsAdmin": {
+    "title": "Mode Administrator Windows direkomendasikan",
+    "description": "Pemeriksaan OpenCode waktu jalan dapat keluar ketika Agen Tim AI tidak ditinggikan. Start ulang aplikasi dengan Jalankan sebagai administrator sebelum meluncurkan tim OpenCode."
+  },
+  "webPreview": {
+    "title": "Buka aplikasi desktop untuk fungsionalitas penuh",
+    "description": "Versi peramban masih dalam pengembangan. Aksi projek, integration, dan pemutakhiran status langsung mungkin terbatas di sini. Gunakan aplikasi desktop untuk mengakses semua fitur yang dapat diandalkan."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Versi baru tersedia",
+    "restartNow": "Mulai lagi sekarang",
+    "viewDetails": "Lihat rincian"
+  }
+}

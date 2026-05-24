@@ -51,12 +51,11 @@ type PendingDiagnosticBucket =
   | 'noRuntime';
 
 type PendingDiagnosticNameGroups = Record<PendingDiagnosticBucket, string[]>;
-type TeamProvisioningTranslator = unknown;
 
 const MAX_PENDING_DIAGNOSTIC_NAMES = 4;
 
 function translateProvisioning(
-  t: TeamProvisioningTranslator | undefined,
+  t: unknown,
   key: string,
   fallback: string,
   options?: Record<string, unknown>
@@ -199,7 +198,7 @@ function countPermissionBlockedMembers(params: {
   return count;
 }
 
-function buildAwaitingPermissionPhrase(count: number, t?: TeamProvisioningTranslator): string {
+function buildAwaitingPermissionPhrase(count: number, t?: unknown): string {
   return translateProvisioning(
     t,
     'provisioning.presentation.awaitingPermission',
@@ -210,7 +209,7 @@ function buildAwaitingPermissionPhrase(count: number, t?: TeamProvisioningTransl
   );
 }
 
-function formatMemberNameList(names: readonly string[], t?: TeamProvisioningTranslator): string {
+function formatMemberNameList(names: readonly string[], t?: unknown): string {
   const listedNames = names.slice(0, MAX_PENDING_DIAGNOSTIC_NAMES).join(', ');
   const remainingCount = names.length - Math.min(names.length, MAX_PENDING_DIAGNOSTIC_NAMES);
   return remainingCount > 0
@@ -346,7 +345,7 @@ function buildOpenCodeSecondaryWaitPhrase(params: {
   memberSpawnStatuses: MemberSpawnStatusCollection;
   memberSpawnSnapshotStatuses?: MemberSpawnStatusesSnapshot['statuses'];
   memberSpawnSnapshotUpdatedAt?: string;
-  t?: TeamProvisioningTranslator;
+  t?: unknown;
 }): string | null {
   const pendingNames = getPendingSpawnNames({
     memberSpawnStatuses: params.memberSpawnStatuses,
@@ -399,7 +398,7 @@ function buildOpenCodeSecondaryWaitPhrase(params: {
 function formatNamedPendingDiagnostic(
   label: string,
   names: readonly string[],
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   if (names.length === 0) {
     return null;
@@ -415,7 +414,7 @@ function formatNamedPendingDiagnostic(
 function formatCountPendingDiagnostic(
   count: number | undefined,
   label: string,
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   return count && count > 0
     ? translateProvisioning(
@@ -443,7 +442,7 @@ function buildPendingDiagnosticPhrase({
   memberSpawnSnapshotStatuses?: MemberSpawnStatusesSnapshot['statuses'];
   memberSpawnSnapshotUpdatedAt?: string;
   fallbackJoiningPhrase: string;
-  t?: TeamProvisioningTranslator;
+  t?: unknown;
 }): string {
   const groups = getPendingDiagnosticNameGroups({
     memberSpawnStatuses,
@@ -722,7 +721,7 @@ function normalizeFailureReason(reason: string): string {
 
 function buildFailedSpawnPanelMessage(
   failedSpawnDetails: readonly FailedSpawnDetail[],
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   if (failedSpawnDetails.length === 0) {
     return null;
@@ -746,7 +745,7 @@ function buildFailedSpawnPanelMessage(
 
 function buildFailedSpawnCompactDetail(
   failedSpawnDetails: readonly FailedSpawnDetail[],
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   if (failedSpawnDetails.length === 0) {
     return null;
@@ -770,7 +769,7 @@ function buildFailedSpawnCompactDetail(
 function buildGenericFailedSpawnPanelMessage(
   failedSpawnCount: number,
   expectedTeammateCount: number,
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   if (failedSpawnCount <= 0) {
     return null;
@@ -793,7 +792,7 @@ function buildGenericFailedSpawnPanelMessage(
 
 function buildSkippedSpawnPanelMessage(
   skippedSpawnDetails: readonly SkippedSpawnDetail[],
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   if (skippedSpawnDetails.length === 0) {
     return null;
@@ -831,7 +830,7 @@ function buildSkippedSpawnPanelMessage(
 
 function buildSkippedSpawnCompactDetail(
   skippedSpawnDetails: readonly SkippedSpawnDetail[],
-  t?: TeamProvisioningTranslator
+  t?: unknown
 ): string | null {
   if (skippedSpawnDetails.length === 0) {
     return null;
@@ -904,7 +903,7 @@ export function buildTeamProvisioningPresentation({
   > & {
     statuses?: MemberSpawnStatusesSnapshot['statuses'];
   };
-  t?: TeamProvisioningTranslator;
+  t?: unknown;
 }): TeamProvisioningPresentation | null {
   if (!progress) {
     return null;

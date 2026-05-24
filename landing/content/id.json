@@ -1,0 +1,132 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "Kau CTO, agen adalah tim Anda. Mereka menangani tugas mereka sendiri, saling mengirim pesan, meninjau kode masing-masing. Anda hanya melihat papan kanban dan minum kopi."
+  },
+  "features": [
+    {
+      "id": "AgentTeams",
+      "title": "Agent Teams",
+      "description": "Membuat tim dengan peran yang berbeda. Agen bekerja secara mandiri secara paralel, berkomunikasi satu sama lain, dan berkolaborasi dalam tim."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban Papan",
+      "description": "Tugas mengubah status di real-time sebagai agen bekerja. Seret, assign, review - semua pada papan visual."
+    },
+    {
+      "id": "codeReview",
+      "title": "Ulasan Kode",
+      "description": "Diff tampilan per tugas dengan menerima, menolak, dan berkomentar. Bawaan-dalam penyunting kode dengan Git dukungan."
+    },
+    {
+      "id": "cross Team",
+      "title": "Cross- Tim Komunikasi",
+      "description": "Agen saling mengirim pesan dalam dan dalam tim. Pesan langsung, komentar tugas, dan tindakan cepat."
+    },
+    {
+      "id": "soloMode",
+      "title": "Moda Solo",
+      "description": "Mulailah dengan satu agen yang mengelola sendiri. Perluas ke tim penuh setiap kali Anda membutuhkan lebih banyak kekuatan."
+    },
+    {
+      "id": "Hidup Proses",
+      "title": "Proses Hidup",
+      "description": "Lihat agen yang sedang berjalan, URL terbuka dalam browser, monitor penggunaan token dan konteks sesi dalam waktu nyata."
+    }
+  ],
+  "faq": [
+    {
+      "id": "APA ITU",
+      "question": "Apa Agent Teams?",
+      "answer": "Aplikasi desktop untuk mendalangi AI tim agen dengan lapisan koordinasi lokal kita sendiri. Agen memiliki peran, bekerja sendiri, berkolaborasi melalui papan kanban, dan dapat berjalan di Anthropic atau Codex."
+    },
+    {
+      "id": "isfree",
+      "question": "Apakah benar-benar gratis?",
+      "answer": "Ya. Aplikasi ini bebas dan open source, dan Anda dapat mulai dengan model bebas tanpa auth - tanpa registrasi, API kunci, atau kartu kredit. Jika Anda ingin lebih banyak model, hubungkan Claude, Codex, OpenCode/OpenRouter, atau penyedia lain yang didukung."
+    },
+    {
+      "id": "platform",
+      "question": "Platform mana yang didukung?",
+      "answer": "macOS (Apple Silikon dan Intel), Windows, dan Linux."
+    },
+    {
+      "id": "homeItWorks",
+      "question": "Bagaimana cara kerjanya?",
+      "answer": "Pasang aplikasi, membuat tim, menetapkan peran - agen mulai bekerja secara paralel. Anda memantau kemajuan pada papan kanban, meninjau kode diffs, dan berkomunikasi dengan agen secara langsung."
+    },
+    {
+      "id": "privasi",
+      "question": "Apakah kode pribadiku?",
+      "answer": "Semuanya berjalan secara lokal pada mesin Anda. Tidak ada data yang dikirim ke server eksternal. Kode, percakapan, dan kegiatan agen tetap sepenuhnya pribadi."
+    },
+    {
+      "id": "persyaratan",
+      "question": "Apa yang harus kumulai?",
+      "answer": "Instal saja aplikasi - mulai dengan model gratis tanpa auth, kemudian menghubungkan model yang didukung dari UI hanya ketika Anda membutuhkannya."
+    }
+  ],
+  "download": {
+    "title": "Unduh",
+    "note": "Pilih platform Anda dan mulai membangun dengan AI Agen tim."
+  },
+  "testimonials": [
+    {
+      "id": "User1",
+      "name": "Alex K.",
+      "role": "Tech Lead",
+      "text": "Akhirnya, alat yang memungkinkan saya mengelola AI agen seperti saya mengelola tim teknik saya. Papan kanban adalah game- changer untuk melacak kerja agen paralel."
+    },
+    {
+      "id": "User2",
+      "name": "Sarah M.",
+      "role": "Pengembang Total-stack",
+      "text": "Modus tunggal sempurna untuk tugas cepat. Ketika saya membutuhkan lebih banyak senjata, Aku memutar tim penuh dalam hitungan detik. Komunikasi tim hanya bekerja."
+    },
+    {
+      "id": "User3",
+      "name": "David R.",
+      "role": "Insinyur Senior",
+      "text": "Review kode adalah brilian - diff view per tugas, accept / reject, komentar. Ini seperti memiliki tim junior devs yang benar-benar mengikuti instruksi."
+    },
+    {
+      "id": "User4",
+      "name": "Yuki T.",
+      "role": "Insinyur DevOps",
+      "text": "Pemantauan proses dan pelacakan konteks secara langsung sangat berguna. Aku bisa melihat apa yang masing-masing agen lakukan dan berapa banyak konteks yang mereka gunakan."
+    },
+    {
+      "id": "UK5",
+      "name": "Maria S.",
+      "role": "Pengembang Indie",
+      "text": "Zero- setup onboarding adalah nyata - terpasang aplikasi, dikonfirmasi sekali, dan memiliki agen bekerja pada codebase saya dalam waktu 5 menit. Tidak API kunci, tidak ada berkas konfigurasi."
+    },
+    {
+      "id": "Us6",
+      "name": "Chris L.",
+      "role": "Startup CTO",
+      "text": "Ini benar-benar berubah bagaimana saya prototipe. Aku mengatur tim agen untuk bagian yang berbeda dari tumpukan dan membiarkan mereka bekerja secara paralel. Peningkatan produktivitas 10x, tidak ada lelucon."
+    }
+  ],
+  "pricing": [
+    {
+      "id": "bebas",
+      "name": "Bebas",
+      "price": "$0",
+      "period": "",
+      "description": "Mulailah dengan model bebas yang termasuk tanpa auth. Tidak ada tanda tangan, tidak ada API kunci, tidak ada kartu kredit.",
+      "features": [
+        "Model bebas tanpa auth untuk pertama kali berjalan",
+        "Tak ada akun atau log masuk penyedia yang diperlukan untuk mencoba",
+        "Opsional Claude, Codex, dan OpenCode Akses penyedia",
+        "Tim agen tak terbatas",
+        "Kanban papan dengan pemutakhiran real-time",
+        "Ulasan kode dengan tilikan diff",
+        "Cross- tim komunikasi",
+        "Mode solo & tim"
+      ],
+      "highlighted": true
+    }
+  ]
+}

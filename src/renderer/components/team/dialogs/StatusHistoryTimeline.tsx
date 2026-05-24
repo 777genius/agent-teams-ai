@@ -1,6 +1,6 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 import {
   REVIEW_STATE_DISPLAY,

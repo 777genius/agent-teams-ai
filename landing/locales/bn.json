@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "features": "IMAP-র বৈশিষ্ট্য",
+    "screenshots": "স্ক্রিন-শট",
+    "docs": "নথিপত্র",
+    "comparison": "সাথে তুলনা করা হবে",
+    "download": "ডাউনলোড করা হয়েছে",
+    "pricing": "মুক্ত",
+    "faq": "FAQ",
+    "viewOnGithub": "প্রদর্শন GitHub"
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "মেইল ডাউনলোড করো",
+    "ctaPrimary": "ডাউনলোড করা হবে {platform}",
+    "ctaSecondary": "সাথে তুলনা করা হবে",
+    "ctaDocs": "নথিপত্র",
+    "preview": "উৎপাদন প্রাকদর্শন",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "কানবুন বোর্ড",
+      "openSource": "উৎস খুলুন"
+    },
+    "watchDemo": "নমুনা",
+    "videoUnavailable": "ভিডিও উপলব্ধ নয়"
+  },
+  "download": {
+    "title": "ডাউনলোড করা হয়েছে",
+    "detected": "সনাক্ত",
+    "systemRequirements": "সিস্টেম প্রয়োজন",
+    "version": "সংস্করণ {version}"
+  },
+  "theme": {
+    "dark": "কালো",
+    "light": "সাদা"
+  },
+  "language": {
+    "label": "ভাষা",
+    "search": "ভাষা সন্ধান..."
+  },
+  "features": {
+    "sectionTitle": "তোমার যা দরকার AI এজেন্ট চার্জ",
+    "sectionSubtitle": "এমন শক্তিশালী হাতিয়ার যা দিয়ে মাল্টি-agent সহযোগিতা করা যায়।"
+  },
+  "pricing": {
+    "sectionTitle": "ইনস্টল করার জন্য মুক্ত। ফ্রি মডেল সহ।",
+    "sectionSubtitle": "অনুমতি ছাড়া একটি মুক্ত মডেল দিয়ে অবিলম্বে শুরু করুন API চাবি বা ক্রেডিট কার্ড। সংযোগ স্থাপন করুন Claude, Codex, OpenCode/OpenRouterআপনি যখন আরো মডেল চান তখন অন্য পরিসেবা ব্যবহার করুন ।",
+    "getStarted": "মেইল ডাউনলোড করো",
+    "popular": "মুক্ত",
+    "freeModelCallout": "মাউন্ট করার যোগ্য মডেল উপস্থিত নেই",
+    "note": "Agent Teams কোনো টাকা নেই। আপনার পরিচয় পত্রের সঙ্গে যে মুক্ত মডেল ব্যবহার করা হবে, তা আপনার সুবিধা অনুযায়ী সঠিকরূপে ধার্য করা হয়নি।"
+  },
+  "testimonials": {
+    "sectionTitle": "ডেভেলপার বলেন",
+    "sectionSubtitle": "বাস্তব নির্মাতাদের কাছ থেকে বাস্তব প্রতিক্রিয়া",
+    "showMore": "আরো বেশি দেখাও",
+    "showLess": "কম দেখান",
+    "feedbackCta": "আপনার অভিজ্ঞতাটা কি শেয়ার করতে চান? একটি বিষয় খুলুন"
+  },
+  "faq": {
+    "sectionTitle": "প্রশ্ন আছে? আমরা উত্তর পেয়েছি",
+    "subtitle": "তোমার যা জানা দরকার Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "আমরা কিভাবে তুলনা",
+    "sectionSubtitle": "অন্যান্য সংস্করণের সাথে একত্রিত করার বৈশিষ্ট্য AI কোডিং টুল।",
+    "feature": "বৈশিষ্ট্য",
+    "robotBubble": "নিজের জন্য বিচারক",
+    "features": {
+      "crossTeam": "ক্রস- পেন যোগাযোগ",
+      "agentMessaging": "এজেন্ট-agent- র প্রতিনিধি",
+      "linkedTasks": "অফলাইন কাজ করুন",
+      "sessionAnalysis": "সেশান বিশ্লেষণ",
+      "taskAttachments": "সংযুক্ত বস্তু সংরক্ষণ করা হচ্ছে",
+      "hunkReview": "ক্রাক-লেগ পর্যালোচনা",
+      "codeEditor": "বিল্ট-ইন কোড সম্পাদক",
+      "fullAutonomy": "সম্পূর্ণ স্বায়ত্তশাসন",
+      "taskDeps": "কাজের নির্ভরতা",
+      "reviewWorkflow": "রিফ্লোফ্লো",
+      "zeroSetup": "জিরো ব্যবস্থাপনা",
+      "kanban": "কানবুন বোর্ড",
+      "execLog": "লগ করা হচ্ছে",
+      "liveProcesses": "লাইভ প্রসেস",
+      "runtimeLoad": "CPU/RAM দলের সদস্য",
+      "perTaskReview": "Pe-Lite কোড পর্যালোচনা ব্যবস্থা",
+      "flexAutonomy": "নমনীয় স্বায়ত্তশাসন",
+      "worktree": "গিটট্রি বিচ্ছিন্ন করুন",
+      "multiAgent": "মিশ্র গন্ধ AI দলের সদস্য",
+      "liveWorkGraph": "লাইভ টিম ম্যাপ",
+      "liveTeam": "জীবন কাহিনী",
+      "teamWorkspace": "কর্মক্ষেত্রের নাম",
+      "launchProof": "দলের বন্ধু আরম্ভের অবস্থা",
+      "orgGovernance": "সংস্থা চার্ট / শাসন",
+      "budgetControls": "বুদেট নিয়ন্ত্রণ",
+      "price": "মূল্য"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "কর্ম সম্পর্কে দেখ",
+    "sectionSubtitle": "অ্যাপটির বাস্তব স্ক্রিনশট —কানবান বোর্ড, কোড পর্যালোচনা, এজেন্ট দল এবং আরও অনেক কিছু ।"
+  },
+  "common": {
+    "learnMore": "অারো জানুন"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI ডেভেলপার",
+    "robotBubble": "আমি অপেক্ষা করছি",
+    "links": {
+      "github": "GitHub",
+      "docs": "নথিপত্র"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - AI ডেভেলপারের জন্য এজেন্ট অর্পেশন",
+    "homeDescription": "মুক্ত, ওপেন সোর্স ডেস্কটপ অ্যাপ্লিকেশন AI এজেন্ট টিম. কোনো পরিচয় সহ মুক্ত মডেলের সাথে আরম্ভ করা হবে না Claude, Codexঅথবা OpenCode যখন তোমার আরও মডেল দরকার.",
+    "downloadTitle": "ডাউনলোড করা হয়েছে Agent Teams ম্যাকমাসো, Windows, লিনাক্স এবং লিনাক্সের জন্য",
+    "downloadDescription": "ডাউনলোড করা হয়েছে Agent Teams ম্যাককোনস, উইন্ডোজ এবং লিনাক্সের জন্য। ডেস্কটপ শেয়ার ব্যবস্থা Claude, Codexএবং OpenCode এজেন্ট টিম."
+  },
+  "error": {
+    "notFoundTitle": "পৃষ্ঠা পাওয়া যায়নি",
+    "notFoundDescription": "আপনি যে ওয়েবপেজটি খুঁজছেন বা সরানো হয়নি, সেটি সরানো হয়েছে ।",
+    "genericTitle": "কিছু সমস্যা হয়েছে",
+    "genericDescription": "একটি অপ্রত্যাশিত সমস্যা দেখা দিয়েছে। অনুগ্রহ করে পুনরায় প্রচেষ্টা করুন।",
+    "goHome": "হোম পেজ-এ যান"
+  }
+}

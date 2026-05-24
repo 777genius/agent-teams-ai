@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "copied": "تم النسخ",
+    "copyUrl": "نسخ الرابط",
+    "open": "فتح",
+    "reveal": "إظهار",
+    "retry": "إعادة المحاولة",
+    "save": "حفظ",
+    "showLess": "عرض أقل",
+    "showMore": "عرض المزيد",
+    "refresh": "تحديث",
+    "reset": "إعادة تعيين",
+    "copyToClipboard": "نسخ إلى الحافظة",
+    "moreActions": "إجراءات إضافية",
+    "closeDialog": "إغلاق النافذة",
+    "goToDashboard": "الانتقال إلى لوحة التحكم",
+    "or": "أو",
+    "hide": "إخفاء",
+    "resetSelection": "إعادة تعيين التحديد"
+  },
+  "code": {
+    "line": "السطر {{line}}",
+    "lines": "الأسطر {{from}}-{{to}}",
+    "moreLines": "({{count}} أسطر إضافية...)",
+    "moreLines_few": "({{count}} أسطر إضافية...)",
+    "moreLines_many": "({{count}} أسطر إضافية...)",
+    "moreLines_one": "({{count}} سطر إضافي...)",
+    "moreLines_other": "({{count}} أسطر إضافية...)",
+    "code": "الكود",
+    "preview": "معاينة",
+    "markdownPreview": "معاينة Markdown",
+    "linesParenthesized": "(الأسطر {{from}}-{{to}})",
+    "mermaidSyntaxError": "خطأ في صيغة Mermaid"
+  },
+  "contextBadge": {
+    "badge": "السياق",
+    "breakdown": {
+      "text": "نص",
+      "thinking": "تفكير"
+    },
+    "detailsAria": "تفاصيل حقن السياق",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sections": {
+      "claudeMdFiles": "ملفات CLAUDE.md",
+      "mentionedFiles": "الملفات المذكورة",
+      "taskCoordination": "تنسيق المهام",
+      "thinkingText": "تفكير + نص",
+      "toolOutputs": "مخرجات الأدوات",
+      "userMessages": "رسائل المستخدم"
+    },
+    "title": "سياق جديد تمت إضافته في هذه الجولة",
+    "tokenCount": "~{{tokens}} رمزًا",
+    "totalNewTokens": "إجمالي الرموز الجديدة",
+    "turn": "الجولة {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} tokens",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} tokens"
+  },
+  "locales": {
+    "emptyMessage": "لم يتم العثور على أي لغة.",
+    "names": {
+      "en": "الإنجليزية",
+      "ru": "الروسية",
+      "zh": "الصينية",
+      "ja": "اليابانية",
+      "ko": "الكورية",
+      "es": "الإسبانية",
+      "hi": "الهندية",
+      "pt": "البرتغالية",
+      "fr": "الفرنسية",
+      "ar": "العربية",
+      "bn": "البنغالية",
+      "ur": "الأردية",
+      "id": "الإندونيسية",
+      "de": "الألمانية",
+      "system": "النظام"
+    },
+    "searchPlaceholder": "البحث عن لغة...",
+    "selectPlaceholder": "اختر لغة التطبيق...",
+    "systemWithResolved": "النظام - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "لم يتم العثور على أعضاء.",
+    "searchPlaceholder": "البحث عن أعضاء...",
+    "unassigned": "غير مخصص",
+    "teammateFallback": "زميل"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "التحقق",
+        "downloading": "تحميل",
+        "installCli": "تثبيت Codex CLI",
+        "installing": "التركيب",
+        "retryInstall": "إعادة محاولة التثبيت"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "لا اقتراحات مطابقة",
+    "searching": "جار البحث...",
+    "searchingFiles": "جار البحث في الملفات...",
+    "findInConversation": "البحث في المحادثة...",
+    "resultCount": "{{current}} من {{total}}",
+    "resultCountCapped": "{{current}} من {{total}}+",
+    "noResults": "لا توجد نتائج",
+    "previousResultShortcut": "النتيجة السابقة (Shift+Enter)",
+    "nextResultShortcut": "النتيجة التالية (Enter)",
+    "closeShortcut": "إغلاق (Esc)",
+    "nothingFound": "لم يتم العثور على شيء",
+    "placeholder": "بحث..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "الجدول الزمني",
+      "clearFilters": "مرشحات واضحة",
+      "createSchedule": "الجدول الزمني المحدد",
+      "delete": "تحذف",
+      "edit": "تعديل",
+      "pause": "وقف",
+      "resume": "الاستهلاك",
+      "runNow": "اركض الآن"
+    },
+    "empty": {
+      "description": "وضع جدول زمني لأي فريق لتشغيل (كلود) في تنفيذ المهمة بتعبيرات (كرون) الجداول من جميع الفرق ستظهر هنا",
+      "noMatches": "لا جداول مطابقة للمرشحين الحاليين",
+      "title": "لا توجد مهام مجدولة"
+    },
+    "filters": {
+      "allTeams": "جميع الفرق"
+    },
+    "item": {
+      "loadingRunHistory": "التمرين على التاريخ",
+      "nextRun": "التالي: {{value}}",
+      "noRunsYet": "لا يوجد ركض حتى الآن"
+    },
+    "loading": "مواعيد الشحن",
+    "searchPlaceholder": "جداول البحث...",
+    "status": {
+      "active": "النشاط",
+      "all": "كل شيء",
+      "disabled": "المعوقين",
+      "paused": "مدفوع"
+    },
+    "title": "الجداول"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "اختبئ",
+      "pin": "تثبيت",
+      "unhide": "Unhide"
+    },
+    "empty": {
+      "noMatchingSessions": "لا جلسات مطابقة",
+      "noMatchingSessionsDescription": "This project has no matching sessions yet.",
+      "noMatchingSessionsFiltered": "جرّبْ استفساراً آخراً أَو إعادة تصفية المزود.",
+      "noSessions": "No sessions found",
+      "noSessionsDescription": "This project has no sessions yet",
+      "selectProject": "اختيار مشروع للنظر في الجلسات"
+    },
+    "errors": {
+      "loading": "جلسات تحميل الأخطاء"
+    },
+    "loadedMatchingMore": "{{count}} جلسات المطابقة التي تم تحميلها حتى الآن - تنزل إلى تحميل أكثر.",
+    "loadingMore": "عقد المزيد من الجلسات...",
+    "pinned": "Pinned",
+    "scrollToLoadMore": "اضغط أكثر",
+    "search": {
+      "clear": "البحث عن الدورة",
+      "placeholder": "جلسات البحث..."
+    },
+    "selection": {
+      "cancel": "اختيار إلغاء",
+      "exitMode": "طريقة اختيار المخرج",
+      "hideSelected": "إخفاء الدورات المختارة",
+      "pinSelected": "دورات مختارة",
+      "selectSessions": "الدورات المختارة",
+      "selected": "{{count}} مختارة",
+      "unhideSelected": "دورات مختارة",
+      "selected_few": "{{count}} مختارة",
+      "selected_many": "{{count}} مختارة",
+      "selected_one": "{{count}} مختارة",
+      "selected_other": "{{count}} مختارة"
+    },
+    "sort": {
+      "byContext": "حسب السياق",
+      "byContextTooltip": "الاستهلاك حسب السياق",
+      "byRecentTooltip": "نوعاً ما",
+      "contextLoadedOnly": "الفرز المستمر فقط ترتيب الجلسات المحملة."
+    },
+    "title": "الدورات",
+    "visibility": {
+      "hideHidden": "جلسات مخفية",
+      "showHidden": "جلسات مخفية"
+    },
+    "worktree": {
+      "switch": "تبديل Worktree"
+    },
+    "loadedMatchingMore_few": "{{count}} جلسات المطابقة التي تم تحميلها حتى الآن - تنزل إلى تحميل أكثر.",
+    "loadedMatchingMore_many": "{{count}} جلسات المطابقة التي تم تحميلها حتى الآن - تنزل إلى تحميل أكثر.",
+    "loadedMatchingMore_one": "{{count}} جلسات المطابقة التي تم تحميلها حتى الآن - تنزل إلى تحميل أكثر.",
+    "loadedMatchingMore_other": "{{count}} جلسات المطابقة التي تم تحميلها حتى الآن - تنزل إلى تحميل أكثر.",
+    "failedToLoad": "فشل في تحميل الدورة",
+    "loading": "جلسة تحديد الموقع",
+    "filter": {
+      "title": "جلسات الاستماع"
+    },
+    "count": "{{count}} الدورات",
+    "count_one": "{{count}} الدورة",
+    "count_other": "{{count}} الدورات",
+    "count_few": "{{count}} الدورات",
+    "count_many": "{{count}} الدورات",
+    "inProgress": "الجلسة جارية"
+  },
+  "states": {
+    "loading": "جار التحميل...",
+    "offline": "غير متصل",
+    "online": "متصل",
+    "unknown": "غير معروف",
+    "error": "خطأ"
+  },
+  "markdown": {
+    "imageFallback": "[Image: {{label}}]",
+    "largeContentNotice": "المضمون كبير جدا{{count}} (شارز). تظهر العرض الأولي خام للحفاظ على استجابة UI.",
+    "largeContentTitle": "ويظهر المحتوى الكبير على أنه خام لمنع تجميد اليورانيوم",
+    "raw": "راو",
+    "rawPreview": "معاينة خام",
+    "renderMarkdown": "عرض Markdown",
+    "showAll": "أظهر كل شيء",
+    "showMore": "أظهر المزيد",
+    "showRaw": "عرض خام",
+    "showingChars": "عرض {{shown}} / {{total}} chars",
+    "largeContentNotice_few": "المضمون كبير جدا{{count}} (شارز). تظهر العرض الأولي خام للحفاظ على استجابة UI.",
+    "largeContentNotice_many": "المضمون كبير جدا{{count}} (شارز). تظهر العرض الأولي خام للحفاظ على استجابة UI.",
+    "largeContentNotice_one": "المضمون كبير جدا{{count}} (شارز). تظهر العرض الأولي خام للحفاظ على استجابة UI.",
+    "largeContentNotice_other": "المضمون كبير جدا{{count}} (شارز). تظهر العرض الأولي خام للحفاظ على استجابة UI."
+  },
+  "terminal": {
+    "checkOutputForDetails": "الناتج النهائي المتحقق أعلاه للتفاصيل",
+    "closingInSeconds": "الإغلاق {{count}}S...",
+    "closingInSeconds_few": "الإغلاق {{count}}S...",
+    "closingInSeconds_many": "الإغلاق {{count}}S...",
+    "closingInSeconds_one": "الإغلاق {{count}}S...",
+    "closingInSeconds_other": "الإغلاق {{count}}S...",
+    "completedSuccessfully": "أُنجز بنجاح",
+    "exitCode": "(exit code {{code}})",
+    "processFailed": "فشل العملية",
+    "title": "المصطلحات"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "متراكمة في كامل الدورة دون ازدواجية",
+    "cacheRead": "Cache Read",
+    "cacheWrite": "Cache Write",
+    "costUsd": "Cost (USD)",
+    "inputTokens": "المدخلات",
+    "model": "النموذج النموذجي",
+    "outputTokens": "الناتج",
+    "phase": "المرحلة {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}النسبة المئوية للمدخلات السريعة",
+    "taskCoordination": "تنسيق المهام",
+    "thinkingText": "التفكير + النص",
+    "toolOutputs": "النواتج",
+    "total": "المجموع",
+    "userMessages": "رسائل مستخدم",
+    "visibleContext": "السياق المرئي",
+    "includesClaudeMd": "incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} tokens",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "فريق النسخ",
+      "createTeam": "فريق الإنشاء",
+      "deleteForever": "تحذف إلى الأبد",
+      "deletePermanently": "تحذف بصفة دائمة",
+      "deleteTeam": "يحذف الفريق",
+      "launching": "إطلاق...",
+      "launchTeam": "فريق الإطلاق",
+      "relaunchTeam": "فريق الإطلاق",
+      "restore": "Restore",
+      "restoreTeam": "فريق ريستو",
+      "retry": "Retry",
+      "stopTeam": "الفريق",
+      "stopping": "توقف..."
+    },
+    "status": {
+      "active": "النشاط",
+      "deleted": "Deleted",
+      "launching": "إطلاق...",
+      "offline": "Offline",
+      "partialFailure": "الإطلاق الفاشل",
+      "partialPending": "قيد النظر",
+      "partialSkipped": "عضو متقدم",
+      "running": "تشغيل"
+    },
+    "partial": {
+      "pending": "آخر عملية إطلاق لا تزال متوافقة",
+      "skipped": "آخر عملية إطلاق تخطيت زملاء الفريق",
+      "skippedWithCount": "آخر عملية إطلاق {{count}}/{{expected}} زميل الفريق",
+      "skippedWithCount_few": "آخر عملية إطلاق {{count}}/{{expected}} زملاء الفريق",
+      "skippedWithCount_many": "آخر عملية إطلاق {{count}}/{{expected}} زملاء الفريق",
+      "skippedWithCount_one": "آخر عملية إطلاق {{count}}/{{expected}} زميل الفريق",
+      "skippedWithCount_other": "آخر عملية إطلاق {{count}}/{{expected}} زملاء الفريق",
+      "stopped": "آخر عملية إطلاق توقفت قبل أن ينضم جميع زملاء الفريق",
+      "stoppedWithCount": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زميل الفريق انضم",
+      "stoppedWithCount_few": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زملاء الفريق انضموا",
+      "stoppedWithCount_many": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زملاء الفريق انضموا",
+      "stoppedWithCount_one": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زميل الفريق انضم",
+      "stoppedWithCount_other": "آخر عملية الإطلاق توقفت من قبل {{count}}/{{expected}} زملاء الفريق انضموا"
+    },
+    "noDescription": "لا وصف",
+    "solo": "Solo",
+    "membersCount": "الأعضاء: {{count}}",
+    "membersCount_few": "الأعضاء: {{count}}",
+    "membersCount_many": "الأعضاء: {{count}}",
+    "membersCount_one": "العضو: {{count}}",
+    "membersCount_other": "الأعضاء: {{count}}",
+    "all": "كل شيء",
+    "moreCount": "+{{count}} أكثر",
+    "moreCount_one": "+{{count}} أكثر",
+    "moreCount_other": "+{{count}} أكثر",
+    "moreCount_few": "+{{count}} أكثر",
+    "moreCount_many": "+{{count}} أكثر"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "تخلف عن كل مشروع ليس له إبطاله الخاص بالشركة المفتوحة.",
+      "scopeDescriptionProject": "تجاوز المشروع المختار فقط فرق التشغيل لم تتغير",
+      "setAllProjectsDefault": "تحديد جميع المشاريع",
+      "setProjectDefault": "مخطط المشروع",
+      "validationContext": "سياق التقييم",
+      "projectOverrideContext": "سياق تجاوز المشروع",
+      "selectProjectHint": "اختيار مشروع قبل اختبار النماذج المحلية أو توفير التقصيرات.",
+      "allProjectsHint": "استخدام الاختبارات {{project}}- ينطبق التقصير ما لم يكن المشروع متجاوزا.",
+      "projectHint": "إنقاذ التجاوزات فقط {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "السياق",
+      "closePanel": "حلقة نقاش",
+      "phase": "المرحلة:",
+      "current": "الحالية",
+      "view": "فيو:",
+      "category": "الفئة",
+      "bySize": "بحجم"
+    },
+    "metrics": {
+      "unavailable": "غير متاح",
+      "contextUsed": "السياق المستخدم",
+      "promptInput": "Prompt Input",
+      "visibleContext": "السياق المرئي",
+      "ofContext": "السياق",
+      "ofPrompt": "فورا",
+      "codexTelemetryUnavailable": "لا يكشف استخدام الكودكس السريع عن طريق القياسات التليفزيونية الجارية حتى الآن، لذلك يبقى الناتج السريع والسياق غير متاحين بدلا من إظهار صفر مزيف.",
+      "sessionCost": "التكلفة:",
+      "parentPlus": "الوالد +",
+      "subagents": "Subagents",
+      "details": "التفاصيل"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "السياق المستخدم",
+        "description": "مدخلات سريعة بالإضافة إلى كسور الإنتاج تحتل حالياً نافذة سياق النموذج"
+      },
+      "promptInput": {
+        "title": "Prompt Input",
+        "description": "تم إرسالها إلى النموذج قبل الجيل لكلود هذا يشمل `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "السياق المرئي",
+        "description": "The inspectable subset of prompt input: files, CLAUDE.md, tool outputs, user messages, and similar injections that you can optimize directly."
+      },
+      "availability": {
+        "title": "التوافر",
+        "description": "وإذا لم يفضح عرض المزود استخدامه في الاتجاه السريع بعد، يُظهر الفريق أن القياسات غير متاحة بدلا من التظاهر بأنها صفر."
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}",
+      "tokensApprox": "~{{tokens}} tokens",
+      "toolsCount": "{{count}} الأدوات",
+      "toolsCount_one": "{{count}} أداة",
+      "toolsCount_other": "{{count}} الأدوات",
+      "toolsCount_few": "{{count}} الأدوات",
+      "toolsCount_many": "{{count}} الأدوات",
+      "itemsCount": "{{count}} البنود",
+      "itemsCount_one": "{{count}} البند",
+      "itemsCount_other": "{{count}} البنود",
+      "itemsCount_few": "{{count}} البنود",
+      "itemsCount_many": "{{count}} البنود",
+      "missing": "مفقود",
+      "thinking": "التفكير",
+      "text": "النص"
+    },
+    "empty": "No context injections detected in this session",
+    "view": {
+      "grouped": "المجموع",
+      "flat": "Flat"
+    },
+    "claudeMdFiles": "CLAUDE.md Files",
+    "mentionedFiles": "الملفات المشار إليها"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "تم تأكيد الإغلاق",
+      "summary": {
+        "tools": "{{count}} الأدوات",
+        "tools_one": "{{count}} أداة",
+        "tools_other": "{{count}} الأدوات",
+        "tools_few": "{{count}} الأدوات",
+        "tools_many": "{{count}} الأدوات"
+      },
+      "meta": {
+        "type": "النوع",
+        "duration": "المدة",
+        "model": "النموذج النموذجي",
+        "id": "الهوية"
+      },
+      "metrics": {
+        "contextWindow": "Context Window",
+        "contextUsage": "السياق",
+        "mainContext": "السياق الرئيسي",
+        "totalOutput": "مجموع الناتج",
+        "turns": "({{count}} turns)",
+        "turns_one": "({{count}} turn)",
+        "turns_other": "({{count}} turns)",
+        "subagentContext": "السياق الفرعي",
+        "phase": "المرحلة {{phase}}",
+        "turns_few": "({{count}} turns)",
+        "turns_many": "({{count}} turns)"
+      },
+      "trace": {
+        "title": "مسار التنفيذ"
+      }
+    },
+    "user": {
+      "you": "أنت",
+      "showMore": "أظهر المزيد",
+      "showLess": "عرض أقل",
+      "backgroundTask": "المهمة الأساسية",
+      "exitCode": "مخرج {{code}}",
+      "imagesAttached": "{{count}} الصور المرفقة",
+      "imagesAttached_one": "{{count}} الصورة المرفقة",
+      "imagesAttached_few": "{{count}} الصور المرفقة",
+      "imagesAttached_many": "{{count}} الصور المرفقة",
+      "imagesAttached_other": "{{count}} الصور المرفقة"
+    },
+    "compact": {
+      "toggle": "المضامين المدمجة",
+      "contextCompacted": "السياق المدمج",
+      "freedTokens": "({{tokens}} freed)",
+      "phase": "المرحلة {{phase}}",
+      "conversationCompacted": "الحوار",
+      "summary": "وقد أوجزت رسائل سابقة لإنقاذ السياق. The full conversation history is preserved in the session file.",
+      "compacted": "تم الاتفاق عليها"
+    },
+    "executionTrace": {
+      "empty": "لا بنود إعدام",
+      "nested": "Nested: {{name}}",
+      "input": "الناتج"
+    },
+    "items": {
+      "empty": "لا أصناف للعرض"
+    },
+    "tools": {
+      "teammateSpawned": "شريك الفريق سحق",
+      "shutdownRequested": "تم طلب إغلاق",
+      "noResultReceived": "No result received",
+      "duration": "المدة: {{duration}}",
+      "result": "النتيجة",
+      "write": {
+        "createdFile": "ملف مبتكر",
+        "wroteToFile": "كاتب ملف"
+      },
+      "skill": {
+        "instructions": "تعليم المهارات",
+        "unknown": "غير معروف"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "الطلب الذي قاطعه المستخدم",
+      "planReadyForApproval": "الخطة جاهزة للموافقة"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "لا حديث",
+      "description": "ولا تتضمن هذه الدورة أية رسائل حتى الآن."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% left)",
+      "count": "Context ({{count}})",
+      "count_one": "Context ({{count}})",
+      "count_other": "Context ({{count}})",
+      "count_few": "Context ({{count}})",
+      "count_many": "Context ({{count}})"
+    },
+    "scrollToBottom": "انحنوا إلى الأسفل",
+    "bottom": "القاع",
+    "teammateMessage": {
+      "message": "الرسالة",
+      "resent": "الموافقة",
+      "fallback": "رسالة الفريق"
+    },
+    "system": {
+      "label": "النظام"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux غير مثبت",
+    "detectedOs": "محدد: {{os}}",
+    "runtimePath": "الطريق السريع: {{path}}",
+    "phase": "المرحلة: {{phase}}",
+    "actions": {
+      "cancel": "إلغاء",
+      "manualGuide": "الدليل الدليلي",
+      "hideSetupSteps": "اخفاء الخطوات",
+      "showSetupSteps": "Show setup steps ({{count}})",
+      "showSetupSteps_one": "Show setup step ({{count}})",
+      "showSetupSteps_other": "Show setup steps ({{count}})",
+      "recheck": "إعادة التدقيق",
+      "showSetupSteps_few": "Show setup steps ({{count}})",
+      "showSetupSteps_many": "Show setup steps ({{count}})"
+    },
+    "installerProgress": "Installer progress",
+    "input": {
+      "placeholder": "أرسل مدخلات إلى المُسلّم",
+      "send": "إرسال مدخلات",
+      "passwordNotice": "وترسل مدخلات كلمة السر مباشرة إلى محطة طرفية &quot; Installer &quot; ولا تضاف إلى ناتج السجل."
+    },
+    "details": {
+      "show": "التفاصيل",
+      "hide": "تفاصيل الاختباء"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "No recent activity",
+    "sessionsCount": "{{count}} الدورات",
+    "sessionsCount_one": "{{count}} الدورة",
+    "sessionsCount_other": "{{count}} الدورات",
+    "mode": {
+      "searchProjects": "مشاريع البحث",
+      "searchAcrossProjects": "البحث في جميع المشاريع",
+      "searchInProject": "البحث في المشروع"
+    },
+    "currentProject": "المشروع الحالي",
+    "global": "Global",
+    "placeholders": {
+      "projects": "مشاريع البحث...",
+      "conversations": "فتش المحادثات"
+    },
+    "empty": {
+      "noProjectsForQuery": "No projects found for \"{{query}}\"",
+      "noProjects": "لا توجد مشاريع",
+      "minChars": "نوع شخصين على الأقل للبحث",
+      "noFastResults": "No fast results in recent sessions for \"{{query}}\"",
+      "noResults": "No results found for \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} المشاريع",
+      "projectsCount_one": "{{count}} المشروع",
+      "projectsCount_other": "{{count}} المشاريع",
+      "results": "{{count}} {{speed}}النتائج",
+      "results_one": "{{count}} {{speed}}النتيجة",
+      "results_other": "{{count}} {{speed}}النتائج",
+      "resultsAcrossProjects": "{{count}} {{speed}}النتائج في جميع المشاريع",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}جميع المشاريع",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}النتائج في جميع المشاريع",
+      "fastPrefix": "بسرعة ",
+      "typeToSearch": "نوع البحث",
+      "navigate": "الملاحة",
+      "select": "اختيار",
+      "open": "مفتوحة",
+      "global": "عالمي",
+      "close": "قريبا",
+      "results_few": "{{count}} {{speed}}النتائج",
+      "results_many": "{{count}} {{speed}}النتائج",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}النتائج في جميع المشاريع",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}النتائج في جميع المشاريع",
+      "projectsCount_few": "{{count}} المشاريع",
+      "projectsCount_many": "{{count}} المشاريع",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} الدورات",
+    "sessionsCount_many": "{{count}} الدورات"
+  },
+  "tasksPanel": {
+    "title": "المهام",
+    "searchPlaceholder": "مهام البحث...",
+    "pinned": "Pinned",
+    "groupByLabel": "المجموعة:",
+    "groupByAria": "المجموعة",
+    "groupModes": {
+      "none": "لا",
+      "project": "المشروع",
+      "time": "الوقت"
+    },
+    "showArchived": "أرشيف العرض",
+    "hideArchived": "المحفوظات المخفية",
+    "empty": {
+      "noMatchingTasks": "لا مهام مطابقة",
+      "noTasks": "No tasks found"
+    },
+    "teamLabel": "الفريق: {{team}}",
+    "showMore": "أظهر المزيد",
+    "showLess": "عرض أقل",
+    "deleteConfirm": {
+      "title": "حذف المهمة",
+      "message": "مهمة التحرك{{taskId}} إلى القمامة؟",
+      "confirmLabel": "تحذف",
+      "cancelLabel": "إلغاء"
+    },
+    "deleteFailed": {
+      "title": "عدم حذف المهمة",
+      "fallbackMessage": "وقع خطأ غير متوقع",
+      "confirmLabel": "حسناً"
+    },
+    "sort": {
+      "byTime": "في الوقت المناسب",
+      "byUnread": "غير مرئية",
+      "byProject": "حسب المشروع",
+      "byTeam": "فريق"
+    }
+  },
+  "toolViewer": {
+    "input": "الناتج",
+    "replaceAll": "(المكان كله)",
+    "noInputRecorded": "لا توجد مدخلات مسجلة لهذه الأداة",
+    "agent": {
+      "action": "الإجراءات",
+      "teammate": "فريق",
+      "team": "فريق",
+      "runtime": "الأجر",
+      "type": "النوع",
+      "startupInstructionsHidden": "تعليمات البدء مخبأة في وحدة التفتيش المشتركة"
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Unpin",
+    "pin": "تثبيت",
+    "rename": "الاسم",
+    "markUnread": "علامة غير واضحة",
+    "unarchive": "إلغاء الأرشفة",
+    "archive": "أرشفة",
+    "deleteTask": "حذف المهمة"
+  },
+  "updateDialog": {
+    "closeDialog": "قفل الهاتف",
+    "updateAvailable": "آخر المعلومات المتاحة",
+    "updateReady": "Update Ready",
+    "noReleaseNotes": "لا توجد مذكرات إطلاق",
+    "viewOnGitHub": "View on GitHub",
+    "later": "لاحقا",
+    "restartNow": "ارجع الآن",
+    "download": "تحميل"
+  },
+  "errorBoundary": {
+    "title": "شيء ما حدث",
+    "description": "وحدث خطأ غير متوقع في الطلب. يمكنك محاولة إعادة تحميل الصفحة أو إعادة صياغة حالة الخطأ.",
+    "componentStack": "العنصر",
+    "tryAgain": "حاول مرة أخرى",
+    "copied": "Copied",
+    "copyErrorDetails": "معلومات خاطئة",
+    "reportBugOnGitHub": "Report Bug on GitHub",
+    "reloadApp": "Reload App",
+    "diagnosticsNotice": "وتشمل تقارير حشرات جيت هوب وعمليات التشخيص المنسخة رسالة الخطأ، وتتبعات الحزم، ونسخة التطبيق، وكتابة نشطة، ومجموعة مختارة، وسياق المهام، وتفاصيل البيئة."
+  },
+  "runtimeBackendSelector": {
+    "label": "متأخر",
+    "resolved": "تقرر: {{backend}}",
+    "current": "الحالية",
+    "recommended": "الموصى بها",
+    "unavailable": "غير متاح",
+    "cannotSelectYet": "هذا التخلف لا يمكن اختياره بعد",
+    "auto": "Auto",
+    "autoCurrently": "Auto (currently: {{backend}})",
+    "audience": {
+      "internal": "داخلي"
+    },
+    "states": {
+      "locked": "مقفل",
+      "disabled": "المعوقين",
+      "authRequired": "مطلوب",
+      "runtimeMissing": "مفقود",
+      "degraded": "कमज़ोर",
+      "unavailable": "غير متاح"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "التحقق",
+    "unavailable": "غير متاح",
+    "checkFailed": "تحقق من فشل",
+    "free": "مجانا",
+    "freeTooltip": "Reported by OpenCode metadata. وقد يتغير توافرها وحدودها."
+  },
+  "taskFilters": {
+    "status": "الحالة",
+    "clearAll": "خالي",
+    "selectAll": "بيع كل شيء",
+    "team": "الفريق",
+    "allTeams": "جميع الفرق",
+    "searchTeams": "فرق البحث",
+    "noTeamsFound": "لا توجد فرق",
+    "project": "المشروع",
+    "allProjects": "جميع المشاريع",
+    "searchProjects": "مشاريع البحث...",
+    "noProjects": "لا توجد مشاريع",
+    "comments": "التعليقات",
+    "apply": "التطبيق",
+    "read": {
+      "all": "كل شيء",
+      "unread": "Unread",
+      "read": "اقرأ"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "IN IN PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "مجموع السياق: {{tokens}} tokens",
+    "context": "السياق: {{tokens}}",
+    "phase": "المرحلة {{phase}}:",
+    "compactedTo": "(compacted to {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "فريق",
+      "subagent": "Subagent",
+      "markAsRead": "علامة على النحو التالي:",
+      "delete": "تحذف",
+      "viewInSession": "مشاهدة في الدورة"
+    },
+    "title": "الإخطارات",
+    "loading": "الإخطارات بالهبوط...",
+    "actions": {
+      "markFilteredAsRead": "علامة ممزقة على النحو التالي:",
+      "markAllAsRead": "كل شيء كما يلي:",
+      "markFilteredRead": "(مارك) يقرأ",
+      "markAllRead": "(مارك) يقرأ",
+      "clearFilteredNotifications": "إخطارات واضحة",
+      "clearAllNotifications": "توضيح جميع الإخطارات",
+      "clickToConfirm": "قم بتأكيد",
+      "clearFiltered": "صافية",
+      "clearAll": "خالي"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} غير مرئي في القذارة",
+      "unreadInFilter_one": "{{count}} غير مرئي في القذارة",
+      "unreadInFilter_few": "{{count}} غير مرئي في القذارة",
+      "unreadInFilter_many": "{{count}} غير مرئي في القذارة",
+      "unreadInFilter_other": "{{count}} غير مرئي في القذارة",
+      "inFilter": "{{count}} في القذارة",
+      "inFilter_one": "{{count}} في القذارة",
+      "inFilter_few": "{{count}} في القذارة",
+      "inFilter_many": "{{count}} في القذارة",
+      "inFilter_other": "{{count}} في القذارة",
+      "unread": "{{count}} غير متوقع",
+      "unread_one": "{{count}} غير متوقع",
+      "unread_few": "{{count}} غير متوقع",
+      "unread_many": "{{count}} غير متوقع",
+      "unread_other": "{{count}} غير متوقع",
+      "total": "{{count}} المجموع",
+      "total_one": "{{count}} المجموع",
+      "total_few": "{{count}} المجموع",
+      "total_many": "{{count}} المجموع",
+      "total_other": "{{count}} المجموع"
+    },
+    "filters": {
+      "other": "أخرى"
+    },
+    "empty": {
+      "noMatching": "No matching notifications",
+      "noNotifications": "لا إخطارات",
+      "tryDifferentFilter": "جرب تصفية مختلفة",
+      "allCaughtUp": "جميعكم محاصرون"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "إعادة تحديث",
+    "updateApp": "آخر تطبيق",
+    "downloadedRestartTooltip": "تم تحميلها من جديد",
+    "newVersionAvailable": "نسخة جديدة متاحة",
+    "updatingApp": "تطبيق مستكمل",
+    "updateReady": "Update ready",
+    "restartNow": "ارجع الآن"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebarShortcut": "Collapse sidebar ({{shortcut}})",
+    "sidebarView": "وجهة نظر جانبية",
+    "resizeSidebar": "Resize sidebar",
+    "closeTab": "وثيقة",
+    "openedFromSearch": "مفتوحة من البحث",
+    "pinnedSession": "الجلسة العامة",
+    "jumpToSection": "اقفز الى القسم",
+    "newTab": "حساب جديد(ب)",
+    "newTabDashboard": "جدول جديد (منطاد)",
+    "refreshSession": "الدورة المستأنفة",
+    "refreshSessionWithShortcut": "Refresh Session ({{shortcut}})",
+    "loadingTab": "رسوم الشحن(ب)",
+    "menu": {
+      "teams": "الأفرقة",
+      "settings": "التركيبات",
+      "extensions": "التمديدات",
+      "search": "البحث",
+      "schedules": "الجداول",
+      "docs": "Docs",
+      "exportMarkdown": "Export as Markdown",
+      "exportJson": "الصادرات JSON",
+      "exportPlainText": "Export as Plain Text",
+      "analyzeSession": "جلسة تحليل"
+    },
+    "tabMenu": {
+      "closeTabs": "اقترب {{count}} Tabs",
+      "closeTabs_one": "اقترب {{count}} Tab",
+      "closeTabs_few": "اقترب {{count}} Tabs",
+      "closeTabs_many": "اقترب {{count}} Tabs",
+      "closeTabs_other": "اقترب {{count}} Tabs",
+      "closeTab": "أغلق الخط",
+      "closeOtherTabs": "إغلاق المطاطات الأخرى",
+      "splitRight": "Split Right",
+      "splitLeft": "اليسار",
+      "pinToSidebar": "بين إلى جانب الجانب",
+      "unpinFromSidebar": "Unpin from Sidebar",
+      "hideFromSidebar": "اختبئ من سيدبار",
+      "unhideFromSidebar": "Unhide from Sidebar",
+      "closeAllTabs": "اغلقوا جميع المشابك"
+    },
+    "sections": {
+      "team": "الفريق",
+      "sessions": "الدورات",
+      "kanban": "كانبان",
+      "claudeLogs": "اللوز",
+      "messages": "الرسائل"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "الضربة",
+    "code": "المدونة"
+  },
+  "diff": {
+    "changed": "تغير",
+    "noChangesDetected": "لم تكتشف أي تغييرات"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "نسخ رابط تسجيل دخول ChatGPT والرمز",
+    "copyLoginLink": "نسخ رابط تسجيل دخول ChatGPT",
+    "copyFailed": "النسخ فشلت",
+    "copyLinkAndCode": "وصلة النسخ + الرمز",
+    "copyLink": "وصلة نسخ",
+    "enterCodeOnLoginPage": "Enter this code on the ChatGPT login page"
+  },
+  "window": {
+    "minimize": "عرض Markdown",
+    "maximize": "الحد الأقصى",
+    "restore": "Restore"
+  },
+  "context": {
+    "local": "محلية",
+    "switchingTo": "التحول إلى {{workspace}}",
+    "loadingWorkspace": "مكان العمل",
+    "switchWorkspace": "مكان العمل"
+  },
+  "repositories": {
+    "noneAvailable": "لا توجد مستودعات متاحة",
+    "remove": "مستودع نقل"
+  },
+  "export": {
+    "session": "دورة التصدير",
+    "sessionTitle": "دورة التصدير"
+  },
+  "brand": {
+    "claude": "كلود"
+  },
+  "sessionReport": {
+    "noSessionData": "No session data available",
+    "title": "تقرير الدورة"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "المشروع المختارة"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "مرفوعة",
+      "updatedYesterday": "يوم أمس",
+      "yesterday": "أمس"
+    },
+    "reviewState": {
+      "needsFix": "يحتاج إلى إصلاحات"
+    },
+    "unassigned": "غير موقعة"
+  }
+}

@@ -3075,13 +3075,13 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runtimeSnapshot.members.alice).toMatchObject({
       providerId: 'anthropic',
       laneKind: 'primary',
-      alive: false,
+      alive: true,
       runtimeModel: 'haiku',
     });
     expect(runtimeSnapshot.members.bob).toMatchObject({
       providerId: 'anthropic',
       laneKind: 'primary',
-      alive: false,
+      alive: true,
       runtimeModel: 'sonnet',
     });
   });

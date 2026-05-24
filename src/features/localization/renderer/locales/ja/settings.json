@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "パワーユーザーオプション: エクスポート/インポートの設定、デフォルト設定のリセット、および未加工設定編集。",
+      "label": "アドバンスト"
+    },
+    "general": {
+      "description": "テーマ、言語、表示密度、起動動作などのコアアプリの設定。",
+      "label": "インフォメーション"
+    },
+    "infoAriaLabel": "{{label}}とは?",
+    "notifications": {
+      "description": "エージェントのアクティビティ、タスクの完了、エラーについて通知するタイミングと方法を制御します。",
+      "label": "お知らせ"
+    }
+  },
+  "view": {
+    "description": "アプリの設定を管理する",
+    "loading": "ローディング設定...",
+    "title": "コンテンツ"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "キャンセル",
+      "test": "テスト"
+    },
+    "defaults": {
+      "allProjects": "すべてのプロジェクト",
+      "allProjectsHint": "試験は{{project}}を使用します。 プロジェクトがオーバーライドされていない限りデフォルトが適用されます。",
+      "loadingContexts": "コンテキストをロードする...",
+      "projectHint": "{{project}} のみオーバーライドを保存します。",
+      "projectOverrideContext": "プロジェクトオーバーライドコンテキスト",
+      "scopeDescriptionAllProjects": "デフォルトは、独自の OpenCode をオーバーライドしていないプロジェクトです。",
+      "scopeDescriptionProject": "選択したプロジェクトのみをオーバーライドします。 運営チームは変更されません。",
+      "selectProjectContext": "プロジェクトコンテキストの選択",
+      "selectProjectHint": "ローカルモデルをテストしたり、デフォルト値を保存する前にプロジェクトを選択します。",
+      "selectValidationContext": "検証コンテキストを選択",
+      "setAllProjectsDefault": "すべてのプロジェクトをデフォルトで設定する",
+      "setProjectDefault": "プロジェクトのデフォルト設定",
+      "thisProject": "プロジェクト",
+      "title": "OpenCode のデフォルト",
+      "validationContext": "検証コンテキスト"
+    },
+    "diagnostics": {
+      "copied": "コピーされた診断",
+      "copiedShort": "コピッド",
+      "copy": "コピー診断",
+      "hints": "ヒント",
+      "likelyCause": "同様に原因:"
+    },
+    "models": {
+      "alreadyDefault": "これは既に選択したOpenCodeのデフォルトです。",
+      "empty": "モデルが見つかりません。",
+      "emptyFree": "無料モデルが見つかりません。",
+      "emptyRecommended": "推奨モデルが見つかりません。",
+      "emptyRecommendedFree": "おすすめのフリーモデルが見つかりません。",
+      "freeOnly": "無料のみ",
+      "launchableDescription": "チームピッカーでテストまたは使用できるルート:ローカルコンフィグ、無料の組み込みモデル、および現在のデフォルト。",
+      "launchableTitle": "起動可能なOpenCodeモデル",
+      "loadingRoutes": "OpenCodeモデルのルートを読み込む...",
+      "noRoutesMatch": "OpenCodeモデルのルートは「{{query}}」と一致しません。",
+      "noneReported": "起動可能な OpenCode モデルのルートはまだ報告されていません。 OpenCode のローカル ルートを構成するか、プロバイダ タブを使用して、カタログ プロバイダーを検査します。",
+      "recommendedOnly": "おすすめ商品",
+      "searchPlaceholder": "モデルを検索",
+      "selectProjectBeforeTesting": "モデルをテストする前にプロジェクトコンテキストを選択します。",
+      "selectProjectBeforeTestingDefaults": "OpenCode のデフォルトをテストまたは保存する前に、プロジェクトコンテキストを選択します。",
+      "useInTeamPicker": "チームピッカーでの使用"
+    },
+    "providers": {
+      "catalog": "OpenCode プロバイダーカタログ",
+      "countFallback": "OpenCode プロバイダー",
+      "description": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
+      "loadMore": "より多くのプロバイダをロード",
+      "loading": "OpenCode プロバイダーの読み込み",
+      "noMatches": "プロバイダーは検索にマッチしません。",
+      "noneReported": "管理されたランタイムによって報告されたOpenCodeプロバイダはいません。",
+      "recommended": "おすすめ商品",
+      "refreshCatalog": "カタログ更新",
+      "searchPlaceholder": "プロバイダーを探す",
+      "description_few": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
+      "description_many": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
+      "description_one": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
+      "description_other": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。"
+    },
+    "setup": {
+      "loading": "ローディングプロバイダーのセットアップ..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode のデフォルト: {{model}}",
+      "loading": "ロード管理されたOpenCodeランタイム、コネクティッドプロバイダー、モデルデフォルト...",
+      "source": "ソース: {{source}}",
+      "title": "OpenCode ランタイム"
+    },
+    "tabs": {
+      "models": "モデル",
+      "providers": "プロバイダー"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "モデルのルートを検索"
+    },
+    "badges": {
+      "usedInTeamPicker": "チームピッカーで使用される",
+      "free": "フリーダイヤル",
+      "local": "ローカル",
+      "configured": "仕様",
+      "connected": "コネクティッド",
+      "verified": "検証済み",
+      "needsTest": "ニーズテスト",
+      "failed": "失敗",
+      "unknown": "インフォメーション",
+      "default": "デフォルト"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "エージェント通信の言語",
+      "descriptionWithDetected": "エージェント通信のための言語(検出:{{detected}})",
+      "emptyMessage": "言語が見つかりません。",
+      "label": "用語集",
+      "searchPlaceholder": "言語検索",
+      "selectPlaceholder": "言語を選択",
+      "title": "エージェントの言語"
+    },
+    "appLanguage": {
+      "description": "アプリケーションインターフェイスの言語。",
+      "label": "用語集",
+      "title": "アプリの言語"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "トランスクリプトを開くか、新しいメッセージを受信するときに、各応答ターンを自動的に拡張する",
+        "label": "デフォルトでAIレスポンスを拡張"
+      },
+      "nativeTitleBar": {
+        "description": "カスタムタイトルバーの代わりにデフォルトのシステムウィンドウフレームを使用します",
+        "label": "ネイティブタイトルバーを使用する",
+        "restartConfirm": {
+          "confirmLabel": "リスタート",
+          "message": "アプリは、タイトルバーの変更を適用するために再起動する必要があります。 今すぐ再起動する?",
+          "title": "必要な再起動"
+        }
+      },
+      "theme": {
+        "description": "ご希望のカラーテーマを選択してください",
+        "label": "テーマ",
+        "options": {
+          "dark": "ダーク",
+          "light": "ライトライト",
+          "system": "システム"
+        }
+      },
+      "title": "インフォメーション"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "HTTPサーバを起動し、ブラウザからUIにアクセスしたり、iframeで埋め込むことができます。",
+        "label": "サーバーモードを有効にする"
+      },
+      "title": "ブラウザアクセス"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "フォルダを選択",
+        "selectFolderManually": "手動でフォルダーを選択",
+        "useAutoDetect": "自動検出の使用",
+        "useFolder": "フォルダを使用する",
+        "usePath": "パスを使用する",
+        "useThisPath": "このパスを使用する",
+        "useWsl": "Linux/WSL の使用"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "このフォルダには「プロジェクト」ディレクトリは含まれていません。 続行しますか?",
+          "title": "プロジェクトディレクトリが見つかりません"
+        },
+        "notClaudeDir": {
+          "message": "このフォルダは \"{{folderName}}\" ではなく \".claude\" と名付けられています。 続行しますか?",
+          "title": "選択したフォルダは.claudeではありません"
+        },
+        "noWslPaths": {
+          "message": "Claudeデータで自動的にWSLのdistrosが見つかりません。 手動でフォルダを選択しますか?",
+          "title": "WSL無し クロードのパスが見つかりました"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" には \"projects\" ディレクトリは含まれていません。 続行しますか?",
+          "title": "WSL パス欠落プロジェクトディレクトリ"
+        }
+      },
+      "current": {
+        "autoDetected": "自動検出: {{path}}",
+        "autoDetectedPath": "自動検出された道を使用して",
+        "customPath": "カスタムパスを使う",
+        "label": "現在のローカルルート"
+      },
+      "description": "ローカルフォルダがClaudeデータルートとして扱われているかを選択します",
+      "errors": {
+        "detectWslFailed": "WSLを検出できなかった クロードルートパス",
+        "loadFailed": "ローカルClaudeルート設定をロードできなかった",
+        "updateFailed": "Claudeルートを更新できなかった"
+      },
+      "title": "ローカルクロードルート",
+      "wslModal": {
+        "closeAriaLabel": "WSLパスモダを閉じる",
+        "description": "検出されたWSL分布とClaudeルート候補",
+        "noProjectsDir": "プロジェクトディレクトリが検出されない",
+        "title": "WSL クロードルートを選択"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "匿名のクラッシュとパフォーマンスデータを送信することにより、アプリを改善するのに役立ちます",
+        "label": "クラッシュレポートを送信する"
+      },
+      "title": "プロフィール"
+    },
+    "server": {
+      "runningOn": "ランニングオン",
+      "standaloneModeDescription": "スタンドアローンモードで実行します。 HTTP サーバは、常にアクティブです。 システム通知は利用できません - 通知トリガーはアプリ内で記録されます。",
+      "title": "サーバー"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "ログイン時に自動的にアプリを起動します",
+        "label": "ログイン時に起動"
+      },
+      "showDockIcon": {
+        "description": "ドック(macOS)にアプリアイコンを表示",
+        "label": "ドックアイコンを表示"
+      },
+      "title": "スタートアップ"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "開発モードでは、通知が動作しない場合があります。 macOS は \"Electron\" (bundle ID) としてアプリを識別します。",
+      "descriptionSuffix": ") 生産アプリ名ではなく。 システム設定 > 通知 > 権限を検証するための電子をチェックします。",
+      "title": "Devモード"
+    },
+    "ignoredRepositories": {
+      "description": "これらのリポジトリからの通知は無視されます",
+      "empty": "リポジトリが無視されない",
+      "selectPlaceholder": "リポジトリを選択して無視する...",
+      "title": "無視されたリポジトリ"
+    },
+    "settings": {
+      "enabled": {
+        "description": "エラーやイベントのシステム通知を表示する",
+        "label": "システム通知を有効にする"
+      },
+      "sound": {
+        "description": "通知が表示されるときに音を再生する",
+        "label": "音を再生する"
+      },
+      "subagentErrors": {
+        "description": "サブエージェントセッションでエラーを検出して通知する",
+        "label": "サブエージェントのエラーを含める"
+      },
+      "title": "通知設定"
+    },
+    "snooze": {
+      "clear": "クリアスヌーズ",
+      "description": "通知を一時的に停止する",
+      "descriptionWithTime": "{{time}}までのスヌーズ",
+      "label": "Snooze通知",
+      "options": {
+        "15": "15分",
+        "30": "30分",
+        "60": "1時間",
+        "120": "2時間",
+        "240": "4時間",
+        "-1": "明日まで"
+      },
+      "selectDuration": "期間を選択してください..."
+    },
+    "taskCompletion": {
+      "description": "Claudeがタスクを終了したときにネイティブOS通知を取得する - 音、バナー、およびドック/タスクバーバッジ。 macOS、Linux、Windowsで動作します。",
+      "installPlugin": "claude-notifications-goプラグインをインストールする",
+      "title": "タスク完了通知"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "チーム内の全てのタスクが完了した状態に達すると通知",
+        "label": "すべてのタスクが完了しました"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Claudeがリセット時間を報告するとき、リミットリセット後にチームのフォローアップナッジをスケジュールします",
+        "label": "レート制限後の自動再開"
+      },
+      "clarifications": {
+        "description": "タスクが入力を必要とするときにネイティブOS通知を表示する",
+        "label": "タスクの明確化通知"
+      },
+      "crossTeamMessage": {
+        "description": "別のチームからメッセージが到着したときに通知する",
+        "label": "クロスチームメッセージ通知"
+      },
+      "leadInbox": {
+        "description": "チームメイトがチームのリードにメッセージを送信したときに通知する",
+        "label": "リード受信トレイ通知"
+      },
+      "statusChange": {
+        "description": "タスクのステータス変更時にネイティブOS通知を表示する",
+        "label": "タスクステータス変更通知",
+        "onlySolo": {
+          "description": "チームメイトがチームメイトを持たない場合にのみ通知",
+          "label": "ソロモードのみ"
+        },
+        "statuses": {
+          "description": "ターゲットステータスが通知をトリガーする",
+          "label": "これらのステータスを通知する",
+          "options": {
+            "approved": "承認済み",
+            "completed": "完了しました",
+            "deleted": "削除された",
+            "in_progress": "スタート",
+            "needsFix": "ニーズの修正",
+            "pending": "ペンディング",
+            "review": "レビュー"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "エージェントがタスクにコメントしたときにネイティブOS通知を表示する",
+        "label": "タスクコメント通知"
+      },
+      "taskCreated": {
+        "description": "新しいタスクを作成したときにネイティブOS通知を表示する",
+        "label": "タスク作成通知"
+      },
+      "teamLaunched": {
+        "description": "チームが起動し、準備が整ったら通知します",
+        "label": "チーム開設のお知らせ"
+      },
+      "title": "チーム通知",
+      "toolApproval": {
+        "description": "アプリが焦点を合わせていないときにツールが承認(許可/拒否)を必要とするときに通知します",
+        "label": "ツール承認通知"
+      },
+      "userInbox": {
+        "description": "チームメイトがメッセージを送信するときに通知する",
+        "label": "ユーザーの受信トレイ通知"
+      }
+    },
+    "test": {
+      "action": "送信テスト",
+      "description": "配信を検証するためのテスト通知を送信する",
+      "failedToSend": "テスト通知を送信する失敗",
+      "label": "テスト通知",
+      "sending": "送信...",
+      "sent": "スタッフ",
+      "unknownError": "未知のエラー"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "アプリアイコン",
+      "description": "並列で自律的に作業し、チーム間でコミュニケーションをとり、カンバンボード上のタスクを管理するAIエージェントチームを組み立てる - 組み込みのコードレビュー、ライブプロセス監視、および完全なツールの可視性。",
+      "standalone": "スタンドアロン",
+      "title": "お問い合わせ",
+      "version": "バージョン{{version}}"
+    },
+    "configuration": {
+      "editConfig": "編集 Config",
+      "exportConfig": "エクスポート Config",
+      "importConfig": "インポート Config",
+      "openInEditor": "エディタで開く",
+      "resetToDefaults": "デフォルトへのリセット",
+      "title": "仕様"
+    },
+    "updates": {
+      "available": "v{{version}} 対応",
+      "check": "アップデートの確認",
+      "checking": "チェックイン",
+      "ready": "更新の準備",
+      "unknownVersion": "インフォメーション",
+      "upToDate": "最新情報"
+    },
+    "appName": "エージェントチームAI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "設定をロードできなかった",
+      "saveFailed": "設定を保存できなかった"
+    },
+    "footer": {
+      "autoSave": "編集後に自動保存を変更",
+      "toClose": "閉じる",
+      "escapeKey": "エスケープ"
+    },
+    "loading": "読み込み設定...",
+    "status": {
+      "invalidJson": "無効な JSON",
+      "saveFailed": "失敗した保存",
+      "saved": "保存済み",
+      "saving": "保存..."
+    },
+    "title": "編集構成"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "キャンセル",
+      "submit": "トリガーを追加",
+      "title": "カスタムトリガーを追加"
+    },
+    "builtin": {
+      "description": "デフォルトはアプリケーションに付属するトリガーです。 それらを有効または無効にし、パターンをカスタマイズできます。",
+      "title": "内蔵トリガー"
+    },
+    "card": {
+      "builtinBadge": "組み込み",
+      "collapseAriaLabel": "ログイン",
+      "deleteAriaLabel": "トリガーを削除する",
+      "editNameAriaLabel": "名前の編集",
+      "expandAriaLabel": "プロモーション"
+    },
+    "color": {
+      "customHexTitle": "カスタム六角色",
+      "invalidHex": "無効な六角"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "アラートの場合 >",
+      "emptyPatternHint": "すべてのコンテンツに一致するように空のままにします。 JavaScript regex 構文を使用します。",
+      "errorStatusDescription": "ツール実行がエラー(is error: true)を報告したときにトリガーします。",
+      "tokensUnit": "トークン",
+      "matchPatternPlaceholder": "例:エラー|失敗|除外"
+    },
+    "custom": {
+      "description": "特定のパターンやツールの出力に通知する独自のトリガーを作成します。",
+      "empty": "まだ設定されていないカスタムトリガー。",
+      "title": "カスタムトリガー"
+    },
+    "errors": {
+      "invalidRegexPattern": "無効な正規表現パターン"
+    },
+    "fields": {
+      "contentType": "コンテンツタイプ",
+      "matchField": "マッチフィールド",
+      "matchPattern": "マッチパターン(Regex)",
+      "scopeToolName": "スコープ/ツール名",
+      "scopeToolNameOptional": "範囲/用具の名前(任意)",
+      "threshold": "パスワード",
+      "tokenType": "トークンタイプ",
+      "triggerNamePlaceholder": "e.g.、失敗アラートを作成する",
+      "triggerNameRequired": "トリガー名 *"
+    },
+    "ignorePatterns": {
+      "hint": "Enterを押して追加します。 パターンがマッチすれば通知はスキップされます。",
+      "placeholder": "無視regexを追加...",
+      "removeAriaLabel": "無視パターンを削除",
+      "summary": "上級:除外規則",
+      "title": "無視パターン(マッチするとスキップ)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "テキスト出力",
+        "thinking": "考えること",
+        "tool_result": "ツール結果",
+        "tool_use": "ツールの使用"
+      },
+      "matchFields": {
+        "args": "カテゴリー",
+        "command": "コマンド",
+        "content": "コンテンツ",
+        "description": "コンテンツ",
+        "file_path": "ファイルパス",
+        "fullInput": "完全な入力(JSON)",
+        "glob": "Glob フィルター",
+        "new_string": "新しい文字列",
+        "old_string": "古い文字列",
+        "path": "パス",
+        "pattern": "パターン",
+        "prompt": "プロンプト",
+        "query": "クエリ",
+        "skill": "スキル名",
+        "subagent_type": "試薬のタイプ",
+        "text": "テキストコンテンツ",
+        "thinking": "コンテンツを考える",
+        "url": "URLの特長"
+      },
+      "modes": {
+        "content_match": "コンテンツパターン",
+        "error_status": "実行エラー",
+        "token_threshold": "高いトークンの使用法"
+      },
+      "tokenTypes": {
+        "input": "入力トークン",
+        "output": "出力トークン",
+        "total": "総トークン"
+      },
+      "toolNames": {
+        "anyTool": "すべてのツール"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "テストトリガー",
+      "detectedSuffix": "エラーが検出された",
+      "more": "と {{count}} より",
+      "more_few": "と {{count}} より",
+      "more_many": "と {{count}} より",
+      "more_one": "と {{count}} より",
+      "more_other": "と {{count}} より",
+      "testTrigger": "テストトリガー",
+      "testing": "テスト...",
+      "title": "プレビュー",
+      "truncatedWarning": "早期検索(タイムアウトまたはカウント制限) 実際の試合が上位になる可能性があります。",
+      "viewSession": "セッションを見る"
+    },
+    "repositoryScope": {
+      "empty": "選択したリポジトリなし - トリガーはすべてのリポジトリに適用されます",
+      "hint": "リポジトリが選択されると、このトリガーはそれらのリポジトリのエラーに対してのみ消火します。",
+      "placeholder": "リポジトリを選択して追加する...",
+      "summary": "アドバンスト:リポジトリスコープ",
+      "title": "リポジトリへの制限(選択したリポジトリのみに適用されます)"
+    },
+    "sections": {
+      "configuration": "仕様",
+      "dotColor": "ドット色",
+      "generalInfo": "総合情報",
+      "triggerCondition": "トリガー条件"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "プロフィールを追加",
+      "cancel": "キャンセル",
+      "deleteProfile": "プロファイルの削除",
+      "editProfile": "プロファイルの編集",
+      "save": "保存する"
+    },
+    "authMethods": {
+      "agent": "SSHの特長 エージェント",
+      "auto": "自動(SSH Configから)",
+      "password": "パスワード",
+      "privateKey": "プライベートキー"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "削除",
+      "message": "「{{name}}」を削除したいですか? これは元に戻すことができません。",
+      "title": "プロファイルの削除"
+    },
+    "description": "SSH 接続プロファイルを保存して、素早く接続できます。",
+    "empty": {
+      "description": "SSH プロファイルを追加して、素早く接続できます。",
+      "title": "保存プロファイルなし"
+    },
+    "form": {
+      "authentication": "認証",
+      "host": "ホスト",
+      "name": "お名前 (必須)",
+      "passwordPrompt": "接続時にパスワードが送信されます。",
+      "port": "ポートレート",
+      "privateKeyPath": "プライベートキーパス",
+      "username": "ユーザ名",
+      "namePlaceholder": "私のサーバー",
+      "hostPlaceholder": "ホスト名またはIP",
+      "usernamePlaceholder": "ユーザ名"
+    },
+    "loading": "プロフィールを読み込む...",
+    "title": "ワークスペースプロファイル"
+  },
+  "connection": {
+    "actions": {
+      "connect": "ログイン",
+      "connecting": "接続...",
+      "disconnect": "接続解除",
+      "testConnection": "テスト接続",
+      "testing": "テスト..."
+    },
+    "currentMode": {
+      "description": "セッションファイルのデータソース",
+      "label": "現在のモード",
+      "local": "ローカル({{path}})"
+    },
+    "description": "リモートマシンに接続して、そこに実行されているClaudeコードセッションを表示",
+    "form": {
+      "authentication": "認証",
+      "host": "ホスト",
+      "password": "パスワード",
+      "port": "ポートレート",
+      "privateKeyPath": "プライベートキーパス",
+      "username": "ユーザ名",
+      "hostPlaceholder": "hostname または SSH 設定エイリアス",
+      "usernamePlaceholder": "ユーザ名"
+    },
+    "savedProfiles": {
+      "title": "保存されたプロフィール"
+    },
+    "ssh": {
+      "title": "SSH 接続"
+    },
+    "status": {
+      "connectedTo": "{{host}}に接続する",
+      "remoteSessions": "SSHによるリモートセッションの表示"
+    },
+    "test": {
+      "failed": "関係は失敗しました:{{error}}",
+      "success": "接続成功",
+      "unknownError": "未知のエラー"
+    },
+    "title": "リモート接続"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "キャンセル",
+      "cancelLogin": "ログインをキャンセル",
+      "connectChatGpt": "ChatGPTを接続する",
+      "delete": "削除",
+      "disable": "免責事項",
+      "disconnectAccount": "アカウントの切断",
+      "generateLink": "リンクを生成",
+      "openLogin": "ログインを開く",
+      "reconnectAnthropic": "Anthropic の再接続",
+      "refresh": "リフレッシュ",
+      "replaceKey": "置換キー",
+      "saveEndpoint": "エンドポイントの保存",
+      "saveKey": "キーを保存",
+      "saving": "保存...",
+      "setApiKey": "APIキーの設定",
+      "updateKey": "更新キー",
+      "useCode": "コードを使用する"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "保存された資格情報を読み込む...",
+      "projectScope": "プロジェクト",
+      "scope": "スコープ",
+      "storedIn": "{{backend}}で保存",
+      "userScope": "ユーザー登録",
+      "storedInApp": "アプリで保存",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic APIのキー",
+          "title": "APIキー",
+          "description": "API対応アクセス用の直接Anthropic APIキーを使用します。 Anthropicサブスクリプションセッションは、バックアップを切り替えるときに利用できます。",
+          "placeholder": "スケートボード"
+        },
+        "codex": {
+          "name": "コードx API キーキー",
+          "title": "APIキー",
+          "description": "OpenAI API キーを二次コーデックスのauthパスとして使用して下さい。 Codex を API キーモードに切り替えると、ネイティブ起動時に OPENAI_API_KEY を CODEX_API_KEY にミラーリングします。",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "ジオミニAPI キーキー",
+          "title": "APIアクセス",
+          "description": "Gemini API バックエンドに `GEMINI_API_KEY` を使用します。 CLI SDK および ADC はそれを必要としません。",
+          "placeholder": "アイザ..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "アプリケーションサーバ: {{state}}",
+        "connected": "コネクテッド",
+        "description": "サブスクリプションバックされたネイティブ起動を出力するローカルCodexアプリサーバーアカウントセッションを管理します。",
+        "loginInProgress": "進行中のログイン",
+        "plan": "プラン:{{plan}}",
+        "reconnectRequired": "必要な再接続",
+        "title": "ChatGPTアカウント",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}}の特長 検出されたAPIキーを使用して、ChatGPTが接続されるまで自動で保ちます。",
+          "detectedApiKeyNeedsApiMode": "{{message}}の特長 検出されたAPIキーは、CodexをAPIキーモードに切り替えた後にのみ使用されます。",
+          "localArtifactsNoSession": "Codex CLI は、現在有効な ChatGPT アカウントを報告していません。 ローカルのCodexアカウントデータが存在しますが、アクティブな管理されたセッションは選択されません。 使用法の限界はCodex CLIが1つを見るの後でここに現われます。",
+          "noActiveAccount": "Codex CLI は、現在有効な ChatGPT アカウントを報告していません。 使用法の限界はCodex CLIが1つを見るの後でここに現われます。",
+          "reconnectBeforeUsage": "Codex にはローカルで選択した ChatGPT アカウントがありますが、使用制限が読み込まれる前に、現在のセッションは再接続する必要があります。",
+          "usageLimitsAfterReport": "利用制限は、Codex が接続されている ChatGPT アカウントについて報告した後に表示されます。"
+        }
+      },
+      "install": {
+        "checking": "チェックイン",
+        "downloading": "ダウンロード",
+        "installCli": "Codex CLIをインストール",
+        "installing": "インストール",
+        "retryInstall": "再試行インストール",
+        "title": "Codex CLIをアプリデータにインストールする"
+      },
+      "rateLimits": {
+        "credits": "クレジット",
+        "creditsDescription": "クレジットは、ウィンドウベースのサブスクリプションの使用状況とは別に表示され、プランバックのChatGPTセッションでは利用できません。",
+        "noSecondaryWindow": "Codex は、このアカウントのスナップショットの二次ウィンドウを返しませんでした。",
+        "notReported": "報告しない",
+        "primaryReset": "プライマリリセット",
+        "primaryUsed": "主な用途",
+        "primaryWindow": "プライマリウィンドウ",
+        "remainingLeft": "{{value}} 左",
+        "remainingUnknown": "未知のまま",
+        "secondaryReset": "二次リセット",
+        "secondaryUsed": "二次利用",
+        "secondaryWindow": "二次ウィンドウ",
+        "usedQuotaNote": "これらのパーセンテージは、クォータを使わずに使用しました。",
+        "weeklyReset": "週単位のリセット",
+        "weeklyUsed": "週単位の使用",
+        "weeklyUsedOneWeek": "週刊(1w)",
+        "weeklyWindow": "週刊ウィンドウ",
+        "secondaryFallback": "セクション",
+        "secondaryWindowNote": "{{window}}ウィンドウに週単位の制限が別途表示されます。",
+        "usageExplanationGeneric": "クォータを使わず、クォータを残さない。",
+        "usageExplanationWindowOnly": "現在の{{window}}ウィンドウで使用したクォータを表示し、残りのクォータは表示されません。",
+        "usageExplanationWithRemaining": "使用される{{used}} - {{remaining}}の現在の{{window}}ウィンドウに残っているZXCVについて。"
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Authトークン",
+      "authTokenMissing": "Auth トークンは設定されていません。",
+      "baseUrl": "ベース URL",
+      "description": "Anthropic 互換ローカルランタイムエンドポイントを使用します。",
+      "keepSavedToken": "保存トークンを維持するために空白を残す",
+      "title": "ローカル/多用性があるエンドポイント",
+      "tokenStatus": "トークン{{status}}",
+      "validation": {
+        "baseUrlRequired": "ベースURLが必要です",
+        "firstPartyAnthropic": "ファーストパーティのAnthropicのための自動、サブスクリプション、またはAPIキーを使用して下さい",
+        "httpRequired": "ベース URL は http:// または https:// を使用する必要があります。",
+        "invalidUrl": "無効な URL",
+        "noCredentials": "ベースURLは、資格情報が含まれていません"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "エンドポイントが無効になっています。 保存されたトークンが保存されました。",
+        "endpointSaved": "エンドポイント保存",
+        "endpointSavedTokenMissing": "エンドポイントを保存します。 Auth トークンは設定されていません。"
+      }
+    },
+    "connection": {
+      "authenticationMethod": "認証方法",
+      "descriptions": {
+        "anthropic": "アプリ起動のAnthropicセッションを認証する方法を選択します。",
+        "codex": "ネイティブランタイムが起動したときに、CodexがChatGPTサブスクリプションまたはAPIキーを好むかどうかを選択します。",
+        "gemini": "任意APIのアクセスを構成して下さい。 CLI SDK と ADC はまだ発見されます。",
+        "opencode": "OpenCode認証とプロバイダの在庫は、OpenCodeランタイムで管理されます。"
+      },
+      "method": "接続方法",
+      "mode": "モード: {{mode}}",
+      "selected": "選択する",
+      "switching": "スイッチング...",
+      "title": "コネクション"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "APIキー"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ANTHROPIC_API_KEY と Anthropic API の課金を使用します。",
+        "autoDescription": "Anthropic ランタイムのデフォルトと利用可能な最高のローカルクレデンシャルを使用します。",
+        "hint": "オートは、デフォルトのローカルクレデンシャル解像度でAnthropicを保持します。",
+        "subscriptionDescription": "ローカルのAnthropicサインインセッションとサブスクリプションアクセスを使用します。",
+        "subscriptionTitle": "不正なサブスクリプション"
+      },
+      "auto": {
+        "title": "オートマチック"
+      },
+      "codex": {
+        "apiKeyDescription": "OPENAI_API_KEY と CODEX_API_KEY を使用して、ネイティブのコーデックスが起動します。",
+        "autoDescription": "ChatGPTアカウントとサブスクリプションを優先します。 必要に応じてAPIキーモードを使用してください。",
+        "chatgptDescription": "接続されているChatGPTアカウントとCodexのサブスクリプションを使用します。",
+        "chatgptTitle": "ChatGPTアカウント",
+        "hint": "Codex はネイティブランタイムで常に実行されます。 自動は、API-keyの資格情報に戻る前にChatGPTアカウントを好む。"
+      }
+    },
+    "description": "各プロバイダがどのように接続するかを管理し、サポートされると、マルチモデルのランタイムをバックエンドに使う必要があります。",
+    "fastMode": {
+      "defaultOff": "デフォルトオフ",
+      "description": "解決されたモデルとランタイムが許可したときに、新しいAnthropicチームが起動するためにデフォルトでClaudeコードファストモードを適用します。",
+      "disabledHint": "チームが明示的にFastモードを有効にしない限り、新しいAnthropic起動は通常の速度にとどまります。",
+      "enabledHint": "解決されたモデルがそれを支えるとき新しいAnthropic進水の要求はデフォルトで速いモードを要求します。",
+      "notExposed": "この不適切なランタイムは高速モードを露出しません。",
+      "preferFast": "優先高速",
+      "title": "高速モードのデフォルト",
+      "unavailableForRuntime": "このAnthropicランタイムでは、Fastモードが使用できません。"
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "APIのキーモードは選択されますが、Anthropic APIのクレデンシャルはまだ利用できます。",
+      "anthropicStoredKeyAvailable": "APIキーは保存されますが、APIキーモードに切り替えた後にのみ、アプリで起動したAnthropicセッションを使用します。",
+      "anthropicSubscriptionMissing": "不適切なサブスクリプションモードを選択します。 このプロバイダを使用するAnthropicにサインインします。",
+      "authTokenMissing": "Auth トークンは設定されていません。 多くのローカルAnthropic互換エンドポイントは、非空のトークンを必要とします。",
+      "chatgptLoginPending": "ChatGPTアカウントのログインを待って...",
+      "chatgptLoginStarting": "ChatGPTのログインを開始...",
+      "codexApiKeyMissing": "API キーモードは選択されますが、OPENAI_API_KEY や CODEX_API_KEY のクレデンシャルは使用できません。",
+      "codexLocalArtifactsNoSession": "Codex CLI は、現在有効な ChatGPT アカウントはありません。 ローカルのCodexアカウントデータが存在しますが、アクティブな管理されたセッションは選択されません。",
+      "codexNeedsReconnect": "Codex にはローカルで選択した ChatGPT アカウントがありますが、現在のセッションは再接続する必要があります。",
+      "codexNoChatgptAccount": "Codex CLI は、現在有効な ChatGPT アカウントはありません。 サブスクリプションを使用するChatGPTを接続します。",
+      "codexNoCredential": "ChatGPTアカウントまたはAPIキーは使用できません。",
+      "geminiApiUnavailable": "Gemini APIは現在使用できません。 ここで `GEMINI_API_KEY` を構成するか、有効な Google ADC の資格情報を使用します。",
+      "withApiKeyFallback": "{{message}}の特長 検出された API キーを使用するために API キー モードに転換して下さい。"
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "APIキークレデンシャルを使用するには、アプリを起動したアンソロピーセッションを強制します。",
+        "auto": "runtime のデフォルト動作を使用します。 このアプリでAPIキーを保存して、APIキーモードに切り替えた後にのみ使用されます。",
+        "oauth": "ローカルAnthropicサブスクリプションセッションを使用するために、アプリが起動したAnthropicセッションを強制します。"
+      },
+      "codex": {
+        "apiKey": "OPENAI_API_KEY / CODEX_API_KEYの課金を使用するために強制的にネイティブのCodexを起動します。",
+        "auto": "利用可能なチャットGPTアカウントを優先します。 必要に応じてAPIキーモードに戻ります。",
+        "chatgpt": "ネイティブのCodexを起動して、接続されたChatGPTアカウントとサブスクリプションを使用します。"
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "接続の変更を適用...",
+      "refreshingProviderStatus": "プロバイダーのステータスをリフレッシュ...",
+      "savingCompatibleEndpoint": "互換性のあるエンドポイントを保存...",
+      "switchingAnthropicSubscription": "Anthropicサブスクリプションへの切り替え...",
+      "switchingApiKey": "APIキーへの切り替え...",
+      "switchingApiKeyMode": "API キーモードへの切り替え...",
+      "switchingAuto": "オートに切り替える...",
+      "switchingChatgpt": "ChatGPTアカウントモードへの切り替え..."
+    },
+    "provider": "プロバイダー",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropicは現在、別のランタイムバックエンドセレクターはありません。",
+        "codex": "Codex はネイティブランタイムパスでのみ実行されます。",
+        "gemini": "ジオミニランタイムバックエンドのマルチモデルを使用するかを選択します。",
+        "opencode": "OpenCode は、管理されたランタイムホストを使用します。 デスクトップは現在、ステータスのみを公開しています。"
+      },
+      "title": "ランタイム",
+      "updating": "稼働時間の更新"
+    },
+    "runtimeSummary": "稼働時間: {{runtime}}",
+    "status": {
+      "configured": "仕様",
+      "enabled": "有効化",
+      "notConfigured": "設定されていない",
+      "notSet": "設定しない",
+      "off": "オフ",
+      "unknown": "未知の"
+    },
+    "title": "プロバイダの設定",
+    "usage": {
+      "apiKey": "APIキーの使用",
+      "apiKeyRequired": "必要なAPIのキー",
+      "compatibleEndpoint": "互換性のあるエンドポイントを使用する",
+      "notConnected": "接続しない",
+      "usingMethod": "{{method}}の使用"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API キーは削除されましたが、プロバイダのステータスを更新できませんでした。",
+      "apiKeySavedRefreshFailed": "API キーは保存しましたが、プロバイダの状態をリフレッシュできませんでした。",
+      "connectionUpdatedRefreshFailed": "接続が更新されましたが、プロバイダのステータスを更新できませんでした。",
+      "deleteApiKey": "APIキーを削除できなかった",
+      "disableEndpoint": "エンドポイントを無効にできない",
+      "endpointDisabledRefreshFailed": "エンドポイントが無効になっていますが、プロバイダのステータスをリフレッシュできませんでした。",
+      "endpointSavedRefreshFailed": "エンドポイントは保存されますが、プロバイダのステータスを更新できませんでした。",
+      "refreshCodexAccount": "Codexアカウントを更新できなかった",
+      "saveApiKey": "APIキーを保存できなかった",
+      "saveEndpoint": "エンドポイントを保存できなかった",
+      "updateAnthropicFastMode": "Anthropic Fastモードを更新できなかった",
+      "updateConnection": "接続を更新できなかった",
+      "updateRuntimeBackend": "ランタイムのバックエンドを更新できなかった",
+      "apiKeyRequired": "APIキーが必要です"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "オートマチック",
+        "oauth": "サブスクリプション / OAuth",
+        "chatgpt": "ChatGPTアカウント",
+        "apiKey": "APIキー",
+        "anthropicSubscription": "不正なサブスクリプション"
+      },
+      "authMethod": {
+        "apiKey": "APIキー",
+        "apiKeyHelper": "APIキーヘルパー",
+        "oauth": "OAuthについて",
+        "claudeSubscription": "Claudeサブスクリプション",
+        "geminiCli": "ジオミニCLI",
+        "googleAccount": "Googleアカウント",
+        "serviceAccount": "サービスアカウント"
+      },
+      "runtime": {
+        "codexNative": "Codex ネイティブ",
+        "currentRuntime": "現在のランタイム",
+        "selectedRuntime": "選択したランタイム",
+        "summary": "{{prefix}}: {{runtime}}の特長"
+      },
+      "status": {
+        "checking": "チェックイン",
+        "checked": "チェックイン",
+        "providerActivity": "提供者活動",
+        "notConnected": "接続しない",
+        "startingChatGptLogin": "ChatGPTのログインを開始...",
+        "waitingForChatGptLogin": "ChatGPTアカウントのログインを待って...",
+        "chatGptVerificationDegraded": "ChatGPTアカウント検出 - アカウント認証は現在劣化しています。",
+        "chatGptAccountReady": "ChatGPTアカウントの準備",
+        "apiKeyReady": "APIのキーは準備が整いました",
+        "codexLocalAccountNeedsReconnect": "Codex にはローカルで選択した ChatGPT アカウントがありますが、現在のセッションは再接続する必要があります。",
+        "codexNoActiveManagedSession": "Codex CLI は、アクティブな ChatGPT ログインを報告しません。 ローカルのCodexアカウントデータが存在しますが、アクティブな管理されたセッションは選択されません。",
+        "codexNoActiveChatGptLogin": "Codex CLI は、アクティブな ChatGPT ログインを報告しません",
+        "connectChatGptForSubscription": "ChatGPTアカウントを接続して、Codexのサブスクリプションを使用します。",
+        "codexNativeReady": "Codex ネイティブ対応",
+        "codexNativeUnavailable": "Codex ネイティブ対応",
+        "unavailableInCurrentRuntime": "現在のランタイムで利用不可",
+        "connectedViaApiKey": "APIキーで接続",
+        "apiKeyConfiguredNotVerified": "API のキーは構成しましたが、まだ確認されません",
+        "apiKeyModeMissingCredential": "API キーモードが選択されますが、API キーは構成されません",
+        "connectedVia": "{{method}}で接続",
+        "unableToVerify": "確認できない"
+      },
+      "mode": {
+        "selectedAuth": "選択されたauth: {{authMode}}",
+        "preferredAuth": "推奨オース:{{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API キーは構成されます",
+        "savedApiKeyAvailable": "管理で利用可能なAPIキーを保存",
+        "apiKeyAlsoConfigured": "API キーも管理で設定",
+        "apiKeyConfiguredInManage": "API キーは管理で構成されます",
+        "apiKeyFallbackInManage": "API キーもフォールバックとして管理できます",
+        "availableAsFallback": "{{summary}} - フォールバックとして利用可能",
+        "savedApiKeyAvailableIfSwitch": "API キーモードに切り替えた場合、管理で利用可能なZXCVトークン0ZXCVキーを保存",
+        "availableIfSwitch": "{{summary}} - APIのキー モードに転換すれば利用できます",
+        "autoWillUseUntilChatGpt": "{{summary}} - ChatGPTが接続されるまで自動でこれを使用します"
+      },
+      "actions": {
+        "connect": "ログイン",
+        "connectAnthropic": "Anthropic の接続",
+        "connectChatGpt": "ChatGPTを接続する",
+        "disconnect": "接続解除",
+        "openLogin": "ログイン"
+      },
+      "disconnect": {
+        "anthropicTitle": "不正なサブスクリプションを切断する?",
+        "anthropic": "これは、Claude CLIランタイムからローカルAnthropicサブスクリプションセッションを削除します。",
+        "anthropicWithApiKey": "これは、Claude CLIランタイムからローカルAnthropicサブスクリプションセッションを削除します。 保存された API キー 管理の滞在で利用可能.",
+        "geminiTitle": "ジェミニCLIを切断しますか?",
+        "gemini": "ローカルの Gemini CLI セッションメタデータをクリアします。 外部のADC認証情報と保存されたAPIキーは削除されません。"
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "アップデートの確認",
+      "checking": "チェックイン",
+      "extensions": "エクステンション",
+      "installRuntime": "{{runtime}}をインストールする",
+      "manage": "マネージング",
+      "recheck": "再確認",
+      "reinstallRuntime": "{{runtime}}を再インストールする",
+      "retry": "リトリート",
+      "update": "ニュース"
+    },
+    "installer": {
+      "checkingLatest": "最新バージョンの確認",
+      "downloading": "ダウンロード...",
+      "failed": "インストール失敗",
+      "installed": "インストールされたv{{version}}",
+      "installing": "インストール...",
+      "latest": "最新情報",
+      "verifying": "チェックサムの確認"
+    },
+    "labels": {
+      "multimodel": "マルチモデル"
+    },
+    "loading": {
+      "aiProviders": "AIプロバイダーの確認...",
+      "claudeCli": "Claude CLIのチェック..."
+    },
+    "provider": {
+      "backend": "バックエンド: {{backend}}",
+      "loadingModels": "モデルを読み込む...",
+      "modelsUnavailable": "このランタイムビルドでモデルが利用できなくなった",
+      "runtime": "稼働時間: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "認証失敗",
+      "authUpdated": "認証更新",
+      "loggedOut": "プロバイダがログアウト",
+      "login": "ログイン",
+      "logout": "ログイン",
+      "logoutFailed": "ログアウト失敗"
+    },
+    "status": {
+      "configuredNotFound": "設定した{{runtime}}が見つかりませんでした。",
+      "foundButFailed": "{{runtime}}が見つかりませんでしたが、起動できませんでした",
+      "healthCheckFailed": "設定した{{runtime}}が起動健康チェックに失敗しました。",
+      "notInstalled": "{{runtime}}がインストールされていない"
+    },
+    "title": "CLIの特長 ランタイム"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} → v{{latest}}"
+  }
+}

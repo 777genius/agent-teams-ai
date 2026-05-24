@@ -346,10 +346,114 @@ describe('OpenCodeBridgeCommandClient', () => {
       command: 'opencode.readiness',
     });
     expect(runner.calls).toHaveLength(2);
+    expect(runner.calls[0].args).toContain('--output');
+    expect(runner.calls[1].args).toContain('--output');
+  });
+
+  it('falls back to stdout-only readiness when the output file contract returns no data', async () => {
+    runner.nextResults = [
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+      {
+        stdout: `${JSON.stringify(
+          bridgeSuccess({
+            command: 'opencode.readiness',
+            data: { state: 'ready', launchAllowed: true },
+          })
+        )}\n`,
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+    ];
+    const client = createClient();
+
+    const result = await client.execute(
+      'opencode.readiness',
+      { projectPath: '/tmp/project' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      requestId: 'req-1',
+      command: 'opencode.readiness',
+    });
+    expect(runner.calls).toHaveLength(3);
+    expect(runner.calls[0].args).toContain('--output');
+    expect(runner.calls[1].args).toContain('--output');
+    expect(runner.calls[2].args).not.toContain('--output');
+  });
+
+  it('falls back to stdout-only handshake when the output file contract returns no data', async () => {
+    runner.nextResults = [
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+      {
+        stdout: `${JSON.stringify(
+          bridgeSuccess({
+            command: 'opencode.handshake',
+            data: { acceptedCommands: ['opencode.launchTeam'] },
+          })
+        )}\n`,
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
+    ];
+    const client = createClient();
+
+    const result = await client.execute(
+      'opencode.handshake',
+      { requiredCommand: 'opencode.launchTeam' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      requestId: 'req-1',
+      command: 'opencode.handshake',
+    });
+    expect(runner.calls).toHaveLength(3);
+    expect(runner.calls[0].args).toContain('--output');
+    expect(runner.calls[1].args).toContain('--output');
+    expect(runner.calls[2].args).not.toContain('--output');
   });
 
   it('keeps empty readiness stdout diagnostics after the retry is exhausted', async () => {
     runner.nextResults = [
+      {
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      },
       {
         stdout: '',
         stderr: '',
@@ -380,7 +484,7 @@ describe('OpenCodeBridgeCommandClient', () => {
         kind: 'contract_violation',
         message: 'Bridge stdout was empty',
         details: {
-          attempts: 2,
+          attempts: 3,
           stdoutBytes: 0,
           stderrBytes: 0,
           outputSource: 'none',
@@ -389,7 +493,8 @@ describe('OpenCodeBridgeCommandClient', () => {
         },
       },
     });
-    expect(runner.calls).toHaveLength(2);
+    expect(runner.calls).toHaveLength(3);
+    expect(runner.calls[2].args).not.toContain('--output');
   });
 
   it('does not retry empty stdout for state-changing bridge commands', async () => {

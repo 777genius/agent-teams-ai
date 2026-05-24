@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "বাতিল",
+    "close": "বন্ধ",
+    "copied": "কপি করা হয়েছে",
+    "copyUrl": "URL কপি করুন",
+    "open": "খুলুন",
+    "reveal": "দেখান",
+    "retry": "আবার চেষ্টা করুন",
+    "save": "সংরক্ষণ করুন",
+    "showLess": "কম দেখান",
+    "showMore": "আরও দেখান",
+    "refresh": "রিফ্রেশ",
+    "reset": "রিসেট",
+    "copyToClipboard": "ক্লিপবোর্ডে কপি করুন",
+    "moreActions": "আরও কাজ",
+    "closeDialog": "ডায়ালগ বন্ধ করুন",
+    "goToDashboard": "ড্যাশবোর্ডে যান",
+    "or": "অথবা",
+    "hide": "লুকান",
+    "resetSelection": "নির্বাচন রিসেট করুন"
+  },
+  "code": {
+    "line": "লাইন {{line}}",
+    "lines": "লাইন {{from}}-{{to}}",
+    "moreLines": "({{count}}টি আরও লাইন...)",
+    "moreLines_few": "({{count}}টি আরও লাইন...)",
+    "moreLines_many": "({{count}}টি আরও লাইন...)",
+    "moreLines_one": "({{count}}টি আরও লাইন...)",
+    "moreLines_other": "({{count}}টি আরও লাইন...)",
+    "code": "কোড",
+    "preview": "প্রিভিউ",
+    "markdownPreview": "Markdown প্রিভিউ",
+    "linesParenthesized": "(লাইন {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid সিনট্যাক্স ত্রুটি"
+  },
+  "contextBadge": {
+    "badge": "প্রসঙ্গ",
+    "breakdown": {
+      "text": "টেক্সট",
+      "thinking": "ভাবনা"
+    },
+    "detailsAria": "প্রসঙ্গ ইনজেকশনের বিবরণ",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} টোকেন",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md ফাইল",
+      "mentionedFiles": "উল্লেখিত ফাইল",
+      "taskCoordination": "কাজের সমন্বয়",
+      "thinkingText": "ভাবনা + টেক্সট",
+      "toolOutputs": "টুল আউটপুট",
+      "userMessages": "ব্যবহারকারীর বার্তা"
+    },
+    "title": "এই টার্নে নতুন প্রসঙ্গ যোগ হয়েছে",
+    "tokenCount": "~{{tokens}} টোকেন",
+    "totalNewTokens": "মোট নতুন টোকেন",
+    "turn": "টার্ন {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} টোকেন",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} টোকেন",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} টোকেন",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} টোকেন"
+  },
+  "locales": {
+    "emptyMessage": "কোনো ভাষা পাওয়া যায়নি।",
+    "names": {
+      "en": "ইংরেজি",
+      "ru": "রুশ",
+      "zh": "চীনা",
+      "ja": "জাপানি",
+      "ko": "কোরীয়",
+      "es": "স্প্যানিশ",
+      "hi": "হিন্দি",
+      "pt": "পর্তুগিজ",
+      "fr": "ফরাসি",
+      "ar": "আরবি",
+      "bn": "বাংলা",
+      "ur": "উর্দু",
+      "id": "ইন্দোনেশীয়",
+      "de": "জার্মান",
+      "system": "সিস্টেম"
+    },
+    "searchPlaceholder": "ভাষা খুঁজুন...",
+    "selectPlaceholder": "অ্যাপের ভাষা নির্বাচন করুন...",
+    "systemWithResolved": "সিস্টেম - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "কোনো সদস্য পাওয়া যায়নি।",
+    "searchPlaceholder": "সদস্য খুঁজুন...",
+    "unassigned": "অনির্ধারিত",
+    "teammateFallback": "সহকর্মী"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "পরীক্ষণ",
+        "downloading": "ডাউনলোড ব্যবস্থা",
+        "installCli": "ইনস্টল করো CLI",
+        "installing": "ইনস্টল করা হচ্ছে",
+        "retryInstall": "পুনরায় ইনস্টলের প্রচেষ্টা করুন"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "কোন সাদৃশ্য নেই",
+    "searching": "অনুসন্ধান চলছে...",
+    "searchingFiles": "ফাইল অনুসন্ধান করা হচ্ছে...",
+    "findInConversation": "কথোপকথনের মধ্যে অনুসন্ধান...",
+    "resultCount": "{{current}} এর {{total}}",
+    "resultCountCapped": "{{current}} এর {{total}}+",
+    "noResults": "কোনো ফলাফল নেই",
+    "previousResultShortcut": "পূর্ববর্তী ফলাফল (Shift+E)",
+    "nextResultShortcut": "পরবর্তী ফলাফল (Enter)",
+    "closeShortcut": "বন্ধ করুন (E)",
+    "nothingFound": "কিছু পাওয়া যায়নি",
+    "placeholder": "অনুসন্ধান..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "নির্ধারিত ট্যাগ যোগ করুন",
+      "clearFilters": "ফিল্টার পরিশ্রুত করুন ( C)",
+      "createSchedule": "ট্যাগ তৈরি করুন",
+      "delete": "মুছে ফেলুন",
+      "edit": "সম্পাদনা",
+      "pause": "সাময়িক বিরতি",
+      "resume": "পুনরারম্ভ হয়েছে",
+      "runNow": "এখন সঞ্চালন করুন"
+    },
+    "empty": {
+      "description": "তাদের মধ্যে কেউ কেউ যিহোবার সাক্ষি । সব দলের নির্ধারিত স্থান এখানে দেখা যাবে।",
+      "noMatches": "বর্তমান ফিল্টারের সাথে মিল পাওয়া যায়নি",
+      "title": "কোনো কর্ম নির্ধারিত হয়নি"
+    },
+    "filters": {
+      "allTeams": "সকল দল"
+    },
+    "item": {
+      "loadingRunHistory": "ইতিহাস লোড করা হচ্ছে...",
+      "nextRun": "পরের বল: {{value}}",
+      "noRunsYet": "এখনো পালাই নি"
+    },
+    "loading": "তালিকা লোড করা হচ্ছে...",
+    "searchPlaceholder": "অনুসন্ধানের স্থান...",
+    "status": {
+      "active": "সক্রিয়",
+      "all": "সকল",
+      "disabled": "নিষ্ক্রিয়",
+      "paused": "সাময়িক বিরতি চলছে"
+    },
+    "title": "সিডিউলার"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "গোপন",
+      "pin": "প্রিন্ট করুন",
+      "unhide": "পুনরায় বিতরণ ( R)"
+    },
+    "empty": {
+      "noMatchingSessions": "কোনো মিল পাওয়া যায়নি",
+      "noMatchingSessionsDescription": "এই প্রকল্পের কোনো মিল নেই।",
+      "noMatchingSessionsFiltered": "অনুসন্ধানের ফিল্টার দ্বারা একটি ভিন্ন অনুসন্ধান অথবা পুনরায় প্রচেষ্টা করুন ।",
+      "noSessions": "কোনো সেশান পাওয়া যায়নি",
+      "noSessionsDescription": "এই প্রজেক্টের কোনো সেশান বর্তমানে উপস্থিত নেই",
+      "selectProject": "একটি প্রকল্প নির্বাচন করুন"
+    },
+    "errors": {
+      "loading": "সেশান লোড করতে সমস্যা"
+    },
+    "loadedMatchingMore": "{{count}} কপি করার প্রচেষ্টা করা হয়েছে",
+    "loadingMore": "অতিরিক্ত সেশান লোড করা হচ্ছে...",
+    "pinned": "পিন করা",
+    "scrollToLoadMore": "অধিক বিবরণ",
+    "search": {
+      "clear": "অনুসন্ধানের তথ্য মুছে ফেলুন",
+      "placeholder": "অনুসন্ধান..."
+    },
+    "selection": {
+      "cancel": "নির্বাচিত অংশ বাতিল করা হবে",
+      "exitMode": "বাছাইকরণ মোড থেকে প্রস্থান করা হবে",
+      "hideSelected": "নির্বাচিত সেশনগুলি আড়াল করা হবে",
+      "pinSelected": "নির্বাচিত সেশান সমাপ্ত করুন",
+      "selectSessions": "সেশন নির্বাচন করুন",
+      "selected": "{{count}} নির্বাচিত",
+      "unhideSelected": "নির্বাচিত সেশান সমাপ্ত করুন",
+      "selected_few": "{{count}} নির্বাচিত",
+      "selected_many": "{{count}} নির্বাচিত",
+      "selected_one": "{{count}} নির্বাচিত",
+      "selected_other": "{{count}} নির্বাচিত"
+    },
+    "sort": {
+      "byContext": "প্রসঙ্গ অনুযায়ী",
+      "byContextTooltip": "কনটেক্সট ব্যবহার অনুমোদন করুন",
+      "byRecentTooltip": "সাম্প্রতিক অনুযায়ী সাজান",
+      "contextLoadedOnly": "কনটেক্সট অনুযায়ী অনুক্রমের মান শুধুমাত্র লোড করা সেশানের ক্ষেত্রে প্রযোজ্য।"
+    },
+    "title": "সেশন",
+    "visibility": {
+      "hideHidden": "আড়াল করা সেশান আড়াল করা হবে",
+      "showHidden": "আড়াল করা সেশান প্রদর্শন করা হবে"
+    },
+    "worktree": {
+      "switch": "ট্রি-ভিউ পরিবর্তন করুন"
+    },
+    "loadedMatchingMore_few": "{{count}} কপি করার প্রচেষ্টা করা হয়েছে",
+    "loadedMatchingMore_many": "{{count}} কপি করার প্রচেষ্টা করা হয়েছে",
+    "loadedMatchingMore_one": "{{count}} কপি করার প্রচেষ্টা করা হয়েছে",
+    "loadedMatchingMore_other": "{{count}} কপি করার প্রচেষ্টা করা হয়েছে",
+    "failedToLoad": "সেশান আরম্ভ করতে ব্যর্থ",
+    "loading": "লোড করা হচ্ছে...",
+    "filter": {
+      "title": "সেশন ফিল্টার"
+    },
+    "count": "{{count}} সেশন",
+    "count_one": "{{count}} সেশান",
+    "count_other": "{{count}} সেশন",
+    "count_few": "{{count}} সেশন",
+    "count_many": "{{count}} সেশন",
+    "inProgress": "সেশন চলছে..."
+  },
+  "states": {
+    "loading": "লোড হচ্ছে...",
+    "offline": "অফলাইন",
+    "online": "অনলাইন",
+    "unknown": "অজানা",
+    "error": "ত্রুটি"
+  },
+  "markdown": {
+    "imageFallback": "[ চিত্র] {{label}}]",
+    "largeContentNotice": "বিষয়বস্তু অত্যাধিক বড়{{count}} অক্ষর। UI- র পূর্বরূপের ক্ষেত্রে পূর্ব প্রদর্শন করা হবে ।",
+    "largeContentTitle": "UI বন্ধ করার জন্য একত্রিত হওয়া বড় সামগ্রী প্রদর্শন করা হয়",
+    "raw": "Raw",
+    "rawPreview": "Raw প্রাকদর্শন",
+    "renderMarkdown": "ডাবল- ডাউন",
+    "showAll": "সমস্ত প্রদর্শন করা হবে",
+    "showMore": "আরো বেশি দেখাও",
+    "showRaw": "দেখাও",
+    "showingChars": "দেখাও {{shown}} / {{total}} অক্ষর",
+    "largeContentNotice_few": "বিষয়বস্তু অত্যাধিক বড়{{count}} অক্ষর। UI- র পূর্বরূপের ক্ষেত্রে পূর্ব প্রদর্শন করা হবে ।",
+    "largeContentNotice_many": "বিষয়বস্তু অত্যাধিক বড়{{count}} অক্ষর। UI- র পূর্বরূপের ক্ষেত্রে পূর্ব প্রদর্শন করা হবে ।",
+    "largeContentNotice_one": "বিষয়বস্তু অত্যাধিক বড়{{count}} অক্ষর। UI- র পূর্বরূপের ক্ষেত্রে পূর্ব প্রদর্শন করা হবে ।",
+    "largeContentNotice_other": "বিষয়বস্তু অত্যাধিক বড়{{count}} অক্ষর। UI- র পূর্বরূপের ক্ষেত্রে পূর্ব প্রদর্শন করা হবে ।"
+  },
+  "terminal": {
+    "checkOutputForDetails": "বিস্তারিত বিবরণের জন্য টার্মিন্যাল আউটপুট পরীক্ষা করুন",
+    "closingInSeconds": "বন্ধ করা হচ্ছে {{count}}এস...",
+    "closingInSeconds_few": "বন্ধ করা হচ্ছে {{count}}এস...",
+    "closingInSeconds_many": "বন্ধ করা হচ্ছে {{count}}এস...",
+    "closingInSeconds_one": "বন্ধ করা হচ্ছে {{count}}এস...",
+    "closingInSeconds_other": "বন্ধ করা হচ্ছে {{count}}এস...",
+    "completedSuccessfully": "সাফল্যের সাথে সমাপ্ত হয়েছে",
+    "exitCode": "(exit code {{code}})",
+    "processFailed": "প্রসেস বিফল",
+    "title": "টার্মিন্যাল"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "পুরো সেশনে একটা গোলক চয়ন",
+    "cacheRead": "ক্যাশে পড়া হয়েছে",
+    "cacheWrite": "ক্যাশে ফাইল লেখা হচ্ছে",
+    "costUsd": "Cost (USD)",
+    "inputTokens": "ইনপুট টোকেন",
+    "model": "মডেল",
+    "outputTokens": "আউটপুট টোকেন",
+    "phase": "পর্যায় {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}%s প্রাপ্ত ইনপুট",
+    "taskCoordination": "কাজের কোবুর্গ",
+    "thinkingText": "ভাবছি + টেক্সট",
+    "toolOutputs": "শেল আউটপুট",
+    "total": "সর্বমোট",
+    "userMessages": "ব্যবহারকারীর বার্তা",
+    "visibleContext": "দৃশ্যমান কনটেক্সট",
+    "includesClaudeMd": "incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} টোকেন",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "দল কপি করুন",
+      "createTeam": "গ্রুপ তৈরি করো",
+      "deleteForever": "মুছে ফেলুন",
+      "deletePermanently": "স্থায়ীরূপে মুছে ফেলুন",
+      "deleteTeam": "দল মুছে ফেলুন",
+      "launching": "আরম্ভ করা হচ্ছে...",
+      "launchTeam": "ইঞ্জিন আরম্ভ করুন",
+      "relaunchTeam": "পুনরায় আরম্ভ করুন",
+      "restore": "পুনুদ্ধার করুন",
+      "restoreTeam": "দল পুনরুদ্ধার করুন",
+      "retry": "পুনরায় চেষ্টা করুন",
+      "stopTeam": "বন্ধ করুন",
+      "stopping": "বন্ধ করা হচ্ছে..."
+    },
+    "status": {
+      "active": "সক্রিয়",
+      "deleted": "মুছে ফেলা হয়েছে",
+      "launching": "আরম্ভ করা হচ্ছে...",
+      "offline": "অফ-লাইন",
+      "partialFailure": "আরম্ভ করতে ব্যর্থ",
+      "partialPending": "বুটস্ট্র্যাপ অপেক্ষারত",
+      "partialSkipped": "আরম্ভ",
+      "running": "চলমান"
+    },
+    "partial": {
+      "pending": "শেষ শুরুটা এখনো পুনরায় শুরু হচ্ছে।",
+      "skipped": "শেষ লঞ্চ টিমমেটকে ছেড়ে দিয়েছে.",
+      "skippedWithCount": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} টিমমেট.",
+      "skippedWithCount_few": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} দলমেট।",
+      "skippedWithCount_many": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} দলমেট।",
+      "skippedWithCount_one": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} টিমমেট.",
+      "skippedWithCount_other": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} দলমেট।",
+      "stopped": "সব টিম যোগ দেওয়ার আগেই শেষ শুরু হয়েছে.",
+      "stoppedWithCount": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} টিম পার্টনার যোগ দিয়েছে।",
+      "stoppedWithCount_few": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} বন্ধুরা যোগ দিয়েছে।",
+      "stoppedWithCount_many": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} বন্ধুরা যোগ দিয়েছে।",
+      "stoppedWithCount_one": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} টিম পার্টনার যোগ দিয়েছে।",
+      "stoppedWithCount_other": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} বন্ধুরা যোগ দিয়েছে।"
+    },
+    "noDescription": "বিবরণ অনুপস্থিত",
+    "solo": "সোলো",
+    "membersCount": "সদস্য: {{count}}",
+    "membersCount_few": "সদস্য: {{count}}",
+    "membersCount_many": "সদস্য: {{count}}",
+    "membersCount_one": "সদস্য: {{count}}",
+    "membersCount_other": "সদস্য: {{count}}",
+    "all": "সকল",
+    "moreCount": "+{{count}} আরও",
+    "moreCount_one": "+{{count}} আরও",
+    "moreCount_other": "+{{count}} আরও",
+    "moreCount_few": "+{{count}} আরও",
+    "moreCount_many": "+{{count}} আরও"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "যে সমস্ত প্রকল্পের নিজস্ব ডিস্কের জন্য ডিফল্ট মান নির্ধারিত হয়নি, তাদের নিজস্ব পরিত্যাগ করা হবে।",
+      "scopeDescriptionProject": "শুধুমাত্র নির্বাচিত প্রজেক্ট উপেক্ষা করা হবে। দল পরিবর্তন করা হচ্ছে না ।",
+      "setAllProjectsDefault": "সমস্ত সম্ভাব্য ডিফল্ট মান নির্ধারণ করো",
+      "setProjectDefault": "প্রজেক্ট ডিফল্ট মান নির্ধারণ করুন",
+      "validationContext": "বৈধতা যাচাই",
+      "projectOverrideContext": "প্রজেক্ট দ্বারা শূণ্যস্থান মুছে ফেলা হবে",
+      "selectProjectHint": "স্থানীয় মডেলের পরীক্ষা অথবা সংরক্ষণ করার পূর্বে একটি প্রজেক্ট নির্বাচন করুন।",
+      "allProjectsHint": "পরীক্ষা {{project}}কোনো প্রজেক্ট উপস্থিত না থাকলে ডিফল্ট মান প্রয়োগ করা হবে ।",
+      "projectHint": "শুধুমাত্র সংরক্ষণ করা শূণ্যস্থান {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "কনটেক্সট",
+      "closePanel": "প্যানেল বন্ধ করুন",
+      "phase": "পর্যায়:",
+      "current": "বর্তমান",
+      "view": "প্রদর্শন:",
+      "category": "শ্রেণীবিভাগ",
+      "bySize": "মাপ অনুসারে"
+    },
+    "metrics": {
+      "unavailable": "উপলব্ধ নয়",
+      "contextUsed": "প্রসঙ্গ",
+      "promptInput": "ইনপুট",
+      "visibleContext": "দৃশ্যমান কনটেক্সট",
+      "ofContext": "কনটেক্সটের প্রসঙ্গ",
+      "ofPrompt": "প্রম্পট",
+      "codexTelemetryUnavailable": "কোড প্রম্পটের ব্যবহার এখনো ব্যবহার করা হয় নি। তাই, ইনপুট এবং প্রসঙ্গ একটি নকল জিরো প্রদর্শন না করে বরং ব্যবহার করা হয়।",
+      "sessionCost": "অধিবেশন:",
+      "parentPlus": "প্যারেন্ট +",
+      "subagents": "সাব-ট্রি",
+      "details": "বিবরণ"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "প্রসঙ্গ",
+        "description": "ইনপুট ও আউটপুট টোকেনগুলি বর্তমানে উইন্ডোর প্রসঙ্গ প্রদর্শনকারী উইন্ডো প্রদর্শন করা হবে।"
+      },
+      "promptInput": {
+        "title": "ইনপুট",
+        "description": "একটি টোকেন প্রজন্ম আগে মডেলে পাঠানো হয়েছে. এর মধ্যে রয়েছে `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "দৃশ্যমান কনটেক্সট",
+        "description": "The inspectable subset of prompt input: files, CLAUDE.md, tool outputs, user messages, and similar injections that you can optimize directly."
+      },
+      "availability": {
+        "title": "আভারতা",
+        "description": "যদি একটি পরিসেবা সমর্থনের মাধ্যমে প্রস্থান না করা হয়, তাহলে প্যানেল মেট্রিকটি শূণ্যের পরিবর্তে তারা কোন কাজ করছে না।"
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}",
+      "tokensApprox": "~{{tokens}} টোকেন",
+      "toolsCount": "{{count}} সরঞ্জাম",
+      "toolsCount_one": "{{count}} টুল",
+      "toolsCount_other": "{{count}} সরঞ্জাম",
+      "toolsCount_few": "{{count}} সরঞ্জাম",
+      "toolsCount_many": "{{count}} সরঞ্জাম",
+      "itemsCount": "{{count}} বস্তু",
+      "itemsCount_one": "{{count}} বস্তু",
+      "itemsCount_other": "{{count}} বস্তু",
+      "itemsCount_few": "{{count}} বস্তু",
+      "itemsCount_many": "{{count}} বস্তু",
+      "missing": "অনুপস্থিত",
+      "thinking": "ভাবছি",
+      "text": "টেক্সট"
+    },
+    "empty": "এই সেশানের মধ্যে কোনো কনটেক্সট সনাক্ত করা যায়নি",
+    "view": {
+      "grouped": "গ্রুপ করা",
+      "flat": "সমান্তরাল"
+    },
+    "claudeMdFiles": "CLAUDE.md Files",
+    "mentionedFiles": "ফাইল মনে রাখা হয়েছে"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "সাব-agent",
+      "shutdownConfirmed": "বন্ধ করার নিশ্চিত করা হয়েছে",
+      "summary": {
+        "tools": "{{count}} সরঞ্জাম",
+        "tools_one": "{{count}} টুল",
+        "tools_other": "{{count}} সরঞ্জাম",
+        "tools_few": "{{count}} সরঞ্জাম",
+        "tools_many": "{{count}} সরঞ্জাম"
+      },
+      "meta": {
+        "type": "ধরন",
+        "duration": "অবকাল",
+        "model": "মডেল",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "কনটেক্সট উইন্ডো",
+        "contextUsage": "প্রসঙ্গের ব্যবহার",
+        "mainContext": "প্রধান কনটেক্সট",
+        "totalOutput": "মোট আউটপুট",
+        "turns": "({{count}} turns)",
+        "turns_one": "({{count}} turn)",
+        "turns_other": "({{count}} turns)",
+        "subagentContext": "সাব-agent কনটেক্সট",
+        "phase": "পর্যায় {{phase}}",
+        "turns_few": "({{count}} turns)",
+        "turns_many": "({{count}} turns)"
+      },
+      "trace": {
+        "title": "অনুসরণ"
+      }
+    },
+    "user": {
+      "you": "আপনি",
+      "showMore": "আরো বেশি দেখাও",
+      "showLess": "কম দেখান",
+      "backgroundTask": "পটভূমির কাজ",
+      "exitCode": "প্রস্থান {{code}}",
+      "imagesAttached": "{{count}} ছবি",
+      "imagesAttached_one": "{{count}} সংযুক্ত করা ছবি",
+      "imagesAttached_few": "{{count}} ছবি",
+      "imagesAttached_many": "{{count}} ছবি",
+      "imagesAttached_other": "{{count}} ছবি"
+    },
+    "compact": {
+      "toggle": "সংক্ষিপ্ত বিষয়বস্তু",
+      "contextCompacted": "প্রসঙ্গ অনুযায়ী",
+      "freedTokens": "({{tokens}} freed)",
+      "phase": "পর্যায় {{phase}}",
+      "conversationCompacted": "পরিচিত ব্যক্তিদের তালিকা সংকুচিত করুন",
+      "summary": "প্রসঙ্গ সংরক্ষণের জন্য পূর্ববর্তী বার্তা সারসংক্ষেপ করা হয়েছে । পুরো কথোপকথন ইতিহাস সেশন ফাইলে সংরক্ষিত রয়েছে ।",
+      "compacted": "ক্ষতিগ্রস্ত"
+    },
+    "executionTrace": {
+      "empty": "কোনো বস্তু সঞ্চালন করা হয়নি",
+      "nested": "নেস্টেড: {{name}}",
+      "input": "ইনপুট"
+    },
+    "items": {
+      "empty": "প্রদর্শনযোগ্য কোনো বস্তু নেই"
+    },
+    "tools": {
+      "teammateSpawned": "টিম kill করা হয়েছে",
+      "shutdownRequested": "বন্ধ করার অনুরোধ ->",
+      "noResultReceived": "কোনো ফলাফল পাওয়া যায়নি",
+      "duration": "অবকাল: {{duration}}",
+      "result": "ফলাফল",
+      "write": {
+        "createdFile": "ফাইল নির্মিত হয়েছে",
+        "wroteToFile": "চিহ্নিত ফাইলে চলুন"
+      },
+      "skill": {
+        "instructions": "দক্ষতার ক্রম",
+        "unknown": "অজানা দক্ষতা"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "ব্যবহারকারী দ্বারা অনুরোধ বাতিল করা হয়েছে",
+      "planReadyForApproval": "উপস্থিত সকলের জন্য প্ল্যান প্রস্তুত"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "কোনো আলাপনের তথ্য উপস্থিত নেই",
+      "description": "এই সেশানের মধ্যে কোনো বার্তা উপস্থিত নেই ।"
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% left)",
+      "count": "Context ({{count}})",
+      "count_one": "Context ({{count}})",
+      "count_other": "Context ({{count}})",
+      "count_few": "Context ({{count}})",
+      "count_many": "Context ({{count}})"
+    },
+    "scrollToBottom": "নীচে চলুন",
+    "bottom": "নীচে",
+    "teammateMessage": {
+      "message": "বার্তা",
+      "resent": "পুনরায়",
+      "fallback": "দলের বার্তা"
+    },
+    "system": {
+      "label": "সিস্টেম"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux ইনস্টল করা হয়নি",
+    "detectedOs": "ওসেমি: {{os}}",
+    "runtimePath": "খেলার পাথ: {{path}}",
+    "phase": "পর্যায়: {{phase}}",
+    "actions": {
+      "cancel": "বাতিল",
+      "manualGuide": "ম্যানুয়াল পেজ",
+      "hideSetupSteps": "পরবর্তী ধাপ আড়াল করা হবে",
+      "showSetupSteps": "Show setup steps ({{count}})",
+      "showSetupSteps_one": "Show setup step ({{count}})",
+      "showSetupSteps_other": "Show setup steps ({{count}})",
+      "recheck": "পুনরায় পরীক্ষা করুন",
+      "showSetupSteps_few": "Show setup steps ({{count}})",
+      "showSetupSteps_many": "Show setup steps ({{count}})"
+    },
+    "installerProgress": "ইনস্টলার প্রগতি",
+    "input": {
+      "placeholder": "ইনস্টলারের জন্য কোনো ইনপুট প্রেরণ করা হবে",
+      "send": "ইনপুট পাঠান",
+      "passwordNotice": "পাসওয়ার্ড ইনপুট সরাসরি ইনস্টলার টার্মিনালে পাঠানো হবে এবং লগ-আউট করে সংযুক্ত করা যায়নি।"
+    },
+    "details": {
+      "show": "বিবরণ প্রদর্শন",
+      "hide": "বিবরণ আড়াল করুন"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "কোনো কর্ম হয়নি",
+    "sessionsCount": "{{count}} সেশন",
+    "sessionsCount_one": "{{count}} সেশান",
+    "sessionsCount_other": "{{count}} সেশন",
+    "mode": {
+      "searchProjects": "প্রজেক্ট অনুসন্ধান করে",
+      "searchAcrossProjects": "সকল প্রজেক্ট অনুসন্ধান করুন",
+      "searchInProject": "একটিও নয়"
+    },
+    "currentProject": "বর্তমান প্রজেক্ট",
+    "global": "গ্রোবাল",
+    "placeholders": {
+      "projects": "প্লাগ-ইন অনুসন্ধান...",
+      "conversations": "আলাপন অনুসন্ধান..."
+    },
+    "empty": {
+      "noProjectsForQuery": "No projects found for \"{{query}}\"",
+      "noProjects": "কোনো প্রজেক্ট পাওয়া যায়নি",
+      "minChars": "অনুসন্ধানের ক্ষেত্রে অন্তত ২ অক্ষর বিশিষ্ট হওয়া আবশ্যক",
+      "noFastResults": "No fast results in recent sessions for \"{{query}}\"",
+      "noResults": "No results found for \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} প্রজেক্ট",
+      "projectsCount_one": "{{count}} প্রজেক্ট",
+      "projectsCount_other": "{{count}} প্রজেক্ট",
+      "results": "{{count}} {{speed}}ফলাফল",
+      "results_one": "{{count}} {{speed}}ফলাফল",
+      "results_other": "{{count}} {{speed}}ফলাফল",
+      "resultsAcrossProjects": "{{count}} {{speed}}সকল প্রকল্প থেকে ফলাফল",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}সকল প্রকল্পের মধ্য থেকে",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}সকল প্রকল্প থেকে ফলাফল",
+      "fastPrefix": "দ্রুত ",
+      "typeToSearch": "অনুসন্ধান টাইপ করুন",
+      "navigate": "চলাচল",
+      "select": "নির্বাচন করুন",
+      "open": "উন্মুক্ত",
+      "global": "গ্রোবাল",
+      "close": "বন্ধ করুন",
+      "results_few": "{{count}} {{speed}}ফলাফল",
+      "results_many": "{{count}} {{speed}}ফলাফল",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}সকল প্রকল্প থেকে ফলাফল",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}সকল প্রকল্প থেকে ফলাফল",
+      "projectsCount_few": "{{count}} প্রজেক্ট",
+      "projectsCount_many": "{{count}} প্রজেক্ট",
+      "upDownKey": "↑↓",
+      "escapeKey": "এস. এস. ই."
+    },
+    "sessionsCount_few": "{{count}} সেশন",
+    "sessionsCount_many": "{{count}} সেশন"
+  },
+  "tasksPanel": {
+    "title": "কর্ম",
+    "searchPlaceholder": "কাজ অনুসন্ধান করুন...",
+    "pinned": "পিন করা",
+    "groupByLabel": "গ্রুপ অনুসারে:",
+    "groupByAria": "দল অনুযায়ী দলভুক্ত করা হবে",
+    "groupModes": {
+      "none": "শূণ্য",
+      "project": "প্রজেক্ট",
+      "time": "সময়"
+    },
+    "showArchived": "আর্কাইভ দেখাও",
+    "hideArchived": "আর্কাইভ আড়াল করা হবে",
+    "empty": {
+      "noMatchingTasks": "কর্ম মিল পাওয়া যায়নি",
+      "noTasks": "কোনো কাজ পাওয়া যায়নি"
+    },
+    "teamLabel": "দল: {{team}}",
+    "showMore": "আরো বেশি দেখাও",
+    "showLess": "কম দেখান",
+    "deleteConfirm": {
+      "title": "বন্টন করা হবে",
+      "message": "কাজ স্থানান্তর করো #{{taskId}} আবর্জনার বাক্সে?",
+      "confirmLabel": "মুছে ফেলুন",
+      "cancelLabel": "বাতিল"
+    },
+    "deleteFailed": {
+      "title": "কর্ম মুছে ফেলতে ব্যর্থ",
+      "fallbackMessage": "একটি অপ্রত্যাশিত ত্রুটি দেখা দিয়েছে",
+      "confirmLabel": "ঠিক আছে"
+    },
+    "sort": {
+      "byTime": "তারিখ অনুসারে",
+      "byUnread": "অপঠিত",
+      "byProject": "প্রজেক্ট নির্মাণ করুন",
+      "byTeam": "দল অনুসারে"
+    }
+  },
+  "toolViewer": {
+    "input": "ইনপুট",
+    "replaceAll": "(সকল পরিবর্তন)",
+    "noInputRecorded": "এই সরঞ্জামের জন্য কোনো ইনপুট রেকর্ড করা হয়নি।",
+    "agent": {
+      "action": "কর্ম",
+      "teammate": "টিমমেট",
+      "team": "দল",
+      "runtime": "ঢাল",
+      "type": "ধরন",
+      "startupInstructionsHidden": "প্রারম্ভিক নির্দেশ UIতে লুকিয়ে আছে।"
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "পিন করা হবে না",
+    "pin": "প্রিন্ট করুন",
+    "rename": "নাম পরিবর্তন",
+    "markUnread": "অপঠিত হিসাবে চিহ্নিত করো",
+    "unarchive": "লিস্ট আর্কাইভ",
+    "archive": "আর্কাইভ",
+    "deleteTask": "বন্টন করা হবে"
+  },
+  "updateDialog": {
+    "closeDialog": "ডায়লগ বন্ধ করুন",
+    "updateAvailable": "আপডেট উপলব্ধ রয়েছে",
+    "updateReady": "আপডেট প্রস্তুত",
+    "noReleaseNotes": "কোনো রিলিজ উপলব্ধ নেই।",
+    "viewOnGitHub": "গিটহাবে দেখুন",
+    "later": "পরে ( L)",
+    "restartNow": "এখন পুনরায় আরম্ভ করুন",
+    "download": "ডাউনলোড করা হয়েছে"
+  },
+  "errorBoundary": {
+    "title": "কিছু সমস্যা হয়েছে",
+    "description": "অ্যাপ্লিকেশনের ত্রুটি দেখা দিয়েছে পেজ পুনরায় লোড করতে অথবা পুনরায় প্রচেষ্টা করুন।",
+    "componentStack": "কম্পোনেন্ট স্ট্যাক",
+    "tryAgain": "পুনরায় প্রচেষ্টা করুন",
+    "copied": "প্রতিলিপি",
+    "copyErrorDetails": "ত্রুটির বিবরণ কপি করুন",
+    "reportBugOnGitHub": "গিটহাবে বাগ রিপোর্ট করুন",
+    "reloadApp": "ব্যাক- এন্ড পুনরায় লোড করুন",
+    "diagnosticsNotice": "গিটহাব বাগ রিপোর্ট এবং অনুলিপি করা ডায়াগনস্টিকের মধ্যে রয়েছে ত্রুটি বার্তা, স্ট্যাক চিহ্ন, সক্রিয় ট্যাব, সক্রিয় টিম, কর্ম সংক্রান্ত তথ্য, এবং পরিবেশ সংক্রান্ত তথ্য।"
+  },
+  "runtimeBackendSelector": {
+    "label": "ব্যাক-এন্ড আরম্ভ করা হবে",
+    "resolved": "মীমাংসা করা হয়েছে: {{backend}}",
+    "current": "বর্তমান",
+    "recommended": "প্রস্তাবিত",
+    "unavailable": "উপলব্ধ নয়",
+    "cannotSelectYet": "নির্বাচিত ব্যাক-এন্ড বর্তমানে আরম্ভ করা যায়নি।",
+    "auto": "স্বয়ংক্রিয়",
+    "autoCurrently": "Auto (currently: {{backend}})",
+    "audience": {
+      "internal": "অভ্যন্তরীণ"
+    },
+    "states": {
+      "locked": "লককৃত",
+      "disabled": "নিষ্ক্রিয়",
+      "authRequired": "অনুমোদন প্রয়োজন",
+      "runtimeMissing": "কর্ম সঞ্চালিত হয়নি",
+      "degraded": "ডিগ্রেড করা হয়েছেRAID status",
+      "unavailable": "উপলব্ধ নয়"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "পরীক্ষণ",
+    "unavailable": "উপলব্ধ নয়",
+    "checkFailed": "পরীক্ষা ব্যর্থ হয়েছে",
+    "free": "মুক্ত",
+    "freeTooltip": "ওপেনক্লাডে মিটা- ডাটা রিপোর্ট করেছে। ক্ষমতা আর সীমা বদলে যেতে পারে."
+  },
+  "taskFilters": {
+    "status": "অবস্থা",
+    "clearAll": "মুছে ফেলুন ( l)",
+    "selectAll": "সমগ্র নির্বাচন করুন",
+    "team": "টিম",
+    "allTeams": "সকল দল",
+    "searchTeams": "গ্রুপ অনুসন্ধান...",
+    "noTeamsFound": "কোনো দল পাওয়া যায়নি",
+    "project": "প্রজেক্ট",
+    "allProjects": "সকল প্রজেক্ট",
+    "searchProjects": "প্লাগ-ইন অনুসন্ধান...",
+    "noProjects": "কোনো প্রজেক্ট উপস্থিত নেই",
+    "comments": "মন্তব্য",
+    "apply": "প্রয়োগ করুন",
+    "read": {
+      "all": "সকল",
+      "unread": "অপঠিত",
+      "read": "পড়ো"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "এর মধ্যে PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "মোট কনটেক্সট: {{tokens}} টোকেন",
+    "context": "কনটেক্সট: {{tokens}}",
+    "phase": "পর্যায় {{phase}}:",
+    "compactedTo": "(compacted to {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "দল",
+      "subagent": "সাব-ট্রি",
+      "markAsRead": "সমস্ত বার্তা পড়া-হয়েছে হিসাবে চিহ্নিত করা হবে",
+      "delete": "মুছে ফেলুন",
+      "viewInSession": "সেশান আরম্ভ করুন"
+    },
+    "title": "সূচনাবার্তা",
+    "loading": "বিজ্ঞপ্তি লোড করা হচ্ছে...",
+    "actions": {
+      "markFilteredAsRead": "সমস্ত বার্তা পড়া-হয়েছে হিসাবে চিহ্নিত করা হবে",
+      "markAllAsRead": "সমস্ত বার্তা পড়া-হয়েছে হিসাবে চিহ্নিত করা হবে",
+      "markFilteredRead": "ফিল্টার পড়া হয়েছে",
+      "markAllRead": "সমস্ত বার্তা পড়া-হয়েছে হিসাবে চিহ্নিত করা হবে",
+      "clearFilteredNotifications": "ফিল্টার মুছে ফেলো",
+      "clearAllNotifications": "সব সূচনাবার্তা মুছে ফেলুন",
+      "clickToConfirm": "নিশ্চিত করার জন্য ক্লিক করুন",
+      "clearFiltered": "ফিল্টার মুছে ফেলুন",
+      "clearAll": "মুছে ফেলুন ( l)"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} না পড়া অবস্থায়",
+      "unreadInFilter_one": "{{count}} না পড়া অবস্থায়",
+      "unreadInFilter_few": "{{count}} না পড়া অবস্থায়",
+      "unreadInFilter_many": "{{count}} না পড়া অবস্থায়",
+      "unreadInFilter_other": "{{count}} না পড়া অবস্থায়",
+      "inFilter": "{{count}} ফিল্টার",
+      "inFilter_one": "{{count}} ফিল্টার",
+      "inFilter_few": "{{count}} ফিল্টার",
+      "inFilter_many": "{{count}} ফিল্টার",
+      "inFilter_other": "{{count}} ফিল্টার",
+      "unread": "{{count}} অপঠিত",
+      "unread_one": "{{count}} অপঠিত",
+      "unread_few": "{{count}} অপঠিত",
+      "unread_many": "{{count}} অপঠিত",
+      "unread_other": "{{count}} অপঠিত",
+      "total": "{{count}} সর্বমোট",
+      "total_one": "{{count}} সর্বমোট",
+      "total_few": "{{count}} সর্বমোট",
+      "total_many": "{{count}} সর্বমোট",
+      "total_other": "{{count}} সর্বমোট"
+    },
+    "filters": {
+      "other": "অন্যান্য"
+    },
+    "empty": {
+      "noMatching": "কোনো মিল পাওয়া যায়নি",
+      "noNotifications": "কোনো সূচনাবার্তা নেই",
+      "tryDifferentFilter": "ভিন্ন ফিল্টার চেষ্টা করুন",
+      "allCaughtUp": "তোমরা সবাই ধরা পরে গেছো!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "পুনরায় আরম্ভ করুন",
+    "updateApp": "আপডেট করুন",
+    "downloadedRestartTooltip": "ডাউনলোড করা হয়েছে, পুনরায় আরম্ভ করুন",
+    "newVersionAvailable": "নতুন সংস্করণ উপলব্ধ রয়েছে",
+    "updatingApp": "ডক আপডেট করা হচ্ছে",
+    "updateReady": "আপডেট প্রস্তুত",
+    "restartNow": "এখন পুনরায় আরম্ভ করুন"
+  },
+  "layout": {
+    "github": "গিটহাব",
+    "discord": "ডিস্ক সংযুক্ত করুন",
+    "expandSidebar": "সাইড-বার প্রসারণ",
+    "collapseSidebarShortcut": "Collapse sidebar ({{shortcut}})",
+    "sidebarView": "সাইড- বার প্রদর্শন",
+    "resizeSidebar": "সাইড-বারের মাপ পরিবর্তন",
+    "closeTab": "ট্যাব বন্ধ করুন",
+    "openedFromSearch": "অনুসন্ধান থেকে খোলা হয়েছে",
+    "pinnedSession": "পিন করা সেশন",
+    "jumpToSection": "ঝাঁপ দিন",
+    "newTab": "নতুন ট্যাব",
+    "newTabDashboard": "নতুন ট্যাব (Dash)",
+    "refreshSession": "সেশান পুনরায় আরম্ভ করুন",
+    "refreshSessionWithShortcut": "Refresh Session ({{shortcut}})",
+    "loadingTab": "লোড করা হচ্ছে",
+    "menu": {
+      "teams": "মিলও",
+      "settings": "বৈশিষ্ট্য",
+      "extensions": "এক্সটেনশন",
+      "search": "অনুসন্ধান",
+      "schedules": "সিডিউলার",
+      "docs": "ডক",
+      "exportMarkdown": "রপ্তানি করো",
+      "exportJson": "এক্সপোর্ট করুন JSON",
+      "exportPlainText": "প্লেইন-টেক্সট রূপে এক্সপোর্ট করা হবে",
+      "analyzeSession": "সেশন বিশ্লেষণ করুন"
+    },
+    "tabMenu": {
+      "closeTabs": "বন্ধ {{count}} ট্যাব",
+      "closeTabs_one": "বন্ধ {{count}} ট্যাব",
+      "closeTabs_few": "বন্ধ {{count}} ট্যাব",
+      "closeTabs_many": "বন্ধ {{count}} ট্যাব",
+      "closeTabs_other": "বন্ধ {{count}} ট্যাব",
+      "closeTab": "ট্যাব বন্ধ করুন",
+      "closeOtherTabs": "অন্যান্য ট্যাব বন্ধ করো",
+      "splitRight": "বিভক্ত",
+      "splitLeft": "বাঁদিকে",
+      "pinToSidebar": "সাইড-বার বন্ধ করুন",
+      "unpinFromSidebar": "সাইড-বার থেকে আন-সাবস্ক্রাইব করা হচ্ছে",
+      "hideFromSidebar": "সাইডবার থেকে আড়াল করো",
+      "unhideFromSidebar": "সাইড-বার থেকে আন-সাবস্ক্রাইব করা হবে",
+      "closeAllTabs": "সব ট্যাব বন্ধ করো"
+    },
+    "sections": {
+      "team": "টিম",
+      "sessions": "সেশন",
+      "kanban": "কানবুন",
+      "claudeLogs": "লগ",
+      "messages": "বার্তা"
+    }
+  },
+  "editorFormatting": {
+    "bold": "গাঢ়",
+    "italic": "ইতালিয়",
+    "strike": "আঘাত করো",
+    "code": "কোড"
+  },
+  "diff": {
+    "changed": "পরিবর্তিত",
+    "noChangesDetected": "কোনো পরিবর্তন সনাক্ত করা হয়নি"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Copy ChatGPT login link and code",
+    "copyLoginLink": "Copy ChatGPT login link",
+    "copyFailed": "কপি করতে ব্যর্থ",
+    "copyLinkAndCode": "লিংক + কোড কপি করুন",
+    "copyLink": "লিংক দ্বারা চিহ্নিত ঠিকানা কপি করুন",
+    "enterCodeOnLoginPage": "Enter this code on the ChatGPT login page"
+  },
+  "window": {
+    "minimize": "আড়াল করুন",
+    "maximize": "বড় করুন",
+    "restore": "পুনুদ্ধার করুন"
+  },
+  "context": {
+    "local": "স্থানীয়",
+    "switchingTo": "পরিবর্তন করা হচ্ছে {{workspace}}",
+    "loadingWorkspace": "কর্মক্ষেত্র লোড করা হচ্ছে",
+    "switchWorkspace": "কর্মক্ষেত্র পরিবর্তন করুন"
+  },
+  "repositories": {
+    "noneAvailable": "কোনো সংগ্রহস্থল উপলব্ধ নেই",
+    "remove": "সংগ্রহস্থল সক্রিয় করুন"
+  },
+  "export": {
+    "session": "সেশান এক্সপোর্ট করুন",
+    "sessionTitle": "সেশন & রপ্তানি করো"
+  },
+  "brand": {
+    "claude": "হোস্টোমেল"
+  },
+  "sessionReport": {
+    "noSessionData": "কোনো ব্যবহারকারীর অ্যাকাউন্ট বিদ্যমান নেই",
+    "title": "সেশন রিপোর্ট"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "প্রজেক্ট নির্বাচন করুন"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "উপরে:",
+      "updatedYesterday": "গতকাল করা হয়েছে",
+      "yesterday": "গতকাল"
+    },
+    "reviewState": {
+      "needsFix": "সংশোধন প্রয়োজন"
+    },
+    "unassigned": "বরাদ্দ নয়"
+  }
+}

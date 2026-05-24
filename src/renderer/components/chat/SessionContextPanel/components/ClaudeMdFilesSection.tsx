@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { CLAUDE_MD_GROUP_CONFIG, CLAUDE_MD_GROUP_ORDER } from '../types';
 
 import { ClaudeMdSubSection } from './ClaudeMdSection';

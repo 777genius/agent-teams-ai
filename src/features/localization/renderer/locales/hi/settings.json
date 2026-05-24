@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "पावर-उपयोगकर्ता विकल्प: निर्यात/आयात कन्फिगर, रीसेट डिफ़ॉल्ट और कच्चे विन्यास संपादन।",
+      "label": "उन्नत"
+    },
+    "general": {
+      "description": "थीम, भाषा, प्रदर्शन घनत्व और स्टार्टअप व्यवहार जैसी कोर ऐप प्राथमिकताएं।",
+      "label": "जनरल"
+    },
+    "infoAriaLabel": "{{label}} क्या है?",
+    "notifications": {
+      "description": "जब आप एजेंट गतिविधि, कार्य पूरा होने और त्रुटियों के बारे में सूचित करते हैं तो नियंत्रण करें।",
+      "label": "अधिसूचनाएं"
+    }
+  },
+  "view": {
+    "description": "अपनी ऐप वरीयताओं को प्रबंधित करें",
+    "loading": "सेटिंग्स लोड हो रहा है...",
+    "title": "सेटिंग"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "रद्द करना",
+      "test": "टेस्ट"
+    },
+    "defaults": {
+      "allProjects": "सभी परियोजनाएं",
+      "allProjectsHint": "टेस्ट {{project}} का उपयोग करते हैं। डिफ़ॉल्ट तब तक लागू होता है जब तक किसी परियोजना में ओवरराइड नहीं होता।",
+      "loadingContexts": "संदर्भ लोड हो रहा है...",
+      "projectHint": "बचत ओवरराइड केवल {{project}}.",
+      "projectOverrideContext": "परियोजना ओवरराइड संदर्भ",
+      "scopeDescriptionAllProjects": "हर परियोजना के लिए डिफ़ॉल्ट है कि अपने स्वयं के OpenCode ओवरराइड नहीं है।",
+      "scopeDescriptionProject": "केवल चयनित परियोजना को ओवरराइड करें। रनिंग टीमों को नहीं बदला गया है।",
+      "selectProjectContext": "परियोजना संदर्भ का चयन करें",
+      "selectProjectHint": "स्थानीय मॉडल या डिफॉल्ट की बचत से पहले एक परियोजना का चयन करें।",
+      "selectValidationContext": "प्रमाणीकरण",
+      "setAllProjectsDefault": "सभी प्रोजेक्ट डिफ़ॉल्ट सेट करें",
+      "setProjectDefault": "परियोजना डिफ़ॉल्ट सेट करें",
+      "thisProject": "यह परियोजना",
+      "title": "OpenCode डिफ़ॉल्ट",
+      "validationContext": "प्रमाणीकरण"
+    },
+    "diagnostics": {
+      "copied": "निदान करना",
+      "copiedShort": "Copied",
+      "copy": "निदान की प्रतिलिपि",
+      "hints": "हिंट",
+      "likelyCause": "समान कारण:"
+    },
+    "models": {
+      "alreadyDefault": "यह पहले से ही चयनित OpenCode डिफ़ॉल्ट है।",
+      "empty": "कोई मॉडल नहीं मिला।",
+      "emptyFree": "कोई मुफ्त मॉडल नहीं मिला।",
+      "emptyRecommended": "कोई अनुशंसित मॉडल नहीं मिला।",
+      "emptyRecommendedFree": "कोई मुफ्त मॉडल नहीं मिला।",
+      "freeOnly": "केवल",
+      "launchableDescription": "रूट्स आप टीम पिकर में परीक्षण या उपयोग कर सकते हैं: स्थानीय विन्यास, स्वतंत्र निर्मित मॉडल और वर्तमान डिफ़ॉल्ट।",
+      "launchableTitle": "लॉन्च करने योग्य ओपनकोड मॉडल",
+      "loadingRoutes": "OpenCode मॉडल मार्ग लोड हो रहा है...",
+      "noRoutesMatch": "कोई ओपनकोड मॉडल मार्ग \"{{query}}\" से मेल खाता है।",
+      "noneReported": "अभी तक लॉन्च करने योग्य ओपनकोड मॉडल मार्गों की सूचना नहीं दी गई थी। OpenCode में एक स्थानीय मार्ग को कॉन्फ़िगर करें या कैटलॉग प्रदाताओं का निरीक्षण करने के लिए प्रदाता टैब का उपयोग करें।",
+      "recommendedOnly": "केवल",
+      "searchPlaceholder": "खोज मॉडल",
+      "selectProjectBeforeTesting": "परीक्षण मॉडल से पहले परियोजना संदर्भ का चयन करें।",
+      "selectProjectBeforeTestingDefaults": "OpenCode डिफ़ॉल्ट परीक्षण या सहेजने से पहले एक परियोजना संदर्भ का चयन करें।",
+      "useInTeamPicker": "टीम पिकर में उपयोग करें"
+    },
+    "providers": {
+      "catalog": "ओपनकोड प्रदाता सूची",
+      "countFallback": "ओपनकोड प्रदाता",
+      "description": "{{count}} कनेक्टेड और अनुशंसित प्रदाताओं को पहले दिखाया गया है।",
+      "loadMore": "अधिक प्रदाता लोड करें",
+      "loading": "ओपनकोड प्रदाता लोड हो रहा है",
+      "noMatches": "कोई प्रदाता उस खोज से मेल खाता नहीं है।",
+      "noneReported": "प्रबंधित रनटाइम द्वारा रिपोर्ट किए गए कोई ओपनकोड प्रदाता नहीं।",
+      "recommended": "अनुशंसित",
+      "refreshCatalog": "ताज़ा सूची",
+      "searchPlaceholder": "खोज प्रदाता",
+      "description_few": "{{count}} कनेक्टेड और अनुशंसित प्रदाताओं को पहले दिखाया गया है।",
+      "description_many": "{{count}} कनेक्टेड और अनुशंसित प्रदाताओं को पहले दिखाया गया है।",
+      "description_one": "{{count}} कनेक्टेड और अनुशंसित प्रदाताओं को पहले दिखाया गया है।",
+      "description_other": "{{count}} कनेक्टेड और अनुशंसित प्रदाताओं को पहले दिखाया गया है।"
+    },
+    "setup": {
+      "loading": "प्रदाता सेटअप लोड हो रहा है..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode डिफ़ॉल्ट: {{model}}",
+      "loading": "OpenCode रनटाइम, कनेक्टेड प्रदाता और मॉडल डिफॉल्ट प्रबंधित करें...",
+      "source": "स्रोत: {{source}}",
+      "title": "ओपनकोड रनटाइम"
+    },
+    "tabs": {
+      "models": "मॉडल",
+      "providers": "प्रदाता"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "खोज मॉडल मार्ग"
+    },
+    "badges": {
+      "usedInTeamPicker": "टीम पिकर में प्रयुक्त",
+      "free": "मुक्त",
+      "local": "स्थानीय",
+      "configured": "विन्यास",
+      "connected": "जुड़े",
+      "verified": "सत्यापित",
+      "needsTest": "परीक्षण",
+      "failed": "असफल",
+      "unknown": "अज्ञात",
+      "default": "डिफ़ॉल्ट"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "एजेंट संचार के लिए भाषा",
+      "descriptionWithDetected": "एजेंट संचार के लिए भाषा (detected: {{detected}})",
+      "emptyMessage": "कोई भाषा नहीं मिली।",
+      "label": "भाषा",
+      "searchPlaceholder": "भाषा खोजें...",
+      "selectPlaceholder": "भाषा चुनें...",
+      "title": "एजेंट भाषा"
+    },
+    "appLanguage": {
+      "description": "आवेदन इंटरफ़ेस के लिए भाषा।",
+      "label": "भाषा",
+      "title": "अनुप्रयोग भाषा"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "एक ट्रांसक्रिप्ट खोलने या एक नया संदेश प्राप्त करते समय स्वचालित रूप से प्रत्येक प्रतिक्रिया बारी का विस्तार करें",
+        "label": "डिफ़ॉल्ट रूप से एआई प्रतिक्रियाओं का विस्तार करें"
+      },
+      "nativeTitleBar": {
+        "description": "कस्टम शीर्षक बार के बजाय डिफ़ॉल्ट सिस्टम विंडो फ्रेम का उपयोग करें",
+        "label": "मूल शीर्षक बार का उपयोग करें",
+        "restartConfirm": {
+          "confirmLabel": "शुरू",
+          "message": "एप्लिकेशन को शीर्षक बार परिवर्तन लागू करने के लिए पुनः आरंभ करने की आवश्यकता है। अभी शुरू करें?",
+          "title": "आवश्यक"
+        }
+      },
+      "theme": {
+        "description": "अपनी पसंदीदा रंग थीम चुनें",
+        "label": "विषय",
+        "options": {
+          "dark": "अंधेरा",
+          "light": "प्रकाश",
+          "system": "सिस्टम"
+        }
+      },
+      "title": "दिखावट"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "एक HTTP सर्वर शुरू करने के लिए एक ब्राउज़र से यूआई तक पहुंचें या iframe में एम्बेड करें",
+        "label": "सर्वर मोड सक्षम करें"
+      },
+      "title": "ब्राउज़र एक्सेस"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "फ़ोल्डर चुनें",
+        "selectFolderManually": "मैन्युअल रूप से फ़ोल्डर चुनें",
+        "useAutoDetect": "ऑटो-डिटेक्ट का उपयोग करें",
+        "useFolder": "फ़ोल्डर का उपयोग करें",
+        "usePath": "पथ का प्रयोग",
+        "useThisPath": "इस पथ का प्रयोग करें",
+        "useWsl": "लिनक्स/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "इस फ़ोल्डर में \"परियोजना\" निर्देशिका नहीं होती है। वैसे भी?",
+          "title": "कोई परियोजना निर्देशिका नहीं मिली"
+        },
+        "notClaudeDir": {
+          "message": "इस फ़ोल्डर को \"{{folderName}}\" नाम दिया गया है, न कि \".claude\"। वैसे भी?",
+          "title": "चयनित फ़ोल्डर नहीं है।"
+        },
+        "noWslPaths": {
+          "message": "स्वचालित रूप से क्लाउड डेटा के साथ WSL डिस्को को नहीं मिला। मैन्युअल रूप से फ़ोल्डर चुनें?",
+          "title": "No WSL क्लाउड पथ पाया"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" में \"परियोजना\" निर्देशिका शामिल नहीं है। वैसे भी?",
+          "title": "WSL पथ लापता परियोजनाओं निर्देशिका"
+        }
+      },
+      "current": {
+        "autoDetected": "ऑटो डिटेक्टेड:{{path}}",
+        "autoDetectedPath": "ऑटो-डिटेक्टेड पथ का उपयोग करना",
+        "customPath": "कस्टम पथ का उपयोग करना",
+        "label": "वर्तमान स्थानीय रूट"
+      },
+      "description": "चुनें कि कौन से स्थानीय फ़ोल्डर को आपके क्लाउड डेटा रूट के रूप में माना जाता है",
+      "errors": {
+        "detectWslFailed": "WSL का पता लगाने में विफल रहा क्लाउड रूट पथ",
+        "loadFailed": "स्थानीय क्लाउड रूट सेटिंग लोड करने में विफल",
+        "updateFailed": "क्लाउड रूट को अपडेट करने में विफल"
+      },
+      "title": "स्थानीय क्लाउड रूट",
+      "wslModal": {
+        "closeAriaLabel": "बंद WSL पथ मोडल",
+        "description": "पता लगाया गया WSL वितरण और क्लाउड रूट उम्मीदवार",
+        "noProjectsDir": "कोई प्रोजेक्ट डायरेक्टरी का पता नहीं लगा",
+        "title": "चुनें WSL क्लाउड रूट"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "अज्ञात दुर्घटना और प्रदर्शन डेटा भेजकर ऐप को बेहतर बनाने में मदद करें",
+        "label": "दुर्घटना रिपोर्ट भेजें"
+      },
+      "title": "गोपनीयता"
+    },
+    "server": {
+      "runningOn": "चल रहा है",
+      "standaloneModeDescription": "स्टैंडअलोन मोड में रनिंग। HTTP सर्वर हमेशा सक्रिय होता है। सिस्टम सूचनाएं उपलब्ध नहीं हैं - अधिसूचना ट्रिगर केवल ऐप में लॉग इन किए जाते हैं।",
+      "title": "सर्वर"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "जब आप लॉग इन करते हैं तो स्वचालित रूप से ऐप शुरू करें",
+        "label": "लॉग इन करें"
+      },
+      "showDockIcon": {
+        "description": "डॉक (macOS) में ऐप आइकन प्रदर्शित करें",
+        "label": "डॉक आइकन दिखाएं"
+      },
+      "title": "स्टार्टअप"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "अधिसूचनाएं विकास मोड में काम नहीं कर सकती हैं। मैकओएस ऐप को \"इलेक्ट्रोन\" (बंडल आईडी) के रूप में पहचानता है",
+      "descriptionSuffix": ") उत्पादन ऐप नाम के बजाय। सिस्टम सेटिंग> अधिसूचनाओं की जाँच करें > अनुमतियों को सत्यापित करने के लिए इलेक्ट्रॉन।",
+      "title": "देव मोड"
+    },
+    "ignoredRepositories": {
+      "description": "इन प्रस्तावों की अधिसूचनाओं को अनदेखा कर दिया जाएगा",
+      "empty": "कोई प्रतिबंध नहीं है",
+      "selectPlaceholder": "....",
+      "title": "मान्यता प्राप्त"
+    },
+    "settings": {
+      "enabled": {
+        "description": "त्रुटियों और घटनाओं के लिए सिस्टम नोटिफिकेशन दिखाएं",
+        "label": "सिस्टम अधिसूचना सक्षम करें"
+      },
+      "sound": {
+        "description": "जब सूचनाएं दिखाई देती हैं तो ध्वनि चलाएं",
+        "label": "ध्वनि"
+      },
+      "subagentErrors": {
+        "description": "सबएजेंट सत्र में त्रुटियों के बारे में पता लगाना और सूचित करना",
+        "label": "सबजेंट त्रुटियों को शामिल करें"
+      },
+      "title": "अधिसूचना सेटिंग"
+    },
+    "snooze": {
+      "clear": "साफ़ स्नूज़",
+      "description": "अस्थायी रूप से नोटिस रोकें",
+      "descriptionWithTime": "जब तक {{time}}",
+      "label": "Snooze अधिसूचना",
+      "options": {
+        "15": "15 मिनट",
+        "30": "30 मिनट",
+        "60": "1 घंटे",
+        "120": "2 घंटे",
+        "240": "4 घंटे",
+        "-1": "कल तक"
+      },
+      "selectDuration": "चयन अवधि..."
+    },
+    "taskCompletion": {
+      "description": "जब क्लाउड कार्यों को समाप्त करता है तो मूल ओएस अधिसूचनाएं प्राप्त करें - ध्वनि, बैनर और डॉक / टस्कबार बैज। MacOS, Linux और Windows पर काम करता है।",
+      "installPlugin": "क्लाउड-notifications-go प्लगइन स्थापित करें",
+      "title": "कार्य समापन अधिसूचना"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "जब किसी टीम में हर कार्य पूर्ण स्थिति तक पहुंच जाता है तो सूचित करें",
+        "label": "सभी कार्य पूर्ण"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "जब क्लाउड एक रीसेट समय की रिपोर्ट करता है, तो सीमा रीसेट करने के बाद टीम लीड के लिए अनुवर्ती न्यायाधीश को शेड्यूल करें",
+        "label": "दर सीमा के बाद ऑटो-फिर से शुरू"
+      },
+      "clarifications": {
+        "description": "जब किसी कार्य को आपके इनपुट की आवश्यकता होती है तो मूल ओएस अधिसूचनाएं दिखाएं",
+        "label": "कार्य स्पष्टीकरण अधिसूचना"
+      },
+      "crossTeamMessage": {
+        "description": "जब कोई संदेश किसी अन्य टीम से आता है तो सूचित करें",
+        "label": "क्रॉस-टीम संदेश अधिसूचना"
+      },
+      "leadInbox": {
+        "description": "जब टीममेट्स टीम लीड को संदेश भेजते हैं तो सूचित करें",
+        "label": "लीड इनबॉक्स अधिसूचनाएं"
+      },
+      "statusChange": {
+        "description": "कार्य की स्थिति में बदलाव होने पर मूल ओएस अधिसूचनाएं दिखाएं",
+        "label": "कार्य स्थिति परिवर्तन अधिसूचना",
+        "onlySolo": {
+          "description": "केवल तभी सूचित करें जब टीम के पास कोई टीममेट नहीं है",
+          "label": "केवल एकल मोड में"
+        },
+        "statuses": {
+          "description": "कौन सा लक्ष्य स्टेटस एक अधिसूचना को ट्रिगर करता है",
+          "label": "इन स्थितियों पर ध्यान देना",
+          "options": {
+            "approved": "स्वीकृत",
+            "completed": "पूरा",
+            "deleted": "हटाना",
+            "in_progress": "शुरू करना",
+            "needsFix": "आवश्यकताएँ फिक्स",
+            "pending": "लंबित",
+            "review": "समीक्षा"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "जब एजेंट कार्यों पर टिप्पणी करते हैं तो मूल ओएस अधिसूचनाएं दिखाएं",
+        "label": "कार्य टिप्पणी अधिसूचना"
+      },
+      "taskCreated": {
+        "description": "जब एक नया कार्य बनाया जाता है तो मूल ओएस अधिसूचनाएं दिखाएं",
+        "label": "कार्य ने अधिसूचनाएं बनाईं"
+      },
+      "teamLaunched": {
+        "description": "जब एक टीम शुरू हो जाती है और तैयार हो जाती है तो सूचित करें",
+        "label": "टीम ने अधिसूचना शुरू की"
+      },
+      "title": "टीम अधिसूचनाएं",
+      "toolApproval": {
+        "description": "जब एक उपकरण को आपकी मंजूरी (अनुमति / Deny) की आवश्यकता होती है, तो सूचित करें कि ऐप केंद्रित नहीं है",
+        "label": "उपकरण अनुमोदन अधिसूचना"
+      },
+      "userInbox": {
+        "description": "जब टीममेट्स आपको संदेश भेजते हैं तो सूचित करें",
+        "label": "उपयोगकर्ता इनबॉक्स अधिसूचनाएं"
+      }
+    },
+    "test": {
+      "action": "टेस्ट भेजें",
+      "description": "प्रसव की पुष्टि करने के लिए एक परीक्षण अधिसूचना भेजें",
+      "failedToSend": "परीक्षण अधिसूचना भेजने में विफल",
+      "label": "टेस्ट अधिसूचना",
+      "sending": "भेजना...",
+      "sent": "संत!",
+      "unknownError": "अज्ञात त्रुटि"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "ऐप आइकन",
+      "description": "एआई एजेंट टीमों को इकट्ठा करना जो स्वायत्त रूप से समानांतर में काम करते हैं, टीमों में संवाद करते हैं और एक कंबान बोर्ड पर कार्यों का प्रबंधन करते हैं - अंतर्निहित कोड समीक्षा, लाइव प्रोसेस मॉनिटरिंग और पूर्ण टूल दृश्यता के साथ।",
+      "standalone": "स्टैंडअलोन",
+      "title": "के बारे में",
+      "version": "संस्करण {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Affig",
+      "exportConfig": "निर्यात Config",
+      "importConfig": "आयात Config",
+      "openInEditor": "संपादक में खोलें",
+      "resetToDefaults": "डिफ़ॉल्ट के लिए रीसेट करें",
+      "title": "विन्यास"
+    },
+    "updates": {
+      "available": "V{{version}} उपलब्ध",
+      "check": "अद्यतन की जाँच करें",
+      "checking": "जाँच...",
+      "ready": "तैयार करना",
+      "unknownVersion": "अज्ञात",
+      "upToDate": "तारीख तक"
+    },
+    "appName": "एजेंट टीम एआई"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "विन्यास लोड करने में विफल",
+      "saveFailed": "विन्यास को बचाने में विफल"
+    },
+    "footer": {
+      "autoSave": "संपादन के बाद ऑटो सेव",
+      "toClose": "बंद करना",
+      "escapeKey": "Esc"
+    },
+    "loading": "config.",
+    "status": {
+      "invalidJson": "Invalid JSON",
+      "saveFailed": "असफल",
+      "saved": "सेव",
+      "saving": "बचत"
+    },
+    "title": "कॉन्फ़िगरेशन संपादित करें"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "रद्द करना",
+      "submit": "ट्रिगर जोड़ें",
+      "title": "कस्टम ट्रिगर जोड़ें"
+    },
+    "builtin": {
+      "description": "डिफ़ॉल्ट ट्रिगर जो एप्लिकेशन के साथ आते हैं। आप उन्हें सक्षम या अक्षम कर सकते हैं और अपने पैटर्न को अनुकूलित कर सकते हैं।",
+      "title": "निर्मित ट्रिगर"
+    },
+    "card": {
+      "builtinBadge": "अंतर्निर्मित",
+      "collapseAriaLabel": "पतन",
+      "deleteAriaLabel": "ट्रिगर हटाएं",
+      "editNameAriaLabel": "नाम संपादित करें",
+      "expandAriaLabel": "विस्तार"
+    },
+    "color": {
+      "customHexTitle": "कस्टम हेक्स रंग",
+      "invalidHex": "Invalid हेक्स"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "अगर चेतावनी >",
+      "emptyPatternHint": "सभी सामग्री से मेल खाने के लिए खाली छोड़ दें। जावास्क्रिप्ट regex syntax का उपयोग करता है।",
+      "errorStatusDescription": "जब एक उपकरण निष्पादन एक त्रुटि (is error: सच) की रिपोर्ट करता है तो ट्रिगर।",
+      "tokensUnit": "टोकन",
+      "matchPatternPlaceholder": "उदाहरण के लिए, त्रुटि विफल"
+    },
+    "custom": {
+      "description": "विशिष्ट पैटर्न या टूल आउटपुट के लिए अधिसूचित करने के लिए अपना खुद का ट्रिगर बनाएं।",
+      "empty": "अभी तक कोई कस्टम ट्रिगर नहीं है।",
+      "title": "कस्टम ट्रिगर"
+    },
+    "errors": {
+      "invalidRegexPattern": "अमान्य रेगेक्स पैटर्न"
+    },
+    "fields": {
+      "contentType": "सामग्री प्रकार",
+      "matchField": "मैच फील्ड",
+      "matchPattern": "मैच पैटर्न (Regex)",
+      "scopeToolName": "स्कोप / टूल का नाम",
+      "scopeToolNameOptional": "स्कोप / टूल का नाम (वैकल्पिक)",
+      "threshold": "थ्रेसहोल्ड",
+      "tokenType": "टोकन प्रकार",
+      "triggerNamePlaceholder": "उदाहरण के लिए, निर्माण विफलता चेतावनी",
+      "triggerNameRequired": "ट्रिगर नाम *"
+    },
+    "ignorePatterns": {
+      "hint": "प्रेस दर्ज करें। यदि कोई पैटर्न मैच होता है तो अधिसूचना छोड़ दी जाती है।",
+      "placeholder": "regex...",
+      "removeAriaLabel": "पैटर्न को अनदेखा करें",
+      "summary": "उन्नत: अपवाद नियम",
+      "title": "Ignore पैटर्न (स्किप अगर मैच)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "पाठ आउटपुट",
+        "thinking": "सोचना",
+        "tool_result": "उपकरण परिणाम",
+        "tool_use": "उपकरण"
+      },
+      "matchFields": {
+        "args": "तर्क",
+        "command": "कमान",
+        "content": "सामग्री",
+        "description": "विवरण",
+        "file_path": "फ़ाइल पथ",
+        "fullInput": "पूर्ण इनपुट (JSON)",
+        "glob": "ग्लोब फिल्टर",
+        "new_string": "न्यू स्ट्रिंग",
+        "old_string": "पुराना स्ट्रिंग",
+        "path": "पथ",
+        "pattern": "पैटर्न",
+        "prompt": "शीघ्र",
+        "query": "क्वेरी",
+        "skill": "कौशल का नाम",
+        "subagent_type": "एजेंट प्रकार",
+        "text": "पाठ सामग्री",
+        "thinking": "विचार सामग्री",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "सामग्री पैटर्न",
+        "error_status": "निष्पादन त्रुटि",
+        "token_threshold": "उच्च टोकन उपयोग"
+      },
+      "tokenTypes": {
+        "input": "इनपुट टोकन",
+        "output": "आउटपुट टोकन",
+        "total": "कुल टोकन"
+      },
+      "toolNames": {
+        "anyTool": "कोई उपकरण"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "टेस्ट ट्रिगर",
+      "detectedSuffix": "त्रुटियों का पता लगाया जाएगा",
+      "more": "...और {{count}} अधिक",
+      "more_few": "...और {{count}} अधिक",
+      "more_many": "...और {{count}} अधिक",
+      "more_one": "...और {{count}} अधिक",
+      "more_other": "...और {{count}} अधिक",
+      "testTrigger": "टेस्ट ट्रिगर",
+      "testing": "परीक्षण...",
+      "title": "पूर्वावलोकन",
+      "truncatedWarning": "खोज जल्दी बंद (टाइमआउट या गिनती सीमा)। वास्तविक मैच अधिक हो सकता है।",
+      "viewSession": "सत्र देखें"
+    },
+    "repositoryScope": {
+      "empty": "चयनित कोई प्रस्ताव नहीं - ट्रिगर सभी प्रस्तावों पर लागू होता है",
+      "hint": "जब भंडार का चयन किया जाता है, तो यह उन भंडारियों में त्रुटियों के लिए केवल आग लग जाती है।",
+      "placeholder": "जोड़ने के लिए भंडार का चयन करें...",
+      "summary": "उन्नत: भंडारी क्षेत्र",
+      "title": "प्रस्तावों की सीमा (केवल चयनित प्रस्तावों पर लागू)"
+    },
+    "sections": {
+      "configuration": "विन्यास",
+      "dotColor": "डॉट कलर",
+      "generalInfo": "सामान्य जानकारी",
+      "triggerCondition": "ट्रिगर शर्त"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "प्रोफ़ाइल जोड़ें",
+      "cancel": "रद्द करना",
+      "deleteProfile": "प्रोफ़ाइल हटाएं",
+      "editProfile": "प्रोफ़ाइल संपादित करें",
+      "save": "सहेजें"
+    },
+    "authMethods": {
+      "agent": "SSH एजेंट",
+      "auto": "ऑटो (SSH Config से)",
+      "password": "पासवर्ड",
+      "privateKey": "निजी कुंजी"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "डिलीट",
+      "message": "क्या आप \"{{name}}\" को हटाना चाहते हैं? यह नहीं हो सकता है।",
+      "title": "प्रोफ़ाइल हटाएं"
+    },
+    "description": "त्वरित पुनर्संयोजन के लिए SSH कनेक्शन प्रोफाइल सहेजें",
+    "empty": {
+      "description": "जल्दी कनेक्ट करने के लिए एक SSH प्रोफ़ाइल जोड़ें",
+      "title": "कोई बचाया प्रोफाइल नहीं"
+    },
+    "form": {
+      "authentication": "प्रमाणीकरण",
+      "host": "होस्ट",
+      "name": "नाम",
+      "passwordPrompt": "आप कनेक्ट करते समय पासवर्ड के लिए प्रेरित होंगे।",
+      "port": "पोर्ट",
+      "privateKeyPath": "निजी कुंजी पथ",
+      "username": "उपयोगकर्ता नाम",
+      "namePlaceholder": "मेरा सर्वर",
+      "hostPlaceholder": "होस्टनाम या आईपी",
+      "usernamePlaceholder": "उपयोगकर्ता"
+    },
+    "loading": "प्रोफ़ाइल लोड हो रहा है...",
+    "title": "वर्कस्पेस प्रोफाइल"
+  },
+  "connection": {
+    "actions": {
+      "connect": "कनेक्ट",
+      "connecting": "कनेक्ट...",
+      "disconnect": "डिस्कनेक्ट",
+      "testConnection": "परीक्षण कनेक्शन",
+      "testing": "परीक्षण..."
+    },
+    "currentMode": {
+      "description": "सत्र फ़ाइलों के लिए डेटा स्रोत",
+      "label": "वर्तमान मोड",
+      "local": "स्थानीय ({{path}})"
+    },
+    "description": "क्लाउड कोड सत्र देखने के लिए दूरस्थ मशीन से कनेक्ट करें",
+    "form": {
+      "authentication": "प्रमाणीकरण",
+      "host": "होस्ट",
+      "password": "पासवर्ड",
+      "port": "पोर्ट",
+      "privateKeyPath": "निजी कुंजी पथ",
+      "username": "उपयोगकर्ता नाम",
+      "hostPlaceholder": "होस्टनाम या SSH विन्यास उपनाम",
+      "usernamePlaceholder": "उपयोगकर्ता"
+    },
+    "savedProfiles": {
+      "title": "सेव प्रोफाइल"
+    },
+    "ssh": {
+      "title": "SSH कनेक्शन"
+    },
+    "status": {
+      "connectedTo": "कनेक्टेड से {{host}}",
+      "remoteSessions": "SSH के माध्यम से दूरस्थ सत्र देखना"
+    },
+    "test": {
+      "failed": "कनेक्शन विफल रहा: {{error}}",
+      "success": "कनेक्शन सफल",
+      "unknownError": "अज्ञात त्रुटि"
+    },
+    "title": "रिमोट कनेक्शन"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "रद्द करना",
+      "cancelLogin": "लॉग इन",
+      "connectChatGpt": "कनेक्ट करें ChatGPT",
+      "delete": "डिलीट",
+      "disable": "अक्षम",
+      "disconnectAccount": "अकाउंट डिस्कनेक्ट करें",
+      "generateLink": "लिंक उत्पन्न करना",
+      "openLogin": "लॉगिन",
+      "reconnectAnthropic": "Reconnect Anthropic",
+      "refresh": "ताज़ा",
+      "replaceKey": "कुंजी बदलें",
+      "saveEndpoint": "अंत बिंदु सहेजें",
+      "saveKey": "कुंजी सहेजें",
+      "saving": "बचत",
+      "setApiKey": "सेट API कुंजी",
+      "updateKey": "कुंजी अद्यतन करें",
+      "useCode": "कोड"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "संग्रहीत क्रेडेंशियल लोड हो रहा है...",
+      "projectScope": "परियोजना",
+      "scope": "स्कोप",
+      "storedIn": "{{backend}} में संग्रहीत",
+      "userScope": "उपयोगकर्ता",
+      "storedInApp": "ऐप में स्टोर",
+      "providers": {
+        "anthropic": {
+          "name": "एन्थ्रोपिक API कुंजी",
+          "title": "API कुंजी",
+          "description": "API-billed access के लिए एक सीधा एन्थ्रोपिक API कुंजी का उपयोग करें। जब आप वापस स्विच करते हैं तो आपका एंथ्रोपिक सदस्यता सत्र उपलब्ध रहता है।",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API कुंजी",
+          "title": "API कुंजी",
+          "description": "एक OpenAI API कुंजी का उपयोग एक माध्यमिक Codex auth पथ के रूप में करें। यदि आप Codex को API कुंजी मोड में स्विच करते हैं, तो यह ऐप मूल लॉन्च के लिए CODEX_API_KEY में CODEX_API_KEY को प्रतिबिंबित करेगा।",
+          "placeholder": "sk-proj..."
+        },
+        "gemini": {
+          "name": "मिथुन API कुंजी",
+          "title": "API पहुँच",
+          "description": "जेमिनी API बैकएंड के लिए `GEMINI_API_KEY` का उपयोग करें। CLI SDK और ADC को इसकी आवश्यकता नहीं है।",
+          "placeholder": "..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "डेवलपर: {{state}}",
+        "connected": "कनेक्ट",
+        "description": "स्थानीय कोडेक्स ऐप सर्वर खाता सत्र का प्रबंधन करें जो सदस्यता समर्थित मूल लॉन्च को शक्ति देता है।",
+        "loginInProgress": "लॉगिन",
+        "plan": "योजना: {{plan}}",
+        "reconnectRequired": "आवश्यक रीकनेक्ट करें",
+        "title": "ChatGPT खाता",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} ऑटो का उपयोग करने के लिए पता चला API कुंजी जब तक ChatGPT जुड़ा हुआ है।",
+          "detectedApiKeyNeedsApiMode": "{{message}} पता लगाया गया API कुंजी केवल आप API कुंजी मोड करने के बाद प्रयोग किया जाता है।",
+          "localArtifactsNoSession": "Codex CLI वर्तमान में कोई सक्रिय चैटGPT खाता नहीं है। स्थानीय कोडेक्स खाता डेटा मौजूद है, लेकिन कोई सक्रिय प्रबंधित सत्र नहीं चुना गया है। केवल Codex CLI के बाद ही उपयोग की सीमा दिखाई देती है।",
+          "noActiveAccount": "Codex CLI वर्तमान में कोई सक्रिय चैटGPT खाता नहीं है। केवल Codex CLI के बाद ही उपयोग की सीमा दिखाई देती है।",
+          "reconnectBeforeUsage": "Codex एक स्थानीय रूप से चयनित ChatGPT खाता है, लेकिन वर्तमान सत्र को उपयोग सीमा से पहले फिर से कनेक्ट करने की आवश्यकता है।",
+          "usageLimitsAfterReport": "कोडेक्स ने उन्हें कनेक्टेड चैटजीपीटी खाते के लिए रिपोर्ट करने के बाद उपयोग की सीमा यहां दिखाई दी।"
+        }
+      },
+      "install": {
+        "checking": "जांच",
+        "downloading": "डाउनलोड",
+        "installCli": "Codex CLI स्थापित करें",
+        "installing": "स्थापना",
+        "retryInstall": "इंस्टॉल फिर से करें",
+        "title": "Codex CLI को ऐप डेटा में इंस्टॉल करें"
+      },
+      "rateLimits": {
+        "credits": "ऋण",
+        "creditsDescription": "क्रेडिट विंडो आधारित सदस्यता उपयोग से अलग से दिखाया गया है और योजना समर्थित चैट जीपीटी सत्र के लिए अनुपलब्ध हो सकता है।",
+        "noSecondaryWindow": "कोडेक्स ने इस खाता स्नैपशॉट के लिए एक द्वितीयक विंडो वापस नहीं किया था।",
+        "notReported": "रिपोर्ट नहीं",
+        "primaryReset": "प्राथमिक रीसेट",
+        "primaryUsed": "प्राथमिक उपयोग",
+        "primaryWindow": "प्राथमिक खिड़की",
+        "remainingLeft": "{{value}} छोड़ दिया",
+        "remainingUnknown": "अज्ञात रहना",
+        "secondaryReset": "माध्यमिक रीसेट",
+        "secondaryUsed": "माध्यमिक इस्तेमाल",
+        "secondaryWindow": "माध्यमिक खिड़की",
+        "usedQuotaNote": "इन प्रतिशतों से पता चलता है कि कोटा का इस्तेमाल नहीं किया जाता है।",
+        "weeklyReset": "साप्ताहिक रीसेट",
+        "weeklyUsed": "साप्ताहिक उपयोग",
+        "weeklyUsedOneWeek": "साप्ताहिक उपयोग (1w)",
+        "weeklyWindow": "साप्ताहिक विंडो",
+        "secondaryFallback": "माध्यमिक",
+        "secondaryWindowNote": "साप्ताहिक सीमाओं को {{window}} विंडो में अलग से दिखाया गया है।",
+        "usageExplanationGeneric": "शो का इस्तेमाल कोटा, शेष कोटा नहीं।",
+        "usageExplanationWindowOnly": "वर्तमान {{window}} विंडो में प्रयुक्त कोटा दिखाता है, शेष कोटा नहीं है।",
+        "usageExplanationWithRemaining": "{{used}} का उपयोग - लगभग {{remaining}} वर्तमान {{window}} विंडो में छोड़ दिया।"
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "Auth token को कॉन्फ़िगर नहीं किया गया है।",
+      "baseUrl": "बेस URL",
+      "description": "Anthropic-compatible स्थानीय रनटाइम समापन बिंदु का उपयोग करें।",
+      "keepSavedToken": "बचाया टोकन रखने के लिए खाली छोड़ दें",
+      "title": "स्थानीय / संगत समापन बिंदु",
+      "tokenStatus": "टोकन {{status}}",
+      "validation": {
+        "baseUrlRequired": "बेस URL की आवश्यकता है",
+        "firstPartyAnthropic": "पहली पार्टी एन्थ्रोपिक के लिए ऑटो, सब्सक्रिप्शन, या API कुंजी का उपयोग करें",
+        "httpRequired": "Base URL must use http:// or https://",
+        "invalidUrl": "Invalid URL",
+        "noCredentials": "बेस URL में क्रेडेंशियल शामिल नहीं होना चाहिए"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "एंडपॉइंट विकलांग। बचाया टोकन रखा गया था।",
+        "endpointSaved": "एंडपॉइंट बचाया",
+        "endpointSavedTokenMissing": "समापन बिंदु बचाया। Auth token को कॉन्फ़िगर नहीं किया गया है।"
+      }
+    },
+    "connection": {
+      "authenticationMethod": "प्रमाणीकरण विधि",
+      "descriptions": {
+        "anthropic": "कैसे app-launched Anthropic सत्र प्रामाणिक चुनें।",
+        "codex": "का चयन करें कि क्या कोडेक्स को अपने चैटजीपीटी सदस्यता या एक API कुंजी को पसंद करना चाहिए जब मूल रनटाइम लॉन्च हो जाए।",
+        "gemini": "वैकल्पिक API पहुँच को कॉन्फ़िगर करें। CLI SDK और ADC अभी भी स्वचालित रूप से खोजा गया है।",
+        "opencode": "ओपनकोड प्रमाणीकरण और प्रदाता सूची को ओपनकोड रनटाइम द्वारा प्रबंधित किया जाता है।"
+      },
+      "method": "कनेक्शन विधि",
+      "mode": "मोड: {{mode}}",
+      "selected": "चयनित",
+      "switching": "स्विचन...",
+      "title": "कनेक्शन"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API कुंजी"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ANTHROPIC_API_KEY और एन्थ्रोपिक API बिलिंग का प्रयोग करें।",
+        "autoDescription": "एन्थ्रोपिक रनटाइम डिफॉल्ट्स और सर्वोत्तम स्थानीय क्रेडेंशियल उपलब्ध हैं।",
+        "hint": "ऑटो अपने डिफ़ॉल्ट स्थानीय क्रेडेंशियल रिज़ॉल्यूशन पर एन्थ्रोपिक रखता है।",
+        "subscriptionDescription": "अपने स्थानीय एंथ्रोपिक साइन-इन सत्र और सदस्यता पहुंच का उपयोग करें।",
+        "subscriptionTitle": "एन्थ्रोपिक सदस्यता"
+      },
+      "auto": {
+        "title": "ऑटो"
+      },
+      "codex": {
+        "apiKeyDescription": "मूल कोडेक्स लॉन्च के लिए OPENAI_API_KEY और CODEX_API_KEY बिलिंग का उपयोग करें।",
+        "autoDescription": "अपने ChatGPT खाते और सदस्यता को प्राथमिकता दें। केवल जरूरत पड़ने पर API कुंजी मोड का उपयोग करें।",
+        "chatgptDescription": "अपने कनेक्टेड ChatGPT खाते और Codex सदस्यता का उपयोग करें।",
+        "chatgptTitle": "ChatGPT खाता",
+        "hint": "कोडेक्स हमेशा मूल रनटाइम के माध्यम से चलता है। ऑटो API कुंजी क्रेडेंशियल को वापस आने से पहले अपने ChatGPT खाते को पसंद करता है।"
+      }
+    },
+    "description": "प्रबंधित करें कि प्रत्येक प्रदाता कैसे जुड़ता है और जब समर्थन किया जाता है, तो मल्टीमॉडल रनटाइम का समर्थन करना चाहिए।",
+    "fastMode": {
+      "defaultOff": "डिफ़ॉल्ट बंद",
+      "description": "नए एन्थ्रोपिक टीम के लिए डिफ़ॉल्ट रूप से क्लाउड कोड फास्ट मोड लागू करें जब हल मॉडल और रनटाइम इसे अनुमति देते हैं।",
+      "disabledHint": "न्यू एंथ्रोपिक लॉन्च सामान्य गति पर रहता है जब तक कि एक टीम तेजी से मोड को सक्षम नहीं बनाती है।",
+      "enabledHint": "न्यू एंथ्रोपिक लॉन्च डिफ़ॉल्ट रूप से फास्ट मोड का अनुरोध करेगा जब हल मॉडल इसका समर्थन करता है।",
+      "notExposed": "यह एंथ्रोपिक रनटाइम फास्ट मोड को उजागर नहीं करता है।",
+      "preferFast": "तेज़",
+      "title": "फास्ट मोड डिफ़ॉल्ट",
+      "unavailableForRuntime": "वर्तमान में इस एन्थ्रोपिक रनटाइम के लिए फास्ट मोड अनुपलब्ध है।"
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API कुंजी मोड चुना गया है, लेकिन कोई एन्थ्रोपिक API क्रेडेंशियल अभी तक उपलब्ध नहीं है।",
+      "anthropicStoredKeyAvailable": "एक बचाया API कुंजी उपलब्ध है, लेकिन ऐप-लॉन्ड एन्थ्रोपिक सत्र केवल तभी उपयोग करते हैं जब आप API कुंजी मोड पर स्विच करते हैं।",
+      "anthropicSubscriptionMissing": "एन्थ्रोपिक सदस्यता मोड का चयन किया जाता है। इस प्रदाता का उपयोग करने के लिए एन्थ्रोपिक के साथ साइन इन करें।",
+      "authTokenMissing": "Auth token को कॉन्फ़िगर नहीं किया गया है। कई स्थानीय एंथ्रोपिक-संगत समापन बिंदुओं को एक गैर-खाली टोकन की आवश्यकता होती है।",
+      "chatgptLoginPending": "ChatGPT खाते के लिए प्रतीक्षा समाप्त करने के लिए लॉगिन...",
+      "chatgptLoginStarting": "ChatGPT लॉगिन शुरू",
+      "codexApiKeyMissing": "API कुंजी मोड चुना गया है, लेकिन कोई OPENAI_API_KEY या CODEX_API_KEY क्रेडेंशियल अभी तक उपलब्ध है।",
+      "codexLocalArtifactsNoSession": "Codex CLI वर्तमान में कोई सक्रिय ChatGPT खाता नहीं है। स्थानीय कोडेक्स खाता डेटा मौजूद है, लेकिन कोई सक्रिय प्रबंधित सत्र नहीं चुना गया है।",
+      "codexNeedsReconnect": "Codex एक स्थानीय रूप से चयनित ChatGPT खाता है, लेकिन वर्तमान सत्र फिर से कनेक्ट करने की जरूरत है।",
+      "codexNoChatgptAccount": "Codex CLI वर्तमान में कोई सक्रिय ChatGPT खाता नहीं है। अपनी सदस्यता का उपयोग करने के लिए ChatGPT कनेक्ट करें।",
+      "codexNoCredential": "कोई ChatGPT खाता या API कुंजी अभी तक उपलब्ध है।",
+      "geminiApiUnavailable": "मिथुन API वर्तमान में अनुपलब्ध है। यहां `GEMINI_API_KEY` को कॉन्फ़िगर करें या मान्य Google ADC क्रेडेंशियल का उपयोग करें।",
+      "withApiKeyFallback": "{{message}} पता लगाने वाले API कुंजी का उपयोग करने के लिए API कुंजी मोड पर स्विच करें।"
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "फोर्स एप-लॉन्ड एन्थ्रोपिक सत्र एक API कुंजी क्रेडेंशियल का उपयोग करने के लिए।",
+        "auto": "रनटाइम डिफ़ॉल्ट व्यवहार का उपयोग करें। इस ऐप में सेव्ड API कुंजी केवल तभी उपयोग की जाती है जब आप API कुंजी मोड पर स्विच करते हैं।",
+        "oauth": "स्थानीय एंथ्रोपिक सदस्यता सत्र का उपयोग करने के लिए फोर्स ने एंथ्रोपिक सत्र शुरू किया।"
+      },
+      "codex": {
+        "apiKey": "फोर्स मूल कोडेक्स ने OPENAI_API_KEY / CODEX_API_KEY बिलिंग का उपयोग करने की शुरूआत की।",
+        "auto": "जब यह उपलब्ध है तो अपने ChatGPT खाते को प्राथमिकता दें। केवल जरूरत पड़ने पर API कुंजी मोड में वापस गिरें।",
+        "chatgpt": "फोर्स मूल कोडेक्स ने अपने कनेक्टेड चैटजीपीटी खाते और सदस्यता का उपयोग करने के लिए लॉन्च किया।"
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "कनेक्शन परिवर्तन लागू करना",
+      "refreshingProviderStatus": "ताज़ा प्रदाता स्थिति...",
+      "savingCompatibleEndpoint": "बचत संगत समापन बिंदु...",
+      "switchingAnthropicSubscription": "Anthropic सदस्यता के लिए स्विचिंग...",
+      "switchingApiKey": "API कुंजी को स्विचिंग...",
+      "switchingApiKeyMode": "API कुंजी मोड स्विचिंग...",
+      "switchingAuto": "ऑटो...",
+      "switchingChatgpt": "ChatGPT खाता मोड में स्विचिंग..."
+    },
+    "provider": "प्रदाता",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "वर्तमान में एंथ्रोपिक में कोई अलग रनटाइम बैकेंड चयनकर्ता नहीं है।",
+        "codex": "कोडेक्स अब केवल मूल रनटाइम पथ के माध्यम से चलता है।",
+        "gemini": "चुनें कि कौन से जेमिनी रनटाइम बैकेंड मल्टीमॉडल का उपयोग करना चाहिए।",
+        "opencode": "ओपनकोड अपने स्वयं के प्रबंधित रनटाइम होस्ट का उपयोग करता है। डेस्कटॉप वर्तमान में केवल स्थिति को उजागर करता है।"
+      },
+      "title": "रनटाइम",
+      "updating": "रनटाइम अद्यतन..."
+    },
+    "runtimeSummary": "रनटाइम: {{runtime}}",
+    "status": {
+      "configured": "विन्यास",
+      "enabled": "सक्षम",
+      "notConfigured": "कॉन्फ़िगर नहीं किया गया",
+      "notSet": "नहीं",
+      "off": "बंद",
+      "unknown": "अज्ञात"
+    },
+    "title": "प्रदाता सेटिंग्स",
+    "usage": {
+      "apiKey": "API कुंजी का उपयोग",
+      "apiKeyRequired": "API कुंजी की आवश्यकता",
+      "compatibleEndpoint": "संगत समापन बिंदु का उपयोग करना",
+      "notConnected": "संबद्ध नहीं",
+      "usingMethod": "{{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API कुंजी हटा दिया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
+      "apiKeySavedRefreshFailed": "API कुंजी बचाया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
+      "connectionUpdatedRefreshFailed": "कनेक्शन अद्यतन किया गया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
+      "deleteApiKey": "API कुंजी को हटाने में विफल",
+      "disableEndpoint": "निष्क्रिय करने में विफल",
+      "endpointDisabledRefreshFailed": "एंडपॉइंट विकलांग, लेकिन प्रदाता की स्थिति को रीफ्रेश करने में विफल रहा।",
+      "endpointSavedRefreshFailed": "एंडपॉइंट बचाया, लेकिन प्रदाता की स्थिति को रीफ्रेश करने में विफल रहा।",
+      "refreshCodexAccount": "कोडेक्स खाते को रीफ्रेश करने में विफल रहा",
+      "saveApiKey": "API कुंजी को बचाने में विफल रहा",
+      "saveEndpoint": "अंत बिंदु को बचाने में विफल",
+      "updateAnthropicFastMode": "एंथ्रोपिक फास्ट मोड को अद्यतन करने में विफल",
+      "updateConnection": "कनेक्शन अद्यतन करने में विफल",
+      "updateRuntimeBackend": "रनटाइम बैकेंड को अपडेट करने में विफल",
+      "apiKeyRequired": "API कुंजी की आवश्यकता है"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "ऑटो",
+        "oauth": "सदस्यता / OAuth",
+        "chatgpt": "ChatGPT खाता",
+        "apiKey": "API कुंजी",
+        "anthropicSubscription": "एन्थ्रोपिक सदस्यता"
+      },
+      "authMethod": {
+        "apiKey": "API कुंजी",
+        "apiKeyHelper": "API कुंजी सहायक",
+        "oauth": "ओथ",
+        "claudeSubscription": "क्लाउड सदस्यता",
+        "geminiCli": "मिथुन CLI",
+        "googleAccount": "गूगल खाता",
+        "serviceAccount": "सेवा खाता"
+      },
+      "runtime": {
+        "codexNative": "कोडेक्स",
+        "currentRuntime": "वर्तमान समय",
+        "selectedRuntime": "चयनित रनटाइम",
+        "summary": "{{prefix}}:{{runtime}}"
+      },
+      "status": {
+        "checking": "जाँच...",
+        "checked": "चेक",
+        "providerActivity": "प्रदाता गतिविधि",
+        "notConnected": "संबद्ध नहीं",
+        "startingChatGptLogin": "ChatGPT लॉगिन शुरू",
+        "waitingForChatGptLogin": "ChatGPT खाता लॉगिन के लिए प्रतीक्षा करें...",
+        "chatGptVerificationDegraded": "ChatGPT खाते का पता चला - वर्तमान में लेखा सत्यापन को गिरावट आई है।",
+        "chatGptAccountReady": "ChatGPT खाता तैयार",
+        "apiKeyReady": "API कुंजी तैयार",
+        "codexLocalAccountNeedsReconnect": "Codex एक स्थानीय रूप से चयनित ChatGPT खाता है, लेकिन वर्तमान सत्र फिर से कनेक्ट करने की जरूरत है।",
+        "codexNoActiveManagedSession": "Codex CLI ने कोई सक्रिय चैटGPT लॉगिन नहीं किया। स्थानीय कोडेक्स खाता डेटा मौजूद है, लेकिन कोई सक्रिय प्रबंधित सत्र नहीं चुना गया है।",
+        "codexNoActiveChatGptLogin": "Codex CLI ने कोई सक्रिय चैटGPT लॉगिन नहीं किया",
+        "connectChatGptForSubscription": "अपने कोडेक्स सदस्यता का उपयोग करने के लिए एक ChatGPT खाता कनेक्ट करें।",
+        "codexNativeReady": "कोडेक्स देशी तैयार",
+        "codexNativeUnavailable": "कोडेक्स मूल अनुपलब्ध",
+        "unavailableInCurrentRuntime": "वर्तमान समय में अनुपलब्ध",
+        "connectedViaApiKey": "कनेक्टेड by API key",
+        "apiKeyConfiguredNotVerified": "API कुंजी विन्यास, लेकिन अभी तक सत्यापित नहीं",
+        "apiKeyModeMissingCredential": "API कुंजी मोड चुना गया है, लेकिन कोई API कुंजी कॉन्फ़िगर किया गया है",
+        "connectedVia": "कनेक्टेड by {{method}}",
+        "unableToVerify": "सत्यापित करने में असमर्थ"
+      },
+      "mode": {
+        "selectedAuth": "चयनित auth: {{authMode}}",
+        "preferredAuth": "भविष्यवाणी की:{{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API कुंजी को कॉन्फ़िगर किया गया है",
+        "savedApiKeyAvailable": "सहेजा गया API कुंजी प्रबंधन में उपलब्ध है",
+        "apiKeyAlsoConfigured": "API कुंजी भी प्रबंधित में कॉन्फ़िगर किया गया है",
+        "apiKeyConfiguredInManage": "API कुंजी प्रबंधित करने में कॉन्फ़िगर किया गया है",
+        "apiKeyFallbackInManage": "API कुंजी भी गिरावट के रूप में प्रबंधन में उपलब्ध है",
+        "availableAsFallback": "{{summary}} - पतनबैक के रूप में उपलब्ध",
+        "savedApiKeyAvailableIfSwitch": "सहेजा गया API कुंजी प्रबंधन में उपलब्ध है यदि आप API कुंजी मोड में स्विच करते हैं",
+        "availableIfSwitch": "{{summary}} - यदि आप API कुंजी मोड में स्विच करते हैं तो उपलब्ध है",
+        "autoWillUseUntilChatGpt": "{{summary}} - ऑटो इस का उपयोग तब तक करेगा जब तक कि ChatGPT कनेक्ट न हो जाए"
+      },
+      "actions": {
+        "connect": "कनेक्ट",
+        "connectAnthropic": "एन्थ्रोपिक कनेक्ट",
+        "connectChatGpt": "कनेक्ट करें ChatGPT",
+        "disconnect": "डिस्कनेक्ट",
+        "openLogin": "लॉग इन"
+      },
+      "disconnect": {
+        "anthropicTitle": "एन्थ्रोपिक सदस्यता को डिस्कनेक्ट करें?",
+        "anthropic": "यह क्लाउड CLI रनटाइम से स्थानीय एंथ्रोपिक सदस्यता सत्र को हटा देता है।",
+        "anthropicWithApiKey": "यह क्लाउड CLI रनटाइम से स्थानीय एंथ्रोपिक सदस्यता सत्र को हटा देता है। प्रबंधित रहने में सहेजा गया API कुंजी उपलब्ध है।",
+        "geminiTitle": "जेमिनी CLI डिस्कनेक्ट?",
+        "gemini": "यह स्थानीय मिथुन CLI सत्र मेटाडाटा को साफ़ करता है। बाहरी ADC क्रेडेंशियल्स और बचाया API कुंजियों को हटाया नहीं जाता है।"
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "अद्यतन की जाँच करें",
+      "checking": "जाँच...",
+      "extensions": "एक्सटेंशन",
+      "installRuntime": "{{runtime}} स्थापित करें",
+      "manage": "प्रबंधन",
+      "recheck": "फिर से जांच",
+      "reinstallRuntime": "{{runtime}}",
+      "retry": "Retry",
+      "update": "अपडेट"
+    },
+    "installer": {
+      "checkingLatest": "नवीनतम संस्करण की जाँच...",
+      "downloading": "डाउनलोड",
+      "failed": "स्थापना विफल",
+      "installed": "स्थापित v{{version}}",
+      "installing": "स्थापना...",
+      "latest": "नवीनतम",
+      "verifying": "चेकसम सत्यापित..."
+    },
+    "labels": {
+      "multimodel": "मल्टीमॉडल"
+    },
+    "loading": {
+      "aiProviders": "एआई प्रदाता की जाँच...",
+      "claudeCli": "चेकिंग Claude CLI..."
+    },
+    "provider": {
+      "backend": "बैकएंड: {{backend}}",
+      "loadingModels": "मॉडल लोड हो रहा है...",
+      "modelsUnavailable": "इस रनटाइम बिल्ड के लिए अनुपलब्ध मॉडल",
+      "runtime": "रनटाइम: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "प्रमाणीकरण विफल",
+      "authUpdated": "प्रमाणीकरण अद्यतन",
+      "loggedOut": "प्रदाता लॉग आउट",
+      "login": "लॉग इन",
+      "logout": "लॉग-इन",
+      "logoutFailed": "लॉग इन"
+    },
+    "status": {
+      "configuredNotFound": "कॉन्फ़िगर किया गया {{runtime}} पाया नहीं गया था।",
+      "foundButFailed": "{{runtime}} पाया गया लेकिन शुरू करने में विफल रहा",
+      "healthCheckFailed": "कॉन्फ़िगर किया गया {{runtime}} अपनी स्टार्टअप स्वास्थ्य जांच में विफल रहा।",
+      "notInstalled": "{{runtime}} स्थापित नहीं"
+    },
+    "title": "CLI रनटाइम"
+  },
+  "cliStatus": {
+    "versionUpgrade": "V{{current}} -> v{{latest}}"
+  }
+}

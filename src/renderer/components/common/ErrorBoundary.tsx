@@ -228,12 +228,12 @@ class ErrorBoundaryInner extends Component<Props, State> {
   }
 }
 
-export function ErrorBoundary(props: Omit<Props, 'labels'>): React.JSX.Element {
+export const ErrorBoundary = ({ children, fallback }: Omit<Props, 'labels'>): React.JSX.Element => {
   const { t } = useAppTranslation('common');
 
   return (
     <ErrorBoundaryInner
-      {...props}
+      fallback={fallback}
       labels={{
         title: t('errorBoundary.title'),
         description: t('errorBoundary.description'),
@@ -245,6 +245,8 @@ export function ErrorBoundary(props: Omit<Props, 'labels'>): React.JSX.Element {
         reloadApp: t('errorBoundary.reloadApp'),
         diagnosticsNotice: t('errorBoundary.diagnosticsNotice'),
       }}
-    />
+    >
+      {children}
+    </ErrorBoundaryInner>
   );
-}
+};

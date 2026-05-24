@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "사용자 정의",
+      "openDashboard": "Dashboard를 여십시오",
+      "refreshCatalog": "카탈로그"
+    },
+    "capabilities": {
+      "mcp": "MCP:{{status}}",
+      "plugins": "플러그인: {{status}}",
+      "skills": "기술: {{status}}"
+    },
+    "desktopOnly": "데스크톱 앱에서만 사용할 수 있습니다.",
+    "provider": {
+      "checkingStatus": "공급자 상태 확인...",
+      "connected": "연결하기",
+      "loading": "로드 중...",
+      "needsSetup": "옵션 설정",
+      "readyToConfigure": "설정하기",
+      "unsupported": "지원되는"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "확장은 플러그인, MCP 서버, 기술 및 공급자 연결을 관리하기 위해 구성된 실행 시간을 필요로 합니다.",
+      "checkingAvailabilityTitle": "extensions runtime 가용성 확인",
+      "failedToStartDescription": "런타임이 시작된 건강 체크를 전달할 때까지 연장이 비활성화됩니다. Dashboard를 열고 수리하거나 재설치하십시오.",
+      "failedToStartTitle": "설정된 실행 시간이 발견되었지만 시작 실패",
+      "multimodelCapabilitiesDescription": "공급자 지원은 단면도에 따라 다를 수 있습니다. 플러그인은 runtime이 명시적으로 지원을 선언하는 유일한 것으로 표시됩니다.",
+      "multimodelCapabilitiesTitle": "Multimodel 런타임 기능",
+      "needsSignInDescription": "{{runtime}}는 Found{{version}}이었지만 플러그인 설치는 대시보드에서 로그인할 때까지 비활성화됩니다.",
+      "needsSignInTitle": "{{runtime}}는 로그인이 필요합니다.",
+      "notAvailableDescription": "런타임이 설치될 때까지 연장이 비활성화됩니다. Dashboard를 열고 리트리를 설치합니다.",
+      "notAvailableTitle": "설정된 실행 시간은 사용할 수 없습니다.",
+      "readyDescription": "이 페이지에서 플러그인을 설치할 수 있습니다{{versionSuffix}}.",
+      "readyTitle": "{{runtime}}는 준비되어 있습니다",
+      "requiredForMutations": "설정된 실행시간은 확장을 설치하거나 제거해야 합니다. 대시보드에서 설치 또는 수리."
+    },
+    "sessionsRestartWarning": "실행 세션은 다시 시작 될 때까지 확장 변경을 선택하지 않습니다.",
+    "tabs": {
+      "apiKeys": {
+        "description": "온라인 서비스에 대한 비밀 키. 플러그인, 서버 및 통합이 연결 및 작동 할 수 있도록 여기에 추가하십시오.",
+        "label": "사이트맵 이름 *"
+      },
+      "mcpServers": {
+        "description": "외부 도구 및 앱에 연결. 이 앱을 넘어 런타임 읽기 데이터 또는 작업을 할 수 있습니다.",
+        "label": "사이트맵 서버"
+      },
+      "plugins": {
+        "description": "런타임을 위한 작은 add-ons. 멀티모델 모드에서는 현재 지원할 때 Anthropic 세션에 적용됩니다. Broader 공급자 지원은 발달에서 입니다.",
+        "label": "플러그인"
+      },
+      "skills": {
+        "description": "자주 묻는 질문 그들은 런타임 핸들 반복 가능한 작업을 더 일관성 있게 도와줍니다.",
+        "label": "한국어"
+      }
+    },
+    "title": "제품정보"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} 활성",
+    "browseByFit": "연락처",
+    "capabilities": "회사연혁",
+    "categories": "1,050원",
+    "clearAllFilters": "모든 필터 제거",
+    "clearFilters": "명확한 필터",
+    "counts": {
+      "capabilities": "{{count}} 기능",
+      "categories": "{{count}} 카테고리",
+      "plugins": "{{count}} 플러그인",
+      "capabilities_few": "{{count}} 기능",
+      "capabilities_many": "{{count}} 기능",
+      "capabilities_one": "{{count}} 기능",
+      "capabilities_other": "{{count}} 기능",
+      "categories_few": "{{count}} 카테고리",
+      "categories_many": "{{count}} 카테고리",
+      "categories_one": "{{count}} 카테고리",
+      "categories_other": "{{count}} 카테고리",
+      "plugins_few": "{{count}} 플러그인",
+      "plugins_many": "{{count}} 플러그인",
+      "plugins_one": "{{count}} 플러그인",
+      "plugins_other": "{{count}} 플러그인"
+    },
+    "empty": {
+      "description": "새로운 플러그인을 위해 나중에 다시 확인",
+      "filteredDescription": "검색 또는 필터 기준을 조정 시도",
+      "filteredTitle": "플러그인이 필터에 일치하지 않음",
+      "title": "플러그인 없음"
+    },
+    "filterDescription": "범주, 기능, 또는 설치 상태로 카탈로그를 좁은.",
+    "installedOnly": "만 설치",
+    "providerSupportNotice": "플러그인 지원은 현재 Anthropic (Claude) 세션에서만 보장됩니다. 모든 에이전트에 걸쳐 플러그인을 지원 하기 위해 노력하고 있습니다.",
+    "resultsUpdateInstantly": "결과가 즉시 업데이트됩니다.",
+    "searchPlaceholder": "검색 플러그인...",
+    "selectedCount": "{{count}} 선택",
+    "showing": "{{shown}}의 {{total}} 플러그인 보기",
+    "sort": {
+      "category": "(주)",
+      "nameAsc": "이름 A-Z",
+      "nameDesc": "이름 Z- ·",
+      "popular": "인기있는"
+    },
+    "activeFilters_few": "{{count}} 활성",
+    "activeFilters_many": "{{count}} 활성",
+    "activeFilters_one": "{{count}} 활성",
+    "activeFilters_other": "{{count}} 활성",
+    "selectedCount_few": "{{count}} 선택",
+    "selectedCount_many": "{{count}} 선택",
+    "selectedCount_one": "{{count}} 선택",
+    "selectedCount_other": "{{count}} 선택"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "기타",
+      "cancel": "이름 *",
+      "install": "설치하기",
+      "installing": "설치..."
+    },
+    "description": "카탈로그없이 서버를 수동으로 추가하십시오.",
+    "errors": {
+      "installFailed": "설치 실패",
+      "invalidServerName": "잘못된 서버 이름. alphanumeric 문자, dashes, underscores, 도트를 사용합니다.",
+      "npmPackageRequired": "npm 패키지 이름필수",
+      "serverNameRequired": "서버 이름 필수",
+      "serverUrlRequired": "서버 URL가 필요합니다."
+    },
+    "fields": {
+      "environmentVariables": "환경 변수",
+      "headers": "기타 제품",
+      "npmPackage": "npm 패키지",
+      "scope": "제품정보",
+      "serverName": "서버 이름",
+      "serverUrl": "서버 URL",
+      "transport": "관련 상품",
+      "transportType": "수송 유형",
+      "versionOptional": "(선택) 버전"
+    },
+    "title": "사용자 정의 MCP 추가 계정 관리",
+    "transport": {
+      "httpSse": "HTTP/SSE",
+      "stdio": "스트로 (npm)"
+    },
+    "placeholders": {
+      "headerName": "머리 이름",
+      "envVarName": "사이트맵",
+      "serverName": "내 서버",
+      "latest": "(주)",
+      "value": "이름 *",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "원격 MCP 서버는 여전히 레지스트리가 설명하지 않는 경우에도 사용자 정의 헤더 또는 API 키를 필요로 할 수 있습니다. 연결이 설치 후 실패하면 공급자 docs를 확인합니다.",
+      "required": "이 서버는 인증이 필요합니다."
+    },
+    "diagnostics": {
+      "launchTarget": "공지사항"
+    },
+    "form": {
+      "autoFilled": "자동 충전",
+      "environmentVariables": "환경 변수",
+      "headers": "기타 제품",
+      "scope": "제품정보",
+      "serverName": "서버 이름"
+    },
+    "install": {
+      "httpTransport": "HTTP:{{transport}}",
+      "manualSetupDescription": "이 서버는 수동 설정이 필요합니다. 설치 지침에 대한 저장소를 확인하십시오.",
+      "manualSetupRequired": "수동 설정 필수",
+      "npmPackage": "메시지:{{package}}",
+      "manage": "자주 묻는 질문",
+      "install": "Server 설치"
+    },
+    "links": {
+      "glama": "뚱 베어",
+      "repository": "회사연혁",
+      "website": "웹 사이트"
+    },
+    "metadata": {
+      "author": "이름 *",
+      "githubStars": "GitHub 스타",
+      "hosting": "이름 *",
+      "installType": "설치 유형",
+      "license": "이름 *",
+      "published": "이름 *",
+      "source": "이름 *",
+      "updated": "으로",
+      "version": "이름 *"
+    },
+    "scope": {
+      "local": "한국어",
+      "project": "회사연혁"
+    },
+    "tools": {
+      "title": "도구 ({{count}})",
+      "title_few": "도구 ({{count}})",
+      "title_many": "도구 ({{count}})",
+      "title_one": "도구 ({{count}})",
+      "title_other": "도구 ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "내 서버"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "이름 *",
+      "createSkill": "기술 정보",
+      "preparing": "지원하다",
+      "reviewAndCreate": "리뷰 및 생성",
+      "reviewAndSave": "리뷰 및 저장",
+      "saveSkill": "기술 정보"
+    },
+    "advanced": {
+      "customDescription": "이 기술은 사용자 정의 마크 다운 형식을 사용하므로 직접 편집하십시오.",
+      "customTitle": "2. SKILL.md 편집기",
+      "description": "대부분의 사람들은 이것을 건너 뛸 수 있습니다. 원시 마크 다운 파일에 직접 컨트롤을 원한다면만 엽니 다.",
+      "hide": "엠에디터 매크로 참조:Head Advanced Editor",
+      "resetFromStructuredFields": "Structured 필드에서 재설정",
+      "show": "고급 편집기",
+      "title": "4. 고급 SKILL.md 편집기"
+    },
+    "basics": {
+      "description": "이 기술을 명확한 이름을 주고, 누가 그것을 사용할 수 있는지 선택하고, 어디 살지 결정합니다.",
+      "title": "1. 기초"
+    },
+    "description": {
+      "create": "일반 언어의 워크플로우를 설명하고, 생성된 파일을 검토하고, 저장합니다.",
+      "edit": "이 기술을 업데이트, 결과 파일 변경을 검토, 다음 저장."
+    },
+    "extraFiles": {
+      "addedFiles": "파일 추가:",
+      "assets": "투자정보",
+      "assetsDescription": "스크린 샷 또는 번들 미디어를 추가하면 작업 흐름을 설명하는 데 도움이됩니다.",
+      "description": "지원 추가 docs, scripts, 또는 Asset 만이 기술이 정말로 필요합니다.",
+      "lockedForEdits": "루트 및 폴더는 편집에 잠겨 있습니다.",
+      "optionalDescription": "검토에 포함되고 `SKILL.md`와 함께 작성되는 시동기 파일을 추가하십시오.",
+      "optionalTitle": "옵션 파일",
+      "references": "이름 *",
+      "referencesDescription": "docs, link 또는 runtime 예제를 추가하면 됩니다.",
+      "scripts": "스크립트",
+      "scriptsDescription": "helper 명령이나 설정 노트를 추가합니다. 이 기술을 공유하기 전에 신중하게 검토하십시오.",
+      "title": "3. 추가 파일"
+    },
+    "fields": {
+      "compatibility": "지원하다",
+      "description": "이름 *",
+      "folderName": "폴더 이름",
+      "folderNameHint": "우리는 기술 이름에서 이것을 자동적으로 건의합니다 그래서 검토는 즉시 작동합니다.",
+      "invocation": "사용 방법",
+      "license": "이름 *",
+      "name": "기술 이름",
+      "notes": "추가 노트 또는 난간",
+      "root": "그것을 저장하는 곳",
+      "scope": "누가 그것을 사용할 수 있습니다",
+      "steps": "자주 묻는 질문",
+      "whenToUse": "이를 위해"
+    },
+    "instructions": {
+      "description": "이 섹션은 기술 파일을 생성하므로 원하는 경우 Markdown을 편집 할 필요가 없습니다.",
+      "locked": "구성 필드는 아래의 수동 `SKILL.md` 편집으로 전환하기 때문에 잠겨 있습니다.",
+      "title": "2. 지침"
+    },
+    "invocation": {
+      "auto": "자동적으로 사용될 수 있습니다",
+      "manualOnly": "자주 묻는 질문"
+    },
+    "placeholders": {
+      "description": "이 기술에 도움이 되는 것",
+      "name": "concise 기술 이름 쓰기",
+      "notes": "예: 누락된 테스트, 회귀, 위험성 가정을 호출합니다.",
+      "steps": "1. 관련 파일을 검사합니다.\n2. 주요 위험을 먼저 설명합니다.\n3. 가장 안전한 수정을 제안합니다.",
+      "whenToUse": "예: 작업이 코드 검토 또는 버그 트리거 요청 때 이것을 사용하십시오.",
+      "license": "사이트맵",
+      "compatibility": "claude 코드, 커서"
+    },
+    "review": {
+      "creating": "기술 혁신",
+      "hint": "파일을 먼저 검토 한 다음 다음 다음 단계에 저장하십시오.",
+      "saving": "이 기술을 저장"
+    },
+    "root": {
+      "codexOnly": "- Codex 전용",
+      "shared": "- 공유"
+    },
+    "scope": {
+      "project": "프로젝트: {{project}}",
+      "projectUnavailable": "프로젝트 unavailable",
+      "user": "사용자 이름"
+    },
+    "title": {
+      "create": "기술 정보",
+      "edit": "기술 정보"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "이름 *",
+      "delete": "이름 *",
+      "deleteSkill": "기술 정보",
+      "deleting": "관련 기사",
+      "editSkill": "기술 정보",
+      "openFolder": "오픈 폴더",
+      "openSkillFile": "SKILL.md를 여십시오",
+      "retry": "이름 *"
+    },
+    "badges": {
+      "assets": "투자정보",
+      "autoUse": "자동차 사용",
+      "hasScripts": "스크립트",
+      "manualUse": "수동 사용",
+      "references": "이름 *",
+      "storedIn": "{{root}}에서 저장됨"
+    },
+    "deleteDialog": {
+      "description": "이 기술을 삭제하고 쓰레기로 이동?",
+      "descriptionWithName": "\"{{name}}\"를 삭제하고 쓰레기로 이동? 필요한 경우 Trash에서 나중에 복원 할 수 있습니다.",
+      "title": "기술 삭제?"
+    },
+    "descriptionFallback": "검사는 metadata와 익지않는 지시를 발견했습니다.",
+    "errors": {
+      "deleteFailed": "기술 삭제",
+      "loadFailed": "이 기술을로드 할 수 없습니다."
+    },
+    "files": {
+      "advancedDetails": "고급 파일 세부사항",
+      "assets": "투자정보",
+      "references": "이름 *",
+      "scripts": "스크립트",
+      "storedAt": "관련 기사"
+    },
+    "includes": {
+      "assets": "계정 관리",
+      "instructionsOnly": "기술 지침",
+      "references": "이름 *",
+      "scripts": "스크립트"
+    },
+    "invocation": {
+      "auto": "작업을 일치할 때 자동으로 실행합니다.",
+      "manualOnly": "명시적으로 요청할 때만 실행됩니다."
+    },
+    "issues": {
+      "bundledScripts": "이 기술에는 번들된 스크립트가 포함되어 있습니다.",
+      "reviewCarefully": "그것을 사용하기 전에이 기술을 신중하게 검토"
+    },
+    "loading": "로딩 기술 정보...",
+    "scope": {
+      "personal": "당신의 개인 기술",
+      "projectOnly": "이 프로젝트 만"
+    },
+    "summary": {
+      "howUsed": "사용 방법",
+      "included": "그것으로 오는 것",
+      "whoCanUse": "누가 그것을 사용할 수 있습니다"
+    },
+    "titleFallback": "기술 정보"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "기술 정보",
+      "import": "제품정보"
+    },
+    "badges": {
+      "assets": "투자정보",
+      "hasScripts": "스크립트",
+      "needsAttention": "자주 묻는 질문",
+      "references": "이름 *",
+      "storedIn": "{{root}}에서 저장됨"
+    },
+    "configuredRuntime": "설정된 실행 시간",
+    "counts": {
+      "codexOnly": "{{count}}Codex 전용",
+      "personal": "{{count}} 개인 정보",
+      "project": "{{count}} 프로젝트",
+      "shared": "{{count}} 공유",
+      "total": "{{count}} 합계",
+      "codexOnly_few": "{{count}}Codex 전용",
+      "codexOnly_many": "{{count}}Codex 전용",
+      "codexOnly_one": "{{count}}Codex 전용",
+      "codexOnly_other": "{{count}}Codex 전용",
+      "personal_few": "{{count}} 개인 정보",
+      "personal_many": "{{count}} 개인 정보",
+      "personal_one": "{{count}} 개인 정보",
+      "personal_other": "{{count}} 개인 정보",
+      "project_few": "{{count}} 프로젝트",
+      "project_many": "{{count}} 프로젝트",
+      "project_one": "{{count}} 프로젝트",
+      "project_other": "{{count}} 프로젝트",
+      "shared_few": "{{count}} 공유",
+      "shared_many": "{{count}} 공유",
+      "shared_one": "{{count}} 공유",
+      "shared_other": "{{count}} 공유",
+      "total_few": "{{count}} 합계",
+      "total_many": "{{count}} 합계",
+      "total_one": "{{count}} 합계",
+      "total_other": "{{count}} 합계"
+    },
+    "empty": {
+      "noMatches": "검색을 일치하는 기술",
+      "noMatchesDescription": "다른 검색 용어 또는 스위치 필터를 사용해보십시오.",
+      "noSkills": "아직 기술 없음",
+      "noSkillsDescription": "반복 가능한 워크플로우를 가르치는 첫 번째 기술을 만들거나 이미 사용 중인 것을 가져옵니다."
+    },
+    "filters": {
+      "all": "모든 기술",
+      "codexOnly": "Codex 전용",
+      "hasScripts": "스크립트",
+      "needsAttention": "자주 묻는 질문",
+      "personal": "이름 *",
+      "project": "회사연혁",
+      "shared": "이름 *"
+    },
+    "hero": {
+      "codexAvailable": "`.codex`를 사용하여 기술이 Codex-only를 유지해야 합니다.",
+      "codexUnavailable": "기존 `.codex` 기술은 여기에서 편집할 수 있지만 새로운 Codex-only 기술은 Codex 런타임을 활성화해야 합니다.",
+      "description": "Skills are reusable description that help the runtime handle the same kind of task more 지속적으로.",
+      "guidance": "모든 곳에서 원하는 습관에 대한 개인 기술을 사용하십시오. 작업 흐름에 대한 프로젝트 스킬을 사용하여 하나의 codebase 안에서 감각을 만듭니다.",
+      "personalContext": "당신은 지금 당신의 개인적인 기술만 볼 수 있습니다.",
+      "projectContext": "{{project}}와 개인 기술에 대한 기술을 볼 수 있습니다.",
+      "title": "Teach 반복 가능한 일"
+    },
+    "invocation": {
+      "auto": "적합 할 때 자동으로 실행",
+      "manualOnly": "명시적으로 요청할 때만 실행"
+    },
+    "loading": {
+      "loading": "로딩...",
+      "refreshing": "새로 고침 기술..."
+    },
+    "runtimeAudience": "`.claude`, `.cursor` 및 `.agents`의 공유 기술로 {{audience}}를 사용할 수 있습니다. Codex가 지원할 때 `.codex` stay Codex-only에 저장된 기술.",
+    "scope": {
+      "project": "이 프로젝트",
+      "user": "이름 *"
+    },
+    "searchPlaceholder": "기술 이름에 의해 검색 또는 그것은 도움이...",
+    "sections": {
+      "personal": {
+        "description": "모든 곳에서 원하는 습관과 지침.",
+        "title": "개인 기술"
+      },
+      "project": {
+        "description": "이 codebase의 감각을 만드는 작업 흐름.",
+        "title": "프로젝트 기술"
+      }
+    },
+    "sort": {
+      "label": "정렬 기술",
+      "name": "이름 *",
+      "recent": "이름 *"
+    },
+    "status": {
+      "hasScripts": "스크립트를 포함, 그래서 신중하게 검토",
+      "needsAttention": "당신이 그것에 의존하기 전에주의해야",
+      "ready": "자주 묻는 질문"
+    },
+    "success": {
+      "created": "기술이 성공적으로 만들었습니다.",
+      "imported": "성공적으로 수입된 기술.",
+      "saved": "성공적으로 저장된 기술."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "이름 *",
+    "metadata": {
+      "author": "이름 *",
+      "category": "(주)",
+      "source": "이름 *",
+      "version": "이름 *",
+      "capabilities": "회사연혁",
+      "installs": "설치하기"
+    },
+    "scope": {
+      "label": "범위:",
+      "options": {
+        "user": "사용자 (글로벌)",
+        "project": "프로젝트 (shared)",
+        "local": "지역 (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "- 연혁",
+      "contact": "제품정보"
+    },
+    "readme": {
+      "loading": "로드 README...",
+      "empty": "README는 없습니다."
+    }
+  },
+  "skillImport": {
+    "title": "수입 기술",
+    "description": "기존의 기술 폴더를 선택하고, 복사 될 것, 다음 지원된 기술 위치 중 하나로 가져 오기.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. 기술 폴더를 선택하십시오",
+        "description": "이미 `SKILL.md`, `Skill.md` 또는 `skill.md` 파일을 포함하는 폴더가 있어야 합니다."
+      },
+      "location": {
+        "title": "2. 그것이 속한다는 것을 결정하십시오",
+        "description": "모든것이 편안하게 느껴집니다. 프로젝트 기술 만 하나의 codebase를 보여줍니다."
+      }
+    },
+    "fields": {
+      "sourceFolder": "소스 폴더",
+      "destinationFolderName": "대상 폴더 이름",
+      "audience": "누가 그것을 사용할 수 있습니다",
+      "storage": "그것을 저장하는 곳"
+    },
+    "placeholders": {
+      "defaultFolderName": "소스 폴더 이름에 기본값"
+    },
+    "actions": {
+      "browse": "계정 만들기",
+      "cancel": "이름 *",
+      "preparing": "지원하다",
+      "reviewAndImport": "리뷰 및 수입",
+      "importSkill": "수입 기술",
+      "backToImport": "수입하기"
+    },
+    "scope": {
+      "user": "사용자 이름",
+      "project": "프로젝트: {{project}}",
+      "projectUnavailable": "프로젝트 unavailable"
+    },
+    "rootSuffix": {
+      "codexOnly": "- Codex 전용",
+      "shared": "- 공유"
+    },
+    "reviewHint": "복사 된 파일을 먼저 검토하고 다음 단계에 가져 오기를 확인합니다.",
+    "reviewLabel": "이 기술을 수입",
+    "errors": {
+      "missingSkillFile": "이 폴더는 아직 기술처럼 보이지 않습니다. SKILL.md, Skill.md 또는 Skill.md 파일이 필요합니다.",
+      "symbolicLinks": "이 폴더에는 상징적인 링크가 포함되어 있습니다. 링크 대신 실제 파일을 가져옵니다.",
+      "tooManyFiles": "이 기술 폴더는 한 번에 가져올 너무 크다. 추가 파일을 제거하고 다시 시도하십시오.",
+      "tooLarge": "이 기술 폴더는 쉽게 가져올 수 있습니다. 큰 자산을 손질하고 다시 시도하십시오.",
+      "invalidFolderName": "문자, 숫자, 점, dashes, 또는 underscores를 사용하여 간단한 대상 폴더 이름을 선택합니다.",
+      "mustBeDirectory": "가져올 폴더를 선택하고 단일 파일이 아닙니다.",
+      "reviewFailed": "Failed to review 가져오기 변경",
+      "importFailed": "기술 수입 실패"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "이름 A→Z",
+      "nameDesc": "이름 Z→A",
+      "toolsDesc": "더 많은 도구"
+    },
+    "health": {
+      "title": "사이트맵 건강 상태",
+      "checkingViaRuntime": "MCP 서버 확인{{runtime}}·",
+      "lastChecked": "마지막 검사 {{time}}",
+      "description": "이 페이지에서 진단을 실행하여 설치한 MCP 연결을 확인합니다.",
+      "checking": "기타...",
+      "checkStatus": "체크 상태"
+    },
+    "diagnostics": {
+      "title": "런타임 MCP 진단",
+      "serversCount": "{{count}} 서버",
+      "serversCount_one": "{{count}} 서버",
+      "serversCount_other": "{{count}} 서버",
+      "waiting": "진단 결과에 대한 대기...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "런타임 상태 확인...",
+        "checkingRuntimeAvailability": "런타임 가용성 확인...",
+        "runtimeFailedToStart": "설정된 실행 시간이 발견되었지만 시작 실패했습니다. Dashboard를 열고 수리하거나 재설치하십시오.",
+        "runtimeRequired": "설정된 실행시간이 필요합니다. 대시보드에서 설치 또는 수리."
+      },
+      "serversCount_few": "{{count}} 서버",
+      "serversCount_many": "{{count}} 서버"
+    },
+    "searchPlaceholder": "MCP 서버를 검색...",
+    "runtime": {
+      "notAvailable": "{{runtime}} 사용할 수 없습니다",
+      "notInstalled": "{{runtime}} 설치되지 않음",
+      "requiredDescription": "MCP 건강 검사는 {{runtime}}를 요구합니다. Dashboard로 이동하여 설치하거나 수리하십시오."
+    },
+    "empty": {
+      "searchTitle": "서버 없음",
+      "title": "MCP 서버 없음",
+      "searchDescription": "다른 검색 용어를 시도",
+      "description": "새로운 서버로 돌아가기"
+    },
+    "loadMore": "더 보기"
+  },
+  "apiKeys": {
+    "description": "MCP 서버를 설치할 때 자동 충전을위한 APITOKEN0ZXCV 키를 안전하게 저장하십시오.",
+    "storage": {
+      "osKeychain": "Keys는 {{backend}}를 통해 암호화되며 제한된 파일 권한으로 저장됩니다.",
+      "localEncryption": "OS keychain 사용 불가 - 키는 AES-256으로 로컬로 암호화됩니다. 더 강한 보호를 위해, 열쇠 고리 서비스를 설치하십시오 (gnome 열쇠 고리, kwallet)."
+    },
+    "actions": {
+      "add": "API 키 추가",
+      "addFirst": "첫 키 추가",
+      "edit": "제품정보"
+    },
+    "empty": {
+      "title": "저장되는 API 열쇠 없음",
+      "description": "MCP 서버를 설치할 때 자동 충전 환경 변수에 키를 추가하십시오."
+    },
+    "form": {
+      "addTitle": "API 키 추가",
+      "editTitle": "API 키 편집",
+      "addDescription": "API 키를 MCP 서버 설치에서 자동 충전에 저장하십시오.",
+      "editDescription": "주요 세부 사항 업데이트. 값을 다시 입력해야합니다.",
+      "keychainUnavailable": "OS keychain 사용 불가 - AES-256으로 암호화 된 키. OS 수준의 보호를 위한 gnome-keyring 설치.",
+      "name": "이름 *",
+      "namePlaceholder": "e.g. OpenAI 생산",
+      "environmentVariableName": "환경 변수 이름",
+      "envVarPlaceholder": "예: OPENAI_API_KEY",
+      "value": "주요 특징",
+      "reenterValue": "Re-enter 키 값",
+      "valuePlaceholder": "스...",
+      "scope": "제품정보",
+      "userScopeLabel": "사용자 (글로벌)",
+      "projectScopeLabel": "프로젝트: {{project}}",
+      "projectUnavailable": "프로젝트 unavailable",
+      "boundTo": "{{path}}에 경계",
+      "cancel": "이름 *",
+      "saving": "저장...",
+      "update": "(주)",
+      "save": "제품 정보",
+      "errors": {
+        "invalidEnvVarFormat": "문자, 숫자, 밑줄을 사용합니다. 문자 또는 밑줄로 시작해야 합니다.",
+        "nameRequired": "이름필수",
+        "envVarRequired": "환경 변수 이름은 필수",
+        "invalidEnvVar": "잘못된 환경 변수 이름",
+        "valueRequired": "키 값은 필수",
+        "projectScopeRequiresProject": "Project-scoped API 키는 활성 프로젝트가 필요합니다.",
+        "saveFailed": "자주 묻는 질문"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "리뷰 기술 변경",
+    "description": "{{reviewLabel}}는 filesystem이 먼저 변경합니다. 아래를 확인할 때까지 아무 것도 쓰지 않습니다.",
+    "noPreview": "사용할 수 없습니다.",
+    "confirmPromptPrefix": "아래 diff를 검토 한 다음 사용",
+    "confirmPromptSuffix": "이 변경 사항을 적용.",
+    "noChanges": "아직 파일 변경이 없습니다.",
+    "binaryBadge": "이름 *",
+    "binaryPreviewHidden": "바이너리 파일 미리보기는 표시되지 않습니다. 파일로 복사됩니다.",
+    "summary": {
+      "fileChanges": "{{count}} 파일 변경",
+      "fileChanges_one": "{{count}} 파일 변경",
+      "fileChanges_other": "{{count}} 파일 변경",
+      "new": "{{count}} 새로운",
+      "updated": "{{count}} 업데이트",
+      "removed": "{{count}} 제거",
+      "binary": "{{count}} 바이너리",
+      "fileChanges_few": "{{count}} 파일 변경",
+      "fileChanges_many": "{{count}} 파일 변경"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} 도구",
+    "toolsCount_one": "{{count}} 도구",
+    "toolsCount_other": "{{count}} 도구",
+    "envCount": "{{count}} 인코더",
+    "envCount_one": "{{count}} 인코더",
+    "envCount_other": "{{count}} 인코더",
+    "auth": "오스",
+    "byAuthor": "작성자: {{author}}",
+    "hosting": {
+      "remote": "원격 제어",
+      "local": "한국어",
+      "both": "둘 다"
+    },
+    "toolsCount_few": "{{count}} 도구",
+    "toolsCount_many": "{{count}} 도구",
+    "envCount_few": "{{count}} 인코더",
+    "envCount_many": "{{count}} 인코더",
+    "repository": "회사연혁",
+    "website": "웹 사이트"
+  },
+  "installButton": {
+    "installing": "설치...",
+    "removing": "관련 기사",
+    "done": "이름 *",
+    "retry": "이름 *",
+    "uninstall": "다운로드",
+    "install": "설치하기"
+  },
+  "pluginCard": {
+    "official": "- 한국어"
+  }
+}

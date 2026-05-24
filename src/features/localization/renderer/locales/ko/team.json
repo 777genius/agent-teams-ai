@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "메시지에서 작업 만들기",
+      "expandMessage": "확장 메시지",
+      "replyToMessage": "메시지에 답글",
+      "restartTeam": "나머지 팀"
+    },
+    "authError": {
+      "description": "인증 실패. 팀은 세션을 새로 고침하고이 문제를 해결할 수 있습니다. 문제가 발생하면 API 자격 증명을 확인하고 나중에 시도하십시오."
+    },
+    "automation": {
+      "reviewPickup": "자주 묻는 질문",
+      "stallNudge": "자주 묻는 질문",
+      "workSyncBody": "현재 작업을 동기화하는 팀원"
+    },
+    "badges": {
+      "automation": "회사연혁",
+      "bootstrap": "부츠스트랩",
+      "command": "이름 *",
+      "comment": "이름 *",
+      "live": "이름 *",
+      "note": "이름 *",
+      "rateLimited": "가격 제한",
+      "restart": "지원하다",
+      "result": "이름 *",
+      "session": "이름 *",
+      "stallNudge": "연락처",
+      "start": "시작하기",
+      "workSync": "작업 동기화"
+    },
+    "bootstrap": {
+      "acknowledged": "부트 스트랩 승인",
+      "restarting": "teammate를 재시작",
+      "starting": "teammate 시작"
+    },
+    "rawJson": "원료 JSON",
+    "unread": "한국어",
+    "thoughts": {
+      "count": "{{count}} 생각",
+      "count_one": "{{count}} 생각",
+      "expand": "확장 된 생각",
+      "showMore": "더 보기",
+      "showLess": "더보기",
+      "count_few": "{{count}} 생각",
+      "count_many": "{{count}} 생각",
+      "count_other": "{{count}} 생각",
+      "toolSummary": "· {{summary}}",
+      "titleForMember": "{{name}} - 생각"
+    },
+    "timeline": {
+      "loadingMessages": "로딩 메시지...",
+      "noMessages": "메시지 없음",
+      "emptyHint": "회원에게 메시지 보내기",
+      "newSession": "새로운 세션",
+      "olderCount": "+{{count}} 이전",
+      "showMore": "{{count}} 더보기",
+      "showAll": "모두보기",
+      "olderCount_one": "+{{count}} 이전",
+      "olderCount_few": "+{{count}} 이전",
+      "olderCount_many": "+{{count}} 이전",
+      "olderCount_other": "+{{count}} 이전"
+    },
+    "pendingReplies": {
+      "title": "Awaiting 답글",
+      "openMember": "공지사항",
+      "messageSentAwaitingReply": "메시지 전송, 답장을 기다리고",
+      "awaitingReply": "자주 묻는 질문",
+      "externalTeam": "외부 팀",
+      "crossTeamAwaitingReply": "Cross-team 메시지 전송, 대기 회신",
+      "user": "제품정보",
+      "awaitingApproval": "감사의 뜻"
+    },
+    "reply": {
+      "replyingTo": "관련 기사",
+      "action": "이름 *"
+    },
+    "activeTasks": {
+      "inProgress": "진행 중"
+    },
+    "expandDialog": {
+      "description": "확장된 메시지 보기"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "이름 *",
+      "creating": "회사 소개",
+      "openExisting": "Existing 팀 열기",
+      "skipPreflightAndCreate": "사전등록"
+    },
+    "conflict": {
+      "description": "동일한 디렉토리의 두 팀을 실행 위험 - 그들은 같은 파일을 편집 할 수 있습니다. 다른 디렉토리 또는 git worktree를 사용하여 고려하십시오.",
+      "title": "또 다른 팀 \"{{team}}\"는 이미이 작업 디렉토리에 대한 실행",
+      "workingDirectory": "작업 디렉토리:"
+    },
+    "description": {
+      "copy": "기존에 기반한 새로운 팀 만들기.",
+      "create": "팀을 설정하고 시작 방법을 선택하십시오."
+    },
+    "errors": {
+      "nameExists": "팀 이름 이미 존재",
+      "nameLaunching": "이 이름을 가진 팀은 현재 발사하고 있습니다",
+      "createConfigFailed": "팀 구성을 만들 실패",
+      "loadProjectsFailed": "프로젝트로드 실패"
+    },
+    "fields": {
+      "color": "(선택) 색깔",
+      "description": "묘사 (선택)",
+      "prompt": "팀 리드 (선택 사항)",
+      "teamName": "팀 이름"
+    },
+    "launchAfterCreate": {
+      "description": "로컬 클로드 CLI를 통해 즉시 팀을 시작합니다.",
+      "label": "생성 후 명령 실행"
+    },
+    "localOnly": "로컬 Electron 모드에서만 사용할 수 있습니다.",
+    "onDisk": "디스크에:",
+    "placeholders": {
+      "description": "팀 목적의 간략한 설명",
+      "prompt": "팀에 대한 지침 제공 중 리드..."
+    },
+    "saved": "지원하다",
+    "solo": {
+      "description": "팀 리드 (주요 프로세스) 만 시작 될 것입니다 - teammates가 spawned되지 않습니다. 선택된 런타임 (Claude Code, Codex, OpenCode, Gemini)의 일반 에이전트 세션과 같은 작업은 계획을위한 작업 보드에 액세스합니다. teammate 조정 오버 헤드를 피함으로써 토큰을 저장합니다. 팀 설정에서 나중에 회원을 추가 할 수 있습니다.",
+      "label": "솔로 팀"
+    },
+    "title": {
+      "copy": "복사 팀",
+      "create": "팀 만들기"
+    },
+    "optional": {
+      "launchSettingsTitle": "옵션 실행 설정",
+      "launchSettingsDescription": "Prompt, 안전 및 CLI override는 당신이 필요로 할 때 여기에서 살고 있습니다.",
+      "teamDetailsTitle": "선택적인 팀 세부사항",
+      "teamDetailsDescription": "기본 흐름을 콤팩트 유지하고 추가 컨텍스트 또는 사용자 정의 색상을 원할 때만이 열립니다."
+    },
+    "prepare": {
+      "unsupportedPreload": "현재 사전 로드 버전은 팀 지원하지 않습니다:prepareProvisioning. dev 앱을 재시작합니다.",
+      "selectWorkingDirectory": "실행 환경을 검증하기 위해 작업 디렉토리를 선택합니다.",
+      "someProvidersNeedAttention": "몇몇 선택된 공급자는 주의를 필요로 합니다.",
+      "readyWithNotes": "선택한 모든 공급자는 노트와 함께 준비됩니다.",
+      "ready": "선택된 모든 공급자는 준비되어 있습니다.",
+      "failed": "선택된 공급자를 준비하는 실패",
+      "checkingProviders": "선택된 공급자...",
+      "preparingEnvironment": "환경 준비...",
+      "selectedProvidersReadyWithNotes": "선택한 공급자 준비 (매트 포함)",
+      "selectedProvidersReady": "협력업체"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "이름은 적어도 1개의 편지 또는 손가락을 포함해야 합니다",
+      "nameTooLong": "이름은 너무 길다 (최대 128 숯)",
+      "selectWorkingDirectory": "작업 디렉토리 선택 (cwd)",
+      "memberNameRequired": "회원 이름은 비어있을 수 없습니다.",
+      "memberNameInvalid": "회원 이름은 알파벳으로 시작해야합니다, 만 사용 [a-zA-Z0-9. -], 최대 128 숯",
+      "memberNamesUnique": "회원 이름은",
+      "openCodeLeadModelRequired": "OpenCode 리드는 선택한 모델이 필요합니다.",
+      "openCodeTeammateRequired": "OpenCode 리드는 적어도 하나의 OpenCode 팀메이트가 필요합니다.",
+      "teamLaunching": "팀은 현재 출시",
+      "teamNameExists": "팀 이름 이미 존재",
+      "checkFormFields": "본문 바로가기"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "이름 *",
+      "save": "제품 정보"
+    },
+    "addMemberLockReason": "전용 Add member 대화 상자를 사용하여 팀이 살고있는 동안 새로운 팀메이트를 추가하십시오.",
+    "description": "팀 이름, 설명 및 색상 변경",
+    "errors": {
+      "changesSavedRefreshFailed": "팀 변경이 저장되었지만 최신보기를 새로 고침하지 못했습니다. {{message}}",
+      "liveRenameBlocked": "팀메이트는 팀이 살고있는 동안 이름을 변경할 수 없습니다. 이름: {{names}}",
+      "memberNameEmpty": "회원 이름은 비어있을 수 없습니다.",
+      "memberNameInvalid": "회원 이름은 알파벳으로 시작해야합니다, 만 사용 [a-zA-Z0-9. -], 최대 128 숯",
+      "memberNameNumericSuffix": "회원 이름 \"{{name}}\"는 허용되지 않습니다 (클래드 CLI 자동 스프릭스에 대한 예약). 대신 \"{{base}}\"를 사용하십시오.",
+      "memberNameReserved": "회원 이름 \"{{name}}\"는",
+      "memberNamesUnique": "회원 이름은 저장하기 전에 고유해야합니다.",
+      "newLiveTeammates": "전용 Add member 대화 상자에서 새 팀메이트를 추가하고 팀이 살고 있습니다. 팀 편집은 기존 팀메이트를 업데이트합니다.",
+      "provisioning": "팀 설정은 여전히 진행중인 동안 편집 할 수 없습니다. 시작을 위해 마무리, 다음 다시 시도.",
+      "restartFailedMany": "팀은 저장했지만,이 팀원을 다시 시작 실패: {{failures}}",
+      "restartFailedOne": "팀이 저장했지만이 팀원을 재시작하지 못했습니다. {{failures}}",
+      "saveFailed": "자주 묻는 질문",
+      "settingsChanged": "이 대화 상자가 열리면서 팀 설정이 변경되었습니다. 저장하기 전에 최신 상태를 다시 열고 검토합니다.",
+      "settingsSavedMembersAndRefreshFailed": "팀 설정이 저장되었지만 회원은 실패했습니다. {{message}}. 새로 고침 실패: {{refreshError}}",
+      "settingsSavedMembersFailed": "팀 설정이 저장되었지만 회원은 실패했습니다. {{message}}",
+      "settingsSavedRefreshFailed": "팀 설정이 저장되었지만 최신보기를 새로 고침하지 못했습니다. {{message}}",
+      "teamNameEmpty": "팀 이름은 비어있을 수 없습니다",
+      "unsupportedMixedPrimaryMutation": "혼합 OpenCode 팀의 주요 팀원에 대한 라이브 편집은 아직 지원되지 않습니다. 팀을 중지, 로스터를 편집, 다음 다시 시작. 감염된: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "(선택) 색깔",
+      "description": "이름 *",
+      "name": "이름 *"
+    },
+    "memberRestartWarning": "저축은 이 teammate가 역할, 워크플로우, 워크트리 고립, 공급자, 모형, 노력, 또는 MCP 접근 변화를 적용하기 위하여 재시작할 것입니다.",
+    "notices": {
+      "liveRenameBlocked": "Live save 기존 팀메이트가 이름을 변경했기 때문에 차단됩니다. 그 정체성을 바꾸거나 팀을 먼저 멈추십시오.",
+      "newLiveTeammates": "새로운 teammates는 편집 팀에서 추가할 수 없습니다. 대신 추가 회원 대화 상자를 사용하십시오.",
+      "provisioning": "팀 프로비저닝은 여전히 진행 중입니다. 편집은 일시적으로 종료 될 때까지 잠겨.",
+      "restartMany": "저축은 이 팀원이 역할, 워크플로우, 워크트리 고립, 공급자, 모형, 노력, 또는 MCP 액세스 변경을 적용하기 위해 재시작하거나 재시작합니다. {{names}}.",
+      "restartOne": "저축은 이 teammate를 다시 시작하거나 다시 시작하거나, 역할, 워크플로우, 워크 트리 고립, 공급자, 모형, 노력, 또는 MCP 접근 변경을 적용하기 위하여 재시작합니다: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "혼합 OpenCode 팀의 1 차 소유 팀 동료를위한 라이브 편집 / 제거는 팀 중단하고 다시 시작해야합니다: {{names}}."
+    },
+    "placeholders": {
+      "description": "팀 설명 (선택 사항)",
+      "teamName": "팀 이름"
+    },
+    "teamLead": {
+      "changeRuntime": "변화 리드 런타임",
+      "changeRuntimeDescription": "리드 공급자, 모델, 또는 노력 변경을 위해 Relaunch 팀을 엽니 다.",
+      "modelLockReason": "팀 리드 런타임은 Relaunch 팀에서 관리됩니다.",
+      "readOnlyHint": "팀 리드 이름과 역할은 여기에서 읽기 전용. 리드 행에 런타임 패널을 열고 공급자, 모델, 또는 노력 변경합니다.",
+      "role": "팀 리드"
+    },
+    "title": "편집 팀"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "회사 소개",
+      "removeAria": "{{name}} 제거",
+      "restore": "회사연혁",
+      "restoreAria": "복원 {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "default context 설정",
+      "description": "Anthropic context는이 발사에 대한 팀 전체입니다: {{mode}}. Lead runtime panel의 Limit context 체크박스를 사용하여 변경합니다.",
+      "limitEnabled": "200K 제한 가능"
+    },
+    "mcp": {
+      "buttonInherit": "MCP 상속",
+      "buttonScopes": "MCP 범위",
+      "chooseScopes": "범위 선택",
+      "inheritLead": "Inherit 지도",
+      "lockedInfo": "Agent Teams MCP는 모든 팀원에게만 사용할 수 있습니다. 이 teammate는 Agent Teams 서버에서만 실행됩니다.",
+      "mode": "MCP 모드",
+      "scopes": {
+        "local": "한국어",
+        "project": "주요사업",
+        "user": "제품정보"
+      },
+      "serverNames": "Server 이름",
+      "settingInfo": "에이전트 팀 MCP는 에이전트 팀 서버와이 팀메이트를 시작합니다. 범위와 수당 모드는이 팀메이트 출시에만 적용됩니다.",
+      "strictAllowlist": "Strict 수당",
+      "tooltip": "{{label}}: 이 회원의 MCP 상속 정책 제어",
+      "agentTeamsMcp": "에이전트 팀 MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} 공급자, {{model}}",
+      "currentLeadRuntime": "현재 리드 타임",
+      "default": "기본 정보",
+      "inheritedTooltip": "공급자, 모형 및 노력은 sync가 활성화된 동안 지도에서 상속됩니다.",
+      "leadSuffix": "{{label}} (리더)",
+      "liveDisabled": "공급자, 모형 및 노력은 팀이 사는 동안 비활성화됩니다. 팀을 다시 연결하여 안전하게 적용하십시오.",
+      "lockedActionFallback": "리드 런타임 변경은 Relaunch 팀, 공급자, 모델 및 노력이 업데이트 될 수 있습니다.",
+      "restartWholeTeam": "그 런타임 변경은 전체 팀을 다시 시작합니다."
+    },
+    "nameAria": "회원 {{index}} 이름",
+    "nameFallback": "회원 {{index}}",
+    "noRole": "없음 역할",
+    "removed": "기타 제품",
+    "workflow": {
+      "addTooltip": "teammate 작업 흐름 추가",
+      "editTooltip": "teammate 작업 흐름 편집",
+      "label": "Workflow (선택 사항)",
+      "placeholder": "이 에이전트가 행동하는 방법, 다른 사람들과 상호 작용...",
+      "saved": "지원하다"
+    },
+    "worktree": {
+      "description": "별도의 git worktree에서 이 팀메이트를 실행하십시오. apply/reject는 worktree가 아닌 리드 워크스페이스가 아닌 대상을 변경합니다.",
+      "label": "워크 트리"
+    },
+    "addMembers": {
+      "title": "회원 가입",
+      "description": "{{teamName}}에 새로운 회원 추가"
+    },
+    "placeholders": {
+      "name": "회원 이름",
+      "mcpServers": "github, 보류"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "기타",
+      "cancel": "이름 *",
+      "delete": "이름 *",
+      "editCode": "비밀번호",
+      "launch": "시작하다",
+      "remove": "기타 제품",
+      "stop": "기타",
+      "task": "기타",
+      "visualize": "제품 설명"
+    },
+    "deleteTeam": {
+      "description": "팀 삭제 \"{{team}}\"? 이 행동은 불가능합니다. 모든 팀 데이터 및 작업이 삭제됩니다.",
+      "title": "팀 삭제"
+    },
+    "draft": {
+      "descriptionPrefix": "이것은 초안 팀입니다 -",
+      "descriptionSuffix": "{{count}} {{member}}로 구성되었지만 CLI가 아직 제공되지 않았습니다. 모델을 선택하고 팀을 시작합니다.",
+      "descriptionSuffix_few": "{{count}} {{member}}로 구성되었지만 CLI가 아직 제공되지 않았습니다. 모델을 선택하고 팀을 시작합니다.",
+      "descriptionSuffix_many": "{{count}} {{member}}로 구성되었지만 CLI가 아직 제공되지 않았습니다. 모델을 선택하고 팀을 시작합니다.",
+      "descriptionSuffix_one": "{{count}} {{member}}로 구성되었지만 CLI가 아직 제공되지 않았습니다. 모델을 선택하고 팀을 시작합니다.",
+      "descriptionSuffix_other": "{{count}} {{member}}로 구성되었지만 CLI가 아직 제공되지 않았습니다. 모델을 선택하고 팀을 시작합니다.",
+      "member": "이름 *",
+      "member_few": "이름 *",
+      "member_many": "이름 *",
+      "member_one": "이름 *",
+      "member_other": "이름 *",
+      "title": "아직 출시되지 않은 팀"
+    },
+    "invalidTab": "잘못된 팀 탭",
+    "kanbanSafeData": "완전 부하 kanban에 실패. 안전한 자료 표시.",
+    "loadFailed": "로드 팀에 실패",
+    "loading": "로딩 팀",
+    "loadingSidebar": "선적 팀 sidebar",
+    "offline": {
+      "offline": "팀 오프라인",
+      "partialFailed": "마지막 출시 실패 partway",
+      "partialMissing": "마지막 출시 실패 partway - {{missing}}/{{expected}} 팀메이트는 가입하지 않았다",
+      "reconciling": "마지막 출시는 여전히 재건축"
+    },
+    "previous": "이전: {{paths}}",
+    "removeMember": {
+      "description": "팀에서 \"{{member}}\"를 제거? 작업 및 메시지는 보존되지만, 이 이름은 재사용 할 수 없습니다.",
+      "title": "회사 소개"
+    },
+    "sections": {
+      "team": "회사연혁"
+    },
+    "solo": "한국어",
+    "status": {
+      "active": "지원하다",
+      "launching": "시작...",
+      "running": "지원하다"
+    },
+    "telemetry": {
+      "cpu": "사이트맵",
+      "memory": "기억하기"
+    },
+    "tooltips": {
+      "deleteTeam": "팀 삭제",
+      "editTeam": "편집 팀",
+      "editUnavailableProvisioning": "팀 편집은 아직 진행중인 동안 사용할 수 없습니다.",
+      "openBuiltInEditor": "내장 편집기에서 프로젝트 열기",
+      "openTeamGraph": "열린 팀 그래프",
+      "stopTeam": "정지 팀"
+    },
+    "waitingForProvisioning": "팀 데이터는 일단 완료되면 나타납니다",
+    "context": {
+      "title": "설정하기"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "이름 *",
+        "discard": "팟캐스트",
+        "discardTooltip": "이 파일에 대한 모든 편집을 Discard",
+        "keepMyDraft": "내 글",
+        "reject": "관련 제품",
+        "reloadFromDisk": "디스크에서 Reload",
+        "restore": "관련 상품",
+        "restoreTooltip": "Create/restore 이 파일에 디스크에서 미리보기",
+        "saveFile": "파일 저장",
+        "saveFileTooltip": "디스크에 파일 저장"
+      },
+      "badges": {
+        "deleted": "사이트맵",
+        "manualReview": "수동 리뷰",
+        "new": "사이트맵",
+        "worktree": "사이트맵"
+      },
+      "contentSource": {
+        "disk-current": "현재 Disk",
+        "file-history": "파일 역사",
+        "git-fallback": "연락처",
+        "ledger-exact": "작업 Ledger",
+        "ledger-snapshot": "Ledger 스냅 샷",
+        "snippet-reconstruction": "관련 기사",
+        "unavailable": "콘텐츠 사용"
+      },
+      "contentUnavailable": {
+        "badge": "콘텐츠 사용",
+        "description": "ledger는이 변경에 대한 메타 데이터를 기록했지만 전체 텍스트 콘텐츠는 사용할 수 없습니다. 이것은 일반적으로 바이너리, 큰, 또는 해시 전용 콘텐츠를 의미합니다.",
+        "safety": "자동 허용 / 거부는 안전 디스크 쓰기를 피하기 위해이 파일에 대해 비활성화됩니다.",
+        "title": "텍스트 콘텐츠는 사용할 수 없습니다"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Accept/Reject는 풀 텍스트 콘텐츠가 사용할 수 없기 때문에 비활성화됩니다.",
+        "acceptRejectMissingOnDisk": "Accept/Reject는 디스크에 파일이 누락되는 동안 비활성화됩니다.",
+        "rejectBaselineUnavailable": "Reject는 원래의 기본이 사용할 수 없기 때문에 비활성화됩니다.",
+        "rejectContentUnavailable": "Reject는 풀 텍스트 콘텐츠가 사용할 수 없기 때문에 비활성화됩니다.",
+        "rejectManualLedgerReview": "이 ledger 변경에는 바이너리, 대용량 또는 사용할 수 없는 콘텐츠가 있어 거절이 비활성화되었습니다."
+      },
+      "externalChange": {
+        "changedOnDisk": "디스크에 고정",
+        "deletedOnDisk": "디스크에 삭제",
+        "recreatedOnDisk": "디스크에 Recreated"
+      },
+      "missingOnDisk": {
+        "badge": "디스크에 넣기",
+        "description": "우리는 여전히 에이전트 로그에서 미리보기를 표시 할 수 있지만, 파일 시스템은 동기화 중입니다.",
+        "restorePrefix": "제품 정보",
+        "restoreSuffix": "미리 내용을 디스크로 다시 쓰기.",
+        "restoreUnavailable": "전체 파일 내용이 자동으로 복원 할 수 없습니다.",
+        "title": "파일은 디스크에 누락됩니다."
+      },
+      "pathChange": {
+        "from": "{{path}}에서",
+        "to": "{{path}}에"
+      },
+      "worktree": {
+        "isolated": "고립된 worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} 종료",
+        "pending_one": "{{count}} 종료",
+        "pending_other": "{{count}} 종료",
+        "accepted": "{{count}} 허용",
+        "accepted_one": "{{count}} 허용",
+        "accepted_other": "{{count}} 허용",
+        "rejected": "{{count}} 거부",
+        "rejected_one": "{{count}} 거부",
+        "rejected_other": "{{count}} 거부",
+        "acrossFiles": "{{count}} 파일",
+        "acrossFiles_one": "{{count}} 파일",
+        "acrossFiles_other": "{{count}} 파일",
+        "edited": "{{count}} 편집",
+        "edited_one": "{{count}} 편집",
+        "edited_other": "{{count}} 편집",
+        "pending_few": "{{count}} 종료",
+        "pending_many": "{{count}} 종료",
+        "accepted_few": "{{count}} 허용",
+        "accepted_many": "{{count}} 허용",
+        "rejected_few": "{{count}} 거부",
+        "rejected_many": "{{count}} 거부",
+        "acrossFiles_few": "{{count}} 파일",
+        "acrossFiles_many": "{{count}} 파일",
+        "edited_few": "{{count}} 편집",
+        "edited_many": "{{count}} 편집"
+      },
+      "actions": {
+        "auto": "제품정보",
+        "undo": "이름 *",
+        "acceptAll": "모든 것",
+        "rejectAll": "모든 것",
+        "applying": "신청하기...",
+        "applyRejections": "Rejections 신청"
+      },
+      "tooltips": {
+        "autoOn": "끝으로 스크롤하면 자동 마크 파일 (ON)",
+        "autoOff": "최종적으로 스크롤했을 때 자동 마크 파일 (OFF)",
+        "undo": "마지막 검토 작업 (Ctrl + Z)",
+        "acceptAll": "모든 파일에서 모든 변경을 수락",
+        "rejectAll": "모든 파일을 통해 안전하게 거부할 수 있는 변경을 거부",
+        "rejectAllDisabled": "파일이 거절되지 않습니다.",
+        "applyRejections": "디스크에 거부 된 hunks를 적용하십시오. 허용 된 변경은 as-is로 유지됩니다."
+      }
+    },
+    "diffError": {
+      "title": "diff 보기를 렌더링 실패",
+      "unexpected": "diff를 렌더링하면서 예상치 못한 오류가 발생했습니다.",
+      "actions": {
+        "retry": "이름 *"
+      },
+      "raw": {
+        "show": "원시 diff 데이터 표시",
+        "file": "파일: {{file}}",
+        "original": "--- 본래",
+        "modified": "+++ 수정",
+        "charsTotal": "... ({{count}} 차 합계)",
+        "charsTotal_one": "... ({{count}} 차 합계)",
+        "charsTotal_other": "... ({{count}} 차 합계)",
+        "charsTotal_few": "... ({{count}} 차 합계)",
+        "charsTotal_many": "... ({{count}} 차 합계)"
+      }
+    },
+    "fileTree": {
+      "viewed": "더 보기",
+      "badges": {
+        "new": "새로운 소식",
+        "deleted": "이름 *"
+      },
+      "collapseFolder": "붕괴 {{name}}",
+      "expandFolder": "{{name}} 확장",
+      "empty": {
+        "noChangedFiles": "변경된 파일",
+        "noMatchingFiles": "일치하는 파일"
+      },
+      "searchPlaceholder": "파일 검색...",
+      "filters": {
+        "unresolved": "해결 된",
+        "rejected": "관련 상품",
+        "new": "- 한국어",
+        "clear": "이름 *"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "이전 chunk",
+      "nextChunk": "다음 펑크",
+      "rejectChange": "거부 변경 (⌘N)",
+      "acceptChange": "바꾸기 (⌘Y)",
+      "undo": "이름 *",
+      "keep": "제품 정보",
+      "rejectShortcut": "·",
+      "acceptShortcut": "·"
+    },
+    "conflict": {
+      "title": "Conflict 검출",
+      "description": "이 파일은 에이전트의 변경 이후 수정되었습니다.",
+      "cancel": "이름 *",
+      "saveResolution": "자주 묻는 질문",
+      "editManually": "수동으로 편집",
+      "useOriginal": "사용 Original",
+      "keepCurrent": "현재 위치"
+    },
+    "fullDiffLoading": {
+      "titleOne": "가득 차있는 Diff 준비",
+      "titleMany": "{{count}} Full Diffs 준비",
+      "subtitleForFile": "{{file}}에 대한 정확한 편집기 디프 정의.",
+      "subtitleCurrentFile": "현재 파일에 대한 정확한 편집기 diff를 정의합니다.",
+      "subtitleMany": "현재 로딩중인 파일에 대한 기본 설정 후 정확한 해결.",
+      "previewsReady": "{{count}} 미리보기 준비",
+      "previewsReady_one": "{{count}} 미리보기 준비",
+      "editorViewLoading": "편집자 보기 로딩",
+      "filesInProgress": "{{count}} 파일 진행 중",
+      "filesInProgress_one": "진행중인 {{count}} 파일",
+      "filesReady": "{{ready}}/{{total}} 파일 준비",
+      "progressDescription": "{{ready}} 준비, {{loading}} 여전히 로딩. 미리보기 디프는 아래에서 볼 수 있으며 나머지 기본은 해결됩니다.",
+      "singleDescription": "미리보기 디프는 정확한 기본 설정이 해결되는 동안 볼 수 있습니다.",
+      "previewsReady_few": "{{count}} 미리보기 준비",
+      "previewsReady_many": "{{count}} 미리보기 준비",
+      "previewsReady_other": "{{count}} 미리보기 준비",
+      "filesInProgress_few": "{{count}} 파일 진행 중",
+      "filesInProgress_many": "{{count}} 파일 진행 중",
+      "filesInProgress_other": "{{count}} 파일 진행 중"
+    },
+    "fileMissingPrefix": "파일은 디스크에 누락됩니다. 이 diff는 에이전트 로그에서 미리보기 만 있을 수 있습니다. 제품 정보",
+    "restore": "관련 상품",
+    "fileMissingSuffix": "디스크에 파일을 만들려면.",
+    "filePlaceholder": {
+      "loading": "제품정보",
+      "description": "이 파일에 대한 전체 편집기 diff 준비."
+    },
+    "loading": {
+      "diff": "사이트맵",
+      "ledgerObjectsProcessed": "처리되는 {{count}} LEDger 목표",
+      "ledgerObjectsProcessed_one": "처리되는 {{count}} LEDger 목표",
+      "ledgerObjectsProcessed_other": "처리되는 {{count}} LEDger 목표",
+      "ledgerObjectsProcessed_few": "처리되는 {{count}} LEDger 목표",
+      "ledgerObjectsProcessed_many": "처리되는 {{count}} LEDger 목표",
+      "phases": {
+        "readingLedger": "독서 작업 ledger...",
+        "resolvingFiles": "파일 상태를 해결...",
+        "checkingWorktree": "Worktree 컨텍스트를 확인...",
+        "preparingDiffs": "리뷰 준비..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} 이름 *"
+    },
+    "scope": {
+      "readMore": "더 보기",
+      "tiers": {
+        "exact": {
+          "title": "작업 범위는 정확하게 결정",
+          "detail": "세션 로그에서 모두 시작 및 완료 마커. diff는 이 특정 작업 중에만 변경됩니다. - 같은 파일을 변경하는 다른 작업은 제외됩니다."
+        },
+        "endEstimated": {
+          "title": "끝 경계 추정",
+          "detail": "시작 마커 만 발견되었습니다 - 작업은 아직 완료 마커가 없습니다. 작업 시작에서 세션 종료에 표시된 변경. 다른 작업이 같은 세션에서이 한 후, 그들의 변경도 포함 될 수 있습니다."
+        },
+        "startEstimated": {
+          "title": "시작 경계 추정",
+          "detail": "완료 마커 만 발견되었습니다 - 작업의 시작은 캡처되지 않았습니다. 다른 작업이 같은 세션에서이 하나 전에 ran 경우, 동일한 파일에 대한 변경도 포함 될 수 있습니다."
+        },
+        "allSession": {
+          "title": "모든 세션 변경 표시",
+          "detail": "세션 로그에서 찾을 수 없음. 이 작업을 격리 할 수 없습니다 - 전체 세션의 모든 파일 변경은 다른 작업의 변경을 포함하여 표시됩니다. 이전 CLI 버전 또는 비표준 워크플로우가 발생할 수 있습니다."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "작업에 의해 캡처 변경 ledger",
+          "detail": "관현관은 이 작업을 수행하면서 이러한 파일 변경을 캡처했습니다.",
+          "badge": "연락처"
+        },
+        "limited": {
+          "title": "한정된 검토로 캡처된 변화",
+          "detail": "이 작업을 위해 이러한 파일 변경을 캡처했지만 적어도 하나의 변경은 스냅 샷 또는 메타 데이터 전용 소스에서 캡처되었습니다. 사용할 수있는 정확한 텍스트 디프를 검토; 바이너리 또는 사용할 수없는 콘텐츠는 수동 검토가 필요할 수 있습니다.",
+          "mixedBadge": "공급 능력",
+          "needsReviewBadge": "자주 묻는 질문"
+        }
+      },
+      "workInterval": {
+        "title": "지속된 작업 간격에 의해 Scoped",
+        "detail": "작업 시작 마커는 세션 로그에서 사용할 수 없습니다, 그래서 diff는 보드에 저장된 작업 간격에 의해 범위.",
+        "badge": "간격 범위"
+      },
+      "confidence": {
+        "high": "높은 신뢰",
+        "medium": "중간 신뢰",
+        "low": "낮은 신뢰",
+        "bestEffort": "제품 정보"
+      }
+    },
+    "shortcuts": {
+      "title": "키보드 단축키",
+      "actions": {
+        "nextChange": "다음 변경",
+        "previousChange": "이전 변경",
+        "nextFile": "다음 파일",
+        "previousFile": "이전 파일",
+        "acceptChange": "자주 묻는 질문",
+        "rejectChange": "Reject 변화",
+        "saveFile": "파일 저장",
+        "undo": "이름 *",
+        "redo": "레드오",
+        "toggleShortcuts": "회사 소개",
+        "closeDialog": "닫기 대화 상자"
+      }
+    },
+    "timeline": {
+      "empty": "행사안내",
+      "titleWithCount": "타임라인 편집 ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "검토 가능한 파일 변경 없음"
+    },
+    "empty": {
+      "noSafeDiff": "안전한 diff 없음",
+      "noFileChangesRecorded": "파일 변경 없음",
+      "noSafeDiffDescription": "작업 ledger는이 작업을 위해 안전한 파일 diff를 노출하지 않았습니다.",
+      "noSafeDiffDiagnosticsDescription": "작업 ledger는이 작업을 위해 안전한 파일 diff를 노출하지 않았습니다. 아래의 진단은 왜 설명합니다.",
+      "noFileEventsYet": "작업 ledger는 아직이 작업을 위한 파일 이벤트가 없습니다.",
+      "noFileEvents": "작업 ledger는이 작업을 위한 파일 이벤트가 없습니다."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "메시지 하단 시트 작업",
+      "collapseAll": "모든 메시지",
+      "collapseSheet": "연락처",
+      "expandAll": "모든 메시지",
+      "expandSheet": "확장 시트",
+      "floatComposer": "Float 작곡가",
+      "floatMessagesComposer": "Float 메시지 작곡가",
+      "hideSearch": "자주 묻는 질문",
+      "loadOlder": "이전 메시지",
+      "markAllRead": "모두 읽기",
+      "messageActions": "메시지 작업",
+      "moveMessagesToBottomSheet": "하단 시트로 메시지 이동",
+      "moveMessagesToSidebar": "사이드바로 메시지 이동",
+      "moveToBottomSheet": "하단 시트로 이동",
+      "moveToInline": "본문 바로가기",
+      "moveToSidebar": "사이드바로 이동",
+      "panelActions": "Message 패널 작업",
+      "searchMessages": "검색 메시지"
+    },
+    "delivery": {
+      "copied": "뚱 베어",
+      "copyDebugDetails": "Copy debug 세부사항",
+      "details": "이름 *",
+      "fields": {
+        "acceptanceUnknown": "합격Unknown",
+        "delivered": "제품정보",
+        "diagnostics": "진단",
+        "ledgerStatus": "연락처",
+        "messageId": "메시지Id",
+        "providerId": "공급자Id",
+        "queuedBehindMessageId": "queuedBehindMessageId의",
+        "reason": "이름 *",
+        "responsePending": "응답Pending",
+        "responseState": "응답 상태",
+        "statusMessageId": "상태MessageId",
+        "userVisibleMessage": "사용자VisibleMessage",
+        "userVisibleNextReviewAt": "userVisible다음ReviewAt",
+        "userVisibleReasonCode": "사용자VisibleReasonCode",
+        "userVisibleState": "사용자VisibleState",
+        "visibleReplyCorrelation": "눈에 띄는ReplyCorrelation",
+        "visibleReplyMessageId": "현재 위치"
+      }
+    },
+    "panelMode": "Message 패널 모드",
+    "title": "이름 *",
+    "unread": {
+      "new": "{{count}} 새로운",
+      "unread": "{{count}} 읽음",
+      "new_few": "{{count}} 새로운",
+      "new_many": "{{count}} 새로운",
+      "new_one": "{{count}} 새로운",
+      "new_other": "{{count}} 새로운",
+      "unread_few": "{{count}} 읽음",
+      "unread_many": "{{count}} 읽음",
+      "unread_one": "{{count}} 읽음",
+      "unread_other": "{{count}} 읽음"
+    },
+    "filter": {
+      "ariaLabel": "필터 메시지",
+      "tooltip": "필터 메시지",
+      "from": "이름 *",
+      "to": "으로",
+      "noData": "데이터 없음",
+      "showStatusUpdates": "상태 업데이트 표시 (idle/shutdown)",
+      "actions": {
+        "reset": "지원하다",
+        "save": "제품 정보"
+      }
+    },
+    "status": {
+      "title": "주요연혁"
+    },
+    "actionMode": {
+      "label": "동작 모드"
+    },
+    "search": {
+      "placeholder": "기타..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "설정하기",
+      "connected": "연결하기",
+      "failed": "실패한",
+      "free": "무료 다운로드",
+      "local": "한국어",
+      "needsTest": "자주 묻는 질문",
+      "verified": "인증 및 인증",
+      "unavailable": "이용안내",
+      "issue": "이름 *"
+    },
+    "customModelId": "주문 모형 id",
+    "label": "모형 (선택)",
+    "multimodelRequired": "Codex 및 Gemini는 Multimodel 모드를 요구합니다.",
+    "openCode": {
+      "allSources": "모든 OpenCode 소스",
+      "filterSource": "필터 {{source}}",
+      "filterSources": "필터 OpenCode 소스",
+      "freeOnly": "무료 만",
+      "freeTooltip": "OpenCode는 이 모델을 무료로 표시합니다.",
+      "loadingModels": "OpenCode 모델...",
+      "noSourcesFound": "찾을 수 없습니다.",
+      "recommendedOnly": "무료 다운로드",
+      "searchSources": "검색 소스",
+      "sourcesCount": "{{count}}OpenCode 소스",
+      "sourcesCount_few": "{{count}}OpenCode 소스",
+      "sourcesCount_many": "{{count}}OpenCode 소스",
+      "sourcesCount_one": "{{count}}OpenCode 소스",
+      "sourcesCount_other": "{{count}}OpenCode 소스"
+    },
+    "reason": "이유: {{reason}}",
+    "runtimeModelsSyncing": "현재 runtime에서 Explicit 모형 짐. Default는 목록이 동기화되는 동안 사용할 수 있습니다.",
+    "fastMode": {
+      "codexLabel": "빠른 모드 (2x 크레딧)",
+      "optionalLabel": "(선택) 빠른 형태",
+      "defaultOff": "기본 (오프)",
+      "fast": "빠른 속도",
+      "off": "이름 *",
+      "defaultFast": "기본 (빠른)",
+      "defaultResolvesTo": "기본값은 현재 {{mode}}로 해결됩니다.",
+      "runtimeBackedHint": "빠른 모드는 runtime-backed이며 해결 된 Anthropic 출시 모델이 지원할 때만 잠금 해제됩니다."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Anthropic 가격 읽기 docs"
+    },
+    "searchModels": "검색 모델",
+    "defaultModel": "기본 정보",
+    "empty": {
+      "noSearchMatches": "이 검색에 모델이 없습니다.",
+      "recommendedFreeOpenCode": "권장 무료 OpenCode 모델은 현재 실행중인 목록에서 사용할 수 없습니다.",
+      "freeOpenCode": "OpenCode 모델은 현재 실행중인 목록에서 사용할 수 없습니다.",
+      "recommendedOpenCode": "권장 OpenCode 모델은 현재 실행중인 목록에서 사용할 수 없습니다.",
+      "noModels": "모델은 현재 런타임 목록에서 사용할 수 없습니다."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode는 팀 출시 준비가 되지 않습니다.",
+      "freeModelsAvailableTitle": "OpenCode 무료 모델 사용 가능",
+      "providerNotConnectedTitle": "OpenCode 공급자는 연결되지 않습니다",
+      "readyTitle": "OpenCode가 준비되어 있습니다.",
+      "readyMessage": "OpenCode는 공급자 readiness를 통과했습니다. 이 팀의 OpenCode 모델을 사용하려면 선택합니다.",
+      "useOpenCode": "OpenCode 사용",
+      "badges": {
+        "check": "기타",
+        "install": "설치하기",
+        "free": "무료 다운로드",
+        "setup": "설치하기"
+      },
+      "summary": {
+        "checking": "OpenCode 상태: runtime 확인",
+        "status": "OpenCode 상태: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "팀 런칭",
+        "providerOptional": "공급자 연결 옵션",
+        "providerModelsNeedSetup": "공급자 백업 모델 필요 설정",
+        "teamLaunchReady": "팀 출시 준비",
+        "runtimeDetected": "시간 감지",
+        "runtimeMissing": "실행 시간 누락",
+        "freeWithoutAuth": "auth없이 무료 모델",
+        "providerConnected": "협력업체",
+        "providerNotConnected": "협력업체"
+      },
+      "messages": {
+        "checking": "이 앱은 여전히 OpenCode runtime을 검사합니다. 공급자 상태에 대 한 대기, 다음 다시 시도.",
+        "unsupported": "OpenCode는 설치되지 않습니다, 발견되지 않은, 또는 감지 된 실행 시간은 지원되지 않습니다. OpenCode를 설치하거나 업데이트하면 공급자 상태를 새로 고침합니다. 홈 페이지에서 설치 버튼을 사용할 수 있습니다.",
+        "freeAvailable": "OpenCode는 검출됩니다. 공급자를 연결하지 않고 Big Pickle과 같은 무료 OpenCode 모델을 사용할 수 있습니다. 공급자 백업 모델을 원할 때만 공급자를 연결하십시오.",
+        "noFreeListed": "OpenCode는 감지되지만 무료 OpenCode 모델은 아직 나열되지 않습니다. 공급자 상태를 새로 고침하거나 공급자 백업 모델을 위한 OpenCode의 공급자를 연결하십시오.",
+        "launchBlocked": "OpenCode가 설치되고 인증되었지만 Agent Teams는 readiness를 차단합니다.",
+        "ready": "OpenCode는 팀 출시 준비가 되어 있습니다."
+      },
+      "loadingRuntime": "OpenCode 런타임 상태는 여전히 로딩됩니다."
+    },
+    "advisory": {
+      "pingNotConfirmed": "확인되지 않음",
+      "note": "이름 *"
+    },
+    "placeholders": {
+      "customModelId": "오픈아이/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode 설정",
+      "builtinFree": "무료 내장",
+      "connectedProviders": "연결 공급자",
+      "otherCatalog": "다른 OpenCode 카탈로그"
+    },
+    "pricing": {
+      "free": "무료 다운로드",
+      "inputShort": "에서 {{rate}}",
+      "outputShort": "밖으로 {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M의",
+      "inputTitle": "입력: 1M 토큰 당 {{rate}}",
+      "outputTitle": "산출: 1M 토큰 당 {{rate}}",
+      "cacheReadTitle": "캐시 읽기: 1M 토큰 당 {{rate}}",
+      "cacheWriteTitle": "캐시 쓰기: 1M 토큰 당 {{rate}}"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Anthropic 호환 엔드 포인트 기본 모델을 사용합니다.\n현재 {{model}}로 해결합니다.",
+      "anthropicCompatible": "Anthropic 호환 엔드 포인트 기본 모델을 사용합니다.",
+      "anthropic": "Claude 팀 기본 모델을 사용합니다.\n{{longContextModel}}에 1M 컨텍스트, 또는 {{limitedContextModel}}를 200K 컨텍스트가 활성화되면 해결합니다.",
+      "openCodeWithResolved": "OpenCode 기본 모델을 사용합니다.\n현재 {{model}}로 해결합니다.",
+      "openCode": "OpenCode 실행 시간 기본 모델을 사용합니다.",
+      "runtime": "선택한 공급자의 runtime default를 사용합니다."
+    },
+    "multimodelOff": "Multimodel 오프",
+    "unavailableInRuntime": "현재 런타임에서 사용 가능"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "이름 *",
+      "delete": "이름 *",
+      "markResolved": "Mark 해결",
+      "save": "제품 정보"
+    },
+    "attachments": {
+      "commentAttachment": "댓글 첨부",
+      "fromComments": "댓글에서",
+      "preview": "미리보기 {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "이름 *",
+        "noSafeDiff": "안전 diff 없음"
+      },
+      "empty": {
+        "noFileChangesRecorded": "파일 변경 없음",
+        "noFileChangesRecordedYet": "아직 파일 변경 없음",
+        "noReviewableChangesRecovered": "검토 가능한 파일 변경 복구",
+        "noSafeDiffAvailable": "안전한 diff 없음"
+      },
+      "loadFailed": "작업 변경 요약을로드 실패",
+      "loading": "로딩...",
+      "fileCount": "{{count}} 파일",
+      "fileRowsHidden": "{{count}} 파일 행 숨겨진",
+      "moreDiagnostics": "{{count}} 더 진단",
+      "moreFiles": "{{count}} 더 많은 파일",
+      "openInEditor": "본문 바로가기",
+      "openTask": "작업 열기 {{subject}}",
+      "refresh": "새로 고침",
+      "refreshFailed": "새로 고침 실패: {{error}}",
+      "refreshing": "회사 소개",
+      "refreshingChanges": "새로 고침 변경...",
+      "refreshTeamChanges": "새로 고침 팀 변경",
+      "refreshShort": "지원하다",
+      "reviewDiff": "리뷰 diff",
+      "reviewTaskDiff": "리뷰 작업 diff",
+      "scannedCandidateTasks": "스캔 한 {{requested}}의 {{eligible}} 후보 작업",
+      "tasksDeferred": "{{count}} 작업이 패스를 무시",
+      "title": "기타",
+      "fileCount_few": "{{count}} 파일",
+      "fileCount_many": "{{count}} 파일",
+      "fileCount_one": "{{count}} 파일",
+      "fileCount_other": "{{count}} 파일",
+      "fileRowsHidden_few": "{{count}} 파일 행 숨겨진",
+      "fileRowsHidden_many": "{{count}} 파일 행 숨겨진",
+      "fileRowsHidden_one": "{{count}} 파일 행 숨겨진",
+      "fileRowsHidden_other": "{{count}} 파일 행 숨겨진",
+      "moreDiagnostics_few": "{{count}} 더 진단",
+      "moreDiagnostics_many": "{{count}} 더 진단",
+      "moreDiagnostics_one": "{{count}} 더 진단",
+      "moreDiagnostics_other": "{{count}} 더 진단",
+      "moreFiles_few": "{{count}} 더 많은 파일",
+      "moreFiles_many": "{{count}} 더 많은 파일",
+      "moreFiles_one": "{{count}} 더 많은 파일",
+      "moreFiles_other": "{{count}} 더 많은 파일",
+      "tasksDeferred_few": "{{count}} 작업이 패스를 무시",
+      "tasksDeferred_many": "{{count}} 작업이 패스를 무시",
+      "tasksDeferred_one": "{{count}} 작업이 패스를 무시",
+      "tasksDeferred_other": "{{count}} 작업이 패스를 무시"
+    },
+    "clarification": {
+      "awaitingLead": "팀 리드의 Awaiting clarification",
+      "awaitingUser": "당신에게서 Awaiting 선명"
+    },
+    "description": {
+      "add": "기술 추가를 클릭하십시오...",
+      "edit": "자주 묻는 질문",
+      "placeholder": "작업 설명 (지원 Markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Fetching 팀 데이터",
+      "title": "로딩..."
+    },
+    "logs": {
+      "newArriving": "새로운 작업 로그 도착"
+    },
+    "notFound": "찾을 수 없음",
+    "related": {
+      "blockedBy": "에 의해 차단",
+      "blocks": "팟캐스트",
+      "linkedFrom": "링크에서",
+      "links": "(주)",
+      "title": "관련 업무"
+    },
+    "review": {
+      "reviewer": "작성자: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "첨부파일",
+      "changes": "기타",
+      "comments": "이름 *",
+      "description": "이름 *",
+      "taskLogs": "작업 로그",
+      "workflowHistory": "사업소개"
+    },
+    "unassigned": "지정되지 않음",
+    "workflow": {
+      "implementationTimeTitle": "Persisted 작업 간격에서 구현 시간",
+      "inProgressTime": "진행 시간 {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "가장 최근의 {{formattedCount}} 댓글을 표시하여 UI 응답을 유지하십시오.",
+      "badges": {
+        "approved": "이름 *",
+        "reviewRequested": "자주 묻는 질문"
+      },
+      "unknownTime": "알 수없는 시간",
+      "actions": {
+        "reply": "이름 *",
+        "replyToComment": "댓글에 답글",
+        "showMore": "더 많은 의견보기 ({{visible}}/{{total}})",
+        "cancelReply": "자주 묻는 질문",
+        "comment": "이름 *"
+      },
+      "attachments": {
+        "previewAlt": "첨부파일 미리보기",
+        "downloadFailed": "다운로드 실패"
+      },
+      "replyingTo": "관련 기사",
+      "input": {
+        "placeholder": "댓글 추가... (이메일로 입력)",
+        "charsLeft": "{{count}} 숯 왼쪽",
+        "charsLeft_one": "{{count}} 숯 왼쪽",
+        "charsLeft_other": "{{count}} 숯 왼쪽",
+        "charsLeft_few": "{{count}} 숯 왼쪽",
+        "charsLeft_many": "{{count}} 숯 왼쪽"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "작업 흐름 기록",
+      "currentImplementationInterval": "현재 구현 간격",
+      "implementationIntervalEnded": "이 전환에 종료된 구현 간격",
+      "runningPrefix": "지원하다",
+      "createdAs": "로그인",
+      "by": "이름 *",
+      "reassigned": "견적 요청",
+      "assignedTo": "이름 *",
+      "unassignedFrom": "정의되지 않음",
+      "ownerChanged": "회사 소개",
+      "reviewRequested": "자주 묻는 질문",
+      "reviewStarted": "자주 묻는 질문",
+      "changesRequested": "자주 묻는 질문",
+      "approved": "이름 *",
+      "unknownEvent": "자주 묻는 질문"
+    },
+    "reviewStates": {
+      "approved": "이름 *",
+      "needsFix": "문제 해결",
+      "inReview": "관련 기사"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "이름 *",
+      "assigneeOptional": "(옵션)",
+      "blockedByOptional": "작업에 의해 차단 (옵션)",
+      "blockedBySummary": "작업이 차단됩니다: {{tasks}}",
+      "cancel": "이름 *",
+      "create": "이름 *",
+      "creating": "회사 소개",
+      "description": "작업은 팀의 작업 / 디렉토리에서 생성되며 Kanban 보드에 나타납니다.",
+      "descriptionOptional": "묘사 (선택)",
+      "detailsPlaceholder": "작업 세부사항 (지원 markdown)",
+      "hideOptionalFields": "선택 영역 숨기기",
+      "offlineNotice": {
+        "after": "- 실행을 시작하려면 팀을 시작합니다.",
+        "before": "팀은 오프라인입니다. 작업이 추가됩니다."
+      },
+      "promptOptional": "(옵션)",
+      "promptPlaceholder": "팀 구성원을위한 사용자 정의 지침...",
+      "relatedOptional": "관련 작업 (옵션)",
+      "relatedSummary": "관련: {{tasks}}",
+      "saved": "지원하다",
+      "searchTasks": "작업 검색...",
+      "selectMember": "회원 선택",
+      "selectMemberOptional": "회원 선택",
+      "showOptionalFields": "선택 사항 보기",
+      "startImmediately": "즉시 시작",
+      "startOfflineHint": "팀은 오프라인입니다. 즉시 작업을 시작하려면 먼저 팀을 시작합니다.",
+      "subject": "이름 *",
+      "subjectPlaceholder": "무엇을 할 것인가?",
+      "title": "작업 만들기",
+      "todo": "사이트맵"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "에 의해 차단",
+        "blocks": "팟캐스트",
+        "id": "이름 *",
+        "owner": "이름 *",
+        "status": "주요연혁",
+        "subject": "이름 *"
+      },
+      "empty": "이 팀에서 작업 없음",
+      "filters": {
+        "allOwners": "모든 소유자",
+        "allStatuses": "모든 상태",
+        "ownerAria": "필터 작업 by owner",
+        "statusAria": "상태별 필터 작업"
+      },
+      "showing": "{{shown}}의 {{total}}보기"
+    },
+    "status": {
+      "completed": "지원하다",
+      "deleted": "이름 *",
+      "inProgress": "로그인",
+      "pending": "뚱 베어"
+    },
+    "statusSummary": {
+      "progressAria": "{{completed}}/{{total}} 완료",
+      "inProgress": "{{count}} in progress의",
+      "inProgress_one": "{{count}} in progress의",
+      "inProgress_other": "{{count}} in progress의",
+      "inProgress_few": "{{count}} in progress의",
+      "inProgress_many": "{{count}} in progress의",
+      "pending": "{{count}} 종료",
+      "pending_one": "{{count}} 종료",
+      "pending_other": "{{count}} 종료",
+      "pending_few": "{{count}} 종료",
+      "pending_many": "{{count}} 종료",
+      "completed": "{{count}} 완료",
+      "completed_one": "{{count}} 완료",
+      "completed_other": "{{count}} 완료",
+      "completed_few": "{{count}} 완료",
+      "completed_many": "{{count}} 완료"
+    },
+    "unassigned": "지정되지 않음",
+    "teamPrefix": "팀:",
+    "openTask": "작업 열기",
+    "deleteConfirm": {
+      "title": "작업 삭제",
+      "message": "작업 이동 #{{taskId}} 쓰레기에?",
+      "confirmLabel": "이름 *",
+      "cancelLabel": "이름 *"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "이름 *",
+      "closeEditor": "닫기 편집기",
+      "closeTab": "닫기 탭",
+      "closeTooltip": "닫기 편집기 (Esc)",
+      "discard": "팟캐스트",
+      "discardAndClose": "Discard 및 닫기",
+      "keep": "제품 정보",
+      "keepMine": "내 계정",
+      "keyboardShortcuts": "키보드 단축키",
+      "overwrite": "파일 형식",
+      "refreshAria": "새로 고침 (F5)",
+      "refreshTooltip": "git 상태 새로 고침 (F5)",
+      "reload": "관련 상품",
+      "retry": "이름 *",
+      "save": "제품 정보",
+      "saveAllAndClose": "모두 저장 & 닫기"
+    },
+    "ariaLabel": "사업영역",
+    "dialogs": {
+      "conflictDescription": "이 파일은 외부로 수정되었습니다. 변경 사항이 있습니까?",
+      "conflictTitle": "Conflict 저장",
+      "unsavedDescription": "당신은 변경되지 않았습니다. 무엇을 할까?",
+      "unsavedFileDescription": "이 파일은 변경되지 않았습니다. 무엇을 할까?",
+      "unsavedTitle": "잘못된 변화"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "이름은 비어있을 수 없습니다",
+        "invalidName": "잘못된 이름",
+        "invalidCharacters": "이름 포함 잘못된 문자",
+        "nameTooLong": "이름도 긴"
+      },
+      "placeholders": {
+        "fileName": "파일 이름...",
+        "folderName": "폴더 이름..."
+      },
+      "aria": {
+        "newFileName": "새 파일 이름",
+        "newFolderName": "새 폴더 이름"
+      }
+    },
+    "draftRecovered": "이전 세션에서 삭제 된 변경 복구.",
+    "externalChange": {
+      "changed": "파일이 디스크에 바뀝니다.",
+      "deleted": "더 이상 디스크에 존재하지 않습니다."
+    },
+    "saveFailed": "저장 실패: {{error}}",
+    "sidebar": {
+      "explorer": "회사 소개",
+      "hide": "맨 위로",
+      "hideWithShortcut": "사이드바 숨기기 ({{shortcut}})",
+      "show": "쇼 sidebar",
+      "showWithShortcut": "사이드바 ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "파일 검색",
+      "closeSearch": "자주 묻는 질문",
+      "closeSearchShortcut": "검색 닫기 (Esc)",
+      "searchPlaceholder": "기타...",
+      "matchCase": "일치 케이스",
+      "matchCaseToggle": "아아",
+      "noResults": "결과 없음",
+      "resultsSummary": "{{count}}는 {{fileCount}} 파일에 일치",
+      "resultsSummary_one": "{{count}}이름 *{{fileCount}}파일 형식",
+      "truncated": "(잘림)",
+      "resultsSummary_few": "{{count}}는 {{fileCount}} 파일에 일치",
+      "resultsSummary_many": "{{count}}는 {{fileCount}} 파일에 일치",
+      "resultsSummary_other": "{{count}}는 {{fileCount}} 파일에 일치"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "파일로드 실패: {{error}}",
+      "loading": "로딩...",
+      "empty": "찾을 수 없음",
+      "dropForProjectRoot": "프로젝트 루트",
+      "moveToTrash": "Trash로 이동",
+      "moveToTrashConfirm": "쓰레기에 \"{{name}}\"를 이동?",
+      "cancel": "이름 *"
+    },
+    "goToLine": {
+      "title": "오시는 길",
+      "position": "(현재: {{current}}, 합계: {{total}})",
+      "placeholder": "라인 번호, +offset, -offset, 또는 %",
+      "go": "기타"
+    },
+    "searchPanel": {
+      "previousMatch": "이전 경기",
+      "nextMatch": "다음 경기",
+      "close": "이름 *",
+      "replacePlaceholder": "기타 제품",
+      "replace": "기타 제품",
+      "replaceNext": "다음을 대체",
+      "all": "모든 것",
+      "replaceAll": "모든 것"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, 콜 {{col}}",
+      "enableWatcher": "Enable 파일 watcher",
+      "disableWatcher": "Disable 파일 watcher",
+      "watch": "뚱 베어",
+      "watching": "뚱 베어",
+      "watchExternalChanges": "외부의 변화",
+      "disableExternalWatcher": "무능 외부 변화 watcher",
+      "encodingUtf8": "사이트맵",
+      "spaces": "공간: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "로딩...",
+      "openFullSize": "전체 크기 미리보기",
+      "openSystemViewer": "시스템 뷰어에서 열기"
+    },
+    "quickOpen": {
+      "title": "빠른 오픈",
+      "searchPlaceholder": "이름으로 파일 검색...",
+      "loading": "로딩...",
+      "empty": "찾을 수 없음"
+    },
+    "errorBoundary": {
+      "crashed": "에디터 추락",
+      "unknownError": "잘못된 오류"
+    },
+    "binaryPlaceholder": {
+      "file": "바이너리 파일 ({{size}})"
+    },
+    "unsavedChanges": "잘못된 변화",
+    "empty": {
+      "selectFile": "나무에서 파일을 선택하여 편집"
+    },
+    "search": {
+      "toggleReplace": "연락처",
+      "placeholder": "제품정보"
+    },
+    "shortcuts": {
+      "title": "키보드 단축키",
+      "groups": {
+        "fileOperations": "파일 작업",
+        "search": "제품정보",
+        "navigation": "- 연혁",
+        "editing": "관련 기사",
+        "markdown": "옵션 정보",
+        "general": "주요사업"
+      },
+      "actions": {
+        "quickOpen": "빠른 오픈",
+        "save": "제품 정보",
+        "saveAll": "모두 저장",
+        "closeTab": "닫기 탭",
+        "findInFile": "파일 찾기",
+        "searchInFiles": "파일 검색",
+        "goToLine": "오시는 길",
+        "nextTab": "다음 탭",
+        "previousTab": "이전 탭",
+        "cycleTabs": "사이클 탭",
+        "toggleSidebar": "관련 링크",
+        "undo": "이름 *",
+        "redo": "레드오",
+        "selectNextMatch": "다음 경기 선택",
+        "toggleComment": "댓글 RSS",
+        "splitPreview": "분할 미리보기",
+        "fullPreview": "전체 미리보기",
+        "closeEditor": "닫기 편집기"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "워드랩 사용",
+      "disableWordWrap": "Disable 워드랩",
+      "closeSplitPreview": "닫기 분할 미리보기",
+      "closePreview": "닫기 미리보기"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "자주 묻는 질문",
+      "creating": "회사 소개",
+      "goToDashboard": "Dashboard로 이동",
+      "launchTeam": "시작 팀",
+      "launching": "시작...",
+      "relaunchTeam": "Relaunch 팀",
+      "relaunching": "...에",
+      "saveChanges": "자주 묻는 질문",
+      "saving": "저장..."
+    },
+    "billing": {
+      "prefix": "시작 6월 15, 2026, Anthropic 요금",
+      "readArticle": "Anthropic 기사 읽기",
+      "suffix": "그리고 에이전트 SDK 사용 월 에이전트 SDK 크레딧, 인터렉티브 클로드 코드 제한으로 분리. 신용 리셋은 각 청구 사이클과 사용되지 않는 크레딧을 초과하지 않습니다."
+    },
+    "conflict": {
+      "description": "동일한 디렉토리의 두 팀을 실행 위험 - 그들은 같은 파일을 편집 할 수 있습니다. 다른 디렉토리 또는 git worktree를 사용하여 고려하십시오.",
+      "title": "또 다른 팀 \"{{team}}\"는 이미이 작업 디렉토리에 대한 실행",
+      "workingDirectory": "작업 디렉토리:"
+    },
+    "description": {
+      "createSchedule": "시간표 자동 Claude 작업 실행",
+      "createScheduleForTeam": "팀 \"{{team}}\"의 자동 실행",
+      "editSchedule": "팀 \"{{team}}\"의 편집 일정",
+      "launchPrefix": "팀 시작",
+      "launchSuffix": "로컬 클로드 CLI를 통해.",
+      "relaunchPrefix": "현재 실행 중지",
+      "relaunchSuffix": "로컬 클로드 CLI를 통해 다시 시작합니다."
+    },
+    "prepare": {
+      "action": {
+        "launch": "계정 만들기",
+        "relaunch": "릴랙스"
+      },
+      "blocked": "실행 환경은 사용할 수 없습니다 - {{action}}는 차단됩니다",
+      "checkingProviders": "선택된 공급자...",
+      "failed": "선택된 공급자를 준비하는 실패",
+      "preflight": "{{action}}의 이전 오류를 잡기위한 사전 기쁨 체크",
+      "preparingEnvironment": "환경 준비...",
+      "ready": "선택된 모든 공급자는 준비되어 있습니다.",
+      "readyWithNotes": "선택한 모든 공급자는 노트와 함께 준비됩니다.",
+      "unsupportedPreload": "현재 사전 로드 버전은 팀 지원하지 않습니다:prepareProvisioning. dev 앱을 재시작합니다.",
+      "selectWorkingDirectory": "실행 환경을 검증하기 위해 작업 디렉토리를 선택합니다.",
+      "someProvidersNeedAttention": "몇몇 선택된 공급자는 주의를 필요로 합니다."
+    },
+    "prompt": {
+      "label": "지원하다",
+      "oneShotPrefix": "이 신속한 전달",
+      "oneShotSuffix": "원샷 실행",
+      "saved": "지원하다",
+      "schedulePlaceholder": "Claude에 대한 지침은 일정에 실행...",
+      "teamLeadOptional": "팀 리드 (선택 사항)",
+      "teamLeadPlaceholder": "팀 리드에 대한 지침..."
+    },
+    "providerChanged": "공급자는 {{from}}에서 {{to}}로 변경했습니다. 이전 리드 세션은 재시작되지 않으며 리드는 신선한 컨텍스트로 시작되므로 새로운 실행 시간은 올바르게 적용됩니다.",
+    "relaunchFreshSession": "팀은 신선한 리드 세션을 시작합니다. 튼튼한 팀 상태, 작업 널 및 일원 윤곽은 발사 신속한으로 rehydrated입니다.",
+    "relaunchWarning": {
+      "description": "이 설정을 저장하면 현재 팀 프로세스를 중지하고 업데이트 된 로스터를 지속하고 새로운 실행 시간으로 팀을 다시 시작합니다.",
+      "title": "Relaunch는 현재 팀을 다시 시작합니다"
+    },
+    "schedule": {
+      "labelOptional": "(선택) 상표",
+      "labelPlaceholder": "e.g., 매일 코드 검토, 야간 테스트...",
+      "maxBudgetUsd": "최대 예산 (USD)",
+      "maxTurns": "최대 회전",
+      "noLimit": "제한 없음",
+      "noMatches": "어떤 팀이 검색합니다.",
+      "noTeams": "팀 없음. 먼저 팀 만들기.",
+      "searchTeams": "팀 검색...",
+      "selectTeam": "팀 선택...",
+      "team": "회사연혁",
+      "title": "소요시간"
+    },
+    "title": {
+      "createSchedule": "자주 묻는 질문",
+      "editSchedule": "편집 일정",
+      "launch": "시작 팀",
+      "relaunch": "Relaunch 팀"
+    },
+    "errors": {
+      "loadProjectsFailed": "프로젝트로드 실패",
+      "saveScheduleFailed": "자주 묻는 질문",
+      "relaunchFailed": "relaunch 팀에 실패",
+      "launchFailed": "팀 출시 실패"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode 리드는 선택한 모델이 필요합니다.",
+      "openCodeTeammateRequired": "OpenCode 리드는 적어도 하나의 OpenCode 팀메이트가 필요합니다.",
+      "selectWorkingDirectory": "작업 디렉토리 선택 (cwd)",
+      "fixMemberNames": "시작하기 전에 회원 이름 수정",
+      "memberNamesUnique": "회원 이름은 출시 전에 고유해야합니다."
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Relaunch 설정",
+      "title": "옵션 실행 설정",
+      "relaunchDescription": "팀 재시작하기 전에 roster 및 리드 실행 시간을 검토하십시오.",
+      "description": "프로젝트 경로에 초점을 맞추고 여분의 컨트롤을 원할 때만 확장하십시오."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "복사 팀",
+      "createTeam": "팀 만들기",
+      "deleteForever": "자주 묻는 질문",
+      "deletePermanently": "영구적으로 삭제",
+      "deleteTeam": "팀 삭제",
+      "launching": "시작...",
+      "launchTeam": "시작 팀",
+      "relaunchTeam": "Relaunch 팀",
+      "restore": "관련 상품",
+      "restoreTeam": "Restore 팀",
+      "retry": "이름 *",
+      "stopTeam": "정지 팀",
+      "stopping": "기타..."
+    },
+    "electronOnly": {
+      "description": "브라우저 모드에서 로컬 `~/.claude/teams` 디렉토리에 액세스할 수 없습니다.",
+      "title": "팀은 Electron 모드에서만 사용할 수 있습니다."
+    },
+    "empty": {
+      "description": "시작하려면 여기에 팀을 만들. 목록에서 자동으로 표시됩니다.",
+      "localOnly": "팀 생성은 로컬 Electron 모드에서만 가능합니다.",
+      "title": "찾을 수 없음"
+    },
+    "filter": {
+      "clearAll": "모든 것",
+      "label": "필터 팀",
+      "projectPriority": "프로젝트 우선",
+      "status": "주요연혁"
+    },
+    "loadFailed": "로드 팀에 실패",
+    "loading": "로딩 팀...",
+    "localOnly": "로컬 Electron 모드에서만 사용할 수 있습니다.",
+    "membersCount": "회원: {{count}}",
+    "membersCount_few": "회원: {{count}}",
+    "membersCount_many": "회원: {{count}}",
+    "membersCount_one": "회원: {{count}}",
+    "membersCount_other": "회원: {{count}}",
+    "noDescription": "설명 없음",
+    "noMatches": "현재 필터를 일치하는 팀 없음",
+    "partial": {
+      "pending": "마지막 발사는 아직도 재건축입니다.",
+      "skipped": "마지막 발사는 teammates를 건너 뛰었습니다.",
+      "skippedWithCount": "마지막 발사는 {{count}}/{{expected}} teammate를 건너 뛰었습니다.",
+      "skippedWithCount_few": "마지막 발사는 {{count}}/{{expected}} teammates를 건너 뛰었습니다.",
+      "skippedWithCount_many": "마지막 발사는 {{count}}/{{expected}} teammates를 건너 뛰었습니다.",
+      "skippedWithCount_one": "마지막 발사는 {{count}}/{{expected}} teammate를 건너 뛰었습니다.",
+      "skippedWithCount_other": "마지막 발사는 {{count}}/{{expected}} teammates를 건너 뛰었습니다.",
+      "stopped": "마지막 출시는 모든 팀원이 합류하기 전에 중단되었습니다.",
+      "stoppedWithCount": "마지막 발사는 {{count}}/{{expected}} teammate가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_few": "마지막 발사는 {{count}}/{{expected}} 팀 동료가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_many": "마지막 발사는 {{count}}/{{expected}} 팀 동료가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_one": "마지막 발사는 {{count}}/{{expected}} teammate가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_other": "마지막 발사는 {{count}}/{{expected}} 팀 동료가 합류하기 전에 중단했습니다."
+    },
+    "searchPlaceholder": "팀 검색...",
+    "sections": {
+      "otherTeams": "다른 팀",
+      "projectTeams": "{{project}} 팀",
+      "selectedProject": "선택된 프로젝트"
+    },
+    "solo": "한국어",
+    "status": {
+      "active": "지원하다",
+      "deleted": "파일 형식",
+      "launching": "시작...",
+      "offline": "옵션 정보",
+      "partialFailure": "시작 실패 partway",
+      "partialPending": "부츠 스트랩",
+      "partialSkipped": "회원가입",
+      "running": "지원하다"
+    },
+    "title": "팀 선택",
+    "trash": "쓰레기 ({{count}})",
+    "trash_few": "쓰레기 ({{count}})",
+    "trash_many": "쓰레기 ({{count}})",
+    "trash_one": "쓰레기 ({{count}})",
+    "trash_other": "쓰레기 ({{count}})",
+    "deleteDraft": {
+      "title": "삭제하기",
+      "message": "초안 팀을 삭제 \"{{teamName}}\"? 이것은 undone일 수 없습니다.",
+      "confirmLabel": "이름 *",
+      "cancelLabel": "이름 *"
+    },
+    "moveToTrash": {
+      "title": "trash로 이동",
+      "message": "trash에 팀 \"{{teamName}}\"를 이동? 나중에 복원 할 수 있습니다.",
+      "confirmLabel": "trash로 이동",
+      "cancelLabel": "이름 *"
+    },
+    "deleteForever": {
+      "title": "영구적으로 삭제",
+      "message": "팀 삭제 \"{{teamName}}\" 영구적으로? 모든 데이터는 손실됩니다.",
+      "confirmLabel": "자주 묻는 질문",
+      "cancelLabel": "이름 *"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "팁: Cross-team 메시지는 대상 팀 리드로 이동합니다. 팀 리드로 돌아가고 싶으면 메시지에 명시적으로 말하십시오."
+    },
+    "attachments": {
+      "attachFiles": "첨부 파일 (약 또는 드래그 & 드롭)",
+      "unavailable": "첨부파일은 사용할 수 없습니다",
+      "disabledHint": "파일 첨부는 온라인 팀 리드 및 온라인 OpenCode teammates에 지원됩니다. 첨부 파일 또는 스위치 수신자를 제거하십시오.",
+      "restrictions": {
+        "crossTeam": "파일 첨부는 cross-team 메시지에 지원되지 않습니다.",
+        "teamOffline": "팀은 파일을 첨부하는 온라인이어야 합니다.",
+        "unsupportedRecipient": "파일은 팀 리드 또는 OpenCode teammates로 보내질 수 있습니다.",
+        "openCodeOffline": "OpenCode teammates에 대한 파일을 첨부하려면 온라인이어야 합니다.",
+        "sending": "파일을 추가하기 전에 전송하기 위해 현재 메시지를 대기",
+        "maximumReached": "최대 첨부 파일",
+        "leadOnly": "파일은 팀 리드에 전송 될 수있다"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Slash 명령은 라이브 팀 리드를 요구하고 첨부 파일로 전송 할 수 없습니다",
+        "crossTeam": "Slash 명령은 현재 팀 리드에서만 실행할 수 있습니다.",
+        "notLead": "Slash 명령은 팀 리드로 보내질 수 있습니다.",
+        "leadOffline": "Slash 명령은 팀 리드가 온라인이어야합니다."
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "최근 Cross-team 요청 사용",
+      "teamOffline": "팀 오프라인"
+    },
+    "input": {
+      "charsLeft": "{{count}} 숯 왼쪽",
+      "charsLeft_one": "{{count}} 숯 왼쪽",
+      "charsLeft_other": "{{count}} 숯 왼쪽",
+      "teamLaunchingPlaceholder": "팀은 발사... 메시지는 inbox 납품을 위해 queued.",
+      "crossTeamPlaceholder": "{{team}}에 크로스 팀 메시지...",
+      "teamFallback": "팀 팀",
+      "placeholder": "메시지 쓰기... (신선을 위해 Shift+Enter를 보내려면)",
+      "slashTip": "팁: Claude 명령을 실행하려면 \"/\"을 사용할 수 있습니다.",
+      "charsLeft_few": "{{count}} 숯 왼쪽",
+      "charsLeft_many": "{{count}} 숯 왼쪽"
+    },
+    "teamSelector": {
+      "thisTeam": "이 팀",
+      "current": "현재 위치",
+      "online": "한국어",
+      "offline": "이름 *",
+      "onlineTitle": "- 한국어",
+      "offlineTitle": "옵션 정보"
+    },
+    "recipient": {
+      "select": "선택...",
+      "searchPlaceholder": "기타...",
+      "noResults": "결과 없음"
+    },
+    "actions": {
+      "voiceToText": "본문 바로가기",
+      "send": "이름 *",
+      "sendingUnavailableLaunching": "팀에서 사용할 수 없는 전송"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "필터 로그",
+      "tooltip": "필터 로그",
+      "sections": {
+        "stream": "스트레이트",
+        "content": "이름 *"
+      },
+      "kinds": {
+        "output": "제품정보",
+        "thinking": "더 보기",
+        "tool": "도구 호출"
+      },
+      "actions": {
+        "reset": "지원하다",
+        "save": "제품 정보"
+      },
+      "streams": {
+        "stdout": "뚱 베어",
+        "stderr": "사이트맵"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} 익지않는 선",
+    "rawLineCount_one": "{{formattedCount}} 익지않는 선",
+    "rawLinesCaptured": "{{count}} 캡처",
+    "emptyRawLogs": "{{count}}; 아직 조수 / 도구 출력이 없습니다.",
+    "noLogsYet": "아직 로그 없음.",
+    "teamNotRunning": "팀은 실행되지 않습니다.",
+    "searchPlaceholder": "검색 로그...",
+    "clearSearch": "자주 묻는 질문",
+    "newCount": "+{{count}} 새로운 기능",
+    "loading": "로드 중...",
+    "showMore": "더 보기",
+    "noLogsCaptured": "로그 캡처 없음.",
+    "noMatchingLogs": "일치하는 로그 없음.",
+    "rawLineCount_few": "{{formattedCount}} 익지않는 선",
+    "rawLineCount_many": "{{formattedCount}} 익지않는 선",
+    "rawLineCount_other": "{{formattedCount}} 익지않는 선",
+    "openFullscreen": "풀스크린 로그 열기",
+    "fullscreen": "전체 화면",
+    "viewingFullscreen": "fullscreen 형태에 있는 보기",
+    "logsTitle": "제품정보",
+    "sourceSelect": {
+      "placeholder": "로그 소스 선택...",
+      "searchPlaceholder": "로그 소스를 검색...",
+      "emptyMessage": "로그 소스가 없습니다.",
+      "ariaLabel": "로그 소스",
+      "leadLabel": "제품정보",
+      "selectSourceEmpty": "로그 소스를 선택합니다."
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "외부 팀",
+      "process": {
+        "startedBy": "에 의해 시작:",
+        "at": "다음 것:",
+        "openUrl": "URL를 여십시오"
+      },
+      "overflow": {
+        "hiddenTasks": "숨겨진 작업",
+        "empty": "자주 묻는 질문"
+      },
+      "member": {
+        "lead": "제품정보",
+        "workingOn": "일하기",
+        "recentTools": "최근 도구",
+        "spawn": {
+          "waitingToStart": "시작하기",
+          "starting": "시작하기",
+          "failed": "실패한"
+        },
+        "state": {
+          "active": "이름 *",
+          "idle": "아이들",
+          "offline": "이름 *",
+          "runningTool": "연락처"
+        },
+        "activeTool": {
+          "running": "연락처",
+          "failed": "도구 실패",
+          "finished": "완료된 공구"
+        },
+        "actions": {
+          "message": "이름 *",
+          "profile": "제품정보",
+          "task": "기타"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "제품정보",
+      "loading": "로드 로그",
+      "more": "+{{count}} 더보기",
+      "more_one": "+{{count}} 더보기",
+      "more_other": "+{{count}} 더보기",
+      "more_few": "+{{count}} 더보기",
+      "more_many": "+{{count}} 더보기"
+    },
+    "blockingEdge": {
+      "title": "블록 의존성",
+      "blocks": "제품정보",
+      "close": "이름 *",
+      "blockingHiddenTasks": "숨겨진 작업을 차단",
+      "blockedHiddenTasks": "숨겨진 작업을 차단"
+    },
+    "activityHud": {
+      "activity": "- 연혁",
+      "noRecentActivity": "최근 활동",
+      "more": "+{{count}} 더보기",
+      "more_one": "+{{count}} 더보기",
+      "more_other": "+{{count}} 더보기",
+      "more_few": "+{{count}} 더보기",
+      "more_many": "+{{count}} 더보기"
+    },
+    "provisioning": {
+      "launchDetails": "공지사항",
+      "launchDetailsDescription": "상세한 팀 시작 진행, 라이브 출력 및 CLI 로그."
+    }
+  },
+  "projectPath": {
+    "label": "회사연혁",
+    "source": {
+      "claude": "Claude의 설립자",
+      "codex": "Codex에 의해 발견",
+      "mixed": "Claude 및 Codex의 설립자"
+    },
+    "deleted": {
+      "title": "프로젝트 폴더는 더 이상 존재하지 않습니다.",
+      "label": "파일 형식"
+    },
+    "mode": {
+      "projectList": "프로젝트 목록에서",
+      "customPath": "주문 경로"
+    },
+    "loadingProjects": "로딩...",
+    "selectProject": "프로젝트 선택",
+    "searchPlaceholder": "이름 또는 경로로 프로젝트 검색",
+    "empty": "제안 사항",
+    "selectFromList": "목록에서 프로젝트 선택",
+    "noProjects": "찾을 수 없음, 사용자 정의 경로로 전환.",
+    "customWorkingDirectory": "주문 작업 디렉토리",
+    "browse": "계정 만들기",
+    "createAutomatically": "디렉토리가 존재하지 않으면 자동으로 생성됩니다."
+  },
+  "members": {
+    "badges": {
+      "worktree": "작업 트리"
+    },
+    "runtimeTelemetry": {
+      "title": "로컬 런타임 로드",
+      "description": "육아 및 아동 과정 만. 리모트 LLM inference는 포함되지 않습니다.",
+      "cpu": "사이트맵",
+      "memory": "기억하기",
+      "summedRss": "요약 RSS",
+      "sharedHost": "공유 OpenCode 호스트 미터. 이 회원에게는 한정되지 않습니다.",
+      "processTreeCapped": "프로세스 트리는이 샘플을 위해 캡핑되었습니다.",
+      "rssHint": "RSS는 공유된 페이지를 포함할 수 있습니다, 그래서 그것은 짐 신호로 제일 읽습니다, 독점적인 기억 아닙니다."
+    },
+    "editor": {
+      "title": "이름 *",
+      "addMember": "회원가입",
+      "editAsJson": "JSON로 편집",
+      "runInSeparateWorktrees": "별도의 worktrees에서 teammates 실행",
+      "agentTeamsMcpOnly": "에이전트 팀 MCP 만",
+      "removedCount": "제거 ({{count}})",
+      "removedModelLockReason": "제거된 회원은 soft delete History에 보관됩니다. 설정을 편집합니다.",
+      "memberNamesUnique": "회원 이름은"
+    },
+    "stats": {
+      "computing": "계산 통계...",
+      "empty": "사용할 수 없음",
+      "lines": "제품정보",
+      "linesInfo": "오시는 길 편집 및 쓰기 도구에 대한 정확한. Bash 파일 쓰기 명령 패턴 (heredoc, echo, sed)에서 추정 하 고 underreported 될 수 있습니다.",
+      "files": "파일 형식",
+      "toolCalls": "도구 통화",
+      "tokens": "토큰",
+      "toolUsage": "공구 사용법",
+      "filesTouched": "파일 터치 ({{count}})",
+      "viewAllChanges": "모든 변경 보기",
+      "showLess": "더보기",
+      "moreFiles": "+{{count}} 더보기",
+      "footer": "{{count}} 세션 · 컴파일 {{computedAgo}}",
+      "footer_one": "{{count}} 세션 · 컴파일 {{computedAgo}}",
+      "footer_few": "{{count}} 세션 · 컴파일 {{computedAgo}}",
+      "footer_many": "{{count}} 세션 · 컴파일 {{computedAgo}}",
+      "footer_other": "{{count}} 세션 · 컴파일 {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "검색 로그...",
+      "empty": "자주 묻는 질문",
+      "waitingForTaskActivity": "작업은 진행 중입니다 - 세션 활동 대기 (auto-refreshing)...",
+      "noTaskActivity": "이 작업을 위한 세션 활동 없음",
+      "noMemberActivity": "이 회원은 아직 기록된 세션 활동이 없습니다.",
+      "leadSessionTooltip": "풀 팀 리드 세션 로그 - 글로벌 관현 상황에 유용, 이 에이전트에 특정하지",
+      "memberSessionTooltip": "풀 persistent teammate 세션 로그 - 작업이 하위 시약 파일 대신 루트 회원 세션에서 실행 될 때 유용합니다.",
+      "startedAt": "{{time}} 시작",
+      "active": "이름 *",
+      "showDetails": "자주 묻는 질문",
+      "hideDetails": "자주 묻는 질문",
+      "loadingDetails": "로딩...",
+      "failedToLoadDetails": "세부사항을 적재하는 실패"
+    },
+    "detail": {
+      "relaunchOpenCode": "오픈코드",
+      "restart": "여행 정보",
+      "legacyLogsFallback": "Legacy 로그 Fallback",
+      "copyDiagnostics": "복사 진단",
+      "pid": "PID 분석{{pid}}",
+      "removedAt": "{{date}} 제거",
+      "failedToRestartMember": "회원가입",
+      "sendMessage": "공지사항",
+      "assignTask": "작업 할당",
+      "remove": "기타 제품"
+    },
+    "list": {
+      "loading": "팀 멤버",
+      "unavailable": "회원 roster 사용 불가",
+      "unavailableDescription": "{{count}} 팀메이트는 팀 메타데이터에서 알려져 있지만 roster 세부 사항은 누락됩니다.",
+      "unavailableDescription_one": "{{count}} 팀메이트는 팀 메타데이터에서 알려져 있지만 roster 세부 사항은 누락됩니다.",
+      "soloLeadOnly": "솔로 팀 - 리드 만",
+      "removedCount": "제거 ({{count}})",
+      "unavailableDescription_few": "{{count}} 팀메이트는 팀 메타데이터에서 알려져 있지만 roster 세부 사항은 누락됩니다.",
+      "unavailableDescription_many": "{{count}} 팀메이트는 팀 메타데이터에서 알려져 있지만 roster 세부 사항은 누락됩니다.",
+      "unavailableDescription_other": "{{count}} 팀메이트는 팀 메타데이터에서 알려져 있지만 roster 세부 사항은 누락됩니다."
+    },
+    "executionLog": {
+      "empty": "아무것도 표시",
+      "emptyUserMessage": "{{time}} - (비어 있는)",
+      "agentInstructions": "에이전트 지침",
+      "memberTurn": "{{member}} 회전",
+      "agentTurn": "에이전트 턴",
+      "turn": "제품정보"
+    },
+    "recentMessages": {
+      "latest": "최신 메시지",
+      "latestForMember": "최신 메시지 - {{member}}",
+      "loadMore": "더 보기",
+      "expand": "지원하다",
+      "collapse": "뚱 베어"
+    },
+    "leadModel": {
+      "defaultModel": "기본 정보",
+      "providerModelAria": "{{provider}} 공급자, {{model}}",
+      "leadShort": "제품정보",
+      "teamLead": "팀 리드",
+      "syncWithTeammates": "teammates와 동기화 모델",
+      "anthropicTeamWide": "Anthropic 팀 전체",
+      "runtimeInheritance": "리드 런타임은 자신의 공급자 또는 모델을 설정하지 않는 팀메이트에 적용됩니다.",
+      "anthropicContextLimit": "200K 컨텍스트 제한은 사용자 정의 Anthropic teammates를 포함한이 출시에서 Anthropic 실행 시간에 대한 팀 전체입니다."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "자동차 수리",
+      "wrapLines": "포장 라인",
+      "loadingTail": "적재 공정 로그 꼬리...",
+      "empty": "아직이 회원을 위해 캡처 된 프로세스 로그 파일 없음."
+    },
+    "tasks": {
+      "empty": "이 회원에게 할당된 작업 없음"
+    },
+    "messages": {
+      "loadOlder": "이전 메시지",
+      "filters": {
+        "all": "모든 것",
+        "messages": "이름 *",
+        "comments": "이름 *"
+      },
+      "empty": {
+        "loading": "로딩...",
+        "noComments": "이 회원에 대한 의견 없음",
+        "noLoadedMessages": "이 회원에 대한 로드 된 메시지 없음 아직",
+        "noMessages": "이 회원으로 메시지 없음",
+        "noLoadedActivity": "이 회원에 대한 로드 된 활동 없음",
+        "noActivity": "이 회원과의 활동"
+      }
+    },
+    "actions": {
+      "openProfile": "공지사항",
+      "editRole": "편집 역할",
+      "sendMessage": "자주 묻는 질문",
+      "assignTask": "작업 할당"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "사용자 정의 역할 입력..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} 일정",
+    "count_one": "{{count}} 일정",
+    "count_other": "{{count}} 일정",
+    "nextRun": "다음 것: {{next}}",
+    "actions": {
+      "runNow": "지금 시작",
+      "edit": "제품정보",
+      "pause": "팟캐스트",
+      "resume": "제품 설명",
+      "delete": "이름 *",
+      "addSchedule": "자주 묻는 질문"
+    },
+    "runHistory": {
+      "loading": "로딩...",
+      "empty": "아직 실행되지 않음"
+    },
+    "count_few": "{{count}} 일정",
+    "count_many": "{{count}} 일정",
+    "runLog": {
+      "title": "로그아웃",
+      "exitCode": "{{code}} 출구",
+      "retryCount": "리트리 {{count}}/{{max}}",
+      "stillRunning": "작업은 여전히 실행됩니다...",
+      "loadingLogs": "로드 로그...",
+      "errors": "계정 관리",
+      "close": "이름 *"
+    },
+    "cron": {
+      "expression": "Cron 표현",
+      "highFrequencyWarning": "고주파 일정 (5 분 간격 보다는 더 적은)",
+      "nextRuns": "다음 실행:",
+      "timezone": "시간 영역",
+      "selectTimezone": "선택 timezone",
+      "warmUpTime": "워밍업 시간",
+      "warmUpDescription": "예정된 실행 전에 선택한 공급자 준비",
+      "errors": {
+        "enterExpression": "cron 표현",
+        "invalidExpression": "잘못된 cron 표현"
+      },
+      "presets": {
+        "everyHour": "매시간",
+        "everySixHours": "매 6시간",
+        "dailyAtNine": "매일 오전 9시",
+        "weekdaysAtNine": "평일 오전 9시",
+        "mondayAtNine": "월요일 오전 9시",
+        "everyThirtyMinutes": "30분"
+      },
+      "warmUpOptions": {
+        "none": "핫업",
+        "fiveMinutes": "5 분",
+        "tenMinutes": "10분",
+        "fifteenMinutes": "15분",
+        "thirtyMinutes": "30분"
+      }
+    },
+    "empty": {
+      "title": "아직 일정 없음",
+      "description": "Cron 일정에서 Claude 작업을 자동으로 실행할 계획 만들기."
+    },
+    "title": "일정표",
+    "status": {
+      "active": "지원하다",
+      "paused": "뚱 베어",
+      "disabled": "지원하다"
+    },
+    "runStatus": {
+      "pending": "뚱 베어",
+      "warmingUp": "지금 연락",
+      "warm": "제품 정보",
+      "running": "지원하다",
+      "completed": "한국어",
+      "failed": "실패한",
+      "interrupted": "채용 정보",
+      "cancelled": "이름 *"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode 로컬 모델은 prompt-only limits 대신 OpenCode context 예산을 사용할 수 있습니다.",
+    "description": "이 teammate에 의해 사용되는 공급자와 모형을 위한 OpenCode config에 일치하는 한계를 추가하십시오. 이 도움말 OpenCode 컴팩트 하 고 prune 로컬 모델은 자신의 컨텍스트 창을 과잉.",
+    "replacePrefix": "기타 제품",
+    "and": "이름 *",
+    "replaceSuffix": "OpenCode 설정에서 공급자와 모델 ID로. Prompt 지시는 좋아합니다",
+    "promptInstructionsSuffix": "요청이 모델을 읽기 전에 조립되기 때문에 약합니다.",
+    "providerLimits": "공급자 제한",
+    "compactionConfig": "압축 구성"
+  },
+  "sessions": {
+    "noProjectPath": "관련 프로젝트 경로 없음",
+    "provisioningHint": "세션은 팀 프로비저닝 후 나타납니다.",
+    "projectNotFound": "찾을 수 없음",
+    "loading": "로딩...",
+    "empty": "자주 묻는 질문",
+    "showAllSessions": "모든 세션 보기",
+    "lead": "제품정보",
+    "removeFilter": "필터 제거",
+    "filterBySession": "이 세션에 의해 필터",
+    "openSession": "공지사항",
+    "title": "교육과정"
+  },
+  "provisioning": {
+    "pid": "PID 분석{{pid}}",
+    "cancel": "이름 *",
+    "moreWarningsHidden": "{{count}} 더 많은 경고 숨겨진",
+    "diagnostics": "진단",
+    "liveOutput": "실시간 출력",
+    "diagnosticsCopied": "진단",
+    "copyDiagnostics": "복사 진단",
+    "copied": "뚱 베어",
+    "noOutput": "아직 출력되지 않았습니다.",
+    "cliLogs": "CLI 로그",
+    "steps": {
+      "starting": "시작하다",
+      "configuring": "팀 설정",
+      "assembling": "회원 가입",
+      "finalizing": "연락처"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "기타...",
+        "ready": "이름 *",
+        "notes": "OK (참고)",
+        "failed": "사이트맵",
+        "pending": "이름 *"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI 바이너리 누락",
+        "openCodeRuntimeMissing": "OpenCode 실행 시간 누락",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows 액세스 차단",
+        "openCodeNoOutput": "OpenCode runtime 체크가 출력되지 않음",
+        "openCodeMcpUnreachable": "OpenCode 앱 MCP 무제한",
+        "workingDirectoryMissing": "작업 디렉토리 누락",
+        "cliBinaryCouldNotStart": "CLI 바이너리를 시작할 수 없습니다",
+        "cliPreflightIncomplete": "CLI preflight는 완료되지 않았습니다",
+        "authenticationRequired": "인증 필수",
+        "runtimeProviderNotConfigured": "Runtime 공급자는 형성되지 않습니다",
+        "cliPreflightFailed": "CLI preflight 실패",
+        "selectedModelCompatible": "선택한 모델 호환",
+        "selectedModelCompatibilityPending": "선택한 모델 호환성 pending",
+        "selectedModelAvailable": "선택된 모델",
+        "selectedModelVerified": "검증된 모델",
+        "selectedModelUnavailable": "선택한 모델 unavailable",
+        "selectedModelTimedOut": "선택한 모델 검증",
+        "selectedModelCheckFailed": "선택한 모델 체크 실패",
+        "selectedModelDeferred": "선택한 모델 검증 deferred",
+        "selectedModelPingNotConfirmed": "선정된 모형 ping는 확인하지 않았습니다",
+        "readyWithNotes": "주의 사항",
+        "needsAttention": "자주 묻는 질문"
+      },
+      "modelChecksSummary": "선택한 모델 체크 - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} 모델 사용 불가",
+        "unavailable_one": "{{count}} 모델 사용 불가",
+        "unavailable_other": "{{count}} 모델 사용 불가",
+        "checkFailed": "{{count}} 모델 체크 실패",
+        "checkFailed_one": "{{count}} 모델 체크 실패",
+        "checkFailed_other": "{{count}} 모델 체크 실패",
+        "timedOut": "{{count}} 모델",
+        "timedOut_one": "{{count}} 모델",
+        "timedOut_other": "{{count}} 모델",
+        "deferred": "{{count}} 인증 획득",
+        "deferred_one": "{{count}} 인증 획득",
+        "deferred_other": "{{count}} 인증 획득",
+        "pingNotConfirmed": "{{count}}는 확인되지 않았습니다",
+        "pingNotConfirmed_one": "{{count}}는 확인되지 않았습니다",
+        "pingNotConfirmed_other": "{{count}}는 확인되지 않았습니다",
+        "compatibilityPending": "{{count}} 호환, 딥 검증 종료",
+        "compatibilityPending_one": "{{count}} 호환, 딥 검증 종료",
+        "compatibilityPending_other": "{{count}} 호환, 딥 검증 종료",
+        "compatible": "{{count}} 호환",
+        "compatible_one": "{{count}} 호환",
+        "compatible_other": "{{count}} 호환",
+        "checking": "{{count}} 검사",
+        "checking_one": "{{count}} 검사",
+        "checking_other": "{{count}} 검사",
+        "available": "{{count}} 사용 가능",
+        "available_one": "{{count}} 사용 가능",
+        "available_other": "{{count}} 사용 가능",
+        "verified": "{{count}} 확인",
+        "verified_one": "{{count}} 확인",
+        "verified_other": "{{count}} 확인",
+        "unavailable_few": "{{count}} 모델 사용 불가",
+        "unavailable_many": "{{count}} 모델 사용 불가",
+        "checkFailed_few": "{{count}} 모델 체크 실패",
+        "checkFailed_many": "{{count}} 모델 체크 실패",
+        "timedOut_few": "{{count}} 모델",
+        "timedOut_many": "{{count}} 모델",
+        "deferred_few": "{{count}} 인증 획득",
+        "deferred_many": "{{count}} 인증 획득",
+        "pingNotConfirmed_few": "{{count}}는 확인되지 않았습니다",
+        "pingNotConfirmed_many": "{{count}}는 확인되지 않았습니다",
+        "compatibilityPending_few": "{{count}} 호환, 딥 검증 종료",
+        "compatibilityPending_many": "{{count}} 호환, 딥 검증 종료",
+        "compatible_few": "{{count}} 호환",
+        "compatible_many": "{{count}} 호환",
+        "checking_few": "{{count}} 검사",
+        "checking_many": "{{count}} 검사",
+        "available_few": "{{count}} 사용 가능",
+        "available_many": "{{count}} 사용 가능",
+        "verified_few": "{{count}} 확인",
+        "verified_many": "{{count}} 확인"
+      },
+      "openProviderSettings": "{{provider}} 설정 열기",
+      "copied": "뚱 베어",
+      "copyDiagnostics": "복사 진단",
+      "deepVerificationPending": "딥 검증은 여전히 실행됩니다. OpenCode 무료 모델은 약 20 초 걸릴 수 있습니다.",
+      "progress": {
+        "checkingSelectedProviders": "선택된 공급자를 병렬로...",
+        "checkingProvider": "{{provider}} 공급자 검사...",
+        "checkingProviders": "{{providers}} 공급자 검사..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "폴더 권한을 수정하거나 프로젝트를 user-writable 폴더로 이동합니다. 관리자로 실행하는 것은 임시 작업입니다.",
+        "openCodeBridgeNoOutput": "앱과 OpenCode 런타임을 재시작합니다. 반복하면 진단을 복사합니다.",
+        "workingDirectoryMissing": "기존 작업 디렉토리를 선택하고, 이 대화 상자를 다시 엽니다.",
+        "authenticationRequired": "Claude CLI에서 필요한 공급자를 인증한 후 이 대화 상자를 다시 엽니다.",
+        "runtimeProviderNotConfigured": "선택한 공급자 실행 시간을 구성, 다음이 대화 상자를 다시 엽니다.",
+        "openCodeRuntimeMissing": "공급자 상태 카드에서 OpenCode 런타임을 설치하거나 재시작하면 이 대화 상자를 다시 엽니다.",
+        "openCodeAppMcpUnreachable": "OpenCode 앱 MCP 브리지를 새로 고침합니다. 반복하면 앱과 OpenCode runtime을 다시 시작합니다.",
+        "cliBinaryMissing": "로컬 클로드 CLI 바이너리가 존재하고 시작할 수 있는지 확인하고, 이 대화 상자를 다시 엽니다.",
+        "default": "위의 문제를 해결 한 다음이 대화 상자를 다시 엽니다."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} 팀메이트는 허가 승인을 기다립니다",
+      "nameListWithMore": "{{names}}, +{{count}} 더보기",
+      "waitingForOpenCode": "OpenCode에 대 한 대기: {{names}}",
+      "bootstrapStalled": "부츠 스트랩 장착: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; OpenCode에 대한 대기: {{names}}",
+      "namedPendingDiagnostic": "{{label}}::{{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "부츠 스트랩",
+        "shellOnly": "쉘 전용",
+        "waitingForBootstrap": "부츠 스트랩에 대한 대기",
+        "bootstrapUnconfirmed": "부트 스트랩 unconfirmed",
+        "awaitingPermission": "Awaiting 허가",
+        "waitingForRuntime": "런타임을 위한 대기",
+        "shellOnlyLower": "쉘 전용",
+        "waitingForBootstrapLower": "부츠스트랩",
+        "bootstrapUnconfirmedLower": "부츠 스트랩 unconfirmed",
+        "awaitingPermissionLower": "자주 묻는 질문",
+        "waitingForRuntimeLower": "대기 시간"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} 시작 실패",
+        "teammatesFailedToStart": "{{count}} 팀메이트는 시작 실패",
+        "teammatesFailedRatio": "{{count}}/{{total}} 팀메이트는 시작 실패"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}}는 이 발사를 위해 건너 뛰었습니다",
+        "memberSkippedWithReason": "{{name}}는 이 발사를 위해 건너 뛰었습니다 - {{reason}}",
+        "memberSkippedCompact": "{{name}} 건너뛰기",
+        "teammatesSkipped": "{{count}} 팀은 건너뛰기",
+        "teammatesSkippedList": "드리프트 팀메이트: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} teammates는 이 발사를 위해 건너 뛰었습니다"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} 팀은 여전히 가입",
+        "teammatesStillJoining_one": "{{count}} 팀메이트는 여전히 참여",
+        "teammatesStillJoining_few": "{{count}} 팀은 여전히 가입",
+        "teammatesStillJoining_many": "{{count}} 팀은 여전히 가입",
+        "teammatesStillJoining_other": "{{count}} 팀은 여전히 가입",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} 팀메이트 확인"
+      },
+      "ready": {
+        "leadOnline": "온라인 채팅",
+        "allTeammatesJoined": "모든 {{count}} 팀원 합류",
+        "teamProvisionedLeadOnline": "팀 제공 - 리드 온라인",
+        "teamProvisionedAllJoined": "팀 제공 - 모든 {{count}} 팀원 합류",
+        "teamProvisionedStillJoining": "팀 제공 - teammates는 여전히 가입",
+        "launchFinishedWithErrors": "오류가 발생했습니다. - {{count}}/{{total}} 팀메이트가 시작되었습니다.",
+        "launchContinuedSkipped": "계속 출시 - {{count}}/{{total}} 팀메이트 건너뛰기",
+        "teamLaunchedLeadOnline": "팀 출시 - 리드 온라인",
+        "teamLaunchedAllJoined": "팀 출시 - 모든 {{count}} 팀원 합류"
+      },
+      "panel": {
+        "launchFailed": "시작 실패",
+        "launchDetails": "공지사항",
+        "launchFinishedWithErrors": "오류로 종료",
+        "launchContinuedSkipped": "Skipped teammates에 계속 출시",
+        "coreTeamReady": "핵심 팀 준비",
+        "finishingLaunch": "마무리 시작",
+        "teamLaunched": "팀 출시",
+        "launchingTeam": "시작 팀"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "실시간 상태",
+    "description": "Display-only heartbeat 및 시작 상태. 프로세스 컨트롤은 아래와 같습니다.",
+    "source": "소스: {{source}}",
+    "lane": "{{lane}} 레인",
+    "diagnosticOnly": "진단 전용",
+    "updated": "{{value}} 업데이트",
+    "states": {
+      "running": "지원하다",
+      "starting": "시작하다",
+      "waiting": "뚱 베어",
+      "degraded": "자주 묻는 질문",
+      "stopped": "뚱 베어",
+      "unknown": "이름 *"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Exact 작업 로그",
+      "loading": "정확한 작업 로그 로딩...",
+      "description": "Exact transcript 슬라이스는 로그에 사용되는 동일한 실행 로그 구성으로 렌더링됩니다.",
+      "emptyTitle": "아직 정확한 작업 로그 없음",
+      "emptyDescription": "Exact transcript 번들은 명시된 작업 링크된 transcript 메타데이터를 사용할 때 여기에 표시됩니다.",
+      "summaryOnly": "자주 묻는 질문"
+    },
+    "executionSessions": {
+      "title": "실행 세션",
+      "online": "- 한국어",
+      "updating": "업데이트",
+      "description": "레거시 세션 중심 성적 검색 및 미리보기."
+    },
+    "stream": {
+      "title": "작업 로그 스트림"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "작업 취소 {{taskId}}",
+      "cancel": "이름 *",
+      "moveBackToTodoConfirm": "이 작업을 TODO로 이동하고 팀에 알림?",
+      "confirm": "이름 *",
+      "keep": "제품 정보",
+      "changesNeedAttention": "변경 사항",
+      "changes": "기타",
+      "deleteTask": "작업 삭제",
+      "taskLogsActive": "작업 로그 활성화",
+      "newTaskLogsArriving": "새로운 작업 로그 도착",
+      "awaitingUser": "Awaiting 사용자",
+      "awaitingLead": "Awaiting 지도",
+      "blockedBy": "에 의해 차단",
+      "blocks": "팟캐스트",
+      "start": "지원하다",
+      "complete": "지원하다",
+      "approve": "앱로드",
+      "requestReview": "자주 묻는 질문",
+      "manualReview": "수동 검토",
+      "requestChanges": "자주 묻는 질문"
+    },
+    "filter": {
+      "title": "필터 작업",
+      "session": "회사연혁",
+      "allSessions": "모든 세션",
+      "teammate": "팀메이트",
+      "unassigned": "( 할당되지 않음)",
+      "column": "제품정보",
+      "clearAll": "모든 것"
+    },
+    "board": {
+      "addTask": "작업 추가",
+      "noTasks": "작업 없음",
+      "showMore": "{{count}} 더보기",
+      "hiddenCount": "{{count}} 숨겨진",
+      "trash": "정보 수집",
+      "gridView": "그리드 뷰",
+      "columnsView": "칼럼 보기"
+    },
+    "trash": {
+      "title": "정보 수집",
+      "empty": "삭제 된 작업",
+      "subject": "이름 *",
+      "owner": "이름 *",
+      "deleted": "파일 형식",
+      "unassigned": "지정되지 않음",
+      "restoreTask": "작업 복원",
+      "restore": "관련 상품",
+      "close": "이름 *"
+    },
+    "sort": {
+      "title": "정렬 작업",
+      "sortBy": "정렬 기준",
+      "reset": "지원하다",
+      "options": {
+        "updatedAt": {
+          "label": "최근 업데이트",
+          "description": "최근 업데이트"
+        },
+        "createdAt": {
+          "label": "이름 *",
+          "description": "가장 새로운"
+        },
+        "owner": {
+          "label": "이름 *",
+          "description": "알파벳순으로"
+        },
+        "manual": {
+          "label": "제품정보",
+          "description": "드래그 앤 드롭 주문"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "자주 묻는 질문",
+      "tasks": "기타",
+      "createdAgo": "생성된 {{time}}",
+      "updatedAgo": "{{time}} 업데이트",
+      "placeholder": "작업 검색... (#id 또는 텍스트)"
+    },
+    "grid": {
+      "addTask": "작업 추가",
+      "noTasks": "작업 없음"
+    },
+    "title": "숙박 플랜",
+    "columns": {
+      "todo": "사이트맵",
+      "inProgress": "PROGRESS에서",
+      "review": "사이트맵",
+      "done": "사이트맵",
+      "approved": "사이트맵"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "teammate worktrees에 대한 Git 저장소 상태 확인...",
+    "ready": "Git worktrees는 준비되어 있습니다.",
+    "readyOnBranch": "Git worktrees는 지점 {{branch}}에 준비되어 있습니다.",
+    "needsSetup": "Worktree 고립은 Git 설치를 필요로 합니다",
+    "initialCommitNotice": "초기 커밋 작업 단계 및 메시지로 모든 현재 파일을 커밋",
+    "initializeRepository": "Git 저장소 초기화",
+    "createInitialCommit": "초기 커밋",
+    "initialCommitMessage": "chore: 초기 커밋"
+  },
+  "toolApproval": {
+    "settings": "지원하다",
+    "autoAllowAllTools": "Auto-allow 모든 도구",
+    "autoAllowFileEdits": "Auto-allow 파일 편집 (Edit, 쓰기, NotebookEdit)",
+    "autoAllowSafeCommands": "자동 허용 명령 (git, pnpm, npm, ls...)",
+    "onTimeout": "타임 아웃:",
+    "after": "후에",
+    "secondsShort": "사이트맵",
+    "timeoutActions": {
+      "wait": "자주 묻는 질문",
+      "allow": "지원하다",
+      "deny": "프랑스어"
+    },
+    "submit": "제출하기",
+    "allow": "지원하다",
+    "deny": "프랑스어",
+    "allowAll": "모든 것",
+    "pendingCount": "{{count}} 종료",
+    "autoActionIn": "{{time}}의 자동 {{action}}",
+    "diff": {
+      "previewChanges": "미리보기 변경",
+      "readingFile": "파일 읽기...",
+      "binaryFile": "바이너리 파일 - 미리보기 할 수 없습니다",
+      "truncated": "2MB에서 truncated 파일 - diff는 불완전할지도 모릅니다",
+      "newFile": "새 파일"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "회원 작업 동기화",
+      "actionableItems": "관련 상품",
+      "fingerprint": "회사 소개",
+      "report": "제품정보",
+      "none": "이름 *",
+      "shadowWouldNudge": "그림자",
+      "yes": "이름 *",
+      "no": "없음",
+      "moreActionableItems": "{{count}} 액션 아이템(s)",
+      "diagnostics": "진단: {{diagnostics}}"
+    },
+    "title": "회원 작업 동기화",
+    "loadingDiagnostics": "선적 일원 일 sync 진단.",
+    "diagnosticsUnavailable": "회원 작업 동기화 진단은 사용할 수 없습니다."
+  },
+  "advancedCli": {
+    "title": "지원하다",
+    "useWorktree": "사용 worktree",
+    "recent": "이름 *",
+    "commandPreview": "명령 미리보기",
+    "customArguments": "사용자 정의",
+    "validate": "이름 *",
+    "validation": {
+      "allFlagsValid": "모든 플래그 유효한",
+      "unknownFlags": "알려진: {{flags}}",
+      "protectedFlags": "보호하는: {{flags}}",
+      "failed": "유효성 검사"
+    },
+    "placeholders": {
+      "worktreeName": "worktree 이름"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} 전",
+    "stoppedAgo": "정지 {{time}} 전",
+    "running": "지원하다",
+    "stopped": "뚱 베어",
+    "stopProcess": "정지 과정 (SIGTERM)",
+    "kill": "한국어",
+    "openInBrowser": "본문 바로가기",
+    "open": "기타",
+    "pid": "PID 분석{{pid}}",
+    "title": "사이트맵 회사연혁"
+  },
+  "taskActivity": {
+    "loadingDetails": "선적 활동 세부사항...",
+    "contextUnavailable": "상세한 성적표는 이 활동에 더 이상 사용할 수 없습니다.",
+    "loading": "로드 작업 활동...",
+    "lowSignalOnly": "키 작업 활동이 아직 발견되지 않았습니다. Low-level 실행 세부 사항은 Task Log Stream 아래에 있습니다.",
+    "empty": "명시되지 않은 작업 활동은 사용 가능한 성적표에 아직 발견되지 않았습니다. 이전 또는 통계 세션 로그는 여전히 실행 세션에서 사용할 수 있습니다.",
+    "title": "작업 활동",
+    "description": "transcript metadata에서 이 작업에 연결된 Key 명시된 실행 시간 활동."
+  },
+  "sendMessage": {
+    "title": "공지사항",
+    "description": "팀 구성원에게 직접 메시지를 보냅니다.",
+    "recipientLabel": "이름 *",
+    "selectMemberPlaceholder": "회원 선택",
+    "messageLabel": "이름 *",
+    "placeholder": "메시지 작성... (이메일로 보내기)",
+    "send": "이름 *",
+    "sending": "이름 *",
+    "charsLeft": "{{count}} 숯 왼쪽",
+    "saved": "지원하다",
+    "attachments": {
+      "teamOnlineRequired": "팀은 파일을 첨부하는 온라인이어야 합니다.",
+      "recipientUnsupported": "파일은 팀 리드 또는 OpenCode teammates로 보내질 수 있습니다.",
+      "openCodeOnlineRequired": "OpenCode teammates에 대한 파일을 첨부하려면 온라인이어야 합니다.",
+      "disabledHint": "파일 첨부는 온라인 팀 리드 및 온라인 OpenCode teammates에 지원됩니다. 첨부 파일 또는 스위치 수신자를 제거하십시오.",
+      "attachFiles": "첨부 파일 (약 또는 드래그 & 드롭)",
+      "unavailable": "첨부파일은 사용할 수 없습니다"
+    },
+    "quote": {
+      "remove": "견적 요청",
+      "replyingTo": "관련 기사"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "자주 묻는 질문",
+    "replyingTo": "관련 기사",
+    "placeholder": "댓글 추가... (이메일로 입력)",
+    "attachFile": "첨부 파일 (또는 붙여넣기)",
+    "voiceToText": "본문 바로가기",
+    "comment": "이름 *",
+    "charsLeft": "{{count}} 숯 왼쪽",
+    "saved": "지원하다",
+    "awaitingReplyFrom": "Awaiting 대답에서",
+    "or": "또는"
+  },
+  "taskAttachments": {
+    "dropImageHere": "여기에 드롭 이미지",
+    "attachImage": "첨부파일",
+    "pasteOrDragDrop": "또는 페이스트 / 드래그 드롭",
+    "fromOriginalMessage": "원본 메시지",
+    "dropFilesHere": "파일 삭제",
+    "loading": "로딩..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Auto-approve 모든 도구",
+    "autonomousModeDescription": "자율 모드: 팀 툴은 확인 없이 실행됩니다. 신뢰할 수없는 코드로 신중하게.",
+    "manualModeDescription": "수동 모드: 당신은 approve 또는 deny 각 공구는 순간에 호출할 것입니다."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "계정 관리",
+      "process": "제품정보"
+    },
+    "filters": {
+      "all": "모든 것"
+    },
+    "logs": {
+      "title": "제품정보",
+      "loading": "로드 회원 로그 스트림...",
+      "emptyTitle": "로그인 스트림 항목이 아직 회원에 대해 찾을 수 없습니다.",
+      "emptyDescription": "회원경쟁 성적표 또는 런타임 로그는 여기에서 볼 수 있습니다."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "변경해야 할 사항 설명... (입력자)",
+    "submit": "제출하기",
+    "charsLeft": "{{count}} 숯 왼쪽",
+    "saved": "지원하다",
+    "title": "자주 묻는 질문"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Dashboard를 여십시오",
+      "openTeam": "열린 팀",
+      "cancel": "이름 *"
+    },
+    "membersJson": {
+      "hide": "JSON를 숨기기"
+    },
+    "optional": {
+      "badge": "옵션 정보"
+    }
+  },
+  "runningTeams": {
+    "title": "팀 실행"
+  },
+  "layout": {
+    "maxPanesReached": "{{count}} 팬의 최대 도달"
+  },
+  "codexReconnect": {
+    "description": "Codex 세션은 stale이 나타납니다. 계속 연결.",
+    "useCode": "사용 코드"
+  },
+  "effortLevel": {
+    "label": "(선택) Effort 수준",
+    "maxDescription": "Max는 어려운 작업에 가장 많은 이유를 제공합니다."
+  },
+  "contextLimit": {
+    "limitTo200k": "200K 토큰에 대한 한계 컨텍스트",
+    "always200k": "(이 모형을 위한 통로 200K)",
+    "tooltipContent": "지원할 때 200K-token 컨텍스트 창에서 실행을 유지하십시오.",
+    "tooltipTitle": "Context 제한"
+  },
+  "roleSelect": {
+    "noRole": "없음 역할",
+    "customRole": "사용자 정의 역할...",
+    "searchPlaceholder": "검색 역할...",
+    "empty": "찾을 수 없음.",
+    "reservedRole": "이 역할은"
+  }
+}

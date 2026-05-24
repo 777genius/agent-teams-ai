@@ -5,6 +5,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { ToolOutputItem } from '../items/ToolOutputItem';
 
 import { CollapsibleSection } from './CollapsibleSection';

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { CodeMirrorDiffView } from './CodeMirrorDiffView';
 import { DiffErrorBoundary } from './DiffErrorBoundary';
 import { FileSectionPlaceholder } from './FileSectionPlaceholder';

@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Membuat tugas dari pesan",
+      "expandMessage": "Perluas pesan",
+      "replyToMessage": "Balas ke pesan",
+      "restartTeam": "Mulai ulang tim"
+    },
+    "authError": {
+      "description": "Otentikasi gagal. Memulai kembali tim akan menyegarkan sesi dan mungkin menyelesaikan masalah ini. Jika masalah berlanjut, periksa API Kredensial atau coba lagi nanti."
+    },
+    "automation": {
+      "reviewPickup": "Meminta rekan untuk mengambil ulasan",
+      "stallNudge": "Meminta rekan tim untuk melanjutkan tugas macet",
+      "workSyncBody": "Meminta rekan tim untuk menyelaraskan pekerjaan saat ini"
+    },
+    "badges": {
+      "automation": "otomatisasi",
+      "bootstrap": "bootstrap",
+      "command": "perintah",
+      "comment": "Komentar",
+      "live": "hidup",
+      "note": "catatan",
+      "rateLimited": "Batas Laju",
+      "restart": "restart",
+      "result": "hasil",
+      "session": "sesi",
+      "stallNudge": "nudge kios",
+      "start": "awal",
+      "workSync": "sinkronisasi kerja"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap diakui",
+      "restarting": "Memulai kembali rekan tim",
+      "starting": "Mulai rekan tim"
+    },
+    "rawJson": "Raw JSON",
+    "unread": "Belum dibaca",
+    "thoughts": {
+      "count": "{{count}} pikiran",
+      "count_one": "{{count}} pikir",
+      "expand": "Perluas pikiran",
+      "showMore": "Tampilkan lebih banyak",
+      "showLess": "Tampilkan kurang",
+      "count_few": "{{count}} pikiran",
+      "count_many": "{{count}} pikiran",
+      "count_other": "{{count}} pikiran",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - Pikiran"
+    },
+    "timeline": {
+      "loadingMessages": "Memuat pesan...",
+      "noMessages": "Tidak ada pesan",
+      "emptyHint": "Kirim pesan ke anggota untuk melihat aktivitas.",
+      "newSession": "Sesi baru",
+      "olderCount": "+{{count}} lebih tua",
+      "showMore": "Tampilkan {{count}} lagi",
+      "showAll": "Tampilkan semua",
+      "olderCount_one": "+{{count}} lebih tua",
+      "olderCount_few": "+{{count}} lebih tua",
+      "olderCount_many": "+{{count}} lebih tua",
+      "olderCount_other": "+{{count}} lebih tua"
+    },
+    "pendingReplies": {
+      "title": "Menunggu balasan",
+      "openMember": "Buka anggota",
+      "messageSentAwaitingReply": "Pesan terkirim, menunggu balasan",
+      "awaitingReply": "menunggu balasan",
+      "externalTeam": "tim eksternal",
+      "crossTeamAwaitingReply": "Pesan Cross- tim dikirim, menunggu balasan",
+      "user": "pengguna",
+      "awaitingApproval": "menunggu persetujuan"
+    },
+    "reply": {
+      "replyingTo": "Menjawab ke",
+      "action": "Balas"
+    },
+    "activeTasks": {
+      "inProgress": "Dalam proses"
+    },
+    "expandDialog": {
+      "description": "Tampilan pesan yang diperluas"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Buat",
+      "creating": "Membuat...",
+      "openExisting": "Buka Tim Yang Telah Ada",
+      "skipPreflightAndCreate": "Lewati sebelum penerbangan dan buat"
+    },
+    "conflict": {
+      "description": "Menjalankan dua tim dalam direktori yang sama berisiko - mereka mungkin konflik menyunting file yang sama. Pertimbangkan menggunakan direktori berbeda atau pohon kerja git untuk isolasi.",
+      "title": "Tim lain \"{{team}}\"sedang berjalan untuk direktori kerja ini",
+      "workingDirectory": "Direktori kerja:"
+    },
+    "description": {
+      "copy": "Membuat tim baru berdasarkan yang ada.",
+      "create": "Atur timmu dan pilih bagaimana awalnya."
+    },
+    "errors": {
+      "nameExists": "Nama tim sudah ada",
+      "nameLaunching": "Sebuah tim dengan nama ini saat ini meluncurkan",
+      "createConfigFailed": "Gagal membuat konfigurasi tim",
+      "loadProjectsFailed": "Gagal memuat proyek"
+    },
+    "fields": {
+      "color": "Warna (opsional)",
+      "description": "Deskripsi (opsional)",
+      "prompt": "Prompt untuk memimpin tim (opsional)",
+      "teamName": "Nama tim"
+    },
+    "launchAfterCreate": {
+      "description": "Mulai tim segera melalui Claude lokal CLI.",
+      "label": "Jalankan perintah setelah membuat"
+    },
+    "localOnly": "Hanya tersedia dalam mode Elektron lokal.",
+    "onDisk": "Pada disk:",
+    "placeholders": {
+      "description": "Deskripsi singkat dari tujuan tim",
+      "prompt": "Instruksi untuk memimpin tim selama provisioning..."
+    },
+    "saved": "Tersimpan",
+    "solo": {
+      "description": "Hanya pimpinan tim (proses utama) yang akan dimulai - tidak ada rekan tim akan melahirkan. Bekerja seperti sesi agen biasa dalam waktu berjalan yang Anda pilih (Claude Codex, OpenCode, Gemini) tetapi dengan akses ke papan tugas untuk perencanaan. Menghemat token dengan menghindari koordinasi tim di atas kepala. Anda dapat menambahkan anggota kemudian dari pengaturan tim.",
+      "label": "Tim Solo"
+    },
+    "title": {
+      "copy": "Salin Tim",
+      "create": "Buat Tim"
+    },
+    "optional": {
+      "launchSettingsTitle": "Pengaturan peluncuran opsional",
+      "launchSettingsDescription": "Prompt, keselamatan, dan CLI overrides tinggal di sini ketika Anda membutuhkan mereka.",
+      "teamDetailsTitle": "Rincian tim opsional",
+      "teamDetailsDescription": "Pertahankan aliran baku kompak dan hanya buka ini ketika Anda ingin konteks tambahan atau warna gubahan."
+    },
+    "prepare": {
+      "unsupportedPreload": "Versi pramuat saat ini tidak mendukung tim: Mempersiapkan Provisioning. Nyalakan kembali aplikasi dev.",
+      "selectWorkingDirectory": "Pilih direktori kerja untuk memvalidasi lingkungan peluncuran.",
+      "someProvidersNeedAttention": "Beberapa penyedia yang dipilih butuh perhatian.",
+      "readyWithNotes": "Semua penyedia yang dipilih siap, dengan catatan.",
+      "ready": "Semua penyedia terpilih siap.",
+      "failed": "Gagal menyiapkan penyedia yang dipilih",
+      "checkingProviders": "Memeriksa penyedia yang dipilih...",
+      "preparingEnvironment": "Mempersiapkan lingkungan...",
+      "selectedProvidersReadyWithNotes": "Penyedia terpilih siap (dengan catatan)",
+      "selectedProvidersReady": "Penyedia terpilih siap"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Nama harus berisi paling tidak satu huruf atau digit",
+      "nameTooLong": "Nama terlalu panjang (max 128 chars)",
+      "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
+      "memberNameRequired": "Nama anggota tidak dapat kosong",
+      "memberNameInvalid": "Nama anggota harus dimulai dengan alfanumerik, hanya gunakan [a-zA-Z0-9.], maksimal 128 chars",
+      "memberNamesUnique": "Nama anggota harus unik",
+      "openCodeLeadModelRequired": "OpenCode memimpin membutuhkan model yang dipilih.",
+      "openCodeTeammateRequired": "OpenCode memimpin membutuhkan setidaknya satu teman satu tim OpenCode.",
+      "teamLaunching": "Tim sedang meluncurkan",
+      "teamNameExists": "Nama tim sudah ada",
+      "checkFormFields": "Periksa ruas formulir"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Batal",
+      "save": "Simpan"
+    },
+    "addMemberLockReason": "Gunakan dedikasi Tambahkan dialog anggota untuk menambahkan rekan tim baru sementara tim hidup.",
+    "description": "Ubah nama tim, deskripsi, dan warna",
+    "errors": {
+      "changesSavedRefreshFailed": "Perubahan tim disimpan, tapi gagal untuk menyegarkan tampilan terbaru: {{message}}",
+      "liveRenameBlocked": "Existing rekan tim tidak dapat diganti nama sementara tim masih hidup. ganti nama: {{names}}",
+      "memberNameEmpty": "Nama anggota tidak dapat kosong",
+      "memberNameInvalid": "Nama anggota harus dimulai dengan alfanumerik, hanya gunakan [a-zA-Z0-9.], maksimal 128 chars",
+      "memberNameNumericSuffix": "Nama anggota \"{{name}}\"tidak diperbolehkan (disediakan untuk Claude CLI auto-suffix). Gunakan \"{{base}}\"sebagai gantinya.",
+      "memberNameReserved": "Nama anggota \"{{name}}\"Dipesan",
+      "memberNamesUnique": "Nama anggota harus unik sebelum menyimpan",
+      "newLiveTeammates": "Tambahkan rekan tim baru dari dialog anggota yang berdedikasi selagi tim masih hidup. Tim Sunting hanya mendukung pemutakhiran rekan tim yang ada.",
+      "provisioning": "Pengaturan tim tidak dapat disunting ketika pemberian masih dalam proses. Tunggu peluncuran selesai, kemudian coba lagi.",
+      "restartFailedMany": "Tim diselamatkan, tapi gagal untuk memulai kembali tim ini: {{failures}}",
+      "restartFailedOne": "Tim diselamatkan, tapi gagal untuk memulai ulang rekan satu tim ini: {{failures}}",
+      "saveFailed": "Gagal menyimpan",
+      "settingsChanged": "Pengaturan tim berubah saat dialog ini dibuka. Buka kembali dan tinjau keadaan terbaru sebelum menabung.",
+      "settingsSavedMembersAndRefreshFailed": "Pengaturan tim disimpan, tapi perubahan anggota gagal: {{message}}Refresh juga gagal: {{refreshError}}",
+      "settingsSavedMembersFailed": "Pengaturan tim disimpan, tapi perubahan anggota gagal: {{message}}",
+      "settingsSavedRefreshFailed": "Pengaturan tim disimpan, tapi gagal menyegarkan tampilan terakhir: {{message}}",
+      "teamNameEmpty": "Nama tim tidak dapat kosong",
+      "unsupportedMixedPrimaryMutation": "Langsung edits untuk primary-dimiliki rekan tim dalam tim OpenCode campuran belum didukung. Menghentikan tim, mengedit daftar, kemudian bersantai. Terpengaruh: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Warna (opsional)",
+      "description": "Deskripsi",
+      "name": "Nama"
+    },
+    "memberRestartWarning": "Menyimpan akan menghidupkan ulang rekan satu tim ini untuk menerapkan peran, alur kerja, isolasi worktree, penyedia, model, usaha, atau MCP Akses berubah.",
+    "notices": {
+      "liveRenameBlocked": "Penyelamatan langsung diblokir karena rekan tim yang ada diubah namanya. Revert perubahan identitas atau menghentikan tim pertama.",
+      "newLiveTeammates": "Rekan baru tidak dapat ditambahkan dari Tim Edit sementara tim masih hidup. Gunakan dialog Tambah anggota sebagai gantinya.",
+      "provisioning": "Pengadaan tim masih berlangsung. Editing sementara terkunci sampai peluncuran selesai.",
+      "restartMany": "Menyimpan akan me-restart atau relachch rekan tim ini untuk menerapkan peran, alur kerja, isolasi worktree, penyedia, model, usaha, atau MCP perubahan akses: {{names}}.",
+      "restartOne": "Menyimpan akan me-restart atau menjalankan rekan satu tim ini untuk menerapkan peran, alur kerja, isolasi worktree, penyedia, model, usaha, atau MCP perubahan akses: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Langsung edits / pemindahan untuk primary-dimiliki rekan tim dalam tim OpenCode campuran memerlukan berhenti dan relaunching tim: {{names}}."
+    },
+    "placeholders": {
+      "description": "Deskripsi tim (opsional)",
+      "teamName": "Nama tim"
+    },
+    "teamLead": {
+      "changeRuntime": "Ubah lead runtime",
+      "changeRuntimeDescription": "Buka Tim Relaunch untuk mengubah penyedia memimpin, model, atau usaha.",
+      "modelLockReason": "Tim memimpin runtime dikelola dari Tim Relaunch.",
+      "readOnlyHint": "Nama depan tim dan peran tetap baca-hanya di sini. Buka panel waktu-jalan pada baris depan untuk mengubah penyedia, model, atau usaha.",
+      "role": "Ketua Tim"
+    },
+    "title": "Sunting Tim"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Hapus anggota",
+      "removeAria": "Hapus {{name}}",
+      "restore": "Pulihkan anggota",
+      "restoreAria": "Pulihkan {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "konfigurasi konteks baku",
+      "description": "Konteks antropik adalah seluruh tim untuk peluncuran ini: {{mode}}. Gunakan kotak cek konteks runtime memimpin untuk mengubahnya.",
+      "limitEnabled": "Batas 200K diaktifkan"
+    },
+    "mcp": {
+      "buttonInherit": "MCP Warisan",
+      "buttonScopes": "MCP scopes",
+      "chooseScopes": "Pilih scopes",
+      "inheritLead": "Inherit lead",
+      "lockedInfo": "Agen Tim MCP hanya diaktifkan untuk semua rekan tim. Rekan satu tim ini hanya akan meluncurkan Agen Tim server.",
+      "mode": "MCP mode",
+      "scopes": {
+        "local": "lokal",
+        "project": "projek",
+        "user": "pengguna"
+      },
+      "serverNames": "Nama server",
+      "settingInfo": "Agen Tim MCP meluncurkan rekan satu tim ini dengan hanya Agen Tim server. Scope dan mode allowlist berlaku hanya untuk peluncuran rekan satu tim ini.",
+      "strictAllowlist": "Coret allowlist",
+      "tooltip": "{{label}}Kontrol anggota ini MCP kebijakan warisan",
+      "agentTeamsMcp": "Agen Tim MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} penyedia, {{model}}",
+      "currentLeadRuntime": "runtime memimpin saat ini",
+      "default": "Baku",
+      "inheritedTooltip": "Provider, model, dan usaha yang diwariskan dari memimpin sementara sync diaktifkan.",
+      "leadSuffix": "{{label}} (lead)",
+      "liveDisabled": "Penyedia, model, dan perubahan usaha dinonaktifkan saat tim hidup. Atur kembali tim untuk menerapkannya dengan aman.",
+      "lockedActionFallback": "Perubahan waktu berjalan terbuka Tim Relaunch, di mana penyedia, model, dan usaha dapat diperbarui.",
+      "restartWholeTeam": "Menyelamatkan perubahan waktu-jalan memulai kembali seluruh tim."
+    },
+    "nameAria": "Anggota {{index}} nama",
+    "nameFallback": "anggota {{index}}",
+    "noRole": "Tidak ada peran",
+    "removed": "Dibuang",
+    "workflow": {
+      "addTooltip": "Tambahkan alur kerja rekan tim",
+      "editTooltip": "Sunting alur kerja rekan tim",
+      "label": "Workflow (opsional)",
+      "placeholder": "Bagaimana agen ini harus berperilaku, berinteraksi dengan orang lain...",
+      "saved": "Tersimpan"
+    },
+    "worktree": {
+      "description": "Jalankan tim ini di pohon kerja git terpisah. Terapkan / tolak perubahan target yang worktree, bukan area kerja utama.",
+      "label": "worktree"
+    },
+    "addMembers": {
+      "title": "Tambah Anggota",
+      "description": "Tambahkan anggota baru ke {{teamName}}"
+    },
+    "placeholders": {
+      "name": "Nama anggota",
+      "mcpServers": "github, penjaga"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Tambah",
+      "cancel": "Batal",
+      "delete": "Hapus",
+      "editCode": "Sunting kode",
+      "launch": "Luncurkan",
+      "remove": "Hapus",
+      "stop": "Berhenti",
+      "task": "Tugas",
+      "visualize": "Visualize"
+    },
+    "deleteTeam": {
+      "description": "Hapus tim \"{{team}}\"? Tindakan ini tidak dapat diubah. Semua data dan tugas tim akan dihapus.",
+      "title": "Hapus tim"
+    },
+    "draft": {
+      "descriptionPrefix": "Ini tim wajib militer.",
+      "descriptionSuffix": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum ditetapkan oleh CLI belum. Klik Peluncuran untuk memilih model dan memulai tim.",
+      "descriptionSuffix_few": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum ditetapkan oleh CLI belum. Klik Peluncuran untuk memilih model dan memulai tim.",
+      "descriptionSuffix_many": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum ditetapkan oleh CLI belum. Klik Peluncuran untuk memilih model dan memulai tim.",
+      "descriptionSuffix_one": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum ditetapkan oleh CLI belum. Klik Peluncuran untuk memilih model dan memulai tim.",
+      "descriptionSuffix_other": "telah dikonfigurasi dengan {{count}} {{member}} tetapi belum ditetapkan oleh CLI belum. Klik Peluncuran untuk memilih model dan memulai tim.",
+      "member": "anggota",
+      "member_few": "anggota",
+      "member_many": "anggota",
+      "member_one": "anggota",
+      "member_other": "anggota",
+      "title": "Tim belum diluncurkan"
+    },
+    "invalidTab": "Tab tim tidak valid",
+    "kanbanSafeData": "Gagal memuat habis kanban. Menampilkan data aman.",
+    "loadFailed": "Gagal memuat tim",
+    "loading": "Memuat tim",
+    "loadingSidebar": "Memuat panel samping tim",
+    "offline": {
+      "offline": "Tim sedang offline",
+      "partialFailed": "Peluncuran terakhir gagal pada partway",
+      "partialMissing": "Peluncuran terakhir gagal pada partway - {{missing}}/{{expected}} rekan tim tidak bergabung",
+      "reconciling": "Peluncuran terakhir masih berdamai."
+    },
+    "previous": "Sebelumnya: {{paths}}",
+    "removeMember": {
+      "description": "Hapus \"{{member}}\"dari tim? Tugas dan pesan akan dipertahankan, tapi nama ini tidak dapat digunakan kembali.",
+      "title": "Hapus anggota"
+    },
+    "sections": {
+      "team": "Tim"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Aktif",
+      "launching": "Peluncuran...",
+      "running": "Berjalan"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memori"
+    },
+    "tooltips": {
+      "deleteTeam": "Hapus tim",
+      "editTeam": "Sunting tim",
+      "editUnavailableProvisioning": "Tim Sunting tidak tersedia ketika pemberian masih dalam proses",
+      "openBuiltInEditor": "Buka projek di penyunting bawaan",
+      "openTeamGraph": "Buka grafik tim",
+      "stopTeam": "Hentikan tim"
+    },
+    "waitingForProvisioning": "Data tim akan muncul setelah pemberian selesai",
+    "context": {
+      "title": "Konteks"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Terima",
+        "discard": "Buang",
+        "discardTooltip": "Buang semua edits untuk berkas ini",
+        "keepMyDraft": "Jauhkan draft saya",
+        "reject": "Tolak",
+        "reloadFromDisk": "Muat ulang dari disk",
+        "restore": "Pulihkan",
+        "restoreTooltip": "Buat / kembalikan berkas ini pada disk dari pratinjau",
+        "saveFile": "Simpan Berkas",
+        "saveFileTooltip": "Simpan berkas ke disk"
+      },
+      "badges": {
+        "deleted": "DELETED",
+        "manualReview": "MANUAL REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Diska Saat ini",
+        "file-history": "Riwayat Berkas",
+        "git-fallback": "Mundur Git",
+        "ledger-exact": "Pengantar Tugas",
+        "ledger-snapshot": "Ledger Snapshot",
+        "snippet-reconstruction": "Terstruktur kembali",
+        "unavailable": "Isi tidak tersedia"
+      },
+      "contentUnavailable": {
+        "badge": "Isi tidak tersedia",
+        "description": "Buku besar mencatat metadata untuk perubahan ini, tetapi isi teks penuh tidak tersedia. Ini biasanya berarti biner, besar, atau hash-only konten.",
+        "safety": "Menerima / menolak otomatis dinonaktifkan bagi berkas ini untuk menghindari disk yang tidak aman menulis.",
+        "title": "Isi teks tidak tersedia"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Terima / Tolak dinonaktifkan karena isi teks penuh tidak tersedia.",
+        "acceptRejectMissingOnDisk": "Terima / Tolak dinonaktifkan ketika berkas hilang pada disk.",
+        "rejectBaselineUnavailable": "Tolak dinonaktifkan karena baseline asli tidak tersedia.",
+        "rejectContentUnavailable": "Tolak dinonaktifkan karena isi teks penuh tidak tersedia.",
+        "rejectManualLedgerReview": "Tolak dinonaktifkan karena perubahan buku besar ini memiliki konten biner, besar, atau tidak tersedia."
+      },
+      "externalChange": {
+        "changedOnDisk": "Diubah pada disk",
+        "deletedOnDisk": "Dihapus pada disk",
+        "recreatedOnDisk": "Dirakit pada disk"
+      },
+      "missingOnDisk": {
+        "badge": "Hilang pada disk",
+        "description": "Kita masih dapat menampilkan pratinjau dari log agen, tetapi sistem berkas Anda tidak sinkron.",
+        "restorePrefix": "Gunakan",
+        "restoreSuffix": "untuk menulis isi pratinjau kembali ke disk.",
+        "restoreUnavailable": "Isi berkas penuh tak tersedia untuk dikembalikan secara otomatis.",
+        "title": "Berkas hilang pada disk"
+      },
+      "pathChange": {
+        "from": "Dari {{path}}",
+        "to": "Ke {{path}}"
+      },
+      "worktree": {
+        "isolated": "worktree terisolasi"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} tertunda",
+        "pending_one": "{{count}} tertunda",
+        "pending_other": "{{count}} tertunda",
+        "accepted": "{{count}} diterima",
+        "accepted_one": "{{count}} diterima",
+        "accepted_other": "{{count}} diterima",
+        "rejected": "{{count}} ditolak",
+        "rejected_one": "{{count}} ditolak",
+        "rejected_other": "{{count}} ditolak",
+        "acrossFiles": "di seluruh {{count}} berkas",
+        "acrossFiles_one": "di seluruh {{count}} berkas",
+        "acrossFiles_other": "di seluruh {{count}} berkas",
+        "edited": "{{count}} Diedit",
+        "edited_one": "{{count}} Diedit",
+        "edited_other": "{{count}} Diedit",
+        "pending_few": "{{count}} tertunda",
+        "pending_many": "{{count}} tertunda",
+        "accepted_few": "{{count}} diterima",
+        "accepted_many": "{{count}} diterima",
+        "rejected_few": "{{count}} ditolak",
+        "rejected_many": "{{count}} ditolak",
+        "acrossFiles_few": "di seluruh {{count}} berkas",
+        "acrossFiles_many": "di seluruh {{count}} berkas",
+        "edited_few": "{{count}} Diedit",
+        "edited_many": "{{count}} Diedit"
+      },
+      "actions": {
+        "auto": "Otomatis",
+        "undo": "Tak Jadi",
+        "acceptAll": "Terima Semua",
+        "rejectAll": "Tolak Semua",
+        "applying": "Menerapkan...",
+        "applyRejections": "Terapkan penolakan"
+      },
+      "tooltips": {
+        "autoOn": "Berkas auto- mark seperti yang ditampilkan ketika digulung ke akhir (ON)",
+        "autoOff": "Berkas tanda otomatis seperti yang ditampilkan ketika digulung ke akhir (OFF)",
+        "undo": "Batalkan operasi review terakhir (Ctrl + Z)",
+        "acceptAll": "Terima semua perubahan di semua berkas",
+        "rejectAll": "Tolak semua perubahan yang dapat ditolak secara aman di seluruh berkas",
+        "rejectAllDisabled": "Tidak ada berkas yang tertunda memiliki dasar asli yang aman untuk ditolak.",
+        "applyRejections": "Terapkan punk yang ditolak ke disk; perubahan yang diterima disimpan adalah"
+      }
+    },
+    "diffError": {
+      "title": "Gagal untuk membuat tilikan diff",
+      "unexpected": "Kesalahan tak terduga terjadi ketika merender diff.",
+      "actions": {
+        "retry": "Coba lagi"
+      },
+      "raw": {
+        "show": "Tampilkan data diff mentah",
+        "file": "Berkas: {{file}}",
+        "original": "--- Asli",
+        "modified": "+ + + Diubah",
+        "charsTotal": "... ({{count}} Chars total)",
+        "charsTotal_one": "... ({{count}} char total)",
+        "charsTotal_other": "... ({{count}} Chars total)",
+        "charsTotal_few": "... ({{count}} Chars total)",
+        "charsTotal_many": "... ({{count}} Chars total)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Dilihat",
+      "badges": {
+        "new": "baru",
+        "deleted": "dihapus"
+      },
+      "collapseFolder": "Kolapse {{name}}",
+      "expandFolder": "Ekspansi {{name}}",
+      "empty": {
+        "noChangedFiles": "Tidak ada berkas yang berubah",
+        "noMatchingFiles": "Tidak ada berkas yang cocok"
+      },
+      "searchPlaceholder": "Cari berkas...",
+      "filters": {
+        "unresolved": "Belum terselesaikan",
+        "rejected": "Ditolak",
+        "new": "Baru",
+        "clear": "Hapus"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Potongan sebelumnya",
+      "nextChunk": "Potongan berikutnya",
+      "rejectChange": "Tolak perubahan (ASAN)",
+      "acceptChange": "Terima perubahan (SYY)",
+      "undo": "Tak Jadi",
+      "keep": "Simpan",
+      "rejectShortcut": "BAN",
+      "acceptShortcut": "AboY"
+    },
+    "conflict": {
+      "title": "Konflik Terdeteksi",
+      "description": "Berkas ini telah diubah sejak perubahan agen",
+      "cancel": "Batal",
+      "saveResolution": "Simpan Resolusi",
+      "editManually": "Sunting Secara Manual",
+      "useOriginal": "Gunakan Asli",
+      "keepCurrent": "Pertahankan Saat Ini"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Mempersiapkan Diff Penuh",
+      "titleMany": "Bersiap {{count}} Diffs Penuh",
+      "subtitleForFile": "Menyelesaikan diff penyunting yang tepat untuk {{file}}.",
+      "subtitleCurrentFile": "Menyelesaikan diff penyunting yang tepat untuk berkas kini.",
+      "subtitleMany": "Memecahkan tepat sebelum / setelah baselees bagi berkas yang sedang dimuat.",
+      "previewsReady": "{{count}} preview siap",
+      "previewsReady_one": "{{count}} pratilik siap",
+      "editorViewLoading": "Pemuatan tilikan penyunting",
+      "filesInProgress": "{{count}} berkas sedang berjalan",
+      "filesInProgress_one": "{{count}} berkas sedang berjalan",
+      "filesReady": "{{ready}}/{{total}} berkas siap",
+      "progressDescription": "{{ready}} siap, {{loading}} Masih memuat. Preview diffs tetap terlihat di bawah ini sementara baseline yang tersisa diselesaikan.",
+      "singleDescription": "Preview diffs tetap terlihat di bawah ini sedangkan baseline tepat diselesaikan.",
+      "previewsReady_few": "{{count}} preview siap",
+      "previewsReady_many": "{{count}} preview siap",
+      "previewsReady_other": "{{count}} preview siap",
+      "filesInProgress_few": "{{count}} berkas sedang berjalan",
+      "filesInProgress_many": "{{count}} berkas sedang berjalan",
+      "filesInProgress_other": "{{count}} berkas sedang berjalan"
+    },
+    "fileMissingPrefix": "Berkas hilang di disk. Diff ini mungkin hanya pratinjau dari log agen. Gunakan",
+    "restore": "Pulihkan",
+    "fileMissingSuffix": "untuk membuat berkas pada disk.",
+    "filePlaceholder": {
+      "loading": "Memuat",
+      "description": "Menyiapkan diff penyunting lengkap untuk berkas ini."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} objek buku besar diproses",
+      "ledgerObjectsProcessed_one": "{{count}} objek buku besar diproses",
+      "ledgerObjectsProcessed_other": "{{count}} objek buku besar diproses",
+      "ledgerObjectsProcessed_few": "{{count}} objek buku besar diproses",
+      "ledgerObjectsProcessed_many": "{{count}} objek buku besar diproses",
+      "phases": {
+        "readingLedger": "Membaca buku besar tugas...",
+        "resolvingFiles": "Menyelesaikan status berkas...",
+        "checkingWorktree": "Memeriksa konteks pohon kerja...",
+        "preparingDiffs": "Menyiapkan diffs ulasan..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} Dilihat"
+    },
+    "scope": {
+      "readMore": "Baca lagi",
+      "tiers": {
+        "exact": {
+          "title": "Lingkup tugas ditentukan dengan tepat",
+          "detail": "Penanda awal dan pelengkapan ditemukan pada log sesi. Diff termasuk hanya perubahan yang dibuat selama tugas spesifik ini - tugas lain yang dimodifikasi berkas yang sama tidak termasuk."
+        },
+        "endEstimated": {
+          "title": "Batas akhir diperkirakan",
+          "detail": "Hanya penanda awal yang ditemukan - tugas belum memiliki penanda penyelesaian. Perubahan yang ditampilkan dari awal tugas ke akhir sesi. Jika tugas lain berjalan setelah ini dalam sesi yang sama, perubahan mereka mungkin juga termasuk."
+        },
+        "startEstimated": {
+          "title": "Batas awal diperkirakan",
+          "detail": "Hanya penanda penyelesaian yang ditemukan - awal kerja tidak ditangkap. Jika tugas lain dijalankan sebelum sesi ini dalam sesi yang sama, perubahan mereka ke berkas yang sama mungkin juga termasuk."
+        },
+        "allSession": {
+          "title": "Menampilkan semua perubahan sesi",
+          "detail": "Tidak ada penanda tugas yang ditemukan dalam log sesi. Tak bisa mengisolasi tugas ini - semua perubahan berkas dari seluruh sesi ditampilkan, termasuk perubahan dari tugas lain. Hal ini dapat terjadi dengan lebih tua CLI versi atau non-standar arus kerja."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Perubahan yang ditangkap oleh buku besar tugas",
+          "detail": "Para dalang menangkap perubahan file ini sementara agen sedang mengerjakan tugas ini.",
+          "badge": "Ledger tepat"
+        },
+        "limited": {
+          "title": "Perubahan yang ditangkap dengan reviewability terbatas",
+          "detail": "Kontraktor menangkap perubahan berkas ini untuk tugas ini, tapi setidaknya satu perubahan ditangkap dari sebuah snapshot atau metadata- satu-satunya sumber. Ulasan teks yang tepat dimana tersedia; konten biner atau tidak tersedia mungkin memerlukan tinjauan manual.",
+          "mixedBadge": "Campuran reviewability",
+          "needsReviewBadge": "Butuh ulasan"
+        }
+      },
+      "workInterval": {
+        "title": "Dicampur dengan interval kerja yang bertahan",
+        "detail": "Penanda awal tugas tidak tersedia dalam log sesi, jadi diff discoped oleh interval tugas disimpan di papan.",
+        "badge": "Interval scoped"
+      },
+      "confidence": {
+        "high": "Percaya diri tinggi",
+        "medium": "Kepercayaan sedang",
+        "low": "Percaya diri rendah",
+        "bestEffort": "Usaha terbaik"
+      }
+    },
+    "shortcuts": {
+      "title": "Pintas Papan Ketik",
+      "actions": {
+        "nextChange": "Perubahan berikutnya",
+        "previousChange": "Perubahan sebelumnya",
+        "nextFile": "Berkas berikutnya",
+        "previousFile": "Berkas sebelumnya",
+        "acceptChange": "Terima perubahan",
+        "rejectChange": "Tolak perubahan",
+        "saveFile": "Simpan berkas",
+        "undo": "Tak Jadi",
+        "redo": "Jadi Lagi",
+        "toggleShortcuts": "Jungkitkan jalan pintas",
+        "closeDialog": "Tutup dialog"
+      }
+    },
+    "timeline": {
+      "empty": "Tidak ada kejadian penyuntingan",
+      "titleWithCount": "Sunting Garis Waktu ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "Tidak ada perubahan berkas dapat dilihat ulang"
+    },
+    "empty": {
+      "noSafeDiff": "Tak ada diff aman yang tersedia",
+      "noFileChangesRecorded": "Tidak ada perubahan berkas yang direkam",
+      "noSafeDiffDescription": "Buku besar tugas tidak mengekspos diff file yang aman untuk tugas ini.",
+      "noSafeDiffDiagnosticsDescription": "Buku besar tugas tidak mengekspos diff file yang aman untuk tugas ini. Diagnosa di bawah ini menjelaskan mengapa.",
+      "noFileEventsYet": "Buku besar tugas belum memiliki acara file untuk tugas ini.",
+      "noFileEvents": "Buku besar tugas tidak memiliki file event untuk tugas ini."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Aksi lembar bawah pesan",
+      "collapseAll": "Kecilkan semua pesan",
+      "collapseSheet": "Lipat lembar",
+      "expandAll": "Memperluas semua pesan",
+      "expandSheet": "Lebarkan lembar",
+      "floatComposer": "Komposer float",
+      "floatMessagesComposer": "Komposer pesan pecahan",
+      "hideSearch": "Sembunyikan pencarian",
+      "loadOlder": "Muat pesan yang lebih tua",
+      "markAllRead": "Tandai semua sebagai dibaca",
+      "messageActions": "Aksi pesan",
+      "moveMessagesToBottomSheet": "Pindahkan pesan ke lembar bawah",
+      "moveMessagesToSidebar": "Pindahkan pesan ke bilah sisi",
+      "moveToBottomSheet": "Pindah ke lembar bawah",
+      "moveToInline": "Pindah ke inline",
+      "moveToSidebar": "Pindah ke bilah sisi",
+      "panelActions": "Aksi panel pesan",
+      "searchMessages": "Cari pesan"
+    },
+    "delivery": {
+      "copied": "Disalin",
+      "copyDebugDetails": "Salin rincian debug",
+      "details": "Rincian",
+      "fields": {
+        "acceptanceUnknown": "acceptance Unknown",
+        "delivered": "dikirim",
+        "diagnostics": "diagnosa",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "MessageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queeded Behind MesageId",
+        "reason": "alasan",
+        "responsePending": "Menanggapi",
+        "responseState": "Negara bagian responsif",
+        "statusMessageId": "status MessageId",
+        "userVisibleMessage": "Pesan Pengandaan",
+        "userVisibleNextReviewAt": "SupVisibleNextReviewAt",
+        "userVisibleReasonCode": "SupVisibleReasonCode",
+        "userVisibleState": "UserVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelations",
+        "visibleReplyMessageId": "VisibleReplyMesageId"
+      }
+    },
+    "panelMode": "Mode panel pesan",
+    "title": "Pesan",
+    "unread": {
+      "new": "{{count}} baru",
+      "unread": "{{count}} belum dibaca",
+      "new_few": "{{count}} baru",
+      "new_many": "{{count}} baru",
+      "new_one": "{{count}} baru",
+      "new_other": "{{count}} baru",
+      "unread_few": "{{count}} belum dibaca",
+      "unread_many": "{{count}} belum dibaca",
+      "unread_one": "{{count}} belum dibaca",
+      "unread_other": "{{count}} belum dibaca"
+    },
+    "filter": {
+      "ariaLabel": "Menyaring pesan",
+      "tooltip": "Menyaring pesan",
+      "from": "Dari",
+      "to": "Ke",
+      "noData": "Tak ada data",
+      "showStatusUpdates": "Tampilkan pemutakhiran status (diam / shutdown)",
+      "actions": {
+        "reset": "Reset",
+        "save": "Simpan"
+      }
+    },
+    "status": {
+      "title": "Status"
+    },
+    "actionMode": {
+      "label": "Mode aksi"
+    },
+    "search": {
+      "placeholder": "Cari..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Dikonfigurasi",
+      "connected": "Terhubung",
+      "failed": "Gagal",
+      "free": "Bebas",
+      "local": "Lokal",
+      "needsTest": "Butuh tes",
+      "verified": "Verifikasi",
+      "unavailable": "Tidak tersedia",
+      "issue": "Isu"
+    },
+    "customModelId": "Id model gubahan",
+    "label": "Model (opsional)",
+    "multimodelRequired": "Codex dan Gemini membutuhkan mode Multimodel.",
+    "openCode": {
+      "allSources": "Semua sumber OpenCode",
+      "filterSource": "Filter {{source}}",
+      "filterSources": "Filter sumber OpenCode",
+      "freeOnly": "Hanya Gratis",
+      "freeTooltip": "OpenCode menandai model ini sebagai gratis.",
+      "loadingModels": "Memuat model OpenCode...",
+      "noSourcesFound": "Tidak ada sumber yang ditemukan.",
+      "recommendedOnly": "Hanya direkomendasikan",
+      "searchSources": "Cari sumber",
+      "sourcesCount": "{{count}} Sumber OpenCode",
+      "sourcesCount_few": "{{count}} Sumber OpenCode",
+      "sourcesCount_many": "{{count}} Sumber OpenCode",
+      "sourcesCount_one": "{{count}} Sumber OpenCode",
+      "sourcesCount_other": "{{count}} Sumber OpenCode"
+    },
+    "reason": "Alasan: {{reason}}",
+    "runtimeModelsSyncing": "Explisit model load dari runtime saat ini. Sisa baku tersedia saat daftar disinkronkan.",
+    "fastMode": {
+      "codexLabel": "Mode cepat (kredit 2x)",
+      "optionalLabel": "Mode cepat (opsional)",
+      "defaultOff": "Baku (Mati)",
+      "fast": "Cepat",
+      "off": "Mati",
+      "defaultFast": "Baku (Cepat)",
+      "defaultResolvesTo": "Sedang memecahkan bawaan {{mode}}.",
+      "runtimeBackedHint": "Mode cepat adalah runtime- didukung dan hanya membuka kunci ketika model peluncuran Anthropic diselesaikan mendukungnya."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Baca dokumen harga Anthropic"
+    },
+    "searchModels": "Cari model",
+    "defaultModel": "Baku",
+    "empty": {
+      "noSearchMatches": "Tidak ada model yang cocok dengan pencarian ini.",
+      "recommendedFreeOpenCode": "Model OpenCode yang direkomendasikan tidak tersedia dalam daftar runtime saat ini.",
+      "freeOpenCode": "Tidak ada model OpenCode yang bebas tersedia dalam daftar runtime saat ini.",
+      "recommendedOpenCode": "Model OpenCode yang direkomendasikan tidak tersedia dalam daftar runtime saat ini.",
+      "noModels": "Tidak ada model yang tersedia dalam daftar runtime saat ini."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode belum siap untuk peluncuran tim",
+      "freeModelsAvailableTitle": "Model bebas OpenCode tersedia",
+      "providerNotConnectedTitle": "Operator OpenCode tak tersambung",
+      "readyTitle": "OpenCode siap",
+      "readyMessage": "OpenCode melewati kesiapan penyedia. Pilih untuk menggunakan model OpenCode untuk tim ini.",
+      "useOpenCode": "Gunakan OpenCode",
+      "badges": {
+        "check": "Periksa",
+        "install": "Pasang",
+        "free": "Bebas",
+        "setup": "Penyiapan"
+      },
+      "summary": {
+        "checking": "Status OpenCode: memeriksa waktu-jalan",
+        "status": "Status OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "peluncuran tim diblokir",
+        "providerOptional": "Opsi koneksi penyedia",
+        "providerModelsNeedSetup": "provider-backed model perlu setup",
+        "teamLaunchReady": "tim peluncuran siap",
+        "runtimeDetected": "waktu-jalan terdeteksi",
+        "runtimeMissing": "waktu jalan hilang",
+        "freeWithoutAuth": "model bebas tersedia tanpa auth",
+        "providerConnected": "penyedia tersambung",
+        "providerNotConnected": "penyedia tidak tersambung"
+      },
+      "messages": {
+        "checking": "Aplikasi ini masih memeriksa waktu berjalan OpenCode. Tunggu status penyedia selesai, kemudian coba lagi.",
+        "unsupported": "OpenCode tak terpasang, tak ditemukan, atau waktu berjalan yang terdeteksi tak didukung. Pasang atau perbarui OpenCode, lalu segarkan status penyedia. Anda juga dapat menggunakan tombol Pasang di halaman depan.",
+        "freeAvailable": "OpenCode terdeteksi. Anda dapat menggunakan model OpenCode gratis seperti Big Pickle tanpa menghubungkan penyedia. Hubungkan penyedia hanya bila Anda ingin model-model yang didukung.",
+        "noFreeListed": "OpenCode terdeteksi, tapi belum ada model OpenCode gratis. Segarkan status penyedia, atau hubungkan penyedia dalam OpenCode untuk model yang didukung.",
+        "launchBlocked": "OpenCode terpasang dan terotentikasi, tapi kesiapan Agen Tim peluncuran diblokir.",
+        "ready": "OpenCode siap untuk peluncuran tim."
+      },
+      "loadingRuntime": "Status OpenCode runtime masih dimuat."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping belum dikonfirmasi",
+      "note": "Catatan"
+    },
+    "placeholders": {
+      "customModelId": "openai / gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "Konfig OpenCode",
+      "builtinFree": "Free built-in",
+      "connectedProviders": "Penyedia Terhubung",
+      "otherCatalog": "Katalog OpenCode lainnya"
+    },
+    "pricing": {
+      "free": "Bebas",
+      "inputShort": "in {{rate}}",
+      "outputShort": "keluar {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Masukan: {{rate}} per 1M token",
+      "outputTitle": "Keluaran: {{rate}} per 1M token",
+      "cacheReadTitle": "Cache dibaca: {{rate}} per 1M token",
+      "cacheWriteTitle": "Cache menulis: {{rate}} per 1M token"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Menggunakan Model default Anthropic- kompatibel titik akhir.\nSedang menyelesaikan ke {{model}}.",
+      "anthropicCompatible": "Menggunakan Model default Anthropic- kompatibel titik akhir.",
+      "anthropic": "Menggunakan model standar tim Claude.\nResolves to {{longContextModel}} dengan 1M konteks, atau {{limitedContextModel}} dengan konteks 200K ketika Limit konteks diaktifkan.",
+      "openCodeWithResolved": "Menggunakan model standar OpenCode.\nSedang menyelesaikan ke {{model}}.",
+      "openCode": "Menggunakan model baku OpenCode runtime.",
+      "runtime": "Menggunakan waktu-jalan default bagi penyedia yang dipilih."
+    },
+    "multimodelOff": "Matikan multimodel",
+    "unavailableInRuntime": "Tidak tersedia dalam waktu-jalan saat ini"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Batal",
+      "delete": "Hapus",
+      "markResolved": "Tandai diselesaikan",
+      "save": "Simpan"
+    },
+    "attachments": {
+      "commentAttachment": "Komentar lampiran",
+      "fromComments": "Dari komentar",
+      "preview": "Pratilik {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "perhatian",
+        "noSafeDiff": "tidak ada diff yang aman"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Tidak ada perubahan berkas yang direkam",
+        "noFileChangesRecordedYet": "Belum ada perubahan berkas yang direkam",
+        "noReviewableChangesRecovered": "Tidak ada perubahan yang dapat dilihat ulang",
+        "noSafeDiffAvailable": "Tak ada diff aman yang tersedia"
+      },
+      "loadFailed": "Gagal memuat ringkasan perubahan tugas",
+      "loading": "Memuat perubahan...",
+      "fileCount": "{{count}} berkas",
+      "fileRowsHidden": "{{count}} baris berkas tersembunyi",
+      "moreDiagnostics": "{{count}} lebih banyak diagnosa",
+      "moreFiles": "{{count}} lebih banyak berkas",
+      "openInEditor": "Buka di penyunting",
+      "openTask": "Buka tugas {{subject}}",
+      "refresh": "Segarkan perubahan",
+      "refreshFailed": "Gagal menyegarkan: {{error}}",
+      "refreshing": "Menyegarkan",
+      "refreshingChanges": "Menyegarkan perubahan...",
+      "refreshTeamChanges": "Refresh perubahan tim",
+      "refreshShort": "Segarkan",
+      "reviewDiff": "Diff ulasan",
+      "reviewTaskDiff": "Diff tugas Ulasan",
+      "scannedCandidateTasks": "Dipindai {{requested}} dari {{eligible}} kandidat tugas",
+      "tasksDeferred": "{{count}} tugas tertunda lulus ini",
+      "title": "Perubahan",
+      "fileCount_few": "{{count}} berkas",
+      "fileCount_many": "{{count}} berkas",
+      "fileCount_one": "{{count}} berkas",
+      "fileCount_other": "{{count}} berkas",
+      "fileRowsHidden_few": "{{count}} baris berkas tersembunyi",
+      "fileRowsHidden_many": "{{count}} baris berkas tersembunyi",
+      "fileRowsHidden_one": "{{count}} baris berkas tersembunyi",
+      "fileRowsHidden_other": "{{count}} baris berkas tersembunyi",
+      "moreDiagnostics_few": "{{count}} lebih banyak diagnosa",
+      "moreDiagnostics_many": "{{count}} lebih banyak diagnosa",
+      "moreDiagnostics_one": "{{count}} lebih banyak diagnosa",
+      "moreDiagnostics_other": "{{count}} lebih banyak diagnosa",
+      "moreFiles_few": "{{count}} lebih banyak berkas",
+      "moreFiles_many": "{{count}} lebih banyak berkas",
+      "moreFiles_one": "{{count}} lebih banyak berkas",
+      "moreFiles_other": "{{count}} lebih banyak berkas",
+      "tasksDeferred_few": "{{count}} tugas tertunda lulus ini",
+      "tasksDeferred_many": "{{count}} tugas tertunda lulus ini",
+      "tasksDeferred_one": "{{count}} tugas tertunda lulus ini",
+      "tasksDeferred_other": "{{count}} tugas tertunda lulus ini"
+    },
+    "clarification": {
+      "awaitingLead": "Menunggu klarifikasi dari memimpin tim",
+      "awaitingUser": "Menunggu klarifikasi darimu"
+    },
+    "description": {
+      "add": "Klik untuk menambahkan deskripsi...",
+      "edit": "Sunting deskripsi",
+      "placeholder": "Deskripsi tugas (mendukung markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Mengambil data tim",
+      "title": "Memuat tugas..."
+    },
+    "logs": {
+      "newArriving": "Log tugas baru tiba"
+    },
+    "notFound": "Tugas tak ditemukan",
+    "related": {
+      "blockedBy": "Diblokir oleh",
+      "blocks": "Blok",
+      "linkedFrom": "Terhubung dari",
+      "links": "Taut",
+      "title": "Tugas terkait"
+    },
+    "review": {
+      "reviewer": "Peninjau: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Lampiran",
+      "changes": "Perubahan",
+      "comments": "Komentar",
+      "description": "Deskripsi",
+      "taskLogs": "Log Tugas",
+      "workflowHistory": "Riwayat Workflow"
+    },
+    "unassigned": "Tak ditugaskan",
+    "workflow": {
+      "implementationTimeTitle": "Waktu implimentasi dari interval kerja yang berkelanjutan",
+      "inProgressTime": "Dalam waktu proses {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Menampilkan terbaru {{formattedCount}} komentar untuk menjaga UI responsif.",
+      "badges": {
+        "approved": "Disetujui",
+        "reviewRequested": "Permintaan Ulasan"
+      },
+      "unknownTime": "waktu tidak diketahui",
+      "actions": {
+        "reply": "Balas",
+        "replyToComment": "Balas ke komentar",
+        "showMore": "Tampilkan lebih banyak komentar ({{visible}}/{{total}})",
+        "cancelReply": "Batalkan balasan",
+        "comment": "Komentar"
+      },
+      "attachments": {
+        "previewAlt": "Pratinjau Lampiran",
+        "downloadFailed": "Gagal mengunduh"
+      },
+      "replyingTo": "Menjawab ke",
+      "input": {
+        "placeholder": "Tambahkan komentar... (Masukkan untuk mengirim)",
+        "charsLeft": "{{count}} chars kiri",
+        "charsLeft_one": "{{count}} char kiri",
+        "charsLeft_other": "{{count}} chars kiri",
+        "charsLeft_few": "{{count}} chars kiri",
+        "charsLeft_many": "{{count}} chars kiri"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "Tidak ada riwayat alur kerja yang direkam",
+      "currentImplementationInterval": "Interval implementasi saat ini",
+      "implementationIntervalEnded": "Interval implimentasi berakhir pada transisi ini",
+      "runningPrefix": "berjalan ",
+      "createdAs": "Dibuat sebagai",
+      "by": "oleh",
+      "reassigned": "Ditandatangani ulang",
+      "assignedTo": "Ditugaskan ke",
+      "unassignedFrom": "Tidak ditugaskan dari",
+      "ownerChanged": "Pemilik berubah",
+      "reviewRequested": "Permintaan Ulasan",
+      "reviewStarted": "Ulasan dimulai",
+      "changesRequested": "Perubahan yang diminta",
+      "approved": "Disetujui",
+      "unknownEvent": "Peristiwa tak dikenal"
+    },
+    "reviewStates": {
+      "approved": "Disetujui",
+      "needsFix": "Perlu diperbaiki",
+      "inReview": "Dalam ulasan"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Assignee",
+      "assigneeOptional": "Assignee (opsional)",
+      "blockedByOptional": "Diblokir oleh tugas (opsional)",
+      "blockedBySummary": "Tugas akan diblokir oleh: {{tasks}}",
+      "cancel": "Batal",
+      "create": "Buat",
+      "creating": "Membuat...",
+      "description": "Tugas akan dibuat dalam tugas / direktori tim dan muncul di papan Kanban.",
+      "descriptionOptional": "Deskripsi (opsional)",
+      "detailsPlaceholder": "Rincian tugas (mendukung markdown)",
+      "hideOptionalFields": "Sembunyikan ruas opsional",
+      "offlineNotice": {
+        "after": "- luncurkan tim untuk memulai eksekusi.",
+        "before": "Tim offline. Tugas akan ditambahkan ke"
+      },
+      "promptOptional": "Konfirmasi untuk assignee (opsional)",
+      "promptPlaceholder": "Instruksi khusus untuk anggota tim...",
+      "relatedOptional": "Tugas terkait (opsional)",
+      "relatedSummary": "Terkait: {{tasks}}",
+      "saved": "Tersimpan",
+      "searchTasks": "Cari tugas...",
+      "selectMember": "Pilih sebuah anggota",
+      "selectMemberOptional": "Pilih anggota...",
+      "showOptionalFields": "Tampilkan ruas opsional",
+      "startImmediately": "Mulai segera",
+      "startOfflineHint": "Tim offline. Luncurkan tim pertama untuk memulai tugas segera.",
+      "subject": "Subjek",
+      "subjectPlaceholder": "Apa yang harus dilakukan?",
+      "title": "Buat Tugas",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Diblokir Oleh",
+        "blocks": "Blok",
+        "id": "ID",
+        "owner": "Pemilik",
+        "status": "Status",
+        "subject": "Subjek"
+      },
+      "empty": "Tidak ada tugas dalam tim ini",
+      "filters": {
+        "allOwners": "Semua pemilik",
+        "allStatuses": "Semua status",
+        "ownerAria": "Filter tugas oleh pemilik",
+        "statusAria": "Penyaring tugas berdasarkan status"
+      },
+      "showing": "Menampilkan {{shown}} dari {{total}}"
+    },
+    "status": {
+      "completed": "selesai",
+      "deleted": "dihapus",
+      "inProgress": "dalam _ kemajuan",
+      "pending": "tertunda"
+    },
+    "statusSummary": {
+      "progressAria": "Tugas {{completed}}/{{total}} selesai",
+      "inProgress": "{{count}} dalam _ kemajuan",
+      "inProgress_one": "{{count}} dalam _ kemajuan",
+      "inProgress_other": "{{count}} dalam _ kemajuan",
+      "inProgress_few": "{{count}} dalam _ kemajuan",
+      "inProgress_many": "{{count}} dalam _ kemajuan",
+      "pending": "{{count}} tertunda",
+      "pending_one": "{{count}} tertunda",
+      "pending_other": "{{count}} tertunda",
+      "pending_few": "{{count}} tertunda",
+      "pending_many": "{{count}} tertunda",
+      "completed": "{{count}} selesai",
+      "completed_one": "{{count}} selesai",
+      "completed_other": "{{count}} selesai",
+      "completed_few": "{{count}} selesai",
+      "completed_many": "{{count}} selesai"
+    },
+    "unassigned": "Tak ditugaskan",
+    "teamPrefix": "Tim:",
+    "openTask": "Buka tugas",
+    "deleteConfirm": {
+      "title": "Hapus tugas",
+      "message": "Pindahkan tugas #{{taskId}} ke tempat sampah?",
+      "confirmLabel": "Hapus",
+      "cancelLabel": "Batal"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Batal",
+      "closeEditor": "Tutup penyunting",
+      "closeTab": "Tutup tab",
+      "closeTooltip": "Tutup penyunting (Esc)",
+      "discard": "Buang",
+      "discardAndClose": "Buang & Tutup",
+      "keep": "Simpan",
+      "keepMine": "Jauhkan tambang",
+      "keyboardShortcuts": "Tombol pintas papan tik",
+      "overwrite": "Timpa",
+      "refreshAria": "Segarkan (F5)",
+      "refreshTooltip": "Status git segar (F5)",
+      "reload": "Muat Ulang",
+      "retry": "Coba lagi",
+      "save": "Simpan",
+      "saveAllAndClose": "Simpan Semua & Tutup"
+    },
+    "ariaLabel": "Penyunting Projek",
+    "dialogs": {
+      "conflictDescription": "Berkas telah diubah secara eksternal sejak Anda membukanya. Timpa dengan perubahanmu?",
+      "conflictTitle": "Simpan Konflik",
+      "unsavedDescription": "Anda memiliki perubahan yang belum disimpan. Apa yang ingin kau lakukan?",
+      "unsavedFileDescription": "Berkas ini memiliki perubahan yang belum disimpan. Apa yang ingin kau lakukan?",
+      "unsavedTitle": "Perubahan Yang Belum Disimpan"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Nama tidak dapat kosong",
+        "invalidName": "Nama tidak valid",
+        "invalidCharacters": "Nama berisi karakter tidak valid",
+        "nameTooLong": "Nama terlalu panjang"
+      },
+      "placeholders": {
+        "fileName": "Nama berkas...",
+        "folderName": "Nama folder..."
+      },
+      "aria": {
+        "newFileName": "Nama berkas baru",
+        "newFolderName": "Nama folder baru"
+      }
+    },
+    "draftRecovered": "Mengembalikan perubahan yang belum disimpan dari sesi sebelumnya.",
+    "externalChange": {
+      "changed": "Berkas berubah di disk.",
+      "deleted": "Berkas tidak ada lagi pada disk."
+    },
+    "saveFailed": "Simpan gagal: {{error}}",
+    "sidebar": {
+      "explorer": "Explorer",
+      "hide": "Sembunyikan bilah sisi",
+      "hideWithShortcut": "Sembunyikan bilah sisi ({{shortcut}})",
+      "show": "Tampilkan bilah sisi",
+      "showWithShortcut": "Tampilkan bilah sisi ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Cari di Berkas",
+      "closeSearch": "Tutup pencarian",
+      "closeSearchShortcut": "Tutup pencarian (Esc)",
+      "searchPlaceholder": "Cari...",
+      "matchCase": "Match Case",
+      "matchCaseToggle": "Aa",
+      "noResults": "Tidak ditemukan hasil",
+      "resultsSummary": "{{count}} cocok di {{fileCount}} berkas",
+      "resultsSummary_one": "{{count}} cocok {{fileCount}} berkas",
+      "truncated": "(dipotong)",
+      "resultsSummary_few": "{{count}} cocok di {{fileCount}} berkas",
+      "resultsSummary_many": "{{count}} cocok di {{fileCount}} berkas",
+      "resultsSummary_other": "{{count}} cocok di {{fileCount}} berkas"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Gagal memuat berkas: {{error}}",
+      "loading": "Memuat berkas...",
+      "empty": "Tak ada berkas yang ditemukan",
+      "dropForProjectRoot": "Jatuhkan di sini untuk root projek",
+      "moveToTrash": "Pindah ke Tempat Sampah",
+      "moveToTrashConfirm": "Move \"{{name}}\" to Trash?",
+      "cancel": "Batal"
+    },
+    "goToLine": {
+      "title": "Ke Baris",
+      "position": "(saat ini: {{current}}, total: {{total}})",
+      "placeholder": "Nomor baris, + ofset, -offset, atau%",
+      "go": "Pergi"
+    },
+    "searchPanel": {
+      "previousMatch": "Cocok Sebelumnya",
+      "nextMatch": "Pertandingan Berikutnya",
+      "close": "Tutup",
+      "replacePlaceholder": "Ganti",
+      "replace": "Ganti",
+      "replaceNext": "Ganti Berikutnya",
+      "all": "Semua",
+      "replaceAll": "Ganti Semua"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, Kol {{col}}",
+      "enableWatcher": "Aktifkan berkas watcher",
+      "disableWatcher": "Matikan berkas watcher",
+      "watch": "lihat",
+      "watching": "menonton",
+      "watchExternalChanges": "Watch untuk perubahan eksternal",
+      "disableExternalWatcher": "Nonaktifkan pengamat perubahan eksternal",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Ruang: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Memuat pratinjau...",
+      "openFullSize": "Buka pratinjau full-size",
+      "openSystemViewer": "Buka dalam Penilik Sistem"
+    },
+    "quickOpen": {
+      "title": "Buka Cepat",
+      "searchPlaceholder": "Cari berkas berdasarkan nama...",
+      "loading": "Memuat berkas...",
+      "empty": "Tak ada berkas yang ditemukan"
+    },
+    "errorBoundary": {
+      "crashed": "Editor jatuh",
+      "unknownError": "Galat tak dikenal"
+    },
+    "binaryPlaceholder": {
+      "file": "Berkas biner ({{size}})"
+    },
+    "unsavedChanges": "Perubahan yang belum disimpan",
+    "empty": {
+      "selectFile": "Pilih berkas dari pohon untuk disunting"
+    },
+    "search": {
+      "toggleReplace": "Jungkitkan Ganti",
+      "placeholder": "Cari"
+    },
+    "shortcuts": {
+      "title": "Pintas Papan Ketik",
+      "groups": {
+        "fileOperations": "Operasi Berkas",
+        "search": "Cari",
+        "navigation": "Navigasi",
+        "editing": "Menyunting",
+        "markdown": "Markdown",
+        "general": "Umum"
+      },
+      "actions": {
+        "quickOpen": "Buka Cepat",
+        "save": "Simpan",
+        "saveAll": "Simpan Semua",
+        "closeTab": "Tutup Tab",
+        "findInFile": "Cari dalam Berkas",
+        "searchInFiles": "Cari di Berkas",
+        "goToLine": "Ke Baris",
+        "nextTab": "Tab Berikutnya",
+        "previousTab": "Tab Sebelumnya",
+        "cycleTabs": "Tab Siklus",
+        "toggleSidebar": "Jungkitkan Batang Sisi",
+        "undo": "Tak Jadi",
+        "redo": "Jadi Lagi",
+        "selectNextMatch": "Pilih Pertandingan Berikutnya",
+        "toggleComment": "Jungkitkan Komentar",
+        "splitPreview": "Pecah Pratilik",
+        "fullPreview": "Pratilik Penuh",
+        "closeEditor": "Tutup Penyunting"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Aktifkan pelipatan kata",
+      "disableWordWrap": "Matikan kata wrap",
+      "closeSplitPreview": "Tutup pratinjau split",
+      "closePreview": "Tutup pratinjau"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Buat Jadwal",
+      "creating": "Membuat...",
+      "goToDashboard": "Pergi ke Dashboard",
+      "launchTeam": "Luncurkan tim",
+      "launching": "Peluncuran...",
+      "relaunchTeam": "Tim relaunch",
+      "relaunching": "Relaunching...",
+      "saveChanges": "Simpan Perubahan",
+      "saving": "Menyimpan..."
+    },
+    "billing": {
+      "prefix": "Mulai 15 Juni 2026, tagihan Anthropic",
+      "readArticle": "Baca artikel Anthropic",
+      "suffix": "dan Agen SDK penggunaan dari Agen bulanan SDK kredit, terpisah dari interaktif Claude Code batas. Kredit mereset setiap siklus tagihan dan kredit yang tidak digunakan tidak berguling."
+    },
+    "conflict": {
+      "description": "Menjalankan dua tim dalam direktori yang sama berisiko - mereka mungkin konflik menyunting file yang sama. Pertimbangkan menggunakan direktori berbeda atau pohon kerja git untuk isolasi.",
+      "title": "Tim lain \"{{team}}\"sedang berjalan untuk direktori kerja ini",
+      "workingDirectory": "Direktori kerja:"
+    },
+    "description": {
+      "createSchedule": "Jadwalkan eksekusi tugas Claude otomatis",
+      "createScheduleForTeam": "Jadwal otomatis berjalan untuk tim \"{{team}}\"",
+      "editSchedule": "Editing schedule for team \"{{team}}\"",
+      "launchPrefix": "Mulai tim",
+      "launchSuffix": "via lokal Claude CLI.",
+      "relaunchPrefix": "Menghentikan menjalankan saat",
+      "relaunchSuffix": "dan memulainya lagi melalui Claude lokal CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "luncurkan",
+        "relaunch": "relacrunch"
+      },
+      "blocked": "Lingkungan runtime tidak tersedia - {{action}} diblokir",
+      "checkingProviders": "Memeriksa penyedia yang dipilih...",
+      "failed": "Gagal menyiapkan penyedia yang dipilih",
+      "preflight": "Pemeriksaan sebelum penerbangan untuk menangkap galat sebelum {{action}}",
+      "preparingEnvironment": "Mempersiapkan lingkungan...",
+      "ready": "Semua penyedia terpilih siap.",
+      "readyWithNotes": "Semua penyedia yang dipilih siap, dengan catatan.",
+      "unsupportedPreload": "Versi pramuat saat ini tidak mendukung tim: Mempersiapkan Provisioning. Nyalakan kembali aplikasi dev.",
+      "selectWorkingDirectory": "Pilih direktori kerja untuk memvalidasi lingkungan peluncuran.",
+      "someProvidersNeedAttention": "Beberapa penyedia yang dipilih butuh perhatian."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "Prompt ini akan dilewatkan ke",
+      "oneShotSuffix": "untuk satu - tembakan eksekusi",
+      "saved": "Tersimpan",
+      "schedulePlaceholder": "Instruksi untuk Claude untuk dijalankan sesuai jadwal...",
+      "teamLeadOptional": "Prompt untuk memimpin tim (opsional)",
+      "teamLeadPlaceholder": "Instruksi untuk memimpin tim..."
+    },
+    "providerChanged": "Penyedia berubah dari {{from}} ke {{to}}Sesi timbal sebelumnya tidak akan dilanjutkan, dan memimpin akan mulai dengan konteks segar sehingga runtime baru diterapkan dengan benar.",
+    "relaunchFreshSession": "Pertemuan tim dimulai dari sesi awal. Tim durable state, task board, dan konfigurasi anggota terhidrasi ke prompt peluncuran.",
+    "relaunchWarning": {
+      "description": "Menyimpan pengaturan ini akan menghentikan proses tim saat ini, mempertahankan daftar terbaru, dan meluncurkan tim lagi dengan runtime baru.",
+      "title": "Relaunch akan memulai kembali menjalankan tim saat ini"
+    },
+    "schedule": {
+      "labelOptional": "Label (opsional)",
+      "labelPlaceholder": "mis., Ulasan kode harian, Tes Nightly...",
+      "maxBudgetUsd": "Anggaran maksimum (USD)",
+      "maxTurns": "Max ternyata",
+      "noLimit": "Tanpa batas",
+      "noMatches": "Tak ada tim yang cocok dengan pencarianmu.",
+      "noTeams": "Tidak ada tim yang tersedia. Buat tim dulu.",
+      "searchTeams": "Tim pencari...",
+      "selectTeam": "Pilih sebuah tim...",
+      "team": "Tim",
+      "title": "Jadwal"
+    },
+    "title": {
+      "createSchedule": "Buat Jadwal",
+      "editSchedule": "Ubah Jadwal",
+      "launch": "Luncurkan Tim",
+      "relaunch": "Tim Relaunch"
+    },
+    "errors": {
+      "loadProjectsFailed": "Gagal memuat proyek",
+      "saveScheduleFailed": "Gagal menyimpan jadwal",
+      "relaunchFailed": "Gagal menjalankan tim",
+      "launchFailed": "Gagal meluncurkan tim"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode memimpin membutuhkan model yang dipilih.",
+      "openCodeTeammateRequired": "OpenCode memimpin membutuhkan setidaknya satu teman satu tim OpenCode.",
+      "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
+      "fixMemberNames": "Perbaiki nama anggota sebelum peluncuran",
+      "memberNamesUnique": "Nama anggota harus unik sebelum diluncurkan"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Pengaturan relachdown",
+      "title": "Pengaturan peluncuran opsional",
+      "relaunchDescription": "Tinjau daftar dan memimpin runtime sebelum memulai kembali tim.",
+      "description": "Menjaga aliran peluncuran fokus pada jalur projek dan hanya memperluas ini ketika Anda ingin ekstra kontrol."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Tim copy",
+      "createTeam": "Buat Tim",
+      "deleteForever": "Hapus selamanya",
+      "deletePermanently": "Hapus permanen",
+      "deleteTeam": "Hapus tim",
+      "launching": "Peluncuran...",
+      "launchTeam": "Luncurkan tim",
+      "relaunchTeam": "Tim relaunch",
+      "restore": "Pulihkan",
+      "restoreTeam": "Tim pengembalian",
+      "retry": "Coba lagi",
+      "stopTeam": "Hentikan tim",
+      "stopping": "Menghentikan..."
+    },
+    "electronOnly": {
+      "description": "Dalam mode peramban, akses ke lokal `~/.claude/teams` direktori tidak tersedia.",
+      "title": "Tim hanya tersedia dalam mode Elektron"
+    },
+    "empty": {
+      "description": "Membuat tim di sini untuk memulai. Ini akan muncul dalam daftar secara otomatis.",
+      "localOnly": "Pembuatan tim hanya tersedia dalam mode Elektron lokal.",
+      "title": "Tidak ada tim yang ditemukan"
+    },
+    "filter": {
+      "clearAll": "Hapus semua",
+      "label": "Tim penyaring",
+      "projectPriority": "Prioritas projek",
+      "status": "Status"
+    },
+    "loadFailed": "Gagal memuat tim",
+    "loading": "Memuat tim...",
+    "localOnly": "Hanya tersedia dalam mode Elektron lokal.",
+    "membersCount": "Anggota: {{count}}",
+    "membersCount_few": "Anggota: {{count}}",
+    "membersCount_many": "Anggota: {{count}}",
+    "membersCount_one": "Anggota: {{count}}",
+    "membersCount_other": "Anggota: {{count}}",
+    "noDescription": "Tidak ada deskripsi",
+    "noMatches": "Tidak ada tim yang cocok dengan penyaring saat ini",
+    "partial": {
+      "pending": "Peluncuran terakhir masih mendamaikan.",
+      "skipped": "Peluncuran terakhir telah melewatkan rekan tim.",
+      "skippedWithCount": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_few": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_many": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_one": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_other": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "stopped": "Peluncuran terakhir berhenti sebelum semua rekan setim bergabung.",
+      "stoppedWithCount": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_few": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_many": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_one": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_other": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung."
+    },
+    "searchPlaceholder": "Tim pencari...",
+    "sections": {
+      "otherTeams": "Tim lain",
+      "projectTeams": "Tim untuk {{project}}",
+      "selectedProject": "proyek terpilih"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Aktif",
+      "deleted": "Dihapus",
+      "launching": "Peluncuran...",
+      "offline": "Luring",
+      "partialFailure": "Peluncuran jalan antar gagal",
+      "partialPending": "Bootstrap tertunda",
+      "partialSkipped": "Luncurkan anggota dilewati",
+      "running": "Berjalan"
+    },
+    "title": "Pilih Tim",
+    "trash": "Tempat Sampah ({{count}})",
+    "trash_few": "Tempat Sampah ({{count}})",
+    "trash_many": "Tempat Sampah ({{count}})",
+    "trash_one": "Tempat Sampah ({{count}})",
+    "trash_other": "Tempat Sampah ({{count}})",
+    "deleteDraft": {
+      "title": "Hapus draft",
+      "message": "Hapus tim draft \"{{teamName}}\"? Ini tak bisa dibatalkan.",
+      "confirmLabel": "Hapus",
+      "cancelLabel": "Batal"
+    },
+    "moveToTrash": {
+      "title": "Pindah ke tempat sampah",
+      "message": "Pindah tim \"{{teamName}}\"ke tempat sampah? Kau bisa mengembalikannya nanti.",
+      "confirmLabel": "Pindah ke tempat sampah",
+      "cancelLabel": "Batal"
+    },
+    "deleteForever": {
+      "title": "Hapus permanen",
+      "message": "Hapus tim \"{{teamName}}\"permanen? Semua data akan hilang.",
+      "confirmLabel": "Hapus selamanya",
+      "cancelLabel": "Batal"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Pesan tim Cross- pergi ke tim target memimpin. Jika Anda ingin jawaban untuk kembali memimpin tim Anda bukan Anda, katakanlah secara eksplisit dalam pesan."
+    },
+    "attachments": {
+      "attachFiles": "Lampirkan berkas (tempel atau seret & jatuhkan)",
+      "unavailable": "Lampiran tidak tersedia",
+      "disabledHint": "Lampiran berkas didukung bagi pimpinan tim online dan rekan-rekan OpenCode online. Hapus lampiran atau ganti penerima.",
+      "restrictions": {
+        "crossTeam": "Lampiran berkas tidak didukung untuk pesan-pesan cross-team",
+        "teamOffline": "Tim mesti daring untuk melampirkan berkas",
+        "unsupportedRecipient": "File dapat dikirim ke memimpin tim atau OpenCode rekan tim",
+        "openCodeOffline": "Tim harus online untuk melampirkan berkas untuk rekan satu tim OpenCode",
+        "sending": "Tunggu pesan saat ini untuk menyelesaikan pengiriman sebelum menambahkan berkas",
+        "maximumReached": "Lampiran maksimum dicapai",
+        "leadOnly": "Berkas hanya dapat dikirim ke memimpin tim"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Perintah perbudakan membutuhkan memimpin tim langsung dan tidak dapat dikirim dengan lampiran",
+        "crossTeam": "Perintah perbudakan hanya dapat dijalankan pada memimpin tim saat ini",
+        "notLead": "Perintah perbudakan hanya bisa dikirim ke pimpinan tim.",
+        "leadOffline": "Perintah perbudakan membutuhkan pemimpin tim untuk online"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Mengulang permintaan tim-cross- baru-baru ini",
+      "teamOffline": "Tim luring"
+    },
+    "input": {
+      "charsLeft": "{{count}} chars kiri",
+      "charsLeft_one": "{{count}} char kiri",
+      "charsLeft_other": "{{count}} chars kiri",
+      "teamLaunchingPlaceholder": "Tim meluncurkan... pesan akan antri untuk pengiriman inbox.",
+      "crossTeamPlaceholder": "Pesan Cross- tim untuk {{team}}...",
+      "teamFallback": "tim",
+      "placeholder": "Tulis sebuah pesan... (Masukkan untuk mengirim, Shift + Enter untuk baris baru)",
+      "slashTip": "Tip: Anda dapat menggunakan \"/\" untuk menjalankan perintah Claude apapun.",
+      "charsLeft_few": "{{count}} chars kiri",
+      "charsLeft_many": "{{count}} chars kiri"
+    },
+    "teamSelector": {
+      "thisTeam": "Tim ini",
+      "current": "saat ini",
+      "online": "daring",
+      "offline": "luring",
+      "onlineTitle": "Daring",
+      "offlineTitle": "Luring"
+    },
+    "recipient": {
+      "select": "Pilih...",
+      "searchPlaceholder": "Cari...",
+      "noResults": "Tidak ada hasil"
+    },
+    "actions": {
+      "voiceToText": "Suara teks",
+      "send": "Kirim",
+      "sendingUnavailableLaunching": "Mengirim tidak tersedia ketika tim sedang meluncurkan"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Filter log",
+      "tooltip": "Filter log",
+      "sections": {
+        "stream": "Stream",
+        "content": "Isi"
+      },
+      "kinds": {
+        "output": "Keluaran",
+        "thinking": "Berpikir",
+        "tool": "Panggilan alat"
+      },
+      "actions": {
+        "reset": "Reset",
+        "save": "Simpan"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} baris mentah",
+    "rawLineCount_one": "{{formattedCount}} baris mentah",
+    "rawLinesCaptured": "{{count}} ditangkap",
+    "emptyRawLogs": "{{count}}; belum ada keluaran asisten / alat.",
+    "noLogsYet": "Belum ada log.",
+    "teamNotRunning": "Tim tidak berjalan.",
+    "searchPlaceholder": "Cari log...",
+    "clearSearch": "Bersihkan pencarian",
+    "newCount": "+{{count}} baru",
+    "loading": "Memuat...",
+    "showMore": "Tampilkan lebih banyak",
+    "noLogsCaptured": "Tidak ada log ditangkap.",
+    "noMatchingLogs": "Tidak ada log yang cocok.",
+    "rawLineCount_few": "{{formattedCount}} baris mentah",
+    "rawLineCount_many": "{{formattedCount}} baris mentah",
+    "rawLineCount_other": "{{formattedCount}} baris mentah",
+    "openFullscreen": "Buka log layar penuh",
+    "fullscreen": "Layar Penuh",
+    "viewingFullscreen": "Melihat dalam mode layar penuh",
+    "logsTitle": "Log",
+    "sourceSelect": {
+      "placeholder": "Pilih sumber log...",
+      "searchPlaceholder": "Cari sumber log...",
+      "emptyMessage": "Tidak ditemukan sumber log.",
+      "ariaLabel": "Sumber log",
+      "leadLabel": "Lead",
+      "selectSourceEmpty": "Pilih sumber log."
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "Tim eksternal",
+      "process": {
+        "startedBy": "Dimulai oleh:",
+        "at": "Pada:",
+        "openUrl": "Buka URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Tugas tersembunyi",
+        "empty": "Tak ada tugas tersembunyi yang tersedia."
+      },
+      "member": {
+        "lead": "Lead",
+        "workingOn": "bekerja pada",
+        "recentTools": "Perkakas baru-baru Ini",
+        "spawn": {
+          "waitingToStart": "menunggu untuk memulai",
+          "starting": "mulai",
+          "failed": "gagal"
+        },
+        "state": {
+          "active": "aktif",
+          "idle": "menganggur",
+          "offline": "luring",
+          "runningTool": "menjalankan alat"
+        },
+        "activeTool": {
+          "running": "Sedang menjalankan alat",
+          "failed": "Alat gagal",
+          "finished": "Alat selesai"
+        },
+        "actions": {
+          "message": "Pesan",
+          "profile": "Profil",
+          "task": "Tugas"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Log",
+      "loading": "Memuat log",
+      "more": "+{{count}} lagi",
+      "more_one": "+{{count}} lagi",
+      "more_other": "+{{count}} lagi",
+      "more_few": "+{{count}} lagi",
+      "more_many": "+{{count}} lagi"
+    },
+    "blockingEdge": {
+      "title": "Blocking Dependensi",
+      "blocks": "blok",
+      "close": "Tutup",
+      "blockingHiddenTasks": "Memblokir tugas tersembunyi",
+      "blockedHiddenTasks": "Diblokir tugas tersembunyi"
+    },
+    "activityHud": {
+      "activity": "Aktivitas",
+      "noRecentActivity": "Tidak ada aktivitas baru-baru ini",
+      "more": "+{{count}} lagi",
+      "more_one": "+{{count}} lagi",
+      "more_other": "+{{count}} lagi",
+      "more_few": "+{{count}} lagi",
+      "more_many": "+{{count}} lagi"
+    },
+    "provisioning": {
+      "launchDetails": "Peluncuran rincian",
+      "launchDetailsDescription": "Tim Detail meluncurkan kemajuan, keluaran langsung dan CLI log."
+    }
+  },
+  "projectPath": {
+    "label": "Projek",
+    "source": {
+      "claude": "Ditemukan oleh Claude",
+      "codex": "Ditemukan oleh Codex",
+      "mixed": "Ditemukan oleh Claude dan Codex"
+    },
+    "deleted": {
+      "title": "Folder projek tak ada lagi",
+      "label": "Dihapus"
+    },
+    "mode": {
+      "projectList": "Dari daftar projek",
+      "customPath": "Path ubahan"
+    },
+    "loadingProjects": "Memuat proyek...",
+    "selectProject": "Pilih proyek...",
+    "searchPlaceholder": "Cari projek berdasarkan nama atau path",
+    "empty": "Tidak ditemukan",
+    "selectFromList": "Pilih proyek dari daftar",
+    "noProjects": "Tak ada proyek yang ditemukan, beralih ke path gubahan.",
+    "customWorkingDirectory": "Direktori kerja gubahan",
+    "browse": "Ramban",
+    "createAutomatically": "Bila direktori tidak ada, itu akan dibuat secara otomatis."
+  },
+  "members": {
+    "badges": {
+      "worktree": "pohon kerja"
+    },
+    "runtimeTelemetry": {
+      "title": "Local runtime load",
+      "description": "Orang tua dan anak hanya proses. Jauh LLM kesimpulan tidak termasuk.",
+      "cpu": "CPU",
+      "memory": "Memori",
+      "summedRss": "summed RSS",
+      "sharedHost": "Shared OpenCode host metric. Hal ini tidak eksklusif untuk anggota ini.",
+      "processTreeCapped": "Pohon proses ditutup untuk sampel ini.",
+      "rssHint": "RSS dapat mencakup halaman bersama, jadi lebih baik dibaca sebagai sinyal load, bukan memori eksklusif."
+    },
+    "editor": {
+      "title": "Anggota",
+      "addMember": "Tambah anggota",
+      "editAsJson": "Sunting sebagai JSON",
+      "runInSeparateWorktrees": "Menjalankan rekan tim di worktree terpisah",
+      "agentTeamsMcpOnly": "Agen Tim MCP hanya",
+      "removedCount": "Dibuang ({{count}})",
+      "removedModelLockReason": "Anggota yang dibuang disimpan untuk menghapus sejarah lembut. Kembalikan mereka untuk menyunting pengaturan.",
+      "memberNamesUnique": "Nama anggota harus unik"
+    },
+    "stats": {
+      "computing": "Komputer statistik...",
+      "empty": "Tidak ada statistik yang tersedia",
+      "lines": "Baris",
+      "linesInfo": "Perkiraan. Akurasi untuk Sunting dan Alat Tulis. Berkas Bash menulis estimasi dari pola perintah (heredoc, echo, sed) dan mungkin akan dilaporkan bawah.",
+      "files": "Berkas",
+      "toolCalls": "Panggilan Alat",
+      "tokens": "Tokens",
+      "toolUsage": "Alat Penggunaan",
+      "filesTouched": "Berkas Tersentuh ({{count}})",
+      "viewAllChanges": "Tilik Semua Perubahan",
+      "showLess": "Tampilkan kurang",
+      "moreFiles": "+{{count}} lagi",
+      "footer": "{{count}} sesi dihitung {{computedAgo}}",
+      "footer_one": "{{count}} sesi dihitung {{computedAgo}}",
+      "footer_few": "{{count}} sesi dihitung {{computedAgo}}",
+      "footer_many": "{{count}} sesi dihitung {{computedAgo}}",
+      "footer_other": "{{count}} sesi dihitung {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "Mencari log...",
+      "empty": "log tidak ditemukan",
+      "waitingForTaskActivity": "Tugas sedang berlangsung - menunggu aktivitas sesi (auto- refresh)...",
+      "noTaskActivity": "Belum ada aktivitas sesi untuk tugas ini",
+      "noMemberActivity": "Anggota ini belum merekam aktivitas sesi",
+      "leadSessionTooltip": "Log utama tim penuh - berguna untuk konteks orkestra global, tidak spesifik untuk agen ini",
+      "memberSessionTooltip": "Log sesi rekan setim penuh - berguna ketika kerja berjalan dalam sesi anggota root daripada sebuah berkas subagen",
+      "startedAt": "dimulai {{time}}",
+      "active": "aktif",
+      "showDetails": "Tampilkan rincian",
+      "hideDetails": "Sembunyikan rincian",
+      "loadingDetails": "Memuat rincian...",
+      "failedToLoadDetails": "Gagal memuat rincian"
+    },
+    "detail": {
+      "relaunchOpenCode": "Relaunch OpenCode",
+      "restart": "Mulai Ulang",
+      "legacyLogsFallback": "Logs Legacy Fallback",
+      "copyDiagnostics": "Salin diagnosa",
+      "pid": "PID {{pid}}",
+      "removedAt": "Dibuang {{date}}",
+      "failedToRestartMember": "Gagal memulai ulang anggota",
+      "sendMessage": "Kirim Pesan",
+      "assignTask": "Atur Tugas",
+      "remove": "Hapus"
+    },
+    "list": {
+      "loading": "Memuat anggota tim",
+      "unavailable": "Daftar anggota tidak tersedia",
+      "unavailableDescription": "{{count}} Rekan tim dikenal dari tim metadata, tapi daftar rincian yang hilang.",
+      "unavailableDescription_one": "{{count}} Rekan tim dikenal dari tim metadata, tapi daftar rincian yang hilang.",
+      "soloLeadOnly": "Tim tunggal - memimpin saja",
+      "removedCount": "Dibuang ({{count}})",
+      "unavailableDescription_few": "{{count}} Rekan tim dikenal dari tim metadata, tapi daftar rincian yang hilang.",
+      "unavailableDescription_many": "{{count}} Rekan tim dikenal dari tim metadata, tapi daftar rincian yang hilang.",
+      "unavailableDescription_other": "{{count}} Rekan tim dikenal dari tim metadata, tapi daftar rincian yang hilang."
+    },
+    "executionLog": {
+      "empty": "Tak ada yang ditampilkan",
+      "emptyUserMessage": "{{time}} - (kosong)",
+      "agentInstructions": "Instruksi Agen",
+      "memberTurn": "{{member}} putar",
+      "agentTurn": "Agen gilirannya",
+      "turn": "putar"
+    },
+    "recentMessages": {
+      "latest": "Pesan terakhir",
+      "latestForMember": "Pesan terakhir - {{member}}",
+      "loadMore": "Muat lebih banyak",
+      "expand": "Ekspansi",
+      "collapse": "Kolapse"
+    },
+    "leadModel": {
+      "defaultModel": "Baku",
+      "providerModelAria": "{{provider}} penyedia, {{model}}",
+      "leadShort": "memimpin",
+      "teamLead": "Ketua Tim",
+      "syncWithTeammates": "Sync model dengan rekan tim",
+      "anthropicTeamWide": "Tim anthropic-lebar",
+      "runtimeInheritance": "runtime memimpin berlaku untuk rekan tim kecuali mereka mengatur penyedia atau model mereka sendiri.",
+      "anthropicContextLimit": "Batas konteks 200K adalah satu tim ke Anthropic runtimes dalam peluncuran ini, termasuk rekan tim Antroppic kustom."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Segarkan otomatis",
+      "wrapLines": "Lipat baris",
+      "loadingTail": "Memuat proses log tail...",
+      "empty": "Belum ada berkas log proses yang ditangkap untuk anggota ini."
+    },
+    "tasks": {
+      "empty": "Tidak ada tugas yang ditugaskan ke anggota ini"
+    },
+    "messages": {
+      "loadOlder": "Muat pesan yang lebih tua",
+      "filters": {
+        "all": "Semua",
+        "messages": "Pesan",
+        "comments": "Komentar"
+      },
+      "empty": {
+        "loading": "Memuat aktivitas...",
+        "noComments": "Tidak ada komentar untuk anggota ini",
+        "noLoadedMessages": "Belum ada pesan yang dimuat bagi anggota ini",
+        "noMessages": "Tidak ada pesan dengan anggota ini",
+        "noLoadedActivity": "Belum ada aktivitas dimuat bagi anggota ini",
+        "noActivity": "Tidak ada aktivitas dengan anggota ini"
+      }
+    },
+    "actions": {
+      "openProfile": "Buka profil",
+      "editRole": "Sunting peran",
+      "sendMessage": "Kirim pesan",
+      "assignTask": "Atur tugas"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Masukkan peran gubahan..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} jadwal",
+    "count_one": "{{count}} jadwal",
+    "count_other": "{{count}} jadwal",
+    "nextRun": "Berikutnya: {{next}}",
+    "actions": {
+      "runNow": "Lari sekarang",
+      "edit": "Sunting",
+      "pause": "Jeda",
+      "resume": "Lanjutkan",
+      "delete": "Hapus",
+      "addSchedule": "Tambah Jadwal"
+    },
+    "runHistory": {
+      "loading": "Memuat riwayat berjalan...",
+      "empty": "Tidak berjalan belum"
+    },
+    "count_few": "{{count}} jadwal",
+    "count_many": "{{count}} jadwal",
+    "runLog": {
+      "title": "Jalankan Log",
+      "exitCode": "keluar {{code}}",
+      "retryCount": "coba lagi {{count}}/{{max}}",
+      "stillRunning": "Tugas masih berjalan...",
+      "loadingLogs": "Memuat log...",
+      "errors": "Galat",
+      "close": "Tutup"
+    },
+    "cron": {
+      "expression": "Ekspresi cron",
+      "highFrequencyWarning": "Jadwal frekuensi tinggi (interval kurang dari 5 menit)",
+      "nextRuns": "Berikutnya berjalan:",
+      "timezone": "Zona Waktu",
+      "selectTimezone": "Pilih zona waktu",
+      "warmUpTime": "Waktunya pemanasan",
+      "warmUpDescription": "Siapkan penyedia yang dipilih sebelum eksekusi yang dijadwalkan",
+      "errors": {
+        "enterExpression": "Masukkan ekspresi kron",
+        "invalidExpression": "Ekspresi cron tidak valid"
+      },
+      "presets": {
+        "everyHour": "Setiap jam",
+        "everySixHours": "Setiap 6 jam",
+        "dailyAtNine": "Harian at 9am",
+        "weekdaysAtNine": "Minggu jam 9 pagi",
+        "mondayAtNine": "Senin jam 9 pagi",
+        "everyThirtyMinutes": "Setiap 30 menit"
+      },
+      "warmUpOptions": {
+        "none": "Tidak ada perang-up",
+        "fiveMinutes": "5 menit",
+        "tenMinutes": "10 menit",
+        "fifteenMinutes": "15 menit",
+        "thirtyMinutes": "30 menit"
+      }
+    },
+    "empty": {
+      "title": "Belum ada jadwal",
+      "description": "Buat jadwal untuk menjalankan tugas Claude secara otomatis pada jadwal cron."
+    },
+    "title": "Schedules",
+    "status": {
+      "active": "Aktif",
+      "paused": "Ditahan",
+      "disabled": "Dinonaktifkan"
+    },
+    "runStatus": {
+      "pending": "Menunggu",
+      "warmingUp": "Pemanasan",
+      "warm": "Hangat",
+      "running": "Berjalan",
+      "completed": "Selesai",
+      "failed": "Gagal",
+      "interrupted": "Interupsi",
+      "cancelled": "Dibatalkan"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Model lokal OpenCode dapat menggunakan anggaran konteks OpenCode bukannya batas proto-saja.",
+    "description": "Tambahkan batas yang cocok ke konfigurasi OpenCode untuk penyedia dan model yang digunakan oleh rekan satu tim ini. Ini membantu OpenCode compact dan prune sebelum model lokal membanjiri jendela konteks mereka.",
+    "replacePrefix": "Ganti",
+    "and": "dan",
+    "replaceSuffix": "dengan penyedia dan ID model dari setup OpenCode Anda. Prompt instruksi seperti",
+    "promptInstructionsSuffix": "lemah karena permintaan dirakit sebelum model membacanya.",
+    "providerLimits": "Batas penyedia",
+    "compactionConfig": "Komaksi konfigurasi"
+  },
+  "sessions": {
+    "noProjectPath": "Tak ada path projek yang terkait",
+    "provisioningHint": "Sesi akan muncul setelah penyediaan tim",
+    "projectNotFound": "Projek tak ditemukan",
+    "loading": "Memuat sesi...",
+    "empty": "Tidak ditemukan sesi",
+    "showAllSessions": "Tampilkan untuk semua sesi",
+    "lead": "memimpin",
+    "removeFilter": "Hapus filter",
+    "filterBySession": "Filter menurut sesi ini",
+    "openSession": "Buka sesi",
+    "title": "Sesi"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Batal",
+    "moreWarningsHidden": "{{count}} peringatan lebih tersembunyi",
+    "diagnostics": "Diagnostik",
+    "liveOutput": "Keluaran hidup",
+    "diagnosticsCopied": "Diagnostik disalin",
+    "copyDiagnostics": "Salin diagnosa",
+    "copied": "Disalin",
+    "noOutput": "Belum ada hasil yang ditangkap.",
+    "cliLogs": "CLI log",
+    "steps": {
+      "starting": "Memulai",
+      "configuring": "Pengaturan tim",
+      "assembling": "Anggota bergabung",
+      "finalizing": "Menyelesaikan"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "Memeriksa...",
+        "ready": "OK",
+        "notes": "OK (catatan)",
+        "failed": "ERR",
+        "pending": "menunggu"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI binari hilang",
+        "openCodeRuntimeMissing": "OpenCode waktu jalan hilang",
+        "openCodeWindowsAccessBlocked": "Akses OpenCode Windows diblokir",
+        "openCodeNoOutput": "Pemeriksaan waktu jalan OpenCode mengembalikan keluaran",
+        "openCodeMcpUnreachable": "Aplikasi OpenCode MCP tak terjangkau",
+        "workingDirectoryMissing": "Direktori kerja hilang",
+        "cliBinaryCouldNotStart": "CLI binari tidak dapat dimulai",
+        "cliPreflightIncomplete": "CLI preflight tidak lengkap",
+        "authenticationRequired": "Otentikasi diperlukan",
+        "runtimeProviderNotConfigured": "Operator waktu jalan tidak dikonfigurasi",
+        "cliPreflightFailed": "CLI prapenerbangan gagal",
+        "selectedModelCompatible": "kompatibel model yang dipilih",
+        "selectedModelCompatibilityPending": "Kompabilitas model yang dipilih tertunda",
+        "selectedModelAvailable": "Model yang dipilih tersedia",
+        "selectedModelVerified": "Model yang dipilih diverifikasi",
+        "selectedModelUnavailable": "Model yang dipilih tidak tersedia",
+        "selectedModelTimedOut": "Waktu verifikasi model yang dipilih habis",
+        "selectedModelCheckFailed": "Pemeriksaan model yang dipilih gagal",
+        "selectedModelDeferred": "Ditunda verifikasi model yang dipilih",
+        "selectedModelPingNotConfirmed": "ping model yang dipilih tidak dikonfirmasi",
+        "readyWithNotes": "Siap dengan catatan",
+        "needsAttention": "Butuh perhatian"
+      },
+      "modelChecksSummary": "Pemeriksaan model terpilih - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model tidak tersedia",
+        "unavailable_one": "{{count}} model tidak tersedia",
+        "unavailable_other": "{{count}} model tidak tersedia",
+        "checkFailed": "{{count}} pemeriksaan model gagal",
+        "checkFailed_one": "{{count}} pemeriksaan model gagal",
+        "checkFailed_other": "{{count}} pemeriksaan model gagal",
+        "timedOut": "{{count}} waktu model habis",
+        "timedOut_one": "{{count}} waktu model habis",
+        "timedOut_other": "{{count}} model timeout",
+        "deferred": "{{count}} tertunda verifikasi",
+        "deferred_one": "{{count}} tertunda verifikasi",
+        "deferred_other": "{{count}} tertunda verifikasi",
+        "pingNotConfirmed": "{{count}} ping belum dikonfirmasi",
+        "pingNotConfirmed_one": "{{count}} ping belum dikonfirmasi",
+        "pingNotConfirmed_other": "{{count}} ping belum dikonfirmasi",
+        "compatibilityPending": "{{count}} kompatibel, verifikasi mendalam tertunda",
+        "compatibilityPending_one": "{{count}} kompatibel, verifikasi mendalam tertunda",
+        "compatibilityPending_other": "{{count}} kompatibel, verifikasi mendalam tertunda",
+        "compatible": "{{count}} kompatibel",
+        "compatible_one": "{{count}} kompatibel",
+        "compatible_other": "{{count}} kompatibel",
+        "checking": "{{count}} memeriksa",
+        "checking_one": "{{count}} memeriksa",
+        "checking_other": "{{count}} memeriksa",
+        "available": "{{count}} tersedia",
+        "available_one": "{{count}} tersedia",
+        "available_other": "{{count}} tersedia",
+        "verified": "{{count}} Diverifikasi",
+        "verified_one": "{{count}} Diverifikasi",
+        "verified_other": "{{count}} Diverifikasi",
+        "unavailable_few": "{{count}} model tidak tersedia",
+        "unavailable_many": "{{count}} model tidak tersedia",
+        "checkFailed_few": "{{count}} pemeriksaan model gagal",
+        "checkFailed_many": "{{count}} pemeriksaan model gagal",
+        "timedOut_few": "{{count}} model timeout",
+        "timedOut_many": "{{count}} model timeout",
+        "deferred_few": "{{count}} tertunda verifikasi",
+        "deferred_many": "{{count}} tertunda verifikasi",
+        "pingNotConfirmed_few": "{{count}} ping belum dikonfirmasi",
+        "pingNotConfirmed_many": "{{count}} ping belum dikonfirmasi",
+        "compatibilityPending_few": "{{count}} kompatibel, verifikasi mendalam tertunda",
+        "compatibilityPending_many": "{{count}} kompatibel, verifikasi mendalam tertunda",
+        "compatible_few": "{{count}} kompatibel",
+        "compatible_many": "{{count}} kompatibel",
+        "checking_few": "{{count}} memeriksa",
+        "checking_many": "{{count}} memeriksa",
+        "available_few": "{{count}} tersedia",
+        "available_many": "{{count}} tersedia",
+        "verified_few": "{{count}} Diverifikasi",
+        "verified_many": "{{count}} Diverifikasi"
+      },
+      "openProviderSettings": "Buka {{provider}} pengaturan",
+      "copied": "Disalin",
+      "copyDiagnostics": "Salin diagnosa",
+      "deepVerificationPending": "Verifikasi mendalam masih berjalan. OpenCode model bebas dapat mengambil sekitar 20 detik.",
+      "progress": {
+        "checkingSelectedProviders": "Memeriksa penyedia yang dipilih dalam paralel...",
+        "checkingProvider": "Memeriksa {{provider}} penyedia...",
+        "checkingProviders": "Memeriksa {{providers}} Penyedia..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Perbaiki perizinan folder atau pindahkan projek ke folder yang dapat ditulisi. Menjalankan sebagai administrator hanya untuk sementara.",
+        "openCodeBridgeNoOutput": "Nyalakan kembali aplikasi dan waktu berjalan OpenCode, lalu coba lagi. Jika berulang, salin diagnosa.",
+        "workingDirectoryMissing": "Pilih direktori kerja yang telah ada, kemudian buka kembali dialog ini.",
+        "authenticationRequired": "Otentikasi penyedia yang diperlukan dalam Claude CLI, kemudian membuka kembali dialog ini.",
+        "runtimeProviderNotConfigured": "Mengkonfigurasi waktu berjalan penyedia yang dipilih, kemudian membuka kembali dialog ini.",
+        "openCodeRuntimeMissing": "Pasang atau coba ulang waktu berjalan OpenCode dari kartu status penyedia, kemudian buka kembali dialog ini.",
+        "openCodeAppMcpUnreachable": "Coba lagi meluncurkan untuk menyegarkan aplikasi OpenCode MCP bridge. Jika berulang, restart aplikasi dan waktu berjalan OpenCode.",
+        "cliBinaryMissing": "Pastikan Claude lokal CLI biner ada dan dapat dimulai, kemudian membuka kembali dialog ini.",
+        "default": "Selesaikan masalah di atas, lalu buka kembali dialog ini."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} Rekan tim menunggu persetujuan izin",
+      "nameListWithMore": "{{names}}, +{{count}} lagi",
+      "waitingForOpenCode": "Menunggu OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap terhenti: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Menunggu OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap terhenti",
+        "shellOnly": "Hanya kulit",
+        "waitingForBootstrap": "Menunggu bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap belum dikonfirmasi",
+        "awaitingPermission": "Izin tunggu",
+        "waitingForRuntime": "Menunggu waktu berjalan",
+        "shellOnlyLower": "shell-only",
+        "waitingForBootstrapLower": "menunggu bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap belum dikonfirmasi",
+        "awaitingPermissionLower": "menunggu izin",
+        "waitingForRuntimeLower": "menunggu waktu berjalan"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} gagal untuk memulai",
+        "teammatesFailedToStart": "{{count}} rekan tim gagal untuk memulai",
+        "teammatesFailedRatio": "{{count}}/{{total}} rekan tim gagal untuk memulai"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} dilewati untuk peluncuran ini",
+        "memberSkippedWithReason": "{{name}} dilewati untuk peluncuran ini - {{reason}}",
+        "memberSkippedCompact": "{{name}} dilewati",
+        "teammatesSkipped": "{{count}} rekan tim melewatkan",
+        "teammatesSkippedList": "Skipped rekan tim: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} rekan tim melewatkan peluncuran ini"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} rekan tim masih bergabung",
+        "teammatesStillJoining_one": "{{count}} Teman satu tim masih bergabung.",
+        "teammatesStillJoining_few": "{{count}} rekan tim masih bergabung",
+        "teammatesStillJoining_many": "{{count}} rekan tim masih bergabung",
+        "teammatesStillJoining_other": "{{count}} rekan tim masih bergabung",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} rekan tim dikonfirmasi"
+      },
+      "ready": {
+        "leadOnline": "Lead online",
+        "allTeammatesJoined": "Semua {{count}} rekan tim bergabung",
+        "teamProvisionedLeadOnline": "Tim yang menyediakan - lead online",
+        "teamProvisionedAllJoined": "Tim ditetapkan - semua {{count}} rekan tim bergabung",
+        "teamProvisionedStillJoining": "Tim ditetapkan - rekan tim masih bergabung",
+        "launchFinishedWithErrors": "Peluncuran selesai dengan galat - {{count}}/{{total}} rekan tim gagal untuk memulai",
+        "launchContinuedSkipped": "Luncurkan terus - {{count}}/{{total}} rekan tim melewatkan",
+        "teamLaunchedLeadOnline": "Tim diluncurkan - lead online",
+        "teamLaunchedAllJoined": "Tim diluncurkan - semua {{count}} rekan tim bergabung"
+      },
+      "panel": {
+        "launchFailed": "Peluncuran gagal",
+        "launchDetails": "Peluncuran rincian",
+        "launchFinishedWithErrors": "Peluncuran selesai dengan galat",
+        "launchContinuedSkipped": "Peluncuran dilanjutkan dengan tim yang terlewati.",
+        "coreTeamReady": "Tim inti siap",
+        "finishingLaunch": "Menyelesaikan peluncuran",
+        "teamLaunched": "Tim diluncurkan",
+        "launchingTeam": "Meluncurkan tim"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Status live runtime",
+    "description": "Buang detak jantung dan peluncurannya. Proses kontrol tetap di bawah.",
+    "source": "sumber: {{source}}",
+    "lane": "{{lane}} jalur",
+    "diagnosticOnly": "Hanya diagnostik",
+    "updated": "diperbarui {{value}}",
+    "states": {
+      "running": "Berjalan",
+      "starting": "Memulai",
+      "waiting": "Menunggu",
+      "degraded": "Butuh perhatian",
+      "stopped": "Dihentikan",
+      "unknown": "Tak dikenal"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Log Tugas Tepat",
+      "loading": "Memuat log tugas yang tepat...",
+      "description": "irisan transkrip yang persis diberikan dengan eksekusi yang sama komponen log yang digunakan dalam Log.",
+      "emptyTitle": "Belum ada log tugas yang tepat",
+      "emptyDescription": "Bundel transkrip yang tepat akan muncul di sini ketika metadata transkrip terkoneksi eksplisit tersedia.",
+      "summaryOnly": "hanya ringkasan"
+    },
+    "executionSessions": {
+      "title": "Sesi Eksekusi",
+      "online": "Daring",
+      "updating": "Memperbarui...",
+      "description": "Legacy session- transkrip sentris browsing dan pratilik."
+    },
+    "stream": {
+      "title": "Stream Log Tugas"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Batalkan tugas {{taskId}}",
+      "cancel": "Batal",
+      "moveBackToTodoConfirm": "Pindahkan tugas ini kembali ke TODO dan memberitahu tim?",
+      "confirm": "Konfirmasi",
+      "keep": "Simpan",
+      "changesNeedAttention": "Perubahan membutuhkan perhatian",
+      "changes": "Perubahan",
+      "deleteTask": "Hapus tugas",
+      "taskLogsActive": "Log tugas aktif",
+      "newTaskLogsArriving": "Log tugas baru tiba",
+      "awaitingUser": "Menunggu pengguna",
+      "awaitingLead": "Menunggu memimpin",
+      "blockedBy": "Diblokir oleh",
+      "blocks": "Blok",
+      "start": "Mulai",
+      "complete": "Lengkap",
+      "approve": "Approve",
+      "requestReview": "Ulasan permintaan",
+      "manualReview": "Ulasan manual",
+      "requestChanges": "Permintaan perubahan"
+    },
+    "filter": {
+      "title": "Filter tugas",
+      "session": "Sesi",
+      "allSessions": "Semua sesi",
+      "teammate": "Teman setim",
+      "unassigned": "(Tidak ditugaskan)",
+      "column": "Kolom",
+      "clearAll": "Hapus semua"
+    },
+    "board": {
+      "addTask": "Tambah tugas",
+      "noTasks": "Tak ada tugas",
+      "showMore": "Tampilkan {{count}} lagi",
+      "hiddenCount": "{{count}} tersembunyi",
+      "trash": "Tempat Sampah",
+      "gridView": "Tilikan kisi",
+      "columnsView": "Tilikan kolom"
+    },
+    "trash": {
+      "title": "Tempat Sampah",
+      "empty": "Tak ada tugas yang dihapus",
+      "subject": "Subjek",
+      "owner": "Pemilik",
+      "deleted": "Dihapus",
+      "unassigned": "Tak ditugaskan",
+      "restoreTask": "Kembalikan tugas",
+      "restore": "Pulihkan",
+      "close": "Tutup"
+    },
+    "sort": {
+      "title": "Urutkan tugas",
+      "sortBy": "Urutkan menurut",
+      "reset": "Reset",
+      "options": {
+        "updatedAt": {
+          "label": "Terakhir diperbarui",
+          "description": "Baru-baru ini diperbarui pertama"
+        },
+        "createdAt": {
+          "label": "Dibuat",
+          "description": "Terbaru pertama"
+        },
+        "owner": {
+          "label": "Pemilik",
+          "description": "Alfabet oleh assignee"
+        },
+        "manual": {
+          "label": "Manual",
+          "description": "Urutan drag-and-drop"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Bersihkan pencarian",
+      "tasks": "Tugas",
+      "createdAgo": "dibuat {{time}}",
+      "updatedAgo": "diperbarui {{time}}",
+      "placeholder": "Cari tugas... (#id atau teks)"
+    },
+    "grid": {
+      "addTask": "Tambah tugas",
+      "noTasks": "Tak ada tugas"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Memeriksa status repositori git bagi pohon kerja rekan tim...",
+    "ready": "pohon kerja Git siap.",
+    "readyOnBranch": "pohon kerja git siap pada branch {{branch}}.",
+    "needsSetup": "Isolasi worktree perlu setup Git",
+    "initialCommitNotice": "Tahap aksi awal melakukan dan melakukan semua berkas kini dengan pesan",
+    "initializeRepository": "Inisialisasi repositori Git",
+    "createInitialCommit": "Buat komit awal",
+    "initialCommitMessage": "chore: komit awal"
+  },
+  "toolApproval": {
+    "settings": "Pengaturan",
+    "autoAllowAllTools": "Otomatis mengizinkan semua alat",
+    "autoAllowFileEdits": "Otomatis mengizinkan berkas disunting (Edit, Tulis, Catatan Edit)",
+    "autoAllowSafeCommands": "Otomatis mengizinkan perintah aman (git, pnpm, npm, ls...)",
+    "onTimeout": "Waktu habis:",
+    "after": "sesudah",
+    "secondsShort": "detik",
+    "timeoutActions": {
+      "wait": "Tunggu selamanya",
+      "allow": "Ijinkan",
+      "deny": "Deny"
+    },
+    "submit": "Kirim",
+    "allow": "Ijinkan",
+    "deny": "Deny",
+    "allowAll": "Izinkan semua",
+    "pendingCount": "{{count}} tertunda",
+    "autoActionIn": "Auto-{{action}} in {{time}}",
+    "diff": {
+      "previewChanges": "Pratilik perubahan",
+      "readingFile": "Membaca berkas...",
+      "binaryFile": "Berkas binary - tidak dapat pratinjau",
+      "truncated": "Berkas dipotong pada 2MB - diff mungkin tidak lengkap",
+      "newFile": "Berkas baru"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Sinkronisasi kerja anggota",
+      "actionableItems": "Butir yang dapat dilaksanakan",
+      "fingerprint": "Sidik jari",
+      "report": "Laporan",
+      "none": "kosong",
+      "shadowWouldNudge": "Shadow akan nudge",
+      "yes": "ya",
+      "no": "tidak",
+      "moreActionableItems": "{{count}} item lebih dapat ditindaklanjuti",
+      "diagnostics": "Diagnostik: {{diagnostics}}"
+    },
+    "title": "Sinkronisasi kerja anggota",
+    "loadingDiagnostics": "Memuat anggota bekerja diagnostik sync.",
+    "diagnosticsUnavailable": "Diagnosa sinkron bekerja tidak tersedia."
+  },
+  "advancedCli": {
+    "title": "Tingkat lanjut",
+    "useWorktree": "Gunakan pohon kerja",
+    "recent": "Terkini",
+    "commandPreview": "Pratilik perintah",
+    "customArguments": "Argumen gubahan",
+    "validate": "Validasi",
+    "validation": {
+      "allFlagsValid": "Semua bendera valid",
+      "unknownFlags": "Tidak diketahui: {{flags}}",
+      "protectedFlags": "Dilindungi: {{flags}}",
+      "failed": "Validasi gagal"
+    },
+    "placeholders": {
+      "worktreeName": "nama kerja"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} yang lalu",
+    "stoppedAgo": "dihentikan {{time}} yang lalu",
+    "running": "Berjalan",
+    "stopped": "Dihentikan",
+    "stopProcess": "Hentikan proses (SIGTERM)",
+    "kill": "Bunuh",
+    "openInBrowser": "Buka dalam peramban",
+    "open": "Buka",
+    "pid": "PID{{pid}}",
+    "title": "CLI Proses"
+  },
+  "taskActivity": {
+    "loadingDetails": "Memuat rincian aktivitas...",
+    "contextUnavailable": "Konteks transkrip rinci tidak lagi tersedia untuk aktivitas ini.",
+    "loading": "Memuat aktivitas tugas...",
+    "lowSignalOnly": "Belum ditemukan aktivitas tugas kunci. Rincian eksekusi tingkat-rendah tersedia di bawah di Stream Log Tugas.",
+    "empty": "Belum ditemukan aktivitas tugas eksplisit dalam transkrip yang tersedia. Log sesi lama atau heuristik mungkin masih tersedia di bawah ini dalam Sesi Eksekusi.",
+    "title": "Aktivitas Tugas",
+    "description": "Aktivitas eksplisit runtime terkait dengan tugas ini dari metadata transkrip."
+  },
+  "sendMessage": {
+    "title": "Kirim Pesan",
+    "description": "Kirim pesan langsung ke anggota tim.",
+    "recipientLabel": "Penerima",
+    "selectMemberPlaceholder": "Pilih anggota...",
+    "messageLabel": "Pesan",
+    "placeholder": "Tulis pesan Anda... (Masukkan untuk mengirim)",
+    "send": "Kirim",
+    "sending": "Mengirim...",
+    "charsLeft": "{{count}} chars kiri",
+    "saved": "Tersimpan",
+    "attachments": {
+      "teamOnlineRequired": "Tim mesti daring untuk melampirkan berkas",
+      "recipientUnsupported": "File dapat dikirim ke memimpin tim atau OpenCode rekan tim",
+      "openCodeOnlineRequired": "Tim harus online untuk melampirkan berkas untuk rekan satu tim OpenCode",
+      "disabledHint": "Lampiran berkas didukung bagi pimpinan tim online dan rekan-rekan OpenCode online. Hapus lampiran atau ganti penerima.",
+      "attachFiles": "Lampirkan berkas (tempel atau seret & jatuhkan)",
+      "unavailable": "Lampiran tidak tersedia"
+    },
+    "quote": {
+      "remove": "Hapus kutipan",
+      "replyingTo": "Menjawab ke"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Batalkan balasan",
+    "replyingTo": "Menjawab ke",
+    "placeholder": "Tambahkan komentar... (Masukkan untuk mengirim)",
+    "attachFile": "Lampirkan berkas (atau tempel)",
+    "voiceToText": "Suara teks",
+    "comment": "Komentar",
+    "charsLeft": "{{count}} chars kiri",
+    "saved": "Tersimpan",
+    "awaitingReplyFrom": "Menunggu balasan dari",
+    "or": "atau"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Jatuhkan gambar di sini",
+    "attachImage": "Kaitkan gambar",
+    "pasteOrDragDrop": "atau paste / drag-drop",
+    "fromOriginalMessage": "Dari pesan asli",
+    "dropFilesHere": "Jatuhkan berkas di sini",
+    "loading": "Memuat lampiran..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Ajukan otomatis semua alat",
+    "autonomousModeDescription": "Mode otomatis: alat tim dijalankan tanpa konfirmasi. Berhati-hatilah dengan kode tidak terpercaya.",
+    "manualModeDescription": "Mode manual: Anda akan menyetujui atau menolak setiap panggilan alat secara real time."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Eksekusi",
+      "process": "Proses"
+    },
+    "filters": {
+      "all": "Semua"
+    },
+    "logs": {
+      "title": "Log",
+      "loading": "Memuat arus log anggota...",
+      "emptyTitle": "Belum ada entri arus log yang ditemukan bagi anggota ini.",
+      "emptyDescription": "Anggota-scoped transkrip atau log waktu-jalan akan muncul di sini ketika tersedia."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Jelaskan apa yang perlu diubah... (Masukkan untuk mengirimkan)",
+    "submit": "Kirim",
+    "charsLeft": "{{count}} chars kiri",
+    "saved": "Tersimpan",
+    "title": "Permintaan Perubahan"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Buka Dashboard",
+      "openTeam": "Buka tim",
+      "cancel": "Batal"
+    },
+    "membersJson": {
+      "hide": "Sembunyikan JSON"
+    },
+    "optional": {
+      "badge": "Opsional"
+    }
+  },
+  "runningTeams": {
+    "title": "Menjalankan Tim"
+  },
+  "layout": {
+    "maxPanesReached": "Maksimum {{count}} panel dicapai"
+  },
+  "codexReconnect": {
+    "description": "Sesi Codex Anda tampak basi. Reconnect untuk melanjutkan.",
+    "useCode": "Gunakan kode"
+  },
+  "effortLevel": {
+    "label": "Tingkat benteng (opsional)",
+    "maxDescription": "Max memberikan model waktu yang paling lama untuk tugas yang sulit."
+  },
+  "contextLimit": {
+    "limitTo200k": "Batasi konteks ke token 200K",
+    "always200k": "(selalu 200K untuk model ini)",
+    "tooltipContent": "Terus meluncurkan dalam 200 K-token jendela konteks ketika didukung.",
+    "tooltipTitle": "Batas konteks"
+  },
+  "roleSelect": {
+    "noRole": "Tidak ada peran",
+    "customRole": "Peran kustom...",
+    "searchPlaceholder": "Cari peran...",
+    "empty": "Tidak ditemukan peran.",
+    "reservedRole": "Peran ini dipesan"
+  }
+}

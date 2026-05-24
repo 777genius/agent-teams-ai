@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "جگہ",
+      "openDashboard": "ڈاک بورڈ کھولیں",
+      "refreshCatalog": "قابلِ‌اعتماد دستاویز"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "حساب: {{status}}",
+      "skills": "سکیل: {{status}}"
+    },
+    "desktopOnly": "صرف ڈیسک ٹاپ میں دستیاب.",
+    "provider": {
+      "checkingStatus": "فراہم کُنندہ کی حیثیت چیک کریں...",
+      "connected": "غیر متصل",
+      "loading": "لوڈ کریں...",
+      "needsSetup": "ضرورتیں مقرر کریں",
+      "readyToConfigure": "تیار رہیں",
+      "unsupported": "غیر متصل"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "بڑے پیمانے پر چلانے کی ضرورت ہے MCP سرور، مہارت اور فراہم کردہ اتصال",
+      "checkingAvailabilityTitle": "وسیع وسائل کی جانچ کرنا",
+      "failedToStartDescription": "فضائیہ اس وقت تک معذور رہتی ہے جب تک کہ رن اپ ہیلتھ چیک نہ گزر جائے۔ اس کی مرمت یا دوبارہ شروع کرنے کے لیے ڈاک بورڈ کھولیں",
+      "failedToStartTitle": "ایبٹ آباد رن ٹائم دریافت ہوا لیکن شروع کرنے میں ناکام رہا۔",
+      "multimodelCapabilitiesDescription": "فراہم کِیا گیا ہے ۔ صرف اُسی جگہ دکھایا جاتا ہے جہاں عارضی حمایت کا اعلان کِیا جاتا ہے ۔",
+      "multimodelCapabilitiesTitle": "مُتناسق عالمی وقتی صلاحیتوں",
+      "needsSignInDescription": "{{runtime}} مل گیا{{version}}... لیکن پلگ ان تنصیبات معذور ہیں جب تک کہ آپ ڈاک بورڈ سے دستخط نہیں کر سکتے۔",
+      "needsSignInTitle": "{{runtime}} نشان کی ضرورت ہے",
+      "notAvailableDescription": "توسیعی اداروں کو اس وقت تک معذور رہتے ہیں جب تک رن بیک نصب نہ ہو جائے۔ اسے نصب کر نے کے ليے داش بورڈ کھول ئيں",
+      "notAvailableTitle": "اِس کے لئے ضروری ہے کہ ہم اُس کی مدد کریں ۔",
+      "readyDescription": "اس صفحے سے پلگ انس نصب کیا جا سکتا ہے۔{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} تیار ہے",
+      "requiredForMutations": "تنصیب یا غیر درج شدہ توسیع کے لیے انفنٹری رننگ ٹائم لازمی ہے۔ ڈاک بورڈ سے نصب یا مرمت کرنا۔"
+    },
+    "sessionsRestartWarning": "دوبارہ شروع ہونے تک توسیعی تبدیلیاں نہیں کریں گے۔",
+    "tabs": {
+      "apiKeys": {
+        "description": "آن لائن خدمات کے لیے خفیہ کلیدیں۔ ان کو یہاں شامل کریں، سروروں اور انفلیشنوں کو جوڑنے اور کام کرنے کے.",
+        "label": "API کلیدیات"
+      },
+      "mcpServers": {
+        "description": "بیرونی آلات اور پلگ ان سے رابطہ. وہ رزمیہ اعداد پڑھنے دیں یا اس ایپ سے آگے کام کریں۔",
+        "label": "MCP سرور"
+      },
+      "plugins": {
+        "description": "رن وے کے لیے چھوٹا اضافہ۔ اُس وقت وہ انتھک تقریبات پر عمل کرتے ہیں ۔ براڈ بینڈ فراہم کُنندہ ترقی میں ہے ۔",
+        "label": "حساب"
+      },
+      "skills": {
+        "description": "عام ملازمتوں کے لیے تیار کردہ ہدایات۔ وہ باقاعدگی سے باقاعدگی سے کام کرتے ہیں ۔",
+        "label": "سو ئچ"
+      }
+    },
+    "title": "وسیع خط"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} فعال",
+    "browseByFit": "پتے کے ذریعے بروش",
+    "capabilities": "استحکام",
+    "categories": "کاٹگل",
+    "clearAllFilters": "تمام فلٹر صاف کریں",
+    "clearFilters": "صاف فیلڈز",
+    "counts": {
+      "capabilities": "{{count}} صلاحیتوں",
+      "categories": "{{count}} تعداد",
+      "plugins": "{{count}} طےشدہ",
+      "capabilities_few": "{{count}} صلاحیتوں",
+      "capabilities_many": "{{count}} صلاحیتوں",
+      "capabilities_one": "{{count}} صلاحیتوں",
+      "capabilities_other": "{{count}} صلاحیتوں",
+      "categories_few": "{{count}} تعداد",
+      "categories_many": "{{count}} تعداد",
+      "categories_one": "{{count}} تعداد",
+      "categories_other": "{{count}} تعداد",
+      "plugins_few": "{{count}} طےشدہ",
+      "plugins_many": "{{count}} طےشدہ",
+      "plugins_one": "{{count}} طےشدہ",
+      "plugins_other": "{{count}} طےشدہ"
+    },
+    "empty": {
+      "description": "نئے پلگ انس کے لئے دوبارہ چیک کریں",
+      "filteredDescription": "تلاش یا درست معیاروں کو درست کرنے کی کوشش کریں",
+      "filteredTitle": "آپ کے پلگ انس میچ نہیں",
+      "title": "کوئی پلگ ان دستیاب نہیں"
+    },
+    "filterDescription": "اِس میں کوئی شک نہیں کہ اُس نے اِسے کیسے محفوظ رکھا ہے ۔",
+    "installedOnly": "صرف",
+    "providerSupportNotice": "اِس کے علاوہ اِس بات کی ضمانت بھی دی جاتی ہے کہ اِن میں سے ہر ایک کو اُس کی مدد کرنی چاہئے ۔ ہم تمام ایجنٹوں کے تعاون کے لئے کام کر رہے ہیں.",
+    "resultsUpdateInstantly": "نتائج فوری طور پر دوبارہ شروع کرتے ہیں جب آپ فیلڈ فیلڈر کو اپ لوڈ کرتے ہیں.",
+    "searchPlaceholder": "... تلاش کرو",
+    "selectedCount": "{{count}} منتخب",
+    "showing": "دکھائیں {{shown}} جواب {{total}} طےشدہ",
+    "sort": {
+      "category": "کیٹیگری",
+      "nameAsc": "نام A-Z",
+      "nameDesc": "نام:  جواب",
+      "popular": "مقبول"
+    },
+    "activeFilters_few": "{{count}} فعال",
+    "activeFilters_many": "{{count}} فعال",
+    "activeFilters_one": "{{count}} فعال",
+    "activeFilters_other": "{{count}} فعال",
+    "selectedCount_few": "{{count}} منتخب",
+    "selectedCount_many": "{{count}} منتخب",
+    "selectedCount_one": "{{count}} منتخب",
+    "selectedCount_other": "{{count}} منتخب"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "شامل کریں",
+      "cancel": "منسوخ",
+      "install": "نصب کریں",
+      "installing": "نصب کی جارہی ہیں..."
+    },
+    "description": "کي بورڈ کے بغیر سرور دستی طور پر شامل کريں",
+    "errors": {
+      "installFailed": "نصب کرنے میں ناکامی",
+      "invalidServerName": "غیر متصل سرور نام. الفانومری حروف استعمال کریں، باریک، باریک، دوات۔",
+      "npmPackageRequired": "npm پیکج نام درکار ہے",
+      "serverNameRequired": "سرور نام لازمی ہے۔",
+      "serverUrlRequired": "سرور URL مطلوب"
+    },
+    "fields": {
+      "environmentVariables": "ماحولیاتی تنوع",
+      "headers": "حساب",
+      "npmPackage": "داخل پیکج",
+      "scope": "ریشم",
+      "serverName": "سرور نام",
+      "serverUrl": "سرور URL",
+      "transport": "ٹرانسپورٹ",
+      "transportType": "ٹرانسپورٹ ٹائپ",
+      "versionOptional": "نسخہ (اختیاری)"
+    },
+    "title": "جگہ MCP سرور",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "اسٹوڈیو (npm)"
+    },
+    "placeholders": {
+      "headerName": "طےشدہ",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "میرا شکریہ",
+      "latest": "تازہ",
+      "value": "اہمیت",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "دور دراز MCP سروروں کے لیے اب بھی معمول کے سربراہوں یا API کلیدیں بھی جب رجسٹر ان کے بیان نہیں کرتیں۔ تنصیب کے بعد اگر اتصال ناکام ہوگیا تو فراہم کُنندہ ڈوس چیک کریں.",
+      "required": "اس سرور کو توثیق درکار ہے۔"
+    },
+    "diagnostics": {
+      "launchTarget": "رنگ"
+    },
+    "form": {
+      "autoFilled": "خود کار محفوظ",
+      "environmentVariables": "ماحولیاتی تنوع",
+      "headers": "حساب",
+      "scope": "ریشم",
+      "serverName": "سرور نام"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "اس سرور کو دستی سیٹ کی ضرورت ہوتی ہے۔ تنصیب کی ہدایات کے لیے محفوظگی چیک کریں.",
+      "manualSetupRequired": "دستی سیٹ درکار",
+      "npmPackage": "نمبر: {{package}}",
+      "manage": "طےشدہ",
+      "install": "سرور انسٹال کریں"
+    },
+    "links": {
+      "glama": "گلما",
+      "repository": "طےشدہ",
+      "website": "ویب سائٹ"
+    },
+    "metadata": {
+      "author": "مصنف",
+      "githubStars": "جٹوب ستارے",
+      "hosting": "مہم بازی",
+      "installType": "قسم",
+      "license": "اجازت",
+      "published": "شائع",
+      "source": "ماخذ",
+      "updated": "طےشدہ",
+      "version": "ورژن"
+    },
+    "scope": {
+      "local": "جگہ",
+      "project": "منصوبہ بندی"
+    },
+    "tools": {
+      "title": "آلات ({{count}})",
+      "title_few": "آلات ({{count}})",
+      "title_many": "آلات ({{count}})",
+      "title_one": "آلات ({{count}})",
+      "title_other": "آلات ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "میرا شکریہ"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "منسوخ",
+      "createSkill": "سکیل بنائیں",
+      "preparing": "تیار کیا گیا...",
+      "reviewAndCreate": "دوبارہ تخلیق کریں",
+      "reviewAndSave": "اور محفوظ کریں",
+      "saveSkill": "سکیل محفوظ کریں"
+    },
+    "advanced": {
+      "customDescription": "یہ مہارت ایک دستوری مارک ڈاؤن فارم کا استعمال کرتی ہے، تو اس میں براہ راست ترمیم کی۔",
+      "customTitle": "2. SKILL. . .",
+      "description": "زیادہ تر لوگ اس کو منسوخ کر سکتے ہیں۔ اسے کھولو اگر آپ براہ راست نشان فائل پر کنٹرول کرنا چاہتے ہیں.",
+      "hide": "ایڈیٹر",
+      "resetFromStructuredFields": "وسیع میدانوں سے",
+      "show": "طےشدہ",
+      "title": "۴ ۔ SKILL. . ."
+    },
+    "basics": {
+      "description": "اِس مہارت کو ایک واضح نام دیں ، اِس بات کا فیصلہ کریں کہ کون اِسے استعمال کر سکتا ہے ، اور کس جگہ رہنا چاہیے ۔",
+      "title": "۱ : بنیادی باتیں"
+    },
+    "description": {
+      "create": "اِس کے بعد اُسے بچا لیں ۔",
+      "edit": "اس مہارت کو اپلوڈ کریں، نتیجہ اخذ کردہ فائل تبدیلیوں کا جائزہ لیں، پھر اسے محفوظ رکھیں۔"
+    },
+    "extraFiles": {
+      "addedFiles": "فائلیں شامل کریں:",
+      "assets": "جمع",
+      "assetsDescription": "اِس میں صرف اُس صورت میں اُس وقت شامل کریں جب اُنہیں اِس کام کو واضح کرنے میں مدد ملتی ہے ۔",
+      "description": "صرف اگر یہ مہارت واقعی ان کی ضرورت ہے",
+      "lockedForEdits": "ترمیم کے لیے رٹ اور فولڈر بند ہیں۔",
+      "optionalDescription": "ایڈگر فائل جو تجزیہ میں شامل ہوں گے اور ساتھ ساتھ لکھے جائیں گے۔ `SKILL.md`.",
+      "optionalTitle": "خفیہ فائلیں",
+      "references": "حوالہ جات",
+      "referencesDescription": "اِس میں دُکان ، تعلقات یا مثالوں کا بھی ذکر کِیا گیا ہے ۔",
+      "scripts": "پرنٹ",
+      "scriptsDescription": "مددگار احکامات شامل کریں یا نوٹس مرتب کریں۔ اس مہارت کو بانٹنے سے پہلے احتیاط سے اعادہ کریں۔",
+      "title": "3۔ ایکسٹرا فائلیں"
+    },
+    "fields": {
+      "compatibility": "تفریح",
+      "description": "تفصیل",
+      "folderName": "فولڈر کا نام",
+      "folderNameHint": "ہم اسے مہارت کے نام سے خودبخود تجویز کرتے ہیں تاکہ تجزیہ فوراً کام کریں۔",
+      "invocation": "اسے کیسے استعمال کیا جانا چاہیے۔",
+      "license": "اجازت",
+      "name": "اسکین",
+      "notes": "اضافی نوٹس یا حفاظتی ریل",
+      "root": "اسے محفوظ کرنے کے لئے",
+      "scope": "جو اسے استعمال کر سکتا ہے۔",
+      "steps": "پیرو کے لئے اہم اقدام",
+      "whenToUse": "جب اس تک پہنچنا"
+    },
+    "instructions": {
+      "description": "یہ حصے آپ کے لیے مہارت فائل تیار کرتے ہیں، لہٰذا آپ کو اس وقت تک نشان لگانے کی ضرورت نہیں ہے جب تک آپ چاہیں.",
+      "locked": "تحقیقی میدان بند ہونے کی وجہ سے آپ دستی طور پر کام کرنا چاہتے ہیں۔ `SKILL.md` نیچے ترمیم کی۔",
+      "title": "۲ ۔"
+    },
+    "invocation": {
+      "auto": "خود کار استعمال کیا جا سکتا ہے۔",
+      "manualOnly": "صرف جب آپ اس سے پوچھیں"
+    },
+    "placeholders": {
+      "description": "کیا یہ مہارت اس میں مدد دیتی ہے۔",
+      "name": "مہارت نام لکھیں",
+      "notes": "مثال : اِس سے ظاہر ہوتا ہے کہ آپ کو آزمائشوں ، آزمائشوں اور پریشانیوں کا سامنا کرنا پڑتا ہے ۔",
+      "steps": "1۔ متعلقہ فائلوں کا جائزہ لیں۔\n۲ ۔\n3۔ محفوظ حالت کو بہتر بنائیں ۔",
+      "whenToUse": "مثال: اس وقت استعمال کریں جب کام کوڈ جائزہ ہو یا بگ ٹریج درخواست ہو۔",
+      "license": "MIT",
+      "compatibility": "Claude-code, Greater"
+    },
+    "review": {
+      "creating": "مہارت پیدا کرنا",
+      "hint": "فائل کی تبدیلیاں پہلے دیکھیں، پھر اگلے مرحلے میں تصدیق کریں.",
+      "saving": "اس مہارت کو محفوظ کرنا"
+    },
+    "root": {
+      "codexOnly": " - صرف متن",
+      "shared": " - شیئرڈ"
+    },
+    "scope": {
+      "project": "پروجیکٹ: {{project}}",
+      "projectUnavailable": "غیر متصل",
+      "user": "صا لح"
+    },
+    "title": {
+      "create": "مہارت بنائیں",
+      "edit": "مہارت مرتب کرو"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "منسوخ",
+      "delete": "حذف",
+      "deleteSkill": "سکیل حذف کریں",
+      "deleting": "نا امید...",
+      "editSkill": "اسکیسل مرتب کرو",
+      "openFolder": "فولڈر کھولیں",
+      "openSkillFile": "کھولیں SKILLایم .",
+      "retry": "دوبارہ کوشش"
+    },
+    "badges": {
+      "assets": "جمع",
+      "autoUse": "خودکار استعمال",
+      "hasScripts": "تحریریں",
+      "manualUse": "دستی استعمال",
+      "references": "حوالہ جات",
+      "storedIn": "محفوظ کیا گیا {{root}}"
+    },
+    "deleteDialog": {
+      "description": "یہ مہارت ختم کرکے اسے ترش کی طرف منتقل کر دیا؟",
+      "descriptionWithName": "Delete \"{{name}}\" and move it to Trash? You can restore it later from Trash if needed.",
+      "title": "مہارت حذف؟"
+    },
+    "descriptionFallback": "انسپکٹر نے مہارت مسعودا اور چھترپتی ہدایات دریافت کیں۔",
+    "errors": {
+      "deleteFailed": "مہارت کو حذف کرنے میں ناکامی",
+      "loadFailed": "اس مہارت کو لوڈ کرنے میں ناقابل۔"
+    },
+    "files": {
+      "advancedDetails": "فائل رولر",
+      "assets": "جمع",
+      "references": "حوالہ جات",
+      "scripts": "پرنٹ",
+      "storedAt": "جگہ"
+    },
+    "includes": {
+      "assets": "مواد",
+      "instructionsOnly": "صرف مہارت ہدایات",
+      "references": "حوالہ جات",
+      "scripts": "پرنٹ"
+    },
+    "invocation": {
+      "auto": "جب یہ کام کرتا ہے تو خودکار طور پر چلا جاتا ہے۔",
+      "manualOnly": "صرف جب آپ اس کے لئے براہ راست درخواست کریں."
+    },
+    "issues": {
+      "bundledScripts": "اس مہارت میں نقل و حمل کا عمل شامل ہے۔",
+      "reviewCarefully": "اس مہارت کا استعمال کرنے سے پہلے احتیاط سے اعادہ کریں"
+    },
+    "loading": "مہارت تفصیلات لوڈ کریں...",
+    "scope": {
+      "personal": "آپ کی ذاتی مہارت",
+      "projectOnly": "یہ منصوبہ صرف"
+    },
+    "summary": {
+      "howUsed": "کیسے استعمال کیا جاتا ہے۔",
+      "included": "اس کے ساتھ کیا ہوتا ہے؟",
+      "whoCanUse": "جو اسے استعمال کر سکتا ہے۔"
+    },
+    "titleFallback": "تفصیلات"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "سکیل بنائیں",
+      "import": "غیر متصل"
+    },
+    "badges": {
+      "assets": "جمع",
+      "hasScripts": "تحریریں",
+      "needsAttention": "ضرورت",
+      "references": "حوالہ جات",
+      "storedIn": "محفوظ کیا گیا {{root}}"
+    },
+    "configuredRuntime": "کال وقت",
+    "counts": {
+      "codexOnly": "{{count}} صرف نام",
+      "personal": "{{count}} ذاتی",
+      "project": "{{count}} منصوبہ",
+      "shared": "{{count}} شیئر",
+      "total": "{{count}} جمع",
+      "codexOnly_few": "{{count}} صرف نام",
+      "codexOnly_many": "{{count}} صرف نام",
+      "codexOnly_one": "{{count}} صرف نام",
+      "codexOnly_other": "{{count}} صرف نام",
+      "personal_few": "{{count}} ذاتی",
+      "personal_many": "{{count}} ذاتی",
+      "personal_one": "{{count}} ذاتی",
+      "personal_other": "{{count}} ذاتی",
+      "project_few": "{{count}} منصوبہ",
+      "project_many": "{{count}} منصوبہ",
+      "project_one": "{{count}} منصوبہ",
+      "project_other": "{{count}} منصوبہ",
+      "shared_few": "{{count}} شیئر",
+      "shared_many": "{{count}} شیئر",
+      "shared_one": "{{count}} شیئر",
+      "shared_other": "{{count}} شیئر",
+      "total_few": "{{count}} جمع",
+      "total_many": "{{count}} جمع",
+      "total_one": "{{count}} جمع",
+      "total_other": "{{count}} جمع"
+    },
+    "empty": {
+      "noMatches": "آپ کی تلاش میں کوئی مہارت میسر نہیں",
+      "noMatchesDescription": "مختلف تلاش کی اصطلاح یا تبدیل کرنے کی کوشش کیجئے۔",
+      "noSkills": "ابھی تک کوئی مہارت نہیں",
+      "noSkillsDescription": "اِسے دوبارہ تیار کریں ۔"
+    },
+    "filters": {
+      "all": "تمام مہارت",
+      "codexOnly": "صرف نام",
+      "hasScripts": "تحریریں",
+      "needsAttention": "ضرورت",
+      "personal": "ذاتی",
+      "project": "منصوبہ بندی",
+      "shared": "شیئرڈ"
+    },
+    "hero": {
+      "codexAvailable": "استعمال `.codex` جب مہارت صرف پڑھنے چاہیے",
+      "codexUnavailable": "پرنٹ `.codex` صلاحیتوں کو یہاں تبدیل کرنے کے قابل رہیں، لیکن نئی تحریروں کی صرف مہارتوں کو وقتاً فوقتاً قابل ضرورت ہوتا ہے۔",
+      "description": "اسکیم دوبارہ قابلِ قبول ہدایات ہوتی ہیں جو باقاعدگی سے ایک ہی قسم کے کام کو سنبھالنے میں مدد دیتی ہیں۔",
+      "guidance": "ہر جگہ عادات کے لئے ذاتی مہارت استعمال کریں ۔ کام کی ادائیگیوں کے لئے پروجیکٹ کی صلاحیتوں کا استعمال کریں جو صرف ایک کوڈ بیس کے اندر سمجھ سکتے ہیں۔",
+      "personalContext": "آپ ابھی صرف اپنی ذاتی مہارتوں کو دیکھ رہے ہیں.",
+      "projectContext": "آپ کو مہارت کے لئے دیکھ رہے ہیں {{project}} اپنی ذاتی صلاحیتوں کو جمع کریں ۔",
+      "title": "مؤثر کام کرنا سکھائیں"
+    },
+    "invocation": {
+      "auto": "جب یہ مناسب ہو تو خودبخود بھاگتے ہیں۔",
+      "manualOnly": "صرف اس وقت چلتا ہے جب آپ اس کے لئے براہ راست درخواست کریں"
+    },
+    "loading": {
+      "loading": "صلاحیتوں کو لوڈ کریں...",
+      "refreshing": "مہارتوں کو مضبوط کرنا..."
+    },
+    "runtimeAudience": "شریکي ميں مہارت `.claude`, `.cursor`، اور `.agents` دستیاب ہیں۔ {{audience}}. . `.codex` صرف متن کو محفوظ رکھیں جب متن معاونت دستیاب ہو۔",
+    "scope": {
+      "project": "یہ منصوبہ",
+      "user": "ذاتی"
+    },
+    "searchPlaceholder": "مہارت کے ذریعے تلاش کریں یا یہ کیا مدد کرتا ہے...",
+    "sections": {
+      "personal": {
+        "description": "آپ ہر جگہ دستیاب ہیں ۔",
+        "title": "ذاتی مہارت"
+      },
+      "project": {
+        "description": "وہ کام جو صرف اس کوڈبیس کے لیے معنی رکھتا ہے۔",
+        "title": "منصوبہ بندی"
+      }
+    },
+    "sort": {
+      "label": "مہارتوں سے ترتیب دیں",
+      "name": "نام",
+      "recent": "حال"
+    },
+    "status": {
+      "hasScripts": "جس میں اسکرپٹ بھی شامل ہیں، تو اس پر احتیاط سے غور کریں",
+      "needsAttention": "آپ اس پر بھروسا کرنے سے پہلے توجہ کی ضرورت ہے",
+      "ready": "استعمال کرنے کے لئے تیار"
+    },
+    "success": {
+      "created": "سکیل نے کامیابی سے تخلیق کیا۔",
+      "imported": "سکی‌انگ نے کامیابی سے درآمد کی ۔",
+      "saved": "سکیل نے کامیابی سے بچ گیا۔"
+    }
+  },
+  "pluginDetail": {
+    "unknown": "نامعلوم",
+    "metadata": {
+      "author": "مصنف",
+      "category": "کیٹیگری",
+      "source": "ماخذ",
+      "version": "ورژن",
+      "capabilities": "استحکام",
+      "installs": "نصب کریں"
+    },
+    "scope": {
+      "label": "اسکوپ:",
+      "options": {
+        "user": "صارف (گلبل)",
+        "project": "طے شدہ",
+        "local": "جگہ"
+      }
+    },
+    "links": {
+      "homepage": "ہوم پیج",
+      "contact": "رابطہ"
+    },
+    "readme": {
+      "loading": "لوڈ README...",
+      "empty": "نہیں README دستیاب."
+    }
+  },
+  "skillImport": {
+    "title": "مہارت",
+    "description": "موجودہ مہارت کا حامل خانہ لے لیں، اس بات کا جائزہ لیں کہ کیا نقل کیا جائے گا، پھر اسے اپنی ایک معاون مہارت کے مقامات میں درآمد کریں۔",
+    "steps": {
+      "chooseFolder": {
+        "title": "1۔ مہارت فولڈر منتخب کریں",
+        "description": "This should be a folder that already contains a `SKILL.md`, `Skill.md`, or `skill.md` file."
+      },
+      "location": {
+        "title": "2۔ فیصلہ کریں کہ یہ کہاں ہے۔",
+        "description": "ذاتی مہارتیں ہر جگہ کام کرتی ہیں۔ پروجیکٹ کی مہارتیں صرف ایک کوڈ بیس کے لئے دکھائی دیتی ہیں۔"
+      }
+    },
+    "fields": {
+      "sourceFolder": "ماخذ فولڈر",
+      "destinationFolderName": "سمت فولڈر کا نام",
+      "audience": "جو اسے استعمال کر سکتا ہے۔",
+      "storage": "اسے محفوظ کرنے کے لئے"
+    },
+    "placeholders": {
+      "defaultFolderName": "طے شدہ فولڈر کا نام"
+    },
+    "actions": {
+      "browse": "بائٹس",
+      "cancel": "منسوخ",
+      "preparing": "تیار کیا گیا...",
+      "reviewAndImport": "اور دوبارہ اعادہ کریں",
+      "importSkill": "سُرنگ",
+      "backToImport": "دوبارہ بحالی کیلئے"
+    },
+    "scope": {
+      "user": "صا لح",
+      "project": "پروجیکٹ: {{project}}",
+      "projectUnavailable": "غیر متصل"
+    },
+    "rootSuffix": {
+      "codexOnly": " - صرف متن",
+      "shared": " - شیئرڈ"
+    },
+    "reviewHint": "نقل کردہ فائلوں کا جائزہ لیں، پھر اگلے مرحلے میں درآمد کی تصدیق کریں۔",
+    "reviewLabel": "اس مہارت کو نکھارنا",
+    "errors": {
+      "missingSkillFile": "یہ فولڈر ابھی تک مہارت کی طرح نہیں دکھائی دیتا ہے۔ اس کی ضرورت ہے ایک SKILL.md, Skill.md یا مہارت.md فائل.",
+      "symbolicLinks": "اس فولڈر میں علامتی تعلق پائے جاتے ہیں۔ تعلقات کی بجائے حقیقی فائلیں لکھیں ۔",
+      "tooManyFiles": "یہ لیاقت خان ایک ہی وقت میں درآمد کے لیے بہت بڑا ہے۔ اضافی فائلیں ہٹا کر دوبارہ کوشش کریں۔",
+      "tooLarge": "یہ لیاقت خان محفوظ طریقے سے درآمد کرنے کے لیے بہت بڑا ہے۔ تریم بڑے سرمایہ دار اور پھر کوشش کرتے ہیں۔",
+      "invalidFolderName": "حرف، نمبر، دوات، قطعے یا پھر اوپر کے استعمال میں سادہ سمتی فولڈر کا نام شامل کریں۔",
+      "mustBeDirectory": "درآمد کے لیے فولڈر منتخب کریں، واحد فائل نہیں منتخب کریں۔",
+      "reviewFailed": "درآمدی تبدیلیوں کا جائزہ لینے میں ناکامی",
+      "importFailed": "مہارت درآمد کرنے میں ناکامی"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "نام",
+      "nameDesc": "نام زیبا",
+      "toolsDesc": "بیشتر آلات"
+    },
+    "health": {
+      "title": "MCP صحت",
+      "checkingViaRuntime": "نصب کی گئی تنصیب پڑتال کی جارہی ہے MCP سرور کے ذریعے {{runtime}} ...",
+      "lastChecked": "آخری جائزے {{time}}",
+      "description": "تنصیب کے لیے اس صفحے سے پلگ ان چلا وٴ MCP ارے.",
+      "checking": "پڑتال کی جا رہی ہے...",
+      "checkStatus": "سٹیٹس"
+    },
+    "diagnostics": {
+      "title": "وقت MCP علمِ‌نجوم",
+      "serversCount": "{{count}} سرور",
+      "serversCount_one": "{{count}} سرور",
+      "serversCount_other": "{{count}} سرور",
+      "waiting": "نتائج کا انتظار...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "مدتی حیثیت چیک کرنا...",
+        "checkingRuntimeAvailability": "وقت کی دستیابی کا جائزہ لینا...",
+        "runtimeFailedToStart": "لیکن شروع کرنے میں ناکام رہا ۔ اس کی مرمت یا دوبارہ شروع کرنے کے لیے ڈاک بورڈ کھولیں",
+        "runtimeRequired": "اِس کی ضرورت ہے ۔ ڈاک بورڈ سے نصب یا مرمت کرنا۔"
+      },
+      "serversCount_few": "{{count}} سرور",
+      "serversCount_many": "{{count}} سرور"
+    },
+    "searchPlaceholder": "تلاش MCP سرور...",
+    "runtime": {
+      "notAvailable": "{{runtime}} دستیاب نہیں",
+      "notInstalled": "{{runtime}} نصب نہیں کی گئی",
+      "requiredDescription": "MCP صحت کا جائزہ لینا ضروری ہے {{runtime}}. اسے نصب کرنے یا مرمت کرنے کے لئے ڈاک بورڈ میں جاؤ."
+    },
+    "empty": {
+      "searchTitle": "سرور نہیں پائی گئی",
+      "title": "نہیں MCP سرور دستیاب ہے",
+      "searchDescription": "مختلف تلاشي مت تلاش کريں",
+      "description": "نئے سروروں کے لئے بعد میں دوبارہ چیک کریں"
+    },
+    "loadMore": "مزید لوڈ کریں"
+  },
+  "apiKeys": {
+    "description": "محفوظ دکان API تنصیب کے وقت خودکار پورنگ کی کلیدیں MCP سرور.",
+    "storage": {
+      "osKeychain": "کُل‌وقتی خدمت کے ذریعے ملامت کی جاتی ہے {{backend}} اور فائل فہرست حاصل کی جارہی ہے",
+      "localEncryption": "OS کلیدین کو مقامی طور پر استعمال کیا جاتا ہے۔ AES-256. محکمہ تحفظ کے لیے، کلیدی سروس (انگریزی: Ed-keyring, Kollet)."
+    },
+    "actions": {
+      "add": "شامل کریں API کلید",
+      "addFirst": "اپنی پہلی کلید کو شامل کریں",
+      "edit": "مرتب"
+    },
+    "empty": {
+      "title": "نہیں API کلید محفوظ کریں",
+      "description": "خودکار ماحول کو تبدیل کرنے کے لیے کلیدیں شامل کریں MCP سرور."
+    },
+    "form": {
+      "addTitle": "شامل کریں API کلید",
+      "editTitle": "مرتب API کلید",
+      "addDescription": "جگہ API خود کار بھرتی کرنے کی کلید MCP سرور تنصیبات.",
+      "editDescription": "کلیدی تفصیلات بیان کریں ۔ آپ کو قیمت دوبارہ شامل کرنا ہوگا.",
+      "keychainUnavailable": "OS کلیدین بے قاعدہ کلیدوں سے لیس کیا گیا AES-256 مقامی. OS-level تحفظ کے لیے EDGE-kiring انسٹال کریں.",
+      "name": "نام",
+      "namePlaceholder": "مثلاً OpenAI Production -",
+      "environmentVariableName": "ماحولیاتی نام",
+      "envVarPlaceholder": "ہاں OPENAI_API_KEY",
+      "value": "قیمت",
+      "reenterValue": "مرکزی اہمیت",
+      "valuePlaceholder": "سکا...",
+      "scope": "ریشم",
+      "userScopeLabel": "صارف (گلبل)",
+      "projectScopeLabel": "پروجیکٹ: {{project}}",
+      "projectUnavailable": "غیر متصل",
+      "boundTo": "جگہ {{path}}",
+      "cancel": "منسوخ",
+      "saving": "محفوظ کیا گیا...",
+      "update": "تجدید",
+      "save": "محفوظ کریں",
+      "errors": {
+        "invalidEnvVarFormat": "حروف استعمال کریں، حروف تہجی استعمال کریں۔ خط یا خط سے شروع ہونا چاہیے۔",
+        "nameRequired": "نام درکار ہے",
+        "envVarRequired": "ماحول تبدیل شدہ نام مطلوب ہے۔",
+        "invalidEnvVar": "غیر متصل ماحول میں تبدیلی نام تبدیل",
+        "valueRequired": "کلیدی قیمت درکار ہے۔",
+        "projectScopeRequiresProject": "پرو فا ئل-سکو API کلید فعال منصوبہ درکار ہے",
+        "saveFailed": "محفوظ کرنے میں ناکامی"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "مشق کی تبدیلیاں دیکھیں",
+    "description": "{{reviewLabel}} فائل کا نظام پہلے تبدیل کرتا ہے۔ درج ذیل تصدیق تک کچھ بھی نہیں لکھا۔",
+    "noPreview": "کوئی پیشگی منظر دستیاب نہیں ہے ۔",
+    "confirmPromptPrefix": "نیچے کے انتخاب کا جائزہ لیں ، پھر استعمال کریں",
+    "confirmPromptSuffix": "ان تبدیلیوں کا اطلاق کرنا ۔",
+    "noChanges": "فائل دوبارہ شروع کریں",
+    "binaryBadge": "بنر",
+    "binaryPreviewHidden": "بینکاری فائل پیش نظر نہیں دکھائی دیتی۔ فائل کو بطور صف نقل کیا جائے گا۔",
+    "summary": {
+      "fileChanges": "{{count}} فائل تبدیل کریں",
+      "fileChanges_one": "{{count}} فائل تبدیل کریں",
+      "fileChanges_other": "{{count}} فائل تبدیل کریں",
+      "new": "{{count}} نیا",
+      "updated": "{{count}} تجدید",
+      "removed": "{{count}} حذف",
+      "binary": "{{count}} بنر",
+      "fileChanges_few": "{{count}} فائل تبدیل کریں",
+      "fileChanges_many": "{{count}} فائل تبدیل کریں"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} آلات",
+    "toolsCount_one": "{{count}} آلات",
+    "toolsCount_other": "{{count}} آلات",
+    "envCount": "{{count}} انس",
+    "envCount_one": "{{count}} بند",
+    "envCount_other": "{{count}} انس",
+    "auth": "Auth",
+    "byAuthor": "قسم {{author}}",
+    "hosting": {
+      "remote": "دور دراز",
+      "local": "جگہ",
+      "both": "دونوں"
+    },
+    "toolsCount_few": "{{count}} آلات",
+    "toolsCount_many": "{{count}} آلات",
+    "envCount_few": "{{count}} انس",
+    "envCount_many": "{{count}} انس",
+    "repository": "طےشدہ",
+    "website": "ویب سائٹ"
+  },
+  "installButton": {
+    "installing": "نصب کی جارہی ہیں...",
+    "removing": "حذف کی جارہی ہے...",
+    "done": "بند",
+    "retry": "دوبارہ کوشش",
+    "uninstall": "غیر درج شدہ",
+    "install": "نصب کریں"
+  },
+  "pluginCard": {
+    "official": "آف لائن"
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "पहले से ही लॉग इन?",
+      "becomeSponsor": "प्रायोजक बनें",
+      "cancel": "रद्द करना",
+      "checkNow": "अभी चेक करें",
+      "checkUpdates": "अद्यतन की जाँच करें",
+      "checking": "जाँच...",
+      "connect": "कनेक्ट",
+      "extensions": "एक्सटेंशन",
+      "login": "लॉग इन",
+      "manage": "प्रबंधन",
+      "manageProviders": "प्रबंधन प्रदाता",
+      "plan": "योजना",
+      "recheck": "फिर से जांच",
+      "recheckProvider": "फिर से चेक {{provider}}",
+      "retry": "Retry",
+      "updateTo": "V{{version}} को अद्यतन",
+      "useCode": "कोड"
+    },
+    "atlas": {
+      "alt": "एटलस क्लाउड",
+      "description": "एटलस क्लाउड एक पूर्ण मोडल AI इनफरेंस प्लेटफॉर्म है जो डेवलपर्स को वीडियो जनरेशन, इमेज जनरेशन और LLM API तक पहुंचने के लिए एक एकल AI API प्रदान करता है। एकाधिक विक्रेता एकीकरण के प्रबंधन के बजाय, आप एक बार कनेक्ट करते हैं और सभी मॉडलों में 300+ क्यूरेट किए गए मॉडल तक पहुंच प्राप्त करते हैं। अधिक बजट के अनुकूल API पहुँच के लिए एटलस क्लाउड की नई कोडिंग योजना पदोन्नति की जाँच करें।",
+      "openCodeProvider": "ओपनकोड प्रदाता",
+      "plan": "एटलस क्लाउड कोडिंग योजना",
+      "sponsor": "प्रायोजक"
+    },
+    "errors": {
+      "checkStatusFailed": "CLI स्थिति की जांच करने में विफल रहा",
+      "installationFailed": "स्थापना विफल",
+      "refreshFailed": "अद्यतन के लिए जाँच करने में विफल रहा। अपने नेटवर्क कनेक्शन की जाँच करें और फिर से प्रयास करें।",
+      "runtimeUpdatedRefreshFailed": "रनटाइम अपडेट किया गया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।"
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} स्थिति पृष्ठभूमि में जांच की जाएगी।",
+      "codexApiKeyFallback": "{{hint}}यदि आप auth मोड स्विच करते हैं तो API कुंजी गिरावट उपलब्ध है।",
+      "codexAutoApiKey": "{{hint}} ऑटो API कुंजी का उपयोग तब तक करेगा जब तक कि ChatGPT कनेक्ट न हो।",
+      "codexFinishLogin": "ब्राउज़र में ChatGPT लॉगिन समाप्त करें। यदि संकेत दिया गया तो दिखाया गया कोड दर्ज करें।",
+      "codexNoActiveLogin": "उपयोग की सीमा केवल कोडेक्स CLI के बाद ही दिखाई देती है। अभी यह कोई सक्रिय चैट जीपीटी लॉगिन की रिपोर्ट नहीं करता है।",
+      "codexNoActiveManagedSession": "उपयोग की सीमा केवल कोडेक्स CLI के बाद ही दिखाई देती है। स्थानीय कोडेक्स खाता डेटा मौजूद है, लेकिन अभी कोई सक्रिय प्रबंधित सत्र नहीं चुना गया है।",
+      "codexReconnectNeeded": "उपयोग की सीमा केवल कोडेक्स वर्तमान में चयनित चैटजीपीटी सत्र को ताज़ा करने के बाद दिखाई देती है। अभी स्थानीय सत्र को फिर से जोड़ने की जरूरत है।",
+      "firstCheckSlow": "पहली जांच 30 सेकंड तक हो सकती है",
+      "loginRequiredForTeams": "ब्राउज़िंग सत्र और परियोजना बिना लॉगिन के काम करती है। लॉग इन केवल एजेंट टीमों को चलाने के लिए आवश्यक है।",
+      "troubleshootTitle": "यदि आपको यकीन है कि आप लॉग इन कर रहे हैं, तो इन चरणों का प्रयास करें:"
+    },
+    "installer": {
+      "checkingLatest": "नवीनतम संस्करण की जाँच...",
+      "downloading": "डाउनलोड {{runtime}}...",
+      "installing": "{{runtime}} स्थापित...",
+      "success": "सफलतापूर्वक स्थापित {{runtime}} v{{version}}",
+      "verifying": "चेकसम सत्यापित..."
+    },
+    "labels": {
+      "apiKeyRequired": "API कुंजी की आवश्यकता",
+      "comingSoon": "जल्द ही",
+      "collapseProviderDetails": "पतन प्रदाता विवरण",
+      "expandProviderDetails": "प्रदाता विवरण का विस्तार करें",
+      "generateLink": "लिंक उत्पन्न करना",
+      "loadingRateLimits": "दर सीमा लोड",
+      "loggedOut": "प्रदाता लॉग आउट",
+      "loginAuthFailed": "प्रमाणीकरण विफल",
+      "loginAuthUpdated": "प्रमाणीकरण अद्यतन",
+      "loginComplete": "लॉग इन करें",
+      "loginFailed": "लॉग इन",
+      "loginTitle": "लॉग इन",
+      "logoutFailed": "लॉग इन",
+      "logoutTitle": "लॉग-इन",
+      "notLoggedIn": "लॉग इन नहीं",
+      "openLogin": "लॉगिन",
+      "providerActionRequired": "प्रदाता कार्रवाई की आवश्यकता",
+      "resets": "रीसेट करें {{time}}",
+      "runtimeLoginTitle": "{{runtime}} लॉग इन"
+    },
+    "loading": {
+      "aiProviders": "एआई प्रदाता की जाँच...",
+      "claudeCli": "चेकिंग Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "प्रमाणीकरण",
+      "backend": "बैकएंड: {{backend}}",
+      "checkingAuthentication": "प्रमाणीकरण जाँच...",
+      "checkingProviders": "जांच प्रदाता...",
+      "configuredLocalCount": "{{count}} ने स्थानीय रूप से कॉन्फ़िगर किया",
+      "configuredLocalCount_few": "{{count}} ने स्थानीय रूप से कॉन्फ़िगर किया",
+      "configuredLocalCount_many": "{{count}} ने स्थानीय रूप से कॉन्फ़िगर किया",
+      "configuredLocalCount_one": "{{count}} ने स्थानीय रूप से कॉन्फ़िगर किया",
+      "configuredLocalCount_other": "{{count}} ने स्थानीय रूप से कॉन्फ़िगर किया",
+      "configuredLocalTitle": "अपने ओपनकोड विन्यास से आयात किए गए स्थानीय ओपनकोड मार्ग।",
+      "connectedCount": "प्रदाता: {{connected}}/{{denominator}} कनेक्ट",
+      "freeModels": "नि: शुल्क मॉडल",
+      "freeModelsTitle": "ओपनकोड में आपके सेटअप में उपलब्ध होने पर बिग पिकले जैसे मुफ्त मॉडल विकल्प शामिल हैं। OpenCode के माध्यम से OpenRouter भी मुफ्त मॉडल को उजागर कर सकता है, लेकिन हर OpenCode/OpenRouter मॉडल मुफ्त नहीं है। उपलब्धता और सीमाएं बदल सकती हैं।",
+      "loadingModels": "मॉडल लोड हो रहा है...",
+      "modelsUnavailable": "इस रनटाइम बिल्ड के लिए अनुपलब्ध मॉडल",
+      "runtime": "रनटाइम: {{runtime}}",
+      "verifiedCount": "{{count}} सत्यापित",
+      "verifiedCount_few": "{{count}} सत्यापित",
+      "verifiedCount_many": "{{count}} सत्यापित",
+      "verifiedCount_one": "{{count}} सत्यापित",
+      "verifiedCount_other": "{{count}} सत्यापित",
+      "verifiedTitle": "एक सफल निष्पादन प्रमाण के साथ ओपनकोड मार्ग।"
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "कॉन्फ़िगर किया गया {{runtime}} अपनी स्टार्टअप स्वास्थ्य जांच में विफल रहा।",
+      "configuredNotFound": "कॉन्फ़िगर किया गया {{runtime}} पाया नहीं गया था।",
+      "foundButFailed": "{{runtime}} पाया गया लेकिन शुरू करने में विफल रहा",
+      "healthCheckFailedDescription": "एप्लिकेशन को कॉन्फ़िगर किया गया {{runtime}} पाया गया, लेकिन इसकी स्टार्टअप हेल्थ चेक विफल हो गया। मरम्मत या इसे फिर से स्थापित करें, फिर पुनः प्रयास करें।",
+      "install": "{{runtime}} स्थापित करें",
+      "installRequiredDescription": "{{runtime}} को टीम प्रावधान और सत्र प्रबंधन के लिए आवश्यक है। इसे शुरू करने के लिए स्थापित करें।",
+      "isRequired": "{{runtime}} की आवश्यकता है",
+      "reinstall": "{{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "जांच",
+      "codexTitle": "Codex CLI को ऐप डेटा में इंस्टॉल करें",
+      "downloading": "डाउनलोड",
+      "downloadingPercent": "डाउनलोड {{percent}}%",
+      "install": "स्थापित",
+      "installing": "स्थापना",
+      "openCodeTitle": "ऐप डेटा में ओपनकोड रनटाइम स्थापित करें",
+      "retryInstall": "इंस्टॉल फिर से करें"
+    },
+    "troubleshoot": {
+      "again": "फिर",
+      "authStatusCommand": "अपने कॉन्फ़िगर किए गए CLI auth स्टेटस कमांड",
+      "checkLoggedIn": "- जांचें कि क्या यह \"लॉग इन\" दिखाता है",
+      "click": "क्लिक करें",
+      "loginCommand": "रनटाइम लॉगिन कमांड",
+      "logoutCommand": "रनटाइम लोगोट कमांड",
+      "openTerminal": "अपना टर्मिनल खोलें और चलाएं:",
+      "reloginPrefix": "अगर यह लॉग इन करता है लेकिन ऐप इसे नहीं देखता है, तो कोशिश करें:",
+      "sameRuntime": "सुनिश्चित करें कि आपके टर्मिनल में CLI समान रनटाइम ऐप का उपयोग करता है",
+      "statusCacheHint": "कभी कभी स्थिति कुछ सेकंड के लिए कैश किया जाता है",
+      "then": "फिर"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "एक या अधिक प्रदाता API कुंजी मोड में सेट किए गए हैं, लेकिन कोई API कुंजी को कॉन्फ़िगर नहीं किया गया है। कुंजी जोड़ने या कनेक्शन मोड को स्विच करने के लिए ओपन प्रबंधित प्रदाता।",
+      "multipleApiKeysNeedAttention": "एक या अधिक प्रदाता API कुंजी मोड पर सेट होते हैं और ध्यान देने की आवश्यकता होती है। सहेजे गए कुंजी की समीक्षा करने या कनेक्शन मोड को स्विच करने के लिए ओपन प्रबंधित प्रदाता।",
+      "notAuthenticated": "{{runtime}} स्थापित है लेकिन आप प्रमाणित नहीं हैं। टीम प्रावधान और एआई सुविधाओं के लिए लॉग इन की आवश्यकता है।",
+      "singleApiKeyMissing": "{{provider}} को API कुंजी मोड में सेट किया गया है, लेकिन कोई API कुंजी को कॉन्फ़िगर नहीं किया गया है। एक कुंजी जोड़ने या कनेक्शन मोड को स्विच करने के लिए ओपन प्रबंधित प्रदाता।",
+      "singleApiKeyNeedsAttention": "{{provider}} को API कुंजी मोड में सेट किया गया है, लेकिन यह जुड़ा नहीं है। सहेजे गए कुंजी की समीक्षा करने या कनेक्शन मोड को स्विच करने के लिए ओपन प्रबंधित प्रदाता।"
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "एक परियोजना फ़ोल्डर चुनें",
+    "selectFolder": "फ़ोल्डर चुनें",
+    "failedToLoad": "परियोजनाओं को लोड करने में विफल",
+    "retry": "Retry",
+    "noProjects": "कोई प्रोजेक्ट नहीं मिला",
+    "noMatches": "\"{{query}}\" के लिए कोई मैच नहीं",
+    "noRecentProjects": "हाल की परियोजनाओं को नहीं मिला",
+    "emptyDescription": "हाल ही में क्लाउड और कोडेक्स गतिविधि यहां दिखाई देगी।",
+    "loadMore": "अधिक लोड",
+    "card": {
+      "deleted": "हटाना",
+      "projectFolderMissing": "प्रोजेक्ट फ़ोल्डर अब मौजूद नहीं है",
+      "taskCounts": {
+        "active": "{{count}} सक्रिय",
+        "active_one": "{{count}} सक्रिय",
+        "active_other": "{{count}} सक्रिय",
+        "active_few": "{{count}} सक्रिय",
+        "active_many": "{{count}} सक्रिय",
+        "pending": "{{count}} लंबित",
+        "pending_one": "{{count}} लंबित",
+        "pending_other": "{{count}} लंबित",
+        "pending_few": "{{count}} लंबित",
+        "pending_many": "{{count}} लंबित",
+        "done": "{{count}} किया",
+        "done_one": "{{count}} किया",
+        "done_other": "{{count}} किया",
+        "done_few": "{{count}} किया",
+        "done_many": "{{count}} किया"
+      }
+    },
+    "title": "हाल ही में परियोजनाएं",
+    "searchResults": "खोज परिणाम",
+    "searchPlaceholder": "परियोजनाएँ खोजें..."
+  },
+  "actions": {
+    "selectTeam": "टीम चुनें",
+    "or": "या",
+    "clearSearch": "स्पष्ट खोज"
+  },
+  "windowsAdmin": {
+    "title": "विंडोज प्रशासक मोड की सिफारिश की",
+    "description": "ओपनकोड रनटाइम चेक टाइम आउट हो सकता है जब एजेंट टीम एआई को ऊपर नहीं बढ़ाया जाता है। OpenCode टीमों को लॉन्च करने से पहले व्यवस्थापक के रूप में रन के साथ ऐप को फिर से शुरू करें।"
+  },
+  "webPreview": {
+    "title": "पूर्ण कार्यक्षमता के लिए डेस्कटॉप ऐप खोलें",
+    "description": "ब्राउज़र संस्करण अभी भी विकास में है। परियोजना क्रियाओं, एकीकरण और लाइव स्टेटस अपडेट यहां सीमित हो सकते हैं। सभी सुविधाओं को विश्वसनीय रूप से एक्सेस करने के लिए डेस्कटॉप ऐप का उपयोग करें।"
+  },
+  "updateBanner": {
+    "newVersionAvailable": "नया संस्करण उपलब्ध",
+    "restartNow": "अभी शुरू करें",
+    "viewDetails": "विवरण देखें"
+  }
+}

@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "বার্তা থেকে একটি নতুন কাজ তৈরি করুন",
+      "expandMessage": "বার্তা মুছে ফেলো",
+      "replyToMessage": "প্রত্যুত্তর",
+      "restartTeam": "দল পুনরায় আরম্ভ করুন"
+    },
+    "authError": {
+      "description": "পরিচয় প্রমাণ করতে ব্যর্থ। দলটি সেশান পুনরায় আরম্ভ করবে এবং এই সমস্যা সমাধান করবে। সমস্যা যদি থেকেই থাকে, আপনার চেক করুন API পরিচয় প্রমাণ করার চেষ্টা করুন অথবা পুনরায় চেষ্টা করুন।"
+    },
+    "automation": {
+      "reviewPickup": "পত্রিকায় প্রকাশিত হয়েছে",
+      "stallNudge": "সঙ্গীকে কাজ চালিয়ে যেতে বলা",
+      "workSyncBody": "সক্রিয় দল বর্তমান কর্ম সুসংগত করার উদ্দেশ্যে চিহ্নিত করুন"
+    },
+    "badges": {
+      "automation": "অবলিভিয়ান",
+      "bootstrap": "বুটস্ট্র্যাপ",
+      "command": "কমান্ড",
+      "comment": "মন্তব্য",
+      "live": "লাইভ",
+      "note": "নোট",
+      "rateLimited": "সীমা",
+      "restart": "পুনরারম্ভ",
+      "result": "ফলাফল",
+      "session": "সেশান",
+      "stallNudge": "স্থগিত রাখো",
+      "start": "আরম্ভ",
+      "workSync": "সুসংগতি কর্ম"
+    },
+    "bootstrap": {
+      "acknowledged": "বুটস্ট্র্যাপ স্বীকার করেছে",
+      "restarting": "দলের সদস্যতা পুনরায় আরম্ভ",
+      "starting": "দলের সদস্য"
+    },
+    "rawJson": "Raw JSON",
+    "unread": "অপঠিত",
+    "thoughts": {
+      "count": "{{count}} ভাবনা",
+      "count_one": "{{count}} চিন্তা",
+      "expand": "চিন্তা প্রসারণ",
+      "showMore": "আরো বেশি দেখাও",
+      "showLess": "কম দেখান",
+      "count_few": "{{count}} ভাবনা",
+      "count_many": "{{count}} ভাবনা",
+      "count_other": "{{count}} ভাবনা",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - চিন্তা"
+    },
+    "timeline": {
+      "loadingMessages": "বার্তা লোড করা হচ্ছে...",
+      "noMessages": "কোন বার্তা নেই",
+      "emptyHint": "একটি বার্তাকে একটি নতুন কর্মে রূপান্তর করুন।",
+      "newSession": "নতুন সেশান",
+      "olderCount": "+{{count}} বড়",
+      "showMore": "প্রদর্শন {{count}} আরও",
+      "showAll": "সমস্ত প্রদর্শন করা হবে",
+      "olderCount_one": "+{{count}} বড়",
+      "olderCount_few": "+{{count}} বড়",
+      "olderCount_many": "+{{count}} বড়",
+      "olderCount_other": "+{{count}} বড়"
+    },
+    "pendingReplies": {
+      "title": "উত্তর দেওয়া",
+      "openMember": "খুলুন",
+      "messageSentAwaitingReply": "বার্তা পাঠানো হয়েছে, অপেক্ষা করা হচ্ছে",
+      "awaitingReply": "উত্তরের অপেক্ষা করা হচ্ছে",
+      "externalTeam": "বহিস্থিত দল",
+      "crossTeamAwaitingReply": "ক্রস-ট্যাম বার্তা পাঠানো হয়েছে, অপেক্ষা করা হচ্ছে",
+      "user": "ব্যবহারকারী",
+      "awaitingApproval": "অপেক্ষায়"
+    },
+    "reply": {
+      "replyingTo": "উত্তর দেওয়া হচ্ছে",
+      "action": "প্রত্যুত্তর"
+    },
+    "activeTasks": {
+      "inProgress": "চলছে"
+    },
+    "expandDialog": {
+      "description": "তালিকা"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "তৈরি করুন ( r)",
+      "creating": "তৈরি করা হচ্ছে...",
+      "openExisting": "উপস্থিত টিম",
+      "skipPreflightAndCreate": "প্রিলোড এবং তৈরি করুন"
+    },
+    "conflict": {
+      "description": "একই ডিরেক্টরিতে দুই দল বাজানো ঝুঁকিপূর্ণ - তাঁরা একই ধরনের ফাইল সম্পাদনা করতে পারেন। পৃথক হওয়ার জন্য একাধিক ডিরেক্টরি অথবা জি-টট্রি ব্যবহার করুন ।",
+      "title": "আরেকটা দল \"{{team}}\" বর্তমানে এই কাজের জন্য চলছে",
+      "workingDirectory": "কাজের ডিরেক্টরি:"
+    },
+    "description": {
+      "copy": "একটি বিদ্যমান একটি ভিত্তিক একটি নতুন দল তৈরি করুন।",
+      "create": "তোমার টিম সেট করো আর এটা শুরু করো."
+    },
+    "errors": {
+      "nameExists": "অ্যাকাউন্ট বর্তমানে উপস্থিত রয়েছে",
+      "nameLaunching": "বর্তমানে এই নামের একটি দল বর্তমানে আরম্ভ করছে",
+      "createConfigFailed": "কনফিগারেশন নির্মাণ করতে ব্যর্থ",
+      "loadProjectsFailed": "প্রজেক্ট লোড করতে ব্যর্থ"
+    },
+    "fields": {
+      "color": "রং (ঐচ্ছিক)",
+      "description": "বিবরণ (ঐচ্ছিক)",
+      "prompt": "নেতৃত্ব দেয়ার উদ্দেশ্যে দল (ঐচ্ছিক)",
+      "teamName": "দলের নাম"
+    },
+    "launchAfterCreate": {
+      "description": "স্থানীয় ক্লড এর মাধ্যমে অবিলম্বে দলটিকে চালু করুন CLI.",
+      "label": "নির্মাণের পরে কমান্ড সঞ্চালন করুন"
+    },
+    "localOnly": "শুধুমাত্র স্থানীয় বৈদ্যুতিক মোডে পাওয়া যায়।",
+    "onDisk": "ডিস্কের মধ্যে:",
+    "placeholders": {
+      "description": "দলের উদ্দেশ্যর সংক্ষিপ্ত বর্ণনা",
+      "prompt": "আয়োজনের সময় দলের নেতৃত্ব..."
+    },
+    "saved": "সংরক্ষিত",
+    "solo": {
+      "description": "কেবলমাত্র দলগত নেতৃত্ব (প্রাথমিক প্রক্রিয়া) শুরু করা হবে - কোন দলের সদস্য এখানে উপস্থিত থাকবে না। আপনার নির্বাচিত স্লিপিং রুমে একটি নিয়মিত এজেন্টের অধিবেশনের মতো কাজ করে (সেডো কোড, কোডেক্স, ওপেনকাও, গেয়মিন) কিন্তু পরিকল্পনা করার জন্য কাজের জন্য বোর্ডের প্রবেশের অনুমতি নিয়ে। টিম পার্টনারের সাথে কথা বলা এড়িয়ে যাওয়া নিদর্শনগুলো সংরক্ষণ করে। আপনি পরে দলের বৈশিষ্ট্য যোগ করতে পারেন ।",
+      "label": "সোলো টিম"
+    },
+    "title": {
+      "copy": "টিম কপি করো",
+      "create": "গ্রুপ তৈরি করো"
+    },
+    "optional": {
+      "launchSettingsTitle": "ঐচ্ছিক বৈশিষ্ট্য",
+      "launchSettingsDescription": "নিরাপত্তা, এবং নিরাপত্তা CLI যখন আপনি তাদের প্রয়োজন এখানে লাইভ রাখা।",
+      "teamDetailsTitle": "ঐচ্ছিক দল সংক্রান্ত বিবরণ",
+      "teamDetailsDescription": "এই অপশনটি সক্রিয় করো:"
+    },
+    "prepare": {
+      "unsupportedPreload": "বর্তমানে লোড করার পূর্ববর্তী সংস্করণ দ্বারা সমর্থন ব্যবস্থা সমর্থিত হয় না: লোড করা হচ্ছে। অ্যাপ্লিকেশন পুনরায় চালু করুন।",
+      "selectWorkingDirectory": "আরম্ভ করার উদ্দেশ্যে একটি কর্ম নির্বাচন করুন।",
+      "someProvidersNeedAttention": "কিছু নির্বাচিত প্রোভাইডারদের মনোযোগের প্রয়োজন।",
+      "readyWithNotes": "নির্বাচিত সকল প্রোভাইডাররা প্রস্তুত, নোট সহ।",
+      "ready": "নির্বাচিত সকল সরবরাহকারী প্রস্তুত।",
+      "failed": "নির্বাচিত উপলব্ধকারী প্রস্তুত করতে ব্যর্থ",
+      "checkingProviders": "নির্বাচিত উপলব্ধকারী...",
+      "preparingEnvironment": "পরিবেশ প্রস্তুত করা হচ্ছে...",
+      "selectedProvidersReadyWithNotes": "নির্বাচিত উপলব্ধকারী ( চিহ্ন সহযোগে)",
+      "selectedProvidersReady": "নির্বাচিত উপলব্ধকারী"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "নামের মধ্যে অন্তত একটি অক্ষর উপস্থিত থাকা আবশ্যক",
+      "nameTooLong": "নাম অত্যাধিক লম্বা (mx ১২৮ অক্ষর)",
+      "selectWorkingDirectory": "সক্রিয় ডিরেক্টরি নির্বাচন করুন (cd)",
+      "memberNameRequired": "সদস্যের নাম ফাঁকা রাখা যাবে না",
+      "memberNameInvalid": "সদস্য নাম শুধুমাত্র [A-Z0-9] ব্যবহার করা আবশ্যক। সর্বোচ্চ ১২৮ অক্ষর",
+      "memberNamesUnique": "নাম হতে হবে",
+      "openCodeLeadModelRequired": "OpenChod এর নেতৃত্বের জন্য একটি নির্বাচিত মডেল প্রয়োজন ।",
+      "openCodeTeammateRequired": "ওপেনCod এর নেতৃত্ব অন্তত একটি ওপেনCod দলের সদস্য হওয়া প্রয়োজন।",
+      "teamLaunching": "টিম বর্তমানে চলছেComment",
+      "teamNameExists": "অ্যাকাউন্ট বর্তমানে উপস্থিত রয়েছে",
+      "checkFormFields": "ফর্মের উজ্জ্বলতা পরীক্ষা করুন"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "বাতিল",
+      "save": "সংরক্ষণ"
+    },
+    "addMemberLockReason": "দলটি যেখানে বেঁচে আছে সেখানে নতুন দলের সদস্যদের যোগ দিতে নিবেদিত সদস্য ডায়ালগ ব্যবহার করুন।",
+    "description": "দলের নাম, বর্ণনা এবং রং পরিবর্তন করুন",
+    "errors": {
+      "changesSavedRefreshFailed": "দল পরিবর্তন সংরক্ষণ করা হয়েছে, কিন্তু সর্বশেষ দেখতে ব্যর্থ হয়েছে: {{message}}",
+      "liveRenameBlocked": "সেখানে উপস্থিত দলের সদস্যদের নাম পরিবর্তন করা সম্ভব নয়। নাম পরিবর্তন: {{names}}",
+      "memberNameEmpty": "সদস্যের নাম ফাঁকা রাখা যাবে না",
+      "memberNameInvalid": "সদস্য নাম শুধুমাত্র [A-Z0-9] ব্যবহার করা আবশ্যক। সর্বোচ্চ ১২৮ অক্ষর",
+      "memberNameNumericSuffix": "সদস্য নাম{{name}}\"কাদের জন্য প্রস্তুত হওয়া যাবে না\" CLI অটো-ফিক্স। ব্যবহার করুন{{base}}এর পরিবর্তে।",
+      "memberNameReserved": "Member name \"{{name}}\" is reserved",
+      "memberNamesUnique": "সংরক্ষণ করার পূর্বে ফাইলের নাম নির্ধারণ করা আবশ্যক",
+      "newLiveTeammates": "একটি নিবেদিত সদস্য সংলাপে যোগ দিন। সম্পাদনা টিম কেবল বর্তমান দলের লোকদের সাহায্য করে।",
+      "provisioning": "পার্টিশন সম্পাদনা করা সম্ভব নয় । শুরু করার জন্য অপেক্ষা করুন, তারপর আবার চেষ্টা করুন।",
+      "restartFailedMany": "টিম সংরক্ষিত, কিন্তু এই দলের সদস্যরা পুনরায় চালু করতে ব্যর্থ হয়েছে: {{failures}}",
+      "restartFailedOne": "টিম সংরক্ষিত, কিন্তু এই দলটি পুনরায় চালু করতে ব্যর্থ হয়েছে: {{failures}}",
+      "saveFailed": "সংরক্ষণ করতে ব্যর্থ",
+      "settingsChanged": "এই ডায়লগ খোলার সময় দলের বৈশিষ্ট্য পরিবর্তন করা হয়েছে । সংরক্ষণ করার পূর্বে gedit পুনরায় আরম্ভ করুন।",
+      "settingsSavedMembersAndRefreshFailed": "দলের বৈশিষ্ট্য সংরক্ষণ করা হয়েছে, কিন্তু সদস্যতা পরিবর্তন করা যায়নি: {{message}}নতুন করে প্রদর্শন করতে ব্যর্থ: {{refreshError}}",
+      "settingsSavedMembersFailed": "দলের বৈশিষ্ট্য সংরক্ষণ করা হয়েছে, কিন্তু সদস্যতা পরিবর্তন করা যায়নি: {{message}}",
+      "settingsSavedRefreshFailed": "দলের বৈশিষ্ট্য সংরক্ষিত হয়েছে, কিন্তু নতুন প্রদর্শনের জন্য ব্যর্থ: {{message}}",
+      "teamNameEmpty": "দলের নাম ফাঁকা রাখা যাবে না",
+      "unsupportedMixedPrimaryMutation": "ওপেনকাডে দলের প্রাথমিক মালিকানাধীন সদস্যদের লাইভ সম্পাদন এখনো সমর্থিত নয়। দলটা বন্ধ করো, তালিকাটাকে সম্পাদন করো, তারপর পুনরায় চালু করো। প্রভাবিত: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "রং (ঐচ্ছিক)",
+      "description": "বিবরণ",
+      "name": "নাম"
+    },
+    "memberRestartWarning": "এই দলের সদস্য হিসেবে দায়িত্ব, কর্মফ্লো, ওয়ার্কট্রি বিচ্ছিন্ন হয়ে যাওয়া, সরবরাহকারী, মডেল, প্রচেষ্টা অথবা কর্ম সংক্রান্ত তথ্য প্রয়োগ করে পুনরায় আরম্ভ করা হবে MCP পরিবর্তনসমূহ বাতিল করা হবে।",
+    "notices": {
+      "liveRenameBlocked": "বিদ্যমান দলের সদস্যদের নাম পরিবর্তন করা হয়েছে বলে লাইভ সংরক্ষণ করা হচ্ছে। পরিচয়ের পরিবর্তন বাতিল করুন অথবা প্রথমে দলটা বন্ধ করুন।",
+      "newLiveTeammates": "টিম থাকার সময় সম্পাদনা টিমের সাথে নতুন দল যোগ করা যাবে না। পরিবর্তে বৈশিষ্ট্য প্রয়োগ করা হবে",
+      "provisioning": "টিমিংিং এখনও চলছে। শেষ না হওয়া অবধি সম্পাদনা সাময়িকভাবে বন্ধ করা হয়েছে।",
+      "restartMany": "এই দলের সদস্যদের ভূমিকা প্রয়োগ, কর্মফল, কাজের প্রবাহ, root বিচ্ছিন্নতা, সরবরাহকারী, মডেল, প্রচেষ্টা অথবা পুনরায় চালু করা হবে MCP পরিবর্তন প্রয়োগ করা হবে: {{names}}.",
+      "restartOne": "পুনরায় আরম্ভ করা হবে অথবা এই দলের প্রতিনিধিটি ভূমিকা, কর্মফ্লো, বিচ্ছিন্নতা, সরবরাহকারী, মডেল, প্রচেষ্টা অথবা পুনরায় আরম্ভ করুন MCP পরিবর্তন প্রয়োগ করা হবে: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "প্রথম মালিকানাধীন দলের সদস্যদের লাইভ/আর্মোভাল সম্পাদনা করুন মিশ্র দলের সদস্যদের বন্ধ করতে এবং দলকে পুনরায় চালু করতে হবে: {{names}}."
+    },
+    "placeholders": {
+      "description": "দলের বিবরণ (ঐচ্ছিক)",
+      "teamName": "দলের নাম"
+    },
+    "teamLead": {
+      "changeRuntime": "স্তর পরিবর্তন করো",
+      "changeRuntimeDescription": "মালিক, মডেল অথবা প্রচেষ্টা পরিবর্তনের জন্য পুনরায় আরম্ভ করুন ।",
+      "modelLockReason": "টিম ট্রেইনিং টিম থেকে উদ্ধার করা হয়েছে.",
+      "readOnlyHint": "টিমের নাম আর ভূমিকা শুধু পড়তেই থাকবে। আইকন পরিবর্তন, মডেল অথবা প্রচেষ্টা ব্যবস্থায় প্রারম্ভিক সারির প্যানেল খুলুন।",
+      "role": "টিম টিম"
+    },
+    "title": "পরিবর্তন"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "সদস্য অপসারণ করো",
+      "removeAria": "অপসারণ {{name}}",
+      "restore": "সদস্য পুনরুদ্ধার",
+      "restoreAria": "পুনুদ্ধার করুন {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "ডিফল্ট কনটেক্সট নির্ধারণ করো",
+      "description": "এন্থোপিক কনটেক্সট এই উৎক্ষেপণের জন্য দল-ব্যাপী: {{mode}}সিস্টেমের সীমা পূর্বনির্দিষ্ট ঘড়ি ব্যবহার করে এটি পরিবর্তন করতে.",
+      "limitEnabled": "200K এর সীমা"
+    },
+    "mcp": {
+      "buttonInherit": "MCP উত্তর দাও",
+      "buttonScopes": "MCP বিক্রয়",
+      "chooseScopes": "সন্ধান:",
+      "inheritLead": "দেখাও",
+      "lockedInfo": "এজেন্ট টিমস MCP সব টিমের জন্য শুধু সক্রিয়. আমাদের টিম শুধু এজেন্ট টিম সার্ভার চালু করবে.",
+      "mode": "MCP মোড",
+      "scopes": {
+        "local": "স্থানীয়",
+        "project": "প্রজেক্ট",
+        "user": "ব্যবহারকারী"
+      },
+      "serverNames": "সার্ভারের নাম:",
+      "settingInfo": "এজেন্ট টিমস MCP শুধু এজেন্ট টিমের সার্ভার দিয়ে এই টিম শুরু করো. স্কোপlist মোডগুলি শুধুমাত্র এই দলের সহকর্মী লঞ্চের জন্য প্রয়োগ করা হবে।",
+      "strictAllowlist": "তালিকা অনুমোদন করো",
+      "tooltip": "{{label}}: এই সদস্য নিয়ন্ত্রণ MCP উত্তরাধিকারের নীতি",
+      "agentTeamsMcp": "এজেন্ট টিমস MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} উপলব্ধকারী, {{model}}",
+      "currentLeadRuntime": "বর্তমানে নেতৃত্বকারী",
+      "default": "ডিফল্ট",
+      "inheritedTooltip": "Provider, model, and effort are inherited from the lead while sync is enabled.",
+      "leadSuffix": "{{label}} (d)",
+      "liveDisabled": "সরবরাহকারী, মডেল এবং প্রচেষ্টা পরিবর্তনগুলো নিষ্ক্রিয় করা হয়েছে যখন দলটি বেঁচে আছে। তাদের নিরাপদে প্রয়োগ করা।",
+      "lockedActionFallback": "বার বার ট্রেইনিং সিস্টেম খোলা হয়, যেখানে সরবরাহকারী, মডেল এবং প্রচেষ্টার পরিবর্তন হয়।",
+      "restartWholeTeam": "যে সমস্ত স্লিপিং পরিবর্তন হয়েছে তা পুরো দল পুনরায় শুরু করেছে।"
+    },
+    "nameAria": "সদস্য {{index}} নাম",
+    "nameFallback": "সদস্য {{index}}",
+    "noRole": "ভূমিকা নেই",
+    "removed": "অপসারণ করা হয়েছে",
+    "workflow": {
+      "addTooltip": "টিমমেট টাস্কু",
+      "editTooltip": "কর্মপ্রণালী সম্পাদনা করুন",
+      "label": "কর্মফ্লো (ঐচ্ছিক)",
+      "placeholder": "এই এজেন্ট কিভাবে আচরণ করবে, অন্যদের সাথে যোগাযোগ করবে...",
+      "saved": "সংরক্ষিত"
+    },
+    "worktree": {
+      "description": "এই টিমের কাজ করো. উদ্দেশ্য/ কর্ম সংক্রান্ত সূচনাকারীগুলি দ্বারা প্রধান কর্মক্ষেত্রের তথ্য প্রয়োগ করা হবে না।",
+      "label": "কার্যদিবস"
+    },
+    "addMembers": {
+      "title": "সদস্য যোগ করুন",
+      "description": "নতুন সদস্য যোগ করুন {{teamName}}"
+    },
+    "placeholders": {
+      "name": "দলের নাম",
+      "mcpServers": "♪ হাকুনা মাতাতা ♪"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "যোগ করুন",
+      "cancel": "বাতিল",
+      "delete": "মুছে ফেলুন",
+      "editCode": "কোড সম্পাদনা",
+      "launch": "আরম্ভ করুন",
+      "remove": "অপসারণ",
+      "stop": "বন্ধ করুন",
+      "task": "কাজ",
+      "visualize": "দৃশ্যমান"
+    },
+    "deleteTeam": {
+      "description": "Delete team \"{{team}}\"? This action is irreversible. All team data and tasks will be deleted.",
+      "title": "দল মুছে ফেলুন"
+    },
+    "draft": {
+      "descriptionPrefix": "এটি একটি খসড়া দল -",
+      "descriptionSuffix": "কনফিগার করা হয়েছে {{count}} {{member}} কিন্তু সে ব্যবস্থা করে নি CLI এখনও. মডেল নির্বাচন করার জন্য ক্লিক করুন।",
+      "descriptionSuffix_few": "কনফিগার করা হয়েছে {{count}} {{member}} কিন্তু সে ব্যবস্থা করে নি CLI এখনও. মডেল নির্বাচন করার জন্য ক্লিক করুন।",
+      "descriptionSuffix_many": "কনফিগার করা হয়েছে {{count}} {{member}} কিন্তু সে ব্যবস্থা করে নি CLI এখনও. মডেল নির্বাচন করার জন্য ক্লিক করুন।",
+      "descriptionSuffix_one": "কনফিগার করা হয়েছে {{count}} {{member}} কিন্তু সে ব্যবস্থা করে নি CLI এখনও. মডেল নির্বাচন করার জন্য ক্লিক করুন।",
+      "descriptionSuffix_other": "কনফিগার করা হয়েছে {{count}} {{member}} কিন্তু সে ব্যবস্থা করে নি CLI এখনও. মডেল নির্বাচন করার জন্য ক্লিক করুন।",
+      "member": "সদস্য",
+      "member_few": "সদস্য",
+      "member_many": "সদস্য",
+      "member_one": "সদস্য",
+      "member_other": "সদস্য",
+      "title": "টিম এখনও আরম্ভ করা হয়নি"
+    },
+    "invalidTab": "অকার্যকর দল",
+    "kanbanSafeData": "কানবান লোড করতে ব্যর্থ । নিরাপদ তথ্য প্রদর্শন করা হচ্ছে।",
+    "loadFailed": "দল লোড করতে ব্যর্থ",
+    "loading": "লোড করা হচ্ছে...",
+    "loadingSidebar": "দল লোড করা হচ্ছে",
+    "offline": {
+      "offline": "দল বর্তমানে অফ-লাইন",
+      "partialFailed": "সর্বশেষ আরম্ভ করতে ব্যর্থ",
+      "partialMissing": "সর্বশেষ এটি আরম্ভ করতে ব্যর্থ - %s {{missing}}/{{expected}} দলের সদস্যরা যোগদান করেনি",
+      "reconciling": "শেষ লঞ্চ এখনো পুনরায় চালু হচ্ছে"
+    },
+    "previous": "পূর্ববর্তী: {{paths}}",
+    "removeMember": {
+      "description": "Remove \"{{member}}\" from the team? Tasks and messages will be preserved, but this name cannot be reused.",
+      "title": "সদস্য অপসারণ করো"
+    },
+    "sections": {
+      "team": "টিম"
+    },
+    "solo": "সোলো",
+    "status": {
+      "active": "সক্রিয়",
+      "launching": "আরম্ভ করা হচ্ছে...",
+      "running": "চলমান"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "মেমরি"
+    },
+    "tooltips": {
+      "deleteTeam": "দল মুছে ফেলুন",
+      "editTeam": "সম্পাদনা",
+      "editUnavailableProvisioning": "সম্পাদনা গ্রুপ উপলব্ধ নেই",
+      "openBuiltInEditor": "নির্মিত সম্পাদকে প্রকল্প খুলুন",
+      "openTeamGraph": "OpenGL গ্রাফ",
+      "stopTeam": "বন্ধ করুন"
+    },
+    "waitingForProvisioning": "দলের তথ্য একযোগে উপলব্ধ করা হবে",
+    "context": {
+      "title": "কনটেক্সট"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "গ্রহণ করুন",
+        "discard": "বাতিল",
+        "discardTooltip": "এই ফাইল- এর জন্য সমস্ত সম্পাদনা বাতিল করো",
+        "keepMyDraft": "আমার খসড়া",
+        "reject": "বাতিল",
+        "reloadFromDisk": "ডিস্ক থেকে পুনরায় লোড করুন",
+        "restore": "পুনুদ্ধার করুন",
+        "restoreTooltip": "ডিস্কের পূর্বদৃশ্য রূপে এই ফাইলটি সংরক্ষণ করা হবে",
+        "saveFile": "ফাইল সংরক্ষণ করুন",
+        "saveFileTooltip": "ডিস্কে ফাইল সংরক্ষণ করুন"
+      },
+      "badges": {
+        "deleted": "DELETED",
+        "manualReview": "MANUAL REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "বর্তমান ডিস্ক",
+        "file-history": "ফাইল ইতিহাস",
+        "git-fallback": "মিলযুক্ত আলফা",
+        "ledger-exact": "কর্ম লেজার",
+        "ledger-snapshot": "লেজার",
+        "snippet-reconstruction": "গঠন করুন",
+        "unavailable": "উপলব্ধ নয়"
+      },
+      "contentUnavailable": {
+        "badge": "উপলব্ধ নয়",
+        "description": "এই পরিবর্তনের জন্য চিহ্নিত অতিরিক্ত মিটা- ডাটা রেকর্ড করা হয়েছে, কিন্তু সম্পূর্ণ লেখা উপস্থিত নেই। এর মানে সাধারণত বাইনারি, বড়, অথবা হ্যাশ বিষয়বস্তু।",
+        "safety": "স্বয়ংক্রিয় গ্রহণ করার জন্য ফাইল/ সরবরাহ সরবরাহের ক্ষেত্রে নিষ্ক্রিয় । অনিরাপদ ডিস্কের লেখার উদ্দেশ্যে এই ফাইল থেকে এটি নিষ্ক্রিয় করা হয়েছে ।",
+        "title": "টেক্সট উপলব্ধ নয়"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "নিষ্ক্রিয়/ প্রত্যাখ্যান করো কারণ সম্পূর্ণ লেখা উপলব্ধ নয় ।",
+        "acceptRejectMissingOnDisk": "ডিস্কের মধ্যে অনুপস্থিত ফাইল",
+        "rejectBaselineUnavailable": "অন্তর্ভুক্তির নিষ্ক্রিয় হওয়ার কারণ হল, মূল পাঠ্য উপলব্ধ নয়।",
+        "rejectContentUnavailable": "নিষ্ক্রিয় থাকলে সম্পূর্ণ টেক্সট উপলব্ধ নয় ।",
+        "rejectManualLedgerReview": "পরিসেবা নিষ্ক্রিয় করা হয়েছে কারণ এই এন্ট্রির বাইনারি, অত্যাধিক বড় অথবা উপলব্ধ নয়।"
+      },
+      "externalChange": {
+        "changedOnDisk": "ডিস্কের মধ্যে পরিবর্তন",
+        "deletedOnDisk": "ডিস্কের মধ্যে মুছে ফেলা হয়েছে",
+        "recreatedOnDisk": "ডিস্কের মধ্যে বিচ্ছিন্ন করা হয়েছে"
+      },
+      "missingOnDisk": {
+        "badge": "ডিস্কের মধ্যে অনুপস্থিত",
+        "description": "এজেন্ট লগের থেকে আমরা এখনো একটি প্রাকদর্শন করতে পারি, কিন্তু আপনার ফাইল সুসংগত নয়।",
+        "restorePrefix": "ব্যবহার",
+        "restoreSuffix": "ডিস্কের মধ্যে তথ্য লিখতে ইচ্ছুক হয়েছে।",
+        "restoreUnavailable": "স্বয়ংক্রিয়ভাবে পুনরুদ্ধার করা সম্ভব নয়।",
+        "title": "ডিস্কের মধ্যে ফাইল অনুপস্থিত"
+      },
+      "pathChange": {
+        "from": "প্রেরক {{path}}",
+        "to": "চিহ্নিত স্থানে {{path}}"
+      },
+      "worktree": {
+        "isolated": "বিচ্ছিন্ন গাছ"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} অপেক্ষারত",
+        "pending_one": "{{count}} অপেক্ষারত",
+        "pending_other": "{{count}} অপেক্ষারত",
+        "accepted": "{{count}} স্বীকার করা হলে",
+        "accepted_one": "{{count}} স্বীকার করা হলে",
+        "accepted_other": "{{count}} স্বীকার করা হলে",
+        "rejected": "{{count}} প্রত্যাখ্যান করা হলে",
+        "rejected_one": "{{count}} প্রত্যাখ্যান করা হলে",
+        "rejected_other": "{{count}} প্রত্যাখ্যান করা হলে",
+        "acrossFiles": "জুড়ে {{count}} ফাইল",
+        "acrossFiles_one": "জুড়ে {{count}} ফাইল",
+        "acrossFiles_other": "জুড়ে {{count}} ফাইল",
+        "edited": "{{count}} সম্পাদনা",
+        "edited_one": "{{count}} সম্পাদনা",
+        "edited_other": "{{count}} সম্পাদনা",
+        "pending_few": "{{count}} অপেক্ষারত",
+        "pending_many": "{{count}} অপেক্ষারত",
+        "accepted_few": "{{count}} স্বীকার করা হলে",
+        "accepted_many": "{{count}} স্বীকার করা হলে",
+        "rejected_few": "{{count}} প্রত্যাখ্যান করা হলে",
+        "rejected_many": "{{count}} প্রত্যাখ্যান করা হলে",
+        "acrossFiles_few": "জুড়ে {{count}} ফাইল",
+        "acrossFiles_many": "জুড়ে {{count}} ফাইল",
+        "edited_few": "{{count}} সম্পাদনা",
+        "edited_many": "{{count}} সম্পাদনা"
+      },
+      "actions": {
+        "auto": "স্বয়ংক্রিয়",
+        "undo": "পূর্বাবস্থা",
+        "acceptAll": "সমস্ত গ্রহণ করা হবে",
+        "rejectAll": "সমস্ত প্রত্যাখ্যান করুন ( R)",
+        "applying": "প্রয়োগ করা হচ্ছে...",
+        "applyRejections": "প্রত্যাখ্যান করো"
+      },
+      "tooltips": {
+        "autoOn": "স্ক্রোল করার সময় স্ক্রোল করার উদ্দেশ্যে চিহ্নিত ফাইলের চিহ্ন (ono)",
+        "autoOff": "Auto-mark files as viewed when scrolled to end (OFF)",
+        "undo": "সর্বশেষ কর্ম বাতিল করুন (Ctrl+Z)",
+        "acceptAll": "সকল ফাইল গ্রহণ করা হবে",
+        "rejectAll": "সকল ফাইল স্থায়ীরূপে মুছে ফেলা হবে",
+        "rejectAllDisabled": "না ফাইলটি মুছে ফেলার উদ্দেশ্যে কোনো নিরাপদ ধারণকারী ফাইল উপস্থিত নেই।",
+        "applyRejections": "ডিস্কের মধ্যে পরিবর্তিত হয়েছে ও পরিবর্তিত রূপে সংরক্ষণ করা হবে"
+      }
+    },
+    "diffError": {
+      "title": "প্রদর্শন করতে ব্যর্থ: %s",
+      "unexpected": "বিভক্ত করার সময় একটি অপ্রত্যাশিত সমস্যা দেখা দিয়েছে।",
+      "actions": {
+        "retry": "পুনরায় চেষ্টা করুন"
+      },
+      "raw": {
+        "show": "raw তথ্য প্রদর্শন করা হবে (s)",
+        "file": "ফাইল ( F): {{file}}",
+        "original": "--- আদি",
+        "modified": "+++ পরিবর্তন",
+        "charsTotal": "... ({{count}} chars total)",
+        "charsTotal_one": "... ({{count}} char total)",
+        "charsTotal_other": "... ({{count}} chars total)",
+        "charsTotal_few": "... ({{count}} chars total)",
+        "charsTotal_many": "... ({{count}} chars total)"
+      }
+    },
+    "fileTree": {
+      "viewed": "প্রদর্শন",
+      "badges": {
+        "new": "নতুন",
+        "deleted": "মুছে ফেলা হয়েছে"
+      },
+      "collapseFolder": "সংকুচিত {{name}}",
+      "expandFolder": "প্রসারণ {{name}}",
+      "empty": {
+        "noChangedFiles": "কোনো ফাইল উপস্থিত নেই",
+        "noMatchingFiles": "কোনো মিল পাওয়া যায়নি"
+      },
+      "searchPlaceholder": "ফাইল অনুসন্ধান...",
+      "filters": {
+        "unresolved": "প্রত্যাখ্যান করুন",
+        "rejected": "প্রত্যাখ্যান করা হয়েছে",
+        "new": "নতুন",
+        "clear": "মুছে ফেলুন"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "পূর্ববর্তী অংশ",
+      "nextChunk": "পরবর্তী অংশ",
+      "rejectChange": "পরিবর্তন প্রত্যাখ্যান করুন (অবচিত)",
+      "acceptChange": "পরিবর্তন গ্রহণ করুন (Y)",
+      "undo": "পূর্বাবস্থা",
+      "keep": "রাখো",
+      "rejectShortcut": "রিসাইফে",
+      "acceptShortcut": "তোয়াকি"
+    },
+    "conflict": {
+      "title": "দ্বন্দ্ব সনাক্ত",
+      "description": "এজেন্টের পরিবর্তন হওয়ার পরে এই ফাইলটি পরিবর্তিত হয়েছে",
+      "cancel": "বাতিল",
+      "saveResolution": "রেজোলিউশন সংরক্ষণ করো",
+      "editManually": "নিজে হাতে সম্পাদনা করো",
+      "useOriginal": "মূল ব্যবহার করা হবে",
+      "keepCurrent": "বর্তমান সংরক্ষণ করুন"
+    },
+    "fullDiffLoading": {
+      "titleOne": "ফুল Diff প্রস্তুত করা হচ্ছে",
+      "titleMany": "প্রস্তুতি {{count}} ফুল Diff",
+      "subtitleForFile": "সঠিক সম্পাদক ভাগ করা {{file}}.",
+      "subtitleCurrentFile": "বর্তমান ফাইলটির সঠিক সম্পাদক ।",
+      "subtitleMany": "বর্তমানে লোড করার উদ্দেশ্যে চিহ্নিত ফাইল ব্যাক-আপের পূর্বে সঠিকরূপে প্রয়োগ করা হয়েছে।",
+      "previewsReady": "{{count}} প্রাকদর্শন তৈরী",
+      "previewsReady_one": "{{count}} প্রাকদর্শন তৈরি",
+      "editorViewLoading": "এডিটর লোড করা হচ্ছে",
+      "filesInProgress": "{{count}} ফাইল অগ্রগতির মধ্যে উপস্থিত",
+      "filesInProgress_one": "{{count}} ফাইলে চলছে",
+      "filesReady": "{{ready}}/{{total}} ফাইল প্রস্তুত করা হচ্ছে",
+      "progressDescription": "{{ready}} তৈরি, {{loading}} এখনো লোড করা হয়নি। অবশিষ্ট প্রান্তগুলি ঠিক করার সময় নীচের অংশে দৃশ্যমান প্রাকদর্শন করা হবে।",
+      "singleDescription": "সঠিক ভিত্তি সমাধান করার সময় নীচে প্রদর্শিত প্রাকদর্শনগুলি নীচে দৃশ্যমান হবে।",
+      "previewsReady_few": "{{count}} প্রাকদর্শন তৈরী",
+      "previewsReady_many": "{{count}} প্রাকদর্শন তৈরী",
+      "previewsReady_other": "{{count}} প্রাকদর্শন তৈরী",
+      "filesInProgress_few": "{{count}} ফাইল অগ্রগতির মধ্যে উপস্থিত",
+      "filesInProgress_many": "{{count}} ফাইল অগ্রগতির মধ্যে উপস্থিত",
+      "filesInProgress_other": "{{count}} ফাইল অগ্রগতির মধ্যে উপস্থিত"
+    },
+    "fileMissingPrefix": "ডিস্কের মধ্যে ফাইল অনুপস্থিত। এর ফলে এজেন্ট লগ থেকে শুধুমাত্র একটি প্রাকদর্শন করা যাবে। ব্যবহার",
+    "restore": "পুনুদ্ধার করুন",
+    "fileMissingSuffix": "ডিস্কের মধ্যে ফাইল নির্মাণ করতে ব্যর্থ।",
+    "filePlaceholder": {
+      "loading": "লোড করা হচ্ছে",
+      "description": "এই ফাইলের জন্য একটি সম্পূর্ণ সম্পাদক প্রস্তুত করা হচ্ছে ।"
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} প্রোফাইল তৈরি করার সামগ্রী",
+      "ledgerObjectsProcessed_one": "{{count}} পাঠ হওয়া বস্তুর অবজেক্ট",
+      "ledgerObjectsProcessed_other": "{{count}} প্রোফাইল তৈরি করার সামগ্রী",
+      "ledgerObjectsProcessed_few": "{{count}} প্রোফাইল তৈরি করার সামগ্রী",
+      "ledgerObjectsProcessed_many": "{{count}} প্রোফাইল তৈরি করার সামগ্রী",
+      "phases": {
+        "readingLedger": "কাজ রেকর্ড পড়া হচ্ছে...",
+        "resolvingFiles": "ফাইলের তালিকা মীমাংসা করা হচ্ছে...",
+        "checkingWorktree": "কাজের ধারা পরীক্ষা করা হচ্ছে...",
+        "preparingDiffs": "প্রস্তুতি চলছে..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} প্রদর্শিত"
+    },
+    "scope": {
+      "readMore": "আরো পড়ুন",
+      "tiers": {
+        "exact": {
+          "title": "সুনির্দিষ্টভাবে নির্ধারিত",
+          "detail": "লগ-ইন করার পরে সেশানের মধ্যে সমাপ্তি। এই নির্দিষ্ট কাজের মধ্যে শুধুমাত্র সেই একই কাজ করার মধ্যে অন্তর্ভুক্ত রয়েছে - অন্য যে সংখ্যক ফাইল অগ্রাহ্য করা হবে।"
+        },
+        "endEstimated": {
+          "title": "সর্বাধিক সমাপ্তি",
+          "detail": "'%s' শেষ চিহ্ন পাওয়া গেছে - কাজ এখনো সমাপ্ত হয়নি। সেশানের সমাপ্তির অবধি কর্ম পরিবর্তন করা হবে। অন্যান্য ব্যবহারকারীদেরকে এই সেশানে কর্ম সঞ্চালন না করা হলে, সেগুলি অন্তর্ভুক্ত করা হবে।"
+        },
+        "startEstimated": {
+          "title": "সর্বাধিক সীমা",
+          "detail": "শুধুমাত্র শেষ চিহ্ন পাওয়া গেছে - কাজের শুরু ধরা যায়নি। অন্যান্য ব্যবহারকারীদের সাথে কোনো একই সেশান চলাকালে এই কর্মের মধ্যে কোনো পরিবর্তন করা হলে, সংশ্লিষ্ট ফাইলগুলি উপস্থিত থাকবে না।"
+        },
+        "allSession": {
+          "title": "সকল সেশান পরিবর্তন প্রদর্শন করা হবে",
+          "detail": "লগ-ইন সেশানের মধ্যে কোনো কর্ম সনাক্ত করা যায়নি। অন্যান্য সকল সেশানের জন্য এই কর্ম বাতিল করা যাবে না - সমস্ত ফাইল স্থায়ীরূপে মুছে ফেলা হবে। এটা পুরোনো হতে পারে CLI কোন ধরণের কাজ না করে।"
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "কর্মের তথ্য পরিবর্তন করা হয়েছে",
+          "detail": "যখন এজেন্ট এই কাজে কাজ করছিল তখন অর্কেস্ট্রা এই ফাইলটা ধারণ করেছিল ।",
+          "badge": "এলোমেলো"
+        },
+        "limited": {
+          "title": "পর্যালোচনার মাধ্যমে পরিবর্তন",
+          "detail": "অর্কেস্ট্রার এই কাজের জন্য এই ফাইলটা ধারণ করেছিলেন, কিন্তু অন্তত একটা পরিবর্তন সেটিকে একটি ছোট ছবি অথবা মিটা উৎস থেকে নেওয়া হয়েছে। সঠিক লেখা পর্যালোচনা করুন, যেখানে বাইনারি অথবা বিষয়বস্তুর বিস্তারিত বিবরণ উপলব্ধ রয়েছে।",
+          "mixedBadge": "মিশ্র পর্যালোচনা",
+          "needsReviewBadge": "পর্যালোচনা ব্যবস্থা"
+        }
+      },
+      "workInterval": {
+        "title": "সুনির্দিষ্ট কর্মকালের মধ্যে পরিবর্তিত হয়েছে",
+        "detail": "সেশান লগ-ইন করার উদ্দেশ্যে আরম্ভের কর্ম উপলব্ধ নয়। কর্ম স্থগিত করার উদ্দেশ্যে কর্ম স্থগিত রাখা হয়েছে।",
+        "badge": "স্বয়ংক্রিয় সংরক্ষণের মধ্যে সময়ের ব্যবধান"
+      },
+      "confidence": {
+        "high": "উচ্চ আস্থা",
+        "medium": "মাঝারি আত্মবিশ্বাস",
+        "low": "নিম্ন আত্মবিশ্বাস",
+        "bestEffort": "সর্বোত্তম ক্ষমতা"
+      }
+    },
+    "shortcuts": {
+      "title": "কি-বোর্ড শর্টকাট",
+      "actions": {
+        "nextChange": "পরবর্তী পরিবর্তন",
+        "previousChange": "পূর্ববর্তী পরিবর্তন",
+        "nextFile": "পরবর্তী ফাইল",
+        "previousFile": "পূর্ববর্তী ফাইল",
+        "acceptChange": "পরিবর্তন গ্রহণ করুন",
+        "rejectChange": "প্রত্যাখ্যান করুন ( R)",
+        "saveFile": "ফাইল সংরক্ষণ করুন",
+        "undo": "পূর্বাবস্থা",
+        "redo": "পুনরাবৃত্তি",
+        "toggleShortcuts": "শর্ট-কাট টগল করা হবে",
+        "closeDialog": "ডায়লগ বন্ধ করুন"
+      }
+    },
+    "timeline": {
+      "empty": "কোনো ইভেন্ট নেই",
+      "titleWithCount": "Edit Timeline ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "কোন পরিবর্তন ফাইল বিশ্লেষণ করা হয়নি"
+    },
+    "empty": {
+      "noSafeDiff": "কোনো নিরাপদ স্থান উপলব্ধ নেই",
+      "noFileChangesRecorded": "কোনো ফাইল লোড করা হয়নি",
+      "noSafeDiffDescription": "যে কাজটি এই কাজের জন্য কোন নিরাপদ ফাইলকে প্রকাশ করা হয়নি ।",
+      "noSafeDiffDiagnosticsDescription": "যে কাজটি এই কাজের জন্য কোন নিরাপদ ফাইলকে প্রকাশ করা হয়নি । নীচের ডায়গন্যগুলো ব্যাখ্যা করে কেন ।",
+      "noFileEventsYet": "এই কর্মটির জন্য কোনো অনুষ্ঠান উপস্থিত নেই।",
+      "noFileEvents": "এই কর্মের জন্য কোনো ফাইল উপস্থিত নেই।"
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "বার্তার প্রধান অংশ",
+      "collapseAll": "সমস্ত বার্তার থ্রেড সংকুচিত করা হবে",
+      "collapseSheet": "টালি",
+      "expandAll": "সমস্ত বার্তার থ্রেড প্রসারণ করা হবে",
+      "expandSheet": "পাতা প্রসারিত করুন",
+      "floatComposer": "রচনাক্ষেত্র",
+      "floatMessagesComposer": "বার্তা মুছে ফেলো",
+      "hideSearch": "অনুসন্ধানের জন্য তথ্য মুছে ফেলুন",
+      "loadOlder": "পুরোনো বার্তা লোড করা হচ্ছে",
+      "markAllRead": "সমস্ত বার্তা পড়া-হয়েছে হিসাবে চিহ্নিত করা হবে",
+      "messageActions": "বার্তার কর্ম",
+      "moveMessagesToBottomSheet": "যে ফিল্টার আপাতত আছে",
+      "moveMessagesToSidebar": "বার্তা সরানো হচ্ছে",
+      "moveToBottomSheet": "নীচে স্থানান্তর",
+      "moveToInline": "ইনলাইনে সরান",
+      "moveToSidebar": "চিহ্নিত অবস্থানে স্থানান্তর করুন",
+      "panelActions": "বার্তা সংক্রান্ত কর্ম",
+      "searchMessages": "অনুসন্ধানের বার্তা"
+    },
+    "delivery": {
+      "copied": "প্রতিলিপি",
+      "copyDebugDetails": "ডিবাগ সংক্রান্ত বিকল্প প্রদর্শন করা হবে",
+      "details": "বিবরণ",
+      "fields": {
+        "acceptanceUnknown": "সমর্থিত",
+        "delivered": "উদ্ধার",
+        "diagnostics": "ডায়গনিস",
+        "ledgerStatus": "জমা দাও",
+        "messageId": "বার্তা",
+        "providerId": "পরিসেবা উপলব্ধকারী",
+        "queuedBehindMessageId": "ডাউনলোড করা হয়েছেRAID status",
+        "reason": "কারণ",
+        "responsePending": "প্রতিদ্বন্ধিতা",
+        "responseState": "প্রত্যুত্তর",
+        "statusMessageId": "প্রেরিত বার্তা",
+        "userVisibleMessage": "ব্যবহারকারী অনুমোদন বার্তা",
+        "userVisibleNextReviewAt": "পরবর্তী অবস্থান",
+        "userVisibleReasonCode": "ব্যবহারকারীর গঠনমূলক Colication",
+        "userVisibleState": "ব্যবহারকারী দ্বারা নির্ধারিত অবস্থা",
+        "visibleReplyCorrelation": "দৃশ্যমান",
+        "visibleReplyMessageId": "উত্তর-প্রাপক বার্তা প্রদর্শিত হবে"
+      }
+    },
+    "panelMode": "বার্তার মোড",
+    "title": "বার্তা",
+    "unread": {
+      "new": "{{count}} নতুন",
+      "unread": "{{count}} অপঠিত",
+      "new_few": "{{count}} নতুন",
+      "new_many": "{{count}} নতুন",
+      "new_one": "{{count}} নতুন",
+      "new_other": "{{count}} নতুন",
+      "unread_few": "{{count}} অপঠিত",
+      "unread_many": "{{count}} অপঠিত",
+      "unread_one": "{{count}} অপঠিত",
+      "unread_other": "{{count}} অপঠিত"
+    },
+    "filter": {
+      "ariaLabel": "বার্তা মুছে ফেলো",
+      "tooltip": "বার্তা মুছে ফেলো",
+      "from": "প্রেরক",
+      "to": "চিহ্নিত স্থানে",
+      "noData": "কোনো বার্তা নেই",
+      "showStatusUpdates": "অবস্থা আপডেটের অবস্থা প্রদর্শন করা হবে",
+      "actions": {
+        "reset": "রিসেট",
+        "save": "সংরক্ষণ"
+      }
+    },
+    "status": {
+      "title": "অবস্থা"
+    },
+    "actionMode": {
+      "label": "কর্ম"
+    },
+    "search": {
+      "placeholder": "অনুসন্ধান..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "কনফিগার করা হয়েছে",
+      "connected": "পরিচিতির সাথে সংযোগ করা হয়েছে",
+      "failed": "ব্যর্থ",
+      "free": "মুক্ত",
+      "local": "স্থানীয়",
+      "needsTest": "পরীক্ষা প্রয়োজন",
+      "verified": "যাচাই করা হয়নি",
+      "unavailable": "উপলব্ধ নয়",
+      "issue": "ইস্যু"
+    },
+    "customModelId": "স্বনির্ধারিত মডেল",
+    "label": "মডেল (ঐচ্ছিক)",
+    "multimodelRequired": "কোডেক্স আর গেমিনিকের মাল্টিইম মোড দরকার।",
+    "openCode": {
+      "allSources": "& সক্রিয়",
+      "filterSource": "ফিল্টার {{source}}",
+      "filterSources": "ফিল্টারের উৎস ফিল্টার করো",
+      "freeOnly": "শুধুমাত্র মুক্ত",
+      "freeTooltip": "এই মডেলটিকে মুক্ত হিসাবে চিহ্নিত করো।",
+      "loadingModels": "রং বিন্যাস বেছে নিন:",
+      "noSourcesFound": "কোনো উৎস পাওয়া যায়নি।",
+      "recommendedOnly": "শুধুমাত্র প্রস্তাবিত",
+      "searchSources": "অনুসন্ধানের উৎস",
+      "sourcesCount": "{{count}} OpenChod উৎসস্থল",
+      "sourcesCount_few": "{{count}} OpenChod উৎসস্থল",
+      "sourcesCount_many": "{{count}} OpenChod উৎসস্থল",
+      "sourcesCount_one": "{{count}} OpenChod উৎসস্থল",
+      "sourcesCount_other": "{{count}} OpenChod উৎসস্থল"
+    },
+    "reason": "কারণ: {{reason}}",
+    "runtimeModelsSyncing": "এক্সপিসি মডেলস বর্তমান ধারণ করে। তালিকা সুসংগত হলে ডিফল্ট অবস্থায় উপলব্ধ থাকবে।",
+    "fastMode": {
+      "codexLabel": "দ্রুত মোড (২x2)",
+      "optionalLabel": "দ্রুত মোড (ঐচ্ছিক)",
+      "defaultOff": "ডিফল্ট",
+      "fast": "দ্রুত",
+      "off": "বন্ধ",
+      "defaultFast": "ডিফল্ট (দ্রুত)",
+      "defaultResolvesTo": "বর্তমানে নির্ধারিত মান {{mode}}.",
+      "runtimeBackedHint": "দ্রুত মোড চালু করা হয় এবং অ্যাথ্রিপিক ইঞ্জিনের মডেলটি সমর্থন করে।"
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "আনৃষ্টোপির গোপনীয় ডক পড়ুন"
+    },
+    "searchModels": "অনুসন্ধানের মডেল",
+    "defaultModel": "ডিফল্ট",
+    "empty": {
+      "noSearchMatches": "এই অনুসন্ধানের জন্য কোনো মডেল উপস্থিত নেই ।",
+      "recommendedFreeOpenCode": "বর্তমানে ব্যবহৃত পর্যবেক্ষণ তালিকার মধ্যে কোনো তালিকা উপস্থিত নেই।",
+      "freeOpenCode": "বর্তমানে ব্যবহৃত পর্যবেক্ষণ তালিকার মধ্যে কোনো মুক্ত ওপেনCod মডেল পাওয়া যায়নি।",
+      "recommendedOpenCode": "বর্তমানে ব্যবহৃত পর্যবেক্ষণ তালিকার মধ্যে কোনো প্রস্তাবিত ওপেনCodod মডেল উপলব্ধ নেই।",
+      "noModels": "বর্তমানে সঞ্চালনার পরে কোনো মডেল উপলব্ধ নেই।"
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode আরম্ভের জন্য মুক্ত নয়",
+      "freeModelsAvailableTitle": "মুক্ত মডেল উপলব্ধ রয়েছে",
+      "providerNotConnectedTitle": "Opencdo পরিসেবা সংযুক্ত নয়",
+      "readyTitle": "Opencode প্রস্তুত",
+      "readyMessage": "ওপেনকাডে প্রবেশ করেছে. এই দলের জন্য ওপেনCod মডেল ব্যবহার করতে এটি বেছে নিন ।",
+      "useOpenCode": "Opencor ব্যবহার করো",
+      "badges": {
+        "check": "পরীক্ষা করুন",
+        "install": "ইনস্টল করুন",
+        "free": "মুক্ত",
+        "setup": "বৈশিষ্ট্য"
+      },
+      "summary": {
+        "checking": "Opencrod অবস্থা: রানার চেক করুন",
+        "status": "আরম্ভের অবস্থা: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "দল আরম্ভ করার প্রতিরোধ",
+        "providerOptional": "সংযোগ সংক্রান্ত তথ্য প্রদর্শন করা সম্ভব নয়",
+        "providerModelsNeedSetup": "উপলব্ধকারী দ্বারা প্রস্তুত করা মডেল",
+        "teamLaunchReady": "দল প্রস্তুত",
+        "runtimeDetected": "ক্যামেরা সনাক্ত হয়েছে",
+        "runtimeMissing": "অনুপস্থিত",
+        "freeWithoutAuth": "অনুমোদন ছাড়া মুক্ত মডেল উপলব্ধ নেই",
+        "providerConnected": "পরিসেবা উপলব্ধকারীর সাথে সংযোগ করা হয়েছে",
+        "providerNotConnected": "পরিসেবা সংযুক্ত নয়"
+      },
+      "messages": {
+        "checking": "অ্যাপটি এখনো ওপেনকাডে ধারণের সময় চেক করছে। পরিসেবা উপলব্ধকারীর অবস্থা সমাপ্তির জন্য অপেক্ষা করুন, তারপর পুনরায় প্রচেষ্টা করুন ।",
+        "unsupported": "Opencdo ইনস্টল করা হয়নি, পাওয়া যায়নি অথবা সনাক্ত করার কর্ম সমর্থিত নয়। OpenDododrodyrop, তার পর নতুন উপলব্ধকারী অবস্থা পরীক্ষা করুন। হোম পেজ-এ আপনি ইনস্টলেশন বাটন-কে ব্যবহার করতে পারেন ।",
+        "freeAvailable": "Opencdod সহযোগে সনাক্ত করা হয়েছে । আপনি মুক্ত ওপেনকাডে মডেল ব্যবহার করতে পারেন, যেমন বিগ পিকলার। শুধুমাত্র পরিসেবা উপলব্ধকারীর সাথে সংযোগ স্থাপন করা হলে, সাথে সংযোগ স্থাপন করা হবে।",
+        "noFreeListed": "Opencdo সনাক্ত করা হয়েছে, কিন্তু কোনো মুক্ত Opencdo মডেল বর্তমানে উপস্থিত নেই । উপলব্ধকারীর অবস্থা, শেয়ারিং পরিসেবা উপলব্ধকারীর সাথে সংযোগ স্থাপন অথবা ডি-কোড করতে সহায়ক।",
+        "launchBlocked": "Opencdo ইনস্টল করা হয়েছে এবং অনুমোদিত, কিন্তু এজেন্ট টিম প্রস্তুত করা হয়েছে।",
+        "ready": "ওপেনকাডে দল চালুর জন্য প্রস্তুত।"
+      },
+      "loadingRuntime": "OpenCodhorkert স্ট্যাটাস এখনো লোড হচ্ছে."
+    },
+    "advisory": {
+      "pingNotConfirmed": "পিং নিশ্চিত করা হয়নি",
+      "note": "নোট"
+    },
+    "placeholders": {
+      "customModelId": "উন্মুক্ত/gip-s-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "Opencdo কনফিগার করুন",
+      "builtinFree": "মুক্ত-ইন",
+      "connectedProviders": "নিকটবর্তী পরিসেবা",
+      "otherCatalog": "অন্যান্য OpenCode ক্যাটালগQuery"
+    },
+    "pricing": {
+      "free": "মুক্ত",
+      "inputShort": "এর মধ্যে {{rate}}",
+      "outputShort": "বাইরে {{rate}}",
+      "perMillionSummary": "{{summary}} / ১",
+      "inputTitle": "ইনপুট: ( I) {{rate}} প্রতি ১টা টোকেন",
+      "outputTitle": "আউটপুট: {{rate}} প্রতি ১টা টোকেন",
+      "cacheReadTitle": "ক্যাশে পড়তে ব্যর্থ {{rate}} প্রতি ১টা টোকেন",
+      "cacheWriteTitle": "ক্যাশে: {{rate}} প্রতি ১টা টোকেন"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "এন্থোপিক- গোলমেলে সমন্বিত ডিফল্ট মডেল ব্যবহার করা হয়।\nবর্তমানে মীমাংসা করা হচ্ছে {{model}}.",
+      "anthropicCompatible": "এন্থোপিক- গোলমেলে সমন্বিত ডিফল্ট মডেল ব্যবহার করা হয়।",
+      "anthropic": "Llade টিম ডিফল্ট মডেল ব্যবহার করে ।\nসমাধান {{longContextModel}} ১এম কনটেক্সট, অথবা {{limitedContextModel}} সীমা অতিক্রান্ত হলে, ২০০K কনটেক্সট সক্রিয় করা হবে ।",
+      "openCodeWithResolved": "ডিফল্ট অঙ্কের ডিফল্ট মডেল ব্যবহার করে ।\nবর্তমানে মীমাংসা করা হচ্ছে {{model}}.",
+      "openCode": "OpenChodget রানার ডিফল্ট মডেল ব্যবহার করে ।",
+      "runtime": "নির্বাচিত উপলব্ধকারীর ডিফল্ট পদ্ধতি ব্যবহার করতে ব্যবহৃত হয় ।"
+    },
+    "multimodelOff": "মাল্টি মডেল বন্ধ করুন",
+    "unavailableInRuntime": "বর্তমানে চলমান নয়"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "বাতিল",
+      "delete": "মুছে ফেলুন",
+      "markResolved": "চিহ্ন সুসংগত করা হবে",
+      "save": "সংরক্ষণ"
+    },
+    "attachments": {
+      "commentAttachment": "অ্যাটাচমেন্ট",
+      "fromComments": "মন্তব্য থেকে",
+      "preview": "প্রাকদর্শন {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "মনোযোগ",
+        "noSafeDiff": "কোন নিরাপদ স্থান নেই"
+      },
+      "empty": {
+        "noFileChangesRecorded": "কোনো ফাইল লোড করা হয়নি",
+        "noFileChangesRecordedYet": "কোনো ফাইল লোড করা হয়নি",
+        "noReviewableChangesRecovered": "কোন পরিবর্তন ফাইল পুনরুদ্ধার করা হয়নি",
+        "noSafeDiffAvailable": "কোনো নিরাপদ স্থান উপলব্ধ নেই"
+      },
+      "loadFailed": "%s'র সংক্ষিপ্ত তথ্য লোড করতে ব্যর্থ",
+      "loading": "লোড করা হচ্ছে...",
+      "fileCount": "{{count}} ফাইল",
+      "fileRowsHidden": "{{count}} পূর্বে ব্যবহৃত ফাইল",
+      "moreDiagnostics": "{{count}} আরও ডায়োজিনীস",
+      "moreFiles": "{{count}} আরো ফাইল",
+      "openInEditor": "& সম্পাদকে খোলো",
+      "openTask": "কর্ম খুলুন {{subject}}",
+      "refresh": "নতুন করে প্রদর্শন",
+      "refreshFailed": "নতুন করে প্রদর্শন করতে ব্যর্থ: {{error}}",
+      "refreshing": "নতুন করে প্রদর্শন করা হচ্ছে",
+      "refreshingChanges": "নতুন করে প্রদর্শন করা হচ্ছে...",
+      "refreshTeamChanges": "পরিবর্তন নতুন করে প্রদর্শন",
+      "refreshShort": "নতুন করে প্রদর্শন",
+      "reviewDiff": "পর্যালোচনা ব্যবস্থা",
+      "reviewTaskDiff": "কাজের পর্যালোচনা",
+      "scannedCandidateTasks": "স্ক্যান করা হবে {{requested}} এর {{eligible}} নেটওয়ার্ক সংক্রান্ত কর্ম",
+      "tasksDeferred": "{{count}} কর্ম স্থগিত রাখা হয়েছে",
+      "title": "পরিবর্তন",
+      "fileCount_few": "{{count}} ফাইল",
+      "fileCount_many": "{{count}} ফাইল",
+      "fileCount_one": "{{count}} ফাইল",
+      "fileCount_other": "{{count}} ফাইল",
+      "fileRowsHidden_few": "{{count}} পূর্বে ব্যবহৃত ফাইল",
+      "fileRowsHidden_many": "{{count}} পূর্বে ব্যবহৃত ফাইল",
+      "fileRowsHidden_one": "{{count}} পূর্বে ব্যবহৃত ফাইল",
+      "fileRowsHidden_other": "{{count}} পূর্বে ব্যবহৃত ফাইল",
+      "moreDiagnostics_few": "{{count}} আরও ডায়োজিনীস",
+      "moreDiagnostics_many": "{{count}} আরও ডায়োজিনীস",
+      "moreDiagnostics_one": "{{count}} আরও ডায়োজিনীস",
+      "moreDiagnostics_other": "{{count}} আরও ডায়োজিনীস",
+      "moreFiles_few": "{{count}} আরো ফাইল",
+      "moreFiles_many": "{{count}} আরো ফাইল",
+      "moreFiles_one": "{{count}} আরো ফাইল",
+      "moreFiles_other": "{{count}} আরো ফাইল",
+      "tasksDeferred_few": "{{count}} কর্ম স্থগিত রাখা হয়েছে",
+      "tasksDeferred_many": "{{count}} কর্ম স্থগিত রাখা হয়েছে",
+      "tasksDeferred_one": "{{count}} কর্ম স্থগিত রাখা হয়েছে",
+      "tasksDeferred_other": "{{count}} কর্ম স্থগিত রাখা হয়েছে"
+    },
+    "clarification": {
+      "awaitingLead": "দল থেকে স্পষ্ট ব্যাখ্যা",
+      "awaitingUser": "কা."
+    },
+    "description": {
+      "add": "বিবরণ যোগ করুন...",
+      "edit": "বিবরণ সম্পাদনা করুন",
+      "placeholder": "কর্ম সংক্রান্ত বিবরণ (soute চিহ্নিত হয়েছে)"
+    },
+    "loading": {
+      "fetchingTeamData": "দলের তথ্য আহরণ করা হচ্ছে",
+      "title": "কাজ লোড করা হচ্ছে..."
+    },
+    "logs": {
+      "newArriving": "নতুন কাজসমূহ আগত"
+    },
+    "notFound": "কর্ম পাওয়া যায়নি",
+    "related": {
+      "blockedBy": "দ্বারা প্রতিরোধ করা",
+      "blocks": "ব্লক",
+      "linkedFrom": "লিংক করা বার্তা",
+      "links": "লিঙ্ক",
+      "title": "এই কাজের জন্য"
+    },
+    "review": {
+      "reviewer": "পরিদর্শক: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "অ্যাটাচমেন্ট",
+      "changes": "পরিবর্তন",
+      "comments": "মন্তব্য",
+      "description": "বিবরণ",
+      "taskLogs": "কাজের লগ",
+      "workflowHistory": "কর্ম চিহ্নকারী পূর্ববর্তী তথ্য"
+    },
+    "unassigned": "বরাদ্দ নয়",
+    "workflow": {
+      "implementationTimeTitle": "কর্ম অবশিষ্ট সময়ের ব্যবধান",
+      "inProgressTime": "চলছে {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "সবচেয়ে সাম্প্রতিক জিনিষ দেখাও {{formattedCount}} টি.",
+      "badges": {
+        "approved": "অনুমোদন করা হয়েছে",
+        "reviewRequested": "পর্যালোচনা"
+      },
+      "unknownTime": "অজানা সময়",
+      "actions": {
+        "reply": "প্রত্যুত্তর",
+        "replyToComment": "মন্তব্য",
+        "showMore": "Show more comments ({{visible}}/{{total}})",
+        "cancelReply": "প্রেরকের উত্তর",
+        "comment": "মন্তব্য"
+      },
+      "attachments": {
+        "previewAlt": "সংযুক্তি প্রাকদর্শন",
+        "downloadFailed": "ডাউনলোড করতে ব্যর্থ"
+      },
+      "replyingTo": "উত্তর দেওয়া হচ্ছে",
+      "input": {
+        "placeholder": "মন্তব্য যোগ করুন... (চিৎকার)",
+        "charsLeft": "{{count}} অক্ষর বাঁদিকে",
+        "charsLeft_one": "{{count}} অক্ষর বাঁদিকে",
+        "charsLeft_other": "{{count}} অক্ষর বাঁদিকে",
+        "charsLeft_few": "{{count}} অক্ষর বাঁদিকে",
+        "charsLeft_many": "{{count}} অক্ষর বাঁদিকে"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "কোনো কর্মপ্রবাহের ইতিহাস উপস্থিত নেই",
+      "currentImplementationInterval": "বর্তমান বাস্তবায়িত অনুকরণ",
+      "implementationIntervalEnded": "এই পরিবর্তনের মধ্যে অন্তর্বর্তী বিরতি",
+      "runningPrefix": "চলমান ",
+      "createdAs": "নির্মাণের সময়",
+      "by": "ব্যবহার করা হবে",
+      "reassigned": "পুনরায় নির্ধারণ করা হয়েছে",
+      "assignedTo": "বরাদ্দকৃত",
+      "unassignedFrom": "বরাদ্দ করা হয়নি",
+      "ownerChanged": "মালিকানা পরিবর্তন",
+      "reviewRequested": "পর্যালোচনা",
+      "reviewStarted": "পর্যালোচনা শুরু",
+      "changesRequested": "অনুরোধ করা পরিবর্তন",
+      "approved": "অনুমোদন করা হয়েছে",
+      "unknownEvent": "অজানা"
+    },
+    "reviewStates": {
+      "approved": "অনুমোদন করা হয়েছে",
+      "needsFix": "সংশোধন করুন",
+      "inReview": "পর্যালোচনা"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "বরাদ্দ স্থলের ব্যবহার",
+      "assigneeOptional": "বরাদ্দ না করা নোট (ঐচ্ছিক)",
+      "blockedByOptional": "কর্ম (ঐচ্ছিক)",
+      "blockedBySummary": "কর্ম দ্বারা বন্ধ করা হবে: {{tasks}}",
+      "cancel": "বাতিল",
+      "create": "তৈরি করুন ( r)",
+      "creating": "তৈরি করা হচ্ছে...",
+      "description": "এই দলটির কাজে / ডিরেক্টরিতে তৈরি করা হবে এবং কানান বোর্ডে দেখা যাবে।",
+      "descriptionOptional": "বিবরণ (ঐচ্ছিক)",
+      "detailsPlaceholder": "কর্ম সংক্রান্ত বিবরণ (%s) প্রত্যাখ্যান করা হয়েছে",
+      "hideOptionalFields": "ঐচ্ছিক ক্ষেত্র আড়াল করো",
+      "offlineNotice": {
+        "after": "- দল চালু করতে হবে।",
+        "before": "টিম অফ-লাইন। কর্ম যোগ করা হবে"
+      },
+      "promptOptional": "লক্ষ্য রাখার জন্য অনুরোধ করা (ঐচ্ছিক)",
+      "promptPlaceholder": "দলের সদস্যদের জন্য স্বনির্ধারিত নির্দেশ...",
+      "relatedOptional": "এই কর্ম (ঐচ্ছিক)",
+      "relatedSummary": "সম্পর্কিত: {{tasks}}",
+      "saved": "সংরক্ষিত",
+      "searchTasks": "কাজ অনুসন্ধান করুন...",
+      "selectMember": "একটি সদস্য নির্বাচন করুন",
+      "selectMemberOptional": "নির্বাচন করুন...",
+      "showOptionalFields": "ঐচ্ছিক ক্ষেত্র প্রদর্শন করা হবে",
+      "startImmediately": "এই মুহূর্তে চালানো হবে",
+      "startOfflineHint": "টিম অফ-লাইন। দ্রুত কাজ আরম্ভ করো।",
+      "subject": "বিষয়",
+      "subjectPlaceholder": "কী করতে হবে?",
+      "title": "কাজ তৈরি করুন",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "ব্লক করা",
+        "blocks": "ব্লক",
+        "id": "ID",
+        "owner": "মালিক",
+        "status": "অবস্থা",
+        "subject": "বিষয়"
+      },
+      "empty": "এই দলে কোনো কাজ নেই",
+      "filters": {
+        "allOwners": "সকল মালিকানা",
+        "allStatuses": "সমস্ত অবস্থা",
+        "ownerAria": "কর্ম অনুযায়ী ফিল্টার করা হবে",
+        "statusAria": "অবস্থা অনুযায়ী ফিল্টার করা হবে"
+      },
+      "showing": "দেখাও {{shown}} এর {{total}}"
+    },
+    "status": {
+      "completed": "সম্পন্ন",
+      "deleted": "মুছে ফেলা হয়েছে",
+      "inProgress": "অনুসন্ধান করা হবে ( x)",
+      "pending": "অপেক্ষারত"
+    },
+    "statusSummary": {
+      "progressAria": "কর্ম {{completed}}/{{total}} সম্পন্ন",
+      "inProgress": "{{count}} অনুসন্ধান করা হবে ( x)",
+      "inProgress_one": "{{count}} অনুসন্ধান করা হবে ( x)",
+      "inProgress_other": "{{count}} অনুসন্ধান করা হবে ( x)",
+      "inProgress_few": "{{count}} অনুসন্ধান করা হবে ( x)",
+      "inProgress_many": "{{count}} অনুসন্ধান করা হবে ( x)",
+      "pending": "{{count}} অপেক্ষারত",
+      "pending_one": "{{count}} অপেক্ষারত",
+      "pending_other": "{{count}} অপেক্ষারত",
+      "pending_few": "{{count}} অপেক্ষারত",
+      "pending_many": "{{count}} অপেক্ষারত",
+      "completed": "{{count}} সম্পন্ন",
+      "completed_one": "{{count}} সম্পন্ন",
+      "completed_other": "{{count}} সম্পন্ন",
+      "completed_few": "{{count}} সম্পন্ন",
+      "completed_many": "{{count}} সম্পন্ন"
+    },
+    "unassigned": "বরাদ্দ নয়",
+    "teamPrefix": "দল:",
+    "openTask": "কর্ম খুলুন",
+    "deleteConfirm": {
+      "title": "বন্টন করা হবে",
+      "message": "কাজ স্থানান্তর করো #{{taskId}} আবর্জনার বাক্সে?",
+      "confirmLabel": "মুছে ফেলুন",
+      "cancelLabel": "বাতিল"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "বাতিল",
+      "closeEditor": "এডিটর বন্ধ করুন",
+      "closeTab": "ট্যাব বন্ধ করুন",
+      "closeTooltip": "সম্পাদক বন্ধ করুন (EC)",
+      "discard": "বাতিল",
+      "discardAndClose": "বন্ধ করুন (C)",
+      "keep": "রাখো",
+      "keepMine": "আমারটা রাখ",
+      "keyboardShortcuts": "কি-বোর্ড শর্ট-কাট",
+      "overwrite": "মুছে নতুন করে লেখা",
+      "refreshAria": "নতুন করে প্রদর্শন (f)",
+      "refreshTooltip": "জি- আই- ডি নতুন করে তৈরি করো (5)",
+      "reload": "পুনরায় লোড করুন",
+      "retry": "পুনরায় চেষ্টা করুন",
+      "save": "সংরক্ষণ",
+      "saveAllAndClose": "& সব সংরক্ষণ করো"
+    },
+    "ariaLabel": "প্রজেক্ট সম্পাদক",
+    "dialogs": {
+      "conflictDescription": "ফাইলটি স্বতন্ত্ররূপে খোলা হয়েছে। আপনি কি আপনার পরিবর্তন বাতিল করে দিতে চান?",
+      "conflictTitle": "দ্বন্দ্ব সংরক্ষণ করা হবে",
+      "unsavedDescription": "আপনি এই খেলাটিতে কিছু পরিবর্তন করেছেন। আপনি কি করতে ইচ্ছুক?",
+      "unsavedFileDescription": "এই ফাইলে অসংরক্ষিত পরিবর্তন রয়েছে। আপনি কি করতে ইচ্ছুক?",
+      "unsavedTitle": "অসংরক্ষিত পরিবর্তন"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "নাম ফাঁকা রাখা যাবে না",
+        "invalidName": "অবৈধ নাম",
+        "invalidCharacters": "নামের মধ্যে অবৈধ অক্ষর রয়েছে",
+        "nameTooLong": "নাম অত্যাধিক লম্বা"
+      },
+      "placeholders": {
+        "fileName": "ফাইলের নাম...",
+        "folderName": "ফোল্ডারের নাম..."
+      },
+      "aria": {
+        "newFileName": "নতুন ফাইলের নাম",
+        "newFolderName": "নতুন ফোল্ডারের নাম"
+      }
+    },
+    "draftRecovered": "পূর্ববর্তী সেশান থেকে পুনরুদ্ধার করা হয়েছে।",
+    "externalChange": {
+      "changed": "ডিস্কের মধ্যে ফাইল পরিবর্তিত হয়েছে।",
+      "deleted": "ডিস্কের মধ্যে চিহ্নিত ফাইলটি বর্তমানে উপস্থিত নেই।"
+    },
+    "saveFailed": "সংরক্ষণ করতে ব্যর্থ {{error}}",
+    "sidebar": {
+      "explorer": "এক্সপ্লোরার",
+      "hide": "সাইডবার আড়াল করো",
+      "hideWithShortcut": "Hide sidebar ({{shortcut}})",
+      "show": "সাইড-বার প্রদর্শন",
+      "showWithShortcut": "Show sidebar ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "ফাইল অনুসন্ধান",
+      "closeSearch": "অনুসন্ধান বন্ধ করুন",
+      "closeSearchShortcut": "অনুসন্ধান বন্ধ করুন (C)",
+      "searchPlaceholder": "অনুসন্ধান...",
+      "matchCase": "হরফের ছাঁদ মেলানো হবে",
+      "matchCaseToggle": "আও",
+      "noResults": "কোনো ফলাফল পাওয়া যায়নি",
+      "resultsSummary": "{{count}} ইনডেকসে খুঁজুন {{fileCount}} ফাইল",
+      "resultsSummary_one": "{{count}} মিল পাওয়া গিয়েছে {{fileCount}} ফাইল",
+      "truncated": "(পুনরাবৃত্তি)",
+      "resultsSummary_few": "{{count}} ইনডেকসে খুঁজুন {{fileCount}} ফাইল",
+      "resultsSummary_many": "{{count}} ইনডেকসে খুঁজুন {{fileCount}} ফাইল",
+      "resultsSummary_other": "{{count}} ইনডেকসে খুঁজুন {{fileCount}} ফাইল"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "ফাইল লোড করতে অক্ষম: {{error}}",
+      "loading": "ফাইল লোড করা হচ্ছে...",
+      "empty": "একটিও ফাইল পাওয়া যায়নি",
+      "dropForProjectRoot": "প্রকল্পের জন্য এখানে ড্রপ করুন",
+      "moveToTrash": "চিহ্নিত অবস্থানে স্থানান্তর করুন",
+      "moveToTrashConfirm": "সর{{name}}আবর্জনার বাক্সে?",
+      "cancel": "বাতিল"
+    },
+    "goToLine": {
+      "title": "উল্লিখিত পংক্তি সংখ্যা দেখুন ( L)...",
+      "position": "(current: {{current}}, total: {{total}})",
+      "placeholder": "লাইন সংখ্যা, +ফসেট, -offসেট অথবা %s",
+      "go": "যান"
+    },
+    "searchPanel": {
+      "previousMatch": "পূর্ববর্তী মিল",
+      "nextMatch": "পরবর্তী মিল",
+      "close": "বন্ধ",
+      "replacePlaceholder": "প্রতিস্থাপন",
+      "replace": "প্রতিস্থাপন",
+      "replaceNext": "পরবর্তী প্রতিস্থাপন",
+      "all": "সকল",
+      "replaceAll": "সমগ্র প্রতিস্থাপন করা হবে"
+    },
+    "statusBar": {
+      "position": "পংক্তি বিভাজন {{line}}কোল {{col}}",
+      "enableWatcher": "ফাইল পর্যবেক্ষক সক্রিয় করো",
+      "disableWatcher": "ফাইল পর্যবেক্ষক নিষ্ক্রিয় করো",
+      "watch": "ঘড়ি",
+      "watching": "নিরীক্ষণ",
+      "watchExternalChanges": "বহিস্থিত পরিবর্তন নিরীক্ষণ করুন",
+      "disableExternalWatcher": "বহিস্থিত পরিবর্তন নিষ্ক্রিয় করুন",
+      "encodingUtf8": "UTF-8",
+      "spaces": "শূণ্যস্থান প্রয়োগ করুন: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "প্রাকদর্শন লোড করা হচ্ছে",
+      "openFullSize": "সম্পূর্ণ প্রাকদর্শন খুলুন",
+      "openSystemViewer": "সিস্টেমের মধ্যে খুলুন"
+    },
+    "quickOpen": {
+      "title": "ঝটপট প্রদর্শন",
+      "searchPlaceholder": "নাম অনুযায়ী ফাইল অনুসন্ধান...",
+      "loading": "ফাইল লোড করা হচ্ছে...",
+      "empty": "একটিও ফাইল পাওয়া যায়নি"
+    },
+    "errorBoundary": {
+      "crashed": "সম্পাদক ক্র্যাশ করেছে",
+      "unknownError": "অজানা ত্রুটি"
+    },
+    "binaryPlaceholder": {
+      "file": "Binary file ({{size}})"
+    },
+    "unsavedChanges": "অসংরক্ষিত পরিবর্তন",
+    "empty": {
+      "selectFile": "ট্রি থেকে সম্পাদনার জন্য কোনো ফাইল নির্বাচন করুন"
+    },
+    "search": {
+      "toggleReplace": "প্রতিস্থাপন",
+      "placeholder": "অনুসন্ধান"
+    },
+    "shortcuts": {
+      "title": "কি-বোর্ড শর্টকাট",
+      "groups": {
+        "fileOperations": "ফাইল সংক্রান্ত কাজ",
+        "search": "অনুসন্ধান",
+        "navigation": "পরিদর্শন",
+        "editing": "সম্পাদনা",
+        "markdown": "মার্ক-আপ",
+        "general": "সাধারণ"
+      },
+      "actions": {
+        "quickOpen": "ঝটপট প্রদর্শন",
+        "save": "সংরক্ষণ",
+        "saveAll": "সমস্ত সংরক্ষণ করুন",
+        "closeTab": "ট্যাব বন্ধ করুন",
+        "findInFile": "ফাইলের মধ্যে অনুসন্ধান",
+        "searchInFiles": "ফাইল অনুসন্ধান",
+        "goToLine": "উল্লিখিত পংক্তি সংখ্যা দেখুন ( L)...",
+        "nextTab": "পরবর্তী ট্যাব",
+        "previousTab": "পূর্ববর্তী ট্যাব",
+        "cycleTabs": "সাইকেল চক্র",
+        "toggleSidebar": "সাইড- বার প্রদর্শনের মোড পাল্টাও",
+        "undo": "পূর্বাবস্থা",
+        "redo": "পুনরাবৃত্তি",
+        "selectNextMatch": "পরবর্তী মিল",
+        "toggleComment": "মন্তব্য",
+        "splitPreview": "প্রাকদর্শন বন্ধ করুন",
+        "fullPreview": "সম্পূর্ণ প্রাকদর্শন",
+        "closeEditor": "সম্পাদক বন্ধ করো"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "শব্দ ঘুরিয়ে",
+      "disableWordWrap": "শব্দ নিষ্ক্রিয় করো",
+      "closeSplitPreview": "প্রাকদর্শন বন্ধ করুন",
+      "closePreview": "প্রিন্টের পূর্বরূপ বন্ধ করুন"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "ট্যাগ তৈরি করুন",
+      "creating": "তৈরি করা হচ্ছে...",
+      "goToDashboard": "ড্যাশবোর্ডে যাও",
+      "launchTeam": "ইঞ্জিন আরম্ভ করুন",
+      "launching": "আরম্ভ করা হচ্ছে...",
+      "relaunchTeam": "পুনরায় আরম্ভ করুন",
+      "relaunching": "পুনরায় আরম্ভ করা হচ্ছে...",
+      "saveChanges": "০ চ্যানেল",
+      "saving": "ইনস্টল করা হয়েছে..."
+    },
+    "billing": {
+      "prefix": "১৫ জুন থেকে শুরু",
+      "readArticle": "এন্থোপিক নিবন্ধ পড়ুন",
+      "suffix": "এবং এজেন্ট SDK মাসিক এজেন্ট থেকে ব্যবহার SDK ক্রেডিট, ইন্টারঅ্যাকটিভ কোড সীমার থেকে আলাদা। এই কৃতিত্ব প্রত্যেক বিলিং চক্রকে রিসাইকেল করে এবং অব্যবহৃত ক্রেডিটের পরিমাণ শেষ হয় না।"
+    },
+    "conflict": {
+      "description": "একই ডিরেক্টরিতে দুই দল বাজানো ঝুঁকিপূর্ণ - তাঁরা একই ধরনের ফাইল সম্পাদনা করতে পারেন। পৃথক হওয়ার জন্য একাধিক ডিরেক্টরি অথবা জি-টট্রি ব্যবহার করুন ।",
+      "title": "আরেকটা দল \"{{team}}\" বর্তমানে এই কাজের জন্য চলছে",
+      "workingDirectory": "কাজের ডিরেক্টরি:"
+    },
+    "description": {
+      "createSchedule": "স্বয়ংক্রিয় Klod কর্ম সম্পাদন",
+      "createScheduleForTeam": "Schedule automatic runs for team \"{{team}}\"",
+      "editSchedule": "Editing schedule for team \"{{team}}\"",
+      "launchPrefix": "আরম্ভ",
+      "launchSuffix": "স্থানীয় ক্লড এর মাধ্যমে CLI.",
+      "relaunchPrefix": "বর্তমান মেইল অপারেশন বন্ধ করুন",
+      "relaunchSuffix": "তারপর আবার শুরু করব স্থানীয় ক্লড এর মাধ্যমে CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "আরম্ভ করা হবে",
+        "relaunch": "পুনরায় আরম্ভ করুন"
+      },
+      "blocked": "রানটাইম এনভায়রনমেন্ট উপলব্ধ নয় - %s {{action}} বন্ধ করা হয়েছে",
+      "checkingProviders": "নির্বাচিত উপলব্ধকারী...",
+      "failed": "নির্বাচিত উপলব্ধকারী প্রস্তুত করতে ব্যর্থ",
+      "preflight": "ত্রুটি দেখা দিয়েছে কিনা তা পরীক্ষা করুন {{action}}",
+      "preparingEnvironment": "পরিবেশ প্রস্তুত করা হচ্ছে...",
+      "ready": "নির্বাচিত সকল সরবরাহকারী প্রস্তুত।",
+      "readyWithNotes": "নির্বাচিত সকল প্রোভাইডাররা প্রস্তুত, নোট সহ।",
+      "unsupportedPreload": "বর্তমানে লোড করার পূর্ববর্তী সংস্করণ দ্বারা সমর্থন ব্যবস্থা সমর্থিত হয় না: লোড করা হচ্ছে। অ্যাপ্লিকেশন পুনরায় চালু করুন।",
+      "selectWorkingDirectory": "আরম্ভ করার উদ্দেশ্যে একটি কর্ম নির্বাচন করুন।",
+      "someProvidersNeedAttention": "কিছু নির্বাচিত প্রোভাইডারদের মনোযোগের প্রয়োজন।"
+    },
+    "prompt": {
+      "label": "প্রম্পট",
+      "oneShotPrefix": "এই প্রম্পটটি পাঠানো হবে",
+      "oneShotSuffix": "এক গুলির দাগ",
+      "saved": "সংরক্ষিত",
+      "schedulePlaceholder": "শিডিউলে কাজ করার নির্দেশনা...",
+      "teamLeadOptional": "নেতৃত্ব দেয়ার উদ্দেশ্যে দল (ঐচ্ছিক)",
+      "teamLeadPlaceholder": "দলের নেতৃত্বের জন্য নির্দেশনা..."
+    },
+    "providerChanged": "উপলব্ধকারী থেকে পরিবর্তন করা হচ্ছে {{from}} চিহ্নিত স্থানে চলুন {{to}}পূর্ববর্তী সেশন পুনরায় চালু করা হবে না, এবং এর নেতৃত্ব নতুন প্রসঙ্গ যোগ করা হবে না।",
+    "relaunchFreshSession": "টিম আবার নতুন সেশন শুরু করবে. উল্লেখযোগ্য দল, টাস্ক বোর্ড এবং সদস্য কনফিগারেশন উৎক্ষেপণ করতে বাধ্য।",
+    "relaunchWarning": {
+      "description": "এই বৈশিষ্ট্য সংরক্ষণ করা হলে বর্তমান দলটি সংরক্ষণ করা বন্ধ করবে, আপডেটের তালিকায় ক্রমাগত পরিবর্তন ঘটেছে এবং নতুন করে ট্রেইনিং আরম্ভ করবে।",
+      "title": "বর্তমান দল পুনরায় আরম্ভ করা হবে"
+    },
+    "schedule": {
+      "labelOptional": "লেবেল (ঐচ্ছিক)",
+      "labelPlaceholder": "উদাহরণ, ডেইলি কোডের পর্যালোচনা, নাইটলি টেস্ট...",
+      "maxBudgetUsd": "Max budget (USD)",
+      "maxTurns": "সর্বাধিক প্রতি",
+      "noLimit": "সীমা অনুপস্থিত",
+      "noMatches": "অনুসন্ধানের জন্য কোনো দল পাওয়া যায়নি ।",
+      "noTeams": "কোনো দল উপলব্ধ নেই। প্রথমে একটি টিম তৈরি করো।",
+      "searchTeams": "গ্রুপ অনুসন্ধান...",
+      "selectTeam": "একটি দল নির্বাচন করুন...",
+      "team": "টিম",
+      "title": "নির্ধারিত সময়সীমা"
+    },
+    "title": {
+      "createSchedule": "ট্যাগ তৈরি করুন",
+      "editSchedule": "নির্ধারিত ট্যাগ সম্পাদনা করুন",
+      "launch": "টিম আরম্ভ করো",
+      "relaunch": "পুনরায় আরম্ভ করুন"
+    },
+    "errors": {
+      "loadProjectsFailed": "প্রজেক্ট লোড করতে ব্যর্থ",
+      "saveScheduleFailed": "সময় নির্ধারণ করতে ব্যর্থ",
+      "relaunchFailed": "পুনরায় আরম্ভ করতে ব্যর্থ",
+      "launchFailed": "দল আরম্ভ করতে ব্যর্থ"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenChod এর নেতৃত্বের জন্য একটি নির্বাচিত মডেল প্রয়োজন ।",
+      "openCodeTeammateRequired": "ওপেনCod এর নেতৃত্ব অন্তত একটি ওপেনCod দলের সদস্য হওয়া প্রয়োজন।",
+      "selectWorkingDirectory": "সক্রিয় ডিরেক্টরি নির্বাচন করুন (cd)",
+      "fixMemberNames": "আরম্ভের পূর্বে ফাইলের নাম সংশোধন করা হবে",
+      "memberNamesUnique": "আরম্ভের পূর্বে সদস্য নাম উপস্থিত থাকা আবশ্যক"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "পুনরায় আরম্ভ করুন",
+      "title": "ঐচ্ছিক বৈশিষ্ট্য",
+      "relaunchDescription": "দল পুনরায় চালু করার আগে দোসরা এবং নেতৃত্ব দিতে হবে।",
+      "description": "এই প্রকল্পের পাথের উপর মনোযোগ প্রদান করে এবং যখন আপনি অতিরিক্ত কন্ট্রোল চান তখন তা প্রসারিত করুন।"
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "দল কপি করুন",
+      "createTeam": "গ্রুপ তৈরি করো",
+      "deleteForever": "মুছে ফেলুন",
+      "deletePermanently": "স্থায়ীরূপে মুছে ফেলুন",
+      "deleteTeam": "দল মুছে ফেলুন",
+      "launching": "আরম্ভ করা হচ্ছে...",
+      "launchTeam": "ইঞ্জিন আরম্ভ করুন",
+      "relaunchTeam": "পুনরায় আরম্ভ করুন",
+      "restore": "পুনুদ্ধার করুন",
+      "restoreTeam": "দল পুনরুদ্ধার করুন",
+      "retry": "পুনরায় চেষ্টা করুন",
+      "stopTeam": "বন্ধ করুন",
+      "stopping": "বন্ধ করা হচ্ছে..."
+    },
+    "electronOnly": {
+      "description": "ব্রাউজার মোডে আরম্ভ করা হবে `~/.claude/teams` ডিরেক্টরি উপলব্ধ নয়।",
+      "title": "শুধুমাত্র বৈদ্যুতিক মোডে উপলব্ধ রয়েছে"
+    },
+    "empty": {
+      "description": "শুরু করার জন্য একটি টিম তৈরি করো। তালিকা অনুসারে প্রদর্শন করা হবে।",
+      "localOnly": "টিমের সৃষ্টি শুধুমাত্র স্থানীয় বৈদ্যুতিক মোডেই পাওয়া যায়।",
+      "title": "কোনো দল পাওয়া যায়নি"
+    },
+    "filter": {
+      "clearAll": "মুছে ফেলুন ( l)",
+      "label": "ফিল্টার করো",
+      "projectPriority": "প্রজেক্টের গুরুত্বের মাত্রা",
+      "status": "অবস্থা"
+    },
+    "loadFailed": "দল লোড করতে ব্যর্থ",
+    "loading": "গ্রুপ লোড করা হচ্ছে...",
+    "localOnly": "শুধুমাত্র স্থানীয় তড়িৎ মোডে উপলব্ধ।",
+    "membersCount": "সদস্য: {{count}}",
+    "membersCount_few": "সদস্য: {{count}}",
+    "membersCount_many": "সদস্য: {{count}}",
+    "membersCount_one": "সদস্য: {{count}}",
+    "membersCount_other": "সদস্য: {{count}}",
+    "noDescription": "বিবরণ অনুপস্থিত",
+    "noMatches": "বর্তমানে কোনো মিল পাওয়া যায়নি",
+    "partial": {
+      "pending": "শেষ শুরুটা এখনো পুনরায় শুরু হচ্ছে।",
+      "skipped": "শেষ লঞ্চ টিমমেটকে ছেড়ে দিয়েছে.",
+      "skippedWithCount": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} টিমমেট.",
+      "skippedWithCount_few": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} দলমেট।",
+      "skippedWithCount_many": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} দলমেট।",
+      "skippedWithCount_one": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} টিমমেট.",
+      "skippedWithCount_other": "সর্বশেষ আরম্ভের সমাপ্তি {{count}}/{{expected}} দলমেট।",
+      "stopped": "সব টিম যোগ দেওয়ার আগেই শেষ শুরু হয়েছে.",
+      "stoppedWithCount": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} টিম পার্টনার যোগ দিয়েছে।",
+      "stoppedWithCount_few": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} বন্ধুরা যোগ দিয়েছে।",
+      "stoppedWithCount_many": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} বন্ধুরা যোগ দিয়েছে।",
+      "stoppedWithCount_one": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} টিম পার্টনার যোগ দিয়েছে।",
+      "stoppedWithCount_other": "আরম্ভের পূর্বে আরম্ভ করা হয়েছে {{count}}/{{expected}} বন্ধুরা যোগ দিয়েছে।"
+    },
+    "searchPlaceholder": "গ্রুপ অনুসন্ধান...",
+    "sections": {
+      "otherTeams": "অন্যান্য দল",
+      "projectTeams": "দলের জন্য {{project}}",
+      "selectedProject": "নির্বাচিত প্রজেক্ট নির্বাচন করুন"
+    },
+    "solo": "সোলো",
+    "status": {
+      "active": "সক্রিয়",
+      "deleted": "মুছে ফেলা হয়েছে",
+      "launching": "আরম্ভ করা হচ্ছে...",
+      "offline": "অফ-লাইন",
+      "partialFailure": "আরম্ভ করতে ব্যর্থ",
+      "partialPending": "বুটস্ট্র্যাপ অপেক্ষারত",
+      "partialSkipped": "আরম্ভ",
+      "running": "চলমান"
+    },
+    "title": "নির্বাচন করো...",
+    "trash": "Trash ({{count}})",
+    "trash_few": "Trash ({{count}})",
+    "trash_many": "Trash ({{count}})",
+    "trash_one": "Trash ({{count}})",
+    "trash_other": "Trash ({{count}})",
+    "deleteDraft": {
+      "title": "মুছে ফেলুন",
+      "message": "Delete draft team \"{{teamName}}\"? This cannot be undone.",
+      "confirmLabel": "মুছে ফেলুন",
+      "cancelLabel": "বাতিল"
+    },
+    "moveToTrash": {
+      "title": "আবর্জনার বাক্সে সরিয়ে ফেলুন",
+      "message": "Move team \"{{teamName}}\" to trash? You can restore it later.",
+      "confirmLabel": "আবর্জনার বাক্সে সরিয়ে ফেলুন",
+      "cancelLabel": "বাতিল"
+    },
+    "deleteForever": {
+      "title": "স্থায়ীরূপে মুছে ফেলুন",
+      "message": "দল মুছে ফেলুন{{teamName}}\"একলা\"? সব তথ্য মুছে যাবে।",
+      "confirmLabel": "মুছে ফেলুন",
+      "cancelLabel": "বাতিল"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "পরামর্শ: ক্রস-টেম মেসেজগুলো টার্গেট টিমের দিকে যাচ্ছে। আপনি যদি চান যে আপনি আপনার দলে ফিরে আসেন, তাহলে এই বার্তাকে স্পষ্টভাবে জানান।"
+    },
+    "attachments": {
+      "attachFiles": "ফাইল সংযুক্ত করুন (প) অথবা টেনে এনে ফেলুন",
+      "unavailable": "সংযুক্ত বস্তু উপলব্ধ নয়",
+      "disabledHint": "ফাইল সংযুক্ত করা হয় নি । অ্যাটাচমেন্ট & সরাও",
+      "restrictions": {
+        "crossTeam": "মেইল ফিল্টার করার যোগ্য কিছু ফাইল সমর্থিত নয়",
+        "teamOffline": "ফাইল সংযুক্ত করার জন্য দলের অনলাইনে থাকা আবশ্যক",
+        "unsupportedRecipient": "ফাইল পাঠানো যাবে তাদের দলে অথবা ওপেনCode টিমে",
+        "openCodeOffline": "OpenCDO দলের প্রতিনিধিদের জন্য দল ফাইল সংযুক্ত করতে হবে",
+        "sending": "ফাইল যোগ করার পূর্বে বর্তমান বার্তার জন্য অপেক্ষা করুন",
+        "maximumReached": "সর্বাধিক সংযুক্ত বস্তু সংখ্যা",
+        "leadOnly": "ফাইল শুধুমাত্র প্রেরণ করা যাবে"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "স্ল্যাশ চিহ্নযুক্ত কমান্ডের ক্ষেত্রে একটি লাইভ টিম আবশ্যক এবং সংযুক্ত করা যাবে না",
+        "crossTeam": "স্ল্যাশ চিহ্ন কমান্ড শুধুমাত্র বর্তমানে দলের নেতৃত্ব দেওয়া যাবে",
+        "notLead": "স্ল্যাশা কমান্ড শুধুমাত্র টিমে পাঠানো যাবে",
+        "leadOffline": "স্ল্যাশা কমান্ডের ক্ষেত্রে দল অনলাইন হতে হবে"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "সম্প্রতি ব্যবহৃত ক্রস-টেম অনুরোধ",
+      "teamOffline": "অফলাইন অবস্থায় ব্যবহারের জন্য প্রস্তুত করা হচ্ছে"
+    },
+    "input": {
+      "charsLeft": "{{count}} অক্ষর বাঁদিকে",
+      "charsLeft_one": "{{count}} অক্ষর বাঁদিকে",
+      "charsLeft_other": "{{count}} অক্ষর বাঁদিকে",
+      "teamLaunchingPlaceholder": "টিম চালু হচ্ছে... ইনবক্সে জমা দেওয়া হচ্ছে.",
+      "crossTeamPlaceholder": "বার্তা প্রত্যাহার {{team}}...",
+      "teamFallback": "দল",
+      "placeholder": "একটি বার্তাকে প্রেরণ করুন... (S)",
+      "slashTip": "পরামর্শ: আপনি যেকোন ক্লাড কমান্ড চালানোর জন্য \"\" ব্যবহার করতে পারেন ।",
+      "charsLeft_few": "{{count}} অক্ষর বাঁদিকে",
+      "charsLeft_many": "{{count}} অক্ষর বাঁদিকে"
+    },
+    "teamSelector": {
+      "thisTeam": "এই দলটি",
+      "current": "বর্তমান",
+      "online": "অনলাইন",
+      "offline": "অফ-লাইন",
+      "onlineTitle": "অন-লাইন",
+      "offlineTitle": "অফ-লাইন"
+    },
+    "recipient": {
+      "select": "নির্বাচন করুন ...",
+      "searchPlaceholder": "অনুসন্ধান...",
+      "noResults": "কোনো ফলাফল প্রাপ্ত হয়নি"
+    },
+    "actions": {
+      "voiceToText": "কার্সার টেক্সট",
+      "send": "প্রেরণ",
+      "sendingUnavailableLaunching": "প্রেরণের সময় উপলব্ধ নয়"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "ফিল্টার লগ",
+      "tooltip": "ফিল্টার লগ",
+      "sections": {
+        "stream": "স্ট্রিম",
+        "content": "বিষয়বস্তু"
+      },
+      "kinds": {
+        "output": "আউটপুট",
+        "thinking": "ভাবছি",
+        "tool": "কল"
+      },
+      "actions": {
+        "reset": "রিসেট",
+        "save": "সংরক্ষণ"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "বার্নার"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} কলাম দেখাও",
+    "rawLineCount_one": "{{formattedCount}} raw লাইন",
+    "rawLinesCaptured": "{{count}} আটক করা হয়েছে",
+    "emptyRawLogs": "{{count}}; কোনো সহায়ক/tool আউটপুট বর্তমানে উপস্থিত নেই ।",
+    "noLogsYet": "এখনো লগ করা হয়নি।",
+    "teamNotRunning": "টিম চলছে না।",
+    "searchPlaceholder": "লগ অনুসন্ধান...",
+    "clearSearch": "অনুসন্ধানের তথ্য মুছে ফেলুন",
+    "newCount": "+{{count}} নতুন",
+    "loading": "লোড করা হচ্ছে...",
+    "showMore": "আরো বেশি দেখাও",
+    "noLogsCaptured": "কোনো লগ পাওয়া যায়নি।",
+    "noMatchingLogs": "কোনো মিল পাওয়া যায়নি।",
+    "rawLineCount_few": "{{formattedCount}} কলাম দেখাও",
+    "rawLineCount_many": "{{formattedCount}} কলাম দেখাও",
+    "rawLineCount_other": "{{formattedCount}} কলাম দেখাও",
+    "openFullscreen": "সম্পূর্ণ লগ প্রদর্শন করা হবে",
+    "fullscreen": "সম্পূর্ণ পর্দা জুড়ে প্রদর্শন",
+    "viewingFullscreen": "সম্পূর্ণ পর্দাজুড়ে প্রদর্শন মোডে প্রদর্শন করা হবে",
+    "logsTitle": "লগ",
+    "sourceSelect": {
+      "placeholder": "লগের উৎস নির্বাচন করুন...",
+      "searchPlaceholder": "অনুসন্ধানের উৎস অনুসন্ধান করুন...",
+      "emptyMessage": "কোনো লগ পাওয়া যায়নি।",
+      "ariaLabel": "উৎসের উৎস",
+      "leadLabel": "লিড",
+      "selectSourceEmpty": "একটি লগ উৎস নির্বাচন করুন।"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "বহিস্থিত দল",
+      "process": {
+        "startedBy": "আরম্ভের তারিখ:",
+        "at": "এতে:",
+        "openUrl": "খুলুন URL"
+      },
+      "overflow": {
+        "hiddenTasks": "আড়াল করা কাজ",
+        "empty": "কোনো কাজ উপস্থিত নেই।"
+      },
+      "member": {
+        "lead": "লিড",
+        "workingOn": "কাজ করছে",
+        "recentTools": "সাম্প্রতিক সরঞ্জাম",
+        "spawn": {
+          "waitingToStart": "আরম্ভ করার জন্য অপেক্ষা করা হচ্ছে",
+          "starting": "আরম্ভ করা হয়েছে",
+          "failed": "বিফল"
+        },
+        "state": {
+          "active": "সক্রিয়",
+          "idle": "কর্মবিহীন",
+          "offline": "অফ-লাইন",
+          "runningTool": "চলমান সরঞ্জাম"
+        },
+        "activeTool": {
+          "running": "চলমান টুল",
+          "failed": "সরঞ্জাম বিফল",
+          "finished": "টুল শেষ হয়ে গেছেName"
+        },
+        "actions": {
+          "message": "বার্তা",
+          "profile": "প্রোফাইল",
+          "task": "কাজ"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "লগ",
+      "loading": "লোড করা হচ্ছে",
+      "more": "+{{count}} আরও",
+      "more_one": "+{{count}} আরও",
+      "more_other": "+{{count}} আরও",
+      "more_few": "+{{count}} আরও",
+      "more_many": "+{{count}} আরও"
+    },
+    "blockingEdge": {
+      "title": "নির্ভরতা ব্লক করা হচ্ছে",
+      "blocks": "ব্লক",
+      "close": "বন্ধ",
+      "blockingHiddenTasks": "আড়াল করা কাজ বন্ধ করা হচ্ছে",
+      "blockedHiddenTasks": "আড়াল করা কাজ আড়াল করা হয়েছে"
+    },
+    "activityHud": {
+      "activity": "কর্ম",
+      "noRecentActivity": "কোনো কর্ম হয়নি",
+      "more": "+{{count}} আরও",
+      "more_one": "+{{count}} আরও",
+      "more_other": "+{{count}} আরও",
+      "more_few": "+{{count}} আরও",
+      "more_many": "+{{count}} আরও"
+    },
+    "provisioning": {
+      "launchDetails": "বিবরণ আরম্ভ করুন",
+      "launchDetailsDescription": "বিস্তারিত দল অগ্রগতি, সরাসরি আউটপুট এবং আউটপুট চালু করুন CLI লগ।"
+    }
+  },
+  "projectPath": {
+    "label": "প্রজেক্ট",
+    "source": {
+      "claude": "ক্লড এর সৌজন্যে",
+      "codex": "কোডেক্সের মাধ্যমে পাওয়া",
+      "mixed": "কা."
+    },
+    "deleted": {
+      "title": "প্রজেক্টের বিষয়বস্তু বর্তমানে উপস্থিত নেই",
+      "label": "মুছে ফেলা হয়েছে"
+    },
+    "mode": {
+      "projectList": "প্রজেক্টের তালিকা",
+      "customPath": "স্বনির্বাচিত পাথ"
+    },
+    "loadingProjects": "প্রজেক্ট লোড করা হচ্ছে...",
+    "selectProject": "একটি প্রজেক্ট নির্বাচন করুন...",
+    "searchPlaceholder": "নাম অথবা পাথ অনুযায়ী প্রজেক্ট অনুসন্ধান করুন",
+    "empty": "কিছুই পাওয়া যায়নি",
+    "selectFromList": "তালিকা থেকে একটি প্রজেক্ট নির্বাচন করুন",
+    "noProjects": "কোনো প্রকল্প পাওয়া যায়নি, স্বনির্ধারিত পাথে স্যুইচ করা হচ্ছে।",
+    "customWorkingDirectory": "সক্রিয় ডিরেক্টরি",
+    "browse": "ব্রাউজ করুন",
+    "createAutomatically": "যদি ডিরেক্টরী বিদ্যমান না থাকে, এটি স্বয়ংক্রিয়ভাবে তৈরি করা হবে।"
+  },
+  "members": {
+    "badges": {
+      "worktree": "ট্রি-ট্রি"
+    },
+    "runtimeTelemetry": {
+      "title": "স্থানীয় অবস্থানে লোড করা হয়েছে",
+      "description": "ঊর্ধ্বতন ও চাইল্ড প্রসেস। দূরবর্তী LLM ঠিকের সাথে কোন সম্পর্ক নেই।",
+      "cpu": "CPU",
+      "memory": "মেমরি",
+      "summedRss": "সাক্ষাৎকার RSS",
+      "sharedHost": "শেয়ার করা হোস্ট-নেমের উজ্জ্বলিত মাত্রা। এই সদস্যের প্রতি এটা বিশেষ কিছু নয়।",
+      "processTreeCapped": "এই নমুনার জন্য প্রসেস ট্রি প্রস্তুত করা হয়েছে ।",
+      "rssHint": "RSS একাধিক পাতা শেয়ার করা যেতে পারে, তাই লোড সংকেত হিসেবে পড়া সবচেয়ে ভাল, সম্পূর্ণ মেমরি নয়।"
+    },
+    "editor": {
+      "title": "সদস্য",
+      "addMember": "সদস্য যোগ করুন",
+      "editAsJson": "সম্পাদনা করুন JSON",
+      "runInSeparateWorktrees": "বিভিন্ন গাছের মাঝখানে দল পরিচালিত হয়",
+      "agentTeamsMcpOnly": "এজেন্ট টিমস MCP শুধুমাত্র",
+      "removedCount": "Removed ({{count}})",
+      "removedModelLockReason": "সকল সদস্যকে সরিয়ে দেওয়া হয়েছে নরম ইতিহাস মুছে ফেলার জন্য। বৈশিষ্ট্যগুলির মান পুনরায় লোড করা হবে",
+      "memberNamesUnique": "নাম হতে হবে"
+    },
+    "stats": {
+      "computing": "পরিসংখ্যান:",
+      "empty": "কোনো তথ্য পাওয়া যায়নি",
+      "lines": "পংক্তি",
+      "linesInfo": "অস্বাভাবিক। সম্পাদনা এবং লেখার টুলের সঠিক অবস্থান। বাশার ফাইল লিখছেন কমান্ড বিন্যাসের (এখানেরডক, প্রতিধ্বনি, প্রতিধ্বনি, প্রতিধ্বনি) মাধ্যমে আর হয়তো কমতে পারে।",
+      "files": "ফাইল",
+      "toolCalls": "টুল কল",
+      "tokens": "টোকেন",
+      "toolUsage": "ব্যবহার প্রণালী",
+      "filesTouched": "Files Touched ({{count}})",
+      "viewAllChanges": "সমস্ত পরিবর্তন প্রদর্শন করুন",
+      "showLess": "কম দেখান",
+      "moreFiles": "+{{count}} আরও",
+      "footer": "{{count}} সেশান গণনা করা হচ্ছে {{computedAgo}}",
+      "footer_one": "{{count}} সেশান গণনা করা হচ্ছে {{computedAgo}}",
+      "footer_few": "{{count}} সেশান গণনা করা হচ্ছে {{computedAgo}}",
+      "footer_many": "{{count}} সেশান গণনা করা হচ্ছে {{computedAgo}}",
+      "footer_other": "{{count}} সেশান গণনা করা হচ্ছে {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "লগ লোড করা হচ্ছে...",
+      "empty": "লগ পাওয়া যায়নি",
+      "waitingForTaskActivity": "কর্ম চলমান - সেশানের জন্য অপেক্ষা করা হচ্ছে (auto নতুন করে সাজানোর জন্য ধার্য)...",
+      "noTaskActivity": "এই কর্ম সঞ্চালনের জন্য কোনো সেশান উপস্থিত নেই",
+      "noMemberActivity": "এই সদস্যে কোন রেকর্ডকৃত সেশন কার্যক্রম নেই",
+      "leadSessionTooltip": "পুরো টিম সেশন লগ করবে - গ্লোবাল কনটেন্ট কনটেক্সটের জন্য প্রয়োজনীয়, নির্দিষ্ট করো না",
+      "memberSessionTooltip": "সাব-agent ফাইলের পরিবর্তে সম্পূর্ণ স্থায়ী দলের লগ লগ- ইন করা হবে",
+      "startedAt": "আরম্ভ করা হয়েছে {{time}}",
+      "active": "সক্রিয়",
+      "showDetails": "বিবরণ প্রদর্শন",
+      "hideDetails": "বিবরণ আড়াল করুন",
+      "loadingDetails": "বিবরণ লোড করা হচ্ছে...",
+      "failedToLoadDetails": "প্রোফাইলের বিবরণ লোড করতে ব্যর্থ"
+    },
+    "detail": {
+      "relaunchOpenCode": "পুনরায় আরম্ভ করো",
+      "restart": "পুনরায় আরম্ভ করুন",
+      "legacyLogsFallback": "লিগ্যাসি লগ",
+      "copyDiagnostics": "ডায়গনিস্টিক কপি করুন",
+      "pid": "PID {{pid}}",
+      "removedAt": "অপসারণ করা হয়েছে {{date}}",
+      "failedToRestartMember": "পুনরারম্ভ করতে ব্যর্থ",
+      "sendMessage": "বার্তা লিখুন",
+      "assignTask": "কাজের বরাদ্দ করুন",
+      "remove": "অপসারণ"
+    },
+    "list": {
+      "loading": "দলের সদস্য লোড করা হচ্ছে",
+      "unavailable": "সদস্য তালিকা",
+      "unavailableDescription": "{{count}} দলগত কর্মীরা দলের মিটা-ডাটার কাছে পরিচিত, কিন্তু তাদের বিস্তারিত অনুপস্থিত।",
+      "unavailableDescription_one": "{{count}} দলগত দল-এর মাধ্যমে পরিচিত, কিন্তু অফ-লাইন সংক্রান্ত তথ্য অনুপস্থিত।",
+      "soloLeadOnly": "সোলো টিম - শুধুমাত্র নেতৃত্ব",
+      "removedCount": "Removed ({{count}})",
+      "unavailableDescription_few": "{{count}} দলগত কর্মীরা দলের মিটা-ডাটার কাছে পরিচিত, কিন্তু তাদের বিস্তারিত অনুপস্থিত।",
+      "unavailableDescription_many": "{{count}} দলগত কর্মীরা দলের মিটা-ডাটার কাছে পরিচিত, কিন্তু তাদের বিস্তারিত অনুপস্থিত।",
+      "unavailableDescription_other": "{{count}} দলগত কর্মীরা দলের মিটা-ডাটার কাছে পরিচিত, কিন্তু তাদের বিস্তারিত অনুপস্থিত।"
+    },
+    "executionLog": {
+      "empty": "প্রদর্শনের জন্য কিছু নেই",
+      "emptyUserMessage": "{{time}} - (ফাঁকা)",
+      "agentInstructions": "এজেন্ট নির্দেশাবলী",
+      "memberTurn": "{{member}} চালু করুন",
+      "agentTurn": "এজেন্ট মোড়",
+      "turn": "চালু করুন"
+    },
+    "recentMessages": {
+      "latest": "সর্বশেষ বার্তা",
+      "latestForMember": "সর্বশেষ বার্তা - নতুন বার্তা {{member}}",
+      "loadMore": "অতিরিক্ত ভার",
+      "expand": "প্রসারণ",
+      "collapse": "সংকুচিত"
+    },
+    "leadModel": {
+      "defaultModel": "ডিফল্ট",
+      "providerModelAria": "{{provider}} উপলব্ধকারী, {{model}}",
+      "leadShort": "নেতৃত্ব",
+      "teamLead": "টিম টিম",
+      "syncWithTeammates": "দলের সহকর্মীর সঙ্গে সুসংগত",
+      "anthropicTeamWide": "নৃতাত্ত্বিক দল- ব্যাপী",
+      "runtimeInheritance": "এরা নিজেদের কোম্পানী বা মডেল নির্ধারণ না করে দলের সদস্যদের জন্য ব্যবহৃত হয়।",
+      "anthropicContextLimit": "এই উদ্বোধনের সময় এনথ্রোপিক স্লিপার জন্য ২০০ কেজি কনটেক্সটের সীমা রয়েছে।"
+    },
+    "runtimeLogs": {
+      "autoRefresh": "নতুন করেত প্রদর্শন ( r)",
+      "wrapLines": "লাইন গুটানো",
+      "loadingTail": "প্রসেসটি লগ- ইন করা হচ্ছে...",
+      "empty": "এই সদস্য জন্য কোনো প্রসেস লগ ফাইল পাওয়া যায়নি।"
+    },
+    "tasks": {
+      "empty": "এই সদস্যে কোনো কাজ নির্ধারিত হয়নি"
+    },
+    "messages": {
+      "loadOlder": "পুরোনো বার্তা লোড করা হচ্ছে",
+      "filters": {
+        "all": "সকল",
+        "messages": "বার্তা",
+        "comments": "মন্তব্য"
+      },
+      "empty": {
+        "loading": "লোড করা হচ্ছে...",
+        "noComments": "এই সদস্যের জন্য কোন মন্তব্য নেই",
+        "noLoadedMessages": "এই নথির কোনো বার্তা উপস্থিত নেই",
+        "noMessages": "এই সদস্য দ্বারা কোনো বার্তা উপস্থিত নেই",
+        "noLoadedActivity": "এই সদস্য জন্য কোনো লোড করা হয়নি",
+        "noActivity": "এই সদস্য দ্বারা কোনো কর্ম সমর্থিত হয় না"
+      }
+    },
+    "actions": {
+      "openProfile": "প্রোফাইল খুলুন",
+      "editRole": "ভূমিকা সম্পাদনা করুন",
+      "sendMessage": "বার্তা পাঠাতে ব্যর্থ",
+      "assignTask": "কাজের বরাদ্দ করুন"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "স্বনির্বাচিত ভূমিকা লিখুন..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} সময় নির্ধারণ",
+    "count_one": "{{count}} সময় নির্ধারণ",
+    "count_other": "{{count}} সময় নির্ধারণ",
+    "nextRun": "পরের বল: {{next}}",
+    "actions": {
+      "runNow": "এখন সঞ্চালন করুন",
+      "edit": "সম্পাদনা",
+      "pause": "সাময়িক বিরতি",
+      "resume": "পুনরারম্ভ হয়েছে",
+      "delete": "মুছে ফেলুন",
+      "addSchedule": "নির্ধারিত ট্যাগ যোগ করুন"
+    },
+    "runHistory": {
+      "loading": "ইতিহাস লোড করা হচ্ছে...",
+      "empty": "এখনো পালাই নি"
+    },
+    "count_few": "{{count}} সময় নির্ধারণ",
+    "count_many": "{{count}} সময় নির্ধারণ",
+    "runLog": {
+      "title": "লগ চালাও",
+      "exitCode": "প্রস্থান {{code}}",
+      "retryCount": "পুনরায় প্রচেষ্টা করুন {{count}}/{{max}}",
+      "stillRunning": "কর্ম বর্তমানে চলছে...",
+      "loadingLogs": "লগ লোড করা হচ্ছে...",
+      "errors": "ত্রুটি",
+      "close": "বন্ধ"
+    },
+    "cron": {
+      "expression": "এক্সপ্রেশন",
+      "highFrequencyWarning": "উচ্চ ফ্রিকোয়েন্সির সিডিউলিং (৫ মিনিট সময়ের মধ্যে)",
+      "nextRuns": "পরবর্তী চাল:",
+      "timezone": "সময়-অঞ্চল",
+      "selectTimezone": "সময়ের অঞ্চল নির্বাচন করুন",
+      "warmUpTime": "গরম সময়",
+      "warmUpDescription": "অপসারণের পূর্বে নির্বাচিত উপলব্ধকারীর তালিকা প্রস্তুত করুন",
+      "errors": {
+        "enterExpression": "একটি মান লিখুন",
+        "invalidExpression": "অবৈধ রেগুলার এক্সপ্রেশন"
+      },
+      "presets": {
+        "everyHour": "প্রতি ঘন্টায়",
+        "everySixHours": "প্রতি ৬ ঘন্টা",
+        "dailyAtNine": "সকাল ৯টায়",
+        "weekdaysAtNine": "সকাল ৯টায় সপ্তাহ",
+        "mondayAtNine": "সোমবার সকাল ৯টায়",
+        "everyThirtyMinutes": "প্রত্যেক ৩০ মিনিট"
+      },
+      "warmUpOptions": {
+        "none": "কোন গরম নেই",
+        "fiveMinutes": "৫ মিনিট",
+        "tenMinutes": "১০ মিনিট",
+        "fifteenMinutes": "১৫ মিনিট",
+        "thirtyMinutes": "৩০ মিনিট"
+      }
+    },
+    "empty": {
+      "title": "এখনো সময় নাই",
+      "description": "কোনো তালিকা তৈরি করার সময় স্বয়ংক্রিয়ভাবে ক্লড কাজ সম্পাদন করার জন্য একটি তালিকা তৈরি করুন।"
+    },
+    "title": "সিডিউলার",
+    "status": {
+      "active": "সক্রিয়",
+      "paused": "সাময়িক বিরতি চলছে",
+      "disabled": "নিষ্ক্রিয়"
+    },
+    "runStatus": {
+      "pending": "অসমাপ্ত",
+      "warmingUp": "গরম হচ্ছে",
+      "warm": "উষ্ণ",
+      "running": "চলমান",
+      "completed": "সম্পন্ন",
+      "failed": "ব্যর্থ",
+      "interrupted": "স্ক্রল করার যোগ্য",
+      "cancelled": "বাতিল করা হয়েছে"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "ওপেনCodo স্থানীয় মডেলগুলো শুধুমাত্র সীমা আরোপের পরিবর্তে ওপেনCod কনটেক্সট বাজেট ব্যবহার করতে পারে।",
+    "description": "সরবরাহকারী ও মডেলের জন্য ওপেনCod কনফিগারেশনের সাথে সুসংগত একটি সীমা যোগ করুন । এটি স্থানীয় মডেলগুলোর প্রসঙ্গকে প্রসারিত করার আগে ওপেনCodcle ব্যবহার করে এবং এটিকে নিষ্ক্রিয় করে ।",
+    "replacePrefix": "প্রতিস্থাপন",
+    "and": "এবং",
+    "replaceSuffix": "আপনার ওপেনডেডের সেট- এর সরবরাহকারী এবং মডেল ID দিন। নির্দেশাবলী নির্দেশ করা হবে",
+    "promptInstructionsSuffix": "কারণ মডেল পড়ার আগে অনুরোধটি একত্রিত করা হয়েছে।",
+    "providerLimits": "উপলব্ধকারীর সীমা",
+    "compactionConfig": "সংক্ষিপ্ত কনফিগারেশন"
+  },
+  "sessions": {
+    "noProjectPath": "কোনো প্রজেক্ট নামের পাথ উপস্থিত নেই",
+    "provisioningHint": "টিমিং করার পর সেশানগুলি দেখা যাবে",
+    "projectNotFound": "প্রজেক্ট পাওয়া যায়নি",
+    "loading": "লোড করা হচ্ছে...",
+    "empty": "কোনো সেশান পাওয়া যায়নি",
+    "showAllSessions": "সব সেশনের জন্য হাইলাইট দেখাও",
+    "lead": "নেতৃত্ব",
+    "removeFilter": "ফিল্টার সরিয়ে ফেলো",
+    "filterBySession": "এই সেশান দ্বারা ফিল্টার করা হবে",
+    "openSession": "সেশান খুলুন",
+    "title": "সেশন"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "বাতিল",
+    "moreWarningsHidden": "{{count}} অতিরিক্ত সতর্কবাণী",
+    "diagnostics": "ডায়াগনস্টিক",
+    "liveOutput": "লাইভ আউটপুট",
+    "diagnosticsCopied": "ডায়াগনস্টিক কপি করেছেন",
+    "copyDiagnostics": "ডায়গনিস্টিক কপি করুন",
+    "copied": "প্রতিলিপি",
+    "noOutput": "কোনো আউটপুট পাওয়া যায়নি।",
+    "cliLogs": "CLI লগ",
+    "steps": {
+      "starting": "আরম্ভ করা হচ্ছে %s",
+      "configuring": "দলের বৈশিষ্ট্য",
+      "assembling": "সদস্য",
+      "finalizing": "চুড়ান্ত করা হচ্ছে"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "পরীক্ষা করা হচ্ছে...",
+        "ready": "ঠিক আছে",
+        "notes": "ঠিক আছে (ঠিক আছে)",
+        "failed": "ERR",
+        "pending": "অপেক্ষারত"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI অনুপস্থিত",
+        "openCodeRuntimeMissing": "আরম্ভ",
+        "openCodeWindowsAccessBlocked": "খোলা Code Windows ব্লক খোলা হয়েছে",
+        "openCodeNoOutput": "Opencorod সহযোগে আরম্ভ করা হবে না",
+        "openCodeMcpUnreachable": "OpenCade অ্যাপ্লিকেশন খুলুন MCP পুনরায় সংযোগ স্থাপন করা হবে",
+        "workingDirectoryMissing": "কাজের ডিরেক্টরি অনুপস্থিত",
+        "cliBinaryCouldNotStart": "CLI বাইনারি আরম্ভ করতে ব্যর্থ",
+        "cliPreflightIncomplete": "CLI প্রিমবডি সম্পূর্ণ হয়নি",
+        "authenticationRequired": "প্রমাণীকরণ আবশ্যক",
+        "runtimeProviderNotConfigured": "চলমান সময়ের পরিসেবা কনফিগার করা হয়নি",
+        "cliPreflightFailed": "CLI পূর্ববর্তী সময়কাল বিফল হয়েছে",
+        "selectedModelCompatible": "নির্বাচিত মডেল",
+        "selectedModelCompatibilityPending": "নির্বাচিত মডেলের সাথে সামঞ্জস্য বজায় রাখা হয়েছে",
+        "selectedModelAvailable": "নির্বাচিত ফোল্ডার মুছে ফেলুন",
+        "selectedModelVerified": "নির্বাচিত মডেল পরীক্ষা করা হচ্ছে",
+        "selectedModelUnavailable": "নির্বাচিত মোড উপলব্ধ নয়",
+        "selectedModelTimedOut": "নির্বাচিত মডেল যাচাইকরণ সময় হয়েছে",
+        "selectedModelCheckFailed": "নির্বাচিত মডেল পরীক্ষা করতে ব্যর্থ",
+        "selectedModelDeferred": "নির্বাচিত মডেল পরীক্ষা স্থগিত করুন",
+        "selectedModelPingNotConfirmed": "নির্বাচিত মডেল ping নিশ্চিত করা হয়নি",
+        "readyWithNotes": "নোটসহ প্রস্তুত",
+        "needsAttention": "মনোযোগ দিন"
+      },
+      "modelChecksSummary": "নির্বাচিত বিন্যাস পরীক্ষা করুন: {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} পরিসেবা উপলব্ধ নয়",
+        "unavailable_one": "{{count}} পরিসেবা উপলব্ধ নয়",
+        "unavailable_other": "{{count}} উপলব্ধ নয়",
+        "checkFailed": "{{count}} পরীক্ষা ব্যর্থ হয়েছে",
+        "checkFailed_one": "{{count}} পরীক্ষা ব্যর্থ হয়েছে",
+        "checkFailed_other": "{{count}} মডেল পরীক্ষা করতে ব্যর্থ",
+        "timedOut": "{{count}} মেয়াদপূর্তীর সময়সীমা",
+        "timedOut_one": "{{count}} মেয়াদপূর্তীর সময়সীমা",
+        "timedOut_other": "{{count}} মডেলের সময়সীমা উত্তীর্ণ হয়েছে",
+        "deferred": "{{count}} যাচাই করা স্থগিত করুন",
+        "deferred_one": "{{count}} যাচাই করা স্থগিত করুন",
+        "deferred_other": "{{count}} যাচাই করা স্থগিত করুন",
+        "pingNotConfirmed": "{{count}} ping নিশ্চিত করা হয়নি",
+        "pingNotConfirmed_one": "{{count}} ping নিশ্চিত করা হয়নি",
+        "pingNotConfirmed_other": "{{count}} ping নিশ্চিত করা হয়নি",
+        "compatibilityPending": "{{count}} সুসংগত, গভীর যাচাই করা হচ্ছে",
+        "compatibilityPending_one": "{{count}} সুসংগত, গভীর যাচাই করা হচ্ছে",
+        "compatibilityPending_other": "{{count}} সুসংগত, গভীর যাচাই করা হচ্ছে",
+        "compatible": "{{count}} সুসংগত",
+        "compatible_one": "{{count}} সুসংগত",
+        "compatible_other": "{{count}} সুসংগত",
+        "checking": "{{count}} পরীক্ষা করা হচ্ছে",
+        "checking_one": "{{count}} পরীক্ষা করা হচ্ছে",
+        "checking_other": "{{count}} পরীক্ষা করা হচ্ছে",
+        "available": "{{count}} উপলব্ধ",
+        "available_one": "{{count}} উপলব্ধ",
+        "available_other": "{{count}} উপলব্ধ",
+        "verified": "{{count}} পরীক্ষা",
+        "verified_one": "{{count}} পরীক্ষা",
+        "verified_other": "{{count}} পরীক্ষা",
+        "unavailable_few": "{{count}} উপলব্ধ নয়",
+        "unavailable_many": "{{count}} উপলব্ধ নয়",
+        "checkFailed_few": "{{count}} মডেল পরীক্ষা করতে ব্যর্থ",
+        "checkFailed_many": "{{count}} মডেল পরীক্ষা করতে ব্যর্থ",
+        "timedOut_few": "{{count}} মডেলের সময়সীমা উত্তীর্ণ হয়েছে",
+        "timedOut_many": "{{count}} মডেলের সময়সীমা উত্তীর্ণ হয়েছে",
+        "deferred_few": "{{count}} যাচাই করা স্থগিত করুন",
+        "deferred_many": "{{count}} যাচাই করা স্থগিত করুন",
+        "pingNotConfirmed_few": "{{count}} ping নিশ্চিত করা হয়নি",
+        "pingNotConfirmed_many": "{{count}} ping নিশ্চিত করা হয়নি",
+        "compatibilityPending_few": "{{count}} সুসংগত, গভীর যাচাই করা হচ্ছে",
+        "compatibilityPending_many": "{{count}} সুসংগত, গভীর যাচাই করা হচ্ছে",
+        "compatible_few": "{{count}} সুসংগত",
+        "compatible_many": "{{count}} সুসংগত",
+        "checking_few": "{{count}} পরীক্ষা করা হচ্ছে",
+        "checking_many": "{{count}} পরীক্ষা করা হচ্ছে",
+        "available_few": "{{count}} উপলব্ধ",
+        "available_many": "{{count}} উপলব্ধ",
+        "verified_few": "{{count}} পরীক্ষা",
+        "verified_many": "{{count}} পরীক্ষা"
+      },
+      "openProviderSettings": "খুলুন {{provider}} বৈশিষ্ট্য",
+      "copied": "প্রতিলিপি",
+      "copyDiagnostics": "ডায়গনিস্টিক কপি করুন",
+      "deepVerificationPending": "গভীর যাচাই এখনো চলছে. মুক্ত মডেল ২০ সেকেন্ড লাগবে।",
+      "progress": {
+        "checkingSelectedProviders": "তুলনার জন্য নির্বাচিত উপলব্ধকারী...",
+        "checkingProvider": "পরীক্ষণ {{provider}} উপলব্ধকারী...",
+        "checkingProviders": "পরীক্ষণ {{providers}} সরবরাহকারী..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "ফোল্ডারের অনুমতি সংশোধন অথবা ফোল্ডারের মধ্যে উপস্থিত ফাইল স্থানান্তর করুন। অ্যাডমিনিস্ট্রেটরের সাথে শুধুমাত্র একটি অস্থায়ী সমস্যা।",
+        "openCodeBridgeNoOutput": "অ্যাপ্লিকেশন পুনরায় চালু করে পুনরায় চালু করুন, তারপর আবার চেষ্টা করুন। যদি আবার হয়, তাহলে ডায়রী কপি করো.",
+        "workingDirectoryMissing": "একটি উপস্থিত ডিরেক্টরি বেছে নিন, তারপর এই ডায়লগ পুনরায় আরম্ভ করুন।",
+        "authenticationRequired": "ব্যবহারকারীর পরিচয় প্রমাণ করো CLI- তারপর এই সংলাপ পুনরায় খুলতে হবে।",
+        "runtimeProviderNotConfigured": "নির্বাচিত পরিসেবা সঞ্চালনার জন্য ব্যবস্থা কনফিগার করুন ও এই ডায়লগ পুনরায় আরম্ভ করুন ।",
+        "openCodeRuntimeMissing": "পরিসেবা উপলব্ধকারীর অবস্থা থেকে আরম্ভ করে এই ডায়লগ পুনরায় আরম্ভ করুন।",
+        "openCodeAppMcpUnreachable": "OpenChod অ্যাপ্লিকেশন পুনরায় চালু করতে পুনরায় চেষ্টা করুন MCP ব্রিজ. যদি এটা আবার হয়, তাহলে অ্যাপ্লিকেশন পুনরায় চালু করুন এবং ওপেনোডে ধারণ করুন।",
+        "cliBinaryMissing": "স্থানীয় Klalou নিশ্চিত করুন CLI বাইনারি উপস্থিত রয়েছে এবং এটি পুনরায় আরম্ভ করা যাবে।",
+        "default": "উপরে ব্যাপারটা সমাধান করো, তারপর এই সংলাপ খুলে দাও।"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} দলগত অনুমতির অপেক্ষায়",
+      "nameListWithMore": "{{names}}, +{{count}} আরও",
+      "waitingForOpenCode": "খোলার জন্য অপেক্ষা করা হচ্ছে: {{names}}",
+      "bootstrapStalled": "বুটস্ট্র্যাপ: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; ওপেনকাডেমের জন্য অপেক্ষা: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "বুটস্ট্র্যাপেট",
+        "shellOnly": "শেল",
+        "waitingForBootstrap": "বুটস্ট্র্যাপের জন্য অপেক্ষা করা হচ্ছে",
+        "bootstrapUnconfirmed": "বুটস্ট্র্যাপ অসমর্থিত",
+        "awaitingPermission": "অনুমতি",
+        "waitingForRuntime": "ব্যাটারি দ্বারা চালিত",
+        "shellOnlyLower": "শেল",
+        "waitingForBootstrapLower": "বুটস্ট্র্যাপের জন্য অপেক্ষা",
+        "bootstrapUnconfirmedLower": "বুটস্ট্র্যাপ অসমর্থিত",
+        "awaitingPermissionLower": "অনুমতি অপেক্ষা করা হচ্ছে",
+        "waitingForRuntimeLower": "শোবার জন্য অপেক্ষা"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} আরম্ভ করতে ব্যর্থ",
+        "teammatesFailedToStart": "{{count}} দল আরম্ভ করতে ব্যর্থ",
+        "teammatesFailedRatio": "{{count}}/{{total}} দল আরম্ভ করতে ব্যর্থ"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} এই চালু করার জন্য আউট",
+        "memberSkippedWithReason": "{{name}} - চালু করার জন্য ছেড়ে দাও {{reason}}",
+        "memberSkippedCompact": "{{name}} এড়িয়ে যাও",
+        "teammatesSkipped": "{{count}} দল বাদ পড়েছে",
+        "teammatesSkippedList": "বন্ধু: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} এই লঞ্চের জন্য টিমমেট"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} বন্ধুরা এখনও যোগদান করছে",
+        "teammatesStillJoining_one": "{{count}} টিম পার্টনার এখনো যোগদান করছে",
+        "teammatesStillJoining_few": "{{count}} বন্ধুরা এখনও যোগদান করছে",
+        "teammatesStillJoining_many": "{{count}} বন্ধুরা এখনও যোগদান করছে",
+        "teammatesStillJoining_other": "{{count}} বন্ধুরা এখনও যোগদান করছে",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} দলের সদস্যরা নিশ্চিত"
+      },
+      "ready": {
+        "leadOnline": "অনলাইন এগিয়ে চলুন",
+        "allTeammatesJoined": "সকল {{count}} দল যোগ দিয়েছে",
+        "teamProvisionedLeadOnline": "দল তৈরি - নেতৃত্ব",
+        "teamProvisionedAllJoined": "দল তৈরি হয়েছে - সবাইকে {{count}} দল যোগ দিয়েছে",
+        "teamProvisionedStillJoining": "দল নিয়োগ করা হয়েছে - দলের সদস্যরা এখনও যোগ দিচ্ছে",
+        "launchFinishedWithErrors": "সমস্যাযুক্ত কর্ম আরম্ভ করুন - %s {{count}}/{{total}} দল আরম্ভ করতে ব্যর্থ",
+        "launchContinuedSkipped": "আরম্ভ করা হয়েছে - %s {{count}}/{{total}} দল বাদ পড়েছে",
+        "teamLaunchedLeadOnline": "টিম চালু করেছিল - অনলাইন",
+        "teamLaunchedAllJoined": "টিম সব শুরু {{count}} দল যোগ দিয়েছে"
+      },
+      "panel": {
+        "launchFailed": "আরম্ভ করতে ব্যর্থ",
+        "launchDetails": "বিবরণ আরম্ভ করুন",
+        "launchFinishedWithErrors": "আরম্ভের সময় সমস্যা উৎপন্ন হয়েছে",
+        "launchContinuedSkipped": "উপেক্ষাকারী দলের সঙ্গে আরম্ভ করা হয়েছে",
+        "coreTeamReady": "কোচ দল প্রস্তুত",
+        "finishingLaunch": "আরম্ভ করা হচ্ছে",
+        "teamLaunched": "দলের আরম্ভ",
+        "launchingTeam": "আরম্ভ করা হচ্ছে"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "লাইভ সঞ্চালনার অবস্থা",
+    "description": "শুধুমাত্র হৃদয় প্রদর্শন ও আরম্ভের অবস্থা প্রদর্শন করা হবে। প্রসেসের নিয়ন্ত্রণ নীচে রাখা হয়েছে ।",
+    "source": "উৎস: {{source}}",
+    "lane": "{{lane}} লেন",
+    "diagnosticOnly": "ডায়াগনস্টিক",
+    "updated": "আপডেট করা হয়েছে {{value}}",
+    "states": {
+      "running": "চলমান",
+      "starting": "আরম্ভ করা হচ্ছে %s",
+      "waiting": "অপেক্ষারত",
+      "degraded": "মনোযোগ দিন",
+      "stopped": "বন্ধ",
+      "unknown": "অজানা"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "কর্ম লগ",
+      "loading": "কাজের লগ লোড করা হচ্ছে...",
+      "description": "স্থানান্তর করা লেখা",
+      "emptyTitle": "কোনো সুনির্দিষ্ট কাজ বর্তমানে লগ করা হয়নি",
+      "emptyDescription": "কপিকৃত লেখা এখানে দেখা যাবে যখন স্পষ্ট ভাবে কাজ করা মিটা-ডাটা পাওয়া যাবে।",
+      "summaryOnly": "শুধুমাত্র সারসংক্ষেপ"
+    },
+    "executionSessions": {
+      "title": "সেশন",
+      "online": "অন-লাইন",
+      "updating": "আপডেট করা হচ্ছে...",
+      "description": "সংরক্ষণযোগ্য সেশানের বিশ্লেষণ ও পূর্বরূপ রূপে ধার্য করা হয়েছে।"
+    },
+    "stream": {
+      "title": "কর্ম লগের লগ"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "কর্ম বাতিল করুন {{taskId}}",
+      "cancel": "বাতিল",
+      "moveBackToTodoConfirm": "বার্তাটি প্রেরিত হয়েছে TODO আর সবাইকে জানিয়ে দাও?",
+      "confirm": "নিশ্চায়ণ:",
+      "keep": "রাখো",
+      "changesNeedAttention": "পরিবর্তন সম্পর্কে বিস্তারিত তথ্য প্রয়োজন",
+      "changes": "পরিবর্তন",
+      "deleteTask": "বন্টন করা হবে",
+      "taskLogsActive": "সক্রিয় কাজ লগ নেই",
+      "newTaskLogsArriving": "নতুন কাজসমূহ আগত",
+      "awaitingUser": "একটি ব্যবহারকারী নির্বাচন করুন",
+      "awaitingLead": "অপেক্ষায় থাকা",
+      "blockedBy": "দ্বারা প্রতিরোধ করা",
+      "blocks": "ব্লক",
+      "start": "আরম্ভ",
+      "complete": "পুরোদমে",
+      "approve": "লিইরোভ",
+      "requestReview": "অনুরোধ জানানো হচ্ছে",
+      "manualReview": "নিজে হাতে পর্যালোচনা",
+      "requestChanges": "অনুরোধ জানানো হচ্ছে"
+    },
+    "filter": {
+      "title": "ফিল্টারের কাজ",
+      "session": "সেশান",
+      "allSessions": "সব সেশন",
+      "teammate": "টিমমেট",
+      "unassigned": "(কিছুই নয়)",
+      "column": "কলাম",
+      "clearAll": "মুছে ফেলুন ( l)"
+    },
+    "board": {
+      "addTask": "কাজ যোগ করুন",
+      "noTasks": "কোনো কাজ নেই",
+      "showMore": "প্রদর্শন {{count}} আরও",
+      "hiddenCount": "{{count}} আড়াল করা",
+      "trash": "আবর্জনা",
+      "gridView": "গ্রিড/ ছক প্রদর্শক",
+      "columnsView": "কলাম ভিউ"
+    },
+    "trash": {
+      "title": "আবর্জনা",
+      "empty": "কোনো কর্ম নেই",
+      "subject": "বিষয়",
+      "owner": "মালিক",
+      "deleted": "মুছে ফেলা হয়েছে",
+      "unassigned": "বরাদ্দ নয়",
+      "restoreTask": "কাজ পুনরায় করুন",
+      "restore": "পুনুদ্ধার করুন",
+      "close": "বন্ধ"
+    },
+    "sort": {
+      "title": "কাজ বেছে নিন",
+      "sortBy": "ক্রমবিন্যাস করা হবে",
+      "reset": "রিসেট",
+      "options": {
+        "updatedAt": {
+          "label": "সর্বশেষ আপডেট",
+          "description": "সম্প্রতি আপডেট করা"
+        },
+        "createdAt": {
+          "label": "নির্মাণের সময়",
+          "description": "প্রথম"
+        },
+        "owner": {
+          "label": "মালিক",
+          "description": "প্রদত্ত অর্থ অনুযায়ী"
+        },
+        "manual": {
+          "label": "ব্যবহারকারী দ্বারা",
+          "description": "বিপরীত দিশায় ধার্য"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "অনুসন্ধানের তথ্য মুছে ফেলুন",
+      "tasks": "কর্ম",
+      "createdAgo": "নির্মিত {{time}}",
+      "updatedAgo": "আপডেট করা হয়েছে {{time}}",
+      "placeholder": "Search tasks... (#id or text)"
+    },
+    "grid": {
+      "addTask": "কাজ যোগ করুন",
+      "noTasks": "কোনো কাজ নেই"
+    },
+    "title": "কানবুন",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "এর মধ্যে PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "দলগত শ্রম গাছের জন্য গিট রিপোজিটরি অবস্থা পরীক্ষা করা হচ্ছে...",
+    "ready": "গিট গাছ তৈরি।",
+    "readyOnBranch": "গিট গাছের গাছ শাখাতে তৈরি {{branch}}.",
+    "needsSetup": "কর্মের root আন-মাউন্ট করা আবশ্যক",
+    "initialCommitNotice": "প্রারম্ভিক কর্ম সঞ্চালনার পরে সমস্ত বর্তমান বার্তার জন্য প্রস্তুত করা হবে",
+    "initializeRepository": "প্রারম্ভিক গিট রিপোজিটরী",
+    "createInitialCommit": "প্রারম্ভিক আর্গুমেন্ট নির্মাণ করুন",
+    "initialCommitMessage": "চোই: প্রাথমিক ভাবে তৈরি কর"
+  },
+  "toolApproval": {
+    "settings": "বৈশিষ্ট্য",
+    "autoAllowAllTools": "স্বয়ংক্রিয়রূপে সকল টুল- টিপ নিষ্ক্রিয় করুন",
+    "autoAllowFileEdits": "স্বয়ংক্রিয় ভাবে অনুমতি সম্পাদনা করুন (পড়ুন, নোট সম্পাদনা)",
+    "autoAllowSafeCommands": "স্বয়ংক্রিয়রূপে ধার্য নিরাপদ কমান্ড (geper, phut, পি. পি., এল....)",
+    "onTimeout": "সময়সীমা পার হয়ে গেছে:",
+    "after": "পরে",
+    "secondsShort": "সেকেন্ড",
+    "timeoutActions": {
+      "wait": "চিরকাল ধরে অপেক্ষা করো",
+      "allow": "অনুমোদন করুন",
+      "deny": "প্রত্যাখ্যান করুন"
+    },
+    "submit": "জমা করুন",
+    "allow": "অনুমোদন করুন",
+    "deny": "প্রত্যাখ্যান করুন",
+    "allowAll": "সকল অনুমোদন করা হবে",
+    "pendingCount": "{{count}} অপেক্ষারত",
+    "autoActionIn": "স্বয়ংক্রিয়-{{action}} এর মধ্যে {{time}}",
+    "diff": {
+      "previewChanges": "প্রাকদর্শন- এর প্রাকদর্শন",
+      "readingFile": "ফাইল পড়া হচ্ছে...",
+      "binaryFile": "বাইনারি ফাইল কপি করতে ব্যর্থ",
+      "truncated": "২ মেগাবাইট - র মধ্যে ফাইল মুছে ফেলা হয়েছে",
+      "newFile": "নতুন ফাইল"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "সদস্য কাজের তালিকা",
+      "actionableItems": "কর্ম",
+      "fingerprint": "ফিঙ্গার-প্রিন্ট",
+      "report": "রিপোর্ট",
+      "none": "শূণ্য",
+      "shadowWouldNudge": "ছায়া নড়বে",
+      "yes": "হ্যাঁ",
+      "no": "না",
+      "moreActionableItems": "{{count}} অতিরিক্ত বস্তু চিহ্নিত করুন",
+      "diagnostics": "ডায়াগনস্টিক: {{diagnostics}}"
+    },
+    "title": "সদস্য কাজের তালিকা",
+    "loadingDiagnostics": "সদস্য হিসেবে কাজ করা ডায়গনিস্টিক পরীক্ষা।",
+    "diagnosticsUnavailable": "সদস্য সংক্রান্ত কাজ ডায়াগনস্টিক উপলব্ধ নয় ।"
+  },
+  "advancedCli": {
+    "title": "উন্নত",
+    "useWorktree": "ট্রি-ভিউ ব্যবহার করা হবে",
+    "recent": "সাম্প্রতিক",
+    "commandPreview": "কমান্ড প্রাকদর্শন",
+    "customArguments": "স্বনির্বাচিত আর্গুমেন্ট",
+    "validate": "বৈধতা পরীক্ষা",
+    "validation": {
+      "allFlagsValid": "সব সক্রিয় ফ্ল্যাগ",
+      "unknownFlags": "অজানা: {{flags}}",
+      "protectedFlags": "সুরক্ষিত {{flags}}",
+      "failed": "বৈধতা যাচাই করতে ব্যর্থ"
+    },
+    "placeholders": {
+      "worktreeName": "ট্রি-ট্রি"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} ট্যাগ",
+    "stoppedAgo": "স্থগিত {{time}} ট্যাগ",
+    "running": "চলমান",
+    "stopped": "বন্ধ",
+    "stopProcess": "Stop process (SIGTERM)",
+    "kill": "হত্যা",
+    "openInBrowser": "ব্রাউজারের মধ্যে খুলুন",
+    "open": "খুলুন",
+    "pid": "PID{{pid}}",
+    "title": "CLI প্রসেস"
+  },
+  "taskActivity": {
+    "loadingDetails": "কর্ম সংক্রান্ত তথ্য লোড করা হচ্ছে...",
+    "contextUnavailable": "বিস্তারিত বর্ণনার জন্য চিহ্নিত কনটেক্সটের বিবরণ বর্তমানে উপলব্ধ নয়।",
+    "loading": "কর্ম লোড করা হচ্ছে...",
+    "lowSignalOnly": "কোনো কর্ম পাওয়া যায়নি লগের স্ট্রিমের অধীন নিম্ন মাত্রার বিবরণ উপস্থিত রয়েছে।",
+    "empty": "উপলব্ধ প্রতিলিপির মধ্যে কোনো কর্ম পাওয়া যায়নি । পুরোনো অথবা হেরোক্‌স্ট সেশন লগ এখনো জি. পি. সেশন- এ পাবেন না ।",
+    "title": "কর্ম",
+    "description": "কপি করার উদ্দেশ্যে চিহ্নিত কি-বাইন্ডিং সহযোগে এই কাজের সাথে যুক্ত রয়েছে।"
+  },
+  "sendMessage": {
+    "title": "বার্তা লিখুন",
+    "description": "টিম সদস্যের কাছে সরাসরি বার্তা পাঠাও.",
+    "recipientLabel": "প্রাপকতালিকা",
+    "selectMemberPlaceholder": "নির্বাচন করুন...",
+    "messageLabel": "বার্তা",
+    "placeholder": "আপনার বার্তা লিখুন (S)",
+    "send": "প্রেরণ",
+    "sending": "প্রেরিত হচ্ছে...",
+    "charsLeft": "{{count}} অক্ষর বাঁদিকে",
+    "saved": "সংরক্ষিত",
+    "attachments": {
+      "teamOnlineRequired": "ফাইল সংযুক্ত করার জন্য দলের অনলাইনে থাকা আবশ্যক",
+      "recipientUnsupported": "ফাইল পাঠানো যাবে তাদের দলে অথবা ওপেনCode টিমে",
+      "openCodeOnlineRequired": "OpenCDO দলের প্রতিনিধিদের জন্য দল ফাইল সংযুক্ত করতে হবে",
+      "disabledHint": "ফাইল সংযুক্ত করা হয় নি । অ্যাটাচমেন্ট & সরাও",
+      "attachFiles": "ফাইল সংযুক্ত করুন (প) অথবা টেনে এনে ফেলুন",
+      "unavailable": "সংযুক্ত বস্তু উপলব্ধ নয়"
+    },
+    "quote": {
+      "remove": "উদ্ধৃতিচিহ্ন & সরিয়ে ফেলো",
+      "replyingTo": "উত্তর দেওয়া হচ্ছে"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "প্রেরকের উত্তর",
+    "replyingTo": "উত্তর দেওয়া হচ্ছে",
+    "placeholder": "মন্তব্য যোগ করুন... (চিৎকার)",
+    "attachFile": "ফাইল সংযুক্ত করুন (অথবা পেস্ট করুন)",
+    "voiceToText": "কার্সার টেক্সট",
+    "comment": "মন্তব্য",
+    "charsLeft": "{{count}} অক্ষর বাঁদিকে",
+    "saved": "সংরক্ষিত",
+    "awaitingReplyFrom": "থেকে উত্তর",
+    "or": "অথবা"
+  },
+  "taskAttachments": {
+    "dropImageHere": "এখানে ছবি ফেলে দিন",
+    "attachImage": "ছবির সাথে সংযুক্ত করুন",
+    "pasteOrDragDrop": "বা পেস্ট করুন/ পেস্ট করুন",
+    "fromOriginalMessage": "মূল বার্তা উদ্ধৃত করো:",
+    "dropFilesHere": "ফাইল এইখানে ধরে রাখুন",
+    "loading": "সংযুক্ত বস্তু লোড করা হচ্ছে..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "স্বয়ংক্রিয়রূপে সকল টুলের সুবিধা উপলব্ধ করা হবে",
+    "autonomousModeDescription": "স্বশাসিত মোডে: সঞ্চালনযোগ্য সরঞ্জামগুলি সঞ্চালনযোগ্য নয়। অবিশ্বস্ত কোড সঙ্গে সাবধানে থাকবে.",
+    "manualModeDescription": "ম্যানুয়াল মোড: আপনি প্রকৃত সময়ে প্রতিটি টুল কল অনুমোদন বা অস্বীকার করতে পারবেন।"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "নির্বাচন",
+      "process": "প্রসেস"
+    },
+    "filters": {
+      "all": "সকল"
+    },
+    "logs": {
+      "title": "লগ",
+      "loading": "সদস্য লগ স্ট্রিম লোড করা হচ্ছে...",
+      "emptyTitle": "এই সদস্যের জন্য কোন লগ স্ট্রিম পাওয়া যায়নি।",
+      "emptyDescription": "সদস্য কর্তৃক উদ্ধৃতি অথবা স্লিপিং লগ পাওয়া যাবে এখানে।"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "কী (Key) পরিবর্তন করতে হবে তা বর্ণনা করো...",
+    "submit": "জমা করুন",
+    "charsLeft": "{{count}} অক্ষর বাঁদিকে",
+    "saved": "সংরক্ষিত",
+    "title": "অনুরোধ জানানো হচ্ছে"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "ড্যাশবোর্ড খুলুন",
+      "openTeam": "খুলুন",
+      "cancel": "বাতিল"
+    },
+    "membersJson": {
+      "hide": "গোপন JSON"
+    },
+    "optional": {
+      "badge": "বিকল্প"
+    }
+  },
+  "runningTeams": {
+    "title": "চলছে"
+  },
+  "layout": {
+    "maxPanesReached": "সর্বোচ্চ মান {{count}} পার্শ্ববর্তী পেইন"
+  },
+  "codexReconnect": {
+    "description": "আপনার কোডেক্স সেশনটা খুব পুরনো মনে হচ্ছে. পুনরায় চালু করা।",
+    "useCode": "কোড ব্যবহার করো"
+  },
+  "effortLevel": {
+    "label": "প্রচেষ্টা",
+    "maxDescription": "ম্যাক্স কঠিন কাজের জন্য সর্বাধিক যুক্তি দিয়েছেন।"
+  },
+  "contextLimit": {
+    "limitTo200k": "200K টোকেনের সীমা",
+    "always200k": "(শুধুমাত্র এই মডেলের জন্য 200K)",
+    "tooltipContent": "একটি 200KK-token উইন্ডোর মধ্যে আরম্ভ করা হয় যখন সমর্থিত হয় ।",
+    "tooltipTitle": "কনটেক্সটের সীমা"
+  },
+  "roleSelect": {
+    "noRole": "ভূমিকা নেই",
+    "customRole": "স্বনির্ধারিত ভূমিকা...",
+    "searchPlaceholder": "ভূমিকা অনুসন্ধান করুন...",
+    "empty": "কোনো ভূমিকা পাওয়া যায়নি।",
+    "reservedRole": "এই ভূমিকা সংরক্ষিত রয়েছে"
+  }
+}

@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "Batal",
+    "close": "Tutup",
+    "copied": "Tersalin",
+    "copyUrl": "Salin URL",
+    "open": "Buka",
+    "reveal": "Tampilkan",
+    "retry": "Coba lagi",
+    "save": "Simpan",
+    "showLess": "Tampilkan lebih sedikit",
+    "showMore": "Tampilkan lebih banyak",
+    "refresh": "Segarkan",
+    "reset": "Atur ulang",
+    "copyToClipboard": "Salin ke clipboard",
+    "moreActions": "Tindakan lainnya",
+    "closeDialog": "Tutup dialog",
+    "goToDashboard": "Buka Dashboard",
+    "or": "atau",
+    "hide": "Sembunyikan",
+    "resetSelection": "Atur ulang pilihan"
+  },
+  "code": {
+    "line": "baris {{line}}",
+    "lines": "baris {{from}}-{{to}}",
+    "moreLines": "({{count}} baris lagi...)",
+    "moreLines_few": "({{count}} baris lagi...)",
+    "moreLines_many": "({{count}} baris lagi...)",
+    "moreLines_one": "({{count}} baris lagi...)",
+    "moreLines_other": "({{count}} baris lagi...)",
+    "code": "Kode",
+    "preview": "Pratinjau",
+    "markdownPreview": "Pratinjau Markdown",
+    "linesParenthesized": "(baris {{from}}-{{to}})",
+    "mermaidSyntaxError": "Kesalahan sintaks Mermaid"
+  },
+  "contextBadge": {
+    "badge": "Konteks",
+    "breakdown": {
+      "text": "Teks",
+      "thinking": "Berpikir"
+    },
+    "detailsAria": "Rincian injeksi konteks",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md Berkas",
+      "mentionedFiles": "Berkas Yang Disebutkan",
+      "taskCoordination": "Koordinat Tugas",
+      "thinkingText": "Berpikir + Teks",
+      "toolOutputs": "Keluaran Alat",
+      "userMessages": "Pesan Pengguna"
+    },
+    "title": "Konteks Baru Disuntikkan Dalam Perubahan Ini",
+    "tokenCount": "~{{tokens}} token",
+    "totalNewTokens": "Token baru total",
+    "turn": "Putar {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} token",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} token"
+  },
+  "locales": {
+    "emptyMessage": "Tidak ada bahasa ditemukan.",
+    "names": {
+      "en": "Inggris",
+      "ru": "Rusia",
+      "zh": "Tionghoa",
+      "ja": "Jepang",
+      "ko": "Korea",
+      "es": "Spanyol",
+      "hi": "Hindi",
+      "pt": "Portugis",
+      "fr": "Prancis",
+      "ar": "Arab",
+      "bn": "Bengali",
+      "ur": "Urdu",
+      "id": "Indonesia",
+      "de": "Jerman",
+      "system": "Sistem"
+    },
+    "searchPlaceholder": "Cari bahasa...",
+    "selectPlaceholder": "Pilih bahasa aplikasi...",
+    "systemWithResolved": "Sistem - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Tidak ada anggota ditemukan.",
+    "searchPlaceholder": "Cari anggota...",
+    "unassigned": "Belum ditetapkan",
+    "teammateFallback": "rekan tim"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Memeriksa",
+        "downloading": "Mengunduh",
+        "installCli": "Pasang Codex CLI",
+        "installing": "Memasang",
+        "retryInstall": "coba lagi instal"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Tidak ada saran yang cocok",
+    "searching": "Mencari...",
+    "searchingFiles": "Mencari berkas...",
+    "findInConversation": "Cari dalam percakapan...",
+    "resultCount": "{{current}} dari {{total}}",
+    "resultCountCapped": "{{current}} dari {{total}}+",
+    "noResults": "Tidak ada hasil",
+    "previousResultShortcut": "Hasil sebelumnya (Shift + Enter)",
+    "nextResultShortcut": "Hasil selanjutnya (Enter)",
+    "closeShortcut": "Tutup (Esc)",
+    "nothingFound": "Tidak ditemukan",
+    "placeholder": "Cari..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Tambah Jadwal",
+      "clearFilters": "Bersihkan penyaring",
+      "createSchedule": "Buat Jadwal",
+      "delete": "Hapus",
+      "edit": "Sunting",
+      "pause": "Jeda",
+      "resume": "Lanjutkan",
+      "runNow": "Lari sekarang"
+    },
+    "empty": {
+      "description": "Buat jadwal pada setiap tim untuk mengotomatisasi eksekusi tugas Claude dengan ekspresi kron. Rencana dari semua tim akan muncul di sini.",
+      "noMatches": "Tidak ada jadwal yang cocok dengan filter saat ini",
+      "title": "Tak ada tugas yang dijadwalkan"
+    },
+    "filters": {
+      "allTeams": "Semua tim"
+    },
+    "item": {
+      "loadingRunHistory": "Memuat riwayat berjalan...",
+      "nextRun": "Berikutnya: {{value}}",
+      "noRunsYet": "Tidak berjalan belum"
+    },
+    "loading": "Memuat jadwal...",
+    "searchPlaceholder": "Jadwal pencarian...",
+    "status": {
+      "active": "Aktif",
+      "all": "Semua",
+      "disabled": "Dinonaktifkan",
+      "paused": "Ditahan"
+    },
+    "title": "Schedules"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Sembunyikan",
+      "pin": "Pin",
+      "unhide": "Sembunyikan"
+    },
+    "empty": {
+      "noMatchingSessions": "Tidak ada sesi yang cocok",
+      "noMatchingSessionsDescription": "Proyek ini belum ada sesi yang cocok.",
+      "noMatchingSessionsFiltered": "Coba query lain atau reset filter penyedia.",
+      "noSessions": "Tidak ditemukan sesi",
+      "noSessionsDescription": "Proyek ini belum memiliki sesi",
+      "selectProject": "Pilih proyek untuk melihat sesi"
+    },
+    "errors": {
+      "loading": "Galat saat memuat sesi"
+    },
+    "loadedMatchingMore": "{{count}} sesi pencocokan dimuat sejauh ini - gulir ke bawah untuk memuat lebih banyak.",
+    "loadingMore": "Memuat lebih banyak sesi...",
+    "pinned": "Dijepit",
+    "scrollToLoadMore": "Scroll untuk memuat lebih banyak",
+    "search": {
+      "clear": "Bersihkan pencarian sesi",
+      "placeholder": "Sesi pencarian..."
+    },
+    "selection": {
+      "cancel": "Batalkan pilihan",
+      "exitMode": "Keluar mode pemilihan",
+      "hideSelected": "Sembunyikan sesi yang dipilih",
+      "pinSelected": "Pin sesi terpilih",
+      "selectSessions": "Pilih sesi",
+      "selected": "{{count}} dipilih",
+      "unhideSelected": "Sembunyikan sesi yang dipilih",
+      "selected_few": "{{count}} dipilih",
+      "selected_many": "{{count}} dipilih",
+      "selected_one": "{{count}} dipilih",
+      "selected_other": "{{count}} dipilih"
+    },
+    "sort": {
+      "byContext": "Menurut Konteks",
+      "byContextTooltip": "Urutkan berdasarkan konsumsi konteks",
+      "byRecentTooltip": "Urutkan dengan terbaru",
+      "contextLoadedOnly": "Penyortiran context hanya peringkat sesi dimuat."
+    },
+    "title": "Sesi",
+    "visibility": {
+      "hideHidden": "Sembunyikan sesi tersembunyi",
+      "showHidden": "Tampilkan sesi tersembunyi"
+    },
+    "worktree": {
+      "switch": "Tukar worktree"
+    },
+    "loadedMatchingMore_few": "{{count}} sesi pencocokan dimuat sejauh ini - gulir ke bawah untuk memuat lebih banyak.",
+    "loadedMatchingMore_many": "{{count}} sesi pencocokan dimuat sejauh ini - gulir ke bawah untuk memuat lebih banyak.",
+    "loadedMatchingMore_one": "{{count}} sesi pencocokan dimuat sejauh ini - gulir ke bawah untuk memuat lebih banyak.",
+    "loadedMatchingMore_other": "{{count}} sesi pencocokan dimuat sejauh ini - gulir ke bawah untuk memuat lebih banyak.",
+    "failedToLoad": "Gagal memuat sesi",
+    "loading": "Memuat sesi...",
+    "filter": {
+      "title": "Sesi penyaring"
+    },
+    "count": "{{count}} sesi",
+    "count_one": "{{count}} sesi",
+    "count_other": "{{count}} sesi",
+    "count_few": "{{count}} sesi",
+    "count_many": "{{count}} sesi",
+    "inProgress": "Sesi sedang berlangsung..."
+  },
+  "states": {
+    "loading": "Memuat...",
+    "offline": "Offline",
+    "online": "Online",
+    "unknown": "Tidak diketahui",
+    "error": "Kesalahan"
+  },
+  "markdown": {
+    "imageFallback": "[Gambar: {{label}}]",
+    "largeContentNotice": "Konten sangat besar ({{count}} Chars). Menampilkan pratinjau mentah untuk menjaga responsif UI.",
+    "largeContentTitle": "Isi besar ditampilkan sebagai mentah untuk mencegah pembekuan UI",
+    "raw": "Raw",
+    "rawPreview": "Pratinjau mentah",
+    "renderMarkdown": "Markdown Render",
+    "showAll": "Tampilkan semua",
+    "showMore": "Tampilkan lebih banyak",
+    "showRaw": "Tampilkan mentah",
+    "showingChars": "Menampilkan {{shown}} / {{total}} karakter",
+    "largeContentNotice_few": "Konten sangat besar ({{count}} Chars). Menampilkan pratinjau mentah untuk menjaga responsif UI.",
+    "largeContentNotice_many": "Konten sangat besar ({{count}} Chars). Menampilkan pratinjau mentah untuk menjaga responsif UI.",
+    "largeContentNotice_one": "Konten sangat besar ({{count}} Chars). Menampilkan pratinjau mentah untuk menjaga responsif UI.",
+    "largeContentNotice_other": "Konten sangat besar ({{count}} Chars). Menampilkan pratinjau mentah untuk menjaga responsif UI."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Periksa keluaran terminal di atas untuk rincian",
+    "closingInSeconds": "Menutup masuk {{count}}s...",
+    "closingInSeconds_few": "Menutup masuk {{count}}s...",
+    "closingInSeconds_many": "Menutup masuk {{count}}s...",
+    "closingInSeconds_one": "Menutup masuk {{count}}s...",
+    "closingInSeconds_other": "Menutup masuk {{count}}s...",
+    "completedSuccessfully": "Selesai dengan sukses",
+    "exitCode": "(kode keluar {{code}})",
+    "processFailed": "Proses gagal",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Akumulasi seluruh sesi tanpa duplikasi",
+    "cacheRead": "Cache Baca",
+    "cacheWrite": "Cache Write",
+    "costUsd": "Biaya (USD)",
+    "inputTokens": "Tokens Masukan",
+    "model": "Model",
+    "outputTokens": "Tokens Keluaran",
+    "phase": "Tahap {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% dari masukan prompt",
+    "taskCoordination": "Koordinat Tugas",
+    "thinkingText": "Berpikir + Teks",
+    "toolOutputs": "Keluaran Alat",
+    "total": "Total",
+    "userMessages": "Pesan Pengguna",
+    "visibleContext": "Konteks Terlihat",
+    "includesClaudeMd": "Incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} token",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Tim copy",
+      "createTeam": "Buat Tim",
+      "deleteForever": "Hapus selamanya",
+      "deletePermanently": "Hapus permanen",
+      "deleteTeam": "Hapus tim",
+      "launching": "Peluncuran...",
+      "launchTeam": "Luncurkan tim",
+      "relaunchTeam": "Tim relaunch",
+      "restore": "Pulihkan",
+      "restoreTeam": "Tim pengembalian",
+      "retry": "Coba lagi",
+      "stopTeam": "Hentikan tim",
+      "stopping": "Menghentikan..."
+    },
+    "status": {
+      "active": "Aktif",
+      "deleted": "Dihapus",
+      "launching": "Peluncuran...",
+      "offline": "Luring",
+      "partialFailure": "Peluncuran jalan antar gagal",
+      "partialPending": "Bootstrap tertunda",
+      "partialSkipped": "Luncurkan anggota dilewati",
+      "running": "Berjalan"
+    },
+    "partial": {
+      "pending": "Peluncuran terakhir masih mendamaikan.",
+      "skipped": "Peluncuran terakhir telah melewatkan rekan tim.",
+      "skippedWithCount": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_few": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_many": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_one": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "skippedWithCount_other": "Peluncuran terakhir dilewati {{count}}/{{expected}} Rekan satu tim.",
+      "stopped": "Peluncuran terakhir berhenti sebelum semua rekan setim bergabung.",
+      "stoppedWithCount": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_few": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_many": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_one": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung.",
+      "stoppedWithCount_other": "Peluncuran terakhir berhenti sebelum {{count}}/{{expected}} Rekan satu tim bergabung."
+    },
+    "noDescription": "Tidak ada deskripsi",
+    "solo": "Solo",
+    "membersCount": "Anggota: {{count}}",
+    "membersCount_few": "Anggota: {{count}}",
+    "membersCount_many": "Anggota: {{count}}",
+    "membersCount_one": "Anggota: {{count}}",
+    "membersCount_other": "Anggota: {{count}}",
+    "all": "Semua",
+    "moreCount": "+{{count}} lagi",
+    "moreCount_one": "+{{count}} lagi",
+    "moreCount_other": "+{{count}} lagi",
+    "moreCount_few": "+{{count}} lagi",
+    "moreCount_many": "+{{count}} lagi"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Baku bagi setiap proyek yang tidak memiliki OpenCode override sendiri.",
+      "scopeDescriptionProject": "Timpa hanya projek yang dipilih. Tim lari tidak berubah.",
+      "setAllProjectsDefault": "Set semua proyek baku",
+      "setProjectDefault": "Set default projek",
+      "validationContext": "Konteks validasi",
+      "projectOverrideContext": "Proyek menimpa konteks",
+      "selectProjectHint": "Pilih proyek sebelum menguji model lokal atau menyimpan baku.",
+      "allProjectsHint": "Penggunaan tes {{project}}Terapan baku kecuali sebuah projek memiliki sebuah override.",
+      "projectHint": "Hanya menyimpan overrides {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Konteks",
+      "closePanel": "Tutup panel",
+      "phase": "Tahap:",
+      "current": "Saat ini",
+      "view": "Tampilan:",
+      "category": "Kategori",
+      "bySize": "Berdasarkan Ukuran"
+    },
+    "metrics": {
+      "unavailable": "Tidak tersedia",
+      "contextUsed": "Konteks Digunakan",
+      "promptInput": "Masukan Prompt",
+      "visibleContext": "Konteks Terlihat",
+      "ofContext": "konteks",
+      "ofPrompt": "prompt",
+      "codexTelemetryUnavailable": "Pemakaian aplikasi di sisi tidak terekspos oleh telemetri runtime saat ini, jadi Masukan dan Konteks Digunakan tetap tidak tersedia daripada menampilkan nol palsu.",
+      "sessionCost": "Biaya sesi:",
+      "parentPlus": "induk +",
+      "subagents": "sub agen",
+      "details": "rincian"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Konteks Digunakan",
+        "description": "Konfirmasi masukan ditambah token keluaran saat ini menempati jendela konteks model."
+      },
+      "promptInput": {
+        "title": "Masukan Prompt",
+        "description": "Tokens dikirim ke model sebelum generasi. Untuk Claude ini termasuk `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Konteks Terlihat",
+        "description": "Subset pemeriksaan dari masukan prompt: berkas, CLAUDE.md, tool outputs, pesan pengguna, dan suntikan serupa yang dapat anda optimasi secara langsung."
+      },
+      "availability": {
+        "title": "Ketersediaan",
+        "description": "Jika sebuah waktu jalan penyedia belum mengungkap penggunaan sisi proto, panel menampilkan metrik sebagai tidak tersedia daripada berpura-pura mereka nol."
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}",
+      "tokensApprox": "~{{tokens}} token",
+      "toolsCount": "{{count}} alat",
+      "toolsCount_one": "{{count}} alat",
+      "toolsCount_other": "{{count}} alat",
+      "toolsCount_few": "{{count}} alat",
+      "toolsCount_many": "{{count}} alat",
+      "itemsCount": "{{count}} butir",
+      "itemsCount_one": "{{count}} butir",
+      "itemsCount_other": "{{count}} butir",
+      "itemsCount_few": "{{count}} butir",
+      "itemsCount_many": "{{count}} butir",
+      "missing": "hilang",
+      "thinking": "Berpikir",
+      "text": "Teks"
+    },
+    "empty": "Tidak ada suntikan konteks terdeteksi dalam sesi ini",
+    "view": {
+      "grouped": "Dikelompokkan",
+      "flat": "Datar"
+    },
+    "claudeMdFiles": "CLAUDE.md Berkas",
+    "mentionedFiles": "Berkas Yang Disebutkan"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagen",
+      "shutdownConfirmed": "Shutdown dikonfirmasi",
+      "summary": {
+        "tools": "{{count}} alat",
+        "tools_one": "{{count}} alat",
+        "tools_other": "{{count}} alat",
+        "tools_few": "{{count}} alat",
+        "tools_many": "{{count}} alat"
+      },
+      "meta": {
+        "type": "Tipe",
+        "duration": "Durasi",
+        "model": "Model",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Jendela Konteks",
+        "contextUsage": "Penggunaan Konteks",
+        "mainContext": "Konteks Utama",
+        "totalOutput": "Keluaran Total",
+        "turns": "({{count}} ternyata)",
+        "turns_one": "({{count}} turn)",
+        "turns_other": "({{count}} ternyata)",
+        "subagentContext": "Konteks Subagen",
+        "phase": "Tahap {{phase}}",
+        "turns_few": "({{count}} ternyata)",
+        "turns_many": "({{count}} ternyata)"
+      },
+      "trace": {
+        "title": "Pelacakan Eksekusi"
+      }
+    },
+    "user": {
+      "you": "Kau",
+      "showMore": "Tampilkan lebih banyak",
+      "showLess": "Tampilkan kurang",
+      "backgroundTask": "Tugas latar belakang",
+      "exitCode": "keluar {{code}}",
+      "imagesAttached": "{{count}} gambar dicantol",
+      "imagesAttached_one": "{{count}} gambar dicantol",
+      "imagesAttached_few": "{{count}} gambar dicantol",
+      "imagesAttached_many": "{{count}} gambar dicantol",
+      "imagesAttached_other": "{{count}} gambar dicantol"
+    },
+    "compact": {
+      "toggle": "Jungkitkan isi yang dikompilasi",
+      "contextCompacted": "Konteks dipadatkan",
+      "freedTokens": "({{tokens}} dibebaskan)",
+      "phase": "Tahap {{phase}}",
+      "conversationCompacted": "Komplikasi Percakapan",
+      "summary": "Pesan sebelumnya dirangkum untuk menyimpan konteks. Sejarah percakapan penuh diawetkan dalam berkas sesi.",
+      "compacted": "Dikompak"
+    },
+    "executionTrace": {
+      "empty": "Tak ada butir eksekusi",
+      "nested": "Nested: {{name}}",
+      "input": "Masukan"
+    },
+    "items": {
+      "empty": "Tak ada butir yang akan ditampilkan"
+    },
+    "tools": {
+      "teammateSpawned": "Teman setim melahirkan",
+      "shutdownRequested": "Shutdown diminta - >",
+      "noResultReceived": "Hasil tidak diterima",
+      "duration": "Durasi: {{duration}}",
+      "result": "Hasil",
+      "write": {
+        "createdFile": "Membuat berkas",
+        "wroteToFile": "Menulis ke berkas"
+      },
+      "skill": {
+        "instructions": "Instruksi Keterampilan",
+        "unknown": "Skill tak dikenal"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Permintaan terganggu oleh pengguna",
+      "planReadyForApproval": "Rencana Siap untuk Persetujuan"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Tidak ada riwayat percakapan",
+      "description": "Sesi ini belum berisi pesan apapun."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% kiri)",
+      "count": "Konteks ({{count}})",
+      "count_one": "Konteks ({{count}})",
+      "count_other": "Konteks ({{count}})",
+      "count_few": "Konteks ({{count}})",
+      "count_many": "Konteks ({{count}})"
+    },
+    "scrollToBottom": "Gulung ke bawah",
+    "bottom": "Dasar",
+    "teammateMessage": {
+      "message": "Pesan",
+      "resent": "Simpan",
+      "fallback": "Pesan teman setim"
+    },
+    "system": {
+      "label": "Sistem"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux belum terpasang",
+    "detectedOs": "OS Terdeteksi: {{os}}",
+    "runtimePath": "Jalur runtime: {{path}}",
+    "phase": "Tahap: {{phase}}",
+    "actions": {
+      "cancel": "Batal",
+      "manualGuide": "Panduan manual",
+      "hideSetupSteps": "Sembunyikan langkah setup",
+      "showSetupSteps": "Tampilkan langkah setup ({{count}})",
+      "showSetupSteps_one": "Tampilkan langkah setup ({{count}})",
+      "showSetupSteps_other": "Tampilkan langkah setup ({{count}})",
+      "recheck": "Periksa ulang",
+      "showSetupSteps_few": "Tampilkan langkah setup ({{count}})",
+      "showSetupSteps_many": "Tampilkan langkah setup ({{count}})"
+    },
+    "installerProgress": "Kemajuan instalasi",
+    "input": {
+      "placeholder": "Kirim masukan ke pemasang",
+      "send": "Kirim masukan",
+      "passwordNotice": "Masukan sandi dikirim langsung ke terminal pemasang dan tidak ditambahkan ke keluaran log."
+    },
+    "details": {
+      "show": "Tampilkan rincian",
+      "hide": "Sembunyikan rincian"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Tidak ada aktivitas baru-baru ini",
+    "sessionsCount": "{{count}} sesi",
+    "sessionsCount_one": "{{count}} sesi",
+    "sessionsCount_other": "{{count}} sesi",
+    "mode": {
+      "searchProjects": "Cari proyek",
+      "searchAcrossProjects": "Cari di semua proyek",
+      "searchInProject": "Cari di projek"
+    },
+    "currentProject": "Proyek saat ini",
+    "global": "Global",
+    "placeholders": {
+      "projects": "Cari proyek...",
+      "conversations": "Cari percakapan..."
+    },
+    "empty": {
+      "noProjectsForQuery": "No projects found for \"{{query}}\"",
+      "noProjects": "Tak ada proyek yang ditemukan",
+      "minChars": "Ketik paling tidak 2 karakter untuk dicari",
+      "noFastResults": "Tidak ada hasil cepat dalam sesi baru-baru ini untuk \"{{query}}\"",
+      "noResults": "Tidak ada hasil yang ditemukan untuk \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} proyek",
+      "projectsCount_one": "{{count}} projek",
+      "projectsCount_other": "{{count}} proyek",
+      "results": "{{count}} {{speed}}hasil",
+      "results_one": "{{count}} {{speed}}hasil",
+      "results_other": "{{count}} {{speed}}hasil",
+      "resultsAcrossProjects": "{{count}} {{speed}}hasil seluruh proyek",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}hasil di seluruh proyek",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}hasil seluruh proyek",
+      "fastPrefix": "cepat ",
+      "typeToSearch": "Tipe untuk dicari",
+      "navigate": "menavigasi",
+      "select": "pilih",
+      "open": "terbuka",
+      "global": "global",
+      "close": "tutup",
+      "results_few": "{{count}} {{speed}}hasil",
+      "results_many": "{{count}} {{speed}}hasil",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}hasil seluruh proyek",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}hasil seluruh proyek",
+      "projectsCount_few": "{{count}} proyek",
+      "projectsCount_many": "{{count}} proyek",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "{{count}} sesi",
+    "sessionsCount_many": "{{count}} sesi"
+  },
+  "tasksPanel": {
+    "title": "Tugas",
+    "searchPlaceholder": "Cari tugas...",
+    "pinned": "Dijepit",
+    "groupByLabel": "Kelompok oleh:",
+    "groupByAria": "Grup oleh",
+    "groupModes": {
+      "none": "Nihil",
+      "project": "Projek",
+      "time": "Waktu"
+    },
+    "showArchived": "Tampilkan arsip",
+    "hideArchived": "Sembunyikan arsip",
+    "empty": {
+      "noMatchingTasks": "Tidak ada tugas yang cocok",
+      "noTasks": "Tak ada tugas yang ditemukan"
+    },
+    "teamLabel": "Tim: {{team}}",
+    "showMore": "Tampilkan lebih banyak",
+    "showLess": "Tampilkan kurang",
+    "deleteConfirm": {
+      "title": "Hapus tugas",
+      "message": "Pindahkan tugas #{{taskId}} ke tempat sampah?",
+      "confirmLabel": "Hapus",
+      "cancelLabel": "Batal"
+    },
+    "deleteFailed": {
+      "title": "Gagal menghapus tugas",
+      "fallbackMessage": "Terjadi galat yang tak diharapkan",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "By time",
+      "byUnread": "Dengan belum dibaca",
+      "byProject": "Menurut proyek",
+      "byTeam": "Oleh tim"
+    }
+  },
+  "toolViewer": {
+    "input": "Masukan",
+    "replaceAll": "(mengganti semua)",
+    "noInputRecorded": "Tidak ada masukan yang terekam untuk panggilan alat ini.",
+    "agent": {
+      "action": "aksi",
+      "teammate": "Rekan satu tim",
+      "team": "tim",
+      "runtime": "waktu-jalan",
+      "type": "jenis",
+      "startupInstructionsHidden": "Instruksi startup tersembunyi di UI."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Lepaskan pin",
+    "pin": "Pin",
+    "rename": "Ganti Nama",
+    "markUnread": "Tandai sebagai belum dibaca",
+    "unarchive": "Unarchive",
+    "archive": "Arsip",
+    "deleteTask": "Hapus tugas"
+  },
+  "updateDialog": {
+    "closeDialog": "Tutup dialog",
+    "updateAvailable": "Mutakhirkan tersedia",
+    "updateReady": "Perbarui Siap",
+    "noReleaseNotes": "Tidak ada catatan rilis yang tersedia.",
+    "viewOnGitHub": "Tilik di GitHub",
+    "later": "Nanti",
+    "restartNow": "Mulai lagi sekarang",
+    "download": "Unduh"
+  },
+  "errorBoundary": {
+    "title": "Sesuatu yang salah",
+    "description": "Terjadi galat tak terduga di aplikasi. Anda dapat mencoba memuat ulang halaman atau menata ulang keadaan galat.",
+    "componentStack": "Komponen Stack",
+    "tryAgain": "Coba Lagi",
+    "copied": "Disalin",
+    "copyErrorDetails": "Salin Rincian Galat",
+    "reportBugOnGitHub": "Laporkan Bug di GitHub",
+    "reloadApp": "Muat Ulang App",
+    "diagnosticsNotice": "Laporan bug GitHub dan diagnosis disalin termasuk pesan kesalahan, jejak stack, versi app, tab aktif, tim terpilih, konteks tugas, dan rincian lingkungan."
+  },
+  "runtimeBackendSelector": {
+    "label": "Backend runtime",
+    "resolved": "Dipecahkan: {{backend}}",
+    "current": "Saat ini",
+    "recommended": "Disarankan",
+    "unavailable": "Tidak tersedia",
+    "cannotSelectYet": "Backend ini belum dapat dipilih.",
+    "auto": "Otomatis",
+    "autoCurrently": "Otomatis (saat ini: {{backend}})",
+    "audience": {
+      "internal": "Internal"
+    },
+    "states": {
+      "locked": "Terkunci",
+      "disabled": "Dinonaktifkan",
+      "authRequired": "Perlu Auth",
+      "runtimeMissing": "Runtime hilang",
+      "degraded": "Dikurangi",
+      "unavailable": "Tidak tersedia"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Memeriksa",
+    "unavailable": "Tidak tersedia",
+    "checkFailed": "Gagal memeriksa",
+    "free": "Bebas",
+    "freeTooltip": "Dilaporkan oleh metadata OpenCode. Kemampuan dan batas mungkin berubah."
+  },
+  "taskFilters": {
+    "status": "Status",
+    "clearAll": "Hapus semua",
+    "selectAll": "Pilih semua",
+    "team": "Tim",
+    "allTeams": "Semua tim",
+    "searchTeams": "Tim pencari...",
+    "noTeamsFound": "Tidak ada tim yang ditemukan",
+    "project": "Projek",
+    "allProjects": "Semua Projek",
+    "searchProjects": "Cari proyek...",
+    "noProjects": "Tidak ada proyek",
+    "comments": "Komentar",
+    "apply": "Terapkan",
+    "read": {
+      "all": "Semua",
+      "unread": "Belum dibaca",
+      "read": "Baca"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Konteks Total: {{tokens}} token",
+    "context": "Konteks: {{tokens}}",
+    "phase": "Tahap {{phase}}:",
+    "compactedTo": "(diatur untuk {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "tim",
+      "subagent": "subagen",
+      "markAsRead": "Tandai sebagai dibaca",
+      "delete": "Hapus",
+      "viewInSession": "Tilik dalam sesi"
+    },
+    "title": "Notifikasi",
+    "loading": "Memuat pemberitahuan...",
+    "actions": {
+      "markFilteredAsRead": "Tandai disaring sebagai dibaca",
+      "markAllAsRead": "Tandai semua sebagai dibaca",
+      "markFilteredRead": "Tanda dibaca disaring",
+      "markAllRead": "Tandai semua dibaca",
+      "clearFilteredNotifications": "Bersihkan notifikasi yang disaring",
+      "clearAllNotifications": "Hapus semua pemberitahuan",
+      "clickToConfirm": "Klik untuk mengkonfirmasi",
+      "clearFiltered": "Bersihkan disaring",
+      "clearAll": "Hapus semua"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} tidak terbaca dalam filter",
+      "unreadInFilter_one": "{{count}} tidak terbaca dalam filter",
+      "unreadInFilter_few": "{{count}} tidak terbaca dalam filter",
+      "unreadInFilter_many": "{{count}} tidak terbaca dalam filter",
+      "unreadInFilter_other": "{{count}} tidak terbaca dalam filter",
+      "inFilter": "{{count}} dalam filter",
+      "inFilter_one": "{{count}} dalam filter",
+      "inFilter_few": "{{count}} dalam filter",
+      "inFilter_many": "{{count}} dalam filter",
+      "inFilter_other": "{{count}} dalam filter",
+      "unread": "{{count}} belum dibaca",
+      "unread_one": "{{count}} belum dibaca",
+      "unread_few": "{{count}} belum dibaca",
+      "unread_many": "{{count}} belum dibaca",
+      "unread_other": "{{count}} belum dibaca",
+      "total": "{{count}} total",
+      "total_one": "{{count}} total",
+      "total_few": "{{count}} total",
+      "total_many": "{{count}} total",
+      "total_other": "{{count}} total"
+    },
+    "filters": {
+      "other": "Lainnya"
+    },
+    "empty": {
+      "noMatching": "Tidak ada pemberitahuan yang cocok",
+      "noNotifications": "Tidak ada pemberitahuan",
+      "tryDifferentFilter": "Coba filter lain",
+      "allCaughtUp": "Kalian semua terjebak!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Mulai ulang untuk memperbarui",
+    "updateApp": "Perbarui aplikasi",
+    "downloadedRestartTooltip": "Mutakhirkan diunduh, jalankan ulang untuk diterapkan",
+    "newVersionAvailable": "Versi baru tersedia",
+    "updatingApp": "Memperbarui aplikasi",
+    "updateReady": "Update siap",
+    "restartNow": "Mulai lagi sekarang"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Batang samping Expand",
+    "collapseSidebarShortcut": "Batang samping collapse ({{shortcut}})",
+    "sidebarView": "Tilikan batang sisi",
+    "resizeSidebar": "undo-type",
+    "closeTab": "Tutup tab",
+    "openedFromSearch": "Dibuka dari pencarian",
+    "pinnedSession": "Sesi yang dipinned",
+    "jumpToSection": "Lompat ke daerah",
+    "newTab": "Tab baru",
+    "newTabDashboard": "Tab baru (Dashboard)",
+    "refreshSession": "Segarkan sesi",
+    "refreshSessionWithShortcut": "Sesi Ulang ({{shortcut}})",
+    "loadingTab": "Memuat tab",
+    "menu": {
+      "teams": "Tim",
+      "settings": "Pengaturan",
+      "extensions": "Ekstensi",
+      "search": "Cari",
+      "schedules": "Schedules",
+      "docs": "Dokumen",
+      "exportMarkdown": "Ekspor sebagai Markdown",
+      "exportJson": "Ekspor sebagai JSON",
+      "exportPlainText": "Ekspor sebagai Teks Biasa",
+      "analyzeSession": "Analisa Sesi"
+    },
+    "tabMenu": {
+      "closeTabs": "Tutup {{count}} Tab",
+      "closeTabs_one": "Tutup {{count}} Tab",
+      "closeTabs_few": "Tutup {{count}} Tab",
+      "closeTabs_many": "Tutup {{count}} Tab",
+      "closeTabs_other": "Tutup {{count}} Tab",
+      "closeTab": "Tutup Tab",
+      "closeOtherTabs": "Tutup Tab Lain",
+      "splitRight": "Pecah Kanan",
+      "splitLeft": "Pecah Kiri",
+      "pinToSidebar": "Pin ke Batang Sisi",
+      "unpinFromSidebar": "Lepas pin dari Batang Sisi",
+      "hideFromSidebar": "Sembunyikan dari Batang Sisi",
+      "unhideFromSidebar": "Hapus dari Batang Sisi",
+      "closeAllTabs": "Tutup Semua Tab"
+    },
+    "sections": {
+      "team": "Tim",
+      "sessions": "Sesi",
+      "kanban": "Kanban",
+      "claudeLogs": "Log",
+      "messages": "Pesan"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Tebal",
+    "italic": "Miring",
+    "strike": "Coret",
+    "code": "Kode"
+  },
+  "diff": {
+    "changed": "Berubah",
+    "noChangesDetected": "Tidak ada perubahan terdeteksi"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Copy ChatGPT login link and code",
+    "copyLoginLink": "Copy ChatGPT login link",
+    "copyFailed": "Penyalinan gagal",
+    "copyLinkAndCode": "Salin link + kode",
+    "copyLink": "Salin taut",
+    "enterCodeOnLoginPage": "Enter this code on the ChatGPT login page"
+  },
+  "window": {
+    "minimize": "Minimalkan",
+    "maximize": "Maksimalkan",
+    "restore": "Pulihkan"
+  },
+  "context": {
+    "local": "Lokal",
+    "switchingTo": "Beralih ke {{workspace}}",
+    "loadingWorkspace": "Memuat area kerja",
+    "switchWorkspace": "Ganti Area Kerja"
+  },
+  "repositories": {
+    "noneAvailable": "Tak tersedia repositori",
+    "remove": "Hapus repositori"
+  },
+  "export": {
+    "session": "Ekspor sesi",
+    "sessionTitle": "Ekspor Sesi"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Tak tersedia data sesi",
+    "title": "Laporan Sesi"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Pilih Projek"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "upd",
+      "updatedYesterday": "upd kemarin",
+      "yesterday": "Kemarin"
+    },
+    "reviewState": {
+      "needsFix": "Kebutuhan Perbaikan"
+    },
+    "unassigned": "tak ditugaskan"
+  }
+}

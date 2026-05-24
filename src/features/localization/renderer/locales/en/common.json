@@ -64,6 +64,18 @@
     "names": {
       "en": "English",
       "ru": "Russian",
+      "zh": "Chinese",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "es": "Spanish",
+      "hi": "Hindi",
+      "pt": "Portuguese",
+      "fr": "French",
+      "ar": "Arabic",
+      "bn": "Bengali",
+      "ur": "Urdu",
+      "id": "Indonesian",
+      "de": "German",
       "system": "System"
     },
     "searchPlaceholder": "Search language...",

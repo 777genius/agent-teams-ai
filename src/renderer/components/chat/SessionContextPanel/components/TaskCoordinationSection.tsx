@@ -5,6 +5,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { TaskCoordinationItem } from '../items/TaskCoordinationItem';
 
 import { CollapsibleSection } from './CollapsibleSection';

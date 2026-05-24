@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "features": "Fitur",
+    "screenshots": "Cuplikan layar",
+    "docs": "Dokumentasi",
+    "comparison": "Bandingkan",
+    "download": "Unduh",
+    "pricing": "Bebas",
+    "faq": "FAQ",
+    "viewOnGithub": "Tilik pada GitHub"
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Unduh Sekarang",
+    "ctaPrimary": "Unduh untuk {platform}",
+    "ctaSecondary": "Bandingkan",
+    "ctaDocs": "Dokumentasi",
+    "preview": "Pratinjau produk",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Papan Kanban",
+      "openSource": "Buka Sumber"
+    },
+    "watchDemo": "Watch Demo",
+    "videoUnavailable": "Video tidak tersedia"
+  },
+  "download": {
+    "title": "Unduh",
+    "detected": "Terdeteksi",
+    "systemRequirements": "Kebutuhan sistem",
+    "version": "Versi {version}"
+  },
+  "theme": {
+    "dark": "Gelap",
+    "light": "Cahaya"
+  },
+  "language": {
+    "label": "Bahasa",
+    "search": "Cari bahasa..."
+  },
+  "features": {
+    "sectionTitle": "Everything you need for AI agen orkestra",
+    "sectionSubtitle": "Alat yang kuat yang membuat kolaborasi multi- agen benar-benar bekerja."
+  },
+  "pricing": {
+    "sectionTitle": "Bebas untuk memasang. Termasuk model gratis.",
+    "sectionSubtitle": "Mulailah dengan model gratis tanpa auth - tidak ada account, API kunci, atau kartu kredit. Sambung Claude, Codex, OpenCode/OpenRouter, atau akses penyedia lain hanya ketika Anda ingin lebih banyak model.",
+    "getStarted": "Unduh Sekarang",
+    "popular": "Bebas",
+    "freeModelCallout": "Model bebas tanpa auth disertakan",
+    "note": "Agent Teams tidak memiliki tingkat dibayar. Model bebas tanpa auth memungkinkan Anda mencobanya segera; penggunaan penyedia yang dibayar adalah opsional dan dikendalikan oleh penyedia yang Anda pilih."
+  },
+  "testimonials": {
+    "sectionTitle": "Apa yang pengembang katakan",
+    "sectionSubtitle": "Umpan balik nyata dari pembangun nyata",
+    "showMore": "Tampilkan lebih banyak",
+    "showLess": "Tampilkan kurang",
+    "feedbackCta": "Ingin berbagi pengalaman Anda? Membuka masalah pada"
+  },
+  "faq": {
+    "sectionTitle": "Punya pertanyaan? Kami punya jawaban",
+    "subtitle": "Segala sesuatu yang Anda perlu tahu tentang Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Bagaimana kita membandingkan",
+    "sectionSubtitle": "Perbandingan fitur-dengan-fitur dengan yang lain AI alat kode.",
+    "feature": "Fitur",
+    "robotBubble": "Hakim sendiri",
+    "features": {
+      "crossTeam": "Cross- tim komunikasi",
+      "agentMessaging": "Agency-to-agent messaging",
+      "linkedTasks": "Tugas terkait",
+      "sessionAnalysis": "Analisis sesi",
+      "taskAttachments": "Lampiran tugas",
+      "hunkReview": "Ulasan tingkat Hunk-level",
+      "codeEditor": "Bawaan-dalam penyunting kode",
+      "fullAutonomy": "otonomi penuh",
+      "taskDeps": "Ketergantungan tugas",
+      "reviewWorkflow": "Ulasan alur kerja",
+      "zeroSetup": "Pengaturan nol",
+      "kanban": "Papan Kanban",
+      "execLog": "Log eksekusi",
+      "liveProcesses": "Proses hidup",
+      "runtimeLoad": "CPU/RAM per rekan tim",
+      "perTaskReview": "Ulasan kode pertugas",
+      "flexAutonomy": "otonomi Fleksibel",
+      "worktree": "Isolasi pohon kerja git",
+      "multiAgent": "Campuran AI rekan tim",
+      "liveWorkGraph": "Peta tim langsung",
+      "liveTeam": "Live rekan tim",
+      "teamWorkspace": "Ruang kerja tim",
+      "launchProof": "Status peluncuran rekan tim",
+      "orgGovernance": "Org bagan / pemerintahan",
+      "budgetControls": "Kontrol anggaran",
+      "price": "Harga"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Lihat dalam aksi",
+    "sectionSubtitle": "Gambar layar nyata dari aplikasi - papan kanban, ulasan kode, tim agen, dan banyak lagi."
+  },
+  "common": {
+    "learnMore": "Pelajari lagi"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI agen orkestra untuk pengembang",
+    "robotBubble": "Aku menunggu",
+    "links": {
+      "github": "GitHub",
+      "docs": "Dokumentasi"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - AI Agen Orkestra untuk Pengembang",
+    "homeDescription": "Aplikasi desktop open-source bebas untuk AI Agen tim. Mulai dengan model bebas tanpa auth, kemudian hubungkan Claude, Codex, atau OpenCode ketika Anda membutuhkan lebih banyak model.",
+    "downloadTitle": "Unduh Agent Teams untuk macOS, Windows, dan Linux",
+    "downloadDescription": "Unduh Agent Teams untuk macOS, Windows, dan Linux. Aplikasi desktop open-source gratis untuk tim agen Claude, Codex, dan OpenCode."
+  },
+  "error": {
+    "notFoundTitle": "Halaman tak ditemukan",
+    "notFoundDescription": "Halaman yang Anda cari tidak ada atau telah dipindahkan.",
+    "genericTitle": "Sesuatu yang salah",
+    "genericDescription": "Terjadi galat yang tak terduga. Tolong coba lagi nanti.",
+    "goHome": "Menuju homepage"
+  }
+}

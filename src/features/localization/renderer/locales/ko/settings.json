@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Power-user 옵션: export/import config, reset default 및 raw configuration 편집.",
+      "label": "지원하다"
+    },
+    "general": {
+      "description": "테마, 언어, 디스플레이 밀도 및 시작 행동과 같은 핵심 앱 환경.",
+      "label": "주요사업"
+    },
+    "infoAriaLabel": "{{label}}는 무엇입니까?",
+    "notifications": {
+      "description": "에이전트 활동, 작업 완료 및 오류에 대해 통지 할 때 제어.",
+      "label": "공지사항"
+    }
+  },
+  "view": {
+    "description": "앱 설정 관리",
+    "loading": "로딩...",
+    "title": "지원하다"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "이름 *",
+      "test": "제품정보"
+    },
+    "defaults": {
+      "allProjects": "모든 프로젝트",
+      "allProjectsHint": "테스트 사용 {{project}}. Default는 프로젝트가 override가 없는 경우에 적용됩니다.",
+      "loadingContexts": "로딩...",
+      "projectHint": "저장 overrides만 {{project}}.",
+      "projectOverrideContext": "프로젝트 override 컨텍스트",
+      "scopeDescriptionAllProjects": "자체 OpenCode override가 없는 모든 프로젝트에 대한 기본값.",
+      "scopeDescriptionProject": "선택한 프로젝트만 오버라이드. 팀은 변경되지 않습니다.",
+      "selectProjectContext": "프로젝트 컨텍스트 선택",
+      "selectProjectHint": "로컬 모델을 테스트하거나 기본값을 저장하기 전에 프로젝트를 선택하십시오.",
+      "selectValidationContext": "자주 묻는 질문",
+      "setAllProjectsDefault": "모든 프로젝트 기본값 설정",
+      "setProjectDefault": "프로젝트 기본값 설정",
+      "thisProject": "이 프로젝트",
+      "title": "OpenCode 기본값",
+      "validationContext": "유효성 검사"
+    },
+    "diagnostics": {
+      "copied": "진단",
+      "copiedShort": "뚱 베어",
+      "copy": "복사 진단",
+      "hints": "뚱 베어",
+      "likelyCause": "같은 원인:"
+    },
+    "models": {
+      "alreadyDefault": "이미 선택한 OpenCode 기본값입니다.",
+      "empty": "찾을 수 없습니다.",
+      "emptyFree": "무료 모델이 없습니다.",
+      "emptyRecommended": "권장된 모델이 없습니다.",
+      "emptyRecommendedFree": "추천 무료 모델이 없습니다.",
+      "freeOnly": "무료 만",
+      "launchableDescription": "팀 피커에서 테스트하거나 사용할 수 있는 루트: 로컬 구성, 무료 내장 모델, 현재 기본.",
+      "launchableTitle": "OpenCode 모델",
+      "loadingRoutes": "OpenCode 모델 경로...",
+      "noRoutesMatch": "OpenCode 모델 경로는 \"{{query}}\".",
+      "noneReported": "OpenCode 모델 루트가 아직 보고되지 않았습니다. OpenCode의 로컬 루트를 구성하거나 공급자 탭을 사용하여 카탈로그 공급자를 검사합니다.",
+      "recommendedOnly": "무료 다운로드",
+      "searchPlaceholder": "검색 모델",
+      "selectProjectBeforeTesting": "모델을 테스트하기 전에 프로젝트 컨텍스트를 선택하십시오.",
+      "selectProjectBeforeTestingDefaults": "OpenCode 기본값을 테스트하거나 저장하기 전에 프로젝트 컨텍스트를 선택하십시오.",
+      "useInTeamPicker": "팀 피커에서 사용"
+    },
+    "providers": {
+      "catalog": "OpenCode 공급자 카탈로그",
+      "countFallback": "OpenCode 공급자",
+      "description": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
+      "loadMore": "더 많은 공급자",
+      "loading": "OpenCode 공급자",
+      "noMatches": "검색할 공급자 일치 없음.",
+      "noneReported": "관리 실행 시간에 의해 보고된 OpenCode 공급자 없음.",
+      "recommended": "(주)",
+      "refreshCatalog": "카탈로그",
+      "searchPlaceholder": "검색 공급자",
+      "description_few": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
+      "description_many": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
+      "description_one": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
+      "description_other": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다."
+    },
+    "setup": {
+      "loading": "로드 공급자 설정..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode 기본값: {{model}}",
+      "loading": "Managed OpenCode runtime, 연결 제공 업체 및 모델 기본값...",
+      "source": "출처: {{source}}",
+      "title": "OpenCode 실행 시간"
+    },
+    "tabs": {
+      "models": "모델 번호:",
+      "providers": "회사 소개"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "검색 모델 노선"
+    },
+    "badges": {
+      "usedInTeamPicker": "팀 피커에서 사용하는",
+      "free": "무료 와이파이",
+      "local": "한국어",
+      "configured": "설치하기",
+      "connected": "지원하다",
+      "verified": "견적 요청",
+      "needsTest": "자주 묻는 질문",
+      "failed": "실패한",
+      "unknown": "이름 *",
+      "default": "기본 정보"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "의료기기",
+      "descriptionWithDetected": "대리인 커뮤니케이션을 위한 언어 (검출되는: {{detected}})",
+      "emptyMessage": "한국어",
+      "label": "* 이름",
+      "searchPlaceholder": "언어 선택",
+      "selectPlaceholder": "언어 선택...",
+      "title": "회사 소개"
+    },
+    "appLanguage": {
+      "description": "신청 공용영역을 위한 언어.",
+      "label": "* 이름",
+      "title": "앱 언어"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "자동적으로 각 응답을 확장하거나 새로운 메시지를 수신 할 때",
+        "label": "기본적으로 AI 응답을 확장"
+      },
+      "nativeTitleBar": {
+        "description": "custom title bar 대신 기본 시스템 창 프레임을 사용하십시오.",
+        "label": "기본 제목 바 사용",
+        "restartConfirm": {
+          "confirmLabel": "여행 정보",
+          "message": "앱은 제목 표시 줄 변경을 다시 시작합니다. 지금 예약",
+          "title": "자주 묻는 질문"
+        }
+      },
+      "theme": {
+        "description": "당신의 선호한 색깔 테마를 선택하십시오",
+        "label": "이름 *",
+        "options": {
+          "dark": "한국어",
+          "light": "제품 정보",
+          "system": "시스템"
+        }
+      },
+      "title": "이름 *"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "HTTP 서버를 시작하여 브라우저에서 UI에 접근하거나 iframes에 내장",
+        "label": "Enable 서버 모드"
+      },
+      "title": "비밀번호"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "선택 폴더",
+        "selectFolderManually": "수동으로 폴더 선택",
+        "useAutoDetect": "Auto-Detect 사용",
+        "useFolder": "사용 폴더",
+        "usePath": "오시는 길",
+        "useThisPath": "이 길을 이용",
+        "useWsl": "Linux/WSL 사용?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "이 폴더는 \"projects\" 디렉토리를 포함하지 않습니다. 자주 묻는 질문",
+          "title": "프로젝트 디렉토리"
+        },
+        "notClaudeDir": {
+          "message": "이 폴더는 \"{{folderName}}\", \".claude\"라는 이름입니다. 자주 묻는 질문",
+          "title": "선택된 폴더는 없습니다.claude"
+        },
+        "noWslPaths": {
+          "message": "Claude 데이터로 WSL 디트로를 자동으로 찾을 수 없습니다. 폴더를 수동으로 선택합니까?",
+          "title": "없음 WSL Claude 경로 발견"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\"는 \"프로젝트\" 디렉토리를 포함하지 않습니다. 자주 묻는 질문",
+          "title": "WSL 경로 누락 프로젝트 디렉토리"
+        }
+      },
+      "current": {
+        "autoDetected": "자동 탐지: {{path}}",
+        "autoDetectedPath": "자동 감지 경로 사용",
+        "customPath": "사용자 정의 경로 사용",
+        "label": "현재 지역 루트"
+      },
+      "description": "로컬 폴더가 Claude data root로 처리되는 것을 선택하십시오.",
+      "errors": {
+        "detectWslFailed": "WSL를 감지하는 실패 Claude 루트 경로",
+        "loadFailed": "로컬 Claude 루트 설정로드 실패",
+        "updateFailed": "Claude root 업데이트 실패"
+      },
+      "title": "지역 Claude 뿌리",
+      "wslModal": {
+        "closeAriaLabel": "WSL 경로 modal 닫기",
+        "description": "WSL 배포 및 클로드 루트 후보자 검출",
+        "noProjectsDir": "프로젝트 디렉토리가 감지되지 않음",
+        "title": "WSL 클로드 루트 선택"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "익명 충돌 및 성능 데이터를 전송하여 앱을 개선",
+        "label": "충돌 보고서"
+      },
+      "title": "제품 정보"
+    },
+    "server": {
+      "runningOn": "지원하다",
+      "standaloneModeDescription": "독립 모드에서 실행. HTTP 서버는 항상 활성화됩니다. 시스템 알림은 사용할 수 없습니다 - 알림 트리거는 로그인 된 앱 만입니다.",
+      "title": "계정 관리"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "로그인할 때 자동으로 앱을 시작합니다.",
+        "label": "로그인"
+      },
+      "showDockIcon": {
+        "description": "도크 앱 아이콘 표시 (macOS)",
+        "label": "쇼 도크 아이콘"
+      },
+      "title": "- 연혁"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "알림은 개발 모드에서 작동하지 않을 수 있습니다. macOS는 \"Electron\"로 앱을 식별합니다 (bundle ID",
+      "descriptionSuffix": ") 대신 생산 앱 이름. 시스템 설정 확인 > 알림 > 전자는 권한을 확인합니다.",
+      "title": "Dev 모드"
+    },
+    "ignoredRepositories": {
+      "description": "이 저장소의 알림은 무시됩니다.",
+      "empty": "저장소 무시",
+      "selectPlaceholder": "무시할 저장소 선택...",
+      "title": "Ignored 저장소"
+    },
+    "settings": {
+      "enabled": {
+        "description": "오류 및 이벤트에 대한 시스템 알림 표시",
+        "label": "시스템 알림"
+      },
+      "sound": {
+        "description": "알림이 나타날 때 소리를 재생",
+        "label": "사운드 재생"
+      },
+      "subagentErrors": {
+        "description": "하위 시약 세션에서 오류에 대해 감지하고 통지",
+        "label": "subagent 오류 포함"
+      },
+      "title": "알림 설정"
+    },
+    "snooze": {
+      "clear": "구름 많음",
+      "description": "Temporarily 일시 중지 알림",
+      "descriptionWithTime": "{{time}}까지 노즈드",
+      "label": "Snooze 알림",
+      "options": {
+        "15": "15 분",
+        "30": "30 분",
+        "60": "1시간",
+        "120": "2시간",
+        "240": "4시간",
+        "-1": "내일까지"
+      },
+      "selectDuration": "시간 선택..."
+    },
+    "taskCompletion": {
+      "description": "Claude가 작업을 완료할 때 기본 OS 알림 받기 - 소리, 배너 및 Dock/taskbar 배지. macOS, Linux 및 Windows에서 작동합니다.",
+      "installPlugin": "claude-notifications-go 플러그인 설치",
+      "title": "작업 완료 알림"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "팀의 모든 작업이 완료 상태에 도달 할 때 통지",
+        "label": "모든 작업 완료"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Claude가 재설정 시간을 보고할 때, 제한 재설정 후 팀 리드에 대한 후속 판결을 일정",
+        "label": "속도 제한 후에 자동 이력서"
+      },
+      "clarifications": {
+        "description": "작업이 입력되면 네이티브 OS 알림 표시",
+        "label": "작업 알림"
+      },
+      "crossTeamMessage": {
+        "description": "메시지가 다른 팀에서 도착했을 때 알림",
+        "label": "Cross-team 메시지 알림"
+      },
+      "leadInbox": {
+        "description": "teammates가 팀 리드에 메시지를 보낼 때 통지",
+        "label": "리드 inbox 알림"
+      },
+      "statusChange": {
+        "description": "작업의 상태가 변경될 때 기본 OS 알림 표시",
+        "label": "작업 상태 변경 알림",
+        "onlySolo": {
+          "description": "팀이 팀메이트가 없을 때만 통지",
+          "label": "솔로 모드에서만"
+        },
+        "statuses": {
+          "description": "어떤 대상 상태를 트리거",
+          "label": "이 상태에 대한 통지",
+          "options": {
+            "approved": "이름 *",
+            "completed": "한국어",
+            "deleted": "파일 형식",
+            "in_progress": "지원하다",
+            "needsFix": "자주 묻는 질문",
+            "pending": "뚱 베어",
+            "review": "이름 *"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "에이전트가 작업에 댓글을 달릴 때 네이티브 OS 알림 표시",
+        "label": "작업 의견 알림"
+      },
+      "taskCreated": {
+        "description": "새로운 작업을 만들 때 기본 OS 알림 표시",
+        "label": "작업 생성 알림"
+      },
+      "teamLaunched": {
+        "description": "팀이 출시 될 때 알림 및 준비",
+        "label": "팀 출시 알림"
+      },
+      "title": "팀 알림",
+      "toolApproval": {
+        "description": "도구가 승인 (Allow/Deny)를 필요로 할 때 알림 앱이 집중되지 않는 동안",
+        "label": "Tool 승인 알림"
+      },
+      "userInbox": {
+        "description": "teammate가 메시지를 보낼 때 통지",
+        "label": "사용자 inbox 알림"
+      }
+    },
+    "test": {
+      "action": "시험 받기",
+      "description": "배송 확인을 위한 테스트 알림 보내기",
+      "failedToSend": "테스트 알림을 보낼 실패",
+      "label": "시험 알림",
+      "sending": "이름 *",
+      "sent": "이름 *",
+      "unknownError": "잘못된 오류"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "앱 아이콘",
+      "description": "동시에 자율적으로 작동하는 AI 에이전트 팀, 팀 전반에 걸쳐 통신하고, 내장 코드 검토, 라이브 프로세스 모니터링 및 전체 도구 가시성을 사용하여 Kanban Board에서 작업을 관리합니다.",
+      "standalone": "회사 소개",
+      "title": "제품정보",
+      "version": "버전 {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Config 편집",
+      "exportConfig": "수출 Config",
+      "importConfig": "수입품 Config",
+      "openInEditor": "편집위원",
+      "resetToDefaults": "기본값으로 재설정",
+      "title": "제품 설명"
+    },
+    "updates": {
+      "available": "v{{version}} 사용 가능",
+      "check": "자주 묻는 질문",
+      "checking": "기타...",
+      "ready": "업데이트",
+      "unknownVersion": "이름 *",
+      "upToDate": "현재 위치"
+    },
+    "appName": "에이전트 팀 AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "config를로드 실패",
+      "saveFailed": "config를 저장하는 실패"
+    },
+    "footer": {
+      "autoSave": "편집 후 자동 저장 변경",
+      "toClose": "이름 *",
+      "escapeKey": "제품 정보"
+    },
+    "loading": "로딩...",
+    "status": {
+      "invalidJson": "잘못된 JSON",
+      "saveFailed": "저장 실패",
+      "saved": "지원하다",
+      "saving": "저장..."
+    },
+    "title": "편집 구성"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "이름 *",
+      "submit": "Trigger를 추가",
+      "title": "사용자 정의 트리거"
+    },
+    "builtin": {
+      "description": "응용 프로그램과 함께 제공되는 기본 트리거. 당신은 그들을 활성화하거나 비활성화하고 자신의 패턴을 사용자 정의 할 수 있습니다.",
+      "title": "내장 Triggers"
+    },
+    "card": {
+      "builtinBadge": "사이트맵",
+      "collapseAriaLabel": "뚱 베어",
+      "deleteAriaLabel": "연락처",
+      "editNameAriaLabel": "이름 *",
+      "expandAriaLabel": "지원하다"
+    },
+    "color": {
+      "customHexTitle": "관례 hex 색깔",
+      "invalidHex": "잘못된 hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "로그인 >",
+      "emptyPatternHint": "모든 콘텐츠를 일치하기 위해 빈번하게. JavaScript regex 구문을 사용하십시오.",
+      "errorStatusDescription": "도구 실행이 오류를보고 할 때 트리거 (is error: true).",
+      "tokensUnit": "토큰 토큰",
+      "matchPatternPlaceholder": "e.g., 오류|발행|발행"
+    },
+    "custom": {
+      "description": "특정 패턴 또는 공구 출력에 대한 알림을 얻기 위해 자신의 트리거를 만듭니다.",
+      "empty": "아직 설정된 사용자 정의 트리거 없음.",
+      "title": "주문 Triggers"
+    },
+    "errors": {
+      "invalidRegexPattern": "잘못된 regex 패턴"
+    },
+    "fields": {
+      "contentType": "내용 유형",
+      "matchField": "연락처",
+      "matchPattern": "일치 패턴 (Regex)",
+      "scopeToolName": "범위 / 도구 이름",
+      "scopeToolNameOptional": "범위 / 도구 이름 (선택 사항)",
+      "threshold": "뚱 베어",
+      "tokenType": "토큰 유형",
+      "triggerNamePlaceholder": "e.g., 실패 경고 구축",
+      "triggerNameRequired": "트리거 이름 *"
+    },
+    "ignorePatterns": {
+      "hint": "보도자료 모든 패턴이 일치하면 알림이 건너집니다.",
+      "placeholder": "추가 무시 regex...",
+      "removeAriaLabel": "무시 패턴",
+      "summary": "고급: 예외 규칙",
+      "title": "Ignore 패턴 (크립 if 일치)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "텍스트 출력",
+        "thinking": "더 보기",
+        "tool_result": "공구 결과",
+        "tool_use": "공구 사용"
+      },
+      "matchFields": {
+        "args": "관련 기사",
+        "command": "이름 *",
+        "content": "이름 *",
+        "description": "이름 *",
+        "file_path": "파일 경로",
+        "fullInput": "전체 입력 (JSON)",
+        "glob": "Glob 필터",
+        "new_string": "새로운 문자열",
+        "old_string": "오래된 끈",
+        "path": "오시는길",
+        "pattern": "제품 정보",
+        "prompt": "지원하다",
+        "query": "글쓰기",
+        "skill": "기술 이름",
+        "subagent_type": "Subagent 유형",
+        "text": "본문내용",
+        "thinking": "회사연혁",
+        "url": "사이트맵"
+      },
+      "modes": {
+        "content_match": "내용 패턴",
+        "error_status": "실행 오류",
+        "token_threshold": "높은 토큰 사용"
+      },
+      "tokenTypes": {
+        "input": "입력 토큰",
+        "output": "산출 토큰",
+        "total": "총 토큰"
+      },
+      "toolNames": {
+        "anyTool": "모든 도구"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "시험 방아쇠",
+      "detectedSuffix": "오류가 발견되었습니다.",
+      "more": "...그리고 {{count}} 더",
+      "more_few": "...그리고 {{count}} 더",
+      "more_many": "...그리고 {{count}} 더",
+      "more_one": "...그리고 {{count}} 더",
+      "more_other": "...그리고 {{count}} 더",
+      "testTrigger": "시험 방아쇠",
+      "testing": "테스트...",
+      "title": "다운로드",
+      "truncatedWarning": "검색은 일찍 중지 (시간 또는 카운트 제한). 실제 경기가 더 높을 수 있습니다.",
+      "viewSession": "공지사항"
+    },
+    "repositoryScope": {
+      "empty": "선택 없음 - 트리거는 모든 저장소에 적용",
+      "hint": "저장소가 선택될 때, 이 트리거는 그 저장소에 있는 오류만을 위한 화재입니다.",
+      "placeholder": "추가 저장소를 선택...",
+      "summary": "고급: 저장소 범위",
+      "title": "Repositories에 제한 (선택된 저장소에만 적용)"
+    },
+    "sections": {
+      "configuration": "제품 설명",
+      "dotColor": "점 색깔",
+      "generalInfo": "일반 정보",
+      "triggerCondition": "방아쇠 상태"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "회사 소개",
+      "cancel": "이름 *",
+      "deleteProfile": "파일 삭제",
+      "editProfile": "관련 기사",
+      "save": "제품 정보"
+    },
+    "authMethods": {
+      "agent": "사이트맵 이름 *",
+      "auto": "자동 (SSH Config에서)",
+      "password": "비밀번호",
+      "privateKey": "개인 키"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "이름 *",
+      "message": "\"{{name}}\"를 삭제하시겠습니까? 이것은 undone일 수 없습니다.",
+      "title": "파일 삭제"
+    },
+    "description": "빠른 연결을위한 SSH 연결 프로파일 저장",
+    "empty": {
+      "description": "SSH 프로필을 추가하여 빠르게 연결",
+      "title": "자주 묻는 질문"
+    },
+    "form": {
+      "authentication": "회사연혁",
+      "host": "이름 *",
+      "name": "이름 *",
+      "passwordPrompt": "접속할 때 암호로 고쳐질 것입니다.",
+      "port": "항구 항구",
+      "privateKeyPath": "개인 키 경로",
+      "username": "사용자 이름",
+      "namePlaceholder": "내 서버",
+      "hostPlaceholder": "호스트명 또는 IP",
+      "usernamePlaceholder": "제품정보"
+    },
+    "loading": "로딩...",
+    "title": "Workspace 프로필"
+  },
+  "connection": {
+    "actions": {
+      "connect": "연결하기",
+      "connecting": "연결...",
+      "disconnect": "연결하기",
+      "testConnection": "시험 연결",
+      "testing": "테스트..."
+    },
+    "currentMode": {
+      "description": "세션 파일에 대한 데이터 소스",
+      "label": "현재 형태",
+      "local": "지역 ({{path}})"
+    },
+    "description": "Claude Code sessions를 볼 수있는 원격 기계에 연결",
+    "form": {
+      "authentication": "회사연혁",
+      "host": "이름 *",
+      "password": "비밀번호",
+      "port": "항구 항구",
+      "privateKeyPath": "개인 키 경로",
+      "username": "사용자 이름",
+      "hostPlaceholder": "hostname 또는 SSH 구성 별칭",
+      "usernamePlaceholder": "제품정보"
+    },
+    "savedProfiles": {
+      "title": "비밀번호"
+    },
+    "ssh": {
+      "title": "SSH 연결"
+    },
+    "status": {
+      "connectedTo": "{{host}}에 연결",
+      "remoteSessions": "SSH를 통해 원격 세션보기"
+    },
+    "test": {
+      "failed": "연결 실패: {{error}}",
+      "success": "연결 성공",
+      "unknownError": "잘못된 오류"
+    },
+    "title": "원격 연결"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "이름 *",
+      "cancelLogin": "자주 묻는 질문",
+      "connectChatGpt": "ChatGPT 연결",
+      "delete": "이름 *",
+      "disable": "기타 제품",
+      "disconnectAccount": "연락처",
+      "generateLink": "관련 링크",
+      "openLogin": "공지사항",
+      "reconnectAnthropic": "연락처 Anthropic",
+      "refresh": "지원하다",
+      "replaceKey": "열쇠를 대체하십시오",
+      "saveEndpoint": "저장 endpoint",
+      "saveKey": "키 저장",
+      "saving": "저장...",
+      "setApiKey": "API 키 설정",
+      "updateKey": "업데이트 키",
+      "useCode": "사용 코드"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "로딩...",
+      "projectScope": "회사연혁",
+      "scope": "제품정보",
+      "storedIn": "{{backend}}에서 저장됨",
+      "userScope": "사용자 이름",
+      "storedInApp": "앱 스토어",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API 열쇠",
+          "title": "API 키",
+          "description": "직접적인 Anthropic API 열쇠를 API-billed 접근 사용하십시오. Anthropic 구독 세션은 다시 전환 할 때 사용할 수 있습니다.",
+          "placeholder": "스칸디..."
+        },
+        "codex": {
+          "name": "코덱 API 이름 *",
+          "title": "API 키",
+          "description": "OpenAI API 키를 보조 Codex auth 경로로 사용합니다. Codex를 API 키 모드로 전환하면 앱은 OPENAI_API_KEY를 CODEX_API_KEY로 네이티브 출시합니다.",
+          "placeholder": "스프 프로 J-..."
+        },
+        "gemini": {
+          "name": "젬니 API 이름 *",
+          "title": "API 액세스",
+          "description": "Gemini API 백엔드의 `GEMINI_API_KEY`를 사용하십시오. CLI SDK 및 ADC는 필요하지 않습니다.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "앱 서버: {{state}}",
+        "connected": "연결하기",
+        "description": "로컬 Codex 앱 서버 계정 세션을 관리하여 구독 백업 네이티브를 실행합니다.",
+        "loginInProgress": "로그인 진행",
+        "plan": "계획: {{plan}}",
+        "reconnectRequired": "자주 묻는 질문",
+        "title": "ChatGPT 계정",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}}자동은 ChatGPT가 연결될 때까지 검출된 API 키를 사용합니다.",
+          "detectedApiKeyNeedsApiMode": "{{message}}검출된 API 열쇠는 API 열쇠 형태에 Codex를 전환한 후에만 사용됩니다.",
+          "localArtifactsNoSession": "Codex CLI는 현재 ChatGPT 계정이 없습니다. Local Codex 계정 데이터가 존재하지만 활성 관리 세션이 선택되지 않습니다. 사용법 한계는 Codex CLI가 1개를 본 후에 여기에서만 나타납니다.",
+          "noActiveAccount": "Codex CLI는 현재 ChatGPT 계정이 없습니다. 사용법 한계는 Codex CLI가 1개를 본 후에 여기에서만 나타납니다.",
+          "reconnectBeforeUsage": "Codex는 로컬로 선택된 ChatGPT 계정이 있지만, 현재 세션은 사용 제한 전에 다시 연결해야 합니다.",
+          "usageLimitsAfterReport": "사용 제한은 Codex가 연결된 ChatGPT 계정에 대해보고 한 후 여기에 나타납니다."
+        }
+      },
+      "install": {
+        "checking": "Check",
+        "downloading": "다운로드",
+        "installCli": "코덱 CLI 설치",
+        "installing": "설치하기",
+        "retryInstall": "Retry 설치",
+        "title": "Codex CLI를 앱 데이터로 설치"
+      },
+      "rateLimits": {
+        "credits": "계정 만들기",
+        "creditsDescription": "크레딧은 윈도우 기반 구독 사용과 별도로 표시되며, 계획된 ChatGPT 세션에 사용할 수 없습니다.",
+        "noSecondaryWindow": "Codex는 이 계정 스냅 샷에 대한 보조 창을 반환하지 않았습니다.",
+        "notReported": "견적 요청",
+        "primaryReset": "기본 재설정",
+        "primaryUsed": "1 차 사용",
+        "primaryWindow": "기본 창",
+        "remainingLeft": "{{value}} 왼쪽",
+        "remainingUnknown": "알 수없는",
+        "secondaryReset": "두 번째 재설정",
+        "secondaryUsed": "중고차",
+        "secondaryWindow": "두 번째 창",
+        "usedQuotaNote": "이 백분율은 할당량, 나머지 할당량.",
+        "weeklyReset": "주간 리셋",
+        "weeklyUsed": "주간 사용",
+        "weeklyUsedOneWeek": "주간 사용 (1w)",
+        "weeklyWindow": "주간 창",
+        "secondaryFallback": "2 월",
+        "secondaryWindowNote": "주간 제한은 {{window}} 창에서 별도로 표시됩니다.",
+        "usageExplanationGeneric": "사용 된 할당량 표시, 나머지 할당량.",
+        "usageExplanationWindowOnly": "현재 {{window}} 창에 사용된 할당량을 보여주고, 나머지 할당량은 아닙니다.",
+        "usageExplanationWithRemaining": "{{used}}사용 - 약{{remaining}}현재 왼쪽{{window}}창."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth 토큰",
+      "authTokenMissing": "Auth 토큰은 구성되지 않습니다.",
+      "baseUrl": "기본 URL",
+      "description": "Anthropic 호환 로컬 런타임 엔드포인트를 사용하십시오.",
+      "keepSavedToken": "저장된 토큰을 유지하려면 공백을 남기십시오.",
+      "title": "로컬 / 호환 엔드포인트",
+      "tokenStatus": "토큰 {{status}}",
+      "validation": {
+        "baseUrlRequired": "기본 URL가 필요합니다.",
+        "firstPartyAnthropic": "Auto, Subscription 또는 API 키를 사용하여 첫 번째 파티 Anthropic",
+        "httpRequired": "Base URL은 http:// 또는 https:// 를 사용해야 합니다",
+        "invalidUrl": "잘못된 URL",
+        "noCredentials": "기초 URL는 credentials를 포함하지 않아야 합니다"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "끝점 비활성화. 저장된 토큰은 보관되었습니다.",
+        "endpointSaved": "Endpoint 저장",
+        "endpointSavedTokenMissing": "저장되는 Endpoint. Auth 토큰은 구성되지 않습니다."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "인증 방법",
+      "descriptions": {
+        "anthropic": "app-launched Anthropic sessions 인증 방법을 선택하십시오.",
+        "codex": "Codex가 ChatGPT 구독 또는 API Key를 선호하는지 선택하면 기본 실행시간이 시작됩니다.",
+        "gemini": "옵션 API 액세스 구성. CLI SDK와 ADC는 아직도 자동적으로 발견됩니다.",
+        "opencode": "OpenCode 인증 및 공급자 재고는 OpenCode 실행 시간에 의해 관리됩니다."
+      },
+      "method": "연결 방법",
+      "mode": "형태: {{mode}}",
+      "selected": "제품정보",
+      "switching": "전환...",
+      "title": "관련 링크"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API 키"
+      },
+      "anthropic": {
+        "apiKeyDescription": "ANTHROPIC_API_KEY 및 Anthropic API 청구를 사용하십시오.",
+        "autoDescription": "Anthropic runtime 디폴트와 최고의 로컬 자격 증명을 사용할 수 있습니다.",
+        "hint": "Auto는 기본 로컬 자격에 대한 Anthropic을 유지합니다.",
+        "subscriptionDescription": "지역 Anthropic Sign-in 세션 및 구독 액세스를 사용하십시오.",
+        "subscriptionTitle": "Anthropic 구독"
+      },
+      "auto": {
+        "title": "제품정보"
+      },
+      "codex": {
+        "apiKeyDescription": "기본 코덱을 위한 OPENAI_API_KEY 및 CODEX_API_KEY 청구를 사용하십시오.",
+        "autoDescription": "ChatGPT 계정 및 구독을 Prefer하십시오. 필요한 경우에만 API 키 모드를 사용하십시오.",
+        "chatgptDescription": "연결된 ChatGPT 계정 및 Codex 구독을 사용하십시오.",
+        "chatgptTitle": "ChatGPT 계정",
+        "hint": "Codex는 항상 기본 실행 시간을 통해 실행됩니다. 자동은 API-key credentials로 돌아가기 전에 ChatGPT 계정을 선호합니다."
+      }
+    },
+    "description": "각 공급자가 어떻게 연결하고, 지원될 때, Multimodel 런타임을 사용할 때.",
+    "fastMode": {
+      "defaultOff": "기본 설정",
+      "description": "새로운 Anthropic 팀에 대한 기본으로 Claude Code Fast 모드를 적용하면 해결 된 모델과 런타임이 허용됩니다.",
+      "disabledHint": "새로운 Anthropic은 팀이 명시적으로 빠른 모드를 활성화하지 않는 한 정상적인 속도로 유지됩니다.",
+      "enabledHint": "새로운 Anthropic 발사는 해결된 모형이 그것을 지원할 때 기본적으로 빠른 형태를 요구할 것입니다.",
+      "notExposed": "이 Anthropic 런타임은 빠른 모드를 노출하지 않습니다.",
+      "preferFast": "빠른 납품",
+      "title": "빠른 모드 기본값",
+      "unavailableForRuntime": "빠른 모드는 현재 Anthropic runtime을 사용할 수 없습니다."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API 키 모드가 선택되지만 Anthropic API credential은 아직 사용할 수 없습니다.",
+      "anthropicStoredKeyAvailable": "저장된 API 열쇠는 유효합니다, 그러나 app-launched Anthropic 회의는 당신이 API 열쇠 형태로 전환한 후에 그것을 단지 이용합니다.",
+      "anthropicSubscriptionMissing": "Anthropic 구독 모드가 선택되었습니다. Anthropic에 로그인하여 이 공급자를 사용합니다.",
+      "authTokenMissing": "Auth 토큰은 구성되지 않습니다. 많은 로컬 Anthropic 호환 엔드포인트는 비가치 토큰이 필요합니다.",
+      "chatgptLoginPending": "ChatGPT 계정 로그인에 대한 대기...",
+      "chatgptLoginStarting": "ChatGPT 로그인 시작...",
+      "codexApiKeyMissing": "API 키 모드가 선택되지만 OPENAI_API_KEY 또는 CODEX_API_KEY 자격은 아직 사용할 수 없습니다.",
+      "codexLocalArtifactsNoSession": "Codex CLI는 현재 ChatGPT 계정이 없습니다. Local Codex 계정 데이터가 존재하지만 활성 관리 세션이 선택되지 않습니다.",
+      "codexNeedsReconnect": "Codex는 Locally selected ChatGPT 계정이 있지만, 현재 세션은 다시 연결해야 합니다.",
+      "codexNoChatgptAccount": "Codex CLI는 현재 ChatGPT 계정이 없습니다. ChatGPT를 연결하여 구독을 사용할 수 있습니다.",
+      "codexNoCredential": "ChatGPT 계정 또는 API 키가 아직 사용할 수 없습니다.",
+      "geminiApiUnavailable": "Gemini API는 현재 사용할 수 없습니다. 여기에서 `GEMINI_API_KEY`를 구성하거나 유효한 Google ADC 자격 증명을 사용하십시오.",
+      "withApiKeyFallback": "{{message}}검출된 API 키를 사용하는 API 키 모드로 전환합니다."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Force app-launched Anthropic 세션은 API 키 자격 증명을 사용합니다.",
+        "auto": "runtime 기본 동작을 사용합니다. 이 응용 프로그램에서 API 키를 저장하면 API 키 모드로 전환됩니다.",
+        "oauth": "Force app-launched Anthropic sessions는 로컬 Anthropic 구독 세션을 사용합니다."
+      },
+      "codex": {
+        "apiKey": "포스 네이티브 코덱은 OPENAI_API_KEY / CODEX_API_KEY 청구를 사용하기 위해 출시됩니다.",
+        "auto": "사용할 때 ChatGPT 계정을 Prefer하십시오. 필요한 경우 API 키 모드로 돌아가십시오.",
+        "chatgpt": "Force native Codex는 연결된 ChatGPT 계정 및 구독을 사용합니다."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "연결 변경 적용...",
+      "refreshingProviderStatus": "공급 업체 상태...",
+      "savingCompatibleEndpoint": "호환성 endpoint 저장...",
+      "switchingAnthropicSubscription": "Anthropic 구독으로 전환...",
+      "switchingApiKey": "API 키로 전환...",
+      "switchingApiKeyMode": "API 키 모드로 전환...",
+      "switchingAuto": "자동으로 전환...",
+      "switchingChatgpt": "ChatGPT 계정 모드로 전환..."
+    },
+    "provider": "회사 소개",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic은 현재 별도의 런타임 백엔드 selector가 없습니다.",
+        "codex": "Codex는 이제 네이티브 런타임 경로를 통해서만 실행됩니다.",
+        "gemini": "Gemini 런타임 백엔드 멀티모델이 사용되어야 합니다.",
+        "opencode": "OpenCode는 자체 관리 실행 호스트를 사용합니다. 데스크탑은 현재 상태를 노출시킵니다."
+      },
+      "title": "지원하다",
+      "updating": "가동 시간..."
+    },
+    "runtimeSummary": "런타임: {{runtime}}",
+    "status": {
+      "configured": "설치하기",
+      "enabled": "이름 *",
+      "notConfigured": "이름 *",
+      "notSet": "이름 *",
+      "off": "이름 *",
+      "unknown": "이름 *"
+    },
+    "title": "공급자 설정",
+    "usage": {
+      "apiKey": "API 키 사용",
+      "apiKeyRequired": "API 키 필요",
+      "compatibleEndpoint": "호환 endpoint 사용",
+      "notConnected": "연결하기",
+      "usingMethod": "{{method}} 사용"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API 키 삭제되었지만 공급자 상태를 새로 고침하지 못했습니다.",
+      "apiKeySavedRefreshFailed": "API 키 저장했지만 공급자 상태를 새로 고침하지 못했습니다.",
+      "connectionUpdatedRefreshFailed": "연결 업데이트, 하지만 새로 고침 공급자 상태 실패.",
+      "deleteApiKey": "API 키 삭제",
+      "disableEndpoint": "Endpoint 비활성화",
+      "endpointDisabledRefreshFailed": "Endpoint 비활성화, 하지만 공급자 상태를 새로 고침 실패.",
+      "endpointSavedRefreshFailed": "Endpoint가 저장되었지만 공급자 상태를 새로 고침하지 못했습니다.",
+      "refreshCodexAccount": "Codex 계정 새로 고침",
+      "saveApiKey": "API 키 저장 실패",
+      "saveEndpoint": "endpoint를 저장하는 실패",
+      "updateAnthropicFastMode": "Anthropic 빠른 모드 업데이트 실패",
+      "updateConnection": "연결 업데이트 실패",
+      "updateRuntimeBackend": "runtime backend 업데이트 실패",
+      "apiKeyRequired": "API 열쇠는 요구됩니다"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "제품정보",
+        "oauth": "구독 / OAuth",
+        "chatgpt": "ChatGPT 계정",
+        "apiKey": "API 키",
+        "anthropicSubscription": "Anthropic 구독"
+      },
+      "authMethod": {
+        "apiKey": "API 키",
+        "apiKeyHelper": "API 키 도우미",
+        "oauth": "오아우트",
+        "claudeSubscription": "Claude 구독",
+        "geminiCli": "젬니 CLI",
+        "googleAccount": "Google 계정",
+        "serviceAccount": "서비스 계정"
+      },
+      "runtime": {
+        "codexNative": "Codex 기본",
+        "currentRuntime": "현재 런타임",
+        "selectedRuntime": "선택된 런타임",
+        "summary": "{{prefix}}::{{runtime}}"
+      },
+      "status": {
+        "checking": "기타...",
+        "checked": "(주)",
+        "providerActivity": "공급자 활동",
+        "notConnected": "연결하기",
+        "startingChatGptLogin": "ChatGPT 로그인 시작...",
+        "waitingForChatGptLogin": "ChatGPT 계정 로그인 대기...",
+        "chatGptVerificationDegraded": "ChatGPT 계정 감지 - 계정 검증은 현재 등급입니다.",
+        "chatGptAccountReady": "ChatGPT 계정 준비",
+        "apiKeyReady": "API 키 준비",
+        "codexLocalAccountNeedsReconnect": "Codex는 Locally selected ChatGPT 계정이 있지만, 현재 세션은 다시 연결해야 합니다.",
+        "codexNoActiveManagedSession": "Codex CLI는 Active ChatGPT 로그인이 없습니다. Local Codex 계정 데이터가 존재하지만 활성 관리 세션이 선택되지 않습니다.",
+        "codexNoActiveChatGptLogin": "Codex CLI는 Active ChatGPT 로그인이 없습니다.",
+        "connectChatGptForSubscription": "Codex 구독을 사용하려면 ChatGPT 계정을 연결하십시오.",
+        "codexNativeReady": "Codex 기본 준비",
+        "codexNativeUnavailable": "Codex 기본 사용 불가",
+        "unavailableInCurrentRuntime": "현재 런타임에서 사용 가능",
+        "connectedViaApiKey": "API 열쇠를 통해 연결해",
+        "apiKeyConfiguredNotVerified": "API 키 구성, 하지만 아직 확인 되지",
+        "apiKeyModeMissingCredential": "API 키 모드 선택, 하지만 API 키 구성",
+        "connectedVia": "{{method}}를 통해 연결",
+        "unableToVerify": "자주 묻는 질문"
+      },
+      "mode": {
+        "selectedAuth": "선택된 오: {{authMode}}",
+        "preferredAuth": "선호하는 오: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API 키 구성",
+        "savedApiKeyAvailable": "API 키 관리 가능",
+        "apiKeyAlsoConfigured": "API 키 관리",
+        "apiKeyConfiguredInManage": "API 키는 관리에서 구성",
+        "apiKeyFallbackInManage": "API 키는 또한 fallback로 관리할 수 있습니다",
+        "availableAsFallback": "{{summary}}",
+        "savedApiKeyAvailableIfSwitch": "API 키를 API 키 모드로 전환하면 관리할 수 있습니다.",
+        "availableIfSwitch": "{{summary}} - API 키 모드로 전환하면 사용 가능",
+        "autoWillUseUntilChatGpt": "{{summary}} - 자동은 ChatGPT가 연결될 때까지 이것을 사용합니다."
+      },
+      "actions": {
+        "connect": "연결하기",
+        "connectAnthropic": "Anthropic에 연결",
+        "connectChatGpt": "ChatGPT 연결",
+        "disconnect": "연결하기",
+        "openLogin": "공지사항"
+      },
+      "disconnect": {
+        "anthropicTitle": "Anthropic 구독을 차단합니까?",
+        "anthropic": "이 Claude CLI 런타임에서 로컬 Anthropic 구독 세션을 제거합니다.",
+        "anthropicWithApiKey": "이 Claude CLI 런타임에서 로컬 Anthropic 구독 세션을 제거합니다. API 키 관리 가능",
+        "geminiTitle": "차단 Gemini CLI?",
+        "gemini": "로컬 Gemini CLI 세션 메타데이터를 명확하게 합니다. 외부 ADC 자격 및 저장 API 키 제거되지 않습니다."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "자주 묻는 질문",
+      "checking": "기타...",
+      "extensions": "제품정보",
+      "installRuntime": "{{runtime}} 설치",
+      "manage": "계정 관리",
+      "recheck": "재검사",
+      "reinstallRuntime": "{{runtime}} 설치",
+      "retry": "이름 *",
+      "update": "(주)"
+    },
+    "installer": {
+      "checkingLatest": "최신 버전 확인...",
+      "downloading": "다운로드...",
+      "failed": "설치 실패",
+      "installed": "V{{version}} 설치",
+      "installing": "설치...",
+      "latest": "(주)",
+      "verifying": "검증 체크섬..."
+    },
+    "labels": {
+      "multimodel": "멀티모델"
+    },
+    "loading": {
+      "aiProviders": "AI 공급자 확인...",
+      "claudeCli": "클래드 CLI..."
+    },
+    "provider": {
+      "backend": "백업: {{backend}}",
+      "loadingModels": "로딩...",
+      "modelsUnavailable": "이 런타임 빌드에 사용할 수 없는 모델",
+      "runtime": "런타임: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "인증 실패",
+      "authUpdated": "인증 업데이트",
+      "loggedOut": "관련 기사",
+      "login": "로그인",
+      "logout": "로그아웃",
+      "logoutFailed": "로그아웃 실패"
+    },
+    "status": {
+      "configuredNotFound": "구성 {{runtime}}는 찾을 수 없습니다.",
+      "foundButFailed": "{{runtime}}가 발견되었지만 시작 실패",
+      "healthCheckFailed": "형성된 {{runtime}}는 그것의 시작 건강 검사를 실패했습니다.",
+      "notInstalled": "{{runtime}} 설치되지 않음"
+    },
+    "title": "사이트맵 지원하다"
+  },
+  "cliStatus": {
+    "versionUpgrade": "₢ 킹{{current}}-> v{{latest}}"
+  }
+}

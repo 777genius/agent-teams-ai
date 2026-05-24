@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
@@ -10,7 +11,6 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useAppTranslation } from '@features/localization/renderer';
 import { useComposerDraft } from '@renderer/hooks/useComposerDraft';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';

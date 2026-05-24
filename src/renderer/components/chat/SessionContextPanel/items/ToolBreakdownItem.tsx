@@ -5,6 +5,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+
 import { formatTokens } from '../utils/formatting';
 
 import type { ToolTokenBreakdown } from '@renderer/types/contextInjection';

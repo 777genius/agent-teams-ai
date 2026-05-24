@@ -1,12 +1,12 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Button } from '@renderer/components/ui/button';
 import { Combobox } from '@renderer/components/ui/combobox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 import { Check, FolderOpen, FolderX } from 'lucide-react';
 
