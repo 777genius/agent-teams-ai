@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  isMemberLogStreamUiEnabled,
-  MemberLogStreamSection,
-} from '@features/member-log-stream/renderer';
 // import { MemberWorkSyncStatusPanel } from '@features/member-work-sync/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
@@ -44,7 +40,7 @@ import { MemberDetailHeader } from './MemberDetailHeader';
 import { MemberDetailStats } from './MemberDetailStats';
 import { type MemberActivityFilter, type MemberDetailTab } from './memberDetailTypes';
 import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
-import { MemberLogsTab } from './MemberLogsTab';
+import { MemberLogStreamWithLegacyFallback } from './MemberLogStreamWithLegacyFallback';
 import { MemberMessagesTab } from './MemberMessagesTab';
 import { MemberStatsTab } from './MemberStatsTab';
 import { MemberTasksTab } from './MemberTasksTab';
@@ -199,7 +195,6 @@ export const MemberDetailDialog = ({
   const [activeTab, setActiveTab] = useState<MemberDetailTab>(initialTab);
   const [restarting, setRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
-  const [showLegacyLogsFallback, setShowLegacyLogsFallback] = useState(false);
 
   const runtimeSummary = useMemo(
     () =>
@@ -273,7 +268,6 @@ export const MemberDetailDialog = ({
     setActiveTab(initialTab);
     setRestartError(null);
     setRestarting(false);
-    setShowLegacyLogsFallback(false);
   }, [initialTab, member, open]);
 
   const {
@@ -283,7 +277,6 @@ export const MemberDetailDialog = ({
   } = useMemberStats(teamName, member?.name ?? null);
 
   const totalTokens = memberStats ? memberStats.inputTokens + memberStats.outputTokens : null;
-  const memberLogStreamEnabled = isMemberLogStreamUiEnabled();
 
   if (!member) return null;
 
@@ -399,26 +392,11 @@ export const MemberDetailDialog = ({
             />
           </TabsContent>
           <TabsContent value="logs" className="min-w-0 overflow-hidden">
-            {memberLogStreamEnabled ? (
-              <div className="space-y-4">
-                <MemberLogStreamSection
-                  teamName={teamName}
-                  member={member}
-                  enabled={open && activeTab === 'logs'}
-                  onInitialLoadErrorChange={setShowLegacyLogsFallback}
-                />
-                {showLegacyLogsFallback ? (
-                  <div className="rounded-md border border-[var(--color-border)] p-3">
-                    <div className="mb-3 text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                      {t('members.detail.legacyLogsFallback')}
-                    </div>
-                    <MemberLogsTab teamName={teamName} memberName={member.name} />
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <MemberLogsTab teamName={teamName} memberName={member.name} />
-            )}
+            <MemberLogStreamWithLegacyFallback
+              teamName={teamName}
+              member={member}
+              enabled={open && activeTab === 'logs'}
+            />
           </TabsContent>
         </Tabs>
 

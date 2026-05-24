@@ -1,6 +1,5 @@
-import { DEFAULT_CLAUDE_LOGS_FILTER } from '../ClaudeLogsFilterPopover';
+import { type ClaudeLogsFilterState, DEFAULT_CLAUDE_LOGS_FILTER } from '../claudeLogsFilterState';
 
-import type { ClaudeLogsFilterState } from '../ClaudeLogsFilterPopover';
 import type { ClaudeLogsViewerState } from '../CliLogsRichView';
 import type { MessagesFilterState } from '../messages/MessagesFilterPopover';
 

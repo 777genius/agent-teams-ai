@@ -1519,7 +1519,7 @@
   },
   "claudeLogs": {
     "filter": {
-      "ariaLabel": "Filter Claude logs",
+      "ariaLabel": "Filter logs",
       "tooltip": "Filter logs",
       "sections": {
         "stream": "Stream",
@@ -1558,7 +1558,15 @@
     "openFullscreen": "Open fullscreen logs",
     "fullscreen": "Fullscreen",
     "viewingFullscreen": "Viewing in fullscreen mode",
-    "logsTitle": "Logs"
+    "logsTitle": "Logs",
+    "sourceSelect": {
+      "placeholder": "Select log source...",
+      "searchPlaceholder": "Search log sources...",
+      "emptyMessage": "No log sources found.",
+      "ariaLabel": "Log source",
+      "leadLabel": "Lead",
+      "selectSourceEmpty": "Select a log source."
+    }
   },
   "agentGraph": {
     "popover": {
@@ -2054,6 +2062,10 @@
       },
       "joining": {
         "teammatesStillJoining": "{{count}} teammates still joining",
+        "teammatesStillJoining_one": "{{count}} teammate still joining",
+        "teammatesStillJoining_few": "{{count}} teammates still joining",
+        "teammatesStillJoining_many": "{{count}} teammates still joining",
+        "teammatesStillJoining_other": "{{count}} teammates still joining",
         "teammatesConfirmedRatio": "{{count}}/{{total}} teammates confirmed"
       },
       "ready": {

@@ -833,7 +833,7 @@
       "team": "Team",
       "sessions": "Sessions",
       "kanban": "Kanban",
-      "claudeLogs": "Claude Logs",
+      "claudeLogs": "Logs",
       "messages": "Messages"
     }
   },

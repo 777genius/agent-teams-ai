@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ClaudeLogsController } from '@renderer/components/team/useClaudeLogsController';
@@ -98,6 +99,49 @@ describe('ClaudeLogsPanel', () => {
     expect(host.querySelector('[data-testid="cli-logs-rich-view"]')).not.toBeNull();
     expect(cliLogsRichViewState.calls.at(-1)?.cliLogsTail).toBe(
       '[stdout]\nfirst line\nsecond line'
+    );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders leading toolbar controls before the search field', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const ctrl = createController({
+      isAlive: true,
+      data: {
+        lines: ['lead output'],
+        total: 1,
+        hasMore: false,
+      },
+      filteredText: 'lead output',
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(ClaudeLogsPanel, {
+          ctrl,
+          toolbarControlsStart: React.createElement(
+            'div',
+            { 'data-testid': 'toolbar-source' },
+            'Lead'
+          ),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const source = host.querySelector('[data-testid="toolbar-source"]');
+    const search = host.querySelector('input[placeholder="Search logs..."]');
+    expect(source).not.toBeNull();
+    expect(search).not.toBeNull();
+    expect(source?.compareDocumentPosition(search as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
     );
 
     await act(async () => {

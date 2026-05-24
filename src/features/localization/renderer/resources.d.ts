@@ -289,7 +289,7 @@ export default interface Resources {
       refreshSessionWithShortcut: 'Refresh Session ({{shortcut}})';
       resizeSidebar: 'Resize sidebar';
       sections: {
-        claudeLogs: 'Claude Logs';
+        claudeLogs: 'Logs';
         kanban: 'Kanban';
         messages: 'Messages';
         sessions: 'Sessions';
@@ -3162,7 +3162,7 @@ export default interface Resources {
           reset: 'Reset';
           save: 'Save';
         };
-        ariaLabel: 'Filter Claude logs';
+        ariaLabel: 'Filter logs';
         kinds: {
           output: 'Output';
           thinking: 'Thinking';
@@ -3194,6 +3194,14 @@ export default interface Resources {
       rawLinesCaptured: '{{count}} captured';
       searchPlaceholder: 'Search logs...';
       showMore: 'Show more';
+      sourceSelect: {
+        ariaLabel: 'Log source';
+        emptyMessage: 'No log sources found.';
+        leadLabel: 'Lead';
+        placeholder: 'Select log source...';
+        searchPlaceholder: 'Search log sources...';
+        selectSourceEmpty: 'Select a log source.';
+      };
       teamNotRunning: 'Team is not running.';
       viewingFullscreen: 'Viewing in fullscreen mode';
     };
@@ -4495,6 +4503,10 @@ export default interface Resources {
         joining: {
           teammatesConfirmedRatio: '{{count}}/{{total}} teammates confirmed';
           teammatesStillJoining: '{{count}} teammates still joining';
+          teammatesStillJoining_few: '{{count}} teammates still joining';
+          teammatesStillJoining_many: '{{count}} teammates still joining';
+          teammatesStillJoining_one: '{{count}} teammate still joining';
+          teammatesStillJoining_other: '{{count}} teammates still joining';
         };
         nameListWithMore: '{{names}}, +{{count}} more';
         namedPendingDiagnostic: '{{label}}: {{names}}';

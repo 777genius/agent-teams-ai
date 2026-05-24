@@ -1519,8 +1519,8 @@
   },
   "claudeLogs": {
     "filter": {
-      "ariaLabel": "Фильтровать Claude logs",
-      "tooltip": "Фильтровать logs",
+      "ariaLabel": "Фильтровать логи",
+      "tooltip": "Фильтровать логи",
       "sections": {
         "stream": "Stream",
         "content": "Content"
@@ -1558,7 +1558,15 @@
     "openFullscreen": "Открыть логи на весь экран",
     "fullscreen": "На весь экран",
     "viewingFullscreen": "Просмотр в полноэкранном режиме",
-    "logsTitle": "Логи"
+    "logsTitle": "Логи",
+    "sourceSelect": {
+      "placeholder": "Выберите источник логов...",
+      "searchPlaceholder": "Искать источники логов...",
+      "emptyMessage": "Источники логов не найдены.",
+      "ariaLabel": "Источник логов",
+      "leadLabel": "Лид",
+      "selectSourceEmpty": "Выберите источник логов."
+    }
   },
   "agentGraph": {
     "popover": {
@@ -2054,6 +2062,10 @@
       },
       "joining": {
         "teammatesStillJoining": "{{count}} участник(ов) ещё подключается",
+        "teammatesStillJoining_one": "{{count}} участник ещё подключается",
+        "teammatesStillJoining_few": "{{count}} участника ещё подключаются",
+        "teammatesStillJoining_many": "{{count}} участников ещё подключается",
+        "teammatesStillJoining_other": "{{count}} участника(ов) ещё подключается",
         "teammatesConfirmedRatio": "{{count}}/{{total}} участников подтверждено"
       },
       "ready": {

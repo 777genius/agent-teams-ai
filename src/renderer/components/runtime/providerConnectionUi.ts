@@ -2,7 +2,32 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 
 import type { CliProviderAuthMode, CliProviderStatus } from '@shared/types';
 
-type ProviderConnectionTranslator = unknown;
+type ProviderConnectionTranslator = object;
+
+function interpolateProviderConnectionFallback(
+  value: string,
+  options?: Record<string, unknown>
+): string {
+  if (!options) {
+    return value;
+  }
+
+  return value.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (match: string, optionKey: string) => {
+    const optionValue = options[optionKey];
+    if (optionValue === undefined || optionValue === null) {
+      return match;
+    }
+    if (
+      typeof optionValue === 'string' ||
+      typeof optionValue === 'number' ||
+      typeof optionValue === 'boolean' ||
+      typeof optionValue === 'bigint'
+    ) {
+      return String(optionValue);
+    }
+    return match;
+  });
+}
 
 function translateProviderConnection(
   t: ProviderConnectionTranslator | undefined,
@@ -10,14 +35,20 @@ function translateProviderConnection(
   fallback: string,
   options?: Record<string, unknown>
 ): string {
+  const interpolatedFallback = interpolateProviderConnectionFallback(fallback, options);
   if (!t) {
-    return fallback;
+    return interpolatedFallback;
   }
 
-  return (t as (translationKey: string, options?: Record<string, unknown>) => string)(key, {
-    defaultValue: fallback,
-    ...options,
-  });
+  const translated = (t as (translationKey: string, options?: Record<string, unknown>) => string)(
+    key,
+    {
+      ...options,
+      defaultValue: fallback,
+    }
+  );
+
+  return interpolateProviderConnectionFallback(translated, options);
 }
 
 const CODEX_NATIVE_LABEL = 'Codex native';

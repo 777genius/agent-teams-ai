@@ -17,9 +17,8 @@ import {
   getTeamClaudeLogsSidebarUiState,
   setTeamClaudeLogsSidebarUiState,
 } from './sidebar/teamSidebarUiState';
-import { DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
+import { type ClaudeLogsFilterState, DEFAULT_CLAUDE_LOGS_FILTER } from './claudeLogsFilterState';
 
-import type { ClaudeLogsFilterState } from './ClaudeLogsFilterPopover';
 import type { ClaudeLogsViewerState } from './CliLogsRichView';
 import type { TeamClaudeLogsResponse } from '@shared/types';
 
@@ -367,7 +366,11 @@ function filterStreamJsonText(
 // Hook
 // =============================================================================
 
-export function useClaudeLogsController(teamName: string): ClaudeLogsController {
+export function useClaudeLogsController(
+  teamName: string,
+  options: { enabled?: boolean } = {}
+): ClaudeLogsController {
+  const enabled = options.enabled ?? true;
   const isAlive = useStore((s) =>
     s.selectedTeamName === teamName ? (s.selectedTeamData?.isAlive ?? false) : false
   );
@@ -407,6 +410,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const committedRef = useRef<TeamClaudeLogsResponse>({ lines: [], total: 0, hasMore: false });
   const pendingCountRef = useRef(0);
+  const pendingPollingFetchRef = useRef<(() => void) | null>(null);
 
   // ── Reset on team change ──────────────────────────────────────────────
   useEffect(() => {
@@ -447,6 +451,13 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
   useEffect(() => {
     let cancelled = false;
 
+    if (!enabled) {
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const computeNewCount = (
       committed: TeamClaudeLogsResponse,
       latest: TeamClaudeLogsResponse
@@ -460,8 +471,17 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
       return Math.max(0, diff);
     };
 
-    const fetchLogs = async (): Promise<void> => {
-      if (inFlightRef.current) return;
+    const fetchLogs = async (options: { queueIfBusy?: boolean } = {}): Promise<void> => {
+      if (inFlightRef.current) {
+        if (options.queueIfBusy) {
+          pendingPollingFetchRef.current = () => {
+            if (!cancelled) {
+              void fetchLogs();
+            }
+          };
+        }
+        return;
+      }
       inFlightRef.current = true;
       try {
         setLoading(true);
@@ -483,20 +503,27 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         inFlightRef.current = false;
-        if (!cancelled) setLoading(false);
+        const pendingFetch = pendingPollingFetchRef.current;
+        pendingPollingFetchRef.current = null;
+        if (pendingFetch) {
+          pendingFetch();
+        } else if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    void fetchLogs();
-    const id = window.setInterval(() => void fetchLogs(), POLL_MS);
+    void fetchLogs({ queueIfBusy: true });
+    const id = window.setInterval(() => void fetchLogs({ queueIfBusy: true }), POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [teamName, loadedCount]);
+  }, [enabled, teamName, loadedCount]);
 
   // ── Load older logs ───────────────────────────────────────────────────
   const loadOlderLogs = useCallback(async (): Promise<void> => {
+    if (!enabled) return;
     if (loadingMoreRef.current || inFlightRef.current) return;
 
     const current = committedRef.current;
@@ -526,7 +553,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [teamName]);
+  }, [enabled, teamName]);
 
   // ── Auto-load when content fits in container ──────────────────────────
   const isNearBottom = useCallback(
@@ -550,6 +577,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
 
   // ── Apply pending logs ────────────────────────────────────────────────
   const applyPending = useCallback(async (): Promise<void> => {
+    if (!enabled) return;
     if (applyingPendingRef.current) return;
 
     applyingPendingRef.current = true;
@@ -575,7 +603,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
     } finally {
       applyingPendingRef.current = false;
     }
-  }, [loadedCount, pending, teamName]);
+  }, [enabled, loadedCount, pending, teamName]);
 
   // ── Computed values ───────────────────────────────────────────────────
   const online = useMemo(() => isRecent(data.updatedAt), [data.updatedAt]);

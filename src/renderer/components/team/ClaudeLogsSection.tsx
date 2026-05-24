@@ -1,17 +1,34 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog';
+import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { Brain, Expand, MessageSquare, Wrench } from 'lucide-react';
+import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import { Brain, Expand, MessageSquare, Terminal, Wrench } from 'lucide-react';
 
-import { ClaudeLogsDialog } from './ClaudeLogsDialog';
+import { MemberLogStreamWithLegacyFallback } from './members/MemberLogStreamWithLegacyFallback';
 import { ClaudeLogsPanel } from './ClaudeLogsPanel';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
+import {
+  buildSelectableLogMembers,
+  formatMemberLogSourceDescription,
+  formatMemberLogSourceLabel,
+  getMemberNameFromLogSourceKey,
+  LEAD_LOG_SOURCE_KEY,
+  memberLogSourceKey,
+  normalizeMemberLogSourceName,
+  resolveLeadLogMember,
+} from './teamLogSources';
 import { useClaudeLogsController } from './useClaudeLogsController';
 
+import type { TeamLogSourceKey } from './teamLogSources';
 import type { LastLogPreview } from './useClaudeLogsController';
+import type { ResolvedTeamMember } from '@shared/types';
 
 // =============================================================================
 // Constants
@@ -79,6 +96,181 @@ const LogPreviewInline = ({ preview }: { preview: LastLogPreview }): React.JSX.E
   );
 };
 
+const TeamLogsSourceSelector = ({
+  leadMember,
+  members,
+  selectedKey,
+  onChange,
+  className,
+}: {
+  leadMember: ResolvedTeamMember;
+  members: readonly ResolvedTeamMember[];
+  selectedKey: TeamLogSourceKey;
+  onChange: (key: TeamLogSourceKey) => void;
+  className?: string;
+}): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const sourceMembers = useMemo(() => [leadMember, ...members], [leadMember, members]);
+  const selectedMemberName =
+    selectedKey === LEAD_LOG_SOURCE_KEY
+      ? leadMember.name
+      : getMemberNameFromLogSourceKey(selectedKey);
+
+  if (sourceMembers.length <= 1) return null;
+
+  return (
+    <div className={cn('min-w-0 pb-2', className)}>
+      <MemberSelect
+        members={sourceMembers}
+        value={selectedMemberName}
+        onChange={(memberName) => {
+          const selectedMember = sourceMembers.find((member) => member.name === memberName);
+          if (!selectedMember || isLeadMember(selectedMember)) {
+            onChange(LEAD_LOG_SOURCE_KEY);
+            return;
+          }
+          onChange(memberLogSourceKey(selectedMember.name));
+        }}
+        placeholder={t('claudeLogs.sourceSelect.placeholder')}
+        searchPlaceholder={t('claudeLogs.sourceSelect.searchPlaceholder')}
+        emptyMessage={t('claudeLogs.sourceSelect.emptyMessage')}
+        ariaLabel={t('claudeLogs.sourceSelect.ariaLabel')}
+        getMemberLabel={(member) =>
+          isLeadMember(member)
+            ? t('claudeLogs.sourceSelect.leadLabel')
+            : formatMemberLogSourceLabel(member)
+        }
+        getMemberDescription={formatMemberLogSourceDescription}
+      />
+    </div>
+  );
+};
+
+const MemberSourcePill = ({ member }: { member: ResolvedTeamMember }): React.JSX.Element => (
+  <span
+    className="min-w-0 truncate rounded-md border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
+    title={formatMemberLogSourceLabel(member)}
+  >
+    {formatMemberLogSourceLabel(member)}
+  </span>
+);
+
+const MemberLogsSourcePanel = ({
+  teamName,
+  member,
+  enabled,
+  maxHeight,
+}: {
+  teamName: string;
+  member: ResolvedTeamMember;
+  enabled: boolean;
+  maxHeight?: number;
+}): React.JSX.Element => {
+  const content = (
+    <MemberLogStreamWithLegacyFallback teamName={teamName} member={member} enabled={enabled} />
+  );
+
+  if (maxHeight === undefined) {
+    return content;
+  }
+
+  return (
+    <div className="min-h-0 overflow-auto pr-1" style={{ maxHeight }}>
+      {content}
+    </div>
+  );
+};
+
+const TeamLogsDialog = ({
+  open,
+  onOpenChange,
+  teamName,
+  leadMember,
+  members,
+  selectedKey,
+  onSourceChange,
+  showingLeadLogs,
+  ctrl,
+  selectedMember,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  teamName: string;
+  leadMember: ResolvedTeamMember;
+  members: readonly ResolvedTeamMember[];
+  selectedKey: TeamLogSourceKey;
+  onSourceChange: (key: TeamLogSourceKey) => void;
+  showingLeadLogs: boolean;
+  ctrl: ReturnType<typeof useClaudeLogsController>;
+  selectedMember: ResolvedTeamMember | null;
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const sourceSelector =
+    members.length > 0 ? (
+      <TeamLogsSourceSelector
+        leadMember={leadMember}
+        members={members}
+        selectedKey={selectedKey}
+        onChange={onSourceChange}
+        className="w-64 max-w-[min(18rem,40vw)] shrink-0 pb-0"
+      />
+    ) : null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-[90vh] w-[80vw] max-w-none flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <span className="inline-flex size-5 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] shadow-sm">
+              <Terminal size={12} />
+            </span>
+            {t('claudeLogs.logsTitle')}
+            {showingLeadLogs && ctrl.badge != null ? (
+              <span className="font-mono text-[11px] text-[var(--color-text-muted)]">
+                ({ctrl.badge})
+              </span>
+            ) : null}
+            {showingLeadLogs && ctrl.online ? (
+              <span className="pointer-events-none relative inline-flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+              </span>
+            ) : null}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div
+          className={cn('min-h-0 flex-1', showingLeadLogs ? 'overflow-hidden' : 'overflow-auto')}
+        >
+          {showingLeadLogs ? (
+            <ClaudeLogsPanel
+              ctrl={ctrl}
+              viewerClassName="max-h-full h-full"
+              className="flex h-full flex-col [&>div:last-child]:min-h-0 [&>div:last-child]:flex-1"
+              toolbarControlsStart={sourceSelector}
+            />
+          ) : selectedMember ? (
+            <>
+              {sourceSelector ? (
+                <div className="mb-3 flex justify-end">{sourceSelector}</div>
+              ) : null}
+              <MemberLogsSourcePanel
+                teamName={teamName}
+                member={selectedMember}
+                enabled={open && selectedKey === memberLogSourceKey(selectedMember.name)}
+              />
+            </>
+          ) : (
+            <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
+              {t('claudeLogs.sourceSelect.selectSourceEmpty')}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // =============================================================================
 // Main component
 // =============================================================================
@@ -90,22 +282,79 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
   onOpenChange,
 }: ClaudeLogsSectionProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
-  const ctrl = useClaudeLogsController(teamName);
+  const teamMembers = useStore((state) => selectResolvedMembersForTeamName(state, teamName));
+  const [selectedSourceState, setSelectedSourceState] = useState<{
+    teamName: string;
+    sourceKey: TeamLogSourceKey;
+  }>(() => ({ teamName, sourceKey: LEAD_LOG_SOURCE_KEY }));
+  const selectedSourceKey =
+    selectedSourceState.teamName === teamName ? selectedSourceState.sourceKey : LEAD_LOG_SOURCE_KEY;
+  const setSelectedSourceKey = useCallback(
+    (sourceKey: TeamLogSourceKey) => {
+      setSelectedSourceState({ teamName, sourceKey });
+    },
+    [teamName]
+  );
+  const leadMember = useMemo(() => resolveLeadLogMember(teamMembers), [teamMembers]);
+  const selectableMembers = useMemo(() => buildSelectableLogMembers(teamMembers), [teamMembers]);
+  const selectedMemberName = getMemberNameFromLogSourceKey(selectedSourceKey);
+  const selectedMemberSourceName = selectedMemberName
+    ? normalizeMemberLogSourceName(selectedMemberName)
+    : null;
+  const selectedMember = useMemo(
+    () =>
+      selectedMemberSourceName
+        ? (selectableMembers.find(
+            (member) => normalizeMemberLogSourceName(member.name) === selectedMemberSourceName
+          ) ?? null)
+        : null,
+    [selectableMembers, selectedMemberSourceName]
+  );
+  const effectiveSelectedSourceKey =
+    selectedSourceKey === LEAD_LOG_SOURCE_KEY
+      ? LEAD_LOG_SOURCE_KEY
+      : selectedMember
+        ? memberLogSourceKey(selectedMember.name)
+        : LEAD_LOG_SOURCE_KEY;
+  const showingLeadLogs = effectiveSelectedSourceKey === LEAD_LOG_SOURCE_KEY;
+  const ctrl = useClaudeLogsController(teamName, { enabled: showingLeadLogs });
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const isSidebar = position === 'sidebar';
-  const showHeaderSkeleton = ctrl.loading && ctrl.data.lines.length === 0 && !ctrl.error;
+  const showHeaderSkeleton =
+    showingLeadLogs && ctrl.loading && ctrl.data.lines.length === 0 && !ctrl.error;
+
+  useEffect(() => {
+    if (selectedSourceState.teamName !== teamName) {
+      setSelectedSourceState({ teamName, sourceKey: LEAD_LOG_SOURCE_KEY });
+    }
+  }, [selectedSourceState.teamName, teamName]);
+
+  useEffect(() => {
+    if (selectedSourceKey === LEAD_LOG_SOURCE_KEY) return;
+    if (selectedMember) {
+      const canonicalSourceKey = memberLogSourceKey(selectedMember.name);
+      if (selectedSourceKey !== canonicalSourceKey) {
+        setSelectedSourceKey(canonicalSourceKey);
+      }
+      return;
+    }
+    setSelectedSourceKey(LEAD_LOG_SOURCE_KEY);
+  }, [selectedMember, selectedSourceKey, setSelectedSourceKey]);
 
   const sectionHeaderExtra = useMemo(
     () => (
       <span className={cn('flex min-w-0 items-center gap-2', isSidebar && 'basis-full pt-0.5')}>
-        {ctrl.online ? (
+        {showingLeadLogs && ctrl.online ? (
           <span className="pointer-events-none relative inline-flex size-2 shrink-0">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
           </span>
         ) : null}
-        {ctrl.lastLogPreview ? <LogPreviewInline preview={ctrl.lastLogPreview} /> : null}
+        {showingLeadLogs && ctrl.lastLogPreview ? (
+          <LogPreviewInline preview={ctrl.lastLogPreview} />
+        ) : null}
+        {!showingLeadLogs && selectedMember ? <MemberSourcePill member={selectedMember} /> : null}
         {showHeaderSkeleton ? (
           <span className="flex min-w-0 flex-1 items-center gap-1.5 opacity-70">
             <LogsHeaderSkeletonPill className="size-3 rounded" />
@@ -116,8 +365,17 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         ) : null}
       </span>
     ),
-    [ctrl.online, ctrl.lastLogPreview, isSidebar, showHeaderSkeleton]
+    [
+      ctrl.online,
+      ctrl.lastLogPreview,
+      isSidebar,
+      selectedMember,
+      showingLeadLogs,
+      showHeaderSkeleton,
+    ]
   );
+
+  const canOpenFullscreen = showingLeadLogs ? ctrl.data.total > 0 : selectedMember !== null;
 
   const afterBadge = showHeaderSkeleton ? (
     <>
@@ -126,7 +384,7 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         <Expand size={14} />
       </span>
     </>
-  ) : ctrl.data.total > 0 ? (
+  ) : canOpenFullscreen ? (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
@@ -152,7 +410,7 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         sectionId="claude-logs"
         title={t('claudeLogs.logsTitle')}
         icon={null}
-        badge={ctrl.badge}
+        badge={showingLeadLogs ? ctrl.badge : undefined}
         afterBadge={afterBadge}
         headerClassName={isSidebar ? '-mx-3 w-[calc(100%+1.5rem)] py-0' : undefined}
         headerSurfaceClassName={isSidebar ? '!rounded-none' : undefined}
@@ -164,22 +422,50 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         contentClassName="pt-0 [overflow-anchor:none]"
       >
         {/* When dialog is open, hide the compact log viewer to avoid two competing scroll containers */}
+        <TeamLogsSourceSelector
+          leadMember={leadMember}
+          members={selectableMembers}
+          selectedKey={effectiveSelectedSourceKey}
+          onChange={setSelectedSourceKey}
+        />
         {dialogOpen ? (
           <div className="flex items-center gap-2 p-2 text-xs text-[var(--color-text-muted)]">
             <Expand size={12} />
             {t('claudeLogs.viewingFullscreen')}
           </div>
-        ) : (
+        ) : showingLeadLogs ? (
           <ClaudeLogsPanel
             ctrl={ctrl}
             viewerClassName={cn('max-h-[213px]', isSidebar && 'cli-logs-sidebar')}
             viewerMaxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
             compactMetaInTooltip={isSidebar}
           />
+        ) : selectedMember ? (
+          <MemberLogsSourcePanel
+            teamName={teamName}
+            member={selectedMember}
+            enabled={effectiveSelectedSourceKey === memberLogSourceKey(selectedMember.name)}
+            maxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
+          />
+        ) : (
+          <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
+            {t('claudeLogs.sourceSelect.selectSourceEmpty')}
+          </div>
         )}
       </CollapsibleTeamSection>
 
-      <ClaudeLogsDialog open={dialogOpen} onOpenChange={setDialogOpen} ctrl={ctrl} />
+      <TeamLogsDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        teamName={teamName}
+        leadMember={leadMember}
+        members={selectableMembers}
+        selectedKey={effectiveSelectedSourceKey}
+        onSourceChange={setSelectedSourceKey}
+        showingLeadLogs={showingLeadLogs}
+        ctrl={ctrl}
+        selectedMember={selectedMember}
+      />
     </>
   );
 });

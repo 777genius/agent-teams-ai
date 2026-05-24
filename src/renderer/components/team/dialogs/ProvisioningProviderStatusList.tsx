@@ -895,16 +895,6 @@ function getProvisioningProviderSettingsActionLabel(
     : null;
 }
 
-function getDisplayDetailText(
-  detail: string,
-  status: ProvisioningProviderCheckStatus,
-  providerId: TeamProviderId,
-  t: TeamTranslator
-): string {
-  const summary = summarizeDetail(detail, status, providerId);
-  return summary ? localizeProvisioningDetailSummary(summary, t) : detail;
-}
-
 function getSupportDiagnosticsPayload(check: ProvisioningProviderCheck): string | null {
   if (check.providerId !== 'opencode') {
     return null;
@@ -990,7 +980,7 @@ export const ProvisioningProviderStatusList = ({
                       check.providerId
                     )}`}
                   >
-                    {getDisplayDetailText(detail, check.status, check.providerId, t)}
+                    {detail}
                   </p>
                 ))}
               </div>
