@@ -73,6 +73,9 @@
       "fr": "Français",
       "ar": "Arabe",
       "bn": "Bengali",
+      "ur": "Ourdou",
+      "id": "Indonésien",
+      "de": "Allemand",
       "system": "Système"
     },
     "searchPlaceholder": "Rechercher une langue...",

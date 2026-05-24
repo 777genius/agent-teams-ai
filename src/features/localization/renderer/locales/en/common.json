@@ -73,6 +73,9 @@
       "fr": "French",
       "ar": "Arabic",
       "bn": "Bengali",
+      "ur": "Urdu",
+      "id": "Indonesian",
+      "de": "German",
       "system": "System"
     },
     "searchPlaceholder": "Search language...",

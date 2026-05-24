@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "طاقت ور اختیارات : برآمد کرنا/ایمپورٹ انفلیشن، ری سیٹ ڈیس اور اسکیٹ کی تدوین۔",
+      "label": "اعلی"
+    },
+    "general": {
+      "description": "کوریج پسندیوں جیسا کہ موضوع، زبان، پیداوار اور طرزِعمل کا آغاز۔",
+      "label": "عمومی"
+    },
+    "infoAriaLabel": "کیا ہے؟ {{label}}?",
+    "notifications": {
+      "description": "جب آپ کسی ایجنٹ کی سرگرمی ، کام مکمل کرنے اور غلطیوں کے بارے میں معلومات حاصل کرتے ہیں تو اُسے کنٹرول کریں ۔",
+      "label": "غیر متصل"
+    }
+  },
+  "view": {
+    "description": "اپنی خواہش کو پورا کریں",
+    "loading": "ترتیبات لوڈ کریں...",
+    "title": "ترتیبات"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "منسوخ",
+      "test": "جانچ"
+    },
+    "defaults": {
+      "allProjects": "تمام منصوبوں",
+      "allProjectsHint": "ٹیسٹ کا استعمال {{project}}. . . .",
+      "loadingContexts": "تاثرات لوڈ کریں...",
+      "projectHint": "صرف بچوں کو محفوظ رکھنا {{project}}.",
+      "projectOverrideContext": "منصوبہ بندی",
+      "scopeDescriptionAllProjects": "ہر منصوبے کے لیے طے کیا گیا ہے جو اپنی اوپن سی کوڈ نہیں رکھتے۔",
+      "scopeDescriptionProject": "صرف منتخب کردہ منصوبے پر زیادہ توجہ دیں. دوڑنے والی ٹیموں کو تبدیل نہیں کیا جاتا۔",
+      "selectProjectContext": "منصوبہ بندی",
+      "selectProjectHint": "مقامی ماڈلوں کو ٹیسٹ کرنے یا بچ جانے سے پہلے منصوبہ منتخب کریں۔",
+      "selectValidationContext": "مناسب سیاق‌وسباق کا انتخاب کریں",
+      "setAllProjectsDefault": "تمام پرو فا ئل سیٹ کرو",
+      "setProjectDefault": "طے شدہ منصوبہ بندی",
+      "thisProject": "یہ منصوبہ",
+      "title": "کھولیں",
+      "validationContext": "سیاق‌وسباق"
+    },
+    "diagnostics": {
+      "copied": "روزنامہیات نقل کرتے ہیں۔",
+      "copiedShort": "کوس",
+      "copy": "نقل و حمل",
+      "hints": "حساب",
+      "likelyCause": "غالباً وجہ:"
+    },
+    "models": {
+      "alreadyDefault": "یہ پہلے سے ہی منتخب اوپن سی ڈی کوڈ ہے.",
+      "empty": "کوئی ماڈل نہیں ملا.",
+      "emptyFree": "کوئی مفت ماڈل نہیں ملا.",
+      "emptyRecommended": "کوئی سفارش کردہ ماڈل نہیں ہے.",
+      "emptyRecommendedFree": "کوئی سفارش نہیں کی گئی مفت ماڈلز -",
+      "freeOnly": "صرف مفت",
+      "launchableDescription": "ریس آپ ٹیم کے کپتان میں ٹیسٹ یا استعمال کر سکتے ہیں: مقامی بلے باز، مفت تعمیر شدہ ماڈل اور موجودہ بجٹ۔",
+      "launchableTitle": "لانچable OpenCode ماڈل",
+      "loadingRoutes": "OpenCode ماڈل روٹس لوڈ کریں...",
+      "noRoutesMatch": "کوئی اوپنCode ماڈل روٹس میچ \"{{query}}\".",
+      "noneReported": "ابھی تک کوئی لانچ کردہ اوپن کوڈ ماڈل روٹس نہیں بتائی گئی تھیں۔ OpenCode میں ایک مقامی راستے کو رکھ دیں یا پھر کھانے کی ٹیبلٹ استعمال کر کے کی بورڈنگ فراہم کرنے والوں کے لئے استعمال کریں۔",
+      "recommendedOnly": "صرف غیر متصل",
+      "searchPlaceholder": "تلاش کے ماڈل",
+      "selectProjectBeforeTesting": "ماڈلوں کا ٹیسٹ کرنے سے پہلے منصوبہ بندی انتخاب کریں۔",
+      "selectProjectBeforeTestingDefaults": "OpenCode دیس کو ٹیسٹ کرنے یا محفوظ کرنے سے پہلے منصوبہ بندی منتخب کریں۔",
+      "useInTeamPicker": "ٹیم چیسٹر میں استعمال ہوتی ہے۔"
+    },
+    "providers": {
+      "catalog": "کھولیں",
+      "countFallback": "کھولیں",
+      "description": "{{count}}. . . .",
+      "loadMore": "مزید فراہم کُنندہ خرچ کریں",
+      "loading": "OpenCode فراہم کار",
+      "noMatches": "کوئی فراہم کنندہ وہ تلاش کرتا ہے.",
+      "noneReported": "کوئی اوپنCode فراہم کنندگان کو انتظامیہ وقت کی طرف سے رپورٹ نہیں کرتا.",
+      "recommended": "بند",
+      "refreshCatalog": "قابلِ‌اعتماد دستاویز",
+      "searchPlaceholder": "تلاش فراہم کُنندہ",
+      "description_few": "{{count}}. . . .",
+      "description_many": "{{count}}. . . .",
+      "description_one": "{{count}}. . . .",
+      "description_other": "{{count}}. . . ."
+    },
+    "setup": {
+      "loading": "وائیرڈ فراہم کُنندہ وضع کیا گیا ہے..."
+    },
+    "summary": {
+      "defaultModel": "کھولیں {{model}}",
+      "loading": "لوڈس اوپن کوڈ رن ٹائمز، متصل فراہم کنندگان اور ماڈل ڈیسلز کا انتظام کیا...",
+      "source": "ماخذ: {{source}}",
+      "title": "اوپن کوڈ وقت"
+    },
+    "tabs": {
+      "models": "ماڈلز",
+      "providers": "رعایت"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "تلاش ماڈل روٹ"
+    },
+    "badges": {
+      "usedInTeamPicker": "ٹیم چیسٹر میں استعمال ہوتی ہے۔",
+      "free": "مفت",
+      "local": "جگہ",
+      "configured": "مصر",
+      "connected": "متصل",
+      "verified": "توثیق",
+      "needsTest": "ضرورت",
+      "failed": "ناکام ہوا",
+      "unknown": "نامعلوم",
+      "default": "طے شدہ"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "ایجنٹ رابطہ کے لئے زبان",
+      "descriptionWithDetected": "زبان برائے ایجنٹ رابطے (انگریزی: {{detected}})",
+      "emptyMessage": "کوئی زبان نہیں ملی۔",
+      "label": "زبان",
+      "searchPlaceholder": "تلاش زبان...",
+      "selectPlaceholder": "زبان منتخب کریں...",
+      "title": "ایجنٹ زبان"
+    },
+    "appLanguage": {
+      "description": "اطلاقیہ مواجہ کے لیے زبان.",
+      "label": "زبان",
+      "title": "ایپی زبان"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "خودکار طور پر ہر جواب موڑ کر جب کوئی نئی پیغام کھولا جائے یا کوئی نیا پیغام موصول ہو۔",
+        "label": "تجویز کے جواب"
+      },
+      "nativeTitleBar": {
+        "description": "دستور کے عنوان بار کی جگہ متعین کردہ نظام ونڈو فریم کا استعمال کریں",
+        "label": "مقامی عنوان بار استعمال کریں",
+        "restartConfirm": {
+          "confirmLabel": "غیر متصل",
+          "message": "ایپ کو دوبارہ شروع کرنے کی ضرورت ہے ۔ اب؟",
+          "title": "غیر متصل"
+        }
+      },
+      "theme": {
+        "description": "اپنا ترجیحی رنگ کا موضوع منتخب کریں",
+        "label": "تھیم",
+        "options": {
+          "dark": "اندھیرا",
+          "light": "روشنی",
+          "system": "سسٹم"
+        }
+      },
+      "title": "غیر متصل"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "شروعات HTTP Aframs میں کسی براؤزر یا embed سے یو آئی تک رسائی کے لئے سرور",
+        "label": "سرور طریقہ کار فعال کریں"
+      },
+      "title": "براہِ‌راست رسائی"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "فولڈر منتخب کریں",
+        "selectFolderManually": "فولڈر دستی طور پر منتخب کریں",
+        "useAutoDetect": "خود کار-Decet استعمال کریں",
+        "useFolder": "فولڈر استعمال کریں",
+        "usePath": "پاتھ استعمال کريں",
+        "useThisPath": "اس روٹ استعمال کریں",
+        "useWsl": "لینکس استعمال کرتا ہے/سےWSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "اس فولڈر میں ایک \"پروجکٹ\" ڈائریکٹری موجود نہیں ہے۔ بالکل؟",
+          "title": "کوئی منصوبہ بندی نہیں پائی گئی"
+        },
+        "notClaudeDir": {
+          "message": "This folder is named \"{{folderName}}\", not \".claude\". Continue anyway?",
+          "title": "منتخب کردہ فولڈر نہیں ہے."
+        },
+        "noWslPaths": {
+          "message": "تلاش نہیں کیا جاسکتا WSL جی‌ہاں ۔ دستی طور پر فولڈر منتخب کریں؟",
+          "title": "نہیں WSL بھول بھلياں راستوں کا پتہ"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" اس میں ایک \"پروجکٹ\" ڈائریکٹری نہیں ہے۔ بالکل؟",
+          "title": "WSL نا معلوم منصوبہ بندی"
+        }
+      },
+      "current": {
+        "autoDetected": "خود کار : {{path}}",
+        "autoDetectedPath": "خود کار محفوظ راستے کا استعمال کرتے ہوئے",
+        "customPath": "دستور سازی",
+        "label": "موجودہ لوکل روٹ"
+      },
+      "description": "منتخب کریں کہ مقامی فولڈر کو آپ کے ڈی این اے ڈیٹا روٹ کے طور پر کیا جاتا ہے۔",
+      "errors": {
+        "detectWslFailed": "معلوم ہونے میں ناکامی WSL روٹ روٹس",
+        "loadFailed": "مقامی پلگ ان ترتیبات لوڈ کرنے میں ناکامی",
+        "updateFailed": "پلگ ان نصب کرنے میں ناکامی"
+      },
+      "title": "جگہ",
+      "wslModal": {
+        "closeAriaLabel": "بندکرو WSL پاتھ ما وٴ س",
+        "description": "غیر متصل WSL تقسیم اور بنیادوں پر طالبان کی تقسیم",
+        "noProjectsDir": "کوئی منصوبہ بندی نہیں",
+        "title": "منتخب کریں WSL طےشدہ"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "انفنٹری اور اداکاری ڈیٹا بھیجنے سے ایپ کو بہتر بنانے میں مدد",
+        "label": "نقصان کی اطلاعات بھیجیں"
+      },
+      "title": "روایتی"
+    },
+    "server": {
+      "runningOn": "اوپر جائیں",
+      "standaloneModeDescription": "کھڑے ہو موڈ میں چلانے. جواب HTTP سرور ہمیشہ فعال رہتا ہے۔ سسٹم اطلاعات دستیاب نہیں ہیں - اطلاعی اطلاعات صرف فوری طور پر لاگو ہوتی ہیں۔",
+      "title": "سرور"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "خودکار طور پر جب آپ لاگ ان ميں لاگ ان شروع کريں",
+        "label": "لانخ"
+      },
+      "showDockIcon": {
+        "description": "کلپس (macOS) ميں ایپی علامت دکھائی دیں۔",
+        "label": "طےشدہ"
+      },
+      "title": "شروع کریں"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "این‌آئی‌وی شاید ترقی‌پذیر موڈ میں کام نہیں کر سکتا ۔ میکوز ایپ کو \"اییٹکرون\" (Bundle ID) کے طور پر شناخت کرتا ہے۔",
+      "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",
+      "title": "دیوی طریقہ"
+    },
+    "ignoredRepositories": {
+      "description": "ان رد عمل سے انکار کیا جائے گا۔",
+      "empty": "کوئی بھی معافی مانگنا نظرانداز نہیں کرتا",
+      "selectPlaceholder": "نظر انداز کرنے کے لیے محفوظ کریں...",
+      "title": "اصلاح کو نظرانداز کرنا"
+    },
+    "settings": {
+      "enabled": {
+        "description": "غلطیوں اور واقعات کے لیے نظام اطلاعات دکھائیں",
+        "label": "سسٹم فعال کریں"
+      },
+      "sound": {
+        "description": "اطلاعات جب اطلاعات دکھائی",
+        "label": "آواز چلائیں"
+      },
+      "subagentErrors": {
+        "description": "صوبائی نشستوں میں غلطیوں کے بارے میں غلط‌فہمی",
+        "label": "جس میں صوبائی ضلع شامل ہیں۔"
+      },
+      "title": "شناختی ترتیبات"
+    },
+    "snooze": {
+      "clear": "صاف‌گوئی",
+      "description": "دلیری سے اطلاعات بند کریں",
+      "descriptionWithTime": "سننود تک {{time}}",
+      "label": "سنائی اطلاعات",
+      "options": {
+        "15": "15 منٹ",
+        "30": "30 منٹ",
+        "60": "۱ گھنٹے",
+        "120": "۲ گھنٹے",
+        "240": "۴ گھنٹے",
+        "-1": "کل تک"
+      },
+      "selectDuration": "مدت منتخب کریں..."
+    },
+    "taskCompletion": {
+      "description": "اُس وقت مقامی لوگ اِس بات کی اطلاعات حاصل کریں گے کہ اُن کی آواز سنائی دیتی ہے ۔ میکوز، لینکس اور ونڈوز پر کام.",
+      "installPlugin": "کلاگ-n-go پلگ ان انسٹال کریں",
+      "title": "معجزے مکمل کریں"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "جب کسی ٹیم میں ہر کام کو پورا کرتا ہے",
+        "label": "تمام امور کی تکمیل کی۔"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "جب ایک ری سیٹ کی اطلاع دی جاتی ہے تو ٹیم کے لئے ایک پیروی کا بندوبست کریں",
+        "label": "شرح حد بندی کے بعد خودکار-resume -"
+      },
+      "clarifications": {
+        "description": "مقامی طور پر OS اطلاعات دکھایئے جب کسی کام کو آپ کے اندراج کی ضرورت ہو۔",
+        "label": "خفیہ اطلاعات"
+      },
+      "crossTeamMessage": {
+        "description": "جب کسی پیغام کو کسی دوسری ٹیم کی طرف سے آتا ہے",
+        "label": "کراس"
+      },
+      "leadInbox": {
+        "description": "ٹیمیں جب ٹیم کی قیادت میں پیغامات بھیجتا ہے",
+        "label": "باکس اطلاعات پر پیشوائی"
+      },
+      "statusChange": {
+        "description": "مقامی OS اطلاعات دکھایئے جب کسی کام کی حالت بدلتی ہے۔",
+        "label": "داخلی اسٹیٹس اطلاعات تبدیل کریں",
+        "onlySolo": {
+          "description": "صرف اس وقت جب ٹیم کے پاس ٹیم کا کوئی رکن نہیں ہے۔",
+          "label": "صرف سولو موڈ میں"
+        },
+        "statuses": {
+          "description": "جس کا نشانہ حیثیتیں ایک اعلان کو چلاتی ہیں۔",
+          "label": "ان حیثیتوں پر فوقیت نہیں دی گئی",
+          "options": {
+            "approved": "غیر متصل",
+            "completed": "مکمل",
+            "deleted": "حذف",
+            "in_progress": "آغاز",
+            "needsFix": "ضرورت",
+            "pending": "پَک",
+            "review": "اعادہ"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "جب ایجنٹ کام پر تبصرہ کرتے ہیں تو مقامی OS اطلاعات دکھائیں",
+        "label": "دستیاب تبصرے اطلاعات"
+      },
+      "taskCreated": {
+        "description": "جب نیا کام تخلیق کیا جاتا ہے تو مقامی OS اطلاعات دکھائیں",
+        "label": "CDMA اطلاعات"
+      },
+      "teamLaunched": {
+        "description": "جب ٹیم کی تیاری کر رہی ہو اور تیار ہو",
+        "label": "ٹیم نے اطلاعات لانچ کیے"
+      },
+      "title": "ٹیم",
+      "toolApproval": {
+        "description": "جب کسی ٹولے کو آپ کی منظوری کی ضرورت ہوتی ہے (سرس/سر) جبکہ ایپ پر مرکوز نہیں ہے۔",
+        "label": "معلومات کو منظور کرنا"
+      },
+      "userInbox": {
+        "description": "جب ٹیمیں آپ کو پیغامات بھیجتے ہیں",
+        "label": "باکس اطلاعات میں صارف"
+      }
+    },
+    "test": {
+      "action": "جانچ پڑتال کریں",
+      "description": "تصدیق کرنے کے لیے امتحاني اطلاع بھیجیں",
+      "failedToSend": "ٹیسٹ بھیجنے میں ناکامی",
+      "label": "ٹیسٹ کی خبریں",
+      "sending": "اتاری جارہی ہے...",
+      "sent": "نازل!",
+      "unknownError": "نامعلوم"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "درخواست",
+      "description": "اے آئی اے ایجنٹ ٹیمیں جمع کریں جو ایک خود مختاری کو مساوی طور پر کام کرتی ہیں، ٹیموں کے دور میں رابطہ کرتی ہیں اور خانان بورڈ پر کام کرتی ہیں - جس کے ساتھ تعمیر کردہ کوڈ جائزہ لیا جاتا ہے، زندہ نگرانی اور مکمل آلات کی نگرانی کرتی ہیں۔",
+      "standalone": "کھڑے ہوجاؤ",
+      "title": "بارے میں",
+      "version": "ورژن {{version}}"
+    },
+    "configuration": {
+      "editConfig": "بند کریں",
+      "exportConfig": "برآمد کنفیغ",
+      "importConfig": "غیر متصل",
+      "openInEditor": "ایڈیٹر میں کھولیں",
+      "resetToDefaults": "طےشدہ",
+      "title": "مصر"
+    },
+    "updates": {
+      "available": "وی{{version}} دستیاب",
+      "check": "اعادہات کا جائزہ لیں",
+      "checking": "پڑتال کی جا رہی ہے...",
+      "ready": "تیار کريں",
+      "unknownVersion": "نامعلوم",
+      "upToDate": "تا حال"
+    },
+    "appName": "ایجنٹ ٹیمیں"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "پیکج لوڈ کرنے میں ناکامی",
+      "saveFailed": "محفوظ کرنے میں ناکامی"
+    },
+    "footer": {
+      "autoSave": "مدون کے بعد خودکار محفوظ کریں",
+      "toClose": "بند",
+      "escapeKey": "ایس ."
+    },
+    "loading": "لوڈ کریں...",
+    "status": {
+      "invalidJson": "غیر متصل JSON",
+      "saveFailed": "محفوظ کرنے میں ناکامی",
+      "saved": "محفوظ کریں",
+      "saving": "محفوظ کیا گیا..."
+    },
+    "title": "مرتب کرو"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "منسوخ",
+      "submit": "ٹیگجر شامل کریں",
+      "title": "ٹیگجر شامل کریں"
+    },
+    "builtin": {
+      "description": "طے شدہ چیزیں جو درخواست کے ساتھ آئیں آپ اُنہیں ختم کر سکتے یا اُن کے نمونے کو نظرانداز کر سکتے ہیں ۔",
+      "title": "گر تے هو ئے ميں"
+    },
+    "card": {
+      "builtinBadge": "چین",
+      "collapseAriaLabel": "رنگ",
+      "deleteAriaLabel": "طےشدہ",
+      "editNameAriaLabel": "نام مرتب کریں",
+      "expandAriaLabel": "غیر متصل"
+    },
+    "color": {
+      "customHexTitle": "رنگ",
+      "invalidHex": "غیر متصل ہیکس"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "اگر آپ مزید معلومات حاصل کرنا چاہیں",
+      "emptyPatternHint": "تمام مواد کے ساتھ مطابقت پیدا کرنے کے لئے خالی چھوڑ دیں. جاوا Scrip regex scox استعمال کرتا ہے۔",
+      "errorStatusDescription": "ٹریگر جب کوئی آلے کی کارروائی کی اطلاع دیتا ہے غلطی (س دہشت گرد: سچ)۔",
+      "tokensUnit": "علامات",
+      "matchPatternPlaceholder": "مثلاً غلطی Edmund|n|nexceptnexceptnexceptnexceptnexceptnexceptnexceptnexceptnexceptnexcept —"
+    },
+    "custom": {
+      "description": "مخصوص اشکال یا آلاتی برآمدات کے لیے معلومات حاصل کرنے کے لیے اپنے آپ کو اسکو استعمال کریں ۔",
+      "empty": "ابھی تک کوئی دستور نہیں بنایا گیا.",
+      "title": "رنگ‌برنگی دُنیا"
+    },
+    "errors": {
+      "invalidRegexPattern": "گري دوبارہ شروع کريں"
+    },
+    "fields": {
+      "contentType": "مواد قسم",
+      "matchField": "میچ فیلڈ",
+      "matchPattern": "میچ کا اضافہ",
+      "scopeToolName": "اسکوپ / ٹول نام",
+      "scopeToolNameOptional": "اسکوپ / ٹول نام (optional)",
+      "threshold": "رنگ",
+      "tokenType": "قسم",
+      "triggerNamePlaceholder": "مثلاً ناکام بنانا",
+      "triggerNameRequired": "ٹریگر نام *"
+    },
+    "ignorePatterns": {
+      "hint": "جمع کرنے کے لئے دباؤ داخل کریں. متناسقات:",
+      "placeholder": "دوبارہ شروع کریں...",
+      "removeAriaLabel": "انداز نظر انداز کریں",
+      "summary": "اعلٰی اصول :",
+      "title": "کھیلوں کو نظر انداز کریں"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "متن ما حاصل",
+        "thinking": "سوچ",
+        "tool_result": "جواب",
+        "tool_use": "ٹول استعمال"
+      },
+      "matchFields": {
+        "args": "ترجیحات",
+        "command": "کمانڈ",
+        "content": "مواد",
+        "description": "تفصیل",
+        "file_path": "فائل طریق",
+        "fullInput": "Full Input (JSON)",
+        "glob": "گلب پلگ ان",
+        "new_string": "نیا سپرنگ",
+        "old_string": "پُرانا سرنگ",
+        "path": "پاتھ",
+        "pattern": "غیر متصل",
+        "prompt": "غیر متصل",
+        "query": "جگہ",
+        "skill": "سکیل نام",
+        "subagent_type": "ذیلی قسم",
+        "text": "متن کے مواد",
+        "thinking": "سوچ بچار",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "مواد",
+        "error_status": "تدوین خامی",
+        "token_threshold": "اعلیٰ درجے کا استعمال"
+      },
+      "tokenTypes": {
+        "input": "داخلی مرکبات",
+        "output": "ما حاصل",
+        "total": "کُل قابِن سُرخ رنگ"
+      },
+      "toolNames": {
+        "anyTool": "کسی بھی ٹول"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "ٹیسٹ ٹریگر",
+      "detectedSuffix": "غلطیوں کو الٹ دیا جاتا",
+      "more": "... اور {{count}} مزید",
+      "more_few": "... اور {{count}} مزید",
+      "more_many": "... اور {{count}} مزید",
+      "more_one": "... اور {{count}} مزید",
+      "more_other": "... اور {{count}} مزید",
+      "testTrigger": "ٹیسٹ ٹریگر",
+      "testing": "ٹیسٹ کرو...",
+      "title": "تفصیل",
+      "truncatedWarning": "تلاش جلد بند (وقت یا گنتی کی حد )۔ عملی مقابلے زیادہ ہو سکتے ہیں۔",
+      "viewSession": "طےشدہ"
+    },
+    "repositoryScope": {
+      "empty": "تمام ردِعمل پر کوئی بھی ردِعمل نہیں آتا",
+      "hint": "جب دوبارہ کوئیشن منتخب ہو جاتا ہے تو ان رد عمل میں غلطیوں کے لیے صرف آگ لگائی جاتی ہے۔",
+      "placeholder": "شامل کرنے کے لیے محفوظ کریں...",
+      "summary": "ترقی‌پذیر : پہلی صدی س .",
+      "title": "رپورتاژ تک محدود"
+    },
+    "sections": {
+      "configuration": "مصر",
+      "dotColor": "رنگ",
+      "generalInfo": "عمومی معلومات",
+      "triggerCondition": "ٹریگر کنڈیشن"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "پرو فا ئل شامل کریں",
+      "cancel": "منسوخ",
+      "deleteProfile": "پرو فا ئل نصب کریں",
+      "editProfile": "پرو فا ئل مرتب کرو",
+      "save": "محفوظ کریں"
+    },
+    "authMethods": {
+      "agent": "SSH ایجنٹ",
+      "auto": "Auto (from SSH Config)",
+      "password": "پاس ورڈ",
+      "privateKey": "نجی کلید"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "حذف",
+      "message": "کیا آپ یقینی طور پر حذف کرنا چاہتے ہیں \"{{name}}\"؟ یہ غلط نہیں ہو سکتا ۔",
+      "title": "پرو فا ئل حذف"
+    },
+    "description": "محفوظ کریں SSH جلدی سے اتصال قائم کرنے میں غلطی",
+    "empty": {
+      "description": "شامل کریں SSH تیزی سے اتصال قائم کرنے کے ليے پرو فا ئل",
+      "title": "کو محفوظ نہیں کیا گیا"
+    },
+    "form": {
+      "authentication": "توثیق:",
+      "host": "میزبان",
+      "name": "نام",
+      "passwordPrompt": "آپ کو نیٹ ورک سے اتصال قائم کرنے کے دوران پاس ورڈ متعین کیا جائے گا.",
+      "port": "پورٹ",
+      "privateKeyPath": "نجی کلید پاتھ",
+      "username": "پرنٹ",
+      "namePlaceholder": "میرا سرور",
+      "hostPlaceholder": "میزبان یا آئی پی",
+      "usernamePlaceholder": "صارف"
+    },
+    "loading": "لوڈ کریں...",
+    "title": "کام کی سہولیات"
+  },
+  "connection": {
+    "actions": {
+      "connect": "پرنٹ",
+      "connecting": "متصل",
+      "disconnect": "غیر متصل",
+      "testConnection": "ٹیسٹ کا نتیجہ",
+      "testing": "ٹیسٹ کرو..."
+    },
+    "currentMode": {
+      "description": "سیشن فائلیں کیلئے معلومات",
+      "label": "حالیہ طریقے",
+      "local": "Local ({{path}})"
+    },
+    "description": "اس دور دراز مشین سے رابطہ کریں تاکہ وہ وہاں چل سکیں",
+    "form": {
+      "authentication": "توثیق:",
+      "host": "میزبان",
+      "password": "پاس ورڈ",
+      "port": "پورٹ",
+      "privateKeyPath": "نجی کلید پاتھ",
+      "username": "پرنٹ",
+      "hostPlaceholder": "میزبانی یا نام SSH انکار کرو",
+      "usernamePlaceholder": "صارف"
+    },
+    "savedProfiles": {
+      "title": "محفوظ پرو فا ئل"
+    },
+    "ssh": {
+      "title": "SSH اتصال کا اضافہ ہوگیا"
+    },
+    "status": {
+      "connectedTo": "جگہ {{host}}",
+      "remoteSessions": "دُور سے اجلاسوں پر غور کرنا SSH"
+    },
+    "test": {
+      "failed": "اتصال کا اضافہ ناکام ہوگیا {{error}}",
+      "success": "اتصال کا اضافہ ناکام ہوگیا",
+      "unknownError": "نامعلوم"
+    },
+    "title": "دور دراز اتصال"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "منسوخ",
+      "cancelLogin": "منسوخ",
+      "connectChatGpt": "Connect ChatGPT",
+      "delete": "حذف",
+      "disable": "معطل کریں",
+      "disconnectAccount": "اکاؤنٹ کی ترمیم",
+      "generateLink": "جینیاتی ربط",
+      "openLogin": "جگہ",
+      "reconnectAnthropic": "دوبارہ شروع کریں",
+      "refresh": "خوشی",
+      "replaceKey": "کلید لوڈ کریں",
+      "saveEndpoint": "مقصد ختم ہونے سے محفوظ کریں",
+      "saveKey": "کلید محفوظ کریں",
+      "saving": "محفوظ کیا گیا...",
+      "setApiKey": "جگہ API کلید",
+      "updateKey": "کلید تجدید کریں",
+      "useCode": "کوڈ استعمال کریں"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "محفوظ کردہ سندیں لوڈ کریں...",
+      "projectScope": "منصوبہ بندی",
+      "scope": "ریشم",
+      "storedIn": "محفوظ کیا گیا {{backend}}",
+      "userScope": "صا لح",
+      "storedInApp": "ایپ میں محفوظ کیا گیا",
+      "providers": {
+        "anthropic": {
+          "name": "انتھک API کلید",
+          "title": "API کلید",
+          "description": "براہِ‌راست این‌تھک استعمال کریں API کلیدی مقصد API-بلڈ رسائی. جب آپ واپس لوٹ جاتے ہیں تو آپ کا انتھک سیشن دستیاب رہتا ہے ۔",
+          "placeholder": "ایس این اے..."
+        },
+        "codex": {
+          "name": "نام API کلید",
+          "title": "API کلید",
+          "description": "کھولیں API ایک سیکنڈری رسم الخط کے طور پر کلیدی۔ اگر آپ متن تبدیل کریں تو API کلیدی طریقہ، ایپ آئی ایم ہوگی OPENAI_API_KEY اندر CODEX_API_KEY مقامی سیاحوں کیلئے.",
+          "placeholder": ". . ."
+        },
+        "gemini": {
+          "name": "جمی API کلید",
+          "title": "API رسائی",
+          "description": "استعمال `GEMINI_API_KEY` جمی کے لئے API پیچھے ہٹ. CLI SDK اور ADC اسکی ضرورت نہیں ۔",
+          "placeholder": "ایاز..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "ای ایس پی این کرک انفو: {{state}}",
+        "connected": "غیر متصل",
+        "description": "مقامی رمزِ ڈاک (پوسٹ-profile account سیشن) مرتب کریں جسے اختیارات واپس اصل میں واپس لائے گئے",
+        "loginInProgress": "ترقی میں لاگس",
+        "plan": "پلان: {{plan}}",
+        "reconnectRequired": "دوبارہ شروع",
+        "title": "ChatGPT account",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto will keep using the detected API key until ChatGPT is connected.",
+          "detectedApiKeyNeedsApiMode": "{{message}} جواب API کلید صرف تب ہی استعمال کی جاتی ہے جب آپ کو تبدیل کرنے کے بعد استعمال کیا جاتا ہے۔ API کلیدی طریقہ.",
+          "localArtifactsNoSession": "Codex CLI currently reports no active ChatGPT account. Local Codex account data exists, but no active managed session is selected. Usage limits appear here only after Codex CLI sees one.",
+          "noActiveAccount": "Codex CLI currently reports no active ChatGPT account. Usage limits appear here only after Codex CLI sees one.",
+          "reconnectBeforeUsage": "Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here.",
+          "usageLimitsAfterReport": "Usage limits appear here after Codex reports them for the connected ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "پڑتال",
+        "downloading": "اوپر لکھیں",
+        "installCli": "نصب کریں CLI",
+        "installing": "نصب کی جارہی ہے",
+        "retryInstall": "تجدید نصب کریں",
+        "title": "نصب کریں CLI ایپ اعداد میں"
+      },
+      "rateLimits": {
+        "credits": "طےشدہ",
+        "creditsDescription": "Credits are shown separately from window-based subscription usage and may be unavailable for plan-backed ChatGPT sessions.",
+        "noSecondaryWindow": "اِس اکاؤنٹ کے ذریعے پتہ چلتا ہے کہ اُس کی نظر میں کوئی دوسرا کھڑکی نہیں ہے ۔",
+        "notReported": "رپورٹ نہیں",
+        "primaryReset": "ابتدائی دوبارہ شروع",
+        "primaryUsed": "ابتدائی استعمال شدہ",
+        "primaryWindow": "ابتدائی ونڈو",
+        "remainingLeft": "{{value}} بند",
+        "remainingUnknown": "غیر متصل",
+        "secondaryReset": "ثانوی نظام",
+        "secondaryUsed": "ثانوی استعمال",
+        "secondaryWindow": "ثانوی ونڈو",
+        "usedQuotaNote": "اِن فیصد شوز میں کیوبیک کا استعمال کِیا گیا ہے ۔",
+        "weeklyReset": "وِڈِن",
+        "weeklyUsed": "ہفتہ‌وار استعمال",
+        "weeklyUsedOneWeek": "ہفتہ‌وار استعمال (1w)",
+        "weeklyWindow": "وی پی این ونڈو",
+        "secondaryFallback": "ثانوی",
+        "secondaryWindowNote": " ویژیول حدود کو الگ سے ظاہر کیا جاتا ہے۔ {{window}} کھڑکی.",
+        "usageExplanationGeneric": "نمائش کے لیے استعمال ہونے والے کنول استعمال کئے گئے ہیں، باقی رہنے والے نہیں.",
+        "usageExplanationWindowOnly": "موجودہ دور میں کوب استعمال کیا گیا ہے۔ {{window}} کھڑکیاں نہیں رہیں گی ۔",
+        "usageExplanationWithRemaining": "{{used}} استعمال - {{remaining}} حالیہ ميں دا ئيں {{window}} کھڑکی."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "اشارہ",
+      "authTokenMissing": "اَے [ یہوواہ ] !",
+      "baseUrl": "بیس URL",
+      "description": "Antropic-comptible مقامی runtimepoint استعمال کریں۔",
+      "keepSavedToken": "نشان کو محفوظ رکھنے کے لئے پَر ترک نہ کریں",
+      "title": "مقامی / مطابقت ختم",
+      "tokenStatus": "انڈیا {{status}}",
+      "validation": {
+        "baseUrlRequired": "بیس URL مطلوب",
+        "firstPartyAnthropic": "خودکار استعمال کریں API پہلی پارے اینتھیروپ کے لیے کلیدی حیثیت رکھتا ہے۔",
+        "httpRequired": "Base URL must use http:// or https://",
+        "invalidUrl": "غیر متصل URL",
+        "noCredentials": "بیس URL سند شامل نہیں کی جانی چاہئے"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "نقطہ معذور ختم. حفاظتی نشان برقرار رکھا گیا ۔",
+        "endpointSaved": "اختتامی مقصد بچا لیا",
+        "endpointSavedTokenMissing": "بالآخر پوائنٹ بچ گیا۔ اَے [ یہوواہ ] !"
+      }
+    },
+    "connection": {
+      "authenticationMethod": "توثیقی طریقے",
+      "descriptions": {
+        "anthropic": "اس بات کا انتخاب کریں کہ app-launding Anthropic Constitution کس طرح.",
+        "codex": "Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.",
+        "gemini": "لباس کو ڈھانپ لیں API رسائی. CLI SDK اور ADC ابھی بھی خودبخود دریافت کیا جاتا ہے۔",
+        "opencode": "OpenCode تصدیق اور فراہم کار نقل و حمل کو اوپن سی کوڈ رن ٹائم کے زیر انتظام کیا گیا ہے۔"
+      },
+      "method": "اتصال کا اضافہ ناکام ہوگیا",
+      "mode": "طریقے: {{mode}}",
+      "selected": "منتخب کردہ",
+      "switching": "سوئچنگ...",
+      "title": "اتصال کا اضافہ ہوگیا"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API کلید"
+      },
+      "anthropic": {
+        "apiKeyDescription": "استعمال ANTHROPIC_API_KEY اور انتھک API بل.",
+        "autoDescription": "Antropic Rantime devices اور بہترین مقامی تناسب دستیاب ہے۔",
+        "hint": "خود کار اینٹی‌پوری اپنے غیر مستحکم مقامی فیصلہ‌کُن حل پر قائم رہتی ہے ۔",
+        "subscriptionDescription": "اپنے مقامی انتھک نشان کو سیشن میں استعمال کریں",
+        "subscriptionTitle": "اِن میں سے زیادہ‌تر لوگ اِس بیماری میں مبتلا ہیں ۔"
+      },
+      "auto": {
+        "title": "خودکار"
+      },
+      "codex": {
+        "apiKeyDescription": "استعمال OPENAI_API_KEY اور CODEX_API_KEY مقامی رسم‌ورواج کی بنیاد",
+        "autoDescription": "Prefer your ChatGPT account and subscription. Use API key mode only if needed.",
+        "chatgptDescription": "Use your connected ChatGPT account and Codex subscription.",
+        "chatgptTitle": "ChatGPT account",
+        "hint": "Codex always runs through the native runtime. Auto prefers your ChatGPT account before falling back to API-key credentials."
+      }
+    },
+    "description": "اس بات کا تعیّن کریں کہ ہر فراہم کُنندہ کس طرح ملتا ہے اور کس طرح معاونت کرتا ہے ۔",
+    "fastMode": {
+      "defaultOff": "طے شدہ",
+      "description": "جب طے شدہ ماڈل اور اسے چلانے کی اجازت دیتا ہے",
+      "disabledHint": "جب تک کوئی ٹیم بڑی تیزی سے ورزش نہیں کر سکتی ، نئی این‌تھی‌پوری کی رفتار معمول پر قائم رہتی ہے ۔",
+      "enabledHint": "نئے این‌تھی‌پی‌پی‌کُن نظام مقررہ وقت سے تیزی سے چلنے والے موڈ کی درخواست کریں گے ۔",
+      "notExposed": "اِس کی وجہ یہ ہے کہ اِس میں تیزی سے چلنے والے موڈ کو ظاہر نہیں کِیا جاتا ۔",
+      "preferFast": "تیز رفتار",
+      "title": "دباؤ کا ریشو:",
+      "unavailableForRuntime": "تیز رفتار موڈ فی الحال اس انتھک رنمنٹ کے لئے غیر موزوں ہے."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API کلیدی طریقہ منتخب کیا جاتا ہے لیکن کوئی انتھک نہیں ہوتا۔ API آج بھی سچ بولنا دستیاب ہے ۔",
+      "anthropicStoredKeyAvailable": "محفوظ API کلیدی دستیاب ہے، لیکن app-launed Antropic مہموں میں اسے صرف تبدیل کرنے کے بعد استعمال کیا جاتا ہے۔ API کلیدی طریقہ.",
+      "anthropicSubscriptionMissing": "اِس سلسلے میں ایک مثال پر غور کریں ۔ یہ فراہم کِیا گیا تھا ۔",
+      "authTokenMissing": "اَے [ یہوواہ ] ! بہت سے مقامی اینتھولک-کومپل اختتامی خطوں کی ضرورت ہوتی ہے۔",
+      "chatgptLoginPending": "Waiting for ChatGPT account login to finish...",
+      "chatgptLoginStarting": "Starting ChatGPT login...",
+      "codexApiKeyMissing": "API کلیدی طریقہ منتخب کیا جاتا ہے لیکن نہیں OPENAI_API_KEY یا CODEX_API_KEY آج بھی سچ بولنا دستیاب ہے ۔",
+      "codexLocalArtifactsNoSession": "Codex CLI currently has no active ChatGPT account. Local Codex account data exists, but no active managed session is selected.",
+      "codexNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+      "codexNoChatgptAccount": "Codex CLI currently has no active ChatGPT account. Connect ChatGPT to use your subscription.",
+      "codexNoCredential": "No ChatGPT account or API key is available yet.",
+      "geminiApiUnavailable": "جمی API فی الحال غیر معمولی ہے۔ اوپر لکھیں `GEMINI_API_KEY` یہاں یا تو درست گوگل استعمال کرتے ہیں۔ ADC سند.",
+      "withApiKeyFallback": "{{message}} سوئچ API پا ني کو استعمال کر نے کے ليے کلیدی طریقہ API کلیدی."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "کسی کو استعمال کرنے کے لئے فورس ایپ کی شروعات. API کلیدی کردار ۔",
+        "auto": "چلانے کا عمل محفوظ کریں API اس ایپ میں کلیدیں صرف تبدیل کرنے کے بعد استعمال کی جاتی ہیں۔ API کلیدی طریقہ.",
+        "oauth": "مقامی اینتھوپی سیشن کو استعمال کرنے کے لئے فورس ایپ-لانگ اپ اپ لانچ."
+      },
+      "codex": {
+        "apiKey": "طاقت‌ور لوگوں کو استعمال کرنے کیلئے استعمال کِیا جاتا ہے OPENAI_API_KEY / CODEX_API_KEY بل.",
+        "auto": "Prefer your ChatGPT account when it is available. Fall back to API key mode only when needed.",
+        "chatgpt": "Force native Codex launches to use your connected ChatGPT account and subscription."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "اتصال کی تبدیلی کا انتظار کررہا ہے...",
+      "refreshingProviderStatus": "نیٹ ورک منیجر حیثیت...",
+      "savingCompatibleEndpoint": "مطابقت ختم کرنے سے مراد",
+      "switchingAnthropicSubscription": "اِس سے ظاہر ہوتا ہے کہ اِس کا کوئی فائدہ نہیں ہے ۔",
+      "switchingApiKey": "سوئچ API کلید...",
+      "switchingApiKeyMode": "سوئچ API کلید طریقہ...",
+      "switchingAuto": "خود کار کو سوئی مار ...",
+      "switchingChatgpt": "Switching to ChatGPT account mode..."
+    },
+    "provider": "فراہم کُنندہ",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "انتھک فی الحال کوئی علاحدہ رن بیک بیک اپنگ نہیں ہے.",
+        "codex": "اب متن صرف مقامی ریل‌گاڑی کے ذریعے چلتا ہے ۔",
+        "gemini": "ایسے انتخاب کریں جن میں جمی رن بیک وقت مختلف موڈل استعمال کرنا چاہیے۔",
+        "opencode": "اوپن کیوڈ اپنی خود انتظامیہ کی میزبانی کرتا ہے۔ اب صرف حالت کو ظاہر کرتا ہے."
+      },
+      "title": "وقت",
+      "updating": "انتظار جاری رکھنا..."
+    },
+    "runtimeSummary": "چلائیں : {{runtime}}",
+    "status": {
+      "configured": "مصر",
+      "enabled": "فعال کریں",
+      "notConfigured": "غیر متصل",
+      "notSet": "اور ان میں کمی نہ کی",
+      "off": "بندکرو",
+      "unknown": "نامعلوم"
+    },
+    "title": "فراہم کُنندہ کی ترتیبات",
+    "usage": {
+      "apiKey": "استعمال API کلید",
+      "apiKeyRequired": "API کلید درکار",
+      "compatibleEndpoint": "متوازن نقطۂ‌نظر استعمال کرنا",
+      "notConnected": "متصل نہیں",
+      "usingMethod": "استعمال {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API کلیدی حیثیت ختم ہو گئی لیکن فراہم‌کردہ حالت کو تازگی بخشنے میں ناکام رہا ۔",
+      "apiKeySavedRefreshFailed": "API اِس سلسلے میں ایک مثال پر غور کریں ۔",
+      "connectionUpdatedRefreshFailed": "اتصال کی تجدید کی گئی لیکن فراہم‌کردہ حالت کو بہتر بنانے میں ناکام رہا ۔",
+      "deleteApiKey": "حذف کرنے میں ناکامی API کلید",
+      "disableEndpoint": "مقصد کو ختم کرنے میں ناکامی",
+      "endpointDisabledRefreshFailed": "( ۱ - کرنتھیوں ۱۵ : ۳۳ ) اس سے ظاہر ہوتا ہے کہ اُس نے اپنی زندگی میں تبدیلیاں کیں ۔",
+      "endpointSavedRefreshFailed": "آخرکار خاتمہ آ گیا لیکن اُس کی حالت تازہ نہ ہو سکی ۔",
+      "refreshCodexAccount": "حساب کو تازہ کرنے میں ناکام",
+      "saveApiKey": "محفوظ کرنے میں ناکامی API کلید",
+      "saveEndpoint": "مقصد کو ختم کرنے میں ناکامی",
+      "updateAnthropicFastMode": "اینتھیروپ تیزاب موڈ کو اپ ڈیٹ کرنے میں ناکام",
+      "updateConnection": "نیا اتصال مدون نہیں ہوسکتا",
+      "updateRuntimeBackend": "دوبارہ شروع کرنے میں ناکامی",
+      "apiKeyRequired": "API کلید درکار ہے"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "خودکار",
+        "oauth": "سبکدوش / اوست",
+        "chatgpt": "ChatGPT account",
+        "apiKey": "API کلید",
+        "anthropicSubscription": "اِن میں سے زیادہ‌تر لوگ اِس بیماری میں مبتلا ہیں ۔"
+      },
+      "authMethod": {
+        "apiKey": "API کلید",
+        "apiKeyHelper": "API کلیدی مدد",
+        "oauth": "اووت",
+        "claudeSubscription": "طےشدہ",
+        "geminiCli": "جمی CLI",
+        "googleAccount": "گوگل اکاؤنٹ",
+        "serviceAccount": "سروس اکاؤنٹ"
+      },
+      "runtime": {
+        "codexNative": "نام",
+        "currentRuntime": "موجودہ زمانے",
+        "selectedRuntime": "منتخب کردہ وقفہ",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "پڑتال کی جا رہی ہے...",
+        "checked": "چیک کیا گیا",
+        "providerActivity": "فراہم کُنندہ",
+        "notConnected": "متصل نہیں",
+        "startingChatGptLogin": "Starting ChatGPT login...",
+        "waitingForChatGptLogin": "Waiting for ChatGPT account login...",
+        "chatGptVerificationDegraded": "ChatGPT account detected - account verification is currently degraded.",
+        "chatGptAccountReady": "ChatGPT account ready",
+        "apiKeyReady": "API کلید تیار",
+        "codexLocalAccountNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+        "codexNoActiveManagedSession": "Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.",
+        "codexNoActiveChatGptLogin": "Codex CLI reports no active ChatGPT login",
+        "connectChatGptForSubscription": "Connect a ChatGPT account to use your Codex subscription.",
+        "codexNativeReady": "حروف تہجی تیار",
+        "codexNativeUnavailable": "حروفِ تہجی",
+        "unavailableInCurrentRuntime": "موجودہ دور میں غیر متصل",
+        "connectedViaApiKey": "جواب API کلید",
+        "apiKeyConfiguredNotVerified": "API کلیدی ربط ، لیکن ابھی تصدیق نہیں ہوئی",
+        "apiKeyModeMissingCredential": "API کلیدی طریقہ انتخاب کرتا ہے لیکن کوئی نہیں API کلیدی کلید",
+        "connectedVia": "جواب {{method}}",
+        "unableToVerify": "درستگی حاصل کرنے کے قابل"
+      },
+      "mode": {
+        "selectedAuth": "منتخب شدہ Auth: {{authMode}}",
+        "preferredAuth": "Preferred auth: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API کلیدی کلید",
+        "savedApiKeyAvailable": "محفوظ کریں API انتظامیہ میں کلیدی معلومات",
+        "apiKeyAlsoConfigured": "API نقل‌مکانی کرنے میں بھی کلیدی کردار",
+        "apiKeyConfiguredInManage": "API کلید پلگ ان میں نصب ہے",
+        "apiKeyFallbackInManage": "API گرنے کی صورت میں مرکبات میں بھی کُنجی دستیاب ہے",
+        "availableAsFallback": "{{summary}} - گرنے کے طور پر دستیاب",
+        "savedApiKeyAvailableIfSwitch": "محفوظ کریں API اگر آپ کو تبدیل کرنا پڑے تو پلگ ان میں کلید دستیاب ہے API کلید موڈ",
+        "availableIfSwitch": "{{summary}} - دستیاب اگر آپ کو تبدیل کریں تو API کلید موڈ",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto will use this until ChatGPT is connected"
+      },
+      "actions": {
+        "connect": "پرنٹ",
+        "connectAnthropic": "یتیم‌خانے",
+        "connectChatGpt": "Connect ChatGPT",
+        "disconnect": "غیر متصل",
+        "openLogin": "لاگ ان"
+      },
+      "disconnect": {
+        "anthropicTitle": "کیا یہ خالق کی کاریگری ہے ؟",
+        "anthropic": "اس سے مقامی اینتھولک سیشن کو پلگ انس سے ہٹا دیا جاتا ہے۔ CLI چلا وقت.",
+        "anthropicWithApiKey": "اس سے مقامی اینتھولک سیشن کو پلگ انس سے ہٹا دیا جاتا ہے۔ CLI چلا وقت. محفوظ کریں API پلگ ان میں کلیدیں دستیاب ہیں",
+        "geminiTitle": "غیر متصل جمی CLI?",
+        "gemini": "یہ مقامی جمی کو واضح کرتی ہے۔ CLI سیشن میقات. بیرون ملک ADC سندیں اور بچا لیا API کلیدیں حذف نہیں کی جاتیں۔"
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "اعادہات کا جائزہ لیں",
+      "checking": "پڑتال کی جا رہی ہے...",
+      "extensions": "وسیع خط",
+      "installRuntime": "نصب کریں {{runtime}}",
+      "manage": "پرنٹ",
+      "recheck": "دوبارہ شروع کریں",
+      "reinstallRuntime": "انکار کرو {{runtime}}",
+      "retry": "دوبارہ کوشش",
+      "update": "تجدید"
+    },
+    "installer": {
+      "checkingLatest": "تازہ ترین نسخہ چیک کریں...",
+      "downloading": "اتاری جارہی ہے...",
+      "failed": "غیر متصل",
+      "installed": "رفتار{{version}}",
+      "installing": "نصب کی جارہی ہیں...",
+      "latest": "تازہ",
+      "verifying": "معاف کرنا"
+    },
+    "labels": {
+      "multimodel": "مٹی"
+    },
+    "loading": {
+      "aiProviders": "آپ روزی کا جائزہ لیتے ہیں...",
+      "claudeCli": "طےشدہ CLI..."
+    },
+    "provider": {
+      "backend": "پشتو: {{backend}}",
+      "loadingModels": "ماڈل لوڈ کریں...",
+      "modelsUnavailable": "اس رنمنٹ عمارت کے لیے ماڈلز غیر ضروری ہیں۔",
+      "runtime": "چلائیں : {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "توثیق نہیں ہو سکی",
+      "authUpdated": "توثیقی طریقے",
+      "loggedOut": "فراہم کُنندہ انسٹال کریں",
+      "login": "لاگ ان",
+      "logout": "لاگ ان",
+      "logoutFailed": "لاگout ناکام"
+    },
+    "status": {
+      "configuredNotFound": "س . ع . {{runtime}} نہیں ملا.",
+      "foundButFailed": "{{runtime}} مل گیا لیکن شروع کرنے میں ناکام رہا",
+      "healthCheckFailed": "س . ع . {{runtime}} اس کی شروعاتی صحت کا چیک ناکام رہا۔",
+      "notInstalled": "{{runtime}} نصب نہیں کی گئی"
+    },
+    "title": "CLI وقت"
+  },
+  "cliStatus": {
+    "versionUpgrade": "وی{{current}} -++ v{{latest}}"
+  }
+}

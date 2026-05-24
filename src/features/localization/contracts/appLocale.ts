@@ -11,6 +11,9 @@ export const APP_LOCALE_PREFERENCES = [
   'fr',
   'ar',
   'bn',
+  'ur',
+  'id',
+  'de',
 ] as const;
 
 export const RESOLVED_APP_LOCALES = [
@@ -25,6 +28,9 @@ export const RESOLVED_APP_LOCALES = [
   'fr',
   'ar',
   'bn',
+  'ur',
+  'id',
+  'de',
 ] as const;
 
 export type AppLocalePreference = (typeof APP_LOCALE_PREFERENCES)[number];

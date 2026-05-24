@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "منسوخ کریں",
+    "close": "بند کریں",
+    "copied": "کاپی ہو گیا",
+    "copyUrl": "URL کاپی کریں",
+    "open": "کھولیں",
+    "reveal": "دکھائیں",
+    "retry": "دوبارہ کوشش کریں",
+    "save": "محفوظ کریں",
+    "showLess": "کم دکھائیں",
+    "showMore": "مزید دکھائیں",
+    "refresh": "تازہ کریں",
+    "reset": "ری سیٹ کریں",
+    "copyToClipboard": "کلپ بورڈ میں کاپی کریں",
+    "moreActions": "مزید کارروائیاں",
+    "closeDialog": "ڈائیلاگ بند کریں",
+    "goToDashboard": "ڈیش بورڈ پر جائیں",
+    "or": "یا",
+    "hide": "چھپائیں",
+    "resetSelection": "انتخاب ری سیٹ کریں"
+  },
+  "code": {
+    "line": "لائن {{line}}",
+    "lines": "لائنیں {{from}}-{{to}}",
+    "moreLines": "({{count}} مزید لائنیں...)",
+    "moreLines_few": "({{count}} مزید لائنیں...)",
+    "moreLines_many": "({{count}} مزید لائنیں...)",
+    "moreLines_one": "({{count}} مزید لائن...)",
+    "moreLines_other": "({{count}} مزید لائنیں...)",
+    "code": "کوڈ",
+    "preview": "پیش منظر",
+    "markdownPreview": "Markdown پیش منظر",
+    "linesParenthesized": "(لائنیں {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid syntax error"
+  },
+  "contextBadge": {
+    "badge": "پرنٹ",
+    "breakdown": {
+      "text": "متن",
+      "thinking": "سوچ"
+    },
+    "detailsAria": "متعلقه تفصیلات",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} علامات",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md فائلیں",
+      "mentionedFiles": "فائلیں یاد کریں",
+      "taskCoordination": "غیر متصل",
+      "thinkingText": "سوچنا + متن",
+      "toolOutputs": "حاصلات",
+      "userMessages": "صارف پیغامات"
+    },
+    "title": "اس موڑ پر نئی شناخت",
+    "tokenCount": "~{{tokens}} علامات",
+    "totalNewTokens": "مکمل نئے نشانات",
+    "turn": "بند کریں {{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} علامات",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} علامات",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} علامات",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} علامات"
+  },
+  "locales": {
+    "emptyMessage": "کوئی زبان نہیں ملی۔",
+    "names": {
+      "en": "انگریزی",
+      "ru": "روسی",
+      "zh": "چینی",
+      "ja": "جاپانی",
+      "ko": "کوریائی",
+      "es": "ہسپانوی",
+      "hi": "ہندی",
+      "pt": "پرتگالی",
+      "fr": "فرانسیسی",
+      "ar": "عربی",
+      "bn": "بنگالی",
+      "ur": "اردو",
+      "id": "انڈونیشیائی",
+      "de": "جرمن",
+      "system": "سسٹم"
+    },
+    "searchPlaceholder": "زبان تلاش کریں...",
+    "selectPlaceholder": "ایپ کی زبان منتخب کریں...",
+    "systemWithResolved": "سسٹم - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "کوئی ممبر نہیں ملا۔",
+    "searchPlaceholder": "ممبرز تلاش کریں...",
+    "unassigned": "غیر تفویض شدہ",
+    "teammateFallback": "ٹیم میٹ"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "پڑتال",
+        "downloading": "اوپر لکھیں",
+        "installCli": "نصب کریں CLI",
+        "installing": "نصب کی جارہی ہے",
+        "retryInstall": "تجدید نصب کریں"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "کوئی ملتی جلتی تجاویز نہیں",
+    "searching": "تلاش جاری ہے...",
+    "searchingFiles": "فائلیں تلاش کریں...",
+    "findInConversation": "گفتگو میں تلاش کریں...",
+    "resultCount": "{{current}} جواب {{total}}",
+    "resultCountCapped": "{{current}} جواب {{total}}+",
+    "noResults": "کوئی نتیجہ نہیں",
+    "previousResultShortcut": "سابقہ نتائج (Shift+ داخلے)",
+    "nextResultShortcut": "اگلا نتیجہ ( داخل )",
+    "closeShortcut": "بند کرو (Esc)",
+    "nothingFound": "کچھ نہیں ملا",
+    "placeholder": "تلاش کریں..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "اِس شمارے میں",
+      "clearFilters": "صاف فیلڈز",
+      "createSchedule": "ایجاد کریں",
+      "delete": "حذف",
+      "edit": "مرتب",
+      "pause": "غیر متصل",
+      "resume": "دوبارہ شروع",
+      "runNow": "اب بھاگو"
+    },
+    "empty": {
+      "description": "کسی بھی ٹیم پر ایک شیڈول بنائیں جس میں کارن اظہارات سے کام لیا جاتا ہے۔ تمام ٹیموں سے آنے والے کھلاڑی یہاں نظر آئیں گے۔",
+      "noMatches": "کوئی شیڈول موجودہ فیلڈرز سے ملتا جلتا نہیں۔",
+      "title": "کوئی مقررہ کام نہیں ہے"
+    },
+    "filters": {
+      "allTeams": "تمام ٹیمیں"
+    },
+    "item": {
+      "loadingRunHistory": "لوڈ کرتا ہے تاریخ",
+      "nextRun": "اگلا: {{value}}",
+      "noRunsYet": "ابھی تک جاری نہیں ہے"
+    },
+    "loading": "انتظامات ...",
+    "searchPlaceholder": "تلاش کے شیڈول ...",
+    "status": {
+      "active": "فعال",
+      "all": "تمام",
+      "disabled": "بند",
+      "paused": "رکاوٹ"
+    },
+    "title": "سبز رنگ"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "بند",
+      "pin": "پینین",
+      "unhide": "غیر متصل"
+    },
+    "empty": {
+      "noMatchingSessions": "کوئی ملتی جلتی سیٹ نہیں",
+      "noMatchingSessionsDescription": "اس منصوبے میں ابھی تک کوئی ملتی جلتی سیٹ نہیں ہے۔",
+      "noMatchingSessionsFiltered": "فراہم کُنندہ دوبارہ انسٹال کریں یا اس کی دوبارہ کوشش کریں.",
+      "noSessions": "کوئی سیٹ نہیں پائی گئی",
+      "noSessionsDescription": "اس منصوبے کی اب تک کوئی سیشن نہیں ہے۔",
+      "selectProject": "اجلاسوں کو دیکھنے کے لئے ایک منصوبہ منتخب کریں"
+    },
+    "errors": {
+      "loading": "سیشن لوڈ کرنے میں غلطی"
+    },
+    "loadedMatchingMore": "{{count}} مزید بوجھ اُٹھانے کے لئے کتابِ‌مُقدس کے اس حصے کو استعمال کِیا گیا ۔",
+    "loadingMore": "مزید نشستیں لوڈ کریں...",
+    "pinned": "پینین",
+    "scrollToLoadMore": "بھاری بوجھ اٹھانے کے لیے",
+    "search": {
+      "clear": "سیشن تلاش",
+      "placeholder": "تلاش کی مجلس..."
+    },
+    "selection": {
+      "cancel": "غیر متصل انتخاب",
+      "exitMode": "انتخاب کا طریقہ اختیار کریں",
+      "hideSelected": "انتخابی تقریبات",
+      "pinSelected": "پینین انتخابی تقریبات",
+      "selectSessions": "سیٹ منتخب کریں",
+      "selected": "{{count}} منتخب",
+      "unhideSelected": "غیرمتوقع انتخابی تقریبات",
+      "selected_few": "{{count}} منتخب",
+      "selected_many": "{{count}} منتخب",
+      "selected_one": "{{count}} منتخب",
+      "selected_other": "{{count}} منتخب"
+    },
+    "sort": {
+      "byContext": "کیوبیک",
+      "byContextTooltip": "سیاق‌وسباق کا استعمال کریں",
+      "byRecentTooltip": "حالیہ ترتیب سے ترتیب دیں",
+      "contextLoadedOnly": "صرف قطاروں کو اُوپر سے اُٹھا کر رکھیں ۔"
+    },
+    "title": "جمع",
+    "visibility": {
+      "hideHidden": "خفیہ نشستیں",
+      "showHidden": "سیشن چھپے ہوئے دکھائی دیں"
+    },
+    "worktree": {
+      "switch": "سوئی کا کام"
+    },
+    "loadedMatchingMore_few": "{{count}} مزید بوجھ اُٹھانے کے لئے کتابِ‌مُقدس کے اس حصے کو استعمال کِیا گیا ۔",
+    "loadedMatchingMore_many": "{{count}} مزید بوجھ اُٹھانے کے لئے کتابِ‌مُقدس کے اس حصے کو استعمال کِیا گیا ۔",
+    "loadedMatchingMore_one": "{{count}} مزید بوجھ اُٹھانے کے لئے کتابِ‌مُقدس کے اس حصے کو استعمال کِیا گیا ۔",
+    "loadedMatchingMore_other": "{{count}} مزید بوجھ اُٹھانے کے لئے کتابِ‌مُقدس کے اس حصے کو استعمال کِیا گیا ۔",
+    "failedToLoad": "سیشن لوڈ کرنے میں ناکامی",
+    "loading": "سیشن لوڈ کریں...",
+    "filter": {
+      "title": "فائلز"
+    },
+    "count": "{{count}} اجلاس",
+    "count_one": "{{count}} سیشن",
+    "count_other": "{{count}} اجلاس",
+    "count_few": "{{count}} اجلاس",
+    "count_many": "{{count}} اجلاس",
+    "inProgress": "ترقی میں ہے..."
+  },
+  "states": {
+    "loading": "لوڈ ہو رہا ہے...",
+    "offline": "آف لائن",
+    "online": "آن لائن",
+    "unknown": "نامعلوم",
+    "error": "خرابی"
+  },
+  "markdown": {
+    "imageFallback": "[مگی: {{label}}]",
+    "largeContentNotice": "مواد بہت بڑا ہے ({{count}} حسابات)۔ یو آئی اے کے جوابات کو برقرار رکھنے کے لیے پیشگی رائے ظاہر کرنا۔",
+    "largeContentTitle": "بڑے مواد کو یو آئی ٹی کو روکنے کے لیے خامرے کے طور پر دکھایا جاتا ہے۔",
+    "raw": "روس",
+    "rawPreview": "رُجحان",
+    "renderMarkdown": "رنگ",
+    "showAll": "طےشدہ",
+    "showMore": "دکھائیں",
+    "showRaw": "طےشدہ",
+    "showingChars": "دکھائیں {{shown}} / {{total}} حساب",
+    "largeContentNotice_few": "مواد بہت بڑا ہے ({{count}} حسابات)۔ یو آئی اے کے جوابات کو برقرار رکھنے کے لیے پیشگی رائے ظاہر کرنا۔",
+    "largeContentNotice_many": "مواد بہت بڑا ہے ({{count}} حسابات)۔ یو آئی اے کے جوابات کو برقرار رکھنے کے لیے پیشگی رائے ظاہر کرنا۔",
+    "largeContentNotice_one": "مواد بہت بڑا ہے ({{count}} حسابات)۔ یو آئی اے کے جوابات کو برقرار رکھنے کے لیے پیشگی رائے ظاہر کرنا۔",
+    "largeContentNotice_other": "مواد بہت بڑا ہے ({{count}} حسابات)۔ یو آئی اے کے جوابات کو برقرار رکھنے کے لیے پیشگی رائے ظاہر کرنا۔"
+  },
+  "terminal": {
+    "checkOutputForDetails": "تفصیل کے لیے اوپری حصے کا ٹرمینل چیک کریں",
+    "closingInSeconds": "رنگ {{count}}س...",
+    "closingInSeconds_few": "رنگ {{count}}س...",
+    "closingInSeconds_many": "رنگ {{count}}س...",
+    "closingInSeconds_one": "رنگ {{count}}س...",
+    "closingInSeconds_other": "رنگ {{count}}س...",
+    "completedSuccessfully": "کامیابی مکمل ہوئی",
+    "exitCode": "(exit code {{code}})",
+    "processFailed": "غیر متصل",
+    "title": "ٹرمینل"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "پورے سیشن میں شرکت",
+    "cacheRead": "کانچ پڑھنے",
+    "cacheWrite": "کانچ لکھ",
+    "costUsd": "Cost (USD)",
+    "inputTokens": "داخلی مرکبات",
+    "model": "ماڈل",
+    "outputTokens": "ما حاصل",
+    "phase": "فاس {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}%s خصوصیات",
+    "taskCoordination": "غیر متصل",
+    "thinkingText": "سوچنا + متن",
+    "toolOutputs": "حاصلات",
+    "total": "بند",
+    "userMessages": "صارف پیغامات",
+    "visibleContext": "بند",
+    "includesClaudeMd": "incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} علامات",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "ٹیم کاپی",
+      "createTeam": "ٹیم بنائیں",
+      "deleteForever": "ہمیشہ کے لیے حذف کرو",
+      "deletePermanently": "مستقل حذف",
+      "deleteTeam": "ٹیم حذف کریں",
+      "launching": "لانچنگ...",
+      "launchTeam": "لانچ ٹیم",
+      "relaunchTeam": "رنگوں کی ٹیم",
+      "restore": "مصر",
+      "restoreTeam": "گروپ",
+      "retry": "دوبارہ کوشش",
+      "stopTeam": "ٹیم روکیں",
+      "stopping": "بند کریں..."
+    },
+    "status": {
+      "active": "فعال",
+      "deleted": "حذف",
+      "launching": "لانچنگ...",
+      "offline": "غیر متصل",
+      "partialFailure": "لانچ ناکام ہوا",
+      "partialPending": "بوٹ روم",
+      "partialSkipped": "access-date= (معاونت)",
+      "running": "چلاو"
+    },
+    "partial": {
+      "pending": "آخری لانچ اب تک جاری ہے.",
+      "skipped": "آخری لانچ ٹیم ساتھیوں کی ہے.",
+      "skippedWithCount": "آخری لانچ پلگ ان {{count}}/{{expected}} ساتھی.",
+      "skippedWithCount_few": "آخری لانچ پلگ ان {{count}}/{{expected}} ٹیم ساتھیوں.",
+      "skippedWithCount_many": "آخری لانچ پلگ ان {{count}}/{{expected}} ٹیم ساتھیوں.",
+      "skippedWithCount_one": "آخری لانچ پلگ ان {{count}}/{{expected}} ساتھی.",
+      "skippedWithCount_other": "آخری لانچ پلگ ان {{count}}/{{expected}} ٹیم ساتھیوں.",
+      "stopped": "آخری لانچ تمام ٹیموں کے ساتھ شامل ہونے سے پہلے روک.",
+      "stoppedWithCount": "آخری لانچ قبل از بند {{count}}/{{expected}} ہم‌جنس‌پسند بھی تھے ۔",
+      "stoppedWithCount_few": "آخری لانچ قبل از بند {{count}}/{{expected}} ٹیموں نے ساتھ مل کر حصہ لیا۔",
+      "stoppedWithCount_many": "آخری لانچ قبل از بند {{count}}/{{expected}} ٹیموں نے ساتھ مل کر حصہ لیا۔",
+      "stoppedWithCount_one": "آخری لانچ قبل از بند {{count}}/{{expected}} ہم‌جنس‌پسند بھی تھے ۔",
+      "stoppedWithCount_other": "آخری لانچ قبل از بند {{count}}/{{expected}} ٹیموں نے ساتھ مل کر حصہ لیا۔"
+    },
+    "noDescription": "کوئی تفصیل نہیں",
+    "solo": "سولو",
+    "membersCount": "ممبر: {{count}}",
+    "membersCount_few": "ممبر: {{count}}",
+    "membersCount_many": "ممبر: {{count}}",
+    "membersCount_one": "ممبر: {{count}}",
+    "membersCount_other": "ممبر: {{count}}",
+    "all": "تمام",
+    "moreCount": "+{{count}} مزید",
+    "moreCount_one": "+{{count}} مزید",
+    "moreCount_other": "+{{count}} مزید",
+    "moreCount_few": "+{{count}} مزید",
+    "moreCount_many": "+{{count}} مزید"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "ہر منصوبے کے لیے طے کیا گیا ہے جو اپنی اوپن سی کوڈ نہیں رکھتے۔",
+      "scopeDescriptionProject": "صرف منتخب کردہ منصوبے پر زیادہ توجہ دیں. دوڑنے والی ٹیموں کو تبدیل نہیں کیا جاتا۔",
+      "setAllProjectsDefault": "تمام پرو فا ئل سیٹ کرو",
+      "setProjectDefault": "طے شدہ منصوبہ بندی",
+      "validationContext": "سیاق‌وسباق",
+      "projectOverrideContext": "منصوبہ بندی",
+      "selectProjectHint": "مقامی ماڈلوں کو ٹیسٹ کرنے یا بچ جانے سے پہلے منصوبہ منتخب کریں۔",
+      "allProjectsHint": "ٹیسٹ کا استعمال {{project}}. . . .",
+      "projectHint": "صرف بچوں کو محفوظ رکھنا {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "پرنٹ",
+      "closePanel": "قریبی پینل",
+      "phase": "فش:",
+      "current": "حالیہ",
+      "view": "دیکھیں:",
+      "category": "کیٹیگری",
+      "bySize": "قسم ہے حجم کی"
+    },
+    "metrics": {
+      "unavailable": "غیر درج شدہ",
+      "contextUsed": "استعمال",
+      "promptInput": "غیر متصل",
+      "visibleContext": "بند",
+      "ofContext": "سیاق‌وسباق",
+      "ofPrompt": "فوری",
+      "codexTelemetryUnavailable": "نستعلیق نستعلیق نستعلیق فی الحال موجودہ رزمیہ ٹیلی میٹری سے ظاہر نہیں ہوتا، لہٰذا نستعلیق Input and Conptic استعمال کرنے کی بجائے جھوٹ صفر کو ظاہر کرنے کی بجائے غیر معمولی طور پر باقی رہیں۔",
+      "sessionCost": "کارگو:",
+      "parentPlus": "والدین +",
+      "subagents": "صوبہ",
+      "details": "تفصیلات"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "استعمال",
+        "description": "اس وقت ماڈل کے ضمنی ونڈو پر قبضہ کر رہا ہے"
+      },
+      "promptInput": {
+        "title": "غیر متصل",
+        "description": "اختر نے نسل سے پہلے ماڈل میں بھیجا تھا۔ کے لئے اس میں شامل `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "بند",
+        "description": "فوری مداخلت کی جانچ ذیلی تقسیم: فائلوں، CLAUDE.md، آلات برآمدات، صارف پیغامات اور اسی طرح کے ایسے اشیاء جن سے آپ براہ راست رابطہ کر سکتے ہیں۔"
+      },
+      "availability": {
+        "title": "غیر متصل",
+        "description": "اگر کوئی فراہم کرنے والا رن ٹائم ابھی فوری طور پر استعمال نہیں کرتا تو پینل میٹرکس کو ظاہر کرتا ہے کہ وہ صفر ہوتے ہیں۔"
+      }
+    },
+    "items": {
+      "turn": "@Turn {{turn}}",
+      "tokensApprox": "~{{tokens}} علامات",
+      "toolsCount": "{{count}} آلات",
+      "toolsCount_one": "{{count}} آلات",
+      "toolsCount_other": "{{count}} آلات",
+      "toolsCount_few": "{{count}} آلات",
+      "toolsCount_many": "{{count}} آلات",
+      "itemsCount": "{{count}} آئٹمس",
+      "itemsCount_one": "{{count}} طےشدہ",
+      "itemsCount_other": "{{count}} آئٹمس",
+      "itemsCount_few": "{{count}} آئٹمس",
+      "itemsCount_many": "{{count}} آئٹمس",
+      "missing": "غیر متصل",
+      "thinking": "سوچ",
+      "text": "متن"
+    },
+    "empty": "اس سیشن میں کوئی نظیری ربط نہیں",
+    "view": {
+      "grouped": "گروپ",
+      "flat": "فلیٹ"
+    },
+    "claudeMdFiles": "CLAUDE.md فائلیں",
+    "mentionedFiles": "فائلیں یاد کریں"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "صوبہ",
+      "shutdownConfirmed": "بند کی تصدیق",
+      "summary": {
+        "tools": "{{count}} آلات",
+        "tools_one": "{{count}} آلات",
+        "tools_other": "{{count}} آلات",
+        "tools_few": "{{count}} آلات",
+        "tools_many": "{{count}} آلات"
+      },
+      "meta": {
+        "type": "قسم",
+        "duration": "مدت",
+        "model": "ماڈل",
+        "id": "آئی ڈی"
+      },
+      "metrics": {
+        "contextWindow": "آن لائن ونڈو",
+        "contextUsage": "رنگ",
+        "mainContext": "مُنجی متن",
+        "totalOutput": "مکمل ما حاصل",
+        "turns": "({{count}} turns)",
+        "turns_one": "({{count}} turn)",
+        "turns_other": "({{count}} turns)",
+        "subagentContext": "صوبہ سرحد",
+        "phase": "فاس {{phase}}",
+        "turns_few": "({{count}} turns)",
+        "turns_many": "({{count}} turns)"
+      },
+      "trace": {
+        "title": "ایگزیکٹو ڈسک"
+      }
+    },
+    "user": {
+      "you": "آپ",
+      "showMore": "دکھائیں",
+      "showLess": "طےشدہ",
+      "backgroundTask": "عمل",
+      "exitCode": "خارج کرو {{code}}",
+      "imagesAttached": "{{count}} تصویریں",
+      "imagesAttached_one": "{{count}} تصویر متصل",
+      "imagesAttached_few": "{{count}} تصویریں",
+      "imagesAttached_many": "{{count}} تصویریں",
+      "imagesAttached_other": "{{count}} تصویریں"
+    },
+    "compact": {
+      "toggle": "مواد جمع کرنا",
+      "contextCompacted": "پرنٹ",
+      "freedTokens": "({{tokens}} freed)",
+      "phase": "فاس {{phase}}",
+      "conversationCompacted": "غیرمتوقع کمپنیاں",
+      "summary": "پہلے پیغامات کو سیاق‌وسباق کو بچانے کے لئے ترتیب دیا گیا تھا ۔ سیشن فائل میں مکمل مکالمہ کی تاریخ محفوظ کی گئی ہے۔",
+      "compacted": "کمپنیاں"
+    },
+    "executionTrace": {
+      "empty": "کوئی بھی چیز قربان نہیں کی گئی",
+      "nested": "ناشر: {{name}}",
+      "input": "درآمد"
+    },
+    "items": {
+      "empty": "ڈسپلے کرنے میں کوئی کسر اٹھا نہیں"
+    },
+    "tools": {
+      "teammateSpawned": "مہم‌جوئی",
+      "shutdownRequested": "بند کریں...",
+      "noResultReceived": "کوئی نتیجہ نہیں ملا",
+      "duration": "مدت: {{duration}}",
+      "result": "نتیجہ",
+      "write": {
+        "createdFile": "فائلز",
+        "wroteToFile": "فائل رولر"
+      },
+      "skill": {
+        "instructions": "عمدہ ہدایات",
+        "unknown": "نامعلوم سکیل"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "صارف کی طرف سے درخواست میں رکاوٹ",
+      "planReadyForApproval": "تیار رہیں"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "کوئی مکالمہ تاریخ نہیں",
+      "description": "اس سیشن میں ابھی تک کوئی پیغامات نہیں ہیں۔"
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% left)",
+      "count": "کنساس ({{count}})",
+      "count_one": "کنساس ({{count}})",
+      "count_other": "کنساس ({{count}})",
+      "count_few": "کنساس ({{count}})",
+      "count_many": "کنساس ({{count}})"
+    },
+    "scrollToBottom": "نیچے کی طرف",
+    "bottom": "نیچے اترو",
+    "teammateMessage": {
+      "message": "پیام",
+      "resent": "دوبارہ شروع",
+      "fallback": "گروہی پیغام"
+    },
+    "system": {
+      "label": "سسٹم"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "Tux نصب نہیں ہوئی",
+    "detectedOs": "ڈیٹنگ او ایس: {{os}}",
+    "runtimePath": "روٹ روٹ: {{path}}",
+    "phase": "فش: {{phase}}",
+    "actions": {
+      "cancel": "منسوخ",
+      "manualGuide": "دستی راہنما",
+      "hideSetupSteps": "بند کریں",
+      "showSetupSteps": "Show setup steps ({{count}})",
+      "showSetupSteps_one": "Show setup step ({{count}})",
+      "showSetupSteps_other": "Show setup steps ({{count}})",
+      "recheck": "دوبارہ شروع کریں",
+      "showSetupSteps_few": "Show setup steps ({{count}})",
+      "showSetupSteps_many": "Show setup steps ({{count}})"
+    },
+    "installerProgress": "ترقی",
+    "input": {
+      "placeholder": "تنصیب کار میں داخل کریں",
+      "send": "اندراج بھیجیں",
+      "passwordNotice": "پاس ورڈ انپٹ کو براہ راست تنصیبر ٹرمینل میں بھیجا جاتا ہے اور لاگ آؤٹ میں شامل نہیں کیا جاتا ہے۔"
+    },
+    "details": {
+      "show": "طےشدہ",
+      "hide": "تفصیلات"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "حالیہ عمل",
+    "sessionsCount": "{{count}} اجلاس",
+    "sessionsCount_one": "{{count}} سیشن",
+    "sessionsCount_other": "{{count}} اجلاس",
+    "mode": {
+      "searchProjects": "تلاش کے منصوبوں",
+      "searchAcrossProjects": "تمام منصوبوں پر تلاش",
+      "searchInProject": "پروجیکٹ میں تلاش"
+    },
+    "currentProject": "موجودہ منصوبہ",
+    "global": "عالمین",
+    "placeholders": {
+      "projects": "تلاش کردہ منصوبوں...",
+      "conversations": "تلاش گفتگو..."
+    },
+    "empty": {
+      "noProjectsForQuery": "کوئی منصوبے \"{{query}}\"",
+      "noProjects": "کوئی منصوبہ بندی نہیں پائی گئی",
+      "minChars": "تلاش کر نے کے ليے کم از کم دو حروف",
+      "noFastResults": "حالیہ نشستوں میں کوئی تیزی سے نتیجہ نہیں \"{{query}}\"",
+      "noResults": "کوئی نتیجہ نہیں ملا \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "{{count}} منصوبوں",
+      "projectsCount_one": "{{count}} منصوبہ",
+      "projectsCount_other": "{{count}} منصوبوں",
+      "results": "{{count}} {{speed}}نتائج",
+      "results_one": "{{count}} {{speed}}نتیجہ",
+      "results_other": "{{count}} {{speed}}نتائج",
+      "resultsAcrossProjects": "{{count}} {{speed}}تمام منصوبوں پر نتائج",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}تمام منصوبوں پر نتیجہ",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}تمام منصوبوں پر نتائج",
+      "fastPrefix": "روزے ",
+      "typeToSearch": "تلاش:",
+      "navigate": "جگہ",
+      "select": "منتخب کریں",
+      "open": "کھولیں",
+      "global": "عالمی",
+      "close": "بندکرو",
+      "results_few": "{{count}} {{speed}}نتائج",
+      "results_many": "{{count}} {{speed}}نتائج",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}تمام منصوبوں پر نتائج",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}تمام منصوبوں پر نتائج",
+      "projectsCount_few": "{{count}} منصوبوں",
+      "projectsCount_many": "{{count}} منصوبوں",
+      "upDownKey": "↑↓",
+      "escapeKey": "ساسک"
+    },
+    "sessionsCount_few": "{{count}} اجلاس",
+    "sessionsCount_many": "{{count}} اجلاس"
+  },
+  "tasksPanel": {
+    "title": "علامات",
+    "searchPlaceholder": "تلاش کے کام...",
+    "pinned": "پینین",
+    "groupByLabel": "گروپ:",
+    "groupByAria": "گروپ",
+    "groupModes": {
+      "none": "کچھ نہیں",
+      "project": "منصوبہ بندی",
+      "time": "وقت"
+    },
+    "showArchived": "محفوظہ دیکھیں",
+    "hideArchived": "محفوظہ کھولیں",
+    "empty": {
+      "noMatchingTasks": "کوئی ملتا کام نہیں",
+      "noTasks": "کوئی کام نہیں پایا گیا"
+    },
+    "teamLabel": "ٹیم: {{team}}",
+    "showMore": "دکھائیں",
+    "showLess": "طےشدہ",
+    "deleteConfirm": {
+      "title": "کام حذف کریں",
+      "message": "منتقل کام #{{taskId}} تباہی کے لئے؟",
+      "confirmLabel": "حذف",
+      "cancelLabel": "منسوخ"
+    },
+    "deleteFailed": {
+      "title": "کام کو حذف کرنے میں ناکامی",
+      "fallbackMessage": "غیر متوقع غلطی",
+      "confirmLabel": "ٹھیک"
+    },
+    "sort": {
+      "byTime": "زمانہ کی قسم ہے",
+      "byUnread": "قَسم ہے روزِ روشن کی۔",
+      "byProject": "منصوبہ‌سازی سے",
+      "byTeam": "ٹیم کی قسم"
+    }
+  },
+  "toolViewer": {
+    "input": "درآمد",
+    "replaceAll": "(تمام)",
+    "noInputRecorded": "اس آلے کے لئے کوئی اندراج ریکارڈ نہیں کیا.",
+    "agent": {
+      "action": "عمل",
+      "teammate": "گروہ",
+      "team": "ٹیم",
+      "runtime": "وقت",
+      "type": "قسم",
+      "startupInstructionsHidden": "شروعاتی ہدایات یو آئی اے میں چھپی ہیں۔"
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "غیر درج شدہ",
+    "pin": "پینین",
+    "rename": "نام بدلیں",
+    "markUnread": "مرقس کی طرح",
+    "unarchive": "غیر متصل",
+    "archive": "محفوظہ:",
+    "deleteTask": "کام حذف کریں"
+  },
+  "updateDialog": {
+    "closeDialog": "بند کریں",
+    "updateAvailable": "تجدید دستیاب",
+    "updateReady": "تیار دیکھو",
+    "noReleaseNotes": "کوئی دستیاب نوٹ نہیں.",
+    "viewOnGitHub": "جی‌نہیں ۔",
+    "later": "بعد",
+    "restartNow": "اب",
+    "download": "گر تے ہوئے"
+  },
+  "errorBoundary": {
+    "title": "کچھ غلط ہو گیا",
+    "description": "درخواست میں غیر متوقع غلطی ہوئی۔ آپ صفحہ کو دوبارہ حل کرنے یا غلطی حالت کو حل کرنے کی کوشش کر سکتے ہیں.",
+    "componentStack": "مرکزی کردار",
+    "tryAgain": "دوبارہ کوشش کریں",
+    "copied": "کوس",
+    "copyErrorDetails": "خامی تفصیلات کاپی کریں",
+    "reportBugOnGitHub": "GitHub پر رپورٹ بگ",
+    "reloadApp": "ایپ دوبارہ لوڈ کریں",
+    "diagnosticsNotice": "GitHub بگ باس رپورٹوں اور نقل کرنے والوں میں غلطی کا پیغام، اسٹاک کے نشانات، ایپ ورژن، فعال تبتی، منتخب ٹیم، کامی سیاق و سباق اور ماحول کی تفصیلات شامل ہیں۔"
+  },
+  "runtimeBackendSelector": {
+    "label": "آخری بار بھاگنا",
+    "resolved": "اخذ شدہ بتاریخ: {{backend}}",
+    "current": "حالیہ",
+    "recommended": "بند",
+    "unavailable": "غیر درج شدہ",
+    "cannotSelectYet": "اس پس‌منظر کو ابھی تک منتخب نہیں کِیا جا سکتا ۔",
+    "auto": "خودکار",
+    "autoCurrently": "خودکار (انگریزی: {{backend}})",
+    "audience": {
+      "internal": "اندرونی"
+    },
+    "states": {
+      "locked": "بند",
+      "disabled": "بند",
+      "authRequired": "Auth لازمی",
+      "runtimeMissing": "غیر متصل",
+      "degraded": "بند",
+      "unavailable": "غیر درج شدہ"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "پڑتال",
+    "unavailable": "غیر درج شدہ",
+    "checkFailed": "چیک ناکام ہوا",
+    "free": "مفت",
+    "freeTooltip": "OpenCode metadata کی طرف سے رپورٹ کی گئی۔ اِس کی کیا وجہ ہے ؟"
+  },
+  "taskFilters": {
+    "status": "سٹیٹس",
+    "clearAll": "تمام صاف",
+    "selectAll": "تمام منتخب کريں",
+    "team": "ٹیم",
+    "allTeams": "تمام ٹیمیں",
+    "searchTeams": "تلاش ٹیمیں ...",
+    "noTeamsFound": "کوئی ٹیم نہیں ملی",
+    "project": "منصوبہ بندی",
+    "allProjects": "تمام پراجیکٹ",
+    "searchProjects": "تلاش کردہ منصوبوں...",
+    "noProjects": "کوئی منصوبہ بندی نہیں",
+    "comments": "تبصرے",
+    "apply": "اطلاق",
+    "read": {
+      "all": "تمام",
+      "unread": "غیر درج شدہ",
+      "read": "پڑھئے"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "اندر PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "کُل قابِل کوڈ: {{tokens}} علامات",
+    "context": "سانچہ: {{tokens}}",
+    "phase": "فاس {{phase}}:",
+    "compactedTo": "(compacted to {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "ٹیم",
+      "subagent": "صوبہ",
+      "markAsRead": "مرقس",
+      "delete": "حذف",
+      "viewInSession": "سیشن میں دیکھیں"
+    },
+    "title": "غیر متصل",
+    "loading": "اطلاعات معطل کریں...",
+    "actions": {
+      "markFilteredAsRead": "پڑھنا",
+      "markAllAsRead": "تمام پڑھنا",
+      "markFilteredRead": "مارککلف پڑھی",
+      "markAllRead": "تمام مرقس",
+      "clearFilteredNotifications": "صاف ہدایات",
+      "clearAllNotifications": "تمام اطلاعات صاف کریں",
+      "clickToConfirm": "تصدیق پر کلک کريں",
+      "clearFiltered": "صاف",
+      "clearAll": "تمام صاف"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} فیلڈ میں پلگ ان",
+      "unreadInFilter_one": "{{count}} فیلڈ میں پلگ ان",
+      "unreadInFilter_few": "{{count}} فیلڈ میں پلگ ان",
+      "unreadInFilter_many": "{{count}} فیلڈ میں پلگ ان",
+      "unreadInFilter_other": "{{count}} فیلڈ میں پلگ ان",
+      "inFilter": "{{count}} فیلڈ میں",
+      "inFilter_one": "{{count}} فیلڈ میں",
+      "inFilter_few": "{{count}} فیلڈ میں",
+      "inFilter_many": "{{count}} فیلڈ میں",
+      "inFilter_other": "{{count}} فیلڈ میں",
+      "unread": "{{count}} انڈیا",
+      "unread_one": "{{count}} انڈیا",
+      "unread_few": "{{count}} انڈیا",
+      "unread_many": "{{count}} انڈیا",
+      "unread_other": "{{count}} انڈیا",
+      "total": "{{count}} جمع",
+      "total_one": "{{count}} جمع",
+      "total_few": "{{count}} جمع",
+      "total_many": "{{count}} جمع",
+      "total_other": "{{count}} جمع"
+    },
+    "filters": {
+      "other": "دیگر"
+    },
+    "empty": {
+      "noMatching": "کوئی ملتی جلتی اطلاعات نہیں",
+      "noNotifications": "کوئی اطلاعات نہیں",
+      "tryDifferentFilter": "مختلف فیلڈنگ کوشش کریں",
+      "allCaughtUp": "تم سب گرفتار ہو گئے!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "تجدید کے لیے دوبارہ شروع کریں",
+    "updateApp": "طےشدہ",
+    "downloadedRestartTooltip": "ڈاؤن لوڈ کیا گیا، دوبارہ شروع کرے",
+    "newVersionAvailable": "نیا نسخہ دستیاب ہے",
+    "updatingApp": "آرام‌دہ خواہش",
+    "updateReady": "تیار کريں",
+    "restartNow": "اب"
+  },
+  "layout": {
+    "github": "جٹوب",
+    "discord": "تقسیم کار",
+    "expandSidebar": "قریبی کنارہ",
+    "collapseSidebarShortcut": "Collapse sidebar ({{shortcut}})",
+    "sidebarView": "اطرافی پٹی",
+    "resizeSidebar": "دوبارہ شروع کریں",
+    "closeTab": "بندکرو",
+    "openedFromSearch": "تلاش سے کھولیں",
+    "pinnedSession": "سیشن",
+    "jumpToSection": "ابواب ميں ضرب",
+    "newTab": "نیا ٹیٹو",
+    "newTabDashboard": "نئی تبتی (دس بورڈ)",
+    "refreshSession": "سُست سیشن",
+    "refreshSessionWithShortcut": "حوصلہ‌افزا جواب ({{shortcut}})",
+    "loadingTab": "لائن گر کریں",
+    "menu": {
+      "teams": "ٹیمیں",
+      "settings": "ترتیبات",
+      "extensions": "وسیع خط",
+      "search": "تلاش",
+      "schedules": "سبز رنگ",
+      "docs": "ڈاک",
+      "exportMarkdown": "Export as Markdown",
+      "exportJson": "بطور JSON",
+      "exportPlainText": "پلانٹ متن کے طور پر پیش کریں",
+      "analyzeSession": "غیر متصل"
+    },
+    "tabMenu": {
+      "closeTabs": "بندکرو {{count}} ٹاس",
+      "closeTabs_one": "بندکرو {{count}} طب",
+      "closeTabs_few": "بندکرو {{count}} ٹاس",
+      "closeTabs_many": "بندکرو {{count}} ٹاس",
+      "closeTabs_other": "بندکرو {{count}} ٹاس",
+      "closeTab": "بندکرو",
+      "closeOtherTabs": "دیگر طیبات کے قریب",
+      "splitRight": "صحیح",
+      "splitLeft": "خفیہ بایاں",
+      "pinToSidebar": "پَن",
+      "unpinFromSidebar": "پہلویبار سے خالی",
+      "hideFromSidebar": "پہلویبار سے آزادی",
+      "unhideFromSidebar": "پہلویبار سے خالی",
+      "closeAllTabs": "تمام طبّی بند"
+    },
+    "sections": {
+      "team": "ٹیم",
+      "sessions": "جمع",
+      "kanban": "کنعان",
+      "claudeLogs": "لاگ ان",
+      "messages": "پیغامات"
+    }
+  },
+  "editorFormatting": {
+    "bold": "ہڈی",
+    "italic": "بنیادی",
+    "strike": "اوپر لکھیں",
+    "code": "کوڈ"
+  },
+  "diff": {
+    "changed": "تبدیل کریں",
+    "noChangesDetected": "کوئی تبدیلی نہیں ہوئی"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Copy ChatGPT login link and code",
+    "copyLoginLink": "Copy ChatGPT login link",
+    "copyFailed": "کاپی ناکام ہوئی",
+    "copyLinkAndCode": "رمزی ربط",
+    "copyLink": "فولڈر کاپی کریں",
+    "enterCodeOnLoginPage": "Enter this code on the ChatGPT login page"
+  },
+  "window": {
+    "minimize": "حساس",
+    "maximize": "ما وٴ س",
+    "restore": "مصر"
+  },
+  "context": {
+    "local": "جگہ",
+    "switchingTo": "سوئچ {{workspace}}",
+    "loadingWorkspace": "کام کی جگہ",
+    "switchWorkspace": "س . ع ."
+  },
+  "repositories": {
+    "noneAvailable": "کوئی دوبارہ دستیاب نہیں",
+    "remove": "جگہ"
+  },
+  "export": {
+    "session": "سیشن از سر نو شروع کریں",
+    "sessionTitle": "برآمد"
+  },
+  "brand": {
+    "claude": "طےشدہ"
+  },
+  "sessionReport": {
+    "noSessionData": "کوئی سیشن ڈیٹا دستیاب نہیں",
+    "title": "خفیہ رپورٹ"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "منصوبہ منتخب کریں"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "کھڑے",
+      "updatedYesterday": "کل اپ لوڈ کی گئی",
+      "yesterday": "کل"
+    },
+    "reviewState": {
+      "needsFix": "ضرورت"
+    },
+    "unassigned": "غیر متصل"
+  }
+}

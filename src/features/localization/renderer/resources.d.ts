@@ -373,15 +373,18 @@ export default interface Resources {
       names: {
         ar: 'Arabic';
         bn: 'Bengali';
+        de: 'German';
         en: 'English';
         es: 'Spanish';
         fr: 'French';
         hi: 'Hindi';
+        id: 'Indonesian';
         ja: 'Japanese';
         ko: 'Korean';
         pt: 'Portuguese';
         ru: 'Russian';
         system: 'System';
+        ur: 'Urdu';
         zh: 'Chinese';
       };
       searchPlaceholder: 'Search language...';
