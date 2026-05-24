@@ -18,7 +18,6 @@ import {
 } from '@features/codex-runtime-profile/main';
 import {
   buildPlannedMemberLaneIdentity,
-  fromProvisioningMembers,
   isMixedOpenCodeSideLanePlan,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
@@ -154,9 +153,6 @@ import * as readline from 'readline';
 import {
   ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS,
   type AnthropicTeamApiKeyHelperMaterial,
-  CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH_ENV,
-  CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER,
-  CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV,
   cleanupAnthropicTeamApiKeyHelperForTeam,
   cleanupAnthropicTeamApiKeyHelperMaterial,
   cleanupStaleAnthropicTeamApiKeyHelpers,
@@ -205,6 +201,56 @@ import {
   writeDeterministicBootstrapUserPromptFile,
 } from './provisioning/TeamProvisioningBootstrapSpec';
 import {
+  buildCliExitFailurePresentation,
+  buildCombinedLogs,
+} from './provisioning/TeamProvisioningCliExitPresentation';
+import {
+  buildDirectTmuxRestartCommand,
+  hasAnthropicCompatibleAuthTokenEnv,
+  isInteractiveShellCommand,
+} from './provisioning/TeamProvisioningDirectRestart';
+import {
+  assertDeterministicBootstrapPrimaryMemberLimit,
+  assertOpenCodeNotLaunchedThroughLegacyProvisioning,
+  buildLargeDeterministicBootstrapWarning,
+  getMixedLaunchFallbackRecoveryError,
+  isPureOpenCodeProvisioningRequest,
+  mergeProvisioningWarnings,
+  type TeamLaunchCompatibilityReport,
+} from './provisioning/TeamProvisioningLaunchCompatibility';
+import {
+  buildLaunchDiagnosticsFromRun,
+  buildWorkspaceTrustPreflightLaunchDiagnostic,
+  mentionsProcessTableUnavailable,
+  mergeLaunchDiagnosticItem,
+} from './provisioning/TeamProvisioningLaunchDiagnostics';
+import {
+  deriveMemberLaunchState,
+  isAutoClearableLaunchFailureReason,
+  isNeverSpawnedDuringLaunchReason,
+} from './provisioning/TeamProvisioningLaunchFailurePolicy';
+import {
+  isOpenCodeOverlayMemberRemoved,
+  matchesExactTeamMemberName,
+  matchesMemberNameOrBase,
+  matchesObservedMemberNameForExpected,
+  matchesTeamMemberIdentity,
+  namesMatchCaseInsensitive,
+} from './provisioning/TeamProvisioningMemberIdentity';
+import {
+  buildRestartDuplicateUnconfirmedReason,
+  buildRestartGraceTimeoutReason,
+  buildRestartStillRunningReason,
+  createInitialMemberSpawnStatusEntry,
+  deriveTaskActivityPauseAt,
+  deriveTaskActivityResumeAt,
+  MEMBER_LAUNCH_GRACE_MS,
+  parseOptionalIsoMs,
+  shouldWarnOnMissingRegisteredMember,
+  shouldWarnOnUnreadableMemberAuditConfig,
+  summarizeMemberSpawnStatusRecord,
+} from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
+import {
   buildEffectiveTeamMemberSpec,
   buildEffectiveTeamMemberSpecs,
   getExplicitLaunchModelSelection,
@@ -212,6 +258,46 @@ import {
   normalizeTeamProviderLike,
   teamRequestIncludesCodexMember,
 } from './provisioning/TeamProvisioningMemberSpecs';
+import {
+  boundOpenCodeAppManagedBriefingText,
+  filterStaleOpenCodeOverlayDiagnostics,
+  hasRealOpenCodeFailureDiagnostic,
+  hasRealOpenCodeLaunchDiagnostic,
+  hasStaleOpenCodeDiagnostics,
+  hasStaleOpenCodeSecondaryLaunchDiagnostic,
+  isFileLockTimeoutError,
+  isPersistedOpenCodeSecondaryLaneMember,
+  promoteOpenCodePersistedFailureReasonsFromDiagnostics,
+} from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
+import {
+  appendDiagnosticOnce,
+  buildOpenCodeSecondaryLaneTimingDiagnostic,
+  buildOpenCodeUncommittedBootstrapDiagnostic,
+  collectOpenCodeSecondaryLaneFailureDiagnostics,
+  createUnexpectedMixedSecondaryLaneFailureResult,
+  downgradeUncommittedOpenCodeBootstrapEvidence,
+  getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
+  hasOpenCodeRuntimeEntryHandle,
+  hasOpenCodeRuntimeHandle,
+  hasOpenCodeRuntimeLivenessMarker,
+  isBootstrapMemberEvidenceCurrentForMember,
+  isDefinitiveOpenCodePreLaunchFailure,
+  isExplicitLegacyOpenCodeBootstrap,
+  isMaterializedOpenCodeSessionId,
+  isRecoverableOpenCodeBootstrapPendingLaunchResult,
+  isRecoverableOpenCodeRuntimeEvidence,
+  isRecoverablePersistedOpenCodeRuntimeCandidate,
+  isRecoverablePersistedOpenCodeTerminalRuntimeCandidate,
+  MEMBER_BOOTSTRAP_STALL_MS,
+  normalizeIsoTimestamp,
+  normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
+  OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
+  promoteCommittedOpenCodeAppManagedBootstrapEvidence,
+  resolveOpenCodeBootstrapAcceptedAt,
+  selectOpenCodeSecondaryBootstrapStallDiagnostic,
+  shouldMarkPersistedOpenCodeBootstrapStalled,
+  summarizeRuntimeLaunchResultMembers,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   buildDeterministicLaunchHydrationPrompt,
   buildGeminiPostLaunchHydrationPrompt,
@@ -226,15 +312,31 @@ import {
   getBootstrapTranscriptSuccessSource,
   getCanonicalSendMessageFieldRule,
   getCanonicalSendMessageToolRule,
-  isBootstrapInstructionPrompt,
   isBootstrapTranscriptContextText,
   isTaskBoardSnapshotWorkCandidate,
   normalizeMemberDiagnosticText,
   shouldUseGeminiStagedLaunch,
 } from './provisioning/TeamProvisioningPromptBuilders';
+import {
+  buildRuntimeLaunchWarning,
+  getAnthropicFastModeDefault,
+  getConfiguredRuntimeBackend,
+  getPromptSizeSummary,
+  getTeamProviderLabel,
+  logRuntimeLaunchSnapshot,
+} from './provisioning/TeamProvisioningRuntimeDiagnostics';
 
 import type { RuntimeTurnSettledProvider } from '@features/member-work-sync/main';
 export type { RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
+export { buildDirectTmuxRestartEnvAssignments } from './provisioning/TeamProvisioningDirectRestart';
+export {
+  getMixedLaunchFallbackRecoveryError,
+  getOpenCodeMixedProviderProvisioningError,
+} from './provisioning/TeamProvisioningLaunchCompatibility';
+export {
+  shouldWarnOnMissingRegisteredMember,
+  shouldWarnOnUnreadableMemberAuditConfig,
+} from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 export {
   buildAddMemberSpawnMessage,
   buildRestartMemberSpawnMessage,
@@ -715,7 +817,6 @@ const VERIFY_TIMEOUT_MS = 15_000;
 const MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS = 45_000;
 const PROVIDER_MODEL_LIST_TIMEOUT_MS = 30_000;
 const PROVIDER_RUNTIME_STATUS_TIMEOUT_MS = 20_000;
-const TASK_ACTIVITY_RUNTIME_PAUSE_GRACE_MS = 5_000;
 
 function asRuntimeRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -792,10 +893,6 @@ function parseRuntimeToolMetadata(value: unknown): RuntimeToolMetadata {
       ? { cwd: normalizeRuntimeMetadataString(raw.cwd, 500) }
       : {}),
   };
-}
-
-function mentionsProcessTableUnavailable(value: string | undefined): boolean {
-  return /\bprocess table\b.*\bunavailable\b/i.test(value ?? '');
 }
 
 function buildRuntimeToolMetadataDiagnostics(metadata: RuntimeToolMetadata | undefined): string[] {
@@ -1118,70 +1215,10 @@ const STALL_CHECK_INTERVAL_MS = 10_000;
 const STALL_WARNING_THRESHOLD_MS = 20_000;
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS =
   'TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop';
-const DIRECT_TMUX_RESTART_ENV_KEYS = [
-  'CLAUDE_CONFIG_DIR',
-  'CLAUDE_TEAM_CONTROL_URL',
-  'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
-  'CLAUDE_CODE_USE_OPENAI',
-  'CLAUDE_CODE_USE_BEDROCK',
-  'CLAUDE_CODE_USE_VERTEX',
-  'CLAUDE_CODE_USE_FOUNDRY',
-  'CLAUDE_CODE_USE_GEMINI',
-  'CLAUDE_CODE_ENTRY_PROVIDER',
-  'CLAUDE_CODE_GEMINI_BACKEND',
-  'CLAUDE_CODE_CODEX_BACKEND',
-  'CODEX_HOME',
-  CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV,
-  CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH_ENV,
-  'ANTHROPIC_BASE_URL',
-  'ANTHROPIC_AWS_WORKSPACE_ID',
-  'ANTHROPIC_AWS_API_KEY',
-  'ANTHROPIC_API_KEY',
-  'ANTHROPIC_AUTH_TOKEN',
-  'GEMINI_BASE_URL',
-  'GEMINI_API_VERSION',
-  'GEMINI_API_KEY',
-  'CODEX_API_KEY',
-  'OPENAI_API_KEY',
-  'GOOGLE_APPLICATION_CREDENTIALS',
-  'GOOGLE_CLOUD_PROJECT',
-  'GOOGLE_CLOUD_PROJECT_ID',
-  'GCLOUD_PROJECT',
-  'HTTPS_PROXY',
-  'https_proxy',
-  'HTTP_PROXY',
-  'http_proxy',
-  'NO_PROXY',
-  'no_proxy',
-  'SSL_CERT_FILE',
-  'NODE_EXTRA_CA_CERTS',
-  'REQUESTS_CA_BUNDLE',
-  'CURL_CA_BUNDLE',
-] as const;
-const DIRECT_TMUX_PROVIDER_SELECTION_ENV_KEYS = [
-  'CLAUDE_CODE_USE_OPENAI',
-  'CLAUDE_CODE_USE_BEDROCK',
-  'CLAUDE_CODE_USE_VERTEX',
-  'CLAUDE_CODE_USE_FOUNDRY',
-  'CLAUDE_CODE_USE_GEMINI',
-  'CLAUDE_CODE_ENTRY_PROVIDER',
-] as const;
-const INTERACTIVE_SHELL_COMMANDS = new Set([
-  'bash',
-  'zsh',
-  'sh',
-  'fish',
-  'nu',
-  'pwsh',
-  'powershell',
-  'cmd',
-  'cmd.exe',
-]);
 const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
 const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
 const TEAM_INBOX_MAX_BYTES = 2 * 1024 * 1024;
 const MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS = 1_500;
-const MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS = 10_000;
 const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
   'cross_team_send',
   'cross_team_list_targets',
@@ -1299,96 +1336,6 @@ function buildMissingCliError(): Error {
 
 function buildProviderCliCommandArgs(providerArgs: string[], args: string[]): string[] {
   return mergeJsonSettingsArgs([...providerArgs, ...args]);
-}
-
-function shellQuote(value: string): string {
-  if (value.length === 0) {
-    return "''";
-  }
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
-function isInteractiveShellCommand(command: string | undefined): boolean {
-  const normalized = command?.trim().toLowerCase();
-  if (!normalized) {
-    return false;
-  }
-  return INTERACTIVE_SHELL_COMMANDS.has(path.basename(normalized));
-}
-
-function getDirectRestartEntryProvider(providerId: TeamProviderId): string {
-  return providerId === 'codex' || providerId === 'gemini' ? providerId : 'anthropic';
-}
-
-export function buildDirectTmuxRestartEnvAssignments(
-  env: NodeJS.ProcessEnv,
-  providerId: TeamProviderId
-): string {
-  const assignments = new Map<string, string>();
-  assignments.set('CLAUDECODE', '1');
-  assignments.set('CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', '1');
-
-  for (const key of DIRECT_TMUX_RESTART_ENV_KEYS) {
-    const value = env[key];
-    if (typeof value === 'string' && value.length > 0) {
-      assignments.set(key, value);
-    }
-  }
-
-  for (const key of DIRECT_TMUX_PROVIDER_SELECTION_ENV_KEYS) {
-    assignments.set(key, '');
-  }
-  assignments.set('CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST', '1');
-  assignments.set('CLAUDE_CODE_ENTRY_PROVIDER', getDirectRestartEntryProvider(providerId));
-  if (providerId === 'anthropic') {
-    if (hasAnthropicCompatibleAuthTokenEnv(env)) {
-      assignments.set('ANTHROPIC_BASE_URL', env.ANTHROPIC_BASE_URL?.trim() ?? '');
-      assignments.set('ANTHROPIC_AUTH_TOKEN', env.ANTHROPIC_AUTH_TOKEN?.trim() ?? '');
-      if (!env.ANTHROPIC_API_KEY?.trim()) {
-        assignments.set('ANTHROPIC_API_KEY', '');
-      }
-    } else if (!isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL)) {
-      assignments.set('ANTHROPIC_AUTH_TOKEN', '');
-    }
-  }
-  if (
-    providerId === 'anthropic' &&
-    env[CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV] === CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER
-  ) {
-    assignments.set(
-      CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV,
-      CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER
-    );
-    const settingsPath = env[CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH_ENV];
-    if (typeof settingsPath === 'string') {
-      assignments.set(CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH_ENV, settingsPath);
-    }
-    for (const key of ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS) {
-      assignments.set(key, '');
-    }
-  }
-
-  return [...assignments.entries()].map(([key, value]) => `${key}=${shellQuote(value)}`).join(' ');
-}
-
-function buildDirectTmuxRestartCommand(input: {
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-  providerId: TeamProviderId;
-  binaryPath: string;
-  args: string[];
-}): string {
-  const envAssignments = buildDirectTmuxRestartEnvAssignments(input.env, input.providerId);
-  const command = [
-    'cd',
-    shellQuote(input.cwd),
-    '&&',
-    'env',
-    envAssignments,
-    shellQuote(input.binaryPath),
-    ...input.args.map(shellQuote),
-  ].join(' ');
-  return `(${command}); __claude_teammate_exit=$?; printf '\\n__CLAUDE_TEAMMATE_EXIT__:%s\\n' "$__claude_teammate_exit"`;
 }
 
 interface ProviderModelListCommandResponse {
@@ -1640,12 +1587,6 @@ function hasAuthoritativeCodexLaunchCatalog(
   );
 }
 
-function getAnthropicFastModeDefault(): boolean {
-  return (
-    ConfigManager.getInstance().getConfig().providerConnections.anthropic.fastModeDefault === true
-  );
-}
-
 function resolveAnthropicSelectionFromFacts(params: {
   selectedModel?: string;
   limitContext?: boolean;
@@ -1843,274 +1784,6 @@ function resolveRequestedLaunchModel(params: {
 
   const explicitModel = getExplicitLaunchModelSelection(params.selectedModel);
   return explicitModel ?? params.facts.defaultModel;
-}
-
-function getTeamProviderLabel(providerId: TeamProviderId): string {
-  switch (providerId) {
-    case 'opencode':
-      return 'OpenCode';
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'anthropic':
-    default:
-      return 'Anthropic';
-  }
-}
-
-function getConfiguredRuntimeBackend(providerId: TeamProviderId): string | null {
-  const runtimeConfig = ConfigManager.getInstance().getConfig().runtime.providerBackends;
-  switch (providerId) {
-    case 'opencode':
-      return null;
-    case 'gemini':
-      return runtimeConfig.gemini;
-    case 'codex':
-      return migrateProviderBackendId('codex', runtimeConfig.codex) ?? 'codex-native';
-    case 'anthropic':
-    default:
-      return null;
-  }
-}
-
-function isOpenCodeLegacyProvisioningRequest(request: {
-  providerId?: unknown;
-  members?: readonly { providerId?: unknown; provider?: unknown }[];
-}): boolean {
-  return (
-    normalizeOptionalTeamProviderId(request.providerId) === 'opencode' ||
-    (request.members ?? []).some(
-      (member) =>
-        normalizeOptionalTeamProviderId(member.providerId) === 'opencode' ||
-        normalizeOptionalTeamProviderId(member.provider) === 'opencode'
-    )
-  );
-}
-
-function isPureOpenCodeProvisioningRequest(request: {
-  providerId?: unknown;
-  members?: readonly { providerId?: unknown; provider?: unknown }[];
-}): boolean {
-  if (!isOpenCodeLegacyProvisioningRequest(request)) {
-    return false;
-  }
-
-  const rootProviderId = normalizeOptionalTeamProviderId(request.providerId);
-  if (rootProviderId && rootProviderId !== 'opencode') {
-    return false;
-  }
-
-  return (request.members ?? []).every((member) => {
-    const memberProviderId =
-      normalizeOptionalTeamProviderId(member.providerId) ??
-      normalizeOptionalTeamProviderId(member.provider);
-    return !memberProviderId || memberProviderId === 'opencode';
-  });
-}
-
-export function getOpenCodeMixedProviderProvisioningError(): string {
-  return (
-    'This OpenCode mixed-team request is outside the current support scope. ' +
-    'Supported mixed teams keep the lead on Anthropic or Codex. OpenCode-led mixed teams still remain blocked in this phase.'
-  );
-}
-
-export function getMixedLaunchFallbackRecoveryError(): string {
-  return 'This old mixed team is missing stable member metadata. Open Edit Team and save the roster once before launching.';
-}
-
-type TeamLaunchCompatibilityLevel = 'ready' | 'repairable' | 'unsafe';
-type TeamLaunchCompatibilityRosterSource = 'members-meta' | 'config' | 'inboxes' | 'missing';
-type TeamLaunchCompatibilityRepairAction = 'materialize-members-meta';
-
-interface TeamLaunchCompatibilityReport {
-  level: TeamLaunchCompatibilityLevel;
-  rosterSource: TeamLaunchCompatibilityRosterSource;
-  members: TeamCreateRequest['members'];
-  warnings: string[];
-  blockers: string[];
-  repairAction?: TeamLaunchCompatibilityRepairAction;
-}
-
-function assertOpenCodeNotLaunchedThroughLegacyProvisioning(request: {
-  providerId?: unknown;
-  members?: readonly { providerId?: unknown; provider?: unknown }[];
-}): void {
-  if (!isOpenCodeLegacyProvisioningRequest(request)) {
-    return;
-  }
-  const lanePlan = fromProvisioningMembers(
-    normalizeOptionalTeamProviderId(request.providerId),
-    (request.members ?? []).map((member, index) => ({
-      name: `member-${index + 1}`,
-      providerId:
-        normalizeOptionalTeamProviderId(member.providerId) ??
-        normalizeOptionalTeamProviderId(member.provider),
-    }))
-  );
-  if (!lanePlan.ok) {
-    throw new Error(lanePlan.message || getOpenCodeMixedProviderProvisioningError());
-  }
-  if (!isPureOpenCodeProvisioningRequest(request)) {
-    return;
-  }
-  throw new Error(
-    'OpenCode team launch is not enabled in the legacy Claude stream-json provisioning path. ' +
-      'Use the gated OpenCode runtime adapter once production launch is enabled.'
-  );
-}
-
-function mergeProvisioningWarnings(
-  existing: string[] | undefined,
-  nextWarning: string | null
-): string[] | undefined {
-  if (!nextWarning) return existing;
-  const merged = (existing ?? []).filter((warning) => warning !== nextWarning);
-  merged.push(nextWarning);
-  return merged.length > 0 ? merged : undefined;
-}
-
-const DETERMINISTIC_BOOTSTRAP_LARGE_TEAM_WARNING_THRESHOLD = 8;
-const DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS = 20;
-
-function buildLargeDeterministicBootstrapWarning(memberCount: number): string | null {
-  if (memberCount <= DETERMINISTIC_BOOTSTRAP_LARGE_TEAM_WARNING_THRESHOLD) {
-    return null;
-  }
-  return (
-    `Large Codex team launch: ${memberCount} primary teammates will bootstrap in one runtime. ` +
-    `Launches above ${DETERMINISTIC_BOOTSTRAP_LARGE_TEAM_WARNING_THRESHOLD} teammates can be slower and more likely to hit provider rate limits or bootstrap timeouts.`
-  );
-}
-
-function assertDeterministicBootstrapPrimaryMemberLimit(memberCount: number): void {
-  if (memberCount <= DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS) {
-    return;
-  }
-  throw new Error(
-    `Codex deterministic bootstrap currently supports up to ${DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS} primary teammates; this team has ${memberCount}. Reduce primary teammates or move extra OpenCode members to secondary lanes.`
-  );
-}
-
-function buildRuntimeLaunchWarning(
-  request: Pick<
-    TeamCreateRequest,
-    'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
-  >,
-  env: NodeJS.ProcessEnv,
-  options?: {
-    geminiRuntimeAuth?: GeminiRuntimeAuthState | null;
-    promptSize?: PromptSizeSummary | null;
-    expectedMembersCount?: number;
-  }
-): string {
-  const providerId = resolveTeamProviderId(request.providerId);
-  const providerLabel = getTeamProviderLabel(providerId);
-  const modelLabel = request.model?.trim() || 'default';
-  const effortLabel = request.effort ?? 'default';
-  const fastLabel =
-    providerId === 'anthropic'
-      ? `, fast ${request.fastMode ?? (getAnthropicFastModeDefault() ? 'inherit:on' : 'inherit:off')}`
-      : providerId === 'codex'
-        ? `, fast ${request.fastMode ?? 'inherit:off'}`
-        : '';
-  const backend =
-    migrateProviderBackendId(providerId, request.providerBackendId?.trim()) ||
-    getConfiguredRuntimeBackend(providerId);
-  const flags: string[] = [];
-  if (env.CLAUDE_CODE_USE_GEMINI === '1') flags.push('USE_GEMINI');
-  if (env.CLAUDE_CODE_USE_OPENAI === '1') flags.push('USE_OPENAI');
-  if (env.CLAUDE_CODE_ENTRY_PROVIDER) {
-    flags.push(`ENTRY_PROVIDER=${env.CLAUDE_CODE_ENTRY_PROVIDER}`);
-  }
-  if (env.CLAUDE_CODE_GEMINI_BACKEND) {
-    flags.push(`GEMINI_BACKEND=${env.CLAUDE_CODE_GEMINI_BACKEND}`);
-  }
-  if (env.CLAUDE_CODE_CODEX_BACKEND) {
-    flags.push(`CODEX_BACKEND=${env.CLAUDE_CODE_CODEX_BACKEND}`);
-  }
-  if (env.CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES === '1') {
-    flags.push('FORCE_PROCESS_TEAMMATES');
-  }
-  const backendPart = backend ? `, backend ${backend}` : '';
-  const flagsPart = flags.length > 0 ? `, env ${flags.join(', ')}` : '';
-  const geminiAuth = options?.geminiRuntimeAuth;
-  const authPart =
-    providerId === 'gemini' && geminiAuth
-      ? `, auth ${geminiAuth.authMethod ?? 'none'}/${geminiAuth.resolvedBackend}`
-      : '';
-  const promptSize = options?.promptSize;
-  const promptPart = promptSize
-    ? `, prompt ${promptSize.chars.toLocaleString('en-US')} chars/${promptSize.lines} lines`
-    : '';
-  const membersPart =
-    typeof options?.expectedMembersCount === 'number'
-      ? `, members ${options.expectedMembersCount}`
-      : '';
-  return `Launch runtime: ${providerLabel} · ${modelLabel} · ${effortLabel}${fastLabel}${backendPart}${authPart}${promptPart}${membersPart}${flagsPart}`;
-}
-
-function logRuntimeLaunchSnapshot(
-  teamName: string,
-  claudePath: string,
-  args: string[],
-  request: Pick<
-    TeamCreateRequest,
-    'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
-  >,
-  env: NodeJS.ProcessEnv,
-  options?: {
-    geminiRuntimeAuth?: GeminiRuntimeAuthState | null;
-    promptSize?: PromptSizeSummary | null;
-    expectedMembersCount?: number;
-    launchIdentity?: ProviderModelLaunchIdentity | null;
-  }
-): void {
-  const providerId = resolveTeamProviderId(request.providerId);
-  const snapshot = {
-    providerId,
-    providerBackendId: migrateProviderBackendId(providerId, request.providerBackendId) ?? null,
-    model: request.model ?? null,
-    effort: request.effort ?? null,
-    fastMode: request.fastMode ?? null,
-    configuredBackend:
-      migrateProviderBackendId(providerId, request.providerBackendId?.trim()) ||
-      getConfiguredRuntimeBackend(providerId),
-    promptSize: options?.promptSize ?? null,
-    expectedMembersCount: options?.expectedMembersCount ?? null,
-    launchIdentity: options?.launchIdentity ?? null,
-    geminiRuntimeAuth:
-      providerId === 'gemini'
-        ? {
-            authenticated: options?.geminiRuntimeAuth?.authenticated ?? null,
-            authMethod: options?.geminiRuntimeAuth?.authMethod ?? null,
-            resolvedBackend: options?.geminiRuntimeAuth?.resolvedBackend ?? null,
-            projectId: options?.geminiRuntimeAuth?.projectId ?? null,
-            statusMessage: options?.geminiRuntimeAuth?.statusMessage ?? null,
-          }
-        : null,
-    env: {
-      CLAUDE_CODE_USE_GEMINI: env.CLAUDE_CODE_USE_GEMINI ?? null,
-      CLAUDE_CODE_USE_OPENAI: env.CLAUDE_CODE_USE_OPENAI ?? null,
-      CLAUDE_CODE_ENTRY_PROVIDER: env.CLAUDE_CODE_ENTRY_PROVIDER ?? null,
-      CLAUDE_CODE_GEMINI_BACKEND: env.CLAUDE_CODE_GEMINI_BACKEND ?? null,
-      CLAUDE_CODE_CODEX_BACKEND: env.CLAUDE_CODE_CODEX_BACKEND ?? null,
-      CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES: env.CLAUDE_TEAM_FORCE_PROCESS_TEAMMATES ?? null,
-      CLAUDE_CONFIG_DIR: env.CLAUDE_CONFIG_DIR ?? null,
-      CLAUDE_TEAM_CONTROL_URL: env.CLAUDE_TEAM_CONTROL_URL ?? null,
-    },
-    args,
-    claudePath,
-  };
-  logger.info(`[${teamName}] Launch runtime snapshot ${JSON.stringify(snapshot)}`);
-}
-
-function getPromptSizeSummary(prompt: string): PromptSizeSummary {
-  return {
-    chars: prompt.length,
-    lines: prompt.length === 0 ? 0 : prompt.split(/\r?\n/g).length,
-  };
 }
 
 type TeamsBaseLocation = 'configured' | 'default';
@@ -2442,67 +2115,6 @@ interface MemberLifecycleOperation {
   startedAtMs: number;
 }
 
-function formatOpenCodeLaneTimingMs(value: number | null | undefined): string {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? `${Math.max(0, Math.round(value))}ms`
-    : 'n/a';
-}
-
-function appendDiagnosticOnce(diagnostics: readonly string[], diagnostic: string | null): string[] {
-  if (!diagnostic || diagnostics.includes(diagnostic)) {
-    return [...diagnostics];
-  }
-  return [...diagnostics, diagnostic];
-}
-
-function buildOpenCodeSecondaryLaneTimingDiagnostic(
-  lane: MixedSecondaryRuntimeLaneState
-): string | null {
-  if (
-    typeof lane.queuedAtMs !== 'number' ||
-    typeof lane.launchStartedAtMs !== 'number' ||
-    typeof lane.launchFinishedAtMs !== 'number'
-  ) {
-    return null;
-  }
-  return [
-    'OpenCode secondary lane timing:',
-    `member=${lane.member.name}`,
-    `queueWaitMs=${formatOpenCodeLaneTimingMs(lane.launchStartedAtMs - lane.queuedAtMs)}`,
-    `launchMs=${formatOpenCodeLaneTimingMs(lane.launchFinishedAtMs - lane.launchStartedAtMs)}`,
-    `totalMs=${formatOpenCodeLaneTimingMs(lane.launchFinishedAtMs - lane.queuedAtMs)}`,
-  ].join(' ');
-}
-
-function createUnexpectedMixedSecondaryLaneFailureResult(input: {
-  runId: string;
-  teamName: string;
-  memberName: string;
-  message: string;
-}): TeamRuntimeLaunchResult {
-  return {
-    runId: input.runId,
-    teamName: input.teamName,
-    launchPhase: 'finished',
-    teamLaunchState: 'partial_failure',
-    members: {
-      [input.memberName]: {
-        memberName: input.memberName,
-        providerId: 'opencode',
-        launchState: 'failed_to_start',
-        agentToolAccepted: false,
-        runtimeAlive: false,
-        bootstrapConfirmed: false,
-        hardFailure: true,
-        hardFailureReason: input.message,
-        diagnostics: [input.message],
-      },
-    },
-    warnings: [],
-    diagnostics: [input.message],
-  };
-}
-
 type LeadActivityState = 'active' | 'idle' | 'offline';
 
 type ProvisioningAuthSource =
@@ -2520,32 +2132,6 @@ function isAnthropicApiKeyBackedAuthSource(authSource: unknown): boolean {
 
 function isAnthropicDirectCredentialAuthSource(authSource: unknown): boolean {
   return isAnthropicApiKeyBackedAuthSource(authSource) || authSource === 'anthropic_auth_token';
-}
-
-function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
-  const trimmed = baseUrl?.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  try {
-    const url = new URL(trimmed);
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      !url.username &&
-      !url.password &&
-      url.hostname !== 'api.anthropic.com' &&
-      url.hostname !== 'api-staging.anthropic.com'
-    );
-  } catch {
-    return false;
-  }
-}
-
-function hasAnthropicCompatibleAuthTokenEnv(env: NodeJS.ProcessEnv): boolean {
-  return Boolean(
-    isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL) && env.ANTHROPIC_AUTH_TOKEN?.trim()
-  );
 }
 
 function buildAnthropicCrossProviderDirectAuthEnvPatch(
@@ -2610,108 +2196,14 @@ interface CrossProviderMemberArgsResult {
   usesAnthropicApiKeyHelper: boolean;
 }
 
-interface PromptSizeSummary {
-  chars: number;
-  lines: number;
-}
-
-const MEMBER_LAUNCH_GRACE_MS = 120_000;
-const MEMBER_BOOTSTRAP_STALL_MS = 5 * 60_000;
 const OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS = {
   acquireTimeoutMs: 45_000,
   staleTimeoutMs: 60_000,
   retryIntervalMs: 50,
 } as const;
 
-export function shouldWarnOnUnreadableMemberAuditConfig(params: {
-  nowMs: number;
-  lastWarnAt: number;
-  expectedMembers: readonly string[];
-  memberSpawnStatuses: ReadonlyMap<
-    string,
-    Pick<MemberSpawnStatusEntry, 'agentToolAccepted' | 'firstSpawnAcceptedAt'> | undefined
-  >;
-}): boolean {
-  const { nowMs, lastWarnAt, expectedMembers, memberSpawnStatuses } = params;
-  if (nowMs - lastWarnAt < MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS) {
-    return false;
-  }
-  return expectedMembers.some((memberName) => {
-    const current = memberSpawnStatuses.get(memberName);
-    if (!current?.agentToolAccepted || typeof current.firstSpawnAcceptedAt !== 'string') {
-      return false;
-    }
-    const acceptedAtMs = Date.parse(current.firstSpawnAcceptedAt);
-    return Number.isFinite(acceptedAtMs) && nowMs - acceptedAtMs >= MEMBER_LAUNCH_GRACE_MS;
-  });
-}
-
-export function shouldWarnOnMissingRegisteredMember(params: {
-  nowMs: number;
-  lastWarnAt: number;
-  graceExpired: boolean;
-}): boolean {
-  const { nowMs, lastWarnAt, graceExpired } = params;
-  return graceExpired && nowMs - lastWarnAt >= MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS;
-}
-
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function parseOptionalIsoMs(value: string | undefined): number {
-  if (!value) return 0;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function deriveTaskActivityPauseAt(previous: MemberSpawnStatusEntry, fallbackAt: string): string {
-  const fallbackMs = parseOptionalIsoMs(fallbackAt);
-  const explicitEvidenceMs = Math.max(
-    parseOptionalIsoMs(previous.lastHeartbeatAt),
-    parseOptionalIsoMs(previous.livenessLastCheckedAt)
-  );
-  const evidenceMs =
-    explicitEvidenceMs > 0 ? explicitEvidenceMs : parseOptionalIsoMs(previous.updatedAt);
-  if (evidenceMs <= 0 || fallbackMs <= 0) {
-    return fallbackAt;
-  }
-  const boundedEvidenceMs = Math.min(evidenceMs, fallbackMs);
-  const closeMs = Math.max(
-    boundedEvidenceMs,
-    Math.min(fallbackMs, boundedEvidenceMs + TASK_ACTIVITY_RUNTIME_PAUSE_GRACE_MS)
-  );
-  return new Date(closeMs).toISOString();
-}
-
-function deriveTaskActivityResumeAt(
-  previous: MemberSpawnStatusEntry,
-  evidenceAt: string,
-  fallbackAt: string
-): string {
-  const fallbackMs = parseOptionalIsoMs(fallbackAt);
-  const evidenceMs = parseOptionalIsoMs(evidenceAt);
-  const previousUpdatedMs = parseOptionalIsoMs(previous.updatedAt);
-  if (evidenceMs <= 0 || fallbackMs <= 0) {
-    return fallbackAt;
-  }
-  if (previousUpdatedMs > 0 && evidenceMs < previousUpdatedMs) {
-    return fallbackAt;
-  }
-  return new Date(Math.min(evidenceMs, fallbackMs)).toISOString();
-}
-
-function createInitialMemberSpawnStatusEntry(): MemberSpawnStatusEntry {
-  const updatedAt = nowIso();
-  return {
-    status: 'offline',
-    launchState: 'starting',
-    agentToolAccepted: false,
-    runtimeAlive: false,
-    bootstrapConfirmed: false,
-    hardFailure: false,
-    updatedAt,
-  };
 }
 
 interface LiveTeamAgentRuntimeMetadata {
@@ -2736,370 +2228,10 @@ interface LiveTeamAgentRuntimeMetadata {
   diagnostics?: string[];
 }
 
-function isNeverSpawnedDuringLaunchReason(reason?: string): boolean {
-  return reason?.trim() === 'Teammate was never spawned during launch.';
-}
-
-function collectRuntimeLaunchFailureDiagnostics(
-  result: TeamRuntimeLaunchResult,
-  memberName: string
-): string[] {
-  const member = result.members[memberName];
-  return [...(member?.diagnostics ?? []), member?.hardFailureReason, ...result.diagnostics].filter(
-    (value): value is string => typeof value === 'string' && value.trim().length > 0
-  );
-}
-
-function collectOpenCodeSecondaryLaneFailureDiagnostics(
-  result: TeamRuntimeLaunchResult,
-  memberName: string,
-  prefixDiagnostics: readonly string[]
-): string[] {
-  const diagnostics = [
-    ...prefixDiagnostics,
-    ...collectRuntimeLaunchFailureDiagnostics(result, memberName),
-  ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
-  return diagnostics.length > 0 ? diagnostics : ['OpenCode bridge reported member launch failure'];
-}
-
-function isReconciliableOpenCodeUnknownOutcome(diagnostics: readonly string[]): boolean {
-  return diagnostics.some((diagnostic) =>
-    /outcome must be reconciled before retry/i.test(diagnostic)
-  );
-}
-
-function isDefinitiveOpenCodePreLaunchFailure(
-  result: TeamRuntimeLaunchResult,
-  memberName: string
-): boolean {
-  const member = result.members[memberName];
-  if (!member) {
-    return false;
-  }
-  const hardFailed = member.launchState === 'failed_to_start' || member.hardFailure === true;
-  if (!hardFailed) {
-    return false;
-  }
-  const runtimeMaterialized =
-    member.agentToolAccepted ||
-    member.runtimeAlive ||
-    member.bootstrapConfirmed ||
-    (typeof member.sessionId === 'string' && member.sessionId.trim().length > 0) ||
-    (typeof member.runtimePid === 'number' &&
-      Number.isFinite(member.runtimePid) &&
-      member.runtimePid > 0);
-  if (runtimeMaterialized) {
-    return false;
-  }
-  return !isReconciliableOpenCodeUnknownOutcome(
-    collectRuntimeLaunchFailureDiagnostics(result, memberName)
-  );
-}
-
-const OPENCODE_BOOTSTRAP_PENDING_DIAGNOSTIC =
-  'opencode_bootstrap_pending_after_materialized_session';
-const OPENCODE_APP_MANAGED_BOOTSTRAP_PENDING_DIAGNOSTIC =
-  'OpenCode app-managed bootstrap evidence is pending after materialized session.';
-
-function isMaterializedOpenCodeSessionId(sessionId: unknown): boolean {
-  if (typeof sessionId !== 'string') {
-    return false;
-  }
-  const trimmed = sessionId.trim();
-  return trimmed.length > 0 && !trimmed.startsWith('failed:');
-}
-
-function hasMaterializedOpenCodeRuntimeForBootstrap(
-  member: TeamRuntimeMemberLaunchEvidence | undefined
-): member is TeamRuntimeMemberLaunchEvidence {
-  if (!member) {
-    return false;
-  }
-  if (isMaterializedOpenCodeSessionId(member.sessionId)) {
-    return true;
-  }
-  return (
-    hasOpenCodeRuntimeLivenessMarker(member) &&
-    typeof member.runtimePid === 'number' &&
-    Number.isFinite(member.runtimePid) &&
-    member.runtimePid > 0
-  );
-}
-
-function hasRecoverableOpenCodeBootstrapDiagnostic(diagnostics: readonly string[]): boolean {
-  const text = diagnostics.join('\n').toLowerCase();
-  if (!text) {
-    return false;
-  }
-  if (hasRealOpenCodeFailureDiagnostic(text)) {
-    return false;
-  }
-  return (
-    text.includes('runtime_bootstrap_checkin') ||
-    text.includes('member_briefing') ||
-    text.includes('bootstrap mcp') ||
-    text.includes('member_session_recorded') ||
-    text.includes('not connected') ||
-    text.includes('mcp not connected') ||
-    text.includes('member_launch_reconcile_pending') ||
-    text.includes('member_launch_preview_timeout')
-  );
-}
-
-function isRecoverableOpenCodeBootstrapPendingLaunchResult(
-  result: TeamRuntimeLaunchResult,
-  memberName: string
-): boolean {
-  const member = result.members[memberName];
-  if (!hasMaterializedOpenCodeRuntimeForBootstrap(member)) {
-    return false;
-  }
-  if (member.bootstrapConfirmed || member.launchState === 'confirmed_alive') {
-    return false;
-  }
-  if ((member.pendingPermissionRequestIds?.length ?? 0) > 0) {
-    return false;
-  }
-  return hasRecoverableOpenCodeBootstrapDiagnostic(
-    collectRuntimeLaunchFailureDiagnostics(result, memberName)
-  );
-}
-
-function normalizeRecoverableOpenCodeBootstrapPendingLaunchResult(
-  result: TeamRuntimeLaunchResult,
-  memberName: string,
-  diagnostics: readonly string[]
-): TeamRuntimeLaunchResult {
-  const member = result.members[memberName];
-  if (!member) {
-    return result;
-  }
-  const memberDiagnostics = Array.from(
-    new Set([
-      ...(member.diagnostics ?? []),
-      OPENCODE_BOOTSTRAP_PENDING_DIAGNOSTIC,
-      isExplicitLegacyOpenCodeBootstrap(member)
-        ? 'OpenCode runtime session materialized; waiting for runtime_bootstrap_checkin.'
-        : OPENCODE_APP_MANAGED_BOOTSTRAP_PENDING_DIAGNOSTIC,
-      ...diagnostics,
-    ])
-  );
-  const normalizedMember: TeamRuntimeMemberLaunchEvidence = {
-    ...member,
-    launchState: 'runtime_pending_bootstrap',
-    agentToolAccepted: true,
-    runtimeAlive: true,
-    bootstrapConfirmed: false,
-    hardFailure: false,
-    hardFailureReason: undefined,
-    pendingPermissionRequestIds: undefined,
-    livenessKind:
-      member.livenessKind === 'confirmed_bootstrap'
-        ? 'runtime_process'
-        : (member.livenessKind ?? 'runtime_process'),
-    runtimeDiagnostic:
-      member.runtimeDiagnostic ??
-      'OpenCode runtime process detected; waiting for bootstrap check-in.',
-    runtimeDiagnosticSeverity: member.runtimeDiagnosticSeverity ?? 'info',
-    diagnostics: memberDiagnostics,
-  };
-  const members = {
-    ...result.members,
-    [memberName]: normalizedMember,
-  };
-  const teamLaunchState = summarizeRuntimeLaunchResultMembers(members);
-  return {
-    ...result,
-    launchPhase: teamLaunchState === 'clean_success' ? result.launchPhase : 'active',
-    teamLaunchState,
-    members,
-    diagnostics: Array.from(new Set([...result.diagnostics, ...memberDiagnostics])),
-  };
-}
-
-const OPENCODE_UNCOMMITTED_BOOTSTRAP_DIAGNOSTIC =
-  'OpenCode bridge reported bootstrap confirmation, but no lane runtime evidence was committed.';
-
-function buildOpenCodeUncommittedBootstrapDiagnostic(storage: {
-  manifestEntryCount: number | null;
-  manifestUpdatedAt: string | null;
-  fileNames: string[];
-}): string[] {
-  return [
-    OPENCODE_UNCOMMITTED_BOOTSTRAP_DIAGNOSTIC,
-    `OpenCode lane manifest entries: ${storage.manifestEntryCount ?? 0}`,
-    ...(storage.manifestUpdatedAt
-      ? [`OpenCode lane manifest updated at: ${storage.manifestUpdatedAt}`]
-      : []),
-    storage.fileNames.length > 0
-      ? `OpenCode lane files: ${storage.fileNames.slice(0, 8).join(', ')}`
-      : 'OpenCode lane files: none',
-  ];
-}
-
-function downgradeUncommittedOpenCodeBootstrapEvidence(
-  evidence: TeamRuntimeMemberLaunchEvidence,
-  diagnostics: readonly string[]
-): TeamRuntimeMemberLaunchEvidence {
-  const hasRuntimeHandle = hasOpenCodeRuntimeHandle(evidence);
-  return {
-    ...evidence,
-    launchState: hasRuntimeHandle ? 'runtime_pending_bootstrap' : 'starting',
-    agentToolAccepted: hasRuntimeHandle,
-    runtimeAlive: false,
-    bootstrapConfirmed: false,
-    hardFailure: false,
-    hardFailureReason: undefined,
-    livenessKind: hasRuntimeHandle
-      ? evidence.livenessKind === 'confirmed_bootstrap'
-        ? 'runtime_process_candidate'
-        : (evidence.livenessKind ?? 'runtime_process_candidate')
-      : 'registered_only',
-    runtimeDiagnostic: hasRuntimeHandle
-      ? 'OpenCode runtime handle is present, but bootstrap evidence was not committed.'
-      : 'OpenCode bootstrap confirmation was not committed to lane runtime evidence.',
-    runtimeDiagnosticSeverity: 'warning',
-    diagnostics: Array.from(new Set([...evidence.diagnostics, ...diagnostics])),
-  };
-}
-
-function promoteCommittedOpenCodeAppManagedBootstrapEvidence(
-  evidence: TeamRuntimeMemberLaunchEvidence
-): TeamRuntimeMemberLaunchEvidence {
-  return {
-    ...evidence,
-    launchState: 'confirmed_alive',
-    agentToolAccepted: true,
-    runtimeAlive: true,
-    bootstrapConfirmed: true,
-    hardFailure: false,
-    hardFailureReason: undefined,
-    livenessKind: 'confirmed_bootstrap',
-    runtimeDiagnostic:
-      'OpenCode app-managed bootstrap evidence was committed and read back by the desktop app.',
-    runtimeDiagnosticSeverity: 'info',
-    diagnostics: appendDiagnosticOnce(
-      evidence.diagnostics,
-      'OpenCode app-managed bootstrap evidence committed and read back.'
-    ),
-  };
-}
-
-function summarizeRuntimeLaunchResultMembers(
-  members: Record<string, TeamRuntimeMemberLaunchEvidence>
-): TeamLaunchAggregateState {
-  const values = Object.values(members);
-  if (
-    values.some((member) => member.launchState === 'failed_to_start' || member.hardFailure === true)
-  ) {
-    return 'partial_failure';
-  }
-  if (values.length > 0 && values.every((member) => member.launchState === 'confirmed_alive')) {
-    return 'clean_success';
-  }
-  return 'partial_pending';
-}
-
-function hasOpenCodeRuntimeHandle(
-  value:
-    | Pick<PersistedTeamLaunchMemberState, 'runtimePid' | 'runtimeSessionId' | 'livenessKind'>
-    | Pick<TeamRuntimeMemberLaunchEvidence, 'runtimePid' | 'sessionId' | 'livenessKind'>
-    | undefined
-): boolean {
-  if (!value) {
-    return false;
-  }
-  const runtimePid =
-    typeof value.runtimePid === 'number' &&
-    Number.isFinite(value.runtimePid) &&
-    value.runtimePid > 0;
-  const runtimeSessionId = (value as { runtimeSessionId?: unknown }).runtimeSessionId;
-  const runtimeEvidenceSessionId = (value as { sessionId?: unknown }).sessionId;
-  const sessionId =
-    (typeof runtimeSessionId === 'string' && runtimeSessionId.trim().length > 0) ||
-    (typeof runtimeEvidenceSessionId === 'string' && runtimeEvidenceSessionId.trim().length > 0);
-  return runtimePid || sessionId;
-}
-
-function hasOpenCodeRuntimeLivenessMarker(
-  value: Pick<TeamRuntimeMemberLaunchEvidence, 'livenessKind'> | undefined
-): boolean {
-  return (
-    value?.livenessKind === 'runtime_process' ||
-    value?.livenessKind === 'runtime_process_candidate' ||
-    value?.livenessKind === 'permission_blocked'
-  );
-}
-
-function hasOpenCodeRuntimeEntryHandle(
-  value:
-    | Pick<TeamAgentRuntimeEntry, 'pid' | 'runtimePid' | 'runtimeSessionId' | 'livenessKind'>
-    | undefined
-    | null
-): boolean {
-  if (!value) {
-    return false;
-  }
-  const pid = typeof value.pid === 'number' && Number.isFinite(value.pid) && value.pid > 0;
-  const runtimePid =
-    typeof value.runtimePid === 'number' &&
-    Number.isFinite(value.runtimePid) &&
-    value.runtimePid > 0;
-  const runtimeSessionId =
-    typeof value.runtimeSessionId === 'string' && value.runtimeSessionId.trim().length > 0;
-  return pid || runtimePid || runtimeSessionId || hasOpenCodeRuntimeLivenessMarker(value);
-}
-
-function isRecoverablePersistedOpenCodeRuntimeCandidate(
-  member: PersistedTeamLaunchMemberState | undefined | null
-): boolean {
-  if (!member || member.skippedForLaunch) {
-    return false;
-  }
-  if (
-    member.providerId !== 'opencode' ||
-    member.laneKind !== 'secondary' ||
-    member.laneOwnerProviderId !== 'opencode' ||
-    typeof member.laneId !== 'string' ||
-    member.laneId.trim().length === 0
-  ) {
-    return false;
-  }
-  const hasPendingPermission = (member.pendingPermissionRequestIds?.length ?? 0) > 0;
-  return (
-    member.agentToolAccepted === true && (hasOpenCodeRuntimeHandle(member) || hasPendingPermission)
-  );
-}
-
-function isPersistedOpenCodeSecondaryLaneMember(
-  member: PersistedTeamLaunchMemberState | undefined | null
-): boolean {
-  return (
-    member?.providerId === 'opencode' &&
-    member.laneKind === 'secondary' &&
-    member.laneOwnerProviderId === 'opencode' &&
-    typeof member.laneId === 'string' &&
-    member.laneId.trim().length > 0
-  );
-}
-
 const OPENCODE_BOOTSTRAP_CHECKIN_RETRY_SENT_PREFIX = 'opencode_bootstrap_checkin_retry_prompt_sent';
-const OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC =
-  'OpenCode app-managed bootstrap evidence did not commit within 5 min.';
 
 function getOpenCodeBootstrapCheckinRetryMarker(runId: string, runtimeSessionId: string): string {
   return `${OPENCODE_BOOTSTRAP_CHECKIN_RETRY_SENT_PREFIX}:${runId}:${runtimeSessionId}`;
-}
-
-function isExplicitLegacyOpenCodeBootstrap(
-  value:
-    | {
-        bootstrapMode?: 'model_tool_checkin' | 'app_managed_context';
-      }
-    | undefined
-    | null
-): boolean {
-  return value?.bootstrapMode === 'model_tool_checkin';
 }
 
 function resolveOpenCodeSecondaryLaneMemberEvidence(
@@ -3115,348 +2247,6 @@ function resolveOpenCodeSecondaryLaneMemberEvidence(
       matchesTeamMemberIdentity(member.memberName ?? '', memberName)
     )
   );
-}
-
-const OPENCODE_MEMBER_SESSION_RECORDED_AT_PATTERN =
-  /\bmember_session_recorded\s+at\s+([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.+-]+Z?)\b/i;
-
-function normalizeIsoTimestamp(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Date.parse(trimmed);
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
-}
-
-function selectEarliestIsoTimestamp(values: readonly unknown[]): string | undefined {
-  let selected: { value: string; timeMs: number } | null = null;
-  for (const value of values) {
-    const normalized = normalizeIsoTimestamp(value);
-    if (!normalized) {
-      continue;
-    }
-    const timeMs = Date.parse(normalized);
-    if (!selected || timeMs < selected.timeMs) {
-      selected = { value: normalized, timeMs };
-    }
-  }
-  return selected?.value;
-}
-
-function extractOpenCodeMemberSessionRecordedAt(
-  diagnostics: readonly string[] | undefined
-): string[] {
-  return (diagnostics ?? []).flatMap((diagnostic) => {
-    const match = OPENCODE_MEMBER_SESSION_RECORDED_AT_PATTERN.exec(diagnostic);
-    return match?.[1] ? [match[1]] : [];
-  });
-}
-
-function resolveOpenCodeBootstrapAcceptedAt(
-  member: Pick<PersistedTeamLaunchMemberState, 'firstSpawnAcceptedAt' | 'diagnostics'>
-): string | undefined {
-  return selectEarliestIsoTimestamp([
-    member.firstSpawnAcceptedAt,
-    ...extractOpenCodeMemberSessionRecordedAt(member.diagnostics),
-  ]);
-}
-
-function hasOpenCodeSecondaryFatalBootstrapDiagnostic(
-  member: Pick<
-    PersistedTeamLaunchMemberState,
-    'diagnostics' | 'runtimeDiagnostic' | 'hardFailureReason'
-  >
-): boolean {
-  const text = [member.runtimeDiagnostic, member.hardFailureReason, ...(member.diagnostics ?? [])]
-    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-    .join('\n')
-    .toLowerCase();
-  return text.length > 0 && hasRealOpenCodeFailureDiagnostic(text);
-}
-
-function selectOpenCodeSecondaryBootstrapStallDiagnostic(
-  values: readonly unknown[]
-): string | null {
-  const normalizedValues = values
-    .filter((value): value is string => typeof value === 'string')
-    .map((value) => normalizeOpenCodePersistedFailureReason(value))
-    .filter((value): value is string => typeof value === 'string' && value.length > 0);
-
-  const runtimeCheckinDiagnostic = normalizedValues.find((value) =>
-    value.toLowerCase().includes('runtime_bootstrap_checkin')
-  );
-  if (runtimeCheckinDiagnostic) {
-    return runtimeCheckinDiagnostic;
-  }
-
-  const memberBriefingDiagnostic = normalizedValues.find((value) =>
-    value.toLowerCase().includes('member_briefing')
-  );
-  if (memberBriefingDiagnostic) {
-    return `${memberBriefingDiagnostic}; runtime_bootstrap_checkin did not complete after 5 min.`;
-  }
-
-  return null;
-}
-
-function getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted(
-  member: PersistedTeamLaunchMemberState
-): string {
-  if (!isExplicitLegacyOpenCodeBootstrap(member)) {
-    return OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC;
-  }
-
-  const selected = selectOpenCodeSecondaryBootstrapStallDiagnostic([
-    member.runtimeDiagnostic,
-    ...(member.diagnostics ?? []),
-    member.hardFailureReason,
-  ]);
-  if (selected) {
-    return selected;
-  }
-
-  return 'OpenCode bootstrap did not complete runtime_bootstrap_checkin after 5 min.';
-}
-
-function shouldMarkPersistedOpenCodeBootstrapStalled(
-  member: PersistedTeamLaunchMemberState,
-  nowMs: number
-): boolean {
-  if (!isPersistedOpenCodeSecondaryLaneMember(member)) {
-    return false;
-  }
-  if (
-    member.launchState !== 'runtime_pending_bootstrap' ||
-    member.bootstrapConfirmed === true ||
-    member.hardFailure === true ||
-    member.skippedForLaunch === true ||
-    (member.pendingPermissionRequestIds?.length ?? 0) > 0
-  ) {
-    return false;
-  }
-  if (hasOpenCodeSecondaryFatalBootstrapDiagnostic(member)) {
-    return false;
-  }
-  const acceptedAt = resolveOpenCodeBootstrapAcceptedAt(member);
-  const acceptedAtMs = acceptedAt ? Date.parse(acceptedAt) : NaN;
-  if (!Number.isFinite(acceptedAtMs) || nowMs - acceptedAtMs < MEMBER_BOOTSTRAP_STALL_MS) {
-    return false;
-  }
-  return (
-    hasOpenCodeRuntimeHandle(member) ||
-    hasOpenCodeRuntimeLivenessMarker(member) ||
-    hasRecoverableOpenCodeBootstrapDiagnostic(
-      [member.runtimeDiagnostic, ...(member.diagnostics ?? [])].filter(
-        (value): value is string => typeof value === 'string'
-      )
-    )
-  );
-}
-
-function namesMatchCaseInsensitive(left: string, right: string): boolean {
-  return left.trim().toLowerCase() === right.trim().toLowerCase();
-}
-
-function isOpenCodeOverlayMemberRemoved(
-  metaMembers: readonly { name?: string; removedAt?: unknown }[],
-  memberName: string
-): boolean {
-  return metaMembers.some(
-    (member) =>
-      typeof member.name === 'string' &&
-      namesMatchCaseInsensitive(member.name, memberName) &&
-      member.removedAt != null
-  );
-}
-
-function hasStaleOpenCodeSecondaryLaunchDiagnostic(
-  member: PersistedTeamLaunchMemberState
-): boolean {
-  return hasStaleOpenCodeDiagnostics(getOpenCodeLaunchDiagnosticValues(member));
-}
-
-function hasRealOpenCodeLaunchDiagnostic(member: PersistedTeamLaunchMemberState): boolean {
-  const text = getOpenCodeLaunchDiagnosticValues(member)
-    .filter((value): value is string => typeof value === 'string')
-    .join('\n')
-    .toLowerCase();
-  return text.length > 0 && hasRealOpenCodeFailureDiagnostic(text);
-}
-
-function getOpenCodeLaunchDiagnosticValues(
-  member: PersistedTeamLaunchMemberState
-): readonly unknown[] {
-  return [member.hardFailureReason, member.runtimeDiagnostic, ...(member.diagnostics ?? [])];
-}
-
-function hasStaleOpenCodeDiagnostics(values: readonly unknown[] | undefined): boolean {
-  const text = (values ?? [])
-    .filter((value): value is string => typeof value === 'string')
-    .join('\n')
-    .toLowerCase();
-  if (!text) {
-    return false;
-  }
-  if (hasRealOpenCodeFailureDiagnostic(text)) {
-    return false;
-  }
-  return (
-    text.includes('no lane runtime evidence') ||
-    text.includes('no runtime evidence') ||
-    text.includes('runtime evidence was not committed') ||
-    text.includes('no lane runtime evidence was committed') ||
-    text.includes('registered runtime metadata without live process') ||
-    text.includes('member has persisted runtime metadata only') ||
-    text.includes('opencode bridge reported member launch failure') ||
-    text.includes('file lock timeout') ||
-    text.includes(OPENCODE_UNCOMMITTED_BOOTSTRAP_DIAGNOSTIC.toLowerCase())
-  );
-}
-
-function isFileLockTimeoutError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.toLowerCase().includes('file lock timeout');
-}
-
-function hasRealOpenCodeFailureDiagnostic(text: string): boolean {
-  return (
-    /\bauth(?:entication|orization)?\b/.test(text) ||
-    text.includes('api key') ||
-    text.includes('unauthorized') ||
-    text.includes('forbidden') ||
-    text.includes('invalid_request') ||
-    text.includes('model not found') ||
-    text.includes('not found in live opencode catalog') ||
-    text.includes('provider unavailable') ||
-    text.includes('quota') ||
-    text.includes('credits') ||
-    text.includes('max_tokens') ||
-    text.includes('rate limit') ||
-    text.includes('member removed') ||
-    text.includes('session conflict') ||
-    text.includes('run tombstoned') ||
-    text.includes('stop requested') ||
-    text.includes('relaunch started')
-  );
-}
-
-const OPEN_CODE_GENERIC_MEMBER_LAUNCH_FAILURE_REASON =
-  'OpenCode bridge reported member launch failure';
-const OPEN_CODE_SECRET_FLAG_PATTERN =
-  /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
-const OPEN_CODE_BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Z0-9._~+/=-]+/gi;
-const OPEN_CODE_SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
-const OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS = 12_000;
-
-function normalizeOpenCodePersistedFailureReason(value: string | undefined): string | undefined {
-  const trimmed = value?.replace(/\s+/g, ' ').trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  return trimmed
-    .replace(OPEN_CODE_SECRET_FLAG_PATTERN, '$1[redacted]')
-    .replace(OPEN_CODE_BEARER_TOKEN_PATTERN, 'Bearer [redacted]')
-    .replace(OPEN_CODE_SECRET_KEY_PATTERN, '[redacted-api-key]');
-}
-
-function redactOpenCodeAppManagedContextText(value: string): string {
-  return value
-    .replace(OPEN_CODE_SECRET_FLAG_PATTERN, '$1[redacted]')
-    .replace(OPEN_CODE_BEARER_TOKEN_PATTERN, 'Bearer [redacted]')
-    .replace(OPEN_CODE_SECRET_KEY_PATTERN, '[redacted-api-key]');
-}
-
-function boundOpenCodeAppManagedBriefingText(value: string): string {
-  const normalized = redactOpenCodeAppManagedContextText(value.replace(/\r\n/g, '\n')).trim();
-  if (normalized.length <= OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS) {
-    return normalized;
-  }
-  return `${normalized.slice(0, OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS)}\n[truncated app-managed briefing]`;
-}
-
-function isGenericOpenCodePersistedFailureReason(value: string | undefined): boolean {
-  const normalized = normalizeOpenCodePersistedFailureReason(value);
-  return (
-    normalized === OPEN_CODE_GENERIC_MEMBER_LAUNCH_FAILURE_REASON ||
-    normalized?.startsWith(`${OPEN_CODE_GENERIC_MEMBER_LAUNCH_FAILURE_REASON}:`) === true ||
-    normalized?.startsWith('OpenCode secondary lane timing:') === true ||
-    normalized?.startsWith(
-      'OpenCode bridge reported ready without all required durable checkpoints:'
-    ) === true ||
-    normalized?.startsWith(
-      'OpenCode bridge reported ready before all expected members were confirmed:'
-    ) === true ||
-    normalized?.startsWith(
-      'OpenCode bootstrap MCP did not complete required tools before assistant response:'
-    ) === true ||
-    normalized?.startsWith('info:opencode_launch_member_timing:') === true ||
-    normalized?.startsWith('info:opencode_launch_total_timing:') === true
-  );
-}
-
-function selectOpenCodePersistedFailureReasonFromDiagnostics(
-  member: PersistedTeamLaunchMemberState
-): string | undefined {
-  if (!isPersistedOpenCodeSecondaryLaneMember(member)) {
-    return undefined;
-  }
-  if (member.launchState !== 'failed_to_start' || member.hardFailure !== true) {
-    return undefined;
-  }
-  if (!isGenericOpenCodePersistedFailureReason(member.hardFailureReason)) {
-    return undefined;
-  }
-  for (const value of member.diagnostics ?? []) {
-    const normalized = normalizeOpenCodePersistedFailureReason(value);
-    if (!normalized || isGenericOpenCodePersistedFailureReason(normalized)) {
-      continue;
-    }
-    return normalized;
-  }
-  return undefined;
-}
-
-function promoteOpenCodePersistedFailureReasonsFromDiagnostics(
-  snapshot: PersistedTeamLaunchSnapshot | null
-): PersistedTeamLaunchSnapshot | null {
-  if (!snapshot) {
-    return null;
-  }
-  let changed = false;
-  const members: Record<string, PersistedTeamLaunchMemberState> = { ...snapshot.members };
-  for (const [memberName, member] of Object.entries(snapshot.members)) {
-    const promotedReason = selectOpenCodePersistedFailureReasonFromDiagnostics(member);
-    if (!promotedReason || promotedReason === member.hardFailureReason) {
-      continue;
-    }
-    members[memberName] = {
-      ...member,
-      hardFailureReason: promotedReason,
-      runtimeDiagnostic:
-        member.runtimeDiagnostic &&
-        !isGenericOpenCodePersistedFailureReason(member.runtimeDiagnostic)
-          ? member.runtimeDiagnostic
-          : promotedReason,
-      runtimeDiagnosticSeverity: member.runtimeDiagnosticSeverity ?? 'error',
-    };
-    changed = true;
-  }
-  if (!changed) {
-    return snapshot;
-  }
-  return createPersistedLaunchSnapshot({
-    teamName: snapshot.teamName,
-    expectedMembers: snapshot.expectedMembers,
-    bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers,
-    leadSessionId: snapshot.leadSessionId,
-    launchPhase: snapshot.launchPhase,
-    members,
-    updatedAt: nowIso(),
-  });
 }
 
 function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(input: {
@@ -3522,264 +2312,12 @@ function promoteOpenCodeSecondaryMemberFromCommittedBootstrapEvidence(input: {
   };
 }
 
-function filterStaleOpenCodeOverlayDiagnostics(values: readonly string[] | undefined): string[] {
-  return (values ?? []).filter((value) => !hasStaleOpenCodeDiagnostics([value]));
-}
-
-function isRecoverablePersistedOpenCodeTerminalRuntimeCandidate(
-  member: PersistedTeamLaunchMemberState | undefined | null
-): boolean {
-  return (
-    isRecoverablePersistedOpenCodeRuntimeCandidate(member) &&
-    member?.launchState === 'failed_to_start' &&
-    member.hardFailure === true &&
-    hasOpenCodeRuntimeHandle(member)
-  );
-}
-
-function isRecoverableOpenCodeRuntimeEvidence(
-  evidence: TeamRuntimeMemberLaunchEvidence | undefined | null
-): evidence is TeamRuntimeMemberLaunchEvidence {
-  if (!evidence) {
-    return false;
-  }
-  return (
-    evidence.runtimeAlive === true ||
-    evidence.bootstrapConfirmed === true ||
-    (evidence.pendingPermissionRequestIds?.length ?? 0) > 0 ||
-    hasOpenCodeRuntimeHandle(evidence) ||
-    (evidence.agentToolAccepted === true && hasOpenCodeRuntimeLivenessMarker(evidence))
-  );
-}
-
-function isLaunchGraceWindowFailureReason(reason?: string): boolean {
-  return reason?.trim() === 'Teammate did not join within the launch grace window.';
-}
-
-function isConfigRegistrationFailureReason(reason?: string): boolean {
-  return (
-    reason?.trim() ===
-    'Teammate was not registered in config.json during launch. Persistent spawn failed.'
-  );
-}
-
-function isOpenCodeBridgeLaunchFailureReason(reason?: string): boolean {
-  return reason?.trim() === 'OpenCode bridge reported member launch failure';
-}
-
-function isRegisteredRuntimeMetadataFailureReason(reason?: string): boolean {
-  return reason?.trim() === 'registered runtime metadata without live process';
-}
-
-function isProcessTableUnavailableFailureReason(reason?: string): boolean {
-  const text = reason?.trim();
-  if (!text || !mentionsProcessTableUnavailable(text)) {
-    return false;
-  }
-  return (
-    /^process table (?:is )?unavailable$/i.test(text) ||
-    /^runtime pid could not be verified because process table (?:is )?unavailable$/i.test(text)
-  );
-}
-
-function stripProcessTableUnavailableDiagnosticSuffix(reason: string): string | null {
-  const match = /^(.*?);\s*process table (?:is )?unavailable$/i.exec(reason.trim());
-  const baseReason = match?.[1]?.trim();
-  return baseReason && baseReason.length > 0 ? baseReason : null;
-}
-
-function isBaseAutoClearableLaunchFailureReason(reason?: string): boolean {
-  return (
-    isNeverSpawnedDuringLaunchReason(reason) ||
-    isLaunchGraceWindowFailureReason(reason) ||
-    isConfigRegistrationFailureReason(reason) ||
-    isRegisteredRuntimeMetadataFailureReason(reason) ||
-    isOpenCodeBridgeLaunchFailureReason(reason) ||
-    isBootstrapMcpResourceReadFailureReason(reason) ||
-    isBootstrapCheckInTimeoutFailureReason(reason) ||
-    isBootstrapInstructionPromptFailureReason(reason) ||
-    isLaunchCleanupBootstrapIncompleteFailureReason(reason)
-  );
-}
-
-function isBootstrapMcpResourceReadFailureReason(reason?: string): boolean {
-  const text = reason?.trim().toLowerCase() ?? '';
-  return (
-    text.includes('resources/read failed') &&
-    text.includes('member_briefing') &&
-    (text.includes('method not found') || text.includes('mcp error'))
-  );
-}
-
-function isBootstrapCheckInTimeoutFailureReason(reason?: string): boolean {
-  return reason?.trim() === 'Teammate was registered but did not bootstrap-confirm before timeout.';
-}
-
-function isBootstrapInstructionPromptFailureReason(reason?: string): boolean {
-  return typeof reason === 'string' && isBootstrapInstructionPrompt(reason);
-}
-
-function isLaunchCleanupBootstrapIncompleteFailureReason(reason?: string): boolean {
-  const text = reason?.trim();
-  if (!text) {
-    return false;
-  }
-  if (
-    text === 'Launch ended before teammate bootstrap completed.' ||
-    text === 'Deterministic bootstrap failed before teammate check-in.'
-  ) {
-    return true;
-  }
-  return (
-    text.startsWith('Launch ended before teammate bootstrap completed. ') &&
-    text.includes('Runtime process was alive after bootstrap failure')
-  );
-}
-
-function isBootstrapMemberEvidenceCurrentForMember(
-  current: { firstSpawnAcceptedAt?: string; lastEvaluatedAt?: string },
-  bootstrapMember: Pick<
-    PersistedTeamLaunchMemberState,
-    'firstSpawnAcceptedAt' | 'lastHeartbeatAt' | 'lastRuntimeAliveAt' | 'lastEvaluatedAt'
-  >,
-  evidenceKind: 'acceptance' | 'confirmation'
-): boolean {
-  const bootstrapFirstSpawnAcceptedMs = Date.parse(bootstrapMember.firstSpawnAcceptedAt ?? '');
-  const bootstrapLastEvaluatedMs = Date.parse(bootstrapMember.lastEvaluatedAt ?? '');
-  const hasDurableBootstrapSpawnAcceptedAt =
-    Number.isFinite(bootstrapFirstSpawnAcceptedMs) &&
-    (!Number.isFinite(bootstrapLastEvaluatedMs) ||
-      bootstrapFirstSpawnAcceptedMs <= bootstrapLastEvaluatedMs);
-  const evidenceAt =
-    evidenceKind === 'confirmation'
-      ? (bootstrapMember.lastHeartbeatAt ??
-        bootstrapMember.lastRuntimeAliveAt ??
-        bootstrapMember.lastEvaluatedAt)
-      : hasDurableBootstrapSpawnAcceptedAt
-        ? bootstrapMember.firstSpawnAcceptedAt
-        : bootstrapMember.lastEvaluatedAt;
-  const evidenceMs = Date.parse(evidenceAt ?? '');
-  if (!Number.isFinite(evidenceMs)) {
-    return false;
-  }
-  const firstSpawnAcceptedMs = Date.parse(current.firstSpawnAcceptedAt ?? '');
-  const lastEvaluatedMs = Date.parse(current.lastEvaluatedAt ?? '');
-  const hasDurableSpawnBoundary =
-    Number.isFinite(firstSpawnAcceptedMs) &&
-    (!Number.isFinite(lastEvaluatedMs) || firstSpawnAcceptedMs <= lastEvaluatedMs);
-  const boundaryMs = hasDurableSpawnBoundary ? firstSpawnAcceptedMs : NaN;
-  return !Number.isFinite(boundaryMs) || evidenceMs >= boundaryMs;
-}
-
 function isTmuxNoServerRunningError(error: unknown): boolean {
   const text = error instanceof Error ? error.message : String(error ?? '');
   return (
     /no server running on /i.test(text) ||
     /error connecting to .*no such file or directory/i.test(text)
   );
-}
-
-function isAutoClearableLaunchFailureReason(reason?: string): boolean {
-  const text = reason?.trim();
-  if (!text) {
-    return false;
-  }
-  const baseReason = stripProcessTableUnavailableDiagnosticSuffix(text);
-  return (
-    isBaseAutoClearableLaunchFailureReason(text) ||
-    isProcessTableUnavailableFailureReason(text) ||
-    (baseReason != null && isBaseAutoClearableLaunchFailureReason(baseReason))
-  );
-}
-
-function summarizeMemberSpawnStatusRecord(
-  expectedMembers: readonly string[],
-  statuses: Record<string, MemberSpawnStatusEntry>
-): PersistedTeamLaunchSummary {
-  let confirmedCount = 0;
-  let pendingCount = 0;
-  let failedCount = 0;
-  let skippedCount = 0;
-  let runtimeAlivePendingCount = 0;
-  let shellOnlyPendingCount = 0;
-  let runtimeProcessPendingCount = 0;
-  let runtimeCandidatePendingCount = 0;
-  let noRuntimePendingCount = 0;
-  let permissionPendingCount = 0;
-  const memberNames = Array.from(new Set([...expectedMembers, ...Object.keys(statuses)]));
-
-  for (const memberName of memberNames) {
-    const entry = statuses[memberName];
-    if (!entry) {
-      pendingCount += 1;
-      continue;
-    }
-    if (entry.launchState === 'confirmed_alive') {
-      confirmedCount += 1;
-      continue;
-    }
-    if (entry.launchState === 'skipped_for_launch' || entry.skippedForLaunch === true) {
-      skippedCount += 1;
-      continue;
-    }
-    if (entry.launchState === 'failed_to_start') {
-      failedCount += 1;
-      continue;
-    }
-    pendingCount += 1;
-    if (entry.runtimeAlive) {
-      runtimeAlivePendingCount += 1;
-    }
-    if (entry.launchState === 'runtime_pending_permission') {
-      permissionPendingCount += 1;
-    }
-    if (entry.livenessKind === 'shell_only') {
-      shellOnlyPendingCount += 1;
-    } else if (entry.livenessKind === 'runtime_process') {
-      runtimeProcessPendingCount += 1;
-    } else if (entry.livenessKind === 'runtime_process_candidate') {
-      runtimeCandidatePendingCount += 1;
-    } else if (
-      entry.livenessKind === 'not_found' ||
-      entry.livenessKind === 'stale_metadata' ||
-      entry.livenessKind === 'registered_only'
-    ) {
-      noRuntimePendingCount += 1;
-    }
-  }
-
-  return {
-    confirmedCount,
-    pendingCount,
-    failedCount,
-    skippedCount,
-    runtimeAlivePendingCount,
-    shellOnlyPendingCount,
-    runtimeProcessPendingCount,
-    runtimeCandidatePendingCount,
-    noRuntimePendingCount,
-    permissionPendingCount,
-  };
-}
-
-function buildRestartStillRunningReason(memberName: string): string {
-  return (
-    `Restart for teammate "${memberName}" was skipped because the previous runtime still appears ` +
-    `to be active. The requested settings may not have been applied.`
-  );
-}
-
-function buildRestartDuplicateUnconfirmedReason(memberName: string, rawReason?: string): string {
-  const suffix = rawReason?.trim()
-    ? ` Agent returned duplicate_skipped with unrecognized reason "${rawReason.trim()}".`
-    : ' Agent returned duplicate_skipped without a reason.';
-  return (
-    `Restart for teammate "${memberName}" could not be confirmed and may not have applied.` + suffix
-  );
-}
-
-function buildRestartGraceTimeoutReason(memberName: string): string {
-  return `Teammate "${memberName}" did not rejoin within the restart grace window.`;
 }
 
 interface PendingMemberRestartContext {
@@ -3800,30 +2338,6 @@ function normalizeTeamAgentRuntimeBackendType(
     return normalized;
   }
   return normalized ? 'process' : undefined;
-}
-
-function matchesMemberNameOrBase(candidateName: string, memberName: string): boolean {
-  if (candidateName === memberName) {
-    return true;
-  }
-  const parsed = parseNumericSuffixName(candidateName);
-  return parsed !== null && parsed.suffix >= 2 && parsed.base === memberName;
-}
-
-function matchesTeamMemberIdentity(leftName: string, rightName: string): boolean {
-  return (
-    matchesMemberNameOrBase(leftName, rightName) || matchesMemberNameOrBase(rightName, leftName)
-  );
-}
-
-function matchesObservedMemberNameForExpected(observedName: string, expectedName: string): boolean {
-  return matchesMemberNameOrBase(observedName, expectedName);
-}
-
-function matchesExactTeamMemberName(candidateName: string, memberName: string): boolean {
-  const left = candidateName.trim().toLowerCase();
-  const right = memberName.trim().toLowerCase();
-  return left.length > 0 && left === right;
 }
 
 interface MemberSpawnInboxCursor {
@@ -3950,32 +2464,6 @@ export function shouldAcceptDeterministicBootstrapEvent(params: {
   }
 
   return { accept: true, nextSeq: params.lastSeq };
-}
-
-function deriveMemberLaunchState(entry: {
-  agentToolAccepted?: boolean;
-  runtimeAlive?: boolean;
-  bootstrapConfirmed?: boolean;
-  hardFailure?: boolean;
-  skippedForLaunch?: boolean;
-  pendingPermissionRequestIds?: string[];
-}): MemberLaunchState {
-  if (entry.skippedForLaunch) {
-    return 'skipped_for_launch';
-  }
-  if (entry.hardFailure) {
-    return 'failed_to_start';
-  }
-  if (entry.bootstrapConfirmed) {
-    return 'confirmed_alive';
-  }
-  if ((entry.pendingPermissionRequestIds?.length ?? 0) > 0) {
-    return 'runtime_pending_permission';
-  }
-  if (entry.runtimeAlive || entry.agentToolAccepted) {
-    return 'runtime_pending_bootstrap';
-  }
-  return 'starting';
 }
 
 function sleep(ms: number): Promise<void> {
@@ -4263,202 +2751,6 @@ function updateProgress(
   return run.progress;
 }
 
-function buildLaunchDiagnosticsFromRun(
-  run: ProvisioningRun
-): TeamLaunchDiagnosticItem[] | undefined {
-  const memberSpawnStatuses = run.memberSpawnStatuses;
-  if (!run.isLaunch || !memberSpawnStatuses || memberSpawnStatuses.size === 0) {
-    return undefined;
-  }
-  const observedAt = nowIso();
-  const items: TeamLaunchDiagnosticItem[] = [];
-  for (const [memberName, entry] of memberSpawnStatuses.entries()) {
-    if (entry.launchState === 'confirmed_alive') {
-      items.push({
-        id: `${memberName}:bootstrap_confirmed`,
-        memberName,
-        severity: 'info',
-        code: 'bootstrap_confirmed',
-        label: `${memberName} - bootstrap confirmed`,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.launchState === 'failed_to_start') {
-      items.push({
-        id: `${memberName}:bootstrap_stalled`,
-        memberName,
-        severity: 'error',
-        code: 'bootstrap_stalled',
-        label: `${memberName} - failed to start`,
-        detail: entry.hardFailureReason ?? entry.error,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.launchState === 'runtime_pending_permission') {
-      items.push({
-        id: `${memberName}:permission_pending`,
-        memberName,
-        severity: 'warning',
-        code: 'permission_pending',
-        label: `${memberName} - awaiting permission`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.bootstrapStalled === true) {
-      items.push({
-        id: `${memberName}:bootstrap_stalled`,
-        memberName,
-        severity: 'warning',
-        code: 'bootstrap_stalled',
-        label: `${memberName} - bootstrap stalled`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (mentionsProcessTableUnavailable(entry.runtimeDiagnostic)) {
-      items.push({
-        id: `${memberName}:process_table_unavailable`,
-        memberName,
-        severity: 'warning',
-        code: 'process_table_unavailable',
-        label: `${memberName} - process table unavailable`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.livenessKind === 'shell_only') {
-      items.push({
-        id: `${memberName}:tmux_shell_only`,
-        memberName,
-        severity: 'warning',
-        code: 'tmux_shell_only',
-        label: `${memberName} - shell only`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.livenessKind === 'runtime_process_candidate') {
-      items.push({
-        id: `${memberName}:runtime_process_candidate`,
-        memberName,
-        severity: 'warning',
-        code: 'runtime_process_candidate',
-        label: `${memberName} - bootstrap unconfirmed`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.livenessKind === 'runtime_process') {
-      items.push({
-        id: `${memberName}:runtime_process_detected`,
-        memberName,
-        severity: 'info',
-        code: 'runtime_process_detected',
-        label: `${memberName} - waiting for bootstrap`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (
-      entry.livenessKind === 'registered_only' ||
-      entry.livenessKind === 'stale_metadata' ||
-      entry.livenessKind === 'not_found'
-    ) {
-      items.push({
-        id: `${memberName}:runtime_not_found`,
-        memberName,
-        severity: 'warning',
-        code: 'runtime_not_found',
-        label: `${memberName} - waiting for runtime`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-      continue;
-    }
-    if (entry.agentToolAccepted) {
-      items.push({
-        id: `${memberName}:spawn_accepted`,
-        memberName,
-        severity: 'info',
-        code: 'spawn_accepted',
-        label: `${memberName} - spawn accepted`,
-        detail: entry.runtimeDiagnostic,
-        observedAt,
-      });
-    }
-  }
-  return items.length > 0 ? items : undefined;
-}
-
-function buildWorkspaceTrustPreflightLaunchDiagnostic(
-  execution: WorkspaceTrustExecutionResult
-): TeamLaunchDiagnosticItem | null {
-  if (execution.status === 'cancelled') {
-    return null;
-  }
-
-  const severity =
-    execution.status === 'blocked'
-      ? 'error'
-      : execution.status === 'soft_failed'
-        ? 'warning'
-        : 'info';
-  const label =
-    execution.status === 'blocked'
-      ? 'Workspace trust preflight blocked launch'
-      : execution.status === 'soft_failed'
-        ? 'Workspace trust preflight could not verify trust'
-        : 'Workspace trust preflight completed';
-  const detail =
-    execution.errorMessage?.trim() ||
-    execution.errorCode?.trim() ||
-    execution.evidence?.find((item) => item.trim().length > 0)?.trim();
-
-  return {
-    id: 'workspace-trust:preflight',
-    severity,
-    code: 'workspace_trust_preflight',
-    label,
-    ...(detail ? { detail } : {}),
-    observedAt: nowIso(),
-  };
-}
-
-function mergeLaunchDiagnosticItem(
-  items: readonly TeamLaunchDiagnosticItem[] | undefined,
-  item: TeamLaunchDiagnosticItem
-): TeamLaunchDiagnosticItem[] {
-  return [...(items ?? []).filter((candidate) => candidate.id !== item.id), item];
-}
-
-function buildCombinedLogs(
-  stdoutBuffer: string | undefined,
-  stderrBuffer: string | undefined
-): string {
-  const stdoutTrimmed = (stdoutBuffer ?? '').trim();
-  const stderrTrimmed = (stderrBuffer ?? '').trim();
-
-  if (stdoutTrimmed.length === 0 && stderrTrimmed.length === 0) {
-    return '';
-  }
-  if (stdoutTrimmed.length > 0 && stderrTrimmed.length === 0) {
-    return stdoutTrimmed;
-  }
-  if (stdoutTrimmed.length === 0 && stderrTrimmed.length > 0) {
-    return stderrTrimmed;
-  }
-  return [`[stdout]`, stdoutTrimmed, '', `[stderr]`, stderrTrimmed].join('\n');
-}
-
 interface AgentTeamsMcpConfigEntry {
   command?: unknown;
   args?: unknown;
@@ -4672,231 +2964,6 @@ function emitLogsProgress(run: ProvisioningRun): void {
     ...(assistantOutputChanged && { assistantOutput }),
   };
   run.onProgress(run.progress);
-}
-
-type CliLogStream = 'stdout' | 'stderr' | 'unknown';
-
-interface CliLogLine {
-  stream: CliLogStream;
-  text: string;
-}
-
-interface CliExitFailurePresentation {
-  message?: string;
-  error: string;
-}
-
-const USER_FACING_CLI_NOISE_TEXT_PATTERN =
-  /additionalContext|skill_flow|EXTREMELY_IMPORTANT|superpowers:using-superpowers|TodoWrite|Skill tool|Invoke Skill tool|Might any skill apply|relevant or requested skills BEFORE|hook_response|hook_started|hook_progress/i;
-
-const USER_FACING_STDOUT_ERROR_PATTERN =
-  /\b(error|failed|failure|fatal|exception|traceback|uncaught|unauthorized|forbidden|quota|rate limit|not authenticated|invalid api key|token refresh failed|warning)\b|please run \/login/i;
-
-function parseCliLogLinesFromText(text: string): CliLogLine[] {
-  const lines: CliLogLine[] = [];
-  let currentStream: CliLogStream = 'unknown';
-  for (const rawLine of text.split(/\r?\n/)) {
-    const trimmed = rawLine.trim();
-    if (!trimmed) {
-      continue;
-    }
-    if (trimmed === '[stdout]') {
-      currentStream = 'stdout';
-      continue;
-    }
-    if (trimmed === '[stderr]') {
-      currentStream = 'stderr';
-      continue;
-    }
-    lines.push({ stream: currentStream, text: trimmed });
-  }
-  return lines;
-}
-
-function getCliLogLinesForUserFacingError(run: ProvisioningRun): CliLogLine[] {
-  const lineHistory = Array.isArray(run.claudeLogLines) ? run.claudeLogLines : [];
-  const lines = lineHistory.length > 0 ? parseCliLogLinesFromText(lineHistory.join('\n')) : [];
-  const combinedBufferLines = parseCliLogLinesFromText(
-    buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer)
-  );
-
-  if (lines.length === 0) {
-    return combinedBufferLines;
-  }
-
-  // `claudeLogLines` stores complete newline-delimited lines. Add raw ring-buffer
-  // lines as a fallback only when they contain user-facing material that may be
-  // sitting in a final partial stderr/stdout line at process close.
-  const seen = new Set(lines.map((line) => `${line.stream}:${line.text}`));
-  for (const line of combinedBufferLines) {
-    const key = `${line.stream}:${line.text}`;
-    if (!seen.has(key) && isPotentiallyUserFacingCliLine(line)) {
-      lines.push(line);
-      seen.add(key);
-    }
-  }
-  return lines;
-}
-
-function isNoiseCliLine(text: string): boolean {
-  return USER_FACING_CLI_NOISE_TEXT_PATTERN.test(text);
-}
-
-function isPotentiallyUserFacingCliLine(line: CliLogLine): boolean {
-  if (isNoiseCliLine(line.text)) {
-    return false;
-  }
-  if (line.stream === 'stderr') {
-    return true;
-  }
-  return USER_FACING_STDOUT_ERROR_PATTERN.test(line.text);
-}
-
-function extractStringField(value: unknown, key: string): string | undefined {
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-  const raw = (value as Record<string, unknown>)[key];
-  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : undefined;
-}
-
-function extractStructuredCliError(parsed: Record<string, unknown>): string | undefined {
-  const type = typeof parsed.type === 'string' ? parsed.type : undefined;
-  const subtype = typeof parsed.subtype === 'string' ? parsed.subtype : undefined;
-
-  if (type === 'system') {
-    if (subtype === 'team_bootstrap' && parsed.event === 'failed') {
-      return extractStringField(parsed, 'reason');
-    }
-    if (subtype === 'init' || subtype?.startsWith('hook_')) {
-      return undefined;
-    }
-    return undefined;
-  }
-
-  if (type === 'result') {
-    const result = parsed.result;
-    const resultSubtype = subtype ?? extractStringField(result, 'subtype');
-    if (resultSubtype === 'success' || parsed.outcome === 'success') {
-      return undefined;
-    }
-    if (resultSubtype === 'error' || resultSubtype?.startsWith('error_')) {
-      return (
-        extractStringField(parsed, 'error') ??
-        extractStringField(result, 'error') ??
-        extractStringField(parsed, 'result')
-      );
-    }
-    return undefined;
-  }
-
-  if (type === 'error') {
-    return extractStringField(parsed, 'error') ?? extractStringField(parsed, 'message');
-  }
-
-  return undefined;
-}
-
-function buildSanitizedCliExitError(run: ProvisioningRun): string | undefined {
-  const errorLines: string[] = [];
-  for (const line of getCliLogLinesForUserFacingError(run)) {
-    if (!line.text || isNoiseCliLine(line.text)) {
-      continue;
-    }
-    try {
-      const parsed = JSON.parse(line.text) as Record<string, unknown>;
-      const structuredError = extractStructuredCliError(parsed);
-      if (structuredError && !isNoiseCliLine(structuredError)) {
-        errorLines.push(structuredError);
-      }
-      continue;
-    } catch {
-      // Non-JSON stderr/plain CLI errors are handled below.
-    }
-
-    if (isPotentiallyUserFacingCliLine(line)) {
-      errorLines.push(line.text);
-    }
-  }
-
-  const deduped = [...new Set(errorLines.map((line) => line.trim()).filter(Boolean))];
-  if (deduped.length === 0) {
-    return undefined;
-  }
-  return deduped.join('\n').slice(-4000);
-}
-
-function formatPendingBootstrapMemberNames(run: ProvisioningRun): string {
-  const pending = run.expectedMembers.filter((name) => {
-    const status = run.memberSpawnStatuses.get(name);
-    return status?.bootstrapConfirmed !== true;
-  });
-  const names = pending.length > 0 ? pending : run.expectedMembers;
-  if (names.length === 0) {
-    return 'unknown';
-  }
-  const visible = names.slice(0, 6);
-  const suffix = names.length > visible.length ? ` and ${names.length - visible.length} more` : '';
-  return `${visible.join(', ')}${suffix}`;
-}
-
-function buildDeterministicBootstrapExitFailure(run: ProvisioningRun): CliExitFailurePresentation {
-  if (!run.lastDeterministicBootstrapEvent) {
-    return {
-      message: 'Launch bootstrap was not confirmed',
-      error:
-        'Codex runtime exited before deterministic team bootstrap started. No team_bootstrap event was received.',
-    };
-  }
-
-  if (!run.deterministicBootstrapMemberSpawnSeen) {
-    const lastStage = run.lastDeterministicBootstrapPhase
-      ? `${run.lastDeterministicBootstrapEvent}/${run.lastDeterministicBootstrapPhase}`
-      : run.lastDeterministicBootstrapEvent;
-    return {
-      message: 'Launch bootstrap was not confirmed',
-      error: `Codex runtime exited during deterministic team bootstrap before teammate spawning started. Last bootstrap event: ${lastStage}.`,
-    };
-  }
-
-  return {
-    message: 'Launch bootstrap was not confirmed',
-    error: `Bootstrap was not confirmed before the Codex runtime exited. Pending teammates: ${formatPendingBootstrapMemberNames(run)}.`,
-  };
-}
-
-function buildCliExitFailurePresentation(
-  run: ProvisioningRun,
-  code: number | null
-): CliExitFailurePresentation {
-  const trimmed = buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer).trim();
-  const cliCommandLabel = getConfiguredCliCommandLabel();
-  if (trimmed.length > 0) {
-    if (trimmed.toLowerCase().includes('please run /login')) {
-      return {
-        error:
-          `${cliCommandLabel} reports it is not authenticated ("Please run /login"). ` +
-          'Run the CLI in a normal terminal and complete login, then retry. ' +
-          'For automation/headless use, set `ANTHROPIC_API_KEY` for `-p` mode.',
-      };
-    }
-    const sanitized = buildSanitizedCliExitError(run);
-    if (sanitized) {
-      return { error: sanitized };
-    }
-  }
-
-  if (run.deterministicBootstrap) {
-    return buildDeterministicBootstrapExitFailure(run);
-  }
-
-  if (code === 1) {
-    return {
-      error: `${cliCommandLabel} exited with code 1 without user-facing stdout/stderr. Typical causes: missing auth/onboarding, interactive TTY requirements, or an early bootstrap/runtime crash. Check \`~/.claude/debug/latest\` for the real stack and retry.`,
-    };
-  }
-
-  return { error: `${cliCommandLabel} exited with code ${code ?? 'unknown'}` };
 }
 
 interface CachedProbeResult {
@@ -21311,7 +19378,7 @@ export class TeamProvisioningService {
         promptSize,
         expectedMembersCount: effectiveMemberSpecs.length,
       });
-      logRuntimeLaunchSnapshot(request.teamName, claudePath, spawnArgs, request, shellEnv, {
+      logRuntimeLaunchSnapshot(logger, request.teamName, claudePath, spawnArgs, request, shellEnv, {
         geminiRuntimeAuth,
         promptSize,
         expectedMembersCount: effectiveMemberSpecs.length,
@@ -22628,12 +20695,20 @@ export class TeamProvisioningService {
         promptSize,
         expectedMembersCount: effectiveMemberSpecs.length,
       });
-      logRuntimeLaunchSnapshot(request.teamName, claudePath, finalLaunchArgs, request, shellEnv, {
-        geminiRuntimeAuth,
-        promptSize,
-        expectedMembersCount: effectiveMemberSpecs.length,
-        launchIdentity,
-      });
+      logRuntimeLaunchSnapshot(
+        logger,
+        request.teamName,
+        claudePath,
+        finalLaunchArgs,
+        request,
+        shellEnv,
+        {
+          geminiRuntimeAuth,
+          promptSize,
+          expectedMembersCount: effectiveMemberSpecs.length,
+          launchIdentity,
+        }
+      );
       // Deterministic bootstrap launches fresh because --team-bootstrap-spec and
       // --resume are not a supported orchestrator combination.
       emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
@@ -35423,7 +33498,9 @@ export class TeamProvisioningService {
       return;
     }
 
-    const failurePresentation = buildCliExitFailurePresentation(run, code);
+    const failurePresentation = buildCliExitFailurePresentation(run, code, {
+      cliCommandLabel: getConfiguredCliCommandLabel(),
+    });
     const runtimeFailureLabel = getRunRuntimeFailureLabel(run);
     const progress = updateProgress(
       run,

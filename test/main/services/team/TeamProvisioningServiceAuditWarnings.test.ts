@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   getOpenCodeMixedProviderProvisioningError,
   shouldWarnOnMissingRegisteredMember,
   shouldWarnOnUnreadableMemberAuditConfig,
 } from '@main/services/team/TeamProvisioningService';
+import { describe, expect, it } from 'vitest';
 
 describe('TeamProvisioningService audit warning policy', () => {
   it('suppresses unreadable config warnings during the short post-accept grace window', () => {
