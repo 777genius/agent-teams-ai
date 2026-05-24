@@ -38,11 +38,11 @@
   "dependencies": {
     "agent-teams-controller": "workspace:*",
     "fastmcp": "^3.35.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsup": "^8.5.1",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.8.2",
     "vitest": "^3.1.4",
     "@types/node": "^22.15.18"
