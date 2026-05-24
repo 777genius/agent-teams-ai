@@ -7,6 +7,8 @@ import { AlertTriangle, CheckCircle2, GitBranch, Loader2 } from 'lucide-react';
 
 import type { TeamWorktreeGitStatus } from '@shared/types';
 
+type TeamT = ReturnType<typeof useAppTranslation>['t'];
+
 interface WorktreeGitReadinessState {
   status: TeamWorktreeGitStatus | null;
   loading: boolean;
@@ -116,28 +118,36 @@ export function useWorktreeGitReadiness(
 
 export function getWorktreeGitBlockingMessage(
   state: Pick<WorktreeGitReadinessState, 'status' | 'loading' | 'error'>,
-  hasSelectedWorktreeIsolation: boolean
+  hasSelectedWorktreeIsolation: boolean,
+  t?: TeamT
 ): string | null {
   if (!hasSelectedWorktreeIsolation) {
     return null;
   }
   if (state.loading) {
-    return 'Checking Git repository status before enabling worktree isolation.';
+    return (
+      t?.('worktreeGitReadiness.blockingChecking') ??
+      'Checking Git repository status before enabling worktree isolation.'
+    );
   }
   if (state.error) {
     return state.error;
   }
   if (!state.status) {
-    return 'Worktree isolation requires a Git repository with an initial commit.';
+    return (
+      t?.('worktreeGitReadiness.requiresInitialCommit') ??
+      'Worktree isolation requires a Git repository with an initial commit.'
+    );
   }
   return state.status.canUseWorktrees ? null : (state.status.message ?? null);
 }
 
 export function getWorktreeGitControlDisabledReason(
-  state: Pick<WorktreeGitReadinessState, 'status' | 'loading' | 'error'>
+  state: Pick<WorktreeGitReadinessState, 'status' | 'loading' | 'error'>,
+  t?: TeamT
 ): string | null {
   if (state.loading) {
-    return 'Checking Git repository status...';
+    return t?.('worktreeGitReadiness.checkingShort') ?? 'Checking Git repository status...';
   }
   if (state.error) {
     return state.error;
@@ -202,8 +212,7 @@ export const WorktreeGitReadinessBanner = ({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-amber-100">{t('worktreeGitReadiness.needsSetup')}</p>
           <p className="mt-0.5 text-amber-100/85">
-            {status.message ??
-              'Worktree isolation requires a Git repository with an initial commit.'}
+            {status.message ?? t('worktreeGitReadiness.requiresInitialCommit')}
           </p>
           {status.reason === 'missing_head' ? (
             <p className="mt-1 text-amber-100/70">

@@ -2268,9 +2268,12 @@
   },
   "worktreeGitReadiness": {
     "checking": "Checking Git repository status for teammate worktrees...",
+    "checkingShort": "Checking Git repository status...",
+    "blockingChecking": "Checking Git repository status before enabling worktree isolation.",
     "ready": "Git worktrees are ready.",
     "readyOnBranch": "Git worktrees are ready on branch {{branch}}.",
     "needsSetup": "Worktree isolation needs Git setup",
+    "requiresInitialCommit": "Worktree isolation requires a Git repository with an initial commit.",
     "initialCommitNotice": "The initial commit action stages and commits all current files with message",
     "initializeRepository": "Initialize Git repository",
     "createInitialCommit": "Create initial commit",

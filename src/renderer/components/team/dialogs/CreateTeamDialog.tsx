@@ -654,10 +654,11 @@ export const CreateTeamDialog = ({
     open && canCreate && hasSelectedWorktreeIsolation
   );
   const worktreeIsolationDisabledReason =
-    !soloTeam && canCreate ? getWorktreeGitControlDisabledReason(worktreeGitReadiness) : null;
+    !soloTeam && canCreate ? getWorktreeGitControlDisabledReason(worktreeGitReadiness, t) : null;
   const worktreeGitBlockingMessage = getWorktreeGitBlockingMessage(
     worktreeGitReadiness,
-    hasSelectedWorktreeIsolation
+    hasSelectedWorktreeIsolation,
+    t
   );
   const worktreeGitBlocksSubmission = Boolean(worktreeGitBlockingMessage);
   const tmuxRuntime = useTmuxRuntimeReadiness(open && canCreate);

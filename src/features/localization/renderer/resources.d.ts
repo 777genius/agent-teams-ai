@@ -5547,7 +5547,9 @@ export default interface Resources {
       };
     };
     worktreeGitReadiness: {
+      blockingChecking: 'Checking Git repository status before enabling worktree isolation.';
       checking: 'Checking Git repository status for teammate worktrees...';
+      checkingShort: 'Checking Git repository status...';
       createInitialCommit: 'Create initial commit';
       initialCommitMessage: 'chore: initial commit';
       initialCommitNotice: 'The initial commit action stages and commits all current files with message';
@@ -5555,6 +5557,7 @@ export default interface Resources {
       needsSetup: 'Worktree isolation needs Git setup';
       ready: 'Git worktrees are ready.';
       readyOnBranch: 'Git worktrees are ready on branch {{branch}}.';
+      requiresInitialCommit: 'Worktree isolation requires a Git repository with an initial commit.';
     };
   };
 }

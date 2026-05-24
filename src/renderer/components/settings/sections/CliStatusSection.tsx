@@ -128,6 +128,7 @@ function getProviderLabel(providerId: CliProviderId): string {
 
 export const CliStatusSection = (): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
+  const { t: commonT } = useAppTranslation('common');
   const isElectron = useMemo(() => isElectronMode(), []);
   const appConfig = useStore((s) => s.appConfig);
   const selectedProjectId = useStore((s) => s.selectedProjectId);
@@ -475,7 +476,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                             isCodexSnapshotPending(provider, codexSnapshotPending);
                           const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
                             ? getProviderCurrentRuntimeSummary(provider, t)
-                            : getProviderRuntimeBackendSummary(provider);
+                            : getProviderRuntimeBackendSummary(provider, commonT);
                           const sourceProvider =
                             loadingCliProviderMap.get(provider.providerId) ?? null;
                           const maskNegativeBootstrapState = shouldMaskCodexNegativeBootstrapState(

@@ -2268,9 +2268,12 @@
   },
   "worktreeGitReadiness": {
     "checking": "Проверка Git-репозитория для worktree участников...",
+    "checkingShort": "Проверка статуса Git-репозитория...",
+    "blockingChecking": "Проверяем статус Git-репозитория перед включением worktree isolation.",
     "ready": "Git worktree готовы.",
     "readyOnBranch": "Git worktree готовы на ветке {{branch}}.",
     "needsSetup": "Для worktree isolation нужна настройка Git",
+    "requiresInitialCommit": "Для worktree isolation нужен Git-репозиторий с initial commit.",
     "initialCommitNotice": "Действие initial commit добавит в индекс и закоммитит все текущие файлы с сообщением",
     "initializeRepository": "Инициализировать Git-репозиторий",
     "createInitialCommit": "Создать initial commit",

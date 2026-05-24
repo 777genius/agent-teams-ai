@@ -1493,11 +1493,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     open && hasSelectedWorktreeIsolation
   );
   const worktreeIsolationDisabledReason = isLaunchMode
-    ? getWorktreeGitControlDisabledReason(worktreeGitReadiness)
+    ? getWorktreeGitControlDisabledReason(worktreeGitReadiness, t)
     : null;
   const worktreeGitBlockingMessage = getWorktreeGitBlockingMessage(
     worktreeGitReadiness,
-    hasSelectedWorktreeIsolation
+    hasSelectedWorktreeIsolation,
+    t
   );
   const selectedModelChecksByProviderSignature = useMemo(
     () => buildProviderPrepareModelChecksSignature(selectedModelChecksByProvider),

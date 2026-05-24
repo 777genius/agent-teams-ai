@@ -10,6 +10,8 @@ import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdent
 
 import type { CliProviderStatus } from '@shared/types';
 
+type CommonT = ReturnType<typeof useAppTranslation>['t'];
+
 interface Props {
   provider: CliProviderStatus;
   disabled?: boolean;
@@ -58,7 +60,8 @@ export function getVisibleProviderRuntimeBackendOptions(
 export function getOptionDisplayLabel(
   provider: CliProviderStatus,
   option: NonNullable<CliProviderStatus['availableBackends']>[number],
-  resolvedOption: NonNullable<CliProviderStatus['availableBackends']>[number] | null
+  resolvedOption: NonNullable<CliProviderStatus['availableBackends']>[number] | null,
+  t?: CommonT
 ): string {
   if (provider.providerId === 'codex') {
     const legacyLabel = formatProviderBackendLabel(provider.providerId, option.id);
@@ -72,13 +75,50 @@ export function getOptionDisplayLabel(
   }
 
   if (resolvedOption?.label) {
-    return `Auto (currently: ${resolvedOption.label})`;
+    return (
+      t?.('runtimeBackendSelector.autoCurrently', { backend: resolvedOption.label }) ??
+      `Auto (currently: ${resolvedOption.label})`
+    );
   }
 
-  return 'Auto';
+  return t?.('runtimeBackendSelector.auto') ?? 'Auto';
 }
 
-export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): string | null {
+function localizeProviderRuntimeBackendStateLabel(
+  option: NonNullable<CliProviderStatus['availableBackends']>[number],
+  t?: CommonT
+): string | null {
+  switch (getProviderRuntimeBackendStateLabel(option)) {
+    case 'Locked':
+      return t?.('runtimeBackendSelector.states.locked') ?? 'Locked';
+    case 'Disabled':
+      return t?.('runtimeBackendSelector.states.disabled') ?? 'Disabled';
+    case 'Auth required':
+      return t?.('runtimeBackendSelector.states.authRequired') ?? 'Auth required';
+    case 'Runtime missing':
+      return t?.('runtimeBackendSelector.states.runtimeMissing') ?? 'Runtime missing';
+    case 'Degraded':
+      return t?.('runtimeBackendSelector.states.degraded') ?? 'Degraded';
+    case 'Unavailable':
+      return t?.('runtimeBackendSelector.states.unavailable') ?? 'Unavailable';
+    default:
+      return null;
+  }
+}
+
+function localizeProviderRuntimeBackendAudienceLabel(
+  option: NonNullable<CliProviderStatus['availableBackends']>[number],
+  t?: CommonT
+): string | null {
+  return getProviderRuntimeBackendAudienceLabel(option)
+    ? (t?.('runtimeBackendSelector.audience.internal') ?? 'Internal')
+    : null;
+}
+
+export function getProviderRuntimeBackendSummary(
+  provider: CliProviderStatus,
+  t?: CommonT
+): string | null {
   const options = provider.availableBackends ?? [];
   if (options.length === 0) {
     return null;
@@ -87,9 +127,9 @@ export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): s
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
-  const parts = [getOptionDisplayLabel(provider, selectedOption, resolvedOption)];
-  const audienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
-  const stateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
+  const parts = [getOptionDisplayLabel(provider, selectedOption, resolvedOption, t)];
+  const audienceLabel = localizeProviderRuntimeBackendAudienceLabel(selectedOption, t);
+  const stateLabel = localizeProviderRuntimeBackendStateLabel(selectedOption, t);
 
   if (audienceLabel) {
     parts.push(audienceLabel.toLowerCase());
@@ -121,30 +161,10 @@ export const ProviderRuntimeBackendSelector = ({
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
   const localizeStateLabel = (
     option: NonNullable<CliProviderStatus['availableBackends']>[number]
-  ): string | null => {
-    switch (getProviderRuntimeBackendStateLabel(option)) {
-      case 'Locked':
-        return t('runtimeBackendSelector.states.locked');
-      case 'Disabled':
-        return t('runtimeBackendSelector.states.disabled');
-      case 'Auth required':
-        return t('runtimeBackendSelector.states.authRequired');
-      case 'Runtime missing':
-        return t('runtimeBackendSelector.states.runtimeMissing');
-      case 'Degraded':
-        return t('runtimeBackendSelector.states.degraded');
-      case 'Unavailable':
-        return t('runtimeBackendSelector.states.unavailable');
-      default:
-        return null;
-    }
-  };
+  ): string | null => localizeProviderRuntimeBackendStateLabel(option, t);
   const localizeAudienceLabel = (
     option: NonNullable<CliProviderStatus['availableBackends']>[number]
-  ): string | null =>
-    getProviderRuntimeBackendAudienceLabel(option)
-      ? t('runtimeBackendSelector.audience.internal')
-      : null;
+  ): string | null => localizeProviderRuntimeBackendAudienceLabel(option, t);
   const localizeOptionDisplayLabel = (
     option: NonNullable<CliProviderStatus['availableBackends']>[number]
   ): string => {
@@ -154,7 +174,7 @@ export const ProviderRuntimeBackendSelector = ({
       }
       return t('runtimeBackendSelector.auto');
     }
-    return getOptionDisplayLabel(provider, option, resolvedOption);
+    return getOptionDisplayLabel(provider, option, resolvedOption, t);
   };
   const selectedLabel = localizeOptionDisplayLabel(selectedOption);
   const selectedStateLabel = localizeStateLabel(selectedOption);

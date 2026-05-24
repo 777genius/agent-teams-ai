@@ -850,6 +850,7 @@ const InstalledBanner = ({
 }: InstalledBannerProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
+  const { t: commonT } = useAppTranslation('common');
   const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const styles = VARIANT_STYLES[variant];
   const visibleProviders = useMemo(
@@ -977,7 +978,7 @@ const InstalledBanner = ({
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
               ? getProviderCurrentRuntimeSummary(provider, settingsT)
-              : getProviderRuntimeBackendSummary(provider);
+              : getProviderRuntimeBackendSummary(provider, commonT);
             const connectionModeSummary = getProviderConnectionModeSummary(provider, settingsT);
             const credentialSummary = getProviderCredentialSummary(provider, settingsT);
             const dashboardRateLimits = getDashboardRateLimitsForProvider(provider, t);
