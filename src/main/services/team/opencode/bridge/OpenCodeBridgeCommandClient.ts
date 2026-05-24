@@ -67,6 +67,7 @@ const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
 const DEFAULT_STDERR_LIMIT_BYTES = 256_000;
 const WINDOWS_BATCH_EXTENSIONS = new Set(['.cmd', '.bat']);
 const EMPTY_STDOUT_READINESS_MAX_ATTEMPTS = 2;
+const EMPTY_STDOUT_READINESS_STDOUT_FALLBACK_ATTEMPTS = 1;
 const EMPTY_STDOUT_READINESS_RETRY_DELAY_MS = 250;
 const SAFE_BRIDGE_INPUT_FILE_REQUEST_ID = /^[A-Za-z0-9._-]{1,120}$/;
 
@@ -175,19 +176,22 @@ export class OpenCodeBridgeCommandClient {
 
     try {
       const maxAttempts =
-        command === 'opencode.readiness' ? EMPTY_STDOUT_READINESS_MAX_ATTEMPTS : 1;
+        command === 'opencode.readiness'
+          ? EMPTY_STDOUT_READINESS_MAX_ATTEMPTS + EMPTY_STDOUT_READINESS_STDOUT_FALLBACK_ATTEMPTS
+          : 1;
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const useStdoutOnlyFallback = shouldUseReadinessStdoutOnlyFallback(
+          command,
+          attempt,
+          maxAttempts
+        );
+        const bridgeArgs = ['runtime', 'opencode-command', '--json', '--input', inputPath];
+        if (!useStdoutOnlyFallback) {
+          bridgeArgs.push('--output', outputPath);
+        }
         const processResult = await this.processRunner.run({
           binaryPath: this.binaryPath,
-          args: [
-            'runtime',
-            'opencode-command',
-            '--json',
-            '--input',
-            inputPath,
-            '--output',
-            outputPath,
-          ],
+          args: bridgeArgs,
           cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
           timeoutMs: options.timeoutMs,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
@@ -411,6 +415,14 @@ function shouldRetryEmptyReadinessStdout(
   return (
     command === 'opencode.readiness' && error === 'Bridge stdout was empty' && attempt < maxAttempts
   );
+}
+
+function shouldUseReadinessStdoutOnlyFallback(
+  command: OpenCodeBridgeCommandName,
+  attempt: number,
+  maxAttempts: number
+): boolean {
+  return command === 'opencode.readiness' && attempt === maxAttempts && maxAttempts > 1;
 }
 
 function sleep(ms: number): Promise<void> {
