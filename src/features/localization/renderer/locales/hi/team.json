@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "संदेश से कार्य करें",
+      "editMessage": "संदेश संपादित करें",
       "expandMessage": "संदेश का विस्तार",
       "replyToMessage": "संदेश का जवाब दें",
       "restartTeam": "टीम शुरू"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "हाल के क्रॉस-टीम अनुरोध का पुन: उपयोग किया",
       "teamOffline": "टीम ऑफलाइन"
+    },
+    "revision": {
+      "editing": "पिछला संदेश संपादित हो रहा है",
+      "cancel": "रद्द करें",
+      "tooltip": "एजेंट को पिछला संदेश अनदेखा करने और उसका पाठ कंपोजर में वापस लाने के लिए कहें."
     },
     "input": {
       "charsLeft": "{{count}}छोड़ दिया",

@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "メッセージからタスクを作成する",
+      "editMessage": "メッセージを編集",
       "expandMessage": "メッセージの拡大",
       "replyToMessage": "メッセージへの返信",
       "restartTeam": "チームを再起動する"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "最近のクロスチームリクエストを再利用",
       "teamOffline": "オフラインチーム"
+    },
+    "revision": {
+      "editing": "前のメッセージを編集中",
+      "cancel": "キャンセル",
+      "tooltip": "エージェントに前のメッセージを無視させ、そのテキストをコンポーザーに戻します。"
     },
     "input": {
       "charsLeft": "{{count}} 文字左",

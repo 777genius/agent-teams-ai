@@ -112,6 +112,8 @@ interface MessageExpandDialogProps {
   members?: ResolvedTeamMember[];
   onCreateTaskFromMessage?: (subject: string, description: string) => void;
   onReplyToMessage?: (message: InboxMessage) => void;
+  revisionMessageId?: string | null;
+  onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onTaskIdClick?: (taskId: string) => void;
   onRestartTeam?: () => void;
@@ -128,6 +130,8 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
   members,
   onCreateTaskFromMessage,
   onReplyToMessage,
+  revisionMessageId,
+  onReviseMessage,
   onMemberClick,
   onTaskIdClick,
   onRestartTeam,
@@ -190,6 +194,8 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
               onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
               onCreateTask={onCreateTaskFromMessage}
               onReply={onReplyToMessage}
+              canRevise={displayItem.message.messageId === revisionMessageId}
+              onRevise={onReviseMessage}
               onTaskIdClick={onTaskIdClick}
               onRestartTeam={onRestartTeam}
               compactHeader={false}

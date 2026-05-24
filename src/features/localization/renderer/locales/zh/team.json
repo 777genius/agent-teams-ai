@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "从信件创建任务",
+      "editMessage": "编辑消息",
       "expandMessage": "扩展消息",
       "replyToMessage": "对信件的答复",
       "restartTeam": "重新启动团队"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "重新使用最近的跨小组请求",
       "teamOffline": "团队离线"
+    },
+    "revision": {
+      "editing": "正在编辑上一条消息",
+      "cancel": "取消",
+      "tooltip": "让代理忽略上一条消息，并将其文本恢复到编辑器。"
     },
     "input": {
       "charsLeft": "{{count}}左边的字符",

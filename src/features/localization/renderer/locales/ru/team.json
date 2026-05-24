@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "Создать задачу из сообщения",
+      "editMessage": "Редактировать сообщение",
       "expandMessage": "Развернуть сообщение",
       "replyToMessage": "Ответить на сообщение",
       "restartTeam": "Перезапустить команду"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "Повторно использован недавний cross-team request",
       "teamOffline": "Команда offline"
+    },
+    "revision": {
+      "editing": "Редактируется предыдущее сообщение",
+      "cancel": "Отмена",
+      "tooltip": "Попросить агента игнорировать предыдущее сообщение и вернуть его текст в composer."
     },
     "input": {
       "charsLeft": "Осталось символов: {{count}}",

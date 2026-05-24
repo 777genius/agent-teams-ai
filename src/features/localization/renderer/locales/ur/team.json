@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "پیام سے کام بنائیں",
+      "editMessage": "پیغام میں ترمیم کریں",
       "expandMessage": "پیام بھیجا گیا",
       "replyToMessage": "پیغام پہنچانے کیلئے تیار",
       "restartTeam": "گروپ"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "حالیہ صلیبی درخواست استعمال کریں",
       "teamOffline": "گروپ"
+    },
+    "revision": {
+      "editing": "پچھلا پیغام ترمیم ہو رہا ہے",
+      "cancel": "منسوخ کریں",
+      "tooltip": "ایجنٹ سے پچھلا پیغام نظر انداز کرنے اور اس کا متن کمپوزر میں واپس لانے کو کہیں۔"
     },
     "input": {
       "charsLeft": "{{count}} حساب",

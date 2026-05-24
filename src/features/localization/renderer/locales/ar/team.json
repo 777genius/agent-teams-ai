@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "إنشاء مهمة من الرسالة",
+      "editMessage": "تعديل الرسالة",
       "expandMessage": "الرسالة الموسعة",
       "replyToMessage": "الرد على الرسالة",
       "restartTeam": "فريق إعادة التشغيل"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "Reused recent cross-team request",
       "teamOffline": "الفريق غير المباشر"
+    },
+    "revision": {
+      "editing": "جارٍ تعديل الرسالة السابقة",
+      "cancel": "إلغاء",
+      "tooltip": "اطلب من الوكيل تجاهل الرسالة السابقة وإعادة نصها إلى المحرر."
     },
     "input": {
       "charsLeft": "{{count}} من اليسار",

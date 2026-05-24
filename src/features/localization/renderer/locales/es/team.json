@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "Crear tarea desde el mensaje",
+      "editMessage": "Editar mensaje",
       "expandMessage": "Ampliar el mensaje",
       "replyToMessage": "Respuesta al mensaje",
       "restartTeam": "Equipo de reinicio"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "Reutilización reciente de la solicitud de equipo cruzado",
       "teamOffline": "Team offline"
+    },
+    "revision": {
+      "editing": "Editando mensaje anterior",
+      "cancel": "Cancelar",
+      "tooltip": "Pide al agente que ignore el mensaje anterior y restaure su texto en el compositor."
     },
     "input": {
       "charsLeft": "{{count}}chars left",

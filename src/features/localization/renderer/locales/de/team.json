@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "Aufgabe aus der Nachricht erstellen",
+      "editMessage": "Nachricht bearbeiten",
       "expandMessage": "Erweiterte Nachricht",
       "replyToMessage": "Antwort auf Nachricht",
       "restartTeam": "Neues Team"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "Neuer Cross-Dampf-Antrag",
       "teamOffline": "Team offline"
+    },
+    "revision": {
+      "editing": "Vorherige Nachricht wird bearbeitet",
+      "cancel": "Abbrechen",
+      "tooltip": "Agent anweisen, die vorherige Nachricht zu ignorieren und ihren Text in den Composer zurückzusetzen."
     },
     "input": {
       "charsLeft": "{{count}} Ausverkauft",

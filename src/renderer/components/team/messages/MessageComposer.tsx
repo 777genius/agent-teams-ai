@@ -67,6 +67,7 @@ interface MessageComposerProps {
   sendWarning?: string | null;
   sendDebugDetails?: OpenCodeRuntimeDeliveryDebugDetails | null;
   lastResult?: SendMessageResult | null;
+  revisionRequest?: MessageRevisionRequest | null;
   cornerActionPrefix?: React.ReactNode;
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
@@ -85,6 +86,16 @@ interface MessageComposerProps {
     actionMode?: ActionMode,
     taskRefs?: TaskRef[]
   ) => void;
+  onRevisionCancel?: () => void;
+  onRevisionComplete?: (requestId: string) => void;
+}
+
+export interface MessageRevisionRequest {
+  requestId: string;
+  originalMessageId: string;
+  originalText: string;
+  recipient: string;
+  actionMode?: ActionMode;
 }
 
 interface PendingSendState {
@@ -92,6 +103,7 @@ interface PendingSendState {
   snapshot: ComposerDraftContent;
   previousDebugDetails: OpenCodeRuntimeDeliveryDebugDetails | null | undefined;
   previousLastResult: SendMessageResult | null | undefined;
+  revisionRequestId?: string;
   observedSending: boolean;
   optimisticallyCleared: boolean;
 }
@@ -108,6 +120,16 @@ function createPendingSendId(): string {
   return `${Date.now()}-${pendingSendIdCounter}`;
 }
 
+function buildRevisionCorrectionText(originalMessageId: string, text: string): string {
+  return [
+    `Correction for my previous message (MessageId: ${originalMessageId}).`,
+    '',
+    'Please use this corrected version instead:',
+    '',
+    text,
+  ].join('\n');
+}
+
 export const MessageComposer = ({
   teamName,
   members,
@@ -119,10 +141,13 @@ export const MessageComposer = ({
   sendWarning,
   sendDebugDetails,
   lastResult,
+  revisionRequest,
   cornerActionPrefix,
   textareaRef: externalTextareaRef,
   onSend,
   onCrossTeamSend,
+  onRevisionCancel,
+  onRevisionComplete,
 }: MessageComposerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -247,6 +272,7 @@ export const MessageComposer = ({
   });
   const isProvisioning = useStore((s) => isTeamProvisioningActive(s, teamName));
   const draft = useComposerDraft(teamName);
+  const appliedRevisionRequestIdRef = useRef<string | null>(null);
 
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
 
@@ -313,6 +339,30 @@ export const MessageComposer = ({
   const shouldAutoDelegate = isLeadRecipient && canDelegate;
 
   const { actionMode, setActionMode, isLoaded: draftLoaded } = draft;
+
+  useEffect(() => {
+    if (!revisionRequest) {
+      appliedRevisionRequestIdRef.current = null;
+      return;
+    }
+    if (appliedRevisionRequestIdRef.current === revisionRequest.requestId) {
+      return;
+    }
+
+    appliedRevisionRequestIdRef.current = revisionRequest.requestId;
+    setSelectedTeam(null);
+    setRecipient(revisionRequest.recipient);
+    draft.restoreDraft({
+      text: revisionRequest.originalText,
+      chips: [],
+      attachments: [],
+      actionMode: revisionRequest.actionMode ?? actionMode,
+    });
+    if (revisionRequest.actionMode) {
+      setActionMode(revisionRequest.actionMode);
+    }
+    focusComposerTextarea();
+  }, [actionMode, draft, focusComposerTextarea, revisionRequest, setActionMode]);
 
   // Re-focus textarea after action mode changes (Do/Ask/Delegate button clicks)
   const prevActionModeRef = useRef(actionMode);
@@ -391,6 +441,7 @@ export const MessageComposer = ({
   const attachmentsBlocked =
     draft.attachments.length > 0 &&
     (!supportsAttachments || attachmentPayloadRestrictionReason != null);
+  const isRevisionActive = revisionRequest !== null && revisionRequest !== undefined;
   const slashCommandRestrictionReason = standaloneSlashCommand
     ? draft.attachments.length > 0
       ? t('messageComposer.slash.restrictions.attachments')
@@ -410,6 +461,7 @@ export const MessageComposer = ({
     !isLaunchBlocking &&
     !attachmentsBlocked &&
     !slashCommandRestrictionReason &&
+    (!isRevisionActive || !isCrossTeam) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
 
   const pendingSendRef = useRef<PendingSendState | null>(null);
@@ -435,19 +487,26 @@ export const MessageComposer = ({
       },
       previousDebugDetails: sendDebugDetails,
       previousLastResult: lastResult,
+      ...(revisionRequest ? { revisionRequestId: revisionRequest.requestId } : {}),
       observedSending: false,
       optimisticallyCleared: false,
     };
     const taskRefs = extractTaskRefsFromText(draft.text, taskSuggestions);
     const serialized = serializeChipsWithText(trimmed, draft.chips);
+    const outboundText = revisionRequest
+      ? buildRevisionCorrectionText(revisionRequest.originalMessageId, serialized)
+      : serialized;
+    const outboundSummary = revisionRequest
+      ? `Correction for MessageId: ${revisionRequest.originalMessageId}`
+      : trimmed;
     if (isCrossTeam && selectedTeam && onCrossTeamSend) {
-      onCrossTeamSend(selectedTeam, serialized, trimmed, actionMode, taskRefs);
+      onCrossTeamSend(selectedTeam, outboundText, outboundSummary, actionMode, taskRefs);
     } else {
       // Summary should stay compact (no expanded chip markdown)
       onSend(
         recipient,
-        serialized,
-        trimmed,
+        outboundText,
+        outboundSummary,
         draft.attachments.length > 0 ? draft.attachments : undefined,
         actionMode,
         taskRefs
@@ -469,6 +528,7 @@ export const MessageComposer = ({
     draft.text,
     lastResult,
     focusComposerTextarea,
+    revisionRequest,
     taskSuggestions,
     teamName,
   ]);
@@ -515,6 +575,10 @@ export const MessageComposer = ({
       return;
     }
 
+    if (pending.revisionRequestId) {
+      onRevisionComplete?.(pending.revisionRequestId);
+    }
+
     if (!isPendingCurrentTeam) {
       draft.finalizePendingSendClear(pending.teamName, pending.snapshot);
       return;
@@ -526,7 +590,7 @@ export const MessageComposer = ({
     }
 
     draft.finalizePendingSendClear(undefined, pending.snapshot);
-  }, [teamName, sending, sendError, sendDebugDetails, lastResult, draft]);
+  }, [teamName, sending, sendError, sendDebugDetails, lastResult, draft, onRevisionComplete]);
 
   const showFileRestrictionError = useCallback(() => {
     setFileRestrictionError(
@@ -538,7 +602,7 @@ export const MessageComposer = ({
     fileRestrictionTimerRef.current = window.setTimeout(() => {
       setFileRestrictionError(null);
     }, 4000);
-  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason]);
+  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]);
 
   const validateSelectedAttachmentFiles = useCallback(
     (files: FileList | File[]): boolean => {
@@ -652,6 +716,10 @@ export const MessageComposer = ({
   );
   const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
   const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
+  const handleRevisionCancel = useCallback(() => {
+    onRevisionCancel?.();
+    focusComposerTextarea();
+  }, [focusComposerTextarea, onRevisionCancel]);
 
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
@@ -720,6 +788,20 @@ export const MessageComposer = ({
         maxWidth: `min(${FLOATING_COMPOSER_MAX_WIDTH}px, calc(100vw - 2rem))`,
       }
     : undefined;
+  const revisionNotice = revisionRequest ? (
+    <div className="flex items-center gap-2 rounded-md border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
+      <span className="min-w-0 flex-1 truncate" title={t('messageComposer.revision.tooltip')}>
+        {t('messageComposer.revision.editing')}
+      </span>
+      <button
+        type="button"
+        className="shrink-0 rounded px-1.5 py-0.5 text-amber-100 transition-colors hover:bg-amber-400/15"
+        onClick={handleRevisionCancel}
+      >
+        {t('messageComposer.revision.cancel')}
+      </button>
+    </div>
+  ) : null;
   const compactFooterNotice = slashCommandRestrictionReason ? (
     <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
       <AlertCircle size={10} className="shrink-0" />
@@ -1129,6 +1211,7 @@ export const MessageComposer = ({
             }
           />
         ) : null}
+        {revisionNotice}
       </div>
 
       <div className={cn('relative', shouldDockRecipientSelector && 'z-[2]')}>

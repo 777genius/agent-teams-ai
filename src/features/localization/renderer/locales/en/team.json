@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "Create task from message",
+      "editMessage": "Edit message",
       "expandMessage": "Expand message",
       "replyToMessage": "Reply to message",
       "restartTeam": "Restart team"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "Reused recent cross-team request",
       "teamOffline": "Team offline"
+    },
+    "revision": {
+      "editing": "Editing previous message",
+      "cancel": "Cancel",
+      "tooltip": "Ask the agent to ignore the previous message and restore it to the composer."
     },
     "input": {
       "charsLeft": "{{count}} chars left",

@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "메시지에서 작업 만들기",
+      "editMessage": "메시지 편집",
       "expandMessage": "확장 메시지",
       "replyToMessage": "메시지에 답글",
       "restartTeam": "나머지 팀"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "최근 Cross-team 요청 사용",
       "teamOffline": "팀 오프라인"
+    },
+    "revision": {
+      "editing": "이전 메시지 편집 중",
+      "cancel": "취소",
+      "tooltip": "에이전트가 이전 메시지를 무시하고 해당 텍스트를 작성기에 복원하도록 요청합니다."
     },
     "input": {
       "charsLeft": "{{count}} 숯 왼쪽",

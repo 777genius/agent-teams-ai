@@ -78,6 +78,7 @@ import {
   ListPlus,
   Maximize2,
   MoveRight,
+  Pencil,
   RefreshCw,
   Reply,
   X,
@@ -220,6 +221,8 @@ interface ActivityItemProps {
   onMemberNameClick?: (memberName: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
+  canRevise?: boolean;
+  onRevise?: (message: InboxMessage) => void;
   /** Called when a task ID link (e.g. #10) is clicked in message text. */
   onTaskIdClick?: (taskId: string) => void;
   /** Called when the user clicks "Restart team" on an auth error message. */
@@ -804,6 +807,8 @@ export const ActivityItem = memo(
     onMemberNameClick,
     onCreateTask,
     onReply,
+    canRevise,
+    onRevise,
     onTaskIdClick,
     onRestartTeam,
     zebraShade,
@@ -1681,6 +1686,27 @@ export const ActivityItem = memo(
                 style={isApiError ? { color: '#f87171' } : undefined}
               >
                 <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/message-body:opacity-100">
+                  {canRevise && onRevise ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t('activity.actions.editMessage')}
+                          className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
+                          style={{ color: CARD_ICON_MUTED }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRevise(message);
+                          }}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {t('activity.actions.editMessage')}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
                   {onReply ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1806,6 +1832,8 @@ export const ActivityItem = memo(
     prev.onMemberNameClick === next.onMemberNameClick &&
     prev.onCreateTask === next.onCreateTask &&
     prev.onReply === next.onReply &&
+    prev.canRevise === next.canRevise &&
+    prev.onRevise === next.onRevise &&
     prev.onTaskIdClick === next.onTaskIdClick &&
     prev.onRestartTeam === next.onRestartTeam &&
     prev.zebraShade === next.zebraShade &&

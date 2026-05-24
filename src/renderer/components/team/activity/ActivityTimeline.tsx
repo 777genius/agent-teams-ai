@@ -96,6 +96,8 @@ interface ActivityTimelineProps {
   readState?: { readSet: Set<string>; getMessageKey: (message: InboxMessage) => string };
   onCreateTaskFromMessage?: (subject: string, description: string) => void;
   onReplyToMessage?: (message: InboxMessage) => void;
+  revisionMessageId?: string | null;
+  onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
   /** Called when a message enters the viewport (for marking as read). */
   onMessageVisible?: (message: InboxMessage) => void;
@@ -283,6 +285,8 @@ const MessageRowWithObserver = ({
   onMemberNameClick,
   onCreateTask,
   onReply,
+  revisionMessageId,
+  onRevise,
   onVisible,
   onTaskIdClick,
   onRestartTeam,
@@ -313,6 +317,8 @@ const MessageRowWithObserver = ({
   onMemberNameClick?: (name: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
+  revisionMessageId?: string | null;
+  onRevise?: (message: InboxMessage) => void;
   onVisible?: (message: InboxMessage) => void;
   onTaskIdClick?: (taskId: string) => void;
   onRestartTeam?: () => void;
@@ -379,6 +385,8 @@ const MessageRowWithObserver = ({
         onMemberNameClick={onMemberNameClick}
         onCreateTask={onCreateTask}
         onReply={onReply}
+        canRevise={message.messageId === revisionMessageId}
+        onRevise={onRevise}
         onTaskIdClick={onTaskIdClick}
         onRestartTeam={onRestartTeam}
         collapseMode={collapseMode}
@@ -413,6 +421,8 @@ const MemoizedMessageRowWithObserver = React.memo(
     prev.onMemberNameClick === next.onMemberNameClick &&
     prev.onCreateTask === next.onCreateTask &&
     prev.onReply === next.onReply &&
+    prev.revisionMessageId === next.revisionMessageId &&
+    prev.onRevise === next.onRevise &&
     prev.onVisible === next.onVisible &&
     prev.onTaskIdClick === next.onTaskIdClick &&
     prev.onRestartTeam === next.onRestartTeam &&
@@ -439,6 +449,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   readState,
   onCreateTaskFromMessage,
   onReplyToMessage,
+  revisionMessageId,
+  onReviseMessage,
   onMemberClick,
   onMessageVisible,
   onTaskIdClick,
@@ -872,6 +884,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
             onCreateTask={onCreateTaskFromMessage}
             onReply={onReplyToMessage}
+            revisionMessageId={revisionMessageId}
+            onRevise={onReviseMessage}
             onVisible={onMessageVisible}
             onTaskIdClick={onTaskIdClick}
             onRestartTeam={onRestartTeam}

@@ -2,6 +2,7 @@
   "activity": {
     "actions": {
       "createTaskFromMessage": "Membuat tugas dari pesan",
+      "editMessage": "Edit pesan",
       "expandMessage": "Perluas pesan",
       "replyToMessage": "Balas ke pesan",
       "restartTeam": "Mulai ulang tim"
@@ -1485,6 +1486,11 @@
     "status": {
       "reusedCrossTeamRequest": "Mengulang permintaan tim-cross- baru-baru ini",
       "teamOffline": "Tim luring"
+    },
+    "revision": {
+      "editing": "Mengedit pesan sebelumnya",
+      "cancel": "Batal",
+      "tooltip": "Minta agen mengabaikan pesan sebelumnya dan mengembalikan teksnya ke composer."
     },
     "input": {
       "charsLeft": "{{count}} chars kiri",

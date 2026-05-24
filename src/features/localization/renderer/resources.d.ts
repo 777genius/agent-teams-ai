@@ -3009,6 +3009,7 @@ export default interface Resources {
     activity: {
       actions: {
         createTaskFromMessage: 'Create task from message';
+        editMessage: 'Edit message';
         expandMessage: 'Expand message';
         replyToMessage: 'Reply to message';
         restartTeam: 'Restart team';
@@ -4218,6 +4219,11 @@ export default interface Resources {
         noResults: 'No results';
         searchPlaceholder: 'Search...';
         select: 'Select...';
+      };
+      revision: {
+        cancel: 'Cancel';
+        editing: 'Editing previous message';
+        tooltip: 'Ask the agent to ignore the previous message and restore it to the composer.';
       };
       slash: {
         restrictions: {
