@@ -408,9 +408,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(provider.detailMessage).toContain(
       'OpenCode runtime status did not return before the desktop timeout.'
     );
-    expect(provider.detailMessage).toContain(
-      'not necessarily that OpenCode auth is missing'
-    );
+    expect(provider.detailMessage).toContain('not necessarily that OpenCode auth is missing');
     expect(provider.detailMessage).toContain('provider/model inventory');
     expect(provider.detailMessage).toContain('Raw timeout detail: Command timed out after 30000ms');
     expect(execCliMock.mock.calls.map((call) => call[1].join(' '))).toEqual([
@@ -508,11 +506,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     const calls = execCliMock.mock.calls.map((call) => call[1].join(' '));
 
     expect(execCliMock).toHaveBeenCalledTimes(3);
-    expect(execCliMock.mock.calls.map((call) => call[2]?.timeout)).toEqual([
-      30000,
-      30000,
-      30000,
-    ]);
+    expect(execCliMock.mock.calls.map((call) => call[2]?.timeout)).toEqual([30000, 30000, 30000]);
     expect(calls).toEqual([
       'runtime status --json --provider anthropic --summary',
       'runtime status --json --provider codex --summary',
@@ -524,8 +518,9 @@ describe('ClaudeMultimodelBridgeService', () => {
       'opencode',
     ]);
     expect(providers.every((provider) => provider.verificationState === 'error')).toBe(true);
-    expect(providers.every((provider) => provider.statusMessage === 'Provider status unavailable'))
-      .toBe(true);
+    expect(
+      providers.every((provider) => provider.statusMessage === 'Provider status unavailable')
+    ).toBe(true);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       expect.stringContaining(
         'Provider-scoped runtime status timed out for anthropic, codex, opencode'
@@ -793,6 +788,128 @@ describe('ClaudeMultimodelBridgeService', () => {
       modelCatalogRefreshState: 'ready',
     });
     expect(hydratedCodex?.modelCatalog?.models.map((model) => model.id)).toEqual(['gpt-5.4']);
+  });
+
+  it('promotes OpenCode auth when full catalog hydration proves built-in free access', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+
+      if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 2,
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                displayName: 'OpenCode',
+                supported: true,
+                authenticated: false,
+                authMethod: null,
+                verificationState: 'verified',
+                canLoginFromUi: false,
+                statusMessage: 'No OpenCode providers connected',
+                models: [],
+                capabilities: { teamLaunch: false, oneShot: false },
+                runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+                backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      if (normalizedArgs === 'runtime status --json --provider opencode') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 2,
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                displayName: 'OpenCode',
+                supported: true,
+                authenticated: true,
+                authMethod: 'opencode_builtin_free',
+                verificationState: 'verified',
+                canLoginFromUi: false,
+                statusMessage: null,
+                detailMessage: '3 built-in free models',
+                models: ['opencode/big-pickle'],
+                capabilities: { teamLaunch: true, oneShot: false },
+                runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+                backend: {
+                  kind: 'opencode-cli',
+                  label: 'OpenCode CLI',
+                  authMethodDetail: 'built-in free models',
+                },
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: '2026-05-25T00:00:00.000Z',
+                  staleAt: '2026-05-25T00:10:00.000Z',
+                  defaultModelId: 'opencode/big-pickle',
+                  defaultLaunchModel: 'opencode/big-pickle',
+                  models: [
+                    {
+                      id: 'opencode/big-pickle',
+                      launchModel: 'opencode/big-pickle',
+                      displayName: 'big-pickle',
+                      hidden: false,
+                      supportedReasoningEfforts: [],
+                      defaultReasoningEffort: null,
+                      inputModalities: ['text'],
+                      supportsPersonality: true,
+                      isDefault: true,
+                      upgrade: false,
+                      source: 'app-server',
+                    },
+                  ],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    const onCatalogUpdate = vi.fn();
+
+    const provider = await service.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      onCatalogUpdate
+    );
+
+    expect(provider).toMatchObject({
+      authenticated: false,
+      statusMessage: 'No OpenCode providers connected',
+      modelCatalogRefreshState: 'loading',
+    });
+    await vi.waitFor(() => {
+      expect(onCatalogUpdate).toHaveBeenCalledTimes(1);
+    });
+    expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
+      authenticated: true,
+      authMethod: 'opencode_builtin_free',
+      statusMessage: null,
+      capabilities: { teamLaunch: true },
+      modelCatalogRefreshState: 'ready',
+      backend: { authMethodDetail: 'built-in free models' },
+    });
   });
 
   it('hydrates a single provider catalog after summary refresh', async () => {

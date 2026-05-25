@@ -88,6 +88,7 @@ import {
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
+import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -396,7 +397,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
   }
 
   reportProgress('runtime-environment', 'Preparing runtime environment...');
-  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
+  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
+    ...process.env,
+    PATH: buildMergedCliPath(binaryPath),
+  });
   applyAgentTeamsIdentityEnv(bridgeEnv);
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();

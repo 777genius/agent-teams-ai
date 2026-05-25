@@ -78,8 +78,9 @@ function buildOpenCodeBridgeSupportCopyText(input: {
   const command = formatDiagnosticValue(input.details.command, input.result.command);
   const requestId = formatDiagnosticValue(input.details.requestId, input.result.requestId);
   const stderrPreview = formatPreview(input.details.stderrPreview);
+  const likelyCause = formatLikelyCause(input.details);
 
-  return [
+  const lines = [
     'Agent Teams OpenCode diagnostics',
     `Time: ${input.createdAt}`,
     'Provider: opencode',
@@ -93,6 +94,8 @@ function buildOpenCodeBridgeSupportCopyText(input: {
     'Bridge command:',
     `command: ${command}`,
     `requestId: ${requestId}`,
+    `binaryPath: ${formatDiagnosticValue(input.details.binaryPath)}`,
+    `cwd: ${formatDiagnosticValue(input.details.cwd)}`,
     `attempts: ${formatDiagnosticValue(input.details.attempts)}`,
     `exitCode: ${formatDiagnosticValue(input.details.exitCode)}`,
     `timedOut: ${formatDiagnosticValue(input.details.timedOut)}`,
@@ -108,10 +111,22 @@ function buildOpenCodeBridgeSupportCopyText(input: {
     `appVersion: ${formatDiagnosticValue(input.appVersion)}`,
     `projectPath: ${redactDiagnosticPath(input.projectPath)}`,
     `selectedModel: ${formatDiagnosticValue(input.selectedModel)}`,
-    '',
-    'stderrPreview:',
-    stderrPreview,
-  ].join('\n');
+  ];
+
+  if (likelyCause) {
+    lines.push('', 'Likely cause:', likelyCause);
+  }
+
+  lines.push('', 'stderrPreview:', stderrPreview);
+
+  return lines.join('\n');
+}
+
+function formatLikelyCause(details: Record<string, unknown>): string | null {
+  if (details.exitCode !== 9009) {
+    return null;
+  }
+  return 'Windows could not start the bridge launcher. Check that the runtime launcher and its dependencies, such as Bun for cli-dev.cmd, are available in PATH.';
 }
 
 function formatDiagnosticValue(value: unknown, fallback: unknown = undefined): string {

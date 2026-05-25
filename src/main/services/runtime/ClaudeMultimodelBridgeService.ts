@@ -727,13 +727,42 @@ function mergeRuntimeCapabilitiesForCatalogHydration(
   };
 }
 
+function shouldPromoteHydratedAuthState(
+  liveProvider: CliProviderStatus,
+  hydratedProvider: CliProviderStatus
+): boolean {
+  return (
+    liveProvider.providerId === 'opencode' &&
+    liveProvider.authenticated !== true &&
+    hydratedProvider.authenticated === true
+  );
+}
+
 function mergeProviderCatalogFields(
   liveProvider: CliProviderStatus,
   hydratedProvider: CliProviderStatus
 ): CliProviderStatus {
   const modelCatalog = hydratedProvider.modelCatalog ?? liveProvider.modelCatalog ?? null;
+  const promoteHydratedAuthState = shouldPromoteHydratedAuthState(liveProvider, hydratedProvider);
   return {
     ...liveProvider,
+    authenticated: promoteHydratedAuthState
+      ? hydratedProvider.authenticated
+      : liveProvider.authenticated,
+    authMethod: promoteHydratedAuthState ? hydratedProvider.authMethod : liveProvider.authMethod,
+    verificationState: promoteHydratedAuthState
+      ? hydratedProvider.verificationState
+      : liveProvider.verificationState,
+    capabilities: promoteHydratedAuthState
+      ? hydratedProvider.capabilities
+      : liveProvider.capabilities,
+    statusMessage: promoteHydratedAuthState
+      ? hydratedProvider.statusMessage
+      : liveProvider.statusMessage,
+    detailMessage: promoteHydratedAuthState
+      ? hydratedProvider.detailMessage
+      : liveProvider.detailMessage,
+    backend: promoteHydratedAuthState ? hydratedProvider.backend : liveProvider.backend,
     models: hydratedProvider.models.length > 0 ? hydratedProvider.models : liveProvider.models,
     modelCatalog,
     modelCatalogRefreshState: modelCatalog
