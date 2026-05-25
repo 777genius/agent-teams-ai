@@ -21,7 +21,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
       REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
-      REVIEWROUTER_ACTION_VERSION: "51a487bbb7d2afaf335336a74b81bdee8d6aed5c"
+      REVIEWROUTER_ACTION_VERSION: "00b1e337751b9ab8e4ebe01ee9068570e9b5acec"
       REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
       REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
       REVIEWROUTER_STATIC_CONFIG_FALLBACK: "true"
@@ -42,7 +42,7 @@ jobs:
 
       - name: Preflight ReviewRouter interaction
         id: preflight
-        uses: 777genius/review-router@51a487bbb7d2afaf335336a74b81bdee8d6aed5c
+        uses: 777genius/review-router@00b1e337751b9ab8e4ebe01ee9068570e9b5acec
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_ROUTER_MODE: "interaction-preflight"
@@ -78,7 +78,7 @@ jobs:
 
       - name: Run ReviewRouter interaction
         if: ${{ steps.preflight.outputs.should_run == 'true' }}
-        uses: 777genius/review-router@51a487bbb7d2afaf335336a74b81bdee8d6aed5c
+        uses: 777genius/review-router@00b1e337751b9ab8e4ebe01ee9068570e9b5acec
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_ROUTER_MODE: "interaction"
