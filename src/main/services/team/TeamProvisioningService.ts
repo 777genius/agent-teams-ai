@@ -1957,6 +1957,7 @@ interface ProvisioningRun {
   isLaunch: boolean;
   launchStateClearedForRun: boolean;
   deterministicBootstrap: boolean;
+  launchCleanupStateFinalized?: boolean;
   workspaceTrustPlan?: WorkspaceTrustFullPlanResult | null;
   workspaceTrustExecution?: WorkspaceTrustExecutionResult | null;
   workspaceTrustDiagnostics?: WorkspaceTrustDiagnosticsManifest | null;
@@ -33269,6 +33270,65 @@ export class TeamProvisioningService {
     this.pendingTimeouts.set(key, timer);
   }
 
+  private shouldFinalizeIncompleteLaunchState(run: ProvisioningRun): boolean {
+    return (
+      run.isLaunch &&
+      run.launchStateClearedForRun !== false &&
+      !run.provisioningComplete &&
+      !run.cancelRequested &&
+      run.launchCleanupStateFinalized !== true
+    );
+  }
+
+  private buildIncompleteLaunchCleanupReason(
+    run: ProvisioningRun,
+    fallback = 'Launch ended before teammate bootstrap completed.'
+  ): string {
+    return typeof run.progress.error === 'string' && run.progress.error.trim()
+      ? run.progress.error.trim()
+      : run.progress.state === 'failed' && run.progress.message.trim()
+        ? run.progress.message.trim()
+        : fallback;
+  }
+
+  private markIncompleteLaunchStateFinalized(run: ProvisioningRun, cleanupReason: string): void {
+    logger.warn(`[${run.teamName}] Launch cleanup finalizing unconfirmed bootstrap members`, {
+      runId: run.runId,
+      progressState: run.progress.state,
+      progressMessage: run.progress.message,
+      progressError: run.progress.error ?? null,
+      cleanupReason,
+      unconfirmedMembers: this.getUnconfirmedBootstrapMemberNames(run),
+      ...this.buildStdoutCarryDiagnostic(run),
+    });
+    this.markUnconfirmedBootstrapMembersFailed(run, cleanupReason, {
+      cleanupRequested: true,
+      preserveExistingFailure: true,
+    });
+    run.launchCleanupStateFinalized = true;
+  }
+
+  private async finalizeIncompleteLaunchStateBeforeCleanup(
+    run: ProvisioningRun,
+    fallbackReason?: string
+  ): Promise<void> {
+    if (!this.shouldFinalizeIncompleteLaunchState(run)) {
+      return;
+    }
+    const cleanupReason = this.buildIncompleteLaunchCleanupReason(run, fallbackReason);
+    this.markIncompleteLaunchStateFinalized(run, cleanupReason);
+    try {
+      await this.persistLaunchStateSnapshot(run, 'finished');
+    } catch (error) {
+      run.launchCleanupStateFinalized = false;
+      logger.warn(
+        `[${run.teamName}] Failed to finalize launch state before cleanup: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
   /**
    * Remove a run from tracking maps.
    */
@@ -33281,32 +33341,9 @@ export class TeamProvisioningService {
       peekAutoResumeService()?.cancelPendingAutoResume(run.teamName);
     }
 
-    if (
-      !hasNewerTrackedRun &&
-      run.isLaunch &&
-      run.launchStateClearedForRun !== false &&
-      !run.provisioningComplete &&
-      !run.cancelRequested
-    ) {
-      const cleanupReason =
-        typeof run.progress.error === 'string' && run.progress.error.trim()
-          ? run.progress.error.trim()
-          : run.progress.state === 'failed' && run.progress.message.trim()
-            ? run.progress.message.trim()
-            : 'Launch ended before teammate bootstrap completed.';
-      logger.warn(`[${run.teamName}] Launch cleanup finalizing unconfirmed bootstrap members`, {
-        runId: run.runId,
-        progressState: run.progress.state,
-        progressMessage: run.progress.message,
-        progressError: run.progress.error ?? null,
-        cleanupReason,
-        unconfirmedMembers: this.getUnconfirmedBootstrapMemberNames(run),
-        ...this.buildStdoutCarryDiagnostic(run),
-      });
-      this.markUnconfirmedBootstrapMembersFailed(run, cleanupReason, {
-        cleanupRequested: true,
-        preserveExistingFailure: true,
-      });
+    if (!hasNewerTrackedRun && this.shouldFinalizeIncompleteLaunchState(run)) {
+      const cleanupReason = this.buildIncompleteLaunchCleanupReason(run);
+      this.markIncompleteLaunchStateFinalized(run, cleanupReason);
       void this.persistLaunchStateSnapshot(run, 'finished');
     }
     if (
@@ -33720,6 +33757,7 @@ export class TeamProvisioningService {
           cliLogsTail: extractCliLogsFromRun(run),
         }
       );
+      await this.finalizeIncompleteLaunchStateBeforeCleanup(run, warnings[0]);
       run.onProgress(progress);
       this.cleanupRun(run);
       return;

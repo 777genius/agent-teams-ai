@@ -19247,6 +19247,157 @@ describe('TeamProvisioningService', () => {
     expect(progressStates).not.toContain('verifying');
   });
 
+  it('clears lead-only bootstrap state before cleanup when deterministic launch process exits', async () => {
+    allowConsoleLogs();
+    const teamName = 'lead-only-launch-exit-clears-bootstrap-state';
+    const leadSessionId = 'lead-session-lead-only-exit';
+    writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, []);
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    const child = createRunningChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    } as any);
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).writeLaunchFailureArtifactPackBestEffort = vi.fn();
+    vi.spyOn(svc as any, 'waitForValidConfig').mockResolvedValue({
+      ok: true,
+      location: 'configured',
+      configPath: path.join(tempTeamsBase, teamName, 'config.json'),
+    });
+    vi.spyOn(svc as any, 'waitForTeamInList').mockResolvedValue(true);
+    (svc as any).pathExists = vi.fn(async (targetPath: string) =>
+      targetPath.endsWith(`${leadSessionId}.jsonl`)
+    );
+
+    const progressStates: string[] = [];
+    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, (progress) => {
+      progressStates.push(progress.state);
+    });
+
+    fs.writeFileSync(
+      getTeamBootstrapStatePath(teamName),
+      `${JSON.stringify(
+        {
+          version: 1,
+          runId,
+          teamName,
+          ownerPid: child.pid,
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+          phase: 'auditing_truth',
+          members: [],
+        },
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressStates).toContain('disconnected'));
+    expect(fs.existsSync(getTeamBootstrapStatePath(teamName))).toBe(false);
+    expect(fs.existsSync(getTeamLaunchStatePath(teamName))).toBe(false);
+    expect(fs.existsSync(getTeamLaunchSummaryPath(teamName))).toBe(false);
+  });
+
+  it('persists failed member launch state before cleanup when deterministic launch process exits', async () => {
+    allowConsoleLogs();
+    const teamName = 'member-launch-exit-finalizes-before-cleanup';
+    const leadSessionId = 'lead-session-member-exit';
+    writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, ['alice']);
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    const child = createRunningChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    } as any);
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice' }],
+      source: 'members-meta',
+      warning: undefined,
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).writeLaunchFailureArtifactPackBestEffort = vi.fn();
+    vi.spyOn(svc as any, 'waitForValidConfig').mockResolvedValue({
+      ok: true,
+      location: 'configured',
+      configPath: path.join(tempTeamsBase, teamName, 'config.json'),
+    });
+    vi.spyOn(svc as any, 'waitForTeamInList').mockResolvedValue(true);
+    (svc as any).pathExists = vi.fn(async (targetPath: string) => {
+      const basename = path.basename(targetPath);
+      return basename === `${leadSessionId}.jsonl` || basename === 'alice.json';
+    });
+
+    const progressStates: string[] = [];
+    const { runId } = await svc.launchTeam({ teamName, cwd: tempClaudeRoot }, (progress) => {
+      progressStates.push(progress.state);
+    });
+
+    fs.writeFileSync(
+      getTeamBootstrapStatePath(teamName),
+      `${JSON.stringify(
+        {
+          version: 1,
+          runId,
+          teamName,
+          ownerPid: 987654321,
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+          phase: 'auditing_truth',
+          members: [{ name: 'alice', status: 'registered', lastAttemptAt: Date.now() }],
+        },
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    child.emit('close', 1);
+
+    await vi.waitFor(() => expect(progressStates).toContain('disconnected'));
+
+    const persisted = JSON.parse(fs.readFileSync(getTeamLaunchStatePath(teamName), 'utf8')) as {
+      teamLaunchState?: string;
+      members?: Record<string, { launchState?: string; hardFailureReason?: string }>;
+    };
+    expect(persisted.teamLaunchState).toBe('partial_failure');
+    expect(persisted.members?.alice?.launchState).toBe('failed_to_start');
+    expect(persisted.members?.alice?.hardFailureReason).toContain(
+      'team provisioned but not alive'
+    );
+
+    const reconciled = await (svc as any).reconcilePersistedLaunchState(teamName);
+    expect(reconciled.snapshot?.teamLaunchState).toBe('partial_failure');
+    expect(reconciled.statuses.alice?.launchState).toBe('failed_to_start');
+  });
+
   it('does not verify provisioning while auth retry is scheduled from final newline-less output', async () => {
     allowConsoleLogs();
     const teamName = 'launch-close-flushes-final-auth-team';
