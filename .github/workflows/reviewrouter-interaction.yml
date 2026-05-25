@@ -42,7 +42,7 @@ jobs:
 
       - name: Preflight ReviewRouter interaction
         id: preflight
-        uses: 777genius/review-router@ad70db70ac76a611e78d1444ed07afa6c0a6ae74
+        uses: 777genius/review-router@ee89d51257953387830ce19a233edf7186740d62
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_ROUTER_MODE: "interaction-preflight"
@@ -78,7 +78,7 @@ jobs:
 
       - name: Run ReviewRouter interaction
         if: ${{ steps.preflight.outputs.should_run == 'true' }}
-        uses: 777genius/review-router@ad70db70ac76a611e78d1444ed07afa6c0a6ae74
+        uses: 777genius/review-router@ee89d51257953387830ce19a233edf7186740d62
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_ROUTER_MODE: "interaction"
