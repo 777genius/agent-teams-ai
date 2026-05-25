@@ -2698,7 +2698,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1/3 connected');
+    expect(host.textContent).toContain('Providers: 1/4 connected');
     expect(host.textContent).toContain('5h left');
     expect(host.textContent).toContain('1w left');
     expect(host.textContent).toContain('resets');
