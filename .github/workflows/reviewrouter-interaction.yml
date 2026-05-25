@@ -17,7 +17,7 @@ permissions:
 jobs:
   interaction:
     name: interaction
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
       REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
@@ -27,7 +27,6 @@ jobs:
       REVIEWROUTER_STATIC_CONFIG_FALLBACK: "true"
       REVIEWROUTER_COMMENT_TOKEN_MODE: "app-oidc"
       CODEX_AUTH_JSON_PRESENT: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON != '' && '1' || '0' }}
-      OPENAI_API_KEY_PRESENT: ${{ secrets.OPENAI_API_KEY != '' && '1' || '0' }}
       REVIEW_ROUTER_REVIEW_WORKFLOW_FILE: "reviewrouter-codex.yml"
     steps:
       - name: Fetch ReviewRouter runtime config
@@ -49,13 +48,13 @@ jobs:
           REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
 
       - name: Setup Node.js for Codex discussion replies
-        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && (env.CODEX_AUTH_JSON_PRESENT == '1' || env.OPENAI_API_KEY_PRESENT == '1') }}
+        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
         uses: actions/setup-node@v6
         with:
           node-version: "24"
 
       - name: Install Codex CLI for discussion replies
-        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && (env.CODEX_AUTH_JSON_PRESENT == '1' || env.OPENAI_API_KEY_PRESENT == '1') }}
+        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
         shell: bash
         run: npm install -g @openai/codex@0.125.0
 
@@ -88,4 +87,3 @@ jobs:
           REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS: ${{ vars.REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS || '60' }}
           CODEX_MODEL: ${{ vars.REVIEW_CODEX_MODEL || 'gpt-5.5' }}
           CODEX_REASONING_EFFORT: ${{ vars.REVIEW_CODEX_EFFORT || 'medium' }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
