@@ -1,0 +1,91 @@
+name: ReviewRouter Interaction
+
+on:
+  pull_request_review_comment:
+    types: [created, edited]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  interaction:
+    name: interaction
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
+    env:
+      REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
+      REVIEWROUTER_ACTION_VERSION: "ad70db70ac76a611e78d1444ed07afa6c0a6ae74"
+      REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
+      REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
+      REVIEWROUTER_STATIC_CONFIG_FALLBACK: "true"
+      REVIEWROUTER_COMMENT_TOKEN_MODE: "app-oidc"
+      CODEX_AUTH_JSON_PRESENT: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON != '' && '1' || '0' }}
+      OPENAI_API_KEY_PRESENT: ${{ secrets.OPENAI_API_KEY != '' && '1' || '0' }}
+      REVIEW_ROUTER_REVIEW_WORKFLOW_FILE: "reviewrouter-codex.yml"
+    steps:
+      - name: Fetch ReviewRouter runtime config
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "ReviewRouter OIDC is unavailable. Check id-token: write permission."
+            exit 1
+          fi
+          echo "ReviewRouter runtime config will be fetched by the action using GitHub OIDC."
+
+      - name: Preflight ReviewRouter interaction
+        id: preflight
+        uses: 777genius/review-router@ad70db70ac76a611e78d1444ed07afa6c0a6ae74
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REVIEW_ROUTER_MODE: "interaction-preflight"
+          REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
+
+      - name: Setup Node.js for Codex discussion replies
+        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && (env.CODEX_AUTH_JSON_PRESENT == '1' || env.OPENAI_API_KEY_PRESENT == '1') }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Install Codex CLI for discussion replies
+        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && (env.CODEX_AUTH_JSON_PRESENT == '1' || env.OPENAI_API_KEY_PRESENT == '1') }}
+        shell: bash
+        run: npm install -g @openai/codex@0.125.0
+
+      - name: Restore Codex subscription auth for discussion replies
+        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
+        shell: bash
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CODEX_AUTH_JSON:-}" ]; then
+            echo "::error::REVIEWROUTER_CODEX_AUTH_JSON secret is missing. Re-run ReviewRouter Codex setup."
+            exit 1
+          fi
+          export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+          mkdir -p "$CODEX_HOME"
+          chmod 700 "$CODEX_HOME"
+          printf '%s' "$CODEX_AUTH_JSON" > "$CODEX_HOME/auth.json"
+          chmod 600 "$CODEX_HOME/auth.json"
+
+      - name: Run ReviewRouter interaction
+        if: ${{ steps.preflight.outputs.should_run == 'true' }}
+        uses: 777genius/review-router@ad70db70ac76a611e78d1444ed07afa6c0a6ae74
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REVIEW_ROUTER_MODE: "interaction"
+          REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
+          REVIEW_ROUTER_DISCUSSION_MAX_PER_PR: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_PR || '20' }}
+          REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD || '5' }}
+          REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS: ${{ vars.REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS || '60' }}
+          CODEX_MODEL: ${{ vars.REVIEW_CODEX_MODEL || 'gpt-5.5' }}
+          CODEX_REASONING_EFFORT: ${{ vars.REVIEW_CODEX_EFFORT || 'medium' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
