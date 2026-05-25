@@ -21,7 +21,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
       REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
-      REVIEWROUTER_ACTION_VERSION: "ad70db70ac76a611e78d1444ed07afa6c0a6ae74"
+      REVIEWROUTER_ACTION_VERSION: "ee89d51257953387830ce19a233edf7186740d62"
       REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
       REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
       REVIEWROUTER_STATIC_CONFIG_FALLBACK: "true"
