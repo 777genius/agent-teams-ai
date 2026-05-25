@@ -10,23 +10,14 @@ import {
   getThemedText,
 } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { asEnhancedChunkArray } from '@renderer/types/data';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { AlertCircle, Clock, FileText, Loader2 } from 'lucide-react';
 
-import type {
-  BoardTaskLogActor,
-  BoardTaskLogParticipant,
-  BoardTaskLogSegment,
-  ResolvedTeamMember,
-} from '@shared/types';
+import { buildDefaultExecutionSegmentRenderKey } from './executionLogStreamUtils';
 
-interface ExecutionLogStreamLike {
-  participants: BoardTaskLogParticipant[];
-  defaultFilter: string;
-  segments: BoardTaskLogSegment[];
-}
+import type { ExecutionLogStreamLike } from './executionLogStreamUtils';
+import type { BoardTaskLogActor, BoardTaskLogSegment, ResolvedTeamMember } from '@shared/types';
 
 interface ParticipantVisual {
   name: string;
@@ -47,6 +38,8 @@ export interface ExecutionLogStreamViewProps<TStream extends ExecutionLogStreamL
   selectionResetKey: string;
   boundedHistoryNote?: string | null;
   forceSegmentHeaders?: boolean;
+  showIntro?: boolean;
+  showSegmentParticipantBadge?: boolean;
   buildSegmentRenderKey?: (segment: TStream['segments'][number]) => string;
   getSegmentMetaLabel?: (segment: TStream['segments'][number]) => string | null;
 }
@@ -70,26 +63,6 @@ function actorLabel(actor: BoardTaskLogActor): string {
   if (actor.role === 'lead' || actor.isSidechain === false) return 'lead session';
   if (actor.agentId) return `member ${actor.agentId.slice(0, 8)}`;
   return `member session ${actor.sessionId.slice(0, 8)}`;
-}
-
-export function normalizeExecutionLogStream<TStream extends ExecutionLogStreamLike>(
-  response: TStream
-): TStream {
-  return {
-    ...response,
-    segments: response.segments.map((segment) => ({
-      ...segment,
-      chunks: asEnhancedChunkArray(segment.chunks) ?? [],
-    })),
-  };
-}
-
-export function buildDefaultExecutionSegmentRenderKey(segment: BoardTaskLogSegment): string {
-  const firstChunkId = segment.chunks[0]?.id;
-  if (firstChunkId) {
-    return `${segment.participantKey}:${firstChunkId}`;
-  }
-  return `${segment.participantKey}:${segment.startTimestamp}`;
 }
 
 function buildParticipantVisualMap(
@@ -129,14 +102,16 @@ const SegmentMarker = <TSegment extends BoardTaskLogSegment>({
   visual,
   teamName,
   metaLabel,
+  showParticipantBadge,
 }: {
   segment: TSegment;
   visual?: ParticipantVisual;
   teamName: string;
   metaLabel?: string | null;
+  showParticipantBadge: boolean;
 }): React.JSX.Element => (
   <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
-    {visual ? (
+    {showParticipantBadge && visual ? (
       <MemberBadge
         name={visual.name}
         color={visual.color}
@@ -159,16 +134,24 @@ const SegmentBlock = <TSegment extends BoardTaskLogSegment>({
   teamName,
   visual,
   metaLabel,
+  showParticipantBadge,
 }: {
   segment: TSegment;
   showHeader: boolean;
   teamName: string;
   visual?: ParticipantVisual;
   metaLabel?: string | null;
+  showParticipantBadge: boolean;
 }): React.JSX.Element => (
   <div className="min-w-0 overflow-hidden">
     {showHeader ? (
-      <SegmentMarker segment={segment} visual={visual} teamName={teamName} metaLabel={metaLabel} />
+      <SegmentMarker
+        segment={segment}
+        visual={visual}
+        teamName={teamName}
+        metaLabel={metaLabel}
+        showParticipantBadge={showParticipantBadge}
+      />
     ) : null}
     <MemberExecutionLog
       chunks={segment.chunks}
@@ -221,7 +204,7 @@ const ParticipantFilterChip = ({
   );
 };
 
-export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
+export const ExecutionLogStreamView = <TStream extends ExecutionLogStreamLike>({
   title,
   description,
   stream,
@@ -235,9 +218,11 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
   selectionResetKey,
   boundedHistoryNote,
   forceSegmentHeaders = false,
+  showIntro = true,
+  showSegmentParticipantBadge = true,
   buildSegmentRenderKey,
   getSegmentMetaLabel,
-}: Readonly<ExecutionLogStreamViewProps<TStream>>): React.JSX.Element {
+}: Readonly<ExecutionLogStreamViewProps<TStream>>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [selectedParticipantKey, setSelectedParticipantKey] = useState<string>('all');
   const appliedSelectionResetKeyRef = useRef<string | null>(null);
@@ -291,7 +276,11 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
   if (loading) {
     return (
       <div className="space-y-2">
-        <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">{title}</h4>
+        {showIntro ? (
+          <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+            {title}
+          </h4>
+        ) : null}
         <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-text-muted)]">
           <Loader2 size={12} className="animate-spin" />
           {loadingText}
@@ -303,7 +292,11 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
   if (error) {
     return (
       <div className="space-y-2">
-        <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">{title}</h4>
+        {showIntro ? (
+          <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+            {title}
+          </h4>
+        ) : null}
         <div className="flex items-center gap-2 py-4 text-xs text-red-400">
           <AlertCircle size={14} />
           {error}
@@ -314,8 +307,14 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">{title}</h4>
-      <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
+      {showIntro ? (
+        <>
+          <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+            {title}
+          </h4>
+          <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
+        </>
+      ) : null}
       {boundedHistoryNote ? (
         <p className="text-[11px] text-amber-300">{boundedHistoryNote}</p>
       ) : null}
@@ -362,10 +361,11 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
               teamName={teamName}
               visual={participantVisuals.get(segment.participantKey)}
               metaLabel={getSegmentMetaLabel?.(segment)}
+              showParticipantBadge={showSegmentParticipantBadge}
             />
           ))}
         </div>
       )}
     </div>
   );
-}
+};

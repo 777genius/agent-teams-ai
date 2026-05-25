@@ -97,40 +97,40 @@ export const ClaudeLogsPanel = ({
             <div className="min-w-0 shrink-0">{toolbarControlsStart}</div>
           ) : null}
           {data.total > 0 ? (
-            <>
-              <div
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1',
-                  compactMetaInTooltip ? 'min-w-0 max-w-48 flex-1' : 'w-48'
-                )}
-              >
-                <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                <input
-                  type="text"
-                  placeholder={t('claudeLogs.searchPlaceholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-                    onClick={() => setSearchQuery('')}
-                    aria-label={t('claudeLogs.clearSearch')}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              {toolbarAccessory}
-              <ClaudeLogsFilterPopover
-                filter={filter}
-                open={filterOpen}
-                onOpenChange={setFilterOpen}
-                onApply={setFilter}
+            <div
+              className={cn(
+                'flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1',
+                compactMetaInTooltip ? 'min-w-0 max-w-48 flex-1' : 'w-48'
+              )}
+            >
+              <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
+              <input
+                type="text"
+                placeholder={t('claudeLogs.searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
               />
-            </>
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                  onClick={() => setSearchQuery('')}
+                  aria-label={t('claudeLogs.clearSearch')}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          ) : null}
+          {toolbarAccessory}
+          {data.total > 0 ? (
+            <ClaudeLogsFilterPopover
+              filter={filter}
+              open={filterOpen}
+              onOpenChange={setFilterOpen}
+              onApply={setFilter}
+            />
           ) : null}
           {pendingNewCount > 0 && (
             <Button

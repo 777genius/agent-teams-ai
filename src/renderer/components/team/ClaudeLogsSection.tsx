@@ -102,12 +102,14 @@ const TeamLogsSourceSelector = ({
   selectedKey,
   onChange,
   className,
+  triggerVariant = 'default',
 }: {
   leadMember: ResolvedTeamMember;
   members: readonly ResolvedTeamMember[];
   selectedKey: TeamLogSourceKey;
   onChange: (key: TeamLogSourceKey) => void;
   className?: string;
+  triggerVariant?: 'default' | 'avatar';
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const sourceMembers = useMemo(() => [leadMember, ...members], [leadMember, members]);
@@ -135,6 +137,7 @@ const TeamLogsSourceSelector = ({
         searchPlaceholder={t('claudeLogs.sourceSelect.searchPlaceholder')}
         emptyMessage={t('claudeLogs.sourceSelect.emptyMessage')}
         ariaLabel={t('claudeLogs.sourceSelect.ariaLabel')}
+        triggerVariant={triggerVariant}
         getMemberLabel={(member) =>
           isLeadMember(member)
             ? t('claudeLogs.sourceSelect.leadLabel')
@@ -145,15 +148,6 @@ const TeamLogsSourceSelector = ({
     </div>
   );
 };
-
-const MemberSourcePill = ({ member }: { member: ResolvedTeamMember }): React.JSX.Element => (
-  <span
-    className="min-w-0 truncate rounded-md border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
-    title={formatMemberLogSourceLabel(member)}
-  >
-    {formatMemberLogSourceLabel(member)}
-  </span>
-);
 
 const MemberLogsSourcePanel = ({
   teamName,
@@ -354,7 +348,6 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         {showingLeadLogs && ctrl.lastLogPreview ? (
           <LogPreviewInline preview={ctrl.lastLogPreview} />
         ) : null}
-        {!showingLeadLogs && selectedMember ? <MemberSourcePill member={selectedMember} /> : null}
         {showHeaderSkeleton ? (
           <span className="flex min-w-0 flex-1 items-center gap-1.5 opacity-70">
             <LogsHeaderSkeletonPill className="size-3 rounded" />
@@ -365,17 +358,22 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         ) : null}
       </span>
     ),
-    [
-      ctrl.online,
-      ctrl.lastLogPreview,
-      isSidebar,
-      selectedMember,
-      showingLeadLogs,
-      showHeaderSkeleton,
-    ]
+    [ctrl.online, ctrl.lastLogPreview, isSidebar, showingLeadLogs, showHeaderSkeleton]
   );
 
   const canOpenFullscreen = showingLeadLogs ? ctrl.data.total > 0 : selectedMember !== null;
+
+  const compactSourceSelector =
+    selectableMembers.length > 0 ? (
+      <TeamLogsSourceSelector
+        leadMember={leadMember}
+        members={selectableMembers}
+        selectedKey={effectiveSelectedSourceKey}
+        onChange={setSelectedSourceKey}
+        className="shrink-0 pb-0"
+        triggerVariant="avatar"
+      />
+    ) : null;
 
   const afterBadge = showHeaderSkeleton ? (
     <>
@@ -422,12 +420,6 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         contentClassName="pt-0 [overflow-anchor:none]"
       >
         {/* When dialog is open, hide the compact log viewer to avoid two competing scroll containers */}
-        <TeamLogsSourceSelector
-          leadMember={leadMember}
-          members={selectableMembers}
-          selectedKey={effectiveSelectedSourceKey}
-          onChange={setSelectedSourceKey}
-        />
         {dialogOpen ? (
           <div className="flex items-center gap-2 p-2 text-xs text-[var(--color-text-muted)]">
             <Expand size={12} />
@@ -439,14 +431,18 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
             viewerClassName={cn('max-h-[213px]', isSidebar && 'cli-logs-sidebar')}
             viewerMaxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
             compactMetaInTooltip={isSidebar}
+            toolbarAccessory={compactSourceSelector}
           />
         ) : selectedMember ? (
-          <MemberLogsSourcePanel
-            teamName={teamName}
-            member={selectedMember}
-            enabled={effectiveSelectedSourceKey === memberLogSourceKey(selectedMember.name)}
-            maxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
-          />
+          <>
+            <div className="flex justify-end pb-2">{compactSourceSelector}</div>
+            <MemberLogsSourcePanel
+              teamName={teamName}
+              member={selectedMember}
+              enabled={effectiveSelectedSourceKey === memberLogSourceKey(selectedMember.name)}
+              maxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
+            />
+          </>
         ) : (
           <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
             {t('claudeLogs.sourceSelect.selectSourceEmpty')}

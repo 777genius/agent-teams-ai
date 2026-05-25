@@ -7,7 +7,7 @@ import {
   type MemberLogStreamResponse,
   normalizeMemberLogStreamResponse,
 } from '../../contracts';
-import { normalizeExecutionLogStream } from '../ui/ExecutionLogStreamView';
+import { normalizeExecutionLogStream } from '../ui/executionLogStreamUtils';
 
 import type { ResolvedTeamMember } from '@shared/types';
 

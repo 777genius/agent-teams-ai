@@ -65,10 +65,21 @@ vi.mock('@renderer/components/team/useClaudeLogsController', () => ({
 }));
 
 vi.mock('@renderer/components/team/ClaudeLogsPanel', () => ({
-  ClaudeLogsPanel: ({ toolbarControlsStart }: { toolbarControlsStart?: React.ReactNode }) =>
+  ClaudeLogsPanel: ({
+    toolbarAccessory,
+    toolbarControlsStart,
+  }: {
+    toolbarAccessory?: React.ReactNode;
+    toolbarControlsStart?: React.ReactNode;
+  }) =>
     React.createElement(
       'div',
-      { 'data-testid': 'lead-logs-panel' },
+      {
+        'data-testid': 'lead-logs-panel',
+        'data-has-toolbar-accessory': toolbarAccessory ? 'true' : 'false',
+        'data-has-toolbar-controls-start': toolbarControlsStart ? 'true' : 'false',
+      },
+      toolbarAccessory,
       toolbarControlsStart,
       'lead-panel'
     ),
@@ -103,6 +114,7 @@ vi.mock('@renderer/components/ui/MemberSelect', () => ({
     searchPlaceholder,
     emptyMessage,
     ariaLabel,
+    triggerVariant,
   }: {
     members: ResolvedTeamMember[];
     value: string | null;
@@ -111,6 +123,7 @@ vi.mock('@renderer/components/ui/MemberSelect', () => ({
     searchPlaceholder?: string;
     emptyMessage?: string;
     ariaLabel?: string;
+    triggerVariant?: 'default' | 'avatar';
   }) =>
     React.createElement(
       'div',
@@ -118,6 +131,7 @@ vi.mock('@renderer/components/ui/MemberSelect', () => ({
         'data-testid': 'member-select',
         'data-search-placeholder': searchPlaceholder,
         'data-empty-message': emptyMessage,
+        'data-trigger-variant': triggerVariant ?? 'default',
       },
       React.createElement(
         'select',
@@ -273,11 +287,22 @@ describe('ClaudeLogsSection source filtering', () => {
     expect(memberSelect?.getAttribute('data-search-placeholder')).toBe('Search log sources...');
     expect(select.getAttribute('data-trigger-aria-label')).toBe('Log source');
     expect(host.querySelector('[data-testid="lead-logs-panel"]')).not.toBeNull();
+    expect(
+      host
+        .querySelector('[data-testid="lead-logs-panel"]')
+        ?.getAttribute('data-has-toolbar-accessory')
+    ).toBe('true');
+    expect(
+      host
+        .querySelector('[data-testid="lead-logs-panel"]')
+        ?.getAttribute('data-has-toolbar-controls-start')
+    ).toBe('false');
     expect(sectionState.memberLogStreamCalls).toEqual([]);
     expect(sectionState.controllerCalls.at(-1)).toEqual({
       teamName: 'demo-team',
       enabled: true,
     });
+    expect(memberSelect?.getAttribute('data-trigger-variant')).toBe('avatar');
 
     await act(async () => {
       root.unmount();
@@ -379,9 +404,12 @@ describe('ClaudeLogsSection source filtering', () => {
 
     expect(host.querySelector('[data-testid="member-log-stream"]')?.textContent).toBe('Builder');
 
+    const teammateSelect = host.querySelector(
+      'select[aria-label="Log source"]'
+    ) as HTMLSelectElement;
     await act(async () => {
-      select.value = 'team-lead';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
+      teammateSelect.value = 'team-lead';
+      teammateSelect.dispatchEvent(new Event('change', { bubbles: true }));
       await Promise.resolve();
     });
 
@@ -436,7 +464,7 @@ describe('ClaudeLogsSection source filtering', () => {
       await Promise.resolve();
     });
 
-    const select = host.querySelector('select[aria-label="Log source"]') as HTMLSelectElement;
+    let select = host.querySelector('select[aria-label="Log source"]') as HTMLSelectElement;
     expect(Array.from(select.options).map((option) => option.textContent)).toEqual([
       'Lead',
       'Builder',
@@ -450,6 +478,7 @@ describe('ClaudeLogsSection source filtering', () => {
     });
     expect(host.querySelector('[data-testid="member-log-stream"]')?.textContent).toBe('Builder');
 
+    select = host.querySelector('select[aria-label="Log source"]') as HTMLSelectElement;
     await act(async () => {
       select.value = 'Reviewer';
       select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -837,9 +866,11 @@ describe('ClaudeLogsSection source filtering', () => {
     expect(
       (dialog.querySelector('select[aria-label="Log source"]') as HTMLSelectElement).value
     ).toBe('team-lead');
-    expect(
-      dialog.querySelector('[data-testid="lead-logs-panel"] [data-testid="member-select"]')
-    ).not.toBeNull();
+    const dialogMemberSelect = dialog.querySelector(
+      '[data-testid="lead-logs-panel"] [data-testid="member-select"]'
+    );
+    expect(dialogMemberSelect).not.toBeNull();
+    expect(dialogMemberSelect?.getAttribute('data-trigger-variant')).toBe('default');
 
     const dialogSelect = dialog.querySelector(
       'select[aria-label="Log source"]'
