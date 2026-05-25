@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 import { ChevronRight, Users } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export const TaskCoordinationItem = ({
   injection,
   onNavigateToTurn,
 }: Readonly<TaskCoordinationItemProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const turnIndex = injection.turnIndex;
   const isClickable = onNavigateToTurn && turnIndex >= 0;
@@ -56,15 +58,17 @@ export const TaskCoordinationItem = ({
             }
           }}
         >
-          @Turn {turnIndex + 1}
+          {t('sessionContext.items.turn', { turn: turnIndex + 1 })}
         </span>
       ) : (
         <span className="text-xs" style={{ color: COLOR_TEXT_SECONDARY }}>
-          @Turn {turnIndex + 1}
+          {t('sessionContext.items.turn', { turn: turnIndex + 1 })}
         </span>
       )}
       <span className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-        ~{formatTokens(injection.estimatedTokens)} tokens
+        {t('sessionContext.items.tokensApprox', {
+          tokens: formatTokens(injection.estimatedTokens),
+        })}
       </span>
       <span
         className="rounded px-1 py-0.5 text-xs"
@@ -73,7 +77,7 @@ export const TaskCoordinationItem = ({
           color: COLOR_TEXT_MUTED,
         }}
       >
-        {injection.breakdown.length} item{injection.breakdown.length !== 1 ? 's' : ''}
+        {t('sessionContext.items.itemsCount', { count: injection.breakdown.length })}
       </span>
     </>
   );

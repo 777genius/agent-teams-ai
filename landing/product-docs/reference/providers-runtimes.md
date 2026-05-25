@@ -88,7 +88,7 @@ Recommended patterns:
 
 ## Provider costs
 
-Agent Teams is free and open source. Provider usage is governed by the runtime/provider you select: subscription limits, API keys, account auth, rate limits, and provider policies all remain external to the app.
+Agent Teams is free and open source. You can start with the included free model with no auth - no registration, API keys, or credit card. Paid or account-backed provider usage is governed by the runtime/provider you select: subscription limits, API keys, account auth, rate limits, and provider policies all remain external to the app.
 
 ## Capability checks
 

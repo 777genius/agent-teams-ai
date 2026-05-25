@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -23,6 +24,7 @@ interface ApiKeyCardProps {
 }
 
 export const ApiKeyCard = ({ apiKey, onEdit }: ApiKeyCardProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const deleteApiKey = useStore((s) => s.deleteApiKey);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -117,7 +119,7 @@ export const ApiKeyCard = ({ apiKey, onEdit }: ApiKeyCardProps): React.JSX.Eleme
                   <Pencil className="size-3.5 text-text-muted" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Edit</TooltipContent>
+              <TooltipContent>{t('apiKeys.actions.edit')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 

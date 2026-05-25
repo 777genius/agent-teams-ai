@@ -27,6 +27,7 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
@@ -61,6 +62,7 @@ export const ConfigEditorDialog = ({
   onClose,
   onConfigSaved,
 }: ConfigEditorDialogProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('settings');
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -106,7 +108,7 @@ export const ConfigEditorDialog = ({
           setSaveStatus('idle');
         } else {
           setSaveStatus('error');
-          setJsonError(e instanceof Error ? e.message : 'Failed to save config');
+          setJsonError(e instanceof Error ? e.message : t('configEditor.errors.saveFailed'));
           if (savedRevertTimerRef.current) clearTimeout(savedRevertTimerRef.current);
           savedRevertTimerRef.current = setTimeout(() => {
             setSaveStatus('idle');
@@ -115,7 +117,7 @@ export const ConfigEditorDialog = ({
         }
       }
     },
-    [onConfigSaved]
+    [onConfigSaved, t]
   );
 
   const scheduleSave = useCallback(
@@ -202,7 +204,7 @@ export const ConfigEditorDialog = ({
       } catch (e) {
         if (destroyed) return;
         setLoading(false);
-        setJsonError(e instanceof Error ? e.message : 'Failed to load config');
+        setJsonError(e instanceof Error ? e.message : t('configEditor.errors.loadFailed'));
       }
     };
 
@@ -217,7 +219,7 @@ export const ConfigEditorDialog = ({
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (savedRevertTimerRef.current) clearTimeout(savedRevertTimerRef.current);
     };
-  }, [open, scheduleSave]);
+  }, [open, scheduleSave, t]);
 
   // Escape key handler
   useEffect(() => {
@@ -236,10 +238,14 @@ export const ConfigEditorDialog = ({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
       }}
     >
       <div
@@ -256,7 +262,7 @@ export const ConfigEditorDialog = ({
         >
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-              Edit Configuration
+              {t('configEditor.title')}
             </h2>
             <SaveStatusBadge status={saveStatus} error={jsonError} />
           </div>
@@ -277,7 +283,7 @@ export const ConfigEditorDialog = ({
               style={{ color: 'var(--color-text-muted)', backgroundColor: 'var(--color-surface)' }}
             >
               <Loader2 className="size-4 animate-spin" />
-              Loading config...
+              {t('configEditor.loading')}
             </div>
           ) : null}
           <div
@@ -293,7 +299,7 @@ export const ConfigEditorDialog = ({
           style={{ borderColor: 'var(--color-border)' }}
         >
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Changes auto-save after editing
+            {t('configEditor.footer.autoSave')}
           </p>
           <div className="flex items-center gap-2">
             <kbd
@@ -304,10 +310,10 @@ export const ConfigEditorDialog = ({
                 border: '1px solid var(--color-border)',
               }}
             >
-              Esc
+              {t('configEditor.footer.escapeKey')}
             </kbd>
             <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              to close
+              {t('configEditor.footer.toClose')}
             </span>
           </div>
         </div>
@@ -327,6 +333,8 @@ const SaveStatusBadge = ({
   status: SaveStatus;
   error: string | null;
 }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('settings');
+
   if (status === 'idle' && !error) return null;
 
   if (error && status !== 'saving') {
@@ -337,7 +345,9 @@ const SaveStatusBadge = ({
         title={error}
       >
         <AlertTriangle className="size-3" />
-        {status === 'error' ? 'Save failed' : 'Invalid JSON'}
+        {status === 'error'
+          ? t('configEditor.status.saveFailed')
+          : t('configEditor.status.invalidJson')}
       </span>
     );
   }
@@ -349,7 +359,7 @@ const SaveStatusBadge = ({
         style={{ backgroundColor: 'rgba(96, 165, 250, 0.15)', color: '#60a5fa' }}
       >
         <Loader2 className="size-3 animate-spin" />
-        Saving...
+        {t('configEditor.status.saving')}
       </span>
     );
   }
@@ -361,7 +371,7 @@ const SaveStatusBadge = ({
         style={{ backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' }}
       >
         <Check className="size-3" />
-        Saved
+        {t('configEditor.status.saved')}
       </span>
     );
   }

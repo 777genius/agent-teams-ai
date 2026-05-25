@@ -1,10 +1,16 @@
 import { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
+import {
+  isOpenCodeWindowsAccessDeniedDiagnostic,
+  normalizeOpenCodeWindowsAccessDeniedDiagnostic,
+} from '@shared/utils/openCodeWindowsAccessDenied';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 
 import type {
   TeamProviderId,
+  TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
+  TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
 export type ProviderPrepareCheckStatus = 'ready' | 'notes' | 'failed';
@@ -15,7 +21,8 @@ type PrepareProvisioningFn = (
   providerIds?: TeamProviderId[],
   selectedModels?: string[],
   limitContext?: boolean,
-  modelVerificationMode?: TeamProvisioningModelVerificationMode
+  modelVerificationMode?: TeamProvisioningModelVerificationMode,
+  selectedModelChecks?: TeamProvisioningModelCheckRequest[]
 ) => Promise<TeamProvisioningPrepareResult>;
 
 interface ProviderPrepareDiagnosticsProgress {
@@ -43,6 +50,7 @@ export interface ProviderPrepareDiagnosticsResult {
   details: string[];
   warnings: string[];
   modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>;
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
 type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
@@ -55,11 +63,29 @@ export function buildReusableProviderPrepareModelResults(
   );
 }
 
+export function mergeReusableProviderPrepareModelResults(
+  existingModelResultsById:
+    | Record<string, ProviderPrepareDiagnosticsModelResult>
+    | null
+    | undefined,
+  modelResultsById: Record<string, ProviderPrepareDiagnosticsModelResult>
+): Record<string, ProviderPrepareDiagnosticsModelResult> {
+  const mergedModelResultsById = { ...(existingModelResultsById ?? {}) };
+  for (const [modelId, result] of Object.entries(modelResultsById)) {
+    if (result.status === 'notes') {
+      delete mergedModelResultsById[modelId];
+      continue;
+    }
+    mergedModelResultsById[modelId] = result;
+  }
+  return mergedModelResultsById;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function uniquePrepareLines(lines: Array<string | null | undefined>): string[] {
+function uniquePrepareLines(lines: (string | null | undefined)[]): string[] {
   const seen = new Set<string>();
   const uniqueLines: string[] = [];
   for (const line of lines) {
@@ -71,6 +97,45 @@ function uniquePrepareLines(lines: Array<string | null | undefined>): string[] {
     uniqueLines.push(trimmed);
   }
   return uniqueLines;
+}
+
+function isOpenCodeBridgeNoOutputDiagnostic(value: string | null | undefined): boolean {
+  const lower = value?.trim().toLowerCase() ?? '';
+  return (
+    lower.includes('opencode runtime check returned no output') ||
+    lower.includes('bridge stdout was empty') ||
+    lower.includes('opencode_bridge_contract_violation') ||
+    (lower.includes('opencode readiness bridge failed') && lower.includes('contract_violation'))
+  );
+}
+
+function cloneSupportDiagnostics(
+  diagnostics: readonly TeamProvisioningSupportDiagnostic[] | undefined
+): TeamProvisioningSupportDiagnostic[] {
+  return (diagnostics ?? []).map((diagnostic) => ({ ...diagnostic }));
+}
+
+function mergeSupportDiagnostics(
+  target: TeamProvisioningSupportDiagnostic[],
+  incoming: readonly TeamProvisioningSupportDiagnostic[] | undefined
+): void {
+  for (const diagnostic of incoming ?? []) {
+    if (!target.some((existing) => existing.id === diagnostic.id)) {
+      target.push({ ...diagnostic });
+    }
+  }
+}
+
+function withSupportDiagnostics(
+  result: ProviderPrepareDiagnosticsResult,
+  supportDiagnostics: readonly TeamProvisioningSupportDiagnostic[]
+): ProviderPrepareDiagnosticsResult {
+  return supportDiagnostics.length > 0
+    ? {
+        ...result,
+        supportDiagnostics: cloneSupportDiagnostics(supportDiagnostics),
+      }
+    : result;
 }
 
 function getModelLabel(providerId: TeamProviderId, modelId: string): string {
@@ -89,6 +154,44 @@ export function buildProviderPrepareModelCheckingLine(
 
 function buildModelSuccessLine(providerId: TeamProviderId, modelId: string): string {
   return `${getModelLabel(providerId, modelId)} - verified`;
+}
+
+function normalizeSelectedModelChecks(
+  providerId: TeamProviderId,
+  selectedModelIds: readonly string[],
+  selectedModelChecks?: readonly TeamProvisioningModelCheckRequest[]
+): TeamProvisioningModelCheckRequest[] {
+  const rawChecks: TeamProvisioningModelCheckRequest[] =
+    selectedModelChecks && selectedModelChecks.length > 0
+      ? [...selectedModelChecks]
+      : selectedModelIds.map((model) => ({ providerId, model }));
+  const seen = new Set<string>();
+  const normalized: TeamProvisioningModelCheckRequest[] = [];
+  for (const check of rawChecks) {
+    const model = check.model.trim();
+    if (!model) {
+      continue;
+    }
+    const key = `${check.providerId}\n${model}\n${check.effort ?? ''}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push({
+      providerId: check.providerId,
+      model,
+      ...(check.effort ? { effort: check.effort } : {}),
+    });
+  }
+  return normalized;
+}
+
+function selectModelChecksForIds(
+  modelChecks: readonly TeamProvisioningModelCheckRequest[],
+  modelIds: readonly string[]
+): TeamProvisioningModelCheckRequest[] {
+  const modelIdSet = new Set(modelIds);
+  return modelChecks.filter((check) => modelIdSet.has(check.model));
 }
 
 function buildModelAvailableLine(providerId: TeamProviderId, modelId: string): string {
@@ -151,6 +254,7 @@ function stripSelectedModelPrefix(modelId: string, message: string): string {
   const patterns = [
     new RegExp(`^Selected model ${escapeRegExp(modelId)} is unavailable\\.\\s*`, 'i'),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} could not be verified\\.\\s*`, 'i'),
+    new RegExp(`^Selected model ${escapeRegExp(modelId)} verification deferred\\.\\s*`, 'i'),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} verified for launch\\.\\s*`, 'i'),
     new RegExp(`^Selected model ${escapeRegExp(modelId)} is available for launch\\.\\s*`, 'i'),
     new RegExp(
@@ -228,12 +332,17 @@ function looksLikeOpenCodeRuntimeFailureReason(reason: string | null | undefined
   }
 
   return (
+    isOpenCodeBridgeNoOutputDiagnostic(reason) ||
+    isOpenCodeWindowsAccessDeniedDiagnostic(reason) ||
     lower.includes('opencode /experimental/tool') ||
     lower.includes('/experimental/tool') ||
+    lower.includes('opencode_bridge_contract_violation') ||
+    lower.includes('bridge stdout was empty') ||
     lower.includes('mcp_unavailable') ||
     lower.includes('unable to connect') ||
     lower.includes('runtime store') ||
-    lower.includes('opencode cli')
+    lower.includes('opencode cli') ||
+    lower.includes('opencode runtime binary')
   );
 }
 
@@ -250,13 +359,6 @@ function getBlockingProviderIssue(
         entry.message.trim().length > 0
     ) ?? null
   );
-}
-
-function getBlockingProviderIssueMessage(
-  providerId: TeamProviderId,
-  result: TeamProvisioningPrepareResult
-): string | null {
-  return getBlockingProviderIssue(providerId, result)?.message.trim() ?? null;
 }
 
 function isAdvisoryOpenCodeDeepVerificationIssue(
@@ -285,7 +387,10 @@ function isAdvisoryOpenCodeDeepVerificationIssue(
     lower.includes('api key') ||
     lower.includes('/experimental/tool') ||
     lower.includes('runtime store') ||
-    lower.includes('opencode cli');
+    lower.includes('opencode cli') ||
+    lower.includes('opencode runtime binary') ||
+    isOpenCodeBridgeNoOutputDiagnostic(lower) ||
+    isOpenCodeWindowsAccessDeniedDiagnostic(lower);
   if (hasHardRuntimeMarker) {
     return false;
   }
@@ -309,12 +414,22 @@ function buildOpenCodeAdvisoryDeepVerificationWarning(reason: string | null | un
   return `OpenCode model ping was not confirmed. ${normalizedReason}`;
 }
 
+function isProviderLevelOpenCodeBusyDeepVerificationWarning(value: string): boolean {
+  const lower = value.trim().toLowerCase();
+  return (
+    lower.includes('opencode is currently busy') &&
+    lower.includes('deep model verification') &&
+    lower.includes('idle')
+  );
+}
+
 function createOpenCodeAdvisoryDeepVerificationModelResult(
   providerId: TeamProviderId,
   modelId: string
 ): ProviderPrepareDiagnosticsModelResult {
   const line = `${getModelLabel(providerId, modelId)} - ping not confirmed`;
   return {
+    // TODO: Introduce a dedicated `unconfirmed` model result status for deep-ping advisory results.
     status: 'notes',
     line,
     warningLine: line,
@@ -401,19 +516,109 @@ function buildModelFailureLine(
   return reason ? `${label} - ${kind} - ${reason}` : `${label} - ${kind}`;
 }
 
-function createRuntimeDetailLines(result: TeamProvisioningPrepareResult): string[] {
-  return uniquePrepareLines([...(result.details ?? []), ...(result.warnings ?? [])]);
+function buildModelVerificationDeferredLine(
+  providerId: TeamProviderId,
+  modelId: string,
+  reason: string | null
+): string {
+  const label = getModelLabel(providerId, modelId);
+  return reason
+    ? `${label} - verification deferred - ${reason}`
+    : `${label} - verification deferred`;
 }
 
-function createRuntimeWarningLines(result: TeamProvisioningPrepareResult): string[] {
-  return uniquePrepareLines(result.warnings ?? []);
+function createRuntimeDetailLines(
+  result: TeamProvisioningPrepareResult,
+  providerId: TeamProviderId
+): string[] {
+  return uniquePrepareLines(
+    [...(result.details ?? []), ...(result.warnings ?? [])]
+      .map((detail) => normalizeRuntimeDetailLine(detail, providerId))
+      .filter(Boolean)
+  );
+}
+
+function createRuntimeWarningLines(
+  result: TeamProvisioningPrepareResult,
+  providerId: TeamProviderId
+): string[] {
+  return uniquePrepareLines(
+    (result.warnings ?? [])
+      .map((warning) => normalizeRuntimeFailureDetailLine(warning, undefined, providerId))
+      .filter(Boolean)
+  );
+}
+
+function normalizeRuntimeFailureDetailLine(
+  detail: string | null | undefined,
+  code?: string | null,
+  providerId?: TeamProviderId
+): string | null {
+  const trimmed = detail?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (providerId === 'opencode') {
+    if (isOpenCodeBridgeNoOutputDiagnostic(trimmed)) {
+      return 'OpenCode runtime check returned no output.';
+    }
+    const accessDeniedDiagnostic = normalizeOpenCodeWindowsAccessDeniedDiagnostic(trimmed);
+    if (accessDeniedDiagnostic) {
+      return accessDeniedDiagnostic;
+    }
+  }
+
+  if (/opencode cli (?:not detected on path|not found)/i.test(trimmed)) {
+    return 'OpenCode runtime binary is not installed or not reachable by launch preflight.';
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes('unable to connect') &&
+    (lower.includes('/experimental/tool') ||
+      lower.includes('mcp_unavailable') ||
+      code?.trim().toLowerCase() === 'mcp_unavailable')
+  ) {
+    const connectionDetail = trimmed.includes(' - ') ? trimmed.split(' - ').pop()?.trim() : trimmed;
+    const base = 'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge.';
+    return connectionDetail && connectionDetail !== trimmed
+      ? `${base} Details: ${connectionDetail}`
+      : base;
+  }
+
+  return trimmed;
+}
+
+function normalizeRuntimeDetailLine(
+  detail: string | null | undefined,
+  providerId: TeamProviderId
+): string | null {
+  const trimmed = detail?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (providerId !== 'opencode') {
+    return trimmed;
+  }
+
+  if (isOpenCodeBridgeNoOutputDiagnostic(trimmed)) {
+    return 'OpenCode runtime check returned no output.';
+  }
+  return normalizeOpenCodeWindowsAccessDeniedDiagnostic(trimmed) ?? trimmed;
 }
 
 function createRuntimeFailureDetailLines(
   runtimeDetailLines: readonly string[],
-  message: string | null | undefined
+  message: string | null | undefined,
+  providerId: TeamProviderId
 ): string[] {
-  return uniquePrepareLines([...runtimeDetailLines, message]);
+  return uniquePrepareLines(
+    [...runtimeDetailLines, message]
+      .map((detail) => normalizeRuntimeFailureDetailLine(detail, undefined, providerId))
+      .filter(Boolean)
+  );
 }
 
 function extractTimedOutPreflightProbeModelId(detail: string): string | null {
@@ -552,6 +757,18 @@ function resolveModelResultFromBatch(
       status: 'notes',
       line: buildModelCompatibilityPendingLine(providerId, modelId),
       warningLine: null,
+    };
+  }
+
+  const hasVerificationDeferredLine = modelScopedEntries.some((entry) =>
+    /selected model .* verification deferred\./i.test(entry)
+  );
+  if (hasVerificationDeferredLine) {
+    const line = buildModelVerificationDeferredLine(providerId, modelId, scopedReason);
+    return {
+      status: 'notes',
+      line,
+      warningLine: line,
     };
   }
 
@@ -814,16 +1031,26 @@ export async function runProviderPrepareDiagnostics({
   limitContext,
   onModelProgress,
   cachedModelResultsById,
+  selectedModelChecks,
 }: {
   cwd: string;
   providerId: TeamProviderId;
   selectedModelIds: string[];
+  selectedModelChecks?: TeamProvisioningModelCheckRequest[];
   prepareProvisioning: PrepareProvisioningFn;
   limitContext?: boolean;
   onModelProgress?: (progress: ProviderPrepareDiagnosticsProgress) => void;
   cachedModelResultsById?: Record<string, ProviderPrepareDiagnosticsModelResult>;
 }): Promise<ProviderPrepareDiagnosticsResult> {
-  if (selectedModelIds.length === 0) {
+  const normalizedModelChecks = normalizeSelectedModelChecks(
+    providerId,
+    selectedModelIds,
+    selectedModelChecks
+  );
+  const hasExplicitModelChecks = (selectedModelChecks?.length ?? 0) > 0;
+  const orderedModelIds = Array.from(new Set(normalizedModelChecks.map((check) => check.model)));
+  const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
+  if (orderedModelIds.length === 0) {
     const runtimeResult = await prepareProvisioning(
       cwd,
       providerId,
@@ -831,29 +1058,37 @@ export async function runProviderPrepareDiagnostics({
       undefined,
       limitContext
     );
-    const runtimeDetailLines = createRuntimeDetailLines(runtimeResult);
-    const runtimeWarnings = createRuntimeWarningLines(runtimeResult);
+    mergeSupportDiagnostics(supportDiagnostics, runtimeResult.supportDiagnostics);
+    const runtimeDetailLines = createRuntimeDetailLines(runtimeResult, providerId);
+    const runtimeWarnings = createRuntimeWarningLines(runtimeResult, providerId);
 
     if (!runtimeResult.ready) {
-      return {
-        status: 'failed',
-        details: createRuntimeFailureDetailLines(runtimeDetailLines, runtimeResult.message),
-        warnings: runtimeWarnings,
-        modelResultsById: {},
-      };
+      return withSupportDiagnostics(
+        {
+          status: 'failed',
+          details: createRuntimeFailureDetailLines(
+            runtimeDetailLines,
+            runtimeResult.message,
+            providerId
+          ),
+          warnings: runtimeWarnings,
+          modelResultsById: {},
+        },
+        supportDiagnostics
+      );
     }
 
-    return {
-      status: runtimeWarnings.length > 0 ? 'notes' : 'ready',
-      details: runtimeDetailLines,
-      warnings: runtimeWarnings,
-      modelResultsById: {},
-    };
+    return withSupportDiagnostics(
+      {
+        status: runtimeWarnings.length > 0 ? 'notes' : 'ready',
+        details: runtimeDetailLines,
+        warnings: runtimeWarnings,
+        modelResultsById: {},
+      },
+      supportDiagnostics
+    );
   }
 
-  const orderedModelIds = Array.from(
-    new Set(selectedModelIds.map((modelId) => modelId.trim()).filter(Boolean))
-  );
   const reusableModelResultsById = cachedModelResultsById ?? {};
   const modelResultsById = new Map<string, ProviderPrepareDiagnosticsModelResult>();
   const modelLines = new Map<string, string>();
@@ -916,16 +1151,24 @@ export async function runProviderPrepareDiagnostics({
       undefined,
       limitContext
     );
-    runtimeDetailLines = createRuntimeDetailLines(runtimeResult);
-    runtimeWarnings = createRuntimeWarningLines(runtimeResult);
+    mergeSupportDiagnostics(supportDiagnostics, runtimeResult.supportDiagnostics);
+    runtimeDetailLines = createRuntimeDetailLines(runtimeResult, providerId);
+    runtimeWarnings = createRuntimeWarningLines(runtimeResult, providerId);
 
     if (!runtimeResult.ready) {
-      return {
-        status: 'failed',
-        details: createRuntimeFailureDetailLines(runtimeDetailLines, runtimeResult.message),
-        warnings: runtimeWarnings,
-        modelResultsById: {},
-      };
+      return withSupportDiagnostics(
+        {
+          status: 'failed',
+          details: createRuntimeFailureDetailLines(
+            runtimeDetailLines,
+            runtimeResult.message,
+            providerId
+          ),
+          warnings: runtimeWarnings,
+          modelResultsById: {},
+        },
+        supportDiagnostics
+      );
     }
   } else {
     const recordTerminalModelResult = (
@@ -954,12 +1197,16 @@ export async function runProviderPrepareDiagnostics({
           [providerId],
           uncachedModelIds,
           limitContext,
-          'compatibility'
+          'compatibility',
+          ...(hasExplicitModelChecks
+            ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+            : [])
         );
-        runtimeDetailLines = createRuntimeDetailLines(compatibilityResult).filter(
+        mergeSupportDiagnostics(supportDiagnostics, compatibilityResult.supportDiagnostics);
+        runtimeDetailLines = createRuntimeDetailLines(compatibilityResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
         );
-        runtimeWarnings = createRuntimeWarningLines(compatibilityResult).filter(
+        runtimeWarnings = createRuntimeWarningLines(compatibilityResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
         );
 
@@ -975,19 +1222,28 @@ export async function runProviderPrepareDiagnostics({
           uncachedModelIds,
           compatibilityResult
         );
-        const structuredProviderScopedFailure = getBlockingProviderIssueMessage(
+        const structuredProviderScopedIssue = getBlockingProviderIssue(
           providerId,
           compatibilityResult
         );
+        const structuredProviderScopedFailure =
+          structuredProviderScopedIssue?.message.trim() ?? null;
         if (structuredProviderScopedFailure || providerScopedFailure) {
-          return {
-            status: 'failed',
-            details: [
-              structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed',
-            ],
-            warnings: [],
-            modelResultsById: {},
-          };
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: [
+                normalizeRuntimeFailureDetailLine(
+                  structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed',
+                  structuredProviderScopedIssue?.code,
+                  providerId
+                ) ?? 'OpenCode failed',
+              ],
+              warnings: [],
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
         }
         if (
           shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
@@ -1002,15 +1258,19 @@ export async function runProviderPrepareDiagnostics({
             (uncachedModelIds.length > 1 ||
               (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason)))
         ) {
-          return {
-            status: 'failed',
-            details: createRuntimeFailureDetailLines(
-              runtimeDetailLines,
-              compatibilityResult.message
-            ),
-            warnings: runtimeWarnings,
-            modelResultsById: {},
-          };
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: createRuntimeFailureDetailLines(
+                runtimeDetailLines,
+                compatibilityResult.message,
+                providerId
+              ),
+              warnings: runtimeWarnings,
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
         }
         if (!hasModelScopedEntries && uncachedModelIds.length === 1) {
           runtimeDetailLines = [];
@@ -1065,19 +1325,22 @@ export async function runProviderPrepareDiagnostics({
             )
         );
 
-        return {
-          status: hasFailure
-            ? 'failed'
-            : hasNotes || dedupedWarnings.length > 0
-              ? 'notes'
-              : 'ready',
-          details: [
-            ...filteredRuntime.runtimeDetailLines,
-            ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
-          ],
-          warnings: dedupedWarnings,
-          modelResultsById: selectedModelResultsById,
-        };
+        return withSupportDiagnostics(
+          {
+            status: hasFailure
+              ? 'failed'
+              : hasNotes || dedupedWarnings.length > 0
+                ? 'notes'
+                : 'ready',
+            details: [
+              ...filteredRuntime.runtimeDetailLines,
+              ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
+            ],
+            warnings: dedupedWarnings,
+            modelResultsById: selectedModelResultsById,
+          },
+          supportDiagnostics
+        );
       }
 
       try {
@@ -1087,12 +1350,16 @@ export async function runProviderPrepareDiagnostics({
           [providerId],
           compatibilityPassedModelIds,
           limitContext,
-          'deep'
+          'deep',
+          ...(hasExplicitModelChecks
+            ? [selectModelChecksForIds(normalizedModelChecks, compatibilityPassedModelIds)]
+            : [])
         );
-        runtimeDetailLines = createRuntimeDetailLines(batchedModelResult).filter(
+        mergeSupportDiagnostics(supportDiagnostics, batchedModelResult.supportDiagnostics);
+        runtimeDetailLines = createRuntimeDetailLines(batchedModelResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(compatibilityPassedModelIds, entry)
         );
-        runtimeWarnings = createRuntimeWarningLines(batchedModelResult).filter(
+        runtimeWarnings = createRuntimeWarningLines(batchedModelResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(compatibilityPassedModelIds, entry)
         );
 
@@ -1115,6 +1382,7 @@ export async function runProviderPrepareDiagnostics({
         const structuredProviderScopedFailure =
           structuredProviderScopedIssue?.message.trim() ?? null;
         let handledAdvisoryDeepFailure = false;
+        let handledBusyDeepDeferral = false;
         if (structuredProviderScopedFailure || providerScopedFailure) {
           const failureReason =
             structuredProviderScopedFailure ?? providerScopedFailure ?? 'OpenCode failed';
@@ -1135,16 +1403,43 @@ export async function runProviderPrepareDiagnostics({
             }
             handledAdvisoryDeepFailure = true;
           } else {
-            return {
-              status: 'failed',
-              details: [failureReason],
-              warnings: [],
-              modelResultsById: {},
-            };
+            return withSupportDiagnostics(
+              {
+                status: 'failed',
+                details: [
+                  normalizeRuntimeFailureDetailLine(
+                    failureReason,
+                    structuredProviderScopedIssue?.code,
+                    providerId
+                  ) ?? failureReason,
+                ],
+                warnings: [],
+                modelResultsById: {},
+              },
+              supportDiagnostics
+            );
           }
         }
         if (
           !handledAdvisoryDeepFailure &&
+          batchedModelResult.ready &&
+          !hasModelScopedEntries &&
+          runtimeWarnings.some(isProviderLevelOpenCodeBusyDeepVerificationWarning)
+        ) {
+          runtimeDetailLines = [];
+          runtimeWarnings = [];
+          for (const modelId of compatibilityPassedModelIds) {
+            recordTerminalModelResult(modelId, {
+              status: 'ready',
+              line: buildModelAvailableLine(providerId, modelId),
+              warningLine: null,
+            });
+          }
+          handledBusyDeepDeferral = true;
+        }
+        if (
+          !handledAdvisoryDeepFailure &&
+          !handledBusyDeepDeferral &&
           (shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure({
             result: batchedModelResult,
             modelIds: compatibilityPassedModelIds,
@@ -1157,18 +1452,23 @@ export async function runProviderPrepareDiagnostics({
               (compatibilityPassedModelIds.length > 1 ||
                 (!hasNonModelScopedDiagnostics && !hasSingleModelFallbackReason))))
         ) {
-          return {
-            status: 'failed',
-            details: createRuntimeFailureDetailLines(
-              runtimeDetailLines,
-              batchedModelResult.message
-            ),
-            warnings: runtimeWarnings,
-            modelResultsById: {},
-          };
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: createRuntimeFailureDetailLines(
+                runtimeDetailLines,
+                batchedModelResult.message,
+                providerId
+              ),
+              warnings: runtimeWarnings,
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
         }
         if (
           !handledAdvisoryDeepFailure &&
+          !handledBusyDeepDeferral &&
           !hasModelScopedEntries &&
           compatibilityPassedModelIds.length === 1
         ) {
@@ -1176,7 +1476,7 @@ export async function runProviderPrepareDiagnostics({
           runtimeWarnings = [];
         }
 
-        if (!handledAdvisoryDeepFailure) {
+        if (!handledAdvisoryDeepFailure && !handledBusyDeepDeferral) {
           for (const modelId of compatibilityPassedModelIds) {
             recordTerminalModelResult(
               modelId,
@@ -1213,12 +1513,15 @@ export async function runProviderPrepareDiagnostics({
           [providerId],
           uncachedModelIds,
           limitContext,
-          'compatibility'
+          'compatibility',
+          ...(hasExplicitModelChecks
+            ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+            : [])
         );
-        runtimeDetailLines = createRuntimeDetailLines(compatibilityResult).filter(
+        runtimeDetailLines = createRuntimeDetailLines(compatibilityResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
         );
-        runtimeWarnings = createRuntimeWarningLines(compatibilityResult).filter(
+        runtimeWarnings = createRuntimeWarningLines(compatibilityResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
         );
 
@@ -1240,7 +1543,8 @@ export async function runProviderPrepareDiagnostics({
             status: 'failed',
             details: createRuntimeFailureDetailLines(
               runtimeDetailLines,
-              compatibilityResult.message
+              compatibilityResult.message,
+              providerId
             ),
             warnings: runtimeWarnings,
             modelResultsById: {},
@@ -1275,10 +1579,10 @@ export async function runProviderPrepareDiagnostics({
               limitContext,
               'deep'
             );
-            runtimeDetailLines = createRuntimeDetailLines(deepResult).filter(
+            runtimeDetailLines = createRuntimeDetailLines(deepResult, providerId).filter(
               (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
             );
-            runtimeWarnings = createRuntimeWarningLines(deepResult).filter(
+            runtimeWarnings = createRuntimeWarningLines(deepResult, providerId).filter(
               (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
             );
             if (
@@ -1332,13 +1636,16 @@ export async function runProviderPrepareDiagnostics({
       )
   );
 
-  return {
-    status: hasFailure ? 'failed' : hasNotes || dedupedWarnings.length > 0 ? 'notes' : 'ready',
-    details: [
-      ...filteredRuntime.runtimeDetailLines,
-      ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
-    ],
-    warnings: dedupedWarnings,
-    modelResultsById: selectedModelResultsById,
-  };
+  return withSupportDiagnostics(
+    {
+      status: hasFailure ? 'failed' : hasNotes || dedupedWarnings.length > 0 ? 'notes' : 'ready',
+      details: [
+        ...filteredRuntime.runtimeDetailLines,
+        ...orderedModelIds.map((modelId) => modelLines.get(modelId) ?? ''),
+      ],
+      warnings: dedupedWarnings,
+      modelResultsById: selectedModelResultsById,
+    },
+    supportDiagnostics
+  );
 }

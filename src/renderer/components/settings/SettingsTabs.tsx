@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import {
   Tooltip,
@@ -18,43 +19,48 @@ interface SettingsTabsProps {
   onSectionChange: (section: SettingsSection) => void;
 }
 
+type TabLabelKey = 'tabs.advanced.label' | 'tabs.general.label' | 'tabs.notifications.label';
+
+type TabDescriptionKey =
+  | 'tabs.advanced.description'
+  | 'tabs.general.description'
+  | 'tabs.notifications.description';
+
 interface TabConfig {
   id: SettingsSection;
-  label: string;
+  labelKey: TabLabelKey;
   icon: LucideIcon;
-  description: string;
+  descriptionKey: TabDescriptionKey;
   electronOnly?: boolean;
 }
 
 const tabs: TabConfig[] = [
   {
     id: 'general',
-    label: 'General',
+    labelKey: 'tabs.general.label',
     icon: Settings,
-    description:
-      'Core app preferences like theme, language, display density, and startup behavior.',
+    descriptionKey: 'tabs.general.description',
   },
   // { id: 'connection', label: 'Connection', icon: Server, description: 'Manage CLI connection and authentication settings.', electronOnly: true },
   {
     id: 'notifications',
-    label: 'Notifications',
+    labelKey: 'tabs.notifications.label',
     icon: Bell,
-    description:
-      'Control when and how you get notified about agent activity, task completions, and errors.',
+    descriptionKey: 'tabs.notifications.description',
   },
   {
     id: 'advanced',
-    label: 'Advanced',
+    labelKey: 'tabs.advanced.label',
     icon: Wrench,
-    description:
-      'Power-user options: export/import config, reset defaults, and raw configuration editing.',
+    descriptionKey: 'tabs.advanced.description',
   },
-];
+] satisfies TabConfig[];
 
 export const SettingsTabs = ({
   activeSection,
   onSectionChange,
 }: Readonly<SettingsTabsProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('settings');
   const isElectron = useMemo(() => isElectronMode(), []);
   const visibleTabs = useMemo(
     () => tabs.filter((tab) => !tab.electronOnly || isElectron),
@@ -68,6 +74,7 @@ export const SettingsTabs = ({
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
+            const label = t(tab.labelKey);
 
             return (
               <button
@@ -80,14 +87,14 @@ export const SettingsTabs = ({
                 }`}
               >
                 <Icon className="size-3.5" />
-                {tab.label}
+                {label}
 
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
                       role="button"
                       tabIndex={0}
-                      aria-label={`What is ${tab.label}?`}
+                      aria-label={t('tabs.infoAriaLabel', { label })}
                       onClick={(event) => event.stopPropagation()}
                       onMouseDown={(event) => event.stopPropagation()}
                       onKeyDown={(event) => {
@@ -101,7 +108,7 @@ export const SettingsTabs = ({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-64 text-pretty text-xs leading-relaxed">
-                    {tab.description}
+                    {t(tab.descriptionKey)}
                   </TooltipContent>
                 </Tooltip>
               </button>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 import { useStore } from '@renderer/store';
@@ -116,6 +117,7 @@ export const ContinuousScrollView = ({
   globalHunkOffsets,
   totalReviewHunks,
 }: ContinuousScrollViewProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const setFileChunkCount = useStore((s) => s.setFileChunkCount);
   const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
   const collapsedFiles = collapsedFilesProp ?? localCollapsedFiles;
@@ -240,7 +242,7 @@ export const ContinuousScrollView = ({
   if (files.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-text-muted">
-        No reviewable file changes
+        {t('review.continuousScroll.empty')}
       </div>
     );
   }

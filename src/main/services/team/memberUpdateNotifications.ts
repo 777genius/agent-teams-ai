@@ -1,4 +1,4 @@
-import type { EffortLevel, TeamProviderId } from '@shared/types';
+import type { EffortLevel, TeamMemberMcpPolicy, TeamProviderId } from '@shared/types';
 
 export interface MemberDiffInput {
   name: string;
@@ -8,6 +8,7 @@ export interface MemberDiffInput {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  mcpPolicy?: TeamMemberMcpPolicy;
   removedAt?: number | string | null;
 }
 
@@ -20,6 +21,7 @@ export interface ReplaceMembersDiff {
     providerId?: TeamProviderId;
     model?: string;
     effort?: EffortLevel;
+    mcpPolicy?: TeamMemberMcpPolicy;
   }[];
   removed: string[];
   updated: {
@@ -65,6 +67,46 @@ function describeWorkflowChange(
   return 'workflow instructions were cleared';
 }
 
+function describeProviderChange(
+  previousProviderId: TeamProviderId | undefined,
+  nextProviderId: TeamProviderId | undefined
+): string | null {
+  if (previousProviderId === nextProviderId) {
+    return null;
+  }
+  return 'provider changed - restart required';
+}
+
+function describeModelChange(
+  previousModel: string | undefined,
+  nextModel: string | undefined
+): string | null {
+  if (previousModel === nextModel) {
+    return null;
+  }
+  return 'model changed - restart required';
+}
+
+function describeEffortChange(
+  previousEffort: EffortLevel | undefined,
+  nextEffort: EffortLevel | undefined
+): string | null {
+  if (previousEffort === nextEffort) {
+    return null;
+  }
+  return 'reasoning effort changed - restart required';
+}
+
+function describeMcpPolicyChange(
+  previousMcpPolicy: TeamMemberMcpPolicy | undefined,
+  nextMcpPolicy: TeamMemberMcpPolicy | undefined
+): string | null {
+  if (JSON.stringify(previousMcpPolicy) === JSON.stringify(nextMcpPolicy)) {
+    return null;
+  }
+  return 'MCP access policy changed - restart required';
+}
+
 export function buildReplaceMembersDiff(
   previousMembers: MemberDiffInput[],
   nextMembers: {
@@ -75,6 +117,7 @@ export function buildReplaceMembersDiff(
     providerId?: TeamProviderId;
     model?: string;
     effort?: EffortLevel;
+    mcpPolicy?: TeamMemberMcpPolicy;
   }[]
 ): ReplaceMembersDiff {
   const previousByName = new Map(
@@ -90,6 +133,7 @@ export function buildReplaceMembersDiff(
           providerId: member.providerId,
           model: normalizeOptionalText(member.model),
           effort: member.effort,
+          mcpPolicy: member.mcpPolicy,
         },
       ])
   );
@@ -106,6 +150,7 @@ export function buildReplaceMembersDiff(
           providerId: member.providerId,
           model: normalizeOptionalText(member.model),
           effort: member.effort,
+          mcpPolicy: member.mcpPolicy,
         },
       ])
   );
@@ -133,6 +178,10 @@ export function buildReplaceMembersDiff(
             ? 'worktree isolation enabled'
             : 'worktree isolation disabled'
           : null,
+        describeProviderChange(previousMember.providerId, nextMember.providerId),
+        describeModelChange(previousMember.model, nextMember.model),
+        describeEffortChange(previousMember.effort, nextMember.effort),
+        describeMcpPolicyChange(previousMember.mcpPolicy, nextMember.mcpPolicy),
       ].filter((value): value is string => value !== null);
       if (changes.length === 0) {
         return [];

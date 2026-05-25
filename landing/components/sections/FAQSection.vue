@@ -66,7 +66,7 @@ const faqIcons = [
         </div>
 
         <div class="faq-section__decoration">
-          <div class="faq-section__deco-circle">
+          <div class="faq-section__deco-circle" data-faq-landing-target>
             <v-icon size="40" class="faq-section__deco-icon" :icon="mdiFrequentlyAskedQuestions" />
           </div>
           <div class="faq-section__deco-ring faq-section__deco-ring--1" />
@@ -84,6 +84,14 @@ const faqIcons = [
 <style scoped>
 .faq-section {
   position: relative;
+  --faq-title-gradient: linear-gradient(135deg, #e0e6ff 0%, #ffd700 100%);
+  --faq-subtitle-color: #8892b0;
+  --faq-panel-bg: rgba(10, 10, 15, 0.8);
+  --faq-panel-border: rgba(0, 240, 255, 0.08);
+  --faq-panel-question: #e0e6ff;
+  --faq-panel-answer: #8892b0;
+  --faq-panel-hover-shadow: 0 8px 32px rgba(0, 240, 255, 0.06);
+  --faq-panel-hover-border: rgba(0, 240, 255, 0.2);
 }
 
 .faq-section__header {
@@ -100,7 +108,7 @@ const faqIcons = [
   letter-spacing: -0.03em;
   line-height: 1.15;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #e0e6ff 0%, #ffd700 100%);
+  background: var(--faq-title-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -108,7 +116,7 @@ const faqIcons = [
 
 .faq-section__subtitle {
   font-size: 1.1rem;
-  color: #8892b0;
+  color: var(--faq-subtitle-color);
   line-height: 1.6;
   margin: 0;
 }
@@ -134,9 +142,10 @@ const faqIcons = [
 
 .faq-section__panel {
   border-radius: 16px !important;
-  background: rgba(10, 10, 15, 0.8) !important;
-  border: 1px solid rgba(0, 240, 255, 0.08) !important;
+  background: var(--faq-panel-bg) !important;
+  border: 1px solid var(--faq-panel-border) !important;
   backdrop-filter: blur(12px);
+  color: var(--faq-panel-question) !important;
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
   animation: faqFadeIn 0.5s ease both;
@@ -145,8 +154,8 @@ const faqIcons = [
 
 .faq-section__panel:hover {
   transform: translateY(-2px);
-  border-color: rgba(0, 240, 255, 0.2) !important;
-  box-shadow: 0 8px 32px rgba(0, 240, 255, 0.06);
+  border-color: var(--faq-panel-hover-border) !important;
+  box-shadow: var(--faq-panel-hover-shadow);
 }
 
 .faq-section__panel::after {
@@ -160,6 +169,8 @@ const faqIcons = [
 .faq-section__panel-title {
   padding: 20px 24px !important;
   min-height: unset !important;
+  background: transparent !important;
+  color: var(--faq-panel-question) !important;
 }
 
 :deep(.faq-section__panel-title .v-expansion-panel-title__overlay) {
@@ -198,17 +209,18 @@ const faqIcons = [
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.4;
-  color: #e0e6ff;
+  color: var(--faq-panel-question);
 }
 
 :deep(.faq-section__panel-text .v-expansion-panel-text__wrapper) {
   padding: 0 24px 20px 82px !important;
+  background: transparent !important;
 }
 
 .faq-section__answer {
   font-size: 0.95rem;
   line-height: 1.7;
-  color: #8892b0;
+  color: var(--faq-panel-answer);
 }
 
 .faq-section__answer :deep(a) {
@@ -300,32 +312,28 @@ const faqIcons = [
 }
 
 /* Light Theme */
-.v-theme--light .faq-section__title {
-  background: linear-gradient(135deg, #1e293b 0%, #d97706 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+:global(.v-theme--light) .faq-section,
+:global(html.light) .faq-section {
+  --faq-title-gradient: linear-gradient(135deg, #1e293b 0%, #d97706 100%);
+  --faq-subtitle-color: #475569;
+  --faq-panel-bg: rgba(255, 255, 255, 0.75);
+  --faq-panel-border: rgba(0, 0, 0, 0.06);
+  --faq-panel-question: #1e293b;
+  --faq-panel-answer: #475569;
+  --faq-panel-hover-shadow: 0 8px 32px rgba(0, 180, 200, 0.08);
+  --faq-panel-hover-border: rgba(0, 240, 255, 0.2);
 }
 
-.v-theme--light .faq-section__subtitle {
-  color: #475569;
-}
-
-.v-theme--light .faq-section__panel {
-  background: rgba(255, 255, 255, 0.75) !important;
-  border-color: rgba(0, 0, 0, 0.06) !important;
-}
-
-.v-theme--light .faq-section__panel:hover {
-  box-shadow: 0 8px 32px rgba(0, 180, 200, 0.08);
-}
-
-.v-theme--light .faq-section__panel-question {
-  color: #1e293b;
-}
-
-.v-theme--light .faq-section__answer {
-  color: #475569;
+:global(.v-theme--dark) .faq-section,
+:global(html.dark) .faq-section {
+  --faq-title-gradient: linear-gradient(135deg, #e0e6ff 0%, #ffd700 100%);
+  --faq-subtitle-color: #8892b0;
+  --faq-panel-bg: rgba(10, 10, 15, 0.8);
+  --faq-panel-border: rgba(0, 240, 255, 0.08);
+  --faq-panel-question: #e0e6ff;
+  --faq-panel-answer: #8892b0;
+  --faq-panel-hover-shadow: 0 8px 32px rgba(0, 240, 255, 0.06);
+  --faq-panel-hover-border: rgba(0, 240, 255, 0.2);
 }
 
 @media (max-width: 960px) {

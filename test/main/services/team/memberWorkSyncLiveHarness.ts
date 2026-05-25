@@ -2,9 +2,10 @@ import { constants as fsConstants, promises as fs } from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
 
+import { encodePath } from '../../../../src/main/utils/pathDecoder';
+
 import type { MemberWorkSyncReportRequest } from '../../../../src/features/member-work-sync/contracts';
 import type { MemberWorkSyncFeatureFacade } from '../../../../src/features/member-work-sync/main';
-
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
 
 export class FatalWaitError extends Error {
@@ -199,8 +200,11 @@ export async function formatMemberWorkSyncDiagnostics(input: {
 export async function throwIfClaudeTranscriptApiError(input: {
   claudeRoot: string;
   context: string;
+  projectPath?: string;
+  sinceMs?: number;
 }): Promise<void> {
-  const transcriptFiles = await findJsonlFiles(path.join(input.claudeRoot, 'projects'));
+  const transcriptRoots = await resolveClaudeTranscriptRoots(input.claudeRoot, input.projectPath);
+  const transcriptFiles = (await Promise.all(transcriptRoots.map(findJsonlFiles))).flat();
   const apiErrors: Array<{ filePath: string; error: string; text: string }> = [];
   for (const filePath of transcriptFiles) {
     const raw = await fs.readFile(filePath, 'utf8').catch(() => '');
@@ -216,6 +220,9 @@ export async function throwIfClaudeTranscriptApiError(input: {
       try {
         parsed = JSON.parse(trimmed) as Record<string, unknown>;
       } catch {
+        continue;
+      }
+      if (input.sinceMs !== undefined && isTranscriptRecordBefore(parsed, input.sinceMs)) {
         continue;
       }
       if (parsed.isApiErrorMessage !== true && typeof parsed.error !== 'string') {
@@ -245,6 +252,46 @@ export async function throwIfClaudeTranscriptApiError(input: {
       .filter(Boolean)
       .join('\n')
   );
+}
+
+async function resolveClaudeTranscriptRoots(
+  claudeRoot: string,
+  projectPath: string | undefined
+): Promise<string[]> {
+  const projectsRoot = path.join(claudeRoot, 'projects');
+  if (!projectPath) {
+    return [projectsRoot];
+  }
+
+  const candidateRoots = new Set<string>();
+  const addCandidate = (candidatePath: string) => {
+    candidateRoots.add(path.join(projectsRoot, encodePath(candidatePath)));
+  };
+  addCandidate(path.resolve(projectPath));
+  const realProjectPath = await fs.realpath(projectPath).catch(() => null);
+  if (realProjectPath) {
+    addCandidate(realProjectPath);
+  }
+
+  const existingRoots: string[] = [];
+  for (const candidateRoot of candidateRoots) {
+    const stats = await fs.stat(candidateRoot).catch(() => null);
+    if (stats?.isDirectory()) {
+      existingRoots.push(candidateRoot);
+    }
+  }
+  return existingRoots;
+}
+
+function isTranscriptRecordBefore(record: Record<string, unknown>, sinceMs: number): boolean {
+  const timestamp = record.timestamp;
+  const timestampMs =
+    typeof timestamp === 'string'
+      ? Date.parse(timestamp)
+      : typeof timestamp === 'number'
+        ? timestamp
+        : Number.NaN;
+  return Number.isFinite(timestampMs) && timestampMs < sinceMs;
 }
 
 export async function readRuntimeTurnSettledProcessedMetas(teamsBasePath: string): Promise<

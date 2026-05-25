@@ -1,8 +1,17 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { CodeMirrorDiffView } from './CodeMirrorDiffView';
 import { DiffErrorBoundary } from './DiffErrorBoundary';
 import { FileSectionPlaceholder } from './FileSectionPlaceholder';
+import {
+  getResolvedReviewModifiedContent,
+  hasReviewSnippetText,
+  isReviewFileMissingOnDisk,
+  isReviewTextContentUnavailable,
+  shouldRenderCurrentDiskContextPreview,
+} from './reviewContentPreview';
 import { ReviewDiffContent } from './ReviewDiffContent';
 import {
   shouldRenderCodeMirrorReviewDiff,
@@ -49,9 +58,11 @@ export const FileSectionDiff = ({
   globalHunkOffset = 0,
   totalReviewHunks,
 }: FileSectionDiffProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const localEditorViewRef = useRef<EditorView | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const canRenderSnippetPreview = shouldRenderSnippetReviewPreview(file.snippets);
+  const hasSnippetText = hasReviewSnippetText(file);
+  const canRenderSnippetPreview = hasSnippetText && shouldRenderSnippetReviewPreview(file.snippets);
 
   // Notify parent whenever CodeMirrorDiffView creates or destroys its EditorView.
   // This fires on every editor lifecycle event: initial mount, key-change remount,
@@ -85,8 +96,7 @@ export const FileSectionDiff = ({
 
   // Loading state
   if (isLoading) {
-    const hasSnippetPreview = file.snippets.some((snippet) => !snippet.isError);
-    if (!hasSnippetPreview) {
+    if (!hasSnippetText) {
       return <FileSectionPlaceholder fileName={file.relativePath} />;
     }
 
@@ -103,21 +113,12 @@ export const FileSectionDiff = ({
   }
 
   // Resolve modified content: prefer full content, fall back to write-type snippet
-  // Only write-new/write-update snippets contain the full file — edit snippets are partial
-  const resolvedModified =
-    fileContent?.modifiedFullContent ??
-    (() => {
-      const writeSnippets = file.snippets.filter(
-        (s) => !s.isError && (s.type === 'write-new' || s.type === 'write-update')
-      );
-      if (writeSnippets.length === 0) return null;
-      // Take the last write (most recent full-file content)
-      return writeSnippets[writeSnippets.length - 1].newString;
-    })();
+  // Only write-new/write-update snippets contain the full file - edit snippets are partial
+  const resolvedModified = getResolvedReviewModifiedContent(file, fileContent);
 
   const resolvedOriginal = fileContent?.originalFullContent ?? null;
-  const isMissingOnDisk = fileContent ? fileContent.modifiedFullContent == null : false;
-  const isContentUnavailable = fileContent?.contentSource === 'unavailable';
+  const isMissingOnDisk = isReviewFileMissingOnDisk(fileContent);
+  const isContentUnavailable = isReviewTextContentUnavailable(file, fileContent);
   const hasLedgerManualAction = file.snippets.some(
     (snippet) =>
       !!snippet.ledger &&
@@ -138,22 +139,64 @@ export const FileSectionDiff = ({
   const canRenderCodeMirrorSafely =
     canRenderCodeMirror &&
     shouldRenderCodeMirrorReviewDiff(originalForDiff, resolvedModified ?? '');
+  const canRenderCurrentDiskContext =
+    resolvedModified !== null &&
+    shouldRenderCurrentDiskContextPreview(file, fileContent) &&
+    shouldRenderCodeMirrorReviewDiff(resolvedModified, resolvedModified);
+  const currentDiskContextContent = canRenderCurrentDiskContext ? resolvedModified : null;
 
   if (!canRenderCodeMirrorSafely) {
     return (
       <div className="overflow-auto">
         <OversizedDiffNotice
           message={
-            hasLedgerManualAction || isContentUnavailable
-              ? 'No text diff is available for this ledger change. Binary, large, or metadata-only content requires manual review.'
-              : canRenderCodeMirror && !canRenderSnippetPreview
-                ? 'Full diff skipped because it is large enough to risk a renderer out-of-memory crash.'
-                : canRenderCodeMirror
-                  ? 'Large diff opened in safe preview mode to avoid a renderer out-of-memory crash.'
-                  : 'Diff preview skipped because the available change data is too large to render safely.'
+            canRenderCurrentDiskContext
+              ? 'No original baseline is available; showing current disk content for context only. Reject is disabled for this file.'
+              : hasLedgerManualAction || isContentUnavailable
+                ? 'No text diff is available for this ledger change. Binary, large, or metadata-only content requires manual review.'
+                : canRenderCodeMirror && !canRenderSnippetPreview
+                  ? 'Full diff skipped because it is large enough to risk a renderer out-of-memory crash.'
+                  : canRenderCodeMirror
+                    ? 'Large diff opened in safe preview mode to avoid a renderer out-of-memory crash.'
+                    : hasSnippetText
+                      ? 'Diff preview skipped because the available change data is too large to render safely.'
+                      : file.snippets.length > 0
+                        ? 'This file change was captured as metadata only; no text diff data is available.'
+                        : 'No text diff data is available for this file.'
           }
         />
-        {canRenderSnippetPreview ? <ReviewDiffContent file={file} /> : null}
+        {canRenderSnippetPreview ? (
+          <ReviewDiffContent file={file} />
+        ) : currentDiskContextContent != null ? (
+          <DiffErrorBoundary
+            filePath={file.filePath}
+            oldString={currentDiskContextContent}
+            newString={currentDiskContextContent}
+          >
+            <CodeMirrorDiffView
+              key={`${file.filePath}:${discardCounter}:current-disk-context`}
+              original={currentDiskContextContent}
+              modified={currentDiskContextContent}
+              fileName={file.relativePath}
+              readOnly={true}
+              showMergeControls={false}
+              collapseUnchanged={false}
+              usePortionCollapse={true}
+              onHunkAccepted={(idx) => onHunkAccepted(file.filePath, idx)}
+              onHunkRejected={(idx) => onHunkRejected(file.filePath, idx)}
+              onContentChanged={(content) => onContentChanged(file.filePath, content)}
+              editorViewRef={localEditorViewRef}
+              onViewChange={handleViewChange}
+              onSelectionChange={
+                onSelectionChange
+                  ? (info) => onSelectionChange(info ? { ...info, filePath: file.filePath } : null)
+                  : undefined
+              }
+              globalHunkOffset={globalHunkOffset}
+              totalReviewHunks={totalReviewHunks}
+            />
+          </DiffErrorBoundary>
+        ) : null}
         <div ref={sentinelRef} className="h-1 shrink-0" />
       </div>
     );
@@ -166,8 +209,8 @@ export const FileSectionDiff = ({
           className="border-b border-border bg-red-500/10 px-4 py-2 text-xs"
           style={{ color: 'var(--diff-removed-text)' }}
         >
-          File is missing on disk. This diff may be only a preview from agent logs. Use{' '}
-          <span className="font-medium">Restore</span> to create the file on disk.
+          {t('review.fileMissingPrefix')} <span className="font-medium">{t('review.restore')}</span>{' '}
+          {t('review.fileMissingSuffix')}
         </div>
       )}
       <DiffErrorBoundary

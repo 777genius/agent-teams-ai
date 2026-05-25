@@ -9,6 +9,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { formatModifierShortcut } from '@renderer/utils/keyboardUtils';
@@ -52,9 +53,10 @@ const ProjectResultItemInner = ({
   isSelected,
   onClick,
 }: Readonly<ProjectResultItemProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const lastActivity = repo.mostRecentSession
     ? formatDistanceToNow(new Date(repo.mostRecentSession), { addSuffix: true })
-    : 'No recent activity';
+    : t('commandPalette.noRecentActivity');
 
   return (
     <button
@@ -73,7 +75,7 @@ const ProjectResultItemInner = ({
             {repo.worktrees[0]?.path || ''}
           </div>
           <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
-            <span>{repo.totalSessions} sessions</span>
+            <span>{t('commandPalette.sessionsCount', { count: repo.totalSessions })}</span>
             <span>·</span>
             <span>{lastActivity}</span>
           </div>
@@ -155,6 +157,7 @@ const SessionResultItem = React.memo(SessionResultItemInner);
 // =============================================================================
 
 export const CommandPalette = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const {
     commandPaletteOpen,
     closeCommandPalette,
@@ -454,13 +457,17 @@ export const CommandPalette = (): React.JSX.Element | null => {
               {searchMode === 'projects' ? (
                 <>
                   <FolderGit2 className="size-3.5 text-text-muted" />
-                  <span className="text-xs text-text-muted">Search projects</span>
+                  <span className="text-xs text-text-muted">
+                    {t('commandPalette.mode.searchProjects')}
+                  </span>
                 </>
               ) : (
                 <>
                   <MessageSquare className="size-3.5 text-text-muted" />
                   <span className="text-xs text-text-muted">
-                    {globalSearchEnabled ? 'Search across all projects' : 'Search in project'}
+                    {globalSearchEnabled
+                      ? t('commandPalette.mode.searchAcrossProjects')
+                      : t('commandPalette.mode.searchInProject')}
                   </span>
                   {!globalSearchEnabled && selectedProjectId && (
                     <>
@@ -472,7 +479,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
                         <span className="max-w-[200px] truncate">
                           {repositoryGroups.find((r) =>
                             r.worktrees.some((w) => w.id === selectedProjectId)
-                          )?.name ?? 'Current project'}
+                          )?.name ?? t('commandPalette.currentProject')}
                         </span>
                         <X className="size-3 shrink-0" />
                       </button>
@@ -495,7 +502,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
               }
             >
               <Globe className="size-3" />
-              <span>Global</span>
+              <span>{t('commandPalette.global')}</span>
             </button>
           </div>
         </div>
@@ -510,7 +517,9 @@ export const CommandPalette = (): React.JSX.Element | null => {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              searchMode === 'projects' ? 'Search projects...' : 'Search conversations...'
+              searchMode === 'projects'
+                ? t('commandPalette.placeholders.projects')
+                : t('commandPalette.placeholders.conversations')
             }
             className="placeholder:text-text-muted/50 flex-1 bg-transparent text-base text-text focus:outline-none"
           />
@@ -529,7 +538,9 @@ export const CommandPalette = (): React.JSX.Element | null => {
             // Project search results
             filteredProjects.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-text-muted">
-                {query.trim() ? `No projects found for "${query}"` : 'No projects found'}
+                {query.trim()
+                  ? t('commandPalette.empty.noProjectsForQuery', { query })
+                  : t('commandPalette.empty.noProjects')}
               </div>
             ) : (
               <div className="py-2">
@@ -546,13 +557,13 @@ export const CommandPalette = (): React.JSX.Element | null => {
           ) : // Session search results
           query.trim().length < 2 ? (
             <div className="px-4 py-8 text-center text-sm text-text-muted">
-              Type at least 2 characters to search
+              {t('commandPalette.empty.minChars')}
             </div>
           ) : sessionResults.length === 0 && !loading ? (
             <div className="px-4 py-8 text-center text-sm text-text-muted">
               {searchIsPartial
-                ? `No fast results in recent sessions for "${query}"`
-                : `No results found for "${query}"`}
+                ? t('commandPalette.empty.noFastResults', { query })
+                : t('commandPalette.empty.noResults', { query })}
             </div>
           ) : (
             <div className="py-2">
@@ -583,28 +594,43 @@ export const CommandPalette = (): React.JSX.Element | null => {
         <div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-text-muted">
           <span>
             {searchMode === 'projects'
-              ? `${filteredProjects.length} project${filteredProjects.length !== 1 ? 's' : ''}`
+              ? t('commandPalette.footer.projectsCount', { count: filteredProjects.length })
               : totalMatches > 0
-                ? `${totalMatches} ${searchIsPartial ? 'fast ' : ''}result${totalMatches !== 1 ? 's' : ''}${globalSearchEnabled ? ' across all projects' : ''}`
-                : 'Type to search'}
+                ? t(
+                    globalSearchEnabled
+                      ? 'commandPalette.footer.resultsAcrossProjects'
+                      : 'commandPalette.footer.results',
+                    {
+                      count: totalMatches,
+                      speed: searchIsPartial ? t('commandPalette.footer.fastPrefix') : '',
+                    }
+                  )
+                : t('commandPalette.footer.typeToSearch')}
           </span>
           <div className="flex items-center gap-4">
             <span>
-              <kbd className="rounded bg-surface-overlay px-1.5 py-0.5 text-[10px]">↑↓</kbd>{' '}
-              navigate
+              <kbd className="rounded bg-surface-overlay px-1.5 py-0.5 text-[10px]">
+                {t('commandPalette.footer.upDownKey')}
+              </kbd>{' '}
+              {t('commandPalette.footer.navigate')}
             </span>
             <span>
               <kbd className="rounded bg-surface-overlay px-1.5 py-0.5 text-[10px]">↵</kbd>{' '}
-              {searchMode === 'projects' ? 'select' : 'open'}
+              {searchMode === 'projects'
+                ? t('commandPalette.footer.select')
+                : t('commandPalette.footer.open')}
             </span>
             <span>
               <kbd className="rounded bg-surface-overlay px-1.5 py-0.5 text-[10px]">
                 {formatModifierShortcut('G')}
               </kbd>{' '}
-              global
+              {t('commandPalette.footer.global')}
             </span>
             <span>
-              <kbd className="rounded bg-surface-overlay px-1.5 py-0.5 text-[10px]">esc</kbd> close
+              <kbd className="rounded bg-surface-overlay px-1.5 py-0.5 text-[10px]">
+                {t('commandPalette.footer.escapeKey')}
+              </kbd>{' '}
+              {t('commandPalette.footer.close')}
             </span>
           </div>
         </div>

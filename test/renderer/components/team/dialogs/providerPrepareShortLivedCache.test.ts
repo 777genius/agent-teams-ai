@@ -49,9 +49,10 @@ describe('providerPrepareShortLivedCache', () => {
         cacheKey: 'key-1',
       })
     ).toEqual({
-      modelIssueReasonByValue: {
+      modelAdvisoryReasonByValue: {
         'opencode/nemotron-3-super-free': 'timed out',
       },
+      modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {},
     });
   });
@@ -105,6 +106,7 @@ describe('providerPrepareShortLivedCache', () => {
         cacheKey: 'key-4',
       })
     ).toEqual({
+      modelAdvisoryReasonByValue: {},
       modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {
         'openai/gpt-5.4': 'OpenCode provider authentication failed',
@@ -142,8 +144,97 @@ describe('providerPrepareShortLivedCache', () => {
         cacheKey: 'key-5',
       })
     ).toEqual({
+      modelAdvisoryReasonByValue: {},
       modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {},
+    });
+  });
+
+  it('clears a short-lived successful result when a later advisory targets the same model', () => {
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey: 'key-7',
+      modelResultsById: {
+        'openai/gpt-5.4': {
+          status: 'ready',
+          line: 'GPT-5.4 - verified',
+          warningLine: null,
+        },
+      },
+    });
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey: 'key-7',
+      modelResultsById: {
+        'openai/gpt-5.4': {
+          status: 'notes',
+          line: 'GPT-5.4 - check failed - Model verification timed out',
+          warningLine: 'GPT-5.4 - check failed - Model verification timed out',
+        },
+      },
+    });
+
+    expect(
+      getShortLivedProviderPrepareModelResults({
+        providerId: 'opencode',
+        cacheKey: 'key-7',
+      })
+    ).toEqual({});
+    expect(
+      getShortLivedProviderPrepareModelIssueReasons({
+        providerId: 'opencode',
+        cacheKey: 'key-7',
+      })
+    ).toEqual({
+      modelAdvisoryReasonByValue: {
+        'openai/gpt-5.4': 'Model verification timed out',
+      },
+      modelIssueReasonByValue: {},
+      modelUnavailableReasonByValue: {},
+    });
+  });
+
+  it('clears a short-lived successful result when a later failure targets the same model', () => {
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey: 'key-8',
+      modelResultsById: {
+        'openai/gpt-5.4': {
+          status: 'ready',
+          line: 'GPT-5.4 - verified',
+          warningLine: null,
+        },
+      },
+    });
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey: 'key-8',
+      modelResultsById: {
+        'openai/gpt-5.4': {
+          status: 'failed',
+          line: 'GPT-5.4 - unavailable - OpenCode provider authentication failed',
+          warningLine: null,
+        },
+      },
+    });
+
+    expect(
+      getShortLivedProviderPrepareModelResults({
+        providerId: 'opencode',
+        cacheKey: 'key-8',
+      })
+    ).toEqual({});
+    expect(
+      getShortLivedProviderPrepareModelIssueReasons({
+        providerId: 'opencode',
+        cacheKey: 'key-8',
+      })
+    ).toEqual({
+      modelAdvisoryReasonByValue: {},
+      modelIssueReasonByValue: {},
+      modelUnavailableReasonByValue: {
+        'openai/gpt-5.4': 'OpenCode provider authentication failed',
+      },
     });
   });
 
@@ -169,6 +260,7 @@ describe('providerPrepareShortLivedCache', () => {
         cacheKey: 'key-6',
       })
     ).toEqual({
+      modelAdvisoryReasonByValue: {},
       modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {},
     });
@@ -199,6 +291,7 @@ describe('providerPrepareShortLivedCache', () => {
         cacheKey: 'key-3',
       })
     ).toEqual({
+      modelAdvisoryReasonByValue: {},
       modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {},
     });

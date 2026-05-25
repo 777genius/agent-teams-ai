@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { TeamTaskStatusSummary } from '@renderer/components/team/TeamTaskStatusSummary';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';
 import { FolderOpen, UsersRound } from 'lucide-react';
@@ -18,6 +19,7 @@ function getRowTitle(row: RunningTeamRowModel): string {
 export function RunningTeamsSection({
   searchQuery,
 }: Readonly<RunningTeamsSectionProps>): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
   const { rows, hidden, openRunningTeam } = useRunningTeamsSection(searchQuery);
 
   if (hidden) {
@@ -28,7 +30,7 @@ export function RunningTeamsSection({
     <section className="mb-12">
       <div className="mb-3 flex items-center">
         <h2 className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-text-muted">
-          Running Teams
+          {t('runningTeams.title')}
           <span className="rounded-full border border-border bg-surface-overlay px-1.5 py-0.5 text-[10px] font-medium leading-none text-text-secondary">
             {rows.length}
           </span>

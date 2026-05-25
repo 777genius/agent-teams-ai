@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "خيارات مستعملي الطاقة: قيود التصدير/الواردات، والتخلف عن السداد، وتحرير التشكيلات الخام.",
+      "label": "السلف"
+    },
+    "general": {
+      "description": "أفضليات التزكية الأساسية مثل الموضوع واللغة وكثافة العرض وسلوك البدء",
+      "label": "معلومات عامة"
+    },
+    "infoAriaLabel": "ماذا؟ {{label}}?",
+    "notifications": {
+      "description": "التحكم متى وكيف يتم ابلاغك عن نشاط الوكيل والمهمة و الأخطاء",
+      "label": "الإخطارات"
+    }
+  },
+  "view": {
+    "description": "إدارة أفضليات تطبيقك",
+    "loading": "أماكن التعبئة...",
+    "title": "التركيبات"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "إلغاء",
+      "test": "الاختبار"
+    },
+    "defaults": {
+      "allProjects": "جميع المشاريع",
+      "allProjectsHint": "استخدام الاختبارات {{project}}- ينطبق التقصير ما لم يكن المشروع متجاوزا.",
+      "loadingContexts": "...سياقات التحمل",
+      "projectHint": "إنقاذ التجاوزات فقط {{project}}.",
+      "projectOverrideContext": "سياق تجاوز المشروع",
+      "scopeDescriptionAllProjects": "تخلف عن كل مشروع ليس له إبطاله الخاص بالشركة المفتوحة.",
+      "scopeDescriptionProject": "تجاوز المشروع المختار فقط فرق التشغيل لم تتغير",
+      "selectProjectContext": "سياق المشاريع المختارة",
+      "selectProjectHint": "اختيار مشروع قبل اختبار النماذج المحلية أو توفير التقصيرات.",
+      "selectValidationContext": "سياق التصديق على الاختيار",
+      "setAllProjectsDefault": "تحديد جميع المشاريع",
+      "setProjectDefault": "مخطط المشروع",
+      "thisProject": "هذا المشروع",
+      "title": "التخلف عن سداد الالتزامات المفتوحة",
+      "validationContext": "سياق التقييم"
+    },
+    "diagnostics": {
+      "copied": "أجهزة التشخيص",
+      "copiedShort": "Copied",
+      "copy": "تشخيص النسخ",
+      "hints": "Hints",
+      "likelyCause": "السبب الغالب:"
+    },
+    "models": {
+      "alreadyDefault": "هذا هو التخلف المختار من قبل",
+      "empty": "لا توجد نماذج",
+      "emptyFree": "لا توجد نماذج مجانية",
+      "emptyRecommended": "لم يتم العثور على نماذج موصى بها.",
+      "emptyRecommendedFree": "لم يتم العثور على نماذج مجانية",
+      "freeOnly": "حر فقط",
+      "launchableDescription": "مسارات يمكنك اختبارها أو استعمالها في مختار الفريق، الوصية المحلية، نماذج مبنية بالمجان، والتخلف الحالي.",
+      "launchableTitle": "النماذج المفتوحة",
+      "loadingRoutes": "وضع طرق نموذجية للشركة المفتوحة...",
+      "noRoutesMatch": "No OpenCode model routes match \"{{query}}\".",
+      "noneReported": "No launchable OpenCode model routes were reported yet. Conigure a local route in OpenCode or use the Providers tab to inspect catalog providers.",
+      "recommendedOnly": "الموصى به فقط",
+      "searchPlaceholder": "نماذج البحث",
+      "selectProjectBeforeTesting": "اختيار سياق المشروع قبل نماذج الاختبار.",
+      "selectProjectBeforeTestingDefaults": "Select a project context before testing orving OpenCode defaults.",
+      "useInTeamPicker": "الاستخدام في مشغل الفريق"
+    },
+    "providers": {
+      "catalog": "مُقدِّم الخدمات المفتوحة",
+      "countFallback": "مقدمو الخدمات المفتوحة",
+      "description": "{{count}}- يُبيَّن مقدمو الخدمات المُتصلون والموصوفون أولا.",
+      "loadMore": "زيادة عدد مقدمي الخدمات",
+      "loading": "تحديد أماكن مقدمي الخدمات المفتوحة",
+      "noMatches": "لا يوجد مُقدّمون يطابقون ذلك البحث",
+      "noneReported": "No OpenCode providers reported by the managed runtime.",
+      "recommended": "الموصى بها",
+      "refreshCatalog": "كتالوج التجديد",
+      "searchPlaceholder": "مقدمو خدمات البحث",
+      "description_few": "{{count}}- يُبيَّن مقدمو الخدمات المُتصلون والموصوفون أولا.",
+      "description_many": "{{count}}- يُبيَّن مقدمو الخدمات المُتصلون والموصوفون أولا.",
+      "description_one": "{{count}}- يُبيَّن مقدمو الخدمات المُتصلون والموصوفون أولا.",
+      "description_other": "{{count}}- يُبيَّن مقدمو الخدمات المُتصلون والموصوفون أولا."
+    },
+    "setup": {
+      "loading": "مُعدّة مُقدّم للوقود..."
+    },
+    "summary": {
+      "defaultModel": "التقصير المفتوح: {{model}}",
+      "loading": "التعبئة تُديرُ نظاماً تشغيلياً مفتوحاً، مُقدّمين مُتصلين، وقصور نموذجية...",
+      "source": "المصدر: {{source}}",
+      "title": "الوقت غير المحدد"
+    },
+    "tabs": {
+      "models": "النماذج",
+      "providers": "مقدمو الخدمات"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "طرق نموذجية للبحث"
+    },
+    "badges": {
+      "usedInTeamPicker": "مستعملة في فريق مختار",
+      "free": "مجانا",
+      "local": "المحلية",
+      "configured": "تم تشكيلها",
+      "connected": "متصل",
+      "verified": "تم التحقق منها",
+      "needsTest": "اختبار الاحتياجات",
+      "failed": "فشل",
+      "unknown": "مجهول",
+      "default": "العجز"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "لغة التواصل مع العملاء",
+      "descriptionWithDetected": "Language for agent communication (detected: {{detected}})",
+      "emptyMessage": "لا توجد لغة",
+      "label": "اللغة",
+      "searchPlaceholder": "لغة البحث...",
+      "selectPlaceholder": "لغة مختارة...",
+      "title": "الوكيلة"
+    },
+    "appLanguage": {
+      "description": "لغة واجهة الطلب.",
+      "label": "اللغة",
+      "title": "اللغة"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": ":: التوسع تلقائياً في دور كل استجابة عند فتح محضر أو تلقي رسالة جديدة",
+        "label": "Expand AI responses by default"
+      },
+      "nativeTitleBar": {
+        "description": "استخدام إطار نافذة النظام الافتراضي بدلا من شريط اللقب العرفي",
+        "label": "Use native title bar",
+        "restartConfirm": {
+          "confirmLabel": "Restart",
+          "message": "The app needs to restart to apply the title bar change. إعادة التشغيل الآن؟",
+          "title": "إعادة التشغيل المطلوبة"
+        }
+      },
+      "theme": {
+        "description": "اختر موضوعك المفضل",
+        "label": "الموضوع",
+        "options": {
+          "dark": "الظلام",
+          "light": "الضوء",
+          "system": "النظام"
+        }
+      },
+      "title": "الإفادات"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "ابدأ HTTP خادم للوصول إلى وحدة التفتيش المشتركة من مصفف أو محمول في أيكوب",
+        "label": "أسلوب الخادم التمكيني"
+      },
+      "title": "Browser Access"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Sect Folder",
+        "selectFolderManually": "المبيعات اليدوية",
+        "useAutoDetect": "Use Auto-Detect",
+        "useFolder": "Use Folder",
+        "usePath": "Use Path",
+        "useThisPath": "إستخدم هذا الطريق",
+        "useWsl": "استخدام لينكس/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "هذا الملف لا يحتوي على دليل المشاريع أكمل على أية حال؟",
+          "title": "لم يعثر على دليل مشاريع"
+        },
+        "notClaudeDir": {
+          "message": "هذا الملف اسمه{{folderName}}\"ليس \"كلود أكمل على أية حال؟",
+          "title": "ملف مختار ليس (كلود)"
+        },
+        "noWslPaths": {
+          "message": "Could not find WSL distros with Claude data automatically. Select folder manually?",
+          "title": "لا WSL تم العثور على كلود"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" does not contain a \"projects\" directory. Continue anyway?",
+          "title": "WSL دليل المشاريع المفقودة"
+        }
+      },
+      "current": {
+        "autoDetected": "تم كشفه {{path}}",
+        "autoDetectedPath": "استخدام المسارات الآلية",
+        "customPath": "استخدام مسار العرف",
+        "label": "الروت المحلي الحالي"
+      },
+      "description": "اختر أي ملف محلي يعامل على أنه جذر بيانات كلود",
+      "errors": {
+        "detectWslFailed": "فشل في الكشف WSL كلود المسارات الجذرية",
+        "loadFailed": "تفشل في تحميل الجذور المحلية لكلود",
+        "updateFailed": "فشل في تحديث جذور كلود"
+      },
+      "title": "Claude Root",
+      "wslModal": {
+        "closeAriaLabel": "اقترب WSL الطريق",
+        "description": "Detected WSL التوزيعات والمرشحين للجذور",
+        "noProjectsDir": "No projects directory detected",
+        "title": "مختارة WSL كلود رووت"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "المساعدة على تحسين التطبيق بإرسال بيانات عن التحطم والأداء",
+        "label": "إرسال تقارير حوادث"
+      },
+      "title": "الخصوصية"
+    },
+    "server": {
+      "runningOn": "تشغيل على",
+      "standaloneModeDescription": "يركضون في وضعية قائمة بذاتها The HTTP الخادم نشط دائماً إخطارات النظام غير متاحة - يتم تسجيل محفزات الإخطارات في حالة تطبيق فقط.",
+      "title": "سيرفر"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "بدء التطبيق تلقائياً عندما تدخل",
+        "label": "الإطلاق في لوغاريت"
+      },
+      "showDockIcon": {
+        "description": "Display the app icon in the dock (macOS)",
+        "label": "رصيف العرض"
+      },
+      "title": "البداية"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "فالإخطارات قد لا تعمل في مجال التنمية. (ماكوس) يعرّف التطبيق على أنه (إلكترون)",
+      "descriptionSuffix": "بدلاً من اسم تطبيق الإنتاج تحقق من النظام المُحدّد",
+      "title": "ديف موديل"
+    },
+    "ignoredRepositories": {
+      "description": "سيتم تجاهل الإخطارات من هذه المستودعات",
+      "empty": "لا توجد مستودعات تم تجاهلها",
+      "selectPlaceholder": "مستودع إختياري لتجاهل...",
+      "title": "المخازن المجهولة"
+    },
+    "settings": {
+      "enabled": {
+        "description": "إخطارات نظام العرض بشأن الأخطاء والأحداث",
+        "label": "إخطارات النظام التمكيني"
+      },
+      "sound": {
+        "description": "يَلْعبُ a صوت عندما تَبْدو",
+        "label": "صوت اللعب"
+      },
+      "subagentErrors": {
+        "description": "الكشف عن الأخطاء في الدورات الفرعية والإخطار بها",
+        "label": "تشمل الأخطاء الفرعية"
+      },
+      "title": "مجموعة الإخطارات"
+    },
+    "snooze": {
+      "clear": "نظيف",
+      "description": "الإخطارات بالتوقف المؤقت",
+      "descriptionWithTime": "حتى {{time}}",
+      "label": "الإخطارات المتعلقة بسنوز",
+      "options": {
+        "15": "15 دقيقة",
+        "30": "30 دقيقة",
+        "60": "ساعة واحدة",
+        "120": "ساعتين",
+        "240": "4 ساعات",
+        "-1": "حتى الغد"
+      },
+      "selectDuration": "...مدة مختارة"
+    },
+    "taskCompletion": {
+      "description": "الحصول على الإخطارات المحلية عندما ينهي كلود المهام - الأصوات، واللافتات، وشارات غرق/تاسكوبار. يعمل على ماكوس، لينكس، وويندوز.",
+      "installPlugin": "Install claude-notifications-go plugin",
+      "title": "الإخطارات بإنجاز المهام"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "الإخطار عندما تصل كل مهمة في الفريق إلى المركز المكتمل",
+        "label": "جميع المهام المنجزة"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "عندما يُبلغ (كلود) عن إعادة ضبط الوقت، يُحدد موعداً للمتابعة مع فريق القيادة بعد إعادة ضبط الحد",
+        "label": "الحجم الآلي بعد الحد الأقصى للمعدل"
+      },
+      "clarifications": {
+        "description": "اعرض الاخطارات الامنية عندما تحتاج المهمة الى مدخلاتك",
+        "label": "إخطارات توضيح المهام"
+      },
+      "crossTeamMessage": {
+        "description": "إشعار عندما تصل رسالة من فريق آخر",
+        "label": "الإخطارات المتعلقة بالرسالة الشاملة"
+      },
+      "leadInbox": {
+        "description": "أبلغوا عندما يرسل زملاء الفريق رسائل إلى قائد الفريق",
+        "label": "الإخطارات بالصندوق الرئيسي"
+      },
+      "statusChange": {
+        "description": "اعرض اخطارات الاوراق المحلية عندما تغيرت حالة المهمة",
+        "label": "الإخطارات المتعلقة بتغيير مركز العمل",
+        "onlySolo": {
+          "description": "ابلغوا فقط عندما لا يكون للفريق زملاء فريق",
+          "label": "فقط في حالة سولو"
+        },
+        "statuses": {
+          "description": "أي حالة مستهدفة تؤدي إلى إخطار",
+          "label": "الإخطار بهذه الحالة",
+          "options": {
+            "approved": "الوظائف المعتمدة",
+            "completed": "مكتملة",
+            "deleted": "Deleted",
+            "in_progress": "بدأت",
+            "needsFix": "الاحتياجات",
+            "pending": "تنتهي",
+            "review": "الاستعراض"
+          }
+        }
+      },
+      "taskComments": {
+        "description": ":: تقديم إخطارات بشأن البرمجيات المحلية عند تعليق الوكلاء على المهام",
+        "label": "الإخطارات المتعلقة بتعليق العمل"
+      },
+      "taskCreated": {
+        "description": ":: تقديم إخطارات بشأن البرمجيات المحلية عند إنشاء مهمة جديدة",
+        "label": "المهمة المستحدثة"
+      },
+      "teamLaunched": {
+        "description": "إشعار عندما ينهي الفريق إطلاقه وجاهز",
+        "label": "الإخطارات الصادرة عن الفريق"
+      },
+      "title": "الإخطارات الجماعية",
+      "toolApproval": {
+        "description": "إشعار عندما تحتاج الأداة إلى موافقتك (اللو/ديني) بينما التطبيق غير مركز",
+        "label": "إخطارات الموافقة على استخدام المعدات"
+      },
+      "userInbox": {
+        "description": "ابلغوا عندما يرسل زملاء الفريق رسائل لك",
+        "label": "الإخطارات بصناديق المستعملين"
+      }
+    },
+    "test": {
+      "action": "إرسال",
+      "description": "إرسال إخطار اختبار للتحقق من التسليم",
+      "failedToSend": "عدم إرسال إخطار بالاختبار",
+      "label": "إخطار الاختبار",
+      "sending": "إرسال...",
+      "sent": "Sent!",
+      "unknownError": "خطأ غير معروف"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "App icon",
+      "description": ":: جمع أفرقة عملاء مكافحة الإرهاب التي تعمل بشكل مستقل بالتوازي، والتواصل عبر الأفرقة، وإدارة المهام على مجلس الكنبان - مع استعراض الشفرة المدمجة، ورصد العمليات الحية، والوضوح الكامل للأدوات.",
+      "standalone": "Standalone",
+      "title": "بشأن",
+      "version": "Version {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Edit Config",
+      "exportConfig": "Export Config",
+      "importConfig": "Import Config",
+      "openInEditor": "محرر",
+      "resetToDefaults": "العودة إلى التقصير",
+      "title": "الاتحاد"
+    },
+    "updates": {
+      "available": "v{{version}} متاح",
+      "check": "التحقق من المستجدات",
+      "checking": "التحقق...",
+      "ready": "Update ready",
+      "unknownVersion": "مجهول",
+      "upToDate": "حتى الآن"
+    },
+    "appName": "الوكيلة"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "فشل في تحميل الثقوب",
+      "saveFailed": "فشل في إنقاذ المثقفين"
+    },
+    "footer": {
+      "autoSave": "تغيرات السلامة الذاتية بعد التحرير",
+      "toClose": "قريب",
+      "escapeKey": "Esc"
+    },
+    "loading": "....",
+    "status": {
+      "invalidJson": "Invalid JSON",
+      "saveFailed": "إنقاذ فاشل",
+      "saved": "منقذة",
+      "saving": "إنقاذ..."
+    },
+    "title": "Edit Configuration"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "إلغاء",
+      "submit": "مصارف",
+      "title": "يضاف الترايغر العرفي"
+    },
+    "builtin": {
+      "description": "الدافع الافتراضي الذي يأتي مع الطلب. يمكنك تمكينهم أو تعطيلهم و تكييف أنماطهم",
+      "title": "مصارف البناء"
+    },
+    "card": {
+      "builtinBadge": "Builtin",
+      "collapseAriaLabel": "التصفيق",
+      "deleteAriaLabel": "يحذف الزناد",
+      "editNameAriaLabel": "اسم إديت",
+      "expandAriaLabel": "التوسع"
+    },
+    "color": {
+      "customHexTitle": "لون الثعلب العرفي",
+      "invalidHex": "Hex invalid"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "إنذار إذا",
+      "emptyPatternHint": "Leave empty to match all content. Uses JavaScript regex syntax.",
+      "errorStatusDescription": "(أ) تجار عندما يُبلغ تنفيذ أداة عن خطأ (هو: صحيح).",
+      "tokensUnit": "tokens",
+      "matchPatternPlaceholder": "e.g., error.failed.exception"
+    },
+    "custom": {
+      "description": "إنشاء محفزات خاصة بك للحصول على إشعار لأنماط أو نواتج أدوات محددة.",
+      "empty": "لا يوجد محفزات للعادة تم تشكيلها بعد",
+      "title": "المثلثات العرفية"
+    },
+    "errors": {
+      "invalidRegexPattern": "Invalid regex pattern"
+    },
+    "fields": {
+      "contentType": "النوع المضمون",
+      "matchField": "الميدان",
+      "matchPattern": "Match Pattern (Regex)",
+      "scopeToolName": "النطاق/الاسم المستعار",
+      "scopeToolNameOptional": "النطاق/الاسم (اختياري)",
+      "threshold": "Threshold",
+      "tokenType": "النوع المكسور",
+      "triggerNamePlaceholder": "e.g., Build Failure Alert",
+      "triggerNameRequired": "الاسم المتسلسل"
+    },
+    "ignorePatterns": {
+      "hint": "مدخل الصحافة لإضافة. التبليغ متوقف إذا كان أي نمط يتطابق",
+      "placeholder": "أضف تجاهل (ريجكس)...",
+      "removeAriaLabel": "تغيير النمط",
+      "summary": "السلف: قواعد الاستبعاد",
+      "title": "Ignore Patterns (skip if matches)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "الناتج",
+        "thinking": "التفكير",
+        "tool_result": "رسل",
+        "tool_use": "Tool Use"
+      },
+      "matchFields": {
+        "args": "الأحكام",
+        "command": "القيادة",
+        "content": "المضمون",
+        "description": "الوصف",
+        "file_path": "ملعب",
+        "fullInput": "Full Input (JSON)",
+        "glob": "فيلم Glob",
+        "new_string": "جديدة",
+        "old_string": "العجوز",
+        "path": "Path",
+        "pattern": "Pattern",
+        "prompt": "Prompt",
+        "query": "Query",
+        "skill": "اسم المهارات",
+        "subagent_type": "النوع الفرعي",
+        "text": "النص",
+        "thinking": "الرأي",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "نمط المحتوى",
+        "error_status": "حالات الإعدام",
+        "token_threshold": "مرتفع توكسي"
+      },
+      "tokenTypes": {
+        "input": "المدخلات",
+        "output": "الناتج",
+        "total": "المجموع"
+      },
+      "toolNames": {
+        "anyTool": "أي تول"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "الاختبار",
+      "detectedSuffix": "كانت ستكتشف أخطاء",
+      "more": "و... {{count}} أكثر",
+      "more_few": "و... {{count}} أكثر",
+      "more_many": "و... {{count}} أكثر",
+      "more_one": "و... {{count}} أكثر",
+      "more_other": "و... {{count}} أكثر",
+      "testTrigger": "الاختبار",
+      "testing": "اختبار...",
+      "title": "Preview",
+      "truncatedWarning": "وتوقف البحث في وقت مبكر (حد أقصى للتفرغ أو العد). المباريات الفعلية قد تكون أعلى",
+      "viewSession": "جلسة المشاهدة"
+    },
+    "repositoryScope": {
+      "empty": "لا توجد مستودعات منتقاة - الزناد ينطبق على جميع المستودعات",
+      "hint": "عندما يتم اختيار المستودعات، هذا يشعل النار فقط للأخطاء في تلك المستودعات.",
+      "placeholder": "مستودع إختياري لإضافة...",
+      "summary": "السلف: نطاق الودائع",
+      "title": "Limit to Repositories (applies only to selected repositories)"
+    },
+    "sections": {
+      "configuration": "الاتحاد",
+      "dotColor": "Dot Color",
+      "generalInfo": "معلومات عامة",
+      "triggerCondition": "شرط التغرير"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "يضاف موجز",
+      "cancel": "إلغاء",
+      "deleteProfile": "تحذف",
+      "editProfile": "Edit profile",
+      "save": "أنقذ"
+    },
+    "authMethods": {
+      "agent": "SSH الوكيل",
+      "auto": "Auto (from SSH Config)",
+      "password": "كلمة السر",
+      "privateKey": "مفتاح خاص"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "تحذف",
+      "message": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+      "title": "تحذف النبذة"
+    },
+    "description": "أنقذ SSH مواصفات الربط السريع",
+    "empty": {
+      "description": "يضاف SSH مواصفات التواصل بسرعة",
+      "title": "لا توجد ملفات منقذة"
+    },
+    "form": {
+      "authentication": "التوثيق",
+      "host": "المضيفة",
+      "name": "الاسم",
+      "passwordPrompt": "ستدفعون إلى كلمة السر عند التواصل",
+      "port": "الميناء",
+      "privateKeyPath": "Special Key Path",
+      "username": "المستعمل",
+      "namePlaceholder": "سيدي",
+      "hostPlaceholder": "الاسم المضيف أو IP",
+      "usernamePlaceholder": "المستخدم"
+    },
+    "loading": "....",
+    "title": "موجزات أماكن العمل"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Connect",
+      "connecting": "التواصل...",
+      "disconnect": "الفصل",
+      "testConnection": "الاختبار",
+      "testing": "اختبار..."
+    },
+    "currentMode": {
+      "description": "مصدر البيانات لملفات الدورة",
+      "label": "الأسلوب الحالي",
+      "local": "Local ({{path}})"
+    },
+    "description": "اتصل بآلة نائية لرؤية جلسات كلود",
+    "form": {
+      "authentication": "التوثيق",
+      "host": "المضيفة",
+      "password": "كلمة السر",
+      "port": "الميناء",
+      "privateKeyPath": "Special Key Path",
+      "username": "المستعمل",
+      "hostPlaceholder": "الاسم المضيف أو SSH config alias",
+      "usernamePlaceholder": "المستخدم"
+    },
+    "savedProfiles": {
+      "title": "Profiles المحفوظة"
+    },
+    "ssh": {
+      "title": "SSH Connection"
+    },
+    "status": {
+      "connectedTo": "متصل {{host}}",
+      "remoteSessions": "مشاهدة الدورات عن بعد عن طريق SSH"
+    },
+    "test": {
+      "failed": "فشل الإرتباط: {{error}}",
+      "success": "النجاح",
+      "unknownError": "خطأ غير معروف"
+    },
+    "title": "Remote Connection"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "إلغاء",
+      "cancelLogin": "سجل الغاء",
+      "connectChatGpt": "Connect ChatGPT",
+      "delete": "تحذف",
+      "disable": "العجز",
+      "disconnectAccount": "حساب الفصل",
+      "generateLink": "وصلة الوراثة",
+      "openLogin": "سجل مفتوح",
+      "reconnectAnthropic": "Reconnect Anthropic",
+      "refresh": "التجديد",
+      "replaceKey": "يستعاض عن المفتاح",
+      "saveEndpoint": "نقطة النهاية",
+      "saveKey": "أنقذ المفتاح",
+      "saving": "إنقاذ...",
+      "setApiKey": "المجموعة API المفتاح",
+      "updateKey": "تحديث المفتاح",
+      "useCode": "رمز الاستخدام"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "وثائق تفويض مخزنة...",
+      "projectScope": "المشروع",
+      "scope": "النطاق",
+      "storedIn": "مخزنة {{backend}}",
+      "userScope": "مستعمل",
+      "storedInApp": "مخزنة في التطبيق",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API المفتاح",
+          "title": "API المفتاح",
+          "description": "إستعملْ Anthropic مباشرة API مفتاح API-الولوج المزدحم جلسة الاشتراك الأنثروي تبقى متاحة عندما تعود",
+          "placeholder": "...."
+        },
+        "codex": {
+          "name": "الرمز API المفتاح",
+          "title": "API المفتاح",
+          "description": "إستعملْ a OpenAI API مفتاح كطريق ثانوي إذا بدلت الرمز إلى API الطريقة الرئيسية، التطبيق مرآة OPENAI_API_KEY إلى CODEX_API_KEY من أجل إطلاقات السكان الأصليين",
+          "placeholder": "...."
+        },
+        "gemini": {
+          "name": "Gemini API المفتاح",
+          "title": "API الوصول",
+          "description": "الاستخدام `GEMINI_API_KEY` من أجل الجوز API تراجع CLI SDK و ADC لا يتطلب ذلك.",
+          "placeholder": "(إيزا)..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "المحاسب: {{state}}",
+        "connected": "Connected",
+        "description": "إدارة جلسة حساب دفتر المركّبات المحلية التي تخوّل عمليات إطلاق الشعوب الأصلية المدعومة بالتسجيل.",
+        "loginInProgress": "قيد التنفيذ",
+        "plan": "الخطة: {{plan}}",
+        "reconnectRequired": "إعادة الاتصال",
+        "title": "ChatGPT الحساب",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto will keep using the detected API key until ChatGPT is connected.",
+          "detectedApiKeyNeedsApiMode": "{{message}} تم اكتشافه API المفتاح يستعمل فقط بعد أن تبدل الشفرة API الطريقة الرئيسية",
+          "localArtifactsNoSession": "Codex CLI currently reports no active ChatGPT account. Local Codex account data exists, but no active managed session is selected. Usage limits appear here only after Codex CLI sees one.",
+          "noActiveAccount": "Codex CLI currently reports no active ChatGPT account. Usage limits appear here only after Codex CLI sees one.",
+          "reconnectBeforeUsage": "Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here.",
+          "usageLimitsAfterReport": "Usage limits appear here after Codex reports them for the connected ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "التحقق",
+        "downloading": "تحميل",
+        "installCli": "تثبيت Codex CLI",
+        "installing": "التركيب",
+        "retryInstall": "إعادة محاولة التثبيت",
+        "title": "تثبيت Codex CLI في بيانات التطبيق"
+      },
+      "rateLimits": {
+        "credits": "الأرصدة الدائنة",
+        "creditsDescription": "تُعرض الأرصدة بشكل منفصل عن استخدام الاشتراك المعتمد على النوافذ، وقد لا تكون متاحة لجلسات ChatGPT المدعومة بخطة.",
+        "noSecondaryWindow": "الكودوكس لم يعد نافذة ثانوية لهذا الحساب",
+        "notReported": "لم يبلغ عنها",
+        "primaryReset": "إعادة التوطين الابتدائي",
+        "primaryUsed": "ابتدائي مستعمل",
+        "primaryWindow": "النافذة الرئيسية",
+        "remainingLeft": "{{value}} يسار",
+        "remainingUnknown": "البقاء غير معروف",
+        "secondaryReset": "إعادة التأهيل الثانوي",
+        "secondaryUsed": "ثانوية مستعملة",
+        "secondaryWindow": "نافذة ثانوية",
+        "usedQuotaNote": "وتبين هذه النسب المئوية الحصة المستخدمة، وليس الحصص المتبقية.",
+        "weeklyReset": "إعادة ترتيب أسبوعي",
+        "weeklyUsed": "مستخدمة أسبوعيا",
+        "weeklyUsedOneWeek": "مستخدمة أسبوعياً (1ث)",
+        "weeklyWindow": "نافذة أسبوعية",
+        "secondaryFallback": "التعليم الثانوي",
+        "secondaryWindowNote": " وترد الحدود الأسبوعية بصورة منفصلة في {{window}} النافذة",
+        "usageExplanationGeneric": "تُظهر الحصص المُستخدمة، وليس الحصص المتبقية.",
+        "usageExplanationWindowOnly": "الحصص المستخدمة في الوقت الراهن {{window}} نافذة، لا تبقى حصة.",
+        "usageExplanationWithRemaining": "{{used}} مستعملة {{remaining}} في الوقت الحالي {{window}} النافذة"
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "(أوث توكن) ليس مُحدّداً.",
+      "baseUrl": "القاعدة URL",
+      "description": "استعمل نقطة النهاية المحلية المتوافقة",
+      "keepSavedToken": "إتركْ فارغاً لإبْقاء منقذِ",
+      "title": "نقطة نهاية متوافقة",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "القاعدة URL مطلوب",
+        "firstPartyAnthropic": "Use Auto,اشتراك, or API مفتاح الحزب الأول",
+        "httpRequired": "القاعدة URL يجب أن يستعمل الموقع http:// أو https://",
+        "invalidUrl": "Invalid URL",
+        "noCredentials": "القاعدة URL يجب ألا تشمل وثائق التفويض"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "نقطة النهاية معوقة تم إنقاذ (توكن)",
+        "endpointSaved": "نقطة النهاية",
+        "endpointSavedTokenMissing": "تم إنقاذ نقطة النهاية (أوث توكن) ليس مُحدّداً."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "طريقة التوثيق",
+      "descriptions": {
+        "anthropic": "اختر كيف أن جلسات الأنثروبيك التي أُطلقت تطبيقاً صحيحة",
+        "codex": "Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.",
+        "gemini": "الاتفاقية الاختيارية API الدخول CLI SDK و ADC لا يزال يكتشف تلقائيا.",
+        "opencode": "وتدير عملية التحقق من البيانات المفتوحة وجرد مقدميها خلال فترة التشغيل المفتوحة."
+      },
+      "method": "طريقة الربط",
+      "mode": "Mode: {{mode}}",
+      "selected": "مختارة",
+      "switching": "أبدل...",
+      "title": "Connection"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API المفتاح"
+      },
+      "anthropic": {
+        "apiKeyDescription": "الاستخدام ANTHROPIC_API_KEY and Anthropic API الفواتير",
+        "autoDescription": "(أ) استخدام حالات التخلف عن العمل في الأنثروبيك وأفضل عقيدة محلية متاحة.",
+        "hint": "(أوتو) يبقي (أنثروبيك) على قرار الإبداع المحلي",
+        "subscriptionDescription": "إستخدمي جلسة توقيعكِ المحلية في (أنثروبيك) والاشتراك",
+        "subscriptionTitle": "اشتراك الأنثروبيك"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "الاستخدام OPENAI_API_KEY و CODEX_API_KEY فواتير لإطلاقات الكودوكس",
+        "autoDescription": "Prefer your ChatGPT account and subscription. Use API key mode only if needed.",
+        "chatgptDescription": "Use your connected ChatGPT account and Codex subscription.",
+        "chatgptTitle": "ChatGPT الحساب",
+        "hint": "Codex always runs through the native runtime. Auto prefers your ChatGPT account before falling back to API-key credentials."
+      }
+    },
+    "description": "(ب) إدارة كيفية اتصال كل مقدم من مقدمي الخدمات، وعند دعمه، الذي ينبغي استخدامه لدعم العمل المتعدد النماذج.",
+    "fastMode": {
+      "defaultOff": "التقديم",
+      "description": "تطبيق مدونة كلود بسرعة عن طريق التقصير في إطلاق فريق الأنثروبيك الجديد عندما يسمح النموذج المُحلّى والوقت غير المسبّب بذلك.",
+      "disabledHint": "إطلاقات الأنثروبيك الجديدة تبقى على السرعة العادية ما لم يسمح الفريق بشكل صريح بطريقة سريعة",
+      "enabledHint": "ستطلب عمليات إطلاق الأنثروبيك الجديدة طريقة سريعة بالفشل عندما يدعمها النموذج المسوي.",
+      "notExposed": "هذا الجري الأنثروبيكي لا يكشف الطريقة السريعة",
+      "preferFast": "تفضل بسرعة",
+      "title": "قصور في الأداء السريع",
+      "unavailableForRuntime": "والطريقة السريعة غير متاحة حاليا لهذا الوقت الذي يستغرقه الأنثروبيك."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API تم اختيار الطريقة الرئيسية، ولكن لا أنثروبيك API ولا يزال الإبداع متاحا.",
+      "anthropicStoredKeyAvailable": "تم إنقاذه API المفتاح متاح، لكن جلسات الأنثروبيك التي تم إطلاقها لا تستخدمه إلا بعد أن تتحول API الطريقة الرئيسية",
+      "anthropicSubscriptionMissing": "ويتم اختيار طريقة الاشتراك الأنثروبيك. وقع مع (أنثروبيك) ليستخدم هذا المزود",
+      "authTokenMissing": "(أوث توكن) ليس مُحدّداً. والكثير من نقاط النهاية المحلية المتوافقة مع الأنثروبيك تتطلب ضربة غير فارغة.",
+      "chatgptLoginPending": "Waiting for ChatGPT account login to finish...",
+      "chatgptLoginStarting": "Starting ChatGPT login...",
+      "codexApiKeyMissing": "API تم اختيار الطريقة الرئيسية، ولكن لا OPENAI_API_KEY أو CODEX_API_KEY ولا يزال الإبداع متاحا.",
+      "codexLocalArtifactsNoSession": "Codex CLI currently has no active ChatGPT account. Local Codex account data exists, but no active managed session is selected.",
+      "codexNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+      "codexNoChatgptAccount": "الرمز CLI حالياً ليس لديه (تشاد)GPT حساب Connect ChatGPT لاستخدام اشتراكك",
+      "codexNoCredential": "No ChatGPT account or API key is available yet.",
+      "geminiApiUnavailable": "Gemini API غير متاح حاليا. الثقة `GEMINI_API_KEY` هنا أو استخدام جوجل صالح ADC وثائق التفويض.",
+      "withApiKeyFallback": "{{message}} تحويل إلى API الطريقة الرئيسية لاستخدام المكتشفة API المفتاح"
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "جلسات أنثروبك التي أطلقتها القوة API الإبداع الرئيسي",
+        "auto": "إستعملْ السلوكَ الناقصِ. منقذ API المفاتيح في هذا التطبيق تستخدم فقط بعد التحول API الطريقة الرئيسية",
+        "oauth": "الجلستان الأنثروبيكيتان اللتين أطلقتهما القوة لاستخدام دورة الاشتراك المحلية للأثروبيك."
+      },
+      "codex": {
+        "apiKey": "عمليات إطلاق الغازات الأصلية للقوة OPENAI_API_KEY / CODEX_API_KEY الفواتير",
+        "auto": "Prefer your ChatGPT account when it is available. Fall back to API key mode only when needed.",
+        "chatgpt": "Force native Codex launches to use your connected ChatGPT account and subscription."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "تطبيق تغيرات الاتصال...",
+      "refreshingProviderStatus": "إنعاش مركز المزود...",
+      "savingCompatibleEndpoint": "إنقاذ نقطة نهاية متوافقة...",
+      "switchingAnthropicSubscription": "التحول إلى اشتراك أنثروبيك",
+      "switchingApiKey": "التحول إلى API مفتاح...",
+      "switchingApiKeyMode": "التحول إلى API طريقة رئيسية...",
+      "switchingAuto": "....",
+      "switchingChatgpt": "Switching to ChatGPT account mode..."
+    },
+    "provider": "مقدِّم",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "الأنثروبيك حالياً ليس لديه مختار خلفي منفصل",
+        "codex": "الكودوكس الآن يمر فقط من خلال الطريق السريع الأصلي.",
+        "gemini": "إختار أيّ نوع من الـ (جيميني) الذي يجب أن يستخدمه",
+        "opencode": "(إفتتاح كويد) يستخدم مضيفه الخاص ويعرض المكتب حالياً المركز فقط."
+      },
+      "title": "الأجر",
+      "updating": "...."
+    },
+    "runtimeSummary": "وقت العمل: {{runtime}}",
+    "status": {
+      "configured": "تم تشكيلها",
+      "enabled": "Enabled",
+      "notConfigured": "لا تم تشكيلها",
+      "notSet": "غير محددة",
+      "off": "قبالة",
+      "unknown": "غير معروف"
+    },
+    "title": "مؤسسات الادخار",
+    "usage": {
+      "apiKey": "استخدام API المفتاح",
+      "apiKeyRequired": "API المفتاح المطلوب",
+      "compatibleEndpoint": "استخدام نقطة نهاية متوافقة",
+      "notConnected": "غير متصل",
+      "usingMethod": "استخدام {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API تم حذف المفتاح، ولكن فشلت في تجديد مركز مقدمي الخدمات.",
+      "apiKeySavedRefreshFailed": "API تم إنقاذ المفتاح، ولكن فشل في تجديد مركز مقدمي الخدمات.",
+      "connectionUpdatedRefreshFailed": "وقد استكملت عملية الاتصال، ولكنها لم تُنعش حالة مقدمي الخدمات.",
+      "deleteApiKey": "لم تحذف API المفتاح",
+      "disableEndpoint": "تقاعس عن اختلال نقطة النهاية",
+      "endpointDisabledRefreshFailed": "معوقين، ولكنهم فشلوا في إعادة تأهيل مركز مقدمي الخدمات.",
+      "endpointSavedRefreshFailed": "تم إنقاذ نقطة النهاية، ولكن فشلت في إعادة تجديد مركز مقدمي الخدمات.",
+      "refreshCodexAccount": "فشل في إعادة فتح حساب الشفرة",
+      "saveApiKey": "فشل في الإنقاذ API المفتاح",
+      "saveEndpoint": "فشل في إنقاذ نقطة النهاية",
+      "updateAnthropicFastMode": "فشل في تحديث نمط الأنثروبيك السريع",
+      "updateConnection": "لم يستكمل الاتصال",
+      "updateRuntimeBackend": "فشل في تحديث النفقة الخلفية",
+      "apiKeyRequired": "API المفتاح مطلوب"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "الاشتراك/المنظمة",
+        "chatgpt": "ChatGPT الحساب",
+        "apiKey": "API المفتاح",
+        "anthropicSubscription": "اشتراك الأنثروبيك"
+      },
+      "authMethod": {
+        "apiKey": "API المفتاح",
+        "apiKeyHelper": "API مساعد رئيسي",
+        "oauth": "OAuth",
+        "claudeSubscription": "اشتراك كلود",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "حساب Google",
+        "serviceAccount": "حساب الخدمة"
+      },
+      "runtime": {
+        "codexNative": "الكود",
+        "currentRuntime": "الوقت الحاضر",
+        "selectedRuntime": "وقت واحد",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "التحقق...",
+        "checked": "تم التحقق منها",
+        "providerActivity": "نشاط الادخار",
+        "notConnected": "غير متصل",
+        "startingChatGptLogin": "Starting ChatGPT login...",
+        "waitingForChatGptLogin": "Waiting for ChatGPT account login...",
+        "chatGptVerificationDegraded": "ChatGPT الحساب المكتشف - يتدهور التحقق من الحسابات حاليا.",
+        "chatGptAccountReady": "ChatGPT الحساب جاهز",
+        "apiKeyReady": "API مفتاح جاهز",
+        "codexLocalAccountNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+        "codexNoActiveManagedSession": "Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.",
+        "codexNoActiveChatGptLogin": "Codex CLI reports no active ChatGPT login",
+        "connectChatGptForSubscription": "Connect a ChatGPT account to use your Codex subscription.",
+        "codexNativeReady": "الكود الأصلي",
+        "codexNativeUnavailable": "السكان الأصليون غير المتوفرين",
+        "unavailableInCurrentRuntime": "غير متاح في الوقت الحالي",
+        "connectedViaApiKey": "Connected via API المفتاح",
+        "apiKeyConfiguredNotVerified": "API تم تشكيل المفتاح ولكن لم يتم التحقق منه بعد",
+        "apiKeyModeMissingCredential": "API الطريقة الرئيسية المختارة، ولكن لا API مفتاح تم تشكيله",
+        "connectedVia": "Connected via {{method}}",
+        "unableToVerify": "غير قادر على التحقق"
+      },
+      "mode": {
+        "selectedAuth": "Selected auth: {{authMode}}",
+        "preferredAuth": "ترجمة: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API مفتاح تم تشكيله",
+        "savedApiKeyAvailable": "منقذة API المفتاح المتاح في مجال الإدارة",
+        "apiKeyAlsoConfigured": "API مفتاح تم تشكيله أيضاً",
+        "apiKeyConfiguredInManage": "API تم تشكيل المفتاح",
+        "apiKeyFallbackInManage": "API مفتاح متاح أيضاً في إدارة الأعمال كبديل",
+        "availableAsFallback": "{{summary}} - متوفر كنتيجة",
+        "savedApiKeyAvailableIfSwitch": "منقذة API مفتاح متاح في (مانج) إذا تحولت API الطريقة الرئيسية",
+        "availableIfSwitch": "{{summary}} -متاح إذا تحولت API الطريقة الرئيسية",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto will use this until ChatGPT is connected"
+      },
+      "actions": {
+        "connect": "Connect",
+        "connectAnthropic": "Connect Anthropic",
+        "connectChatGpt": "Connect ChatGPT",
+        "disconnect": "الفصل",
+        "openLogin": "إفتحوا لوجين"
+      },
+      "disconnect": {
+        "anthropicTitle": "فصّل الاشتراك الأنثروبيك؟",
+        "anthropic": "This removes the local Anthropic participation session from the Claude CLI وقت الهروب",
+        "anthropicWithApiKey": "This removes the local Anthropic participation session from the Claude CLI وقت الهروب منقذة API المفاتيح في إدارة البقاء متاحة.",
+        "geminiTitle": "Disconnect Gemini CLI?",
+        "gemini": "هذا يوضح الجوز CLI البيانات الوصفية للدورة. الخارجي ADC وثائق التفويض والمحفوظة API لم يتم إزالة المفاتيح"
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "التحقق من المستجدات",
+      "checking": "التحقق...",
+      "extensions": "التمديدات",
+      "installRuntime": "Install {{runtime}}",
+      "manage": "Manage",
+      "recheck": "إعادة التدقيق",
+      "reinstallRuntime": "Reinstall {{runtime}}",
+      "retry": "Retry",
+      "update": "آخر"
+    },
+    "installer": {
+      "checkingLatest": "التحقق من آخر نسخة...",
+      "downloading": "تحميل...",
+      "failed": "فشل التركيب",
+      "installed": "Installed v{{version}}",
+      "installing": "...مماطلة",
+      "latest": "آخر",
+      "verifying": "التحقق..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "تحقق من مُقدّمي \"آي آي\"...",
+      "claudeCli": "التحقق من كلود CLI..."
+    },
+    "provider": {
+      "backend": "الخلفية: {{backend}}",
+      "loadingModels": "نماذج التعبئة...",
+      "modelsUnavailable": "نماذج غير متاحة لهذا البناء",
+      "runtime": "وقت العمل: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "فشل التوثيق",
+      "authUpdated": "تحديث",
+      "loggedOut": "مُسجّل",
+      "login": "Login",
+      "logout": "Logout",
+      "logoutFailed": "فشل"
+    },
+    "status": {
+      "configuredNotFound": "تم تشكيله {{runtime}} لم يعثر عليه",
+      "foundButFailed": "{{runtime}} تم العثور عليها ولكن فشلت في البدء",
+      "healthCheckFailed": "تم تشكيله {{runtime}} فشل فحصها الصحي",
+      "notInstalled": "{{runtime}} لم يتم تركيبها"
+    },
+    "title": "CLI الأجر"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} - ف{{latest}}"
+  }
+}

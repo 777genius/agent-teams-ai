@@ -1,5 +1,6 @@
 import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isNearBottom, useAutoScrollBottom } from '@renderer/hooks/useAutoScrollBottom';
 import { useTabNavigationController } from '@renderer/hooks/useTabNavigationController';
 import { useTabUI } from '@renderer/hooks/useTabUI';
@@ -39,6 +40,7 @@ interface ChatHistoryProps {
 }
 
 export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
+  const { t } = useAppTranslation('common');
   const VIRTUALIZATION_THRESHOLD = 120;
   const ESTIMATED_CHAT_ITEM_HEIGHT = 260;
 
@@ -914,12 +916,14 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
                         }}
                       >
                         {' '}
-                        ({remainingContext.remainingPct.toFixed(0)}% left)
+                        {t('chat.context.remainingPercent', {
+                          percent: remainingContext.remainingPct.toFixed(0),
+                        })}
                       </span>
                     )}
                   </>
                 ) : (
-                  `Context (${allContextInjections.length})`
+                  t('chat.context.count', { count: allContextInjections.length })
                 )}
               </button>
             </div>
@@ -1031,10 +1035,10 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
               color: 'var(--color-text-secondary)',
               border: '1px solid var(--color-border-emphasis)',
             }}
-            title="Scroll to bottom"
+            title={t('chat.scrollToBottom')}
           >
             <ChevronsDown className="size-3.5" />
-            <span>Bottom</span>
+            <span>{t('chat.bottom')}</span>
           </button>
         )}
       </div>

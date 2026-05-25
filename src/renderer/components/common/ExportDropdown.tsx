@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { triggerDownload } from '@renderer/utils/sessionExporter';
 import { Braces, Download, FileText, Type } from 'lucide-react';
 
@@ -33,6 +34,7 @@ const FORMAT_OPTIONS: FormatOption[] = [
 export const ExportDropdown = ({
   sessionDetail,
 }: Readonly<ExportDropdownProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [buttonHover, setButtonHover] = useState(false);
   const [hoveredFormat, setHoveredFormat] = useState<ExportFormat | null>(null);
@@ -86,7 +88,7 @@ export const ExportDropdown = ({
           color: buttonHover || isOpen ? 'var(--color-text)' : 'var(--color-text-muted)',
           backgroundColor: buttonHover || isOpen ? 'var(--color-surface-raised)' : 'transparent',
         }}
-        title="Export session"
+        title={t('export.session')}
       >
         <Download className="size-4" />
       </button>
@@ -108,7 +110,7 @@ export const ExportDropdown = ({
               borderBottom: '1px solid var(--color-border)',
             }}
           >
-            Export Session
+            {t('export.sessionTitle')}
           </div>
 
           {/* Format options */}

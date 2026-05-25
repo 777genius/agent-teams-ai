@@ -1,5 +1,6 @@
 import { memo, type ReactNode, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -42,6 +43,7 @@ export const ActiveTasksBlock = memo(function ActiveTasksBlock({
   onMemberClick,
   onTaskClick,
 }: ActiveTasksBlockProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const colorMap = buildMemberColorMap(members);
@@ -87,7 +89,7 @@ export const ActiveTasksBlock = memo(function ActiveTasksBlock({
             size={10}
             className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
           />
-          <span>In progress</span>
+          <span>{t('activity.activeTasks.inProgress')}</span>
           {collapsed && (
             <span className="rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium tabular-nums leading-none text-[var(--color-text-muted)]">
               {entries.length}

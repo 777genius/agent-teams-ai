@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { cn } from '@renderer/lib/utils';
 import {
   formatMemberLaunchDiagnosticsPayload,
   type MemberLaunchDiagnosticsPayload,
@@ -13,6 +14,7 @@ interface MemberLaunchDiagnosticsButtonProps {
   label?: string;
   className?: string;
   size?: 'icon' | 'sm';
+  attention?: boolean;
 }
 
 export const MemberLaunchDiagnosticsButton = ({
@@ -20,6 +22,7 @@ export const MemberLaunchDiagnosticsButton = ({
   label,
   className,
   size = label ? 'sm' : 'icon',
+  attention = false,
 }: MemberLaunchDiagnosticsButtonProps): React.JSX.Element => {
   const [copied, setCopied] = useState(false);
 
@@ -45,7 +48,7 @@ export const MemberLaunchDiagnosticsButton = ({
           type="button"
           variant="ghost"
           size={size}
-          className={className}
+          className={cn(className, attention && !copied && 'member-launch-diagnostics-pulse')}
           title={tooltip}
           aria-label={tooltip}
           onClick={copyDiagnostics}

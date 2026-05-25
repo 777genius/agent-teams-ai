@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   Tooltip,
   TooltipContent,
@@ -53,6 +54,7 @@ export const ActionModeSelector = ({
   showDelegate,
   disabled = false,
 }: ActionModeSelectorProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const modes = showDelegate ? MODE_CONFIG : MODE_CONFIG.filter((m) => m.mode !== 'delegate');
 
   return (
@@ -60,7 +62,7 @@ export const ActionModeSelector = ({
       <div
         className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)]"
         role="radiogroup"
-        aria-label="Action mode"
+        aria-label={t('messages.actionMode.label')}
       >
         {modes.map((cfg, idx) => {
           const isActive = value === cfg.mode;

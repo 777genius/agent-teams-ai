@@ -10,6 +10,7 @@ import {
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Badge } from '@renderer/components/ui/badge';
@@ -63,33 +64,36 @@ const ProviderCapabilityCardSkeleton = ({
 }: {
   providerId: 'anthropic' | 'codex' | 'gemini' | 'opencode' | 'kilocode';
   displayName: string;
-}): React.JSX.Element => (
-  <div className="rounded-md border border-border bg-surface-raised px-3 py-2">
-    <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <p className="inline-flex items-center gap-2 text-sm font-medium text-text">
-          <ProviderBrandLogo providerId={providerId} className="size-4 shrink-0" />
-          <span>{displayName}</span>
-        </p>
-        <div className="mt-1 flex items-center gap-2 text-[11px] text-text-muted">
-          <Loader2 className="size-3 animate-spin" />
-          <span>Checking provider status...</span>
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
+  return (
+    <div className="rounded-md border border-border bg-surface-raised px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-2 text-sm font-medium text-text">
+            <ProviderBrandLogo providerId={providerId} className="size-4 shrink-0" />
+            <span>{displayName}</span>
+          </p>
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-text-muted">
+            <Loader2 className="size-3 animate-spin" />
+            <span>{t('store.provider.checkingStatus')}</span>
+          </div>
         </div>
+        <Badge variant="outline" className="shrink-0 text-text-muted">
+          {t('store.provider.loading')}
+        </Badge>
       </div>
-      <Badge variant="outline" className="shrink-0 text-text-muted">
-        Loading...
-      </Badge>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {Array.from({ length: 3 }, (_, index) => (
+          <span
+            key={index}
+            className="h-7 w-28 animate-pulse rounded-md border border-border bg-surface"
+          />
+        ))}
+      </div>
     </div>
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      {Array.from({ length: 3 }, (_, index) => (
-        <span
-          key={index}
-          className="h-7 w-28 animate-pulse rounded-md border border-border bg-surface"
-        />
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 function isProviderCapabilityCardLoading(
   provider: CliProviderStatus,
@@ -112,6 +116,7 @@ function isCodexSnapshotPending(
 }
 
 export const ExtensionStoreView = (): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const isElectron = useMemo(() => isElectronMode(), []);
   const tabId = useTabIdOptional();
   const {
@@ -222,34 +227,30 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     () => [
       {
         value: 'plugins' as const,
-        label: 'Plugins',
+        label: t('store.tabs.plugins.label'),
         icon: Puzzle,
-        description:
-          'Small add-ons for the runtime. In multimodel mode they currently apply to Anthropic sessions when supported. Broader provider support is in development.',
+        description: t('store.tabs.plugins.description'),
       },
       {
         value: 'mcp-servers' as const,
-        label: 'MCP Servers',
+        label: t('store.tabs.mcpServers.label'),
         icon: Server,
-        description:
-          'Connections to outside tools and apps. They let the runtime read data or do actions beyond this app.',
+        description: t('store.tabs.mcpServers.description'),
       },
       {
         value: 'skills' as const,
-        label: 'Skills',
+        label: t('store.tabs.skills.label'),
         icon: BookOpen,
-        description:
-          'Ready-made instructions for common jobs. They help the runtime handle repeatable tasks more consistently.',
+        description: t('store.tabs.skills.description'),
       },
       {
         value: 'api-keys' as const,
-        label: 'API Keys',
+        label: t('store.tabs.apiKeys.label'),
         icon: Key,
-        description:
-          'Secret keys for online services. Add them here so plugins, servers, and integrations can connect and work.',
+        description: t('store.tabs.apiKeys.description'),
       },
     ],
-    []
+    [t]
   );
 
   // Fetch plugin catalog on mount
@@ -258,12 +259,21 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   }, [fetchPluginCatalog, projectPath]);
 
   useEffect(() => {
+    const cliStatusMatchesCurrentMode =
+      cliStatus &&
+      (multimodelEnabled
+        ? cliStatus.flavor === 'agent_teams_orchestrator'
+        : cliStatus.flavor !== 'agent_teams_orchestrator');
+    if (cliStatusLoading || cliStatusMatchesCurrentMode) {
+      return;
+    }
     void refreshCliStatusForCurrentMode({
       multimodelEnabled,
+      providerStatusMode: 'defer',
       bootstrapCliStatus,
       fetchCliStatus,
     });
-  }, [bootstrapCliStatus, fetchCliStatus, multimodelEnabled]);
+  }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled]);
 
   // Fetch MCP installed state on mount
   useEffect(() => {
@@ -334,11 +344,10 @@ export const ExtensionStoreView = (): React.JSX.Element => {
           <Info className="mt-0.5 size-4 shrink-0 text-text-secondary" />
           <div>
             <p className="text-sm font-medium text-text">
-              Checking extensions runtime availability
+              {t('store.runtime.checkingAvailabilityTitle')}
             </p>
             <p className="mt-0.5 text-xs text-text-muted">
-              Extensions need the configured runtime to manage plugins, MCP servers, skills, and
-              provider connections.
+              {t('store.runtime.checkingAvailabilityDescription')}
             </p>
           </div>
         </div>
@@ -355,13 +364,13 @@ export const ExtensionStoreView = (): React.JSX.Element => {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-amber-300">
               {cliLaunchIssue
-                ? 'The configured runtime was found but failed to start'
-                : 'The configured runtime is not available'}
+                ? t('store.runtime.failedToStartTitle')
+                : t('store.runtime.notAvailableTitle')}
             </p>
             <p className="mt-0.5 text-xs text-text-muted">
               {cliLaunchIssue
-                ? 'Extensions are disabled until the runtime passes its startup health check. Open the Dashboard to repair or reinstall it.'
-                : 'Extensions are disabled until the runtime is installed. Open the Dashboard to install it and retry.'}
+                ? t('store.runtime.failedToStartDescription')
+                : t('store.runtime.notAvailableDescription')}
             </p>
             {cliLaunchIssue && effectiveCliStatus.launchError && (
               <p className="mt-2 break-all font-mono text-[11px] text-text-muted">
@@ -370,7 +379,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
             )}
           </div>
           <Button size="sm" variant="outline" onClick={openDashboard}>
-            Open Dashboard
+            {t('store.actions.openDashboard')}
           </Button>
         </div>
       );
@@ -381,17 +390,20 @@ export const ExtensionStoreView = (): React.JSX.Element => {
         <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-amber-300">{runtimeDisplayName} needs sign-in</p>
+            <p className="text-sm font-medium text-amber-300">
+              {t('store.runtime.needsSignInTitle', { runtime: runtimeDisplayName })}
+            </p>
             <p className="mt-0.5 text-xs text-text-muted">
-              {runtimeDisplayName} was found
-              {effectiveCliStatus.installedVersion
-                ? ` (${effectiveCliStatus.installedVersion})`
-                : ''}
-              , but plugin installs are disabled until you sign in from the Dashboard.
+              {t('store.runtime.needsSignInDescription', {
+                runtime: runtimeDisplayName,
+                version: effectiveCliStatus.installedVersion
+                  ? ` (${effectiveCliStatus.installedVersion})`
+                  : '',
+              })}
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={openDashboard}>
-            Open Dashboard
+            {t('store.actions.openDashboard')}
           </Button>
         </div>
       );
@@ -403,10 +415,11 @@ export const ExtensionStoreView = (): React.JSX.Element => {
           <div className="flex items-start gap-3">
             <Info className="mt-0.5 size-4 shrink-0 text-text-secondary" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-text">Multimodel runtime capabilities</p>
+              <p className="text-sm font-medium text-text">
+                {t('store.runtime.multimodelCapabilitiesTitle')}
+              </p>
               <p className="mt-0.5 text-xs text-text-muted">
-                Provider support can differ by section. Plugins are shown only where the runtime
-                explicitly declares support.
+                {t('store.runtime.multimodelCapabilitiesDescription')}
               </p>
             </div>
           </div>
@@ -435,8 +448,11 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                 const statusLabel = provider.authenticated
                   ? 'Connected'
                   : provider.supported
-                    ? 'Needs setup'
-                    : 'Unsupported';
+                    ? t('store.provider.needsSetup')
+                    : t('store.provider.unsupported');
+                const finalStatusLabel = provider.authenticated
+                  ? t('store.provider.connected')
+                  : statusLabel;
                 const extensionCapabilities = getCliProviderExtensionCapabilities(provider);
                 const pluginStatus = extensionCapabilities.plugins.status;
 
@@ -457,11 +473,11 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                         <p className="truncate text-[11px] text-text-muted">
                           {provider.statusMessage ??
                             provider.backend?.label ??
-                            'Ready to configure'}
+                            t('store.provider.readyToConfigure')}
                         </p>
                       </div>
                       <Badge variant="outline" className="shrink-0">
-                        {statusLabel}
+                        {finalStatusLabel}
                       </Badge>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
@@ -473,13 +489,21 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                             : undefined
                         }
                       >
-                        Plugins: {formatCliExtensionCapabilityStatus(pluginStatus)}
+                        {t('store.capabilities.plugins', {
+                          status: formatCliExtensionCapabilityStatus(pluginStatus),
+                        })}
                       </Badge>
                       <Badge variant="secondary">
-                        MCP: {formatCliExtensionCapabilityStatus(extensionCapabilities.mcp.status)}
+                        {t('store.capabilities.mcp', {
+                          status: formatCliExtensionCapabilityStatus(
+                            extensionCapabilities.mcp.status
+                          ),
+                        })}
                       </Badge>
                       <Badge variant="secondary">
-                        Skills: {extensionCapabilities.skills.ownership}
+                        {t('store.capabilities.skills', {
+                          status: extensionCapabilities.skills.ownership,
+                        })}
                       </Badge>
                     </div>
                   </div>
@@ -495,13 +519,16 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
         <Info className="mt-0.5 size-4 shrink-0 text-emerald-300" />
         <div>
-          <p className="text-sm font-medium text-emerald-300">{runtimeDisplayName} is ready</p>
+          <p className="text-sm font-medium text-emerald-300">
+            {t('store.runtime.readyTitle', { runtime: runtimeDisplayName })}
+          </p>
           <p className="mt-0.5 text-xs text-text-muted">
-            Plugins can be installed from this page
-            {effectiveCliStatus.installedVersion
-              ? ` using ${runtimeDisplayName} ${effectiveCliStatus.installedVersion}`
-              : ''}
-            .
+            {t('store.runtime.readyDescription', {
+              runtime: runtimeDisplayName,
+              versionSuffix: effectiveCliStatus.installedVersion
+                ? ` using ${runtimeDisplayName} ${effectiveCliStatus.installedVersion}`
+                : '',
+            })}
           </p>
         </div>
       </div>
@@ -512,6 +539,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     effectiveCliStatus,
     effectiveCliStatusLoading,
     openDashboard,
+    runtimeDisplayName,
+    t,
   ]);
 
   // Browser mode guard
@@ -520,8 +549,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
           <Puzzle className="mx-auto mb-3 size-12 text-text-muted" />
-          <h2 className="text-lg font-semibold text-text">Extensions</h2>
-          <p className="mt-1 text-sm text-text-muted">Available in the desktop app only.</p>
+          <h2 className="text-lg font-semibold text-text">{t('store.title')}</h2>
+          <p className="mt-1 text-sm text-text-muted">{t('store.desktopOnly')}</p>
         </div>
       </div>
     );
@@ -536,7 +565,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
               <Puzzle className="size-5 text-text-muted" />
-              <h1 className="text-lg font-semibold text-text">Extensions</h1>
+              <h1 className="text-lg font-semibold text-text">{t('store.title')}</h1>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -544,7 +573,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                   <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Refresh catalog</TooltipContent>
+              <TooltipContent>{t('store.actions.refreshCatalog')}</TooltipContent>
             </Tooltip>
           </div>
 
@@ -554,15 +583,14 @@ export const ExtensionStoreView = (): React.JSX.Element => {
             {!cliInstalled && (
               <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-400">
                 <AlertTriangle className="size-4 shrink-0" />
-                The configured runtime is required to install or uninstall extensions. Install or
-                repair it from the Dashboard.
+                {t('store.runtime.requiredForMutations')}
               </div>
             )}
             {/* Active sessions warning */}
             {hasOngoingSessions && (
               <div className="mb-4 flex items-center gap-2 rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-blue-400">
                 <Info className="size-4 shrink-0" />
-                Running sessions won&apos;t pick up extension changes until restarted.
+                {t('store.sessionsRestartWarning')}
               </div>
             )}
             <Tabs
@@ -586,7 +614,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                 {tabState.activeSubTab === 'mcp-servers' && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span tabIndex={mcpMutationDisableReason ? 0 : -1}>
+                      <span>
                         <Button
                           variant="outline"
                           size="sm"
@@ -595,7 +623,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                           disabled={Boolean(mcpMutationDisableReason)}
                         >
                           <Plus className="mr-1 size-3.5" />
-                          Add Custom
+                          {t('store.actions.addCustom')}
                         </Button>
                       </span>
                     </TooltipTrigger>

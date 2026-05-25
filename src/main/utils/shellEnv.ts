@@ -27,18 +27,32 @@ let lastShellEnvFailureMessage: string | null = null;
 export interface ShellEnvResolveProgress {
   phase: string;
   message: string;
+  source?: string;
 }
 
 export interface ShellEnvResolveOptions {
   onProgress?: (progress: ShellEnvResolveProgress) => void;
+  /**
+   * Stable diagnostic label for the caller that initiated the shell probe.
+   * Keep this to a short feature/service id, not a filesystem path.
+   */
+  source?: string;
 }
 
 export interface ShellEnvBestEffortResolveOptions extends ShellEnvResolveOptions {
   /**
    * Max time to wait on the critical path before returning fallbackEnv.
-   * The full shell resolve continues in the background and caches on success.
+   * By default, the full shell resolve continues in the background and caches
+   * on success. Set background=false for hot paths that only want cached env
+   * or an immediate fallback.
    */
   timeoutMs?: number;
+  /**
+   * Whether a slow shell probe should continue in the background after the
+   * caller falls back. Disable this for startup/status hot paths where a
+   * delayed hard timeout would only create log noise and process pressure.
+   */
+  background?: boolean;
   /**
    * Returned when shell env is not ready quickly enough. This is intentionally
    * not cached as a real shell env.
@@ -51,7 +65,21 @@ function emitProgress(
   phase: string,
   message: string
 ): void {
-  options?.onProgress?.({ phase, message });
+  const source = normalizeShellEnvSource(options?.source);
+  options?.onProgress?.(source ? { phase, message, source } : { phase, message });
+}
+
+function normalizeShellEnvSource(source: string | undefined): string | null {
+  const trimmed = source?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 80);
+}
+
+function formatShellEnvSource(options: ShellEnvResolveOptions | undefined): string {
+  const source = normalizeShellEnvSource(options?.source);
+  return source ? ` source=${source}` : '';
 }
 
 function rememberShellEnvFailure(message: string): void {
@@ -177,7 +205,6 @@ export async function resolveInteractiveShellEnv(
       return loginEnv;
     } catch (loginError) {
       const loginMessage = loginError instanceof Error ? loginError.message : String(loginError);
-      logger.warn(`Failed to resolve login shell env: ${loginMessage}`);
       try {
         emitProgress(options, 'shell-env-interactive', 'Trying interactive shell environment...');
         const interactiveEnv = await readShellEnv(shellPath, ['-ic', 'env -0']);
@@ -187,7 +214,11 @@ export async function resolveInteractiveShellEnv(
       } catch (interactiveError) {
         const interactiveMessage =
           interactiveError instanceof Error ? interactiveError.message : String(interactiveError);
-        logger.warn(`Failed to resolve interactive shell env: ${interactiveMessage}`);
+        logger.warn(
+          `Failed to resolve shell env after login and interactive probes${formatShellEnvSource(
+            options
+          )}: login=${loginMessage}; interactive=${interactiveMessage}`
+        );
         rememberShellEnvFailure(interactiveMessage);
         emitProgress(options, 'shell-env-fallback', 'Using current process environment...');
         return {};
@@ -222,6 +253,10 @@ export async function resolveInteractiveShellEnvBestEffort(
   const fallbackEnv = options.fallbackEnv ?? {};
   const timeoutMs = Math.max(0, options.timeoutMs ?? SHELL_ENV_BEST_EFFORT_TIMEOUT_MS);
   const startedAt = Date.now();
+  if (options.background === false) {
+    emitProgress(options, 'shell-env-best-effort-fallback', 'Using fallback shell environment...');
+    return fallbackEnv;
+  }
   if (!shellEnvResolvePromise && startedAt < shellEnvFailureCooldownUntil) {
     const retryInMs = Math.max(0, shellEnvFailureCooldownUntil - startedAt);
     emitProgress(

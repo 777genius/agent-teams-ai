@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ExternalLink, Square, Terminal } from 'lucide-react';
 
@@ -76,6 +77,7 @@ export const ProcessesSection = memo(function ProcessesSection({
   members,
   processes,
 }: ProcessesSectionProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
   if (!teamName || processes.length === 0) return null;
 
   const memberColorMap = new Map(members.map((m) => [m.name, m.color]));
@@ -92,8 +94,10 @@ export const ProcessesSection = memo(function ProcessesSection({
       {sorted.map((proc) => {
         const alive = !proc.stoppedAt;
         const timeStr = alive
-          ? `${formatShortTime(new Date(proc.registeredAt))} ago`
-          : `stopped ${formatShortTime(new Date(proc.stoppedAt!))} ago`;
+          ? t('processes.ago', { time: formatShortTime(new Date(proc.registeredAt)) })
+          : t('processes.stoppedAgo', {
+              time: formatShortTime(new Date(proc.stoppedAt!)),
+            });
 
         return (
           <div
@@ -103,7 +107,7 @@ export const ProcessesSection = memo(function ProcessesSection({
             {/* Status indicator */}
             <span
               className="relative inline-flex size-2 shrink-0"
-              title={alive ? 'Running' : 'Stopped'}
+              title={alive ? t('processes.running') : t('processes.stopped')}
             >
               {alive && (
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
@@ -146,10 +150,10 @@ export const ProcessesSection = memo(function ProcessesSection({
                   type="button"
                   className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/10"
                   onClick={() => void window.electronAPI.teams.killProcess(teamName, proc.pid)}
-                  title="Stop process (SIGTERM)"
+                  title={t('processes.stopProcess')}
                 >
                   <Square size={8} className="fill-current" />
-                  Kill
+                  {t('processes.kill')}
                 </button>
               )}
               {alive && proc.url && (
@@ -157,13 +161,15 @@ export const ProcessesSection = memo(function ProcessesSection({
                   type="button"
                   className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-blue-400 transition-colors hover:bg-blue-500/10"
                   onClick={() => void window.electronAPI.openExternal(proc.url!)}
-                  title="Open in browser"
+                  title={t('processes.openInBrowser')}
                 >
                   <ExternalLink size={10} />
-                  Open
+                  {t('processes.open')}
                 </button>
               )}
-              <span className="font-mono text-[var(--color-text-muted)]">PID{proc.pid}</span>
+              <span className="font-mono text-[var(--color-text-muted)]">
+                {t('processes.pid', { pid: proc.pid })}
+              </span>
               {proc.registeredBy && (
                 <MemberBadge
                   name={proc.registeredBy}

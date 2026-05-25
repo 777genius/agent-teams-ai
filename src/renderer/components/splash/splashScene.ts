@@ -71,6 +71,7 @@ const TEAM_MEMBER_COUNTS = [4, 3, 5] as const;
 const TEAM_MEMBER_OFFSETS = [0, 4, 7] as const;
 const TEAM_LABELS = ['Marketing', 'Researchers', 'Coding'] as const;
 const MAX_DPR = 2;
+const SPLASH_SCENE_FRAME_INTERVAL_MS = 1000 / 30;
 const avatarCache = new Map<string, HTMLImageElement>();
 const avatarLoading = new Map<string, Promise<HTMLImageElement | null>>();
 
@@ -112,6 +113,7 @@ export function startSplashScene(
     particles: [] as DepthParticle[],
     running: true,
     frameId: 0,
+    lastRenderedAt: 0,
     startedAt: performance.now(),
   };
 
@@ -139,9 +141,16 @@ export function startSplashScene(
   const render = (now: number): void => {
     if (!state.running) return;
 
-    resize();
-    const time = (now - state.startedAt) / 1000;
-    drawScene(ctx, state.width, state.height, time, state.particles, reducedMotion);
+    if (
+      reducedMotion ||
+      state.lastRenderedAt === 0 ||
+      now - state.lastRenderedAt >= SPLASH_SCENE_FRAME_INTERVAL_MS
+    ) {
+      resize();
+      const time = (now - state.startedAt) / 1000;
+      drawScene(ctx, state.width, state.height, time, state.particles, reducedMotion);
+      state.lastRenderedAt = now;
+    }
 
     if (!reducedMotion) {
       state.frameId = window.requestAnimationFrame(render);

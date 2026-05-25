@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
@@ -25,6 +26,7 @@ export const EditorImagePreview = ({
   fileName,
   size,
 }: EditorImagePreviewProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const projectPath = useStore((s) => s.editorProjectPath);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export const EditorImagePreview = ({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-text-muted">
         <Loader2 className="size-8 animate-spin opacity-40" />
-        <p className="text-xs">Loading preview…</p>
+        <p className="text-xs">{t('editor.imagePreview.loading')}</p>
       </div>
     );
   }
@@ -102,7 +104,7 @@ export const EditorImagePreview = ({
         type="button"
         className="checkerboard-bg flex max-h-[60vh] max-w-[80%] cursor-zoom-in items-center justify-center overflow-hidden rounded-lg border border-border-subtle p-1"
         onClick={() => setLightboxOpen(true)}
-        aria-label="Open full-size preview"
+        aria-label={t('editor.imagePreview.openFullSize')}
       >
         <img
           ref={imgRef}
@@ -122,7 +124,7 @@ export const EditorImagePreview = ({
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={handleOpenExternal}>
-          Open in System Viewer
+          {t('editor.imagePreview.openSystemViewer')}
         </Button>
       </div>
 

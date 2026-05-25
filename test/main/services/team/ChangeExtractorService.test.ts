@@ -20,7 +20,12 @@ const SUMMARY_OPTIONS = {
   summaryOnly: true,
 };
 
-function buildAssistantWriteEntry(toolUseId: string, filePath: string, content: string, timestamp: string) {
+function buildAssistantWriteEntry(
+  toolUseId: string,
+  filePath: string,
+  content: string,
+  timestamp: string
+) {
   return {
     timestamp,
     type: 'assistant',
@@ -39,7 +44,11 @@ function buildAssistantWriteEntry(toolUseId: string, filePath: string, content: 
 }
 
 async function writeJsonl(filePath: string, entries: object[]): Promise<void> {
-  await fs.writeFile(filePath, entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n', 'utf8');
+  await fs.writeFile(
+    filePath,
+    entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n',
+    'utf8'
+  );
 }
 
 async function writeTaskFile(
@@ -57,7 +66,9 @@ async function writeTaskFile(
         status: 'completed',
         createdAt: '2026-03-01T09:55:00.000Z',
         updatedAt: '2026-03-01T10:10:00.000Z',
-        workIntervals: [{ startedAt: '2026-03-01T10:00:00.000Z', completedAt: '2026-03-01T10:10:00.000Z' }],
+        workIntervals: [
+          { startedAt: '2026-03-01T10:00:00.000Z', completedAt: '2026-03-01T10:10:00.000Z' },
+        ],
         historyEvents: [],
         ...overrides,
       },
@@ -268,7 +279,12 @@ async function writeOpenCodeLedgerEventJournal(
 }
 
 function persistedEntryPath(baseDir: string): string {
-  return path.join(baseDir, 'task-change-summaries', encodeURIComponent(TEAM_NAME), `${TASK_ID}.json`);
+  return path.join(
+    baseDir,
+    'task-change-summaries',
+    encodeURIComponent(TEAM_NAME),
+    `${TASK_ID}.json`
+  );
 }
 
 function deferred<T>() {
@@ -347,12 +363,11 @@ function makeTaskChangeResult(
       endTimestamp: overrides.scope?.endTimestamp ?? '',
       toolUseIds: overrides.scope?.toolUseIds ?? [],
       filePaths: overrides.scope?.filePaths ?? files.map((file) => file.filePath),
-      confidence:
-        overrides.scope?.confidence ?? {
-          tier: confidenceTierByLabel[confidence],
-          label: confidence,
-          reason: 'test fixture',
-        },
+      confidence: overrides.scope?.confidence ?? {
+        tier: confidenceTierByLabel[confidence],
+        label: confidence,
+        reason: 'test fixture',
+      },
     },
     warnings: overrides.warning ? [overrides.warning] : [],
   };
@@ -367,14 +382,20 @@ function pendingTaskChangeResult(): Promise<ReturnType<typeof makeTaskChangeResu
 function createService(params: {
   logPaths: string[];
   projectPath?: string;
-  findLogFileRefsForTask?: (teamName: string, taskId: string, options?: unknown) => Promise<unknown[]>;
+  findLogFileRefsForTask?: (
+    teamName: string,
+    taskId: string,
+    options?: unknown
+  ) => Promise<unknown[]>;
   taskChangePresenceRepository?: {
     upsertEntry: ReturnType<typeof vi.fn>;
     deleteEntry?: ReturnType<typeof vi.fn>;
   };
   teamLogSourceTracker?: {
     ensureTracking: ReturnType<
-      typeof vi.fn<() => Promise<{ projectFingerprint: string | null; logSourceGeneration: string | null }>>
+      typeof vi.fn<
+        () => Promise<{ projectFingerprint: string | null; logSourceGeneration: string | null }>
+      >
     >;
   };
   taskChangeWorkerClient?: {
@@ -588,15 +609,24 @@ describe('ChangeExtractorService', () => {
 
     const aliceLogPath = path.join(tmpDir, 'alice.jsonl');
     await writeJsonl(aliceLogPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
-    const findLogFileRefsForTask = vi.fn(async (_teamName: string, _taskId: string, options?: any) =>
-      options?.owner === 'alice' ? [{ filePath: aliceLogPath, memberName: 'alice' }] : []
+    const findLogFileRefsForTask = vi.fn(
+      async (_teamName: string, _taskId: string, options?: any) =>
+        options?.owner === 'alice' ? [{ filePath: aliceLogPath, memberName: 'alice' }] : []
     );
     const service = createService({ logPaths: [aliceLogPath], findLogFileRefsForTask }).service;
 
-    const empty = await service.getTaskChanges(TEAM_NAME, TASK_ID, { owner: 'bob', status: 'completed' });
+    const empty = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'bob',
+      status: 'completed',
+    });
     const populated = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
       owner: 'alice',
       status: 'completed',
@@ -613,7 +643,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-summary.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const { service, findLogFileRefsForTask } = createService({ logPaths: [logPath] });
@@ -641,7 +676,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-restart.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const first = createService({ logPaths: [logPath] });
@@ -657,6 +697,41 @@ describe('ChangeExtractorService', () => {
     expect((second.findLogFileRefsForTask as any).mock.calls.length).toBeLessThanOrEqual(1);
   });
 
+  it('persists terminal summary signatures with task metadata status when request status is stale', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const logPath = path.join(tmpDir, 'alice-stale-status.jsonl');
+    await writeJsonl(logPath, [
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
+    ]);
+
+    const first = createService({ logPaths: [logPath] });
+    const initial = await first.service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'in_progress',
+      stateBucket: 'active',
+    });
+    const persisted = JSON.parse(await fs.readFile(persistedEntryPath(tmpDir), 'utf8')) as {
+      taskSignature: string;
+    };
+    const taskSignature = JSON.parse(persisted.taskSignature) as { status: string };
+
+    const second = createService({ logPaths: [logPath] });
+    const restored = await second.service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(taskSignature.status).toBe('completed');
+    expect(initial.files).toHaveLength(1);
+    expect(restored.files).toHaveLength(1);
+    expect((second.findLogFileRefsForTask as any).mock.calls.length).toBeLessThanOrEqual(1);
+  });
+
   it('forceFresh overwrites the persisted terminal summary snapshot', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
     setClaudeBasePathOverride(tmpDir);
@@ -664,15 +739,30 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-refresh.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const { service } = createService({ logPaths: [logPath] });
     await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
 
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 2;\n', '2026-03-01T10:00:00.000Z'),
-      buildAssistantWriteEntry('tool-2', '/repo/src/extra.ts', 'export const extra = true;\n', '2026-03-01T10:02:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 2;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
+      buildAssistantWriteEntry(
+        'tool-2',
+        '/repo/src/extra.ts',
+        'export const extra = true;\n',
+        '2026-03-01T10:02:00.000Z'
+      ),
     ]);
 
     const refreshed = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
@@ -696,7 +786,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-review.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const { service } = createService({ logPaths: [logPath] });
@@ -729,7 +824,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-project-drift.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     await createService({ logPaths: [logPath], projectPath: '/repo-a' }).service.getTaskChanges(
@@ -738,11 +838,7 @@ describe('ChangeExtractorService', () => {
       SUMMARY_OPTIONS
     );
     const drifted = createService({ logPaths: [logPath], projectPath: '/repo-b' });
-    await drifted.service.getTaskChanges(
-      TEAM_NAME,
-      TASK_ID,
-      SUMMARY_OPTIONS
-    );
+    await drifted.service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
 
     expect((drifted.findLogFileRefsForTask as any).mock.calls.length).toBeGreaterThan(1);
   });
@@ -754,12 +850,25 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-missing-task.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
-    await createService({ logPaths: [logPath] }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    await createService({ logPaths: [logPath] }).service.getTaskChanges(
+      TEAM_NAME,
+      TASK_ID,
+      SUMMARY_OPTIONS
+    );
     await fs.unlink(taskPath);
-    await createService({ logPaths: [logPath] }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    await createService({ logPaths: [logPath] }).service.getTaskChanges(
+      TEAM_NAME,
+      TASK_ID,
+      SUMMARY_OPTIONS
+    );
 
     await expect(fs.stat(persistedEntryPath(tmpDir))).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -771,10 +880,19 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-corrupt.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
-    await createService({ logPaths: [logPath] }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    await createService({ logPaths: [logPath] }).service.getTaskChanges(
+      TEAM_NAME,
+      TASK_ID,
+      SUMMARY_OPTIONS
+    );
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     await fs.writeFile(persistedEntryPath(tmpDir), '{bad-json', 'utf8');
 
@@ -794,7 +912,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-fallback.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const service = new ChangeExtractorService(
@@ -833,10 +956,20 @@ describe('ChangeExtractorService', () => {
     const firstLogPath = path.join(tmpDir, 'first.jsonl');
     const secondLogPath = path.join(tmpDir, 'second.jsonl');
     await writeJsonl(firstLogPath, [
-      buildAssistantWriteEntry('tool-1', 'C:\\repo\\src\\same.ts', 'first\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        'C:\\repo\\src\\same.ts',
+        'first\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
     await writeJsonl(secondLogPath, [
-      buildAssistantWriteEntry('tool-2', 'C:/repo/src/same.ts', 'second\n', '2026-03-01T10:01:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-2',
+        'C:/repo/src/same.ts',
+        'second\n',
+        '2026-03-01T10:01:00.000Z'
+      ),
     ]);
 
     const service = createService({
@@ -886,7 +1019,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-inline-unavailable.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const computeTaskChanges = vi.fn();
@@ -916,7 +1054,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-inline-worker-error.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const computeTaskChanges = vi.fn(async () => {
@@ -947,7 +1090,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-worker-summary-cache.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const computeTaskChanges = vi.fn(async () => makeTaskChangeResult());
@@ -972,7 +1120,12 @@ describe('ChangeExtractorService', () => {
 
     const logPath = path.join(tmpDir, 'alice-worker-persisted.jsonl');
     await writeJsonl(logPath, [
-      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
     ]);
 
     const firstWorker = {
@@ -1249,7 +1402,9 @@ describe('ChangeExtractorService', () => {
     }));
     const workerClient = {
       isAvailable: vi.fn(() => true),
-      computeTaskChanges: vi.fn(async () => makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })
+      ),
     };
     const { service } = createService({
       logPaths: [],
@@ -1263,6 +1418,245 @@ describe('ChangeExtractorService', () => {
     expect(result.files).toHaveLength(0);
     expect(result.confidence === 'high' || result.confidence === 'medium').toBe(false);
     expect(upsertEntry).not.toHaveBeenCalled();
+  });
+
+  it('clears stale presence entries for active uncertain empty task diff results', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, {
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-03-01T10:00:00.000Z' }],
+    });
+
+    const upsertEntry = vi.fn(() => Promise.resolve(undefined));
+    const deleteEntry = vi.fn(() => Promise.resolve(undefined));
+    const ensureTracking = vi.fn(() =>
+      Promise.resolve({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      })
+    );
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(() =>
+        Promise.resolve(makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' }))
+      ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry, deleteEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'in_progress',
+      stateBucket: 'active',
+    });
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual([]);
+    expect(upsertEntry).not.toHaveBeenCalled();
+    expect(deleteEntry).toHaveBeenCalledWith(TEAM_NAME, TASK_ID);
+  });
+
+  it('clears stale presence entries for newly created pending tasks without logs', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, {
+      status: 'pending',
+      workIntervals: [],
+    });
+
+    const upsertEntry = vi.fn(() => Promise.resolve(undefined));
+    const deleteEntry = vi.fn(() => Promise.resolve(undefined));
+    const ensureTracking = vi.fn(() =>
+      Promise.resolve({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      })
+    );
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(() =>
+        Promise.resolve(makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' }))
+      ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry, deleteEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'completed',
+      stateBucket: 'completed',
+    });
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual([]);
+    expect(upsertEntry).not.toHaveBeenCalled();
+    expect(deleteEntry).toHaveBeenCalledWith(TEAM_NAME, TASK_ID);
+  });
+
+  it('clears stale presence for pending related logs that have no task boundaries or file edits yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, {
+      status: 'pending',
+      workIntervals: [],
+    });
+
+    const logPath = path.join(tmpDir, 'lead-pending.jsonl');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'user',
+        message: {
+          role: 'user',
+          content: `Task ${TASK_ID} was created and is waiting to start.`,
+        },
+      },
+    ]);
+
+    const upsertEntry = vi.fn(() => Promise.resolve(undefined));
+    const deleteEntry = vi.fn(() => Promise.resolve(undefined));
+    const ensureTracking = vi.fn(() =>
+      Promise.resolve({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      })
+    );
+    const { service } = createService({
+      logPaths: [logPath],
+      taskChangePresenceRepository: { upsertEntry, deleteEntry },
+      teamLogSourceTracker: { ensureTracking },
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'completed',
+      stateBucket: 'completed',
+    });
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual([]);
+    expect(upsertEntry).not.toHaveBeenCalled();
+    expect(deleteEntry).toHaveBeenCalledWith(TEAM_NAME, TASK_ID);
+  });
+
+  it('passes task metadata status to task diff workers when request status is stale', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { status: 'completed', reviewState: 'none' });
+
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(() =>
+        Promise.resolve(makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' }))
+      ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangeWorkerClient: workerClient,
+    });
+
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'in_progress',
+      stateBucket: 'completed',
+    });
+
+    expect(workerClient.computeTaskChanges).toHaveBeenCalledTimes(1);
+    const workerCalls = workerClient.computeTaskChanges.mock.calls as unknown as Array<[unknown]>;
+    expect(workerCalls[0]?.[0]).toMatchObject({
+      effectiveOptions: { status: 'completed' },
+    });
+  });
+
+  it('keeps stale presence entries for completed uncertain empty task diff results even when request status is stale', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, { status: 'completed', reviewState: 'none' });
+
+    const upsertEntry = vi.fn(() => Promise.resolve(undefined));
+    const deleteEntry = vi.fn(() => Promise.resolve(undefined));
+    const ensureTracking = vi.fn(() =>
+      Promise.resolve({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      })
+    );
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(() =>
+        Promise.resolve(makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' }))
+      ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry, deleteEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'in_progress',
+      stateBucket: 'completed',
+    });
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual([]);
+    expect(upsertEntry).not.toHaveBeenCalled();
+    expect(deleteEntry).not.toHaveBeenCalled();
+  });
+
+  it('falls back inline before recording presence for malformed worker task diff results', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir, {
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-03-01T10:00:00.000Z' }],
+    });
+
+    const upsertEntry = vi.fn(() => Promise.resolve(undefined));
+    const deleteEntry = vi.fn(() => Promise.resolve(undefined));
+    const ensureTracking = vi.fn(() =>
+      Promise.resolve({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      })
+    );
+    const malformedResult = {
+      ...makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' }),
+      files: undefined,
+      warnings: undefined,
+    } as unknown as ReturnType<typeof makeTaskChangeResult>;
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(() => Promise.resolve(malformedResult)),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry, deleteEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      ...SUMMARY_OPTIONS,
+      status: 'in_progress',
+      stateBucket: 'active',
+    });
+
+    expect(result.files).toEqual([]);
+    expect(upsertEntry).not.toHaveBeenCalled();
+    expect(deleteEntry).toHaveBeenCalledWith(TEAM_NAME, TASK_ID);
   });
 
   it('runs OpenCode recovery when a ledger result only contains warning notices', async () => {

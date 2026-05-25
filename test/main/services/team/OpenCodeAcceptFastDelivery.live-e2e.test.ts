@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createOpenCodePromptDeliveryLedgerStore } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
@@ -15,11 +14,12 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+
 import {
   createOpenCodeLiveHarness,
+  type OpenCodeLiveHarness,
   waitForOpenCodeLanesStopped,
   waitForOpenCodeMemberIdle,
-  type OpenCodeLiveHarness,
 } from './openCodeLiveTestHarness';
 
 import type { ClaudeMultimodelBridgeService } from '../../../../src/main/services/runtime/ClaudeMultimodelBridgeService';
@@ -31,7 +31,7 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli';
+const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_MODEL = 'opencode/big-pickle';
 
 liveDescribe('OpenCode accept-fast delivery live e2e', () => {
@@ -78,7 +78,7 @@ liveDescribe('OpenCode accept-fast delivery live e2e', () => {
     } else {
       await fs.rm(tempDir, { recursive: true, force: true });
     }
-  });
+  }, 90_000);
 
   it(
     'returns after prompt acceptance and later projects exact-session task logs',

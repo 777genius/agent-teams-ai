@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Combobox } from '@renderer/components/ui/combobox';
 import { Input } from '@renderer/components/ui/input';
 import { CUSTOM_ROLE, FORBIDDEN_ROLES, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
@@ -42,15 +43,6 @@ interface RoleSelectProps {
   disabled?: boolean;
 }
 
-const roleOptions: ComboboxOption[] = [
-  { value: NO_ROLE, label: 'No role' },
-  ...PRESET_ROLES.map((role) => ({
-    value: role,
-    label: role,
-  })),
-  { value: CUSTOM_ROLE, label: 'Custom role...' },
-];
-
 // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
 const renderRoleOption = (option: ComboboxOption, isSelected: boolean): React.ReactNode => {
   const Icon =
@@ -85,6 +77,18 @@ export const RoleSelect = ({
   onCustomRoleValidate,
   disabled,
 }: RoleSelectProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const roleOptions = useMemo<ComboboxOption[]>(
+    () => [
+      { value: NO_ROLE, label: t('roleSelect.noRole') },
+      ...PRESET_ROLES.map((role) => ({
+        value: role,
+        label: role,
+      })),
+      { value: CUSTOM_ROLE, label: t('roleSelect.customRole') },
+    ],
+    [t]
+  );
   const [internalError, setInternalError] = useState<string | null>(null);
   const error = externalError ?? internalError;
 
@@ -106,12 +110,12 @@ export const RoleSelect = ({
       if (onCustomRoleValidate) {
         setInternalError(onCustomRoleValidate(val));
       } else if (FORBIDDEN_ROLES.has(val.trim().toLowerCase())) {
-        setInternalError('This role is reserved');
+        setInternalError(t('roleSelect.reservedRole'));
       } else {
         setInternalError(null);
       }
     },
-    [onCustomRoleChange, onCustomRoleValidate]
+    [onCustomRoleChange, onCustomRoleValidate, t]
   );
 
   const selectedLabel = useMemo(() => {
@@ -119,23 +123,20 @@ export const RoleSelect = ({
     return opt?.label;
   }, [value]);
 
-  const renderTriggerLabel = useCallback(
-    (option: ComboboxOption) => {
-      const Icon =
-        option.value === CUSTOM_ROLE
-          ? CUSTOM_ICON
-          : option.value === NO_ROLE
-            ? null
-            : (ROLE_ICONS[option.value] ?? null);
-      return (
-        <span className="flex items-center gap-1.5">
-          {Icon ? <Icon className="size-3 text-[var(--color-text-muted)]" /> : null}
-          {option.label}
-        </span>
-      );
-    },
-    []
-  );
+  const renderTriggerLabel = useCallback((option: ComboboxOption) => {
+    const Icon =
+      option.value === CUSTOM_ROLE
+        ? CUSTOM_ICON
+        : option.value === NO_ROLE
+          ? null
+          : (ROLE_ICONS[option.value] ?? null);
+    return (
+      <span className="flex items-center gap-1.5">
+        {Icon ? <Icon className="size-3 text-[var(--color-text-muted)]" /> : null}
+        {option.label}
+      </span>
+    );
+  }, []);
 
   return (
     <div className="space-y-1">
@@ -143,9 +144,9 @@ export const RoleSelect = ({
         options={roleOptions}
         value={value}
         onValueChange={handleValueChange}
-        placeholder={selectedLabel ?? 'No role'}
-        searchPlaceholder="Search roles..."
-        emptyMessage="No roles found."
+        placeholder={selectedLabel ?? t('roleSelect.noRole')}
+        searchPlaceholder={t('roleSelect.searchPlaceholder')}
+        emptyMessage={t('roleSelect.empty')}
         disabled={disabled}
         className={triggerClassName}
         renderOption={renderRoleOption}
@@ -157,7 +158,7 @@ export const RoleSelect = ({
             className={inputClassName ?? 'h-8 text-xs'}
             value={customRole}
             onChange={handleCustomChange}
-            placeholder="Enter custom role..."
+            placeholder={t('members.roleSelect.customRolePlaceholder')}
             autoFocus
           />
           {error ? <span className="mt-0.5 block text-[10px] text-red-400">{error}</span> : null}

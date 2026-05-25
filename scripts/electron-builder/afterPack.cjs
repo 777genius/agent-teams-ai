@@ -92,9 +92,7 @@ function shouldKeepNodePtyPrebuild(entryName, platform, archLabel) {
 
   if (platform === 'darwin' && archLabel === 'universal') {
     return (
-      entryName === 'darwin-universal' ||
-      entryName === 'darwin-arm64' ||
-      entryName === 'darwin-x64'
+      entryName === 'darwin-universal' || entryName === 'darwin-arm64' || entryName === 'darwin-x64'
     );
   }
 
@@ -154,9 +152,83 @@ async function pruneNodePtyArtifacts(appOutDir, platform, archLabel) {
         removedPaths.push(absolutePath);
       }
     }
+
+    const hasTargetPrebuild = await hasNodePtyTargetPrebuild(nodePtyRoot, platform, archLabel);
+    if (!hasTargetPrebuild) {
+      continue;
+    }
+
+    for (const buildName of ['Release', 'Debug']) {
+      const buildDir = path.join(nodePtyRoot, 'build', buildName);
+      if (!(await directoryExists(buildDir))) {
+        continue;
+      }
+
+      if (await containsIncompatibleNativeBinary(buildDir, platform, archLabel)) {
+        await fs.promises.rm(buildDir, { recursive: true, force: true });
+        removedPaths.push(buildDir);
+      }
+    }
   }
 
   return removedPaths;
+}
+
+async function directoryExists(dirPath) {
+  try {
+    const stat = await fs.promises.stat(dirPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function hasNodePtyTargetPrebuild(nodePtyRoot, platform, archLabel) {
+  const prebuildsDir = path.join(nodePtyRoot, 'prebuilds');
+  let entries;
+  try {
+    entries = await fs.promises.readdir(prebuildsDir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !shouldKeepNodePtyPrebuild(entry.name, platform, archLabel)) {
+      continue;
+    }
+
+    const ptyNativePath = path.join(prebuildsDir, entry.name, 'pty.node');
+    if (await fileExists(ptyNativePath)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function fileExists(filePath) {
+  try {
+    const stat = await fs.promises.stat(filePath);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function containsIncompatibleNativeBinary(rootDir, targetPlatform, targetArch) {
+  const files = await walkFiles(rootDir);
+  for (const filePath of files) {
+    const metadata = await detectBinaryMetadata(filePath);
+    if (!metadata) {
+      continue;
+    }
+
+    if (!isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function findNodeModulesSequence(segments, sequence) {
@@ -332,12 +404,7 @@ function parseElf(buffer) {
   if (buffer.length < 20) {
     return null;
   }
-  if (
-    buffer[0] !== 0x7f ||
-    buffer[1] !== 0x45 ||
-    buffer[2] !== 0x4c ||
-    buffer[3] !== 0x46
-  ) {
+  if (buffer[0] !== 0x7f || buffer[1] !== 0x45 || buffer[2] !== 0x4c || buffer[3] !== 0x46) {
     return null;
   }
 
@@ -454,11 +521,7 @@ async function afterPack(context) {
 
   const removedPaths = [
     ...(await pruneNodePtyArtifacts(context.appOutDir, targetPlatform, targetArch)),
-    ...(await pruneKnownIncompatibleNativeArtifacts(
-      context.appOutDir,
-      targetPlatform,
-      targetArch
-    )),
+    ...(await pruneKnownIncompatibleNativeArtifacts(context.appOutDir, targetPlatform, targetArch)),
   ];
   const mismatches = await validateNativeBinaries(context.appOutDir, targetPlatform, targetArch);
 

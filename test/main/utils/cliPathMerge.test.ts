@@ -93,7 +93,7 @@ describe('buildMergedCliPath', () => {
     expect(parts[parts.length - 1]).toBe('/usr/bin');
   });
 
-  it('when shell cache has PATH, uses that instead of static fallback dirs', () => {
+  it('when shell cache has PATH, keeps it first and still adds static fallback dirs', () => {
     Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
     mockGetCachedShellEnv.mockReturnValue({ PATH: '/opt/custom/bin:/bin' });
     const p = buildMergedCliPath(null);
@@ -101,8 +101,9 @@ describe('buildMergedCliPath', () => {
     expect(p).toContain('/bin');
     expect(p).toContain('/home/testuser/.claude/local/node_modules/.bin');
     expect(p).toContain('/home/testuser/.bun/bin');
+    expect(p).toContain('/home/testuser/.local/bin');
+    expect(p).toContain('/usr/local/bin');
     expect(p).toContain('/usr/bin');
-    expect(p).not.toContain('/home/testuser/.local/bin');
   });
 
   it('prepends binary directory when binaryPath is set', () => {

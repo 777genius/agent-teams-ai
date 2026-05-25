@@ -3,14 +3,14 @@
  * Provides Fullscreen button that opens the overlay.
  */
 
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
-import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
 import { useGraphMessagesPanel } from '../hooks/useGraphMessagesPanel';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
+import { useGraphSurfaceInteractions } from '../hooks/useGraphSurfaceInteractions';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
 
@@ -26,10 +26,6 @@ import type {
   GraphEventPort,
   TransientHandoffCard,
 } from '@claude-teams/agent-graph';
-import type {
-  MemberActivityFilter,
-  MemberDetailTab,
-} from '@renderer/components/team/members/memberDetailTypes';
 
 const TeamGraphOverlay = lazy(() =>
   import('./TeamGraphOverlay').then((m) => ({ default: m.TeamGraphOverlay }))
@@ -39,11 +35,6 @@ export interface TeamGraphTabProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
-}
-
-interface OpenProfileOptions {
-  initialTab?: MemberDetailTab;
-  initialActivityFilter?: MemberActivityFilter;
 }
 
 export const TeamGraphTab = ({
@@ -59,86 +50,34 @@ export const TeamGraphTab = ({
     null
   );
   const { sidebarVisible, toggleSidebarVisible } = useGraphSidebarVisibility();
-  const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
-
-  // Typed event dispatchers (DRY — used in both events + renderOverlay)
-  const dispatchOpenTask = useCallback(
-    (taskId: string) =>
-      window.dispatchEvent(new CustomEvent('graph:open-task', { detail: { teamName, taskId } })),
-    [teamName]
-  );
-  const dispatchSendMessage = useCallback(
-    (memberName: string) =>
-      window.dispatchEvent(
-        new CustomEvent('graph:send-message', { detail: { teamName, memberName } })
-      ),
-    [teamName]
-  );
-  const dispatchOpenProfile = useCallback(
-    (memberName: string, options?: OpenProfileOptions) =>
-      window.dispatchEvent(
-        new CustomEvent('graph:open-profile', {
-          detail: { teamName, memberName, ...options },
-        })
-      ),
-    [teamName]
-  );
+  const interactions = useGraphSurfaceInteractions(teamName);
   const openCreateTask = useCallback(() => {
-    openCreateTaskDialog('');
-  }, [openCreateTaskDialog]);
-  // Task action dispatchers
-  const dispatchTaskAction = useCallback(
-    (action: string) => (taskId: string) =>
-      window.dispatchEvent(new CustomEvent(`graph:${action}`, { detail: { teamName, taskId } })),
-    [teamName]
-  );
-  const dispatchStartTask = useMemo(() => dispatchTaskAction('start-task'), [dispatchTaskAction]);
-  const dispatchCompleteTask = useMemo(
-    () => dispatchTaskAction('complete-task'),
-    [dispatchTaskAction]
-  );
-  const dispatchApproveTask = useMemo(
-    () => dispatchTaskAction('approve-task'),
-    [dispatchTaskAction]
-  );
-  const dispatchRequestReview = useMemo(
-    () => dispatchTaskAction('request-review'),
-    [dispatchTaskAction]
-  );
-  const dispatchRequestChanges = useMemo(
-    () => dispatchTaskAction('request-changes'),
-    [dispatchTaskAction]
-  );
-  const dispatchCancelTask = useMemo(() => dispatchTaskAction('cancel-task'), [dispatchTaskAction]);
-  const dispatchMoveBackToDone = useMemo(
-    () => dispatchTaskAction('move-back-to-done'),
-    [dispatchTaskAction]
-  );
-  const dispatchDeleteTask = useMemo(() => dispatchTaskAction('delete-task'), [dispatchTaskAction]);
+    interactions.openCreateTask('');
+  }, [interactions]);
 
   const events: GraphEventPort = {
     onNodeDoubleClick: useCallback(
       (ref: GraphDomainRef) => {
-        if (ref.kind === 'task') dispatchOpenTask(ref.taskId);
-        else if (ref.kind === 'member') dispatchOpenProfile(ref.memberName);
+        if (ref.kind === 'task') interactions.openTaskDetail(ref.taskId);
+        else if (ref.kind === 'member') interactions.openMemberProfile(ref.memberName);
       },
-      [dispatchOpenTask, dispatchOpenProfile]
+      [interactions]
     ),
-    onSendMessage: dispatchSendMessage,
-    onOpenTaskDetail: dispatchOpenTask,
+    onSendMessage: interactions.openSendMessage,
+    onOpenTaskDetail: interactions.openTaskDetail,
     onOpenMemberProfile: useCallback(
       (memberName: string) => {
-        dispatchOpenProfile(memberName);
+        interactions.openMemberProfile(memberName);
       },
-      [dispatchOpenProfile]
+      [interactions]
     ),
   };
   const graphMessagesPanel = useGraphMessagesPanel({
     teamName,
     enabled: isActive && isPaneFocused && !fullscreen,
     mountPoint: messagesPanelMountPoint,
-    onOpenMemberProfile: dispatchOpenProfile,
-    onOpenTaskDetail: dispatchOpenTask,
+    onOpenMemberProfile: interactions.openMemberProfile,
+    onOpenTaskDetail: interactions.openTaskDetail,
   });
 
   return (
@@ -224,8 +163,9 @@ export const TeamGraphTab = ({
                   getViewportSize={getViewportSize}
                   focusNodeIds={focusNodeIds}
                   enabled={isActive && (filters?.showActivity ?? true)}
-                  onOpenTaskDetail={dispatchOpenTask}
-                  onOpenMemberProfile={dispatchOpenProfile}
+                  showConnectors={filters?.showEdges ?? false}
+                  onOpenTaskDetail={interactions.openTaskDetail}
+                  onOpenMemberProfile={interactions.openMemberProfile}
                 />
                 <GraphMemberLogPreviewHud
                   teamName={teamName}
@@ -236,7 +176,7 @@ export const TeamGraphTab = ({
                   getViewportSize={getViewportSize}
                   focusNodeIds={focusNodeIds}
                   enabled={isActive && (filters?.showLogs ?? true)}
-                  onOpenMemberProfile={dispatchOpenProfile}
+                  onOpenMemberProfile={interactions.openMemberProfile}
                 />
               </>
             );
@@ -249,7 +189,7 @@ export const TeamGraphTab = ({
               targetNode={targetNode}
               onClose={onClose}
               onSelectNode={onSelectNode}
-              onOpenTaskDetail={dispatchOpenTask}
+              onOpenTaskDetail={interactions.openTaskDetail}
             />
           )}
           renderOverlay={({ node, onClose }) => (
@@ -257,18 +197,19 @@ export const TeamGraphTab = ({
               node={node}
               teamName={teamName}
               onClose={onClose}
-              onSendMessage={dispatchSendMessage}
-              onOpenTaskDetail={dispatchOpenTask}
-              onOpenMemberProfile={dispatchOpenProfile}
-              onCreateTask={openCreateTaskDialog}
-              onStartTask={dispatchStartTask}
-              onCompleteTask={dispatchCompleteTask}
-              onApproveTask={dispatchApproveTask}
-              onRequestReview={dispatchRequestReview}
-              onRequestChanges={dispatchRequestChanges}
-              onCancelTask={dispatchCancelTask}
-              onMoveBackToDone={dispatchMoveBackToDone}
-              onDeleteTask={dispatchDeleteTask}
+              onSendMessage={interactions.openSendMessage}
+              onOpenTaskDetail={interactions.openTaskDetail}
+              onOpenMemberProfile={interactions.openMemberProfile}
+              onCreateTask={interactions.openCreateTask}
+              onStartTask={interactions.onStartTask}
+              onCompleteTask={interactions.onCompleteTask}
+              onApproveTask={interactions.onApproveTask}
+              onRequestReview={interactions.onRequestReview}
+              onRequestChanges={interactions.onRequestChanges}
+              onCancelTask={interactions.onCancelTask}
+              onMoveBackToDone={interactions.onMoveBackToDone}
+              onViewChanges={interactions.openTaskChanges}
+              onDeleteTask={interactions.onDeleteTask}
             />
           )}
         />
@@ -280,7 +221,7 @@ export const TeamGraphTab = ({
         />
       ) : null}
       {graphMessagesPanel}
-      {createTaskDialog}
+      {interactions.dialogs}
       {fullscreen && (
         <Suspense fallback={null}>
           <TeamGraphOverlay
@@ -288,9 +229,6 @@ export const TeamGraphTab = ({
             onClose={() => setFullscreen(false)}
             sidebarVisible={sidebarVisible}
             onToggleSidebar={toggleSidebarVisible}
-            onSendMessage={dispatchSendMessage}
-            onOpenTaskDetail={dispatchOpenTask}
-            onOpenMemberProfile={dispatchOpenProfile}
             messagesPanelEnabled={isActive && isPaneFocused}
           />
         </Suspense>

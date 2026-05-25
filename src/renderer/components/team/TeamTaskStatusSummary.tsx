@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { CheckCircle, Clock, Play } from 'lucide-react';
 
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
@@ -31,6 +32,7 @@ export const TeamTaskStatusSummary = ({
   iconSize = 10,
   countersClassName = 'flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-[var(--color-text-muted)]',
 }: Readonly<TeamTaskStatusSummaryProps>): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const normalized = normalizeCounts(counts);
   const totalTasks = getTaskStatusTotal(normalized);
   const completedRatio = totalTasks > 0 ? normalized.completed / totalTasks : 0;
@@ -49,7 +51,10 @@ export const TeamTaskStatusSummary = ({
             aria-valuenow={normalized.completed}
             aria-valuemin={0}
             aria-valuemax={totalTasks}
-            aria-label={`Tasks ${normalized.completed}/${totalTasks} completed`}
+            aria-label={t('tasks.statusSummary.progressAria', {
+              completed: normalized.completed,
+              total: totalTasks,
+            })}
           >
             <div
               className="h-full rounded-full bg-emerald-500 transition-all duration-200"
@@ -66,19 +71,19 @@ export const TeamTaskStatusSummary = ({
           {normalized.inProgress > 0 && (
             <span className="inline-flex items-center gap-1">
               <Play size={iconSize} className="shrink-0 text-blue-400" />
-              {normalized.inProgress} in_progress
+              {t('tasks.statusSummary.inProgress', { count: normalized.inProgress })}
             </span>
           )}
           {normalized.pending > 0 && (
             <span className="inline-flex items-center gap-1">
               <Clock size={iconSize} className="shrink-0 text-amber-400" />
-              {normalized.pending} pending
+              {t('tasks.statusSummary.pending', { count: normalized.pending })}
             </span>
           )}
           {normalized.completed > 0 && (
             <span className="inline-flex items-center gap-1">
               <CheckCircle size={iconSize} className="shrink-0 text-emerald-400" />
-              {normalized.completed} completed
+              {t('tasks.statusSummary.completed', { count: normalized.completed })}
             </span>
           )}
         </div>

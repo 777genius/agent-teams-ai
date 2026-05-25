@@ -1,11 +1,10 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 import { TeamTaskActivityIntervalService } from '../../../../src/main/services/team/TeamTaskActivityIntervalService';
+import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 let tempDir = '';
 
@@ -463,6 +462,50 @@ describe('TeamTaskActivityIntervalService', () => {
         completedAt: '2026-05-08T10:08:00.000Z',
       },
       { reviewer: 'bob', startedAt: '2026-05-08T10:20:00.000Z' },
+    ]);
+  });
+
+  it('reopens and closes lead work intervals across activity changes', async () => {
+    await writeTask('alpha', {
+      id: 'lead-task',
+      subject: 'Lead follow-up',
+      owner: 'team-lead',
+      status: 'in_progress',
+      workIntervals: [
+        { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+      ],
+      historyEvents: [
+        {
+          id: 'event-created-active',
+          type: 'task_created',
+          status: 'in_progress',
+          timestamp: '2026-05-08T10:00:00.000Z',
+          actor: 'team-lead',
+        },
+      ],
+    });
+
+    const service = new TeamTaskActivityIntervalService();
+    const resumeResult = service.resumeActiveIntervalsForMember(
+      'alpha',
+      'team-lead',
+      '2026-05-08T10:20:00.000Z'
+    );
+    expect(resumeResult.changedTasks).toBe(1);
+    expect((await readTask('alpha', 'lead-task')).workIntervals).toEqual([
+      { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+      { startedAt: '2026-05-08T10:20:00.000Z' },
+    ]);
+
+    const pauseResult = service.pauseActiveIntervalsForMember(
+      'alpha',
+      'team-lead',
+      '2026-05-08T10:25:00.000Z'
+    );
+    expect(pauseResult.changedTasks).toBe(1);
+    expect((await readTask('alpha', 'lead-task')).workIntervals).toEqual([
+      { startedAt: '2026-05-08T10:00:00.000Z', completedAt: '2026-05-08T10:05:00.000Z' },
+      { startedAt: '2026-05-08T10:20:00.000Z', completedAt: '2026-05-08T10:25:00.000Z' },
     ]);
   });
 

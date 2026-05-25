@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { decideMemberWorkSyncNudgeActivation } from '@features/member-work-sync/core/application';
+import { describe, expect, it } from 'vitest';
 
 import type {
   MemberWorkSyncStatus,
@@ -152,10 +151,21 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
   });
 
-  it('keeps non-OpenCode providers behind phase2 readiness while collecting', () => {
+  it('activates native inbox-watch nudges while shadow data is still collecting', () => {
+    for (const providerId of ['anthropic', 'codex', 'gemini'] as const) {
+      expect(
+        decideMemberWorkSyncNudgeActivation({
+          status: status({ providerId }),
+          metrics: metrics(),
+        })
+      ).toEqual({ active: true, reason: 'native_targeted_shadow_collecting' });
+    }
+  });
+
+  it('keeps unknown-provider teammates behind phase2 readiness while collecting', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
-        status: status({ providerId: 'anthropic' }),
+        status: status({ providerId: undefined }),
         metrics: metrics(),
       })
     ).toEqual({ active: false, reason: 'phase2_not_ready' });

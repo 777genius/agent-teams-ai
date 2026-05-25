@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { DisplayItemList } from '@renderer/components/chat/DisplayItemList';
 import { LastOutputDisplay } from '@renderer/components/chat/LastOutputDisplay';
 import { SystemChatGroup } from '@renderer/components/chat/SystemChatGroup';
@@ -34,6 +35,7 @@ export const MemberExecutionLog = ({
   teamName,
   hideMemberHeading,
 }: MemberExecutionLogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const conversation = useMemo(() => transformChunksToConversation(chunks, [], false), [chunks]);
 
   // Show newest groups first — most recent activity is most relevant in execution logs.
@@ -49,7 +51,7 @@ export const MemberExecutionLog = ({
   if (!orderedItems.length) {
     return (
       <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
-        Nothing to display
+        {t('members.executionLog.empty')}
       </div>
     );
   }
@@ -113,6 +115,7 @@ function splitAgentBlocks(raw: string): { humanText: string; agentInfo: string[]
 }
 
 const UserLogItem = ({ group }: { group: UserGroup }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const text = group.content.rawText ?? group.content.text ?? '';
   const { humanText, agentInfo } = useMemo(() => splitAgentBlocks(text), [text]);
   const [agentInfoOpen, setAgentInfoOpen] = useState(false);
@@ -120,7 +123,9 @@ const UserLogItem = ({ group }: { group: UserGroup }): React.JSX.Element => {
   if (!humanText && agentInfo.length === 0) {
     return (
       <div className="py-1 text-[10px] text-[var(--color-text-muted)]">
-        {format(group.timestamp, 'h:mm:ss a')} — (empty)
+        {t('members.executionLog.emptyUserMessage', {
+          time: format(group.timestamp, 'h:mm:ss a'),
+        })}
       </div>
     );
   }
@@ -147,7 +152,7 @@ const UserLogItem = ({ group }: { group: UserGroup }): React.JSX.Element => {
               className={`shrink-0 transition-transform ${agentInfoOpen ? 'rotate-90' : ''}`}
             />
             <Bot size={10} className="shrink-0" />
-            Agent instructions
+            {t('members.executionLog.agentInstructions')}
           </button>
           {agentInfoOpen && (
             <pre className="overflow-x-auto border-t border-[var(--color-border)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--color-text-muted)]">
@@ -183,6 +188,7 @@ const AIExecutionGroup = ({
   onToggleExpanded,
   onToggleItem,
 }: AIExecutionGroupProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const enhanced = useMemo(() => {
     if (!memberName) {
@@ -195,7 +201,9 @@ const AIExecutionGroup = ({
     return enhanceAIGroup({ ...group, processes: filteredProcesses });
   }, [group, memberName]);
   const normalizedMemberName = memberName?.trim();
-  const groupLabel = normalizedMemberName ? `${normalizedMemberName} turn` : 'Agent turn';
+  const groupLabel = normalizedMemberName
+    ? t('members.executionLog.memberTurn', { member: normalizedMemberName })
+    : t('members.executionLog.agentTurn');
   const hasToggleContent = enhanced.displayItems.length > 0;
   const visibleLastOutput =
     enhanced.lastOutput?.type === 'tool_result' && hasToggleContent ? null : enhanced.lastOutput;
@@ -225,12 +233,12 @@ const AIExecutionGroup = ({
                     disableHoverCard
                   />
                   <span className="shrink-0 text-xs font-semibold text-[var(--color-text-secondary)]">
-                    turn
+                    {t('members.executionLog.turn')}
                   </span>
                 </>
               ) : hideMemberHeading ? (
                 <span className="shrink-0 text-xs font-semibold text-[var(--color-text-secondary)]">
-                  turn
+                  {t('members.executionLog.turn')}
                 </span>
               ) : (
                 <>

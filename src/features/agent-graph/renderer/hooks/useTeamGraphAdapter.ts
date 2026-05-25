@@ -5,6 +5,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
+import { useTeamAgentRuntimeWatcher } from '@renderer/components/team/useTeamAgentRuntimeWatcher';
 import { getSnapshot, subscribe } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import {
@@ -73,6 +74,7 @@ export function useTeamGraphAdapter(
     members,
     messages,
     spawnStatuses,
+    runtimeSnapshot,
     leadActivity,
     leadContext,
     pendingApprovals,
@@ -93,6 +95,7 @@ export function useTeamGraphAdapter(
       members: isActive ? selectResolvedMembersForTeamName(s, teamName) : EMPTY_MEMBERS,
       messages: isActive ? selectTeamMessages(s, teamName) : EMPTY_MESSAGES,
       spawnStatuses: isActive && teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
+      runtimeSnapshot: isActive && teamName ? s.teamAgentRuntimeByTeam[teamName] : undefined,
       leadActivity: isActive && teamName ? s.leadActivityByTeam[teamName] : undefined,
       leadContext: isActive && teamName ? s.leadContextByTeam[teamName] : undefined,
       pendingApprovals: isActive ? s.pendingApprovals : EMPTY_PENDING_APPROVALS,
@@ -112,6 +115,11 @@ export function useTeamGraphAdapter(
       ensureTeamGraphSlotAssignments: s.ensureTeamGraphSlotAssignments,
     }))
   );
+
+  useTeamAgentRuntimeWatcher({
+    teamName,
+    enabled: isActive,
+  });
 
   const pendingApprovalAgents = useMemo(() => {
     if (!isActive) {
@@ -134,8 +142,9 @@ export function useTeamGraphAdapter(
       ...teamSnapshot,
       members,
       messageFeed: messages,
+      runtimeEntriesByMember: runtimeSnapshot?.members,
     };
-  }, [members, messages, teamSnapshot]);
+  }, [members, messages, runtimeSnapshot?.members, teamSnapshot]);
 
   const commentReadState = useSyncExternalStore(
     isActive ? subscribe : subscribeNoop,

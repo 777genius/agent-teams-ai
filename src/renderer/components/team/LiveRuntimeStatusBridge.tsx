@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { Activity } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -31,6 +32,7 @@ const LiveRuntimeStatusStoreBridge = memo(function LiveRuntimeStatusStoreBridge(
   teamName,
   members,
 }: LiveRuntimeStatusBridgeProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
   const { runtimeSnapshot, spawnStatuses } = useStore(
     useShallow((s) => ({
       runtimeSnapshot: s.teamAgentRuntimeByTeam[teamName],
@@ -56,7 +58,7 @@ const LiveRuntimeStatusStoreBridge = memo(function LiveRuntimeStatusStoreBridge(
   return (
     <CollapsibleTeamSection
       sectionId="live-runtime-status"
-      title="Live Runtime Status"
+      title={t('liveRuntimeStatus.title')}
       icon={<Activity size={14} />}
       badge={badge}
       defaultOpen={false}

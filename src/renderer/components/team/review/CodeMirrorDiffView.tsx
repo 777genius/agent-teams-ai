@@ -6,6 +6,7 @@ import { goToNextChunk, goToPreviousChunk, unifiedMergeView } from '@codemirror/
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   getAsyncLanguageDesc,
   getSyncLanguageExtension,
@@ -207,6 +208,7 @@ export const CodeMirrorDiffView = ({
   globalHunkOffset = 0,
   totalReviewHunks,
 }: CodeMirrorDiffViewProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -800,7 +802,7 @@ export const CodeMirrorDiffView = ({
             <button
               type="button"
               className="px-2 py-[3px] text-[13px] leading-5 text-text-secondary transition-colors hover:bg-[var(--diff-merge-nav-hover-bg)]"
-              title="Previous chunk"
+              title={t('review.diffControls.previousChunk')}
               onMouseDown={(e) => {
                 e.preventDefault();
                 moveBetweenChunks('prev');
@@ -815,7 +817,7 @@ export const CodeMirrorDiffView = ({
             <button
               type="button"
               className="px-2 py-[3px] text-[13px] leading-5 text-text-secondary transition-colors hover:bg-[var(--diff-merge-nav-hover-bg)]"
-              title="Next chunk"
+              title={t('review.diffControls.nextChunk')}
               onMouseDown={(e) => {
                 e.preventDefault();
                 moveBetweenChunks('next');
@@ -832,14 +834,16 @@ export const CodeMirrorDiffView = ({
               backgroundColor: 'var(--diff-merge-undo-bg)',
               border: '1px solid var(--diff-merge-undo-border)',
             }}
-            title="Reject change (⌘N)"
+            title={t('review.diffControls.rejectChange')}
             onMouseDown={(e) => {
               e.preventDefault();
               actOnActiveChunk('reject');
             }}
           >
-            {'Undo '}
-            <kbd className="ml-1 text-[10px] text-text-muted">{'\u2318N'}</kbd>
+            {t('review.diffControls.undo')}{' '}
+            <kbd className="ml-1 text-[10px] text-text-muted">
+              {t('review.diffControls.rejectShortcut')}
+            </kbd>
           </button>
           <button
             type="button"
@@ -849,14 +853,16 @@ export const CodeMirrorDiffView = ({
               backgroundColor: 'var(--diff-merge-keep-bg)',
               border: '1px solid var(--diff-merge-keep-border)',
             }}
-            title="Accept change (⌘Y)"
+            title={t('review.diffControls.acceptChange')}
             onMouseDown={(e) => {
               e.preventDefault();
               actOnActiveChunk('accept');
             }}
           >
-            {'Keep '}
-            <kbd className="ml-1 text-[10px] text-[var(--diff-merge-keep-kbd)]">{'\u2318Y'}</kbd>
+            {t('review.diffControls.keep')}{' '}
+            <kbd className="ml-1 text-[10px] text-[var(--diff-merge-keep-kbd)]">
+              {t('review.diffControls.acceptShortcut')}
+            </kbd>
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { ACTIVITY_LANE } from '@claude-teams/agent-graph';
+import { useAppTranslation } from '@features/localization/renderer';
 import { buildMessageContext } from '@renderer/components/team/activity/activityMessageContext';
 import { MessageExpandDialog } from '@renderer/components/team/activity/MessageExpandDialog';
 import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMeta';
@@ -29,6 +30,7 @@ const ACTIVITY_SHELL_HEIGHT =
   ACTIVITY_LANE.maxVisibleItems * ACTIVITY_LANE.rowHeight +
   ACTIVITY_LANE.overflowHeight;
 const NEW_ACTIVITY_HIGHLIGHT_MS = 1_000;
+const INTERACTIVE_ACTIVITY_CONTROL_CLASS = 'pointer-events-auto';
 
 interface GraphActivityHudProps {
   teamName: string;
@@ -47,6 +49,7 @@ interface GraphActivityHudProps {
   getViewportSize?: () => { width: number; height: number };
   focusNodeIds: ReadonlySet<string> | null;
   enabled?: boolean;
+  showConnectors?: boolean;
   onOpenTaskDetail?: (taskId: string) => void;
   onOpenMemberProfile?: (
     memberName: string,
@@ -71,9 +74,11 @@ export const GraphActivityHud = ({
   getViewportSize,
   focusNodeIds,
   enabled = true,
+  showConnectors = true,
   onOpenTaskDetail,
   onOpenMemberProfile,
 }: GraphActivityHudProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const worldLayerRef = useRef<HTMLDivElement | null>(null);
   const shellRefs = useRef(new Map<string, HTMLDivElement | null>());
   const connectorRefs = useRef(new Map<string, SVGSVGElement | null>());
@@ -86,8 +91,8 @@ export const GraphActivityHud = ({
   );
   const { teamData, teams } = useGraphActivityContext(teamName);
   const teamSnapshot = teamData;
-  const members = teamData?.members ?? [];
-  const messages = teamData?.messageFeed ?? [];
+  const members = useMemo(() => teamData?.members ?? [], [teamData?.members]);
+  const messages = useMemo(() => teamData?.messageFeed ?? [], [teamData?.messageFeed]);
 
   const ownerNodes = useMemo(
     () =>
@@ -133,11 +138,12 @@ export const GraphActivityHud = ({
   }, [teamName]);
 
   useEffect(() => {
+    const timers = highlightTimersRef.current;
     return () => {
-      for (const timer of highlightTimersRef.current.values()) {
+      for (const timer of timers.values()) {
         clearTimeout(timer);
       }
-      highlightTimersRef.current.clear();
+      timers.clear();
     };
   }, []);
 
@@ -456,7 +462,7 @@ export const GraphActivityHud = ({
           key={entry.graphItem.id}
           data-activity-entry-id={entry.graphItem.id}
           className={[
-            'h-[72px] min-h-[72px] min-w-0 max-w-full cursor-pointer overflow-hidden rounded-md border transition-[border-color,background-color,box-shadow] duration-500',
+            `${INTERACTIVE_ACTIVITY_CONTROL_CLASS} h-[72px] min-h-[72px] min-w-0 max-w-full cursor-pointer overflow-hidden rounded-md border transition-[border-color,background-color,box-shadow] duration-500`,
             isHighlighted
               ? 'border-sky-300/70 bg-[rgba(14,34,62,0.56)] shadow-[0_0_0_1px_rgba(125,211,252,0.30),0_0_18px_rgba(56,189,248,0.22)]'
               : 'border-transparent',
@@ -514,46 +520,46 @@ export const GraphActivityHud = ({
 
               return (
                 <>
-                  <svg
-                    ref={(element) => {
-                      connectorRefs.current.set(lane.node.id, element);
-                    }}
-                    className="pointer-events-none absolute z-[9] overflow-visible opacity-0"
-                  >
-                    <path
+                  {showConnectors ? (
+                    <svg
                       ref={(element) => {
-                        connectorPathRefs.current.set(lane.node.id, element);
+                        connectorRefs.current.set(lane.node.id, element);
                       }}
-                      d=""
-                      fill="none"
-                      stroke="rgba(148, 163, 184, 0.3)"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                      strokeDasharray="3 4"
-                    />
-                  </svg>
+                      data-activity-connector={lane.node.id}
+                      className="pointer-events-none absolute z-[9] overflow-visible opacity-0"
+                    >
+                      <path
+                        ref={(element) => {
+                          connectorPathRefs.current.set(lane.node.id, element);
+                        }}
+                        d=""
+                        fill="none"
+                        stroke="rgba(148, 163, 184, 0.3)"
+                        strokeWidth="1.25"
+                        strokeLinecap="round"
+                        strokeDasharray="3 4"
+                      />
+                    </svg>
+                  ) : null}
                   <div
                     ref={(element) => {
                       shellRefs.current.set(lane.node.id, element);
                     }}
-                    className="pointer-events-auto absolute z-10 origin-top-left select-none opacity-0"
+                    className="pointer-events-none absolute z-10 origin-top-left select-none opacity-0"
                     style={{
                       width: `${laneWidth}px`,
                       maxWidth: `${laneWidth}px`,
                       height: `${laneHeight}px`,
                     }}
-                    onDragStart={(event) => {
-                      event.preventDefault();
-                    }}
                   >
                     <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden">
                       <div className="mb-1 px-1 text-[10px] font-semibold tracking-[0.2em] text-slate-400/70">
-                        Activity
+                        {t('agentGraph.activityHud.activity')}
                       </div>
                       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                         {lane.entries.length === 0 && lane.overflowCount === 0 ? (
                           <div className="flex h-[72px] min-h-[72px] items-center rounded-md border border-dashed border-white/10 bg-[rgba(8,14,28,0.28)] px-3 text-[11px] text-slate-400/60">
-                            No recent activity
+                            {t('agentGraph.activityHud.noRecentActivity')}
                           </div>
                         ) : null}
                         {lane.entries.map(renderLaneEntry)}
@@ -561,10 +567,10 @@ export const GraphActivityHud = ({
                         {lane.overflowCount > 0 ? (
                           <button
                             type="button"
-                            className="h-8 min-h-8 w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]"
+                            className={`${INTERACTIVE_ACTIVITY_CONTROL_CLASS} h-8 min-h-8 w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]`}
                             onClick={() => handleOpenOwnerActivity(lane.node)}
                           >
-                            +{lane.overflowCount} more
+                            {t('agentGraph.activityHud.more', { count: lane.overflowCount })}
                           </button>
                         ) : null}
                       </div>

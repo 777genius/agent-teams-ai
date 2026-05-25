@@ -4,7 +4,7 @@ import { register } from 'swiper/element/bundle';
 import { mdiChevronLeft, mdiChevronRight, mdiClose, mdiArrowExpand } from '@mdi/js';
 import { screenshots as screenshotData } from '~/data/screenshots';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { baseURL } = useRuntimeConfig().app;
 
 register();
@@ -21,12 +21,14 @@ type SwiperContainerElement = HTMLElement & {
   swiper?: SwiperApi;
 };
 
-const screenshots = screenshotData.map((s) => ({
+const screenshots = computed(() => screenshotData.map((s) => ({
   src: publicPath(s.path),
-  alt: s.alt,
+  alt: locale.value === 'ru' ? (s.ruAlt ?? s.alt) : s.alt,
   width: s.width,
   height: s.height,
-}));
+})));
+const prevLabel = computed(() => locale.value === 'ru' ? 'Предыдущий' : 'Previous');
+const nextLabel = computed(() => locale.value === 'ru' ? 'Следующий' : 'Next');
 
 const swiperRef = ref<SwiperContainerElement | null>(null);
 const swiperReady = ref(false);
@@ -45,11 +47,11 @@ function closeLightbox() {
 }
 
 function lightboxPrev() {
-  lightboxIndex.value = (lightboxIndex.value - 1 + screenshots.length) % screenshots.length;
+  lightboxIndex.value = (lightboxIndex.value - 1 + screenshots.value.length) % screenshots.value.length;
 }
 
 function lightboxNext() {
-  lightboxIndex.value = (lightboxIndex.value + 1) % screenshots.length;
+  lightboxIndex.value = (lightboxIndex.value + 1) % screenshots.value.length;
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -182,14 +184,14 @@ function slideNext() {
       <!-- Nav buttons -->
       <button
         class="screenshots-section__nav screenshots-section__nav--prev"
-        aria-label="Previous"
+        :aria-label="prevLabel"
         @click="slidePrev"
       >
         <v-icon :icon="mdiChevronLeft" size="28" />
       </button>
       <button
         class="screenshots-section__nav screenshots-section__nav--next"
-        aria-label="Next"
+        :aria-label="nextLabel"
         @click="slideNext"
       >
         <v-icon :icon="mdiChevronRight" size="28" />
@@ -399,7 +401,10 @@ function slideNext() {
 }
 
 .screenshots-lightbox__nav {
-  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -417,12 +422,20 @@ function slideNext() {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.screenshots-lightbox__nav--prev {
+  left: clamp(16px, 4vw, 48px);
+}
+
+.screenshots-lightbox__nav--next {
+  right: clamp(16px, 4vw, 48px);
+}
+
 .screenshots-lightbox__content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  max-width: 90vw;
+  max-width: min(90vw, calc(100vw - 160px));
   max-height: 85vh;
 }
 
@@ -515,6 +528,10 @@ function slideNext() {
 
   .screenshots-lightbox__nav {
     display: none;
+  }
+
+  .screenshots-lightbox__content {
+    max-width: 96vw;
   }
 
   .screenshots-lightbox {

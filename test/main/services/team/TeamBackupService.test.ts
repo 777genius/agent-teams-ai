@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -316,12 +315,13 @@ describe('TeamBackupService', () => {
     }
   });
 
-  it('backs up member-scoped work sync files', async () => {
+  it('backs up member-scoped work sync status without copying the append-only journal', async () => {
     const service = new TeamBackupService();
     const teamName = 'member-work-sync-team';
     const teamDir = path.join(hoisted.teamsBase, teamName);
     const memberDir = path.join(teamDir, 'members', 'jack');
     const workSyncDir = path.join(memberDir, '.member-work-sync');
+    const runtimeWorkSyncDir = path.join(teamDir, '.opencode-runtime', '.member-work-sync');
     const status = {
       teamName,
       memberName: 'jack',
@@ -366,6 +366,23 @@ describe('TeamBackupService', () => {
       );
       await fs.writeFile(path.join(workSyncDir, '.tmp.deadbeef'), '{"partial":', 'utf8');
       await fs.writeFile(path.join(workSyncDir, 'journal.jsonl.lock'), '123\n', 'utf8');
+      await fs.mkdir(runtimeWorkSyncDir, { recursive: true });
+      await fs.writeFile(
+        path.join(runtimeWorkSyncDir, 'journal.jsonl'),
+        '{"runtime":true}\n',
+        'utf8'
+      );
+      const staleBackupJournalPath = path.join(
+        hoisted.backupsBase,
+        'teams',
+        teamName,
+        'members',
+        'jack',
+        '.member-work-sync',
+        'journal.jsonl'
+      );
+      await fs.mkdir(path.dirname(staleBackupJournalPath), { recursive: true });
+      await fs.writeFile(staleBackupJournalPath, '{"old":true}\n', 'utf8');
 
       await service.initialize();
       await service.backupTeam(teamName);
@@ -383,14 +400,46 @@ describe('TeamBackupService', () => {
         fs.readFile(path.join(backupMemberDir, '.member-work-sync', 'status.json'), 'utf8')
       ).resolves.toBe(JSON.stringify({ schemaVersion: 2, status }));
       await expect(
-        fs.readFile(path.join(backupMemberDir, '.member-work-sync', 'journal.jsonl'), 'utf8')
-      ).resolves.toContain('"event":"status_written"');
+        fs.stat(path.join(backupMemberDir, '.member-work-sync', 'journal.jsonl'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
       await expect(
         fs.stat(path.join(backupMemberDir, '.member-work-sync', '.tmp.deadbeef'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
       await expect(
         fs.stat(path.join(backupMemberDir, '.member-work-sync', 'journal.jsonl.lock'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(
+        fs.readFile(
+          path.join(
+            hoisted.backupsBase,
+            'teams',
+            teamName,
+            '.opencode-runtime',
+            '.member-work-sync',
+            'journal.jsonl'
+          ),
+          'utf8'
+        )
+      ).resolves.toBe('{"runtime":true}\n');
+
+      const manifest = JSON.parse(
+        await fs.readFile(
+          path.join(hoisted.backupsBase, 'teams', teamName, 'manifest.json'),
+          'utf8'
+        )
+      ) as { fileStats: Record<string, unknown> };
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          manifest.fileStats,
+          'members/jack/.member-work-sync/status.json'
+        )
+      ).toBe(true);
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          manifest.fileStats,
+          'members/jack/.member-work-sync/journal.jsonl'
+        )
+      ).toBe(false);
     } finally {
       service.dispose();
     }

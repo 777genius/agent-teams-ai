@@ -4,6 +4,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { GitBranch } from 'lucide-react';
@@ -20,6 +21,7 @@ export const EditorStatusBar = React.memo(function EditorStatusBar({
   col,
   language,
 }: EditorStatusBarProps): React.ReactElement {
+  const { t } = useAppTranslation('team');
   const { gitBranch, isGitRepo, watcherEnabled } = useStore(
     useShallow((s) => ({
       gitBranch: s.editorGitBranch,
@@ -32,9 +34,7 @@ export const EditorStatusBar = React.memo(function EditorStatusBar({
   return (
     <div className="flex h-6 shrink-0 items-center justify-between border-t border-border bg-surface-sidebar px-3 text-[11px] text-text-muted">
       <div className="flex items-center gap-4">
-        <span>
-          Ln {line}, Col {col}
-        </span>
+        <span>{t('editor.statusBar.position', { line, col })}</span>
         {isGitRepo && gitBranch && (
           <span className="flex items-center gap-1">
             <GitBranch className="size-3" />
@@ -53,19 +53,25 @@ export const EditorStatusBar = React.memo(function EditorStatusBar({
                   ? 'bg-green-500/15 text-green-400 hover:bg-green-500/20'
                   : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'
               }`}
-              aria-label={watcherEnabled ? 'Disable file watcher' : 'Enable file watcher'}
+              aria-label={
+                watcherEnabled
+                  ? t('editor.statusBar.disableWatcher')
+                  : t('editor.statusBar.enableWatcher')
+              }
               aria-pressed={watcherEnabled}
             >
-              {watcherEnabled ? 'watching' : 'watch'}
+              {watcherEnabled ? t('editor.statusBar.watching') : t('editor.statusBar.watch')}
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            {watcherEnabled ? 'Disable external change watcher' : 'Watch for external changes'}
+            {watcherEnabled
+              ? t('editor.statusBar.disableExternalWatcher')
+              : t('editor.statusBar.watchExternalChanges')}
           </TooltipContent>
         </Tooltip>
         <span>{language}</span>
-        <span>UTF-8</span>
-        <span>Spaces: 2</span>
+        <span>{t('editor.statusBar.encodingUtf8')}</span>
+        <span>{t('editor.statusBar.spaces', { count: 2 })}</span>
       </div>
     </div>
   );

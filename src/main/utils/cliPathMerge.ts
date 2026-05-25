@@ -37,11 +37,9 @@ export function buildMergedCliPath(binaryPath?: string | null): string {
   const cachedEnv = getCachedShellEnv();
   if (cachedEnv?.PATH) {
     extraDirs.push(...cachedEnv.PATH.split(sep).filter(Boolean));
-    extraDirs.push(vendorBinDir);
-    if (process.platform !== 'win32') {
-      extraDirs.push(pathPosix.join(home, '.bun', 'bin'));
-    }
-  } else if (process.platform === 'win32') {
+  }
+
+  if (process.platform === 'win32') {
     extraDirs.push(
       vendorBinDir,
       pathWin32.join(home, 'AppData', 'Roaming', 'npm'),

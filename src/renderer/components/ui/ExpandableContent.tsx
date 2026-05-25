@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const DEFAULT_COLLAPSED_HEIGHT = 200; // px
@@ -29,6 +30,7 @@ export const ExpandableContent = ({
   className,
   onExpand,
 }: ExpandableContentProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const anchorRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [needsTruncation, setNeedsTruncation] = useState(false);
@@ -84,7 +86,7 @@ export const ExpandableContent = ({
             }}
           >
             <ChevronDown size={12} />
-            Show more
+            {t('actions.showMore')}
           </button>
         </div>
       ) : null}
@@ -101,7 +103,7 @@ export const ExpandableContent = ({
             }}
           >
             <ChevronUp size={12} />
-            Show less
+            {t('actions.showLess')}
           </button>
         </div>
       ) : null}

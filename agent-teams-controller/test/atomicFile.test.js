@@ -19,9 +19,23 @@ function withMockedRenameSync(mockRenameSync, callback) {
 }
 
 describe('atomic file writes', () => {
+  const tempDirs = [];
+
+  function makeTempDir() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-atomic-'));
+    tempDirs.push(dir);
+    return dir;
+  }
+
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   ['EPERM', 'EACCES', 'EBUSY'].forEach((code) => {
     it(`retries transient ${code} rename failures before publishing JSON`, () => {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-atomic-'));
+      const dir = makeTempDir();
       const filePath = path.join(dir, 'state.json');
       let attempts = 0;
 
@@ -47,7 +61,7 @@ describe('atomic file writes', () => {
   });
 
   it('does not retry ENOENT rename failures and removes the temp file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-atomic-'));
+    const dir = makeTempDir();
     const filePath = path.join(dir, 'state.json');
     let attempts = 0;
 
@@ -69,7 +83,7 @@ describe('atomic file writes', () => {
   });
 
   it('removes the temp file after retryable rename failures are exhausted', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-atomic-'));
+    const dir = makeTempDir();
     const filePath = path.join(dir, 'state.json');
     let attempts = 0;
 

@@ -1,14 +1,16 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createInitialProviderChecks,
   deriveEffectiveProvisioningPrepareState,
   getPrimaryProvisioningFailureDetail,
+  getProvisioningFailureHint,
   getProvisioningProviderBackendSummary,
+  getProvisioningProviderProgressMessage,
   ProvisioningProviderStatusList,
-  createInitialProviderChecks,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('ProvisioningProviderStatusList', () => {
   afterEach(() => {
@@ -87,6 +89,7 @@ describe('ProvisioningProviderStatusList', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const onOpenProviderSettings = vi.fn();
 
     await act(async () => {
       root.render(
@@ -101,14 +104,200 @@ describe('ProvisioningProviderStatusList', () => {
               ],
             },
           ],
+          onOpenProviderSettings,
         })
       );
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode (OpenCode CLI): Needs attention');
+    expect(host.textContent).toContain('OpenCode (OpenCode CLI): OpenCode app MCP unreachable');
     expect(host.textContent).not.toContain('Selected model checks');
     expect(host.textContent).not.toContain('model unavailable');
+    expect(host.querySelector('button')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('gives a concrete hint for missing OpenCode runtime binary failures', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode runtime binary is not installed or not reachable by launch preflight.',
+          ],
+        },
+      ])
+    ).toBe(
+      'Install or retry OpenCode runtime from the provider status card, then reopen this dialog.'
+    );
+  });
+
+  it('gives a concrete hint for stale OpenCode app MCP bridge failures', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?',
+          ],
+        },
+      ])
+    ).toBe(
+      'Retry launch to refresh the OpenCode app MCP bridge. If it repeats, restart the app and OpenCode runtime.'
+    );
+  });
+
+  it('gives a concrete hint for OpenCode bridge no-output failures', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode readiness bridge failed: contract_violation: Bridge stdout was empty',
+          ],
+        },
+      ])
+    ).toBe(
+      'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
+    );
+  });
+
+  it('renders Copy diagnostics for OpenCode support diagnostics and copies the prepared payload', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'failed',
+              backendSummary: 'OpenCode CLI',
+              details: ['OpenCode runtime check returned no output.'],
+              supportDiagnostics: [
+                {
+                  id: 'diag-empty-stdout',
+                  providerId: 'opencode',
+                  kind: 'opencode_bridge_no_output',
+                  severity: 'error',
+                  title: 'OpenCode runtime check returned no output',
+                  summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
+                  copyText: 'Agent Teams OpenCode diagnostics\noutputReadError: ENOENT',
+                  createdAt: '2026-04-21T12:00:00.000Z',
+                },
+              ],
+            },
+            {
+              providerId: 'codex',
+              status: 'failed',
+              details: ['Codex failed'],
+              supportDiagnostics: [
+                {
+                  id: 'diag-codex',
+                  providerId: 'codex',
+                  kind: 'codex_debug',
+                  severity: 'error',
+                  title: 'Codex debug',
+                  summary: 'Codex debug summary',
+                  copyText: 'should not render',
+                  createdAt: '2026-04-21T12:00:00.000Z',
+                },
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): OpenCode runtime check returned no output'
+    );
+    expect(host.textContent).toContain('Copy diagnostics');
+    const buttons = Array.from(host.querySelectorAll('button'));
+    expect(buttons).toHaveLength(1);
+
+    await act(async () => {
+      buttons[0]?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith(
+      'Agent Teams OpenCode diagnostics\noutputReadError: ENOENT'
+    );
+    expect(host.textContent).toContain('Copied');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not show copied when the Clipboard API is unavailable', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'failed',
+              details: ['OpenCode runtime check returned no output.'],
+              supportDiagnostics: [
+                {
+                  id: 'diag-empty-stdout',
+                  providerId: 'opencode',
+                  kind: 'opencode_bridge_no_output',
+                  severity: 'error',
+                  title: 'OpenCode runtime check returned no output',
+                  summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
+                  copyText: 'Agent Teams OpenCode diagnostics',
+                  createdAt: '2026-04-21T12:00:00.000Z',
+                },
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const button = host.querySelector('button');
+    expect(button?.textContent).toContain('Copy diagnostics');
+
+    await act(async () => {
+      button?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Copy diagnostics');
+    expect(host.textContent).not.toContain('Copied');
 
     await act(async () => {
       root.unmount();
@@ -165,6 +354,58 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('offers provider settings for actionable Codex auth notes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onOpenProviderSettings = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'codex',
+              status: 'notes',
+              backendSummary: 'Codex native - auth required',
+              details: [
+                'Codex native requires OPENAI_API_KEY or CODEX_API_KEY, or a connected ChatGPT account. Add one before launching Codex.',
+                'Default - available for launch',
+                '5.5 - available for launch',
+              ],
+            },
+            {
+              providerId: 'anthropic',
+              status: 'notes',
+              details: ['Opus 4.6 - available for launch'],
+            },
+          ],
+          onOpenProviderSettings,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Open Codex settings');
+    const buttons = host.querySelectorAll('button');
+    expect(buttons).toHaveLength(1);
+    const button = buttons[0];
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      button?.click();
+      await Promise.resolve();
+    });
+
+    expect(onOpenProviderSettings).toHaveBeenCalledWith('codex');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('summarizes OpenCode advisory ping misses without failure wording', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -195,6 +436,80 @@ describe('ProvisioningProviderStatusList', () => {
 
     const detailLines = Array.from(host.querySelectorAll('p'));
     expect(detailLines[0]?.className).toContain('text-[var(--color-text-muted)]');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('hides internal OpenCode MCP proof cache markers from preflight details', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'ready',
+              backendSummary: 'OpenCode CLI',
+              details: ['opencode_app_mcp_tool_proof_persisted_cache_hit', 'big-pickle - verified'],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): Selected model checks - 1 verified'
+    );
+    expect(host.textContent).toContain('big-pickle - verified');
+    expect(host.textContent).not.toContain('opencode_app_mcp_tool_proof_persisted_cache_hit');
+
+    const detailLines = Array.from(host.querySelectorAll('p'));
+    expect(detailLines).toHaveLength(1);
+    expect(detailLines[0]?.textContent).toBe('big-pickle - verified');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('summarizes OpenCode busy model checks as deferred notes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'notes',
+              backendSummary: 'OpenCode CLI',
+              details: [
+                'qwen/qwen3-235b-a22b-thinking-2507 - verification deferred - OpenCode session is busy; retry when idle.',
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): Selected model checks - 1 verification deferred'
+    );
+    expect(host.textContent).not.toContain('model check failed');
+    expect(host.textContent).not.toContain('Needs attention');
 
     await act(async () => {
       root.unmount();
@@ -411,7 +726,7 @@ describe('ProvisioningProviderStatusList', () => {
       })
     ).toEqual({
       state: 'ready',
-      message: 'Selected providers are ready.',
+      message: 'All selected providers are ready.',
     });
   });
 
@@ -457,5 +772,17 @@ describe('ProvisioningProviderStatusList', () => {
       message:
         'Deep verification is still running. OpenCode free models may take around 20 seconds.',
     });
+  });
+
+  it('labels provider-scoped prepare refreshes without implying every provider restarted', () => {
+    expect(getProvisioningProviderProgressMessage(['opencode'], 3)).toBe(
+      'Checking OpenCode provider...'
+    );
+    expect(getProvisioningProviderProgressMessage(['anthropic', 'codex'], 3)).toBe(
+      'Checking Anthropic, Codex providers...'
+    );
+    expect(getProvisioningProviderProgressMessage(['anthropic', 'codex', 'opencode'], 3)).toBe(
+      'Checking selected providers in parallel...'
+    );
   });
 });

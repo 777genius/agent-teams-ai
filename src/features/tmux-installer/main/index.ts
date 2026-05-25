@@ -9,7 +9,7 @@ export {
   isTmuxRuntimeReadyForCurrentPlatform,
   killTmuxPaneForCurrentPlatform,
   killTmuxPaneForCurrentPlatformSync,
-  listRuntimeProcessesForCurrentTmuxPlatform,
+  listRuntimeProcessTableForCurrentPlatform,
   listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,

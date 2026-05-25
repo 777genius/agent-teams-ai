@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import appIcon from '@renderer/favicon.png';
 import { useStore } from '@renderer/store';
@@ -30,6 +31,7 @@ export const AdvancedSection = ({
   onImportConfig,
   onOpenInEditor,
 }: AdvancedSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('settings');
   const isElectron = useMemo(() => isElectronMode(), []);
   const [version, setVersion] = useState<string>('');
   const [configEditorOpen, setConfigEditorOpen] = useState(false);
@@ -68,14 +70,14 @@ export const AdvancedSection = ({
         return (
           <>
             <Loader2 className="size-3.5 animate-spin" />
-            Checking...
+            {t('advanced.updates.checking')}
           </>
         );
       case 'not-available':
         return (
           <>
             <CheckCircle className="size-3.5" />
-            Up to date
+            {t('advanced.updates.upToDate')}
           </>
         );
       case 'available':
@@ -84,15 +86,17 @@ export const AdvancedSection = ({
           <>
             <Download className="size-3.5" />
             {updateStatus === 'downloaded'
-              ? 'Update ready'
-              : `v${availableVersion ?? 'unknown'} available`}
+              ? t('advanced.updates.ready')
+              : t('advanced.updates.available', {
+                  version: availableVersion ?? t('advanced.updates.unknownVersion'),
+                })}
           </>
         );
       default:
         return (
           <>
             <RefreshCw className="size-3.5" />
-            Check for Updates
+            {t('advanced.updates.check')}
           </>
         );
     }
@@ -100,7 +104,7 @@ export const AdvancedSection = ({
 
   return (
     <div>
-      <SettingsSectionHeader title="Configuration" />
+      <SettingsSectionHeader title={t('advanced.configuration.title')} />
       <div className="flex flex-wrap gap-2 py-2">
         <button
           onClick={() => setConfigEditorOpen(true)}
@@ -111,7 +115,7 @@ export const AdvancedSection = ({
           }}
         >
           <FileEdit className="size-4" />
-          Edit Config
+          {t('advanced.configuration.editConfig')}
         </button>
         <button
           onClick={onResetToDefaults}
@@ -123,7 +127,7 @@ export const AdvancedSection = ({
           }}
         >
           <RefreshCw className="size-4" />
-          Reset to Defaults
+          {t('advanced.configuration.resetToDefaults')}
         </button>
         <button
           onClick={onExportConfig}
@@ -135,7 +139,7 @@ export const AdvancedSection = ({
           }}
         >
           <Download className="size-4" />
-          Export Config
+          {t('advanced.configuration.exportConfig')}
         </button>
         <button
           onClick={onImportConfig}
@@ -147,7 +151,7 @@ export const AdvancedSection = ({
           }}
         >
           <Upload className="size-4" />
-          Import Config
+          {t('advanced.configuration.importConfig')}
         </button>
         {isElectron && (
           <button
@@ -159,20 +163,20 @@ export const AdvancedSection = ({
             }}
           >
             <Code2 className="size-4" />
-            Open in Editor
+            {t('advanced.configuration.openInEditor')}
           </button>
         )}
       </div>
 
       <CliStatusSection />
 
-      <SettingsSectionHeader title="About" />
+      <SettingsSectionHeader title={t('advanced.about.title')} />
       <div className="flex items-start gap-4 py-3">
-        <img src={appIcon} alt="App Icon" className="size-10 rounded-lg" />
+        <img src={appIcon} alt={t('advanced.about.appIconAlt')} className="size-10 rounded-lg" />
         <div>
           <div className="flex items-center gap-3">
             <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-              Agent Teams UI
+              {t('advanced.appName')}
             </p>
             {isElectron && (
               <button
@@ -200,17 +204,15 @@ export const AdvancedSection = ({
                   color: 'var(--color-text-muted)',
                 }}
               >
-                Standalone
+                {t('advanced.about.standalone')}
               </span>
             )}
           </div>
           <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Version {version || '...'}
+            {t('advanced.about.version', { version: version || '...' })}
           </p>
           <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-            Assemble AI agent teams that work autonomously in parallel, communicate across teams,
-            and manage tasks on a kanban board — with built-in code review, live process monitoring,
-            and full tool visibility.
+            {t('advanced.about.description')}
           </p>
         </div>
       </div>

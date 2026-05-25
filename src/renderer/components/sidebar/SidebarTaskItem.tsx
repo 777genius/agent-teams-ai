@@ -1,9 +1,11 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
+import { cn } from '@renderer/lib/utils';
 import { clearTaskManualUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
@@ -21,24 +23,28 @@ import { useShallow } from 'zustand/react/shallow';
 import type { GlobalTask, TeamTaskStatus } from '@shared/types';
 import type { LucideIcon } from 'lucide-react';
 
-const statusConfig: Record<TeamTaskStatus, { icon: LucideIcon; color: string; label: string }> = {
-  pending: { icon: Circle, color: 'text-amber-400', label: 'pending' },
-  in_progress: { icon: Loader2, color: 'text-blue-400', label: 'in progress' },
-  completed: { icon: CheckCircle2, color: 'text-emerald-400', label: 'completed' },
-  deleted: { icon: Circle, color: 'text-zinc-500', label: 'deleted' },
+const statusConfig: Record<TeamTaskStatus, { icon: LucideIcon; color: string; key: string }> = {
+  pending: { icon: Circle, color: 'text-amber-400', key: 'pending' },
+  in_progress: { icon: Loader2, color: 'text-blue-400', key: 'in_progress' },
+  completed: { icon: CheckCircle2, color: 'text-emerald-400', key: 'completed' },
+  deleted: { icon: Circle, color: 'text-zinc-500', key: 'deleted' },
 };
 
-function formatTaskDate(dateStr: string | undefined): string | null {
+function formatTaskDate(dateStr: string | undefined, yesterdayLabel: string): string | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return null;
   if (isToday(d)) return format(d, 'HH:mm');
-  if (isYesterday(d)) return 'Yesterday';
+  if (isYesterday(d)) return yesterdayLabel;
   if (isThisYear(d)) return format(d, 'MMM d');
   return format(d, 'MMM d, yyyy');
 }
 
-function formatUpdatedLabel(task: GlobalTask): string | null {
+function formatUpdatedLabel(
+  task: GlobalTask,
+  updatedPrefix: string,
+  updatedYesterdayLabel: string
+): string | null {
   const updatedStr = task.updatedAt;
   if (!updatedStr) return null;
   const updated = new Date(updatedStr);
@@ -53,16 +59,19 @@ function formatUpdatedLabel(task: GlobalTask): string | null {
     }
   }
 
-  if (isToday(updated)) return `upd ${format(updated, 'HH:mm')}`;
-  if (isYesterday(updated)) return 'upd yesterday';
-  if (isThisYear(updated)) return `upd ${format(updated, 'MMM d')}`;
-  return `upd ${format(updated, 'MMM d, yyyy')}`;
+  if (isToday(updated)) return `${updatedPrefix} ${format(updated, 'HH:mm')}`;
+  if (isYesterday(updated)) return updatedYesterdayLabel;
+  if (isThisYear(updated)) return `${updatedPrefix} ${format(updated, 'MMM d')}`;
+  return `${updatedPrefix} ${format(updated, 'MMM d, yyyy')}`;
 }
 
 interface SidebarTaskItemProps {
   task: GlobalTask;
   hideTeamName?: boolean;
+  hideProjectName?: boolean;
   showTeamName?: boolean;
+  /** Pauses the in-progress spinner when the parent team is offline. */
+  teamOffline?: boolean;
   /** The composite key "teamName:taskId" of the task being renamed, or null */
   renamingKey?: string | null;
   /** Called when rename is completed with Enter or blur */
@@ -76,12 +85,15 @@ interface SidebarTaskItemProps {
 export const SidebarTaskItem = memo(function SidebarTaskItem({
   task,
   hideTeamName,
+  hideProjectName,
   showTeamName,
+  teamOffline = false,
   renamingKey,
   onRenameComplete,
   onRenameCancel,
   getDisplaySubject,
 }: SidebarTaskItemProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
   const teamMembers = useStore(useShallow((s) => s.teamByName[task.teamName]?.members));
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
@@ -112,13 +124,23 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
   const reviewColumn = getTeamTaskWorkflowColumn(task);
   const cfg =
     reviewColumn === 'approved'
-      ? ({ icon: ShieldCheck, color: 'text-teal-400', label: 'approved' } as const)
+      ? ({ icon: ShieldCheck, color: 'text-teal-400', key: 'approved' } as const)
       : reviewColumn === 'review'
-        ? ({ icon: Eye, color: 'text-orange-400', label: 'in review' } as const)
+        ? ({ icon: Eye, color: 'text-orange-400', key: 'review' } as const)
         : (statusConfig[task.status] ?? statusConfig.pending);
   const StatusIcon = cfg.icon;
-  const updatedLabel = formatUpdatedLabel(task);
-  const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt);
+  const shouldAnimateStatusIcon = cfg.key === 'in_progress' && !teamOffline;
+  const statusIconClassName = cn(
+    'size-3 shrink-0',
+    cfg.color,
+    shouldAnimateStatusIcon && 'animate-spin'
+  );
+  const updatedLabel = formatUpdatedLabel(
+    task,
+    t('tasks.date.updatedPrefix'),
+    t('tasks.date.updatedYesterday')
+  );
+  const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt, t('tasks.date.yesterday'));
 
   const ownerColorSet = useMemo(() => {
     if (!teamMembers || !task.owner) return null;
@@ -133,9 +155,10 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
   }, [ownerColorSet, isLight]);
 
   const projectLabel = useMemo(() => {
+    if (hideProjectName) return null;
     if (!task.projectPath?.trim()) return null;
     return projectLabelFromPath(task.projectPath);
-  }, [task.projectPath]);
+  }, [hideProjectName, task.projectPath]);
 
   const projectColorSet = useMemo(
     () => (projectLabel ? projectColor(projectLabel, isLight) : null),
@@ -167,7 +190,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
       <div className="w-full overflow-hidden">
         {isRenaming ? (
           <div className="flex items-start gap-1.5">
-            <StatusIcon className={`mt-0.5 size-3 shrink-0 ${cfg.color}`} />
+            <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
             <input
               ref={inputRef}
               type="text"
@@ -207,7 +230,9 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
                 className="line-clamp-2 text-[13px] font-medium leading-tight"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                <StatusIcon className={`mr-1.5 inline-block size-3 align-[-1px] ${cfg.color}`} />
+                <StatusIcon
+                  className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)}
+                />
                 {unreadCount > 0 &&
                   (unreadCount === 1 ? (
                     <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
@@ -221,7 +246,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
                   <span
                     className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
                   >
-                    {REVIEW_STATE_DISPLAY.needsFix.label}
+                    {t('tasks.reviewState.needsFix')}
                   </span>
                 )}
               </span>
@@ -254,7 +279,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
               className="shrink-0 opacity-100 dark:opacity-60"
               style={ownerTextColor ? { color: ownerTextColor } : undefined}
             >
-              {task.owner ?? 'unassigned'}
+              {task.owner ?? t('tasks.unassigned')}
             </span>
           </>
         )}
@@ -273,7 +298,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
           className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          <span className="shrink-0 opacity-100 dark:opacity-50">Team:</span>
+          <span className="shrink-0 opacity-100 dark:opacity-50">{t('tasks.teamPrefix')}</span>
           <span className="shrink-0" style={teamColor ? { color: teamColor.text } : undefined}>
             {task.teamDisplayName}
           </span>
@@ -282,7 +307,7 @@ export const SidebarTaskItem = memo(function SidebarTaskItem({
             className="shrink-0 opacity-100 dark:opacity-60"
             style={ownerTextColor ? { color: ownerTextColor } : undefined}
           >
-            {task.owner ?? 'unassigned'}
+            {task.owner ?? t('tasks.unassigned')}
           </span>
         </div>
       )}

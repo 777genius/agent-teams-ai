@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import {
   KANBAN_COLUMN_DISPLAY,
@@ -27,6 +28,7 @@ const STATUS_ORDER: Record<string, number> = {
 };
 
 export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const visibleTasks = useMemo(
     () =>
       tasks
@@ -38,7 +40,7 @@ export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): Rea
   if (visibleTasks.length === 0) {
     return (
       <div className="rounded-md border border-[var(--color-border)] px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
-        No tasks assigned to this member
+        {t('members.tasks.empty')}
       </div>
     );
   }

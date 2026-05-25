@@ -47,6 +47,7 @@ import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import type {
   AgentChangeSet,
   ChangeStats,
+  TaskChangeReviewability,
   TaskChangeSetV2,
   TeamConfig,
   TeamTaskChangeSummariesResponse,
@@ -63,6 +64,39 @@ const TEAM_TASK_CHANGE_SUMMARY_BATCH_LIMIT = 200;
 const TEAM_TASK_CHANGE_SUMMARY_BATCH_CONCURRENCY = 3;
 const TEAM_TASK_CHANGE_SUMMARY_TASK_TIMEOUT_MS = 15_000;
 const TEAM_TASK_CHANGE_SUMMARY_BATCH_TIMEOUT_MS = 30_000;
+
+function shouldClearStaleTaskChangePresence(input: {
+  result: TaskChangeSetV2;
+  taskMeta: TaskChangeTaskMeta;
+  effectiveOptions: TaskChangeEffectiveOptions;
+  reviewability: TaskChangeReviewability;
+}): boolean {
+  if (input.reviewability !== 'unknown') {
+    return false;
+  }
+  if (!Array.isArray(input.result.files) || !Array.isArray(input.result.warnings)) {
+    return false;
+  }
+  if (input.result.files.length > 0 || input.result.warnings.length > 0) {
+    return false;
+  }
+  const status = getTaskMetaPreferredStatus(input.taskMeta, input.effectiveOptions);
+  return (
+    getTaskChangeStateBucket({
+      status,
+      reviewState: input.taskMeta.reviewState,
+      historyEvents: input.taskMeta.historyEvents,
+      kanbanColumn: input.taskMeta.kanbanColumn,
+    }) === 'active'
+  );
+}
+
+function getTaskMetaPreferredStatus(
+  taskMeta: TaskChangeTaskMeta | null,
+  effectiveOptions: TaskChangeEffectiveOptions
+): string | undefined {
+  return taskMeta?.status?.trim() || effectiveOptions.status?.trim() || undefined;
+}
 
 /** Кеш-запись: данные + mtime файла + время протухания */
 interface CacheEntry {
@@ -208,14 +242,18 @@ export class ChangeExtractorService {
     const taskMeta = await this.readTaskMeta(teamName, taskId);
     const effectiveOptions: TaskChangeEffectiveOptions = {
       owner: options?.owner ?? taskMeta?.owner,
-      status: options?.status ?? taskMeta?.status,
+      status: taskMeta?.status?.trim() || options?.status?.trim(),
       intervals: options?.intervals ?? taskMeta?.intervals,
       since: options?.since,
     };
     const projectPath = await this.resolveProjectPath(teamName);
+    const cacheOptions: TaskChangeEffectiveOptions = {
+      ...effectiveOptions,
+      status: getTaskMetaPreferredStatus(taskMeta, effectiveOptions),
+    };
     const effectiveStateBucket = taskMeta
       ? getTaskChangeStateBucket({
-          status: effectiveOptions.status,
+          status: cacheOptions.status,
           reviewState: taskMeta.reviewState,
           historyEvents: taskMeta.historyEvents,
           kanbanColumn: taskMeta.kanbanColumn,
@@ -279,7 +317,7 @@ export class ChangeExtractorService {
     const cacheKey = this.buildTaskChangeSummaryCacheKey(
       teamName,
       taskId,
-      effectiveOptions,
+      cacheOptions,
       effectiveStateBucket,
       version
     );
@@ -306,7 +344,7 @@ export class ChangeExtractorService {
       const persisted = await this.readPersistedTaskChangeSummary(
         teamName,
         taskId,
-        effectiveOptions,
+        cacheOptions,
         effectiveStateBucket,
         taskMeta
       );
@@ -333,7 +371,7 @@ export class ChangeExtractorService {
         await this.persistTaskChangeSummary(
           teamName,
           taskId,
-          effectiveOptions,
+          cacheOptions,
           effectiveStateBucket,
           result,
           version
@@ -1422,7 +1460,7 @@ export class ChangeExtractorService {
     }
 
     const currentBucket = getTaskChangeStateBucket({
-      status: taskMeta.status ?? effectiveOptions.status,
+      status: getTaskMetaPreferredStatus(taskMeta, effectiveOptions),
       reviewState: taskMeta.reviewState,
       historyEvents: taskMeta.historyEvents,
       kanbanColumn: taskMeta.kanbanColumn,
@@ -1464,7 +1502,7 @@ export class ChangeExtractorService {
     const currentTaskMeta = await this.readTaskMeta(teamName, taskId);
     if (!currentTaskMeta) return;
     const currentBucket = getTaskChangeStateBucket({
-      status: currentTaskMeta.status ?? effectiveOptions.status,
+      status: getTaskMetaPreferredStatus(currentTaskMeta, effectiveOptions),
       reviewState: currentTaskMeta.reviewState,
       historyEvents: currentTaskMeta.historyEvents,
       kanbanColumn: currentTaskMeta.kanbanColumn,
@@ -1546,7 +1584,15 @@ export class ChangeExtractorService {
     const reviewability = classifyTaskChangeReviewability(result);
     const resolvedPresence = resolveTaskChangePresenceFromResult(result);
     if (!resolvedPresence) {
-      if (reviewability.reviewability === 'diagnostic_only') {
+      if (
+        reviewability.reviewability === 'diagnostic_only' ||
+        shouldClearStaleTaskChangePresence({
+          result,
+          taskMeta,
+          effectiveOptions,
+          reviewability: reviewability.reviewability,
+        })
+      ) {
         await this.taskChangePresenceRepository.deleteEntry?.(teamName, taskId);
       }
       return;
@@ -1555,7 +1601,7 @@ export class ChangeExtractorService {
     const descriptor = buildTaskChangePresenceDescriptor({
       createdAt: taskMeta.createdAt,
       owner: effectiveOptions.owner ?? taskMeta.owner,
-      status: effectiveOptions.status ?? taskMeta.status,
+      status: getTaskMetaPreferredStatus(taskMeta, effectiveOptions),
       intervals: effectiveOptions.intervals ?? taskMeta.intervals,
       since: effectiveOptions.since,
       reviewState: taskMeta.reviewState,

@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "In den Warenkorb",
+      "openDashboard": "Dashboard öffnen",
+      "refreshCatalog": "Refresh Katalog"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Plugins: {{status}}",
+      "skills": "Fähigkeiten: {{status}}"
+    },
+    "desktopOnly": "Nur in der Desktop-App verfügbar.",
+    "provider": {
+      "checkingStatus": "Status des Anbieters prüfen...",
+      "connected": "verbunden",
+      "loading": "Die...",
+      "needsSetup": "Bedarfs-Setup",
+      "readyToConfigure": "Konfigurierbar",
+      "unsupported": "Nicht unterstützt"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Erweiterungen benötigen die konfigurierte Laufzeit, um Plugins zu verwalten, MCP Server, Fähigkeiten und Anbieterverbindungen.",
+      "checkingAvailabilityTitle": "Verfügbarkeit der Prüferweiterungen",
+      "failedToStartDescription": "Erweiterungen sind deaktiviert, bis die Laufzeit seinen Start-Gesundheitscheck übergeht. Öffnen Sie das Dashboard, um es zu reparieren oder neu zu installieren.",
+      "failedToStartTitle": "Die konfigurierte Laufzeit wurde gefunden, konnte aber nicht starten",
+      "multimodelCapabilitiesDescription": "Provider-Unterstützung kann sich nach Abschnitt unterscheiden. Plugins werden nur angezeigt, wenn die Laufzeit ausdrücklich Unterstützung erklärt.",
+      "multimodelCapabilitiesTitle": "Multimodel Laufzeitfunktionen",
+      "needsSignInDescription": "{{runtime}} wurde gefunden{{version}}, aber Plugin-Installationen sind deaktiviert, bis Sie sich aus dem Dashboard anmelden.",
+      "needsSignInTitle": "{{runtime}} Einschreiben",
+      "notAvailableDescription": "Erweiterungen werden solange deaktiviert, bis die Laufzeit installiert ist. Öffnen Sie das Dashboard, um es zu installieren und wiederherzustellen.",
+      "notAvailableTitle": "Die konfigurierte Laufzeit ist nicht verfügbar",
+      "readyDescription": "Plugins können von dieser Seite installiert werden{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} ist bereit",
+      "requiredForMutations": "Die konfigurierte Laufzeit ist erforderlich, um Erweiterungen zu installieren oder zu deinstallieren. Installieren oder reparieren Sie es vom Dashboard."
+    },
+    "sessionsRestartWarning": "Laufende Sitzungen werden bis zum Neustart keine Erweiterungsänderungen aufnehmen.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Geheime Schlüssel für Online-Dienste. Fügen Sie sie hier so Plugins, Server und Integrationen können verbinden und arbeiten.",
+        "label": "API Schlüssel"
+      },
+      "mcpServers": {
+        "description": "Verbindungen zu externen Tools und Apps. Sie lassen die Laufzeit Daten lesen oder Aktionen außerhalb dieser App durchführen.",
+        "label": "MCP Server"
+      },
+      "plugins": {
+        "description": "Kleine Add-ons für die Laufzeit. Im Multimodel-Modus gelten sie derzeit für Anthropic Sessions, wenn sie unterstützt werden. Broader Provider-Unterstützung ist in der Entwicklung.",
+        "label": "Plugins"
+      },
+      "skills": {
+        "description": "Fertig gemachte Anweisungen für gemeinsame Jobs. Sie helfen der Laufzeit, wiederholbare Aufgaben konsequenter zu bewältigen.",
+        "label": "Fähigkeiten"
+      }
+    },
+    "title": "Erweiterungen"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} Wirkstoff",
+    "browseByFit": "Durchsuchen nach Passform",
+    "capabilities": "Fähigkeiten",
+    "categories": "Kategorien",
+    "clearAllFilters": "Alle Filter löschen",
+    "clearFilters": "Filter löschen",
+    "counts": {
+      "capabilities": "{{count}} Fähigkeiten",
+      "categories": "{{count}} Kategorien",
+      "plugins": "{{count}} Plugins",
+      "capabilities_few": "{{count}} Fähigkeiten",
+      "capabilities_many": "{{count}} Fähigkeiten",
+      "capabilities_one": "{{count}} Fähigkeiten",
+      "capabilities_other": "{{count}} Fähigkeiten",
+      "categories_few": "{{count}} Kategorien",
+      "categories_many": "{{count}} Kategorien",
+      "categories_one": "{{count}} Kategorien",
+      "categories_other": "{{count}} Kategorien",
+      "plugins_few": "{{count}} Plugins",
+      "plugins_many": "{{count}} Plugins",
+      "plugins_one": "{{count}} Plugins",
+      "plugins_other": "{{count}} Plugins"
+    },
+    "empty": {
+      "description": "Überprüfen Sie später nach neuen Plugins",
+      "filteredDescription": "Versuchen Sie, Ihre Such- oder Filterkriterien anzupassen",
+      "filteredTitle": "Keine Plugins passen zu Ihren Filtern",
+      "title": "Keine Plugins verfügbar"
+    },
+    "filterDescription": "Verknüpfen Sie den Katalog nach Kategorie, Funktion oder installiertem Zustand.",
+    "installedOnly": "Nur installiert",
+    "providerSupportNotice": "Plugin-Support ist derzeit nur für Anthropic (Claude) Sessions garantiert. Wir arbeiten daran, Plugins über alle Agenten zu unterstützen.",
+    "resultsUpdateInstantly": "Ergebnisse aktualisieren Sie sofort, wie Sie Filter verfeinern.",
+    "searchPlaceholder": "Suche Plugins...",
+    "selectedCount": "{{count}} ausgewählt",
+    "showing": "Showing {{shown}} von {{total}} Plugins",
+    "sort": {
+      "category": "Kategorie",
+      "nameAsc": "Name A-Z",
+      "nameDesc": "Name Z A",
+      "popular": "Beliebtheit"
+    },
+    "activeFilters_few": "{{count}} Wirkstoff",
+    "activeFilters_many": "{{count}} Wirkstoff",
+    "activeFilters_one": "{{count}} Wirkstoff",
+    "activeFilters_other": "{{count}} Wirkstoff",
+    "selectedCount_few": "{{count}} ausgewählt",
+    "selectedCount_many": "{{count}} ausgewählt",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "selectedCount_other": "{{count}} ausgewählt"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Hinzufügen",
+      "cancel": "Abbrechen",
+      "install": "Installieren",
+      "installing": "Installation..."
+    },
+    "description": "Einen Server manuell ohne Katalog hinzufügen.",
+    "errors": {
+      "installFailed": "Fehler beim Installieren",
+      "invalidServerName": "Ungültiger Servername. Verwenden Sie alphanumerische Zeichen, Dashes, Unterpunkte, Punkte.",
+      "npmPackageRequired": "npm Paketname ist erforderlich",
+      "serverNameRequired": "Servername ist erforderlich",
+      "serverUrlRequired": "Server URL ist erforderlich"
+    },
+    "fields": {
+      "environmentVariables": "Umweltvariablen",
+      "headers": "Kopf",
+      "npmPackage": "npm Paket",
+      "scope": "Anwendungsbereich",
+      "serverName": "Servername",
+      "serverUrl": "Server URL",
+      "transport": "Verkehr",
+      "transportType": "Verkehrsart",
+      "versionOptional": "Ausführung (optional)"
+    },
+    "title": "In den Warenkorb MCP Server",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "spätestens",
+      "value": "Wert",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Fernbedienung MCP Server können noch benutzerdefinierte Header oder API Schlüssel selbst wenn die Registrierung sie nicht beschreibt. Wenn die Verbindung nach der Installation ausfällt, überprüfen Sie die Anbieter-Docs.",
+      "required": "Dieser Server erfordert eine Authentifizierung"
+    },
+    "diagnostics": {
+      "launchTarget": "Startziel"
+    },
+    "form": {
+      "autoFilled": "Autogefüllt",
+      "environmentVariables": "Umweltvariablen",
+      "headers": "Kopf",
+      "scope": "Anwendungsbereich",
+      "serverName": "Servername"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Dieser Server benötigt manuelles Setup. Überprüfen Sie das Repository für Installationsanweisungen.",
+      "manualSetupRequired": "Manuelle Einrichtung erforderlich",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Installation verwalten",
+      "install": "Server installieren"
+    },
+    "links": {
+      "glama": "Glamour",
+      "repository": "Repository",
+      "website": "Webseite"
+    },
+    "metadata": {
+      "author": "Autor",
+      "githubStars": "GitHub Sterne",
+      "hosting": "Hosting",
+      "installType": "Installationstyp",
+      "license": "Lizenz",
+      "published": "Veröffentlicht",
+      "source": "Quelle",
+      "updated": "Aktualisierung",
+      "version": "Version"
+    },
+    "scope": {
+      "local": "Ort",
+      "project": "Projekt"
+    },
+    "tools": {
+      "title": "Werkzeuge ({{count}})",
+      "title_few": "Werkzeuge ({{count}})",
+      "title_many": "Werkzeuge ({{count}})",
+      "title_one": "Werkzeuge ({{count}})",
+      "title_other": "Werkzeuge ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Abbrechen",
+      "createSkill": "Fähigkeiten schaffen",
+      "preparing": "Vorbereitung...",
+      "reviewAndCreate": "Bewertung und Erstellung",
+      "reviewAndSave": "Bewertung und Speichern",
+      "saveSkill": "Sparen Sie Geschicklichkeit"
+    },
+    "advanced": {
+      "customDescription": "Dieses Können verwendet ein benutzerdefiniertes Markdown-Format, so bearbeiten Sie es direkt hier.",
+      "customTitle": "2. SKILL.md Editor",
+      "description": "Die meisten Leute können das überspringen. Öffnen Sie es nur, wenn Sie die direkte Kontrolle über die Rohmarkdown-Datei wünschen.",
+      "hide": "Erweiterter Editor verbergen",
+      "resetFromStructuredFields": "Zurücksetzen aus strukturierten Feldern",
+      "show": "Erweiterter Editor",
+      "title": "4. Erweitert SKILL.md Editor"
+    },
+    "basics": {
+      "description": "Geben Sie diesem Können einen klaren Namen, wählen Sie, wer es verwenden kann, und entscheiden, wo es leben sollte.",
+      "title": "1. Grundlagen"
+    },
+    "description": {
+      "create": "Beschreiben Sie den Workflow in der einfachen Sprache, überprüfen Sie die Dateien, die erstellt werden, dann speichern Sie es.",
+      "edit": "Aktualisieren Sie diese Fähigkeit, überprüfen Sie die resultierenden Dateiänderungen, dann speichern Sie sie."
+    },
+    "extraFiles": {
+      "addedFiles": "Hinzugefügte Dateien:",
+      "assets": "Forderungen",
+      "assetsDescription": "Fügen Sie Screenshots oder gebündelte Medien nur hinzu, wenn sie helfen, den Workflow zu erklären.",
+      "description": "Fügen Sie Stützpunkte, Skripte oder Assets nur hinzu, wenn diese Fähigkeit sie wirklich braucht.",
+      "lockedForEdits": "Root und Ordner sind für Edits gesperrt",
+      "optionalDescription": "Fügen Sie Starterdateien hinzu, die in die Bewertung aufgenommen und zusammen mit `SKILL.md`.",
+      "optionalTitle": "Optionale Dateien",
+      "references": "Referenzen",
+      "referencesDescription": "Fügen Sie Stützpunkte, Links oder Beispiele hinzu, die die Laufzeit betrachten kann.",
+      "scripts": "Schriften",
+      "scriptsDescription": "Hilferbefehle oder Setup-Notizen hinzufügen. Überprüfen Sie sorgfältig, bevor Sie diese Fähigkeit teilen.",
+      "title": "3. Extra Dateien"
+    },
+    "fields": {
+      "compatibility": "Vereinbarkeit",
+      "description": "Warenbezeichnung",
+      "folderName": "Ordnername",
+      "folderNameHint": "Wir empfehlen dies automatisch aus dem Geschicksnamen, so dass Überprüfung funktioniert sofort.",
+      "invocation": "Wie es verwendet werden sollte",
+      "license": "Lizenz",
+      "name": "Bezeichnung",
+      "notes": "Zusätzliche Anmerkungen oder Auflieger",
+      "root": "Wo es zu speichern",
+      "scope": "Wer kann es benutzen",
+      "steps": "Hauptschritte folgen",
+      "whenToUse": "Wann erreichen Sie dies"
+    },
+    "instructions": {
+      "description": "Diese Abschnitte erzeugen die Fertigkeitsdatei für Sie, so dass Sie nicht brauchen, um markdown zu bearbeiten, es sei denn, Sie wollen.",
+      "locked": "Strukturierte Felder sind gesperrt, weil Sie auf manuell geschaltet `SKILL.md` unten bearbeiten.",
+      "title": "2. Anleitung"
+    },
+    "invocation": {
+      "auto": "Kann automatisch verwendet werden",
+      "manualOnly": "Nur wenn Sie darum bitten"
+    },
+    "placeholders": {
+      "description": "Was diese Fähigkeit hilft",
+      "name": "Schreibe präzise Geschicklichkeitsbezeichnung",
+      "notes": "Beispiel: Rufen Sie fehlende Tests, Regressionen und riskante Annahmen heraus.",
+      "steps": "1. Überprüfen Sie die entsprechenden Dateien.\n2. Erklären Sie zunächst das Hauptrisiko.\n3. Den sichersten Fix vorschlagen.",
+      "whenToUse": "Beispiel: Verwenden Sie dies, wenn die Aufgabe eine Code-Review oder Bug-Triage-Anfrage ist.",
+      "license": "MIT",
+      "compatibility": "claude-code, Cursor"
+    },
+    "review": {
+      "creating": "Erstellen eines Geschicks",
+      "hint": "Überprüfen Sie zuerst die Dateiänderungen, dann bestätigen Sie im nächsten Schritt speichern.",
+      "saving": "Diese Fähigkeit zu retten"
+    },
+    "root": {
+      "codexOnly": " - Nur Codex",
+      "shared": " - Geteilt"
+    },
+    "scope": {
+      "project": "Projekt: {{project}}",
+      "projectUnavailable": "Projekt nicht verfügbar",
+      "user": "Benutzer"
+    },
+    "title": {
+      "create": "Fähigkeiten schaffen",
+      "edit": "Fertigkeiten bearbeiten"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "deleteSkill": "Löschen der Fähigkeiten",
+      "deleting": "Löschen...",
+      "editSkill": "Fähigkeiten bearbeiten",
+      "openFolder": "Ordner öffnen",
+      "openSkillFile": "Öffnen SKILL.md",
+      "retry": "Wiederkehr"
+    },
+    "badges": {
+      "assets": "Forderungen",
+      "autoUse": "Autonutzung",
+      "hasScripts": "Hat Skripte",
+      "manualUse": "Gebrauchsanweisung",
+      "references": "Referenzen",
+      "storedIn": "Eingespeichert {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Löschen Sie diese Fähigkeit und verschieben Sie sie in Müll?",
+      "descriptionWithName": "Löschen \"{{name}}\"und es in den Müll ziehen? Sie können es später bei Bedarf aus Müll wiederherstellen.",
+      "title": "Geschicklichkeit löschen?"
+    },
+    "descriptionFallback": "Inspect entdeckte Fähigkeiten Metadaten und Rohanweisungen.",
+    "errors": {
+      "deleteFailed": "Versäumt, Geschicklichkeit zu löschen",
+      "loadFailed": "Unfähig, diese Fähigkeit zu laden."
+    },
+    "files": {
+      "advancedDetails": "Erweiterte Dateidetails",
+      "assets": "Forderungen",
+      "references": "Referenzen",
+      "scripts": "Schriften",
+      "storedAt": "Gespeichert bei"
+    },
+    "includes": {
+      "assets": "Vermögenswerte",
+      "instructionsOnly": "Nur die Anleitungen",
+      "references": "Referenzen",
+      "scripts": "Skripte"
+    },
+    "invocation": {
+      "auto": "Läuft automatisch, wenn es der Aufgabe entspricht.",
+      "manualOnly": "Nur läuft, wenn Sie ausdrücklich danach fragen."
+    },
+    "issues": {
+      "bundledScripts": "Dieses Geschick umfasst gebündelte Skripte",
+      "reviewCarefully": "Überprüfen Sie diese Fähigkeit sorgfältig, bevor Sie es"
+    },
+    "loading": "Belastungsdetails...",
+    "scope": {
+      "personal": "Ihre persönlichen Fähigkeiten",
+      "projectOnly": "Nur dieses Projekt"
+    },
+    "summary": {
+      "howUsed": "Wie es verwendet wird",
+      "included": "Was kommt mit ihm?",
+      "whoCanUse": "Wer kann es benutzen"
+    },
+    "titleFallback": "Skill details"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Fähigkeiten schaffen",
+      "import": "Einfuhr"
+    },
+    "badges": {
+      "assets": "Forderungen",
+      "hasScripts": "Hat Skripte",
+      "needsAttention": "Braucht Aufmerksamkeit",
+      "references": "Referenzen",
+      "storedIn": "Eingespeichert {{root}}"
+    },
+    "configuredRuntime": "die konfigurierte Laufzeit",
+    "counts": {
+      "codexOnly": "{{count}} Codex nur",
+      "personal": "{{count}} persönlich",
+      "project": "{{count}} Projekt",
+      "shared": "{{count}} geteilt",
+      "total": "{{count}} Gesamt",
+      "codexOnly_few": "{{count}} Codex nur",
+      "codexOnly_many": "{{count}} Codex nur",
+      "codexOnly_one": "{{count}} Codex nur",
+      "codexOnly_other": "{{count}} Codex nur",
+      "personal_few": "{{count}} persönlich",
+      "personal_many": "{{count}} persönlich",
+      "personal_one": "{{count}} persönlich",
+      "personal_other": "{{count}} persönlich",
+      "project_few": "{{count}} Projekt",
+      "project_many": "{{count}} Projekt",
+      "project_one": "{{count}} Projekt",
+      "project_other": "{{count}} Projekt",
+      "shared_few": "{{count}} geteilt",
+      "shared_many": "{{count}} geteilt",
+      "shared_one": "{{count}} geteilt",
+      "shared_other": "{{count}} geteilt",
+      "total_few": "{{count}} Gesamt",
+      "total_many": "{{count}} Gesamt",
+      "total_one": "{{count}} Gesamt",
+      "total_other": "{{count}} Gesamt"
+    },
+    "empty": {
+      "noMatches": "Keine Fähigkeiten entsprechen Ihrer Suche",
+      "noMatchesDescription": "Versuchen Sie einen anderen Suchbegriff oder Schalterfilter.",
+      "noSkills": "Noch keine Fähigkeiten",
+      "noSkillsDescription": "Erstellen Sie Ihre erste Fähigkeit, einen wiederholbaren Workflow zu lehren, oder importieren Sie einen, den Sie bereits verwenden."
+    },
+    "filters": {
+      "all": "Alle Fähigkeiten",
+      "codexOnly": "Codex nur",
+      "hasScripts": "Hat Skripte",
+      "needsAttention": "Braucht Aufmerksamkeit",
+      "personal": "Personal",
+      "project": "Projekt",
+      "shared": "Geteilt"
+    },
+    "hero": {
+      "codexAvailable": "Verwendung `.codex` wenn ein Geschick Codex-only bleiben sollte.",
+      "codexUnavailable": "Vorhandene `.codex` Fähigkeiten bleiben hier editierbar, aber neue Codex-only Fähigkeiten benötigen die Codex-Laufzeit aktiviert.",
+      "description": "Fähigkeiten sind wiederverwendbare Anweisungen, die der Laufzeit helfen, die gleiche Art von Aufgabe konsequenter zu handhaben.",
+      "guidance": "Verwenden Sie persönliche Fähigkeiten für Gewohnheiten, die Sie überall wollen. Verwenden Sie Projektfähigkeiten für Workflows, die nur innerhalb einer Codebasis sinnvoll sind.",
+      "personalContext": "Sie sehen gerade nur Ihre persönlichen Fähigkeiten.",
+      "projectContext": "Sie sehen Fähigkeiten für {{project}} und Ihre persönlichen Fähigkeiten.",
+      "title": "Lehren wiederholbare Arbeit"
+    },
+    "invocation": {
+      "auto": "Läuft automatisch, wenn es passt",
+      "manualOnly": "Nur läuft, wenn Sie es ausdrücklich fragen"
+    },
+    "loading": {
+      "loading": "Belastende Fähigkeiten...",
+      "refreshing": "Erfrischende Fähigkeiten..."
+    },
+    "runtimeAudience": "Geteilte Fähigkeiten `.claude`, `.cursor`, und `.agents` sind verfügbar {{audience}}. Fähigkeiten gespeichert in `.codex` bleiben Codex-nur, wenn Codex-Unterstützung verfügbar ist.",
+    "scope": {
+      "project": "Dieses Projekt",
+      "user": "Personal"
+    },
+    "searchPlaceholder": "Suche nach Geschicklichkeitsnamen oder was es bei...",
+    "sections": {
+      "personal": {
+        "description": "Gewohnheiten und Anweisungen, die Sie überall zur Verfügung haben möchten.",
+        "title": "Persönliche Fähigkeiten"
+      },
+      "project": {
+        "description": "Workflows, die nur für diese Codebase Sinn machen.",
+        "title": "Projektfähigkeiten"
+      }
+    },
+    "sort": {
+      "label": "Sortieren von Fähigkeiten",
+      "name": "Name",
+      "recent": "Vor kurzem"
+    },
+    "status": {
+      "hasScripts": "Enthält Skripte, so überprüfen Sie es sorgfältig",
+      "needsAttention": "Braucht Aufmerksamkeit, bevor Sie sich darauf verlassen",
+      "ready": "Fertig"
+    },
+    "success": {
+      "created": "Können erfolgreich erstellt.",
+      "imported": "Können erfolgreich importiert.",
+      "saved": "Geschicklichkeit erfolgreich gerettet."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Unbekannt",
+    "metadata": {
+      "author": "Autor",
+      "category": "Kategorie",
+      "source": "Quelle",
+      "version": "Version",
+      "capabilities": "Fähigkeiten",
+      "installs": "Installationen"
+    },
+    "scope": {
+      "label": "Anwendungsbereich",
+      "options": {
+        "user": "Benutzer (global)",
+        "project": "Projekt (teilweise)",
+        "local": "Lokal (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Homepage",
+      "contact": "Kontakt"
+    },
+    "readme": {
+      "loading": "Beladung README...",
+      "empty": "Nein README verfügbar."
+    }
+  },
+  "skillImport": {
+    "title": "Bedeutung",
+    "description": "Wählen Sie einen vorhandenen Kompetenzordner, überprüfen Sie, was kopiert wird, dann importieren Sie es in eine Ihrer unterstützten Fähigkeiten Standorte.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Wählen Sie einen Geschicksordner",
+        "description": "Dies sollte ein Ordner sein, der bereits eine `SKILL.md`, `Skill.md`, oder `skill.md` Datei."
+      },
+      "location": {
+        "title": "2. Entscheiden, wo es gehört",
+        "description": "Persönliche Fähigkeiten arbeiten überall. Projektfähigkeiten zeigen sich nur für eine Codebasis."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Quellordner",
+      "destinationFolderName": "Name des Bestimmungsordners",
+      "audience": "Wer kann es benutzen",
+      "storage": "Wo es zu speichern"
+    },
+    "placeholders": {
+      "defaultFolderName": "Defaults zum Quellordnernamen"
+    },
+    "actions": {
+      "browse": "Nach oben",
+      "cancel": "Abbrechen",
+      "preparing": "Vorbereitung...",
+      "reviewAndImport": "Bewertung und Import",
+      "importSkill": "Import Skills",
+      "backToImport": "Zurück zum Import"
+    },
+    "scope": {
+      "user": "Benutzer",
+      "project": "Projekt: {{project}}",
+      "projectUnavailable": "Projekt nicht verfügbar"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Nur Codex",
+      "shared": " - Geteilt"
+    },
+    "reviewHint": "Überprüfen Sie zuerst die kopierten Dateien und bestätigen Sie dann den Import im nächsten Schritt.",
+    "reviewLabel": "Diese Fähigkeiten importieren",
+    "errors": {
+      "missingSkillFile": "Dieser Ordner sieht noch nicht aus wie ein Geschick. Es braucht eine SKILL.md, Skill.md oder Geschick.md-Datei.",
+      "symbolicLinks": "Dieser Ordner enthält symbolische Links. Importieren Sie die realen Dateien anstelle von Links.",
+      "tooManyFiles": "Dieser Fachordner ist zu groß, um sofort zu importieren. Entfernen Sie zusätzliche Dateien und versuchen Sie es erneut.",
+      "tooLarge": "Dieser Fachordner ist zu groß, um sicher zu importieren. Trimm große Vermögenswerte und versuche es wieder.",
+      "invalidFolderName": "Wählen Sie einen einfacheren Zielordnernamen mit Buchstaben, Zahlen, Punkten, Bindestrichen oder Unterstrichen.",
+      "mustBeDirectory": "Wählen Sie einen Ordner zum Import, nicht eine einzelne Datei.",
+      "reviewFailed": "Nicht zu überprüfen Importänderungen",
+      "importFailed": "Versäumt, Fähigkeiten zu importieren"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "toolsDesc": "Die meisten Werkzeuge"
+    },
+    "health": {
+      "title": "MCP Gesundheitsstatus",
+      "checkingViaRuntime": "Installation der Überprüfung MCP Server über {{runtime}} ...",
+      "lastChecked": "Letzte Prüfung {{time}}",
+      "description": "Führen Sie Diagnosen von dieser Seite, um zu überprüfen installiert MCP Konnektivität.",
+      "checking": "Sieh...",
+      "checkStatus": "Check-Status"
+    },
+    "diagnostics": {
+      "title": "Laufzeit MCP Diagnostik",
+      "serversCount": "{{count}} Server",
+      "serversCount_one": "{{count}} Server",
+      "serversCount_other": "{{count}} Server",
+      "waiting": "Warten auf Diagnoseergebnisse...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Überprüfung des Laufzeitstatus...",
+        "checkingRuntimeAvailability": "Überprüfung der Verfügbarkeit von Laufzeiten...",
+        "runtimeFailedToStart": "Die konfigurierte Laufzeit wurde gefunden, aber nicht gestartet. Öffnen Sie das Dashboard, um es zu reparieren oder neu zu installieren.",
+        "runtimeRequired": "Die konfigurierte Laufzeit ist erforderlich. Installieren oder reparieren Sie es vom Dashboard."
+      },
+      "serversCount_few": "{{count}} Server",
+      "serversCount_many": "{{count}} Server"
+    },
+    "searchPlaceholder": "Suche MCP Server...",
+    "runtime": {
+      "notAvailable": "{{runtime}} nicht verfügbar",
+      "notInstalled": "{{runtime}} nicht installiert",
+      "requiredDescription": "MCP Gesundheitskontrollen erfordern {{runtime}}. Gehen Sie zum Dashboard, um es zu installieren oder zu reparieren."
+    },
+    "empty": {
+      "searchTitle": "Keine Server gefunden",
+      "title": "Nein MCP Server verfügbar",
+      "searchDescription": "Versuchen Sie einen anderen Suchbegriff",
+      "description": "Überprüfen Sie später nach neuen Servern"
+    },
+    "loadMore": "Mehr erfahren"
+  },
+  "apiKeys": {
+    "description": "Sicher speichern API Schlüssel zum automatischen Befüllen bei der Installation MCP Server.",
+    "storage": {
+      "osKeychain": "Schlüssel werden verschlüsselt {{backend}} und mit eingeschränkten Dateiberechtigungen (nur Eigentümer) gespeichert.",
+      "localEncryption": "OS Schlüsselanhänger nicht verfügbar - Schlüssel werden lokal mit verschlüsselt AES-256. Für einen stärkeren Schutz installieren Sie einen Keyring-Service (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Hinzufügen API Schlüssel",
+      "addFirst": "Fügen Sie Ihren ersten Schlüssel hinzu",
+      "edit": "Bearbeiten"
+    },
+    "empty": {
+      "title": "Nein API Schlüssel gespeichert",
+      "description": "Fügen Sie Schlüssel zu Auto-Füll-Umgebungsvariablen bei der Installation hinzu MCP Server."
+    },
+    "form": {
+      "addTitle": "Hinzufügen API Schlüssel",
+      "editTitle": "Bearbeiten API Schlüssel",
+      "addDescription": "Speichern eines API Schlüssel zum auto-filling in MCP Serverinstallationen.",
+      "editDescription": "Aktualisieren Sie die wichtigsten Details. Sie müssen den Wert erneut eingeben.",
+      "keychainUnavailable": "OS Schlüsselanhänger nicht verfügbar - Schlüssel verschlüsselt mit AES- 256 lokal. Installieren Sie gnome-keyring für OS-Level-Schutz.",
+      "name": "Name",
+      "namePlaceholder": "z.B. OpenAI Produktion",
+      "environmentVariableName": "Umwelt Variabler Name",
+      "envVarPlaceholder": "z. OPENAI_API_KEY",
+      "value": "Wert",
+      "reenterValue": "Schlüsselwert erneut eingeben",
+      "valuePlaceholder": "sk...",
+      "scope": "Anwendungsbereich",
+      "userScopeLabel": "Benutzer (global)",
+      "projectScopeLabel": "Projekt: {{project}}",
+      "projectUnavailable": "Projekt nicht verfügbar",
+      "boundTo": "Zunehmen {{path}}",
+      "cancel": "Abbrechen",
+      "saving": "Sparen...",
+      "update": "Aktualisierung",
+      "save": "Speichern",
+      "errors": {
+        "invalidEnvVarFormat": "Verwenden Sie Buchstaben, Ziffern, Unterstriche. Muss mit einem Buchstaben oder Unterstrich beginnen.",
+        "nameRequired": "Name ist erforderlich",
+        "envVarRequired": "Der Name der Umweltvariablen ist erforderlich",
+        "invalidEnvVar": "Invalide Umgebungsvariable",
+        "valueRequired": "Schlüsselwert ist erforderlich",
+        "projectScopeRequiresProject": "Projektoskop API Schlüssel benötigen ein aktives Projekt",
+        "saveFailed": "Nicht zu retten"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Erfahrungsänderungen überprüfen",
+    "description": "{{reviewLabel}} sieht zuerst die Änderungen des Dateisystems vor. Nichts wird geschrieben, bis Sie unten bestätigen.",
+    "noPreview": "Keine Vorschau verfügbar.",
+    "confirmPromptPrefix": "Überprüfen Sie die diff unten, dann verwenden",
+    "confirmPromptSuffix": "diese Änderungen anzuwenden.",
+    "noChanges": "Noch keine Dateiänderungen erkannt.",
+    "binaryBadge": "bindend",
+    "binaryPreviewHidden": "Binäre Dateivorschau wird nicht angezeigt. Die Datei wird as-is kopiert.",
+    "summary": {
+      "fileChanges": "{{count}} Dateiänderungen",
+      "fileChanges_one": "{{count}} Dateiänderung",
+      "fileChanges_other": "{{count}} Dateiänderungen",
+      "new": "{{count}} neue",
+      "updated": "{{count}} aktualisiert",
+      "removed": "{{count}} entfernt",
+      "binary": "{{count}} bindend",
+      "fileChanges_few": "{{count}} Dateiänderungen",
+      "fileChanges_many": "{{count}} Dateiänderungen"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} Werkzeuge",
+    "toolsCount_one": "{{count}} Werkzeug",
+    "toolsCount_other": "{{count}} Werkzeuge",
+    "envCount": "{{count}} Envs",
+    "envCount_one": "{{count}} env",
+    "envCount_other": "{{count}} Envs",
+    "auth": "Authentizität",
+    "byAuthor": "von {{author}}",
+    "hosting": {
+      "remote": "Fernbedienung",
+      "local": "Ort",
+      "both": "Beide"
+    },
+    "toolsCount_few": "{{count}} Werkzeuge",
+    "toolsCount_many": "{{count}} Werkzeuge",
+    "envCount_few": "{{count}} Envs",
+    "envCount_many": "{{count}} Envs",
+    "repository": "Repository",
+    "website": "Webseite"
+  },
+  "installButton": {
+    "installing": "Installation...",
+    "removing": "Entfernen...",
+    "done": "Artikel 2",
+    "retry": "Wiederkehr",
+    "uninstall": "Deinstallieren",
+    "install": "Installieren"
+  },
+  "pluginCard": {
+    "official": "Amtsblatt"
+  }
+}

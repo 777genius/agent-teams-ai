@@ -8,97 +8,6 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="./favicon.png" />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/01.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/02.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/03.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/04.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/05.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/06.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/07.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/08.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/09.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/10.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/11.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/12.png"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      type="image/png"
-      href="./assets/participant-avatars/13.png"
-      fetchpriority="high"
-    />
     <title>Agent Teams AI</title>
     <style>
       /* Splash: animated gradient background */
@@ -652,7 +561,8 @@
         var TEAM_MEMBER_OFFSETS = [0, 4, 7];
         var TEAM_LABELS = ['Marketing', 'Researchers', 'Coding'];
         var MAX_DPR = 2;
-        var AVATAR_URLS = [
+        var SPLASH_SCENE_FRAME_INTERVAL_MS = 1000 / 30;
+        var FALLBACK_AVATAR_URLS = [
           './assets/participant-avatars/01.png',
           './assets/participant-avatars/02.png',
           './assets/participant-avatars/03.png',
@@ -667,8 +577,35 @@
           './assets/participant-avatars/12.png',
           './assets/participant-avatars/13.png',
         ];
+        var AVATAR_URLS = resolveAvatarUrls();
         var avatarCache = new Map();
         var avatarLoading = new Map();
+
+        function resolveAvatarUrls() {
+          var links = document.querySelectorAll(
+            'link[rel="preload"][as="image"][type="image/png"]'
+          );
+          var urlsByIndex = [];
+
+          for (var i = 0; i < links.length; i++) {
+            var href = links[i].getAttribute('href');
+            if (!href) continue;
+
+            var match = href.match(/(?:^|\/)(0[1-9]|1[0-3])(?:-[^/?#]+)?\.png(?:[?#].*)?$/);
+            if (!match) continue;
+
+            urlsByIndex[Number(match[1]) - 1] = href;
+          }
+
+          var resolved = [];
+          for (var avatarIndex = 0; avatarIndex < FALLBACK_AVATAR_URLS.length; avatarIndex++) {
+            var url = urlsByIndex[avatarIndex];
+            if (!url) return FALLBACK_AVATAR_URLS;
+            resolved.push(url);
+          }
+
+          return resolved;
+        }
 
         function startFileSplashScene(splash) {
           if (window.__claudeTeamsSplashScene && splash.querySelector('#splash-enhanced-canvas')) {
@@ -701,6 +638,7 @@
             particles: [],
             running: true,
             frameId: 0,
+            lastRenderedAt: 0,
             startedAt: performance.now(),
           };
 
@@ -725,14 +663,21 @@
 
           function render(now) {
             if (!state.running) return;
-            resize();
-            drawScene(
-              ctx,
-              state.width,
-              state.height,
-              reducedMotion ? 1.2 : (now - state.startedAt) / 1000,
-              state.particles
-            );
+            if (
+              reducedMotion ||
+              state.lastRenderedAt === 0 ||
+              now - state.lastRenderedAt >= SPLASH_SCENE_FRAME_INTERVAL_MS
+            ) {
+              resize();
+              drawScene(
+                ctx,
+                state.width,
+                state.height,
+                reducedMotion ? 1.2 : (now - state.startedAt) / 1000,
+                state.particles
+              );
+              state.lastRenderedAt = now;
+            }
             if (!reducedMotion) state.frameId = window.requestAnimationFrame(render);
           }
 

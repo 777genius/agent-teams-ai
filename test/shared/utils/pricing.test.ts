@@ -85,6 +85,14 @@ describe('Shared Pricing Module', () => {
       warnSpy.mockRestore();
     });
 
+    it('should return 0 for synthetic model markers without warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const cost = calculateMessageCost('<synthetic>', 1000, 500, 0, 0);
+      expect(cost).toBe(0);
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
     it('should include cache token costs', () => {
       const cost = calculateMessageCost('claude-4-sonnet-20250514', 1000, 500, 300, 200);
       expect(cost).toBeGreaterThan(0.0105);

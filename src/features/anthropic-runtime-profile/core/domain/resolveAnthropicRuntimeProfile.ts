@@ -44,6 +44,12 @@ export interface AnthropicRuntimeReconciliation {
   fastModeResetReason: string | null;
 }
 
+export type AnthropicEffortSupportResolution =
+  | { kind: 'supported'; source: 'catalog' | 'runtime-capability' | 'static-fallback' }
+  | { kind: 'unsupported-by-catalog'; supportedEfforts: EffortLevel[] }
+  | { kind: 'unsupported-by-runtime-capability'; supportedEfforts: EffortLevel[] }
+  | { kind: 'unverified-catalog-missing' };
+
 function getAnthropicCatalog(
   source: AnthropicRuntimeProfileSource
 ): CliProviderModelCatalog | null {
@@ -77,17 +83,89 @@ function hasCatalogTruth(selection: AnthropicRuntimeSelection): boolean {
   return selection.catalogSource !== 'unavailable' && selection.catalogStatus !== 'unavailable';
 }
 
+function stripOneMillionSuffix(model: string): string {
+  return model
+    .trim()
+    .toLowerCase()
+    .replace(/(?:\[1m\])+$/i, '');
+}
+
+function isKnownAnthropicReasoningModel(model: string | null | undefined): boolean {
+  const normalized = stripOneMillionSuffix(model ?? '');
+  return (
+    normalized === 'opus' ||
+    normalized === 'sonnet' ||
+    normalized === 'claude-opus-4-7' ||
+    normalized.startsWith('claude-opus-4-7-') ||
+    normalized === 'claude-opus-4-6' ||
+    normalized.startsWith('claude-opus-4-6-') ||
+    normalized === 'claude-sonnet-4-6' ||
+    normalized.startsWith('claude-sonnet-4-6-')
+  );
+}
+
+function normalizeRuntimeReasoningEfforts(
+  capabilities: CliProviderRuntimeCapabilities | null | undefined
+): EffortLevel[] {
+  return normalizeEffortLevels(capabilities?.reasoningEffort?.values);
+}
+
+export function resolveAnthropicEffortSupport(params: {
+  selection: AnthropicRuntimeSelection;
+  effort: EffortLevel;
+  runtimeCapabilities?: CliProviderRuntimeCapabilities | null;
+}): AnthropicEffortSupportResolution {
+  if (params.selection.catalogModel) {
+    return params.selection.supportedEfforts.includes(params.effort)
+      ? { kind: 'supported', source: 'catalog' }
+      : { kind: 'unsupported-by-catalog', supportedEfforts: params.selection.supportedEfforts };
+  }
+
+  const runtimeReasoning = params.runtimeCapabilities?.reasoningEffort;
+  const runtimeEfforts = normalizeRuntimeReasoningEfforts(params.runtimeCapabilities);
+  if (runtimeReasoning) {
+    if (
+      runtimeReasoning.supported !== true ||
+      runtimeReasoning.configPassthrough !== true ||
+      !runtimeEfforts.includes(params.effort)
+    ) {
+      return { kind: 'unsupported-by-runtime-capability', supportedEfforts: runtimeEfforts };
+    }
+    if (isKnownAnthropicReasoningModel(params.selection.resolvedLaunchModel)) {
+      return { kind: 'supported', source: 'runtime-capability' };
+    }
+  }
+
+  if (
+    !runtimeReasoning &&
+    isKnownAnthropicReasoningModel(params.selection.resolvedLaunchModel) &&
+    (params.effort === 'low' ||
+      params.effort === 'medium' ||
+      params.effort === 'high' ||
+      params.effort === 'max')
+  ) {
+    return { kind: 'supported', source: 'static-fallback' };
+  }
+
+  return { kind: 'unverified-catalog-missing' };
+}
+
 export function resolveAnthropicRuntimeSelection(params: {
   source: AnthropicRuntimeProfileSource;
   selectedModel?: string | null;
   limitContext: boolean;
+  availableLaunchModels?: Iterable<string>;
 }): AnthropicRuntimeSelection {
   const catalog = getAnthropicCatalog(params.source);
+  const availableLaunchModels =
+    catalog !== null
+      ? catalog.models.map((model) => model.launchModel)
+      : params.availableLaunchModels;
   const resolvedLaunchModel =
     resolveAnthropicLaunchModel({
       selectedModel: params.selectedModel,
       limitContext: params.limitContext,
-      availableLaunchModels: catalog?.models.map((model) => model.launchModel),
+      availableLaunchModels,
       defaultLaunchModel: catalog?.defaultLaunchModel ?? null,
     }) ?? null;
 
@@ -168,6 +246,7 @@ export function reconcileAnthropicRuntimeSelections(params: {
   selectedEffort?: string | null;
   selectedFastMode?: TeamFastMode | null;
   providerFastModeDefault?: boolean;
+  runtimeCapabilities?: CliProviderRuntimeCapabilities | null;
 }): AnthropicRuntimeReconciliation {
   const selectedEffort = normalizeEffortLevel(params.selectedEffort ?? null);
   if (!hasCatalogTruth(params.selection)) {
@@ -179,14 +258,22 @@ export function reconcileAnthropicRuntimeSelections(params: {
     };
   }
 
-  const nextEffort =
-    selectedEffort && !params.selection.supportedEfforts.includes(selectedEffort)
-      ? ''
-      : (selectedEffort ?? '');
-  const effortResetReason =
-    selectedEffort && nextEffort === ''
-      ? `${selectedEffort} effort is not available for the currently selected Anthropic model. Reset to Default.`
-      : null;
+  let nextEffort: EffortLevel | '' = selectedEffort ?? '';
+  let effortResetReason: string | null = null;
+  if (selectedEffort) {
+    const effortSupport = resolveAnthropicEffortSupport({
+      selection: params.selection,
+      effort: selectedEffort,
+      runtimeCapabilities: params.runtimeCapabilities,
+    });
+    if (
+      effortSupport.kind === 'unsupported-by-catalog' ||
+      effortSupport.kind === 'unsupported-by-runtime-capability'
+    ) {
+      nextEffort = '';
+      effortResetReason = `${selectedEffort} effort is not available for the currently selected Anthropic model. Reset to Default.`;
+    }
+  }
 
   const fastResolution = resolveAnthropicFastMode({
     selection: params.selection,

@@ -1,18 +1,17 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
 } from '@features/member-work-sync/main';
-import { buildMemberWorkSyncOutboxEnsureInput } from '@features/member-work-sync/core/domain';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/NodeHashAdapter';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const tempRoots: string[] = [];
 
@@ -587,7 +586,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
       await expect(store.ensurePending(outboxInput!)).resolves.toMatchObject({
         ok: true,
-        outcome: 'created',
+        outcome: 'existing',
       });
 
       await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
@@ -682,8 +681,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       });
 
       await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
-        claimed: 1,
-        delivered: 0,
+        claimed: 2,
+        delivered: 1,
         superseded: 1,
         retryable: 0,
         terminal: 0,
@@ -697,9 +696,12 @@ describe('createMemberWorkSyncFeature composition', () => {
           taskIds: ['task-1'],
         })
       );
-      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
-        []
+      const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
       );
+      expect(nudges).toHaveLength(1);
+      expect(nudges[0]?.text).toContain('Required sync action');
+      expect(nudges[0]?.text).not.toContain('Recover proof');
     } finally {
       await feature.dispose();
     }
@@ -756,7 +758,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
       await expect(store.ensurePending(outboxInput!)).resolves.toMatchObject({
         ok: true,
-        outcome: 'created',
+        outcome: 'existing',
       });
 
       await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
@@ -886,6 +888,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       } as never,
       isTeamActive: vi.fn(async () => true),
       queueQuietWindowMs: 1,
+      resolveControlUrl: vi.fn(async () => 'http://127.0.0.1:43123'),
     });
 
     try {
@@ -914,9 +917,8 @@ describe('createMemberWorkSyncFeature composition', () => {
         'utf8'
       );
 
-      await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
-        claimed: 1,
-        enqueued: 1,
+      const drain = await feature.drainRuntimeTurnSettledEvents();
+      expect(drain).toMatchObject({
         invalid: 0,
         unresolved: 0,
       });
@@ -949,6 +951,150 @@ describe('createMemberWorkSyncFeature composition', () => {
         outcome: 'enqueued',
         teamName,
         memberName,
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('delivers a status-only recovery nudge when a delivered Codex nudge settles without report proof', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-codex-status-only-recovery';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Ship sync after status-only turn',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      queueQuietWindowMs: 1,
+      resolveControlUrl: vi.fn(async () => 'http://127.0.0.1:43123'),
+    });
+
+    try {
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudges[0]?.text).toContain('controlUrl "http://127.0.0.1:43123"');
+        const outboxItems = Object.values(
+          await readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+        );
+        expect(outboxItems).toEqual([
+          expect.objectContaining({
+            status: 'delivered',
+          }),
+        ]);
+        const deliveredOutboxItem = outboxItems[0] as {
+          payload?: { workSyncIntentKey?: string };
+        };
+        expect(deliveredOutboxItem.payload?.workSyncIntentKey).toBeUndefined();
+      });
+
+      feature.noteTeamChange({
+        type: 'tool-activity',
+        teamName,
+        detail: JSON.stringify({
+          action: 'start',
+          activity: {
+            memberName,
+            toolUseId: 'status-tool-1',
+            toolName: 'member_work_sync_status',
+            startedAt: '2026-05-05T12:00:00.000Z',
+            source: 'runtime',
+          },
+        }),
+      } as never);
+      feature.noteTeamChange({
+        type: 'tool-activity',
+        teamName,
+        detail: JSON.stringify({
+          action: 'finish',
+          memberName,
+          toolUseId: 'status-tool-1',
+          finishedAt: new Date().toISOString(),
+        }),
+      } as never);
+
+      const env = await feature.buildRuntimeTurnSettledEnvironment({ provider: 'codex' });
+      const spoolRoot = env?.[RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV];
+      expect(spoolRoot).toBeTruthy();
+      const eventFileName = '20260505T120001000Z-status-only.codex.json';
+      await fs.promises.writeFile(
+        path.join(spoolRoot!, 'incoming', eventFileName),
+        `${JSON.stringify({
+          schemaVersion: 1,
+          provider: 'codex',
+          source: 'agent-teams-orchestrator-codex-native',
+          eventName: 'runtime_turn_settled',
+          hookEventName: 'Stop',
+          sessionId: 'ses-codex-1',
+          memberName,
+          teamName,
+          cwd: claudeRoot,
+          outcome: 'success',
+          recordedAt: '2026-05-05T12:00:01.000Z',
+        })}\n`,
+        'utf8'
+      );
+
+      await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
+        claimed: 1,
+        enqueued: 1,
+        invalid: 0,
+        unresolved: 0,
+      });
+
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(2);
+        expect(nudges[1]?.messageId).toContain('status-only');
+        expect(nudges[1]?.text).toContain('previous work-sync turn appears to have stopped');
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              status: 'delivered',
+              payload: expect.objectContaining({
+                workSyncIntentKey: expect.stringContaining('status-only:'),
+              }),
+            }),
+          ])
+        );
       });
     } finally {
       await feature.dispose();
@@ -1054,12 +1200,15 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('does not apply the OpenCode shadow-collection exception to Codex members', async () => {
+  it('delivers Codex inbox-watch nudges while shadow data is still collecting', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
     const teamName = 'team-codex-shadow-gated';
     const memberName = 'bob';
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
     const feature = createMemberWorkSyncFeature({
       teamsBasePath,
       configReader: {
@@ -1090,6 +1239,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         getMembers: vi.fn(async () => []),
       } as never,
       isTeamActive: vi.fn(async () => true),
+      nudgeDeliveryWake,
       queueQuietWindowMs: 1,
     });
 
@@ -1099,8 +1249,28 @@ describe('createMemberWorkSyncFeature composition', () => {
 
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
-        expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
-        expect(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).toEqual({});
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_report');
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+          teamName,
+          memberName,
+          messageId: nudges[0]?.messageId,
+          providerId: 'codex',
+          reason: 'member_work_sync_nudge_inserted',
+          delayMs: 500,
+        });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([
+          expect.objectContaining({
+            status: 'delivered',
+            deliveredMessageId: nudges[0]?.messageId,
+          }),
+        ]);
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
           phase2Readiness: { state: 'collecting_shadow_data' },
         });
@@ -1122,9 +1292,8 @@ describe('createMemberWorkSyncFeature composition', () => {
         ),
         'utf8'
       );
-      expect(journal).toContain('"event":"nudge_skipped"');
-      expect(journal).toContain('"reason":"phase2_not_ready"');
-      expect(journal).not.toContain('"event":"nudge_delivered"');
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"phase2_not_ready"');
     } finally {
       await feature.dispose();
     }
@@ -2008,7 +2177,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
       await expect(store.ensurePending(outboxInput!)).resolves.toMatchObject({
         ok: true,
-        outcome: 'created',
+        outcome: 'existing',
       });
       const staleOutboxId = `member-work-sync:${teamName}:${memberName}:${staleStatus.agenda.fingerprint}`;
       await expect(
@@ -2160,7 +2329,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
       await expect(store.ensurePending(outboxInput!)).resolves.toMatchObject({
         ok: true,
-        outcome: 'created',
+        outcome: 'existing',
       });
 
       teamActive = false;

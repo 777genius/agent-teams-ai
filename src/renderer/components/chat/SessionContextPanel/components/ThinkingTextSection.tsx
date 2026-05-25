@@ -4,6 +4,8 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { ThinkingTextItem } from '../items/ThinkingTextItem';
 
 import { CollapsibleSection } from './CollapsibleSection';
@@ -25,11 +27,13 @@ export const ThinkingTextSection = ({
   onToggle,
   onNavigateToTurn,
 }: Readonly<ThinkingTextSectionProps>): React.ReactElement | null => {
+  const { t } = useAppTranslation('common');
+
   if (injections.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="Thinking + Text"
+      title={t('tokens.thinkingText')}
       count={injections.length}
       tokenCount={tokenCount}
       isExpanded={isExpanded}

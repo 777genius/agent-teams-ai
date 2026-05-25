@@ -6,6 +6,7 @@
 
 import React, { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CodeBlockViewer, MarkdownViewer } from '@renderer/components/chat/viewers';
 
 import type { LinkedToolItem } from '@renderer/types/groups';
@@ -15,6 +16,7 @@ interface ReadToolViewerProps {
 }
 
 export const ReadToolViewer = memo(function ReadToolViewer({ linkedTool }: ReadToolViewerProps) {
+  const { t } = useAppTranslation('common');
   const filePath = linkedTool.input.file_path as string;
 
   // Prefer enriched toolUseResult data
@@ -73,7 +75,7 @@ export const ReadToolViewer = memo(function ReadToolViewer({ linkedTool }: ReadT
               border: '1px solid var(--tag-border)',
             }}
           >
-            Code
+            {t('code.code')}
           </button>
           <button
             type="button"
@@ -85,12 +87,12 @@ export const ReadToolViewer = memo(function ReadToolViewer({ linkedTool }: ReadT
               border: '1px solid var(--tag-border)',
             }}
           >
-            Preview
+            {t('code.preview')}
           </button>
         </div>
       )}
       {isMarkdownFile && viewMode === 'preview' ? (
-        <MarkdownViewer content={content} label="Markdown Preview" copyable />
+        <MarkdownViewer content={content} label={t('code.markdownPreview')} copyable />
       ) : (
         <CodeBlockViewer
           fileName={filePath}

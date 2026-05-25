@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { cn } from '@renderer/lib/utils';
 import { formatRelativeTime } from '@renderer/utils/formatters';
@@ -36,6 +37,7 @@ export const MemberStatsTab = ({
   onFileClick,
   onShowAllFiles,
 }: MemberStatsTabProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const usePrefetched = prefetchedStats !== undefined;
 
   const [localStats, setLocalStats] = useState<MemberFullStats | null>(null);
@@ -73,7 +75,7 @@ export const MemberStatsTab = ({
     return (
       <div className="flex items-center justify-center gap-2 py-8 text-xs text-[var(--color-text-muted)]">
         <Loader2 size={14} className="animate-spin" />
-        Computing stats...
+        {t('members.stats.computing')}
       </div>
     );
   }
@@ -91,7 +93,7 @@ export const MemberStatsTab = ({
     return (
       <div className="py-8 text-center text-xs text-[var(--color-text-muted)]">
         <BarChart3 size={20} className="mx-auto mb-2 opacity-40" />
-        No stats available
+        {t('members.stats.empty')}
       </div>
     );
   }
@@ -153,25 +155,30 @@ const SummaryCards = ({
   stats: MemberFullStats;
   totalTokens: number;
   totalToolCalls: number;
-}): React.JSX.Element => (
-  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-    <StatCard
-      label="Lines"
-      value={`+${stats.linesAdded}`}
-      sub={stats.linesRemoved > 0 ? `-${stats.linesRemoved}` : undefined}
-      info="Approximate. Accurate for Edit and Write tools. Bash file writes are estimated from command patterns (heredoc, echo, sed) and may be underreported."
-    />
-    <StatCard label="Files" value={stats.filesTouched.length} />
-    <StatCard label="Tool Calls" value={totalToolCalls} />
-    <StatCard label="Tokens" value={formatTokensCompact(totalTokens)} />
-  </div>
-);
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <StatCard
+        label={t('members.stats.lines')}
+        value={`+${stats.linesAdded}`}
+        sub={stats.linesRemoved > 0 ? `-${stats.linesRemoved}` : undefined}
+        info={t('members.stats.linesInfo')}
+      />
+      <StatCard label={t('members.stats.files')} value={stats.filesTouched.length} />
+      <StatCard label={t('members.stats.toolCalls')} value={totalToolCalls} />
+      <StatCard label={t('members.stats.tokens')} value={formatTokensCompact(totalTokens)} />
+    </div>
+  );
+};
 
 const ToolUsageBars = ({
   toolUsage,
 }: {
   toolUsage: Record<string, number>;
 }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const entries = Object.entries(toolUsage).sort(([, a], [, b]) => b - a);
   if (entries.length === 0) return null;
 
@@ -179,7 +186,9 @@ const ToolUsageBars = ({
 
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-      <p className="mb-2 text-[11px] font-medium text-[var(--color-text-secondary)]">Tool Usage</p>
+      <p className="mb-2 text-[11px] font-medium text-[var(--color-text-secondary)]">
+        {t('members.stats.toolUsage')}
+      </p>
       <div className="space-y-1.5">
         {entries.map(([name, count]) => (
           <div key={name} className="flex items-center gap-2 text-[11px]">
@@ -235,6 +244,7 @@ const FilesTouchedSection = ({
   onFileClick?: (filePath: string) => void;
   onShowAll?: () => void;
 }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const [expanded, setExpanded] = useState(false);
 
   const validFiles = files.filter((f) => !isInvalidPath(f));
@@ -248,11 +258,11 @@ const FilesTouchedSection = ({
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-[11px] font-medium text-[var(--color-text-secondary)]">
-          Files Touched ({validFiles.length})
+          {t('members.stats.filesTouched', { count: validFiles.length })}
         </p>
         {onShowAll && (
           <button className="text-[10px] text-blue-400 hover:text-blue-300" onClick={onShowAll}>
-            View All Changes
+            {t('members.stats.viewAllChanges')}
           </button>
         )}
       </div>
@@ -291,7 +301,9 @@ const FilesTouchedSection = ({
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-          {expanded ? 'Show less' : `+${hiddenCount} more`}
+          {expanded
+            ? t('members.stats.showLess')
+            : t('members.stats.moreFiles', { count: hiddenCount })}
         </button>
       )}
     </div>
@@ -299,11 +311,12 @@ const FilesTouchedSection = ({
 };
 
 const StatsFooter = ({ stats }: { stats: MemberFullStats }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const computedAgo = formatRelativeTime(stats.computedAt);
 
   return (
     <div className="text-center text-[10px] text-[var(--color-text-muted)]">
-      {stats.sessionCount} session{stats.sessionCount !== 1 ? 's' : ''} · computed {computedAgo}
+      {t('members.stats.footer', { count: stats.sessionCount, computedAgo })}
     </div>
   );
 };

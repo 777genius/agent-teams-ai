@@ -4,6 +4,8 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { MentionedFileItem } from '../items/MentionedFileItem';
 
 import { CollapsibleSection } from './CollapsibleSection';
@@ -27,11 +29,13 @@ export const MentionedFilesSection = ({
   projectRoot,
   onNavigateToTurn,
 }: Readonly<MentionedFilesSectionProps>): React.ReactElement | null => {
+  const { t } = useAppTranslation('common');
+
   if (injections.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="Mentioned Files"
+      title={t('sessionContext.mentionedFiles')}
       count={injections.length}
       tokenCount={tokenCount}
       isExpanded={isExpanded}

@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -31,19 +32,21 @@ export const TrashDialog = ({
   onClose,
   onRestore,
 }: TrashDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
             <Trash2 size={14} className="text-[var(--color-text-muted)]" />
-            Trash
+            {t('kanban.trash.title')}
           </DialogTitle>
         </DialogHeader>
 
         {tasks.length === 0 ? (
           <div className="py-8 text-center text-xs text-[var(--color-text-muted)]">
-            No deleted tasks
+            {t('kanban.trash.empty')}
           </div>
         ) : (
           <TooltipProvider delayDuration={300}>
@@ -52,9 +55,9 @@ export const TrashDialog = ({
                 <thead>
                   <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-text-muted)]">
                     <th className="pb-2 pr-3 font-medium">#</th>
-                    <th className="pb-2 pr-3 font-medium">Subject</th>
-                    <th className="pb-2 pr-3 font-medium">Owner</th>
-                    <th className="pb-2 pr-3 font-medium">Deleted</th>
+                    <th className="pb-2 pr-3 font-medium">{t('kanban.trash.subject')}</th>
+                    <th className="pb-2 pr-3 font-medium">{t('kanban.trash.owner')}</th>
+                    <th className="pb-2 pr-3 font-medium">{t('kanban.trash.deleted')}</th>
                     {onRestore ? <th className="pb-2 font-medium" /> : null}
                   </tr>
                 </thead>
@@ -69,7 +72,7 @@ export const TrashDialog = ({
                       </td>
                       <td className="py-2 pr-3 text-[var(--color-text)]">{task.subject}</td>
                       <td className="py-2 pr-3 text-[var(--color-text-secondary)]">
-                        {task.owner ?? 'Unassigned'}
+                        {task.owner ?? t('kanban.trash.unassigned')}
                       </td>
                       <td className="py-2 pr-3 text-[var(--color-text-muted)]">
                         {task.deletedAt
@@ -84,12 +87,12 @@ export const TrashDialog = ({
                                 type="button"
                                 className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-emerald-500/10 hover:text-emerald-400"
                                 onClick={() => onRestore(task.id)}
-                                aria-label="Restore task"
+                                aria-label={t('kanban.trash.restoreTask')}
                               >
                                 <RotateCcw size={12} />
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent side="left">Restore</TooltipContent>
+                            <TooltipContent side="left">{t('kanban.trash.restore')}</TooltipContent>
                           </Tooltip>
                         </td>
                       ) : null}
@@ -103,7 +106,7 @@ export const TrashDialog = ({
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>
-            Close
+            {t('kanban.trash.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,12 +6,14 @@
  * Only rendered in Electron mode.
  */
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { AlertTriangle } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 export const CliInstallWarningBanner = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const cliStatus = useStore(useShallow((s) => s.cliStatus));
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const openDashboard = useStore((s) => s.openDashboard);
@@ -58,7 +60,7 @@ export const CliInstallWarningBanner = (): React.JSX.Element | null => {
           color: 'var(--warning-text)',
         }}
       >
-        Go to Dashboard
+        {t('actions.goToDashboard')}
       </button>
     </div>
   );

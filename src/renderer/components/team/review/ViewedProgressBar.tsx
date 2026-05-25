@@ -1,3 +1,5 @@
+import { useAppTranslation } from '@features/localization/renderer';
+
 interface ViewedProgressBarProps {
   viewed: number;
   total: number;
@@ -5,6 +7,8 @@ interface ViewedProgressBarProps {
 }
 
 export const ViewedProgressBar = ({ viewed, total, progress }: ViewedProgressBarProps) => {
+  const { t } = useAppTranslation('team');
+
   if (total === 0) return null;
 
   return (
@@ -15,9 +19,7 @@ export const ViewedProgressBar = ({ viewed, total, progress }: ViewedProgressBar
           style={{ width: `${progress}%` }}
         />
       </div>
-      <span className="text-text-muted">
-        {viewed}/{total} viewed
-      </span>
+      <span className="text-text-muted">{t('review.progress.viewed', { viewed, total })}</span>
     </div>
   );
 };

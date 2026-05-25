@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -72,6 +73,7 @@ export const ScheduleRunLogDialog = ({
   scheduleId,
   onClose,
 }: ScheduleRunLogDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   // Read live run data from store — falls back to initial prop if not found
   const liveRun = useStore(
     useShallow((s) => {
@@ -145,7 +147,7 @@ export const ScheduleRunLogDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
             <Terminal className="size-4" />
-            Run Log
+            {t('schedule.runLog.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -166,12 +168,14 @@ export const ScheduleRunLogDialog = ({
             <span
               className={`font-mono ${run.exitCode === 0 ? 'text-emerald-400' : 'text-red-400'}`}
             >
-              exit {run.exitCode}
+              {t('schedule.runLog.exitCode', { code: run.exitCode })}
             </span>
           ) : null}
 
           {run.retryCount > 0 ? (
-            <span className="text-[var(--color-text-muted)]">retry {run.retryCount}/2</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('schedule.runLog.retryCount', { count: run.retryCount, max: 2 })}
+            </span>
           ) : null}
         </div>
 
@@ -181,7 +185,7 @@ export const ScheduleRunLogDialog = ({
           {isRunning ? (
             <div className="flex items-center gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-xs text-[var(--color-text-secondary)]">
               <Loader2 className="size-4 animate-spin" />
-              Task is still running...
+              {t('schedule.runLog.stillRunning')}
               {run.summary ? (
                 <span className="ml-2 truncate text-[var(--color-text-muted)]">{run.summary}</span>
               ) : null}
@@ -192,7 +196,7 @@ export const ScheduleRunLogDialog = ({
           {loading ? (
             <div className="flex items-center justify-center py-6 text-xs text-[var(--color-text-muted)]">
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Loading logs...
+              {t('schedule.runLog.loadingLogs')}
             </div>
           ) : null}
 
@@ -216,7 +220,9 @@ export const ScheduleRunLogDialog = ({
               {/* Stderr */}
               {hasStderr ? (
                 <div>
-                  <div className="mb-1 text-[11px] font-medium text-red-400">Errors</div>
+                  <div className="mb-1 text-[11px] font-medium text-red-400">
+                    {t('schedule.runLog.errors')}
+                  </div>
                   <pre className="max-h-[200px] overflow-auto whitespace-pre-wrap rounded border border-red-500/30 bg-red-500/5 p-3 font-mono text-xs leading-relaxed text-red-300">
                     {logs.stderr}
                   </pre>
@@ -236,7 +242,7 @@ export const ScheduleRunLogDialog = ({
 
         <DialogFooter className="pt-2">
           <Button variant="outline" size="sm" onClick={onClose}>
-            Close
+            {t('schedule.runLog.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

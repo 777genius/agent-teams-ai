@@ -8,6 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 import { ChevronRight } from 'lucide-react';
@@ -97,6 +98,7 @@ const ToolOutputRankedItem = ({
   onNavigateToTurn?: (turnIndex: number) => void;
   onNavigateToTool?: (turnIndex: number, toolUseId: string) => void;
 }>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const hasBreakdown = injection.toolBreakdown.length > 0;
   const categoryInfo = CATEGORY_COLORS['tool-output'];
@@ -183,7 +185,7 @@ const ToolOutputRankedItem = ({
                     fontSize: '10px',
                   }}
                 >
-                  error
+                  {t('states.error')}
                 </span>
               )}
             </button>

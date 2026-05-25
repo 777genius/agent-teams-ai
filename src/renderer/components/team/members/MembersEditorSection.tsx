@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
@@ -7,8 +8,10 @@ import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRole
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import { GitBranch, Plus } from 'lucide-react';
+import { GitBranch, Plug, Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
@@ -32,7 +35,7 @@ function membersToJsonText(drafts: MemberDraft[]): string {
     .filter((d) => d.name.trim())
     .map((d) => {
       const role = getMemberDraftRole(d);
-      const obj: Record<string, string> = { name: d.name.trim() };
+      const obj: Record<string, unknown> = { name: d.name.trim() };
       if (role) obj.role = role;
       const workflow = getWorkflowForExport(d);
       if (workflow) obj.workflow = workflow;
@@ -40,6 +43,7 @@ function membersToJsonText(drafts: MemberDraft[]): string {
       if (d.providerId) obj.providerId = d.providerId;
       if (d.model?.trim()) obj.model = d.model.trim();
       if (d.effort) obj.effort = d.effort;
+      if (d.mcpPolicy) obj.mcpPolicy = d.mcpPolicy;
       return obj;
     });
   return JSON.stringify(arr, null, 2);
@@ -58,6 +62,7 @@ function parseJsonToDrafts(text: string): MemberDraft[] {
     const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort)
       ? item.effort
       : undefined;
+    const mcpPolicy = normalizeTeamMemberMcpPolicy(item.mcpPolicy);
     const presetRoles: readonly string[] = PRESET_ROLES;
     const isPreset = presetRoles.includes(role);
     return createMemberDraft({
@@ -69,8 +74,27 @@ function parseJsonToDrafts(text: string): MemberDraft[] {
       providerId,
       model,
       effort,
+      mcpPolicy,
     });
   });
+}
+
+function cloneMcpPolicy(policy: MemberDraft['mcpPolicy']): MemberDraft['mcpPolicy'] {
+  const normalized = normalizeTeamMemberMcpPolicy(policy);
+  if (!normalized) {
+    return undefined;
+  }
+  return {
+    mode: normalized.mode,
+    ...(normalized.scopes ? { scopes: { ...normalized.scopes } } : {}),
+    ...(normalized.serverNames ? { serverNames: [...normalized.serverNames] } : {}),
+  };
+}
+
+function forceActiveMembersToAgentTeamsMcp(drafts: MemberDraft[]): MemberDraft[] {
+  return drafts.map((member) =>
+    member.removedAt ? member : { ...member, mcpPolicy: { mode: 'appOnly' as const } }
+  );
 }
 
 export interface MembersEditorSectionProps {
@@ -88,6 +112,8 @@ export interface MembersEditorSectionProps {
   taskSuggestions?: MentionSuggestion[];
   /** Team suggestions for @@team mentions in workflow */
   teamSuggestions?: MentionSuggestion[];
+  /** Called before workflow mention suggestions are needed. */
+  onWorkflowSuggestionsNeeded?: () => void;
   /** Extra content rendered right below the "Members" label row */
   headerExtra?: React.ReactNode;
   /** When true, hides member rows and action buttons (label + headerExtra still visible) */
@@ -115,6 +141,9 @@ export interface MembersEditorSectionProps {
   memberInfoById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   memberModelIssueById?: Record<string, string | null | undefined>;
+  modelAdvisoryReasonByProvider?: Partial<
+    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
+  >;
   modelIssueReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
@@ -140,6 +169,7 @@ export const MembersEditorSection = ({
   projectPath,
   taskSuggestions,
   teamSuggestions,
+  onWorkflowSuggestionsNeeded,
   headerExtra,
   hideContent = false,
   existingMembers,
@@ -160,6 +190,7 @@ export const MembersEditorSection = ({
   memberInfoById,
   disableGeminiOption = false,
   memberModelIssueById,
+  modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
   disableAddMember = false,
@@ -169,9 +200,18 @@ export const MembersEditorSection = ({
   worktreeIsolationDisabledReason,
   onTeammateWorktreeDefaultChange,
 }: MembersEditorSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [agentTeamsMcpLockedForAll, setAgentTeamsMcpLockedForAll] = useState(false);
+  const previousMcpPolicyByMemberIdRef = useRef<Map<string, MemberDraft['mcpPolicy']>>(new Map());
+
+  const emitMembersChange = (nextMembers: MemberDraft[]): void => {
+    onChange(
+      agentTeamsMcpLockedForAll ? forceActiveMembersToAgentTeamsMcp(nextMembers) : nextMembers
+    );
+  };
 
   const toggleJsonEditor = (): void => {
     if (!jsonEditorOpen) {
@@ -190,7 +230,7 @@ export const MembersEditorSection = ({
     setJsonText(text);
     try {
       const drafts = parseJsonToDrafts(text);
-      onChange(drafts);
+      emitMembersChange(drafts);
       setJsonError(null);
     } catch (e) {
       setJsonError(e instanceof Error ? e.message : 'Invalid JSON');
@@ -198,12 +238,12 @@ export const MembersEditorSection = ({
   };
 
   const updateMemberName = (memberId: string, name: string): void => {
-    onChange(members.map((c) => (c.id === memberId ? { ...c, name } : c)));
+    emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, name } : c)));
   };
 
   const updateMemberRole = (memberId: string, roleSelection: string): void => {
     const resolvedRole = roleSelection === NO_ROLE ? '' : roleSelection;
-    onChange(
+    emitMembersChange(
       members.map((c) =>
         c.id === memberId
           ? {
@@ -217,37 +257,44 @@ export const MembersEditorSection = ({
   };
 
   const updateMemberCustomRole = (memberId: string, customRole: string): void => {
-    onChange(members.map((c) => (c.id === memberId ? { ...c, customRole } : c)));
+    emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, customRole } : c)));
   };
 
   const updateMemberWorkflow = (memberId: string, workflow: string): void => {
-    onChange(members.map((c) => (c.id === memberId ? { ...c, workflow } : c)));
+    emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, workflow } : c)));
   };
 
   const updateMemberWorkflowChips = (memberId: string, workflowChips: InlineChip[]): void => {
-    onChange(members.map((c) => (c.id === memberId ? { ...c, workflowChips } : c)));
+    emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, workflowChips } : c)));
   };
 
   const updateMemberProvider = (memberId: string, providerId: TeamProviderId): void => {
-    onChange(
+    emitMembersChange(
       members.map((c) =>
         c.id === memberId
-          ? {
-              ...c,
-              providerId,
-              model: c.providerId === providerId ? c.model : '',
-            }
+          ? (() => {
+              const previousProviderId = c.providerId ?? inheritedProviderId;
+              const providerChanged = previousProviderId !== providerId;
+              return {
+                ...c,
+                providerId,
+                providerBackendId: migrateProviderBackendId(providerId, c.providerBackendId),
+                model: providerChanged ? '' : c.model,
+                effort: providerChanged ? undefined : c.effort,
+                fastMode: providerChanged ? undefined : c.fastMode,
+              };
+            })()
           : c
       )
     );
   };
 
   const updateMemberModel = (memberId: string, model: string): void => {
-    onChange(members.map((c) => (c.id === memberId ? { ...c, model } : c)));
+    emitMembersChange(members.map((c) => (c.id === memberId ? { ...c, model } : c)));
   };
 
   const updateMemberEffort = (memberId: string, effort: string): void => {
-    onChange(
+    emitMembersChange(
       members.map((c) =>
         c.id === memberId
           ? {
@@ -263,11 +310,45 @@ export const MembersEditorSection = ({
     if (enabled && worktreeIsolationDisabledReason) {
       return;
     }
-    onChange(
+    emitMembersChange(
       members.map((c) =>
         c.id === memberId ? { ...c, isolation: enabled ? 'worktree' : undefined } : c
       )
     );
+  };
+
+  const updateMemberMcpPolicy = (memberId: string, mcpPolicy: MemberDraft['mcpPolicy']): void => {
+    if (agentTeamsMcpLockedForAll) {
+      return;
+    }
+    emitMembersChange(
+      members.map((c) =>
+        c.id === memberId ? { ...c, mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy) } : c
+      )
+    );
+  };
+
+  const updateAgentTeamsMcpLock = (enabled: boolean): void => {
+    if (enabled) {
+      const previous = new Map<string, MemberDraft['mcpPolicy']>();
+      for (const member of members) {
+        previous.set(member.id, cloneMcpPolicy(member.mcpPolicy));
+      }
+      previousMcpPolicyByMemberIdRef.current = previous;
+      setAgentTeamsMcpLockedForAll(true);
+      onChange(forceActiveMembersToAgentTeamsMcp(members));
+      return;
+    }
+
+    setAgentTeamsMcpLockedForAll(false);
+    const previous = previousMcpPolicyByMemberIdRef.current;
+    onChange(
+      members.map((member) => ({
+        ...member,
+        mcpPolicy: cloneMcpPolicy(previous.get(member.id)),
+      }))
+    );
+    previous.clear();
   };
 
   const updateTeammateWorktreeDefault = (enabled: boolean): void => {
@@ -275,7 +356,7 @@ export const MembersEditorSection = ({
       return;
     }
     onTeammateWorktreeDefaultChange?.(enabled);
-    onChange(
+    emitMembersChange(
       members.map((member) =>
         member.removedAt ? member : { ...member, isolation: enabled ? 'worktree' : undefined }
       )
@@ -284,10 +365,10 @@ export const MembersEditorSection = ({
 
   const removeMember = (memberId: string): void => {
     if (!softDeleteMembers) {
-      onChange(members.filter((c) => c.id !== memberId));
+      emitMembersChange(members.filter((c) => c.id !== memberId));
       return;
     }
-    onChange(
+    emitMembersChange(
       members.map((member) =>
         member.id === memberId ? { ...member, removedAt: member.removedAt ?? Date.now() } : member
       )
@@ -295,32 +376,49 @@ export const MembersEditorSection = ({
   };
 
   const restoreMember = (memberId: string): void => {
-    onChange(
+    emitMembersChange(
       members.map((member) => (member.id === memberId ? { ...member, removedAt: null } : member))
     );
   };
 
+  const activeMembers = members.filter((member) => !member.removedAt);
+  const removedMembers = members.filter((member) => member.removedAt);
+  const activeWorktreeMemberCount = activeMembers.filter(
+    (member) => member.isolation === 'worktree'
+  ).length;
+  const allActiveMembersUseWorktrees =
+    activeMembers.length > 0 && activeWorktreeMemberCount === activeMembers.length;
+  const someActiveMembersUseWorktrees = activeWorktreeMemberCount > 0;
+  const teammateWorktreeDefaultChecked: boolean | 'indeterminate' = allActiveMembersUseWorktrees
+    ? true
+    : someActiveMembersUseWorktrees
+      ? 'indeterminate'
+      : false;
+  const newMemberUsesWorktree =
+    allActiveMembersUseWorktrees || (activeMembers.length === 0 && teammateWorktreeDefault);
+  const worktreeDefaultDisabled = Boolean(
+    worktreeIsolationDisabledReason && !allActiveMembersUseWorktrees
+  );
+
   const addMember = (): void => {
     const suggestedName = getNextSuggestedMemberName(members.map((member) => member.name));
-    onChange([
+    emitMembersChange([
       ...members,
       createMemberDraft(
         inheritModelSettingsByDefault
           ? {
               name: suggestedName,
-              isolation: teammateWorktreeDefault ? 'worktree' : undefined,
+              isolation: newMemberUsesWorktree ? 'worktree' : undefined,
             }
           : {
               name: suggestedName,
               providerId: defaultProviderId,
-              isolation: teammateWorktreeDefault ? 'worktree' : undefined,
+              isolation: newMemberUsesWorktree ? 'worktree' : undefined,
             }
       ),
     ]);
   };
 
-  const activeMembers = members.filter((member) => !member.removedAt);
-  const removedMembers = members.filter((member) => member.removedAt);
   const names = activeMembers.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
   const hasDuplicates = new Set(names).size !== names.length;
   const memberColorMap = useMemo(
@@ -332,6 +430,11 @@ export const MembersEditorSection = ({
       `teammate-worktree-default-${(draftKeyPrefix ?? 'default').replace(/[^a-zA-Z0-9_-]/g, '-')}`,
     [draftKeyPrefix]
   );
+  const agentTeamsMcpDefaultControlId = useMemo(
+    () =>
+      `teammate-agent-teams-mcp-default-${(draftKeyPrefix ?? 'default').replace(/[^a-zA-Z0-9_-]/g, '-')}`,
+    [draftKeyPrefix]
+  );
 
   const mentionSuggestions = useMemo(
     () => buildMemberDraftSuggestions(members, memberColorMap),
@@ -341,7 +444,7 @@ export const MembersEditorSection = ({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <Label>Members</Label>
+        <Label>{t('members.editor.title')}</Label>
         {!hideContent && (
           <div className="flex gap-2">
             <Button
@@ -353,11 +456,11 @@ export const MembersEditorSection = ({
               title={disableAddMember ? addMemberLockReason : undefined}
             >
               <Plus className="size-3.5" />
-              Add member
+              {t('members.editor.addMember')}
             </Button>
             {showJsonEditor && !jsonEditorOpen ? (
               <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
-                Edit as JSON
+                {t('members.editor.editAsJson')}
               </Button>
             ) : null}
           </div>
@@ -386,22 +489,40 @@ export const MembersEditorSection = ({
           >
             {showWorktreeIsolationControls ? (
               <div
-                className="flex items-center gap-2 border-b border-[var(--color-border)] px-2.5 py-2"
+                className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-2.5 py-2"
                 title={worktreeIsolationDisabledReason ?? undefined}
               >
-                <Checkbox
-                  id={worktreeDefaultControlId}
-                  checked={teammateWorktreeDefault}
-                  disabled={Boolean(worktreeIsolationDisabledReason && !teammateWorktreeDefault)}
-                  onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
-                />
-                <Label
-                  htmlFor={worktreeDefaultControlId}
-                  className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-                >
-                  <GitBranch className="size-3.5 shrink-0" />
-                  <span className="truncate">Run teammates in separate worktrees</span>
-                </Label>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Checkbox
+                    id={worktreeDefaultControlId}
+                    checked={teammateWorktreeDefaultChecked}
+                    disabled={worktreeDefaultDisabled}
+                    onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+                  />
+                  <Label
+                    htmlFor={worktreeDefaultControlId}
+                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+                  >
+                    <GitBranch className="size-3.5 shrink-0" />
+                    <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
+                  </Label>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Checkbox
+                    id={agentTeamsMcpDefaultControlId}
+                    checked={agentTeamsMcpLockedForAll}
+                    onCheckedChange={(checked) => updateAgentTeamsMcpLock(checked === true)}
+                  />
+                  <Label
+                    htmlFor={agentTeamsMcpDefaultControlId}
+                    className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+                  >
+                    <Plug className="size-3.5 shrink-0" />
+                    <span className="whitespace-nowrap">
+                      {t('members.editor.agentTeamsMcpOnly')}
+                    </span>
+                  </Label>
+                </div>
               </div>
             ) : null}
             <div className={cn('space-y-2', showWorktreeIsolationControls && 'p-2')}>
@@ -426,6 +547,8 @@ export const MembersEditorSection = ({
                   showWorktreeIsolationControls={showWorktreeIsolationControls}
                   worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
                   onWorktreeIsolationChange={updateMemberIsolation}
+                  onMcpPolicyChange={updateMemberMcpPolicy}
+                  agentTeamsMcpLocked={agentTeamsMcpLockedForAll}
                   inheritedProviderId={inheritedProviderId}
                   inheritedModel={inheritedModel}
                   inheritedEffort={inheritedEffort}
@@ -436,6 +559,7 @@ export const MembersEditorSection = ({
                   mentionSuggestions={mentionSuggestions}
                   taskSuggestions={taskSuggestions}
                   teamSuggestions={teamSuggestions}
+                  onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
                   lockProviderModel={lockProviderModel}
                   lockIdentity={lockExistingMemberIdentity && Boolean(member.originalName?.trim())}
                   identityLockReason={identityLockReason}
@@ -444,6 +568,7 @@ export const MembersEditorSection = ({
                   infoText={memberInfoById?.[member.id] ?? null}
                   disableGeminiOption={disableGeminiOption}
                   modelIssueText={memberModelIssueById?.[member.id] ?? null}
+                  modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
                   modelIssueReasonByProvider={modelIssueReasonByProvider}
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
                 />
@@ -451,7 +576,7 @@ export const MembersEditorSection = ({
               {softDeleteMembers && removedMembers.length > 0 ? (
                 <div className="pt-2">
                   <div className="mb-2 text-[10px] text-[var(--color-text-muted)]">
-                    Removed ({removedMembers.length})
+                    {t('members.editor.removedCount', { count: removedMembers.length })}
                   </div>
                   <div className="space-y-2">
                     {removedMembers.map((member, index) => (
@@ -475,6 +600,8 @@ export const MembersEditorSection = ({
                         onEffortChange={updateMemberEffort}
                         showWorktreeIsolationControls={showWorktreeIsolationControls}
                         onWorktreeIsolationChange={updateMemberIsolation}
+                        onMcpPolicyChange={updateMemberMcpPolicy}
+                        agentTeamsMcpLocked={agentTeamsMcpLockedForAll}
                         inheritedProviderId={inheritedProviderId}
                         inheritedModel={inheritedModel}
                         inheritedEffort={inheritedEffort}
@@ -485,8 +612,9 @@ export const MembersEditorSection = ({
                         mentionSuggestions={mentionSuggestions}
                         taskSuggestions={taskSuggestions}
                         teamSuggestions={teamSuggestions}
+                        onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
                         lockProviderModel
-                        modelLockReason="Removed members are kept for soft delete history. Restore them to edit settings."
+                        modelLockReason={t('members.editor.removedModelLockReason')}
                         isRemoved
                         warningText={null}
                         disableGeminiOption={disableGeminiOption}
@@ -500,7 +628,7 @@ export const MembersEditorSection = ({
           </div>
           {hasDuplicates ? (
             <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-              Member names must be unique
+              {t('members.editor.memberNamesUnique')}
             </p>
           ) : fieldError ? (
             <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>

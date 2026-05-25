@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CARD_BG,
   CARD_BORDER_STYLE,
@@ -84,6 +85,7 @@ export const TeammateMessageItem = memo(
     highlightClasses = '',
     highlightStyle,
   }: TeammateMessageItemProps): React.JSX.Element => {
+    const { t } = useAppTranslation('common');
     const colors = getTeamColorSet(teammateMessage.color);
     const { isLight } = useTheme();
 
@@ -200,7 +202,7 @@ export const TeammateMessageItem = memo(
 
           {/* "Message" type label — parallels SubagentItem's model info */}
           <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-            Message
+            {t('chat.teammateMessage.message')}
           </span>
 
           {/* Reply indicator — shows which SendMessage triggered this response */}
@@ -226,13 +228,13 @@ export const TeammateMessageItem = memo(
               style={{ color: CARD_ICON_MUTED }}
             >
               <RefreshCw className="size-2.5" />
-              Resent
+              {t('chat.teammateMessage.resent')}
             </span>
           )}
 
           {/* Summary */}
           <span className="flex-1 truncate text-xs" style={{ color: CARD_TEXT_LIGHT }}>
-            {truncatedSummary || 'Teammate message'}
+            {truncatedSummary || t('chat.teammateMessage.fallback')}
           </span>
 
           {/* Context impact — tokens injected into main session */}
@@ -241,7 +243,9 @@ export const TeammateMessageItem = memo(
               className="shrink-0 font-mono text-[11px] tabular-nums"
               style={{ color: CARD_ICON_MUTED }}
             >
-              ~{formatTokensCompact(teammateMessage.tokenCount)} tokens
+              {t('tokens.approxTokens', {
+                tokens: formatTokensCompact(teammateMessage.tokenCount),
+              })}
             </span>
           )}
 

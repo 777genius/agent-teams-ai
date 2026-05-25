@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -30,24 +31,26 @@ import { validateSkillFolderName, validateSkillImportSourceDir } from './skillVa
 
 import type { SkillReviewPreview, SkillRootKind } from '@shared/types/extensions';
 
-function getFriendlyImportError(message: string): string {
+type ExtensionsT = ReturnType<typeof useAppTranslation>['t'];
+
+function getFriendlyImportError(message: string, t: ExtensionsT): string {
   if (message.includes('valid skill file')) {
-    return 'This folder does not look like a skill yet. It needs a SKILL.md, Skill.md, or skill.md file.';
+    return t('skillImport.errors.missingSkillFile');
   }
   if (message.includes('symbolic links')) {
-    return 'This folder contains symbolic links. Import the real files instead of links.';
+    return t('skillImport.errors.symbolicLinks');
   }
   if (message.includes('too many files')) {
-    return 'This skill folder is too large to import at once. Remove extra files and try again.';
+    return t('skillImport.errors.tooManyFiles');
   }
   if (message.includes('too large')) {
-    return 'This skill folder is too large to import safely. Trim large assets and try again.';
+    return t('skillImport.errors.tooLarge');
   }
   if (message.includes('Invalid folder name')) {
-    return 'Pick a simpler destination folder name using letters, numbers, dots, dashes, or underscores.';
+    return t('skillImport.errors.invalidFolderName');
   }
   if (message.includes('must be a directory')) {
-    return 'Choose a folder to import, not a single file.';
+    return t('skillImport.errors.mustBeDirectory');
   }
   return message;
 }
@@ -69,6 +72,7 @@ export const SkillImportDialog = ({
   onClose,
   onImported,
 }: SkillImportDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const previewSkillImport = useStore((s) => s.previewSkillImport);
   const applySkillImport = useStore((s) => s.applySkillImport);
 
@@ -170,7 +174,8 @@ export const SkillImportDialog = ({
     } catch (error) {
       setMutationError(
         getFriendlyImportError(
-          error instanceof Error ? error.message : 'Failed to review import changes'
+          error instanceof Error ? error.message : t('skillImport.errors.reviewFailed'),
+          t
         )
       );
     } finally {
@@ -198,7 +203,10 @@ export const SkillImportDialog = ({
       onClose();
     } catch (error) {
       setMutationError(
-        getFriendlyImportError(error instanceof Error ? error.message : 'Failed to import skill')
+        getFriendlyImportError(
+          error instanceof Error ? error.message : t('skillImport.errors.importFailed'),
+          t
+        )
       );
     } finally {
       setImportLoading(false);
@@ -211,24 +219,24 @@ export const SkillImportDialog = ({
         <DialogContent className="gap-0 overflow-hidden p-0">
           <div className="flex max-h-[85vh] min-h-0 flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
-              <DialogTitle>Import skill</DialogTitle>
-              <DialogDescription>
-                Pick an existing skill folder, review what will be copied, then import it into one
-                of your supported skill locations.
-              </DialogDescription>
+              <DialogTitle>{t('skillImport.title')}</DialogTitle>
+              <DialogDescription>{t('skillImport.description')}</DialogDescription>
             </DialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               <div className="space-y-5">
                 <section className="space-y-1">
-                  <h3 className="text-sm font-semibold text-text">1. Choose a skill folder</h3>
+                  <h3 className="text-sm font-semibold text-text">
+                    {t('skillImport.steps.chooseFolder.title')}
+                  </h3>
                   <p className="text-sm text-text-muted">
-                    This should be a folder that already contains a `SKILL.md`, `Skill.md`, or
-                    `skill.md` file.
+                    {t('skillImport.steps.chooseFolder.description')}
                   </p>
                 </section>
                 <div className="space-y-2">
-                  <Label htmlFor="skill-import-source">Source folder</Label>
+                  <Label htmlFor="skill-import-source">
+                    {t('skillImport.fields.sourceFolder')}
+                  </Label>
                   <div className="flex gap-2">
                     <Input
                       id="skill-import-source"
@@ -237,13 +245,15 @@ export const SkillImportDialog = ({
                     />
                     <Button variant="outline" onClick={() => void handleChooseFolder()}>
                       <FolderOpen className="mr-1.5 size-3.5" />
-                      Browse
+                      {t('skillImport.actions.browse')}
                     </Button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="skill-import-folder">Destination folder name</Label>
+                  <Label htmlFor="skill-import-folder">
+                    {t('skillImport.fields.destinationFolderName')}
+                  </Label>
                   <Input
                     id="skill-import-folder"
                     value={folderName}
@@ -251,19 +261,21 @@ export const SkillImportDialog = ({
                       setFolderNameEdited(true);
                       setFolderName(event.target.value);
                     }}
-                    placeholder="Defaults to source folder name"
+                    placeholder={t('skillImport.placeholders.defaultFolderName')}
                   />
                 </div>
 
                 <section className="space-y-1">
-                  <h3 className="text-sm font-semibold text-text">2. Decide where it belongs</h3>
+                  <h3 className="text-sm font-semibold text-text">
+                    {t('skillImport.steps.location.title')}
+                  </h3>
                   <p className="text-sm text-text-muted">
-                    Personal skills work everywhere. Project skills only show up for one codebase.
+                    {t('skillImport.steps.location.description')}
                   </p>
                 </section>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="skill-import-scope">Who can use it</Label>
+                    <Label htmlFor="skill-import-scope">{t('skillImport.fields.audience')}</Label>
                     <Select
                       value={scope}
                       onValueChange={(value) => setScope(value as 'user' | 'project')}
@@ -272,18 +284,20 @@ export const SkillImportDialog = ({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="user">{t('skillImport.scope.user')}</SelectItem>
                         <SelectItem value="project" disabled={!projectPath}>
                           {projectPath
-                            ? `Project: ${projectLabel ?? projectPath}`
-                            : 'Project unavailable'}
+                            ? t('skillImport.scope.project', {
+                                project: projectLabel ?? projectPath,
+                              })
+                            : t('skillImport.scope.projectUnavailable')}
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="skill-import-root">Where to store it</Label>
+                    <Label htmlFor="skill-import-root">{t('skillImport.fields.storage')}</Label>
                     <Select
                       value={rootKind}
                       onValueChange={(value) => setRootKind(value as SkillRootKind)}
@@ -295,7 +309,9 @@ export const SkillImportDialog = ({
                         {visibleRootDefinitions.map((definition) => (
                           <SelectItem key={definition.rootKind} value={definition.rootKind}>
                             {definition.directoryName}
-                            {definition.audience === 'codex' ? ' - Codex only' : ' - Shared'}
+                            {definition.audience === 'codex'
+                              ? t('skillImport.rootSuffix.codexOnly')
+                              : t('skillImport.rootSuffix.shared')}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -314,17 +330,19 @@ export const SkillImportDialog = ({
             <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-border bg-surface px-6 py-4 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
               <Button variant="outline" onClick={onClose}>
                 <X className="mr-1.5 size-3.5" />
-                Cancel
+                {t('skillImport.actions.cancel')}
               </Button>
               <p className="min-w-64 flex-1 text-sm text-text-muted">
-                Review the copied files first, then confirm the import in the next step.
+                {t('skillImport.reviewHint')}
               </p>
               <Button
                 onClick={() => void handleReview()}
                 disabled={!sourceDir.trim() || reviewLoading || importLoading}
               >
                 <FileSearch className="mr-1.5 size-3.5" />
-                {reviewLoading ? 'Preparing...' : 'Review And Import'}
+                {reviewLoading
+                  ? t('skillImport.actions.preparing')
+                  : t('skillImport.actions.reviewAndImport')}
               </Button>
             </div>
           </div>
@@ -338,9 +356,9 @@ export const SkillImportDialog = ({
         error={mutationError}
         onClose={() => setReviewOpen(false)}
         onConfirm={() => void handleConfirmImport()}
-        confirmLabel="Import Skill"
-        reviewLabel="Importing this skill"
-        backLabel="Back To Import"
+        confirmLabel={t('skillImport.actions.importSkill')}
+        reviewLabel={t('skillImport.reviewLabel')}
+        backLabel={t('skillImport.actions.backToImport')}
       />
     </>
   );

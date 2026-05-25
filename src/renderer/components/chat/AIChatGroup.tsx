@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useStore } from '@renderer/store';
@@ -125,6 +126,7 @@ const AIChatGroupInner = ({
   highlightColor,
   registerToolRef,
 }: Readonly<AIChatGroupProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   // Per-tab UI state for expansion (completely isolated per tab)
   const {
     tabId,
@@ -396,7 +398,7 @@ const AIChatGroupInner = ({
               className="shrink-0 text-xs font-semibold"
               style={{ color: COLOR_TEXT_SECONDARY }}
             >
-              Claude
+              {t('brand.claude')}
             </span>
 
             {/* Main agent model */}

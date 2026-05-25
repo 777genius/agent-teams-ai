@@ -131,6 +131,37 @@ async function downloadFile(url, destinationPath) {
   await pipeline(Readable.fromWeb(response.body), fs.createWriteStream(destinationPath));
 }
 
+function downloadReleaseAssetWithGh(runtimeLock, releaseTag, asset, destinationPath) {
+  if (!process.env.GH_TOKEN) {
+    return false;
+  }
+
+  fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+  const result = spawnSync(
+    'gh',
+    [
+      'release',
+      'download',
+      releaseTag,
+      '--repo',
+      runtimeLock.releaseRepository,
+      '--pattern',
+      asset.file,
+      '--dir',
+      path.dirname(destinationPath),
+      '--clobber',
+    ],
+    {
+      cwd: repoRoot,
+      stdio: 'inherit',
+      shell: false,
+      env: process.env,
+    }
+  );
+
+  return result.status === 0 && fs.existsSync(destinationPath);
+}
+
 function extractArchive(archivePath, extractDir, archiveKind) {
   fs.mkdirSync(extractDir, { recursive: true });
 
@@ -208,7 +239,9 @@ async function stageRuntime(options) {
     process.stdout.write(
       `Downloading ${asset.file} from ${runtimeLock.releaseRepository}@${releaseTag}\n`
     );
-    await downloadFile(url, archivePath);
+    if (!downloadReleaseAssetWithGh(runtimeLock, releaseTag, asset, archivePath)) {
+      await downloadFile(url, archivePath);
+    }
 
     process.stdout.write(`Extracting ${asset.file}\n`);
     extractArchive(archivePath, extractDir, asset.archiveKind);

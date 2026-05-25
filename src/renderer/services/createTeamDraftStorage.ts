@@ -10,10 +10,11 @@
  */
 
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { del, get, set } from 'idb-keyval';
 
-import type { TeamProviderId } from '@shared/types';
+import type { TeamMemberMcpPolicy, TeamProviderId } from '@shared/types';
 import type { EffortLevel } from '@shared/types';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,7 @@ export interface SerializedMemberDraft {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  mcpPolicy?: TeamMemberMcpPolicy;
 }
 
 export interface CreateTeamDraftSnapshot {
@@ -64,6 +66,10 @@ const STORAGE_KEY = 'createTeamDraft:form';
 function isValidMember(m: unknown): m is SerializedMemberDraft {
   if (typeof m !== 'object' || m === null) return false;
   const obj = m as Record<string, unknown>;
+  const mcpPolicyMode =
+    obj.mcpPolicy && typeof obj.mcpPolicy === 'object'
+      ? (obj.mcpPolicy as Record<string, unknown>).mode
+      : undefined;
   return (
     typeof obj.id === 'string' &&
     typeof obj.name === 'string' &&
@@ -72,7 +78,10 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
     (obj.isolation === undefined || obj.isolation === 'worktree') &&
     (obj.providerId === undefined || isTeamProviderId(obj.providerId)) &&
     (obj.model === undefined || typeof obj.model === 'string') &&
-    (obj.effort === undefined || isTeamEffortLevel(obj.effort))
+    (obj.effort === undefined || isTeamEffortLevel(obj.effort)) &&
+    (obj.mcpPolicy === undefined ||
+      mcpPolicyMode === 'inheritLead' ||
+      normalizeTeamMemberMcpPolicy(obj.mcpPolicy) !== undefined)
   );
 }
 

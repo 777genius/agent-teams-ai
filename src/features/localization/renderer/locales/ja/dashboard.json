@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "ログイン済みですか?",
+      "becomeSponsor": "スポンサーになる",
+      "cancel": "キャンセル",
+      "checkNow": "今すぐご予約",
+      "checkUpdates": "アップデートの確認",
+      "checking": "チェックイン",
+      "connect": "ログイン",
+      "extensions": "エクステンション",
+      "login": "ログイン",
+      "manage": "マネージング",
+      "manageProviders": "プロバイダーの管理",
+      "plan": "プラン",
+      "recheck": "再確認",
+      "recheckProvider": "{{provider}}を再確認する",
+      "retry": "リトリート",
+      "updateTo": "v{{version}}へのアップデート",
+      "useCode": "コードを使用する"
+    },
+    "atlas": {
+      "alt": "アトラスクラウド",
+      "description": "アトラスクラウドは、単一のAI APIを開発者に提供し、ビデオ生成、画像生成、LLM APIにアクセスするためのフルモーダルAI推論プラットフォームです。 複数のベンダーのインテグレーションを管理する代わりに、一度接続して、すべてのモジュール間で300以上のキュレーションされたモデルへの統一されたアクセスを取得します。 より予算に優しいAPIアクセスのために、Aトラスクラウドの新しいコーディング計画プロモーションをチェックしてください。",
+      "openCodeProvider": "OpenCode プロバイダー",
+      "plan": "アトラスクラウドコーディングプラン",
+      "sponsor": "スポンサー"
+    },
+    "errors": {
+      "checkStatusFailed": "CLIステータスの確認が失敗",
+      "installationFailed": "インストール失敗",
+      "refreshFailed": "アップデートの確認が失敗しました。 ネットワーク接続をチェックし、もう一度お試しください。",
+      "runtimeUpdatedRefreshFailed": "Runtime は更新されましたが、プロバイダーのステータスを更新できませんでした。"
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}}の状態はバックグラウンドでチェックされます。",
+      "codexApiKeyFallback": "{{hint}} APIの特長 auth モードを切り替えると、キーフォールバックが使用可能です。",
+      "codexAutoApiKey": "{{hint}}の特長 オートは、チャットGPTが接続されるまで、APIキーを使用して続けます。",
+      "codexFinishLogin": "ブラウザでChatGPTログインを終了します。 プロンプトが表示された場合に示されたコードを入力してください。",
+      "codexNoActiveLogin": "利用制限は、Codex CLIがアクティブなChatGPTアカウントを参照した後にのみ表示されます。 今すぐ登録すると、ChatGPT のログインが有効になっていません。",
+      "codexNoActiveManagedSession": "利用制限は、Codex CLIがアクティブなChatGPTアカウントを参照した後にのみ表示されます。 ローカルのCodexアカウントデータが存在しますが、現在アクティブな管理されたセッションは選択されません。",
+      "codexReconnectNeeded": "利用制限は、Codexが現在選択されているChatGPTセッションをリフレッシュした後にのみ表示されます。 現在、ローカルセッションは再接続が必要です。",
+      "firstCheckSlow": "最初のチェックは最大30秒かかります",
+      "loginRequiredForTeams": "閲覧セッションとプロジェクトはログインせずに動作します。 エージェントチームを実行するには、ログインが必要です。",
+      "troubleshootTitle": "あなたがログインしていることを確認してください。次の手順を試してください。"
+    },
+    "installer": {
+      "checkingLatest": "最新バージョンの確認",
+      "downloading": "{{runtime}}をダウンロード...",
+      "installing": "{{runtime}}のインストール...",
+      "success": "{{runtime}} v{{version}}を正常にインストール",
+      "verifying": "チェックサムの確認"
+    },
+    "labels": {
+      "apiKeyRequired": "必要なAPIのキー",
+      "comingSoon": "近日公開",
+      "collapseProviderDetails": "崩壊プロバイダーの詳細",
+      "expandProviderDetails": "プロバイダーの詳細を拡大",
+      "generateLink": "リンクを生成",
+      "loadingRateLimits": "レート制限ローディング",
+      "loggedOut": "プロバイダがログアウト",
+      "loginAuthFailed": "認証失敗",
+      "loginAuthUpdated": "認証更新",
+      "loginComplete": "ログイン 完了",
+      "loginFailed": "ログイン失敗",
+      "loginTitle": "ログイン",
+      "logoutFailed": "ログアウト失敗",
+      "logoutTitle": "ログイン",
+      "notLoggedIn": "ログインしていない",
+      "openLogin": "ログインを開く",
+      "providerActionRequired": "プロバイダのアクションが必要",
+      "resets": "リセット {{time}}",
+      "runtimeLoginTitle": "{{runtime}}の特長 ログイン"
+    },
+    "loading": {
+      "aiProviders": "AIプロバイダーの確認...",
+      "claudeCli": "Claude CLIのチェック..."
+    },
+    "provider": {
+      "authenticated": "認証",
+      "backend": "バックエンド: {{backend}}",
+      "checkingAuthentication": "認証チェック...",
+      "checkingProviders": "プロバイダーの確認",
+      "configuredLocalCount": "{{count}} 設定されたローカル",
+      "configuredLocalCount_few": "{{count}} 設定されたローカル",
+      "configuredLocalCount_many": "{{count}} 設定されたローカル",
+      "configuredLocalCount_one": "{{count}} 設定されたローカル",
+      "configuredLocalCount_other": "{{count}} 設定されたローカル",
+      "configuredLocalTitle": "OpenCode 設定からインポートされたローカル OpenCode ルート。",
+      "connectedCount": "提供者: 接続される{{connected}}/{{denominator}}",
+      "freeModels": "無料モデル",
+      "freeModelsTitle": "OpenCodeには、セットアップで利用可能な場合、Big Pickleなどの無料モデルオプションが含まれています。 OpenCode による OpenRouter はフリーモデルも公開できますが、すべての OpenCode/OpenRouter モデルは無料ではありません。 空室状況と制限は変更される場合があります。",
+      "loadingModels": "モデルを読み込む...",
+      "modelsUnavailable": "このランタイムビルドでモデルが利用できなくなった",
+      "runtime": "稼働時間: {{runtime}}",
+      "verifiedCount": "{{count}}検証",
+      "verifiedCount_few": "{{count}}検証",
+      "verifiedCount_many": "{{count}}検証",
+      "verifiedCount_one": "{{count}}検証",
+      "verifiedCount_other": "{{count}}検証",
+      "verifiedTitle": "OpenCode は、成功した実行証拠でルートをルーティングします。"
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "設定した{{runtime}}が起動健康チェックに失敗しました。",
+      "configuredNotFound": "設定した{{runtime}}が見つかりませんでした。",
+      "foundButFailed": "{{runtime}}が見つかりませんでしたが、起動できませんでした",
+      "healthCheckFailedDescription": "このアプリは、設定された{{runtime}}を見つけましたが、その起動健康チェックは失敗しました。 修理または再インストールしてから、再インストールします。",
+      "install": "{{runtime}}をインストールする",
+      "installRequiredDescription": "{{runtime}}は、チームプロビジョニングとセッション管理のために必要な機能です。 インストールして起動します。",
+      "isRequired": "{{runtime}}が必要です",
+      "reinstall": "{{runtime}}を再インストールする"
+    },
+    "runtimeInstall": {
+      "checking": "チェックイン",
+      "codexTitle": "Codex CLIをアプリデータにインストールする",
+      "downloading": "ダウンロード",
+      "downloadingPercent": "{{percent}}%のダウンロード",
+      "install": "インストール",
+      "installing": "インストール",
+      "openCodeTitle": "アプリデータにOpenCodeランタイムをインストール",
+      "retryInstall": "再試行インストール"
+    },
+    "troubleshoot": {
+      "again": "お問い合わせ",
+      "authStatusCommand": "設定した CLI auth ステータスコマンド",
+      "checkLoggedIn": "- 「ログイン」が表示されているかどうかチェック",
+      "click": "クリック",
+      "loginCommand": "runtime ログインコマンド",
+      "logoutCommand": "runtime logout コマンド",
+      "openTerminal": "ターミナルを開き、実行します。",
+      "reloginPrefix": "ログオンしているが、アプリが見つからない場合は、次のようにしてください。",
+      "sameRuntime": "端末の CLI が、アプリが使用するランタイムと同じであることを確認してください。",
+      "statusCacheHint": "- ステータスが秒数でキャッシュされる場合",
+      "then": "それから"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "API キーモードに1つ以上のプロバイダーが設定されていますが、API キーは構成されていません。 プロバイダーを管理してキーを追加したり、接続モードを切り替えたりします。",
+      "multipleApiKeysNeedAttention": "API キーモードに1つ以上のプロバイダがセットされ、注意が必要です。 保存されたキーを見直し、または接続モードを切り替えるためにプロバイダを管理します。",
+      "notAuthenticated": "{{runtime}}がインストールされていますが、認証されていません。 チームプロビジョニングとAI機能のログインが必要です。",
+      "singleApiKeyMissing": "{{provider}} は API キーモードに設定されていますが、API キーは設定されていません。 プロバイダーを管理して、キーを追加したり、接続モードを切り替えたりします。",
+      "singleApiKeyNeedsAttention": "{{provider}} は、API キーモードに設定されていますが、接続されていません。 保存されたキーを調べたり、接続モードを切り替えたりするためにプロバイダを管理します。"
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "プロジェクトフォルダを選択",
+    "selectFolder": "フォルダを選択",
+    "failedToLoad": "プロジェクトをロードできなかった",
+    "retry": "リトリート",
+    "noProjects": "プロジェクトが見つかりません",
+    "noMatches": "\"{{query}}\" にマッチしない",
+    "noRecentProjects": "最近のプロジェクトが見つかりませんでした",
+    "emptyDescription": "最近のクロードとコーデックスのアクティビティがここに表示されます。",
+    "loadMore": "もっと見る",
+    "card": {
+      "deleted": "削除された",
+      "projectFolderMissing": "プロジェクトフォルダが存在しなくなった",
+      "taskCounts": {
+        "active": "{{count}} アクティブ",
+        "active_one": "{{count}} アクティブ",
+        "active_other": "{{count}} アクティブ",
+        "active_few": "{{count}} アクティブ",
+        "active_many": "{{count}} アクティブ",
+        "pending": "{{count}} ペンディング",
+        "pending_one": "{{count}} ペンディング",
+        "pending_other": "{{count}} ペンディング",
+        "pending_few": "{{count}} ペンディング",
+        "pending_many": "{{count}} ペンディング",
+        "done": "{{count}} 完了",
+        "done_one": "{{count}} 完了",
+        "done_other": "{{count}} 完了",
+        "done_few": "{{count}} 完了",
+        "done_many": "{{count}} 完了"
+      }
+    },
+    "title": "最近のプロジェクト",
+    "searchResults": "検索結果",
+    "searchPlaceholder": "プロジェクトを検索"
+  },
+  "actions": {
+    "selectTeam": "チームを選択",
+    "or": "または",
+    "clearSearch": "明確な検索"
+  },
+  "windowsAdmin": {
+    "title": "Windows 管理者モード 推奨",
+    "description": "OpenCode のランタイムチェックは、Agent Teams AI が上昇していないときにタイムアウトできます。 OpenCode チームを起動する前に、管理者として実行してアプリを再起動します。"
+  },
+  "webPreview": {
+    "title": "デスクトップアプリをフル機能で開く",
+    "description": "ブラウザバージョンはまだ開発中です。 プロジェクトアクション、インテグレーション、およびライブステータスの更新がここに制限される場合があります。 デスクトップアプリを使用して、すべての機能を確実にアクセスします。"
+  },
+  "updateBanner": {
+    "newVersionAvailable": "新バージョン対応",
+    "restartNow": "今すぐ再起動",
+    "viewDetails": "詳細を見る"
+  }
+}

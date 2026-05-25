@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ const DialogThoughtsContent = ({
   teamColorByName,
   onTeamClick,
 }: DialogThoughtsContentProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { thoughts } = group;
   const newest = thoughts[0];
   const oldest = thoughts[thoughts.length - 1];
@@ -68,7 +70,7 @@ const DialogThoughtsContent = ({
         />
         <MemberBadge name={newest.from} color={memberColor} hideAvatar />
         <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-          {thoughts.length} thoughts
+          {t('activity.thoughts.count', { count: thoughts.length })}
         </span>
         <span className="ml-auto text-[10px]" style={{ color: CARD_ICON_MUTED }}>
           {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
@@ -133,6 +135,7 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
   teamColorByName,
   onTeamClick,
 }: MessageExpandDialogProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   // Keep last valid item for exit animation
   const lastItemRef = useRef<TimelineItem | null>(null);
   if (expandedItem) lastItemRef.current = expandedItem;
@@ -162,7 +165,7 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
     displayItem?.type === 'message'
       ? displayItem.message.from
       : displayItem?.type === 'lead-thoughts'
-        ? `${displayItem.group.thoughts[0].from} — thoughts`
+        ? t('activity.thoughts.titleForMember', { name: displayItem.group.thoughts[0].from })
         : '';
 
   return (
@@ -170,7 +173,9 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
       <DialogContent className="flex max-h-[90vh] w-[80vw] max-w-[2000px] flex-col overflow-hidden p-0">
         <DialogHeader className="shrink-0 px-4 pt-4">
           <DialogTitle className="text-sm">{headerTitle}</DialogTitle>
-          <DialogDescription className="sr-only">Expanded message view</DialogDescription>
+          <DialogDescription className="sr-only">
+            {t('activity.expandDialog.description')}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-4">
           {displayItem?.type === 'message' ? (

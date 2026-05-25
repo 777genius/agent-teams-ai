@@ -14,6 +14,7 @@ import {
   API_KEYS_LOOKUP,
   API_KEYS_SAVE,
   API_KEYS_STORAGE_STATUS,
+  APP_GET_WINDOWS_ELEVATION_STATUS,
   APP_RELAUNCH,
   APP_STARTUP_GET_STATUS,
   APP_STARTUP_PROGRESS,
@@ -178,6 +179,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
   TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -205,6 +207,7 @@ import {
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
   TEAM_VALIDATE_CLI_ARGS,
+  TELEMETRY_GET_SENTRY_CONTEXT,
   TERMINAL_DATA,
   TERMINAL_EXIT,
   TERMINAL_KILL,
@@ -270,6 +273,7 @@ import type {
   ClaudeRootFolderSelection,
   ClaudeRootInfo,
   CliInstallationStatus,
+  CliInstallerGetStatusOptions,
   CliInstallerProgress,
   CliProviderId,
   ConflictCheckResult,
@@ -330,6 +334,7 @@ import type {
   TeamLaunchResponse,
   TeamMemberActivityMeta,
   TeamMessageNotificationData,
+  TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
@@ -347,6 +352,7 @@ import type {
   TriggerTestResult,
   UpdateKanbanPatch,
   UpdateSchedulePatch,
+  WindowsElevationStatus,
   WslClaudeRootCandidate,
 } from '@shared/types';
 import type {
@@ -495,6 +501,9 @@ const electronAPI: ElectronAPI = {
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
+  telemetry: {
+    getSentryContext: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_CONTEXT),
+  },
   startup: {
     getStatus: () => ipcRenderer.invoke(APP_STARTUP_GET_STATUS) as Promise<AppStartupStatus>,
     onProgress: (callback: (status: AppStartupStatus) => void): (() => void) => {
@@ -508,6 +517,8 @@ const electronAPI: ElectronAPI = {
     },
   },
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getWindowsElevationStatus: () =>
+    ipcRenderer.invoke(APP_GET_WINDOWS_ELEVATION_STATUS) as Promise<WindowsElevationStatus>,
   getProjects: () => ipcRenderer.invoke('get-projects'),
   getSessions: (projectId: string) => ipcRenderer.invoke('get-sessions', projectId),
   getSessionsPaginated: (
@@ -923,7 +934,8 @@ const electronAPI: ElectronAPI = {
       providerIds?: TeamLaunchRequest['providerId'][],
       selectedModels?: string[],
       limitContext?: boolean,
-      modelVerificationMode?: TeamProvisioningModelVerificationMode
+      modelVerificationMode?: TeamProvisioningModelVerificationMode,
+      selectedModelChecks?: TeamProvisioningModelCheckRequest[]
     ) => {
       return invokeIpcWithResult<TeamProvisioningPrepareResult>(
         TEAM_PREPARE_PROVISIONING,
@@ -932,7 +944,8 @@ const electronAPI: ElectronAPI = {
         providerIds,
         selectedModels,
         limitContext,
-        modelVerificationMode
+        modelVerificationMode,
+        selectedModelChecks
       );
     },
     getWorktreeGitStatus: async (projectPath: string) => {
@@ -1137,6 +1150,9 @@ const electronAPI: ElectronAPI = {
     },
     removeMember: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<void>(TEAM_REMOVE_MEMBER, teamName, memberName);
+    },
+    restoreMember: async (teamName: string, memberName: string) => {
+      return invokeIpcWithResult<void>(TEAM_RESTORE_MEMBER, teamName, memberName);
     },
     updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_MEMBER_ROLE, teamName, memberName, role);
@@ -1539,8 +1555,8 @@ const electronAPI: ElectronAPI = {
 
   // ===== CLI Installer API =====
   cliInstaller: {
-    getStatus: async (): Promise<CliInstallationStatus> => {
-      return invokeIpcWithResult<CliInstallationStatus>(CLI_INSTALLER_GET_STATUS);
+    getStatus: async (options?: CliInstallerGetStatusOptions): Promise<CliInstallationStatus> => {
+      return invokeIpcWithResult<CliInstallationStatus>(CLI_INSTALLER_GET_STATUS, options);
     },
     getProviderStatus: async (providerId: CliProviderId) => {
       return invokeIpcWithResult(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId);

@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CODE_BG,
   CODE_BORDER,
@@ -138,6 +139,7 @@ const DisplayItemRow = memo(function DisplayItemRow({
   timestampFormat,
   showItemMetaTooltip = false,
 }: DisplayItemRowProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('common');
   const handleClick = useCallback(() => onItemClick(itemKey), [onItemClick, itemKey]);
 
   let element: React.ReactNode = null;
@@ -343,7 +345,7 @@ const DisplayItemRow = memo(function DisplayItemRow({
               <Layers size={14} />
             </div>
             <span className="shrink-0 text-xs font-medium" style={{ color: TOOL_CALL_TEXT }}>
-              Compacted
+              {t('chat.compact.compacted')}
             </span>
             {item.tokenDelta && (
               <span
@@ -354,7 +356,9 @@ const DisplayItemRow = memo(function DisplayItemRow({
                 {formatTokensCompact(item.tokenDelta.postCompactionTokens)}
                 <span style={{ color: '#4ade80' }}>
                   {' '}
-                  ({formatTokensCompact(Math.abs(item.tokenDelta.delta))} freed)
+                  {t('chat.compact.freedTokens', {
+                    tokens: formatTokensCompact(Math.abs(item.tokenDelta.delta)),
+                  })}
                 </span>
               </span>
             )}
@@ -365,7 +369,7 @@ const DisplayItemRow = memo(function DisplayItemRow({
                 color: '#818cf8',
               }}
             >
-              Phase {item.phaseNumber}
+              {t('chat.compact.phase', { phase: item.phaseNumber })}
             </span>
             <span className="ml-auto shrink-0 text-[11px]" style={{ color: COLOR_TEXT_MUTED }}>
               {format(new Date(item.timestamp), 'h:mm:ss a')}
@@ -438,6 +442,7 @@ export const DisplayItemList = React.memo(function DisplayItemList({
   timestampFormat,
   showItemMetaTooltip = false,
 }: Readonly<DisplayItemListProps>): React.JSX.Element {
+  const { t } = useAppTranslation('common');
   const [replyLinkToolId, setReplyLinkToolId] = useState<string | null>(null);
 
   const handleReplyHover = useCallback((toolId: string | null) => {
@@ -447,7 +452,7 @@ export const DisplayItemList = React.memo(function DisplayItemList({
   if (!items || items.length === 0) {
     return (
       <div className="px-3 py-2 text-sm italic text-claude-dark-text-secondary">
-        No items to display
+        {t('chat.items.empty')}
       </div>
     );
   }

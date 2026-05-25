@@ -1,7 +1,4 @@
-import {
-  isReviewPickupAgenda,
-  isStrictReviewPickupItem,
-} from './MemberWorkSyncNudgeAgendaPredicates';
+import { isStrictReviewPickupItem } from './MemberWorkSyncNudgeAgendaPredicates';
 import {
   decideMemberWorkSyncTargetedRecovery,
   type MemberWorkSyncTargetedRecoveryReason,
@@ -187,13 +184,21 @@ export function decideMemberWorkSyncNudgeActivation(input: {
     return { active: true, reason: 'review_pickup_required' };
   }
 
-  const targetedRecovery = decideMemberWorkSyncTargetedRecovery(input.status);
-  if (targetedRecovery.active) {
-    return { active: true, reason: targetedRecovery.reason };
-  }
-
   if (isNativeStaleInProgressCandidate(input)) {
     return { active: true, reason: 'native_stale_in_progress' };
+  }
+
+  const targetedRecovery = decideMemberWorkSyncTargetedRecovery(input.status);
+  if (targetedRecovery.active) {
+    if (targetedRecovery.reason !== 'native_targeted_shadow_collecting') {
+      return { active: true, reason: targetedRecovery.reason };
+    }
+    if (hasBlockingMetrics(input.metrics)) {
+      return { active: false, reason: 'blocking_metrics' };
+    }
+    if (input.metrics.phase2Readiness.state !== 'shadow_ready') {
+      return { active: true, reason: targetedRecovery.reason };
+    }
   }
 
   if (hasBlockingMetrics(input.metrics)) {

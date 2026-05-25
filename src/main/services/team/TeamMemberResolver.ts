@@ -2,6 +2,7 @@ import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
@@ -163,6 +164,7 @@ export class TeamMemberResolver {
         model?: string;
         effort?: TeamMember['effort'];
         fastMode?: TeamMember['fastMode'];
+        mcpPolicy?: TeamMember['mcpPolicy'];
         color?: string;
         cwd?: string;
       }
@@ -190,6 +192,7 @@ export class TeamMemberResolver {
               configMember.fastMode === 'off'
                 ? configMember.fastMode
                 : undefined,
+            mcpPolicy: normalizeTeamMemberMcpPolicy(configMember.mcpPolicy),
             color: configMember.color,
             cwd: configMember.cwd,
           });
@@ -210,6 +213,7 @@ export class TeamMemberResolver {
         model?: string;
         effort?: TeamMember['effort'];
         fastMode?: TeamMember['fastMode'];
+        mcpPolicy?: TeamMember['mcpPolicy'];
         color?: string;
         cwd?: string;
         removedAt?: number;
@@ -235,6 +239,7 @@ export class TeamMemberResolver {
               member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
                 ? member.fastMode
                 : undefined,
+            mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
             color: member.color,
             cwd: member.cwd,
             removedAt: member.removedAt,
@@ -300,13 +305,15 @@ export class TeamMemberResolver {
           providerId: effectiveProviderId,
         },
       });
-      const providerBackendId =
+      const providerBackendId = migrateProviderBackendId(
+        effectiveProviderId,
         launchMember?.providerBackendId ??
-        configMember?.providerBackendId ??
-        metaMember?.providerBackendId ??
-        (effectiveProviderId === options?.leadProviderId
-          ? (options?.leadProviderBackendId ?? undefined)
-          : undefined);
+          configMember?.providerBackendId ??
+          metaMember?.providerBackendId ??
+          (effectiveProviderId === options?.leadProviderId
+            ? (options?.leadProviderBackendId ?? undefined)
+            : undefined)
+      );
       const agentId = configMember?.agentId ?? metaMember?.agentId;
       members.push({
         name,
@@ -322,6 +329,7 @@ export class TeamMemberResolver {
         providerBackendId,
         model: launchMember?.model ?? configMember?.model ?? metaMember?.model,
         effort: launchMember?.effort ?? configMember?.effort ?? metaMember?.effort,
+        mcpPolicy: configMember?.mcpPolicy ?? metaMember?.mcpPolicy,
         selectedFastMode:
           launchMember?.selectedFastMode ??
           configMember?.fastMode ??

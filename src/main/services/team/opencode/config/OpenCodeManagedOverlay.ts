@@ -134,6 +134,10 @@ export class OpenCodeBehaviorSourceScanner {
         kind: 'global_config',
         targetPath: path.join(this.homePath, '.config/opencode/opencode.json'),
       },
+      {
+        kind: 'global_config',
+        targetPath: path.join(this.homePath, '.config/opencode/opencode.jsonc'),
+      },
       { kind: 'project_config', targetPath: path.join(projectPath, 'opencode.json') },
       { kind: 'project_config', targetPath: path.join(projectPath, 'opencode.jsonc') },
       {
@@ -150,6 +154,7 @@ export class OpenCodeBehaviorSourceScanner {
   async readDeclaredMcpNames(projectPath: string): Promise<Set<string>> {
     const configPaths = [
       path.join(this.homePath, '.config/opencode/opencode.json'),
+      path.join(this.homePath, '.config/opencode/opencode.jsonc'),
       path.join(projectPath, 'opencode.json'),
       path.join(projectPath, 'opencode.jsonc'),
       path.join(projectPath, '.opencode/opencode.json'),

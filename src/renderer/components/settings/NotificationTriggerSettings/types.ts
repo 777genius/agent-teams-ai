@@ -24,6 +24,7 @@ export interface PreviewResult {
 export interface ModeConfig {
   value: TriggerMode;
   label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 

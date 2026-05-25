@@ -11,6 +11,12 @@ import type {
 } from './ports';
 
 const WORKSPACE_TRUST_RAW_TAIL_LIMIT = 4096;
+const CLAUDE_WORKSPACE_TRUST_PREFLIGHT_TIMEOUT_MS = 60_000;
+const CLAUDE_WORKSPACE_TRUST_CONFIRM_TIMEOUT_MS = 5_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export interface ClaudePtyWorkspaceTrustStrategyInput {
   claudePath: string;
@@ -43,6 +49,27 @@ function buildRawTail(snapshot: TerminalSnapshot | undefined): string | undefine
     return undefined;
   }
   return normalized.slice(-WORKSPACE_TRUST_RAW_TAIL_LIMIT);
+}
+
+async function waitForTrustedState(input: {
+  stateProbe: ProviderStateProbe;
+  workspace: WorkspaceTrustWorkspace;
+  isCancelled(): boolean;
+  timeoutMs: number;
+  pollIntervalMs: number;
+}): Promise<Awaited<ReturnType<ProviderStateProbe['readTrustState']>>> {
+  const pollIntervalMs = Math.max(1, input.pollIntervalMs);
+  const deadline = Date.now() + input.timeoutMs;
+  let last = await input.stateProbe.readTrustState(input.workspace);
+  while (last.status !== 'trusted' && !input.isCancelled()) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+    await sleep(Math.min(pollIntervalMs, remainingMs));
+    last = await input.stateProbe.readTrustState(input.workspace);
+  }
+  return last;
 }
 
 function worseStatus(
@@ -152,13 +179,22 @@ export class ClaudePtyWorkspaceTrustStrategy {
             session: spawnResult.session,
             detect: detectClaudeStartupState,
             isCancelled: input.isCancelled,
-            timeoutMs: input.timeoutMs,
+            timeoutMs: input.timeoutMs ?? CLAUDE_WORKSPACE_TRUST_PREFLIGHT_TIMEOUT_MS,
             pollIntervalMs: input.pollIntervalMs,
             afterDialogAction: async ({ ruleId }) => {
               if (ruleId !== 'claude.workspace_trust') {
                 return { action: 'continue' };
               }
-              const after = await stateProbe.readTrustState(workspace);
+              const after = await waitForTrustedState({
+                stateProbe,
+                workspace,
+                isCancelled: input.isCancelled,
+                timeoutMs: Math.min(
+                  CLAUDE_WORKSPACE_TRUST_CONFIRM_TIMEOUT_MS,
+                  input.timeoutMs ?? CLAUDE_WORKSPACE_TRUST_CONFIRM_TIMEOUT_MS
+                ),
+                pollIntervalMs: input.pollIntervalMs ?? 100,
+              });
               if (after.status === 'trusted') {
                 evidence.push(...after.evidence);
                 return { action: 'stop', reason: 'workspace_trust_persisted' };
@@ -218,7 +254,7 @@ export class ClaudePtyWorkspaceTrustStrategy {
       workspaceIds,
       matchedRuleIds: [...new Set(matchedRuleIds)],
       actions,
-      evidence,
+      evidence: [...new Set(evidence)],
       elapsedMs: Date.now() - startedAt,
       errorCode,
       errorMessage,

@@ -1,7 +1,9 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { FlaskConical } from 'lucide-react';
 
 export const WebPreviewBanner = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('dashboard');
   if (isElectronMode()) {
     return null;
   }
@@ -16,13 +18,8 @@ export const WebPreviewBanner = (): React.JSX.Element | null => {
     >
       <FlaskConical className="mt-0.5 size-4 shrink-0 text-amber-600" />
       <div className="min-w-0">
-        <p className="text-sm font-medium text-amber-900">
-          Open the desktop app for full functionality
-        </p>
-        <p className="mt-1 text-xs leading-relaxed text-amber-800">
-          The browser version is still in development. Project actions, integrations, and live
-          status updates may be limited here. Use the desktop app to access all features reliably.
-        </p>
+        <p className="text-sm font-medium text-amber-900">{t('webPreview.title')}</p>
+        <p className="mt-1 text-xs leading-relaxed text-amber-800">{t('webPreview.description')}</p>
       </div>
     </div>
   );

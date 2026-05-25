@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { format } from 'date-fns';
 import { Terminal } from 'lucide-react';
 
@@ -19,6 +20,7 @@ interface SystemChatGroupProps {
 const SystemChatGroupInner = ({
   systemGroup,
 }: Readonly<SystemChatGroupProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const { commandOutput, timestamp } = systemGroup;
 
   // Clean ANSI escape codes from output
@@ -34,7 +36,7 @@ const SystemChatGroupInner = ({
         >
           <Terminal className="size-3.5" style={{ color: 'var(--color-text-muted)' }} />
           <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            System
+            {t('chat.system.label')}
           </span>
           <span>·</span>
           <span>{format(timestamp, 'h:mm:ss a')}</span>

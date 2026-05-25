@@ -6,7 +6,7 @@
  * Folders are derived from file paths (no extra IPC call needed).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   getQuickOpenCache,
@@ -190,16 +190,6 @@ export function useFileSuggestions(
     return onQuickOpenCacheInvalidated(() => setFetchTrigger((n) => n + 1));
   }, []);
 
-  // Lazy refetch: when dropdown opens and cache is stale, trigger a reload
-  const prevEnabledRef = useRef(enabled);
-  useEffect(() => {
-    if (enabled && !prevEnabledRef.current && projectPath && !getQuickOpenCache(projectPath)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional trigger on state transition
-      setFetchTrigger((n) => n + 1);
-    }
-    prevEnabledRef.current = enabled;
-  }, [enabled, projectPath]);
-
   // Load files from API when cache is empty.
   // Uses project:listFiles (not editor:listFiles) — works without editor being open.
   const fetchFiles = useCallback(
@@ -231,13 +221,14 @@ export function useFileSuggestions(
   // - effect (projectPath change)
   useEffect(() => {
     if (!projectPath) return;
+    if (!enabled) return;
 
     const cached = getQuickOpenCache(projectPath);
     if (cached) return;
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- setLoading before async fetch is intentional
     return fetchFiles(projectPath);
-  }, [projectPath, fetchTrigger, fetchFiles]);
+  }, [projectPath, enabled, fetchTrigger, fetchFiles]);
 
   // Derive folders from file list (memoized)
   const allFolders = useMemo(

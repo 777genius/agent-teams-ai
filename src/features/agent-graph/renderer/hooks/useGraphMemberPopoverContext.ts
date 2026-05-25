@@ -17,6 +17,7 @@ interface GraphMemberPopoverContext {
     | null;
   teamMembers: ReturnType<typeof selectResolvedMembersForTeamName>;
   spawnEntry: AppState['memberSpawnStatusesByTeam'][string][string] | undefined;
+  runtimeEntry: AppState['teamAgentRuntimeByTeam'][string]['members'][string] | undefined;
   leadActivity: AppState['leadActivityByTeam'][string] | undefined;
   progress: ReturnType<typeof getCurrentProvisioningProgressForTeam> | null;
   memberSpawnSnapshot: AppState['memberSpawnSnapshotsByTeam'][string] | undefined;
@@ -41,6 +42,9 @@ function selectGraphMemberPopoverContext(
       : null,
     teamMembers,
     spawnEntry: teamName ? state.memberSpawnStatusesByTeam[teamName]?.[memberName] : undefined,
+    runtimeEntry: teamName
+      ? state.teamAgentRuntimeByTeam[teamName]?.members[memberName]
+      : undefined,
     leadActivity: teamName ? state.leadActivityByTeam[teamName] : undefined,
     progress: teamName ? getCurrentProvisioningProgressForTeam(state, teamName) : null,
     memberSpawnSnapshot: teamName ? state.memberSpawnSnapshotsByTeam[teamName] : undefined,

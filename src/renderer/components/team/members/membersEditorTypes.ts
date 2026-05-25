@@ -2,6 +2,7 @@ import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   EffortLevel,
   TeamFastMode,
+  TeamMemberMcpPolicy,
   TeamProviderBackendId,
   TeamProviderId,
 } from '@shared/types';
@@ -20,6 +21,7 @@ export interface MemberDraft {
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
+  mcpPolicy?: TeamMemberMcpPolicy;
   removedAt?: number | string | null;
 }
 

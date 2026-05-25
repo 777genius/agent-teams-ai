@@ -1,6 +1,8 @@
 import { formatTeamModelSummary } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { formatBytes } from '@renderer/utils/formatters';
 import { formatTeamProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
+import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 
 import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
@@ -69,9 +71,22 @@ function isMemberLaunchPending(spawnEntry: MemberSpawnStatusEntry | undefined): 
   );
 }
 
+function appendRuntimeSummarySuffixes(
+  summary: string,
+  backendLabel: string | undefined,
+  memorySuffix: string
+): string {
+  const summaryParts = new Set(summary.split(' · '));
+  const backendSuffix = backendLabel && !summaryParts.has(backendLabel) ? ` · ${backendLabel}` : '';
+  return `${summary}${backendSuffix}${memorySuffix}`;
+}
+
 export function getRuntimeMemorySourceLabel(
   runtimeEntry: TeamAgentRuntimeEntry | undefined
 ): string | undefined {
+  if (runtimeEntry?.runtimeLoadScope === 'shared-host') {
+    return 'RSS source: shared OpenCode host';
+  }
   if (!runtimeEntry?.pidSource) {
     return undefined;
   }
@@ -106,48 +121,85 @@ export function resolveMemberRuntimeSummary(
   spawnEntry: MemberSpawnStatusEntry | undefined,
   runtimeEntry?: TeamAgentRuntimeEntry
 ): string | undefined {
+  const leadLaunchParams = isLeadMember(member) ? launchParams : undefined;
   const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
     .providerBackendId;
   const memberModel = member.model?.trim() || '';
   const runtimeModel = spawnEntry?.runtimeModel?.trim() || runtimeEntry?.runtimeModel?.trim();
-  const inferredMemberProvider =
-    inferTeamProviderIdFromModel(memberModel) ?? inferTeamProviderIdFromModel(runtimeModel);
+  const runtimeModelProvider = inferTeamProviderIdFromModel(runtimeModel);
+  const inferredMemberProvider = inferTeamProviderIdFromModel(memberModel) ?? runtimeModelProvider;
+  const launchPending = isMemberLaunchPending(spawnEntry);
+  const stalePrimaryLaneConflictsWithLaunch =
+    !leadLaunchParams &&
+    launchPending &&
+    launchParams?.providerId != null &&
+    member.laneKind === 'primary' &&
+    member.laneOwnerProviderId != null &&
+    member.laneOwnerProviderId !== launchParams.providerId;
+  const authoritativeLaunchParams =
+    leadLaunchParams ?? (stalePrimaryLaneConflictsWithLaunch ? launchParams : undefined);
   const configuredProvider: TeamProviderId =
-    member.providerId ?? inferredMemberProvider ?? launchParams?.providerId ?? 'anthropic';
-  const memberProviderForInheritance = member.providerId ?? inferredMemberProvider;
+    authoritativeLaunchParams?.providerId ??
+    member.providerId ??
+    inferredMemberProvider ??
+    launchParams?.providerId ??
+    'anthropic';
+  const memberProviderForInheritance =
+    authoritativeLaunchParams?.providerId ?? member.providerId ?? inferredMemberProvider;
   const inheritsLeadRuntimeDefaults =
     memberProviderForInheritance == null ||
     launchParams?.providerId == null ||
     memberProviderForInheritance === launchParams.providerId;
-  const configuredModel =
-    memberModel || (inheritsLeadRuntimeDefaults ? launchParams?.model?.trim() || '' : '');
-  const configuredEffort =
-    member.effort ?? (inheritsLeadRuntimeDefaults ? launchParams?.effort : undefined);
-  const configuredProviderBackendId =
-    memberProviderBackendId ??
-    (inheritsLeadRuntimeDefaults ? launchParams?.providerBackendId : undefined);
+  const configuredModel = authoritativeLaunchParams
+    ? authoritativeLaunchParams.model?.trim() || ''
+    : memberModel || (inheritsLeadRuntimeDefaults ? launchParams?.model?.trim() || '' : '');
+  const configuredEffort = authoritativeLaunchParams
+    ? authoritativeLaunchParams.effort
+    : (member.effort ?? (inheritsLeadRuntimeDefaults ? launchParams?.effort : undefined));
+  const configuredProviderBackendId = authoritativeLaunchParams
+    ? authoritativeLaunchParams.providerBackendId
+    : (memberProviderBackendId ??
+      (inheritsLeadRuntimeDefaults ? launchParams?.providerBackendId : undefined));
+  const runtimeProviderId = runtimeModelProvider ?? runtimeEntry?.providerId;
+  const runtimeModelConflictsWithAuthoritativeLaunch =
+    launchPending &&
+    authoritativeLaunchParams != null &&
+    runtimeModel != null &&
+    (authoritativeLaunchParams.model == null ||
+      extractProviderScopedBaseModel(runtimeModel, runtimeProviderId ?? configuredProvider) !==
+        extractProviderScopedBaseModel(
+          authoritativeLaunchParams.model,
+          authoritativeLaunchParams.providerId
+        ));
+  const runtimeConflictsWithAuthoritativeLaunch =
+    authoritativeLaunchParams?.providerId != null &&
+    (stalePrimaryLaneConflictsWithLaunch ||
+      (runtimeProviderId != null && runtimeProviderId !== authoritativeLaunchParams.providerId) ||
+      runtimeModelConflictsWithAuthoritativeLaunch);
+  const displayRuntimeModel = runtimeConflictsWithAuthoritativeLaunch ? undefined : runtimeModel;
   const backendLabel = normalizeMemberBackendLabel(
     configuredProvider,
     formatTeamProviderBackendLabel(configuredProvider, configuredProviderBackendId)
   );
-  const memorySuffix = shouldShowRuntimeMemory(spawnEntry, runtimeEntry)
-    ? ` · ${formatBytes(runtimeEntry!.rssBytes!)}`
-    : '';
+  const memorySuffix =
+    !runtimeConflictsWithAuthoritativeLaunch && shouldShowRuntimeMemory(spawnEntry, runtimeEntry)
+      ? ` · ${formatBytes(runtimeEntry!.rssBytes!)}`
+      : '';
 
-  if (runtimeModel && (isMemberLaunchPending(spawnEntry) || configuredModel.length === 0)) {
-    const runtimeProvider = inferTeamProviderIdFromModel(runtimeModel) ?? configuredProvider;
-    const summary = formatTeamModelSummary(runtimeProvider, runtimeModel, configuredEffort);
-    return `${summary}${backendLabel ? ` · ${backendLabel}` : ''}${memorySuffix}`;
+  if (displayRuntimeModel && (launchPending || configuredModel.length === 0)) {
+    const runtimeProvider = runtimeModelProvider ?? configuredProvider;
+    const summary = formatTeamModelSummary(runtimeProvider, displayRuntimeModel, configuredEffort);
+    return appendRuntimeSummarySuffixes(summary, backendLabel, memorySuffix);
   }
 
-  if (isMemberLaunchPending(spawnEntry)) {
-    if (!configuredModel.length && !memorySuffix) {
+  if (launchPending) {
+    if (!authoritativeLaunchParams && !configuredModel.length && !memorySuffix) {
       return undefined;
     }
     const summary = formatTeamModelSummary(configuredProvider, configuredModel, configuredEffort);
-    return `${summary}${backendLabel ? ` · ${backendLabel}` : ''}${memorySuffix}`;
+    return appendRuntimeSummarySuffixes(summary, backendLabel, memorySuffix);
   }
 
   const summary = formatTeamModelSummary(configuredProvider, configuredModel, configuredEffort);
-  return `${summary}${backendLabel ? ` · ${backendLabel}` : ''}${memorySuffix}`;
+  return appendRuntimeSummarySuffixes(summary, backendLabel, memorySuffix);
 }

@@ -7,6 +7,7 @@
 import { memo, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { useStore } from '@renderer/store';
 import { formatSessionLabel, parseSessionTitle } from '@renderer/utils/sessionTitleParser';
@@ -64,6 +65,7 @@ const ConsumptionBadge = ({
   contextConsumption: number;
   phaseBreakdown?: PhaseTokenBreakdown[];
 }>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [popoverPosition, setPopoverPosition] = useState<{
     top: number;
     left: number;
@@ -107,20 +109,28 @@ const ConsumptionBadge = ({
             }}
           >
             <div className="mb-1 font-medium" style={{ color: 'var(--color-text)' }}>
-              Total Context: {formatTokensCompact(contextConsumption)} tokens
+              {t('sessionItem.totalContext', {
+                tokens: formatTokensCompact(contextConsumption),
+              })}
             </div>
             {phaseBreakdown.length === 1 ? (
-              <div>Context: {formatTokensCompact(phaseBreakdown[0].peakTokens)}</div>
+              <div>
+                {t('sessionItem.context', {
+                  tokens: formatTokensCompact(phaseBreakdown[0].peakTokens),
+                })}
+              </div>
             ) : (
               phaseBreakdown.map((phase) => (
                 <div key={phase.phaseNumber} className="flex items-center gap-1">
                   <span style={{ color: 'var(--color-text-muted)' }}>
-                    Phase {phase.phaseNumber}:
+                    {t('sessionItem.phase', { phase: phase.phaseNumber })}
                   </span>
                   <span className="tabular-nums">{formatTokensCompact(phase.contribution)}</span>
                   {phase.postCompaction != null && (
                     <span style={{ color: 'var(--color-text-muted)' }}>
-                      (compacted to {formatTokensCompact(phase.postCompaction)})
+                      {t('sessionItem.compactedTo', {
+                        tokens: formatTokensCompact(phase.postCompaction),
+                      })}
                     </span>
                   )}
                 </div>

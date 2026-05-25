@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 
-import type {
-  TeamConfig,
-  TeamTask,
-  TeamTaskWithKanban,
-} from '../../../../src/shared/types/team';
+import type { TeamConfig, TeamTask, TeamTaskWithKanban } from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
   it('builds roster from config + meta + inbox only', () => {
@@ -119,6 +115,54 @@ describe('TeamMemberResolver', () => {
     const members = resolver.resolveMembers(config, [], [], tasks);
 
     expect(members.find((member) => member.name === 'alice')?.currentTaskId).toBe('task-active');
+  });
+
+  it('does not leak stale Codex backend metadata into Anthropic members', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'anthropic',
+          providerBackendId: 'codex-native',
+          model: 'opus[1m]',
+          effort: 'low',
+        },
+        {
+          name: 'bob',
+          agentType: 'general-purpose',
+          providerId: 'anthropic',
+          providerBackendId: 'codex-native',
+          model: 'opus',
+        },
+      ],
+    };
+    const metaMembers: TeamConfig['members'] = [
+      {
+        name: 'jack',
+        agentType: 'general-purpose',
+        providerId: 'anthropic',
+        providerBackendId: 'codex-native',
+        model: 'haiku',
+      },
+    ];
+
+    const members = resolver.resolveMembers(config, metaMembers, [], [], {
+      leadProviderId: 'anthropic',
+      leadProviderBackendId: 'codex-native',
+    });
+
+    expect(
+      members
+        .filter((member) => member.providerId === 'anthropic')
+        .map((member) => [member.name, member.providerBackendId])
+    ).toEqual([
+      ['team-lead', undefined],
+      ['bob', undefined],
+      ['jack', undefined],
+    ]);
   });
 
   it('filters out "user" pseudo-member even when present in config, meta, or inboxNames', () => {

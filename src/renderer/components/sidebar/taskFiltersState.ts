@@ -14,14 +14,14 @@ export type TaskStatusFilterId =
   | 'review'
   | 'approved';
 
-export const STATUS_OPTIONS: { id: TaskStatusFilterId; label: string; color: string }[] = [
-  { id: 'todo', label: 'TODO', color: '#3b82f6' },
-  { id: 'in_progress', label: 'IN PROGRESS', color: '#eab308' },
-  { id: 'needs_fix', label: 'NEEDS FIXES', color: '#f43f5e' },
-  { id: 'done', label: 'DONE', color: '#22c55e' },
-  { id: 'review', label: 'REVIEW', color: '#8b5cf6' },
-  { id: 'approved', label: 'APPROVED', color: '#16a34a' },
-];
+export const STATUS_OPTIONS = [
+  { id: 'todo', labelKey: 'todo', color: '#3b82f6' },
+  { id: 'in_progress', labelKey: 'inProgress', color: '#eab308' },
+  { id: 'needs_fix', labelKey: 'needsFix', color: '#f43f5e' },
+  { id: 'done', labelKey: 'done', color: '#22c55e' },
+  { id: 'review', labelKey: 'review', color: '#8b5cf6' },
+  { id: 'approved', labelKey: 'approved', color: '#16a34a' },
+] as const satisfies readonly { id: TaskStatusFilterId; labelKey: string; color: string }[];
 
 export type ReadFilter = 'all' | 'unread' | 'read';
 

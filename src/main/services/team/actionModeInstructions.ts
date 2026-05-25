@@ -1,4 +1,4 @@
-import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 
 import type { AgentActionMode } from '@shared/types';
@@ -46,7 +46,7 @@ export function buildActionModeAgentBlock(mode: AgentActionMode | undefined): st
   }
 
   const lines = ACTION_MODE_BLOCKS[mode];
-  return `${AGENT_BLOCK_OPEN}\n${lines.join('\n')}\n${AGENT_BLOCK_CLOSE}`;
+  return wrapAgentBlock(lines.join('\n'));
 }
 
 export function isAgentActionMode(value: unknown): value is AgentActionMode {

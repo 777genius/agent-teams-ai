@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Tambah Ubahan",
+      "openDashboard": "Buka Dashboard",
+      "refreshCatalog": "Segarkan katalog"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Pengaya: {{status}}",
+      "skills": "Keterampilan: {{status}}"
+    },
+    "desktopOnly": "Tersedia di aplikasi desktop saja.",
+    "provider": {
+      "checkingStatus": "Memeriksa status penyedia...",
+      "connected": "Terhubung",
+      "loading": "Memuat...",
+      "needsSetup": "Butuh pengaturan",
+      "readyToConfigure": "Siap untuk dikonfigurasi",
+      "unsupported": "Tak didukung"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Ekstensi membutuhkan waktu-jalan yang dikonfigurasi untuk mengelola plugin, MCP server, keterampilan, dan koneksi penyedia.",
+      "checkingAvailabilityTitle": "Memeriksa ketersediaan waktu-jalan ekstensi",
+      "failedToStartDescription": "Ekstensi dinonaktifkan sampai runtime melewati pemeriksaan kesehatan startup. Buka Dashboard untuk memperbaiki atau memasangnya kembali.",
+      "failedToStartTitle": "Waktu berjalan yang dikonfigurasi ditemukan tapi gagal untuk memulai",
+      "multimodelCapabilitiesDescription": "Dukungan penyedia dapat berbeda dengan daerah. Pengaya hanya ditampilkan dimana waktu-jalan secara eksplisit mendeklarasikan dukungan.",
+      "multimodelCapabilitiesTitle": "Kemampuan multimodel waktu jalan",
+      "needsSignInDescription": "{{runtime}} ditemukan{{version}}, tetapi plugin instalasi dinonaktifkan sampai Anda masuk dari Dashboard.",
+      "needsSignInTitle": "{{runtime}} perlu sinyal-in",
+      "notAvailableDescription": "Ekstensi dinonaktifkan sampai waktu jalan dipasang. Buka Dashboard untuk memasangnya dan coba lagi.",
+      "notAvailableTitle": "Waktu berjalan yang dikonfigurasi tak tersedia",
+      "readyDescription": "Pengaya dapat dipasang dari halaman ini{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} siap",
+      "requiredForMutations": "Waktu berjalan yang dikonfigurasi diperlukan untuk menginstal atau melepaskan ekstensi. Pasang atau perbaiki dari Dashboard."
+    },
+    "sessionsRestartWarning": "Menjalankan sesi tidak akan mengambil perubahan ekstensi sampai memulai kembali.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Kunci rahasia untuk layanan online. Tambahkan di sini sehingga plugin, server, dan integrasi dapat terhubung dan bekerja.",
+        "label": "API Tombol"
+      },
+      "mcpServers": {
+        "description": "Koneksi ke perangkat dan aplikasi luar. Mereka membiarkan waktu-jalan membaca data atau melakukan tindakan di luar aplikasi ini.",
+        "label": "MCP Server"
+      },
+      "plugins": {
+        "description": "Sedikit tambahan untuk waktu berjalan. Dalam mode multimodel mereka saat ini berlaku untuk sesi Anthropic ketika didukung. Dukungan penyedia broader dalam pengembangan.",
+        "label": "Pengaya"
+      },
+      "skills": {
+        "description": "Ready-dibuat instruksi untuk pekerjaan umum. Mereka membantu menangani waktu-jalan berulang tugas lebih konsisten.",
+        "label": "Keterampilan"
+      }
+    },
+    "title": "Ekstensi"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} aktif",
+    "browseByFit": "Ramban sesuai",
+    "capabilities": "Kemampuan",
+    "categories": "Kategori",
+    "clearAllFilters": "Bersihkan semua filter",
+    "clearFilters": "Bersihkan penyaring",
+    "counts": {
+      "capabilities": "{{count}} kemampuan",
+      "categories": "{{count}} kategori",
+      "plugins": "{{count}} plugin",
+      "capabilities_few": "{{count}} kemampuan",
+      "capabilities_many": "{{count}} kemampuan",
+      "capabilities_one": "{{count}} kemampuan",
+      "capabilities_other": "{{count}} kemampuan",
+      "categories_few": "{{count}} kategori",
+      "categories_many": "{{count}} kategori",
+      "categories_one": "{{count}} kategori",
+      "categories_other": "{{count}} kategori",
+      "plugins_few": "{{count}} plugin",
+      "plugins_many": "{{count}} plugin",
+      "plugins_one": "{{count}} plugin",
+      "plugins_other": "{{count}} plugin"
+    },
+    "empty": {
+      "description": "Periksa kembali nanti untuk plugin baru",
+      "filteredDescription": "Coba menyesuaikan kriteria pencarian atau filter Anda",
+      "filteredTitle": "Tak ada plugin yang cocok dengan penyaring Anda",
+      "title": "Plugin tak tersedia"
+    },
+    "filterDescription": "Persempit katalog dengan kategori, kemampuan, atau keadaan yang terpasang.",
+    "installedOnly": "Hanya terpasang",
+    "providerSupportNotice": "Dukungan plugin saat ini dijamin untuk sesi Anthropic (Claude) saja. Kami bekerja untuk mendukung plugin di semua agen.",
+    "resultsUpdateInstantly": "Hasil pembaruan langsung saat Anda memperbaiki filter.",
+    "searchPlaceholder": "Cari plugin...",
+    "selectedCount": "{{count}} dipilih",
+    "showing": "Menampilkan {{shown}} dari {{total}} plugin",
+    "sort": {
+      "category": "Kategori",
+      "nameAsc": "Nama A- Z",
+      "nameDesc": "Nama Z- A",
+      "popular": "Populer"
+    },
+    "activeFilters_few": "{{count}} aktif",
+    "activeFilters_many": "{{count}} aktif",
+    "activeFilters_one": "{{count}} aktif",
+    "activeFilters_other": "{{count}} aktif",
+    "selectedCount_few": "{{count}} dipilih",
+    "selectedCount_many": "{{count}} dipilih",
+    "selectedCount_one": "{{count}} dipilih",
+    "selectedCount_other": "{{count}} dipilih"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Tambah",
+      "cancel": "Batal",
+      "install": "Pasang",
+      "installing": "Memasang..."
+    },
+    "description": "Tambahkan server secara manual tanpa katalog.",
+    "errors": {
+      "installFailed": "Pasang gagal",
+      "invalidServerName": "Nama server tidak valid. Gunakan karakter alfanumerik, dashes, garis bawah, titik.",
+      "npmPackageRequired": "nama paket npm dibutuhkan",
+      "serverNameRequired": "Nama server diperlukan",
+      "serverUrlRequired": "Server URL diperlukan"
+    },
+    "fields": {
+      "environmentVariables": "Variabel Lingkungan",
+      "headers": "Tajuk",
+      "npmPackage": "paket npm",
+      "scope": "Scope",
+      "serverName": "Nama Server",
+      "serverUrl": "Server URL",
+      "transport": "Transportasi",
+      "transportType": "Tipe Transportasi",
+      "versionOptional": "Versi (opsional)"
+    },
+    "title": "Tambah Ubahan MCP Server",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stundio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Nama Tajuk",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "Server-ku",
+      "latest": "terakhir",
+      "value": "nilai",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Jauh MCP server mungkin masih memerlukan tajuk gubahan atau API kunci bahkan ketika registri tidak menggambarkan mereka. Bila koneksi gagal setelah memasang, periksa dokumen penyedia.",
+      "required": "Server ini memerlukan otentikasi"
+    },
+    "diagnostics": {
+      "launchTarget": "Target Peluncuran"
+    },
+    "form": {
+      "autoFilled": "Otomatis-penuh",
+      "environmentVariables": "Variabel Lingkungan",
+      "headers": "Tajuk",
+      "scope": "Scope",
+      "serverName": "Nama Server"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Server ini membutuhkan pengaturan manual. Periksa repositori untuk instruksi instalasi.",
+      "manualSetupRequired": "Pengaturan manual diperlukan",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Kelola Pemasangan",
+      "install": "Pasang Server"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Repositori",
+      "website": "Situs web"
+    },
+    "metadata": {
+      "author": "Penulis",
+      "githubStars": "Bintang GitHub",
+      "hosting": "Hosting",
+      "installType": "Tipe Pasang",
+      "license": "Lisensi",
+      "published": "Diterbitkan",
+      "source": "Sumber",
+      "updated": "Diperbarui",
+      "version": "Versi"
+    },
+    "scope": {
+      "local": "Lokal",
+      "project": "Projek"
+    },
+    "tools": {
+      "title": "Perkakas ({{count}})",
+      "title_few": "Perkakas ({{count}})",
+      "title_many": "Perkakas ({{count}})",
+      "title_one": "Perkakas ({{count}})",
+      "title_other": "Perkakas ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "Server-ku"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Batal",
+      "createSkill": "Buat Skill",
+      "preparing": "Mempersiapkan...",
+      "reviewAndCreate": "Ulasan Dan Buat",
+      "reviewAndSave": "Ulasan Dan Simpan",
+      "saveSkill": "Simpan Skill"
+    },
+    "advanced": {
+      "customDescription": "Keterampilan ini menggunakan format markdown gubahan, jadi sunting langsung di sini.",
+      "customTitle": "2. SKILL.md penyunting",
+      "description": "Kebanyakan orang bisa melewatkan ini. Buka hanya jika Anda ingin kontrol langsung atas file markdown mentah.",
+      "hide": "Sembunyikan Penyunting Lanjutan",
+      "resetFromStructuredFields": "Reset Dari Ruas Terstruktur",
+      "show": "Tampilkan Penyunting Lanjutan",
+      "title": "4. SKILL.md penyunting"
+    },
+    "basics": {
+      "description": "Berikan keterampilan ini nama yang jelas, memilih yang dapat menggunakannya, dan memutuskan di mana ia harus tinggal.",
+      "title": "1."
+    },
+    "description": {
+      "create": "Jelaskan alur kerja dalam bahasa biasa, tinjau berkas yang akan dibuat, lalu simpan.",
+      "edit": "Perbarui keterampilan ini, tinjau perubahan berkas yang dihasilkan, kemudian simpan."
+    },
+    "extraFiles": {
+      "addedFiles": "Berkas ditambahkan:",
+      "assets": "Aset",
+      "assetsDescription": "Tambahkan cuplikan layar atau media yang bundel hanya jika mereka membantu menjelaskan alur kerja.",
+      "description": "Tambahkan docs pendukung, skrip, atau aset saja jika keterampilan ini benar-benar membutuhkan mereka.",
+      "lockedForEdits": "Root dan folder terkunci bagi penyunting",
+      "optionalDescription": "Tambahkan berkas starter yang akan disertakan dalam ulasan dan ditulis bersama dengan `SKILL.md`.",
+      "optionalTitle": "Berkas opsional",
+      "references": "Referensi",
+      "referencesDescription": "Tambahkan docs pendukung, tautan, atau contoh waktu-jalan dapat dilihat.",
+      "scripts": "Skrip",
+      "scriptsDescription": "Tambahkan perintah pembantu atau catatan setup. Tinjau dengan hati-hati sebelum berbagi keterampilan ini.",
+      "title": "3."
+    },
+    "fields": {
+      "compatibility": "Kompatibilitas",
+      "description": "Deskripsi",
+      "folderName": "Nama folder",
+      "folderNameHint": "Kami menyarankan ini secara otomatis dari nama keterampilan sehingga tinjauan bekerja segera.",
+      "invocation": "Bagaimana seharusnya digunakan",
+      "license": "Lisensi",
+      "name": "Nama skill",
+      "notes": "Catatan ekstra atau perwalian",
+      "root": "Dimana menyimpannya",
+      "scope": "Siapa yang bisa menggunakannya",
+      "steps": "Langkah utama untuk diikuti",
+      "whenToUse": "Kapan mencapai ini"
+    },
+    "instructions": {
+      "description": "Bagian-bagian ini menghasilkan berkas keterampilan untuk Anda, sehingga Anda tidak perlu mengedit markdown kecuali jika Anda ingin.",
+      "locked": "Ruas struktur terkunci karena Anda beralih ke manual `SKILL.md` Editing di bawah ini.",
+      "title": "2 Instruksi"
+    },
+    "invocation": {
+      "auto": "Dapat digunakan secara otomatis",
+      "manualOnly": "Hanya ketika Anda meminta untuk itu"
+    },
+    "placeholders": {
+      "description": "Apa keterampilan ini membantu dengan",
+      "name": "Tulis nama keterampilan ringkas",
+      "notes": "Sebut saja tes hilang, kemunduran, dan asumsi berisiko.",
+      "steps": "Inspeksi berkas yang relevan.\nJelaskan risiko utamanya dulu.\n3, sarankan yang paling aman.",
+      "whenToUse": "Contoh: Gunakan ini ketika tugas ini adalah sebuah ulasan kode atau permintaan triase bug.",
+      "license": "MIT",
+      "compatibility": "klaude- kode, kursor"
+    },
+    "review": {
+      "creating": "Membuat keterampilan",
+      "hint": "Tinjau perubahan file pertama, kemudian konfirmasi simpan di langkah berikutnya.",
+      "saving": "Menyimpan keterampilan ini"
+    },
+    "root": {
+      "codexOnly": " - Codex saja",
+      "shared": " - Bersama"
+    },
+    "scope": {
+      "project": "Projek: {{project}}",
+      "projectUnavailable": "Projek tak tersedia",
+      "user": "Pengguna"
+    },
+    "title": {
+      "create": "Buat keterampilan",
+      "edit": "Sunting keterampilan"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Batal",
+      "delete": "Hapus",
+      "deleteSkill": "Hapus Skill",
+      "deleting": "Menghapus...",
+      "editSkill": "Sunting Skill",
+      "openFolder": "Buka Folder",
+      "openSkillFile": "Buka SKILL.md",
+      "retry": "Coba lagi"
+    },
+    "badges": {
+      "assets": "Aset",
+      "autoUse": "Penggunaan otomatis",
+      "hasScripts": "Memiliki skrip",
+      "manualUse": "Penggunaan manual",
+      "references": "Referensi",
+      "storedIn": "Tersimpan {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Hapus keterampilan ini dan pindahkan ke Tempat Sampah?",
+      "descriptionWithName": "Hapus \"{{name}}\"dan memindahkannya ke tempat sampah? Anda dapat mengembalikannya dari Tempat Sampah jika diperlukan.",
+      "title": "Hapus keterampilan?"
+    },
+    "descriptionFallback": "Inspeksi menemukan keahlian metadata dan instruksi mentah.",
+    "errors": {
+      "deleteFailed": "Gagal menghapus keterampilan",
+      "loadFailed": "Tidak dapat memuat keterampilan ini."
+    },
+    "files": {
+      "advancedDetails": "Rincian berkas tingkat lanjut",
+      "assets": "Aset",
+      "references": "Referensi",
+      "scripts": "Skrip",
+      "storedAt": "Disimpan di"
+    },
+    "includes": {
+      "assets": "aset",
+      "instructionsOnly": "Hanya keterampilan instruksi",
+      "references": "referensi",
+      "scripts": "skrip"
+    },
+    "invocation": {
+      "auto": "Berjalan otomatis ketika cocok dengan tugas.",
+      "manualOnly": "Hanya berjalan ketika Anda secara eksplisit memintanya."
+    },
+    "issues": {
+      "bundledScripts": "Keterampilan ini termasuk script bundled",
+      "reviewCarefully": "Tinjau keterampilan ini dengan hati-hati sebelum menggunakannya"
+    },
+    "loading": "Memuat rincian keterampilan...",
+    "scope": {
+      "personal": "Keterampilan pribadi Anda",
+      "projectOnly": "Proyek ini saja"
+    },
+    "summary": {
+      "howUsed": "Bagaimana digunakan",
+      "included": "Apa yang datang dengan itu",
+      "whoCanUse": "Siapa yang bisa menggunakannya"
+    },
+    "titleFallback": "Detail skill"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Buat Skill",
+      "import": "Impor"
+    },
+    "badges": {
+      "assets": "Aset",
+      "hasScripts": "Memiliki skrip",
+      "needsAttention": "Butuh perhatian",
+      "references": "Referensi",
+      "storedIn": "Tersimpan {{root}}"
+    },
+    "configuredRuntime": "waktu jalan yang dikonfigurasi",
+    "counts": {
+      "codexOnly": "{{count}} Hanya Codex",
+      "personal": "{{count}} personal",
+      "project": "{{count}} projek",
+      "shared": "{{count}} bersama",
+      "total": "{{count}} total",
+      "codexOnly_few": "{{count}} Hanya Codex",
+      "codexOnly_many": "{{count}} Hanya Codex",
+      "codexOnly_one": "{{count}} Hanya Codex",
+      "codexOnly_other": "{{count}} Hanya Codex",
+      "personal_few": "{{count}} personal",
+      "personal_many": "{{count}} personal",
+      "personal_one": "{{count}} personal",
+      "personal_other": "{{count}} personal",
+      "project_few": "{{count}} projek",
+      "project_many": "{{count}} projek",
+      "project_one": "{{count}} projek",
+      "project_other": "{{count}} projek",
+      "shared_few": "{{count}} bersama",
+      "shared_many": "{{count}} bersama",
+      "shared_one": "{{count}} bersama",
+      "shared_other": "{{count}} bersama",
+      "total_few": "{{count}} total",
+      "total_many": "{{count}} total",
+      "total_one": "{{count}} total",
+      "total_other": "{{count}} total"
+    },
+    "empty": {
+      "noMatches": "Tidak ada keterampilan yang cocok dengan pencarian Anda",
+      "noMatchesDescription": "Coba istilah pencarian yang berbeda atau filter switch.",
+      "noSkills": "Tidak ada keterampilan belum",
+      "noSkillsDescription": "Buat keterampilan pertama Anda untuk mengajarkan aliran kerja yang berulang-ulang, atau impor yang sudah Anda pakai."
+    },
+    "filters": {
+      "all": "Semua keterampilan",
+      "codexOnly": "Hanya Codex",
+      "hasScripts": "Memiliki skrip",
+      "needsAttention": "Butuh perhatian",
+      "personal": "Pribadi",
+      "project": "Projek",
+      "shared": "Bersama"
+    },
+    "hero": {
+      "codexAvailable": "Gunakan `.codex` ketika keterampilan harus tinggal Codex-only.",
+      "codexUnavailable": "Terkini `.codex` keterampilan tetap diedit di sini, tapi Codex baru-hanya keterampilan membutuhkan waktu berjalan Codex diaktifkan.",
+      "description": "Keterampilan dapat digunakan kembali instruksi yang membantu waktu-jalan menangani jenis tugas yang sama lebih konsisten.",
+      "guidance": "Gunakan keterampilan pribadi untuk kebiasaan yang Anda inginkan di mana-mana. Gunakan keterampilan proyek untuk arus kerja yang hanya masuk akal di dalam satu codebase.",
+      "personalContext": "Anda hanya melihat keterampilan pribadi Anda sekarang.",
+      "projectContext": "Anda melihat keterampilan untuk {{project}} ditambah kemampuan pribadimu.",
+      "title": "Teach repeatable work"
+    },
+    "invocation": {
+      "auto": "Berjalan otomatis ketika cocok",
+      "manualOnly": "Hanya berjalan ketika Anda secara eksplisit memintanya"
+    },
+    "loading": {
+      "loading": "Memuat keterampilan...",
+      "refreshing": "Menyegarkan keterampilan..."
+    },
+    "runtimeAudience": "Keterampilan bersama dalam `.claude`, `.cursor`, dan `.agents` tersedia untuk {{audience}}Keterampilan disimpan di `.codex` tetap Codex-hanya ketika Codex dukungan tersedia.",
+    "scope": {
+      "project": "Proyek ini",
+      "user": "Pribadi"
+    },
+    "searchPlaceholder": "Cari dengan nama keterampilan atau apa yang membantu dengan...",
+    "sections": {
+      "personal": {
+        "description": "Kebiasaan dan instruksi yang Anda inginkan tersedia di mana-mana.",
+        "title": "Keterampilan pribadi"
+      },
+      "project": {
+        "description": "Jaringan kerja yang hanya masuk akal bagi basis kode ini.",
+        "title": "Keterampilan projek"
+      }
+    },
+    "sort": {
+      "label": "Urutkan keterampilan",
+      "name": "Nama",
+      "recent": "Terkini"
+    },
+    "status": {
+      "hasScripts": "Sertakan skrip, jadi periksa dengan hati-hati",
+      "needsAttention": "Perlu perhatian sebelum Anda bergantung pada itu",
+      "ready": "Siap untuk digunakan"
+    },
+    "success": {
+      "created": "Keterampilan berhasil dibuat.",
+      "imported": "Skill diimpor dengan sukses.",
+      "saved": "Keterampilan disimpan dengan sukses."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Tak dikenal",
+    "metadata": {
+      "author": "Penulis",
+      "category": "Kategori",
+      "source": "Sumber",
+      "version": "Versi",
+      "capabilities": "Kemampuan",
+      "installs": "Install"
+    },
+    "scope": {
+      "label": "Scope:",
+      "options": {
+        "user": "Pengguna (global)",
+        "project": "Projek (bersama)",
+        "local": "Lokal (diabaikan)"
+      }
+    },
+    "links": {
+      "homepage": "Laman",
+      "contact": "Kontak"
+    },
+    "readme": {
+      "loading": "Memuat README...",
+      "empty": "Tidak README tersedia."
+    }
+  },
+  "skillImport": {
+    "title": "Impor keterampilan",
+    "description": "Pilih folder keterampilan yang ada, periksa apa yang akan disalin, lalu impor ke salah satu lokasi keterampilan yang didukung Anda.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Pilih sebuah folder keterampilan",
+        "description": "Ini seharusnya menjadi folder yang telah memuat `SKILL.md`, `Skill.md`, atau `skill.md` file."
+      },
+      "location": {
+        "title": "Putuskan di mana ia berada",
+        "description": "Keterampilan pribadi bekerja di mana-mana. Keterampilan projek hanya muncul untuk satu codebase."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Folder sumber",
+      "destinationFolderName": "Nama folder tujuan",
+      "audience": "Siapa yang bisa menggunakannya",
+      "storage": "Dimana menyimpannya"
+    },
+    "placeholders": {
+      "defaultFolderName": "Baku untuk nama folder sumber"
+    },
+    "actions": {
+      "browse": "Ramban",
+      "cancel": "Batal",
+      "preparing": "Mempersiapkan...",
+      "reviewAndImport": "Ulasan Dan Impor",
+      "importSkill": "Impor Skill",
+      "backToImport": "Kembali Ke Impor"
+    },
+    "scope": {
+      "user": "Pengguna",
+      "project": "Projek: {{project}}",
+      "projectUnavailable": "Projek tak tersedia"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Codex saja",
+      "shared": " - Bersama"
+    },
+    "reviewHint": "Tinjau file yang disalin pertama, kemudian konfirmasi impor di langkah berikutnya.",
+    "reviewLabel": "Mengimpor keterampilan ini",
+    "errors": {
+      "missingSkillFile": "Folder ini tidak terlihat seperti keterampilan belum. Butuh SKILL.md, Skill.md, atau berkas skil.md terampil.",
+      "symbolicLinks": "Folder ini berisi link simbolik. Impor berkas sebenarnya daripada taut.",
+      "tooManyFiles": "Folder keterampilan ini terlalu besar untuk diimpor sekaligus. Hapus berkas tambahan dan coba lagi.",
+      "tooLarge": "Folder keterampilan ini terlalu besar untuk diimpor dengan aman. Trim aset besar dan coba lagi.",
+      "invalidFolderName": "Pilih nama folder tujuan sederhana menggunakan huruf, nomor, titik, garis, atau garis bawah.",
+      "mustBeDirectory": "Pilih folder untuk diimpor, bukan berkas tunggal.",
+      "reviewFailed": "Gagal mengulas perubahan impor",
+      "importFailed": "Gagal mengimpor keterampilan"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Nama A £Z",
+      "nameDesc": "Nama Z Asa",
+      "toolsDesc": "Kebanyakan alat"
+    },
+    "health": {
+      "title": "MCP Status Kesehatan",
+      "checkingViaRuntime": "Memeriksa terpasang MCP server via {{runtime}} ...",
+      "lastChecked": "Terakhir diperiksa {{time}}",
+      "description": "Jalankan diagnosa dari halaman ini untuk memverifikasi terinstal MCP konektivitas.",
+      "checking": "Memeriksa...",
+      "checkStatus": "Periksa Status"
+    },
+    "diagnostics": {
+      "title": "Runtime MCP Diagnostik",
+      "serversCount": "{{count}} server",
+      "serversCount_one": "{{count}} server",
+      "serversCount_other": "{{count}} server",
+      "waiting": "Menunggu hasil diagnosa...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Memeriksa status waktu jalan...",
+        "checkingRuntimeAvailability": "Memeriksa ketersediaan waktu-jalan...",
+        "runtimeFailedToStart": "Waktu berjalan yang dikonfigurasi ditemukan tapi gagal untuk memulai. Buka Dashboard untuk memperbaiki atau memasangnya kembali.",
+        "runtimeRequired": "Waktu jalan yang dikonfigurasi diperlukan. Pasang atau perbaiki dari Dashboard."
+      },
+      "serversCount_few": "{{count}} server",
+      "serversCount_many": "{{count}} server"
+    },
+    "searchPlaceholder": "Cari MCP server...",
+    "runtime": {
+      "notAvailable": "{{runtime}} tak tersedia",
+      "notInstalled": "{{runtime}} tidak terpasang",
+      "requiredDescription": "MCP pemeriksaan kesehatan membutuhkan {{runtime}}Pergi ke Dashboard untuk memasang atau memperbaikinya."
+    },
+    "empty": {
+      "searchTitle": "Tak ditemukan server",
+      "title": "Tidak MCP server tersedia",
+      "searchDescription": "Coba istilah pencarian lain",
+      "description": "Periksa kembali nanti untuk server baru"
+    },
+    "loadMore": "Muat lebih banyak"
+  },
+  "apiKeys": {
+    "description": "Simpan terpercaya API kunci untuk otomatis-fill ketika memasang MCP server.",
+    "storage": {
+      "osKeychain": "Kunci dienkripsi via {{backend}} dan disimpan dengan izin file terbatas (owneronly).",
+      "localEncryption": "Keychain OS tidak tersedia - kunci dienkripsi secara lokal dengan AES-256. Untuk perlindungan yang lebih kuat, pasang layanan keyring (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Tambah API Kunci",
+      "addFirst": "Tambah kunci pertama Anda",
+      "edit": "Sunting"
+    },
+    "empty": {
+      "title": "Tidak API kunci disimpan",
+      "description": "Tambahkan kunci ke variabel lingkungan otomatis-fill ketika memasang MCP server."
+    },
+    "form": {
+      "addTitle": "Tambah API Kunci",
+      "editTitle": "Sunting API Kunci",
+      "addDescription": "Simpan API kunci untuk otomatis-filling MCP instalasi server.",
+      "editDescription": "Mutakhirkan rincian kunci. Anda harus mengembalikan nilai.",
+      "keychainUnavailable": "Keychain OS tidak tersedia - kunci dienkripsi dengan AES- 256 lokal. Pasang gnome-keyring untuk perlindungan tingkat OS-.",
+      "name": "Nama",
+      "namePlaceholder": "mis. Produksi OpenAI",
+      "environmentVariableName": "Nama Variabel Lingkungan",
+      "envVarPlaceholder": "mis. OPENAI_API_KEY",
+      "value": "Nilai",
+      "reenterValue": "Masukkan kembali nilai kunci",
+      "valuePlaceholder": "Ka...",
+      "scope": "Scope",
+      "userScopeLabel": "Pengguna (global)",
+      "projectScopeLabel": "Projek: {{project}}",
+      "projectUnavailable": "Projek tak tersedia",
+      "boundTo": "Terikat ke {{path}}",
+      "cancel": "Batal",
+      "saving": "Menyimpan...",
+      "update": "Perbarui",
+      "save": "Simpan",
+      "errors": {
+        "invalidEnvVarFormat": "Gunakan huruf, digit, garis bawah. Harus mulai dengan surat atau garis bawah.",
+        "nameRequired": "Nama diperlukan",
+        "envVarRequired": "Nama variabel lingkungan diperlukan",
+        "invalidEnvVar": "Nama variabel lingkungan tidak valid",
+        "valueRequired": "Nilai kunci diperlukan",
+        "projectScopeRequiresProject": "Projek- scoped API kunci membutuhkan sebuah projek yang aktif",
+        "saveFailed": "Gagal menyimpan"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Ulasan perubahan keterampilan",
+    "description": "{{reviewLabel}} pratilik perubahan sistem berkas terlebih dahulu. Tidak ada yang ditulis sampai Anda mengkonfirmasi di bawah ini.",
+    "noPreview": "Tak ada pratinjau yang tersedia.",
+    "confirmPromptPrefix": "Tinjau diff di bawah ini, kemudian gunakan",
+    "confirmPromptSuffix": "untuk menerapkan perubahan ini.",
+    "noChanges": "Belum ada perubahan berkas yang terdeteksi.",
+    "binaryBadge": "binari",
+    "binaryPreviewHidden": "Pratinjau berkas binary tidak ditampilkan. Berkas akan disalin as-is.",
+    "summary": {
+      "fileChanges": "{{count}} berkas berubah",
+      "fileChanges_one": "{{count}} berkas berubah",
+      "fileChanges_other": "{{count}} berkas berubah",
+      "new": "{{count}} baru",
+      "updated": "{{count}} diperbarui",
+      "removed": "{{count}} dihapus",
+      "binary": "{{count}} binari",
+      "fileChanges_few": "{{count}} berkas berubah",
+      "fileChanges_many": "{{count}} berkas berubah"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} alat",
+    "toolsCount_one": "{{count}} alat",
+    "toolsCount_other": "{{count}} alat",
+    "envCount": "{{count}} env",
+    "envCount_one": "{{count}} env",
+    "envCount_other": "{{count}} env",
+    "auth": "Auth",
+    "byAuthor": "oleh {{author}}",
+    "hosting": {
+      "remote": "Jauh",
+      "local": "Lokal",
+      "both": "Keduanya"
+    },
+    "toolsCount_few": "{{count}} alat",
+    "toolsCount_many": "{{count}} alat",
+    "envCount_few": "{{count}} env",
+    "envCount_many": "{{count}} env",
+    "repository": "Repositori",
+    "website": "Situs web"
+  },
+  "installButton": {
+    "installing": "Memasang...",
+    "removing": "Menghapus...",
+    "done": "Selesai",
+    "retry": "Coba lagi",
+    "uninstall": "Batalkan",
+    "install": "Pasang"
+  },
+  "pluginCard": {
+    "official": "Resmi"
+  }
+}

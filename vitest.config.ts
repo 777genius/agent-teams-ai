@@ -23,6 +23,10 @@ export default defineConfig({
       '@renderer': resolve(__dirname, 'src/renderer'),
       '@preload': resolve(__dirname, 'src/preload'),
       '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts'),
+      '@radix-ui/react-compose-refs': resolve(
+        __dirname,
+        'src/renderer/vendor/radixComposeRefs.ts'
+      ),
       react: resolve(__dirname, 'node_modules/react'),
       'react-dom': resolve(__dirname, 'node_modules/react-dom'),
     },

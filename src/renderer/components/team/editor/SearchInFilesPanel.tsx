@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -46,6 +47,7 @@ export const SearchInFilesPanel = ({
   onClose,
   onSelectMatch,
 }: SearchInFilesPanelProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const [query, setQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [results, setResults] = useState<SearchInFilesResult | null>(null);
@@ -159,7 +161,9 @@ export const SearchInFilesPanel = ({
     <div className="flex h-full flex-col border-r border-border bg-surface-sidebar">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-xs font-medium text-text-secondary">Search in Files</span>
+        <span className="text-xs font-medium text-text-secondary">
+          {t('editor.searchInFiles.title')}
+        </span>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -167,12 +171,14 @@ export const SearchInFilesPanel = ({
               size="icon"
               className="size-6 text-text-muted"
               onClick={onClose}
-              aria-label="Close search"
+              aria-label={t('editor.searchInFiles.closeSearch')}
             >
               <X className="size-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Close search (Esc)</TooltipContent>
+          <TooltipContent side="bottom">
+            {t('editor.searchInFiles.closeSearchShortcut')}
+          </TooltipContent>
         </Tooltip>
       </div>
 
@@ -185,7 +191,7 @@ export const SearchInFilesPanel = ({
             type="text"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
-            placeholder="Search..."
+            placeholder={t('editor.searchInFiles.searchPlaceholder')}
             className="flex-1 bg-transparent text-xs text-text outline-none placeholder:text-text-muted"
           />
           {searching && <Loader2 className="size-3 shrink-0 animate-spin text-text-muted" />}
@@ -200,13 +206,13 @@ export const SearchInFilesPanel = ({
                     ? 'bg-blue-500/20 text-blue-400'
                     : 'text-text-muted hover:bg-surface-raised'
                 }`}
-                aria-label="Match Case"
+                aria-label={t('editor.searchInFiles.matchCase')}
                 aria-pressed={caseSensitive}
               >
-                Aa
+                {t('editor.searchInFiles.matchCaseToggle')}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Match Case</TooltipContent>
+            <TooltipContent side="bottom">{t('editor.searchInFiles.matchCase')}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -216,15 +222,19 @@ export const SearchInFilesPanel = ({
         {error && <div className="p-3 text-xs text-red-400">{error}</div>}
 
         {results?.totalMatches === 0 && query.trim() && (
-          <div className="p-4 text-center text-xs text-text-muted">No results found</div>
+          <div className="p-4 text-center text-xs text-text-muted">
+            {t('editor.searchInFiles.noResults')}
+          </div>
         )}
 
         {results && results.totalMatches > 0 && (
           <>
             <div className="border-b border-border px-3 py-1.5 text-[10px] text-text-muted">
-              {results.totalMatches} match{results.totalMatches !== 1 ? 'es' : ''} in{' '}
-              {results.results.length} file{results.results.length !== 1 ? 's' : ''}
-              {results.truncated && ' (truncated)'}
+              {t('editor.searchInFiles.resultsSummary', {
+                count: results.totalMatches,
+                fileCount: results.results.length,
+              })}
+              {results.truncated && ` ${t('editor.searchInFiles.truncated')}`}
             </div>
             {results.results.map((fileResult) => (
               <SearchFileGroup

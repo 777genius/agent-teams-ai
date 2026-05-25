@@ -1,5 +1,6 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { captureRendererException, isSentryRendererActive } from '@renderer/sentry';
 import { useStore } from '@renderer/store';
 import {
@@ -15,6 +16,19 @@ const logger = createLogger('Component:ErrorBoundary');
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  labels?: ErrorBoundaryLabels;
+}
+
+interface ErrorBoundaryLabels {
+  title: string;
+  description: string;
+  componentStack: string;
+  tryAgain: string;
+  copied: string;
+  copyErrorDetails: string;
+  reportBugOnGitHub: string;
+  reloadApp: string;
+  diagnosticsNotice: string;
 }
 
 interface State {
@@ -24,7 +38,7 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryInner extends Component<Props, State> {
   private copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(props: Props) {
@@ -136,7 +150,7 @@ export class ErrorBoundary extends Component<Props, State> {
   // eslint-disable-next-line sonarjs/function-return-type -- Error boundaries inherently return different content based on error state
   render(): ReactNode {
     const { hasError, copiedReport, error, errorInfo } = this.state;
-    const { children, fallback } = this.props;
+    const { children, fallback, labels } = this.props;
 
     if (hasError) {
       if (fallback) {
@@ -147,12 +161,11 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex h-screen flex-col items-center justify-center bg-claude-dark-bg p-8 text-claude-dark-text">
           <div className="mb-6 flex items-center gap-3">
             <AlertTriangle className="size-10 text-red-500" />
-            <h1 className="text-2xl font-semibold">Something went wrong</h1>
+            <h1 className="text-2xl font-semibold">{labels?.title}</h1>
           </div>
 
           <p className="mb-6 max-w-md text-center text-claude-dark-text-secondary">
-            An unexpected error occurred in the application. You can try reloading the page or
-            resetting the error state.
+            {labels?.description}
           </p>
 
           {error && (
@@ -161,7 +174,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {errorInfo?.componentStack && (
                 <details className="mt-2">
                   <summary className="cursor-pointer text-xs text-claude-dark-text-secondary hover:text-claude-dark-text">
-                    Component Stack
+                    {labels?.componentStack}
                   </summary>
                   <pre className="mt-2 whitespace-pre-wrap text-xs text-claude-dark-text-secondary">
                     {errorInfo.componentStack}
@@ -176,7 +189,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReset}
               className="flex items-center gap-2 rounded-lg border border-claude-dark-border bg-claude-dark-surface px-4 py-2 transition-colors hover:bg-claude-dark-border"
             >
-              Try Again
+              {labels?.tryAgain}
             </button>
             <button
               onClick={() => void this.handleCopyErrorDetails()}
@@ -187,26 +200,25 @@ export class ErrorBoundary extends Component<Props, State> {
               ) : (
                 <Copy className="size-4" />
               )}
-              {copiedReport ? 'Copied' : 'Copy Error Details'}
+              {copiedReport ? labels?.copied : labels?.copyErrorDetails}
             </button>
             <button
               onClick={this.handleCreateGitHubIssue}
               className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-red-300 transition-colors hover:bg-red-500/20"
             >
               <Bug className="size-4" />
-              Report Bug on GitHub
+              {labels?.reportBugOnGitHub}
             </button>
             <button
               onClick={this.handleReload}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 transition-colors hover:bg-blue-700"
             >
               <RefreshCw className="size-4" />
-              Reload App
+              {labels?.reloadApp}
             </button>
           </div>
           <p className="mt-4 max-w-md text-center text-xs text-claude-dark-text-secondary">
-            GitHub bug reports and copied diagnostics include the error message, stack traces, app
-            version, active tab, selected team, task context, and environment details.
+            {labels?.diagnosticsNotice}
           </p>
         </div>
       );
@@ -215,3 +227,26 @@ export class ErrorBoundary extends Component<Props, State> {
     return children;
   }
 }
+
+export const ErrorBoundary = ({ children, fallback }: Omit<Props, 'labels'>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
+
+  return (
+    <ErrorBoundaryInner
+      fallback={fallback}
+      labels={{
+        title: t('errorBoundary.title'),
+        description: t('errorBoundary.description'),
+        componentStack: t('errorBoundary.componentStack'),
+        tryAgain: t('errorBoundary.tryAgain'),
+        copied: t('errorBoundary.copied'),
+        copyErrorDetails: t('errorBoundary.copyErrorDetails'),
+        reportBugOnGitHub: t('errorBoundary.reportBugOnGitHub'),
+        reloadApp: t('errorBoundary.reloadApp'),
+        diagnosticsNotice: t('errorBoundary.diagnosticsNotice'),
+      }}
+    >
+      {children}
+    </ErrorBoundaryInner>
+  );
+};

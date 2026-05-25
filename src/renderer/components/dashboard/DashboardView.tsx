@@ -5,6 +5,7 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { RecentProjectsSection } from '@features/recent-projects/renderer';
 import { RunningTeamsSection } from '@features/running-teams/renderer';
 import { useStore } from '@renderer/store';
@@ -16,6 +17,7 @@ import { CliStatusBanner } from './CliStatusBanner';
 import { DashboardUpdateBanner } from './DashboardUpdateBanner';
 import { TmuxStatusBanner } from './TmuxStatusBanner';
 import { WebPreviewBanner } from './WebPreviewBanner';
+import { WindowsAdministratorBanner } from './WindowsAdministratorBanner';
 
 interface CommandSearchProps {
   value: string;
@@ -23,6 +25,7 @@ interface CommandSearchProps {
 }
 
 const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('dashboard');
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { openCommandPalette, selectedProjectId } = useStore(
@@ -75,7 +78,7 @@ const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Search projects..."
+          placeholder={t('recentProjects.searchPlaceholder')}
           className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -102,6 +105,7 @@ const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React
 };
 
 export const DashboardView = (): React.JSX.Element => {
+  const { t } = useAppTranslation('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);
 
@@ -114,6 +118,7 @@ export const DashboardView = (): React.JSX.Element => {
 
       <div className="relative mx-auto max-w-5xl px-8 py-12">
         <WebPreviewBanner />
+        <WindowsAdministratorBanner />
         <DashboardUpdateBanner />
         <CliStatusBanner />
         <TmuxStatusBanner />
@@ -124,9 +129,9 @@ export const DashboardView = (): React.JSX.Element => {
             className="flex shrink-0 items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary transition-all duration-200 hover:border-zinc-500 hover:text-text"
           >
             <Users className="size-4" />
-            Select Team
+            {t('actions.selectTeam')}
           </button>
-          <span className="shrink-0 text-xs text-text-muted">or</span>
+          <span className="shrink-0 text-xs text-text-muted">{t('actions.or')}</span>
           <div className="flex-1">
             <CommandSearch value={searchQuery} onChange={setSearchQuery} />
           </div>
@@ -136,14 +141,14 @@ export const DashboardView = (): React.JSX.Element => {
 
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xs font-medium uppercase tracking-wider text-text-muted">
-            {searchQuery.trim() ? 'Search Results' : 'Recent Projects'}
+            {searchQuery.trim() ? t('recentProjects.searchResults') : t('recentProjects.title')}
           </h2>
           {searchQuery.trim() && (
             <button
               onClick={() => setSearchQuery('')}
               className="text-xs text-text-muted transition-colors hover:text-text-secondary"
             >
-              Clear search
+              {t('actions.clearSearch')}
             </button>
           )}
         </div>

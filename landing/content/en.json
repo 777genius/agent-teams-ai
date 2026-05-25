@@ -44,7 +44,7 @@
     {
       "id": "isFree",
       "question": "Is it really free?",
-      "answer": "Yes. The app itself is free and open source. The app has no paid tier of its own. To run agents, you only need access to a supported provider/runtime, such as Anthropic or Codex."
+      "answer": "Yes. The app is free and open source, and you can start with a free model with no auth - no registration, API keys, or credit card. If you want more models, connect Claude, Codex, OpenCode/OpenRouter, or another supported provider."
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "What do I need to get started?",
-      "answer": "Just install the app - it guides runtime detection and provider authentication from the UI. Zero-setup onboarding gets you running in minutes."
+      "answer": "Just install the app - start with the free model with no auth, then connect provider-backed models from the UI only when you need them."
     }
   ],
   "download": {
@@ -85,16 +85,16 @@
       "name": "Free",
       "price": "$0",
       "period": "",
-      "description": "Everything included. No limits, no API keys, no credit card.",
+      "description": "Start with the included free model with no auth. No signup, no API key, no credit card.",
       "features": [
+        "Free model with no auth for first runs",
+        "No account or provider login required to try",
+        "Optional Claude, Codex, and OpenCode provider access",
         "Unlimited agent teams",
         "Kanban board with real-time updates",
         "Code review with diff view",
         "Cross-team communication",
-        "Solo & team modes",
-        "Live process monitoring",
-        "Built-in code editor",
-        "MCP integration"
+        "Solo & team modes"
       ],
       "highlighted": true
     }

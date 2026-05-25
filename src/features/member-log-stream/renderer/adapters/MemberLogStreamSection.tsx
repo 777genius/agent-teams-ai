@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
@@ -43,6 +44,7 @@ export function MemberLogStreamSection({
   enabled = true,
   onInitialLoadErrorChange,
 }: Readonly<MemberLogStreamSectionProps>): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const [selectedLogView, setSelectedLogView] = useState<'execution' | 'process'>('execution');
   const teamMembers = useStore((s) => selectResolvedMembersForTeamName(s, teamName));
   const { stream, loading, error } = useMemberLogStream({ teamName, member, enabled });
@@ -79,7 +81,7 @@ export function MemberLogStreamSection({
           }`}
           onClick={() => setSelectedLogView('execution')}
         >
-          Execution
+          {t('memberLogStream.tabs.execution')}
         </button>
         <button
           type="button"
@@ -90,22 +92,22 @@ export function MemberLogStreamSection({
           }`}
           onClick={() => setSelectedLogView('process')}
         >
-          Process
+          {t('memberLogStream.tabs.process')}
         </button>
       </div>
 
       {selectedLogView === 'execution' ? (
         <ExecutionLogStreamView
-          title="Logs"
+          title={t('memberLogStream.logs.title')}
           description={describeMemberStream()}
           stream={stream}
           loading={loading}
           error={error}
           teamName={teamName}
           teamMembers={teamMembers}
-          loadingText="Loading member log stream..."
-          emptyTitle="No log stream entries were found for this member yet."
-          emptyDescription="Member-scoped transcript or runtime logs will appear here when available."
+          loadingText={t('memberLogStream.logs.loading')}
+          emptyTitle={t('memberLogStream.logs.emptyTitle')}
+          emptyDescription={t('memberLogStream.logs.emptyDescription')}
           selectionResetKey={`${teamName}:${member.name}`}
           boundedHistoryNote={boundedHistoryNote}
           forceSegmentHeaders

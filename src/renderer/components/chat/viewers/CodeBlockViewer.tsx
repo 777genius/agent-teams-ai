@@ -1,5 +1,6 @@
 import React, { memo, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { getBaseName } from '@renderer/utils/pathUtils';
 import { createLogger } from '@shared/utils/logger';
 import { Check, Copy, FileCode } from 'lucide-react';
@@ -125,6 +126,7 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
   endLine,
   maxHeight = 'max-h-96',
 }: CodeBlockViewerProps): React.JSX.Element {
+  const { t } = useAppTranslation('common');
   const [isCopied, setIsCopied] = useState(false);
 
   // Infer language from file extension if not provided
@@ -178,7 +180,7 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
           </span>
           {(startLine > 1 || endLine) && (
             <span className="shrink-0 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              (lines {startLine}-{actualEndLine})
+              {t('code.linesParenthesized', { from: startLine, to: actualEndLine })}
             </span>
           )}
           <span
@@ -197,7 +199,7 @@ export const CodeBlockViewer = memo(function CodeBlockViewer({
         <button
           onClick={handleCopy}
           className="rounded p-1 transition-colors hover:opacity-80"
-          title="Copy to clipboard"
+          title={t('actions.copyToClipboard')}
           style={{ backgroundColor: 'transparent' }}
         >
           {isCopied ? (

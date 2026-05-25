@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildMemberWorkSyncNudgePayload,
   buildMemberWorkSyncOutboxEnsureInput,
 } from '@features/member-work-sync/core/domain';
+import { describe, expect, it } from 'vitest';
+
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 
 function makeStatus(
@@ -52,6 +52,8 @@ describe('MemberWorkSyncNudge', () => {
   it('tells lead to move escalated clarification to user on the board', () => {
     const payload = buildMemberWorkSyncNudgePayload(makeStatus());
 
+    expect(payload.text).toContain('mcp__agent-teams__member_work_sync_status');
+    expect(payload.text).toContain('A status-only tool call is incomplete');
     expect(payload.text).toContain(
       'update the task board first with task_set_clarification value "user"'
     );
@@ -88,6 +90,46 @@ describe('MemberWorkSyncNudge', () => {
     );
 
     expect(payload.text).not.toContain('task_set_clarification value "user"');
+  });
+
+  it('marks review-pickup status-only tool calls as incomplete', () => {
+    const payload = buildMemberWorkSyncNudgePayload(
+      makeStatus({
+        memberName: 'bob',
+        agenda: {
+          teamName: 'sable-ops',
+          memberName: 'bob',
+          generatedAt: '2026-05-13T13:02:44.263Z',
+          fingerprint: 'agenda:v1:review',
+          diagnostics: [],
+          items: [
+            {
+              taskId: 'task-review',
+              displayId: '22222222',
+              subject: 'Review docs',
+              assignee: 'bob',
+              kind: 'review',
+              priority: 'review_requested',
+              reason: 'current_cycle_review_assigned',
+              evidence: {
+                status: 'completed',
+                owner: 'alice',
+                reviewer: 'bob',
+                reviewState: 'review',
+                reviewCycleId: 'evt-review-request',
+                reviewRequestEventId: 'evt-review-request',
+                reviewObligation: 'review_pickup_required',
+                canBypassPhase2: true,
+              },
+            },
+          ],
+        },
+      })
+    );
+
+    expect(payload.workSyncIntent).toBe('review_pickup');
+    expect(payload.text).toContain('A status-only tool call is incomplete');
+    expect(payload.text).toContain('mcp__agent-teams__member_work_sync_report');
   });
 
   it('adds proof-missing recovery context to agenda sync nudges', () => {

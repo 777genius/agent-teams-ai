@@ -7,6 +7,7 @@ import { syncRendererTelemetry } from '@renderer/sentry';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
+import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
 import {
   buildTaskChangePresenceKey,
   buildTaskChangeRequestOptions,
@@ -21,6 +22,7 @@ import { create } from 'zustand';
 import { createChangeReviewSlice } from './slices/changeReviewSlice';
 import {
   createCliInstallerSlice,
+  getIncompleteMultimodelProviderIds,
   getModelOnlyFallbackProviderIds,
   mergeCliStatusPreservingHydratedProviders,
   reconcileMultimodelProviderLoading,
@@ -95,6 +97,9 @@ const TEAM_VISIBLE_IDLE_WATCHDOG_POLL_MS = 10_000;
 const TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS = 30_000;
 const TEAM_MESSAGE_FALLBACK_POLL_MS = 10_000;
 const TASK_LOG_ACTIVITY_PULSE_MS = 3_500;
+const STARTUP_RUNTIME_STATUS_IDLE_DELAY_MS = 30_000;
+const STARTUP_PROVIDER_STATUS_MIN_DELAY_MS = 2_000;
+const STARTUP_PROVIDER_STATUS_MAX_DELAY_MS = 30_000;
 const ACTIVE_PROVISIONING_STATES_FOR_PROCESS_LITE: ReadonlySet<TeamProvisioningProgress['state']> =
   new Set(['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying']);
 export const TEAM_PROCESS_LITE_FANOUT_STORAGE_KEY = 'team:processLiteFanout';
@@ -209,15 +214,16 @@ export function initializeNotificationListeners(): () => void {
   const cleanupFns: (() => void)[] = [];
   cleanupFns.push(installTeamRefreshFanoutDebugBridge());
   let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
+  let runtimeStatusTimer: ReturnType<typeof setTimeout> | null = null;
+  let deferredProviderStatusCleanup: (() => void) | null = null;
   useStore.getState().subscribeProvisioningProgress();
   cleanupFns.push(() => {
     useStore.getState().unsubscribeProvisioningProgress();
   });
-  // Initial data fetches. Config loads first (needed for theme), then the rest
-  // run in parallel (no data dependencies between them). UV_THREADPOOL_SIZE=16
-  // prevents thread pool saturation even with concurrent I/O on Windows.
-  // Components also fire these from useEffect — loading guards in each action
-  // prevent duplicate IPC calls (whichever caller starts first wins).
+  // Initial data fetches. Config loads first (needed for theme), then the
+  // immediately visible data follows. Repository grouping is owned by the
+  // Sessions sidebar tab when it first mounts; scanning it here made startup
+  // pay for a hidden panel.
   void (async () => {
     // Config: fast (in-memory read) — needed for theme before first paint.
     await useStore.getState().fetchConfig();
@@ -241,24 +247,47 @@ export function initializeNotificationListeners(): () => void {
       cliStatusTimer = setTimeout(() => {
         const multimodelEnabled = useStore.getState().appConfig?.general?.multimodelEnabled ?? true;
         if (multimodelEnabled) {
-          void useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+          void (async () => {
+            await useStore
+              .getState()
+              .bootstrapCliStatus({ multimodelEnabled: true, providerStatusMode: 'defer' });
+            if (deferredProviderStatusCleanup) {
+              deferredProviderStatusCleanup();
+            }
+            deferredProviderStatusCleanup = scheduleStartupIdleTask(
+              () => {
+                const providerIds = getIncompleteMultimodelProviderIds(
+                  useStore.getState().cliStatus
+                );
+                for (const providerId of providerIds) {
+                  void useStore.getState().fetchCliProviderStatus(providerId, { silent: false });
+                }
+                deferredProviderStatusCleanup = null;
+              },
+              {
+                minDelayMs: STARTUP_PROVIDER_STATUS_MIN_DELAY_MS,
+                maxDelayMs: STARTUP_PROVIDER_STATUS_MAX_DELAY_MS,
+              }
+            );
+          })();
         } else {
           void useStore.getState().fetchCliStatus();
         }
         cliStatusTimer = null;
       }, delayMs);
     }
-    if (api.openCodeRuntime) {
-      void useStore.getState().fetchOpenCodeRuntimeStatus();
-    }
-    if (api.codexRuntime) {
-      void useStore.getState().fetchCodexRuntimeStatus();
-    }
+    runtimeStatusTimer = setTimeout(() => {
+      if (api.openCodeRuntime) {
+        void useStore.getState().fetchOpenCodeRuntimeStatus();
+      }
+      if (api.codexRuntime) {
+        void useStore.getState().fetchCodexRuntimeStatus();
+      }
+      runtimeStatusTimer = null;
+    }, STARTUP_RUNTIME_STATUS_IDLE_DELAY_MS);
 
-    // Remaining fetches have no data dependency on each other — run in parallel
-    // to avoid blocking teams/notifications behind a slow repository scan.
+    // Remaining visible startup fetches have no data dependency on each other.
     await Promise.all([
-      useStore.getState().fetchRepositoryGroups(),
       useStore.getState().fetchAllTasks(),
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
@@ -267,6 +296,8 @@ export function initializeNotificationListeners(): () => void {
   })();
   cleanupFns.push(() => {
     if (cliStatusTimer) clearTimeout(cliStatusTimer);
+    if (runtimeStatusTimer) clearTimeout(runtimeStatusTimer);
+    if (deferredProviderStatusCleanup) deferredProviderStatusCleanup();
   });
   // TODO(task-change-presence): re-enable this only after the board uses a bounded
   // batch/priority presence pipeline. The old one-task-per-tick poll was accurate

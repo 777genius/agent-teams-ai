@@ -1,5 +1,6 @@
 import { Fragment, memo, useCallback, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CompactMarkdownPreview,
   MarkdownViewer,
@@ -345,12 +346,13 @@ const PassiveIdlePeerSummaryRow = ({
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { recipient, body } = parseIdlePeerSummaryRoute(summary);
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5" style={{ opacity: 0.78 }}>
       <span className="bg-sky-500/12 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-300">
-        note
+        {t('activity.badges.note')}
       </span>
       <MemberBadge
         name={senderName}
@@ -400,6 +402,7 @@ const TaskStallRemediationRow = ({
   onMemberNameClick?: (memberName: string) => void;
   onTaskIdClick?: (taskId: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const taskLabel = taskRef
     ? formatTaskDisplayLabel({ id: taskRef.taskId, displayId: taskRef.displayId })
     : null;
@@ -410,10 +413,10 @@ const TaskStallRemediationRow = ({
         className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
         style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)' }}
       >
-        automation
+        {t('activity.badges.automation')}
       </span>
       <span className="text-[11px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-        stall nudge
+        {t('activity.badges.stallNudge')}
       </span>
       <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
       <MemberBadge
@@ -424,7 +427,7 @@ const TaskStallRemediationRow = ({
         onClick={onMemberNameClick}
       />
       <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: CARD_TEXT_LIGHT }}>
-        Asked teammate to continue stalled task
+        {t('activity.automation.stallNudge')}
         {taskRef && taskLabel ? (
           <>
             {' '}
@@ -467,6 +470,7 @@ const MemberWorkSyncNudgeRow = ({
   onMemberNameClick?: (memberName: string) => void;
   onTaskIdClick?: (taskId: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const primaryTaskRef = taskRefs?.[0];
   const taskLabel = primaryTaskRef
     ? formatTaskDisplayLabel({ id: primaryTaskRef.taskId, displayId: primaryTaskRef.displayId })
@@ -474,8 +478,8 @@ const MemberWorkSyncNudgeRow = ({
   const extraTaskCount = Math.max((taskRefs?.length ?? 0) - 1, 0);
   const body =
     intent === 'review_pickup'
-      ? 'Asked teammate to pick up review'
-      : 'Asked teammate to sync current work';
+      ? t('activity.automation.reviewPickup')
+      : t('activity.automation.workSyncBody');
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5" style={{ opacity: 0.82 }}>
@@ -483,10 +487,10 @@ const MemberWorkSyncNudgeRow = ({
         className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
         style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)' }}
       >
-        automation
+        {t('activity.badges.automation')}
       </span>
       <span className="text-[11px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-        work sync
+        {t('activity.badges.workSync')}
       </span>
       <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
       <MemberBadge
@@ -543,6 +547,7 @@ const BootstrapSystemRow = ({
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const isRestart = eventKind === 'restart';
   return (
     <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.82 }}>
@@ -551,7 +556,7 @@ const BootstrapSystemRow = ({
           isRestart ? 'bg-amber-500/12 text-amber-300' : 'bg-sky-500/12 text-sky-300'
         }`}
       >
-        {isRestart ? 'restart' : 'start'}
+        {isRestart ? t('activity.badges.restart') : t('activity.badges.start')}
       </span>
       <MemberBadge
         name={senderName}
@@ -569,7 +574,8 @@ const BootstrapSystemRow = ({
         onClick={onMemberNameClick}
       />
       <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: CARD_ICON_MUTED }}>
-        {runtime || (isRestart ? 'Restarting teammate' : 'Starting teammate')}
+        {runtime ||
+          (isRestart ? t('activity.bootstrap.restarting') : t('activity.bootstrap.starting'))}
       </span>
       <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
         {timestamp}
@@ -594,34 +600,37 @@ const BootstrapAcknowledgementRow = ({
   recipientColor?: string;
   timestamp: string;
   onMemberNameClick?: (memberName: string) => void;
-}): React.JSX.Element => (
-  <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.72 }}>
-    <span className="bg-emerald-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
-      bootstrap
-    </span>
-    <MemberBadge
-      name={senderName}
-      color={senderColor}
-      teamName={teamName}
-      hideAvatar
-      onClick={onMemberNameClick}
-    />
-    <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
-    <MemberBadge
-      name={recipientName}
-      color={recipientColor}
-      teamName={teamName}
-      hideAvatar
-      onClick={onMemberNameClick}
-    />
-    <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: CARD_ICON_MUTED }}>
-      Bootstrap acknowledged
-    </span>
-    <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-      {timestamp}
-    </span>
-  </div>
-);
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  return (
+    <div className="flex items-center gap-2 px-3 py-2" style={{ opacity: 0.72 }}>
+      <span className="bg-emerald-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+        {t('activity.badges.bootstrap')}
+      </span>
+      <MemberBadge
+        name={senderName}
+        color={senderColor}
+        teamName={teamName}
+        hideAvatar
+        onClick={onMemberNameClick}
+      />
+      <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
+      <MemberBadge
+        name={recipientName}
+        color={recipientColor}
+        teamName={teamName}
+        hideAvatar
+        onClick={onMemberNameClick}
+      />
+      <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: CARD_ICON_MUTED }}>
+        {t('activity.bootstrap.acknowledged')}
+      </span>
+      <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+        {timestamp}
+      </span>
+    </div>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Detect historical system/automated messages that should be collapsed by default.
@@ -808,6 +817,7 @@ export const ActivityItem = memo(
     expandItemKey,
     onExpandContent,
   }: Readonly<ActivityItemProps>): React.JSX.Element => {
+    const { t } = useAppTranslation('team');
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
     const { isLight } = useTheme();
     // Hide role when it matches the sender name (avoids "lead" badge + "Team Lead" text duplication)
@@ -1154,7 +1164,7 @@ export const ActivityItem = memo(
 
     const senderBadge = isSlashCommandResult ? (
       <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
-        result
+        {t('activity.badges.result')}
       </span>
     ) : (
       <MemberBadge
@@ -1173,7 +1183,7 @@ export const ActivityItem = memo(
       </span>
     ) : commentTaskRef ? (
       <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-        Comment
+        {t('activity.badges.comment')}
       </span>
     ) : isSlashCommandResult && message.commandOutput ? (
       <span
@@ -1185,7 +1195,9 @@ export const ActivityItem = memo(
         {message.commandOutput.stream}
       </span>
     ) : isSlashCommandMessage ? (
-      <span className="text-[10px] uppercase tracking-wide text-amber-400">command</span>
+      <span className="text-[10px] uppercase tracking-wide text-amber-400">
+        {t('activity.badges.command')}
+      </span>
     ) : messageType ? (
       <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {messageType}
@@ -1195,18 +1207,18 @@ export const ActivityItem = memo(
     const leadSourceBadge =
       message.source === 'lead_session' && !isSlashCommandResult ? (
         <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-          session
+          {t('activity.badges.session')}
         </span>
       ) : message.source === 'lead_process' && !isSlashCommandResult ? (
         <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-          live
+          {t('activity.badges.live')}
         </span>
       ) : null;
 
     const statusBadge = rateLimited ? (
       <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
         <AlertTriangle size={10} />
-        Rate Limited
+        {t('activity.badges.rateLimited')}
       </span>
     ) : isApiError ? (
       <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
@@ -1366,7 +1378,7 @@ export const ActivityItem = memo(
                   {isUnread ? (
                     <span
                       className="size-2 shrink-0 rounded-full bg-blue-500"
-                      title="Unread"
+                      title={t('activity.unread')}
                       aria-hidden
                     />
                   ) : null}
@@ -1393,7 +1405,7 @@ export const ActivityItem = memo(
                   {onExpand && expandItemKey && (
                     <button
                       type="button"
-                      aria-label="Expand message"
+                      aria-label={t('activity.actions.expandMessage')}
                       className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
                       style={{ color: CARD_ICON_MUTED }}
                       onClick={(e) => {
@@ -1435,7 +1447,7 @@ export const ActivityItem = memo(
                 {isUnread ? (
                   <span
                     className="size-2 shrink-0 rounded-full bg-blue-500"
-                    title="Unread"
+                    title={t('activity.unread')}
                     aria-hidden
                   />
                 ) : null}
@@ -1475,7 +1487,7 @@ export const ActivityItem = memo(
                   {onExpand && expandItemKey && (
                     <button
                       type="button"
-                      aria-label="Expand message"
+                      aria-label={t('activity.actions.expandMessage')}
                       className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
                       style={{ color: CARD_ICON_MUTED }}
                       onClick={(e) => {
@@ -1516,7 +1528,7 @@ export const ActivityItem = memo(
               {isUnread ? (
                 <span
                   className="size-2 shrink-0 rounded-full bg-blue-500"
-                  title="Unread"
+                  title={t('activity.unread')}
                   aria-hidden
                 />
               ) : null}
@@ -1559,7 +1571,7 @@ export const ActivityItem = memo(
                 {onExpand && expandItemKey && (
                   <button
                     type="button"
-                    aria-label="Expand message"
+                    aria-label={t('activity.actions.expandMessage')}
                     className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
                     style={{ color: CARD_ICON_MUTED }}
                     onClick={(e) => {
@@ -1586,7 +1598,7 @@ export const ActivityItem = memo(
                 ) : null}
                 <details className="rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
                   <summary className="cursor-pointer px-2 py-1 text-[11px] text-[var(--color-text-muted)]">
-                    Raw JSON
+                    {t('activity.rawJson')}
                   </summary>
                   <pre className="overflow-auto px-2 pb-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
                     {JSON.stringify(structured, null, 2)}
@@ -1684,7 +1696,9 @@ export const ActivityItem = memo(
                           <Reply size={14} />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Reply to message</TooltipContent>
+                      <TooltipContent side="top">
+                        {t('activity.actions.replyToMessage')}
+                      </TooltipContent>
                     </Tooltip>
                   ) : null}
                   {onCreateTask ? (
@@ -1702,7 +1716,9 @@ export const ActivityItem = memo(
                           <ListPlus size={14} />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Create task from message</TooltipContent>
+                      <TooltipContent side="top">
+                        {t('activity.actions.createTaskFromMessage')}
+                      </TooltipContent>
                     </Tooltip>
                   ) : null}
                   <CopyButton text={displayText} inline />
@@ -1748,9 +1764,7 @@ export const ActivityItem = memo(
                 <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-400" />
                 <div className="flex-1 space-y-1.5">
                   <p className="text-[11px] leading-relaxed text-red-300/90">
-                    Authentication failed. Restarting the team will refresh the session and may
-                    resolve this issue. If the problem persists, check your API credentials or try
-                    again later.
+                    {t('activity.authError.description')}
                   </p>
                   <button
                     type="button"
@@ -1761,7 +1775,7 @@ export const ActivityItem = memo(
                     }}
                   >
                     <RefreshCw size={11} />
-                    Restart team
+                    {t('activity.actions.restartTeam')}
                   </button>
                 </div>
               </div>

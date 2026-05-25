@@ -3,26 +3,139 @@
  * Uses CSS display-toggle to keep all tabs mounted (preserving state).
  */
 
-import { TeamGraphTab } from '@features/agent-graph/renderer';
+import { lazy, Suspense, useEffect, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
 import { TabUIProvider } from '@renderer/contexts/TabUIContext';
 
 import { DashboardView } from '../dashboard/DashboardView';
-import { ExtensionStoreView } from '../extensions/ExtensionStoreView';
-import { NotificationsView } from '../notifications/NotificationsView';
-import { SessionReportTab } from '../report/SessionReportTab';
-import { SchedulesView } from '../schedules/SchedulesView';
-import { SettingsView } from '../settings/SettingsView';
-import { TeamDetailView } from '../team/TeamDetailView';
-import { TeamListView } from '../team/TeamListView';
-
-import { SessionTabContent } from './SessionTabContent';
 
 import type { Pane } from '@renderer/types/panes';
+import type { Tab } from '@renderer/types/tabs';
+
+const ExtensionStoreView = lazy(() =>
+  import('../extensions/ExtensionStoreView').then((module) => ({
+    default: module.ExtensionStoreView,
+  }))
+);
+const NotificationsView = lazy(() =>
+  import('../notifications/NotificationsView').then((module) => ({
+    default: module.NotificationsView,
+  }))
+);
+const SessionReportTab = lazy(() =>
+  import('../report/SessionReportTab').then((module) => ({
+    default: module.SessionReportTab,
+  }))
+);
+const SchedulesView = lazy(() =>
+  import('../schedules/SchedulesView').then((module) => ({
+    default: module.SchedulesView,
+  }))
+);
+const SettingsView = lazy(() =>
+  import('../settings/SettingsView').then((module) => ({
+    default: module.SettingsView,
+  }))
+);
+const TeamDetailView = lazy(() =>
+  import('../team/TeamDetailView').then((module) => ({
+    default: module.TeamDetailView,
+  }))
+);
+const TeamListView = lazy(() =>
+  import('../team/TeamListView').then((module) => ({
+    default: module.TeamListView,
+  }))
+);
+const SessionTabContent = lazy(() =>
+  import('./SessionTabContent').then((module) => ({
+    default: module.SessionTabContent,
+  }))
+);
+const TeamGraphTab = lazy(() =>
+  import('@features/agent-graph/renderer').then((module) => ({
+    default: module.TeamGraphTab,
+  }))
+);
 
 interface PaneContentProps {
   pane: Pane;
   isPaneFocused: boolean;
 }
+
+interface PaneTabSlotProps {
+  tab: Tab;
+  isActive: boolean;
+  isPaneFocused: boolean;
+}
+
+const PaneLazyFallback = (): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
+
+  return (
+    <div className="flex flex-1 items-center justify-center bg-surface">
+      <div
+        className="size-5 animate-spin rounded-full border border-border border-t-text-muted"
+        aria-label={t('layout.loadingTab')}
+        role="status"
+      />
+    </div>
+  );
+};
+
+const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.JSX.Element => {
+  const [hasActivated, setHasActivated] = useState(isActive);
+
+  useEffect(() => {
+    if (isActive) {
+      setHasActivated(true);
+    }
+  }, [isActive]);
+
+  return (
+    <div className="absolute inset-0 flex" style={{ display: isActive ? 'flex' : 'none' }}>
+      {hasActivated && (
+        <Suspense fallback={<PaneLazyFallback />}>
+          {tab.type === 'dashboard' && <DashboardView />}
+          {tab.type === 'notifications' && <NotificationsView />}
+          {tab.type === 'settings' && <SettingsView />}
+          {tab.type === 'teams' && <TeamListView />}
+          {tab.type === 'team' && (
+            <TabUIProvider tabId={tab.id}>
+              <TeamDetailView
+                teamName={tab.teamName ?? ''}
+                isActive={isActive}
+                isPaneFocused={isPaneFocused}
+              />
+            </TabUIProvider>
+          )}
+          {tab.type === 'session' && (
+            <TabUIProvider tabId={tab.id}>
+              <SessionTabContent tab={tab} isActive={isActive} />
+            </TabUIProvider>
+          )}
+          {tab.type === 'report' && <SessionReportTab tab={tab} />}
+          {tab.type === 'extensions' && (
+            <TabUIProvider tabId={tab.id}>
+              <ExtensionStoreView />
+            </TabUIProvider>
+          )}
+          {tab.type === 'schedules' && <SchedulesView />}
+          {tab.type === 'graph' && (
+            <TabUIProvider tabId={tab.id}>
+              <TeamGraphTab
+                teamName={tab.teamName ?? ''}
+                isActive={isActive}
+                isPaneFocused={isPaneFocused}
+              />
+            </TabUIProvider>
+          )}
+        </Suspense>
+      )}
+    </div>
+  );
+};
 
 export const PaneContent = ({ pane, isPaneFocused }: PaneContentProps): React.JSX.Element => {
   const activeTabId = pane.activeTabId;
@@ -41,46 +154,7 @@ export const PaneContent = ({ pane, isPaneFocused }: PaneContentProps): React.JS
       {pane.tabs.map((tab) => {
         const isActive = tab.id === activeTabId;
         return (
-          <div
-            key={tab.id}
-            className="absolute inset-0 flex"
-            style={{ display: isActive ? 'flex' : 'none' }}
-          >
-            {tab.type === 'dashboard' && <DashboardView />}
-            {tab.type === 'notifications' && <NotificationsView />}
-            {tab.type === 'settings' && <SettingsView />}
-            {tab.type === 'teams' && <TeamListView />}
-            {tab.type === 'team' && (
-              <TabUIProvider tabId={tab.id}>
-                <TeamDetailView
-                  teamName={tab.teamName ?? ''}
-                  isActive={isActive}
-                  isPaneFocused={isPaneFocused}
-                />
-              </TabUIProvider>
-            )}
-            {tab.type === 'session' && (
-              <TabUIProvider tabId={tab.id}>
-                <SessionTabContent tab={tab} isActive={isActive} />
-              </TabUIProvider>
-            )}
-            {tab.type === 'report' && <SessionReportTab tab={tab} />}
-            {tab.type === 'extensions' && (
-              <TabUIProvider tabId={tab.id}>
-                <ExtensionStoreView />
-              </TabUIProvider>
-            )}
-            {tab.type === 'schedules' && <SchedulesView />}
-            {tab.type === 'graph' && (
-              <TabUIProvider tabId={tab.id}>
-                <TeamGraphTab
-                  teamName={tab.teamName ?? ''}
-                  isActive={isActive}
-                  isPaneFocused={isPaneFocused}
-                />
-              </TabUIProvider>
-            )}
-          </div>
+          <PaneTabSlot key={tab.id} tab={tab} isActive={isActive} isPaneFocused={isPaneFocused} />
         );
       })}
     </div>

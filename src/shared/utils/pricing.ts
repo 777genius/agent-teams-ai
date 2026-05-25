@@ -84,6 +84,10 @@ export function calculateMessageCost(
   cacheReadTokens: number,
   cacheCreationTokens: number
 ): number {
+  if (modelName === '<synthetic>') {
+    return 0;
+  }
+
   const pricing = getPricing(modelName);
   if (!pricing) {
     if (inputTokens > 0 || outputTokens > 0 || cacheReadTokens > 0 || cacheCreationTokens > 0) {

@@ -173,4 +173,56 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
       })
     ).toMatchObject({ action: 'suppress' });
   });
+
+  it('does not suppress terminal failures with stale visible proof before the prompt window', () => {
+    const record = makeRecord({});
+
+    expect(
+      decideOpenCodeRuntimeDeliveryAdvisory({
+        record,
+        proof: {
+          visibleReplyAt: Date.parse(record.inboxTimestamp) - 6_000,
+          visibleReplyMessageId: 'old-reply',
+          visibleReplyInbox: 'user',
+        },
+        now: Date.parse(record.failedAt!) + OPENCODE_RUNTIME_DELIVERY_GENERIC_PROOF_GRACE_MS + 1,
+      })
+    ).toMatchObject({
+      action: 'surface',
+      severity: 'error',
+    });
+  });
+
+  it('does not suppress terminal failures with only unrelated later delivery success', () => {
+    const record = makeRecord({});
+
+    expect(
+      decideOpenCodeRuntimeDeliveryAdvisory({
+        record,
+        proof: {
+          latestSuccessAt: Date.parse(record.failedAt!) + 60_000,
+        },
+        now: Date.parse(record.failedAt!) + OPENCODE_RUNTIME_DELIVERY_GENERIC_PROOF_GRACE_MS + 1,
+      })
+    ).toMatchObject({
+      action: 'surface',
+      severity: 'error',
+    });
+  });
+
+  it('accepts visible proof inside the prompt timestamp skew window', () => {
+    const record = makeRecord({});
+
+    expect(
+      decideOpenCodeRuntimeDeliveryAdvisory({
+        record,
+        proof: {
+          visibleReplyAt: Date.parse(record.inboxTimestamp) - 4_000,
+          visibleReplyMessageId: 'nearby-reply',
+          visibleReplyInbox: 'user',
+        },
+        now: Date.parse(record.failedAt!) + OPENCODE_RUNTIME_DELIVERY_GENERIC_PROOF_GRACE_MS + 1,
+      })
+    ).toMatchObject({ action: 'suppress' });
+  });
 });

@@ -2,25 +2,44 @@ import { createHash } from 'crypto';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { gzipSync } from 'zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { gzipSync } from 'zlib';
 
 const execCliMock = vi.hoisted(() => vi.fn());
+const buildMergedCliPathMock = vi.hoisted(() => vi.fn());
+const getCachedShellEnvMock = vi.hoisted(() => vi.fn());
+const getShellPreferredHomeMock = vi.hoisted(() => vi.fn());
+const resolveInteractiveShellEnvBestEffortMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: execCliMock,
 }));
 
+vi.mock('@main/utils/cliPathMerge', () => ({
+  buildMergedCliPath: () => buildMergedCliPathMock(),
+}));
+
+vi.mock('@main/utils/shellEnv', () => ({
+  getCachedShellEnv: () => getCachedShellEnvMock(),
+  getShellPreferredHome: () => getShellPreferredHomeMock(),
+  resolveInteractiveShellEnvBestEffort: (
+    ...args: Parameters<typeof resolveInteractiveShellEnvBestEffortMock>
+  ) => resolveInteractiveShellEnvBestEffortMock(...args),
+}));
+
 import {
   extractOpenCodeRuntimeBinaryFromTarball,
   getOpenCodeRuntimePlatformCandidates,
+  OpenCodeRuntimeInstallerService,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
   verifyOpenCodeRuntimePackageIntegrity,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 let tempRoot: string | null = null;
+let originalPath: string | undefined;
 
 function writeOctal(header: Buffer, offset: number, length: number, value: number): void {
   const encoded = value
@@ -63,12 +82,28 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   beforeEach(async () => {
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-resolver-'));
     setAppDataBasePath(tempRoot);
+    originalPath = process.env.PATH;
+    process.env.PATH = '';
     execCliMock.mockReset();
     execCliMock.mockResolvedValue({ stdout: 'opencode 1.0.0\n', stderr: '' });
+    buildMergedCliPathMock.mockReset();
+    buildMergedCliPathMock.mockReturnValue('');
+    getCachedShellEnvMock.mockReset();
+    getCachedShellEnvMock.mockReturnValue(null);
+    getShellPreferredHomeMock.mockReset();
+    getShellPreferredHomeMock.mockReturnValue(os.homedir());
+    resolveInteractiveShellEnvBestEffortMock.mockReset();
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue(process.env);
   });
 
   afterEach(async () => {
     setAppDataBasePath(null);
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+    originalPath = undefined;
     if (tempRoot) {
       await rm(tempRoot, { recursive: true, force: true });
       tempRoot = null;
@@ -162,6 +197,304 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     execCliMock.mockRejectedValueOnce(new Error('broken binary'));
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBeNull();
+  });
+
+  it('returns a verified OpenCode binary from best-effort shell PATH when app-managed runtime is absent', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: path.dirname(binaryPath),
+    });
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      binaryPath
+    );
+    expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeoutMs: 0,
+        fallbackEnv: process.env,
+      })
+    );
+    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
+      timeout: 10_000,
+      windowsHide: true,
+    });
+  });
+
+  it('returns a verified OpenCode binary from the merged CLI PATH after zero-wait shell fallback', async () => {
+    const binaryPath = path.join(tempRoot!, 'merged-cli-path', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    buildMergedCliPathMock.mockReturnValue(path.dirname(binaryPath));
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      binaryPath
+    );
+    expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeoutMs: 0,
+        fallbackEnv: process.env,
+      })
+    );
+    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
+      timeout: 10_000,
+      windowsHide: true,
+    });
+  });
+
+  it('resolves from fast fallback PATH without spawning shell env when shell env is disabled', async () => {
+    const binaryPath = path.join(tempRoot!, 'merged-cli-path', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    buildMergedCliPathMock.mockReturnValue(path.dirname(binaryPath));
+
+    await expect(
+      resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
+    ).resolves.toBe(binaryPath);
+    expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
+      timeout: 10_000,
+      windowsHide: true,
+    });
+  });
+
+  it('does not spawn shell env for shell-only PATH installs when shell env is disabled', async () => {
+    const binaryPath = path.join(tempRoot!, 'custom-npm-prefix', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: path.dirname(binaryPath),
+    });
+
+    await expect(
+      resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
+    ).resolves.toBeNull();
+    expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a verified OpenCode binary from nvm when desktop PATH misses npm globals', async () => {
+    const olderBinaryPath = path.join(
+      tempRoot!,
+      '.nvm',
+      'versions',
+      'node',
+      'v20.10.0',
+      'bin',
+      'opencode'
+    );
+    const binaryPath = path.join(
+      tempRoot!,
+      '.nvm',
+      'versions',
+      'node',
+      'v22.22.1',
+      'bin',
+      'opencode'
+    );
+    await mkdir(path.dirname(olderBinaryPath), { recursive: true });
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(olderBinaryPath, 'older binary', { mode: 0o755 });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    getCachedShellEnvMock.mockReturnValue({ HOME: tempRoot! });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      binaryPath
+    );
+    expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
+      timeout: 10_000,
+      windowsHide: true,
+    });
+  });
+
+  it('returns a verified OpenCode cmd shim from nvm-windows when desktop PATH misses npm globals', async () => {
+    const originalPlatform = process.platform;
+    const originalAppData = process.env.APPDATA;
+
+    try {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+        writable: true,
+      });
+      process.env.APPDATA = tempRoot!;
+
+      const olderBinaryPath = path.join(tempRoot!, 'nvm', 'v20.10.0', 'opencode.cmd');
+      const binaryPath = path.join(tempRoot!, 'nvm', 'v22.22.1', 'opencode.cmd');
+      await mkdir(path.dirname(olderBinaryPath), { recursive: true });
+      await mkdir(path.dirname(binaryPath), { recursive: true });
+      await writeFile(olderBinaryPath, 'older binary', { mode: 0o755 });
+      await writeFile(binaryPath, 'binary', { mode: 0o755 });
+
+      await expect(
+        resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })
+      ).resolves.toBe(binaryPath);
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+      expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
+        timeout: 10_000,
+        windowsHide: true,
+      });
+    } finally {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+        writable: true,
+      });
+      if (originalAppData === undefined) {
+        delete process.env.APPDATA;
+      } else {
+        process.env.APPDATA = originalAppData;
+      }
+    }
+  });
+
+  it('skips a broken newer nvm OpenCode binary and reports the next working install', async () => {
+    const brokenBinaryPath = path.join(
+      tempRoot!,
+      '.nvm',
+      'versions',
+      'node',
+      'v23.0.0',
+      'bin',
+      'opencode'
+    );
+    const workingBinaryPath = path.join(
+      tempRoot!,
+      '.nvm',
+      'versions',
+      'node',
+      'v22.22.1',
+      'bin',
+      'opencode'
+    );
+    await mkdir(path.dirname(brokenBinaryPath), { recursive: true });
+    await mkdir(path.dirname(workingBinaryPath), { recursive: true });
+    await writeFile(brokenBinaryPath, 'broken binary', { mode: 0o755 });
+    await writeFile(workingBinaryPath, 'working binary', { mode: 0o755 });
+    getCachedShellEnvMock.mockReturnValue({ HOME: tempRoot! });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+    execCliMock.mockImplementation(async (binaryPath: string) => {
+      if (binaryPath === brokenBinaryPath) {
+        throw new Error('broken nvm runtime');
+      }
+      return { stdout: 'opencode 1.15.6\n', stderr: '' };
+    });
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      workingBinaryPath
+    );
+    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath: workingBinaryPath,
+      version: 'opencode 1.15.6',
+    });
+  });
+
+  it('falls through to shell PATH when all fast nvm candidates are broken', async () => {
+    const brokenBinaryPath = path.join(
+      tempRoot!,
+      '.nvm',
+      'versions',
+      'node',
+      'v23.0.0',
+      'bin',
+      'opencode'
+    );
+    const shellBinaryPath = path.join(tempRoot!, 'custom-npm-prefix', 'bin', 'opencode');
+    await mkdir(path.dirname(brokenBinaryPath), { recursive: true });
+    await mkdir(path.dirname(shellBinaryPath), { recursive: true });
+    await writeFile(brokenBinaryPath, 'broken binary', { mode: 0o755 });
+    await writeFile(shellBinaryPath, 'working binary', { mode: 0o755 });
+    getCachedShellEnvMock.mockReturnValue({ HOME: tempRoot! });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: path.dirname(shellBinaryPath),
+      HOME: tempRoot!,
+    });
+    execCliMock.mockImplementation(async (binaryPath: string) => {
+      if (binaryPath === brokenBinaryPath) {
+        throw new Error('broken nvm runtime');
+      }
+      return { stdout: 'opencode 1.15.6\n', stderr: '' };
+    });
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      shellBinaryPath
+    );
+    expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeoutMs: 0,
+        fallbackEnv: process.env,
+      })
+    );
+  });
+
+  it('reports PATH-installed OpenCode as installed after best-effort shell env resolution', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({
+      PATH: path.dirname(binaryPath),
+    });
+
+    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath,
+      version: 'opencode 1.0.0',
+    });
+  });
+
+  it('prefers a working PATH OpenCode binary over a broken app-managed manifest', async () => {
+    const appManagedBinaryPath = path.join(
+      tempRoot!,
+      'data',
+      'runtimes',
+      'opencode',
+      'versions',
+      '1.0.0',
+      'opencode-test',
+      'opencode'
+    );
+    const pathBinaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
+    await mkdir(path.dirname(appManagedBinaryPath), { recursive: true });
+    await mkdir(path.dirname(pathBinaryPath), { recursive: true });
+    await mkdir(path.dirname(manifestPath), { recursive: true });
+    await writeFile(appManagedBinaryPath, 'broken binary', { mode: 0o755 });
+    await writeFile(pathBinaryPath, 'path binary', { mode: 0o755 });
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        version: '1.0.0',
+        platformPackage: 'opencode-test',
+        binaryPath: appManagedBinaryPath,
+        integrity: 'sha512-test',
+        installedAt: '2026-05-12T00:00:00.000Z',
+      })}\n`,
+      'utf8'
+    );
+    buildMergedCliPathMock.mockReturnValue(path.dirname(pathBinaryPath));
+    execCliMock.mockImplementation(async (binaryPath: string) => {
+      if (binaryPath === appManagedBinaryPath) {
+        throw new Error('broken app-managed runtime');
+      }
+      return { stdout: 'opencode 1.0.0\n', stderr: '' };
+    });
+
+    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath: pathBinaryPath,
+      version: 'opencode 1.0.0',
+    });
   });
 });
 

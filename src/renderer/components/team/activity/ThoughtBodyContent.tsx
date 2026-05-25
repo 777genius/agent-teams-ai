@@ -1,5 +1,6 @@
 import { type JSX, memo, useCallback, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -40,6 +41,7 @@ export const ThoughtBodyContent = memo(
     teamColorByName,
     onTeamClick,
   }: ThoughtBodyContentProps): JSX.Element {
+    const { t } = useAppTranslation('team');
     const displayContent = useMemo(() => {
       return buildThoughtDisplayContent(thought, memberColorMap, teamNames, {
         preserveLineBreaks: true,
@@ -107,7 +109,7 @@ export const ThoughtBodyContent = memo(
                     <Reply size={13} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Reply</TooltipContent>
+                <TooltipContent side="top">{t('activity.reply.action')}</TooltipContent>
               </Tooltip>
             ) : null}
             <CopyButton text={thought.text} inline />
@@ -120,7 +122,7 @@ export const ThoughtBodyContent = memo(
                 className="mb-[7px] cursor-default pb-0.5 pl-3 pr-1 font-mono text-[9px]"
                 style={{ color: CARD_ICON_MUTED }}
               >
-                🔧 {thought.toolSummary}
+                {t('activity.thoughts.toolSummary', { summary: thought.toolSummary })}
               </div>
             </TooltipTrigger>
             <TooltipContent

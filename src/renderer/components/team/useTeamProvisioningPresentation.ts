@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -22,6 +23,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
   memberDiagnostics: MemberLaunchDiagnosticsPayload[];
   runInstanceKey: string | null;
 } {
+  const { t } = useAppTranslation('team');
   const {
     progress,
     cancelProvisioning,
@@ -49,8 +51,9 @@ export function useTeamProvisioningPresentation(teamName: string): {
         members: teamMembers,
         memberSpawnStatuses,
         memberSpawnSnapshot,
+        t,
       }),
-    [memberSpawnSnapshot, memberSpawnStatuses, progress, teamMembers]
+    [memberSpawnSnapshot, memberSpawnStatuses, progress, teamMembers, t]
   );
   const memberDiagnostics = useMemo(
     () =>

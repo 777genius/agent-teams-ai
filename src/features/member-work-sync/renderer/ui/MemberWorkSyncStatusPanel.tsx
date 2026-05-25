@@ -1,3 +1,5 @@
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { useMemberWorkSyncStatus } from '../hooks/useMemberWorkSyncStatus';
 
 import { MemberWorkSyncBadge } from './MemberWorkSyncBadge';
@@ -18,6 +20,7 @@ export function MemberWorkSyncStatusPanel({
   enabled = true,
   showDiagnostics = false,
 }: MemberWorkSyncStatusPanelProps): React.ReactElement | null {
+  const { t } = useAppTranslation('team');
   const { status, viewModel, loading, error } = useMemberWorkSyncStatus({
     teamName,
     memberName,
@@ -36,12 +39,14 @@ export function MemberWorkSyncStatusPanel({
     <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--color-text)]">Member work sync</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
+            {t('memberWorkSync.title')}
+          </h3>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
             {loading
-              ? 'Loading member work sync diagnostics.'
+              ? t('memberWorkSync.loadingDiagnostics')
               : error
-                ? 'Member work sync diagnostics are unavailable.'
+                ? t('memberWorkSync.diagnosticsUnavailable')
                 : viewModel.tooltip}
           </p>
         </div>

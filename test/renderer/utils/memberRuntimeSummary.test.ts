@@ -156,6 +156,204 @@ describe('resolveMemberRuntimeSummary', () => {
     ).toBe('5.4 Mini · Medium · Codex');
   });
 
+  it('uses lead launch params instead of stale persisted lead runtime fields', () => {
+    const member = createMember({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      effort: 'medium',
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'anthropic',
+          providerBackendId: undefined,
+          model: 'haiku',
+          effort: undefined,
+          limitContext: false,
+        },
+        undefined
+      )
+    ).toBe('Anthropic · Haiku 4.5');
+  });
+
+  it('uses lead launch params instead of stale pending lead runtime evidence', () => {
+    const member = createMember({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      effort: 'medium',
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'anthropic',
+          providerBackendId: undefined,
+          model: 'haiku',
+          effort: undefined,
+          limitContext: false,
+        },
+        createSpawnEntry({
+          runtimeModel: 'gpt-5.5',
+          runtimeAlive: true,
+        }),
+        {
+          memberName: 'team-lead',
+          alive: true,
+          restartable: false,
+          providerId: 'codex',
+          runtimeModel: 'gpt-5.5',
+          rssBytes: 300 * 1024 * 1024,
+          updatedAt: '2026-04-18T18:00:00.000Z',
+        }
+      )
+    ).toBe('Anthropic · Haiku 4.5');
+  });
+
+  it('uses pending lead launch params instead of stale same-provider runtime model evidence', () => {
+    const member = createMember({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      effort: 'medium',
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'high',
+          limitContext: false,
+        },
+        createSpawnEntry({
+          runtimeModel: 'gpt-5.5',
+          runtimeAlive: true,
+        }),
+        {
+          memberName: 'team-lead',
+          alive: true,
+          restartable: false,
+          providerId: 'codex',
+          runtimeModel: 'gpt-5.5',
+          rssBytes: 300 * 1024 * 1024,
+          updatedAt: '2026-04-18T18:00:00.000Z',
+        }
+      )
+    ).toBe('5.4 · High · Codex');
+  });
+
+  it('uses pending lead default launch params instead of stale same-provider runtime model evidence', () => {
+    const member = createMember({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      effort: 'medium',
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: undefined,
+          effort: 'low',
+          limitContext: false,
+        },
+        createSpawnEntry({
+          runtimeModel: 'gpt-5.5',
+          runtimeAlive: true,
+        }),
+        {
+          memberName: 'team-lead',
+          alive: true,
+          restartable: false,
+          providerId: 'codex',
+          runtimeModel: 'gpt-5.5',
+          rssBytes: 300 * 1024 * 1024,
+          updatedAt: '2026-04-18T18:00:00.000Z',
+        }
+      )
+    ).toBe('Codex · Default · Low');
+  });
+
+  it('uses staged default launch params without duplicating the Codex backend label', () => {
+    const member = createMember({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      effort: 'medium',
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'default',
+          effort: 'low',
+          limitContext: false,
+        },
+        createSpawnEntry()
+      )
+    ).toBe('Codex · Default · Low');
+  });
+
+  it('uses pending launch params for stale primary teammate cards during provider switch', () => {
+    const member = createMember({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.5',
+      effort: 'medium',
+      laneKind: 'primary',
+      laneOwnerProviderId: 'codex',
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'anthropic',
+          providerBackendId: undefined,
+          model: 'haiku',
+          effort: 'low',
+          limitContext: false,
+        },
+        createSpawnEntry({
+          runtimeModel: 'gpt-5.5',
+          runtimeAlive: true,
+        }),
+        {
+          memberName: 'alice',
+          alive: true,
+          restartable: false,
+          providerId: 'codex',
+          runtimeModel: 'gpt-5.5',
+          rssBytes: 221 * 1024 * 1024,
+          updatedAt: '2026-04-18T18:00:00.000Z',
+        }
+      )
+    ).toBe('Anthropic · Haiku 4.5 · Low');
+  });
+
   it('normalizes persisted legacy Codex lanes to the native runtime summary', () => {
     const member = createMember({ model: 'gpt-5.4-mini' });
 

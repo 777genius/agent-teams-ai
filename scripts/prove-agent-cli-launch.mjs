@@ -5,17 +5,23 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
-const siblingOrchestrator = path.resolve(repoRoot, '..', 'agent_teams_orchestrator');
 
 const env = {
   ...process.env,
   AGENT_CLI_LAUNCH_LIVE_E2E: '1',
   CLAUDE_TEAM_CLI_FLAVOR: process.env.CLAUDE_TEAM_CLI_FLAVOR || 'agent_teams_orchestrator',
-  CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH || path.join(siblingOrchestrator, 'cli'),
 };
+
+if (!env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim()) {
+  env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = resolveLiveSmokeOrchestratorCliPath({
+    env,
+    repoRoot,
+  });
+}
 
 console.log('Running agent CLI launch live smoke');
 console.log(`Claude runtime: ${env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH}`);

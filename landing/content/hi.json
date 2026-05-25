@@ -44,7 +44,7 @@
     {
       "id": "isFree",
       "question": "क्या यह सच में मुफ़्त है?",
-      "answer": "हाँ। ऐप मुफ़्त और ओपन सोर्स है। ऐप का अपना कोई paid plan नहीं है। agents चलाने के लिए आपको सिर्फ़ किसी supported provider/runtime, जैसे Anthropic या Codex, का access चाहिए।"
+      "answer": "हाँ। ऐप मुफ़्त और ओपन सोर्स है, और आप बिना registration, API key या credit card के मुफ़्त no-auth model से शुरू कर सकते हैं। अगर और models चाहिए, तो Claude, Codex, OpenCode/OpenRouter या कोई दूसरा supported provider जोड़ें।"
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "शुरू करने के लिए क्या चाहिए?",
-      "answer": "बस ऐप इंस्टॉल करें - यह UI से runtime detection और provider authentication में गाइड करता है। zero-setup onboarding आपको कुछ ही मिनटों में शुरू करा देता है।"
+      "answer": "बस ऐप इंस्टॉल करें - मुफ़्त no-auth model से शुरू करें, फिर provider-backed models को UI से तभी जोड़ें जब ज़रूरत हो।"
     }
   ],
   "download": {
@@ -85,16 +85,16 @@
       "name": "मुफ़्त",
       "price": "$0",
       "period": "",
-      "description": "सब कुछ शामिल। कोई लिमिट नहीं, कोई API कुंजी नहीं, कोई क्रेडिट कार्ड नहीं।",
+      "description": "शामिल मुफ़्त no-auth model से शुरू करें। कोई registration नहीं, कोई API key नहीं, कोई credit card नहीं।",
       "features": [
+        "पहले runs के लिए मुफ़्त no-auth model",
+        "Try करने के लिए account या provider login नहीं चाहिए",
+        "Claude, Codex और OpenCode provider access optional",
         "असीमित एजेंट टीमें",
         "रियल-टाइम अपडेट के साथ कानबन बोर्ड",
         "diff व्यू के साथ कोड रिव्यू",
         "क्रॉस-टीम कम्युनिकेशन",
-        "सोलो और टीम मोड",
-        "लाइव प्रोसेस मॉनिटरिंग",
-        "बिल्ट-इन कोड एडिटर",
-        "MCP इंटीग्रेशन"
+        "सोलो और टीम मोड"
       ],
       "highlighted": true
     }

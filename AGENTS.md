@@ -22,6 +22,22 @@ Default local run target:
 - Do not start the browser/web dev mode for normal development or smoke checks. The browser path is limited and lacks the full desktop runtime, IPC, terminal, provider auth, and team lifecycle behavior.
 - When documenting or recommending startup commands, point contributors to the desktop app unless a task explicitly asks for browser-mode internals.
 
+Live team smoke runtime:
+
+- Use the orchestrator source launcher by default for live/dev smoke loops: `/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source`
+- The source launcher runs `src/entrypoints/cli.tsx` through Bun, so it reflects local orchestrator source edits immediately and cannot accidentally test stale `dist` output.
+- The source launcher normalizes inherited `NODE_ENV=production` to `NODE_ENV=development`. Release or production-like smoke must use the built wrapper instead of preserving production mode on source.
+- Local live/prove scripts should use `scripts/lib/live-smoke-runtime.mjs`, which defaults to `cli-source` unless `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH` is explicitly set.
+- Source-mode teammate startup can be slower than bundled startup. Live smoke harnesses may raise `CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS` and `CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS` when the test is validating source behavior instead of watchdog latency.
+- Use the built wrapper only for release or production-like smoke checks. Build first in `/Users/belief/dev/projects/claude/agent_teams_orchestrator` with `bun run build`, then set `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli`.
+- Do not use `cli-dev` or `bun run build:dev` as proof for the production wrapper. `cli` reads `dist/local-cli/cli.js`; `cli-dev` reads `dist/local-cli-dev/cli.js`.
+Fast local lint:
+
+- Use `pnpm lint:fast:files -- <changed files>` for quick preflight on files you touched.
+- Use `pnpm lint:fast` for a faster source-tree lint pass when full type-aware lint is too slow.
+- `lint:fast` intentionally uses `eslint.fast.config.js` without TypeScript project-service rules. It is not a replacement for `pnpm typecheck` or the full `pnpm lint` gate.
+- Keep using `pnpm typecheck` after TypeScript changes, and use full `pnpm lint` when validating a broad PR or changing lint-sensitive architecture boundaries.
+
 For new features:
 
 - Default home for medium and large features: `src/features/<feature-name>/`

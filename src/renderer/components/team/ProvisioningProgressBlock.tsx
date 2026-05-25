@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
@@ -26,11 +27,6 @@ import type { StepProgressBarStep } from './StepProgressBar';
 import type { MemberLaunchDiagnosticsPayload } from '@renderer/utils/memberLaunchDiagnostics';
 import type { TeamLaunchDiagnosticItem, TeamLaunchFailureDiagnosticsBundle } from '@shared/types';
 
-/** Pre-built step definitions for the provisioning stepper. */
-const PROVISIONING_STEPS: StepProgressBarStep[] = DISPLAY_STEPS.map((s) => ({
-  key: s.key,
-  label: s.label,
-}));
 const PROVIDER_API_KEY_FLAG_PATTERN =
   /(--(?:openai|codex|anthropic)[-_]api[-_]key(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const SECRET_FLAG_PATTERN =
@@ -515,6 +511,11 @@ export const ProvisioningProgressBlock = ({
   surface = 'raised',
   className,
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const provisioningSteps: StepProgressBarStep[] = DISPLAY_STEPS.map((s) => ({
+    key: s.key,
+    label: t(s.labelKey),
+  }));
   const elapsed = useElapsedTimer(startedAt, loading);
   const [logsOpen, setLogsOpen] = useState(() => defaultLogsOpen ?? false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -682,7 +683,9 @@ export const ProvisioningProgressBlock = ({
             </span>
           ) : null}
           {pid !== undefined ? (
-            <span className="text-[10px] text-[var(--color-text-muted)]">PID {pid}</span>
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              {t('provisioning.pid', { pid })}
+            </span>
           ) : null}
         </div>
         {onCancel ? (
@@ -692,7 +695,7 @@ export const ProvisioningProgressBlock = ({
             className="h-6 shrink-0 px-2 text-xs"
             onClick={onCancel}
           >
-            Cancel
+            {t('provisioning.cancel')}
           </Button>
         ) : null}
       </div>
@@ -724,14 +727,14 @@ export const ProvisioningProgressBlock = ({
               </p>
             ))}
             {visibleWarnings.length > 3 ? (
-              <p>{visibleWarnings.length - 3} more warnings hidden</p>
+              <p>{t('provisioning.moreWarningsHidden', { count: visibleWarnings.length - 3 })}</p>
             ) : null}
           </div>
         </div>
       ) : null}
       <div className="mt-2 px-2">
         <StepProgressBar
-          steps={PROVISIONING_STEPS}
+          steps={provisioningSteps}
           currentIndex={currentStepIndex}
           active={loading}
           errorIndex={errorStepIndex}
@@ -745,7 +748,7 @@ export const ProvisioningProgressBlock = ({
             onClick={() => setDiagnosticsOpen((v) => !v)}
           >
             {diagnosticsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Diagnostics
+            {t('provisioning.diagnostics')}
           </button>
           {diagnosticsOpen ? (
             <div className="mt-1 space-y-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
@@ -781,7 +784,7 @@ export const ProvisioningProgressBlock = ({
             onClick={() => setLiveOutputOpen((v) => !v)}
           >
             {liveOutputOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            Live output
+            {t('provisioning.liveOutput')}
           </button>
           <Button
             type="button"
@@ -794,8 +797,16 @@ export const ProvisioningProgressBlock = ({
                 : 'h-6 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
               isError && diagnosticsCopied && 'animate-none'
             )}
-            title={diagnosticsCopied ? 'Diagnostics copied' : 'Copy diagnostics'}
-            aria-label={diagnosticsCopied ? 'Diagnostics copied' : 'Copy diagnostics'}
+            title={
+              diagnosticsCopied
+                ? t('provisioning.diagnosticsCopied')
+                : t('provisioning.copyDiagnostics')
+            }
+            aria-label={
+              diagnosticsCopied
+                ? t('provisioning.diagnosticsCopied')
+                : t('provisioning.copyDiagnostics')
+            }
             onClick={() => void copyDiagnostics()}
           >
             {diagnosticsCopied ? (
@@ -803,7 +814,9 @@ export const ProvisioningProgressBlock = ({
             ) : (
               <ClipboardList size={isError ? 14 : 12} />
             )}
-            <span>{diagnosticsCopied ? 'Copied' : 'Copy diagnostics'}</span>
+            <span>
+              {diagnosticsCopied ? t('provisioning.copied') : t('provisioning.copyDiagnostics')}
+            </span>
           </Button>
         </div>
         {liveOutputOpen ? (
@@ -823,7 +836,7 @@ export const ProvisioningProgressBlock = ({
                   isError ? 'text-[var(--step-error-text-dim)]' : 'text-[var(--color-text-muted)]'
                 )}
               >
-                No output captured yet.
+                {t('provisioning.noOutput')}
               </p>
             )}
           </div>
@@ -837,7 +850,7 @@ export const ProvisioningProgressBlock = ({
             onClick={() => setLogsOpen((v) => !v)}
           >
             {logsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            CLI logs
+            {t('provisioning.cliLogs')}
           </button>
           {logsOpen ? (
             <CliLogsRichView cliLogsTail={cliLogsTail} order="newest-first" className="mt-1" />

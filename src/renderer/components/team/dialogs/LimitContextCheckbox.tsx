@@ -1,13 +1,9 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Checkbox } from '@renderer/components/ui/checkbox';
+import { HoverTooltip } from '@renderer/components/ui/hover-tooltip';
 import { Label } from '@renderer/components/ui/label';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
 import { Info } from 'lucide-react';
 
 interface LimitContextCheckboxProps {
@@ -24,40 +20,38 @@ export const LimitContextCheckbox: React.FC<LimitContextCheckboxProps> = ({
   onCheckedChange,
   disabled = false,
   scopeLabel,
-}) => (
-  <div className="mt-4 flex flex-wrap items-center gap-2">
-    <Checkbox
-      id={id}
-      checked={disabled ? true : checked}
-      disabled={disabled}
-      onCheckedChange={(value) => onCheckedChange(value === true)}
-    />
-    <Label
-      htmlFor={id}
-      className={`flex flex-wrap items-center gap-1.5 text-xs font-normal leading-snug ${
-        disabled ? 'cursor-not-allowed text-text-muted opacity-50' : 'text-text-secondary'
-      }`}
-    >
-      Limit context to 200K tokens
-      {scopeLabel ? (
-        <span className="text-[10px] text-[var(--color-text-muted)]">({scopeLabel})</span>
-      ) : null}
-      {disabled && <span className="text-[10px] italic">(always 200K for this model)</span>}
-    </Label>
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Info
-            className={`size-3.5 shrink-0 ${disabled ? 'text-text-muted opacity-50' : 'text-text-muted hover:text-text-secondary'} cursor-help`}
-          />
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[260px]">
-          <p>
-            Enable this to cap Anthropic runtimes at 200K tokens. Leave it off only when you want
-            the selected Anthropic model or runtime to use a longer context window when available.
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  </div>
-);
+}) => {
+  const { t } = useAppTranslation('team');
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      <Checkbox
+        id={id}
+        checked={disabled ? true : checked}
+        disabled={disabled}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+      />
+      <Label
+        htmlFor={id}
+        className={`flex flex-wrap items-center gap-1.5 text-xs font-normal leading-snug ${
+          disabled ? 'cursor-not-allowed text-text-muted opacity-50' : 'text-text-secondary'
+        }`}
+      >
+        {t('contextLimit.limitTo200k')}
+        {scopeLabel ? (
+          <span className="text-[10px] text-[var(--color-text-muted)]">({scopeLabel})</span>
+        ) : null}
+        {disabled && <span className="text-[10px] italic">{t('contextLimit.always200k')}</span>}
+      </Label>
+      <HoverTooltip
+        content={t('contextLimit.tooltipContent')}
+        title={t('contextLimit.tooltipTitle')}
+        contentClassName="max-w-[260px]"
+      >
+        <Info
+          className={`size-3.5 shrink-0 ${disabled ? 'text-text-muted opacity-50' : 'text-text-muted hover:text-text-secondary'} cursor-help`}
+          aria-hidden="true"
+        />
+      </HoverTooltip>
+    </div>
+  );
+};

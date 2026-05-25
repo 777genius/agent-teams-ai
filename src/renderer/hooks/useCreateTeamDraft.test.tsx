@@ -143,4 +143,84 @@ describe('useCreateTeamDraft', () => {
       root.unmount();
     });
   });
+
+  it('preserves per-member MCP policy in saved create-team drafts', async () => {
+    loadSnapshotMock.mockResolvedValue({
+      version: 1,
+      teamName: 'team-alpha',
+      members: [
+        {
+          id: 'member-1',
+          name: 'alice',
+          roleSelection: 'developer',
+          customRole: '',
+          mcpPolicy: { mode: 'appOnly' },
+        },
+      ],
+      syncModelsWithLead: true,
+      teammateWorktreeDefault: false,
+      cwdMode: 'project',
+      selectedProjectPath: '',
+      customCwd: '',
+      soloTeam: false,
+      launchTeam: true,
+      teamColor: '',
+      updatedAt: Date.now(),
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let loadedDraft: ReturnType<typeof useCreateTeamDraft> | null = null;
+
+    await act(async () => {
+      root.render(
+        React.createElement(HookProbeWithDraft, {
+          onLoaded: (draft) => {
+            loadedDraft = draft;
+          },
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const draft = loadedDraft as ReturnType<typeof useCreateTeamDraft> | null;
+    expect(draft).not.toBeNull();
+    if (!draft) {
+      throw new Error('Draft did not load');
+    }
+    expect(draft.members[0]?.mcpPolicy).toEqual({ mode: 'appOnly' });
+
+    act(() => {
+      draft.setMembers([
+        {
+          id: 'member-1',
+          name: 'alice',
+          roleSelection: 'developer',
+          customRole: '',
+          mcpPolicy: {
+            mode: 'strictAllowlist',
+            scopes: { user: true, project: false, local: false },
+            serverNames: ['github'],
+          },
+        },
+      ]);
+      root.unmount();
+    });
+
+    expect(saveSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        members: [
+          expect.objectContaining({
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { user: true, project: false, local: false },
+              serverNames: ['github'],
+            },
+          }),
+        ],
+      })
+    );
+  });
 });

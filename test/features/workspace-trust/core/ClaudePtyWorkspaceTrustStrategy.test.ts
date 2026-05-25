@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { ClaudePtyWorkspaceTrustStrategy } from '@features/workspace-trust/core/application';
 import { buildWorkspaceTrustPathCandidates } from '@features/workspace-trust/core/domain';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   ProviderStateProbe,
@@ -83,6 +82,10 @@ function workspace(cwd = '/tmp/project') {
 }
 
 describe('ClaudePtyWorkspaceTrustStrategy', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('skips PTY when the state probe already reports trusted', async () => {
     const pty = new FakePtyProcess();
     const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
@@ -172,15 +175,17 @@ describe('ClaudePtyWorkspaceTrustStrategy', () => {
   it('accepts the trust dialog, verifies persisted trust, kills PTY, and cleans temp MCP config', async () => {
     const pty = new FakePtyProcess();
     const tempStore = new FakeTempStore();
+    const stateProbe = new FakeStateProbe([
+      { status: 'untrusted' },
+      { status: 'untrusted' },
+      { status: 'trusted', evidence: ['trusted project key: /tmp/project'] },
+    ]);
     const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
       claudePath: '/usr/local/bin/claude',
       workspaces: [workspace()],
       env: { HOME: '/Users/tester', PATH: '/usr/local/bin', OPTIONAL_EMPTY: undefined },
       ptyProcess: pty,
-      stateProbe: new FakeStateProbe([
-        { status: 'untrusted' },
-        { status: 'trusted', evidence: ['trusted project key: /tmp/project'] },
-      ]),
+      stateProbe,
       tempEmptyMcpConfigStore: tempStore,
       isCancelled: () => false,
       timeoutMs: 100,
@@ -190,6 +195,7 @@ describe('ClaudePtyWorkspaceTrustStrategy', () => {
     expect(result.status).toBe('ok');
     expect(result.matchedRuleIds).toEqual(['claude.workspace_trust']);
     expect(result.actions).toEqual(['claude.workspace_trust:enter']);
+    expect(result.evidence).toEqual(['trusted project key: /tmp/project']);
     expect(pty.spawnInputs[0]).toMatchObject({
       command: '/usr/local/bin/claude',
       cwd: '/tmp/project',
@@ -203,6 +209,33 @@ describe('ClaudePtyWorkspaceTrustStrategy', () => {
     expect(pty.session?.actions.map((action) => action.id)).toEqual(['enter']);
     expect(pty.session?.killed).toBe(true);
     expect(tempStore.cleaned).toBe(true);
+    expect(stateProbe.calls).toBe(4);
+  });
+
+  it('keeps the default Claude preflight alive long enough for slow startup trust prompts', async () => {
+    const pty = new FakePtyProcess();
+    const session = new FakeSession(['Starting Claude...', 'Quick safety check\nYes, I trust this folder']);
+    pty.spawnResult = { ok: true, session };
+    const nowValues = [0, 0, 0, 0, 46_000, 46_000, 46_000];
+    vi.spyOn(Date, 'now').mockImplementation(() => nowValues.shift() ?? 46_000);
+
+    const result = await new ClaudePtyWorkspaceTrustStrategy().execute({
+      claudePath: '/usr/local/bin/claude',
+      workspaces: [workspace()],
+      env: { HOME: '/Users/tester' },
+      ptyProcess: pty,
+      stateProbe: new FakeStateProbe([
+        { status: 'untrusted' },
+        { status: 'trusted', evidence: ['trusted project key: /tmp/project'] },
+      ]),
+      tempEmptyMcpConfigStore: new FakeTempStore(),
+      isCancelled: () => false,
+      pollIntervalMs: 1,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.matchedRuleIds).toEqual(['claude.workspace_trust']);
+    expect(session.actions.map((action) => action.id)).toEqual(['enter']);
   });
 
   it('soft-fails when node-pty is unavailable instead of throwing', async () => {

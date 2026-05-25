@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ActivityItem } from '@renderer/components/team/activity/ActivityItem';
 import {
   buildMessageContext,
@@ -30,11 +31,11 @@ interface MemberMessagesTabProps {
 }
 
 const MAX_MESSAGES = 100;
-const FILTER_OPTIONS: readonly { value: MemberActivityFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'messages', label: 'Messages' },
-  { value: 'comments', label: 'Comments' },
-];
+const FILTER_OPTIONS = [
+  { value: 'all', labelKey: 'members.messages.filters.all' },
+  { value: 'messages', labelKey: 'members.messages.filters.messages' },
+  { value: 'comments', labelKey: 'members.messages.filters.comments' },
+] as const satisfies readonly { value: MemberActivityFilter; labelKey: string }[];
 
 export const MemberMessagesTab = ({
   teamName,
@@ -45,6 +46,7 @@ export const MemberMessagesTab = ({
   onCreateTask,
   onTaskClick,
 }: MemberMessagesTabProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [activityFilter, setActivityFilter] = useState<MemberActivityFilter>(initialFilter);
   const [expandedItem, setExpandedItem] = useState<TimelineItem | null>(null);
   const { messages, messagesState, loadOlderTeamMessages } = useStore(
@@ -132,16 +134,16 @@ export const MemberMessagesTab = ({
 
   const initialPageLoading = loading && activityEntries.length === 0;
   const emptyStateText = initialPageLoading
-    ? 'Loading activity...'
+    ? t('members.messages.empty.loading')
     : activityFilter === 'comments'
-      ? 'No comments for this member'
+      ? t('members.messages.empty.noComments')
       : activityFilter === 'messages'
         ? hasMore
-          ? 'No loaded messages for this member yet'
-          : 'No messages with this member'
+          ? t('members.messages.empty.noLoadedMessages')
+          : t('members.messages.empty.noMessages')
         : hasMore
-          ? 'No loaded activity for this member yet'
-          : 'No activity with this member';
+          ? t('members.messages.empty.noLoadedActivity')
+          : t('members.messages.empty.noActivity');
   const canLoadOlderMessages = hasMore && activityFilter !== 'comments';
 
   return (
@@ -161,7 +163,7 @@ export const MemberMessagesTab = ({
               ].join(' ')}
               onClick={() => setActivityFilter(option.value)}
             >
-              {option.label}
+              {t(option.labelKey)}
             </button>
           );
         })}
@@ -227,7 +229,7 @@ export const MemberMessagesTab = ({
               disabled={loadingOlderMessages}
               onClick={() => void loadOlderMessages()}
             >
-              Load older messages
+              {t('members.messages.loadOlder')}
             </Button>
           </div>
         )}

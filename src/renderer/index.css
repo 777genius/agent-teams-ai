@@ -1056,6 +1056,44 @@ a[href],
   }
 }
 
+@keyframes member-diagnostics-attention-fill {
+  0%,
+  100% {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.22);
+  }
+}
+
+@keyframes member-diagnostics-attention-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.38);
+  }
+}
+
+.member-launch-diagnostics-pulse {
+  position: relative;
+  overflow: visible;
+  animation: member-diagnostics-attention-fill 1.7s ease-in-out infinite;
+}
+
+.member-launch-diagnostics-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: member-diagnostics-attention-ring 1.7s ease-out infinite;
+}
+
 /* Skeleton-style shimmer for waiting members: a translucent light sweep */
 .member-waiting-shimmer {
   position: relative;
@@ -1644,8 +1682,17 @@ a[href],
   opacity: 0.96;
 }
 
+.runtime-telemetry-list:hover .runtime-telemetry-strip,
+.runtime-telemetry-list:focus-within .runtime-telemetry-strip,
+.runtime-telemetry-hover-scope:has(.runtime-telemetry-list:hover) .runtime-telemetry-legend,
+.runtime-telemetry-hover-scope:has(.runtime-telemetry-list:focus-within) .runtime-telemetry-legend {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kanban-comment-badge-pulse,
+  .member-launch-diagnostics-pulse,
+  .member-launch-diagnostics-pulse::after,
   .message-composer-orbit-path,
   .message-composer-orbit-glow {
     animation: none;

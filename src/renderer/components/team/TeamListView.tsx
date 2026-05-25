@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -53,6 +54,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
 import {
@@ -63,6 +65,7 @@ import {
 import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
+import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type {
@@ -198,55 +201,57 @@ function renderTeamRecentPaths(
   );
 }
 
-const StatusBadge = ({ status }: { status: TeamStatus }): React.JSX.Element => {
+type TeamT = ReturnType<typeof useAppTranslation>['t'];
+
+const StatusBadge = ({ status, t }: { status: TeamStatus; t: TeamT }): React.JSX.Element => {
   switch (status) {
     case 'active':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
           <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-          Active
+          {t('list.status.active')}
         </span>
       );
     case 'idle':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
           <span className="size-1.5 rounded-full bg-emerald-400" />
-          Running
+          {t('list.status.running')}
         </span>
       );
     case 'provisioning':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
           <span className="size-1.5 animate-pulse rounded-full bg-amber-400" />
-          Launching...
+          {t('list.status.launching')}
         </span>
       );
     case 'offline':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
           <span className="size-1.5 rounded-full bg-zinc-500" />
-          Offline
+          {t('list.status.offline')}
         </span>
       );
     case 'partial_failure':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
           <span className="size-1.5 rounded-full bg-amber-400" />
-          Launch failed partway
+          {t('list.status.partialFailure')}
         </span>
       );
     case 'partial_skipped':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-300">
           <span className="size-1.5 rounded-full bg-sky-300" />
-          Launch skipped member
+          {t('list.status.partialSkipped')}
         </span>
       );
     case 'partial_pending':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
           <span className="size-1.5 rounded-full bg-amber-300" />
-          Bootstrap pending
+          {t('list.status.partialPending')}
         </span>
       );
   }
@@ -267,11 +272,13 @@ interface ActiveTeamCardProps {
   onLaunchTeam: (
     teamName: string,
     projectPath: string | undefined,
+    mode: TeamLaunchDialogMode,
     event: React.MouseEvent
   ) => void;
   onStopTeam: (teamName: string, event: React.MouseEvent) => void;
   onCopyTeam: (teamName: string, event: React.MouseEvent) => void;
   onDeleteTeam: (teamName: string, pendingCreate: boolean, event: React.MouseEvent) => void;
+  t: TeamT;
 }
 
 const ActiveTeamCard = ({
@@ -290,6 +297,7 @@ const ActiveTeamCard = ({
   onStopTeam,
   onCopyTeam,
   onDeleteTeam,
+  t,
 }: Readonly<ActiveTeamCardProps>): React.JSX.Element => {
   const canLaunch =
     (status === 'offline' ||
@@ -297,6 +305,9 @@ const ActiveTeamCard = ({
       status === 'partial_skipped' ||
       status === 'partial_pending') &&
     Boolean(team.projectPath);
+  const launchMode: TeamLaunchDialogMode = status === 'offline' ? 'launch' : 'relaunch';
+  const launchLabel =
+    launchMode === 'relaunch' ? t('list.actions.relaunchTeam') : t('list.actions.launchTeam');
 
   return (
     <div
@@ -312,7 +323,7 @@ const ActiveTeamCard = ({
       }}
     >
       <div className="pointer-events-none absolute right-4 top-4 z-10">
-        <StatusBadge status={status} />
+        <StatusBadge status={status} t={t} />
       </div>
       <div className="flex flex-1 flex-col">
         <div className="space-y-2">
@@ -347,16 +358,23 @@ const ActiveTeamCard = ({
                       type="button"
                       className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50 group-hover:opacity-100"
                       onClick={(event) =>
-                        onLaunchTeam(team.teamName, team.projectPath ?? undefined, event)
+                        onLaunchTeam(
+                          team.teamName,
+                          team.projectPath ?? undefined,
+                          launchMode,
+                          event
+                        )
                       }
                       disabled={launchingTeamName === team.teamName}
-                      aria-label="Launch team"
+                      aria-label={launchLabel}
                     >
                       <Play size={14} fill="currentColor" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    {launchingTeamName === team.teamName ? 'Launching…' : 'Launch team'}
+                    {launchingTeamName === team.teamName
+                      ? t('list.actions.launching')
+                      : launchLabel}
                   </TooltipContent>
                 </Tooltip>
               ) : null}
@@ -368,13 +386,15 @@ const ActiveTeamCard = ({
                       className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50 group-hover:opacity-100"
                       onClick={(event) => onStopTeam(team.teamName, event)}
                       disabled={stoppingTeamName === team.teamName}
-                      aria-label="Stop team"
+                      aria-label={t('list.actions.stopTeam')}
                     >
                       <Square size={14} fill="currentColor" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    {stoppingTeamName === team.teamName ? 'Stopping…' : 'Stop team'}
+                    {stoppingTeamName === team.teamName
+                      ? t('list.actions.stopping')
+                      : t('list.actions.stopTeam')}
                   </TooltipContent>
                 </Tooltip>
               ) : null}
@@ -389,7 +409,7 @@ const ActiveTeamCard = ({
                       <Copy size={14} />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">Copy team</TooltipContent>
+                  <TooltipContent side="bottom">{t('list.actions.copyTeam')}</TooltipContent>
                 </Tooltip>
               ) : null}
               <Tooltip>
@@ -402,14 +422,14 @@ const ActiveTeamCard = ({
                     <Trash2 size={14} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Delete team</TooltipContent>
+                <TooltipContent side="bottom">{t('list.actions.deleteTeam')}</TooltipContent>
               </Tooltip>
             </div>
           </div>
         </div>
         <div className="mt-2 flex min-h-10 items-start gap-2">
           <p className="line-clamp-2 min-w-0 flex-1 text-xs text-[var(--color-text-muted)]">
-            {team.description || 'No description'}
+            {team.description || t('list.noDescription')}
           </p>
         </div>
         {team.teamLaunchState === 'partial_pending' ? (
@@ -422,19 +442,25 @@ const ActiveTeamCard = ({
                   runtimeProcessPendingCount: team.runtimeProcessPendingCount,
                   includePeriod: true,
                 })
-              : 'Last launch is still reconciling.'}
+              : t('list.partial.pending')}
           </p>
         ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
           <p className="mt-2 text-[11px] text-amber-400">
             {team.missingMembers?.length
-              ? `Last launch stopped before ${team.missingMembers.length}/${team.expectedMemberCount ?? team.missingMembers.length} teammate${team.missingMembers.length === 1 ? '' : 's'} joined.`
-              : 'Last launch stopped before all teammates joined.'}
+              ? t('list.partial.stoppedWithCount', {
+                  count: team.missingMembers.length,
+                  expected: team.expectedMemberCount ?? team.missingMembers.length,
+                })
+              : t('list.partial.stopped')}
           </p>
         ) : team.teamLaunchState === 'partial_skipped' ? (
           <p className="mt-2 text-[11px] text-sky-300">
             {team.skippedMembers?.length
-              ? `Last launch skipped ${team.skippedMembers.length}/${team.expectedMemberCount ?? team.skippedMembers.length} teammate${team.skippedMembers.length === 1 ? '' : 's'}.`
-              : 'Last launch has skipped teammates.'}
+              ? t('list.partial.skippedWithCount', {
+                  count: team.skippedMembers.length,
+                  expected: team.expectedMemberCount ?? team.skippedMembers.length,
+                })
+              : t('list.partial.skipped')}
           </p>
         ) : null}
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -442,11 +468,11 @@ const ActiveTeamCard = ({
             renderMemberChips(team.members, isLight)
           ) : team.memberCount === 0 ? (
             <Badge variant="secondary" className="text-[10px] font-normal">
-              Solo
+              {t('list.solo')}
             </Badge>
           ) : (
             <Badge variant="secondary" className="text-[10px] font-normal">
-              Members: {team.memberCount}
+              {t('list.membersCount', { count: team.memberCount })}
             </Badge>
           )}
         </div>
@@ -461,6 +487,7 @@ const ActiveTeamCard = ({
 
 export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
+  const { t } = useAppTranslation('team');
   const electronMode = isElectronMode();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
@@ -750,10 +777,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       void (async () => {
         if (isDraft) {
           const confirmed = await confirm({
-            title: 'Delete draft',
-            message: `Delete draft team "${teamName}"? This cannot be undone.`,
-            confirmLabel: 'Delete',
-            cancelLabel: 'Cancel',
+            title: t('list.deleteDraft.title'),
+            message: t('list.deleteDraft.message', { teamName }),
+            confirmLabel: t('list.deleteDraft.confirmLabel'),
+            cancelLabel: t('list.deleteDraft.cancelLabel'),
             variant: 'danger',
           });
           if (confirmed) {
@@ -762,10 +789,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           return;
         }
         const confirmed = await confirm({
-          title: 'Move to trash',
-          message: `Move team "${teamName}" to trash? You can restore it later.`,
-          confirmLabel: 'Move to trash',
-          cancelLabel: 'Cancel',
+          title: t('list.moveToTrash.title'),
+          message: t('list.moveToTrash.message', { teamName }),
+          confirmLabel: t('list.moveToTrash.confirmLabel'),
+          cancelLabel: t('list.moveToTrash.cancelLabel'),
           variant: 'danger',
         });
         if (confirmed) {
@@ -777,7 +804,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         }
       })();
     },
-    [deleteTeam]
+    [deleteTeam, t]
   );
 
   const handleRestoreTeam = useCallback(
@@ -799,10 +826,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       e.stopPropagation();
       void (async () => {
         const confirmed = await confirm({
-          title: 'Delete permanently',
-          message: `Delete team "${teamName}" permanently? All data will be lost.`,
-          confirmLabel: 'Delete forever',
-          cancelLabel: 'Cancel',
+          title: t('list.deleteForever.title'),
+          message: t('list.deleteForever.message', { teamName }),
+          confirmLabel: t('list.deleteForever.confirmLabel'),
+          cancelLabel: t('list.deleteForever.cancelLabel'),
           variant: 'danger',
         });
         if (confirmed) {
@@ -814,7 +841,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         }
       })();
     },
-    [permanentlyDeleteTeam]
+    [permanentlyDeleteTeam, t]
   );
 
   const handleCopyTeam = useCallback(
@@ -834,7 +861,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
               if (!role && m.agentType && m.agentType !== 'general-purpose') {
                 role = m.agentType;
               }
-              return { name: m.name, role };
+              return { name: m.name, role, mcpPolicy: m.mcpPolicy };
             });
           setCopyData({
             teamName: uniqueName,
@@ -867,18 +894,25 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
   const [launchingTeamName, setLaunchingTeamName] = useState<string | null>(null);
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
+  const [launchDialogMode, setLaunchDialogMode] = useState<TeamLaunchDialogMode>('launch');
   const [launchDialogTeamName, setLaunchDialogTeamName] = useState('');
   const [launchDialogMembers, setLaunchDialogMembers] = useState<ResolvedTeamMember[]>([]);
   const [launchDialogDefaultPath, setLaunchDialogDefaultPath] = useState<string | undefined>();
 
   const handleLaunchTeam = useCallback(
-    async (teamName: string, projectPath: string | undefined, e: React.MouseEvent) => {
+    async (
+      teamName: string,
+      projectPath: string | undefined,
+      mode: TeamLaunchDialogMode,
+      e: React.MouseEvent
+    ) => {
       e.stopPropagation();
       if (!projectPath) return;
       try {
         const data = await api.teams.getData(teamName, {
           includeMemberBranches: false,
         });
+        setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers(resolveLaunchDialogMembers(data.members ?? []));
         setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
@@ -889,6 +923,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           console.error('Failed to load team data for launch dialog:', err);
         }
         // Fallback: open dialog with minimal data
+        setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers([]);
         setLaunchDialogDefaultPath(projectPath);
@@ -905,6 +940,30 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         await launchTeam(request);
       } catch (err) {
         console.error('Failed to launch team:', err);
+        throw err;
+      } finally {
+        setLaunchingTeamName(null);
+      }
+    },
+    [launchTeam]
+  );
+
+  const handleRelaunchSubmit = useCallback(
+    async (request: TeamLaunchRequest, members: TeamCreateRequest['members']) => {
+      setLaunchingTeamName(request.teamName);
+      try {
+        await executeTeamRelaunch({
+          teamName: request.teamName,
+          isTeamAlive: true,
+          request,
+          members,
+          stopTeam: (nextTeamName) => api.teams.stop(nextTeamName),
+          replaceMembers: (nextTeamName, nextRequest) =>
+            api.teams.replaceMembers(nextTeamName, nextRequest),
+          launchTeam,
+        });
+      } catch (err) {
+        console.error('Failed to relaunch team:', err);
         throw err;
       } finally {
         setLaunchingTeamName(null);
@@ -951,10 +1010,10 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       <div className="flex size-full items-center justify-center p-6">
         <div className="max-w-md text-center">
           <p className="text-sm font-medium text-[var(--color-text)]">
-            Teams is only available in Electron mode
+            {t('list.electronOnly.title')}
           </p>
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-            In browser mode, access to local `~/.claude/teams` directories is not available.
+            {t('list.electronOnly.description')}
           </p>
         </div>
       </div>
@@ -982,25 +1041,40 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
   const launchDialogElement = launchDialogOpen && (
     <Suspense fallback={null}>
-      <LaunchTeamDialog
-        mode="launch"
-        open={launchDialogOpen}
-        teamName={launchDialogTeamName}
-        members={launchDialogMembers}
-        defaultProjectPath={launchDialogDefaultPath}
-        provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}
-        clearProvisioningError={clearProvisioningError}
-        activeTeams={activeTeams}
-        onClose={() => setLaunchDialogOpen(false)}
-        onLaunch={handleLaunchSubmit}
-      />
+      {launchDialogMode === 'relaunch' ? (
+        <LaunchTeamDialog
+          mode="relaunch"
+          open={launchDialogOpen}
+          teamName={launchDialogTeamName}
+          members={launchDialogMembers}
+          defaultProjectPath={launchDialogDefaultPath}
+          provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}
+          clearProvisioningError={clearProvisioningError}
+          activeTeams={activeTeams}
+          onClose={() => setLaunchDialogOpen(false)}
+          onRelaunch={handleRelaunchSubmit}
+        />
+      ) : (
+        <LaunchTeamDialog
+          mode="launch"
+          open={launchDialogOpen}
+          teamName={launchDialogTeamName}
+          members={launchDialogMembers}
+          defaultProjectPath={launchDialogDefaultPath}
+          provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}
+          clearProvisioningError={clearProvisioningError}
+          activeTeams={activeTeams}
+          onClose={() => setLaunchDialogOpen(false)}
+          onLaunch={handleLaunchSubmit}
+        />
+      )}
     </Suspense>
   );
 
   const renderHeader = (): React.JSX.Element => (
     <div className="mb-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-[var(--color-text)]">Select Team</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text)]">{t('list.title')}</h2>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -1008,14 +1082,12 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             disabled={!canCreate}
             onClick={() => setShowCreateDialog(true)}
           >
-            Create Team
+            {t('list.actions.createTeam')}
           </Button>
         </div>
       </div>
       {!canCreate ? (
-        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-          Only available in local Electron mode.
-        </p>
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">{t('list.localOnly')}</p>
       ) : null}
 
       {teamsWithProvisioning.length > 0 ? (
@@ -1027,7 +1099,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             />
             <Input
               type="text"
-              placeholder="Search teams..."
+              placeholder={t('list.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-8 pl-8 text-xs"
@@ -1050,7 +1122,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     if (teamsLoading) {
       return (
         <div className="flex size-full items-center justify-center text-sm text-[var(--color-text-muted)]">
-          Loading teams...
+          {t('list.loading')}
         </div>
       );
     }
@@ -1059,7 +1131,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       return (
         <div className="flex size-full items-center justify-center p-6">
           <div className="text-center">
-            <p className="text-sm font-medium text-red-400">Failed to load teams</p>
+            <p className="text-sm font-medium text-red-400">{t('list.loadFailed')}</p>
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">{teamsError}</p>
             <Button
               variant="outline"
@@ -1069,7 +1141,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                 void fetchTeams();
               }}
             >
-              Retry
+              {t('list.actions.retry')}
             </Button>
           </div>
         </div>
@@ -1086,7 +1158,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     if (filteredTeams.length === 0 && (searchQuery.trim() || hasActiveFilters)) {
       return (
         <div className="flex items-center justify-center py-12 text-sm text-[var(--color-text-muted)]">
-          No teams matching current filters
+          {t('list.noMatches')}
         </div>
       );
     }
@@ -1097,14 +1169,16 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       ? [
           {
             key: 'project',
-            title: `Teams for ${folderName(currentProjectPath) || 'selected project'}`,
+            title: t('list.sections.projectTeams', {
+              project: folderName(currentProjectPath) || t('list.sections.selectedProject'),
+            }),
             teams: activeFiltered.filter((team) =>
               teamMatchesProjectSelection(team, currentProjectPath)
             ),
           },
           {
             key: 'other',
-            title: 'Other teams',
+            title: t('list.sections.otherTeams'),
             teams: activeFiltered.filter(
               (team) => !teamMatchesProjectSelection(team, currentProjectPath)
             ),
@@ -1169,6 +1243,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                     onStopTeam={handleStopTeam}
                     onCopyTeam={handleCopyTeam}
                     onDeleteTeam={handleDeleteTeam}
+                    t={t}
                   />
                 );
               })}
@@ -1181,7 +1256,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-[var(--color-border)]" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-                Trash ({deletedFiltered.length})
+                {t('list.trash', { count: deletedFiltered.length })}
               </span>
               <div className="h-px flex-1 bg-[var(--color-border)]" />
             </div>
@@ -1202,7 +1277,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                           {team.displayName}
                         </h3>
                         <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
-                          Deleted
+                          {t('list.status.deleted')}
                         </span>
                       </div>
                       <div className="flex shrink-0 gap-1">
@@ -1212,12 +1287,12 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                               type="button"
                               className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-emerald-500/10 hover:text-emerald-300 group-hover:opacity-100"
                               onClick={(e) => handleRestoreTeam(team.teamName, e)}
-                              aria-label="Restore team"
+                              aria-label={t('list.actions.restoreTeam')}
                             >
                               <RotateCcw size={14} />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">Restore</TooltipContent>
+                          <TooltipContent side="bottom">{t('list.actions.restore')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1225,17 +1300,19 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                               type="button"
                               className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
                               onClick={(e) => handlePermanentlyDeleteTeam(team.teamName, e)}
-                              aria-label="Delete permanently"
+                              aria-label={t('list.actions.deletePermanently')}
                             >
                               <Trash2 size={14} />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">Delete forever</TooltipContent>
+                          <TooltipContent side="bottom">
+                            {t('list.actions.deleteForever')}
+                          </TooltipContent>
                         </Tooltip>
                       </div>
                     </div>
                     <p className="mt-2 line-clamp-2 text-xs text-[var(--color-text-muted)]">
-                      {team.description || 'No description'}
+                      {team.description || t('list.noDescription')}
                     </p>
                     {team.members && team.members.length > 0 && (
                       <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">

@@ -15,6 +15,7 @@ import { syntaxHighlighting } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { chipDisplayLabel } from '@renderer/types/inlineChip';
@@ -64,6 +65,7 @@ const ChipFilePreview = ({
   onOpenInEditor?: (filePath: string) => void;
   onRevealFolder?: (folderPath: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const displayPath = chip.displayPath ?? chip.filePath;
   const isFolder = chip.isFolder === true;
   return (
@@ -82,7 +84,7 @@ const ChipFilePreview = ({
             }}
           >
             <ExternalLink size={10} />
-            Reveal
+            {t('actions.reveal')}
           </button>
         ) : !isFolder && onOpenInEditor ? (
           <button
@@ -95,7 +97,7 @@ const ChipFilePreview = ({
             }}
           >
             <ExternalLink size={10} />
-            Open
+            {t('actions.open')}
           </button>
         ) : null}
       </div>
@@ -104,6 +106,7 @@ const ChipFilePreview = ({
 };
 
 const ChipCodePreview = ({ chip }: { chip: InlineChip }): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const containerRef = React.useRef<HTMLDivElement>(null);
   const allLines = chip.codeText.split('\n');
   const truncated = allLines.length > MAX_PREVIEW_LINES;
@@ -111,8 +114,8 @@ const ChipCodePreview = ({ chip }: { chip: InlineChip }): React.JSX.Element => {
   const label = chipDisplayLabel(chip);
   const lineRef =
     chip.fromLine === chip.toLine
-      ? `line ${String(chip.fromLine)}`
-      : `lines ${String(chip.fromLine)}-${String(chip.toLine)}`;
+      ? t('code.line', { line: chip.fromLine })
+      : t('code.lines', { from: chip.fromLine, to: chip.toLine });
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -148,7 +151,7 @@ const ChipCodePreview = ({ chip }: { chip: InlineChip }): React.JSX.Element => {
       {truncated ? (
         <div className="border-t border-[var(--color-border)] bg-[var(--code-bg,#1e1e2e)] px-2.5 py-1">
           <span className="text-[10px] text-[var(--color-text-muted)]">
-            ({allLines.length - MAX_PREVIEW_LINES} more lines...)
+            {t('code.moreLines', { count: allLines.length - MAX_PREVIEW_LINES })}
           </span>
         </div>
       ) : null}

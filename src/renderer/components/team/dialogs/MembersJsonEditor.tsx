@@ -19,6 +19,7 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 import { X } from 'lucide-react';
@@ -46,6 +47,7 @@ export const MembersJsonEditor = ({
   error,
   onClose,
 }: MembersJsonEditorProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -112,7 +114,7 @@ export const MembersJsonEditor = ({
         <div className="flex items-center justify-end border-b border-[var(--color-border)] px-2 py-1.5">
           <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={onClose}>
             <X className="size-3.5" />
-            Hide JSON
+            {t('dialogs.membersJson.hide')}
           </Button>
         </div>
         <div ref={containerRef} />

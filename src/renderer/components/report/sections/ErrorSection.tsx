@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 
 import { ReportSection } from '../ReportSection';
@@ -11,6 +12,7 @@ interface ErrorItemProps {
 }
 
 const ErrorItem = ({ error }: ErrorItemProps) => {
+  const { t } = useAppTranslation('report');
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -33,17 +35,19 @@ const ErrorItem = ({ error }: ErrorItemProps) => {
               color: 'var(--assess-danger)',
             }}
           >
-            Permission Denied
+            {t('errors.permissionDenied')}
           </span>
         )}
-        <span className="ml-auto text-text-muted">msg #{error.messageIndex}</span>
+        <span className="ml-auto text-text-muted">
+          {t('errors.messageIndex', { index: error.messageIndex })}
+        </span>
       </button>
       {expanded && (
         <div className="mt-2 flex flex-col gap-1.5">
           {error.inputPreview && (
             <div className="rounded bg-surface-raised p-2">
               <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-                Input
+                {t('errors.input')}
               </div>
               <div className="whitespace-pre-wrap break-words font-mono text-xs text-text-secondary">
                 {error.inputPreview}
@@ -52,7 +56,7 @@ const ErrorItem = ({ error }: ErrorItemProps) => {
           )}
           <div className="rounded bg-surface-raised p-2">
             <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-              Error
+              {t('errors.error')}
             </div>
             <div
               className="whitespace-pre-wrap break-words text-xs"
@@ -73,8 +77,14 @@ interface ErrorSectionProps {
 }
 
 export const ErrorSection = ({ data, defaultCollapsed }: ErrorSectionProps) => {
+  const { t } = useAppTranslation('report');
+
   return (
-    <ReportSection title="Errors" icon={AlertTriangle} defaultCollapsed={defaultCollapsed}>
+    <ReportSection
+      title={t('errors.title')}
+      icon={AlertTriangle}
+      defaultCollapsed={defaultCollapsed}
+    >
       <div className="mb-3 flex items-center gap-3">
         <span
           className="rounded px-2 py-0.5 text-xs font-medium"
@@ -83,12 +93,11 @@ export const ErrorSection = ({ data, defaultCollapsed }: ErrorSectionProps) => {
             color: 'var(--assess-danger)',
           }}
         >
-          {data.errors.length} error{data.errors.length !== 1 ? 's' : ''}
+          {t('errors.count', { count: data.errors.length })}
         </span>
         {data.permissionDenials.count > 0 && (
           <span className="text-xs text-text-muted">
-            {data.permissionDenials.count} permission denial
-            {data.permissionDenials.count !== 1 ? 's' : ''}
+            {t('errors.permissionDenialCount', { count: data.permissionDenials.count })}
           </span>
         )}
       </div>

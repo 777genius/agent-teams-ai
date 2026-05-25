@@ -34,6 +34,17 @@ describe('isEphemeralProjectPath', () => {
     );
   });
 
+  it('detects provider launch stress temp project paths only under temp roots', () => {
+    expect(
+      isEphemeralProjectPath(
+        '/private/var/folders/7b/ydmc_b0n251bc4hss4tz8y880000gn/T/provider-launch-stress-live-rn5TFr/project'
+      )
+    ).toBe(true);
+    expect(
+      isEphemeralProjectPath('/Users/test/projects/provider-launch-stress-live-real/project')
+    ).toBe(false);
+  });
+
   it('keeps normal project paths selectable', () => {
     expect(isEphemeralProjectPath('/Users/test/projects/claude_team')).toBe(false);
     expect(isEphemeralProjectPath('')).toBe(false);

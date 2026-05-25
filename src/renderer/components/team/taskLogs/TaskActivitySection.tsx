@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
@@ -163,11 +164,13 @@ const ActivityMetadata = ({ detail }: ActivityMetadataProps): React.JSX.Element 
 };
 
 const ActivityDetailPanel = ({ detailState }: ActivityDetailPanelProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+
   if (detailState.status === 'loading') {
     return (
       <div className="border-[var(--color-border)]/20 bg-[var(--color-bg-elevated)]/18 flex items-center gap-2 rounded-md border p-3 text-xs text-[var(--color-text-muted)]">
         <Loader2 size={12} className="animate-spin" />
-        Loading activity details...
+        {t('taskActivity.loadingDetails')}
       </div>
     );
   }
@@ -184,7 +187,7 @@ const ActivityDetailPanel = ({ detailState }: ActivityDetailPanelProps): React.J
   if (detailState.status === 'missing') {
     return (
       <div className="border-[var(--color-border)]/20 bg-[var(--color-bg-elevated)]/18 rounded-md border p-3 text-xs text-[var(--color-text-muted)]">
-        Detailed transcript context is no longer available for this activity.
+        {t('taskActivity.contextUnavailable')}
       </div>
     );
   }
@@ -265,6 +268,7 @@ export const TaskActivitySection = ({
   taskId,
   enabled = true,
 }: TaskActivitySectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [detailStates, setDetailStates] = useState<Record<string, ActivityDetailState>>({});
   const [entries, setEntries] = useState<BoardTaskActivityEntry[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -400,7 +404,7 @@ export const TaskActivitySection = ({
       return (
         <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
           <Loader2 size={12} className="animate-spin" />
-          Loading task activity...
+          {t('taskActivity.loading')}
         </div>
       );
     }
@@ -417,9 +421,7 @@ export const TaskActivitySection = ({
     if (visibleEntries.length === 0) {
       return (
         <p className="text-xs text-[var(--color-text-muted)]">
-          {hasOnlyLowSignalExecution
-            ? 'No key task activity was found yet. Low-level execution details are available below in Task Log Stream.'
-            : 'No explicit task activity was found in the available transcripts yet. Older or heuristic session logs may still be available below in Execution Sessions.'}
+          {hasOnlyLowSignalExecution ? t('taskActivity.lowSignalOnly') : t('taskActivity.empty')}
         </p>
       );
     }
@@ -451,12 +453,10 @@ export const TaskActivitySection = ({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-          Task Activity
+          {t('taskActivity.title')}
         </h4>
       </div>
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Key explicit runtime activity linked to this task from transcript metadata.
-      </p>
+      <p className="text-xs text-[var(--color-text-muted)]">{t('taskActivity.description')}</p>
       {content}
     </div>
   );

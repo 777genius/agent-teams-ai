@@ -32,6 +32,7 @@ export interface SafeConfig {
     multimodelEnabled: boolean;
     claudeRootPath: string | null;
     agentLanguage: string;
+    appLocale: string;
     autoExpandAIGroups: boolean;
     useNativeTitleBar: boolean;
     telemetryEnabled: boolean;
@@ -174,6 +175,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         multimodelEnabled: displayConfig?.general?.multimodelEnabled ?? true,
         claudeRootPath: displayConfig?.general?.claudeRootPath ?? null,
         agentLanguage: displayConfig?.general?.agentLanguage ?? 'system',
+        appLocale: displayConfig?.general?.appLocale ?? 'system',
         autoExpandAIGroups: displayConfig?.general?.autoExpandAIGroups ?? false,
         useNativeTitleBar: displayConfig?.general?.useNativeTitleBar ?? false,
         telemetryEnabled: displayConfig?.general?.telemetryEnabled ?? true,

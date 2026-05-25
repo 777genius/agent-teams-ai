@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CliInstallationStatus } from '@shared/types';
@@ -214,7 +215,7 @@ describe('PluginsPanel effective runtime status', () => {
     });
 
     expect(host.textContent).not.toContain(
-      'In the multimodel runtime, plugins currently apply only to Anthropic sessions.'
+      'Plugin support is currently guaranteed for Anthropic (Claude) sessions only.'
     );
     expect(host.textContent).not.toContain('Codex bootstrap placeholder');
 
@@ -224,7 +225,7 @@ describe('PluginsPanel effective runtime status', () => {
     });
   });
 
-  it('explains that broader plugin support for all agents is actively being built when Codex plugins are not supported yet', async () => {
+  it('explains that plugin support is guaranteed only for Anthropic sessions when Codex plugins are not supported yet', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -257,12 +258,10 @@ describe('PluginsPanel effective runtime status', () => {
     });
 
     expect(host.textContent).toContain(
-      'plugins are currently guaranteed only for Anthropic sessions'
+      "Plugin support is currently guaranteed for Anthropic (Claude) sessions only. We're working to support plugins across all agents."
     );
-    expect(host.textContent).toContain(
-      'We are actively building broader plugin support for all agents'
-    );
-    expect(host.textContent).toContain('universal plugins and agent-specific plugins');
+    expect(host.textContent).not.toContain('multimodel runtime');
+    expect(host.textContent).not.toContain('Codex bootstrap placeholder');
 
     await act(async () => {
       root.unmount();

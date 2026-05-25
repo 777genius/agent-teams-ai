@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { Badge } from '@renderer/components/ui/badge';
@@ -54,11 +55,23 @@ interface PluginDetailDialogProps {
   cliStatusLoading?: boolean;
 }
 
-const SCOPE_OPTIONS: { value: InstallScope; label: string }[] = [
-  { value: 'user', label: 'User (global)' },
-  { value: 'project', label: 'Project (shared)' },
-  { value: 'local', label: 'Local (gitignored)' },
-];
+const SCOPE_OPTIONS: InstallScope[] = ['user', 'project', 'local'];
+
+function getScopeOptionLabel(
+  scope: InstallScope,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string {
+  switch (scope) {
+    case 'user':
+      return t('pluginDetail.scope.options.user');
+    case 'project':
+      return t('pluginDetail.scope.options.project');
+    case 'local':
+      return t('pluginDetail.scope.options.local');
+    default:
+      return String(scope);
+  }
+}
 
 export const PluginDetailDialog = ({
   plugin,
@@ -68,6 +81,7 @@ export const PluginDetailDialog = ({
   cliStatus,
   cliStatusLoading,
 }: PluginDetailDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const { fetchPluginReadme, readmes, readmeLoading, installPlugin, uninstallPlugin } = useStore(
     useShallow((s) => ({
       fetchPluginReadme: s.fetchPluginReadme,
@@ -142,25 +156,25 @@ export const PluginDetailDialog = ({
         {/* Metadata grid */}
         <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
-            <span className="text-text-muted">Author</span>
-            <p className="text-text">{plugin.author?.name ?? 'Unknown'}</p>
+            <span className="text-text-muted">{t('pluginDetail.metadata.author')}</span>
+            <p className="text-text">{plugin.author?.name ?? t('pluginDetail.unknown')}</p>
           </div>
           <div>
-            <span className="text-text-muted">Category</span>
+            <span className="text-text-muted">{t('pluginDetail.metadata.category')}</span>
             <p className="capitalize text-text">{category}</p>
           </div>
           <div>
-            <span className="text-text-muted">Source</span>
+            <span className="text-text-muted">{t('pluginDetail.metadata.source')}</span>
             <p className="capitalize text-text">{plugin.source}</p>
           </div>
           {plugin.version && (
             <div>
-              <span className="text-text-muted">Version</span>
+              <span className="text-text-muted">{t('pluginDetail.metadata.version')}</span>
               <p className="text-text">{plugin.version}</p>
             </div>
           )}
           <div>
-            <span className="text-text-muted">Capabilities</span>
+            <span className="text-text-muted">{t('pluginDetail.metadata.capabilities')}</span>
             <div className="mt-0.5 flex flex-wrap gap-1">
               {capabilities.map((cap) => (
                 <Badge
@@ -174,7 +188,7 @@ export const PluginDetailDialog = ({
             </div>
           </div>
           <div>
-            <span className="text-text-muted">Installs</span>
+            <span className="text-text-muted">{t('pluginDetail.metadata.installs')}</span>
             <div className="mt-0.5">
               <InstallCountBadge count={plugin.installCount} />
             </div>
@@ -184,19 +198,19 @@ export const PluginDetailDialog = ({
         {/* Install controls */}
         <div className="flex items-center gap-3 rounded-md border border-border bg-surface-raised px-4 py-3">
           <div className="flex flex-1 items-center gap-2">
-            <Label className="text-xs text-text-muted">Scope:</Label>
+            <Label className="text-xs text-text-muted">{t('pluginDetail.scope.label')}</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as InstallScope)}>
               <SelectTrigger className="h-7 w-36 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SCOPE_OPTIONS.map((opt) => (
+                {SCOPE_OPTIONS.map((scopeOption) => (
                   <SelectItem
-                    key={opt.value}
-                    value={opt.value}
-                    disabled={opt.value !== 'user' && !projectScopeAvailable}
+                    key={scopeOption}
+                    value={scopeOption}
+                    disabled={scopeOption !== 'user' && !projectScopeAvailable}
                   >
-                    {opt.label}
+                    {getScopeOptionLabel(scopeOption, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -236,7 +250,7 @@ export const PluginDetailDialog = ({
               onClick={() => void api.openExternal(plugin.homepage!)}
             >
               <ExternalLink className="mr-1 size-3.5" />
-              Homepage
+              {t('pluginDetail.links.homepage')}
             </Button>
           )}
           {plugin.author?.email && (
@@ -246,7 +260,7 @@ export const PluginDetailDialog = ({
               onClick={() => void api.openExternal(`mailto:${plugin.author!.email}`)}
             >
               <Mail className="mr-1 size-3.5" />
-              Contact
+              {t('pluginDetail.links.contact')}
             </Button>
           )}
         </div>
@@ -256,14 +270,14 @@ export const PluginDetailDialog = ({
           {isReadmeLoading && (
             <div className="flex items-center gap-2 text-sm text-text-muted">
               <Loader2 className="size-4 animate-spin" />
-              Loading README...
+              {t('pluginDetail.readme.loading')}
             </div>
           )}
           {!isReadmeLoading && readme && (
             <MarkdownViewer content={readme} bare maxHeight="max-h-none" />
           )}
           {!isReadmeLoading && !readme && (
-            <p className="text-sm text-text-muted">No README available.</p>
+            <p className="text-sm text-text-muted">{t('pluginDetail.readme.empty')}</p>
           )}
         </div>
       </DialogContent>

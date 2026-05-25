@@ -216,6 +216,118 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('validates top-level create effort against the default Anthropic provider over HTTP', async () => {
+    const { app, createTeamConfig } = await createApp();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: 'default-anthropic-effort-team',
+          members: [{ name: 'builder' }],
+          cwd: '/Users/test/project',
+          effort: 'max',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(createTeamConfig).toHaveBeenCalledWith({
+        teamName: 'default-anthropic-effort-team',
+        members: [{ name: 'builder' }],
+        cwd: '/Users/test/project',
+        effort: 'max',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('validates teammate runtime fields against the inherited top-level provider over HTTP create', async () => {
+    const { app, createTeamConfig } = await createApp();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: 'inherited-backend-team',
+          members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
+          cwd: '/Users/test/project',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(createTeamConfig).toHaveBeenCalledWith({
+        teamName: 'inherited-backend-team',
+        members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
+        cwd: '/Users/test/project',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('drops a stale known backend when launching with a different provider over HTTP', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockResolvedValue({ runId: 'run-2' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+          providerBackendId: 'codex-native',
+          model: 'sonnet',
+          effort: 'low',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(launchTeam).toHaveBeenCalledWith(
+        {
+          teamName: 'demo-team',
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+        },
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('still rejects unknown provider backends over HTTP launch', async () => {
+    const { app, launchTeam } = await createApp();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+          providerBackendId: 'unknown-backend',
+          model: 'sonnet',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('providerBackendId must be valid');
+      expect(launchTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('routes draft team launch through createTeam with saved metadata', async () => {
     const { app, createTeam, getSavedRequest, launchTeam } = await createApp();
     getSavedRequest.mockResolvedValue({
@@ -266,6 +378,139 @@ describe('HTTP team runtime routes', () => {
         },
         expect.any(Function)
       );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('drops stale saved draft backend when draft launch switches provider over HTTP', async () => {
+    const { app, createTeam, getSavedRequest } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'draft-team',
+      displayName: 'Draft Team',
+      cwd: '/Users/test/saved-project',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.2',
+      effort: 'medium',
+      limitContext: false,
+      members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-draft-anthropic' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/draft-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(createTeam).toHaveBeenCalledWith(
+        expect.not.objectContaining({ providerBackendId: expect.any(String) }),
+        expect.any(Function)
+      );
+      expect(createTeam).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'draft-team',
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+        }),
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not reuse saved draft model defaults when draft launch switches provider over HTTP', async () => {
+    const { app, createTeam, getSavedRequest } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'draft-team',
+      displayName: 'Draft Team',
+      cwd: '/Users/test/saved-project',
+      providerId: 'codex',
+      providerBackendId: 'unknown-stale-backend' as never,
+      model: 'gpt-5.2',
+      effort: 'medium',
+      fastMode: 'on',
+      limitContext: true,
+      members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-draft-anthropic-default' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/draft-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const [request] = createTeam.mock.calls.at(-1)!;
+      expect(request).toMatchObject({
+        teamName: 'draft-team',
+        cwd: '/Users/test/project',
+        providerId: 'anthropic',
+      });
+      expect(request.providerBackendId).toBeUndefined();
+      expect(request.model).toBeUndefined();
+      expect(request.effort).toBeUndefined();
+      expect(request.fastMode).toBeUndefined();
+      expect(request.limitContext).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('clears saved draft model when same-provider draft launch requests default over HTTP', async () => {
+    const { app, createTeam, getSavedRequest } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'draft-team',
+      displayName: 'Draft Team',
+      cwd: '/Users/test/saved-project',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.2',
+      effort: 'medium',
+      limitContext: false,
+      members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-draft-codex-default' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/draft-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: null,
+          effort: 'low',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const [request] = createTeam.mock.calls.at(-1)!;
+      expect(request).toMatchObject({
+        teamName: 'draft-team',
+        cwd: '/Users/test/project',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        effort: 'low',
+      });
+      expect(request.model).toBeUndefined();
     } finally {
       await app.close();
     }

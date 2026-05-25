@@ -59,6 +59,29 @@ Desktop launches use the app-managed process backend by default. That is the sup
 normal app launches because the app owns the process lifecycle, runtime logs, cleanup, and bootstrap
 evidence.
 
+## Live Smoke Runtime Launcher
+
+Live/dev smoke tests should use the orchestrator source launcher by default:
+
+```bash
+CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source \
+  pnpm vitest run --maxWorkers 1 --minWorkers 1 test/main/services/team/AnthropicLaunchSelection.live.test.ts
+```
+
+`cli-source` runs `src/entrypoints/cli.tsx` directly through Bun. Use it while developing launch/runtime code so the smoke test cannot accidentally pass or fail against a stale `dist/local-cli/cli.js` bundle.
+
+For release or production-like smoke checks, test the built wrapper explicitly:
+
+```bash
+cd /Users/belief/dev/projects/claude/agent_teams_orchestrator
+bun run build
+cd /Users/belief/dev/projects/claude/claude_team
+CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli \
+  pnpm vitest run --maxWorkers 1 --minWorkers 1 test/main/services/team/AnthropicLaunchSelection.live.test.ts
+```
+
+The built wrapper `cli` reads `dist/local-cli/cli.js`. `cli-dev` reads `dist/local-cli-dev/cli.js`; it is useful for dev-bundle checks, but it is not the production wrapper.
+
 For local debugging, force pane-backed teammates through `tmux`:
 
 ```bash
@@ -80,6 +103,40 @@ Expected behavior:
 Use this mode to inspect interactive CLI behavior, terminal prompts, and pane output. Do not treat it
 as equivalent to the process backend for recovery semantics; persisted pane IDs can help discovery,
 but app restart does not make old panes a fully app-owned runtime again.
+
+## Live Smoke Runtime Launcher
+
+Live/dev smoke checks should run the orchestrator from source unless the test explicitly says it is
+validating packaged output. This keeps app smoke tests aligned with the source tree and avoids a stale
+`dist` bundle hiding runtime changes.
+
+Default live/dev smoke launcher:
+
+```bash
+export CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source
+```
+
+The source launcher executes `src/entrypoints/cli.tsx` through Bun. It is the right default for local
+debug loops, live model/provider checks, and cross-repo runtime fixes.
+It normalizes inherited `NODE_ENV=production` to `NODE_ENV=development`, because source smoke is a
+dev/runtime validation path. If you need production semantics, run the release smoke path below.
+Local live/prove scripts should resolve their default CLI through `scripts/lib/live-smoke-runtime.mjs`,
+which points at `cli-source` unless `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH` is explicitly set.
+Source-mode teammate startup can be slower than bundled startup, so live smoke harnesses may set
+`CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS` and
+`CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS` to larger values when they are validating source
+behavior instead of watchdog latency.
+
+Release or production-like smoke checks must validate the built wrapper:
+
+```bash
+cd /Users/belief/dev/projects/claude/agent_teams_orchestrator
+bun run build
+export CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli
+```
+
+`cli` reads `dist/local-cli/cli.js`. `cli-dev` reads `dist/local-cli-dev/cli.js`, so a passing
+`cli-dev` smoke is not proof that the production wrapper is fresh.
 
 ## Member State Meanings
 

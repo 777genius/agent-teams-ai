@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -270,8 +271,9 @@ describe('ProvisioningProgressBlock', () => {
           defaultLiveOutputOpen: true,
           startedAt: '2026-04-28T12:00:00.000Z',
           pid: 321,
-          assistantOutput: 'Launch trace line',
-          cliLogsTail: '[stderr] OPENAI_API_KEY=secret-value\n[stdout] booted',
+          assistantOutput: 'Launch trace line Authorization: Bearer assistant-token',
+          cliLogsTail:
+            '[stderr] OPENAI_API_KEY=secret-value ANTHROPIC_AUTH_TOKEN="local token"\n[stdout] booted',
           warnings: ['Large Codex team launch: 9 primary teammates will bootstrap in one runtime.'],
           launchDiagnostics: [
             {
@@ -316,8 +318,12 @@ describe('ProvisioningProgressBlock', () => {
     expect(copied).toContain('Launch trace line');
     expect(copied).toContain('[stdout] booted');
     expect(copied).toContain('OPENAI_API_KEY=[redacted]');
+    expect(copied).toContain('ANTHROPIC_AUTH_TOKEN=[redacted]');
+    expect(copied).toContain('Authorization: Bearer [redacted]');
     expect(copied).toContain('--api-key [redacted]');
     expect(copied).not.toContain('secret-value');
+    expect(copied).not.toContain('local token');
+    expect(copied).not.toContain('assistant-token');
     expect(copied).not.toContain('hidden-value');
 
     await act(async () => {

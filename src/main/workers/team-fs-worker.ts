@@ -191,6 +191,7 @@ interface RawMember {
   name?: unknown;
   agentType?: unknown;
   role?: unknown;
+  cwd?: unknown;
   color?: unknown;
   providerId?: unknown;
   provider?: unknown;
@@ -666,6 +667,59 @@ function isRawMember(v: unknown): v is RawMember {
   return !!v && typeof v === 'object';
 }
 
+function normalizeProjectPathCandidate(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function getRawConfigMembers(config: Pick<ParsedConfig, 'members'>): RawMember[] {
+  if (!Array.isArray(config.members)) {
+    return [];
+  }
+  return config.members.filter(isRawMember);
+}
+
+function resolveProjectPathFromConfig(
+  config: Pick<ParsedConfig, 'projectPath' | 'projectPathHistory' | 'members'>
+): string | undefined {
+  const direct = normalizeProjectPathCandidate(config.projectPath);
+  if (direct) {
+    return direct;
+  }
+
+  const members = getRawConfigMembers(config);
+  const leadMemberCwd = members.find((member) => isLeadMember(member))?.cwd;
+  const leadResolved = normalizeProjectPathCandidate(leadMemberCwd);
+  if (leadResolved) {
+    return leadResolved;
+  }
+
+  const distinctMemberCwds = Array.from(
+    new Set(
+      members
+        .map((member) => normalizeProjectPathCandidate(member.cwd))
+        .filter((cwd): cwd is string => Boolean(cwd))
+    )
+  );
+  if (distinctMemberCwds.length === 1) {
+    return distinctMemberCwds[0];
+  }
+
+  if (Array.isArray(config.projectPathHistory)) {
+    for (let i = config.projectPathHistory.length - 1; i >= 0; i -= 1) {
+      const historyValue = normalizeProjectPathCandidate(config.projectPathHistory[i]);
+      if (historyValue) {
+        return historyValue;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function mergeMember(
   m: RawMember,
   memberMap: Map<string, { name: string; role?: string; color?: string }>,
@@ -981,10 +1035,7 @@ async function listTeams(
           typeof config.color === 'string' && config.color.trim().length > 0
             ? config.color
             : undefined;
-        projectPath =
-          typeof config.projectPath === 'string' && config.projectPath.trim().length > 0
-            ? config.projectPath
-            : undefined;
+        projectPath = resolveProjectPathFromConfig(config);
         leadSessionId =
           typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0
             ? config.leadSessionId

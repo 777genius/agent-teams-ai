@@ -2,8 +2,9 @@
  * NotificationsSection - Notification settings including triggers and ignored repositories.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import {
   RepositoryDropdown,
@@ -45,15 +46,27 @@ type NotifiableStatus =
   | TeamTaskStatus
   | Extract<TeamReviewState, 'review' | 'needsFix' | 'approved'>;
 
-// Snooze duration options
 const SNOOZE_OPTIONS = [
-  { value: 15, label: '15 minutes' },
-  { value: 30, label: '30 minutes' },
-  { value: 60, label: '1 hour' },
-  { value: 120, label: '2 hours' },
-  { value: 240, label: '4 hours' },
-  { value: -1, label: 'Until tomorrow' },
+  { value: 15, labelKey: 'notifications.snooze.options.15' },
+  { value: 30, labelKey: 'notifications.snooze.options.30' },
+  { value: 60, labelKey: 'notifications.snooze.options.60' },
+  { value: 120, labelKey: 'notifications.snooze.options.120' },
+  { value: 240, labelKey: 'notifications.snooze.options.240' },
+  { value: -1, labelKey: 'notifications.snooze.options.-1' },
 ] as const;
+
+const STATUS_OPTIONS = [
+  {
+    value: 'in_progress',
+    labelKey: 'notifications.team.statusChange.statuses.options.in_progress',
+  },
+  { value: 'completed', labelKey: 'notifications.team.statusChange.statuses.options.completed' },
+  { value: 'review', labelKey: 'notifications.team.statusChange.statuses.options.review' },
+  { value: 'needsFix', labelKey: 'notifications.team.statusChange.statuses.options.needsFix' },
+  { value: 'approved', labelKey: 'notifications.team.statusChange.statuses.options.approved' },
+  { value: 'pending', labelKey: 'notifications.team.statusChange.statuses.options.pending' },
+  { value: 'deleted', labelKey: 'notifications.team.statusChange.statuses.options.deleted' },
+] as const satisfies readonly { value: NotifiableStatus; labelKey: string }[];
 
 interface NotificationsSectionProps {
   readonly safeConfig: SafeConfig;
@@ -109,8 +122,17 @@ export const NotificationsSection = ({
   onRemoveTrigger,
   onStatusChangeStatusesUpdate,
 }: NotificationsSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('settings');
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string | null>(null);
+  const snoozeOptions = useMemo(
+    () =>
+      SNOOZE_OPTIONS.map((option) => ({
+        value: option.value,
+        label: t(option.labelKey),
+      })),
+    [t]
+  );
 
   const handleTestNotification = async (): Promise<void> => {
     setTestStatus('sending');
@@ -122,13 +144,13 @@ export const NotificationsSection = ({
         setTimeout(() => setTestStatus('idle'), 3000);
       } else {
         setTestStatus('error');
-        setTestError(result.error ?? 'Unknown error');
+        setTestError(result.error ?? t('notifications.test.unknownError'));
         setTimeout(() => setTestStatus('idle'), 5000);
       }
     } catch (err) {
       console.error('[notifications] testNotification failed:', err);
       setTestStatus('error');
-      const message = err instanceof Error ? err.message : 'Failed to send test notification';
+      const message = err instanceof Error ? err.message : t('notifications.test.failedToSend');
       setTestError(message);
       setTimeout(() => setTestStatus('idle'), 5000);
     }
@@ -149,22 +171,26 @@ export const NotificationsSection = ({
         >
           <Info className="mt-0.5 size-4 shrink-0 text-yellow-500" />
           <div>
-            <div className="text-sm font-medium text-yellow-500">Dev Mode</div>
+            <div className="text-sm font-medium text-yellow-500">
+              {t('notifications.dev.title')}
+            </div>
             <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Notifications may not work in development mode. macOS identifies the app as
-              &quot;Electron&quot; (bundle ID <code className="text-xs">com.github.Electron</code>)
-              instead of the production app name. Check System Settings → Notifications → Electron
-              to verify permissions.
+              {t('notifications.dev.descriptionPrefix')}{' '}
+              <code className="text-xs">com.github.Electron</code>{' '}
+              {t('notifications.dev.descriptionSuffix')}
             </div>
           </div>
         </div>
       ) : null}
 
       {/* Notification Settings */}
-      <SettingsSectionHeader title="Notification Settings" icon={<Bell className="size-3.5" />} />
+      <SettingsSectionHeader
+        title={t('notifications.settings.title')}
+        icon={<Bell className="size-3.5" />}
+      />
       <SettingRow
-        label="Enable System Notifications"
-        description="Show system notifications for errors and events"
+        label={t('notifications.settings.enabled.label')}
+        description={t('notifications.settings.enabled.description')}
         icon={<BellRing className="size-4" />}
       >
         <SettingsToggle
@@ -174,8 +200,8 @@ export const NotificationsSection = ({
         />
       </SettingRow>
       <SettingRow
-        label="Play sound"
-        description="Play a sound when notifications appear"
+        label={t('notifications.settings.sound.label')}
+        description={t('notifications.settings.sound.description')}
         icon={<Volume2 className="size-4" />}
       >
         <SettingsToggle
@@ -185,8 +211,8 @@ export const NotificationsSection = ({
         />
       </SettingRow>
       <SettingRow
-        label="Include subagent errors"
-        description="Detect and notify about errors in subagent sessions"
+        label={t('notifications.settings.subagentErrors.label')}
+        description={t('notifications.settings.subagentErrors.description')}
         icon={<AlertTriangle className="size-4" />}
       >
         <SettingsToggle
@@ -196,13 +222,13 @@ export const NotificationsSection = ({
         />
       </SettingRow>
       <SettingRow
-        label="Test notification"
-        description="Send a test notification to verify delivery"
+        label={t('notifications.test.label')}
+        description={t('notifications.test.description')}
         icon={<Send className="size-4" />}
       >
         <div className="flex items-center gap-2">
           {testStatus === 'success' ? (
-            <span className="text-xs text-green-400">Sent!</span>
+            <span className="text-xs text-green-400">{t('notifications.test.sent')}</span>
           ) : testStatus === 'error' ? (
             <span className="max-w-48 truncate text-xs text-red-400">{testError}</span>
           ) : null}
@@ -219,16 +245,20 @@ export const NotificationsSection = ({
               color: 'var(--color-text)',
             }}
           >
-            {testStatus === 'sending' ? 'Sending...' : 'Send Test'}
+            {testStatus === 'sending'
+              ? t('notifications.test.sending')
+              : t('notifications.test.action')}
           </button>
         </div>
       </SettingRow>
       <SettingRow
-        label="Snooze notifications"
+        label={t('notifications.snooze.label')}
         description={
           isSnoozed
-            ? `Snoozed until ${new Date(safeConfig.notifications.snoozedUntil!).toLocaleTimeString()}`
-            : 'Temporarily pause notifications'
+            ? t('notifications.snooze.descriptionWithTime', {
+                time: new Date(safeConfig.notifications.snoozedUntil!).toLocaleTimeString(),
+              })
+            : t('notifications.snooze.description')
         }
         icon={<Clock className="size-4" />}
       >
@@ -239,12 +269,15 @@ export const NotificationsSection = ({
               disabled={saving}
               className={`rounded-md bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400 transition-all duration-150 hover:bg-red-500/20 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
             >
-              Clear Snooze
+              {t('notifications.snooze.clear')}
             </button>
           ) : (
             <SettingsSelect
               value={0}
-              options={[{ value: 0, label: 'Select duration...' }, ...SNOOZE_OPTIONS]}
+              options={[
+                { value: 0, label: t('notifications.snooze.selectDuration') },
+                ...snoozeOptions,
+              ]}
               onChange={(v) => v !== 0 && onSnooze(v)}
               disabled={saving || !safeConfig.notifications.enabled}
               dropUp
@@ -254,7 +287,10 @@ export const NotificationsSection = ({
       </SettingRow>
 
       {/* Team Notifications — grouped card */}
-      <SettingsSectionHeader title="Team Notifications" icon={<Users className="size-3.5" />} />
+      <SettingsSectionHeader
+        title={t('notifications.team.title')}
+        icon={<Users className="size-3.5" />}
+      />
       <div
         className="mb-4 rounded-lg border p-4"
         style={{
@@ -263,8 +299,8 @@ export const NotificationsSection = ({
         }}
       >
         <SettingRow
-          label="Lead inbox notifications"
-          description="Notify when teammates send messages to the team lead"
+          label={t('notifications.team.leadInbox.label')}
+          description={t('notifications.team.leadInbox.description')}
           icon={<Inbox className="size-4" />}
         >
           <SettingsToggle
@@ -274,8 +310,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="User inbox notifications"
-          description="Notify when teammates send messages to you"
+          label={t('notifications.team.userInbox.label')}
+          description={t('notifications.team.userInbox.description')}
           icon={<Mail className="size-4" />}
         >
           <SettingsToggle
@@ -285,8 +321,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Task clarification notifications"
-          description="Show native OS notifications when a task needs your input"
+          label={t('notifications.team.clarifications.label')}
+          description={t('notifications.team.clarifications.description')}
           icon={<HelpCircle className="size-4" />}
         >
           <SettingsToggle
@@ -296,8 +332,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Task comment notifications"
-          description="Show native OS notifications when agents comment on tasks"
+          label={t('notifications.team.taskComments.label')}
+          description={t('notifications.team.taskComments.description')}
           icon={<MessageSquare className="size-4" />}
         >
           <SettingsToggle
@@ -307,8 +343,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Task created notifications"
-          description="Show native OS notifications when a new task is created"
+          label={t('notifications.team.taskCreated.label')}
+          description={t('notifications.team.taskCreated.description')}
           icon={<CirclePlus className="size-4" />}
         >
           <SettingsToggle
@@ -318,8 +354,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="All tasks completed"
-          description="Notify when every task in a team reaches completed status"
+          label={t('notifications.team.allTasksCompleted.label')}
+          description={t('notifications.team.allTasksCompleted.description')}
           icon={<CheckCircle2 className="size-4" />}
         >
           <SettingsToggle
@@ -329,8 +365,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Cross-team message notifications"
-          description="Notify when a message arrives from another team"
+          label={t('notifications.team.crossTeamMessage.label')}
+          description={t('notifications.team.crossTeamMessage.description')}
           icon={<GitBranch className="size-4" />}
         >
           <SettingsToggle
@@ -340,8 +376,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Team launched notifications"
-          description="Notify when a team finishes launching and is ready"
+          label={t('notifications.team.teamLaunched.label')}
+          description={t('notifications.team.teamLaunched.description')}
           icon={<Rocket className="size-4" />}
         >
           <SettingsToggle
@@ -351,8 +387,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Tool approval notifications"
-          description="Notify when a tool needs your approval (Allow/Deny) while the app is not focused"
+          label={t('notifications.team.toolApproval.label')}
+          description={t('notifications.team.toolApproval.description')}
           icon={<ShieldQuestion className="size-4" />}
         >
           <SettingsToggle
@@ -362,8 +398,8 @@ export const NotificationsSection = ({
           />
         </SettingRow>
         <SettingRow
-          label="Auto-resume after rate limit"
-          description="When Claude reports a reset time, schedule a follow-up nudge for the team lead after the limit resets"
+          label={t('notifications.team.autoResumeOnRateLimit.label')}
+          description={t('notifications.team.autoResumeOnRateLimit.description')}
           icon={<Clock className="size-4" />}
         >
           <SettingsToggle
@@ -376,8 +412,8 @@ export const NotificationsSection = ({
         {/* Task Status Change Notifications — nested within team card */}
         <div className="last:*:border-b-0">
           <SettingRow
-            label="Task status change notifications"
-            description="Show native OS notifications when a task's status changes"
+            label={t('notifications.team.statusChange.label')}
+            description={t('notifications.team.statusChange.description')}
             icon={<ArrowRightLeft className="size-4" />}
           >
             <SettingsToggle
@@ -397,10 +433,10 @@ export const NotificationsSection = ({
                     className="text-sm font-medium"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    Only in Solo mode
+                    {t('notifications.team.statusChange.onlySolo.label')}
                   </div>
                   <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    Notify only when the team has no teammates
+                    {t('notifications.team.statusChange.onlySolo.description')}
                   </div>
                 </div>
                 <div className="shrink-0">
@@ -417,16 +453,17 @@ export const NotificationsSection = ({
                     className="text-sm font-medium"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    Notify on these statuses
+                    {t('notifications.team.statusChange.statuses.label')}
                   </div>
                   <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    Which target statuses trigger a notification
+                    {t('notifications.team.statusChange.statuses.description')}
                   </div>
                 </div>
                 <StatusCheckboxGroup
                   selected={safeConfig.notifications.statusChangeStatuses}
                   onChange={onStatusChangeStatusesUpdate}
                   disabled={saving}
+                  t={t}
                 />
               </div>
             </div>
@@ -443,9 +480,12 @@ export const NotificationsSection = ({
         onRemoveTrigger={onRemoveTrigger}
       />
 
-      <SettingsSectionHeader title="Ignored Repositories" icon={<EyeOff className="size-3.5" />} />
+      <SettingsSectionHeader
+        title={t('notifications.ignoredRepositories.title')}
+        icon={<EyeOff className="size-3.5" />}
+      />
       <p className="mb-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-        Notifications from these repositories will be ignored
+        {t('notifications.ignoredRepositories.description')}
       </p>
       {ignoredRepositoryItems.length > 0 ? (
         <div className="mb-3">
@@ -464,21 +504,21 @@ export const NotificationsSection = ({
           style={{ borderColor: 'var(--color-border)' }}
         >
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            No repositories ignored
+            {t('notifications.ignoredRepositories.empty')}
           </p>
         </div>
       )}
       <RepositoryDropdown
         onSelect={onAddIgnoredRepository}
         excludeIds={excludedRepositoryIds}
-        placeholder="Select repository to ignore..."
+        placeholder={t('notifications.ignoredRepositories.selectPlaceholder')}
         disabled={saving}
         dropUp
       />
 
       {/* Task Completion Notifications */}
       <SettingsSectionHeader
-        title="Task Completion Notifications"
+        title={t('notifications.taskCompletion.title')}
         icon={<PartyPopper className="size-3.5" />}
       />
       <div
@@ -489,8 +529,7 @@ export const NotificationsSection = ({
         }}
       >
         <p className="mb-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Get native OS notifications when Claude finishes tasks — sounds, banners, and Dock/taskbar
-          badges. Works on macOS, Linux, and Windows.
+          {t('notifications.taskCompletion.description')}
         </p>
         <button
           onClick={() =>
@@ -503,44 +542,36 @@ export const NotificationsSection = ({
           }}
         >
           <ExternalLink className="size-3.5" />
-          Install claude-notifications-go plugin
+          {t('notifications.taskCompletion.installPlugin')}
         </button>
       </div>
     </div>
   );
 };
 
-const STATUS_OPTIONS: { value: NotifiableStatus; label: string }[] = [
-  { value: 'in_progress', label: 'Started' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'review', label: 'Review' },
-  { value: 'needsFix', label: 'Needs Fixes' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'deleted', label: 'Deleted' },
-];
-
 const StatusCheckboxGroup = ({
   selected,
   onChange,
   disabled,
+  t,
 }: {
   selected: string[];
   onChange: (statuses: string[]) => void;
   disabled: boolean;
+  t: ReturnType<typeof useAppTranslation>['t'];
 }) => (
   <div className="flex flex-wrap gap-2">
-    {STATUS_OPTIONS.map((opt) => {
-      const checked = selected.includes(opt.value);
+    {STATUS_OPTIONS.map((option) => {
+      const checked = selected.includes(option.value);
       return (
         <button
-          key={opt.value}
+          key={option.value}
           type="button"
           disabled={disabled}
           onClick={() => {
             const next = checked
-              ? selected.filter((s) => s !== opt.value)
-              : [...selected, opt.value];
+              ? selected.filter((selectedStatus) => selectedStatus !== option.value)
+              : [...selected, option.value];
             onChange(next);
           }}
           className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
@@ -549,7 +580,7 @@ const StatusCheckboxGroup = ({
               : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
           } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
         >
-          {opt.label}
+          {t(option.labelKey)}
         </button>
       );
     })}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
@@ -113,6 +114,8 @@ export const SendMessageDialog = ({
   onSend,
   onClose,
 }: SendMessageDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
   const [quote, setQuote] = useState<QuotedMessage | undefined>(undefined);
@@ -167,13 +170,13 @@ export const SendMessageDialog = ({
   const canAttach = supportsAttachments && canAddMore;
   const attachmentRestrictionReason = !supportsAttachments
     ? !isTeamAlive
-      ? 'Team must be online to attach files'
+      ? t('sendMessage.attachments.teamOnlineRequired')
       : !showAttachmentControl
-        ? 'Files can be sent to the team lead or OpenCode teammates'
+        ? t('sendMessage.attachments.recipientUnsupported')
         : (memberAttachmentUnavailableReason ??
           (isOpenCodeRecipient
-            ? 'Team must be online to attach files for OpenCode teammates'
-            : 'Team must be online to attach files'))
+            ? t('sendMessage.attachments.openCodeOnlineRequired')
+            : t('sendMessage.attachments.teamOnlineRequired')))
     : undefined;
 
   // Auto-switch to delegate when lead recipient is selected, but don't
@@ -334,7 +337,7 @@ export const SendMessageDialog = ({
     setFileRestrictionError(
       attachmentRestrictionReason ??
         attachmentPayloadRestrictionReason ??
-        'Files can be sent to the team lead or OpenCode teammates'
+        t('sendMessage.attachments.recipientUnsupported')
     );
     window.clearTimeout(fileRestrictionTimerRef.current);
     fileRestrictionTimerRef.current = window.setTimeout(() => {
@@ -467,25 +470,25 @@ export const SendMessageDialog = ({
         />
 
         <DialogHeader>
-          <DialogTitle>Send Message</DialogTitle>
-          <DialogDescription>Send a direct message to a team member.</DialogDescription>
+          <DialogTitle>{t('sendMessage.title')}</DialogTitle>
+          <DialogDescription>{t('sendMessage.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label htmlFor="smd-recipient">Recipient</Label>
+            <Label htmlFor="smd-recipient">{t('sendMessage.recipientLabel')}</Label>
             <MemberSelect
               members={members}
               value={member || null}
               onChange={(v) => setMember(v ?? '')}
-              placeholder="Select member..."
+              placeholder={t('sendMessage.selectMemberPlaceholder')}
               size="sm"
             />
           </div>
 
           <div className="grid gap-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor="smd-message">Message</Label>
+              <Label htmlFor="smd-message">{t('sendMessage.messageLabel')}</Label>
               {showAttachmentControl ? (
                 <>
                   <input
@@ -513,8 +516,8 @@ export const SendMessageDialog = ({
                     </TooltipTrigger>
                     <TooltipContent side="top">
                       {canAttach
-                        ? 'Attach files (paste or drag & drop)'
-                        : (attachmentRestrictionReason ?? 'Attachments are unavailable')}
+                        ? t('sendMessage.attachments.attachFiles')
+                        : (attachmentRestrictionReason ?? t('sendMessage.attachments.unavailable'))}
                     </TooltipContent>
                   </Tooltip>
                 </>
@@ -530,7 +533,7 @@ export const SendMessageDialog = ({
               disabledHint={
                 attachmentPayloadRestrictionReason ??
                 attachmentRestrictionReason ??
-                'File attachments are supported for the online team lead and online OpenCode teammates. Remove attachments or switch recipient.'
+                t('sendMessage.attachments.disabledHint')
               }
             />
 
@@ -552,12 +555,12 @@ export const SendMessageDialog = ({
                         <X size={12} />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="left">Remove quote</TooltipContent>
+                    <TooltipContent side="left">{t('sendMessage.quote.remove')}</TooltipContent>
                   </Tooltip>
 
                   <div className="mb-1 flex items-center gap-1.5">
                     <span className="text-[10px] text-blue-600/70 dark:text-blue-300/60">
-                      Replying to
+                      {t('sendMessage.quote.replyingTo')}
                     </span>
                     <MemberBadge name={quote.from} color={colorMap.get(quote.from)} size="sm" />
                   </div>
@@ -576,7 +579,7 @@ export const SendMessageDialog = ({
                       className="mt-0.5 text-[10px] text-blue-500 hover:text-blue-700 dark:text-blue-400/60 dark:hover:text-blue-300"
                       onClick={() => setQuoteExpanded((v) => !v)}
                     >
-                      {quoteExpanded ? 'less' : 'more'}
+                      {quoteExpanded ? tCommon('actions.showLess') : tCommon('actions.showMore')}
                     </button>
                   ) : null}
                 </div>
@@ -584,7 +587,7 @@ export const SendMessageDialog = ({
               <MentionableTextarea
                 id="smd-message"
                 className={quote ? 'rounded-t-none' : undefined}
-                placeholder="Write your message... (Enter to send)"
+                placeholder={t('sendMessage.placeholder')}
                 value={textDraft.value}
                 onValueChange={textDraft.setValue}
                 suggestions={mentionSuggestions}
@@ -614,7 +617,7 @@ export const SendMessageDialog = ({
                     onClick={handleSubmit}
                   >
                     <Send size={12} />
-                    {sending ? 'Sending...' : 'Send'}
+                    {sending ? t('sendMessage.sending') : t('sendMessage.send')}
                   </button>
                 }
                 footerRight={
@@ -635,11 +638,13 @@ export const SendMessageDialog = ({
                         <span
                           className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
                         >
-                          {remaining} chars left
+                          {t('sendMessage.charsLeft', { count: remaining })}
                         </span>
                       ) : null}
                       {textDraft.isSaved ? (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                          {t('sendMessage.saved')}
+                        </span>
                       ) : null}
                     </div>
                   </div>

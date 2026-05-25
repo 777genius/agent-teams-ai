@@ -61,4 +61,22 @@ describe('ScopeWarningBanner', () => {
 
     await cleanup();
   });
+
+  it('uses work-interval wording for legacy interval-scoped task changes', async () => {
+    const { host, cleanup } = await renderBanner({
+      sourceKind: 'legacy',
+      confidence: {
+        tier: 2,
+        label: 'medium',
+        reason: 'Scoped by persisted task workIntervals (timestamp-based)',
+      },
+      warnings: ['Task start boundary missing - scoped by persisted workIntervals timestamps.'],
+    });
+
+    expect(host.textContent).toContain('Scoped by persisted work interval');
+    expect(host.textContent).toContain('Interval scoped');
+    expect(host.textContent).not.toContain('End boundary estimated');
+
+    await cleanup();
+  });
 });

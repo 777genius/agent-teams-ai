@@ -75,6 +75,7 @@ vi.mock('../../../../src/main/services/team/atomicWrite', () => ({
 
 vi.mock('../../../../src/main/services/team/fileLock', () => ({
   withFileLock: async (_filePath: string, fn: () => Promise<unknown>) => await fn(),
+  withFileLockSync: (_filePath: string, fn: () => unknown) => fn(),
 }));
 
 vi.mock('../../../../src/main/services/team/inboxLock', () => ({
@@ -114,7 +115,6 @@ vi.mock('agent-teams-controller', () => ({
   },
 }));
 
-import type { TeamChangeEvent } from '@shared/types/team';
 import { ConfigManager } from '../../../../src/main/services/infrastructure/ConfigManager';
 import {
   clearAutoResumeService,
@@ -122,6 +122,8 @@ import {
   initializeAutoResumeService,
 } from '../../../../src/main/services/team/AutoResumeService';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+
+import type { TeamChangeEvent } from '@shared/types/team';
 
 function seedConfig(teamName: string): void {
   hoisted.files.set(
@@ -165,9 +167,11 @@ interface RunLike {
   processKilled: boolean;
   cancelRequested: boolean;
   provisioningOutputParts: string[];
+  provisioningOutputIndexByMessageId: Map<string, number>;
   request: { members: { name: string; role?: string }[] };
   activeCrossTeamReplyHints?: Array<{ toTeam: string; conversationId: string }>;
   pendingInboxRelayCandidates?: unknown[];
+  liveLeadTextBuffer?: unknown;
   memberSpawnStatuses: Map<string, unknown>;
   pendingApprovals: Map<string, unknown>;
 }
@@ -209,8 +213,10 @@ function attachRun(
     processKilled: false,
     cancelRequested: false,
     provisioningOutputParts: [],
+    provisioningOutputIndexByMessageId: new Map(),
     request: { members: [{ name: 'team-lead', role: 'Team Lead' }] },
     activeCrossTeamReplyHints: [],
+    liveLeadTextBuffer: null,
     memberSpawnStatuses: new Map(),
     pendingApprovals: new Map(),
   };
@@ -258,6 +264,38 @@ describe('TeamProvisioningService pre-ready live messages', () => {
 
     // Also still in provisioningOutputParts for the banner
     expect(run.provisioningOutputParts).toHaveLength(1);
+  });
+
+  it('coalesces Codex synthetic chunks through stream handling without dropping spaces', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const run = attachRun(service, 'my-team', { provisioningComplete: false });
+
+    const emitSyntheticText = (text: string, timestamp: string): void => {
+      callHandleStreamJsonMessage(service, run, {
+        type: 'assistant',
+        timestamp,
+        message: {
+          id: `msg-${timestamp}`,
+          model: '<synthetic>',
+          type: 'message',
+          content: [{ type: 'text', text }],
+        },
+      });
+    };
+
+    emitSyntheticText('Пр', '2026-04-17T12:00:00.000Z');
+    emitSyntheticText('ин', '2026-04-17T12:00:00.010Z');
+    emitSyntheticText('ял', '2026-04-17T12:00:00.020Z');
+    emitSyntheticText(':', '2026-04-17T12:00:00.030Z');
+    emitSyntheticText(' раз', '2026-04-17T12:00:00.040Z');
+    emitSyntheticText('лож', '2026-04-17T12:00:00.050Z');
+    emitSyntheticText('у', '2026-04-17T12:00:00.060Z');
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].text).toBe('Принял: разложу');
+    expect(live[0].messageId).toBe('lead-turn-run-1-1');
   });
 
   it('attaches leadSessionId to a live message when the same assistant payload carries session_id', () => {
@@ -1007,9 +1045,14 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     ]);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    (service as any).rememberRecentCrossTeamLeadDeliveryMessageIds('my-team', [
-      'm-native-cross-team-dup',
-    ]);
+    (
+      service as unknown as {
+        rememberRecentCrossTeamLeadDeliveryMessageIds: (
+          teamName: string,
+          messageIds: string[]
+        ) => void;
+      }
+    ).rememberRecentCrossTeamLeadDeliveryMessageIds('my-team', ['m-native-cross-team-dup']);
 
     callHandleStreamJsonMessage(service, run, {
       type: 'user',

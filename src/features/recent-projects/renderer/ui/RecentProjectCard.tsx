@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { ActivePulseIndicator } from '@renderer/components/ui/ActivePulseIndicator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -20,6 +21,8 @@ export const RecentProjectCard = ({
   onClick,
   onOpenPath,
 }: Readonly<RecentProjectCardProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('dashboard');
+  const { t: tCommon } = useAppTranslation('common');
   const color = useMemo(() => projectColor(card.name), [card.name]);
   const isDeleted = card.filesystemState === 'deleted';
   const FolderIcon = isDeleted ? FolderX : FolderGit2;
@@ -53,10 +56,12 @@ export const RecentProjectCard = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex shrink-0 items-center rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-medium text-red-300">
-                    Deleted
+                    {t('recentProjects.card.deleted')}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Project folder no longer exists</TooltipContent>
+                <TooltipContent side="bottom">
+                  {t('recentProjects.card.projectFolderMissing')}
+                </TooltipContent>
               </Tooltip>
             )}
             {card.pathSummary && (
@@ -134,7 +139,7 @@ export const RecentProjectCard = ({
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {isDeleted ? 'Project folder no longer exists' : 'Open'}
+            {isDeleted ? t('recentProjects.card.projectFolderMissing') : tCommon('actions.open')}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -164,17 +169,23 @@ export const RecentProjectCard = ({
             <>
               {card.taskCounts.inProgress > 0 && (
                 <span className="inline-flex items-center rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
-                  {card.taskCounts.inProgress} active
+                  {t('recentProjects.card.taskCounts.active', {
+                    count: card.taskCounts.inProgress,
+                  })}
                 </span>
               )}
               {card.taskCounts.pending > 0 && (
                 <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
-                  {card.taskCounts.pending} pending
+                  {t('recentProjects.card.taskCounts.pending', {
+                    count: card.taskCounts.pending,
+                  })}
                 </span>
               )}
               {card.taskCounts.completed > 0 && (
                 <span className="inline-flex items-center rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
-                  {card.taskCounts.completed} done
+                  {t('recentProjects.card.taskCounts.done', {
+                    count: card.taskCounts.completed,
+                  })}
                 </span>
               )}
               <span className="text-text-muted">·</span>

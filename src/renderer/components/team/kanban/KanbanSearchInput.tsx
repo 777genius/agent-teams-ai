@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { TASK_STATUS_LABELS } from '@renderer/utils/memberHelpers';
@@ -29,6 +30,7 @@ export const KanbanSearchInput = ({
   tasks,
   members,
 }: KanbanSearchInputProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -130,7 +132,7 @@ export const KanbanSearchInput = ({
       <input
         ref={inputRef}
         type="text"
-        placeholder="Search tasks... (#id or text)"
+        placeholder={t('kanban.search.placeholder')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -147,7 +149,7 @@ export const KanbanSearchInput = ({
               <X size={14} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Clear search</TooltipContent>
+          <TooltipContent side="bottom">{t('kanban.search.clearSearch')}</TooltipContent>
         </Tooltip>
       )}
 
@@ -160,7 +162,7 @@ export const KanbanSearchInput = ({
           <div className="flex items-center gap-1.5 px-3 py-1.5">
             <Hash size={10} className="text-[var(--color-text-muted)]" />
             <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-              Tasks
+              {t('kanban.search.tasks')}
             </span>
           </div>
           {suggestions.map((task, index) => (
@@ -201,6 +203,7 @@ const TaskSuggestionItem = React.memo(function TaskSuggestionItem({
   onSelect,
   onHover,
 }: TaskSuggestionItemProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const displayId = getTaskDisplayId(task);
   const statusLabel = TASK_STATUS_LABELS[task.status] ?? task.status;
   const memberColorMap = useMemo(() => {
@@ -272,10 +275,14 @@ const TaskSuggestionItem = React.memo(function TaskSuggestionItem({
             />
           )}
           {createdAgo && (
-            <span className="text-[9px] text-[var(--color-text-muted)]">created {createdAgo}</span>
+            <span className="text-[9px] text-[var(--color-text-muted)]">
+              {t('kanban.search.createdAgo', { time: createdAgo })}
+            </span>
           )}
           {updatedAgo && updatedAgo !== createdAgo && (
-            <span className="text-[9px] text-[var(--color-text-muted)]">updated {updatedAgo}</span>
+            <span className="text-[9px] text-[var(--color-text-muted)]">
+              {t('kanban.search.updatedAgo', { time: updatedAgo })}
+            </span>
           )}
         </div>
       </div>

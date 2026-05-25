@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
   Tooltip,
@@ -48,6 +49,7 @@ export const InstallButton = ({
   cliStatus: cliStatusOverride,
   cliStatusLoading: cliStatusLoadingOverride,
 }: InstallButtonProps) => {
+  const { t } = useAppTranslation('extensions');
   const { cliStatus: storedCliStatus, cliStatusLoading: storedCliStatusLoading } = useStore(
     useShallow((s) => ({
       cliStatus: s.cliStatus,
@@ -77,7 +79,9 @@ export const InstallButton = ({
       <Button size={size} variant="outline" disabled>
         <Loader2 className="size-3.5 animate-spin" />
         <span className="ml-1.5">
-          {pendingAction === 'uninstall' ? 'Removing...' : 'Installing...'}
+          {pendingAction === 'uninstall'
+            ? t('installButton.removing')
+            : t('installButton.installing')}
         </span>
       </Button>
     );
@@ -87,7 +91,7 @@ export const InstallButton = ({
     return (
       <Button size={size} variant="outline" disabled className="text-green-400">
         <Check className="size-3.5" />
-        <span className="ml-1.5">Done</span>
+        <span className="ml-1.5">{t('installButton.done')}</span>
       </Button>
     );
   }
@@ -111,7 +115,7 @@ export const InstallButton = ({
         }}
         disabled={isDisabled}
       >
-        <span>Retry</span>
+        <span>{t('installButton.retry')}</span>
       </Button>
     );
 
@@ -152,7 +156,7 @@ export const InstallButton = ({
       disabled={isDisabled}
     >
       <Trash2 className="size-3.5" />
-      <span className="ml-1.5">Uninstall</span>
+      <span className="ml-1.5">{t('installButton.uninstall')}</span>
     </Button>
   ) : (
     <Button
@@ -165,7 +169,7 @@ export const InstallButton = ({
       }}
       disabled={isDisabled}
     >
-      Install
+      {t('installButton.install')}
     </Button>
   );
 

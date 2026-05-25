@@ -15,7 +15,8 @@ describe('workspaceTrustPreflightEnv', () => {
       CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:1234',
       CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
       CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER: '1',
-      CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH: '/tmp/helper-settings.json',
+      CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
+        '/Users/tester/helper-settings.json',
       CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: '1',
       CLAUDE_CODE_ENTRY_PROVIDER: 'codex',
       CLAUDE_CODE_USE_OPENAI: '1',
@@ -25,10 +26,11 @@ describe('workspaceTrustPreflightEnv', () => {
       CLAUDE_CODE_USE_GEMINI: '1',
       CLAUDE_CODE_CODEX_BACKEND: 'codex-native',
       CLAUDE_CODE_GEMINI_BACKEND: 'api',
-      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: '/tmp/opencode',
-      CODEX_HOME: '/tmp/codex-home',
-      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/tmp/spool',
-      AGENT_TEAMS_MCP_CLAUDE_DIR: '/tmp/claude-dir',
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: '/Users/tester/bin/opencode',
+      OPENCODE_BIN_PATH: '/Users/tester/bin/opencode',
+      CODEX_HOME: '/Users/tester/codex-home',
+      AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/Users/tester/spool',
+      AGENT_TEAMS_MCP_CLAUDE_DIR: '/Users/tester/claude-dir',
       CLAUDE_TEAM_BOOTSTRAP_TOKEN: 'bootstrap-token',
     });
 
@@ -55,6 +57,7 @@ describe('workspaceTrustPreflightEnv', () => {
     expect(env.CLAUDE_CODE_CODEX_BACKEND).toBeUndefined();
     expect(env.CLAUDE_CODE_GEMINI_BACKEND).toBeUndefined();
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBeUndefined();
+    expect(env.OPENCODE_BIN_PATH).toBeUndefined();
     expect(env.CODEX_HOME).toBeUndefined();
     expect(env.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT).toBeUndefined();
     expect(env.AGENT_TEAMS_MCP_CLAUDE_DIR).toBeUndefined();

@@ -4,7 +4,6 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 
 import { TmuxPackageManagerResolver } from '../platform/TmuxPackageManagerResolver';
 import { TmuxWslService } from '../wsl/TmuxWslService';
@@ -71,7 +70,6 @@ export class TmuxPlatformCommandExecutor {
       return this.#wslService.execTmux(effectiveArgs, null, timeout);
     }
 
-    await resolveInteractiveShellEnv();
     const env = buildEnrichedEnv();
     const executable = await this.#resolveNativeTmuxExecutable(env);
     return new Promise((resolve) => {
@@ -250,13 +248,11 @@ export class TmuxPlatformCommandExecutor {
   }
 
   async #execNativePs(): Promise<ExecResult> {
-    await resolveInteractiveShellEnv();
-    const env = buildEnrichedEnv();
     return new Promise((resolve) => {
       execFile(
         'ps',
         ['-ax', '-o', 'pid=,ppid=,command='],
-        { env, timeout: 3_000, maxBuffer: 2 * 1024 * 1024 },
+        { env: process.env, timeout: 3_000, maxBuffer: 2 * 1024 * 1024 },
         (error, stdout, stderr) => {
           const errorCode =
             typeof error === 'object' && error !== null && 'code' in error

@@ -75,6 +75,7 @@ describe('electron userData migration', () => {
 
     expect(getLegacyElectronUserDataCandidates(currentPath)).toEqual([
       path.join(parentPath, 'agent-teams-ai'),
+      path.join(parentPath, 'Agent Teams AI'),
       path.join(parentPath, 'Claude Agent Teams UI'),
       path.join(parentPath, 'claude-agent-teams-ui'),
       path.join(parentPath, 'claude-devtools'),
@@ -289,6 +290,34 @@ describe('electron userData migration', () => {
     ]);
     expect(readFile(completedNewPath, 'data/attachments/team-a/current.txt')).toBe('current');
     expect(readFile(currentProductPath, 'data/attachments/team-a/old.txt')).toBe('old');
+  });
+
+  it('reuses existing agent-teams-ai data when the current product name is Agent Teams AI', () => {
+    const root = createTempRoot();
+    const completedNewPath = path.join(root, 'agent-teams-ai');
+    const currentProductPath = path.join(root, 'Agent Teams AI');
+    const olderProductPath = path.join(root, 'Agent Teams UI');
+    const app = new FakeElectronApp(currentProductPath);
+
+    writeFile(currentProductPath, 'Preferences', '{}');
+    writeFile(completedNewPath, 'data/attachments/team-a/current.txt', 'current');
+    writeFile(olderProductPath, 'data/attachments/team-a/old.txt', 'old');
+
+    const result = migrateElectronUserDataDirectory(app);
+
+    expect(result).toMatchObject({
+      currentPath: currentProductPath,
+      legacyPath: completedNewPath,
+      migrated: false,
+      fallbackToLegacy: false,
+      reason: 'legacy-reused',
+    });
+    expect(app.setPathCalls).toEqual([
+      { name: 'userData', value: completedNewPath },
+      { name: 'sessionData', value: completedNewPath },
+    ]);
+    expect(readFile(completedNewPath, 'data/attachments/team-a/current.txt')).toBe('current');
+    expect(readFile(olderProductPath, 'data/attachments/team-a/old.txt')).toBe('old');
   });
 
   it('copies legacy app-owned state and durable renderer storage without Chromium caches', async () => {

@@ -6,6 +6,7 @@
 
 import React, { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CodeBlockViewer, MarkdownViewer } from '@renderer/components/chat/viewers';
 
 import type { LinkedToolItem } from '@renderer/types/groups';
@@ -15,6 +16,7 @@ interface WriteToolViewerProps {
 }
 
 export const WriteToolViewer = memo(function WriteToolViewer({ linkedTool }: WriteToolViewerProps) {
+  const { t } = useAppTranslation('common');
   const toolUseResult = linkedTool.result?.toolUseResult as Record<string, unknown> | undefined;
 
   const filePath =
@@ -37,7 +39,7 @@ export const WriteToolViewer = memo(function WriteToolViewer({ linkedTool }: Wri
   return (
     <div className="space-y-2">
       <div className="mb-1 text-xs text-zinc-500">
-        {isCreate ? 'Created file' : 'Wrote to file'}
+        {isCreate ? t('chat.tools.write.createdFile') : t('chat.tools.write.wroteToFile')}
       </div>
       {isMarkdownFile && (
         <div className="flex items-center justify-end gap-1">
@@ -51,7 +53,7 @@ export const WriteToolViewer = memo(function WriteToolViewer({ linkedTool }: Wri
               border: '1px solid var(--tag-border)',
             }}
           >
-            Code
+            {t('code.code')}
           </button>
           <button
             type="button"
@@ -63,12 +65,12 @@ export const WriteToolViewer = memo(function WriteToolViewer({ linkedTool }: Wri
               border: '1px solid var(--tag-border)',
             }}
           >
-            Preview
+            {t('code.preview')}
           </button>
         </div>
       )}
       {isMarkdownFile && viewMode === 'preview' ? (
-        <MarkdownViewer content={content} label="Markdown Preview" copyable />
+        <MarkdownViewer content={content} label={t('code.markdownPreview')} copyable />
       ) : (
         <CodeBlockViewer fileName={filePath} content={content} startLine={1} />
       )}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markdown';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { MemberHoverCard } from '@renderer/components/team/members/MemberHoverCard';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
@@ -380,6 +381,7 @@ function createUserMarkdownComponents(
  * - Shows image count indicator
  */
 const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const { content, timestamp, id: groupId } = userGroup;
   const [isManuallyExpanded, setIsManuallyExpanded] = useState(false);
   const [validatedPaths, setValidatedPaths] = useState<Record<string, boolean>>({});
@@ -544,7 +546,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
             {format(timestamp, 'h:mm:ss a')}
           </span>
           <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-            You
+            {t('chat.user.you')}
           </span>
           <User className="size-3.5" style={{ color: 'var(--color-text-secondary)' }} />
         </div>
@@ -578,7 +580,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 <ChevronDown size={12} />
-                Show more
+                {t('chat.user.showMore')}
               </button>
             )}
           </div>
@@ -596,7 +598,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
               }}
             >
               <ChevronUp size={12} />
-              Show less
+              {t('chat.user.showLess')}
             </button>
           </div>
         ) : null}
@@ -613,7 +615,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
                 : 'var(--color-text-muted)';
             const commandMatch = /"([^"]+)"/.exec(notification.summary);
             const commandName =
-              commandMatch?.[1] ?? notification.summary.trim() ?? 'Background task';
+              commandMatch?.[1] ?? notification.summary.trim() ?? t('chat.user.backgroundTask');
             const exitCodeMatch = /\(exit code (\d+)\)/.exec(notification.summary);
             const outputFileName = notification.outputFile
               ? (notification.outputFile.split(/[\\/]/).pop() ?? notification.outputFile)
@@ -634,14 +636,16 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
                     className="text-xs font-medium leading-snug"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    {commandName || 'Background task'}
+                    {commandName || t('chat.user.backgroundTask')}
                   </div>
                   <div
                     className="flex items-center gap-2 text-[10px]"
                     style={{ color: 'var(--color-text-muted)' }}
                   >
                     <span className="capitalize">{notification.status || 'unknown'}</span>
-                    {exitCodeMatch?.[1] ? <span>exit {exitCodeMatch[1]}</span> : null}
+                    {exitCodeMatch?.[1] ? (
+                      <span>{t('chat.user.exitCode', { code: exitCodeMatch[1] })}</span>
+                    ) : null}
                     {outputFileName ? (
                       <span className="flex min-w-0 items-center gap-0.5 truncate">
                         <FileText className="size-2.5 shrink-0" />
@@ -657,7 +661,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
         {/* Images indicator */}
         {hasImages && (
           <div className="text-right text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {content.images.length} image{content.images.length > 1 ? 's' : ''} attached
+            {t('chat.user.imagesAttached', { count: content.images.length })}
           </div>
         )}
       </div>

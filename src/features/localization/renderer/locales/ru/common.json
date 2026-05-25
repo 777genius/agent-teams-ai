@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "copied": "Скопировано",
+    "copyUrl": "Копировать URL",
+    "open": "Открыть",
+    "reveal": "Показать",
+    "retry": "Повторить",
+    "save": "Сохранить",
+    "showLess": "Свернуть",
+    "showMore": "Показать больше",
+    "refresh": "Обновить",
+    "reset": "Сбросить",
+    "copyToClipboard": "Скопировать в буфер",
+    "moreActions": "Ещё действия",
+    "closeDialog": "Закрыть диалог",
+    "goToDashboard": "На дашборд",
+    "or": "или",
+    "hide": "Скрыть",
+    "resetSelection": "Сбросить выбор"
+  },
+  "code": {
+    "line": "строка {{line}}",
+    "lines": "строки {{from}}-{{to}}",
+    "moreLines": "({{count}} строк ещё...)",
+    "moreLines_few": "({{count}} строки ещё...)",
+    "moreLines_many": "({{count}} строк ещё...)",
+    "moreLines_one": "({{count}} строка ещё...)",
+    "moreLines_other": "({{count}} строки ещё...)",
+    "code": "Код",
+    "preview": "Предпросмотр",
+    "markdownPreview": "Предпросмотр Markdown",
+    "linesParenthesized": "(строки {{from}}-{{to}})",
+    "mermaidSyntaxError": "Синтаксическая ошибка Mermaid"
+  },
+  "contextBadge": {
+    "badge": "Контекст",
+    "breakdown": {
+      "text": "Текст",
+      "thinking": "Thinking"
+    },
+    "detailsAria": "Детали инъекции контекста",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} токенов",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} токенов",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} токенов",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} токенов",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} токенов",
+    "sections": {
+      "claudeMdFiles": "Файлы CLAUDE.md",
+      "mentionedFiles": "Упомянутые файлы",
+      "taskCoordination": "Координация задач",
+      "thinkingText": "Thinking + Text",
+      "toolOutputs": "Выводы инструментов",
+      "userMessages": "Сообщения пользователя"
+    },
+    "title": "Новый контекст, добавленный в этом ходе",
+    "tokenCount": "~{{tokens}} токенов",
+    "totalNewTokens": "Всего новых токенов",
+    "turn": "Ход {{turn}}"
+  },
+  "locales": {
+    "emptyMessage": "Язык не найден.",
+    "names": {
+      "en": "Английский",
+      "ru": "Русский",
+      "zh": "Китайский",
+      "ja": "Японский",
+      "ko": "Корейский",
+      "es": "Испанский",
+      "hi": "Хинди",
+      "pt": "Португальский",
+      "fr": "Французский",
+      "ar": "Арабский",
+      "bn": "Бенгальский",
+      "ur": "Урду",
+      "id": "Индонезийский",
+      "de": "Немецкий",
+      "system": "Системный"
+    },
+    "searchPlaceholder": "Поиск языка...",
+    "selectPlaceholder": "Выберите язык интерфейса...",
+    "systemWithResolved": "Системный - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "Участники не найдены.",
+    "searchPlaceholder": "Поиск участников...",
+    "unassigned": "Не назначено",
+    "teammateFallback": "участник"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Проверка",
+        "downloading": "Загрузка",
+        "installCli": "Установить Codex CLI",
+        "installing": "Установка",
+        "retryInstall": "Повторить установку"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "Подходящих вариантов нет",
+    "searching": "Поиск...",
+    "searchingFiles": "Поиск файлов...",
+    "findInConversation": "Найти в разговоре...",
+    "resultCount": "{{current}} из {{total}}",
+    "resultCountCapped": "{{current}} из {{total}}+",
+    "noResults": "Нет результатов",
+    "previousResultShortcut": "Предыдущий результат (Shift+Enter)",
+    "nextResultShortcut": "Следующий результат (Enter)",
+    "closeShortcut": "Закрыть (Esc)",
+    "nothingFound": "Ничего не найдено",
+    "placeholder": "Поиск..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Добавить расписание",
+      "clearFilters": "Сбросить фильтры",
+      "createSchedule": "Создать расписание",
+      "delete": "Удалить",
+      "edit": "Редактировать",
+      "pause": "Приостановить",
+      "resume": "Возобновить",
+      "runNow": "Запустить сейчас"
+    },
+    "empty": {
+      "description": "Создайте расписание в любой команде, чтобы автоматизировать выполнение Claude-задач через cron expressions. Расписания всех команд появятся здесь.",
+      "noMatches": "Нет расписаний под текущие фильтры",
+      "title": "Запланированных задач нет"
+    },
+    "filters": {
+      "allTeams": "Все команды"
+    },
+    "item": {
+      "loadingRunHistory": "Загрузка истории запусков...",
+      "nextRun": "Следующий запуск: {{value}}",
+      "noRunsYet": "Запусков пока нет"
+    },
+    "loading": "Загрузка расписаний...",
+    "searchPlaceholder": "Поиск расписаний...",
+    "status": {
+      "active": "Активные",
+      "all": "Все",
+      "disabled": "Отключённые",
+      "paused": "На паузе"
+    },
+    "title": "Расписания"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Скрыть",
+      "pin": "Закрепить",
+      "unhide": "Показать"
+    },
+    "empty": {
+      "noMatchingSessions": "Подходящих сессий нет",
+      "noMatchingSessionsDescription": "В этом проекте пока нет подходящих сессий.",
+      "noMatchingSessionsFiltered": "Попробуйте другой запрос или сбросьте фильтр provider.",
+      "noSessions": "Сессии не найдены",
+      "noSessionsDescription": "В этом проекте пока нет сессий",
+      "selectProject": "Выберите проект, чтобы посмотреть сессии"
+    },
+    "errors": {
+      "loading": "Ошибка загрузки сессий"
+    },
+    "loadedMatchingMore": "Загружено подходящих сессий: {{count}} - прокрутите вниз, чтобы загрузить ещё.",
+    "loadedMatchingMore_few": "Загружено подходящих сессий: {{count}} - прокрутите вниз, чтобы загрузить ещё.",
+    "loadedMatchingMore_many": "Загружено подходящих сессий: {{count}} - прокрутите вниз, чтобы загрузить ещё.",
+    "loadedMatchingMore_one": "Загружена подходящая сессия: {{count}} - прокрутите вниз, чтобы загрузить ещё.",
+    "loadedMatchingMore_other": "Загружено подходящих сессий: {{count}} - прокрутите вниз, чтобы загрузить ещё.",
+    "loadingMore": "Загрузка следующих сессий...",
+    "pinned": "Закреплённые",
+    "scrollToLoadMore": "Прокрутите, чтобы загрузить ещё",
+    "search": {
+      "clear": "Очистить поиск сессий",
+      "placeholder": "Поиск сессий..."
+    },
+    "selection": {
+      "cancel": "Отменить выделение",
+      "exitMode": "Выйти из режима выделения",
+      "hideSelected": "Скрыть выбранные сессии",
+      "pinSelected": "Закрепить выбранные сессии",
+      "selectSessions": "Выбрать сессии",
+      "selected": "Выбрано: {{count}}",
+      "selected_few": "Выбрано: {{count}}",
+      "selected_many": "Выбрано: {{count}}",
+      "selected_one": "Выбрана: {{count}}",
+      "selected_other": "Выбрано: {{count}}",
+      "unhideSelected": "Показать выбранные сессии"
+    },
+    "sort": {
+      "byContext": "По контексту",
+      "byContextTooltip": "Сортировать по потреблению контекста",
+      "byRecentTooltip": "Сортировать по недавним",
+      "contextLoadedOnly": "Сортировка по контексту ранжирует только загруженные сессии."
+    },
+    "title": "Сессии",
+    "visibility": {
+      "hideHidden": "Скрыть скрытые сессии",
+      "showHidden": "Показать скрытые сессии"
+    },
+    "worktree": {
+      "switch": "Переключить worktree"
+    },
+    "failedToLoad": "Не удалось загрузить сессию",
+    "loading": "Загрузка сессии...",
+    "filter": {
+      "title": "Фильтр сессий"
+    },
+    "count": "{{count}} сессий",
+    "count_one": "{{count}} сессия",
+    "count_few": "{{count}} сессии",
+    "count_many": "{{count}} сессий",
+    "count_other": "{{count}} сессий",
+    "inProgress": "Сессия выполняется..."
+  },
+  "states": {
+    "loading": "Загрузка...",
+    "offline": "Офлайн",
+    "online": "Онлайн",
+    "unknown": "Неизвестно",
+    "error": "Ошибка"
+  },
+  "markdown": {
+    "imageFallback": "[Изображение: {{label}}]",
+    "largeContentNotice": "Контент очень большой ({{count}} символов). Показываем raw preview, чтобы интерфейс не завис.",
+    "largeContentNotice_few": "Контент очень большой ({{count}} символа). Показываем raw preview, чтобы интерфейс не завис.",
+    "largeContentNotice_many": "Контент очень большой ({{count}} символов). Показываем raw preview, чтобы интерфейс не завис.",
+    "largeContentNotice_one": "Контент очень большой ({{count}} символ). Показываем raw preview, чтобы интерфейс не завис.",
+    "largeContentNotice_other": "Контент очень большой ({{count}} символа). Показываем raw preview, чтобы интерфейс не завис.",
+    "largeContentTitle": "Большой контент показан как raw, чтобы интерфейс не завис",
+    "raw": "Raw",
+    "rawPreview": "Raw preview",
+    "renderMarkdown": "Отрендерить Markdown",
+    "showAll": "Показать всё",
+    "showMore": "Показать ещё",
+    "showRaw": "Показать raw",
+    "showingChars": "Показано {{shown}} / {{total}} символов"
+  },
+  "terminal": {
+    "checkOutputForDetails": "Подробности смотрите в выводе терминала выше",
+    "closingInSeconds": "Закрытие через {{count}} с...",
+    "closingInSeconds_few": "Закрытие через {{count}} с...",
+    "closingInSeconds_many": "Закрытие через {{count}} с...",
+    "closingInSeconds_one": "Закрытие через {{count}} с...",
+    "closingInSeconds_other": "Закрытие через {{count}} с...",
+    "completedSuccessfully": "Успешно завершено",
+    "exitCode": "(код выхода {{code}})",
+    "processFailed": "Процесс завершился с ошибкой",
+    "title": "Терминал"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Накоплено по всей сессии без дублирования",
+    "cacheRead": "Cache Read",
+    "cacheWrite": "Cache Write",
+    "costUsd": "Стоимость (USD)",
+    "inputTokens": "Входные токены",
+    "model": "Модель",
+    "outputTokens": "Выходные токены",
+    "phase": "Фаза {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% от prompt input",
+    "taskCoordination": "Координация задач",
+    "thinkingText": "Thinking + Text",
+    "toolOutputs": "Выводы инструментов",
+    "total": "Итого",
+    "userMessages": "Сообщения пользователя",
+    "visibleContext": "Видимый контекст",
+    "includesClaudeMd": "вкл. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} токенов",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Скопировать команду",
+      "createTeam": "Создать команду",
+      "deleteForever": "Удалить навсегда",
+      "deletePermanently": "Удалить окончательно",
+      "deleteTeam": "Удалить команду",
+      "launching": "Запуск...",
+      "launchTeam": "Запустить команду",
+      "relaunchTeam": "Перезапустить команду",
+      "restore": "Восстановить",
+      "restoreTeam": "Восстановить команду",
+      "retry": "Повторить",
+      "stopTeam": "Остановить команду",
+      "stopping": "Остановка..."
+    },
+    "status": {
+      "active": "Активно",
+      "deleted": "Удалено",
+      "launching": "Запуск...",
+      "offline": "Offline",
+      "partialFailure": "Запуск частично не удался",
+      "partialPending": "Bootstrap ожидает",
+      "partialSkipped": "Запуск пропустил участника",
+      "running": "Работает"
+    },
+    "partial": {
+      "pending": "Последний запуск ещё сверяется.",
+      "skipped": "В последнем запуске были пропущены teammates.",
+      "skippedWithCount": "Последний запуск пропустил {{count}}/{{expected}} teammate.",
+      "skippedWithCount_few": "Последний запуск пропустил {{count}}/{{expected}} teammates.",
+      "skippedWithCount_many": "Последний запуск пропустил {{count}}/{{expected}} teammates.",
+      "skippedWithCount_one": "Последний запуск пропустил {{count}}/{{expected}} teammate.",
+      "skippedWithCount_other": "Последний запуск пропустил {{count}}/{{expected}} teammates.",
+      "stopped": "Последний запуск остановился до подключения всех teammates.",
+      "stoppedWithCount": "Последний запуск остановился до подключения {{count}}/{{expected}} teammate.",
+      "stoppedWithCount_few": "Последний запуск остановился до подключения {{count}}/{{expected}} teammates.",
+      "stoppedWithCount_many": "Последний запуск остановился до подключения {{count}}/{{expected}} teammates.",
+      "stoppedWithCount_one": "Последний запуск остановился до подключения {{count}}/{{expected}} teammate.",
+      "stoppedWithCount_other": "Последний запуск остановился до подключения {{count}}/{{expected}} teammates."
+    },
+    "noDescription": "Нет описания",
+    "solo": "Solo",
+    "membersCount": "Участников: {{count}}",
+    "membersCount_few": "Участников: {{count}}",
+    "membersCount_many": "Участников: {{count}}",
+    "membersCount_one": "Участник: {{count}}",
+    "membersCount_other": "Участников: {{count}}",
+    "all": "Все",
+    "moreCount": "+{{count}} ещё",
+    "moreCount_one": "+{{count}} ещё",
+    "moreCount_few": "+{{count}} ещё",
+    "moreCount_many": "+{{count}} ещё",
+    "moreCount_other": "+{{count}} ещё"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Default для всех проектов, у которых нет собственного OpenCode override.",
+      "scopeDescriptionProject": "Override только для выбранного проекта. Уже запущенные команды не изменяются.",
+      "setAllProjectsDefault": "Задать default для всех проектов",
+      "setProjectDefault": "Задать default для проекта",
+      "validationContext": "Validation context",
+      "projectOverrideContext": "Project override context",
+      "selectProjectHint": "Выберите проект перед тестированием local models или сохранением defaults.",
+      "allProjectsHint": "Тесты используют {{project}}. Default применяется, если у проекта нет своего override.",
+      "projectHint": "Сохранение изменит override только для {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Контекст",
+      "closePanel": "Закрыть панель",
+      "phase": "Фаза:",
+      "current": "Текущая",
+      "view": "Вид:",
+      "category": "Категории",
+      "bySize": "По размеру"
+    },
+    "metrics": {
+      "unavailable": "Недоступно",
+      "contextUsed": "Использовано контекста",
+      "promptInput": "Вход prompt",
+      "visibleContext": "Видимый контекст",
+      "ofContext": "от контекста",
+      "ofPrompt": "от prompt",
+      "codexTelemetryUnavailable": "Текущий runtime пока не передаёт prompt-side usage для Codex, поэтому Prompt Input и Context Used остаются недоступными вместо фейкового нуля.",
+      "sessionCost": "Стоимость сессии:",
+      "parentPlus": "parent +",
+      "subagents": "subagents",
+      "details": "подробности"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Использовано контекста",
+        "description": "Prompt input плюс output tokens, которые сейчас занимают context window модели."
+      },
+      "promptInput": {
+        "title": "Вход prompt",
+        "description": "Tokens, отправленные модели перед генерацией. Для Claude это включает `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Видимый контекст",
+        "description": "Инспектируемая часть prompt input: файлы, CLAUDE.md, tool outputs, сообщения пользователя и похожие injections, которые можно оптимизировать напрямую."
+      },
+      "availability": {
+        "title": "Доступность",
+        "description": "Если provider runtime пока не отдаёт prompt-side usage, панель показывает metrics как unavailable, а не притворяется, что это ноль."
+      }
+    },
+    "items": {
+      "turn": "@Ход {{turn}}",
+      "tokensApprox": "~{{tokens}} токенов",
+      "toolsCount": "{{count}} инструментов",
+      "toolsCount_one": "{{count}} инструмент",
+      "toolsCount_few": "{{count}} инструмента",
+      "toolsCount_many": "{{count}} инструментов",
+      "toolsCount_other": "{{count}} инструментов",
+      "itemsCount": "{{count}} элементов",
+      "itemsCount_one": "{{count}} элемент",
+      "itemsCount_few": "{{count}} элемента",
+      "itemsCount_many": "{{count}} элементов",
+      "itemsCount_other": "{{count}} элементов",
+      "missing": "нет файла",
+      "thinking": "Размышление",
+      "text": "Текст"
+    },
+    "empty": "В этой сессии контекстные вставки не обнаружены",
+    "view": {
+      "grouped": "Группировано",
+      "flat": "Плоско"
+    },
+    "claudeMdFiles": "Файлы CLAUDE.md",
+    "mentionedFiles": "Упомянутые файлы"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Shutdown подтверждён",
+      "summary": {
+        "tools": "{{count}} tools",
+        "tools_one": "{{count}} tool",
+        "tools_few": "{{count}} tools",
+        "tools_many": "{{count}} tools",
+        "tools_other": "{{count}} tools"
+      },
+      "meta": {
+        "type": "Тип",
+        "duration": "Длительность",
+        "model": "Модель",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Context Window",
+        "contextUsage": "Использование контекста",
+        "mainContext": "Основной контекст",
+        "totalOutput": "Общий output",
+        "turns": "({{count}} turns)",
+        "turns_one": "({{count}} turn)",
+        "turns_few": "({{count}} turns)",
+        "turns_many": "({{count}} turns)",
+        "turns_other": "({{count}} turns)",
+        "subagentContext": "Контекст subagent",
+        "phase": "Фаза {{phase}}"
+      },
+      "trace": {
+        "title": "Execution trace"
+      }
+    },
+    "user": {
+      "you": "Вы",
+      "showMore": "Показать больше",
+      "showLess": "Показать меньше",
+      "backgroundTask": "Фоновая задача",
+      "exitCode": "exit {{code}}",
+      "imagesAttached": "прикреплено изображений: {{count}}",
+      "imagesAttached_one": "прикреплено {{count}} изображение",
+      "imagesAttached_few": "прикреплено {{count}} изображения",
+      "imagesAttached_many": "прикреплено изображений: {{count}}",
+      "imagesAttached_other": "прикреплено {{count}} изображения"
+    },
+    "compact": {
+      "toggle": "Переключить сжатое содержимое",
+      "contextCompacted": "Контекст сжат",
+      "freedTokens": "(освобождено {{tokens}})",
+      "phase": "Фаза {{phase}}",
+      "conversationCompacted": "Диалог сжат",
+      "summary": "Предыдущие сообщения были суммаризированы для экономии контекста. Полная история диалога сохранена в файле сессии.",
+      "compacted": "Сжато"
+    },
+    "executionTrace": {
+      "empty": "Нет элементов выполнения",
+      "nested": "Вложенный: {{name}}",
+      "input": "Ввод"
+    },
+    "items": {
+      "empty": "Нет элементов для отображения"
+    },
+    "tools": {
+      "teammateSpawned": "Участник запущен",
+      "shutdownRequested": "Запрошено завершение ->",
+      "noResultReceived": "Результат не получен",
+      "duration": "Длительность: {{duration}}",
+      "result": "Результат",
+      "write": {
+        "createdFile": "Файл создан",
+        "wroteToFile": "Записано в файл"
+      },
+      "skill": {
+        "instructions": "Инструкции навыка",
+        "unknown": "Неизвестный навык"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Запрос прерван пользователем",
+      "planReadyForApproval": "План готов к подтверждению"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "История разговора пуста",
+      "description": "В этой сессии пока нет сообщений."
+    },
+    "context": {
+      "remainingPercent": "(осталось {{percent}}%)",
+      "count": "Контекст ({{count}})",
+      "count_one": "Контекст ({{count}})",
+      "count_few": "Контекст ({{count}})",
+      "count_many": "Контекст ({{count}})",
+      "count_other": "Контекст ({{count}})"
+    },
+    "scrollToBottom": "Прокрутить вниз",
+    "bottom": "Вниз",
+    "teammateMessage": {
+      "message": "Сообщение",
+      "resent": "Отправлено повторно",
+      "fallback": "Сообщение участника"
+    },
+    "system": {
+      "label": "Система"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux не установлен",
+    "detectedOs": "Обнаруженная ОС: {{os}}",
+    "runtimePath": "Путь runtime: {{path}}",
+    "phase": "Фаза: {{phase}}",
+    "actions": {
+      "cancel": "Отмена",
+      "manualGuide": "Manual guide",
+      "hideSetupSteps": "Скрыть шаги настройки",
+      "showSetupSteps": "Показать шаги настройки ({{count}})",
+      "showSetupSteps_one": "Показать шаг настройки ({{count}})",
+      "showSetupSteps_few": "Показать шаги настройки ({{count}})",
+      "showSetupSteps_many": "Показать шаги настройки ({{count}})",
+      "showSetupSteps_other": "Показать шаги настройки ({{count}})",
+      "recheck": "Проверить снова"
+    },
+    "installerProgress": "Прогресс установки",
+    "input": {
+      "placeholder": "Отправить input в installer",
+      "send": "Отправить input",
+      "passwordNotice": "Password input отправляется напрямую в terminal installer и не добавляется в log output."
+    },
+    "details": {
+      "show": "Показать details",
+      "hide": "Скрыть details"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Нет недавней активности",
+    "sessionsCount": "{{count}} sessions",
+    "sessionsCount_one": "{{count}} session",
+    "sessionsCount_few": "{{count}} sessions",
+    "sessionsCount_many": "{{count}} sessions",
+    "sessionsCount_other": "{{count}} sessions",
+    "mode": {
+      "searchProjects": "Поиск проектов",
+      "searchAcrossProjects": "Поиск по всем проектам",
+      "searchInProject": "Поиск в проекте"
+    },
+    "currentProject": "Текущий проект",
+    "global": "Global",
+    "placeholders": {
+      "projects": "Поиск проектов...",
+      "conversations": "Поиск conversations..."
+    },
+    "empty": {
+      "noProjectsForQuery": "Проекты по запросу \"{{query}}\" не найдены",
+      "noProjects": "Проекты не найдены",
+      "minChars": "Введите минимум 2 символа для поиска",
+      "noFastResults": "В недавних sessions нет быстрых результатов по запросу \"{{query}}\"",
+      "noResults": "Результаты по запросу \"{{query}}\" не найдены"
+    },
+    "footer": {
+      "projectsCount": "{{count}} проектов",
+      "projectsCount_one": "{{count}} проект",
+      "projectsCount_few": "{{count}} проекта",
+      "projectsCount_many": "{{count}} проектов",
+      "projectsCount_other": "{{count}} проектов",
+      "results": "{{count}} {{speed}}результатов",
+      "results_one": "{{count}} {{speed}}результат",
+      "results_few": "{{count}} {{speed}}результата",
+      "results_many": "{{count}} {{speed}}результатов",
+      "results_other": "{{count}} {{speed}}результатов",
+      "resultsAcrossProjects": "{{count}} {{speed}}результатов по всем проектам",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}результат по всем проектам",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}результата по всем проектам",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}результатов по всем проектам",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}результатов по всем проектам",
+      "fastPrefix": "fast ",
+      "typeToSearch": "Введите запрос",
+      "navigate": "навигация",
+      "select": "выбрать",
+      "open": "открыть",
+      "global": "global",
+      "close": "закрыть",
+      "upDownKey": "↑↓",
+      "escapeKey": "esc"
+    }
+  },
+  "tasksPanel": {
+    "title": "Задачи",
+    "searchPlaceholder": "Поиск задач...",
+    "pinned": "Закреплённые",
+    "groupByLabel": "Группировать:",
+    "groupByAria": "Группировка",
+    "groupModes": {
+      "none": "Нет",
+      "project": "Проект",
+      "time": "Время"
+    },
+    "showArchived": "Показать архивные",
+    "hideArchived": "Скрыть архивные",
+    "empty": {
+      "noMatchingTasks": "Нет подходящих задач",
+      "noTasks": "Задачи не найдены"
+    },
+    "teamLabel": "Команда: {{team}}",
+    "showMore": "Показать ещё",
+    "showLess": "Показать меньше",
+    "deleteConfirm": {
+      "title": "Удалить задачу",
+      "message": "Переместить задачу #{{taskId}} в корзину?",
+      "confirmLabel": "Удалить",
+      "cancelLabel": "Отмена"
+    },
+    "deleteFailed": {
+      "title": "Не удалось удалить задачу",
+      "fallbackMessage": "Произошла непредвиденная ошибка",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "По времени",
+      "byUnread": "По непрочитанным",
+      "byProject": "По проекту",
+      "byTeam": "По команде"
+    }
+  },
+  "toolViewer": {
+    "input": "Ввод",
+    "replaceAll": "(заменить все)",
+    "noInputRecorded": "Для этого вызова инструмента ввод не записан.",
+    "agent": {
+      "action": "действие",
+      "teammate": "участник",
+      "team": "команда",
+      "runtime": "runtime",
+      "type": "тип",
+      "startupInstructionsHidden": "Стартовые инструкции скрыты в интерфейсе."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Открепить",
+    "pin": "Закрепить",
+    "rename": "Переименовать",
+    "markUnread": "Пометить непрочитанной",
+    "unarchive": "Разархивировать",
+    "archive": "Архивировать",
+    "deleteTask": "Удалить задачу"
+  },
+  "updateDialog": {
+    "closeDialog": "Закрыть диалог",
+    "updateAvailable": "Доступно обновление",
+    "updateReady": "Обновление готово",
+    "noReleaseNotes": "Описание релиза недоступно.",
+    "viewOnGitHub": "Открыть на GitHub",
+    "later": "Позже",
+    "restartNow": "Перезапустить сейчас",
+    "download": "Скачать"
+  },
+  "errorBoundary": {
+    "title": "Что-то пошло не так",
+    "description": "В приложении произошла непредвиденная ошибка. Можно попробовать перезагрузить страницу или сбросить состояние ошибки.",
+    "componentStack": "Стек компонентов",
+    "tryAgain": "Попробовать снова",
+    "copied": "Скопировано",
+    "copyErrorDetails": "Скопировать детали ошибки",
+    "reportBugOnGitHub": "Сообщить об ошибке на GitHub",
+    "reloadApp": "Перезагрузить приложение",
+    "diagnosticsNotice": "GitHub-отчёты и скопированная диагностика включают сообщение об ошибке, stack trace, версию приложения, активную вкладку, выбранную команду, контекст задачи и сведения окружения."
+  },
+  "runtimeBackendSelector": {
+    "label": "Runtime backend",
+    "resolved": "Определено: {{backend}}",
+    "current": "Текущий",
+    "recommended": "Рекомендуется",
+    "unavailable": "Недоступно",
+    "cannotSelectYet": "Этот backend пока нельзя выбрать.",
+    "auto": "Авто",
+    "autoCurrently": "Авто (сейчас: {{backend}})",
+    "audience": {
+      "internal": "Внутренний"
+    },
+    "states": {
+      "locked": "Заблокировано",
+      "disabled": "Отключено",
+      "authRequired": "Нужен вход",
+      "runtimeMissing": "Runtime отсутствует",
+      "degraded": "Есть проблемы",
+      "unavailable": "Недоступно"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Проверка",
+    "unavailable": "Недоступно",
+    "checkFailed": "Проверка не удалась",
+    "free": "Бесплатно",
+    "freeTooltip": "Передано метаданными OpenCode. Доступность и лимиты могут измениться."
+  },
+  "taskFilters": {
+    "status": "Статус",
+    "clearAll": "Очистить всё",
+    "selectAll": "Выбрать всё",
+    "team": "Команда",
+    "allTeams": "Все команды",
+    "searchTeams": "Искать команды...",
+    "noTeamsFound": "Команды не найдены",
+    "project": "Проект",
+    "allProjects": "Все проекты",
+    "searchProjects": "Искать проекты...",
+    "noProjects": "Проектов нет",
+    "comments": "Комментарии",
+    "apply": "Применить",
+    "read": {
+      "all": "Все",
+      "unread": "Непрочитанные",
+      "read": "Прочитанные"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "В РАБОТЕ",
+      "needsFix": "НУЖНЫ ПРАВКИ",
+      "done": "ГОТОВО",
+      "review": "РЕВЬЮ",
+      "approved": "ОДОБРЕНО"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Всего контекста: {{tokens}} токенов",
+    "context": "Контекст: {{tokens}}",
+    "phase": "Фаза {{phase}}:",
+    "compactedTo": "(сжато до {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "команда",
+      "subagent": "subagent",
+      "markAsRead": "Пометить прочитанным",
+      "delete": "Удалить",
+      "viewInSession": "Открыть в сессии"
+    },
+    "title": "Уведомления",
+    "loading": "Загрузка уведомлений...",
+    "actions": {
+      "markFilteredAsRead": "Пометить отфильтрованные прочитанными",
+      "markAllAsRead": "Пометить все прочитанными",
+      "markFilteredRead": "Пометить фильтр",
+      "markAllRead": "Пометить все",
+      "clearFilteredNotifications": "Очистить отфильтрованные уведомления",
+      "clearAllNotifications": "Очистить все уведомления",
+      "clickToConfirm": "Нажмите для подтверждения",
+      "clearFiltered": "Очистить фильтр",
+      "clearAll": "Очистить все"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} непрочитанных в фильтре",
+      "unreadInFilter_one": "{{count}} непрочитанное в фильтре",
+      "unreadInFilter_few": "{{count}} непрочитанных в фильтре",
+      "unreadInFilter_many": "{{count}} непрочитанных в фильтре",
+      "unreadInFilter_other": "{{count}} непрочитанных в фильтре",
+      "inFilter": "{{count}} в фильтре",
+      "inFilter_one": "{{count}} в фильтре",
+      "inFilter_few": "{{count}} в фильтре",
+      "inFilter_many": "{{count}} в фильтре",
+      "inFilter_other": "{{count}} в фильтре",
+      "unread": "{{count}} непрочитанных",
+      "unread_one": "{{count}} непрочитанное",
+      "unread_few": "{{count}} непрочитанных",
+      "unread_many": "{{count}} непрочитанных",
+      "unread_other": "{{count}} непрочитанных",
+      "total": "{{count}} всего",
+      "total_one": "{{count}} всего",
+      "total_few": "{{count}} всего",
+      "total_many": "{{count}} всего",
+      "total_other": "{{count}} всего"
+    },
+    "filters": {
+      "other": "Другое"
+    },
+    "empty": {
+      "noMatching": "Подходящих уведомлений нет",
+      "noNotifications": "Уведомлений нет",
+      "tryDifferentFilter": "Попробуйте другой фильтр",
+      "allCaughtUp": "Все уведомления разобраны"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Перезапустить для обновления",
+    "updateApp": "Обновить приложение",
+    "downloadedRestartTooltip": "Обновление загружено, перезапустите приложение для применения",
+    "newVersionAvailable": "Доступна новая версия",
+    "updatingApp": "Обновление приложения",
+    "updateReady": "Обновление готово",
+    "restartNow": "Перезапустить сейчас"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Развернуть боковую панель",
+    "collapseSidebarShortcut": "Свернуть боковую панель ({{shortcut}})",
+    "sidebarView": "Вид боковой панели",
+    "resizeSidebar": "Изменить ширину боковой панели",
+    "closeTab": "Закрыть вкладку",
+    "openedFromSearch": "Открыто из поиска",
+    "pinnedSession": "Закрепленная сессия",
+    "jumpToSection": "Перейти к разделу",
+    "newTab": "Новая вкладка",
+    "newTabDashboard": "Новая вкладка (дашборд)",
+    "refreshSession": "Обновить сессию",
+    "refreshSessionWithShortcut": "Обновить сессию ({{shortcut}})",
+    "loadingTab": "Загрузка вкладки",
+    "menu": {
+      "teams": "Команды",
+      "settings": "Настройки",
+      "extensions": "Расширения",
+      "search": "Поиск",
+      "schedules": "Расписания",
+      "docs": "Документация",
+      "exportMarkdown": "Экспорт в Markdown",
+      "exportJson": "Экспорт в JSON",
+      "exportPlainText": "Экспорт в обычный текст",
+      "analyzeSession": "Анализировать сессию"
+    },
+    "tabMenu": {
+      "closeTabs": "Закрыть {{count}} вкладок",
+      "closeTabs_one": "Закрыть {{count}} вкладку",
+      "closeTabs_few": "Закрыть {{count}} вкладки",
+      "closeTabs_many": "Закрыть {{count}} вкладок",
+      "closeTabs_other": "Закрыть {{count}} вкладки",
+      "closeTab": "Закрыть вкладку",
+      "closeOtherTabs": "Закрыть остальные вкладки",
+      "splitRight": "Разделить вправо",
+      "splitLeft": "Разделить влево",
+      "pinToSidebar": "Закрепить в боковой панели",
+      "unpinFromSidebar": "Открепить от боковой панели",
+      "hideFromSidebar": "Скрыть из боковой панели",
+      "unhideFromSidebar": "Вернуть в боковую панель",
+      "closeAllTabs": "Закрыть все вкладки"
+    },
+    "sections": {
+      "team": "Команда",
+      "sessions": "Сессии",
+      "kanban": "Канбан",
+      "claudeLogs": "Логи",
+      "messages": "Сообщения"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Жирный",
+    "italic": "Курсив",
+    "strike": "Зачеркнутый",
+    "code": "Код"
+  },
+  "diff": {
+    "changed": "Изменено",
+    "noChangesDetected": "Изменений нет"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Скопировать ссылку входа ChatGPT и код",
+    "copyLoginLink": "Скопировать ссылку входа ChatGPT",
+    "copyFailed": "Не удалось скопировать",
+    "copyLinkAndCode": "Скопировать ссылку + код",
+    "copyLink": "Скопировать ссылку",
+    "enterCodeOnLoginPage": "Введите этот код на странице входа ChatGPT"
+  },
+  "window": {
+    "minimize": "Свернуть",
+    "maximize": "Развернуть",
+    "restore": "Восстановить"
+  },
+  "context": {
+    "local": "Локально",
+    "switchingTo": "Переключение на {{workspace}}",
+    "loadingWorkspace": "Загрузка workspace",
+    "switchWorkspace": "Сменить рабочую область"
+  },
+  "repositories": {
+    "noneAvailable": "Репозитории недоступны",
+    "remove": "Удалить репозиторий"
+  },
+  "export": {
+    "session": "Экспортировать сессию",
+    "sessionTitle": "Экспорт сессии"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "Данные сессии недоступны",
+    "title": "Отчёт по сессии"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Выберите проект"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "обн.",
+      "updatedYesterday": "обн. вчера",
+      "yesterday": "Вчера"
+    },
+    "reviewState": {
+      "needsFix": "Нужны правки"
+    },
+    "unassigned": "не назначено"
+  }
+}

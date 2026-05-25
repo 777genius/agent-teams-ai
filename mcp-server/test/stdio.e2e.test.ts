@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 
 function parseJsonToolResult(result: unknown) {
@@ -16,7 +17,17 @@ function parseJsonToolResult(result: unknown) {
   return JSON.parse(text ?? 'null');
 }
 
-async function writeTeamConfig(claudeDir: string, teamName: string) {
+type TestTeamMember = Record<string, unknown>;
+
+async function writeTeamConfig(
+  claudeDir: string,
+  teamName: string,
+  members: TestTeamMember[] = [
+    { name: 'team-lead', agentType: 'team-lead' },
+    { name: 'alice', agentType: 'teammate', role: 'developer' },
+    { name: 'bob', agentType: 'teammate', role: 'reviewer' },
+  ]
+) {
   const teamDir = path.join(claudeDir, 'teams', teamName);
   await mkdir(teamDir, { recursive: true });
   await writeFile(
@@ -24,17 +35,52 @@ async function writeTeamConfig(claudeDir: string, teamName: string) {
     JSON.stringify(
       {
         name: teamName,
-        members: [
-          { name: 'team-lead', agentType: 'team-lead' },
-          { name: 'alice', agentType: 'teammate', role: 'developer' },
-          { name: 'bob', agentType: 'teammate', role: 'reviewer' },
-        ],
+        members,
       },
       null,
       2
     ),
     'utf8'
   );
+}
+
+async function startControlServer(
+  handler: (request: {
+    method?: string;
+    url?: string;
+    body?: unknown;
+  }) => Promise<{ statusCode?: number; body: unknown }> | { statusCode?: number; body: unknown }
+) {
+  const server = http.createServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', async () => {
+      try {
+        const bodyText = Buffer.concat(chunks).toString('utf8');
+        const body = bodyText ? JSON.parse(bodyText) : undefined;
+        const result = await handler({ method: req.method, url: req.url, body });
+        res.writeHead(result.statusCode ?? 200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(result.body));
+      } catch (error) {
+        res.writeHead(500, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Failed to bind control server');
+  }
+
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    close: async () =>
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve()))
+      ),
+  };
 }
 
 async function writeBulkTaskRows(claudeDir: string, teamName: string, count: number) {
@@ -1988,6 +2034,454 @@ describe('agent-teams-mcp stdio e2e', () => {
         restoreAgainResponse.error?.message ?? (restoreAgainResponse.result?.content?.[0]?.text ?? '');
       expect(restoreAgainErrorText).toContain('task_restore only restores deleted tasks');
     } finally {
+      await client.close();
+    }
+  });
+
+  it('exposes Codex-native briefing and owner notifications over stdio MCP', async () => {
+    await writeTeamConfig(claudeDir, 'stdio-codex-team', [
+      { name: 'team-lead', agentType: 'team-lead', providerId: 'codex', model: 'gpt-5.5' },
+      {
+        name: 'bob',
+        agentType: 'teammate',
+        role: 'developer',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+      },
+    ]);
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+
+    try {
+      await client.initialize();
+
+      const briefingResult = await client.callTool(
+        'member_briefing',
+        {
+          claudeDir,
+          teamName: 'stdio-codex-team',
+          memberName: 'bob',
+          runtimeProvider: 'codex',
+        },
+        201
+      );
+      const briefingText = (
+        ((briefingResult as { result: { content?: Array<{ text?: string }> } }).result
+          ?.content?.[0]?.text as string | undefined) ?? ''
+      );
+      expect(briefingText).toContain('Codex Native visible messaging rule');
+      expect(briefingText).toContain('Codex Native task tool rule');
+      expect(briefingText).toContain('agent-teams_message_send');
+      expect(briefingText).toContain('mcp__agent-teams__task_get');
+      expect(briefingText).not.toContain('notify your team lead via SendMessage');
+
+      await client.callTool(
+        'task_create',
+        {
+          claudeDir,
+          teamName: 'stdio-codex-team',
+          subject: 'Codex stdio assignment',
+          owner: 'bob',
+          description: 'Verify Codex sees Agent Teams MCP tools over stdio.',
+        },
+        202
+      );
+
+      const inboxRaw = await readFile(
+        path.join(claudeDir, 'teams', 'stdio-codex-team', 'inboxes', 'bob.json'),
+        'utf8'
+      );
+      const inbox = JSON.parse(inboxRaw) as Array<{ text?: string }>;
+      const assignmentText = inbox[0]?.text ?? '';
+      expect(assignmentText).toContain('MCP tool agent-teams_message_send');
+      expect(assignmentText).toContain('Codex Native visible messaging rule');
+      expect(assignmentText).toContain('mcp__agent-teams__task_get');
+      expect(assignmentText).not.toContain('notify your lead via SendMessage');
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('forwards work-sync status and report through real stdio MCP JSON-RPC', async () => {
+    await writeTeamConfig(claudeDir, 'stdio-work-sync-team', [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'alice', agentType: 'teammate', role: 'developer' },
+    ]);
+    const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const controlServer = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+      if (
+        method === 'POST' &&
+        url === '/api/teams/stdio-work-sync-team/member-work-sync/alice/refresh'
+      ) {
+        return {
+          body: {
+            teamName: 'stdio-work-sync-team',
+            memberName: 'alice',
+            state: 'needs_sync',
+            agenda: {
+              teamName: 'stdio-work-sync-team',
+              memberName: 'alice',
+              generatedAt: '2026-04-29T00:00:00.000Z',
+              fingerprint: 'agenda:v1:stdio',
+              items: [],
+              diagnostics: [],
+            },
+            reportToken: 'wrs:v1.stdio.token',
+            reportTokenExpiresAt: '2026-04-29T00:15:00.000Z',
+            evaluatedAt: '2026-04-29T00:00:00.000Z',
+            diagnostics: ['no_current_report'],
+          },
+        };
+      }
+      if (method === 'POST' && url === '/api/teams/stdio-work-sync-team/member-work-sync/report') {
+        return { body: { accepted: true, code: 'accepted', status: body } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+
+    try {
+      await client.initialize();
+
+      const statusResult = await client.callTool(
+        'member_work_sync_status',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-team',
+          controlUrl: controlServer.baseUrl,
+          from: 'alice',
+        },
+        203
+      );
+      const status = parseJsonToolResult((statusResult as { result: unknown }).result);
+      expect(status.state).toBe('needs_sync');
+      expect(status.agenda.fingerprint).toBe('agenda:v1:stdio');
+      expect(status.statusOnlyIncomplete).toBe(true);
+      expect(status.nextRequiredToolCall).toMatchObject({
+        tool: 'member_work_sync_report',
+        arguments: {
+          teamName: 'stdio-work-sync-team',
+          memberName: 'alice',
+          controlUrl: controlServer.baseUrl,
+          state: 'caught_up',
+          agendaFingerprint: 'agenda:v1:stdio',
+          reportToken: 'wrs:v1.stdio.token',
+        },
+      });
+
+      const reportResult = await client.callTool(
+        'member_work_sync_report',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-team',
+          controlUrl: controlServer.baseUrl,
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:stdio',
+          reportToken: 'wrs:v1.stdio.token',
+          taskIds: ['task-1'],
+          note: 'Still working',
+          leaseTtlMs: 120000,
+        },
+        204
+      );
+      const report = parseJsonToolResult((reportResult as { result: unknown }).result);
+      expect(report.accepted).toBe(true);
+
+      expect(calls).toEqual([
+        {
+          method: 'POST',
+          url: '/api/teams/stdio-work-sync-team/member-work-sync/alice/refresh',
+          body: {},
+        },
+        {
+          method: 'POST',
+          url: '/api/teams/stdio-work-sync-team/member-work-sync/report',
+          body: expect.objectContaining({
+            memberName: 'alice',
+            state: 'still_working',
+            agendaFingerprint: 'agenda:v1:stdio',
+            reportToken: 'wrs:v1.stdio.token',
+            taskIds: ['task-1'],
+            note: 'Still working',
+            leaseTtlMs: 120000,
+          }),
+        },
+      ]);
+    } finally {
+      await client.close();
+      await controlServer.close();
+    }
+  });
+
+  it('discovers work-sync control endpoint from env in a real stdio MCP process', async () => {
+    await writeTeamConfig(claudeDir, 'stdio-work-sync-env-team', [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'alice', agentType: 'teammate', role: 'developer' },
+    ]);
+    const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const controlServer = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+      if (
+        method === 'POST' &&
+        url === '/api/teams/stdio-work-sync-env-team/member-work-sync/alice/refresh'
+      ) {
+        return {
+          body: {
+            teamName: 'stdio-work-sync-env-team',
+            memberName: 'alice',
+            state: 'needs_sync',
+            agenda: {
+              teamName: 'stdio-work-sync-env-team',
+              memberName: 'alice',
+              generatedAt: '2026-04-29T00:00:00.000Z',
+              fingerprint: 'agenda:v1:stdio-env',
+              items: [{ taskId: 'task-env-1' }],
+              diagnostics: [],
+            },
+            reportToken: 'wrs:v1.stdio.env.token',
+            reportTokenExpiresAt: '2026-04-29T00:15:00.000Z',
+            evaluatedAt: '2026-04-29T00:00:00.000Z',
+            diagnostics: ['no_current_report'],
+          },
+        };
+      }
+      if (
+        method === 'POST' &&
+        url === '/api/teams/stdio-work-sync-env-team/member-work-sync/report'
+      ) {
+        return { body: { accepted: true, code: 'accepted', status: body } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+    const previousControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+
+    try {
+      await client.initialize();
+
+      const statusResult = await client.callTool(
+        'member_work_sync_status',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-env-team',
+          from: 'alice',
+        },
+        205
+      );
+      const status = parseJsonToolResult((statusResult as { result: unknown }).result);
+      expect(status.nextRequiredToolCall).toMatchObject({
+        tool: 'member_work_sync_report',
+        arguments: {
+          teamName: 'stdio-work-sync-env-team',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:stdio-env',
+          reportToken: 'wrs:v1.stdio.env.token',
+          taskIds: ['task-env-1'],
+        },
+      });
+
+      const reportResult = await client.callTool(
+        'member_work_sync_report',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-env-team',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:stdio-env',
+          reportToken: 'wrs:v1.stdio.env.token',
+          taskIds: ['task-env-1'],
+        },
+        206
+      );
+      const report = parseJsonToolResult((reportResult as { result: unknown }).result);
+      expect(report.accepted).toBe(true);
+      expect(calls.map((call) => call.url)).toEqual([
+        '/api/teams/stdio-work-sync-env-team/member-work-sync/alice/refresh',
+        '/api/teams/stdio-work-sync-env-team/member-work-sync/report',
+      ]);
+    } finally {
+      if (previousControlUrl === undefined) {
+        delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      } else {
+        process.env.CLAUDE_TEAM_CONTROL_URL = previousControlUrl;
+      }
+      await client.close();
+      await controlServer.close();
+    }
+  });
+
+  it('falls back from stale explicit work-sync control URL to state file in real stdio MCP', async () => {
+    await writeTeamConfig(claudeDir, 'stdio-work-sync-stale-team', [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'alice', agentType: 'teammate', role: 'developer' },
+    ]);
+    const staleCalls: Array<{ method?: string; url?: string }> = [];
+    const freshCalls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const staleServer = await startControlServer(async ({ method, url }) => {
+      staleCalls.push({ method, url });
+      return { statusCode: 404, body: { error: 'stale control server' } };
+    });
+    const freshServer = await startControlServer(async ({ method, url, body }) => {
+      freshCalls.push({ method, url, body });
+      if (
+        method === 'POST' &&
+        url === '/api/teams/stdio-work-sync-stale-team/member-work-sync/alice/refresh'
+      ) {
+        return {
+          body: {
+            teamName: 'stdio-work-sync-stale-team',
+            memberName: 'alice',
+            state: 'needs_sync',
+            agenda: {
+              teamName: 'stdio-work-sync-stale-team',
+              memberName: 'alice',
+              generatedAt: '2026-04-29T00:00:00.000Z',
+              fingerprint: 'agenda:v1:stdio-stale-fallback',
+              items: [{ taskId: 'task-stale-1' }],
+              diagnostics: [],
+            },
+            reportToken: 'wrs:v1.stdio.stale.token',
+            reportTokenExpiresAt: '2026-04-29T00:15:00.000Z',
+            evaluatedAt: '2026-04-29T00:00:00.000Z',
+            diagnostics: ['no_current_report'],
+          },
+        };
+      }
+      if (
+        method === 'POST' &&
+        url === '/api/teams/stdio-work-sync-stale-team/member-work-sync/report'
+      ) {
+        return { body: { accepted: true, code: 'accepted', status: body } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+    await writeFile(
+      path.join(claudeDir, 'team-control-api.json'),
+      JSON.stringify({ baseUrl: freshServer.baseUrl, updatedAt: new Date().toISOString() }),
+      'utf8'
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+
+    try {
+      await client.initialize();
+
+      const statusResult = await client.callTool(
+        'member_work_sync_status',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-stale-team',
+          controlUrl: staleServer.baseUrl,
+          from: 'alice',
+        },
+        207
+      );
+      const status = parseJsonToolResult((statusResult as { result: unknown }).result);
+      expect(status.agenda.fingerprint).toBe('agenda:v1:stdio-stale-fallback');
+
+      const reportResult = await client.callTool(
+        'member_work_sync_report',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-stale-team',
+          controlUrl: staleServer.baseUrl,
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:stdio-stale-fallback',
+          reportToken: 'wrs:v1.stdio.stale.token',
+          taskIds: ['task-stale-1'],
+        },
+        208
+      );
+      const report = parseJsonToolResult((reportResult as { result: unknown }).result);
+      expect(report.accepted).toBe(true);
+      expect(staleCalls.map((call) => call.url)).toEqual([
+        '/api/teams/stdio-work-sync-stale-team/member-work-sync/alice/refresh',
+        '/api/teams/stdio-work-sync-stale-team/member-work-sync/report',
+      ]);
+      expect(freshCalls.map((call) => call.url)).toEqual([
+        '/api/teams/stdio-work-sync-stale-team/member-work-sync/alice/refresh',
+        '/api/teams/stdio-work-sync-stale-team/member-work-sync/report',
+      ]);
+    } finally {
+      await client.close();
+      await staleServer.close();
+      await freshServer.close();
+    }
+  });
+
+  it('records a pending work-sync report when control API is unavailable in real stdio MCP', async () => {
+    await writeTeamConfig(claudeDir, 'stdio-work-sync-pending-team', [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'alice', agentType: 'teammate', role: 'developer' },
+    ]);
+    const previousControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+    delete process.env.CLAUDE_TEAM_CONTROL_URL;
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+
+    try {
+      await client.initialize();
+
+      const reportResult = await client.callTool(
+        'member_work_sync_report',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-pending-team',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:offline',
+          reportToken: 'wrs:v1.offline.token',
+          taskIds: ['task-offline-1'],
+        },
+        209
+      );
+      const report = parseJsonToolResult((reportResult as { result: unknown }).result);
+      expect(report).toMatchObject({
+        accepted: false,
+        pendingValidation: true,
+        code: 'pending_validation',
+      });
+
+      const pendingFile = JSON.parse(
+        await readFile(
+          path.join(
+            claudeDir,
+            'teams',
+            'stdio-work-sync-pending-team',
+            '.member-work-sync',
+            'pending-reports.json'
+          ),
+          'utf8'
+        )
+      ) as {
+        intents?: Record<
+          string,
+          {
+            reason?: string;
+            status?: string;
+            request?: { memberName?: string; agendaFingerprint?: string; taskIds?: string[] };
+          }
+        >;
+      };
+      const intents = Object.values(pendingFile.intents ?? {});
+      expect(intents).toHaveLength(1);
+      expect(intents[0]).toMatchObject({
+        reason: 'control_api_unavailable',
+        status: 'pending',
+        request: {
+          memberName: 'alice',
+          agendaFingerprint: 'agenda:v1:offline',
+          taskIds: ['task-offline-1'],
+        },
+      });
+    } finally {
+      if (previousControlUrl === undefined) {
+        delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      } else {
+        process.env.CLAUDE_TEAM_CONTROL_URL = previousControlUrl;
+      }
       await client.close();
     }
   });

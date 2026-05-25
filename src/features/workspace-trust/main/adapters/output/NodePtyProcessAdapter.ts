@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+
 import { createLogger } from '@shared/utils/logger';
 
 import type {
@@ -13,6 +15,7 @@ import type * as NodePty from 'node-pty';
 
 const logger = createLogger('WorkspaceTrustNodePtyProcessAdapter');
 const MAX_TRANSCRIPT_CHARS = 64 * 1024;
+const requireNativeAddon = createRequire(import.meta.url);
 
 type NodePtyModule = typeof NodePty;
 
@@ -23,8 +26,7 @@ function loadNodePty(): NodePtyModule | null {
     return nodePty;
   }
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node-pty is optional native addon
-    nodePty = require('node-pty') as NodePtyModule;
+    nodePty = requireNativeAddon('node-pty') as NodePtyModule;
   } catch (error) {
     logger.warn(`node-pty unavailable for workspace trust preflight: ${String(error)}`);
     nodePty = null;

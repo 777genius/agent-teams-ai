@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
@@ -20,6 +21,7 @@ import type { GlobalTask, TeamTaskWithKanban } from '@shared/types';
  * without navigating to the team page first.
  */
 export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const {
     globalTaskDetail,
     closeGlobalTaskDetail,
@@ -159,7 +161,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
           onClick={handleOpenTeam}
         >
           <ExternalLink size={12} />
-          Open team
+          {t('dialogs.actions.openTeam')}
         </button>
       }
     />

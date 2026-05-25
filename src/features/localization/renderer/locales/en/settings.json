@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Power-user options: export/import config, reset defaults, and raw configuration editing.",
+      "label": "Advanced"
+    },
+    "general": {
+      "description": "Core app preferences like theme, language, display density, and startup behavior.",
+      "label": "General"
+    },
+    "infoAriaLabel": "What is {{label}}?",
+    "notifications": {
+      "description": "Control when and how you get notified about agent activity, task completions, and errors.",
+      "label": "Notifications"
+    }
+  },
+  "view": {
+    "description": "Manage your app preferences",
+    "loading": "Loading settings...",
+    "title": "Settings"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Cancel",
+      "test": "Test"
+    },
+    "defaults": {
+      "allProjects": "All projects",
+      "allProjectsHint": "Tests use {{project}}. Default applies unless a project has an override.",
+      "loadingContexts": "Loading contexts...",
+      "projectHint": "Saving overrides only {{project}}.",
+      "projectOverrideContext": "Project override context",
+      "scopeDescriptionAllProjects": "Default for every project that does not have its own OpenCode override.",
+      "scopeDescriptionProject": "Override only the selected project. Running teams are not changed.",
+      "selectProjectContext": "Select project context",
+      "selectProjectHint": "Select a project before testing local models or saving defaults.",
+      "selectValidationContext": "Select validation context",
+      "setAllProjectsDefault": "Set all-projects default",
+      "setProjectDefault": "Set project default",
+      "thisProject": "This project",
+      "title": "OpenCode defaults",
+      "validationContext": "Validation context"
+    },
+    "diagnostics": {
+      "copied": "Diagnostics copied",
+      "copiedShort": "Copied",
+      "copy": "Copy diagnostics",
+      "hints": "Hints",
+      "likelyCause": "Likely cause:"
+    },
+    "models": {
+      "alreadyDefault": "This is already the selected OpenCode default.",
+      "empty": "No models found.",
+      "emptyFree": "No free models found.",
+      "emptyRecommended": "No recommended models found.",
+      "emptyRecommendedFree": "No recommended free models found.",
+      "freeOnly": "Free only",
+      "launchableDescription": "Routes you can test or use in the team picker: local config, free built-in models, and current default.",
+      "launchableTitle": "Launchable OpenCode models",
+      "loadingRoutes": "Loading OpenCode model routes...",
+      "noRoutesMatch": "No OpenCode model routes match \"{{query}}\".",
+      "noneReported": "No launchable OpenCode model routes were reported yet. Configure a local route in OpenCode or use the Providers tab to inspect catalog providers.",
+      "recommendedOnly": "Recommended only",
+      "searchPlaceholder": "Search models",
+      "selectProjectBeforeTesting": "Select a project context before testing models.",
+      "selectProjectBeforeTestingDefaults": "Select a project context before testing or saving OpenCode defaults.",
+      "useInTeamPicker": "Use in team picker"
+    },
+    "providers": {
+      "catalog": "OpenCode provider catalog",
+      "countFallback": "OpenCode providers",
+      "description": "{{count}}. Connected and recommended providers are shown first.",
+      "loadMore": "Load more providers",
+      "loading": "Loading OpenCode providers",
+      "noMatches": "No providers match that search.",
+      "noneReported": "No OpenCode providers reported by the managed runtime.",
+      "recommended": "Recommended",
+      "refreshCatalog": "Refresh catalog",
+      "searchPlaceholder": "Search providers",
+      "description_few": "{{count}}. Connected and recommended providers are shown first.",
+      "description_many": "{{count}}. Connected and recommended providers are shown first.",
+      "description_one": "{{count}}. Connected and recommended providers are shown first.",
+      "description_other": "{{count}}. Connected and recommended providers are shown first."
+    },
+    "setup": {
+      "loading": "Loading provider setup..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode default: {{model}}",
+      "loading": "Loading managed OpenCode runtime, connected providers, and model defaults...",
+      "source": "Source: {{source}}",
+      "title": "OpenCode runtime"
+    },
+    "tabs": {
+      "models": "Models",
+      "providers": "Providers"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Search model routes"
+    },
+    "badges": {
+      "usedInTeamPicker": "Used in team picker",
+      "free": "free",
+      "local": "local",
+      "configured": "configured",
+      "connected": "connected",
+      "verified": "verified",
+      "needsTest": "needs test",
+      "failed": "failed",
+      "unknown": "unknown",
+      "default": "default"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Language for agent communication",
+      "descriptionWithDetected": "Language for agent communication (detected: {{detected}})",
+      "emptyMessage": "No language found.",
+      "label": "Language",
+      "searchPlaceholder": "Search language...",
+      "selectPlaceholder": "Select language...",
+      "title": "Agent Language"
+    },
+    "appLanguage": {
+      "description": "Language for the application interface.",
+      "label": "Language",
+      "title": "App Language"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Automatically expand each response turn when opening a transcript or receiving a new message",
+        "label": "Expand AI responses by default"
+      },
+      "nativeTitleBar": {
+        "description": "Use the default system window frame instead of the custom title bar",
+        "label": "Use native title bar",
+        "restartConfirm": {
+          "confirmLabel": "Restart",
+          "message": "The app needs to restart to apply the title bar change. Restart now?",
+          "title": "Restart required"
+        }
+      },
+      "theme": {
+        "description": "Choose your preferred color theme",
+        "label": "Theme",
+        "options": {
+          "dark": "Dark",
+          "light": "Light",
+          "system": "System"
+        }
+      },
+      "title": "Appearance"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Start an HTTP server to access the UI from a browser or embed in iframes",
+        "label": "Enable server mode"
+      },
+      "title": "Browser Access"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Select Folder",
+        "selectFolderManually": "Select Folder Manually",
+        "useAutoDetect": "Use Auto-Detect",
+        "useFolder": "Use Folder",
+        "usePath": "Use Path",
+        "useThisPath": "Use This Path",
+        "useWsl": "Using Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "This folder does not contain a \"projects\" directory. Continue anyway?",
+          "title": "No projects directory found"
+        },
+        "notClaudeDir": {
+          "message": "This folder is named \"{{folderName}}\", not \".claude\". Continue anyway?",
+          "title": "Selected folder is not .claude"
+        },
+        "noWslPaths": {
+          "message": "Could not find WSL distros with Claude data automatically. Select folder manually?",
+          "title": "No WSL Claude paths found"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" does not contain a \"projects\" directory. Continue anyway?",
+          "title": "WSL path missing projects directory"
+        }
+      },
+      "current": {
+        "autoDetected": "Auto-detected: {{path}}",
+        "autoDetectedPath": "Using auto-detected path",
+        "customPath": "Using custom path",
+        "label": "Current Local Root"
+      },
+      "description": "Choose which local folder is treated as your Claude data root",
+      "errors": {
+        "detectWslFailed": "Failed to detect WSL Claude root paths",
+        "loadFailed": "Failed to load local Claude root settings",
+        "updateFailed": "Failed to update Claude root"
+      },
+      "title": "Local Claude Root",
+      "wslModal": {
+        "closeAriaLabel": "Close WSL path modal",
+        "description": "Detected WSL distributions and Claude root candidates",
+        "noProjectsDir": "No projects directory detected",
+        "title": "Select WSL Claude Root"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Help improve the app by sending anonymous crash and performance data",
+        "label": "Send crash reports"
+      },
+      "title": "Privacy"
+    },
+    "server": {
+      "runningOn": "Running on",
+      "standaloneModeDescription": "Running in standalone mode. The HTTP server is always active. System notifications are not available - notification triggers are logged in-app only.",
+      "title": "Server"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Automatically start the app when you log in",
+        "label": "Launch at login"
+      },
+      "showDockIcon": {
+        "description": "Display the app icon in the dock (macOS)",
+        "label": "Show dock icon"
+      },
+      "title": "Startup"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Notifications may not work in development mode. macOS identifies the app as \"Electron\" (bundle ID",
+      "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",
+      "title": "Dev Mode"
+    },
+    "ignoredRepositories": {
+      "description": "Notifications from these repositories will be ignored",
+      "empty": "No repositories ignored",
+      "selectPlaceholder": "Select repository to ignore...",
+      "title": "Ignored Repositories"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Show system notifications for errors and events",
+        "label": "Enable System Notifications"
+      },
+      "sound": {
+        "description": "Play a sound when notifications appear",
+        "label": "Play sound"
+      },
+      "subagentErrors": {
+        "description": "Detect and notify about errors in subagent sessions",
+        "label": "Include subagent errors"
+      },
+      "title": "Notification Settings"
+    },
+    "snooze": {
+      "clear": "Clear Snooze",
+      "description": "Temporarily pause notifications",
+      "descriptionWithTime": "Snoozed until {{time}}",
+      "label": "Snooze notifications",
+      "options": {
+        "15": "15 minutes",
+        "30": "30 minutes",
+        "60": "1 hour",
+        "120": "2 hours",
+        "240": "4 hours",
+        "-1": "Until tomorrow"
+      },
+      "selectDuration": "Select duration..."
+    },
+    "taskCompletion": {
+      "description": "Get native OS notifications when Claude finishes tasks - sounds, banners, and Dock/taskbar badges. Works on macOS, Linux, and Windows.",
+      "installPlugin": "Install claude-notifications-go plugin",
+      "title": "Task Completion Notifications"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Notify when every task in a team reaches completed status",
+        "label": "All tasks completed"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "When Claude reports a reset time, schedule a follow-up nudge for the team lead after the limit resets",
+        "label": "Auto-resume after rate limit"
+      },
+      "clarifications": {
+        "description": "Show native OS notifications when a task needs your input",
+        "label": "Task clarification notifications"
+      },
+      "crossTeamMessage": {
+        "description": "Notify when a message arrives from another team",
+        "label": "Cross-team message notifications"
+      },
+      "leadInbox": {
+        "description": "Notify when teammates send messages to the team lead",
+        "label": "Lead inbox notifications"
+      },
+      "statusChange": {
+        "description": "Show native OS notifications when a task's status changes",
+        "label": "Task status change notifications",
+        "onlySolo": {
+          "description": "Notify only when the team has no teammates",
+          "label": "Only in Solo mode"
+        },
+        "statuses": {
+          "description": "Which target statuses trigger a notification",
+          "label": "Notify on these statuses",
+          "options": {
+            "approved": "Approved",
+            "completed": "Completed",
+            "deleted": "Deleted",
+            "in_progress": "Started",
+            "needsFix": "Needs Fixes",
+            "pending": "Pending",
+            "review": "Review"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Show native OS notifications when agents comment on tasks",
+        "label": "Task comment notifications"
+      },
+      "taskCreated": {
+        "description": "Show native OS notifications when a new task is created",
+        "label": "Task created notifications"
+      },
+      "teamLaunched": {
+        "description": "Notify when a team finishes launching and is ready",
+        "label": "Team launched notifications"
+      },
+      "title": "Team Notifications",
+      "toolApproval": {
+        "description": "Notify when a tool needs your approval (Allow/Deny) while the app is not focused",
+        "label": "Tool approval notifications"
+      },
+      "userInbox": {
+        "description": "Notify when teammates send messages to you",
+        "label": "User inbox notifications"
+      }
+    },
+    "test": {
+      "action": "Send Test",
+      "description": "Send a test notification to verify delivery",
+      "failedToSend": "Failed to send test notification",
+      "label": "Test notification",
+      "sending": "Sending...",
+      "sent": "Sent!",
+      "unknownError": "Unknown error"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "App icon",
+      "description": "Assemble AI agent teams that work autonomously in parallel, communicate across teams, and manage tasks on a kanban board - with built-in code review, live process monitoring, and full tool visibility.",
+      "standalone": "Standalone",
+      "title": "About",
+      "version": "Version {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Edit Config",
+      "exportConfig": "Export Config",
+      "importConfig": "Import Config",
+      "openInEditor": "Open in Editor",
+      "resetToDefaults": "Reset to Defaults",
+      "title": "Configuration"
+    },
+    "updates": {
+      "available": "v{{version}} available",
+      "check": "Check for Updates",
+      "checking": "Checking...",
+      "ready": "Update ready",
+      "unknownVersion": "unknown",
+      "upToDate": "Up to date"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Failed to load config",
+      "saveFailed": "Failed to save config"
+    },
+    "footer": {
+      "autoSave": "Changes auto-save after editing",
+      "toClose": "to close",
+      "escapeKey": "Esc"
+    },
+    "loading": "Loading config...",
+    "status": {
+      "invalidJson": "Invalid JSON",
+      "saveFailed": "Save failed",
+      "saved": "Saved",
+      "saving": "Saving..."
+    },
+    "title": "Edit Configuration"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Cancel",
+      "submit": "Add Trigger",
+      "title": "Add Custom Trigger"
+    },
+    "builtin": {
+      "description": "Default triggers that come with the application. You can enable or disable them and customize their patterns.",
+      "title": "Built-in Triggers"
+    },
+    "card": {
+      "builtinBadge": "Builtin",
+      "collapseAriaLabel": "Collapse",
+      "deleteAriaLabel": "Delete trigger",
+      "editNameAriaLabel": "Edit name",
+      "expandAriaLabel": "Expand"
+    },
+    "color": {
+      "customHexTitle": "Custom hex color",
+      "invalidHex": "Invalid hex"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Alert if >",
+      "emptyPatternHint": "Leave empty to match all content. Uses JavaScript regex syntax.",
+      "errorStatusDescription": "Triggers when a tool execution reports an error (is_error: true).",
+      "tokensUnit": "tokens",
+      "matchPatternPlaceholder": "e.g., error|failed|exception"
+    },
+    "custom": {
+      "description": "Create your own triggers to get notified for specific patterns or tool outputs.",
+      "empty": "No custom triggers configured yet.",
+      "title": "Custom Triggers"
+    },
+    "errors": {
+      "invalidRegexPattern": "Invalid regex pattern"
+    },
+    "fields": {
+      "contentType": "Content Type",
+      "matchField": "Match Field",
+      "matchPattern": "Match Pattern (Regex)",
+      "scopeToolName": "Scope / Tool Name",
+      "scopeToolNameOptional": "Scope / Tool Name (optional)",
+      "threshold": "Threshold",
+      "tokenType": "Token Type",
+      "triggerNamePlaceholder": "e.g., Build Failure Alert",
+      "triggerNameRequired": "Trigger Name *"
+    },
+    "ignorePatterns": {
+      "hint": "Press Enter to add. Notification is skipped if any pattern matches.",
+      "placeholder": "Add ignore regex...",
+      "removeAriaLabel": "Remove ignore pattern",
+      "summary": "Advanced: Exclusion Rules",
+      "title": "Ignore Patterns (skip if matches)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Text Output",
+        "thinking": "Thinking",
+        "tool_result": "Tool Result",
+        "tool_use": "Tool Use"
+      },
+      "matchFields": {
+        "args": "Arguments",
+        "command": "Command",
+        "content": "Content",
+        "description": "Description",
+        "file_path": "File Path",
+        "fullInput": "Full Input (JSON)",
+        "glob": "Glob Filter",
+        "new_string": "New String",
+        "old_string": "Old String",
+        "path": "Path",
+        "pattern": "Pattern",
+        "prompt": "Prompt",
+        "query": "Query",
+        "skill": "Skill Name",
+        "subagent_type": "Subagent Type",
+        "text": "Text Content",
+        "thinking": "Thinking Content",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Content Pattern",
+        "error_status": "Execution Error",
+        "token_threshold": "High Token Usage"
+      },
+      "tokenTypes": {
+        "input": "Input Tokens",
+        "output": "Output Tokens",
+        "total": "Total Tokens"
+      },
+      "toolNames": {
+        "anyTool": "Any Tool"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Test Trigger",
+      "detectedSuffix": "errors would have been detected",
+      "more": "...and {{count}} more",
+      "more_few": "...and {{count}} more",
+      "more_many": "...and {{count}} more",
+      "more_one": "...and {{count}} more",
+      "more_other": "...and {{count}} more",
+      "testTrigger": "Test Trigger",
+      "testing": "Testing...",
+      "title": "Preview",
+      "truncatedWarning": "Search stopped early (timeout or count limit). Actual matches may be higher.",
+      "viewSession": "View Session"
+    },
+    "repositoryScope": {
+      "empty": "No repositories selected - trigger applies to all repositories",
+      "hint": "When repositories are selected, this trigger only fires for errors in those repositories.",
+      "placeholder": "Select repository to add...",
+      "summary": "Advanced: Repository Scope",
+      "title": "Limit to Repositories (applies only to selected repositories)"
+    },
+    "sections": {
+      "configuration": "Configuration",
+      "dotColor": "Dot Color",
+      "generalInfo": "General Info",
+      "triggerCondition": "Trigger Condition"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Add Profile",
+      "cancel": "Cancel",
+      "deleteProfile": "Delete profile",
+      "editProfile": "Edit profile",
+      "save": "Save"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Auto (from SSH Config)",
+      "password": "Password",
+      "privateKey": "Private Key"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Delete",
+      "message": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+      "title": "Delete Profile"
+    },
+    "description": "Save SSH connection profiles for quick reconnection",
+    "empty": {
+      "description": "Add an SSH profile to connect quickly",
+      "title": "No saved profiles"
+    },
+    "form": {
+      "authentication": "Authentication",
+      "host": "Host",
+      "name": "Name",
+      "passwordPrompt": "You will be prompted for the password when connecting.",
+      "port": "Port",
+      "privateKeyPath": "Private Key Path",
+      "username": "Username",
+      "namePlaceholder": "My Server",
+      "hostPlaceholder": "hostname or IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "Loading profiles...",
+    "title": "Workspace Profiles"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Connect",
+      "connecting": "Connecting...",
+      "disconnect": "Disconnect",
+      "testConnection": "Test Connection",
+      "testing": "Testing..."
+    },
+    "currentMode": {
+      "description": "Data source for session files",
+      "label": "Current Mode",
+      "local": "Local ({{path}})"
+    },
+    "description": "Connect to a remote machine to view Claude Code sessions running there",
+    "form": {
+      "authentication": "Authentication",
+      "host": "Host",
+      "password": "Password",
+      "port": "Port",
+      "privateKeyPath": "Private Key Path",
+      "username": "Username",
+      "hostPlaceholder": "hostname or SSH config alias",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "Saved Profiles"
+    },
+    "ssh": {
+      "title": "SSH Connection"
+    },
+    "status": {
+      "connectedTo": "Connected to {{host}}",
+      "remoteSessions": "Viewing remote sessions via SSH"
+    },
+    "test": {
+      "failed": "Connection failed: {{error}}",
+      "success": "Connection successful",
+      "unknownError": "Unknown error"
+    },
+    "title": "Remote Connection"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Cancel",
+      "cancelLogin": "Cancel login",
+      "connectChatGpt": "Connect ChatGPT",
+      "delete": "Delete",
+      "disable": "Disable",
+      "disconnectAccount": "Disconnect account",
+      "generateLink": "Generate link",
+      "openLogin": "Open login",
+      "reconnectAnthropic": "Reconnect Anthropic",
+      "refresh": "Refresh",
+      "replaceKey": "Replace key",
+      "saveEndpoint": "Save endpoint",
+      "saveKey": "Save key",
+      "saving": "Saving...",
+      "setApiKey": "Set API key",
+      "updateKey": "Update key",
+      "useCode": "Use code"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Loading stored credentials...",
+      "projectScope": "Project",
+      "scope": "Scope",
+      "storedIn": "Stored in {{backend}}",
+      "userScope": "User",
+      "storedInApp": "Stored in app",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Key",
+          "title": "API key",
+          "description": "Use a direct Anthropic API key for API-billed access. Your Anthropic subscription session stays available when you switch back.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Key",
+          "title": "API key",
+          "description": "Use an OpenAI API key as a secondary Codex auth path. If you switch Codex to API key mode, the app will mirror OPENAI_API_KEY into CODEX_API_KEY for native launches.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Key",
+          "title": "API access",
+          "description": "Use `GEMINI_API_KEY` for the Gemini API backend. CLI SDK and ADC do not require it.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Connected",
+        "description": "Manage the local Codex app-server account session that powers subscription-backed native launches.",
+        "loginInProgress": "Login in progress",
+        "plan": "Plan: {{plan}}",
+        "reconnectRequired": "Reconnect required",
+        "title": "ChatGPT account",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto will keep using the detected API key until ChatGPT is connected.",
+          "detectedApiKeyNeedsApiMode": "{{message}} The detected API key is only used after you switch Codex to API key mode.",
+          "localArtifactsNoSession": "Codex CLI currently reports no active ChatGPT account. Local Codex account data exists, but no active managed session is selected. Usage limits appear here only after Codex CLI sees one.",
+          "noActiveAccount": "Codex CLI currently reports no active ChatGPT account. Usage limits appear here only after Codex CLI sees one.",
+          "reconnectBeforeUsage": "Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here.",
+          "usageLimitsAfterReport": "Usage limits appear here after Codex reports them for the connected ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "Checking",
+        "downloading": "Downloading",
+        "installCli": "Install Codex CLI",
+        "installing": "Installing",
+        "retryInstall": "Retry install",
+        "title": "Install Codex CLI into app data"
+      },
+      "rateLimits": {
+        "credits": "Credits",
+        "creditsDescription": "Credits are shown separately from window-based subscription usage and may be unavailable for plan-backed ChatGPT sessions.",
+        "noSecondaryWindow": "Codex did not return a secondary window for this account snapshot.",
+        "notReported": "Not reported",
+        "primaryReset": "Primary reset",
+        "primaryUsed": "Primary used",
+        "primaryWindow": "Primary window",
+        "remainingLeft": "{{value}} left",
+        "remainingUnknown": "Remaining unknown",
+        "secondaryReset": "Secondary reset",
+        "secondaryUsed": "Secondary used",
+        "secondaryWindow": "Secondary window",
+        "usedQuotaNote": "These percentages show used quota, not remaining quota.",
+        "weeklyReset": "Weekly reset",
+        "weeklyUsed": "Weekly used",
+        "weeklyUsedOneWeek": "Weekly used (1w)",
+        "weeklyWindow": "Weekly window",
+        "secondaryFallback": "secondary",
+        "secondaryWindowNote": " Weekly limits are shown separately in the {{window}} window.",
+        "usageExplanationGeneric": "Shows used quota, not remaining quota.",
+        "usageExplanationWindowOnly": "Shows used quota in the current {{window}} window, not remaining quota.",
+        "usageExplanationWithRemaining": "{{used}} used - about {{remaining}} left in the current {{window}} window."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "Auth token is not configured.",
+      "baseUrl": "Base URL",
+      "description": "Use an Anthropic-compatible local runtime endpoint.",
+      "keepSavedToken": "Leave blank to keep saved token",
+      "title": "Local / compatible endpoint",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "Base URL is required",
+        "firstPartyAnthropic": "Use Auto, Subscription, or API key for first-party Anthropic",
+        "httpRequired": "Base URL must use http:// or https://",
+        "invalidUrl": "Invalid URL",
+        "noCredentials": "Base URL must not include credentials"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint disabled. Saved token was kept.",
+        "endpointSaved": "Endpoint saved",
+        "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Authentication method",
+      "descriptions": {
+        "anthropic": "Choose how app-launched Anthropic sessions authenticate.",
+        "codex": "Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.",
+        "gemini": "Configure optional API access. CLI SDK and ADC are still discovered automatically.",
+        "opencode": "OpenCode authentication and provider inventory are managed by the OpenCode runtime."
+      },
+      "method": "Connection method",
+      "mode": "Mode: {{mode}}",
+      "selected": "Selected",
+      "switching": "Switching...",
+      "title": "Connection"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API key"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Use ANTHROPIC_API_KEY and Anthropic API billing.",
+        "autoDescription": "Use Anthropic runtime defaults and the best local credential available.",
+        "hint": "Auto keeps Anthropic on its default local credential resolution.",
+        "subscriptionDescription": "Use your local Anthropic sign-in session and subscription access.",
+        "subscriptionTitle": "Anthropic subscription"
+      },
+      "auto": {
+        "title": "Auto"
+      },
+      "codex": {
+        "apiKeyDescription": "Use OPENAI_API_KEY and CODEX_API_KEY billing for native Codex launches.",
+        "autoDescription": "Prefer your ChatGPT account and subscription. Use API key mode only if needed.",
+        "chatgptDescription": "Use your connected ChatGPT account and Codex subscription.",
+        "chatgptTitle": "ChatGPT account",
+        "hint": "Codex always runs through the native runtime. Auto prefers your ChatGPT account before falling back to API-key credentials."
+      }
+    },
+    "description": "Manage how each provider connects and, when supported, which backend the multimodel runtime should use.",
+    "fastMode": {
+      "defaultOff": "Default Off",
+      "description": "Apply Claude Code Fast mode by default for new Anthropic team launches when the resolved model and runtime allow it.",
+      "disabledHint": "New Anthropic launches stay on normal speed unless a team explicitly enables Fast mode.",
+      "enabledHint": "New Anthropic launches will request Fast mode by default when the resolved model supports it.",
+      "notExposed": "This Anthropic runtime does not expose Fast mode.",
+      "preferFast": "Prefer Fast",
+      "title": "Fast mode default",
+      "unavailableForRuntime": "Fast mode is currently unavailable for this Anthropic runtime."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API key mode is selected, but no Anthropic API credential is available yet.",
+      "anthropicStoredKeyAvailable": "A saved API key is available, but app-launched Anthropic sessions use it only after you switch to API key mode.",
+      "anthropicSubscriptionMissing": "Anthropic subscription mode is selected. Sign in with Anthropic to use this provider.",
+      "authTokenMissing": "Auth token is not configured. Many local Anthropic-compatible endpoints require a non-empty token.",
+      "chatgptLoginPending": "Waiting for ChatGPT account login to finish...",
+      "chatgptLoginStarting": "Starting ChatGPT login...",
+      "codexApiKeyMissing": "API key mode is selected, but no OPENAI_API_KEY or CODEX_API_KEY credential is available yet.",
+      "codexLocalArtifactsNoSession": "Codex CLI currently has no active ChatGPT account. Local Codex account data exists, but no active managed session is selected.",
+      "codexNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+      "codexNoChatgptAccount": "Codex CLI currently has no active ChatGPT account. Connect ChatGPT to use your subscription.",
+      "codexNoCredential": "No ChatGPT account or API key is available yet.",
+      "geminiApiUnavailable": "Gemini API is currently unavailable. Configure `GEMINI_API_KEY` here or use valid Google ADC credentials.",
+      "withApiKeyFallback": "{{message}} Switch to API key mode to use the detected API key."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Force app-launched Anthropic sessions to use an API key credential.",
+        "auto": "Use the runtime default behavior. Saved API keys in this app are only used after you switch to API key mode.",
+        "oauth": "Force app-launched Anthropic sessions to use the local Anthropic subscription session."
+      },
+      "codex": {
+        "apiKey": "Force native Codex launches to use OPENAI_API_KEY / CODEX_API_KEY billing.",
+        "auto": "Prefer your ChatGPT account when it is available. Fall back to API key mode only when needed.",
+        "chatgpt": "Force native Codex launches to use your connected ChatGPT account and subscription."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Applying connection changes...",
+      "refreshingProviderStatus": "Refreshing provider status...",
+      "savingCompatibleEndpoint": "Saving compatible endpoint...",
+      "switchingAnthropicSubscription": "Switching to Anthropic subscription...",
+      "switchingApiKey": "Switching to API key...",
+      "switchingApiKeyMode": "Switching to API key mode...",
+      "switchingAuto": "Switching to Auto...",
+      "switchingChatgpt": "Switching to ChatGPT account mode..."
+    },
+    "provider": "Provider",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic currently has no separate runtime backend selector.",
+        "codex": "Codex now runs only through the native runtime path.",
+        "gemini": "Choose which Gemini runtime backend multimodel should use.",
+        "opencode": "OpenCode uses its own managed runtime host. Desktop currently exposes status only."
+      },
+      "title": "Runtime",
+      "updating": "Updating runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "configured",
+      "enabled": "Enabled",
+      "notConfigured": "Not configured",
+      "notSet": "not set",
+      "off": "Off",
+      "unknown": "Unknown"
+    },
+    "title": "Provider Settings",
+    "usage": {
+      "apiKey": "Using API key",
+      "apiKeyRequired": "API key required",
+      "compatibleEndpoint": "Using compatible endpoint",
+      "notConnected": "Not connected",
+      "usingMethod": "Using {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API key deleted, but failed to refresh provider status.",
+      "apiKeySavedRefreshFailed": "API key saved, but failed to refresh provider status.",
+      "connectionUpdatedRefreshFailed": "Connection updated, but failed to refresh provider status.",
+      "deleteApiKey": "Failed to delete API key",
+      "disableEndpoint": "Failed to disable endpoint",
+      "endpointDisabledRefreshFailed": "Endpoint disabled, but failed to refresh provider status.",
+      "endpointSavedRefreshFailed": "Endpoint saved, but failed to refresh provider status.",
+      "refreshCodexAccount": "Failed to refresh Codex account",
+      "saveApiKey": "Failed to save API key",
+      "saveEndpoint": "Failed to save endpoint",
+      "updateAnthropicFastMode": "Failed to update Anthropic Fast mode",
+      "updateConnection": "Failed to update connection",
+      "updateRuntimeBackend": "Failed to update runtime backend",
+      "apiKeyRequired": "API key is required"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Auto",
+        "oauth": "Subscription / OAuth",
+        "chatgpt": "ChatGPT account",
+        "apiKey": "API key",
+        "anthropicSubscription": "Anthropic subscription"
+      },
+      "authMethod": {
+        "apiKey": "API key",
+        "apiKeyHelper": "API key helper",
+        "oauth": "OAuth",
+        "claudeSubscription": "Claude subscription",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Google account",
+        "serviceAccount": "service account"
+      },
+      "runtime": {
+        "codexNative": "Codex native",
+        "currentRuntime": "Current runtime",
+        "selectedRuntime": "Selected runtime",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Checking...",
+        "checked": "Checked",
+        "providerActivity": "Provider Activity",
+        "notConnected": "Not connected",
+        "startingChatGptLogin": "Starting ChatGPT login...",
+        "waitingForChatGptLogin": "Waiting for ChatGPT account login...",
+        "chatGptVerificationDegraded": "ChatGPT account detected - account verification is currently degraded.",
+        "chatGptAccountReady": "ChatGPT account ready",
+        "apiKeyReady": "API key ready",
+        "codexLocalAccountNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+        "codexNoActiveManagedSession": "Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.",
+        "codexNoActiveChatGptLogin": "Codex CLI reports no active ChatGPT login",
+        "connectChatGptForSubscription": "Connect a ChatGPT account to use your Codex subscription.",
+        "codexNativeReady": "Codex native ready",
+        "codexNativeUnavailable": "Codex native unavailable",
+        "unavailableInCurrentRuntime": "Unavailable in current runtime",
+        "connectedViaApiKey": "Connected via API key",
+        "apiKeyConfiguredNotVerified": "API key configured, but not verified yet",
+        "apiKeyModeMissingCredential": "API key mode selected, but no API key is configured",
+        "connectedVia": "Connected via {{method}}",
+        "unableToVerify": "Unable to verify"
+      },
+      "mode": {
+        "selectedAuth": "Selected auth: {{authMode}}",
+        "preferredAuth": "Preferred auth: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API key is configured",
+        "savedApiKeyAvailable": "Saved API key available in Manage",
+        "apiKeyAlsoConfigured": "API key also configured in Manage",
+        "apiKeyConfiguredInManage": "API key is configured in Manage",
+        "apiKeyFallbackInManage": "API key also available in Manage as fallback",
+        "availableAsFallback": "{{summary}} - available as fallback",
+        "savedApiKeyAvailableIfSwitch": "Saved API key available in Manage if you switch to API key mode",
+        "availableIfSwitch": "{{summary}} - available if you switch to API key mode",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto will use this until ChatGPT is connected"
+      },
+      "actions": {
+        "connect": "Connect",
+        "connectAnthropic": "Connect Anthropic",
+        "connectChatGpt": "Connect ChatGPT",
+        "disconnect": "Disconnect",
+        "openLogin": "Open Login"
+      },
+      "disconnect": {
+        "anthropicTitle": "Disconnect Anthropic subscription?",
+        "anthropic": "This removes the local Anthropic subscription session from the Claude CLI runtime.",
+        "anthropicWithApiKey": "This removes the local Anthropic subscription session from the Claude CLI runtime. Saved API keys in Manage stay available.",
+        "geminiTitle": "Disconnect Gemini CLI?",
+        "gemini": "This clears the local Gemini CLI session metadata. External ADC credentials and saved API keys are not removed."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Check for Updates",
+      "checking": "Checking...",
+      "extensions": "Extensions",
+      "installRuntime": "Install {{runtime}}",
+      "manage": "Manage",
+      "recheck": "Re-check",
+      "reinstallRuntime": "Reinstall {{runtime}}",
+      "retry": "Retry",
+      "update": "Update"
+    },
+    "installer": {
+      "checkingLatest": "Checking latest version...",
+      "downloading": "Downloading...",
+      "failed": "Installation failed",
+      "installed": "Installed v{{version}}",
+      "installing": "Installing...",
+      "latest": "latest",
+      "verifying": "Verifying checksum..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "Checking AI Providers...",
+      "claudeCli": "Checking Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Loading models...",
+      "modelsUnavailable": "Models unavailable for this runtime build",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Authentication failed",
+      "authUpdated": "Authentication updated",
+      "loggedOut": "Provider logged out",
+      "login": "Login",
+      "logout": "Logout",
+      "logoutFailed": "Logout failed"
+    },
+    "status": {
+      "configuredNotFound": "The configured {{runtime}} was not found.",
+      "foundButFailed": "{{runtime}} was found but failed to start",
+      "healthCheckFailed": "The configured {{runtime}} failed its startup health check.",
+      "notInstalled": "{{runtime}} not installed"
+    },
+    "title": "CLI Runtime"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

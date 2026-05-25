@@ -59,4 +59,80 @@ describe('mergeTeamMessages', () => {
     expect(merged[0].summary).toBe('live');
     expect(merged[0].source).toBe('lead_process');
   });
+
+  it('coalesces pathological lead thought fragments before display', () => {
+    const messages = [
+      makeMessage({
+        from: 'team-lead',
+        text: 'ложу',
+        timestamp: '2026-01-01T00:00:00.060Z',
+        messageId: 'chunk-4',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: ' раз',
+        timestamp: '2026-01-01T00:00:00.040Z',
+        messageId: 'chunk-3',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: ':',
+        timestamp: '2026-01-01T00:00:00.030Z',
+        messageId: 'chunk-2',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: 'Принял',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        messageId: 'chunk-1',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+    ];
+
+    const merged = mergeTeamMessages(messages);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].text).toBe('Принял: разложу');
+    expect(merged[0].messageId).toMatch(/^lead-thought-coalesced-/);
+  });
+
+  it('does not coalesce separate short lead thoughts across a large gap', () => {
+    const messages = [
+      makeMessage({
+        from: 'team-lead',
+        text: 'Done',
+        timestamp: '2026-01-01T00:00:05.000Z',
+        messageId: 'm3',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: 'OK',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        messageId: 'm2',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+      makeMessage({
+        from: 'team-lead',
+        text: 'Hi',
+        timestamp: '2025-12-31T23:59:55.000Z',
+        messageId: 'm1',
+        source: 'lead_session',
+        leadSessionId: 'sess-1',
+      }),
+    ];
+
+    const merged = mergeTeamMessages(messages);
+
+    expect(merged.map((message) => message.text)).toEqual(['Done', 'OK', 'Hi']);
+  });
 });

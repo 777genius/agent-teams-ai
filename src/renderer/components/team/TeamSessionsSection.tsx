@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
@@ -38,6 +39,7 @@ export const TeamSessionsSection = ({
   onSelectSession,
   projectPath,
 }: TeamSessionsSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { openTab, selectSession, projects, repositoryGroups } = useStore(
     useShallow((s) => ({
       openTab: s.openTab,
@@ -83,8 +85,8 @@ export const TeamSessionsSection = ({
     return (
       <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
         <Monitor size={20} className="mx-auto mb-2 opacity-40" />
-        No project path linked
-        <p className="mt-1 text-[10px] opacity-60">Sessions will appear after team provisioning</p>
+        {t('sessions.noProjectPath')}
+        <p className="mt-1 text-[10px] opacity-60">{t('sessions.provisioningHint')}</p>
       </div>
     );
   }
@@ -93,7 +95,7 @@ export const TeamSessionsSection = ({
     return (
       <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
         <AlertCircle size={20} className="mx-auto mb-2 opacity-40" />
-        Project not found
+        {t('sessions.projectNotFound')}
         <p className="mt-1 max-w-[260px] truncate text-[10px] opacity-60">{projectPath}</p>
       </div>
     );
@@ -103,7 +105,7 @@ export const TeamSessionsSection = ({
     return (
       <div className="flex items-center justify-center gap-2 py-6 text-xs text-[var(--color-text-muted)]">
         <Loader2 size={14} className="animate-spin" />
-        Loading sessions...
+        {t('sessions.loading')}
       </div>
     );
   }
@@ -121,7 +123,7 @@ export const TeamSessionsSection = ({
     return (
       <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
         <Monitor size={20} className="mx-auto mb-2 opacity-40" />
-        No sessions found
+        {t('sessions.empty')}
       </div>
     );
   }
@@ -135,7 +137,7 @@ export const TeamSessionsSection = ({
           onClick={() => onSelectSession(null)}
         >
           <FilterX size={12} />
-          Show for all sessions
+          {t('sessions.showAllSessions')}
         </button>
       )}
       {sortedSessions.map((session) => (
@@ -148,6 +150,10 @@ export const TeamSessionsSection = ({
           onToggleFilter={() =>
             onSelectSession(session.id === selectedSessionId ? null : session.id)
           }
+          leadLabel={t('sessions.lead')}
+          removeFilterLabel={t('sessions.removeFilter')}
+          filterBySessionLabel={t('sessions.filterBySession')}
+          openSessionLabel={t('sessions.openSession')}
         />
       ))}
     </div>
@@ -164,6 +170,10 @@ interface SessionRowProps {
   isSelected: boolean;
   onClick: () => void;
   onToggleFilter: () => void;
+  leadLabel: string;
+  removeFilterLabel: string;
+  filterBySessionLabel: string;
+  openSessionLabel: string;
 }
 
 const SessionRow = ({
@@ -172,6 +182,10 @@ const SessionRow = ({
   isSelected,
   onClick,
   onToggleFilter,
+  leadLabel,
+  removeFilterLabel,
+  filterBySessionLabel,
+  openSessionLabel,
 }: SessionRowProps): React.JSX.Element => {
   const timeAgo = formatShortTime(new Date(session.createdAt));
   const label = formatSessionLabel(session.firstMessage);
@@ -202,7 +216,7 @@ const SessionRow = ({
           {isLead && (
             <>
               <span style={{ opacity: 0.5 }}>·</span>
-              <span className="text-blue-600 dark:text-blue-400">lead</span>
+              <span className="text-blue-600 dark:text-blue-400">{leadLabel}</span>
             </>
           )}
         </div>
@@ -225,7 +239,7 @@ const SessionRow = ({
             </button>
           </TooltipTrigger>
           <TooltipContent side="left">
-            {isSelected ? 'Remove filter' : 'Filter by this session'}
+            {isSelected ? removeFilterLabel : filterBySessionLabel}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -241,7 +255,7 @@ const SessionRow = ({
               <ExternalLink size={12} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left">Open session</TooltipContent>
+          <TooltipContent side="left">{openSessionLabel}</TooltipContent>
         </Tooltip>
       </div>
     </div>

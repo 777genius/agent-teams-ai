@@ -10,10 +10,20 @@ import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { GlobalTask, TeamTaskWithKanban } from '@shared/types';
+import type { GlobalTask, TeamSummary, TeamTaskWithKanban } from '@shared/types';
+
+const EMPTY_GLOBAL_TASKS: GlobalTask[] = [];
+const EMPTY_TEAM_TASKS: TeamTaskWithKanban[] = [];
+const EMPTY_TEAM_MEMBERS: NonNullable<TeamSummary['members']> = [];
+const EMPTY_TEAM_BY_NAME: Record<string, TeamSummary> = {};
+const EMPTY_TASK_SUGGESTIONS: MentionSuggestion[] = [];
 
 export interface UseTaskSuggestionsResult {
   suggestions: MentionSuggestion[];
+}
+
+interface UseTaskSuggestionsOptions {
+  enabled?: boolean;
 }
 
 interface TaskWithTeamContext {
@@ -60,19 +70,29 @@ function isVisibleTask(task: TeamTaskWithKanban | GlobalTask): boolean {
   return task.status !== 'deleted' && !task.deletedAt;
 }
 
-export function useTaskSuggestions(currentTeamName: string | null): UseTaskSuggestionsResult {
+export function useTaskSuggestions(
+  currentTeamName: string | null,
+  options: UseTaskSuggestionsOptions = {}
+): UseTaskSuggestionsResult {
+  const enabled = options.enabled ?? true;
   const { globalTasks, currentTeamData, currentTeamMembers, teamByName } = useStore(
     useShallow((s) => ({
-      globalTasks: s.globalTasks,
-      currentTeamData: currentTeamName ? selectTeamDataForName(s, currentTeamName) : null,
-      currentTeamMembers: currentTeamName
-        ? selectResolvedMembersForTeamName(s, currentTeamName)
-        : [],
-      teamByName: s.teamByName,
+      globalTasks: enabled ? s.globalTasks : EMPTY_GLOBAL_TASKS,
+      currentTeamData:
+        enabled && currentTeamName ? selectTeamDataForName(s, currentTeamName) : null,
+      currentTeamMembers:
+        enabled && currentTeamName
+          ? selectResolvedMembersForTeamName(s, currentTeamName)
+          : EMPTY_TEAM_MEMBERS,
+      teamByName: enabled ? s.teamByName : EMPTY_TEAM_BY_NAME,
     }))
   );
 
   const suggestions = useMemo<MentionSuggestion[]>(() => {
+    if (!enabled) {
+      return EMPTY_TASK_SUGGESTIONS;
+    }
+
     const tasks: TaskWithTeamContext[] = [];
     const seenTaskIds = new Set<string>();
 
@@ -80,7 +100,10 @@ export function useTaskSuggestions(currentTeamName: string | null): UseTaskSugge
       const currentTeamSummary = teamByName[currentTeamName];
       const currentTeamDisplayName = currentTeamSummary?.displayName || currentTeamName;
       const currentTeamTasks =
-        currentTeamData?.tasks ?? globalTasks.filter((task) => task.teamName === currentTeamName);
+        currentTeamData?.tasks ??
+        (currentTeamName
+          ? globalTasks.filter((task) => task.teamName === currentTeamName)
+          : EMPTY_TEAM_TASKS);
       const currentTeamMemberColors =
         currentTeamMembers.length > 0 ? currentTeamMembers : (currentTeamSummary?.members ?? []);
 
@@ -125,7 +148,7 @@ export function useTaskSuggestions(currentTeamName: string | null): UseTaskSugge
     });
 
     return tasks.map(buildTaskSuggestion);
-  }, [currentTeamData, currentTeamMembers, currentTeamName, globalTasks, teamByName]);
+  }, [currentTeamData, currentTeamMembers, currentTeamName, enabled, globalTasks, teamByName]);
 
   return { suggestions };
 }

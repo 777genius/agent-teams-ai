@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Already logged in?",
+      "becomeSponsor": "Become a sponsor",
+      "cancel": "Cancel",
+      "checkNow": "Check now",
+      "checkUpdates": "Check for Updates",
+      "checking": "Checking...",
+      "connect": "Connect",
+      "extensions": "Extensions",
+      "login": "Login",
+      "manage": "Manage",
+      "manageProviders": "Manage Providers",
+      "plan": "Plan",
+      "recheck": "Re-check",
+      "recheckProvider": "Re-check {{provider}}",
+      "retry": "Retry",
+      "updateTo": "Update to v{{version}}",
+      "useCode": "Use code"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud is a full-modal AI inference platform that gives developers a single AI API to access video generation, image generation, and LLM APIs. Instead of managing multiple vendor integrations, you connect once and get unified access to 300+ curated models across all modalities. Check out Atlas Cloud's new coding plan promotion for more budget-friendly API access.",
+      "openCodeProvider": "OpenCode provider",
+      "plan": "Atlas Cloud coding plan",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "Failed to check CLI status",
+      "installationFailed": "Installation failed",
+      "refreshFailed": "Failed to check for updates. Check your network connection and try again.",
+      "runtimeUpdatedRefreshFailed": "Runtime updated, but failed to refresh provider status."
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} status will be checked in the background.",
+      "codexApiKeyFallback": "{{hint}} API key fallback is available if you switch auth mode.",
+      "codexAutoApiKey": "{{hint}} Auto will keep using the API key until ChatGPT is connected.",
+      "codexFinishLogin": "Finish ChatGPT login in the browser. Enter the shown code if prompted.",
+      "codexNoActiveLogin": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Right now it reports no active ChatGPT login.",
+      "codexNoActiveManagedSession": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Local Codex account data exists, but no active managed session is selected right now.",
+      "codexReconnectNeeded": "Usage limits appear only after Codex refreshes the currently selected ChatGPT session. Right now the local session needs reconnect.",
+      "firstCheckSlow": "First check may take up to 30 seconds",
+      "loginRequiredForTeams": "Browsing sessions and projects works without login. Login is only needed to run agent teams.",
+      "troubleshootTitle": "If you're sure you're logged in, try these steps:"
+    },
+    "installer": {
+      "checkingLatest": "Checking latest version...",
+      "downloading": "Downloading {{runtime}}...",
+      "installing": "Installing {{runtime}}...",
+      "success": "Successfully installed {{runtime}} v{{version}}",
+      "verifying": "Verifying checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "API key required",
+      "comingSoon": "Coming soon",
+      "collapseProviderDetails": "Collapse provider details",
+      "expandProviderDetails": "Expand provider details",
+      "generateLink": "Generate link",
+      "loadingRateLimits": "Rate limits loading",
+      "loggedOut": "Provider logged out",
+      "loginAuthFailed": "Authentication failed",
+      "loginAuthUpdated": "Authentication updated",
+      "loginComplete": "Login complete",
+      "loginFailed": "Login failed",
+      "loginTitle": "Login",
+      "logoutFailed": "Logout failed",
+      "logoutTitle": "Logout",
+      "notLoggedIn": "Not logged in",
+      "openLogin": "Open login",
+      "providerActionRequired": "Provider action required",
+      "resets": "resets {{time}}",
+      "runtimeLoginTitle": "{{runtime}} Login"
+    },
+    "loading": {
+      "aiProviders": "Checking AI Providers...",
+      "claudeCli": "Checking Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Authenticated",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Checking authentication...",
+      "checkingProviders": "Checking providers...",
+      "configuredLocalCount": "{{count}} configured local",
+      "configuredLocalCount_few": "{{count}} configured local",
+      "configuredLocalCount_many": "{{count}} configured local",
+      "configuredLocalCount_one": "{{count}} configured local",
+      "configuredLocalCount_other": "{{count}} configured local",
+      "configuredLocalTitle": "Local OpenCode routes imported from your OpenCode config.",
+      "connectedCount": "Providers: {{connected}}/{{denominator}} connected",
+      "freeModels": "Free models",
+      "freeModelsTitle": "OpenCode includes free model options such as Big Pickle when available in your setup. OpenRouter through OpenCode can also expose free models, but not every OpenCode/OpenRouter model is free. Availability and limits may change.",
+      "loadingModels": "Loading models...",
+      "modelsUnavailable": "Models unavailable for this runtime build",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} verified",
+      "verifiedCount_few": "{{count}} verified",
+      "verifiedCount_many": "{{count}} verified",
+      "verifiedCount_one": "{{count}} verified",
+      "verifiedCount_other": "{{count}} verified",
+      "verifiedTitle": "OpenCode routes with a successful execution proof."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "The configured {{runtime}} failed its startup health check.",
+      "configuredNotFound": "The configured {{runtime}} was not found.",
+      "foundButFailed": "{{runtime}} was found but failed to start",
+      "healthCheckFailedDescription": "The app found the configured {{runtime}}, but its startup health check failed. Repair or reinstall it, then retry.",
+      "install": "Install {{runtime}}",
+      "installRequiredDescription": "{{runtime}} is required for team provisioning and session management. Install it to get started.",
+      "isRequired": "{{runtime}} is required",
+      "reinstall": "Reinstall {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Checking",
+      "codexTitle": "Install Codex CLI into app data",
+      "downloading": "Downloading",
+      "downloadingPercent": "Downloading {{percent}}%",
+      "install": "Install",
+      "installing": "Installing",
+      "openCodeTitle": "Install OpenCode runtime into app data",
+      "retryInstall": "Retry install"
+    },
+    "troubleshoot": {
+      "again": "again",
+      "authStatusCommand": "your configured CLI auth status command",
+      "checkLoggedIn": "- check if it shows \"Logged in\"",
+      "click": "Click",
+      "loginCommand": "the runtime login command",
+      "logoutCommand": "the runtime logout command",
+      "openTerminal": "Open your terminal and run:",
+      "reloginPrefix": "If it says logged in but the app doesn't see it, try:",
+      "sameRuntime": "Make sure the CLI in your terminal is the same runtime the app uses",
+      "statusCacheHint": "- sometimes the status is cached for a few seconds",
+      "then": "then"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "One or more providers are set to API key mode, but no API key is configured. Open Manage Providers to add keys or switch the connection mode.",
+      "multipleApiKeysNeedAttention": "One or more providers are set to API key mode and need attention. Open Manage Providers to review saved keys or switch the connection mode.",
+      "notAuthenticated": "{{runtime}} is installed but you are not authenticated. Login is required for team provisioning and AI features.",
+      "singleApiKeyMissing": "{{provider}} is set to API key mode, but no API key is configured. Open Manage Providers to add a key or switch the connection mode.",
+      "singleApiKeyNeedsAttention": "{{provider}} is set to API key mode, but it is not connected. Open Manage Providers to review the saved key or switch the connection mode."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Select a project folder",
+    "selectFolder": "Select Folder",
+    "failedToLoad": "Failed to load projects",
+    "retry": "Retry",
+    "noProjects": "No projects found",
+    "noMatches": "No matches for \"{{query}}\"",
+    "noRecentProjects": "No recent projects found",
+    "emptyDescription": "Recent Claude and Codex activity will appear here.",
+    "loadMore": "Load more",
+    "card": {
+      "deleted": "Deleted",
+      "projectFolderMissing": "Project folder no longer exists",
+      "taskCounts": {
+        "active": "{{count}} active",
+        "active_one": "{{count}} active",
+        "active_other": "{{count}} active",
+        "active_few": "{{count}} active",
+        "active_many": "{{count}} active",
+        "pending": "{{count}} pending",
+        "pending_one": "{{count}} pending",
+        "pending_other": "{{count}} pending",
+        "pending_few": "{{count}} pending",
+        "pending_many": "{{count}} pending",
+        "done": "{{count}} done",
+        "done_one": "{{count}} done",
+        "done_other": "{{count}} done",
+        "done_few": "{{count}} done",
+        "done_many": "{{count}} done"
+      }
+    },
+    "title": "Recent Projects",
+    "searchResults": "Search Results",
+    "searchPlaceholder": "Search projects..."
+  },
+  "actions": {
+    "selectTeam": "Select Team",
+    "or": "or",
+    "clearSearch": "Clear search"
+  },
+  "windowsAdmin": {
+    "title": "Windows Administrator mode recommended",
+    "description": "OpenCode runtime checks can time out when Agent Teams AI is not elevated. Restart the app with Run as administrator before launching OpenCode teams."
+  },
+  "webPreview": {
+    "title": "Open the desktop app for full functionality",
+    "description": "The browser version is still in development. Project actions, integrations, and live status updates may be limited here. Use the desktop app to access all features reliably."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "New version available",
+    "restartNow": "Restart now",
+    "viewDetails": "View details"
+  }
+}

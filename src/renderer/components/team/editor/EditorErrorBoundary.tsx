@@ -7,12 +7,18 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   filePath: string;
   onRetry?: () => void;
   children: React.ReactNode;
+  labels?: {
+    crashed: string;
+    unknownError: string;
+    retry: string;
+  };
 }
 
 interface State {
@@ -20,7 +26,7 @@ interface State {
   error: string | null;
 }
 
-export class EditorErrorBoundary extends React.Component<Props, State> {
+class EditorErrorBoundaryInner extends React.Component<Props, State> {
   state: State = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -46,14 +52,14 @@ export class EditorErrorBoundary extends React.Component<Props, State> {
         >
           <AlertTriangle aria-hidden="true" className="size-12 text-red-400 opacity-50" />
           <p className="max-w-md text-center text-sm text-text-secondary">
-            Editor crashed: {this.state.error ?? 'Unknown error'}
+            {this.props.labels?.crashed}: {this.state.error ?? this.props.labels?.unknownError}
           </p>
           <button
             type="button"
             onClick={this.handleRetry}
             className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-raised"
           >
-            Retry
+            {this.props.labels?.retry}
           </button>
         </div>
       );
@@ -61,3 +67,22 @@ export class EditorErrorBoundary extends React.Component<Props, State> {
     return <>{this.props.children}</>;
   }
 }
+
+export const EditorErrorBoundary = ({
+  children,
+  ...props
+}: Omit<Props, 'labels'>): React.ReactElement => {
+  const { t } = useAppTranslation('team');
+  return (
+    <EditorErrorBoundaryInner
+      {...props}
+      labels={{
+        crashed: t('editor.errorBoundary.crashed'),
+        unknownError: t('editor.errorBoundary.unknownError'),
+        retry: t('editor.actions.retry'),
+      }}
+    >
+      {children}
+    </EditorErrorBoundaryInner>
+  );
+};

@@ -98,6 +98,7 @@ import type {
   UpdaterAPI,
   UpdateSchedulePatch,
   WaterfallData,
+  WindowsElevationStatus,
   WslClaudeRootCandidate,
 } from '@shared/types';
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
@@ -109,6 +110,9 @@ export class HttpAPIClient implements ElectronAPI {
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
+  telemetry = {
+    getSentryContext: async () => null,
+  };
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -240,6 +244,14 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   getAppVersion = (): Promise<string> => this.get<string>('/api/version');
+
+  getWindowsElevationStatus = async (): Promise<WindowsElevationStatus> => ({
+    platform: 'browser',
+    isWindows: false,
+    isAdministrator: null,
+    checkFailed: false,
+    error: null,
+  });
 
   getCodexAccountSnapshot = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
@@ -990,6 +1002,9 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team member management is not available in browser mode');
     },
     removeMember: async (): Promise<void> => {
+      throw new Error('Team member management is not available in browser mode');
+    },
+    restoreMember: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
     updateMemberRole: async (): Promise<void> => {

@@ -15,10 +15,21 @@ export interface TeamMember {
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
+  mcpPolicy?: TeamMemberMcpPolicy;
   color?: string;
   joinedAt?: number;
   cwd?: string;
   removedAt?: number;
+}
+
+export type TeamMemberMcpScope = 'user' | 'project' | 'local';
+
+export type TeamMemberMcpMode = 'inheritLead' | 'inheritScopes' | 'strictAllowlist' | 'appOnly';
+
+export interface TeamMemberMcpPolicy {
+  mode: TeamMemberMcpMode;
+  scopes?: Partial<Record<TeamMemberMcpScope, boolean>>;
+  serverNames?: string[];
 }
 
 export interface TeamConfig {
@@ -47,6 +58,7 @@ export interface TeamSummaryMember {
   agentId?: string;
   role?: string;
   color?: string;
+  mcpPolicy?: TeamMemberMcpPolicy;
 }
 
 export interface TeamSummary {
@@ -837,6 +849,7 @@ export interface ResolvedTeamMember {
   providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  mcpPolicy?: TeamMemberMcpPolicy;
   selectedFastMode?: TeamFastMode;
   resolvedFastMode?: boolean;
   laneId?: string;
@@ -906,6 +919,7 @@ export interface TeamMemberSnapshot {
   providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  mcpPolicy?: TeamMemberMcpPolicy;
   selectedFastMode?: TeamFastMode;
   resolvedFastMode?: boolean;
   laneId?: string;
@@ -971,6 +985,7 @@ export interface ProviderModelLaunchIdentity {
   catalogId: string | null;
   catalogSource:
     | 'anthropic-models-api'
+    | 'anthropic-compatible-api'
     | 'app-server'
     | 'static-fallback'
     | 'runtime'
@@ -1108,7 +1123,7 @@ export interface PersistedTeamLaunchMemberState {
   hardFailureReason?: string;
   pendingPermissionRequestIds?: string[];
   runtimePid?: number;
-  /** OpenCode runtime run id that produced the current runtimeSessionId/liveness evidence. */
+  /** Runtime/bootstrap run id that produced current liveness or bootstrap evidence. */
   runtimeRunId?: string;
   runtimeSessionId?: string;
   bootstrapEvidenceSource?: OpenCodeBootstrapEvidenceSource;
@@ -1199,6 +1214,24 @@ export type TeamAgentRuntimePidSource =
 
 export type TeamAgentRuntimeDiagnosticSeverity = 'info' | 'warning' | 'error';
 
+export interface TeamAgentRuntimeResourceSample {
+  timestamp: string;
+  cpuPercent?: number;
+  rssBytes?: number;
+  primaryCpuPercent?: number;
+  primaryRssBytes?: number;
+  childCpuPercent?: number;
+  childRssBytes?: number;
+  processCount?: number;
+  runtimeLoadScope?: TeamAgentRuntimeLoadScope;
+  runtimeLoadTruncated?: boolean;
+  pidSource?: TeamAgentRuntimePidSource;
+  pid?: number;
+  runtimePid?: number;
+}
+
+export type TeamAgentRuntimeLoadScope = 'single-process' | 'process-tree' | 'shared-host';
+
 export interface TeamAgentRuntimeEntry {
   memberName: string;
   alive: boolean;
@@ -1213,6 +1246,15 @@ export interface TeamAgentRuntimeEntry {
   /** Runtime working directory, when known. */
   cwd?: string;
   rssBytes?: number;
+  cpuPercent?: number;
+  primaryCpuPercent?: number;
+  primaryRssBytes?: number;
+  childCpuPercent?: number;
+  childRssBytes?: number;
+  processCount?: number;
+  runtimeLoadScope?: TeamAgentRuntimeLoadScope;
+  runtimeLoadTruncated?: boolean;
+  resourceHistory?: TeamAgentRuntimeResourceSample[];
   livenessKind?: TeamAgentRuntimeLivenessKind;
   pidSource?: TeamAgentRuntimePidSource;
   processCommand?: string;
@@ -1296,6 +1338,12 @@ export interface MemberSpawnStatusEntry {
   hardFailure?: boolean;
   /** Pending runtime permission request ids currently blocking bootstrap. */
   pendingPermissionRequestIds?: string[];
+  /** OpenCode bootstrap evidence source for launch/status recovery. */
+  bootstrapEvidenceSource?: OpenCodeBootstrapEvidenceSource;
+  /** OpenCode bootstrap proof mode. Missing means app-managed for current OpenCode sessions. */
+  bootstrapMode?: OpenCodeBootstrapMode;
+  /** Candidate used by app-managed OpenCode bootstrap before durable evidence promotion. */
+  appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
   /** ISO timestamp of the first accepted teammate spawn for this member. */
   firstSpawnAcceptedAt?: string;
   /** ISO timestamp of the latest confirmed heartbeat/bootstrap message. */
@@ -1361,6 +1409,7 @@ export interface TeamProvisioningMemberInput {
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
+  mcpPolicy?: TeamMemberMcpPolicy;
 }
 
 export type TeamWorktreeGitBlockReason =
@@ -1433,6 +1482,12 @@ export interface TeamCreateResponse {
 
 export type TeamProvisioningModelVerificationMode = 'compatibility' | 'deep';
 
+export interface TeamProvisioningModelCheckRequest {
+  providerId: TeamProviderId;
+  model: string;
+  effort?: EffortLevel;
+}
+
 export type TeamProvisioningPrepareIssueScope = 'provider' | 'model';
 export type TeamProvisioningPrepareIssueSeverity = 'blocking' | 'warning';
 
@@ -1445,12 +1500,24 @@ export interface TeamProvisioningPrepareIssue {
   message: string;
 }
 
+export interface TeamProvisioningSupportDiagnostic {
+  id: string;
+  providerId: TeamProviderId;
+  kind: string;
+  severity: 'info' | 'warning' | 'error';
+  title: string;
+  summary: string;
+  copyText: string;
+  createdAt: string;
+}
+
 export interface TeamProvisioningPrepareResult {
   ready: boolean;
   message: string;
   details?: string[];
   warnings?: string[];
   issues?: TeamProvisioningPrepareIssue[];
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
 }
 
 export interface TeamProvisioningProgress {
@@ -1622,6 +1689,7 @@ export interface AddMemberRequest {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  mcpPolicy?: TeamMemberMcpPolicy;
 }
 
 export interface RemoveMemberRequest {
@@ -1715,6 +1783,8 @@ export interface ToolApprovalRequest {
   /** Run ID — prevents stale approvals after stop→launch race. */
   runId: string;
   teamName: string;
+  /** Runtime/provider that owns the approval, when it is not the Anthropic CLI control protocol. */
+  providerId?: TeamProviderId;
   /** Which process sent this (e.g. 'lead'). */
   source: string;
   /** Tool name: 'Bash', 'Edit', 'Write', 'Read', etc. */
@@ -1727,6 +1797,14 @@ export interface ToolApprovalRequest {
   teamColor?: string;
   /** Team display name (from config or create request). */
   teamDisplayName?: string;
+  /** Provider runtime permission metadata used to answer non-Anthropic approval APIs. */
+  runtimePermission?: {
+    providerId: 'anthropic' | 'opencode' | 'codex';
+    laneId: string;
+    memberName: string;
+    providerRequestId: string;
+    sessionId?: string | null;
+  };
   /** Permission suggestions from teammate runtime (only for teammate permission_request).
    * FACT: Populated by Claude Code runtime, contains instructions to add permission rules.
    */
@@ -1781,7 +1859,7 @@ export interface ToolApprovalAutoResolved {
   requestId: string;
   runId: string;
   teamName: string;
-  reason: 'auto_allow_category' | 'timeout_allow' | 'timeout_deny';
+  reason: 'auto_allow_category' | 'timeout_allow' | 'timeout_deny' | 'runtime_resolved';
 }
 
 /** Union of approval events pushed from main to renderer. */

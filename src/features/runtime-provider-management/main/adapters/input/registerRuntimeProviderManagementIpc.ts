@@ -16,6 +16,7 @@ import type {
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementDirectoryResponse,
+  RuntimeProviderManagementErrorDto,
   RuntimeProviderManagementForgetInput,
   RuntimeProviderManagementLoadDirectoryInput,
   RuntimeProviderManagementLoadModelsInput,
@@ -32,6 +33,85 @@ import type {
 import type { IpcMain } from 'electron';
 
 const logger = createLogger('Feature:RuntimeProviderManagement:IPC');
+const RUNTIME_PROVIDER_IPC_ERROR_DETAIL_LIMIT = 1_600;
+const ESCAPE_CHARACTER = String.fromCharCode(27);
+const BELL_CHARACTER = String.fromCharCode(7);
+const ANSI_ESCAPE_PATTERN = new RegExp(`${ESCAPE_CHARACTER}\\[[0-?]*[ -/]*[@-~]`, 'g');
+const OSC_ESCAPE_PATTERN = new RegExp(
+  `${ESCAPE_CHARACTER}\\][\\s\\S]*?(?:${BELL_CHARACTER}|${ESCAPE_CHARACTER}\\\\)`,
+  'g'
+);
+
+function truncateRuntimeProviderIpcErrorDetail(message: string): string {
+  if (message.length <= RUNTIME_PROVIDER_IPC_ERROR_DETAIL_LIMIT) {
+    return message;
+  }
+  return `${message.slice(0, RUNTIME_PROVIDER_IPC_ERROR_DETAIL_LIMIT).trimEnd()}...`;
+}
+
+function sanitizeRuntimeProviderIpcErrorMessage(message: string): string {
+  const sanitized = message
+    .replace(OSC_ESCAPE_PATTERN, '')
+    .replace(ANSI_ESCAPE_PATTERN, '')
+    .replace(/\b(sk-[A-Za-z0-9_-]{12,})\b/g, 'sk-...redacted')
+    .replace(/\b(or-[A-Za-z0-9_-]{12,})\b/g, 'or-...redacted')
+    .replace(/\b(AIza[A-Za-z0-9_-]{20,})\b/g, 'AIza...redacted')
+    .replace(
+      /\b([a-z0-9_.-]*(?:api[-_]?key|(?:access|auth)[-_]?token|token|secret|password|[-_]key)["'\s:=]+)([a-z0-9._~+/=-]{12,})/gi,
+      '$1...redacted'
+    )
+    .replace(/\b(key["'\s:=]+)([a-z0-9._~+/=-]{12,})/gi, '$1...redacted')
+    .replace(/\b(bearer\s+)([a-z0-9._~+/=-]{12,})/gi, '$1...redacted')
+    .trim();
+  return truncateRuntimeProviderIpcErrorDetail(sanitized);
+}
+
+function getRuntimeProviderIpcErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') {
+    return sanitizeRuntimeProviderIpcErrorMessage(error) || fallback;
+  }
+  if (!(error instanceof Error) || !error.message.trim()) {
+    return fallback;
+  }
+  return sanitizeRuntimeProviderIpcErrorMessage(error.message) || fallback;
+}
+
+function getRuntimeProviderIpcConnectLogDetail(error: unknown): string {
+  if (error instanceof Error) {
+    return sanitizeRuntimeProviderIpcErrorMessage(error.message) || error.name || 'Error';
+  }
+  if (typeof error === 'string') {
+    return sanitizeRuntimeProviderIpcErrorMessage(error) || 'Non-Error throw';
+  }
+  return 'Non-Error throw';
+}
+
+function createUnexpectedRuntimeProviderIpcError(
+  code: RuntimeProviderManagementErrorDto['code'],
+  message: string
+): RuntimeProviderManagementErrorDto {
+  return {
+    code,
+    message,
+    recoverable: true,
+    diagnostics: {
+      errorCode: code,
+      summary: message,
+      likelyCause:
+        'The desktop app runtime provider management handler failed before it returned a normal response.',
+      binaryPath: null,
+      command: null,
+      projectPath: null,
+      exitCode: null,
+      stderrPreview: message,
+      stdoutPreview: null,
+      hints: [
+        'Retry the action once after refreshing provider settings.',
+        'If it repeats, copy diagnostics and attach the app logs from the same session.',
+      ],
+    },
+  };
+}
 
 export function registerRuntimeProviderManagementIpc(
   ipcMain: IpcMain,
@@ -46,15 +126,12 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.loadView(input);
       } catch (error) {
-        logger.error('Failed to load runtime provider management view', error);
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to load providers');
+        logger.error('Failed to load runtime provider management view', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'runtime-unhealthy',
-            message: error instanceof Error ? error.message : 'Failed to load providers',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
       }
     }
@@ -69,15 +146,15 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.loadProviderDirectory(input);
       } catch (error) {
-        logger.error('Failed to load runtime provider directory', error);
+        const message = getRuntimeProviderIpcErrorMessage(
+          error,
+          'Failed to load provider directory'
+        );
+        logger.error('Failed to load runtime provider directory', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'runtime-unhealthy',
-            message: error instanceof Error ? error.message : 'Failed to load provider directory',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
       }
     }
@@ -92,15 +169,15 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.loadSetupForm(input);
       } catch (error) {
-        logger.error('Failed to load runtime provider setup form', error);
+        const message = getRuntimeProviderIpcErrorMessage(
+          error,
+          'Failed to load provider setup form'
+        );
+        logger.error('Failed to load runtime provider setup form', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'runtime-unhealthy',
-            message: error instanceof Error ? error.message : 'Failed to load provider setup form',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
       }
     }
@@ -115,18 +192,15 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.connectProvider(input);
       } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to connect provider');
         logger.error(
           'Failed to connect runtime provider',
-          error instanceof Error ? error.name : error
+          getRuntimeProviderIpcConnectLogDetail(error)
         );
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'auth-failed',
-            message: 'Failed to connect provider',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('auth-failed', message),
         };
       }
     }
@@ -141,18 +215,15 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.connectWithApiKey(input);
       } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to connect provider');
         logger.error(
           'Failed to connect runtime provider',
-          error instanceof Error ? error.name : error
+          getRuntimeProviderIpcConnectLogDetail(error)
         );
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'auth-failed',
-            message: 'Failed to connect provider',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('auth-failed', message),
         };
       }
     }
@@ -167,15 +238,12 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.forgetCredential(input);
       } catch (error) {
-        logger.error('Failed to forget runtime provider credential', error);
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to forget provider');
+        logger.error('Failed to forget runtime provider credential', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'unsupported-action',
-            message: error instanceof Error ? error.message : 'Failed to forget provider',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('unsupported-action', message),
         };
       }
     }
@@ -190,15 +258,12 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.loadModels(input);
       } catch (error) {
-        logger.error('Failed to load runtime provider models', error);
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to load provider models');
+        logger.error('Failed to load runtime provider models', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'runtime-unhealthy',
-            message: error instanceof Error ? error.message : 'Failed to load provider models',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
       }
     }
@@ -213,15 +278,12 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.testModel(input);
       } catch (error) {
-        logger.error('Failed to test runtime provider model', error);
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to test model');
+        logger.error('Failed to test runtime provider model', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'model-test-failed',
-            message: error instanceof Error ? error.message : 'Failed to test model',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('model-test-failed', message),
         };
       }
     }
@@ -236,15 +298,12 @@ export function registerRuntimeProviderManagementIpc(
       try {
         return await feature.setDefaultModel(input);
       } catch (error) {
-        logger.error('Failed to set runtime provider default model', error);
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to set default model');
+        logger.error('Failed to set runtime provider default model', message);
         return {
           schemaVersion: 1,
           runtimeId: input.runtimeId,
-          error: {
-            code: 'model-test-failed',
-            message: error instanceof Error ? error.message : 'Failed to set default model',
-            recoverable: true,
-          },
+          error: createUnexpectedRuntimeProviderIpcError('model-test-failed', message),
         };
       }
     }

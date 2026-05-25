@@ -1,16 +1,22 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { GlobalTask } from '../../../../src/shared/types';
+import type { GlobalTask, TeamSummary } from '../../../../src/shared/types';
 
 interface StoreState {
   globalTasks: GlobalTask[];
   globalTasksLoading: boolean;
   globalTasksInitialized: boolean;
   fetchAllTasks: ReturnType<typeof vi.fn>;
+  fetchProjects: ReturnType<typeof vi.fn>;
+  fetchRepositoryGroups: ReturnType<typeof vi.fn>;
   softDeleteTask: ReturnType<typeof vi.fn>;
   projects: { path: string; name: string; sessions: unknown[]; totalSessions?: number }[];
+  projectsLoading: boolean;
+  projectsInitialized: boolean;
+  projectsError: string | null;
   viewMode: 'flat' | 'grouped';
   repositoryGroups: {
     id: string;
@@ -18,7 +24,13 @@ interface StoreState {
     totalSessions: number;
     worktrees: { path: string }[];
   }[];
-  teams: { teamName: string; displayName: string }[];
+  repositoryGroupsLoading: boolean;
+  repositoryGroupsInitialized: boolean;
+  repositoryGroupsError: string | null;
+  teams: (Pick<TeamSummary, 'teamName' | 'displayName'> & Partial<TeamSummary>)[];
+  provisioningRuns: Record<string, { state: string; runId: string; updatedAt: string }>;
+  currentProvisioningRunIdByTeam: Record<string, string | null>;
+  leadActivityByTeam: Record<string, 'active' | 'idle' | 'offline'>;
 }
 
 const storeState = {} as StoreState;
@@ -83,8 +95,24 @@ vi.mock('../../../../src/renderer/components/sidebar/TaskContextMenu', () => ({
 }));
 
 vi.mock('../../../../src/renderer/components/sidebar/SidebarTaskItem', () => ({
-  SidebarTaskItem: ({ task }: { task: GlobalTask }) =>
-    React.createElement('div', { 'data-testid': 'sidebar-task-item' }, task.subject),
+  SidebarTaskItem: ({
+    task,
+    hideProjectName,
+    teamOffline,
+  }: {
+    task: GlobalTask;
+    hideProjectName?: boolean;
+    teamOffline?: boolean;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'sidebar-task-item',
+        'data-hide-project-name': hideProjectName ? 'true' : 'false',
+        'data-team-offline': teamOffline ? 'true' : 'false',
+      },
+      task.subject
+    ),
 }));
 
 vi.mock('../../../../src/renderer/components/sidebar/TaskFiltersPopover', () => ({
@@ -129,6 +157,14 @@ import { GlobalTaskList } from '../../../../src/renderer/components/sidebar/Glob
 
 function flushMicrotasks(): Promise<void> {
   return Promise.resolve();
+}
+
+function setElectronApiForTest(value: unknown): void {
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    writable: true,
+    value,
+  });
 }
 
 function findButton(host: HTMLElement, label: string): HTMLButtonElement | null {
@@ -177,11 +213,22 @@ describe('GlobalTaskList project grouping', () => {
     storeState.globalTasksLoading = false;
     storeState.globalTasksInitialized = true;
     storeState.fetchAllTasks = vi.fn(() => Promise.resolve(undefined));
+    storeState.fetchProjects = vi.fn(() => Promise.resolve(undefined));
+    storeState.fetchRepositoryGroups = vi.fn(() => Promise.resolve(undefined));
     storeState.softDeleteTask = vi.fn(() => Promise.resolve(undefined));
     storeState.projects = [];
+    storeState.projectsLoading = false;
+    storeState.projectsInitialized = false;
+    storeState.projectsError = null;
     storeState.viewMode = 'flat';
     storeState.repositoryGroups = [];
+    storeState.repositoryGroupsLoading = false;
+    storeState.repositoryGroupsInitialized = false;
+    storeState.repositoryGroupsError = null;
     storeState.teams = [{ teamName: 'alpha-team', displayName: 'Alpha Team' }];
+    storeState.provisioningRuns = {};
+    storeState.currentProvisioningRunIdByTeam = {};
+    storeState.leadActivityByTeam = {};
     toggleCollapsedGroup.mockReset();
     taskLocalState.isPinned.mockClear();
     taskLocalState.isArchived.mockClear();
@@ -189,14 +236,119 @@ describe('GlobalTaskList project grouping', () => {
     taskLocalState.togglePin.mockClear();
     taskLocalState.toggleArchive.mockClear();
     taskLocalState.renameTask.mockClear();
+    setElectronApiForTest(undefined);
     localStorage.clear();
     localStorage.setItem('sidebarTasksGrouping', 'project');
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
+    setElectronApiForTest(undefined);
     vi.unstubAllGlobals();
     storeListeners.clear();
+  });
+
+  it('fetches repository groups when grouped project filter data is missing', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.viewMode = 'grouped';
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchRepositoryGroups).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchProjects).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('fetches flat projects when flat project filter data is missing', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchProjects).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchRepositoryGroups).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('does not duplicate project filter data fetches while a repository fetch is already pending', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.viewMode = 'grouped';
+    storeState.repositoryGroupsLoading = true;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchRepositoryGroups).not.toHaveBeenCalled();
+    expect(storeState.fetchProjects).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('does not refetch repository groups after an empty grouped result is initialized', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.viewMode = 'grouped';
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchRepositoryGroups).toHaveBeenCalledTimes(1);
+
+    storeState.repositoryGroupsLoading = true;
+    await act(async () => {
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+
+    storeState.repositoryGroupsLoading = false;
+    storeState.repositoryGroupsInitialized = true;
+    storeState.repositoryGroups = [];
+    await act(async () => {
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+
+    expect(storeState.fetchRepositoryGroups).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
   });
 
   it('shows five tasks first, then expands and collapses with Show more and Show less', async () => {
@@ -238,6 +390,118 @@ describe('GlobalTaskList project grouping', () => {
 
     expect(visibleSubjects(host)).toEqual(['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5']);
     expect(findButton(host, 'Show less')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('hides project labels in task cards when grouped by project', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [makeTask(1), makeTask(2)];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(
+      Array.from(host.querySelectorAll('[data-testid="sidebar-task-item"]')).map((node) =>
+        node.getAttribute('data-hide-project-name')
+      )
+    ).toEqual(['true', 'true']);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('marks task cards as offline when the owning team has gone offline', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [makeTask(1)];
+    storeState.leadActivityByTeam = { 'alpha-team': 'offline' };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(
+      host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
+    ).toBe('true');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('marks task cards as offline when the owning team has a partial launch failure', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const aliveList = vi.fn(() => Promise.resolve([]));
+    setElectronApiForTest({ teams: { aliveList } });
+    storeState.globalTasks = [makeTask(1)];
+    storeState.teams = [
+      {
+        teamName: 'alpha-team',
+        displayName: 'Alpha Team',
+        partialLaunchFailure: true,
+        teamLaunchState: 'partial_failure',
+      },
+    ];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(aliveList).toHaveBeenCalled();
+    expect(
+      host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
+    ).toBe('true');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('marks task cards as offline when alive-list is initialized before teams are loaded', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const aliveList = vi.fn(() => Promise.resolve([]));
+    setElectronApiForTest({ teams: { aliveList } });
+    storeState.globalTasks = [makeTask(1)];
+    storeState.teams = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(aliveList).toHaveBeenCalled();
+    expect(
+      host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
+    ).toBe('true');
 
     await act(async () => {
       root.unmount();

@@ -18,14 +18,14 @@ const REVIEW_TOUCH_TOOLS = new Set(['review_start', 'task_add_comment']);
 
 const ONE_MINUTE_MS = 60_000;
 const WORK_THRESHOLDS_MS: Record<TaskStallSignal, number> = {
-  turn_ended_after_touch: 8 * ONE_MINUTE_MS,
-  touch_then_other_turns: 10 * ONE_MINUTE_MS,
-  mid_turn_after_touch: 20 * ONE_MINUTE_MS,
+  turn_ended_after_touch: 4 * ONE_MINUTE_MS,
+  touch_then_other_turns: 5 * ONE_MINUTE_MS,
+  mid_turn_after_touch: 10 * ONE_MINUTE_MS,
 };
 const REVIEW_THRESHOLDS_MS: Record<TaskStallSignal, number> = {
-  turn_ended_after_touch: 10 * ONE_MINUTE_MS,
-  touch_then_other_turns: 10 * ONE_MINUTE_MS,
-  mid_turn_after_touch: 25 * ONE_MINUTE_MS,
+  turn_ended_after_touch: 5 * ONE_MINUTE_MS,
+  touch_then_other_turns: 6 * ONE_MINUTE_MS,
+  mid_turn_after_touch: 12 * ONE_MINUTE_MS,
 };
 
 function skip(

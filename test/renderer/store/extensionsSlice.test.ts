@@ -55,15 +55,15 @@ vi.mock('../../../src/renderer/api', () => ({
 }));
 
 import { api } from '../../../src/renderer/api';
-import type { AppConfig, CliInstallationStatus } from '../../../src/shared/types';
 import {
   getMcpDiagnosticKey,
-  getMcpProjectStateKey,
   getMcpOperationKey,
+  getMcpProjectStateKey,
   getPluginOperationKey,
 } from '../../../src/shared/utils/extensionNormalizers';
 import { createDefaultCliExtensionCapabilities } from '../../../src/shared/utils/providerExtensionCapabilities';
 
+import type { AppConfig, CliInstallationStatus } from '../../../src/shared/types';
 import type {
   EnrichedPlugin,
   McpCatalogItem,
@@ -239,6 +239,7 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       multimodelEnabled,
       claudeRootPath: null,
       agentLanguage: 'system',
+      appLocale: 'system',
       autoExpandAIGroups: true,
       useNativeTitleBar: false,
       telemetryEnabled: false,
@@ -247,6 +248,10 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       anthropic: {
         authMode: 'auto',
         fastModeDefault: false,
+        compatibleEndpoint: {
+          enabled: false,
+          baseUrl: '',
+        },
       },
       codex: {
         preferredAuthMode: 'auto',

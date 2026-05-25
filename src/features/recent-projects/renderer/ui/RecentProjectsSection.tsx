@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { FolderGit2, FolderOpen, Search } from 'lucide-react';
 
@@ -17,17 +18,18 @@ function SelectProjectFolderCard({
 }: Readonly<{
   onClick: () => void;
 }>): React.JSX.Element {
+  const { t } = useAppTranslation('dashboard');
   return (
     <button
       className="hover:bg-surface/30 group relative flex min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-transparent p-4 transition-all duration-300 hover:border-border-emphasis"
       onClick={onClick}
-      title="Select a project folder"
+      title={t('recentProjects.selectFolderTitle')}
     >
       <div className="mb-2 flex size-8 items-center justify-center rounded-md border border-dashed border-border transition-colors duration-300 group-hover:border-border-emphasis">
         <FolderOpen className="size-4 text-text-muted transition-colors group-hover:text-text-secondary" />
       </div>
       <span className="text-xs text-text-muted transition-colors group-hover:text-text-secondary">
-        Select Folder
+        {t('recentProjects.selectFolder')}
       </span>
     </button>
   );
@@ -36,6 +38,7 @@ function SelectProjectFolderCard({
 export const RecentProjectsSection = ({
   searchQuery,
 }: Readonly<RecentProjectsSectionProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('dashboard');
   const {
     cards,
     loading,
@@ -102,14 +105,14 @@ export const RecentProjectsSection = ({
           <FolderGit2 className="size-6 text-text-muted" />
         </div>
         <div className="text-center">
-          <p className="mb-1 text-sm text-text-secondary">Failed to load projects</p>
+          <p className="mb-1 text-sm text-text-secondary">{t('recentProjects.failedToLoad')}</p>
           <p className="max-w-xl text-xs text-text-muted">{error}</p>
         </div>
         <button
           onClick={() => void reload()}
           className="rounded-sm border border-border bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-emphasis hover:text-text"
         >
-          Retry
+          {t('recentProjects.retry')}
         </button>
       </div>
     );
@@ -121,8 +124,10 @@ export const RecentProjectsSection = ({
         <div className="mb-4 flex size-12 items-center justify-center rounded-sm border border-border bg-surface-raised">
           <Search className="size-6 text-text-muted" />
         </div>
-        <p className="mb-1 text-sm text-text-secondary">No projects found</p>
-        <p className="text-xs text-text-muted">No matches for &quot;{searchQuery}&quot;</p>
+        <p className="mb-1 text-sm text-text-secondary">{t('recentProjects.noProjects')}</p>
+        <p className="text-xs text-text-muted">
+          {t('recentProjects.noMatches', { query: searchQuery })}
+        </p>
       </div>
     );
   }
@@ -133,10 +138,8 @@ export const RecentProjectsSection = ({
         <div className="mb-4 flex size-12 items-center justify-center rounded-sm border border-border bg-surface-raised">
           <FolderGit2 className="size-6 text-text-muted" />
         </div>
-        <p className="mb-1 text-sm text-text-secondary">No recent projects found</p>
-        <p className="text-xs text-text-muted">
-          Recent Claude and Codex activity will appear here.
-        </p>
+        <p className="mb-1 text-sm text-text-secondary">{t('recentProjects.noRecentProjects')}</p>
+        <p className="text-xs text-text-muted">{t('recentProjects.emptyDescription')}</p>
       </div>
     );
   }
@@ -162,7 +165,7 @@ export const RecentProjectsSection = ({
       {canLoadMore && (
         <div className="flex justify-center">
           <Button variant="outline" size="sm" onClick={loadMore}>
-            Load more
+            {t('recentProjects.loadMore')}
           </Button>
         </div>
       )}

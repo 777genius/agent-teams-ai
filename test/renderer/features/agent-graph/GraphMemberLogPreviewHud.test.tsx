@@ -166,10 +166,11 @@ describe('GraphMemberLogPreviewHud', () => {
       button.textContent?.includes('pnpm test')
     );
     expect(row).not.toBeUndefined();
-    expect(row?.querySelector('.float-left')).not.toBeNull();
+    expect(row?.querySelector('svg.text-amber-300')).not.toBeNull();
     expect(row?.querySelector('.line-clamp-3')).toBeNull();
+    expect(row?.querySelector('.line-clamp-2')).not.toBeNull();
     expect(row?.className).toContain('h-[72px]');
-    expect(row?.querySelector('span.text-slate-200')?.className).toContain('leading-5');
+    expect(row?.querySelector('span.text-slate-200')?.className).toContain('leading-4');
     expect(row?.textContent).toContain('pnpm test');
 
     const errorRow = Array.from(host.querySelectorAll('button')).find((button) =>
@@ -203,6 +204,60 @@ describe('GraphMemberLogPreviewHud', () => {
     });
 
     expect(onOpenMemberProfile).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('lets empty log lane space pass pointer events through while rows remain clickable', async () => {
+    const node: GraphNode = {
+      id: 'member:alpha-team:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'active',
+      domainRef: { kind: 'member', teamName: 'alpha-team', memberName: 'alice' },
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <GraphMemberLogPreviewHud
+          teamName="alpha-team"
+          nodes={[node]}
+          getLogWorldRect={() => ({
+            left: 40,
+            top: 80,
+            right: 300,
+            bottom: 372,
+            width: 260,
+            height: 292,
+          })}
+          getCameraZoom={() => 1}
+          worldToScreen={(x, y) => ({ x, y })}
+          getViewportSize={() => ({ width: 1200, height: 800 })}
+          focusNodeIds={null}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const shell = host.querySelector<HTMLDivElement>('.z-10');
+    expect(shell).not.toBeNull();
+    expect(shell?.className).toContain('pointer-events-none');
+    expect(shell?.style.pointerEvents).toBe('none');
+
+    const row = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('pnpm test')
+    );
+    expect(row?.className).toContain('pointer-events-auto');
+
+    const moreButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('+2 more')
+    );
+    expect(moreButton?.className).toContain('pointer-events-auto');
 
     act(() => {
       root.unmount();

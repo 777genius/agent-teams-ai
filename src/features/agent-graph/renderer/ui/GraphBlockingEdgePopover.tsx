@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 
@@ -63,6 +64,7 @@ export const GraphBlockingEdgePopover = ({
   onSelectNode,
   onOpenTaskDetail,
 }: GraphBlockingEdgePopoverProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { teamData } = useGraphActivityContext(teamName);
   const tasksById = useMemo(
     () => new Map((teamData?.tasks ?? []).map((task) => [task.id, task] as const)),
@@ -102,7 +104,7 @@ export const GraphBlockingEdgePopover = ({
     <div className="min-w-[260px] max-w-[340px] rounded-lg border border-red-500/20 bg-[var(--color-surface-raised)] p-3 shadow-xl">
       <div className="flex items-center justify-between gap-2">
         <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-red-400/90">
-          Blocking Dependency
+          {t('agentGraph.blockingEdge.title')}
         </div>
         {relationCount > 1 && (
           <Badge
@@ -118,17 +120,19 @@ export const GraphBlockingEdgePopover = ({
         <div className="font-medium text-red-100">{sourceLabel}</div>
         {sourceHiddenTasks.length > 0 && (
           <HiddenTaskPreview
-            title="Blocking hidden tasks"
+            title={t('agentGraph.blockingEdge.blockingHiddenTasks')}
             tasks={sourceHiddenTasks}
             onOpenTaskDetail={onOpenTaskDetail}
             onClose={onClose}
           />
         )}
-        <div className="mt-1 text-[11px] text-red-300/85">blocks</div>
+        <div className="mt-1 text-[11px] text-red-300/85">
+          {t('agentGraph.blockingEdge.blocks')}
+        </div>
         <div className="mt-1 font-medium text-red-100">{targetLabel}</div>
         {targetHiddenTasks.length > 0 && (
           <HiddenTaskPreview
-            title="Blocked hidden tasks"
+            title={t('agentGraph.blockingEdge.blockedHiddenTasks')}
             tasks={targetHiddenTasks}
             onOpenTaskDetail={onOpenTaskDetail}
             onClose={onClose}
@@ -148,7 +152,7 @@ export const GraphBlockingEdgePopover = ({
           </Button>
         )}
         <Button type="button" size="sm" variant="ghost" onClick={onClose}>
-          Close
+          {t('agentGraph.blockingEdge.close')}
         </Button>
       </div>
     </div>

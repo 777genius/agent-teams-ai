@@ -1269,7 +1269,7 @@ export function getOpenCodeTeamModelRecommendation(
   if (unavailableReason) {
     return {
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
       reason: unavailableReason,
     };
   }

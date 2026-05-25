@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { analyzeTeammateRuntimeCompatibility } from '@renderer/components/team/dialogs/teammateRuntimeCompatibility';
+import { describe, expect, it } from 'vitest';
 
 import type { TmuxStatus } from '@features/tmux-installer/contracts';
 
@@ -52,6 +51,7 @@ describe('analyzeTeammateRuntimeCompatibility', () => {
 
     expect(result.blocksSubmission).toBe(false);
     expect(result.visible).toBe(false);
+    expect(result.providerNoticeProviderId).toBeNull();
     expect(result.memberWarningById).toEqual({});
   });
 
@@ -93,8 +93,12 @@ describe('analyzeTeammateRuntimeCompatibility', () => {
     });
 
     expect(result.blocksSubmission).toBe(true);
+    expect(result.providerNoticeProviderId).toBe('opencode');
     expect(result.title).toBe('OpenCode cannot lead mixed-provider teams');
     expect(result.message).toContain('mixed teams cannot use OpenCode as the lead');
+    expect(result.message).toContain('Anthropic or Codex lead');
+    expect(result.message).not.toContain('Gemini');
+    expect(result.tmuxDetail).toBeNull();
     expect(result.memberWarningById.bob).toContain('OpenCode cannot be the team lead');
   });
 

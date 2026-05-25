@@ -72,7 +72,7 @@ export function buildTmuxEffectiveAvailability(
       version: input.host.version,
       binaryPath: input.host.binaryPath,
       runtimeReady: input.nativeSupported,
-      detail: 'tmux is available as an optional pane transport for teammate sessions.',
+      detail: 'tmux is available.',
     };
   }
 

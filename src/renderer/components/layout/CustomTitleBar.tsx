@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import faviconUrl from '@renderer/favicon.png';
@@ -30,6 +31,7 @@ function needsCustomTitleBar(): boolean {
 }
 
 export const CustomTitleBar = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const [isMaximized, setIsMaximized] = useState(false);
   const useNativeTitleBar = useStore((s) => s.appConfig?.general?.useNativeTitleBar ?? false);
   const showTitleBar = needsCustomTitleBar() && !useNativeTitleBar;
@@ -76,12 +78,12 @@ export const CustomTitleBar = (): React.JSX.Element | null => {
               className={`${buttonBase} ${buttonHover}`}
               style={{ color: 'var(--color-text-secondary)' }}
               onClick={() => void minimize()}
-              aria-label="Minimize"
+              aria-label={t('window.minimize')}
             >
               <Minus className="size-4" strokeWidth={2.5} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Minimize</TooltipContent>
+          <TooltipContent side="bottom">{t('window.minimize')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -90,12 +92,14 @@ export const CustomTitleBar = (): React.JSX.Element | null => {
               className={`${buttonBase} ${buttonHover}`}
               style={{ color: 'var(--color-text-secondary)' }}
               onClick={() => void handleMaximize()}
-              aria-label={isMaximized ? 'Restore' : 'Maximize'}
+              aria-label={isMaximized ? t('window.restore') : t('window.maximize')}
             >
               <Square className="size-3.5" strokeWidth={2.5} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{isMaximized ? 'Restore' : 'Maximize'}</TooltipContent>
+          <TooltipContent side="bottom">
+            {isMaximized ? t('window.restore') : t('window.maximize')}
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -104,12 +108,12 @@ export const CustomTitleBar = (): React.JSX.Element | null => {
               className={`${buttonBase} hover:bg-red-500/90 hover:text-white`}
               style={{ color: 'var(--color-text-secondary)' }}
               onClick={() => void close()}
-              aria-label="Close"
+              aria-label={t('actions.close')}
             >
               <X className="size-4" strokeWidth={2.5} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Close</TooltipContent>
+          <TooltipContent side="bottom">{t('actions.close')}</TooltipContent>
         </Tooltip>
       </div>
     </div>

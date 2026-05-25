@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { computeTakeaways } from '@renderer/utils/reportAssessments';
 import { analyzeSession } from '@renderer/utils/sessionAnalyzer';
@@ -25,6 +26,7 @@ interface SessionReportTabProps {
 }
 
 export const SessionReportTab = ({ tab }: SessionReportTabProps) => {
+  const { t } = useAppTranslation('report');
   // Find session data from any session tab with matching sessionId
   const sessionDetail = useStore(
     useShallow((s) => {
@@ -44,14 +46,14 @@ export const SessionReportTab = ({ tab }: SessionReportTabProps) => {
   if (!report) {
     return (
       <div className="flex h-full items-center justify-center text-text-muted">
-        No session data available. Open the session tab first.
+        {t('sessionReport.noSessionData')}
       </div>
     );
   }
 
   return (
     <div className="h-full overflow-y-auto p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
-      <h1 className="mb-6 text-lg font-semibold text-text">Session Analysis Report</h1>
+      <h1 className="mb-6 text-lg font-semibold text-text">{t('sessionReport.title')}</h1>
       <div className="flex flex-col gap-4">
         {takeaways.length > 0 && <KeyTakeawaysSection takeaways={takeaways} />}
         <OverviewSection data={report.overview} />

@@ -1,5 +1,6 @@
 import { type JSX, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 import { AlertTriangle, ChevronRight, Info, ShieldCheck, X } from 'lucide-react';
 
@@ -25,52 +26,48 @@ interface TierConfig {
   badgeLabel?: string;
 }
 
-const TIER_CONFIGS: Record<number, TierConfig> = {
-  1: {
-    Icon: ShieldCheck,
-    border: 'border-emerald-500/15',
-    bg: 'bg-emerald-500/5',
-    accentColor: 'text-emerald-400',
-    title: 'Task scope determined precisely',
-    detail:
-      'Both start and completion markers found in the session log. The diff includes only changes made during this specific task - other tasks that modified the same files are excluded.',
-  },
-  2: {
-    Icon: Info,
-    border: 'border-blue-500/15',
-    bg: 'bg-blue-500/5',
-    accentColor: 'text-blue-400',
-    title: 'End boundary estimated',
-    detail:
-      'Only the start marker was found - the task has no completion marker yet. Changes shown from task start to end of session. If other tasks ran after this one in the same session, their changes may also be included.',
-  },
-  3: {
-    Icon: AlertTriangle,
-    border: 'border-orange-500/20',
-    bg: 'bg-orange-500/5',
-    accentColor: 'text-orange-400',
-    title: 'Start boundary estimated',
-    detail:
-      'Only the completion marker was found - the start of work was not captured. If other tasks ran before this one in the same session, their changes to the same files may also be included.',
-  },
-  4: {
-    Icon: AlertTriangle,
-    border: 'border-red-500/20',
-    bg: 'bg-red-500/5',
-    accentColor: 'text-red-400',
-    title: 'Showing all session changes',
-    detail:
-      'No task markers found in the session log. Cannot isolate this task - all file changes from the entire session are shown, including changes from other tasks. This can happen with older CLI versions or non-standard workflows.',
-  },
-};
-
 export const ScopeWarningBanner = ({
   warnings,
   confidence,
   sourceKind = 'legacy',
   onDismiss,
 }: ScopeWarningBannerProps): JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [expanded, setExpanded] = useState(false);
+  const tierConfigs: Record<number, TierConfig> = {
+    1: {
+      Icon: ShieldCheck,
+      border: 'border-emerald-500/15',
+      bg: 'bg-emerald-500/5',
+      accentColor: 'text-emerald-400',
+      title: t('review.scope.tiers.exact.title'),
+      detail: t('review.scope.tiers.exact.detail'),
+    },
+    2: {
+      Icon: Info,
+      border: 'border-blue-500/15',
+      bg: 'bg-blue-500/5',
+      accentColor: 'text-blue-400',
+      title: t('review.scope.tiers.endEstimated.title'),
+      detail: t('review.scope.tiers.endEstimated.detail'),
+    },
+    3: {
+      Icon: AlertTriangle,
+      border: 'border-orange-500/20',
+      bg: 'bg-orange-500/5',
+      accentColor: 'text-orange-400',
+      title: t('review.scope.tiers.startEstimated.title'),
+      detail: t('review.scope.tiers.startEstimated.detail'),
+    },
+    4: {
+      Icon: AlertTriangle,
+      border: 'border-red-500/20',
+      bg: 'bg-red-500/5',
+      accentColor: 'text-red-400',
+      title: t('review.scope.tiers.allSession.title'),
+      detail: t('review.scope.tiers.allSession.detail'),
+    },
+  };
   const ledgerConfig: TierConfig | null =
     sourceKind === 'ledger'
       ? {
@@ -95,21 +92,34 @@ export const ScopeWarningBanner = ({
                 : 'text-orange-400',
           title:
             confidence.tier <= 1
-              ? 'Changes captured by task ledger'
-              : 'Changes captured with limited reviewability',
+              ? t('review.scope.ledger.exact.title')
+              : t('review.scope.ledger.limited.title'),
           detail:
             confidence.tier <= 1
-              ? 'The orchestrator captured these file changes while the agent was working on this task.'
-              : 'The orchestrator captured these file changes for this task, but at least one change was captured from a snapshot or metadata-only source. Review exact text diffs where available; binary or unavailable content may require manual review.',
+              ? t('review.scope.ledger.exact.detail')
+              : t('review.scope.ledger.limited.detail'),
           badgeLabel:
             confidence.tier <= 1
-              ? 'Ledger exact'
+              ? t('review.scope.ledger.exact.badge')
               : confidence.tier === 2
-                ? 'Mixed reviewability'
-                : 'Needs review',
+                ? t('review.scope.ledger.limited.mixedBadge')
+                : t('review.scope.ledger.limited.needsReviewBadge'),
         }
       : null;
-  const config = ledgerConfig ?? TIER_CONFIGS[confidence.tier] ?? TIER_CONFIGS[4];
+  const workIntervalConfig: TierConfig | null =
+    sourceKind !== 'ledger' && confidence.reason.toLowerCase().includes('workinterval')
+      ? {
+          Icon: Info,
+          border: 'border-blue-500/15',
+          bg: 'bg-blue-500/5',
+          accentColor: 'text-blue-400',
+          title: t('review.scope.workInterval.title'),
+          detail: t('review.scope.workInterval.detail'),
+          badgeLabel: t('review.scope.workInterval.badge'),
+        }
+      : null;
+  const config =
+    ledgerConfig ?? workIntervalConfig ?? tierConfigs[confidence.tier] ?? tierConfigs[4];
   const { Icon } = config;
 
   return (
@@ -121,7 +131,7 @@ export const ScopeWarningBanner = ({
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-0.5 text-xs text-text-muted transition-colors hover:text-text-secondary"
         >
-          Read more
+          {t('review.scope.readMore')}
           <ChevronRight className={cn('size-3 transition-transform', expanded && 'rotate-90')} />
         </button>
 

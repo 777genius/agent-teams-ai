@@ -1,15 +1,15 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   formatProviderStatusText,
   getProviderConnectionModeSummary,
   getProviderCredentialSummary,
   getProviderCurrentRuntimeSummary,
-  isProviderInventoryOnlyFallback,
   isConnectionManagedRuntimeProvider,
+  isOpenCodeCatalogHydrating,
+  isProviderInventoryOnlyFallback,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -224,6 +224,73 @@ describe('providerConnectionUi', () => {
 
     expect(formatProviderStatusText(provider)).toBe('API key configured, but not verified yet');
     expect(getProviderCredentialSummary(provider)).toBe('API key also configured in Manage');
+  });
+
+  it('treats the OpenCode summary-only big-pickle model as catalog hydration', () => {
+    const provider: CliProviderStatus = {
+      providerId: 'opencode',
+      displayName: 'OpenCode (200+ models)',
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_managed',
+      verificationState: 'verified',
+      modelCatalogRefreshState: 'idle',
+      statusMessage: null,
+      models: ['opencode/big-pickle'],
+      modelCatalog: null,
+      runtimeCapabilities: {
+        modelCatalog: {
+          dynamic: true,
+          source: 'app-server',
+        },
+      },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: false,
+        extensions: createDefaultCliExtensionCapabilities(),
+      },
+    };
+
+    expect(isOpenCodeCatalogHydrating(provider)).toBe(true);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalogRefreshState: 'ready',
+      })
+    ).toBe(true);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        models: ['opencode/big-pickle', 'openrouter/qwen/qwen3-coder-plus'],
+      })
+    ).toBe(true);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalogRefreshState: 'error',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeCatalogHydrating({
+        ...provider,
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-05-20T00:00:00.000Z',
+          staleAt: '2026-05-20T00:10:00.000Z',
+          defaultModelId: null,
+          defaultLaunchModel: null,
+          models: [],
+          diagnostics: {
+            configReadState: 'ready',
+            appServerState: 'healthy',
+          },
+        },
+      })
+    ).toBe(false);
   });
 
   it('does not describe Anthropic API key mode as subscription connected when the key is missing', () => {

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
@@ -21,13 +22,13 @@ export interface KanbanFilterState {
 }
 
 /** Column definitions with display labels and accent colors for filter UI. */
-export const KANBAN_COLUMNS: { id: KanbanColumnId; label: string; color: string }[] = [
-  { id: 'todo', label: 'TODO', color: 'rgb(59, 130, 246)' },
-  { id: 'in_progress', label: 'IN PROGRESS', color: 'rgb(234, 179, 8)' },
-  { id: 'done', label: 'DONE', color: 'rgb(34, 197, 94)' },
-  { id: 'review', label: 'REVIEW', color: 'rgb(139, 92, 246)' },
-  { id: 'approved', label: 'APPROVED', color: 'rgb(22, 163, 74)' },
-];
+export const KANBAN_COLUMNS = [
+  { id: 'todo', labelKey: 'kanban.columns.todo', color: 'rgb(59, 130, 246)' },
+  { id: 'in_progress', labelKey: 'kanban.columns.inProgress', color: 'rgb(234, 179, 8)' },
+  { id: 'done', labelKey: 'kanban.columns.done', color: 'rgb(34, 197, 94)' },
+  { id: 'review', labelKey: 'kanban.columns.review', color: 'rgb(139, 92, 246)' },
+  { id: 'approved', labelKey: 'kanban.columns.approved', color: 'rgb(22, 163, 74)' },
+] as const satisfies readonly { id: KanbanColumnId; labelKey: string; color: string }[];
 
 interface KanbanFilterPopoverProps {
   filter: KanbanFilterState;
@@ -44,6 +45,7 @@ export const KanbanFilterPopover = ({
   members,
   onFilterChange,
 }: KanbanFilterPopoverProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const activeCount = useMemo(() => {
     let count = 0;
     if (filter.sessionId !== null) count += 1;
@@ -89,7 +91,7 @@ export const KanbanFilterPopover = ({
               variant="ghost"
               size="sm"
               className="relative h-7 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              aria-label="Filter tasks"
+              aria-label={t('kanban.filter.title')}
             >
               <Filter size={14} />
               {activeCount > 0 && (
@@ -100,13 +102,13 @@ export const KanbanFilterPopover = ({
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Filter tasks</TooltipContent>
+        <TooltipContent side="bottom">{t('kanban.filter.title')}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="w-72 p-0">
         {/* Session section */}
         <div className="border-b border-[var(--color-border)] p-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Session
+            {t('kanban.filter.session')}
           </p>
           <div className="max-h-40 space-y-0.5 overflow-y-auto">
             <button
@@ -118,7 +120,7 @@ export const KanbanFilterPopover = ({
               }`}
               onClick={() => handleSessionSelect(null)}
             >
-              All sessions
+              {t('kanban.filter.allSessions')}
             </button>
             {sessions.map((session) => {
               const isLead = session.id === leadSessionId;
@@ -146,7 +148,7 @@ export const KanbanFilterPopover = ({
         {/* Teammate section */}
         <div className="border-b border-[var(--color-border)] p-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Teammate
+            {t('kanban.filter.teammate')}
           </p>
           <div className="space-y-1.5">
             {members.map((member) => (
@@ -167,7 +169,7 @@ export const KanbanFilterPopover = ({
                 checked={filter.selectedOwners.has(UNASSIGNED_OWNER)}
                 onCheckedChange={() => handleOwnerToggle(UNASSIGNED_OWNER)}
               />
-              (unassigned)
+              {t('kanban.filter.unassigned')}
             </label>
           </div>
         </div>
@@ -175,7 +177,7 @@ export const KanbanFilterPopover = ({
         {/* Column section */}
         <div className="border-b border-[var(--color-border)] p-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Column
+            {t('kanban.filter.column')}
           </p>
           <div className="space-y-1.5">
             {KANBAN_COLUMNS.map((col) => (
@@ -188,7 +190,7 @@ export const KanbanFilterPopover = ({
                   checked={filter.columns.has(col.id)}
                   onCheckedChange={() => handleColumnToggle(col.id)}
                 />
-                {col.label}
+                {t(col.labelKey)}
               </label>
             ))}
           </div>
@@ -203,7 +205,7 @@ export const KanbanFilterPopover = ({
             disabled={activeCount === 0}
             onClick={handleClearAll}
           >
-            Clear all
+            {t('kanban.filter.clearAll')}
           </Button>
         </div>
       </PopoverContent>

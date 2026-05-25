@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
   ANTHROPIC_LONG_CONTEXT_PRICING_URL,
@@ -8,6 +9,7 @@ import {
 } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
+import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
@@ -45,7 +47,9 @@ interface LeadModelRowProps {
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
   warningText?: string | null;
   disableGeminiOption?: boolean;
+  providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
   modelIssueText?: string | null;
+  modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   showAnthropicContextLimit?: boolean;
@@ -65,19 +69,26 @@ export const LeadModelRow = ({
   onSyncModelsWithTeammatesChange,
   warningText,
   disableGeminiOption = false,
+  providerNoticeById,
   modelIssueText,
+  modelAdvisoryReasonByValue,
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
   showAnthropicContextLimit = providerId === 'anthropic',
   disableAnthropicContextLimit,
 }: LeadModelRowProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
-  const [modelExpanded, setModelExpanded] = useState(false);
+  const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
+  const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
-    : 'Default';
-  const modelButtonAriaLabel = `${getTeamProviderLabel(providerId)} provider, ${modelButtonLabel}`;
+    : t('members.leadModel.defaultModel');
+  const modelButtonAriaLabel = t('members.leadModel.providerModelAria', {
+    provider: getTeamProviderLabel(providerId),
+    model: modelButtonLabel,
+  });
   const selectedModelIssueText =
     model.trim() && modelIssueReasonByValue?.[model.trim()]
       ? modelIssueReasonByValue[model.trim()]
@@ -86,9 +97,15 @@ export const LeadModelRow = ({
     model.trim() && modelUnavailableReasonByValue?.[model.trim()]
       ? modelUnavailableReasonByValue[model.trim()]
       : null;
+  const selectedModelAdvisoryText =
+    model.trim() && modelAdvisoryReasonByValue?.[model.trim()]
+      ? modelAdvisoryReasonByValue[model.trim()]
+      : null;
   const currentModelIssueText =
     modelIssueText ?? selectedModelUnavailableText ?? selectedModelIssueText ?? null;
+  const currentModelAdvisoryText = currentModelIssueText ? null : selectedModelAdvisoryText;
   const hasModelIssue = Boolean(currentModelIssueText);
+  const hasModelAdvisory = Boolean(currentModelAdvisoryText);
   const showSonnetExtraUsageWarning =
     providerId === 'anthropic' &&
     !limitContext &&
@@ -100,6 +117,12 @@ export const LeadModelRow = ({
   const contextLimitDisabled =
     disableAnthropicContextLimit ??
     (providerId === 'anthropic' && isAnthropicHaikuTeamModel(model));
+
+  useEffect(() => {
+    if (hasActiveProviderNotice && !modelExpanded) {
+      setModelExpanded(true);
+    }
+  }, [hasActiveProviderNotice, modelExpanded]);
 
   return (
     <div
@@ -125,8 +148,12 @@ export const LeadModelRow = ({
             loading="lazy"
           />
           <div className="flex h-8 min-w-0 items-center gap-3">
-            <span className="truncate text-sm font-medium text-[var(--color-text)]">lead</span>
-            <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">Team Lead</span>
+            <span className="truncate text-sm font-medium text-[var(--color-text)]">
+              {t('members.leadModel.leadShort')}
+            </span>
+            <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">
+              {t('members.leadModel.teamLead')}
+            </span>
           </div>
         </div>
       </div>
@@ -142,7 +169,7 @@ export const LeadModelRow = ({
               htmlFor="sync-models-with-lead"
               className="cursor-pointer truncate text-xs font-normal text-text-secondary"
             >
-              Sync model with teammates
+              {t('members.leadModel.syncWithTeammates')}
             </Label>
           </div>
         </div>
@@ -155,7 +182,9 @@ export const LeadModelRow = ({
             className={cn(
               'h-8 w-full justify-start gap-1 overflow-hidden text-left',
               hasModelIssue &&
-                'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50'
+                'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
+              hasModelAdvisory &&
+                'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
             )}
             aria-label={modelButtonAriaLabel}
             onClick={() => setModelExpanded((prev) => !prev)}
@@ -168,6 +197,7 @@ export const LeadModelRow = ({
             <ProviderBrandLogo providerId={providerId} className="size-3.5 shrink-0" />
             <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
             {hasModelIssue ? <AlertTriangle className="size-3.5 shrink-0 text-red-300" /> : null}
+            {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
           </Button>
         </div>
       </div>
@@ -193,6 +223,8 @@ export const LeadModelRow = ({
             onValueChange={onModelChange}
             id="lead-model"
             disableGeminiOption={disableGeminiOption}
+            providerNoticeById={providerNoticeById}
+            modelAdvisoryReasonByValue={modelAdvisoryReasonByValue}
             modelIssueReasonByValue={{
               ...(modelIssueReasonByValue ?? {}),
               ...(model.trim() && modelIssueText ? { [model.trim()]: modelIssueText } : {}),
@@ -207,21 +239,24 @@ export const LeadModelRow = ({
             model={model}
             limitContext={limitContext}
           />
+          {providerId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
           {showAnthropicContextLimit ? (
             <LimitContextCheckbox
               id="lead-limit-context"
               checked={limitContext}
               onCheckedChange={onLimitContextChange}
               disabled={contextLimitDisabled}
-              scopeLabel={providerId === 'anthropic' ? undefined : 'Anthropic team-wide'}
+              scopeLabel={
+                providerId === 'anthropic' ? undefined : t('members.leadModel.anthropicTeamWide')
+              }
             />
           ) : null}
           <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
             <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
             <p className="text-[11px] leading-relaxed text-sky-300">
-              Lead runtime applies to teammates unless they set their own provider or model.
+              {t('members.leadModel.runtimeInheritance')}
               {showAnthropicContextLimit
-                ? ' The 200K context limit is team-wide for Anthropic runtimes in this launch, including custom Anthropic teammates.'
+                ? ` ${t('members.leadModel.anthropicContextLimit')}`
                 : null}
             </p>
           </div>

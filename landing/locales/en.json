@@ -43,11 +43,12 @@
     "sectionSubtitle": "Powerful tools that make multi-agent collaboration actually work."
   },
   "pricing": {
-    "sectionTitle": "100% Free. No strings attached.",
-    "sectionSubtitle": "Open source, no API keys, no configuration. Just install and go.",
+    "sectionTitle": "Free to install. Free model included.",
+    "sectionSubtitle": "Start immediately with a free model with no auth - no account, API key, or credit card. Connect Claude, Codex, OpenCode/OpenRouter, or other provider access only when you want more models.",
     "getStarted": "Download Now",
     "popular": "Free",
-    "note": "Open source. No API keys. No configuration. Runs entirely locally."
+    "freeModelCallout": "Free model with no auth included",
+    "note": "Agent Teams has no paid tier. The free model with no auth lets you try it right away; paid provider usage is optional and controlled by the provider you choose."
   },
   "testimonials": {
     "sectionTitle": "What developers say",
@@ -64,6 +65,7 @@
     "sectionTitle": "How we compare",
     "sectionSubtitle": "Feature-by-feature comparison with other AI coding tools.",
     "feature": "Feature",
+    "robotBubble": "Judge for yourself",
     "features": {
       "crossTeam": "Cross-team communication",
       "agentMessaging": "Agent-to-agent messaging",
@@ -77,12 +79,17 @@
       "reviewWorkflow": "Review workflow",
       "zeroSetup": "Zero setup",
       "kanban": "Kanban board",
-      "execLog": "Execution log viewer",
+      "execLog": "Execution logs",
       "liveProcesses": "Live processes",
+      "runtimeLoad": "CPU/RAM per teammate",
       "perTaskReview": "Per-task code review",
       "flexAutonomy": "Flexible autonomy",
       "worktree": "Git worktree isolation",
-      "multiAgent": "Multi-agent backend",
+      "multiAgent": "Mixed AI teammates",
+      "liveWorkGraph": "Live team map",
+      "liveTeam": "Live teammates",
+      "teamWorkspace": "Team workspace",
+      "launchProof": "Teammate launch status",
       "orgGovernance": "Org chart / governance",
       "budgetControls": "Budget controls",
       "price": "Price"
@@ -98,6 +105,7 @@
   "footer": {
     "copyright": "© {year} Agent Teams",
     "tagline": "AI agent orchestration for developers",
+    "robotBubble": "I'm waiting",
     "links": {
       "github": "GitHub",
       "docs": "Documentation"
@@ -105,7 +113,7 @@
   },
   "meta": {
     "homeTitle": "Agent Teams - AI Agent Orchestration for Developers",
-    "homeDescription": "Free, open-source desktop app for assembling AI agent teams. Kanban board, code review, cross-team communication. Runs entirely locally.",
+    "homeDescription": "Free, open-source desktop app for AI agent teams. Start with a free model with no auth, then connect Claude, Codex, or OpenCode when you need more models.",
     "downloadTitle": "Download Agent Teams for macOS, Windows, and Linux",
     "downloadDescription": "Download Agent Teams for macOS, Windows, and Linux. Free open-source desktop app for Claude, Codex, and OpenCode agent teams."
   },

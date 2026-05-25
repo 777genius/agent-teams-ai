@@ -123,6 +123,7 @@ export async function materializeTeamRuntimeSettingsBundle(input: {
   providerId: TeamProviderId;
   baseSettings?: (TeamRuntimeSettingsJson | null | undefined)[];
   anthropicHelper?: AnthropicTeamApiKeyHelperMaterial | null;
+  settingsDirectory?: string | null;
 }): Promise<TeamRuntimeSettingsBundle | null> {
   const fragments = [...(input.baseSettings ?? [])].filter(
     (fragment): fragment is TeamRuntimeSettingsJson =>
@@ -145,7 +146,7 @@ export async function materializeTeamRuntimeSettingsBundle(input: {
     return null;
   }
 
-  const baseDirectory = input.anthropicHelper?.directory;
+  const baseDirectory = input.anthropicHelper?.directory ?? input.settingsDirectory;
   if (!baseDirectory) {
     return null;
   }

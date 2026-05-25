@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -45,6 +46,20 @@ const MCP_SORT_OPTIONS: { value: McpSortValue; label: string }[] = [
   { value: 'name-desc', label: 'Name Z→A' },
   { value: 'tools-desc', label: 'Most tools' },
 ];
+
+function getMcpSortLabel(
+  value: McpSortValue,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string {
+  switch (value) {
+    case 'name-asc':
+      return t('mcpPanel.sort.nameAsc');
+    case 'name-desc':
+      return t('mcpPanel.sort.nameDesc');
+    case 'tools-desc':
+      return t('mcpPanel.sort.toolsDesc');
+  }
+}
 
 function sortMcpServers(servers: McpCatalogItem[], sort: McpSortValue): McpCatalogItem[] {
   return [...servers].sort((a, b) => {
@@ -95,6 +110,7 @@ export const McpServersPanel = ({
   cliStatus: cliStatusOverride,
   cliStatusLoading: cliStatusLoadingOverride,
 }: McpServersPanelProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const projectStateKey = getMcpProjectStateKey(projectPath);
   const {
     browseCatalog,
@@ -163,18 +179,20 @@ export const McpServersPanel = ({
 
   const diagnosticsDisableReason = useMemo(() => {
     if (cliStatus === null || typeof cliStatus === 'undefined') {
-      return cliStatusLoading ? 'Checking runtime status...' : 'Checking runtime availability...';
+      return cliStatusLoading
+        ? t('mcpPanel.diagnostics.disableReasons.checkingRuntimeStatus')
+        : t('mcpPanel.diagnostics.disableReasons.checkingRuntimeAvailability');
     }
 
     if (cliStatus?.installed === false) {
       if (cliStatus.binaryPath && cliStatus.launchError) {
-        return 'The configured runtime was found but failed to start. Open the Dashboard to repair or reinstall it.';
+        return t('mcpPanel.diagnostics.disableReasons.runtimeFailedToStart');
       }
-      return 'The configured runtime is required. Install or repair it from the Dashboard.';
+      return t('mcpPanel.diagnostics.disableReasons.runtimeRequired');
     }
 
     return null;
-  }, [cliStatus, cliStatusLoading]);
+  }, [cliStatus, cliStatusLoading, t]);
 
   useEffect(() => {
     if (diagnosticsDisableReason) {
@@ -270,17 +288,19 @@ export const McpServersPanel = ({
       <div className="rounded-md border border-black/10 bg-surface-raised px-4 py-3 dark:border-white/10">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-text">MCP Health Status</p>
+            <p className="text-sm font-medium text-text">{t('mcpPanel.health.title')}</p>
             <p className="text-xs text-text-muted">
-              {mcpDiagnosticsLoading ? (
-                <>Checking installed MCP servers via {runtimeLabel} ...</>
-              ) : diagnosticsDisableReason ? (
-                diagnosticsDisableReason
-              ) : mcpDiagnosticsLastCheckedAt ? (
-                `Last checked ${formatRelativeTime(new Date(mcpDiagnosticsLastCheckedAt).toISOString())}`
-              ) : (
-                <>Run diagnostics from this page to verify installed MCP connectivity.</>
-              )}
+              {mcpDiagnosticsLoading
+                ? t('mcpPanel.health.checkingViaRuntime', { runtime: runtimeLabel })
+                : diagnosticsDisableReason
+                  ? diagnosticsDisableReason
+                  : mcpDiagnosticsLastCheckedAt
+                    ? t('mcpPanel.health.lastChecked', {
+                        time: formatRelativeTime(
+                          new Date(mcpDiagnosticsLastCheckedAt).toISOString()
+                        ),
+                      })
+                    : t('mcpPanel.health.description')}
             </p>
           </div>
           <Button
@@ -293,16 +313,20 @@ export const McpServersPanel = ({
             <RefreshCw
               className={`mr-1.5 size-3.5 ${mcpDiagnosticsLoading ? 'animate-spin' : ''}`}
             />
-            {mcpDiagnosticsLoading ? 'Checking...' : 'Check Status'}
+            {mcpDiagnosticsLoading
+              ? t('mcpPanel.health.checking')
+              : t('mcpPanel.health.checkStatus')}
           </Button>
         </div>
 
         {(mcpDiagnosticsLoading || allDiagnostics.length > 0) && (
           <div className="mt-4 border-t border-black/10 pt-4 dark:border-white/10">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-text">Runtime MCP Diagnostics</p>
+              <p className="text-sm font-medium text-text">{t('mcpPanel.diagnostics.title')}</p>
               {allDiagnostics.length > 0 && (
-                <span className="text-xs text-text-muted">{allDiagnostics.length} servers</span>
+                <span className="text-xs text-text-muted">
+                  {t('mcpPanel.diagnostics.serversCount', { count: allDiagnostics.length })}
+                </span>
               )}
             </div>
             {allDiagnostics.length > 0 ? (
@@ -335,7 +359,7 @@ export const McpServersPanel = ({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-text-muted">Waiting for diagnostics results...</p>
+              <p className="text-xs text-text-muted">{t('mcpPanel.diagnostics.waiting')}</p>
             )}
           </div>
         )}
@@ -347,7 +371,7 @@ export const McpServersPanel = ({
           <SearchInput
             value={mcpSearchQuery}
             onChange={mcpSearch}
-            placeholder="Search MCP servers..."
+            placeholder={t('mcpPanel.searchPlaceholder')}
           />
         </div>
         <Select value={mcpSort} onValueChange={(v) => setMcpSort(v as McpSortValue)}>
@@ -357,7 +381,7 @@ export const McpServersPanel = ({
           <SelectContent>
             {MCP_SORT_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+                {getMcpSortLabel(opt.value, t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -421,12 +445,11 @@ export const McpServersPanel = ({
             <div>
               <p className="text-sm font-medium text-amber-300">
                 {cliStatus?.flavor === 'agent_teams_orchestrator'
-                  ? `${runtimeLabel} not available`
-                  : `${runtimeLabel} not installed`}
+                  ? t('mcpPanel.runtime.notAvailable', { runtime: runtimeLabel })
+                  : t('mcpPanel.runtime.notInstalled', { runtime: runtimeLabel })}
               </p>
               <p className="mt-0.5 text-xs text-text-muted">
-                MCP health checks require {runtimeLabel}. Go to the Dashboard to install or repair
-                it.
+                {t('mcpPanel.runtime.requiredDescription', { runtime: runtimeLabel })}
               </p>
             </div>
           </div>
@@ -447,10 +470,10 @@ export const McpServersPanel = ({
             )}
           </div>
           <p className="text-sm text-text-secondary">
-            {isSearching ? 'No servers found' : 'No MCP servers available'}
+            {isSearching ? t('mcpPanel.empty.searchTitle') : t('mcpPanel.empty.title')}
           </p>
           <p className="text-xs text-text-muted">
-            {isSearching ? 'Try a different search term' : 'Check back later for new servers'}
+            {isSearching ? t('mcpPanel.empty.searchDescription') : t('mcpPanel.empty.description')}
           </p>
         </div>
       )}
@@ -483,7 +506,7 @@ export const McpServersPanel = ({
             disabled={browseLoading}
             onClick={() => void mcpBrowse(browseNextCursor)}
           >
-            Load more
+            {t('mcpPanel.loadMore')}
           </Button>
         </div>
       )}

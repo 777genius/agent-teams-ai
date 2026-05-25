@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
@@ -44,6 +45,10 @@ const codexAccountHookState = {
 const pluginsPanelSpy = vi.fn();
 const mcpServersPanelSpy = vi.fn();
 const customMcpDialogSpy = vi.fn();
+const useCodexAccountSnapshotSpy = vi.fn(
+  (_options: { enabled: boolean; includeRateLimits?: boolean; initialRefreshDelayMs?: number }) =>
+    codexAccountHookState
+);
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: StoreState) => unknown) => selector(storeState),
@@ -66,7 +71,11 @@ vi.mock('@features/codex-account/renderer', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@features/codex-account/renderer')>();
   return {
     ...actual,
-    useCodexAccountSnapshot: () => codexAccountHookState,
+    useCodexAccountSnapshot: (options: {
+      enabled: boolean;
+      includeRateLimits?: boolean;
+      initialRefreshDelayMs?: number;
+    }) => useCodexAccountSnapshotSpy(options),
   };
 });
 
@@ -295,6 +304,7 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     pluginsPanelSpy.mockReset();
     mcpServersPanelSpy.mockReset();
     customMcpDialogSpy.mockReset();
+    useCodexAccountSnapshotSpy.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.error = null;
@@ -346,7 +356,7 @@ describe('ExtensionStoreView provider loading placeholders', () => {
       await Promise.resolve();
     });
 
-    expect(storeState.bootstrapCliStatus).toHaveBeenCalledWith({ multimodelEnabled: true });
+    expect(storeState.bootstrapCliStatus).not.toHaveBeenCalled();
     expect(storeState.fetchCliStatus).not.toHaveBeenCalled();
     expect(storeState.fetchApiKeys).not.toHaveBeenCalled();
 
@@ -363,12 +373,41 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     });
   });
 
+  it('does not defer Codex account refresh again after the lazy Extensions tab mounts', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const lastOptions = useCodexAccountSnapshotSpy.mock.calls.at(-1)?.[0] as
+      | { enabled?: boolean; includeRateLimits?: boolean; initialRefreshDelayMs?: number }
+      | undefined;
+    expect(lastOptions).toEqual(
+      expect.objectContaining({
+        enabled: true,
+        includeRateLimits: true,
+      })
+    );
+    expect(lastOptions?.initialRefreshDelayMs).toBeUndefined();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('falls back to legacy refresh when multimodel is disabled', async () => {
     storeState.appConfig = {
       general: {
         multimodelEnabled: false,
       },
     };
+    storeState.cliStatusLoading = false;
 
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -8,6 +8,7 @@ import {
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -30,6 +31,7 @@ export const ApiKeysPanel = ({
   projectPath,
   projectLabel,
 }: ApiKeysPanelProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const isElectron = useMemo(() => isElectronMode(), []);
   const {
     apiKeys,
@@ -188,7 +190,7 @@ export const ApiKeysPanel = ({
       {/* Header row */}
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-sm text-text-secondary">
-          Securely store API keys for auto-filling when installing MCP servers.
+          {t('apiKeys.description')}
           {storageStatus && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -200,15 +202,9 @@ export const ApiKeysPanel = ({
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
                 {isOsKeychain ? (
-                  <p>
-                    Keys are encrypted via {storageStatus.backend} and stored with restricted file
-                    permissions (owner-only).
-                  </p>
+                  <p>{t('apiKeys.storage.osKeychain', { backend: storageStatus.backend })}</p>
                 ) : (
-                  <p>
-                    OS keychain unavailable — keys are encrypted locally with AES-256. For stronger
-                    protection, install a keyring service (gnome-keyring, kwallet).
-                  </p>
+                  <p>{t('apiKeys.storage.localEncryption')}</p>
                 )}
               </TooltipContent>
             </Tooltip>
@@ -216,7 +212,7 @@ export const ApiKeysPanel = ({
         </p>
         <Button variant="outline" size="sm" onClick={handleAdd} className="gap-1.5">
           <Plus className="size-3.5" />
-          Add API Key
+          {t('apiKeys.actions.add')}
         </Button>
       </div>
 
@@ -250,13 +246,11 @@ export const ApiKeysPanel = ({
           <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-surface-raised">
             <Key className="size-5 text-text-muted" />
           </div>
-          <p className="text-sm text-text-secondary">No API keys saved</p>
-          <p className="text-xs text-text-muted">
-            Add keys to auto-fill environment variables when installing MCP servers.
-          </p>
+          <p className="text-sm text-text-secondary">{t('apiKeys.empty.title')}</p>
+          <p className="text-xs text-text-muted">{t('apiKeys.empty.description')}</p>
           <Button variant="outline" size="sm" onClick={handleAdd} className="mt-2 gap-1.5">
             <Plus className="size-3.5" />
-            Add your first key
+            {t('apiKeys.actions.addFirst')}
           </Button>
         </div>
       )}

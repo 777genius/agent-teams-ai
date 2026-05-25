@@ -507,6 +507,7 @@ function normalizeLaunchIdentity(
       : 'default';
   const catalogSource =
     raw.catalogSource === 'anthropic-models-api' ||
+    raw.catalogSource === 'anthropic-compatible-api' ||
     raw.catalogSource === 'app-server' ||
     raw.catalogSource === 'static-fallback' ||
     raw.catalogSource === 'runtime' ||
@@ -926,6 +927,9 @@ export function snapshotToMemberSpawnStatuses(
       bootstrapConfirmed: skippedForLaunch ? false : entry.bootstrapConfirmed,
       hardFailure: skippedForLaunch ? false : entry.hardFailure,
       pendingPermissionRequestIds: entry.pendingPermissionRequestIds,
+      bootstrapEvidenceSource: entry.bootstrapEvidenceSource,
+      bootstrapMode: entry.bootstrapMode,
+      appManagedBootstrapCandidate: entry.appManagedBootstrapCandidate,
       livenessKind: entry.livenessKind,
       runtimeDiagnostic: entry.runtimeDiagnostic,
       runtimeDiagnosticSeverity: entry.runtimeDiagnosticSeverity,

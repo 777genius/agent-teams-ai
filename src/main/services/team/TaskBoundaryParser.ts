@@ -33,7 +33,7 @@ interface BoundaryCacheEntry {
 interface ToolUseInfo {
   toolUseId: string;
   toolName: string;
-  filePath?: string;
+  filePaths: string[];
 }
 
 type DetectedMechanism = 'TaskUpdate' | 'mcp' | 'none';
@@ -126,9 +126,9 @@ export class TaskBoundaryParser {
             const toolName = canonicalizeAgentTeamsToolName(rawName);
             const toolUseId = typeof b.id === 'string' ? b.id : '';
             const input = b.input as Record<string, unknown> | undefined;
-            const fp = typeof input?.file_path === 'string' ? input.file_path : undefined;
+            const filePaths = input ? this.extractFilePaths(input) : [];
             if (!allToolUsesByLine.has(lineNumber)) allToolUsesByLine.set(lineNumber, []);
-            allToolUsesByLine.get(lineNumber)!.push({ toolUseId, toolName, filePath: fp });
+            allToolUsesByLine.get(lineNumber)!.push({ toolUseId, toolName, filePaths });
           }
 
           // Prefer structured task markers for modern runtime sessions.
@@ -195,6 +195,28 @@ export class TaskBoundaryParser {
     if (message && Array.isArray(message.content)) return message.content as unknown[];
     if (Array.isArray(entry.content)) return entry.content as unknown[];
     return null;
+  }
+
+  private extractFilePaths(input: Record<string, unknown>): string[] {
+    const paths: string[] = [];
+    const seen = new Set<string>();
+    const addPath = (value: unknown): void => {
+      if (typeof value !== 'string' || value.length === 0) return;
+      const normalized = value.replace(/\\/g, '/');
+      if (seen.has(normalized)) return;
+      seen.add(normalized);
+      paths.push(value);
+    };
+
+    addPath(input.file_path);
+
+    const changes = Array.isArray(input.changes) ? input.changes : [];
+    for (const change of changes) {
+      if (!change || typeof change !== 'object') continue;
+      addPath((change as Record<string, unknown>).path);
+    }
+
+    return paths;
   }
 
   /**
@@ -386,7 +408,9 @@ export class TaskBoundaryParser {
         for (const tool of tools) {
           if (FILE_MODIFYING_TOOLS.has(tool.toolName) && tool.toolUseId) {
             toolUseIds.push(tool.toolUseId);
-            if (tool.filePath) filePaths.add(tool.filePath);
+            for (const filePath of tool.filePaths) {
+              filePaths.add(filePath);
+            }
           }
         }
       }

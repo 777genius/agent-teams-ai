@@ -7,6 +7,7 @@ import { TeamTaskReader } from '../../TeamTaskReader';
 import {
   getOpenCodeRuntimeDeliveryPromptTimeMs,
   getOpenCodeRuntimeDeliveryRecordTimeMs,
+  isPotentialOpenCodeRuntimeDeliveryError,
   isTerminalSuccessfulOpenCodeDeliveryRecord,
   type OpenCodeRuntimeDeliveryProofSnapshot,
 } from './OpenCodeRuntimeDeliveryAdvisoryPolicy';
@@ -17,9 +18,10 @@ import {
   normalizeOpenCodeRuntimeDeliveryToken,
   openCodeTaskRefsIncludeAll,
 } from './OpenCodeRuntimeDeliveryProofMatching';
+import { inferOpenCodeTaskRefsFromInboxMessage } from './OpenCodeRuntimeDeliveryTaskRefInference';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliveryLedger';
-import type { InboxMessage, TeamConfig, TeamTask } from '@shared/types';
+import type { InboxMessage, TaskRef, TeamConfig, TeamTask } from '@shared/types';
 
 const PROOF_READ_CONCURRENCY = 4;
 
@@ -100,7 +102,8 @@ class MaterializedOpenCodeRuntimeDeliveryProofIndex implements OpenCodeRuntimeDe
   constructor(
     private readonly latestSuccessTimesByMember: ReadonlyMap<string, number>,
     private readonly visibleRepliesByMember: ReadonlyMap<string, readonly IndexedVisibleReply[]>,
-    private readonly taskProgressTimes: ReadonlyMap<string, number>
+    private readonly taskProgressTimes: ReadonlyMap<string, number>,
+    private readonly inferredTaskRefsByRecordId: ReadonlyMap<string, readonly TaskRef[]>
   ) {}
 
   getSnapshot(
@@ -149,13 +152,25 @@ class MaterializedOpenCodeRuntimeDeliveryProofIndex implements OpenCodeRuntimeDe
         }) ?? null;
     }
 
-    if (!visibleReply && record.taskRefs.length > 0) {
+    const taskRefs =
+      record.taskRefs.length > 0
+        ? record.taskRefs
+        : (this.inferredTaskRefsByRecordId.get(record.id) ?? []);
+
+    if (!visibleReply && taskRefs.length > 0) {
+      const recordWithTaskRefs =
+        taskRefs === record.taskRefs
+          ? record
+          : {
+              ...record,
+              taskRefs: [...taskRefs],
+            };
       visibleReply =
         visibleReplies
           .filter((candidate) =>
             isOpenCodeRecoveredVisibleReplyCandidate({
               message: candidate.message,
-              ledgerRecord: record,
+              ledgerRecord: recordWithTaskRefs,
               from: memberName,
               requireTaskRefs: true,
             })
@@ -164,7 +179,7 @@ class MaterializedOpenCodeRuntimeDeliveryProofIndex implements OpenCodeRuntimeDe
     }
 
     let taskProgressAt = 0;
-    for (const taskRef of record.taskRefs) {
+    for (const taskRef of taskRefs) {
       const taskId = taskRef.taskId?.trim();
       if (!taskId) {
         continue;
@@ -197,20 +212,17 @@ export class OpenCodeRuntimeDeliveryProofReader {
   async readProofIndex(
     input: OpenCodeRuntimeDeliveryProofReaderInput
   ): Promise<OpenCodeRuntimeDeliveryProofIndex> {
-    const [configuredLeadName, visibleRepliesByMember, taskProgressTimes] = await Promise.all([
+    const [configuredLeadName, visibleRepliesByMember, taskProgressProof] = await Promise.all([
       this.readConfiguredLeadName(input.teamName),
       this.readVisibleRepliesByMember(input),
-      this.readTaskProgressProofTimes(
-        input.teamName,
-        input.activeMemberKeys,
-        input.recordsByMember
-      ),
+      this.readTaskProgressProof(input.teamName, input.activeMemberKeys, input.recordsByMember),
     ]);
 
     return new MaterializedOpenCodeRuntimeDeliveryProofIndex(
       this.readLatestSuccessTimesByMember(input.activeMemberKeys, input.recordsByMember),
       await visibleRepliesByMember(configuredLeadName),
-      taskProgressTimes
+      taskProgressProof.taskProgressTimes,
+      taskProgressProof.inferredTaskRefsByRecordId
     );
   }
 
@@ -307,17 +319,24 @@ export class OpenCodeRuntimeDeliveryProofReader {
     return result;
   }
 
-  private async readTaskProgressProofTimes(
+  private async readTaskProgressProof(
     teamName: string,
     activeMemberKeys: ReadonlySet<string>,
     recordsByMember: ReadonlyMap<string, readonly OpenCodePromptDeliveryLedgerRecord[]>
-  ): Promise<Map<string, number>> {
+  ): Promise<{
+    taskProgressTimes: Map<string, number>;
+    inferredTaskRefsByRecordId: Map<string, TaskRef[]>;
+  }> {
     const taskIdsByMember = new Map<string, Set<string>>();
+    const recordsMissingTaskRefs: OpenCodePromptDeliveryLedgerRecord[] = [];
     for (const [memberKey, records] of recordsByMember) {
       if (!activeMemberKeys.has(memberKey)) {
         continue;
       }
       for (const record of records) {
+        if (record.taskRefs.length === 0 && isPotentialOpenCodeRuntimeDeliveryError(record)) {
+          recordsMissingTaskRefs.push(record);
+        }
         for (const taskRef of record.taskRefs) {
           const taskId = taskRef.taskId?.trim();
           if (!taskId) {
@@ -329,16 +348,42 @@ export class OpenCodeRuntimeDeliveryProofReader {
         }
       }
     }
-    if (taskIdsByMember.size === 0) {
-      return new Map();
+
+    if (taskIdsByMember.size === 0 && recordsMissingTaskRefs.length === 0) {
+      return { taskProgressTimes: new Map(), inferredTaskRefsByRecordId: new Map() };
     }
 
     const tasks = await this.taskReader.getTasks(teamName).catch(() => []);
     if (tasks.length === 0) {
-      return new Map();
+      return { taskProgressTimes: new Map(), inferredTaskRefsByRecordId: new Map() };
     }
 
-    const result = new Map<string, number>();
+    const inferredTaskRefsByRecordId = await this.inferTaskRefsForRecordsMissingTaskRefs({
+      teamName,
+      records: recordsMissingTaskRefs,
+      tasks,
+    });
+    for (const record of recordsMissingTaskRefs) {
+      const memberKey = normalizeOpenCodeRuntimeDeliveryToken(record.memberName);
+      if (!activeMemberKeys.has(memberKey)) {
+        continue;
+      }
+      for (const taskRef of inferredTaskRefsByRecordId.get(record.id) ?? []) {
+        const taskId = taskRef.taskId?.trim();
+        if (!taskId) {
+          continue;
+        }
+        const taskIds = taskIdsByMember.get(memberKey) ?? new Set<string>();
+        taskIds.add(taskId);
+        taskIdsByMember.set(memberKey, taskIds);
+      }
+    }
+
+    if (taskIdsByMember.size === 0) {
+      return { taskProgressTimes: new Map(), inferredTaskRefsByRecordId };
+    }
+
+    const taskProgressTimes = new Map<string, number>();
     for (const task of tasks) {
       const taskId = task.id?.trim();
       if (!taskId) {
@@ -353,9 +398,56 @@ export class OpenCodeRuntimeDeliveryProofReader {
           continue;
         }
         const key = getOpenCodeTaskProgressProofKey(memberKey, taskId);
-        result.set(key, Math.max(result.get(key) ?? 0, proofAt));
+        taskProgressTimes.set(key, Math.max(taskProgressTimes.get(key) ?? 0, proofAt));
       }
     }
+    return { taskProgressTimes, inferredTaskRefsByRecordId };
+  }
+
+  private async inferTaskRefsForRecordsMissingTaskRefs(input: {
+    teamName: string;
+    records: readonly OpenCodePromptDeliveryLedgerRecord[];
+    tasks: readonly TeamTask[];
+  }): Promise<Map<string, TaskRef[]>> {
+    const result = new Map<string, TaskRef[]>();
+    if (input.records.length === 0) {
+      return result;
+    }
+
+    const inboxMessagesByMember = new Map<string, Promise<InboxMessage[]>>();
+    const getInboxMessages = (memberName: string): Promise<InboxMessage[]> => {
+      const memberKey = normalizeOpenCodeRuntimeDeliveryToken(memberName);
+      const existing = inboxMessagesByMember.get(memberKey);
+      if (existing) {
+        return existing;
+      }
+      const request = this.inboxReader
+        .getMessagesFor(input.teamName, memberName)
+        .catch(() => [] as InboxMessage[]);
+      inboxMessagesByMember.set(memberKey, request);
+      return request;
+    };
+
+    await mapLimit(input.records, PROOF_READ_CONCURRENCY, async (record) => {
+      const inboxMessageId = record.inboxMessageId?.trim();
+      if (!inboxMessageId) {
+        return;
+      }
+      const messages = await getInboxMessages(record.memberName);
+      const message = messages.find((candidate) => candidate.messageId?.trim() === inboxMessageId);
+      if (!message) {
+        return;
+      }
+      const inferred = inferOpenCodeTaskRefsFromInboxMessage({
+        teamName: input.teamName,
+        message,
+        tasks: input.tasks,
+      });
+      if (inferred.length > 0) {
+        result.set(record.id, inferred);
+      }
+    });
+
     return result;
   }
 }

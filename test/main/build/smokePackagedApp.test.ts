@@ -59,9 +59,12 @@ describe('smokePackagedApp shutdown handling', () => {
       const termination = terminateChild(child, exitPromise, 'linux');
       const rejection = expect(termination).rejects.toThrow('Timed out after 5000ms');
       await vi.advanceTimersByTimeAsync(5_000);
+      await vi.advanceTimersByTimeAsync(5_000);
 
       await rejection;
-      expect(child.kill).toHaveBeenCalledTimes(1);
+      expect(child.kill).toHaveBeenCalledTimes(2);
+      expect(child.kill).toHaveBeenNthCalledWith(1);
+      expect(child.kill).toHaveBeenNthCalledWith(2, 'SIGKILL');
     } finally {
       vi.useRealTimers();
     }

@@ -12,7 +12,15 @@
 
 import { countContentTokens } from '@main/utils/tokenizer';
 
-import type { AIChunk, EnhancedAIChunk, SemanticStep } from '@main/types';
+import type { AIChunk, ContentBlock, EnhancedAIChunk, SemanticStep } from '@main/types';
+
+function normalizeAssistantContent(content: ContentBlock[] | string): ContentBlock[] {
+  if (typeof content === 'string') {
+    return content ? [{ type: 'text', text: content }] : [];
+  }
+
+  return Array.isArray(content) ? content : [];
+}
 
 /**
  * Extract semantic steps from AI chunk responses.
@@ -33,7 +41,7 @@ export function extractSemanticStepsFromAIChunk(chunk: AIChunk | EnhancedAIChunk
   for (const msg of chunk.responses) {
     if (msg.type === 'assistant') {
       // Extract from content blocks
-      const content = Array.isArray(msg.content) ? msg.content : [];
+      const content = normalizeAssistantContent(msg.content);
 
       for (const block of content) {
         if (block.type === 'thinking' && block.thinking) {

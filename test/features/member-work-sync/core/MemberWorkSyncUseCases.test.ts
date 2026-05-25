@@ -1,20 +1,20 @@
-import { describe, expect, it } from 'vitest';
-
 import {
+  type MemberWorkSyncAgendaSourceResult,
+  type MemberWorkSyncAuditEvent,
   MemberWorkSyncDiagnosticsReader,
+  type MemberWorkSyncInboxNudgePort,
   MemberWorkSyncNudgeDispatcher,
+  type MemberWorkSyncOutboxStorePort,
   MemberWorkSyncPendingReportIntentReplayer,
   MemberWorkSyncReconciler,
   MemberWorkSyncReporter,
-  type MemberWorkSyncAgendaSourceResult,
-  type MemberWorkSyncAuditEvent,
-  type MemberWorkSyncInboxNudgePort,
-  type MemberWorkSyncOutboxStorePort,
   type MemberWorkSyncReviewPickupDeliveryPort,
   type MemberWorkSyncReviewPickupEscalationPort,
   type MemberWorkSyncStatusStorePort,
   type MemberWorkSyncUseCaseDeps,
 } from '@features/member-work-sync/core/application';
+import { describe, expect, it } from 'vitest';
+
 import type {
   MemberWorkSyncActionableWorkItem,
   MemberWorkSyncOutboxEnsureInput,
@@ -745,6 +745,24 @@ describe('MemberWorkSync use cases', () => {
     expect(store.writes).toEqual([]);
   });
 
+  it('plans a nudge from status refresh once readiness is green', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { deps, store } = createDeps({ outboxStore: outbox });
+    store.phase2ReadinessState = 'shadow_ready';
+
+    const status = await new MemberWorkSyncReconciler(deps).execute({
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+
+    expect(outbox.ensures).toHaveLength(1);
+    expect(outbox.ensures[0]).toMatchObject({
+      id: `member-work-sync:team-a:bob:${status.agenda.fingerprint}`,
+      teamName: 'team-a',
+      memberName: 'bob',
+    });
+  });
+
   it('creates one idempotent outbox nudge intent when Phase 2 readiness is green', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({ outboxStore: outbox });
@@ -778,6 +796,7 @@ describe('MemberWorkSync use cases', () => {
       'member_work_sync_status with teamName "team-a" and memberName "bob"'
     );
     expect(nudgeText).toContain('member_work_sync_report with the same teamName/memberName');
+    expect(nudgeText).toContain('mcp__agent-teams__member_work_sync_status');
     expect(nudgeText).toContain('taskIds: "task-1"');
     expect(nudgeText).toContain(
       'Do not use provider names, runtime names, or team names as memberName'
@@ -815,6 +834,68 @@ describe('MemberWorkSync use cases', () => {
       status: 'delivered',
       deliveredMessageId: `member-work-sync:team-a:bob:${status.agenda.fingerprint}`,
     });
+  });
+
+  it('creates a status-only recovery nudge after a delivered nudge turn settles without a report', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const inbox = new InMemoryInboxNudge();
+    let busyChecks = 0;
+    const { deps, store } = createDeps({
+      outboxStore: outbox,
+      inboxNudge: inbox,
+      busySignal: {
+        isBusy: async () => {
+          busyChecks += 1;
+          return busyChecks > 1
+            ? { busy: true, reason: 'recent_tool_activity' }
+            : { busy: false };
+        },
+      },
+    });
+    store.phase2ReadinessState = 'shadow_ready';
+
+    const firstStatus = await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+    await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+
+    await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['turn_settled'] }
+    );
+
+    const recovery = [...outbox.items.values()].find((item) =>
+      item.payload.workSyncIntentKey?.startsWith('status-only:')
+    );
+    expect(recovery).toMatchObject({
+      status: 'pending',
+      agendaFingerprint: firstStatus.agenda.fingerprint,
+      payload: {
+        workSyncIntent: 'agenda_sync',
+        workSyncIntentKey: `status-only:${firstStatus.agenda.fingerprint}`,
+      },
+    });
+    expect(recovery?.payload.text).toContain('previous work-sync turn appears to have stopped');
+
+    const summary = await new MemberWorkSyncNudgeDispatcher(deps).dispatchDue({
+      teamNames: ['team-a'],
+      claimedBy: 'test-dispatcher',
+    });
+
+    expect(summary).toMatchObject({ claimed: 1, delivered: 1, superseded: 0 });
+    expect(busyChecks).toBe(2);
+    expect(inbox.inserted).toHaveLength(2);
+    expect(inbox.inserted[1]?.messageId).toContain('status-only');
   });
 
   it('marks review pickup delivered only after the delivery port confirms prompt acceptance', async () => {

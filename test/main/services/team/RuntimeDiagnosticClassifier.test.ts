@@ -35,6 +35,20 @@ describe('RuntimeDiagnosticClassifier', () => {
     });
   });
 
+  it('classifies OpenCode free usage retry status as quota exhausted', () => {
+    const selected = selectRuntimeDiagnosticClassification([
+      'empty_assistant_turn',
+      'OpenCode session status retry - attempt=1 - Free usage exceeded, subscribe to Go https://opencode.ai/go - next=2026-05-18T00:00:00.267Z',
+    ]);
+
+    expect(selected).toMatchObject({
+      reasonCode: 'quota_exhausted',
+      normalizedMessage:
+        'OpenCode session status retry - attempt=1 - Free usage exceeded, subscribe to Go https://opencode.ai/go - next=2026-05-18T00:00:00.267Z',
+      actionRequired: true,
+    });
+  });
+
   it('selects auth errors over bridge timeouts', () => {
     const selected = selectRuntimeDiagnosticClassification([
       'OpenCode bridge command timed out',
@@ -127,6 +141,250 @@ describe('RuntimeDiagnosticClassifier', () => {
   it('keeps OpenCode bridge command timeout as backend state despite timeout tokens', () => {
     expect(classifyRuntimeDiagnostic('OpenCode bridge command timed out')).toMatchObject({
       reasonCode: 'backend_error',
+      generic: true,
+    });
+  });
+
+  it('classifies resolved OpenCode behavior changes as recoverable generic refresh state', () => {
+    expect(classifyRuntimeDiagnostic('resolved_behavior_changed:old->new')).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('opencode_app_mcp_transport_changed:old->new')
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(classifyRuntimeDiagnostic('(resolved_behavior_changed:old->new)')).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:tool_error->session_error')
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:responded_non_visible_tool->pending')
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:permission_blocked->pending')
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic(
+        'resolved_behavior_changed:old->new opencode_app_mcp_transport_changed:a->b'
+      )
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('OpenCode session changed; refreshing the session before retry.')
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic(
+        'OpenCode API error. opencode_prompt_delivery_session_refresh_scheduled'
+      )
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic(
+        'OpenCode API error. opencode_prompt_delivery_session_refresh_scheduled.'
+      )
+    ).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+      actionRequired: false,
+    });
+  });
+
+  it('does not classify refresh markers with unknown extra text as clean refresh', () => {
+    const result = classifyRuntimeDiagnostic(
+      'resolved_behavior_changed:old->new unexpected detail'
+    );
+
+    expect(result.normalizedMessage).toBe(
+      'resolved_behavior_changed:old->new unexpected detail'
+    );
+    expect(result.generic).toBe(false);
+  });
+
+  it('requires a separator after generic OpenCode API error before refresh markers', () => {
+    const result = classifyRuntimeDiagnostic(
+      'OpenCode API errorresolved_behavior_changed:old->new'
+    );
+
+    expect(result.normalizedMessage).toBe(
+      'OpenCode API errorresolved_behavior_changed:old->new'
+    );
+    expect(result.generic).toBe(false);
+  });
+
+  it('only allows known stale log-projection text after refresh markers', () => {
+    expect(
+      classifyRuntimeDiagnostic(
+        'OpenCode session is stale (resolved_behavior_changed:old->new); reading historical messages for log projection only'
+      )
+    ).toMatchObject({
+      normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
+      generic: true,
+    });
+
+    const unknown = classifyRuntimeDiagnostic(
+      'OpenCode session is stale (resolved_behavior_changed:old->new); unexpected detail'
+    );
+    expect(unknown.normalizedMessage).toBe(
+      'OpenCode session is stale (resolved_behavior_changed:old->new); unexpected detail'
+    );
+    expect(unknown.generic).toBe(false);
+  });
+
+  it('does not let OpenCode refresh markers hide network failure details', () => {
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:old->new network timeout')
+    ).toMatchObject({
+      reasonCode: 'network_error',
+      generic: false,
+    });
+    expect(
+      classifyRuntimeDiagnostic('opencode_app_mcp_transport_changed:old->new service unavailable')
+    ).toMatchObject({
+      reasonCode: 'provider_overloaded',
+      generic: false,
+    });
+  });
+
+  it('does not let OpenCode refresh markers hide permission failures', () => {
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:old->new;permission_denied')
+    ).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+    expect(
+      classifyRuntimeDiagnostic('opencode_app_mcp_transport_changed:old->new permission denied')
+    ).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+    expect(classifyRuntimeDiagnostic('permission_blocked')).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:old->new permission_blocked')
+    ).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+  });
+
+  it.each(['error', 'failed', 'failure', 'aborted', 'canceled', 'cancelled', 'interrupted', 'enospc'])(
+    'does not classify directly attached OpenCode refresh suffix _%s as clean refresh',
+    (suffix) => {
+      const result = classifyRuntimeDiagnostic(`resolved_behavior_changed:old->new_${suffix}`);
+
+      expect(result.normalizedMessage).not.toBe(
+        'OpenCode session changed; refreshing the session before retry.'
+      );
+    }
+  );
+
+  it.each([
+    ['resolved_behavior_changed:old->new/auth_unavailable', 'auth_error'],
+    ['resolved_behavior_changed:old->new permission denied', 'auth_error'],
+    ['resolved_behavior_changed:old->new permission_blocked', 'auth_error'],
+    ['resolved_behavior_changed:old->new login required', 'auth_error'],
+    ['resolved_behavior_changed:old->new not logged in', 'auth_error'],
+    ['resolved_behavior_changed:old->new missing credentials', 'auth_error'],
+    ['resolved_behavior_changed:old->new access denied', 'auth_error'],
+    ['resolved_behavior_changed:old->new 401', 'auth_error'],
+    ['resolved_behavior_changed:old->new 403', 'auth_error'],
+    ['resolved_behavior_changed:old->new;key limit exceeded', 'quota_exhausted'],
+    ['resolved_behavior_changed:old->new-network_timeout', 'network_error'],
+    ['resolved_behavior_changed:old->new interrupted', 'backend_error'],
+    [
+      'resolved_behavior_changed:old->new(non_visible_tool_without_task_progress)',
+      'protocol_proof_missing',
+    ],
+    ['opencode_app_mcp_transport_changed:old->new/permission_denied', 'auth_error'],
+    [
+      'opencode_app_mcp_transport_changed:old->new;visible_reply_missing_task_refs',
+      'protocol_proof_missing',
+    ],
+  ])('classifies separator-attached failure detail %s as %s', (message, reasonCode) => {
+    expect(classifyRuntimeDiagnostic(message)).toMatchObject({
+      reasonCode,
+    });
+    expect(classifyRuntimeDiagnostic(message).normalizedMessage).not.toBe(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+  });
+
+  it('does not treat embedded HTTP status digits in ids as auth diagnostics', () => {
+    expect(classifyRuntimeDiagnostic('trace id abc401def')).toMatchObject({
+      reasonCode: 'backend_error',
+      actionRequired: false,
+    });
+    expect(classifyRuntimeDiagnostic('trace id abc403def')).toMatchObject({
+      reasonCode: 'backend_error',
+      actionRequired: false,
+    });
+    expect(classifyRuntimeDiagnostic('HTTP 401')).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+    expect(classifyRuntimeDiagnostic('status:403')).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+    expect(classifyRuntimeDiagnostic('status_401')).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+    expect(classifyRuntimeDiagnostic('http_403')).toMatchObject({
+      reasonCode: 'auth_error',
+      actionRequired: true,
+    });
+  });
+
+  it('does not let OpenCode refresh markers hide protocol proof failures', () => {
+    expect(
+      classifyRuntimeDiagnostic('resolved_behavior_changed:old->new visible_reply_missing_task_refs')
+    ).toMatchObject({
+      reasonCode: 'protocol_proof_missing',
       generic: true,
     });
   });

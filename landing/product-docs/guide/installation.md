@@ -9,7 +9,7 @@ Agent Teams is distributed as a desktop app for macOS, Windows, and Linux.
 
 ::: tip Shortest path
 1. Download the build for your platform below
-2. Launch the app — it detects runtimes and guides provider auth from the UI
+2. Launch the app - start with the free model with no auth or connect provider auth from the UI
 3. Start the [quickstart](/guide/quickstart) to create your first team
 
 Desktop app startup: run `pnpm dev` for the Electron app. Do not start the browser/web dev mode for normal use.
@@ -30,16 +30,16 @@ Unsigned or newly published open-source apps can trigger SmartScreen. If you tru
 
 ## Requirements
 
-The packaged app is designed for zero-setup onboarding. It guides you through runtime detection and provider authentication from the UI — no manual CLI configuration needed.
+The packaged app is designed for zero-setup onboarding. You can start with the free model with no auth - no registration, API keys, or credit card. If you want more models, the app guides runtime detection and provider authentication from the UI.
 
-To use agent runtimes, you need access to at least one provider:
+For paid or account-backed models, connect at least one provider:
 
 | Provider           | Access method                                     |
 | ------------------ | ------------------------------------------------- |
 | Claude (Anthropic) | Claude Code CLI login or API key                  |
 | Codex (OpenAI)     | Codex CLI login or API key                        |
 | Gemini (Google)    | Google ADC, Gemini CLI, or API key                |
-| OpenCode           | API key for a supported backend (e.g. OpenRouter) |
+| OpenCode           | Included free model with no auth, or API key for a supported backend (e.g. OpenRouter) |
 
 ::: info
 Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current status across all providers.

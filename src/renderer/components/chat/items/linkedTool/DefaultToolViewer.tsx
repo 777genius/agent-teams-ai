@@ -6,6 +6,8 @@
 
 import React, { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { type ItemStatus } from '../BaseItem';
 
 import { CollapsibleOutputSection } from './CollapsibleOutputSection';
@@ -27,6 +29,7 @@ export const DefaultToolViewer = memo(function DefaultToolViewer({
   linkedTool,
   status,
 }: DefaultToolViewerProps) {
+  const { t } = useAppTranslation('common');
   const displayOutputContent = linkedTool.result
     ? formatToolOutputForDisplay(linkedTool.name, linkedTool.result.content)
     : null;
@@ -42,7 +45,7 @@ export const DefaultToolViewer = memo(function DefaultToolViewer({
       {/* Input Section */}
       <div>
         <div className="mb-1 text-xs" style={{ color: 'var(--tool-item-muted)' }}>
-          Input
+          {t('toolViewer.input')}
         </div>
         <div
           className="max-h-96 overflow-auto rounded p-3 font-mono text-xs"
@@ -52,7 +55,16 @@ export const DefaultToolViewer = memo(function DefaultToolViewer({
             color: 'var(--color-text-secondary)',
           }}
         >
-          {renderInput(linkedTool.name, linkedTool.input)}
+          {renderInput(linkedTool.name, linkedTool.input, {
+            replaceAll: t('toolViewer.replaceAll'),
+            agentAction: t('toolViewer.agent.action'),
+            agentTeammate: t('toolViewer.agent.teammate'),
+            agentTeam: t('toolViewer.agent.team'),
+            agentRuntime: t('toolViewer.agent.runtime'),
+            agentType: t('toolViewer.agent.type'),
+            startupInstructionsHidden: t('toolViewer.agent.startupInstructionsHidden'),
+            noInputRecorded: t('toolViewer.noInputRecorded'),
+          })}
         </div>
       </div>
 

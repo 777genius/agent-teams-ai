@@ -1,8 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
 

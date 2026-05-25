@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Options Power-user : export/import config, réinitialise les paramètres par défaut et édition de configuration brute.",
+      "label": "Avancé"
+    },
+    "general": {
+      "description": "Préférences de l'application de base comme le thème, la langue, la densité d'affichage et le comportement de démarrage.",
+      "label": "Généralités"
+    },
+    "infoAriaLabel": "Ce qui est {{label}}?",
+    "notifications": {
+      "description": "Contrôlez quand et comment vous êtes informé de l'activité de l'agent, de l'achèvement des tâches et des erreurs.",
+      "label": "Notifications"
+    }
+  },
+  "view": {
+    "description": "Gérer vos préférences d'application",
+    "loading": "Chargement des paramètres...",
+    "title": "Paramètres"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Annuler",
+      "test": "Essai"
+    },
+    "defaults": {
+      "allProjects": "Tous les projets",
+      "allProjectsHint": "Utilisation des essais {{project}}. La valeur par défaut s'applique à moins qu'un projet ait une priorité.",
+      "loadingContexts": "Chargement des contextes...",
+      "projectHint": "Sauvegarder les dépassements seulement {{project}}.",
+      "projectOverrideContext": "Contexte de remplacement du projet",
+      "scopeDescriptionAllProjects": "Par défaut pour chaque projet qui n'a pas sa propre préséance OpenCode.",
+      "scopeDescriptionProject": "Surpasser seulement le projet sélectionné. Les équipes de course ne changent pas.",
+      "selectProjectContext": "Sélectionner le contexte du projet",
+      "selectProjectHint": "Sélectionnez un projet avant de tester des modèles locaux ou d'enregistrer des valeurs par défaut.",
+      "selectValidationContext": "Sélectionner le contexte de validation",
+      "setAllProjectsDefault": "Définir par défaut tous les projets",
+      "setProjectDefault": "Définir la valeur par défaut du projet",
+      "thisProject": "Ce projet",
+      "title": "Par défaut OpenCode",
+      "validationContext": "Contexte de validation"
+    },
+    "diagnostics": {
+      "copied": "Diagnostic copié",
+      "copiedShort": "Copié",
+      "copy": "Copier les diagnostics",
+      "hints": "Conseils",
+      "likelyCause": "Cause probable:"
+    },
+    "models": {
+      "alreadyDefault": "C'est déjà la valeur par défaut d'OpenCode sélectionnée.",
+      "empty": "Aucun modèle trouvé.",
+      "emptyFree": "Aucun modèle gratuit trouvé.",
+      "emptyRecommended": "Aucun modèle recommandé trouvé.",
+      "emptyRecommendedFree": "Aucun modèle libre recommandé trouvé.",
+      "freeOnly": "Gratuit seulement",
+      "launchableDescription": "Routes que vous pouvez tester ou utiliser dans le sélectionneur d'équipe : configuration locale, modèles intégrés gratuits et défaut courant.",
+      "launchableTitle": "Modèles OpenCode à lancer",
+      "loadingRoutes": "Chargement des itinéraires du modèle OpenCode...",
+      "noRoutesMatch": "Aucune route du modèle OpenCode ne correspond \"{{query}}\".",
+      "noneReported": "Aucune route de modèle OpenCode n'a encore été signalée. Configurez une route locale dans OpenCode ou utilisez l'onglet Fournisseurs pour inspecter les fournisseurs de catalogue.",
+      "recommendedOnly": "Recommandé seulement",
+      "searchPlaceholder": "Modèles de recherche",
+      "selectProjectBeforeTesting": "Sélectionnez un contexte de projet avant de tester des modèles.",
+      "selectProjectBeforeTestingDefaults": "Sélectionnez un contexte de projet avant de tester ou d'enregistrer les valeurs par défaut OpenCode.",
+      "useInTeamPicker": "Utilisation dans le sélectionneur d'équipe"
+    },
+    "providers": {
+      "catalog": "Catalogue des fournisseurs OpenCode",
+      "countFallback": "Fournisseurs OpenCode",
+      "description": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier.",
+      "loadMore": "Charger plus de fournisseurs",
+      "loading": "Chargement des fournisseurs OpenCode",
+      "noMatches": "Aucun fournisseur ne correspond à cette recherche.",
+      "noneReported": "Aucun fournisseur OpenCode n'a été signalé par l'exécution gérée.",
+      "recommended": "Recommandation",
+      "refreshCatalog": "Actualiser le catalogue",
+      "searchPlaceholder": "Fournisseurs de recherche",
+      "description_few": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier.",
+      "description_many": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier.",
+      "description_one": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier.",
+      "description_other": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier."
+    },
+    "setup": {
+      "loading": "Chargement de la configuration du fournisseur..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode par défaut : {{model}}",
+      "loading": "Chargement géré OpenCode runtime, fournisseurs connectés et modèles par défaut...",
+      "source": "Source: {{source}}",
+      "title": "Ouvrir le code d'exécution"
+    },
+    "tabs": {
+      "models": "Modèles",
+      "providers": "Fournisseurs"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Rechercher les itinéraires du modèle"
+    },
+    "badges": {
+      "usedInTeamPicker": "Utilisé dans le choix d'équipe",
+      "free": "gratuit",
+      "local": "locaux",
+      "configured": "configuré",
+      "connected": "connecté",
+      "verified": "vérifié",
+      "needsTest": "test des besoins",
+      "failed": "échoué",
+      "unknown": "inconnu",
+      "default": "par défaut"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Langue pour la communication des agents",
+      "descriptionWithDetected": "Langue pour la communication des agents (détectée : {{detected}})",
+      "emptyMessage": "Aucun langage trouvé.",
+      "label": "Langue",
+      "searchPlaceholder": "Langue de recherche...",
+      "selectPlaceholder": "Choisir la langue...",
+      "title": "Langue de l'agent"
+    },
+    "appLanguage": {
+      "description": "Langue pour l'interface de l'application.",
+      "label": "Langue",
+      "title": "Langue de l'application"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Élargir automatiquement chaque tour de réponse lors de l'ouverture d'une transcription ou de la réception d'un nouveau message",
+        "label": "Élargir les réponses AI par défaut"
+      },
+      "nativeTitleBar": {
+        "description": "Utilisez le cadre de fenêtre système par défaut au lieu de la barre de titre personnalisée",
+        "label": "Utiliser la barre de titre native",
+        "restartConfirm": {
+          "confirmLabel": "Redémarrer",
+          "message": "L'application doit redémarrer pour appliquer la modification de la barre de titre. Redémarrer maintenant ?",
+          "title": "Redémarrage nécessaire"
+        }
+      },
+      "theme": {
+        "description": "Choisissez votre thème de couleur préféré",
+        "label": "Thème",
+        "options": {
+          "dark": "Noir",
+          "light": "Lumière",
+          "system": "Système"
+        }
+      },
+      "title": "Apparence"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Démarrer une HTTP serveur pour accéder à l'interface utilisateur depuis un navigateur ou intégrer dans iframes",
+        "label": "Activer le mode serveur"
+      },
+      "title": "Accès au navigateur"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Sélectionner le dossier",
+        "selectFolderManually": "Sélectionner manuellement le dossier",
+        "useAutoDetect": "Utiliser Auto-Detect",
+        "useFolder": "Utiliser le dossier",
+        "usePath": "Utiliser le chemin",
+        "useThisPath": "Utiliser ce chemin",
+        "useWsl": "Utilisation de Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "Ce dossier ne contient pas de répertoire \"projets\". Vous continuez ?",
+          "title": "Aucun répertoire de projets trouvé"
+        },
+        "notClaudeDir": {
+          "message": "Ce dossier s'appelle \"{{folderName}}\", pas \".claude\". Vous continuez ?",
+          "title": "Le dossier sélectionné n'est pas .claude"
+        },
+        "noWslPaths": {
+          "message": "Impossible de trouver WSL distros avec les données de Claude automatiquement. Sélectionnez le dossier manuellement ?",
+          "title": "Numéro WSL Les chemins de Claude trouvés"
+        },
+        "wslNoProjectsDir": {
+          "message": "\"{{path}}\" ne contient pas de répertoire \"projets\". Vous continuez ?",
+          "title": "WSL chemin manquant répertoire de projets"
+        }
+      },
+      "current": {
+        "autoDetected": "Détecté automatiquement: {{path}}",
+        "autoDetectedPath": "Utilisation du chemin détecté automatiquement",
+        "customPath": "Utilisation du chemin personnalisé",
+        "label": "Racine locale actuelle"
+      },
+      "description": "Choisissez quel dossier local est traité comme votre racine de données Claude",
+      "errors": {
+        "detectWslFailed": "Impossible de détecter WSL Les chemins des racines de Claude",
+        "loadFailed": "Impossible de charger les paramètres locaux de Claude root",
+        "updateFailed": "Impossible de mettre à jour la racine de Claude"
+      },
+      "title": "Racine locale Claude",
+      "wslModal": {
+        "closeAriaLabel": "Fermer WSL chemin modal",
+        "description": "Détecté WSL distributions et candidats Claude root",
+        "noProjectsDir": "Aucun répertoire de projets détecté",
+        "title": "Sélectionner WSL Racine de Claude"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Aidez à améliorer l'application en envoyant des données anonymes de plantage et de performance",
+        "label": "Envoyer des rapports d'accident"
+      },
+      "title": "Confidentialité"
+    },
+    "server": {
+      "runningOn": "En cours",
+      "standaloneModeDescription": "Courir en mode autonome. Les HTTP serveur est toujours actif. Les notifications système ne sont pas disponibles - les déclencheurs de notification sont connectés dans l'application seulement.",
+      "title": "Serveur"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Démarrer automatiquement l'application lorsque vous vous connectez",
+        "label": "Lancement à la connexion"
+      },
+      "showDockIcon": {
+        "description": "Affiche l'icône de l'application dans le dock (macOS)",
+        "label": "Afficher l'icône du dock"
+      },
+      "title": "Début"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "Notifications may not work in development mode. macOS identifies the app as \"Electron\" (bundle ID",
+      "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",
+      "title": "Mode Dev"
+    },
+    "ignoredRepositories": {
+      "description": "Les notifications de ces dépôts seront ignorées",
+      "empty": "Aucun dépôt ignoré",
+      "selectPlaceholder": "Sélectionnez le dépôt à ignorer...",
+      "title": "Dépôts ignorés"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Afficher les notifications système pour les erreurs et les événements",
+        "label": "Activer les notifications système"
+      },
+      "sound": {
+        "description": "Jouer un son lorsque les notifications apparaissent",
+        "label": "Jouer le son"
+      },
+      "subagentErrors": {
+        "description": "Détecter et notifier les erreurs dans les sessions subagent",
+        "label": "Inclure les erreurs de sous-agent"
+      },
+      "title": "Paramètres des notifications"
+    },
+    "snooze": {
+      "clear": "Effacer Snooze",
+      "description": "Arrêt temporaire des notifications",
+      "descriptionWithTime": "Snoozé jusqu'à {{time}}",
+      "label": "Notifications snooze",
+      "options": {
+        "15": "15 minutes",
+        "30": "30 minutes",
+        "60": "1 heure",
+        "120": "2 heures",
+        "240": "4 heures",
+        "-1": "À demain"
+      },
+      "selectDuration": "Sélectionner la durée..."
+    },
+    "taskCompletion": {
+      "description": "Obtenez des notifications d'exploitation natives lorsque Claude termine les tâches - sons, bannières et badges dock/taskbar. Fonctionne sur macOS, Linux et Windows.",
+      "installPlugin": "Installez le plugin claude-notifications-go",
+      "title": "Avis d'achèvement des tâches"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Avertir quand chaque tâche d'une équipe atteint son état complet",
+        "label": "Toutes les tâches terminées"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Quand Claude signale un temps de réinitialisation, planifiez un suivi pour le chef d'équipe après la réinitialisation",
+        "label": "Reprendre automatiquement après la limite de taux"
+      },
+      "clarifications": {
+        "description": "Afficher les notifications OS natives lorsqu'une tâche a besoin de votre entrée",
+        "label": "Notifications de clarification des tâches"
+      },
+      "crossTeamMessage": {
+        "description": "Avertissez quand un message arrive d'une autre équipe",
+        "label": "Notifications de messages entre équipes"
+      },
+      "leadInbox": {
+        "description": "Prévenez les coéquipiers quand ils envoient des messages au chef d'équipe",
+        "label": "Notification de la boîte de réception du plomb"
+      },
+      "statusChange": {
+        "description": "Afficher les notifications d'exploitation natives lorsque l'état d'une tâche change",
+        "label": "Notifications de changement d'état de la tâche",
+        "onlySolo": {
+          "description": "N'avertir que lorsque l'équipe n'a pas de coéquipiers",
+          "label": "Seulement en mode solo"
+        },
+        "statuses": {
+          "description": "Quels états cibles déclenchent une notification",
+          "label": "Aviser sur ces statuts",
+          "options": {
+            "approved": "Approuvé",
+            "completed": "Achevé",
+            "deleted": "Supprimé",
+            "in_progress": "Commencé",
+            "needsFix": "Réparation des besoins",
+            "pending": "En attente",
+            "review": "Révision"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Afficher les notifications d'exploitation natives lorsque les agents commentent les tâches",
+        "label": "Notifications de commentaires de tâches"
+      },
+      "taskCreated": {
+        "description": "Afficher les notifications OS natives lorsqu'une nouvelle tâche est créée",
+        "label": "Notifications créées par la tâche"
+      },
+      "teamLaunched": {
+        "description": "Prévenez quand une équipe termine le lancement et est prête",
+        "label": "L'équipe a lancé des notifications"
+      },
+      "title": "Notifications de l'équipe",
+      "toolApproval": {
+        "description": "Prévenez quand un outil a besoin de votre approbation (Allow/Deny) alors que l'application n'est pas focalisée",
+        "label": "Notifications d'approbation d'outil"
+      },
+      "userInbox": {
+        "description": "Prévenez vos coéquipiers quand ils vous envoient des messages",
+        "label": "Notifications de la boîte de réception de l'utilisateur"
+      }
+    },
+    "test": {
+      "action": "Envoyer l'essai",
+      "description": "Envoyer un avis d'essai pour vérifier la livraison",
+      "failedToSend": "Échec de l'envoi de la notification d'essai",
+      "label": "Notification d'essai",
+      "sending": "Envoyer...",
+      "sent": "Envoyé !",
+      "unknownError": "Erreur inconnue"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Icône de l'application",
+      "description": "Assemblez des équipes d'agents de l'IA qui travaillent de façon autonome en parallèle, communiquent entre les équipes et gèrent les tâches d'un conseil d'administration kanban - avec un examen de code intégré, un suivi en direct des processus et une visibilité complète des outils.",
+      "standalone": "Standalone",
+      "title": "À propos",
+      "version": "Version {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Modifier la configuration",
+      "exportConfig": "Config à l'exportation",
+      "importConfig": "Importer Config",
+      "openInEditor": "Ouvrir dans l'éditeur",
+      "resetToDefaults": "Réinitialiser aux valeurs par défaut",
+      "title": "Configuration"
+    },
+    "updates": {
+      "available": "V{{version}} disponibles",
+      "check": "Vérifier les mises à jour",
+      "checking": "Vérification...",
+      "ready": "Mise à jour prête",
+      "unknownVersion": "inconnu",
+      "upToDate": "Mise à jour"
+    },
+    "appName": "Équipes d'agents AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Impossible de charger la configuration",
+      "saveFailed": "Impossible d'enregistrer la configuration"
+    },
+    "footer": {
+      "autoSave": "Modification de l'enregistrement automatique après édition",
+      "toClose": "à fermer",
+      "escapeKey": "Échap"
+    },
+    "loading": "Chargement de la configuration...",
+    "status": {
+      "invalidJson": "Invalide JSON",
+      "saveFailed": "Enregistrer a échoué",
+      "saved": "Enregistrer",
+      "saving": "Sauver..."
+    },
+    "title": "Modifier la configuration"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Annuler",
+      "submit": "Ajouter le déclencheur",
+      "title": "Ajouter un déclencheur personnalisé"
+    },
+    "builtin": {
+      "description": "Déclencheurs par défaut qui viennent avec l'application. Vous pouvez les activer ou les désactiver et personnaliser leurs modèles.",
+      "title": "Déclencheurs intégrés"
+    },
+    "card": {
+      "builtinBadge": "Construit",
+      "collapseAriaLabel": "Effacement",
+      "deleteAriaLabel": "Supprimer le déclencheur",
+      "editNameAriaLabel": "Modifier le nom",
+      "expandAriaLabel": "Élargir"
+    },
+    "color": {
+      "customHexTitle": "Couleur hexagonale personnalisée",
+      "invalidHex": "Hex non valide"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Alerte si >",
+      "emptyPatternHint": "Laissez vide pour correspondre à tout le contenu. Utilise la syntaxe JavaScript regex.",
+      "errorStatusDescription": "Déclenche lorsqu'une exécution d'outil signale une erreur (is error: true).",
+      "tokensUnit": "jetons",
+      "matchPatternPlaceholder": "Par exemple, erreur"
+    },
+    "custom": {
+      "description": "Créez vos propres déclencheurs pour être averti pour des modèles ou des sorties d'outils spécifiques.",
+      "empty": "Pas encore de déclencheurs personnalisés configurés.",
+      "title": "Déclencheurs personnalisés"
+    },
+    "errors": {
+      "invalidRegexPattern": "Modèle régex non valide"
+    },
+    "fields": {
+      "contentType": "Type de contenu",
+      "matchField": "Champ correspondant",
+      "matchPattern": "Modèle de correspondance (Regex)",
+      "scopeToolName": "Portée / Nom de l'outil",
+      "scopeToolNameOptional": "Portée / Nom de l'outil (facultatif)",
+      "threshold": "Seuil",
+      "tokenType": "Type de jeton",
+      "triggerNamePlaceholder": "Par exemple, créer une alerte d'échec",
+      "triggerNameRequired": "Nom du déclencheur *"
+    },
+    "ignorePatterns": {
+      "hint": "Appuyez sur Entrée pour ajouter. La notification est ignorée si un motif correspond.",
+      "placeholder": "Ajouter ignorer regex...",
+      "removeAriaLabel": "Supprimer le motif ignoré",
+      "summary": "Avancé : Règles d'exclusion",
+      "title": "Ignorer les motifs (skip si matches)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Sortie de texte",
+        "thinking": "Penser",
+        "tool_result": "Résultat de l'outil",
+        "tool_use": "Utilisation des outils"
+      },
+      "matchFields": {
+        "args": "Arguments",
+        "command": "Commande",
+        "content": "Contenu",
+        "description": "Désignation des marchandises",
+        "file_path": "Chemin du fichier",
+        "fullInput": "Entrée complète (JSON)",
+        "glob": "Filtre à gants",
+        "new_string": "Nouvelle chaîne",
+        "old_string": "Vieille chaîne",
+        "path": "Voie",
+        "pattern": "Modèle",
+        "prompt": "Rapide",
+        "query": "Demande",
+        "skill": "Nom de la compétence",
+        "subagent_type": "Type de sous-agent",
+        "text": "Contenu du texte",
+        "thinking": "Penser au contenu",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Modèle de contenu",
+        "error_status": "Erreur d'exécution",
+        "token_threshold": "Utilisation haut de gamme"
+      },
+      "tokenTypes": {
+        "input": "Jetons d'entrée",
+        "output": "Jetons de sortie",
+        "total": "Total des jetons"
+      },
+      "toolNames": {
+        "anyTool": "Tout outil"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Déclencheur d'essai",
+      "detectedSuffix": "des erreurs auraient été détectées",
+      "more": "...et {{count}} plus",
+      "more_few": "...et {{count}} plus",
+      "more_many": "...et {{count}} plus",
+      "more_one": "...et {{count}} plus",
+      "more_other": "...et {{count}} plus",
+      "testTrigger": "Déclencheur d'essai",
+      "testing": "Essais...",
+      "title": "Aperçu",
+      "truncatedWarning": "La recherche s'est arrêtée tôt (délai ou limite de nombre). Les matchs réels peuvent être plus élevés.",
+      "viewSession": "Affichage de la session"
+    },
+    "repositoryScope": {
+      "empty": "Aucun dépôt sélectionné - le déclencheur s'applique à tous les dépôts",
+      "hint": "Lorsque des dépôts sont sélectionnés, ce déclencheur ne fait que déclencher des erreurs dans ces dépôts.",
+      "placeholder": "Sélectionnez le dépôt à ajouter...",
+      "summary": "Avancé : Portée du dépôt",
+      "title": "Limite aux dépôts (ne s'applique qu'aux dépôts sélectionnés)"
+    },
+    "sections": {
+      "configuration": "Configuration",
+      "dotColor": "Couleur du point",
+      "generalInfo": "Informations générales",
+      "triggerCondition": "Condition de déclenchement"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Ajouter un profil",
+      "cancel": "Annuler",
+      "deleteProfile": "Supprimer le profil",
+      "editProfile": "Modifier le profil",
+      "save": "Enregistrer"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Automatique (à partir SSH Config)",
+      "password": "Mot de passe",
+      "privateKey": "Clé privée"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Supprimer",
+      "message": "Voulez-vous vraiment supprimer \"{{name}}\"? Cela ne peut pas être annulé.",
+      "title": "Supprimer le profil"
+    },
+    "description": "Enregistrer SSH profils de connexion pour une connexion rapide",
+    "empty": {
+      "description": "Ajouter un SSH profil à connecter rapidement",
+      "title": "Aucun profil enregistré"
+    },
+    "form": {
+      "authentication": "Authentification",
+      "host": "Hôte",
+      "name": "Dénomination",
+      "passwordPrompt": "Vous serez invité pour le mot de passe lors de la connexion.",
+      "port": "Port",
+      "privateKeyPath": "Chemin de la clé privée",
+      "username": "Nom d'utilisateur",
+      "namePlaceholder": "Mon serveur",
+      "hostPlaceholder": "nom d'hôte ou IP",
+      "usernamePlaceholder": "utilisateur"
+    },
+    "loading": "Chargement des profils...",
+    "title": "Profils de l'espace de travail"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Connexion",
+      "connecting": "Connexion...",
+      "disconnect": "Déconnecter",
+      "testConnection": "Connexion d'essai",
+      "testing": "Essais..."
+    },
+    "currentMode": {
+      "description": "Source des données pour les fichiers de session",
+      "label": "Mode actuel",
+      "local": "Local ({{path}})"
+    },
+    "description": "Connectez-vous à une machine distante pour voir les sessions Claude Code qui s'y déroulent",
+    "form": {
+      "authentication": "Authentification",
+      "host": "Hôte",
+      "password": "Mot de passe",
+      "port": "Port",
+      "privateKeyPath": "Chemin de la clé privée",
+      "username": "Nom d'utilisateur",
+      "hostPlaceholder": "nom d'hôte ou SSH config alias",
+      "usernamePlaceholder": "utilisateur"
+    },
+    "savedProfiles": {
+      "title": "Profils sauvegardés"
+    },
+    "ssh": {
+      "title": "SSH Connexion"
+    },
+    "status": {
+      "connectedTo": "Connecté à {{host}}",
+      "remoteSessions": "Affichage de sessions distantes via SSH"
+    },
+    "test": {
+      "failed": "La connexion a échoué : {{error}}",
+      "success": "Connexion réussie",
+      "unknownError": "Erreur inconnue"
+    },
+    "title": "Connexion à distance"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Annuler",
+      "cancelLogin": "Annuler la connexion",
+      "connectChatGpt": "Connect ChatGPT",
+      "delete": "Supprimer",
+      "disable": "Désactiver",
+      "disconnectAccount": "Déconnecter le compte",
+      "generateLink": "Générer un lien",
+      "openLogin": "Ouvrir la connexion",
+      "reconnectAnthropic": "Reconnecter Anthropique",
+      "refresh": "Actualiser",
+      "replaceKey": "Remplacer la clé",
+      "saveEndpoint": "Enregistrer le paramètre",
+      "saveKey": "Enregistrer la clé",
+      "saving": "Sauver...",
+      "setApiKey": "Jeu API clé",
+      "updateKey": "Mettre à jour la clé",
+      "useCode": "Utiliser le code"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Chargement des identifiants stockés...",
+      "projectScope": "Projet",
+      "scope": "Portée",
+      "storedIn": "A conserver dans {{backend}}",
+      "userScope": "Utilisateur",
+      "storedInApp": "Stocké dans l'application",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropique API Clé",
+          "title": "API clé",
+          "description": "Utiliser une anthropique directe API clé pour API- Accès facturé. Votre session d'abonnement anthropique reste disponible lorsque vous revenez.",
+          "placeholder": "C'est..."
+        },
+        "codex": {
+          "name": "Codex API Clé",
+          "title": "API clé",
+          "description": "Utiliser un OpenAI API clé comme chemin secondaire Codex auth. Si vous changez Codex en API mode clé, l'application sera miroir OPENAI_API_KEY dans CODEX_API_KEY pour les lancements natifs.",
+          "placeholder": "SK-proj..."
+        },
+        "gemini": {
+          "name": "Gémeaux API Clé",
+          "title": "API accès",
+          "description": "Utilisation `GEMINI_API_KEY` pour les Gémeaux API moteur. CLI SDK et ADC ne l'exigent pas.",
+          "placeholder": "Aiza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-serveur: {{state}}",
+        "connected": "Connecté",
+        "description": "Gérer la session de compte local Codex app-server qui permet les lancements natifs soutenus par abonnement.",
+        "loginInProgress": "Connexion en cours",
+        "plan": "Plan : {{plan}}",
+        "reconnectRequired": "Reconnecter nécessaire",
+        "title": "ChatGPT compte",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto continuera à utiliser le détecté API touche jusqu'à ChatGPT est connecté.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Les API clé n'est utilisée qu'après avoir commuté Codex API mode clé.",
+          "localArtifactsNoSession": "Codex CLI currently reports no active ChatGPT account. Local Codex account data exists, but no active managed session is selected. Usage limits appear here only after Codex CLI sees one.",
+          "noActiveAccount": "Codex CLI currently reports no active ChatGPT account. Usage limits appear here only after Codex CLI sees one.",
+          "reconnectBeforeUsage": "Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here.",
+          "usageLimitsAfterReport": "Usage limits appear here after Codex reports them for the connected ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "Vérification",
+        "downloading": "Téléchargement",
+        "installCli": "Installer le codex CLI",
+        "installing": "Installation",
+        "retryInstall": "Réessayer l'installation",
+        "title": "Installer le codex CLI dans les données app"
+      },
+      "rateLimits": {
+        "credits": "Crédits",
+        "creditsDescription": "Les crédits sont affichés séparément de l’utilisation de l’abonnement par fenêtre et peuvent être indisponibles pour les sessions ChatGPT adossées à un forfait.",
+        "noSecondaryWindow": "Codex n'a pas retourné de fenêtre secondaire pour cet instantané de compte.",
+        "notReported": "Non communiqué",
+        "primaryReset": "Réinitialisation primaire",
+        "primaryUsed": "Primaire utilisée",
+        "primaryWindow": "Fenêtre primaire",
+        "remainingLeft": "{{value}} gauche",
+        "remainingUnknown": "Reste inconnu",
+        "secondaryReset": "Réinitialisation secondaire",
+        "secondaryUsed": "Secondaire utilisé",
+        "secondaryWindow": "Fenêtre secondaire",
+        "usedQuotaNote": "Ces pourcentages indiquent les quotas utilisés et non les quotas restants.",
+        "weeklyReset": "Réinitialisation hebdomadaire",
+        "weeklyUsed": "Semaine utilisée",
+        "weeklyUsedOneWeek": "Usage hebdomadaire (1w)",
+        "weeklyWindow": "Fenêtre hebdomadaire",
+        "secondaryFallback": "secondaire",
+        "secondaryWindowNote": " Les limites hebdomadaires sont indiquées séparément {{window}} fenêtre.",
+        "usageExplanationGeneric": "Indique les quotas utilisés et non les quotas restants.",
+        "usageExplanationWindowOnly": "Affiche le quota utilisé dans le courant {{window}} fenêtre, pas de quota restant.",
+        "usageExplanationWithRemaining": "{{used}} utilisé - environ {{remaining}} gauche dans le courant {{window}} fenêtre."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Jeton d'auth",
+      "authTokenMissing": "Le jeton Auth n'est pas configuré.",
+      "baseUrl": "Base URL",
+      "description": "Utiliser un paramètre d'exécution local compatible avec l'anthropie.",
+      "keepSavedToken": "Laisser en blanc pour conserver le jeton enregistré",
+      "title": "Paramètres locaux / compatibles",
+      "tokenStatus": "Jeton {{status}}",
+      "validation": {
+        "baseUrlRequired": "Base URL est nécessaire",
+        "firstPartyAnthropic": "Utiliser Auto, Abonnement, ou API clé pour première partie Anthropique",
+        "httpRequired": "Base URL doit utiliser http:// ou https://",
+        "invalidUrl": "Invalide URL",
+        "noCredentials": "Base URL ne doit pas inclure les pouvoirs"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Point d'extrémité désactivé. Le jeton sauvé a été conservé.",
+        "endpointSaved": "Point d'arrivée enregistré",
+        "endpointSavedTokenMissing": "Point d'arrivée enregistré. Le jeton Auth n'est pas configuré."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Méthode d'authentification",
+      "descriptions": {
+        "anthropic": "Choisissez comment les sessions anthropiques app-lancées authentifient.",
+        "codex": "Choisissez si Codex devrait préférer votre ChatGPT par abonnement ou par API clé quand l'exécution native démarre.",
+        "gemini": "Configuration optionnelle API accès. CLI SDK et ADC sont encore découverts automatiquement.",
+        "opencode": "L'authentification OpenCode et l'inventaire des fournisseurs sont gérés par l'exécution OpenCode."
+      },
+      "method": "Méthode de connexion",
+      "mode": "Mode : {{mode}}",
+      "selected": "Sélectionné",
+      "switching": "Changer...",
+      "title": "Connexion"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API clé"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Utilisation ANTHROPIC_API_KEY et anthropiques API la facturation.",
+        "autoDescription": "Utilisez Anthropic runtime par défaut et le meilleur justificatif local disponible.",
+        "hint": "Auto conserve Anthropic sur sa résolution de justificatifs locaux par défaut.",
+        "subscriptionDescription": "Utilisez votre session de connexion anthropique locale et votre accès à l'abonnement.",
+        "subscriptionTitle": "Abonnement anthropique"
+      },
+      "auto": {
+        "title": "Automatique"
+      },
+      "codex": {
+        "apiKeyDescription": "Utilisation OPENAI_API_KEY et CODEX_API_KEY facturation pour les lancements de Codex natif.",
+        "autoDescription": "Préférez votre ChatGPT compte et abonnement. Utilisation API mode clé seulement si nécessaire.",
+        "chatgptDescription": "Use your connected ChatGPT account and Codex subscription.",
+        "chatgptTitle": "ChatGPT compte",
+        "hint": "Codex passe toujours par l'exécution native. Auto préfère votre ChatGPT compte avant de revenir à API- Les clés."
+      }
+    },
+    "description": "Gérer comment chaque fournisseur se connecte et, lorsqu'il est pris en charge, quel moteur d'exécution multimodèle devrait utiliser.",
+    "fastMode": {
+      "defaultOff": "Arrêt par défaut",
+      "description": "Appliquer le mode Claude Code Fast par défaut pour la nouvelle équipe Anthropic lance lorsque le modèle résolu et l'exécution le permettent.",
+      "disabledHint": "Nouvelle anthropique lance rester à vitesse normale à moins qu'une équipe n'autorise explicitement le mode Fast.",
+      "enabledHint": "Nouveau lancement Anthropique demandera le mode rapide par défaut lorsque le modèle résolu le supporte.",
+      "notExposed": "Ce mode Anthropique n'expose pas le mode Fast.",
+      "preferFast": "Préférez vite",
+      "title": "Mode rapide par défaut",
+      "unavailableForRuntime": "Le mode Fast n'est pas disponible pour ce mode Anthropique."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "API le mode clé est sélectionné, mais pas d'anthropique API Le certificat est encore disponible.",
+      "anthropicStoredKeyAvailable": "Un sauvé API clé est disponible, mais les sessions anthropiques lancées par app l'utilisent seulement après que vous passez à API mode clé.",
+      "anthropicSubscriptionMissing": "Le mode d'abonnement anthropique est sélectionné. Connectez-vous avec Anthropic pour utiliser ce fournisseur.",
+      "authTokenMissing": "Le jeton Auth n'est pas configuré. De nombreux paramètres compatibles avec l'anthropie locale nécessitent un jeton non vide.",
+      "chatgptLoginPending": "Waiting for ChatGPT account login to finish...",
+      "chatgptLoginStarting": "Starting ChatGPT login...",
+      "codexApiKeyMissing": "API le mode clé est sélectionné, mais non OPENAI_API_KEY ou CODEX_API_KEY Le certificat est encore disponible.",
+      "codexLocalArtifactsNoSession": "Codex CLI currently has no active ChatGPT account. Local Codex account data exists, but no active managed session is selected.",
+      "codexNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+      "codexNoChatgptAccount": "Codex CLI currently has no active ChatGPT account. Connect ChatGPT to use your subscription.",
+      "codexNoCredential": "No ChatGPT account or API key is available yet.",
+      "geminiApiUnavailable": "Gémeaux API est actuellement indisponible. Configuration `GEMINI_API_KEY` ici ou utiliser Google valide ADC les pouvoirs.",
+      "withApiKeyFallback": "{{message}} Passez à API mode clé pour utiliser le détecté API clé."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Sessions anthropiques lancées par la Force API la clé de l'identité.",
+        "auto": "Utilisez le comportement par défaut d'exécution. Enregistrer API les touches de cette application ne sont utilisées que lorsque vous passez à API mode clé.",
+        "oauth": "Forcez les sessions anthropiques lancées par app pour utiliser la session d'abonnement anthropique locale."
+      },
+      "codex": {
+        "apiKey": "Forcer le lancement de Codex natif à utiliser OPENAI_API_KEY / CODEX_API_KEY la facturation.",
+        "auto": "Préférez votre ChatGPT compte quand il est disponible. Retour à API mode clé seulement lorsque nécessaire.",
+        "chatgpt": "Force native Codex launches to use your connected ChatGPT account and subscription."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Appliquer des modifications de connexion...",
+      "refreshingProviderStatus": "Rafraîchir le statut de fournisseur...",
+      "savingCompatibleEndpoint": "Enregistrer les paramètres compatibles...",
+      "switchingAnthropicSubscription": "Passer à l'abonnement anthropique...",
+      "switchingApiKey": "Passage à API clé...",
+      "switchingApiKeyMode": "Passage à API mode clé...",
+      "switchingAuto": "Passage à Auto...",
+      "switchingChatgpt": "Switching to ChatGPT account mode..."
+    },
+    "provider": "Fournisseur",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "Anthropic n'a actuellement aucun sélecteur de backend d'exécution séparé.",
+        "codex": "Codex ne fonctionne maintenant que par le chemin natif d'exécution.",
+        "gemini": "Choisissez le moteur d'exécution Gemini multimodel à utiliser.",
+        "opencode": "OpenCode utilise son propre hôte d'exécution géré. Le bureau expose actuellement l'état uniquement."
+      },
+      "title": "Durée",
+      "updating": "Mise à jour de l'exécution..."
+    },
+    "runtimeSummary": "Durée d'exécution : {{runtime}}",
+    "status": {
+      "configured": "configuré",
+      "enabled": "Activé",
+      "notConfigured": "Non configuré",
+      "notSet": "non réglé",
+      "off": "Arrêt",
+      "unknown": "Inconnu"
+    },
+    "title": "Paramètres du fournisseur",
+    "usage": {
+      "apiKey": "Utilisation API clé",
+      "apiKeyRequired": "API clé requise",
+      "compatibleEndpoint": "Utilisation d'un paramètre compatible",
+      "notConnected": "Non connecté",
+      "usingMethod": "Utilisation {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API clé supprimée, mais n'a pas réussi à rafraîchir le statut du fournisseur.",
+      "apiKeySavedRefreshFailed": "API clé enregistrée, mais n'a pas réussi à rafraîchir le statut du fournisseur.",
+      "connectionUpdatedRefreshFailed": "Connexion mise à jour, mais n'a pas réussi à actualiser le statut du fournisseur.",
+      "deleteApiKey": "Impossible de supprimer API clé",
+      "disableEndpoint": "Impossible de désactiver le paramètre",
+      "endpointDisabledRefreshFailed": "Endpoint désactivé, mais n'a pas réussi à rafraîchir le statut de fournisseur.",
+      "endpointSavedRefreshFailed": "Endpoint sauvegardé, mais n'a pas réussi à rafraîchir le statut du fournisseur.",
+      "refreshCodexAccount": "Impossible de rafraîchir le compte Codex",
+      "saveApiKey": "Échec de l'enregistrement API clé",
+      "saveEndpoint": "Impossible d'enregistrer le paramètre",
+      "updateAnthropicFastMode": "Impossible de mettre à jour le mode Anthropic Fast",
+      "updateConnection": "Impossible de mettre à jour la connexion",
+      "updateRuntimeBackend": "Impossible de mettre à jour le moteur d'exécution",
+      "apiKeyRequired": "API clé nécessaire"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Automatique",
+        "oauth": "Abonnement / OAuth",
+        "chatgpt": "ChatGPT compte",
+        "apiKey": "API clé",
+        "anthropicSubscription": "Abonnement anthropique"
+      },
+      "authMethod": {
+        "apiKey": "API clé",
+        "apiKeyHelper": "API aide clé",
+        "oauth": "Auth",
+        "claudeSubscription": "Abonnement Claude",
+        "geminiCli": "Gémeaux CLI",
+        "googleAccount": "Compte Google",
+        "serviceAccount": "compte de services"
+      },
+      "runtime": {
+        "codexNative": "Codex natif",
+        "currentRuntime": "Durée d'exécution actuelle",
+        "selectedRuntime": "Durée d'exécution sélectionnée",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Vérification...",
+        "checked": "Vérification",
+        "providerActivity": "Activité du fournisseur",
+        "notConnected": "Non connecté",
+        "startingChatGptLogin": "Starting ChatGPT login...",
+        "waitingForChatGptLogin": "Waiting for ChatGPT account login...",
+        "chatGptVerificationDegraded": "ChatGPT compte détecté - la vérification du compte est actuellement dégradée.",
+        "chatGptAccountReady": "ChatGPT compte prêt",
+        "apiKeyReady": "API clé prête",
+        "codexLocalAccountNeedsReconnect": "Codex has a locally selected ChatGPT account, but the current session needs reconnect.",
+        "codexNoActiveManagedSession": "Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.",
+        "codexNoActiveChatGptLogin": "Codex CLI reports no active ChatGPT login",
+        "connectChatGptForSubscription": "Connect a ChatGPT account to use your Codex subscription.",
+        "codexNativeReady": "Codex natif prêt",
+        "codexNativeUnavailable": "Codex natif non disponible",
+        "unavailableInCurrentRuntime": "Indisponible dans l'exécution actuelle",
+        "connectedViaApiKey": "Connecté via API clé",
+        "apiKeyConfiguredNotVerified": "API clé configurée, mais non encore vérifiée",
+        "apiKeyModeMissingCredential": "API mode clé sélectionné, mais non API la clé est configurée",
+        "connectedVia": "Connecté via {{method}}",
+        "unableToVerify": "Impossible de vérifier"
+      },
+      "mode": {
+        "selectedAuth": "Auth sélectionnée: {{authMode}}",
+        "preferredAuth": "Auth préféré: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API la clé est configurée",
+        "savedApiKeyAvailable": "Enregistrer API clé disponible dans Gérer",
+        "apiKeyAlsoConfigured": "API clé également configurée dans Gérer",
+        "apiKeyConfiguredInManage": "API la clé est configurée dans Gérer",
+        "apiKeyFallbackInManage": "API clé aussi disponible dans Manage as fallback",
+        "availableAsFallback": "{{summary}} - disponibles en repli",
+        "savedApiKeyAvailableIfSwitch": "Enregistrer API clé disponible dans Gérer si vous passez à API mode clé",
+        "availableIfSwitch": "{{summary}} - disponible si vous passez à API mode clé",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto utilisera ceci jusqu'à ChatGPT est connecté"
+      },
+      "actions": {
+        "connect": "Connexion",
+        "connectAnthropic": "Connecter Anthropique",
+        "connectChatGpt": "Connect ChatGPT",
+        "disconnect": "Déconnecter",
+        "openLogin": "Ouvrir une connexion"
+      },
+      "disconnect": {
+        "anthropicTitle": "Déconnecter l'abonnement Anthropique ?",
+        "anthropic": "Ceci supprime la session d'abonnement locale Anthropic du Claude CLI C'est l'heure.",
+        "anthropicWithApiKey": "Ceci supprime la session d'abonnement locale Anthropic du Claude CLI C'est l'heure. Enregistrer API clés dans Gérer le séjour disponible.",
+        "geminiTitle": "Déconnecter Gemini CLI?",
+        "gemini": "Cela efface le Gemini local CLI métadonnées de la session. Extérieur ADC identifiants et enregistrés API les clés ne sont pas enlevées."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Vérifier les mises à jour",
+      "checking": "Vérification...",
+      "extensions": "Prorogations",
+      "installRuntime": "Installer {{runtime}}",
+      "manage": "Gérer",
+      "recheck": "Revérifier",
+      "reinstallRuntime": "Réinstaller {{runtime}}",
+      "retry": "Réessayer",
+      "update": "Mise à jour"
+    },
+    "installer": {
+      "checkingLatest": "Vérification de la dernière version...",
+      "downloading": "Téléchargement...",
+      "failed": "L'installation a échoué",
+      "installed": "Installé v{{version}}",
+      "installing": "Installation...",
+      "latest": "dernière",
+      "verifying": "Vérification du bilan..."
+    },
+    "labels": {
+      "multimodel": "Modèle multiple"
+    },
+    "loading": {
+      "aiProviders": "Vérification des fournisseurs d'IA...",
+      "claudeCli": "Vérification de Claude CLI..."
+    },
+    "provider": {
+      "backend": "Moteur : {{backend}}",
+      "loadingModels": "Chargement des modèles...",
+      "modelsUnavailable": "Modèles non disponibles pour cette construction d'exécution",
+      "runtime": "Durée d'exécution : {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "L'authentification a échoué",
+      "authUpdated": "authentification mise à jour",
+      "loggedOut": "Fournisseur déconnecté",
+      "login": "Connexion",
+      "logout": "Déconnexion",
+      "logoutFailed": "La déconnexion a échoué"
+    },
+    "status": {
+      "configuredNotFound": "La configuration {{runtime}} n'a pas été trouvé.",
+      "foundButFailed": "{{runtime}} a été trouvé mais n'a pas commencé",
+      "healthCheckFailed": "La configuration {{runtime}} a échoué son bilan de santé de démarrage.",
+      "notInstalled": "{{runtime}} non installé"
+    },
+    "title": "CLI Durée"
+  },
+  "cliStatus": {
+    "versionUpgrade": "V{{current}} -> v{{latest}}"
+  }
+}

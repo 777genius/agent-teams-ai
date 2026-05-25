@@ -1,15 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'fs';
 import Module from 'module';
 import * as os from 'os';
 import * as path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+type ExecCliMock = (
+  binaryPath: string | null,
+  args: string[],
+  options?: {
+    encoding?: BufferEncoding;
+    timeout?: number;
+    env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  }
+) => Promise<{ stdout: string; stderr: string }>;
+
+type ResolveInteractiveShellEnvMock = (options?: unknown) => Promise<NodeJS.ProcessEnv>;
 
 const hoisted = vi.hoisted(() => ({
   electronState: {
     isPackaged: false,
     version: '9.9.9-test',
   },
-  execCliMock: vi.fn(async () => ({ stdout: '/mock/node', stderr: '' })),
+  execCliMock: vi.fn<ExecCliMock>(async () => ({
+    stdout: JSON.stringify({ execPath: '/mock/node', version: '20.11.0' }),
+    stderr: '',
+  })),
+  cachedShellEnv: null as NodeJS.ProcessEnv | null,
+  resolveInteractiveShellEnvMock: vi.fn<ResolveInteractiveShellEnvMock>(
+    async () => ({}) as NodeJS.ProcessEnv
+  ),
 }));
 
 let mockHomeDir = '';
@@ -33,17 +52,32 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
   };
 });
 
-import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+vi.mock('@main/utils/shellEnv', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/utils/shellEnv')>();
+  return {
+    ...actual,
+    getCachedShellEnv: () => hoisted.cachedShellEnv,
+    resolveInteractiveShellEnv: hoisted.resolveInteractiveShellEnvMock,
+  };
+});
+
 import {
-  TeamMcpConfigBuilder,
   clearResolvedNodePathForTests,
+  resolveAgentTeamsMcpLaunchSpec,
+  TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
+import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+
+function nodeRuntimeProbeStdout(execPath: string, version = '20.11.0'): string {
+  return JSON.stringify({ execPath, version });
+}
 
 describe('TeamMcpConfigBuilder', () => {
   const createdPaths: string[] = [];
   const createdDirs: string[] = [];
   let tempAppData: string;
   let originalResourcesPath: string | undefined;
+  let originalControlUrl: string | undefined;
 
   function setPackagedMode(isPackaged: boolean, version = '9.9.9-test'): void {
     hoisted.electronState.isPackaged = isPackaged;
@@ -68,12 +102,14 @@ describe('TeamMcpConfigBuilder', () => {
 
   function readGeneratedServer(
     configPath: string
-  ): { command?: string; args?: string[]; env?: Record<string, string> } | undefined {
+  ):
+    | { command?: string; args?: string[]; enabled?: boolean; env?: Record<string, string> }
+    | undefined {
     const raw = fs.readFileSync(configPath, 'utf8');
     const parsed = JSON.parse(raw) as {
       mcpServers?: Record<
         string,
-        { command?: string; args?: string[]; env?: Record<string, string> }
+        { command?: string; args?: string[]; enabled?: boolean; env?: Record<string, string> }
       >;
     };
     return parsed.mcpServers?.['agent-teams'];
@@ -158,6 +194,7 @@ describe('TeamMcpConfigBuilder', () => {
   beforeEach(() => {
     clearResolvedNodePathForTests();
     originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+    originalControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
     tempAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-appdata-'));
     createdDirs.push(tempAppData);
     moduleInternal._load = ((request, parent, isMain) => {
@@ -178,6 +215,13 @@ describe('TeamMcpConfigBuilder', () => {
     setPackagedMode(false);
     setResourcesPath(undefined);
     hoisted.execCliMock.mockClear();
+    hoisted.execCliMock.mockResolvedValue({
+      stdout: nodeRuntimeProbeStdout('/mock/node'),
+      stderr: '',
+    });
+    hoisted.cachedShellEnv = null;
+    hoisted.resolveInteractiveShellEnvMock.mockClear();
+    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -185,6 +229,11 @@ describe('TeamMcpConfigBuilder', () => {
     setClaudeBasePathOverride(null);
     setPackagedMode(false);
     setResourcesPath(originalResourcesPath);
+    if (originalControlUrl === undefined) {
+      delete process.env.CLAUDE_TEAM_CONTROL_URL;
+    } else {
+      process.env.CLAUDE_TEAM_CONTROL_URL = originalControlUrl;
+    }
     moduleInternal._load = originalModuleLoad;
     vi.restoreAllMocks();
     for (const filePath of createdPaths.splice(0)) {
@@ -281,8 +330,301 @@ describe('TeamMcpConfigBuilder', () => {
     expect(readGeneratedServer(configPath)?.command).toBe('/mock/node');
     expect(hoisted.execCliMock).toHaveBeenCalledWith(
       'node',
-      ['-e', 'process.stdout.write(process.execPath)'],
-      expect.objectContaining({ encoding: 'utf-8', timeout: 5000 })
+      ['-e', expect.stringContaining('process.versions.node')],
+      expect.objectContaining({
+        encoding: 'utf-8',
+        timeout: 5000,
+        env: expect.objectContaining({ PATH: expect.any(String) }),
+      })
+    );
+    expect(hoisted.resolveInteractiveShellEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('resolves packaged MCP Node through cached shell PATH without spawning shell', async () => {
+    setPackagedMode(true, '2.0.0');
+    const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
+    createdDirs.push(resourcesDir);
+    createPackagedServerBundle(resourcesDir, '// packaged server');
+    setResourcesPath(resourcesDir);
+    hoisted.cachedShellEnv = {
+      PATH: ['/mock-shell-node-bin', '/usr/bin'].join(path.delimiter),
+      HOME: '/Users/tester',
+    };
+    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue(hoisted.cachedShellEnv);
+    hoisted.execCliMock.mockImplementationOnce(async () => {
+      throw new Error('Electron-as-Node unavailable');
+    });
+    hoisted.execCliMock.mockImplementationOnce(async (command, _args, options) => {
+      expect(command).toBe('node');
+      const env = options?.env as NodeJS.ProcessEnv | undefined;
+      expect(env?.PATH?.split(path.delimiter)[0]).toBe('/mock-shell-node-bin');
+      return { stdout: nodeRuntimeProbeStdout('/mock-shell-node-bin/node'), stderr: '' };
+    });
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile();
+    createdPaths.push(configPath);
+
+    expect(readGeneratedServer(configPath)?.command).toBe('/mock-shell-node-bin/node');
+    expect(readGeneratedServer(configPath)?.command).not.toBe('node');
+    expect(hoisted.resolveInteractiveShellEnvMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['linux', 'darwin', 'win32'] as const)(
+    'uses the packaged Electron Node runtime for %s packaged MCP launches',
+    async (platform) => {
+      const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+      const execPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
+      const electronBinary =
+        platform === 'win32'
+          ? 'C:\\Program Files\\Agent Teams AI\\agent-teams-ai.exe'
+          : '/opt/Agent Teams AI/agent-teams-ai';
+      setPackagedMode(true, '3.0.0');
+      const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
+      createdDirs.push(resourcesDir);
+      createPackagedServerBundle(resourcesDir, '// packaged server');
+      setResourcesPath(resourcesDir);
+      hoisted.execCliMock.mockResolvedValue({
+        stdout: 'agent-teams-electron-node-ok',
+        stderr: '',
+      });
+
+      Object.defineProperty(process, 'platform', {
+        value: platform,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'execPath', {
+        value: electronBinary,
+        configurable: true,
+        writable: true,
+      });
+
+      try {
+        const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
+        const builder = new TeamMcpConfigBuilder();
+        const configPath = await builder.writeConfigFile();
+        createdPaths.push(configPath);
+        const server = readGeneratedServer(configPath);
+        const expectedEntry = path.join(tempAppData, 'mcp-server', '3.0.0', 'index.js');
+
+        expect(launchSpec).toEqual({
+          command: electronBinary,
+          args: [expectedEntry],
+          env: { ELECTRON_RUN_AS_NODE: '1' },
+        });
+        expect(server?.command).toBe(electronBinary);
+        expect(server?.args).toEqual([expectedEntry]);
+        expect(server?.env?.ELECTRON_RUN_AS_NODE).toBe('1');
+        expect(hoisted.execCliMock).toHaveBeenCalledTimes(1);
+        expect(hoisted.execCliMock).toHaveBeenCalledWith(
+          electronBinary,
+          ['-e', 'process.stdout.write("agent-teams-electron-node-ok")'],
+          expect.objectContaining({
+            env: expect.objectContaining({ ELECTRON_RUN_AS_NODE: '1' }),
+          })
+        );
+      } finally {
+        if (platformDescriptor) {
+          Object.defineProperty(process, 'platform', platformDescriptor);
+        }
+        if (execPathDescriptor) {
+          Object.defineProperty(process, 'execPath', execPathDescriptor);
+        }
+      }
+    }
+  );
+
+  it('falls back to strict shell env lookup when fast Node lookup cannot resolve Node', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    const previousNodeBinary = process.env.NODE_BINARY;
+    const previousNpmNodeExecPath = process.env.npm_node_execpath;
+    delete process.env.NODE_BINARY;
+    delete process.env.npm_node_execpath;
+    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
+      PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
+      HOME: '/Users/tester',
+    });
+    hoisted.execCliMock.mockImplementation(async (command, _args, options) => {
+      const env = options?.env as NodeJS.ProcessEnv | undefined;
+      if (env?.PATH?.split(path.delimiter)[0] === '/strict-shell-node-bin') {
+        expect(command).toBe('node');
+        return { stdout: nodeRuntimeProbeStdout('/strict-shell-node-bin/node'), stderr: '' };
+      }
+      throw new Error(`spawn ${command} ENOENT`);
+    });
+
+    try {
+      const builder = new TeamMcpConfigBuilder();
+      const configPath = await builder.writeConfigFile();
+      createdPaths.push(configPath);
+
+      expect(readGeneratedServer(configPath)?.command).toBe('/strict-shell-node-bin/node');
+      expect(hoisted.resolveInteractiveShellEnvMock).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'mcp-node-runtime' })
+      );
+    } finally {
+      if (previousNodeBinary === undefined) {
+        delete process.env.NODE_BINARY;
+      } else {
+        process.env.NODE_BINARY = previousNodeBinary;
+      }
+      if (previousNpmNodeExecPath === undefined) {
+        delete process.env.npm_node_execpath;
+      } else {
+        process.env.npm_node_execpath = previousNpmNodeExecPath;
+      }
+    }
+  });
+
+  it('prefers strict shell env lookup over fast Node lookup from a minimal GUI PATH', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    const previousPath = process.env.PATH;
+    process.env.PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(path.delimiter);
+    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
+      PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
+      HOME: '/Users/tester',
+    });
+    hoisted.execCliMock.mockImplementation(async (command, _args, options) => {
+      const env = options?.env as NodeJS.ProcessEnv | undefined;
+      if (env?.PATH?.split(path.delimiter)[0] === '/strict-shell-node-bin') {
+        expect(command).toBe('node');
+        return { stdout: nodeRuntimeProbeStdout('/strict-shell-node-bin/node'), stderr: '' };
+      }
+      return { stdout: nodeRuntimeProbeStdout('/fast/node'), stderr: '' };
+    });
+
+    try {
+      const builder = new TeamMcpConfigBuilder();
+      const configPath = await builder.writeConfigFile();
+      createdPaths.push(configPath);
+
+      expect(readGeneratedServer(configPath)?.command).toBe('/strict-shell-node-bin/node');
+      expect(hoisted.resolveInteractiveShellEnvMock).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'mcp-node-runtime' })
+      );
+    } finally {
+      if (previousPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousPath;
+      }
+    }
+  });
+
+  it('falls back to strict shell env lookup when the fast Node runtime is too old', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    const previousNodeBinary = process.env.NODE_BINARY;
+    const previousNpmNodeExecPath = process.env.npm_node_execpath;
+    const previousPath = process.env.PATH;
+    delete process.env.NODE_BINARY;
+    delete process.env.npm_node_execpath;
+    process.env.PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(path.delimiter);
+    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
+      PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
+      HOME: '/Users/tester',
+    });
+    hoisted.execCliMock.mockImplementation(async (command, _args, options) => {
+      const env = options?.env as NodeJS.ProcessEnv | undefined;
+      if (env?.PATH?.split(path.delimiter)[0] === '/strict-shell-node-bin') {
+        expect(command).toBe('node');
+        return {
+          stdout: nodeRuntimeProbeStdout('/strict-shell-node-bin/node', '20.11.0'),
+          stderr: '',
+        };
+      }
+      return { stdout: nodeRuntimeProbeStdout('/usr/bin/node', '18.19.0'), stderr: '' };
+    });
+
+    try {
+      const builder = new TeamMcpConfigBuilder();
+      const configPath = await builder.writeConfigFile();
+      createdPaths.push(configPath);
+
+      expect(readGeneratedServer(configPath)?.command).toBe('/strict-shell-node-bin/node');
+      expect(hoisted.resolveInteractiveShellEnvMock).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'mcp-node-runtime' })
+      );
+    } finally {
+      if (previousNodeBinary === undefined) {
+        delete process.env.NODE_BINARY;
+      } else {
+        process.env.NODE_BINARY = previousNodeBinary;
+      }
+      if (previousNpmNodeExecPath === undefined) {
+        delete process.env.npm_node_execpath;
+      } else {
+        process.env.npm_node_execpath = previousNpmNodeExecPath;
+      }
+      if (previousPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousPath;
+      }
+    }
+  });
+
+  it('falls back to strict shell env lookup when fast Node lookup reports an empty path', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
+      PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
+      HOME: '/Users/tester',
+    });
+    let returnedEmptyPath = false;
+    hoisted.execCliMock.mockImplementation(async (command, _args, options) => {
+      const env = options?.env as NodeJS.ProcessEnv | undefined;
+      if (env?.PATH?.split(path.delimiter)[0] === '/strict-shell-node-bin') {
+        expect(command).toBe('node');
+        return { stdout: nodeRuntimeProbeStdout('/strict-shell-node-bin/node'), stderr: '' };
+      }
+      if (!returnedEmptyPath) {
+        returnedEmptyPath = true;
+        return { stdout: '   ', stderr: '' };
+      }
+      throw new Error(`spawn ${command} ENOENT`);
+    });
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile();
+    createdPaths.push(configPath);
+
+    expect(readGeneratedServer(configPath)?.command).toBe('/strict-shell-node-bin/node');
+    expect(hoisted.resolveInteractiveShellEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'mcp-node-runtime' })
+    );
+  });
+
+  it('prefers an explicit NODE_BINARY over PATH-based node lookup', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    const previousNodeBinary = process.env.NODE_BINARY;
+    process.env.NODE_BINARY = '/explicit/node';
+    hoisted.execCliMock.mockImplementationOnce(async (command) => {
+      expect(command).toBe('/explicit/node');
+      return { stdout: nodeRuntimeProbeStdout('/explicit/node'), stderr: '' };
+    });
+
+    try {
+      const builder = new TeamMcpConfigBuilder();
+      const configPath = await builder.writeConfigFile();
+      createdPaths.push(configPath);
+
+      expect(readGeneratedServer(configPath)?.command).toBe('/explicit/node');
+      expect(hoisted.resolveInteractiveShellEnvMock).not.toHaveBeenCalled();
+    } finally {
+      if (previousNodeBinary === undefined) {
+        delete process.env.NODE_BINARY;
+      } else {
+        process.env.NODE_BINARY = previousNodeBinary;
+      }
+    }
+  });
+
+  it('fails fast when Node cannot be resolved instead of emitting a broken bare node command', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    hoisted.execCliMock.mockRejectedValue(new Error('spawn node ENOENT'));
+    const builder = new TeamMcpConfigBuilder();
+
+    await expect(builder.writeConfigFile()).rejects.toThrow(
+      'Node.js runtime for Agent Teams MCP was not found'
     );
   });
 
@@ -336,6 +678,90 @@ describe('TeamMcpConfigBuilder', () => {
     expect(parsed.mcpServers.duplicateServer).toBeUndefined();
   });
 
+  it('writes Agent Teams MCP only member config even when user and project MCP exist', async () => {
+    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
+    const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-claude-root-'));
+    createdDirs.push(homeDir, projectDir, claudeRoot);
+    mockHomeDir = homeDir;
+    setClaudeBasePathOverride(claudeRoot);
+
+    fs.writeFileSync(
+      path.join(homeDir, '.claude.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            'brave-real-browser': {
+              command: 'node',
+              args: ['brave-real-browser.js'],
+            },
+            context7: {
+              type: 'http',
+              url: 'https://context7.example.com/mcp',
+            },
+            'agent-teams': {
+              command: 'node',
+              args: ['user-shadow-agent-teams.js'],
+              enabled: false,
+            },
+          },
+          projects: {
+            [projectDir]: {
+              mcpServers: {
+                'chrome-devtools': {
+                  command: 'node',
+                  args: ['chrome-devtools.js'],
+                },
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+    fs.writeFileSync(
+      path.join(projectDir, '.mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            tavily: {
+              command: 'node',
+              args: ['tavily.js'],
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile(projectDir, { mode: 'appOnly' });
+    createdPaths.push(configPath);
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      mcpServers: Record<
+        string,
+        { command?: string; args?: string[]; enabled?: boolean; env?: Record<string, string> }
+      >;
+    };
+
+    expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
+    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expect(parsed.mcpServers['agent-teams']).toMatchObject({
+      enabled: true,
+      env: {
+        AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
+      },
+    });
+    expect(parsed.mcpServers['brave-real-browser']).toBeUndefined();
+    expect(parsed.mcpServers.context7).toBeUndefined();
+    expect(parsed.mcpServers['chrome-devtools']).toBeUndefined();
+    expect(parsed.mcpServers.tavily).toBeUndefined();
+  });
+
   it('does not inline project MCP config to preserve native Claude precedence', async () => {
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
@@ -371,6 +797,73 @@ describe('TeamMcpConfigBuilder', () => {
     expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
   });
 
+  it('inlines allowlisted MCP servers for strict member policies with Claude precedence', async () => {
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
+    createdDirs.push(homeDir, projectDir);
+    mockHomeDir = homeDir;
+
+    fs.writeFileSync(
+      path.join(homeDir, '.claude.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            github: { type: 'http', url: 'https://user.example.com/mcp' },
+            sentry: { command: 'node', args: ['sentry.js'] },
+          },
+          projects: {
+            [projectDir]: {
+              mcpServers: {
+                github: { type: 'http', url: 'https://local.example.com/mcp' },
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    fs.writeFileSync(
+      path.join(projectDir, '.mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            github: { type: 'http', url: 'https://project.example.com/mcp' },
+            linear: { type: 'http', url: 'https://linear.example.com/mcp' },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile(projectDir, {
+      mode: 'strictAllowlist',
+      serverNames: ['GitHub', 'LINEAR'],
+    });
+    createdPaths.push(configPath);
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      mcpServers: Record<
+        string,
+        { command?: string; args?: string[]; type?: string; url?: string }
+      >;
+    };
+
+    expect(Object.keys(parsed.mcpServers).sort()).toEqual(['agent-teams', 'github', 'linear']);
+    expect(parsed.mcpServers.github).toEqual({
+      type: 'http',
+      url: 'https://local.example.com/mcp',
+    });
+    expect(parsed.mcpServers.linear).toEqual({
+      type: 'http',
+      url: 'https://linear.example.com/mcp',
+    });
+    expect(parsed.mcpServers.sentry).toBeUndefined();
+  });
+
   it('generated agent-teams server ignores same-named user MCP entry', async () => {
     const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
@@ -395,9 +888,121 @@ describe('TeamMcpConfigBuilder', () => {
     createdPaths.push(configPath);
 
     const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
-      mcpServers: Record<string, { command?: string; args?: string[] }>;
+      mcpServers: Record<string, { command?: string; args?: string[]; enabled?: boolean }>;
     };
 
+    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expect(parsed.mcpServers['agent-teams']?.enabled).toBe(true);
+  });
+
+  it('forces generated agent-teams MCP even when user, project, local, or allowlist settings shadow it', async () => {
+    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
+    createdDirs.push(homeDir, projectDir);
+    mockHomeDir = homeDir;
+
+    fs.writeFileSync(
+      path.join(homeDir, '.claude.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['user-shadow.js'], enabled: false },
+          },
+          projects: {
+            [projectDir]: {
+              mcpServers: {
+                'agent-teams': {
+                  command: 'node',
+                  args: ['local-shadow.js'],
+                  enabled: false,
+                },
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+    fs.writeFileSync(
+      path.join(projectDir, '.mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['project-shadow.js'], enabled: false },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile(projectDir, {
+      mode: 'strictAllowlist',
+      serverNames: ['agent-teams'],
+    });
+    createdPaths.push(configPath);
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      mcpServers: Record<string, { command?: string; args?: string[]; enabled?: boolean }>;
+    };
+
+    expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
+    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expect(parsed.mcpServers['agent-teams']?.enabled).toBe(true);
+  });
+
+  it('forces the generated agent-teams MCP server on regardless of user, local, or project settings', async () => {
+    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
+    createdDirs.push(homeDir, projectDir);
+    mockHomeDir = homeDir;
+
+    fs.writeFileSync(
+      path.join(homeDir, '.claude.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['user-disabled.js'], enabled: false },
+          },
+          projects: {
+            [projectDir]: {
+              mcpServers: {
+                'agent-teams': { command: 'node', args: ['local-disabled.js'], enabled: false },
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+    fs.writeFileSync(
+      path.join(projectDir, '.mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['project-disabled.js'], enabled: false },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile(projectDir);
+    createdPaths.push(configPath);
+
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      mcpServers: Record<string, { command?: string; args?: string[]; enabled?: boolean }>;
+    };
+
+    expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
+    expect(parsed.mcpServers['agent-teams']?.enabled).toBe(true);
     expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
   });
 
@@ -412,6 +1017,30 @@ describe('TeamMcpConfigBuilder', () => {
 
     expect(readGeneratedServer(configPath)?.env).toMatchObject({
       AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
+    });
+  });
+
+  it('passes the published control API URL to the MCP server', async () => {
+    process.env.CLAUDE_TEAM_CONTROL_URL = 'http://127.0.0.1:43123';
+
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile();
+    createdPaths.push(configPath);
+
+    expect(readGeneratedServer(configPath)?.env).toMatchObject({
+      CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43123',
+    });
+  });
+
+  it('allows an explicit control API URL when no MCP policy is provided', async () => {
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile(undefined, {
+      controlApiBaseUrl: 'http://127.0.0.1:43124',
+    });
+    createdPaths.push(configPath);
+
+    expect(readGeneratedServer(configPath)?.env).toMatchObject({
+      CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43124',
     });
   });
 

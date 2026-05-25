@@ -6,6 +6,7 @@
 
 import React, { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { DiffViewer } from '@renderer/components/chat/viewers';
 
 import { type ItemStatus, StatusDot } from '../BaseItem';
@@ -24,6 +25,7 @@ export const EditToolViewer = memo(function EditToolViewer({
   linkedTool,
   status,
 }: EditToolViewerProps) {
+  const { t } = useAppTranslation('common');
   const toolUseResult = linkedTool.result?.toolUseResult as Record<string, unknown> | undefined;
 
   const filePath = (toolUseResult?.filePath as string) || (linkedTool.input.file_path as string);
@@ -49,11 +51,11 @@ export const EditToolViewer = memo(function EditToolViewer({
             className="mb-1 flex items-center gap-2 text-xs"
             style={{ color: 'var(--tool-item-muted)' }}
           >
-            Result
+            {t('chat.tools.result')}
             <StatusDot status={status} />
             {linkedTool.result?.tokenCount !== undefined && linkedTool.result.tokenCount > 0 && (
               <span style={{ color: 'var(--color-text-muted)' }}>
-                ~{formatTokens(linkedTool.result.tokenCount)} tokens
+                {t('tokens.approxTokens', { tokens: formatTokens(linkedTool.result.tokenCount) })}
               </span>
             )}
           </div>

@@ -134,6 +134,62 @@ describe('electron-builder afterPack', () => {
     expect(fs.existsSync(path.join(prebuildsDir, 'darwin-x64'))).toBe(false);
   });
 
+  it('prunes host node-pty build outputs when a matching target prebuild exists', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const nodePtyDir = path.join(
+      tempDir,
+      'resources',
+      'app.asar.unpacked',
+      'node_modules',
+      'node-pty'
+    );
+    const releaseDir = path.join(nodePtyDir, 'build', 'Release');
+    const prebuildDir = path.join(nodePtyDir, 'prebuilds', 'win32-x64');
+
+    writeFile(path.join(tempDir, 'AgentTeamsAI.exe'), createPortableExecutableBuffer('x64'));
+    writeFile(path.join(releaseDir, 'pty.node'), createMachOBuffer('arm64'));
+    writeFile(path.join(releaseDir, 'spawn-helper'), createMachOBuffer('arm64'));
+    writeFile(path.join(prebuildDir, 'pty.node'), createPortableExecutableBuffer('x64'));
+    writeFile(path.join(prebuildDir, 'conpty.node'), createPortableExecutableBuffer('x64'));
+
+    await afterPackModule({
+      appOutDir: tempDir,
+      electronPlatformName: 'win32',
+      arch: 1,
+    });
+
+    expect(fs.existsSync(releaseDir)).toBe(false);
+    expect(fs.existsSync(path.join(prebuildDir, 'pty.node'))).toBe(true);
+  });
+
+  it('keeps incompatible node-pty build outputs when no target prebuild exists', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const releaseDir = path.join(
+      tempDir,
+      'resources',
+      'app.asar.unpacked',
+      'node_modules',
+      'node-pty',
+      'build',
+      'Release'
+    );
+
+    writeFile(path.join(tempDir, 'agent-teams-ai'), createElfBuffer('x64'));
+    writeFile(path.join(releaseDir, 'pty.node'), createMachOBuffer('arm64'));
+
+    await expect(
+      afterPackModule({
+        appOutDir: tempDir,
+        electronPlatformName: 'linux',
+        arch: 1,
+      })
+    ).rejects.toThrow('Found incompatible native binaries in linux-x64 bundle after pruning');
+
+    expect(fs.existsSync(releaseDir)).toBe(true);
+  });
+
   it('fails validation when a foreign-arch native binary remains in the bundle', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
@@ -157,7 +213,7 @@ describe('electron-builder afterPack', () => {
     tempDirs.push(tempDir);
 
     writeFile(
-      path.join(tempDir, 'Contents', 'MacOS', 'Agent Teams UI'),
+      path.join(tempDir, 'Contents', 'MacOS', 'Agent Teams AI'),
       createMachOBuffer('arm64')
     );
     writeFile(
@@ -229,7 +285,7 @@ describe('electron-builder afterPack', () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
 
-    writeFile(path.join(tempDir, 'Agent Teams UI.exe'), createPortableExecutableBuffer('x64'));
+    writeFile(path.join(tempDir, 'Agent Teams AI.exe'), createPortableExecutableBuffer('x64'));
     writeFile(
       path.join(
         tempDir,

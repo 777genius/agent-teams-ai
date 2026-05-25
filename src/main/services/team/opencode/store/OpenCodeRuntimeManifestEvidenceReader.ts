@@ -71,6 +71,8 @@ export interface OpenCodeCommittedBootstrapSessionRecord {
   observedAt: string | null;
   source: OpenCodeBootstrapEvidenceSource;
   appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
+  appMcpTransportHash?: string;
+  appMcpTransportEvidence?: Record<string, unknown>;
 }
 
 export interface OpenCodeCommittedBootstrapSessionEvidence {
@@ -320,6 +322,13 @@ function normalizeOpenCodeBootstrapSessionRecord(
     source === 'app_managed_bootstrap'
       ? normalizeAppManagedBootstrapCandidate(record.appManagedBootstrapCandidate)
       : undefined;
+  const appMcpTransportHash = normalizeNonEmptyStoreString(record.appMcpTransportHash);
+  const appMcpTransportEvidence =
+    record.appMcpTransportEvidence &&
+    typeof record.appMcpTransportEvidence === 'object' &&
+    !Array.isArray(record.appMcpTransportEvidence)
+      ? (record.appMcpTransportEvidence as Record<string, unknown>)
+      : undefined;
   return {
     id,
     teamName,
@@ -329,6 +338,8 @@ function normalizeOpenCodeBootstrapSessionRecord(
     observedAt,
     source,
     ...(appManagedBootstrapCandidate ? { appManagedBootstrapCandidate } : {}),
+    ...(appMcpTransportHash ? { appMcpTransportHash } : {}),
+    ...(appMcpTransportEvidence ? { appMcpTransportEvidence } : {}),
   };
 }
 

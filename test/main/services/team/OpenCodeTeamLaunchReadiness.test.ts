@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { createEmptyEndpointMap } from '../../../../src/main/services/team/opencode/capabilities/OpenCodeApiCapabilities';
 import { REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import {
-  OpenCodeTeamLaunchReadinessService,
   type OpenCodeApiCapabilityPort,
-  type OpenCodeModelExecutionProbePort,
   type OpenCodeMcpToolProofPort,
+  type OpenCodeModelExecutionProbePort,
   type OpenCodeRuntimeInventory,
   type OpenCodeRuntimeInventoryPort,
   type OpenCodeRuntimeStoreReadinessPort,
+  OpenCodeTeamLaunchReadinessService,
 } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
 
 import type {
@@ -29,13 +29,75 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       state: 'not_installed',
       launchAllowed: false,
       hostHealthy: false,
-      diagnostics: ['PATH checked', 'OpenCode CLI not detected on PATH'],
+      diagnostics: [
+        'PATH checked',
+        'OpenCode runtime binary is not installed or not reachable by launch preflight.',
+      ],
     });
     expect(ports.capabilities.detect).not.toHaveBeenCalled();
     expect(ports.mcpTools.prove).not.toHaveBeenCalled();
   });
 
-  it('blocks unauthenticated OpenCode even when the binary is installed', async () => {
+  it('allows unauthenticated OpenCode when the selected model is a free route', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['opencode/big-pickle'],
+      },
+    });
+
+    await expect(
+      service(ports).check(readinessInput({ selectedModel: 'opencode/big-pickle' }))
+    ).resolves.toMatchObject({
+      state: 'ready',
+      launchAllowed: true,
+      modelId: 'opencode/big-pickle',
+      diagnostics: [
+        'No connected OpenCode provider found. Proceeding with a free OpenCode model route that does not require provider authentication.',
+      ],
+    });
+    expect(ports.capabilities.detect).toHaveBeenCalled();
+    expect(ports.mcpTools.prove).toHaveBeenCalled();
+  });
+
+  it('uses the first free OpenCode model for unauthenticated default selection', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['openai/gpt-5.4-mini', 'opencode/big-pickle'],
+      },
+    });
+
+    await expect(service(ports).check(readinessInput({ selectedModel: null }))).resolves.toMatchObject({
+      state: 'ready',
+      launchAllowed: true,
+      modelId: 'opencode/big-pickle',
+    });
+    expect(ports.capabilities.detect).toHaveBeenCalled();
+    expect(ports.mcpTools.prove).toHaveBeenCalled();
+  });
+
+  it('does not replace an explicit unauthenticated provider-backed model with a free route', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['opencode/big-pickle', 'openai/gpt-5.4-mini'],
+      },
+    });
+
+    await expect(service(ports).check(readinessInput())).resolves.toMatchObject({
+      state: 'not_authenticated',
+      launchAllowed: false,
+      modelId: 'openai/gpt-5.4-mini',
+    });
+    expect(ports.capabilities.detect).not.toHaveBeenCalled();
+    expect(ports.mcpTools.prove).not.toHaveBeenCalled();
+  });
+
+  it('blocks unauthenticated OpenCode when the selected model needs a provider', async () => {
     const ports = createPorts({
       inventory: { authenticated: false, connectedProviders: [] },
     });
@@ -44,7 +106,96 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
       state: 'not_authenticated',
       launchAllowed: false,
       opencodeVersion: '1.14.19',
-      diagnostics: ['No connected OpenCode providers found'],
+      diagnostics: [
+        'No connected OpenCode provider found. Choose a free OpenCode model such as Big Pickle, or connect a provider in OpenCode for provider-backed models.',
+      ],
+    });
+    expect(ports.capabilities.detect).not.toHaveBeenCalled();
+    expect(ports.mcpTools.prove).not.toHaveBeenCalled();
+  });
+
+  it('requires execution probe before allowing unauthenticated configured local models', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['llama.cpp/qwen-test:0.5b'],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({
+          selectedModel: 'llama.cpp/qwen-test:0.5b',
+          requireExecutionProbe: false,
+        })
+      )
+    ).resolves.toMatchObject({
+      state: 'not_authenticated',
+      launchAllowed: false,
+      modelId: 'llama.cpp/qwen-test:0.5b',
+    });
+    expect(ports.modelExecution.verify).not.toHaveBeenCalled();
+  });
+
+  it('allows unauthenticated configured local models after execution proof', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['llama.cpp/qwen-test:0.5b'],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({
+          selectedModel: 'llama.cpp/qwen-test:0.5b',
+          requireExecutionProbe: true,
+        })
+      )
+    ).resolves.toMatchObject({
+      state: 'ready',
+      launchAllowed: true,
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      diagnostics: [
+        'No connected OpenCode provider found. Proceeding with a configured local OpenCode model route after execution proof.',
+      ],
+    });
+    expect(ports.modelExecution.verify).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      inventory: expect.objectContaining({
+        connectedProviders: [],
+      }),
+    });
+  });
+
+  it('maps execution probe authentication failures to not_authenticated', async () => {
+    const ports = createPorts({
+      inventory: {
+        authenticated: false,
+        connectedProviders: [],
+        models: ['llama.cpp/qwen-test:0.5b'],
+      },
+      modelProbe: {
+        outcome: 'not_authenticated',
+        reason: 'local server rejected request',
+        diagnostics: ['local server rejected request'],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({
+          selectedModel: 'llama.cpp/qwen-test:0.5b',
+          requireExecutionProbe: true,
+        })
+      )
+    ).resolves.toMatchObject({
+      state: 'not_authenticated',
+      launchAllowed: false,
+      missing: ['local server rejected request'],
     });
   });
 
@@ -205,7 +356,7 @@ function createPorts(
     toolProof?: OpenCodeMcpToolProof;
     runtimeStores?: RuntimeStoreReadinessCheck;
     modelProbe?: {
-      outcome: 'available' | 'unavailable' | 'unknown';
+      outcome: 'available' | 'unavailable' | 'not_authenticated' | 'unknown';
       reason: string | null;
       diagnostics: string[];
     };
@@ -219,19 +370,19 @@ function createPorts(
 } {
   return {
     inventory: {
-      probe: vi.fn(async () => inventory(overrides.inventory)),
+      probe: vi.fn(() => Promise.resolve(inventory(overrides.inventory))),
     },
     capabilities: {
-      detect: vi.fn(async () => overrides.capabilities ?? capabilities()),
+      detect: vi.fn(() => Promise.resolve(overrides.capabilities ?? capabilities())),
     },
     mcpTools: {
-      prove: vi.fn(async () => overrides.toolProof ?? toolProof()),
+      prove: vi.fn(() => Promise.resolve(overrides.toolProof ?? toolProof())),
     },
     runtimeStores: {
-      check: vi.fn(async () => overrides.runtimeStores ?? runtimeStores()),
+      check: vi.fn(() => Promise.resolve(overrides.runtimeStores ?? runtimeStores())),
     },
     modelExecution: {
-      verify: vi.fn(async () => overrides.modelProbe ?? modelProbe()),
+      verify: vi.fn(() => Promise.resolve(overrides.modelProbe ?? modelProbe())),
     },
   };
 }

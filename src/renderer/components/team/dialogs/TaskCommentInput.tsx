@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
@@ -54,6 +55,8 @@ export const TaskCommentInput = ({
   replyTo,
   onClearReply,
 }: TaskCommentInputProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
   const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
@@ -245,11 +248,13 @@ export const TaskCommentInput = ({
                 <X size={12} />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="left">Cancel reply</TooltipContent>
+            <TooltipContent side="left">{t('taskComments.cancelReply')}</TooltipContent>
           </Tooltip>
 
           <div className="mb-1 flex items-center gap-1.5">
-            <span className="text-[10px] text-blue-600/70 dark:text-blue-300/60">Replying to</span>
+            <span className="text-[10px] text-blue-600/70 dark:text-blue-300/60">
+              {t('taskComments.replyingTo')}
+            </span>
             <MemberBadge name={replyTo.author} color={colorMap.get(replyTo.author)} size="sm" />
           </div>
           <div
@@ -267,7 +272,7 @@ export const TaskCommentInput = ({
               className="mt-0.5 text-[10px] text-blue-500 hover:text-blue-700 dark:text-blue-400/60 dark:hover:text-blue-300"
               onClick={() => setQuoteExpanded((v) => !v)}
             >
-              {quoteExpanded ? 'less' : 'more'}
+              {quoteExpanded ? tCommon('actions.showLess') : tCommon('actions.showMore')}
             </button>
           ) : null}
         </div>
@@ -347,7 +352,7 @@ export const TaskCommentInput = ({
         <MentionableTextarea
           id={`task-comment-${taskId}`}
           className={replyTo ? 'rounded-t-none' : undefined}
-          placeholder="Add a comment... (Enter to send)"
+          placeholder={t('taskComments.placeholder')}
           value={draft.value}
           onValueChange={draft.setValue}
           suggestions={mentionSuggestions}
@@ -375,7 +380,7 @@ export const TaskCommentInput = ({
                     <Paperclip size={14} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Attach file (or paste)</TooltipContent>
+                <TooltipContent side="top">{t('taskComments.attachFile')}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -387,7 +392,7 @@ export const TaskCommentInput = ({
                     <Mic size={14} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Voice to text</TooltipContent>
+                <TooltipContent side="top">{t('taskComments.voiceToText')}</TooltipContent>
               </Tooltip>
               <button
                 type="button"
@@ -396,7 +401,7 @@ export const TaskCommentInput = ({
                 onClick={() => void handleSubmit()}
               >
                 <Send size={12} />
-                Comment
+                {t('taskComments.comment')}
               </button>
             </div>
           }
@@ -406,11 +411,13 @@ export const TaskCommentInput = ({
                 <span
                   className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
                 >
-                  {remaining} chars left
+                  {t('taskComments.charsLeft', { count: remaining })}
                 </span>
               ) : null}
               {draft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                <span className="text-[10px] text-[var(--color-text-muted)]">
+                  {t('taskComments.saved')}
+                </span>
               ) : null}
             </div>
           }

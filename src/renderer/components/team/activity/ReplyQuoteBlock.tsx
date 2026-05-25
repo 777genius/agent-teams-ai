@@ -1,5 +1,6 @@
 import { memo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
@@ -27,6 +28,7 @@ export const ReplyQuoteBlock = memo(
     bodyMaxHeight = 'max-h-56',
     replyTaskRefs,
   }: ReplyQuoteBlockProps): React.JSX.Element => {
+    const { t } = useAppTranslation('team');
     const isLong = reply.originalText.length > LONG_QUOTE_THRESHOLD;
     const [expanded, setExpanded] = useState(false);
 
@@ -43,7 +45,9 @@ export const ReplyQuoteBlock = memo(
 
           {/* "Replying to" + MemberBadge */}
           <div className="mb-1 flex items-center gap-1.5">
-            <span className="text-[10px] text-blue-600/60 dark:text-blue-300/60">Replying to</span>
+            <span className="text-[10px] text-blue-600/60 dark:text-blue-300/60">
+              {t('activity.reply.replyingTo')}
+            </span>
             <MemberBadge name={reply.agentName} color={memberColor} size="sm" />
           </div>
 

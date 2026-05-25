@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { computeAwaitingReply } from '@renderer/utils/taskCommentPendingReply';
@@ -24,6 +25,7 @@ export const TaskCommentAwaitingReply = ({
   taskCreatedBy,
   members,
 }: TaskCommentAwaitingReplyProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const result = useMemo(
     () => computeAwaitingReply(comments, taskOwner, taskCreatedBy),
@@ -42,11 +44,17 @@ export const TaskCommentAwaitingReply = ({
         <span className="relative inline-flex size-full rounded-full bg-emerald-500" />
       </span>
 
-      <span className="text-[10px] text-[var(--color-text-muted)]">Awaiting reply from</span>
+      <span className="text-[10px] text-[var(--color-text-muted)]">
+        {t('taskComments.awaitingReplyFrom')}
+      </span>
 
       {result.awaitingFrom.map((name, i) => (
         <React.Fragment key={name}>
-          {i > 0 && <span className="text-[10px] text-[var(--color-text-muted)]">or</span>}
+          {i > 0 && (
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              {t('taskComments.or')}
+            </span>
+          )}
           <MemberBadge name={name} color={colorMap.get(name)} size="xs" />
         </React.Fragment>
       ))}

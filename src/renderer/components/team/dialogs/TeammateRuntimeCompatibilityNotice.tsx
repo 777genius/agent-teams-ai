@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle, Info } from 'lucide-react';
 
@@ -14,6 +15,8 @@ export const TeammateRuntimeCompatibilityNotice = ({
   analysis,
   onOpenDashboard,
 }: TeammateRuntimeCompatibilityNoticeProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+
   if (!analysis.visible) {
     return null;
   }
@@ -50,7 +53,7 @@ export const TeammateRuntimeCompatibilityNotice = ({
               className="mt-1 h-7 px-2 text-[11px]"
               onClick={onOpenDashboard}
             >
-              Open Dashboard
+              {t('dialogs.actions.openDashboard')}
             </Button>
           ) : null}
         </div>

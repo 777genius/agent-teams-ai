@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -40,6 +41,9 @@ interface MemberDetailHeaderProps {
   spawnRuntimeAlive?: boolean;
   spawnBootstrapConfirmed?: boolean;
   spawnBootstrapStalled?: boolean;
+  spawnAgentToolAccepted?: boolean;
+  spawnHardFailure?: boolean;
+  spawnLivenessKind?: TeamAgentRuntimeEntry['livenessKind'];
   spawnFirstSpawnAcceptedAt?: string;
   spawnUpdatedAt?: string;
   isLaunchSettling?: boolean;
@@ -60,12 +64,16 @@ export const MemberDetailHeader = ({
   spawnRuntimeAlive,
   spawnBootstrapConfirmed,
   spawnBootstrapStalled,
+  spawnAgentToolAccepted,
+  spawnHardFailure,
+  spawnLivenessKind,
   spawnFirstSpawnAcceptedAt,
   spawnUpdatedAt,
   isLaunchSettling,
   onUpdateRole,
   updatingRole,
 }: MemberDetailHeaderProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [editing, setEditing] = useState(false);
   const selectedTeamName = useStore((s) => s.selectedTeamName);
   const teamMembers = useStore((s) =>
@@ -89,6 +97,9 @@ export const MemberDetailHeader = ({
     spawnRuntimeAlive,
     spawnBootstrapConfirmed,
     spawnBootstrapStalled,
+    spawnAgentToolAccepted,
+    spawnHardFailure,
+    spawnLivenessKind,
     spawnFirstSpawnAcceptedAt,
     spawnUpdatedAt,
     runtimeEntry,
@@ -161,7 +172,7 @@ export const MemberDetailHeader = ({
                     type="button"
                     className="inline-flex items-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
                     onClick={() => setEditing(true)}
-                    aria-label="Edit role"
+                    aria-label={t('members.actions.editRole')}
                   >
                     <Pencil size={12} />
                   </button>

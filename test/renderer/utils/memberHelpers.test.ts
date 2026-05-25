@@ -50,6 +50,16 @@ describe('memberHelpers spawn-aware presence', () => {
       shouldDisplayMemberCurrentTask({
         member: { ...member, currentTaskId: 'task-1' },
         isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
         spawnStatus: 'error',
         spawnLaunchState: 'failed_to_start',
       })
@@ -69,6 +79,22 @@ describe('memberHelpers spawn-aware presence', () => {
           restartable: true,
           providerId: 'opencode',
           livenessKind: 'stale_metadata',
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        runtimeEntry: {
+          memberName: 'alice',
+          alive: false,
+          restartable: true,
+          providerId: 'opencode',
           updatedAt: '2026-04-24T12:00:00.000Z',
         },
       })
@@ -493,10 +519,10 @@ describe('memberHelpers spawn-aware presence', () => {
         isTeamProvisioning: false,
       })
     ).toMatchObject({
-      presenceLabel: 'online',
-      launchVisualState: null,
-      launchStatusLabel: null,
-      dotClass: expect.stringContaining('bg-emerald-400'),
+      presenceLabel: 'registered',
+      launchVisualState: 'registered_only',
+      launchStatusLabel: 'registered',
+      dotClass: expect.stringContaining('bg-red-400'),
     });
 
     expect(
@@ -521,11 +547,64 @@ describe('memberHelpers spawn-aware presence', () => {
         isTeamProvisioning: false,
       })
     ).toMatchObject({
-      presenceLabel: 'online',
-      launchVisualState: null,
-      launchStatusLabel: null,
-      dotClass: expect.stringContaining('bg-emerald-400'),
+      presenceLabel: 'registered',
+      launchVisualState: 'registered_only',
+      launchStatusLabel: 'registered',
+      dotClass: expect.stringContaining('bg-red-400'),
     });
+  });
+
+  it('marks confirmed members offline when spawn runtime liveness is false', () => {
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnLivenessSource: 'process',
+        spawnRuntimeAlive: false,
+        spawnBootstrapConfirmed: true,
+        runtimeAdvisory: undefined,
+        isLaunchSettling: false,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      })
+    ).toMatchObject({
+      presenceLabel: 'stale runtime',
+      launchVisualState: 'stale_runtime',
+      launchStatusLabel: 'stale runtime',
+      dotClass: expect.stringContaining('bg-red-400'),
+    });
+  });
+
+  it('marks dead confirmed runtime entries as stale runtime', () => {
+    for (const livenessKind of ['runtime_process', 'confirmed_bootstrap'] as const) {
+      expect(
+        buildMemberLaunchPresentation({
+          member,
+          spawnStatus: 'online',
+          spawnLaunchState: 'confirmed_alive',
+          spawnLivenessSource: 'process',
+          spawnRuntimeAlive: true,
+          spawnBootstrapConfirmed: true,
+          runtimeEntry: {
+            memberName: 'alice',
+            alive: false,
+            restartable: true,
+            livenessKind,
+            updatedAt: '2026-04-24T12:00:00.000Z',
+          },
+          runtimeAdvisory: undefined,
+          isLaunchSettling: false,
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+        })
+      ).toMatchObject({
+        presenceLabel: 'stale runtime',
+        launchVisualState: 'stale_runtime',
+        launchStatusLabel: 'stale runtime',
+        dotClass: expect.stringContaining('bg-red-400'),
+      });
+    }
   });
 
   it('marks stuck OpenCode launch states as manually relaunchable', () => {
@@ -806,6 +885,27 @@ describe('memberHelpers spawn-aware presence', () => {
     ).toContain('Anthropic authentication error');
   });
 
+  it('renders timed OpenCode quota errors with retry/reset context', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-17T21:44:34.000Z',
+      retryUntil: '2026-05-18T00:00:00.502Z',
+      retryDelayMs: 8_126_502,
+      reasonCode: 'quota_exhausted' as const,
+      message:
+        'OpenCode session status retry - attempt=1 - Free usage exceeded, subscribe to Go https://opencode.ai/go - next=2026-05-18T00:00:00.502Z',
+    };
+
+    expect(
+      getMemberRuntimeAdvisoryLabel(advisory, 'opencode', Date.parse('2026-05-17T21:45:00.000Z'))
+    ).toBe('OpenCode quota error · retry 2h 15m');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode quota exhausted.');
+    expect(title).toContain('Waiting for OpenCode retry or quota reset around 00:00 UTC.');
+    expect(title).toContain('Free usage exceeded');
+  });
+
   it('formats raw OpenCode protocol advisory reasons before showing them in titles', () => {
     const advisory = {
       kind: 'api_error' as const,
@@ -815,13 +915,11 @@ describe('memberHelpers spawn-aware presence', () => {
     };
 
     expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode proof missing');
-    expect(getMemberRuntimeAdvisoryTone(advisory)).toBe('warning');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('warning');
 
     const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
 
-    expect(title).toContain(
-      'OpenCode delivery completed without required visible/progress proof.'
-    );
+    expect(title).toContain('OpenCode delivery completed without required visible/progress proof.');
     expect(title).toContain('OpenCode responded, but did not create a visible message_send reply.');
     expect(title).not.toContain('visible_reply_still_required');
   });
@@ -850,18 +948,348 @@ describe('memberHelpers spawn-aware presence', () => {
       message: 'opencode_prompt_acceptance_unknown_after_bridge_timeout',
     };
 
-    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe(
-      'OpenCode delivery error'
-    );
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode delivery error');
 
     const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
 
     expect(title).toContain('OpenCode runtime delivery error.');
-    expect(title).toContain(
-      'OpenCode bridge outcome unknown after timeout, retrying/observing.'
-    );
+    expect(title).toContain('OpenCode bridge outcome unknown after timeout, retrying/observing.');
     expect(title).not.toContain('Network or connectivity error');
     expect(title).not.toContain('opencode_prompt_acceptance_unknown_after_bridge_timeout');
+  });
+
+  it.each([
+    'session_stale',
+    'resolved_behavior_changed:old->new',
+    '(resolved_behavior_changed:old->new)',
+    'OpenCode API error: resolved_behavior_changed:old->new',
+    'resolved_behavior_changed:old.hash/1=abc->new.hash/2=def.',
+    'resolved_behavior_changed:tool_error->session_error',
+    'resolved_behavior_changed:responded_non_visible_tool->pending',
+    'resolved_behavior_changed:permission_blocked->pending',
+    'resolved_behavior_changed:old->new opencode_app_mcp_transport_changed:a->b',
+    'OpenCode session is stale (resolved_behavior_changed:old->new); reading historical messages for log projection only',
+    'opencode_app_mcp_transport_changed:old->new',
+    'opencode_prompt_delivery_session_refresh_scheduled',
+    'OpenCode API error. opencode_prompt_delivery_session_refresh_scheduled',
+    'OpenCode API error. opencode_prompt_delivery_session_refresh_scheduled.',
+    'OpenCode session refresh scheduled after resolved behavior changed',
+    'opencode_session_refresh_scheduled_after_resolved_behavior_changed',
+  ])('renders recoverable OpenCode session refresh advisory %s as a warning', (message) => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message,
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode session refresh');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('warning');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toBe('OpenCode session changed; refreshing the session before retry.');
+    expect(title).not.toContain('OpenCode API error');
+    expect(title).not.toContain(message);
+  });
+
+  it('renders legacy OpenCode session refresh advisories without a reason code as warnings', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      message: 'session_stale',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode session refresh');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('warning');
+    expect(getMemberRuntimeAdvisoryTitle(advisory, 'opencode')).toBe(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+  });
+
+  it('does not hide real OpenCode API errors that merely mention a refresh marker', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'OpenCode API error. resolved_behavior_changed:old->new permission denied',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('permission denied');
+  });
+
+  it('does not strip a generic OpenCode API error prefix without a separator', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'OpenCode API errorresolved_behavior_changed:old->new',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+    expect(getMemberRuntimeAdvisoryTitle(advisory, 'opencode')).toContain(
+      'OpenCode API errorresolved_behavior_changed:old->new'
+    );
+  });
+
+  it('does not format a refresh-prefixed message with extra failure details as a clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new permission denied',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('resolved_behavior_changed:old->new permission denied');
+    expect(title).not.toBe('OpenCode session changed; refreshing the session before retry.');
+  });
+
+  it('does not format refresh markers with unknown extra text as a clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new unexpected detail',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('unexpected detail');
+  });
+
+  it('does not format colon-suffixed refresh failure details as a clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new:permission_denied',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('resolved_behavior_changed:old->new:permission_denied');
+    expect(title).not.toBe('OpenCode session changed; refreshing the session before retry.');
+  });
+
+  it('does not format semicolon-attached failure details as a clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new;permission_denied',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('permission_denied');
+  });
+
+  it.each([
+    'permission_denied',
+    'error',
+    'failed',
+    'failure',
+    'aborted',
+    'canceled',
+    'cancelled',
+    'interrupted',
+    'enospc',
+  ])('does not let refresh pattern consume directly attached failure token _%s', (suffix) => {
+    const message = `resolved_behavior_changed:old->new_${suffix}`;
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message,
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain(message);
+  });
+
+  it.each([
+    'resolved_behavior_changed:old->new/auth_unavailable',
+    'resolved_behavior_changed:old->new permission denied',
+    'resolved_behavior_changed:old->new permission_blocked',
+    'resolved_behavior_changed:old->new login required',
+    'resolved_behavior_changed:old->new not logged in',
+    'resolved_behavior_changed:old->new missing credentials',
+    'resolved_behavior_changed:old->new access denied',
+    'resolved_behavior_changed:old->new 401',
+    'resolved_behavior_changed:old->new;key limit exceeded',
+    'resolved_behavior_changed:old->new-network_timeout',
+    'resolved_behavior_changed:old->new interrupted',
+    'resolved_behavior_changed:old->new(non_visible_tool_without_task_progress)',
+    'opencode_app_mcp_transport_changed:old->new/permission_denied',
+    'opencode_app_mcp_transport_changed:old->new;visible_reply_missing_task_refs',
+  ])('keeps separator-attached failure detail as an OpenCode API error for %s', (message) => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message,
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain(message);
+  });
+
+  it('still formats clean refresh markers after direct suffix checks', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode session refresh');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('warning');
+    expect(getMemberRuntimeAdvisoryTitle(advisory, 'opencode')).toBe(
+      'OpenCode session changed; refreshing the session before retry.'
+    );
+  });
+
+  it('does not format refresh markers with network failures as a clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new network timeout',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('network timeout');
+  });
+
+  it('does not format refresh markers with auth failures as a clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new auth_unavailable',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('auth_unavailable');
+  });
+
+  it.each([
+    'OpenCode session is stale (resolved_behavior_changed:old->new); Key limit exceeded (total limit)',
+    'OpenCode session is stale (resolved_behavior_changed:old->new); 429 too many requests',
+    'OpenCode session is stale (resolved_behavior_changed:old->new); Free usage exceeded, subscribe to Go',
+  ])(
+    'does not format stale refresh text with quota/rate failures as clean refresh: %s',
+    (message) => {
+      const advisory = {
+        kind: 'api_error' as const,
+        observedAt: '2026-05-18T08:31:46.075Z',
+        reasonCode: 'backend_error' as const,
+        message,
+      };
+
+      expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+      expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+      const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+      expect(title).toContain('OpenCode API error.');
+      expect(title).toContain(message);
+    }
+  );
+
+  it('does not format stale refresh text with unknown extra text as clean refresh', () => {
+    const message =
+      'OpenCode session is stale (resolved_behavior_changed:old->new); unexpected detail';
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message,
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+    expect(getMemberRuntimeAdvisoryTitle(advisory, 'opencode')).toContain(message);
+  });
+
+  it('does not format stale log-projection text with protocol failures as clean session refresh', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message:
+        'OpenCode session is stale (resolved_behavior_changed:old->new); visible_reply_missing_task_refs',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode API error.');
+    expect(title).toContain('visible_reply_missing_task_refs');
+  });
+
+  it('does not downgrade action-required OpenCode errors with refresh-looking messages', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'quota_exhausted' as const,
+      message: 'resolved_behavior_changed:old->new',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode')).toBe('OpenCode quota error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'opencode')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'opencode');
+    expect(title).toContain('OpenCode quota exhausted.');
+  });
+
+  it('does not downgrade non-OpenCode backend errors that reuse OpenCode refresh-looking text', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-05-18T08:31:46.075Z',
+      reasonCode: 'backend_error' as const,
+      message: 'resolved_behavior_changed:old->new',
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'anthropic')).toBe('Anthropic API error');
+    expect(getMemberRuntimeAdvisoryTone(advisory, 'anthropic')).toBe('error');
+
+    const title = getMemberRuntimeAdvisoryTitle(advisory, 'anthropic');
+    expect(title).toContain('Anthropic API error.');
+    expect(title).toContain('resolved_behavior_changed:old->new');
+    expect(title).not.toContain('OpenCode session changed');
   });
 
   it('formats non-visible tool progress advisory reasons before showing them in titles', () => {
@@ -911,9 +1339,7 @@ describe('memberHelpers spawn-aware presence', () => {
       'opencode'
     );
 
-    expect(title).toContain(
-      'OpenCode created a reply without the required taskRefs metadata.'
-    );
+    expect(title).toContain('OpenCode created a reply without the required taskRefs metadata.');
     expect(title).not.toContain('visible_reply_missing_task_refs');
   });
 
@@ -956,6 +1382,67 @@ describe('memberHelpers spawn-aware presence', () => {
     expect(presentation.presenceLabel).toBe('Anthropic auth error');
     expect(presentation.runtimeAdvisoryTone).toBe('error');
     expect(presentation.dotClass).toContain('bg-red-400');
+  });
+
+  it('keeps recoverable OpenCode session refresh presentation out of the terminal error state', () => {
+    const presentation = buildMemberLaunchPresentation({
+      member: { ...member, providerId: 'opencode' },
+      spawnStatus: 'online',
+      spawnLaunchState: 'confirmed_alive',
+      spawnLivenessSource: 'process',
+      spawnRuntimeAlive: true,
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-05-18T08:31:46.075Z',
+        reasonCode: 'backend_error',
+        message: 'opencode_app_mcp_transport_changed:old->new',
+      },
+      isLaunchSettling: false,
+      isTeamAlive: true,
+      isTeamProvisioning: false,
+    });
+
+    expect(presentation.presenceLabel).toBe('OpenCode session refresh');
+    expect(presentation.runtimeAdvisoryLabel).toBe('OpenCode session refresh');
+    expect(presentation.runtimeAdvisoryTone).toBe('warning');
+    expect(presentation.dotClass).not.toContain('bg-red-400');
+  });
+
+  it('keeps recovered OpenCode App MCP connectivity advisory out of the terminal presentation', () => {
+    const presentation = buildMemberLaunchPresentation({
+      member: { ...member, providerId: 'opencode' },
+      spawnStatus: 'online',
+      spawnLaunchState: 'confirmed_alive',
+      spawnLivenessSource: 'heartbeat',
+      spawnRuntimeAlive: true,
+      spawnBootstrapConfirmed: true,
+      spawnAgentToolAccepted: true,
+      spawnHardFailure: false,
+      spawnLivenessKind: 'runtime_process',
+      runtimeEntry: {
+        memberName: 'alice',
+        providerId: 'opencode',
+        alive: true,
+        restartable: false,
+        livenessKind: 'runtime_process',
+        updatedAt: '2026-05-18T17:21:24.498Z',
+      },
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-05-18T17:20:36.681Z',
+        reasonCode: 'network_error',
+        message:
+          'OpenCode app MCP was not connected before message delivery (status=attach_failed, connected=null). OpenCode app MCP readiness check failed: Unable to connect.',
+      },
+      isLaunchSettling: false,
+      isTeamAlive: true,
+      isTeamProvisioning: false,
+    });
+
+    expect(presentation.presenceLabel).not.toContain('OpenCode API error');
+    expect(presentation.runtimeAdvisoryLabel).toBeNull();
+    expect(presentation.runtimeAdvisoryTone).toBeNull();
+    expect(presentation.dotClass).not.toContain('bg-red-400');
   });
 
   it('falls back to the existing generic retry wording when no structured reason is present', () => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Check, FileCode, FileDiff, FileText, GitBranch, GitCommit, Search } from 'lucide-react';
 
 /* Fake diff lines for the mini-terminal */
@@ -22,11 +23,27 @@ const diffLines = [
 
 /* Phases */
 const phases = [
-  { icon: Search, label: 'Reading task ledger...', accent: 'rgba(147,197,253,0.7)' },
-  { icon: FileDiff, label: 'Resolving file states...', accent: 'rgba(253,186,116,0.7)' },
-  { icon: GitBranch, label: 'Checking worktree context...', accent: 'rgba(167,139,250,0.7)' },
-  { icon: FileCode, label: 'Preparing review diffs...', accent: 'rgba(110,231,183,0.7)' },
-];
+  {
+    icon: Search,
+    labelKey: 'review.loading.phases.readingLedger',
+    accent: 'rgba(147,197,253,0.7)',
+  },
+  {
+    icon: FileDiff,
+    labelKey: 'review.loading.phases.resolvingFiles',
+    accent: 'rgba(253,186,116,0.7)',
+  },
+  {
+    icon: GitBranch,
+    labelKey: 'review.loading.phases.checkingWorktree',
+    accent: 'rgba(167,139,250,0.7)',
+  },
+  {
+    icon: FileCode,
+    labelKey: 'review.loading.phases.preparingDiffs',
+    accent: 'rgba(110,231,183,0.7)',
+  },
+] as const;
 
 /* Orbiting icons */
 const orbitItems = [
@@ -88,6 +105,7 @@ const useFileCounter = () => {
 
 /* Component */
 export const ChangesLoadingAnimation = (): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [phaseFading, setPhaseFading] = useState(false);
   const [visibleLines, setVisibleLines] = useState<number[]>([]);
@@ -228,7 +246,7 @@ export const ChangesLoadingAnimation = (): React.JSX.Element => {
               <span className="block size-1.5 rounded-full bg-green-500/50" />
             </div>
             <span className="ml-1 text-[8px] font-medium tracking-wider text-[var(--color-text-muted)] opacity-60">
-              DIFF
+              {t('review.loading.diff')}
             </span>
           </div>
 
@@ -306,10 +324,10 @@ export const ChangesLoadingAnimation = (): React.JSX.Element => {
           }}
         >
           <PhaseIcon size={12} className="mr-1.5 inline-block align-[-2px] opacity-60" />
-          {phase.label}
+          {t(phase.labelKey)}
         </p>
         <p className="text-[10px] tabular-nums text-[var(--color-text-muted)] opacity-50">
-          {fileCount} ledger objects processed
+          {t('review.loading.ledgerObjectsProcessed', { count: fileCount })}
         </p>
       </div>
 

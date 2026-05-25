@@ -3,6 +3,7 @@
  * Renders different UI based on the selected trigger mode.
  */
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   getCursorClass,
   SELECT_INPUT_BASE,
@@ -10,7 +11,11 @@ import {
 } from '@renderer/constants/cssVariables';
 import { AlertCircle } from 'lucide-react';
 
-import { CONTENT_TYPE_OPTIONS } from '../utils/constants';
+import {
+  CONTENT_TYPE_OPTIONS,
+  getContentTypeLabelKey,
+  getMatchFieldLabelKey,
+} from '../utils/constants';
 import { getAvailableMatchFields } from '../utils/trigger';
 
 import { SectionHeader } from './SectionHeader';
@@ -50,18 +55,19 @@ export const DynamicConfigSection = ({
   onTokenThresholdChange,
   onTokenTypeChange,
 }: Readonly<DynamicConfigSectionProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('settings');
   // Get available match fields based on content type and tool name
   const availableMatchFields = getAvailableMatchFields(contentType, toolName || undefined);
 
   return (
     <div className="space-y-3">
-      <SectionHeader title="Configuration" />
+      <SectionHeader title={t('notificationTriggers.sections.configuration')} />
 
       {/* Error Status Mode */}
       {mode === 'error_status' && (
         <div className="py-2">
           <p className="text-sm text-text-muted">
-            Triggers when a tool execution reports an error (is_error: true).
+            {t('notificationTriggers.configuration.errorStatusDescription')}
           </p>
         </div>
       )}
@@ -72,7 +78,7 @@ export const DynamicConfigSection = ({
           {/* Content Type */}
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
             <label htmlFor="new-trigger-content-type" className="text-sm text-text-secondary">
-              Content Type
+              {t('notificationTriggers.fields.contentType')}
             </label>
             <select
               id="new-trigger-content-type"
@@ -83,7 +89,7 @@ export const DynamicConfigSection = ({
             >
               {CONTENT_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value} className={SELECT_OPTION_BG}>
-                  {option.label}
+                  {t(getContentTypeLabelKey(option.value))}
                 </option>
               ))}
             </select>
@@ -93,7 +99,7 @@ export const DynamicConfigSection = ({
           {availableMatchFields.length > 0 && (
             <div className="flex items-center justify-between border-b border-border-subtle py-2">
               <label htmlFor="new-trigger-match-field" className="text-sm text-text-secondary">
-                Match Field
+                {t('notificationTriggers.fields.matchField')}
               </label>
               <select
                 id="new-trigger-match-field"
@@ -104,7 +110,7 @@ export const DynamicConfigSection = ({
               >
                 {availableMatchFields.map((option) => (
                   <option key={option.value} value={option.value} className={SELECT_OPTION_BG}>
-                    {option.label}
+                    {t(getMatchFieldLabelKey(option.value))}
                   </option>
                 ))}
               </select>
@@ -115,7 +121,7 @@ export const DynamicConfigSection = ({
           <div className="border-b border-border-subtle py-2">
             <div className="mb-2 flex items-center justify-between">
               <label htmlFor="new-trigger-match-pattern" className="text-sm text-text-secondary">
-                Match Pattern (Regex)
+                {t('notificationTriggers.fields.matchPattern')}
               </label>
             </div>
             <input
@@ -123,7 +129,7 @@ export const DynamicConfigSection = ({
               type="text"
               value={matchPattern}
               onChange={(e) => onMatchPatternChange(e.target.value)}
-              placeholder="e.g., error|failed|exception"
+              placeholder={t('notificationTriggers.configuration.matchPatternPlaceholder')}
               disabled={saving}
               className={`w-full rounded border bg-transparent px-2 py-1.5 font-mono text-sm text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${patternError ? 'border-red-500' : 'border-border'} ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
             />
@@ -134,7 +140,7 @@ export const DynamicConfigSection = ({
               </p>
             )}
             <p className="mt-1 text-xs text-text-muted">
-              Leave empty to match all content. Uses JavaScript regex syntax.
+              {t('notificationTriggers.configuration.emptyPatternHint')}
             </p>
           </div>
         </div>
@@ -145,7 +151,7 @@ export const DynamicConfigSection = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
             <label htmlFor="new-trigger-token-type" className="text-sm text-text-secondary">
-              Token Type
+              {t('notificationTriggers.fields.tokenType')}
             </label>
             <select
               id="new-trigger-token-type"
@@ -155,22 +161,24 @@ export const DynamicConfigSection = ({
               className={`${SELECT_INPUT_BASE} ${getCursorClass(saving)}`}
             >
               <option value="total" className={SELECT_OPTION_BG}>
-                Total Tokens
+                {t('notificationTriggers.options.tokenTypes.total')}
               </option>
               <option value="input" className={SELECT_OPTION_BG}>
-                Input Tokens
+                {t('notificationTriggers.options.tokenTypes.input')}
               </option>
               <option value="output" className={SELECT_OPTION_BG}>
-                Output Tokens
+                {t('notificationTriggers.options.tokenTypes.output')}
               </option>
             </select>
           </div>
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
             <label htmlFor="new-trigger-threshold" className="text-sm text-text-secondary">
-              Threshold
+              {t('notificationTriggers.fields.threshold')}
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-text-muted">Alert if &gt;</span>
+              <span className="text-xs text-text-muted">
+                {t('notificationTriggers.configuration.alertIfGreaterThan')}
+              </span>
               <input
                 id="new-trigger-threshold"
                 type="text"
@@ -181,7 +189,9 @@ export const DynamicConfigSection = ({
                 disabled={saving}
                 className={`w-20 rounded border border-border bg-transparent px-2 py-1 text-right text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
               />
-              <span className="text-xs text-text-muted">tokens</span>
+              <span className="text-xs text-text-muted">
+                {t('notificationTriggers.configuration.tokensUnit')}
+              </span>
             </div>
           </div>
         </div>

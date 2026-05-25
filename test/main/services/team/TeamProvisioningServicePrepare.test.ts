@@ -1,10 +1,10 @@
+import { OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE } from '@shared/utils/openCodeWindowsAccessDenied';
+import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
@@ -12,6 +12,7 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(),
+  resolveInteractiveShellEnvBestEffort: vi.fn(),
 }));
 
 const buildProviderAwareCliEnvMock = vi.fn();
@@ -30,6 +31,14 @@ vi.mock('@main/services/infrastructure/NotificationManager', () => ({
 }));
 
 const defaultExecCliMockImplementation = async (_binaryPath: string | null, args: string[]) => {
+  if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
+    return {
+      stdout: JSON.stringify({ execPath: process.execPath, version: process.versions.node }),
+      stderr: '',
+      exitCode: 0,
+    };
+  }
+
   if (args[0] === 'model') {
     return {
       stdout: JSON.stringify({
@@ -95,15 +104,18 @@ vi.mock('@main/utils/childProcess', () => ({
   killProcessTree: vi.fn(),
 }));
 
-import {
-  TeamProvisioningService,
-  buildDirectTmuxRestartEnvAssignments,
-} from '@main/services/team/TeamProvisioningService';
-import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
-import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime';
 import { ProviderConnectionService } from '@main/services/runtime/ProviderConnectionService';
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import {
+  type TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+} from '@main/services/team/runtime';
+import {
+  buildDirectTmuxRestartEnvAssignments,
+  TeamProvisioningService,
+} from '@main/services/team/TeamProvisioningService';
 import { spawnCli } from '@main/utils/childProcess';
-import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
 function getRealAgentTeamsMcpLaunchSpec(): { command: string; args: string[] } {
   const workspaceRoot = process.cwd();
@@ -336,7 +348,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     addTeamNotificationMock.mockResolvedValue(null);
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-prepare-'));
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
-    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
       PATH: '/usr/bin',
       SHELL: '/bin/zsh',
     });
@@ -404,6 +416,57 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(assignments).toContain("ANTHROPIC_AWS_WORKSPACE_ID='wrkspc_123'");
     expect(assignments).toContain("ANTHROPIC_AWS_API_KEY='aws-platform-key'");
     expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='anthropic'");
+  });
+
+  it('preserves Anthropic-compatible direct restart env while blanking stale first-party tokens', () => {
+    const compatibleAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_AUTH_TOKEN: 'lmstudio',
+        ANTHROPIC_API_KEY: '',
+      },
+      'anthropic'
+    );
+
+    expect(compatibleAssignments).toContain("ANTHROPIC_BASE_URL='http://localhost:1234'");
+    expect(compatibleAssignments).toContain("ANTHROPIC_AUTH_TOKEN='lmstudio'");
+    expect(compatibleAssignments).toContain("ANTHROPIC_API_KEY=''");
+
+    const firstPartyAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+        ANTHROPIC_AUTH_TOKEN: 'stale-oauth-token',
+      },
+      'anthropic'
+    );
+
+    expect(firstPartyAssignments).toContain("ANTHROPIC_BASE_URL='https://api.anthropic.com'");
+    expect(firstPartyAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(firstPartyAssignments).not.toContain('stale-oauth-token');
+
+    const malformedAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'not a url',
+        ANTHROPIC_AUTH_TOKEN: 'malformed-local-token',
+      },
+      'anthropic'
+    );
+
+    expect(malformedAssignments).toContain("ANTHROPIC_BASE_URL='not a url'");
+    expect(malformedAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(malformedAssignments).not.toContain('malformed-local-token');
+
+    const credentialUrlAssignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        ANTHROPIC_BASE_URL: 'http://token@localhost:1234',
+        ANTHROPIC_AUTH_TOKEN: 'credential-url-token',
+      },
+      'anthropic'
+    );
+
+    expect(credentialUrlAssignments).toContain("ANTHROPIC_BASE_URL='http://token@localhost:1234'");
+    expect(credentialUrlAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(credentialUrlAssignments).not.toContain('credential-url-token');
   });
 
   it('does not flatten Anthropic helper settings into non-Anthropic lead cross-provider args', async () => {
@@ -475,6 +538,225 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.envPatch.ANTHROPIC_AUTH_TOKEN).toBe('');
     expect(result.envPatch.CLAUDE_CODE_OAUTH_TOKEN).toBe('');
     expect(result.args).toContain('--anthropic-safe-passthrough');
+  });
+
+  it('passes Anthropic-compatible bearer env to non-Anthropic leads without injecting ANTHROPIC_API_KEY', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
+      env: {
+        ANTHROPIC_BASE_URL: 'http://localhost:11434',
+        ANTHROPIC_AUTH_TOKEN: 'ollama',
+        ANTHROPIC_API_KEY: '',
+      },
+      authSource: 'anthropic_auth_token',
+      geminiRuntimeAuth: null,
+      providerArgs: ['--anthropic-compatible-passthrough'],
+    });
+
+    const result = await (svc as any).buildCrossProviderMemberArgs(
+      'codex',
+      [{ name: 'bob', providerId: 'anthropic', model: 'qwen3.6' }],
+      { teamRuntimeAuth: { teamName: 'mixed-team', authMaterialId: 'run-1' } }
+    );
+
+    expect(result.usesAnthropicApiKeyHelper).toBe(false);
+    expect(result.envPatch.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.envPatch.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+    expect(result.envPatch.ANTHROPIC_API_KEY).toBe('');
+    expect(result.args).toContain('--anthropic-compatible-passthrough');
+  });
+
+  it('does not inherit lead effort for an Anthropic teammate with an explicit model', async () => {
+    const svc = new TeamProvisioningService();
+
+    const result = await (svc as any).materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: tempRoot,
+      members: [{ name: 'jack', providerId: 'anthropic', model: 'haiku' }, { name: 'alice' }],
+      defaults: {
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+      },
+    });
+
+    expect(result).toEqual([
+      { name: 'jack', providerId: 'anthropic', model: 'haiku', effort: undefined },
+      { name: 'alice', providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+    ]);
+  });
+
+  it.each([
+    {
+      label: 'inherits lead model and effort when teammate leaves runtime unset',
+      defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      members: [{ name: 'alice' }],
+      expected: [{ name: 'alice', providerId: 'anthropic', model: 'sonnet', effort: 'low' }],
+    },
+    {
+      label: 'keeps effort unset when teammate selects a different Anthropic model',
+      defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      members: [{ name: 'jack', providerId: 'anthropic', model: 'haiku' }],
+      expected: [{ name: 'jack', providerId: 'anthropic', model: 'haiku', effort: undefined }],
+    },
+    {
+      label: 'keeps effort unset even when teammate explicitly selects the same Anthropic model',
+      defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      members: [{ name: 'bob', providerId: 'anthropic', model: 'sonnet' }],
+      expected: [{ name: 'bob', providerId: 'anthropic', model: 'sonnet', effort: undefined }],
+    },
+    {
+      label: 'preserves teammate explicit effort with an explicit Anthropic model',
+      defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      members: [{ name: 'eve', providerId: 'anthropic', model: 'haiku', effort: 'medium' }],
+      expected: [{ name: 'eve', providerId: 'anthropic', model: 'haiku', effort: 'medium' }],
+    },
+    {
+      label: 'does not inherit lead effort across providers',
+      defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      members: [{ name: 'tom', providerId: 'codex', model: 'gpt-5.4' }],
+      expected: [{ name: 'tom', providerId: 'codex', model: 'gpt-5.4', effort: undefined }],
+    },
+    {
+      label: 'resolves secondary non-Anthropic default model without inheriting lead effort',
+      defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      members: [{ name: 'sam', providerId: 'codex' }],
+      expected: [{ name: 'sam', providerId: 'codex', model: 'gpt-5.4-mini', effort: undefined }],
+    },
+    {
+      label: 'does not inherit Codex lead effort into an Anthropic teammate model',
+      defaults: { providerId: 'codex', model: 'gpt-5.5', effort: 'low' },
+      members: [{ name: 'zoe', providerId: 'anthropic', model: 'haiku' }],
+      expected: [{ name: 'zoe', providerId: 'anthropic', model: 'haiku', effort: undefined }],
+    },
+  ])('$label', async ({ defaults, members, expected }) => {
+    const svc = new TeamProvisioningService();
+
+    const result = await (svc as any).materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: tempRoot,
+      members,
+      defaults,
+    });
+
+    expect(result).toEqual(expected);
+  });
+
+  it('validates the Sonnet low lead plus explicit Haiku teammate launch matrix', async () => {
+    const svc = new TeamProvisioningService();
+    const facts = {
+      defaultModel: 'sonnet',
+      modelIds: new Set(['sonnet', 'haiku']),
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'anthropic',
+        source: 'anthropic-models-api',
+        status: 'ready',
+        fetchedAt: '2026-05-17T00:00:00.000Z',
+        staleAt: '2026-05-17T00:01:00.000Z',
+        defaultModelId: 'sonnet',
+        defaultLaunchModel: 'sonnet',
+        models: [
+          {
+            id: 'sonnet',
+            launchModel: 'sonnet',
+            displayName: 'Sonnet 4.6',
+            hidden: false,
+            supportedReasoningEfforts: ['low', 'medium', 'high'],
+            defaultReasoningEffort: 'medium',
+            supportsFastMode: false,
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+          {
+            id: 'haiku',
+            launchModel: 'haiku',
+            displayName: 'Haiku 4.5',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            supportsFastMode: false,
+            inputModalities: ['text', 'image'],
+            supportsPersonality: false,
+            isDefault: false,
+            upgrade: false,
+            source: 'anthropic-models-api',
+          },
+        ],
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+      },
+      runtimeCapabilities: {
+        modelCatalog: { dynamic: true, source: 'anthropic-models-api' },
+        reasoningEffort: {
+          supported: true,
+          values: ['low', 'medium', 'high'],
+          configPassthrough: true,
+        },
+        fastMode: {
+          supported: true,
+          available: true,
+          reason: null,
+          source: 'runtime',
+        },
+      },
+    };
+
+    const materializedMembers = await (svc as any).materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: tempRoot,
+      members: [{ name: 'jack', providerId: 'anthropic', model: 'haiku' }, { name: 'alice' }],
+      defaults: {
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+      },
+    });
+
+    expect(materializedMembers).toEqual([
+      { name: 'jack', providerId: 'anthropic', model: 'haiku', effort: undefined },
+      { name: 'alice', providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+    ]);
+
+    expect(() =>
+      (svc as any).validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+        limitContext: false,
+        facts,
+      })
+    ).not.toThrow();
+
+    for (const member of materializedMembers) {
+      expect(() =>
+        (svc as any).validateRuntimeLaunchSelection({
+          actorLabel: `Member ${member.name}`,
+          providerId: member.providerId,
+          model: member.model,
+          effort: member.effort,
+          limitContext: false,
+          facts,
+        })
+      ).not.toThrow();
+    }
+
+    expect(() =>
+      (svc as any).validateRuntimeLaunchSelection({
+        actorLabel: 'Member jack',
+        providerId: 'anthropic',
+        model: 'haiku',
+        effort: 'low',
+        limitContext: false,
+        facts,
+      })
+    ).toThrow('does not support Anthropic effort "low" in the current runtime');
   });
 
   afterEach(async () => {
@@ -616,15 +898,14 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       diagnostics: [],
       warnings: [],
     }));
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -659,6 +940,78 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         runtimeOnly: false,
       })
     );
+  });
+
+  it('uses OpenCode access-denied warnings as the model-less prepare failure message', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: [],
+      warnings: ['EPERM: operation not permitted, mkdir C:\\Program Files\\locked-project'],
+    }));
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+  });
+
+  it('keeps OpenCode access-denied selected-model failures provider-scoped', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'unknown_error',
+      retryable: false,
+      diagnostics: ['EPERM: operation not permitted, mkdir C:\\Program Files\\locked-project'],
+      warnings: [],
+    }));
+    const adapter: TeamLaunchRuntimeAdapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    };
+    const registry = new TeamRuntimeAdapterRegistry([adapter]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE);
+    expect(result.details).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+    expect(result.warnings).toEqual([OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE]);
+    expect(result.issues).toEqual([
+      {
+        providerId: 'opencode',
+        scope: 'provider',
+        severity: 'blocking',
+        code: 'unknown_error',
+        message: OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+      },
+    ]);
   });
 
   it('coalesces duplicate OpenCode compatibility preflight requests while prepare is in flight', async () => {
@@ -801,7 +1154,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
-  it('runs OpenCode model verification with bounded concurrency and preserves model order', async () => {
+  it('serializes OpenCode model verification and preserves model order', async () => {
     const started: string[] = [];
     let activeCount = 0;
     let maxActiveCount = 0;
@@ -859,11 +1212,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       ],
     });
 
+    await vi.waitFor(() => expect(started).toEqual(['opencode/minimax-m2.5-free']));
+    expect(maxActiveCount).toBe(1);
+    expect(releases.has('opencode/nemotron-3-super-free')).toBe(false);
+    expect(releases.has('opencode/big-pickle')).toBe(false);
+
+    releases.get('opencode/minimax-m2.5-free')?.();
     await vi.waitFor(() =>
       expect(started).toEqual(['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'])
     );
-    expect(maxActiveCount).toBe(2);
-    expect(releases.has('opencode/big-pickle')).toBe(false);
+    expect(maxActiveCount).toBe(1);
 
     releases.get('opencode/nemotron-3-super-free')?.();
     await vi.waitFor(() =>
@@ -873,10 +1231,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         'opencode/big-pickle',
       ])
     );
-    expect(maxActiveCount).toBe(2);
+    expect(maxActiveCount).toBe(1);
 
     releases.get('opencode/big-pickle')?.();
-    releases.get('opencode/minimax-m2.5-free')?.();
 
     const result = await resultPromise;
 
@@ -886,7 +1243,120 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       'Selected model opencode/nemotron-3-super-free verified for launch.',
     ]);
     expect(result.warnings).toEqual([
-      'Selected model opencode/big-pickle could not be verified. provider busy',
+      'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
+    ]);
+    expect(result.issues).toEqual([
+      {
+        providerId: 'opencode',
+        scope: 'provider',
+        severity: 'warning',
+        code: 'provider_busy',
+        message:
+          'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
+      },
+    ]);
+  });
+
+  it('stops OpenCode deep model verification after the first busy host result', async () => {
+    const prepare = vi.fn(async (input: { model?: string }) => {
+      if (input.model === 'opencode/minimax-m2.5-free') {
+        return {
+          ok: false as const,
+          providerId: 'opencode' as const,
+          reason: 'provider_busy',
+          retryable: true,
+          diagnostics: ['OpenCode session status busy'],
+          warnings: [],
+        };
+      }
+
+      return {
+        ok: true as const,
+        providerId: 'opencode' as const,
+        modelId: input.model ?? null,
+        diagnostics: [],
+        warnings: [],
+      };
+    });
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: [
+        'opencode/minimax-m2.5-free',
+        'opencode/nemotron-3-super-free',
+        'opencode/big-pickle',
+      ],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'opencode/minimax-m2.5-free',
+        runtimeOnly: false,
+      })
+    );
+    expect(result.ready).toBe(true);
+    expect(result.details).toBeUndefined();
+    expect(result.warnings).toEqual([
+      'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
+    ]);
+  });
+
+  it('does not mask OpenCode model verification timeouts as busy deferred checks', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'model_unavailable' as const,
+      retryable: true,
+      diagnostics: ['OpenCode session status busy', 'Model verification timed out'],
+      warnings: [],
+    }));
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(result.ready).toBe(true);
+    expect(result.warnings).toEqual([
+      'Selected model opencode/big-pickle could not be verified. Model verification timed out',
+    ]);
+    expect(result.warnings?.join('\n')).not.toContain('verification deferred');
+    expect(result.issues).toEqual([
+      {
+        providerId: 'opencode',
+        modelId: 'opencode/big-pickle',
+        scope: 'model',
+        severity: 'warning',
+        code: 'model_unavailable',
+        message: 'Model verification timed out',
+      },
     ]);
   });
 
@@ -1131,6 +1601,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   it('keeps deep OpenCode runtime failures provider-scoped instead of model-scoped', async () => {
     const runtimeFailure =
       'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?';
+    const normalizedRuntimeFailure =
+      'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?';
     const prepare = vi.fn(async () => ({
       ok: false as const,
       providerId: 'opencode' as const,
@@ -1159,16 +1631,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result.ready).toBe(false);
-    expect(result.message).toBe(runtimeFailure);
-    expect(result.details).toEqual([runtimeFailure]);
-    expect(result.warnings).toEqual([runtimeFailure]);
+    expect(result.message).toBe(normalizedRuntimeFailure);
+    expect(result.details).toEqual([normalizedRuntimeFailure]);
+    expect(result.warnings).toEqual([normalizedRuntimeFailure]);
     expect(result.issues).toEqual([
       {
         providerId: 'opencode',
         scope: 'provider',
         severity: 'blocking',
         code: 'mcp_unavailable',
-        message: runtimeFailure,
+        message: normalizedRuntimeFailure,
       },
     ]);
   });
@@ -1217,6 +1689,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   });
 
   it('keeps shared OpenCode MCP compatibility failures provider-scoped', async () => {
+    const normalizedRuntimeFailure =
+      'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?';
     const prepare = vi.fn(async () => ({
       ok: false as const,
       providerId: 'opencode' as const,
@@ -1247,25 +1721,60 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result.ready).toBe(false);
-    expect(result.message).toBe(
-      'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?'
-    );
-    expect(result.details).toEqual([
-      'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
-    ]);
-    expect(result.warnings).toEqual([
-      'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
-    ]);
+    expect(result.message).toBe(normalizedRuntimeFailure);
+    expect(result.details).toEqual([normalizedRuntimeFailure]);
+    expect(result.warnings).toEqual([normalizedRuntimeFailure]);
     expect(result.issues).toEqual([
       {
         providerId: 'opencode',
         scope: 'provider',
         severity: 'blocking',
         code: 'mcp_unavailable',
-        message:
-          'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?',
+        message: normalizedRuntimeFailure,
       },
     ]);
+  });
+
+  it('restores OpenCode MCP context when the bridge reports only a plain connect failure', async () => {
+    const normalizedRuntimeFailure =
+      'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge.';
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'mcp_unavailable',
+      retryable: true,
+      diagnostics: ['Unable to connect. Is the computer able to access the url?'],
+      warnings: [],
+    }));
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'compatibility',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(normalizedRuntimeFailure);
+    expect(result.details).toEqual([normalizedRuntimeFailure]);
+    expect(result.issues?.[0]).toMatchObject({
+      providerId: 'opencode',
+      scope: 'provider',
+      severity: 'blocking',
+      code: 'mcp_unavailable',
+      message: normalizedRuntimeFailure,
+    });
   });
 
   it('normalizes unexpected OpenCode model prepare exceptions into a blocking diagnostic', async () => {
@@ -2045,6 +2554,81 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(spawnProbe).not.toHaveBeenCalled();
   });
 
+  it('allows selected Anthropic effort checks when model catalog is missing but model is known', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
+      env: {
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      authSource: 'none',
+      geminiRuntimeAuth: null,
+      providerArgs: [],
+    });
+    vi.spyOn(svc as any, 'readRuntimeProviderLaunchFacts').mockResolvedValue({
+      defaultModel: null,
+      modelIds: new Set(['claude-opus-4-6[1m]']),
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      providerStatus: null,
+    });
+
+    const result = await (svc as any).verifySelectedProviderModels({
+      claudePath: '/fake/claude',
+      cwd: tempRoot,
+      providerId: 'anthropic',
+      modelIds: ['claude-opus-4-6[1m]'],
+      modelChecks: [{ modelId: 'claude-opus-4-6[1m]', effort: 'medium' }],
+      limitContext: false,
+    });
+
+    expect(result.details).toEqual([
+      'Selected model claude-opus-4-6[1m] is available for launch.',
+    ]);
+    expect(result.blockingMessages).toEqual([]);
+  });
+
+  it('blocks selected Anthropic effort checks when model catalog cannot verify an unknown model', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
+      env: {
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      authSource: 'none',
+      geminiRuntimeAuth: null,
+      providerArgs: [],
+    });
+    vi.spyOn(svc as any, 'readRuntimeProviderLaunchFacts').mockResolvedValue({
+      defaultModel: null,
+      modelIds: new Set(['claude-experimental-5']),
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      providerStatus: null,
+    });
+
+    const result = await (svc as any).verifySelectedProviderModels({
+      claudePath: '/fake/claude',
+      cwd: tempRoot,
+      providerId: 'anthropic',
+      modelIds: ['claude-experimental-5'],
+      modelChecks: [{ modelId: 'claude-experimental-5', effort: 'medium' }],
+      limitContext: false,
+    });
+
+    expect(result.details).toEqual([]);
+    expect(result.blockingMessages).toEqual([
+      'Selected model claude-experimental-5 is unavailable. Anthropic runtime catalog was unavailable, so effort "medium" for claude-experimental-5 could not be verified.',
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        providerId: 'anthropic',
+        modelId: 'claude-experimental-5',
+        code: 'effort_unverified',
+      }),
+    ]);
+  });
+
   it('augments dynamic Codex compatibility checks with the app-server catalog', async () => {
     const svc = new TeamProvisioningService();
     vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
@@ -2398,9 +2982,335 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     vi.mocked(console.warn).mockClear();
   });
 
+  it('resolves the OpenCode default model when CLI JSON is surrounded by noisy structured logs', async () => {
+    const modelList = {
+      schemaVersion: 1,
+      providers: {
+        opencode: {
+          defaultModel: 'opencode/big-pickle',
+          models: [
+            {
+              id: 'opencode/big-pickle',
+              label: 'Big Pickle',
+              description: 'Default OpenCode free model',
+            },
+            {
+              id: 'opencode/minimax-m2.5-free',
+              label: 'MiniMax M2.5 Free',
+              description: 'Free OpenCode model',
+            },
+          ],
+        },
+      },
+    };
+    execCliMock.mockResolvedValue({
+      stdout: [
+        'debug {"event":"starting model list"}',
+        JSON.stringify(modelList),
+        'debug {"providers":"log-only"}',
+      ].join('\n'),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
+  it('falls back to OpenCode runtime status when the default model list is truncated', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        return {
+          stdout: [
+            '{',
+            '  "schemaVersion": 1,',
+            '  "providers": {',
+            '    "opencode": {',
+            '      "defaultModel": "opencode/big-pickle",',
+            '      "models": [',
+            '        {"id":"opencode/big-pickle","label":"Big Pickle","description":"Free"}',
+          ].join('\n'),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      if (args[0] === 'runtime' && args[1] === 'status' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: new Date(0).toISOString(),
+                  staleAt: new Date(60_000).toISOString(),
+                  defaultModelId: 'opencode/big-pickle',
+                  defaultLaunchModel: 'opencode/big-pickle',
+                  models: [
+                    {
+                      id: 'opencode/big-pickle',
+                      launchModel: 'opencode/big-pickle',
+                      displayName: 'Big Pickle',
+                      hidden: false,
+                      supportedReasoningEfforts: [],
+                      defaultReasoningEffort: null,
+                      inputModalities: ['text'],
+                      supportsPersonality: true,
+                      isDefault: true,
+                      upgrade: false,
+                      source: 'app-server',
+                      badgeLabel: 'Free',
+                      statusMessage: null,
+                      metadata: { free: true },
+                    },
+                  ],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
+  it('falls back to OpenCode runtime status when the default model list command fails', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        const error = new Error('stdout maxBuffer exceeded');
+        Object.assign(error, { stdout: '{"providers":', stderr: '' });
+        throw error;
+      }
+      if (args[0] === 'runtime' && args[1] === 'status' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: new Date(0).toISOString(),
+                  staleAt: new Date(60_000).toISOString(),
+                  defaultModelId: 'opencode/big-pickle',
+                  defaultLaunchModel: 'opencode/big-pickle',
+                  models: [],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
+  it('materializes pure OpenCode runtime adapter Default selections before launch', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providers: {
+              opencode: {
+                defaultModel: 'opencode/big-pickle',
+                models: [
+                  {
+                    id: 'opencode/big-pickle',
+                    label: 'Big Pickle',
+                    description: 'Free OpenCode model',
+                  },
+                ],
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithMaterializer = svc as unknown as {
+      materializeOpenCodeRuntimeAdapterDefaults: (params: {
+        request: {
+          teamName: string;
+          cwd: string;
+          providerId: 'opencode';
+          skipPermissions: boolean;
+          model?: string;
+        };
+        members: Array<{
+          name: string;
+          providerId?: 'opencode';
+          model?: string;
+        }>;
+      }) => Promise<{
+        request: { model?: string };
+        members: Array<{ name: string; model?: string }>;
+      }>;
+    };
+
+    const result = await serviceWithMaterializer.materializeOpenCodeRuntimeAdapterDefaults({
+      request: {
+        teamName: 'default-opencode-team',
+        cwd: tempRoot,
+        providerId: 'opencode',
+        skipPermissions: true,
+      },
+      members: [
+        {
+          name: 'atlas',
+          providerId: 'opencode',
+        },
+      ],
+    });
+
+    expect(result.request.model).toBe('opencode/big-pickle');
+    expect(result.members).toEqual([
+      {
+        name: 'atlas',
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        effort: undefined,
+      },
+    ]);
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/fake/claude',
+      ['model', 'list', '--json', '--provider', 'opencode'],
+      expect.objectContaining({ cwd: tempRoot })
+    );
+  });
+
+  it('materializes pure OpenCode runtime adapter root model from a saved teammate model', async () => {
+    const svc = new TeamProvisioningService();
+    const serviceWithMaterializer = svc as unknown as {
+      materializeOpenCodeRuntimeAdapterDefaults: (params: {
+        request: {
+          teamName: string;
+          cwd: string;
+          providerId: 'opencode';
+          skipPermissions: boolean;
+          model?: string;
+        };
+        members: Array<{
+          name: string;
+          providerId?: 'opencode';
+          model?: string;
+        }>;
+      }) => Promise<{
+        request: { model?: string };
+        members: Array<{ name: string; model?: string }>;
+      }>;
+    };
+
+    const result = await serviceWithMaterializer.materializeOpenCodeRuntimeAdapterDefaults({
+      request: {
+        teamName: 'saved-opencode-team',
+        cwd: tempRoot,
+        providerId: 'opencode',
+        skipPermissions: true,
+      },
+      members: [
+        {
+          name: 'atlas',
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+        },
+      ],
+    });
+
+    expect(result.request.model).toBe('opencode/big-pickle');
+    expect(result.members[0]?.model).toBe('opencode/big-pickle');
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
   it('maps ANTHROPIC_AUTH_TOKEN into ANTHROPIC_API_KEY for headless preflight', async () => {
     const svc = new TeamProvisioningService();
-    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
       ANTHROPIC_AUTH_TOKEN: 'proxy-token',
       PATH: '/usr/bin',
       SHELL: '/bin/zsh',
@@ -2412,9 +3322,63 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.env.ANTHROPIC_API_KEY).toBe('proxy-token');
   });
 
+  it('preserves Anthropic-compatible Ollama auth token without mapping it into ANTHROPIC_API_KEY', async () => {
+    const svc = new TeamProvisioningService();
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
+      ANTHROPIC_BASE_URL: 'http://localhost:11434',
+      ANTHROPIC_AUTH_TOKEN: 'ollama',
+      ANTHROPIC_API_KEY: '',
+      PATH: '/usr/bin',
+      SHELL: '/bin/zsh',
+    });
+
+    const result = await (svc as any).buildProvisioningEnv();
+
+    expect(result.authSource).toBe('anthropic_auth_token');
+    expect(result.env.ANTHROPIC_BASE_URL).toBe('http://localhost:11434');
+    expect(result.env.ANTHROPIC_AUTH_TOKEN).toBe('ollama');
+    expect(result.env.ANTHROPIC_API_KEY).toBe('');
+  });
+
+  it('does not materialize the Anthropic API-key helper for compatible endpoints without a token', async () => {
+    const svc = new TeamProvisioningService();
+    const getConfiguredAnthropicApiKeyForTeamRuntime = vi.fn().mockResolvedValue(null);
+    (svc as any).providerConnectionService = {
+      getConfiguredAnthropicApiKeyForTeamRuntime,
+      augmentConfiguredConnectionEnv: vi.fn(),
+    };
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: {
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_API_KEY: '',
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      connectionIssues: {},
+      providerArgs: [],
+    });
+
+    const result = await (svc as any).buildProvisioningEnv('anthropic', undefined, {
+      teamRuntimeAuth: {
+        allowAnthropicApiKeyHelper: true,
+        teamName: 'local-team',
+        authMaterialId: 'auth-local',
+      },
+    });
+
+    expect(getConfiguredAnthropicApiKeyForTeamRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_API_KEY: '',
+      })
+    );
+    expect(result.authSource).toBe('none');
+    expect(result.providerArgs).toEqual([]);
+  });
+
   it('prefers explicit ANTHROPIC_API_KEY over ANTHROPIC_AUTH_TOKEN', async () => {
     const svc = new TeamProvisioningService();
-    vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
+    vi.mocked(resolveInteractiveShellEnvBestEffort).mockResolvedValue({
       ANTHROPIC_API_KEY: 'real-key',
       ANTHROPIC_AUTH_TOKEN: 'proxy-token',
       PATH: '/usr/bin',
@@ -2425,6 +3389,61 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     expect(result.authSource).toBe('anthropic_api_key');
     expect(result.env.ANTHROPIC_API_KEY).toBe('real-key');
+  });
+
+  it('does not leak Vitest NODE_ENV into real team runtime children', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'test';
+    try {
+      const svc = new TeamProvisioningService();
+      const buildProvisioningEnv = (
+        svc as unknown as {
+          buildProvisioningEnv(): Promise<{ env: NodeJS.ProcessEnv }>;
+        }
+      ).buildProvisioningEnv.bind(svc);
+
+      const result = await buildProvisioningEnv();
+
+      expect(result.env.NODE_ENV).toBe('development');
+      expect(buildProviderAwareCliEnvMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          env: expect.objectContaining({ NODE_ENV: 'development' }),
+        })
+      );
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    }
+  });
+
+  it('uses no-background best-effort shell env for provisioning launch env', async () => {
+    const svc = new TeamProvisioningService();
+    const buildProvisioningEnv = (
+      svc as unknown as {
+        buildProvisioningEnv(): Promise<{ env: NodeJS.ProcessEnv }>;
+      }
+    ).buildProvisioningEnv.bind(svc);
+
+    await buildProvisioningEnv();
+
+    const [options] = vi.mocked(resolveInteractiveShellEnvBestEffort).mock.calls.at(-1) ?? [];
+    expect(options).toMatchObject({
+      source: 'team-provisioning',
+      timeoutMs: 1_500,
+      background: false,
+    });
+    expect(options?.fallbackEnv).toBe(process.env);
+    expect(buildProviderAwareCliEnvMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        shellEnv: expect.objectContaining({
+          PATH: '/usr/bin',
+          SHELL: '/bin/zsh',
+        }),
+      })
+    );
   });
 
   it('adds member-work-sync turn-settled spool env for Codex provisioning', async () => {
@@ -2439,6 +3458,42 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     expect(result.authSource).toBe('codex_runtime');
     expect(result.env.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT).toBe('/tmp/runtime-hooks');
+  });
+
+  it('materializes Anthropic turn-settled hook settings instead of passing inline JSON', async () => {
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeTurnSettledHookSettingsProvider(async ({ provider }) =>
+      provider === 'claude'
+        ? {
+            hooks: {
+              Stop: [
+                {
+                  matcher: '',
+                  hooks: [{ type: 'command', command: '/bin/true # test-hook' }],
+                },
+              ],
+            },
+          }
+        : null
+    );
+
+    const result = await (svc as any).buildTeamRuntimeLaunchArgsPlan({
+      teamName: 'anthropic-hook-settings-team',
+      providerId: 'anthropic',
+      launchIdentity: null,
+      envResolution: { providerArgs: [] },
+      extraArgs: [],
+      includeAnthropicHelper: false,
+      contextLabel: 'Team launch',
+    });
+
+    expect(result.fastModeArgs).toEqual([]);
+    expect(result.runtimeTurnSettledHookArgs).toEqual([]);
+    expect(result.settingsArgs[0]).toBe('--settings');
+    const settingsPath = result.settingsArgs[1];
+    expect(settingsPath).toContain('agent-teams-runtime-settings');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    expect(settings.hooks.Stop[0].hooks[0].command).toBe('/bin/true # test-hook');
   });
 
   it('adds Codex turn-settled env when Codex is only a secondary member provider', async () => {
@@ -3073,7 +4128,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         limitContext: false,
         facts,
       })
-    ).toThrow('does not support it in the current runtime');
+    ).toThrow('does not support Anthropic effort "max" in the current runtime');
 
     expect(() =>
       (svc as any).validateRuntimeLaunchSelection({
@@ -3085,6 +4140,75 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         facts,
       })
     ).toThrow('enables Anthropic Fast mode');
+  });
+
+  it('allows known Anthropic effort when runtime catalog is unavailable', () => {
+    const svc = new TeamProvisioningService();
+    const facts = {
+      defaultModel: null,
+      modelIds: new Set<string>(),
+      modelCatalog: null,
+      runtimeCapabilities: {
+        reasoningEffort: {
+          supported: true,
+          values: ['low', 'medium', 'high', 'max'],
+          configPassthrough: true,
+        },
+      },
+    };
+
+    expect(() =>
+      (svc as any).validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'anthropic',
+        model: 'claude-opus-4-6[1m]',
+        effort: 'medium',
+        limitContext: false,
+        facts,
+      })
+    ).not.toThrow();
+  });
+
+  it('allows known Anthropic effort when catalog is missing and model list only exposes the base launch id', () => {
+    const svc = new TeamProvisioningService();
+    const facts = {
+      defaultModel: null,
+      modelIds: new Set(['claude-opus-4-6']),
+      modelCatalog: null,
+      runtimeCapabilities: null,
+    };
+
+    expect(() =>
+      (svc as any).validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'anthropic',
+        model: 'claude-opus-4-6[1m]',
+        effort: 'medium',
+        limitContext: false,
+        facts,
+      })
+    ).not.toThrow();
+  });
+
+  it('reports unknown Anthropic effort support as unverified when runtime catalog is unavailable', () => {
+    const svc = new TeamProvisioningService();
+    const facts = {
+      defaultModel: null,
+      modelIds: new Set<string>(),
+      modelCatalog: null,
+      runtimeCapabilities: null,
+    };
+
+    expect(() =>
+      (svc as any).validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'anthropic',
+        model: 'claude-experimental-5',
+        effort: 'medium',
+        limitContext: false,
+        facts,
+      })
+    ).toThrow('could not be verified');
   });
 
   it('emits a lead-message refresh after provisioning reaches ready', async () => {

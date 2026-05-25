@@ -6,6 +6,7 @@ import {
   type ExecOptions,
   spawn,
   type SpawnOptions,
+  spawnSync,
 } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
@@ -21,14 +22,20 @@ function execFileAsync(
   options: ExecFileOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    const { timeout, killSignal, ...execOptions } = options;
+    const timeoutMs = typeof timeout === 'number' && timeout > 0 ? timeout : 0;
+    const timeoutSignal = normalizeKillSignal(killSignal);
     let child: ChildProcess | null = null;
     let settled = false;
-    const cleanup = (): void => {
-      untrackCliProcess(child);
-    };
-    child = execFile(cmd, args, options, (err, stdout, stderr) => {
+    let stdoutText = '';
+    let stderrText = '';
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    child = execFile(cmd, args, execOptions, (err, stdout, stderr) => {
+      if (settled) {
+        return;
+      }
       settled = true;
-      cleanup();
+      timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
       if (err) {
         const normalizedError =
           err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error');
@@ -41,6 +48,33 @@ function execFileAsync(
     });
     if (!settled) {
       trackCliProcess(child);
+      if (timeoutMs > 0) {
+        child.stdout?.on('data', (chunk: Buffer | string) => {
+          stdoutText += chunk.toString();
+        });
+        child.stderr?.on('data', (chunk: Buffer | string) => {
+          stderrText += chunk.toString();
+        });
+        timeoutHandle = setTimeout(() => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
+          killProcessTree(child, timeoutSignal);
+          const error = new Error(
+            `Command timed out after ${timeoutMs}ms: ${cmd} ${args.join(' ')}`
+          );
+          Object.assign(error, {
+            killed: true,
+            signal: timeoutSignal,
+            stdout: stdoutText,
+            stderr: stderrText,
+          });
+          reject(error);
+        }, timeoutMs);
+        timeoutHandle.unref?.();
+      }
     }
   });
 }
@@ -55,15 +89,21 @@ function execShellAsync(
   options: ExecOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    const { timeout, killSignal, ...execOptions } = options;
+    const timeoutMs = typeof timeout === 'number' && timeout > 0 ? timeout : 0;
+    const timeoutSignal = normalizeKillSignal(killSignal);
     let child: ChildProcess | null = null;
     let settled = false;
-    const cleanup = (): void => {
-      untrackCliProcess(child);
-    };
+    let stdoutText = '';
+    let stderrText = '';
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     // eslint-disable-next-line sonarjs/os-command, security/detect-child-process -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-    child = exec(cmd, options, (err, stdout, stderr) => {
+    child = exec(cmd, execOptions, (err, stdout, stderr) => {
+      if (settled) {
+        return;
+      }
       settled = true;
-      cleanup();
+      timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
       if (err)
         reject(
           err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error')
@@ -72,8 +112,44 @@ function execShellAsync(
     });
     if (!settled) {
       trackCliProcess(child);
+      if (timeoutMs > 0) {
+        child.stdout?.on('data', (chunk: Buffer | string) => {
+          stdoutText += chunk.toString();
+        });
+        child.stderr?.on('data', (chunk: Buffer | string) => {
+          stderrText += chunk.toString();
+        });
+        timeoutHandle = setTimeout(() => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
+          killProcessTree(child, timeoutSignal);
+          const error = new Error(`Command timed out after ${timeoutMs}ms: ${cmd}`);
+          Object.assign(error, {
+            killed: true,
+            signal: timeoutSignal,
+            stdout: stdoutText,
+            stderr: stderrText,
+          });
+          reject(error);
+        }, timeoutMs);
+        timeoutHandle.unref?.();
+      }
     }
   });
+}
+
+function cleanupTimedCliProcess(
+  child: ChildProcess | null,
+  timeoutHandle: ReturnType<typeof setTimeout> | null
+): null {
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+  }
+  untrackCliProcess(child);
+  return null;
 }
 
 /**
@@ -155,6 +231,20 @@ function resolveNpmNodeShim(content: string, launcherDir: string): DirectWindows
   };
 }
 
+function resolveNpmNativeShim(content: string, launcherDir: string): DirectWindowsLauncher | null {
+  const nativeTarget = /(?:^|[&|])\s*"([^"]+\.(?:exe|com))"\s+%\*/im.exec(content)?.[1];
+  if (!nativeTarget) {
+    return null;
+  }
+
+  const target = resolveCmdPathTemplate(nativeTarget, launcherDir);
+  if (!existsSync(target)) {
+    return null;
+  }
+
+  return { command: target, argsPrefix: [] };
+}
+
 /**
  * Some Windows launchers are thin wrappers around a real JS entrypoint.
  * Running that entrypoint directly with an argv array avoids cmd.exe's
@@ -169,7 +259,9 @@ function resolveDirectWindowsLauncher(binaryPath: string): DirectWindowsLauncher
     const content = readFileSync(binaryPath, 'utf8');
     const launcherDir = path.dirname(binaryPath);
     return (
-      resolveGeneratedBunLauncher(content, launcherDir) ?? resolveNpmNodeShim(content, launcherDir)
+      resolveGeneratedBunLauncher(content, launcherDir) ??
+      resolveNpmNodeShim(content, launcherDir) ??
+      resolveNpmNativeShim(content, launcherDir)
     );
   } catch {
     return null;
@@ -215,7 +307,7 @@ const CLI_ENV_DEFAULTS: Record<string, string> = {
 
 const activeCliProcesses = new Set<ChildProcess>();
 
-function untrackCliProcess(child: ChildProcess | null): void {
+export function untrackCliProcess(child: ChildProcess | null): void {
   if (child) {
     activeCliProcesses.delete(child);
   }
@@ -357,8 +449,8 @@ export function spawnCli(
  * `cmd.exe` shell, leaving the actual process (e.g. `claude.cmd`) orphaned.
  * `taskkill /T /F /PID` recursively kills the entire process tree.
  *
- * On macOS/Linux, processes are killed directly (no shell wrapper), so
- * the standard `child.kill(signal)` works correctly.
+ * On macOS/Linux, kill the child and descendants by PID so shell wrappers
+ * and spawned grandchildren do not survive a timeout or team stop.
  */
 export function killProcessTree(
   child: ChildProcess | null | undefined,
@@ -385,5 +477,66 @@ export function killProcessTree(
     }
   }
 
-  child.kill(signal);
+  const childPid = child.pid;
+  const descendants = getDescendantProcessIds(childPid);
+  const targetSignal = signal ?? 'SIGTERM';
+  for (const pid of [childPid, ...descendants.reverse()]) {
+    try {
+      process.kill(pid, targetSignal);
+    } catch {
+      // Best-effort - process may have already exited.
+    }
+  }
+}
+
+function normalizeKillSignal(signal: ExecFileOptions['killSignal']): NodeJS.Signals {
+  return typeof signal === 'string' ? signal : 'SIGTERM';
+}
+
+function getDescendantProcessIds(parentPid: number): number[] {
+  if (process.platform === 'win32') {
+    return [];
+  }
+
+  try {
+    const result = spawnSync('ps', ['-axo', 'pid=,ppid='], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
+      return [];
+    }
+
+    const childrenByParent = new Map<number, number[]>();
+    for (const line of result.stdout.split('\n')) {
+      const match = /^(\d+)\s+(\d+)$/.exec(line.trim());
+      if (!match) {
+        continue;
+      }
+      const pid = Number(match[1]);
+      const ppid = Number(match[2]);
+      const children = childrenByParent.get(ppid);
+      if (children) {
+        children.push(pid);
+      } else {
+        childrenByParent.set(ppid, [pid]);
+      }
+    }
+
+    const descendants: number[] = [];
+    const stack = [...(childrenByParent.get(parentPid) ?? [])];
+    const seen = new Set<number>();
+    while (stack.length > 0) {
+      const pid = stack.pop();
+      if (!pid || seen.has(pid) || pid === process.pid) {
+        continue;
+      }
+      seen.add(pid);
+      descendants.push(pid);
+      stack.push(...(childrenByParent.get(pid) ?? []));
+    }
+    return descendants;
+  } catch {
+    return [];
+  }
 }

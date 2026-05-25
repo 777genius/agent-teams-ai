@@ -7,9 +7,13 @@ import path from 'node:path';
 const CHILD_CLOSE_GRACE_MS = 3_000;
 const CHILD_FORCE_CLOSE_GRACE_MS = 1_000;
 const TASKKILL_TIMEOUT_MS = 5_000;
+const OPENCODE_HEALTH_FETCH_TIMEOUT_MS = 1_000;
 
 export async function preflightOpenCodeLiveEnvironment(input) {
   const repoRoot = input.repoRoot;
+  const requiredModels = Array.isArray(input.requiredModels)
+    ? input.requiredModels.map((model) => String(model).trim()).filter(Boolean)
+    : [];
   const opencodeBin = process.env.OPENCODE_BIN?.trim() || '/opt/homebrew/bin/opencode';
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-live-preflight-'));
   const xdgDataHome = path.join(tempRoot, 'xdg-data');
@@ -27,6 +31,14 @@ export async function preflightOpenCodeLiveEnvironment(input) {
     const models = runOpenCodeCommand(opencodeBin, ['models'], repoRoot, env);
     if (!models.ok) {
       return skip(`opencode models failed: ${models.output}`);
+    }
+    const missingModels = findMissingOpenCodeModels(models.output, requiredModels);
+    if (missingModels.length > 0) {
+      return skip(
+        `opencode models missing selected model(s): ${missingModels.join(', ')}. Available: ${compactOutput(
+          parseOpenCodeModels(models.output).join(', ') || 'none'
+        )}`
+      );
     }
 
     const agents = runOpenCodeCommand(opencodeBin, ['agent', 'list'], repoRoot, env);
@@ -67,12 +79,25 @@ function runOpenCodeCommand(opencodeBin, args, cwd, env) {
     maxBuffer: 256_000,
   });
   if (result.status === 0) {
-    return { ok: true, output: '' };
+    return { ok: true, output: result.stdout || '' };
   }
   return {
     ok: false,
     output: compactOutput(result.stderr || result.stdout || result.error?.message || 'unknown'),
   };
+}
+
+function parseOpenCodeModels(output) {
+  return output
+    .split(/\s+/)
+    .map((model) => model.trim())
+    .filter(Boolean);
+}
+
+function findMissingOpenCodeModels(output, requiredModels) {
+  if (requiredModels.length === 0) return [];
+  const available = new Set(parseOpenCodeModels(output));
+  return requiredModels.filter((model) => !available.has(model));
 }
 
 function canBindLoopback() {
@@ -125,13 +150,12 @@ async function canStartOpenCodeHost(opencodeBin, cwd, env) {
         return { ok: false, reason: output || `process exited with code ${child.exitCode}` };
       }
       try {
-        const response = await fetch(`http://127.0.0.1:${port}/global/health`);
-        if (response.ok) {
-          const data = await response.json().catch(() => ({}));
-          if (data?.healthy === true) {
-            return { ok: true };
-          }
+        const response = await fetchOpenCodeHealth(port);
+        if (isHealthyOpenCodeHostResponse(response)) {
+          response.body?.cancel().catch(() => undefined);
+          return { ok: true };
         }
+        response.body?.cancel().catch(() => undefined);
       } catch {
         // Host is still starting.
       }
@@ -141,6 +165,22 @@ async function canStartOpenCodeHost(opencodeBin, cwd, env) {
   } finally {
     await stopChild(child);
   }
+}
+
+async function fetchOpenCodeHealth(port) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OPENCODE_HEALTH_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(`http://127.0.0.1:${port}/global/health`, {
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function isHealthyOpenCodeHostResponse(response) {
+  return response.ok;
 }
 
 async function stopChild(child, options = {}) {
@@ -271,6 +311,9 @@ function compactOutput(value) {
 }
 
 export const __opencodeLivePreflightTestHooks = {
+  findMissingOpenCodeModels,
+  isHealthyOpenCodeHostResponse,
+  parseOpenCodeModels,
   stopChild,
   taskkillProcessTree,
 };

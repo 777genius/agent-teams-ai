@@ -3,5 +3,10 @@ packages:
   - mcp-server
   - landing
   - packages/agent-graph
+minimumReleaseAge: 4320
+strictPeerDependencies: true
+peerDependencyRules:
+  allowedVersions:
+    "@nuxt/schema": "3.21.6"
 ignoredBuiltDependencies:
   - esbuild

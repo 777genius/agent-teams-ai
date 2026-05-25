@@ -29,6 +29,7 @@ interface GraphTaskCardProps {
   onRequestChanges?: (taskId: string) => void;
   onCancelTask?: (taskId: string) => void;
   onMoveBackToDone?: (taskId: string) => void;
+  onViewChanges?: (taskId: string) => void;
   onDeleteTask?: (taskId: string) => void;
 }
 
@@ -80,6 +81,7 @@ export const GraphTaskCard = ({
   onRequestChanges,
   onCancelTask,
   onMoveBackToDone,
+  onViewChanges,
   onDeleteTask,
 }: GraphTaskCardProps): React.JSX.Element => {
   const taskId = node.domainRef.kind === 'task' ? node.domainRef.taskId : '';
@@ -143,6 +145,7 @@ export const GraphTaskCard = ({
         onRequestChanges={closeAct(onRequestChanges)}
         onCancelTask={closeAct(onCancelTask)}
         onMoveBackToDone={closeAct(onMoveBackToDone)}
+        onViewChanges={onViewChanges ? closeAct(onViewChanges) : undefined}
         onDeleteTask={onDeleteTask ? closeAct(onDeleteTask) : undefined}
       />
     </div>

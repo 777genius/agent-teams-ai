@@ -1,5 +1,5 @@
 /**
- * Visualization-specific types for Agent Teams UI.
+ * Visualization-specific types for Agent Teams AI.
  *
  * These types are used for waterfall chart visualization
  * and are shared between main and renderer processes.

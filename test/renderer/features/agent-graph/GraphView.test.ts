@@ -1,10 +1,11 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { GraphEdge, GraphNode } from '@claude-teams/agent-graph';
-
 import { getEdgeMidpoint } from '../../../../packages/agent-graph/src/canvas/hit-detection';
+
+import type { GraphEdge, GraphNode } from '@claude-teams/agent-graph';
 
 const hoisted = vi.hoisted(() => ({
   handlePanStart: vi.fn(),
@@ -161,6 +162,42 @@ describe('GraphView pan interactions', () => {
     container.remove();
     HTMLCanvasElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
     vi.unstubAllGlobals();
+  });
+
+  it('starts with static edges hidden by default', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false },
+        })
+      );
+    });
+
+    expect((hoisted.graphControlsProps?.filters as { showEdges: boolean }).showEdges).toBe(false);
+  });
+
+  it('can opt into showing static edges through config', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false, showEdges: true },
+        })
+      );
+    });
+
+    expect((hoisted.graphControlsProps?.filters as { showEdges: boolean }).showEdges).toBe(true);
   });
 
   it('starts panning when dragging from a hit-tested edge instead of getting stuck on edge selection', async () => {

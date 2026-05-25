@@ -176,6 +176,7 @@ export function createMemberWorkSyncFeature(deps: {
   extraBusySignals?: MemberWorkSyncBusySignalPort[];
   proofMissingRecoveryGuard?: MemberWorkSyncProofMissingRecoveryGuardPort;
   nudgeDeliveryWake?: MemberWorkSyncNudgeDeliveryWakePort;
+  resolveControlUrl?: () => Promise<string | null> | string | null;
   reviewPickupDelivery?: MemberWorkSyncReviewPickupDeliveryPort;
   reviewPickupEscalation?: MemberWorkSyncReviewPickupEscalationPort;
   logger?: MemberWorkSyncLoggerPort;
@@ -229,7 +230,11 @@ export function createMemberWorkSyncFeature(deps: {
     busySignals.length === 1
       ? toolActivityBusySignal
       : new CompositeMemberWorkSyncBusySignal(busySignals, deps.logger);
-  const inboxNudge = new TeamInboxMemberWorkSyncNudgeSink();
+  const inboxNudge = new TeamInboxMemberWorkSyncNudgeSink(
+    undefined,
+    undefined,
+    deps.resolveControlUrl
+  );
   const useCaseDeps = {
     clock,
     hash,

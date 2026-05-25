@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -30,12 +31,19 @@ const inputStyle = {
   color: 'var(--color-text)',
 };
 
-const authMethodOptions: readonly { value: SshAuthMethod; label: string }[] = [
-  { value: 'auto', label: 'Auto (from SSH Config)' },
-  { value: 'agent', label: 'SSH Agent' },
-  { value: 'privateKey', label: 'Private Key' },
-  { value: 'password', label: 'Password' },
+const authMethodOptionValues: readonly SshAuthMethod[] = [
+  'auto',
+  'agent',
+  'privateKey',
+  'password',
 ];
+const authMethodLabelKeys = {
+  agent: 'workspaceProfiles.authMethods.agent',
+  auto: 'workspaceProfiles.authMethods.auto',
+  // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- SSH auth method label key, not a credential.
+  password: 'workspaceProfiles.authMethods.password',
+  privateKey: 'workspaceProfiles.authMethods.privateKey',
+} as const satisfies Record<SshAuthMethod, string>;
 
 const defaultForm = {
   name: '',
@@ -47,10 +55,15 @@ const defaultForm = {
 };
 
 export const WorkspaceSection = (): React.JSX.Element => {
+  const { t } = useAppTranslation('settings');
   const [profiles, setProfiles] = useState<SshConnectionProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const authMethodOptions = authMethodOptionValues.map((value) => ({
+    value,
+    label: t(authMethodLabelKeys[value]),
+  }));
 
   // Form state
   const [formName, setFormName] = useState(defaultForm.name);
@@ -146,9 +159,9 @@ export const WorkspaceSection = (): React.JSX.Element => {
     if (!profile) return;
 
     const confirmed = await confirm({
-      title: 'Delete Profile',
-      message: `Are you sure you want to delete "${profile.name}"? This cannot be undone.`,
-      confirmLabel: 'Delete',
+      title: t('workspaceProfiles.deleteConfirm.title'),
+      message: t('workspaceProfiles.deleteConfirm.message', { name: profile.name }),
+      confirmLabel: t('workspaceProfiles.deleteConfirm.confirmLabel'),
       variant: 'danger',
     });
     if (!confirmed) return;
@@ -177,14 +190,14 @@ export const WorkspaceSection = (): React.JSX.Element => {
             className="mb-1 block text-xs"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Name
+            {t('workspaceProfiles.form.name')}
           </label>
           <input
             id="ws-profile-name"
             type="text"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
-            placeholder="My Server"
+            placeholder={t('workspaceProfiles.form.namePlaceholder')}
             className={inputClass}
             style={inputStyle}
           />
@@ -195,14 +208,14 @@ export const WorkspaceSection = (): React.JSX.Element => {
             className="mb-1 block text-xs"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Host
+            {t('workspaceProfiles.form.host')}
           </label>
           <input
             id="ws-profile-host"
             type="text"
             value={formHost}
             onChange={(e) => setFormHost(e.target.value)}
-            placeholder="hostname or IP"
+            placeholder={t('workspaceProfiles.form.hostPlaceholder')}
             className={inputClass}
             style={inputStyle}
           />
@@ -216,7 +229,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
             className="mb-1 block text-xs"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Port
+            {t('workspaceProfiles.form.port')}
           </label>
           <input
             id="ws-profile-port"
@@ -234,14 +247,14 @@ export const WorkspaceSection = (): React.JSX.Element => {
             className="mb-1 block text-xs"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Username
+            {t('workspaceProfiles.form.username')}
           </label>
           <input
             id="ws-profile-username"
             type="text"
             value={formUsername}
             onChange={(e) => setFormUsername(e.target.value)}
-            placeholder="user"
+            placeholder={t('workspaceProfiles.form.usernamePlaceholder')}
             className={inputClass}
             style={inputStyle}
           />
@@ -249,9 +262,8 @@ export const WorkspaceSection = (): React.JSX.Element => {
       </div>
 
       <div>
-        {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- SettingsSelect is a custom dropdown without a native control */}
         <label className="mb-1 block text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Authentication
+          {t('workspaceProfiles.form.authentication')}
         </label>
         <SettingsSelect
           value={formAuthMethod}
@@ -268,7 +280,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
             className="mb-1 block text-xs"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Private Key Path
+            {t('workspaceProfiles.form.privateKeyPath')}
           </label>
           <input
             id="ws-profile-private-key-path"
@@ -284,7 +296,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
 
       {formAuthMethod === 'password' && (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          You will be prompted for the password when connecting.
+          {t('workspaceProfiles.form.passwordPrompt')}
         </p>
       )}
 
@@ -299,7 +311,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
           }}
         >
           <Save className="size-3.5" />
-          Save
+          {t('workspaceProfiles.actions.save')}
         </button>
         <button
           onClick={onCancel}
@@ -310,7 +322,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
           }}
         >
           <X className="size-3.5" />
-          Cancel
+          {t('workspaceProfiles.actions.cancel')}
         </button>
       </div>
     </div>
@@ -318,15 +330,15 @@ export const WorkspaceSection = (): React.JSX.Element => {
 
   return (
     <div className="space-y-6">
-      <SettingsSectionHeader title="Workspace Profiles" />
+      <SettingsSectionHeader title={t('workspaceProfiles.title')} />
       <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-        Save SSH connection profiles for quick reconnection
+        {t('workspaceProfiles.description')}
       </p>
 
       {loading && (
         <div className="flex items-center gap-2 py-4" style={{ color: 'var(--color-text-muted)' }}>
           <Loader2 className="size-4 animate-spin" />
-          <span className="text-sm">Loading profiles...</span>
+          <span className="text-sm">{t('workspaceProfiles.loading')}</span>
         </div>
       )}
 
@@ -339,8 +351,8 @@ export const WorkspaceSection = (): React.JSX.Element => {
           }}
         >
           <Server className="mx-auto mb-2 size-8 opacity-40" />
-          <p className="text-sm">No saved profiles</p>
-          <p className="mt-1 text-xs">Add an SSH profile to connect quickly</p>
+          <p className="text-sm">{t('workspaceProfiles.empty.title')}</p>
+          <p className="mt-1 text-xs">{t('workspaceProfiles.empty.description')}</p>
         </div>
       )}
 
@@ -395,7 +407,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
-                    Edit profile
+                    {t('workspaceProfiles.actions.editProfile')}
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -409,7 +421,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
-                    Delete profile
+                    {t('workspaceProfiles.actions.deleteProfile')}
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -438,7 +450,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
               }}
             >
               <Plus className="size-3.5" />
-              Add Profile
+              {t('workspaceProfiles.actions.addProfile')}
             </button>
           )}
         </div>

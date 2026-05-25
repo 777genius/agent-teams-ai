@@ -2,6 +2,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactGridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { usePersistedGridLayout } from '@renderer/hooks/usePersistedGridLayout';
 import { cn } from '@renderer/lib/utils';
 import { browserGridLayoutRepository } from '@renderer/services/layout-system/BrowserGridLayoutRepository';
@@ -164,6 +165,7 @@ const LoadingKanbanGridLayout = ({
   onPrimaryColumnWidthChange,
   className,
 }: Readonly<LoadingKanbanGridLayoutProps>): ReactElement => {
+  const { t } = useAppTranslation('team');
   const columnMap = new Map(columns.map((column) => [column.id, column]));
   const loadingItems =
     visibleItems.length > 0
@@ -253,17 +255,17 @@ const LoadingKanbanGridLayout = ({
                     ))}
                     {showAddButton ? (
                       <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
-                        Add task
+                        {t('kanban.grid.addTask')}
                       </div>
                     ) : null}
                   </>
                 ) : showAddButton ? (
                   <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
-                    Add task
+                    {t('kanban.grid.addTask')}
                   </div>
                 ) : (
                   <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
-                    No tasks
+                    {t('kanban.grid.noTasks')}
                   </div>
                 )}
               </KanbanColumn>

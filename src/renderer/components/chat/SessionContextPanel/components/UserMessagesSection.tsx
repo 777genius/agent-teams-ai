@@ -4,6 +4,8 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { UserMessageItem } from '../items/UserMessageItem';
 
 import { CollapsibleSection } from './CollapsibleSection';
@@ -25,11 +27,13 @@ export const UserMessagesSection = ({
   onToggle,
   onNavigateToTurn,
 }: Readonly<UserMessagesSectionProps>): React.ReactElement | null => {
+  const { t } = useAppTranslation('common');
+
   if (injections.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="User Messages"
+      title={t('tokens.userMessages')}
       count={injections.length}
       tokenCount={tokenCount}
       isExpanded={isExpanded}

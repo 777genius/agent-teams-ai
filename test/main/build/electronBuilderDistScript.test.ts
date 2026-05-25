@@ -15,8 +15,8 @@ describe('electron-builder dist wrapper', () => {
           '--linux',
           '--publish',
           'never',
-          '--config.productName=Agent-Teams-UI',
-          '--config.linux.desktop.entry.Name=Agent Teams UI',
+          '--config.productName=Agent-Teams-AI',
+          '--config.linux.desktop.entry.Name=Agent Teams AI',
         ],
       },
     ]);
@@ -29,8 +29,8 @@ describe('electron-builder dist wrapper', () => {
           '--linux',
           '--publish',
           'never',
-          '--config.productName=Agent-Teams-UI',
-          '--config.linux.desktop.entry.Name=Agent Teams UI',
+          '--config.productName=Agent-Teams-AI',
+          '--config.linux.desktop.entry.Name=Agent Teams AI',
         ],
       },
     ]);

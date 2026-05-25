@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { getNextSuggestedMemberName } from '@renderer/components/team/members/memberNameSets';
 import {
   buildMembersFromDrafts,
@@ -20,7 +21,7 @@ import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { Loader2 } from 'lucide-react';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
-import type { EffortLevel, TeamProviderId } from '@shared/types';
+import type { EffortLevel, TeamMemberMcpPolicy, TeamProviderId } from '@shared/types';
 
 export interface AddMemberEntry {
   name: string;
@@ -30,6 +31,7 @@ export interface AddMemberEntry {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  mcpPolicy?: TeamMemberMcpPolicy;
 }
 
 interface AddMemberDialogProps {
@@ -51,7 +53,7 @@ interface AddMemberDialogProps {
   }[];
 }
 
-const DIALOG_WIDTH = 'w-[720px]';
+const DIALOG_WIDTH = 'max-w-[52rem]';
 
 function deriveExistingWorktreeDefault(
   existingMembers: AddMemberDialogProps['existingMembers']
@@ -85,6 +87,7 @@ export const AddMemberDialog = ({
   projectPath,
   existingMembers,
 }: AddMemberDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const existingWorktreeDefault = deriveExistingWorktreeDefault(existingMembers);
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(existingWorktreeDefault);
   const [members, setMembers] = useState<MemberDraft[]>(() =>
@@ -153,6 +156,7 @@ export const AddMemberDialog = ({
         providerId: m.providerId,
         model: m.model,
         effort: m.effort,
+        mcpPolicy: m.mcpPolicy,
       }))
     );
   };
@@ -179,10 +183,12 @@ export const AddMemberDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={`${DIALOG_WIDTH} max-w-[90vw]`}>
+      <DialogContent className={DIALOG_WIDTH}>
         <DialogHeader>
-          <DialogTitle>Add Members</DialogTitle>
-          <DialogDescription>Add new members to {teamName}</DialogDescription>
+          <DialogTitle>{t('memberDraft.addMembers.title')}</DialogTitle>
+          <DialogDescription>
+            {t('memberDraft.addMembers.description', { teamName })}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[60vh] overflow-y-auto py-2">
@@ -205,7 +211,7 @@ export const AddMemberDialog = ({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose} disabled={adding}>
-            Cancel
+            {t('dialogs.actions.cancel')}
           </Button>
           <Button type="button" disabled={adding || !hasValidMembers} onClick={handleSubmit}>
             {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}

@@ -145,6 +145,19 @@ function getRowWidths(snapshot: StableSlotLayoutSnapshot): number[] {
     });
 }
 
+function getFramesByRow(
+  snapshot: StableSlotLayoutSnapshot
+): Map<number, StableSlotLayoutSnapshot['memberSlotFrames']> {
+  const rows = new Map<number, StableSlotLayoutSnapshot['memberSlotFrames']>();
+  for (const frame of snapshot.memberSlotFrames) {
+    rows.set(frame.ringIndex, [...(rows.get(frame.ringIndex) ?? []), frame]);
+  }
+  for (const row of rows.values()) {
+    row.sort((left, right) => left.sectorIndex - right.sectorIndex);
+  }
+  return rows;
+}
+
 describe('stable slot layout', () => {
   it('packs six legacy radial owners into two row-orbit rows', () => {
     const { nodes, layout } = buildSixOwnerGraph();
@@ -237,6 +250,32 @@ describe('stable slot layout', () => {
     const maxFrameWidth = Math.max(...snapshot.memberSlotFrames.map((frame) => frame.bounds.width));
     const maxRowWidth = Math.max(...getRowWidths(snapshot));
     expect(maxRowWidth).toBeLessThan(maxFrameWidth * 4);
+  });
+
+  it('packs fourteen radial owners into aligned rows around the lead', () => {
+    const { nodes, layout } = buildRowOrbitGraph(14, [3, 3, 2, 3, 3]);
+    const snapshot = getSnapshot(nodes, layout);
+
+    expect(snapshot.ownerSlotLayoutKind).toBe('row-orbit');
+    expect(getRowCounts(snapshot)).toEqual([3, 3, 2, 3, 3]);
+
+    const rows = getFramesByRow(snapshot);
+    const middleRow = rows.get(2)!;
+    expect(middleRow).toHaveLength(2);
+    expect(middleRow[0]!.ownerY).toBe(0);
+    expect(middleRow[1]!.ownerY).toBe(0);
+
+    for (const rowIndex of [0, 1, 3, 4]) {
+      const row = rows.get(rowIndex)!;
+      expect(row).toHaveLength(3);
+      expect(row[0]!.ownerX).toBeCloseTo(middleRow[0]!.ownerX, 5);
+      expect(row[1]!.ownerX).toBeCloseTo(0, 5);
+      expect(row[2]!.ownerX).toBeCloseTo(middleRow[1]!.ownerX, 5);
+    }
+
+    for (const frame of middleRow) {
+      expect(rectsOverlap(frame.bounds, snapshot.runtimeCentralExclusion)).toBe(false);
+    }
   });
 
   it('swaps with the nearest existing row-orbit slot while dragging', () => {

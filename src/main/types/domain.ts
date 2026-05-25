@@ -1,5 +1,5 @@
 /**
- * Domain/business entity types for Agent Teams UI.
+ * Domain/business entity types for Agent Teams AI.
  *
  * These types represent the application's domain model:
  * - Projects and sessions

@@ -1,21 +1,23 @@
-import * as os from 'os';
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+
 import type {
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
-  BoardTaskLogStreamResponse,
   BoardTaskExactLogDetailResult,
   BoardTaskExactLogSummariesResponse,
+  BoardTaskLogStreamResponse,
   InboxMessage,
   MessagesPage,
   SendMessageResult,
-  TeamViewSnapshot,
   TeamCreateRequest,
+  TeamLaunchRequest,
   TeamProviderId,
   TeamProvisioningProgress,
+  TeamViewSnapshot,
 } from '@shared/types/team';
 
 vi.mock('electron', () => ({
@@ -94,66 +96,6 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
 }));
 
 import {
-  TEAM_ALIVE_LIST,
-  TEAM_STOP,
-  TEAM_CANCEL_PROVISIONING,
-  TEAM_CREATE,
-  TEAM_CREATE_CONFIG,
-  TEAM_CREATE_TASK,
-  TEAM_DELETE_TEAM,
-  TEAM_GET_DATA,
-  TEAM_GET_MEMBER_ACTIVITY_META,
-  TEAM_GET_MESSAGES_PAGE,
-  TEAM_LAUNCH,
-  TEAM_LIST,
-  TEAM_PREPARE_PROVISIONING,
-  TEAM_PROCESS_ALIVE,
-  TEAM_PROCESS_SEND,
-  TEAM_PROVISIONING_STATUS,
-  TEAM_REQUEST_REVIEW,
-  TEAM_SEND_MESSAGE,
-  TEAM_SET_CHANGE_PRESENCE_TRACKING,
-  TEAM_GET_ALL_TASKS,
-  TEAM_GET_LOGS_FOR_TASK,
-  TEAM_GET_TASK_ACTIVITY,
-  TEAM_GET_TASK_ACTIVITY_DETAIL,
-  TEAM_GET_TASK_LOG_STREAM,
-  TEAM_GET_TASK_EXACT_LOG_DETAIL,
-  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
-  TEAM_GET_MEMBER_LOGS,
-  TEAM_GET_MEMBER_STATS,
-  TEAM_START_TASK,
-  TEAM_UPDATE_CONFIG,
-  TEAM_UPDATE_KANBAN,
-  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
-  TEAM_UPDATE_TASK_STATUS,
-  TEAM_ADD_MEMBER,
-  TEAM_ADD_TASK_COMMENT,
-  TEAM_GET_ATTACHMENTS,
-  TEAM_GET_DELETED_TASKS,
-  TEAM_GET_TASK_CHANGE_PRESENCE,
-  TEAM_GET_PROJECT_BRANCH,
-  TEAM_KILL_PROCESS,
-  TEAM_LEAD_ACTIVITY,
-  TEAM_PERMANENTLY_DELETE,
-  TEAM_REMOVE_MEMBER,
-  TEAM_RESTORE,
-  TEAM_SET_TASK_CLARIFICATION,
-  TEAM_SOFT_DELETE_TASK,
-  TEAM_UPDATE_MEMBER_ROLE,
-  TEAM_ADD_TASK_RELATIONSHIP,
-  TEAM_REMOVE_TASK_RELATIONSHIP,
-  TEAM_REPLACE_MEMBERS,
-  TEAM_UPDATE_TASK_OWNER,
-  TEAM_UPDATE_TASK_FIELDS,
-  TEAM_LEAD_CONTEXT,
-  TEAM_RESTORE_TASK,
-  TEAM_SHOW_MESSAGE_NOTIFICATION,
-  TEAM_SAVE_TASK_ATTACHMENT,
-  TEAM_GET_TASK_ATTACHMENT,
-  TEAM_DELETE_TASK_ATTACHMENT,
-} from '../../../src/preload/constants/ipcChannels';
-import {
   initializeTeamHandlers,
   registerTeamHandlers,
   removeTeamHandlers,
@@ -161,6 +103,67 @@ import {
 import { ConfigManager } from '../../../src/main/services/infrastructure/ConfigManager';
 import { LaunchIoGovernor } from '../../../src/main/services/team/LaunchIoGovernor';
 import { getAppDataPath } from '../../../src/main/utils/pathDecoder';
+import {
+  TEAM_ADD_MEMBER,
+  TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_ALIVE_LIST,
+  TEAM_CANCEL_PROVISIONING,
+  TEAM_CREATE,
+  TEAM_CREATE_CONFIG,
+  TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
+  TEAM_DELETE_TEAM,
+  TEAM_GET_ALL_TASKS,
+  TEAM_GET_ATTACHMENTS,
+  TEAM_GET_DATA,
+  TEAM_GET_DELETED_TASKS,
+  TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MEMBER_LOGS,
+  TEAM_GET_MEMBER_STATS,
+  TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_KILL_PROCESS,
+  TEAM_LAUNCH,
+  TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
+  TEAM_LIST,
+  TEAM_PERMANENTLY_DELETE,
+  TEAM_PREPARE_PROVISIONING,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_PROVISIONING_STATUS,
+  TEAM_REMOVE_MEMBER,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_REQUEST_REVIEW,
+  TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
+  TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SOFT_DELETE_TASK,
+  TEAM_START_TASK,
+  TEAM_STOP,
+  TEAM_UPDATE_CONFIG,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_STATUS,
+} from '../../../src/preload/constants/ipcChannels';
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -245,6 +248,11 @@ describe('ipc teams handlers', () => {
     })),
     addMember: vi.fn(async () => undefined),
     removeMember: vi.fn(async () => undefined),
+    restoreMember: vi.fn(async () => ({
+      name: 'alice',
+      role: 'Developer',
+      providerId: 'codex' as TeamProviderId,
+    })),
     updateMemberRole: vi.fn(async () => ({ oldRole: undefined, changed: true })),
     softDeleteTask: vi.fn(async () => undefined),
     getDeletedTasks: vi.fn(async () => []),
@@ -278,6 +286,8 @@ describe('ipc teams handlers', () => {
     cancelProvisioning: vi.fn(async () => undefined),
     launchTeam: vi.fn(async () => ({ runId: 'run-2' })),
     sendMessageToTeam: vi.fn(async () => undefined),
+    prepareLiveMemberMcpLaunchConfig: vi.fn(async () => null),
+    discardLiveMemberMcpLaunchConfig: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
@@ -348,11 +358,26 @@ describe('ipc teams handlers', () => {
     handlers.clear();
     vi.clearAllMocks();
     service.listTeams.mockReset();
+    service.getTeamData.mockReset();
     service.getAllTasks.mockReset();
+    service.restoreMember.mockReset();
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
+    service.getTeamData.mockResolvedValue({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
     service.getAllTasks.mockResolvedValue([
       { id: 'task-1', teamName: 'my-team', subject: 'Task 1' },
     ]);
+    service.restoreMember.mockResolvedValue({
+      name: 'alice',
+      role: 'Developer',
+      providerId: 'codex' as TeamProviderId,
+    });
     mockGetMembersMeta.mockReset();
     mockGetMembersMeta.mockResolvedValue([]);
     mockGetMembersMetaFile.mockReset();
@@ -371,8 +396,14 @@ describe('ipc teams handlers', () => {
     mockTeamDataWorkerClient.invalidateTeamConfig.mockReset();
     mockTeamDataWorkerClient.invalidateTeamMessageFeed.mockReset();
     mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockReset();
+    provisioningService.sendMessageToTeam.mockReset();
+    provisioningService.sendMessageToTeam.mockResolvedValue(undefined);
     provisioningService.resolveRuntimeRecipientProviderId.mockReset();
     provisioningService.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
+    provisioningService.prepareLiveMemberMcpLaunchConfig.mockReset();
+    provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValue(null);
+    provisioningService.discardLiveMemberMcpLaunchConfig.mockReset();
+    provisioningService.discardLiveMemberMcpLaunchConfig.mockResolvedValue(undefined);
     provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockReset();
     provisioningService.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
@@ -438,6 +469,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(true);
     expect(handlers.has(TEAM_ADD_MEMBER)).toBe(true);
     expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(true);
+    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(true);
     expect(handlers.has(TEAM_KILL_PROCESS)).toBe(true);
     expect(handlers.has(TEAM_LEAD_ACTIVITY)).toBe(true);
@@ -459,6 +491,65 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(true);
     expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(true);
     expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(true);
+  });
+
+  it('forwards selected model checks with effort to prepareProvisioning', async () => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic'],
+      ['claude-opus-4-6[1m]'],
+      false,
+      'compatibility',
+      [
+        {
+          providerId: 'anthropic',
+          model: 'claude-opus-4-6[1m]',
+          effort: 'medium',
+        },
+      ]
+    )) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.prepareForProvisioning).toHaveBeenCalledWith(os.tmpdir(), {
+      providerId: 'anthropic',
+      providerIds: ['anthropic'],
+      modelIds: ['claude-opus-4-6[1m]'],
+      limitContext: false,
+      modelVerificationMode: 'compatibility',
+      modelChecks: [
+        {
+          providerId: 'anthropic',
+          model: 'claude-opus-4-6[1m]',
+          effort: 'medium',
+        },
+      ],
+    });
+  });
+
+  it('rejects invalid selected model check effort for the provider', async () => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic'],
+      ['claude-opus-4-6[1m]'],
+      false,
+      'compatibility',
+      [
+        {
+          providerId: 'anthropic',
+          model: 'claude-opus-4-6[1m]',
+          effort: 'xhigh',
+        },
+      ]
+    )) as { success: boolean; error: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('selectedModelChecks effort must be one of');
   });
 
   it('updates change presence tracking for a team', async () => {
@@ -2492,10 +2583,13 @@ describe('ipc teams handlers', () => {
         role: 'developer',
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(service.addMember).toHaveBeenCalledWith('my-team', {
-        name: 'alice',
-        role: 'developer',
-      });
+      expect(service.addMember).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          name: 'alice',
+          role: 'developer',
+        })
+      );
     });
 
     it('notifies a live lead to use member_briefing bootstrap for the new teammate', async () => {
@@ -2529,6 +2623,79 @@ describe('ipc teams handlers', () => {
         'my-team',
         expect.stringContaining('Their workflow: Focus on frontend polish')
       );
+    });
+
+    it('passes Agent Teams MCP only launch overrides into live add-member Agent prompt', async () => {
+      const projectPath = path.join(os.tmpdir(), 'codex live add project with spaces');
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team', projectPath },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce({
+        mcpConfigPath: '/tmp/codex live add/alice-app-only.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      } as never);
+
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'codex',
+        mcpPolicy: { mode: 'appOnly' },
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        cwd: projectPath,
+        mcpPolicy: { mode: 'appOnly' },
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining(
+          'mcp_config="/tmp/codex live add/alice-app-only.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+        )
+      );
+    });
+
+    it('discards live add-member MCP config if lead notification fails after config creation', async () => {
+      const mcpLaunchConfig = {
+        mcpConfigPath: '/tmp/codex live add/alice-orphan-risk.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      };
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce(
+        mcpLaunchConfig as never
+      );
+      provisioningService.sendMessageToTeam.mockRejectedValueOnce(new Error('lead offline'));
+
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        providerId: 'codex',
+        mcpPolicy: { mode: 'appOnly' },
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.discardLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        mcpLaunchConfig,
+      });
+      vi.mocked(console.warn).mockClear();
     });
 
     it('rejects invalid team name', async () => {
@@ -2652,6 +2819,7 @@ describe('ipc teams handlers', () => {
         providerId: 'opencode',
         model: 'minimax-m2.5-free',
         effort: undefined,
+        mcpPolicy: undefined,
       });
       expect(service.replaceMembers).not.toHaveBeenCalled();
       expect(mockWriteMembersMeta).toHaveBeenCalledWith(
@@ -2754,6 +2922,7 @@ describe('ipc teams handlers', () => {
     it('invalidates worker config cache after roster metadata mutations', async () => {
       const addHandler = handlers.get(TEAM_ADD_MEMBER)!;
       const removeHandler = handlers.get(TEAM_REMOVE_MEMBER)!;
+      const restoreMemberHandler = handlers.get(TEAM_RESTORE_MEMBER)!;
       const replaceHandler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       const updateRoleHandler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
 
@@ -2762,10 +2931,13 @@ describe('ipc teams handlers', () => {
         role: 'developer',
       })) as { success: boolean };
       expect(result.success).toBe(true);
-      expect(service.addMember).toHaveBeenCalledWith('my-team', {
-        name: 'alice',
-        role: 'developer',
-      });
+      expect(service.addMember).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          name: 'alice',
+          role: 'developer',
+        })
+      );
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
@@ -2777,6 +2949,19 @@ describe('ipc teams handlers', () => {
       result = (await removeHandler({} as never, 'my-team', 'alice')) as { success: boolean };
       expect(result.success).toBe(true);
       expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
+      expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
+        'my-team'
+      );
+
+      mockTeamDataWorkerClient.invalidateTeamConfig.mockClear();
+      mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory.mockClear();
+
+      result = (await restoreMemberHandler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(true);
+      expect(service.restoreMember).toHaveBeenCalledWith('my-team', 'alice');
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
       expect(mockTeamDataWorkerClient.invalidateMemberRuntimeAdvisory).toHaveBeenCalledWith(
         'my-team'
@@ -2970,7 +3155,260 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  describe('restoreMember', () => {
+    it('calls service on valid input', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+      expect(result.success).toBe(true);
+      expect(service.restoreMember).toHaveBeenCalledWith('my-team', 'alice');
+    });
+
+    it('rejects invalid team name', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, '../bad', 'alice')) as { success: boolean };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid member name', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', '../bad')) as { success: boolean };
+      expect(result.success).toBe(false);
+    });
+
+    it('passes Agent Teams MCP only launch overrides into live restore-member Agent prompt', async () => {
+      const projectPath = path.join(os.tmpdir(), 'codex live restore project with spaces');
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team', projectPath },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'codex',
+            role: 'Developer',
+            removedAt: Date.now(),
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      service.restoreMember.mockResolvedValueOnce({
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex',
+        mcpPolicy: { mode: 'appOnly' },
+      } as never);
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce({
+        mcpConfigPath: '/tmp/codex live restore/alice-app-only.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      } as never);
+
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        cwd: projectPath,
+        mcpPolicy: { mode: 'appOnly' },
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining(
+          'mcp_config="/tmp/codex live restore/alice-app-only.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+        )
+      );
+    });
+
+    it('reattaches a restored OpenCode teammate on a live mixed team', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      service.restoreMember.mockResolvedValueOnce({
+        name: 'alice',
+        providerId: 'opencode',
+        role: 'Developer',
+      });
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Developer',
+            removedAt: Date.now(),
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).toHaveBeenCalledWith(
+        'my-team',
+        'alice',
+        { reason: 'member_added' }
+      );
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+    });
+
+    it('blocks live restoreMember for a running OpenCode-led team before metadata is changed', async () => {
+      const handler = handlers.get(TEAM_RESTORE_MEMBER)!;
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'opencode',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            role: 'Developer',
+            removedAt: Date.now(),
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+        error?: string;
+      };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('running OpenCode-led team');
+      expect(service.restoreMember).not.toHaveBeenCalled();
+      expect(provisioningService.reattachOpenCodeOwnedMemberLane).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    });
+  });
+
   describe('replaceMembers', () => {
+    it('passes Agent Teams MCP only launch overrides into live replace-members added teammate prompt', async () => {
+      const projectPath = path.join(os.tmpdir(), 'codex live replace project with spaces');
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team', projectPath },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+      provisioningService.prepareLiveMemberMcpLaunchConfig.mockResolvedValueOnce({
+        mcpConfigPath: '/tmp/codex live replace/alice-app-only.json',
+        mcpSettingSources: 'user,project,local',
+        strictMcpConfig: true,
+      } as never);
+
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'codex',
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).toHaveBeenCalledWith({
+        teamName: 'my-team',
+        cwd: projectPath,
+        mcpPolicy: { mode: 'appOnly' },
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining(
+          'mcp_config="/tmp/codex live replace/alice-app-only.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+        )
+      );
+    });
+
+    it('reports existing teammate MCP policy changes in live replace-members summary', async () => {
+      service.getTeamData.mockResolvedValueOnce({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [
+          {
+            name: 'team-lead',
+            providerId: 'codex',
+            role: 'Team Lead',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+          {
+            name: 'alice',
+            providerId: 'codex',
+            role: 'Developer',
+            currentTaskId: null,
+            taskCount: 0,
+          },
+        ],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      });
+
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      const result = (await handler({} as never, 'my-team', {
+        members: [
+          {
+            name: 'alice',
+            role: 'Developer',
+            providerId: 'codex',
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.prepareLiveMemberMcpLaunchConfig).not.toHaveBeenCalled();
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('MCP access policy changed - restart required')
+      );
+    });
+
     it('blocks live replaceMembers for a running OpenCode-led team before metadata is changed', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
       service.getTeamData.mockResolvedValueOnce({
@@ -3356,6 +3794,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(false);
     expect(handlers.has(TEAM_ADD_MEMBER)).toBe(false);
     expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(false);
+    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(false);
     expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(false);
     expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(false);
     expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(false);
@@ -3569,6 +4008,71 @@ describe('ipc teams handlers', () => {
       ]);
     });
 
+    it('createTeam validates teammate runtime fields against inherited team provider metadata', async () => {
+      const handler = handlers.get(TEAM_CREATE)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'inherited-backend-team',
+        members: [
+          {
+            name: 'builder',
+            providerBackendId: 'codex-native',
+            effort: 'xhigh',
+          },
+        ],
+        cwd: os.tmpdir(),
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.createTeam.mock.calls[0][0].members).toEqual([
+        {
+          name: 'builder',
+          role: undefined,
+          workflow: undefined,
+          isolation: undefined,
+          providerId: undefined,
+          providerBackendId: 'codex-native',
+          model: undefined,
+          effort: 'xhigh',
+          fastMode: undefined,
+        },
+      ]);
+    });
+
+    it('createTeam preserves top-level OpenCode provider and inherited teammate backend', async () => {
+      const handler = handlers.get(TEAM_CREATE)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'opencode-runtime-team',
+        members: [
+          {
+            name: 'builder',
+            providerBackendId: 'opencode-cli',
+          },
+        ],
+        cwd: os.tmpdir(),
+        providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.createTeam).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'opencode-runtime-team',
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          members: [
+            expect.objectContaining({
+              name: 'builder',
+              providerId: undefined,
+              providerBackendId: 'opencode-cli',
+            }),
+          ],
+        }),
+        expect.any(Function)
+      );
+    });
+
     it('handleCreateConfig accepts members: []', async () => {
       const handler = handlers.get(TEAM_CREATE_CONFIG)!;
       const result = (await handler({} as never, {
@@ -3642,6 +4146,124 @@ describe('ipc teams handlers', () => {
         worktree: 'feature-x',
         extraCliArgs: '--max-turns 5',
       });
+    });
+
+    it('handleCreateConfig validates teammate runtime fields against inherited team provider metadata', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'draft-inherited-runtime',
+        members: [
+          {
+            name: 'builder',
+            providerBackendId: 'codex-native',
+            effort: 'xhigh',
+          },
+        ],
+        cwd: os.tmpdir(),
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.createTeamConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'draft-inherited-runtime',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          members: [
+            expect.objectContaining({
+              name: 'builder',
+              providerId: undefined,
+              providerBackendId: 'codex-native',
+              effort: 'xhigh',
+            }),
+          ],
+        })
+      );
+    });
+
+    it('handleCreateConfig rejects stale inherited teammate backends for the selected team provider', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'draft-stale-runtime',
+        members: [
+          {
+            name: 'builder',
+            providerBackendId: 'codex-native',
+          },
+        ],
+        cwd: os.tmpdir(),
+        providerId: 'anthropic',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('providerBackendId must be valid');
+      expect(service.createTeamConfig).not.toHaveBeenCalled();
+    });
+
+    it('handleCreateConfig drops known stale top-level backend when provider is omitted', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'draft-stale-top-level-runtime',
+        members: [{ name: 'builder' }],
+        cwd: os.tmpdir(),
+        providerBackendId: 'codex-native',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.createTeamConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'draft-stale-top-level-runtime',
+          providerId: undefined,
+          providerBackendId: undefined,
+        })
+      );
+    });
+
+    it('handleCreateConfig validates teammate effort against default Anthropic provider metadata', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'draft-default-anthropic-runtime',
+        members: [
+          {
+            name: 'builder',
+            effort: 'max',
+          },
+        ],
+        cwd: os.tmpdir(),
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.createTeamConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'draft-default-anthropic-runtime',
+          members: [
+            expect.objectContaining({
+              name: 'builder',
+              effort: 'max',
+            }),
+          ],
+        })
+      );
+    });
+
+    it('handleCreateConfig validates top-level effort against default Anthropic provider metadata', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'draft-default-anthropic-effort',
+        members: [{ name: 'builder' }],
+        cwd: os.tmpdir(),
+        effort: 'max',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.createTeamConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'draft-default-anthropic-effort',
+          providerId: undefined,
+          effort: 'max',
+        })
+      );
     });
 
     it('launches draft team through saved request without dropping Electron draft metadata', async () => {
@@ -3788,6 +4410,407 @@ describe('ipc teams handlers', () => {
       } finally {
         fs.rmSync(claudeRoot, { recursive: true, force: true });
       }
+    });
+
+    it('prefers Anthropic launch identity over stale root Codex backend during launch', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-launch-provider-identity-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'anthropic-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'anthropic-team' })
+        );
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Anthropic Team',
+            cwd: '/Users/test/project',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.4',
+            effort: 'medium',
+            launchIdentity: {
+              providerId: 'anthropic',
+              providerBackendId: null,
+              selectedModel: 'opus[1m]',
+              selectedModelKind: 'explicit',
+              resolvedLaunchModel: 'opus[1m]',
+              catalogId: 'opus',
+              catalogSource: 'runtime',
+              catalogFetchedAt: null,
+              selectedEffort: 'low',
+              resolvedEffort: 'low',
+              selectedFastMode: 'inherit',
+              resolvedFastMode: null,
+              fastResolutionReason: null,
+            },
+            createdAt: Date.now(),
+          })
+        );
+
+        const handler = handlers.get(TEAM_LAUNCH)!;
+        const result = (await handler({ sender: { send: vi.fn() } } as never, {
+          teamName: 'anthropic-team',
+          cwd: os.tmpdir(),
+        })) as { success: boolean };
+
+        expect(result).toMatchObject({ success: true });
+        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'anthropic-team',
+            providerId: 'anthropic',
+            providerBackendId: undefined,
+            model: 'opus[1m]',
+            effort: 'low',
+            fastMode: 'inherit',
+          }),
+          expect.any(Function)
+        );
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('lets an explicit relaunch payload override stale persisted provider and model metadata', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-relaunch-provider-change-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'runtime-change-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'runtime-change-team' })
+        );
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Runtime Change Team',
+            cwd: '/Users/test/project',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            launchIdentity: {
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              selectedModel: 'gpt-5.5',
+              selectedModelKind: 'explicit',
+              resolvedLaunchModel: 'gpt-5.5',
+              catalogId: 'gpt-5.5',
+              catalogSource: 'runtime',
+              catalogFetchedAt: null,
+              selectedEffort: 'medium',
+              resolvedEffort: 'medium',
+              selectedFastMode: 'inherit',
+              resolvedFastMode: null,
+              fastResolutionReason: null,
+            },
+            createdAt: Date.now(),
+          })
+        );
+
+        const handler = handlers.get(TEAM_LAUNCH)!;
+        const result = (await handler({ sender: { send: vi.fn() } } as never, {
+          teamName: 'runtime-change-team',
+          cwd: os.tmpdir(),
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+          fastMode: 'inherit',
+        })) as { success: boolean };
+
+        expect(result).toMatchObject({ success: true });
+        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'runtime-change-team',
+            providerId: 'anthropic',
+            providerBackendId: undefined,
+            model: 'sonnet',
+            effort: 'low',
+            fastMode: 'inherit',
+          }),
+          expect.any(Function)
+        );
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('does not reuse a persisted model when an explicit relaunch changes provider without a model', async () => {
+      const claudeRoot = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'ipc-relaunch-provider-change-default-model-')
+      );
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'runtime-default-change-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'runtime-default-change-team' })
+        );
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Runtime Default Change Team',
+            cwd: '/Users/test/project',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            fastMode: 'on',
+            limitContext: true,
+            launchIdentity: {
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              selectedModel: 'gpt-5.5',
+              selectedModelKind: 'explicit',
+              resolvedLaunchModel: 'gpt-5.5',
+              catalogId: 'gpt-5.5',
+              catalogSource: 'runtime',
+              catalogFetchedAt: null,
+              selectedEffort: 'medium',
+              resolvedEffort: 'medium',
+              selectedFastMode: 'on',
+              resolvedFastMode: true,
+              fastResolutionReason: null,
+            },
+            createdAt: Date.now(),
+          })
+        );
+
+        const handler = handlers.get(TEAM_LAUNCH)!;
+        const result = (await handler({ sender: { send: vi.fn() } } as never, {
+          teamName: 'runtime-default-change-team',
+          cwd: os.tmpdir(),
+          providerId: 'anthropic',
+        })) as { success: boolean };
+
+        expect(result).toMatchObject({ success: true });
+        const [request] = provisioningService.launchTeam.mock.calls.at(
+          -1
+        ) as unknown as [TeamLaunchRequest, (progress: TeamProvisioningProgress) => void];
+        expect(request).toMatchObject({
+          teamName: 'runtime-default-change-team',
+          providerId: 'anthropic',
+          providerBackendId: undefined,
+        });
+        expect(request.model).toBeUndefined();
+        expect(request.effort).toBeUndefined();
+        expect(request.fastMode).toBeUndefined();
+        expect(request.limitContext).toBeUndefined();
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('keeps persisted backend when an explicit relaunch repeats the same provider without backend', async () => {
+      const claudeRoot = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'ipc-relaunch-same-provider-backend-')
+      );
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'gemini-backend-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'gemini-backend-team' })
+        );
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Gemini Backend Team',
+            cwd: '/Users/test/project',
+            providerId: 'gemini',
+            providerBackendId: 'api',
+            model: 'gemini-3-pro',
+            createdAt: Date.now(),
+          })
+        );
+
+        const handler = handlers.get(TEAM_LAUNCH)!;
+        const result = (await handler({ sender: { send: vi.fn() } } as never, {
+          teamName: 'gemini-backend-team',
+          cwd: os.tmpdir(),
+          providerId: 'gemini',
+        })) as { success: boolean };
+
+        expect(result).toMatchObject({ success: true });
+        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'gemini-backend-team',
+            providerId: 'gemini',
+            providerBackendId: 'api',
+            model: 'gemini-3-pro',
+          }),
+          expect.any(Function)
+        );
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('clears a persisted model when an explicit relaunch repeats the provider with default model', async () => {
+      const claudeRoot = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'ipc-relaunch-same-provider-default-model-')
+      );
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'codex-default-model-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'codex-default-model-team' })
+        );
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Codex Default Model Team',
+            cwd: '/Users/test/project',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            launchIdentity: {
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              selectedModel: 'gpt-5.5',
+              selectedModelKind: 'explicit',
+              resolvedLaunchModel: 'gpt-5.5',
+              catalogId: 'gpt-5.5',
+              catalogSource: 'runtime',
+              catalogFetchedAt: null,
+              selectedEffort: 'medium',
+              resolvedEffort: 'medium',
+              selectedFastMode: 'inherit',
+              resolvedFastMode: null,
+              fastResolutionReason: null,
+            },
+            createdAt: Date.now(),
+          })
+        );
+
+        const handler = handlers.get(TEAM_LAUNCH)!;
+        const result = (await handler({ sender: { send: vi.fn() } } as never, {
+          teamName: 'codex-default-model-team',
+          cwd: os.tmpdir(),
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: undefined,
+          effort: 'low',
+        })) as { success: boolean };
+
+        expect(result).toMatchObject({ success: true });
+        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'codex-default-model-team',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: undefined,
+            effort: 'low',
+          }),
+          expect.any(Function)
+        );
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('drops a known stale providerBackendId from explicit Anthropic relaunch payloads', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-relaunch-stale-backend-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'runtime-backend-change-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'runtime-backend-change-team' })
+        );
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({
+            version: 1,
+            displayName: 'Runtime Backend Change Team',
+            cwd: '/Users/test/project',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            createdAt: Date.now(),
+          })
+        );
+
+        const handler = handlers.get(TEAM_LAUNCH)!;
+        const result = (await handler({ sender: { send: vi.fn() } } as never, {
+          teamName: 'runtime-backend-change-team',
+          cwd: os.tmpdir(),
+          providerId: 'anthropic',
+          providerBackendId: 'codex-native',
+          model: 'sonnet',
+          effort: 'low',
+          fastMode: 'inherit',
+        })) as { success: boolean };
+
+        expect(result).toMatchObject({ success: true });
+        expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teamName: 'runtime-backend-change-team',
+            providerId: 'anthropic',
+            providerBackendId: undefined,
+            model: 'sonnet',
+            effort: 'low',
+            fastMode: 'inherit',
+          }),
+          expect.any(Function)
+        );
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('still rejects unknown providerBackendId values during launch', async () => {
+      const handler = handlers.get(TEAM_LAUNCH)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        providerId: 'anthropic',
+        providerBackendId: 'not-a-backend',
+        model: 'sonnet',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('providerBackendId must be valid');
+      expect(provisioningService.launchTeam).not.toHaveBeenCalled();
+    });
+
+    it('launchTeam preserves top-level OpenCode provider and backend', async () => {
+      const handler = handlers.get(TEAM_LAUNCH)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'opencode-runtime-team',
+        cwd: os.tmpdir(),
+        providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+        model: 'opencode/minimax-m2.5-free',
+        effort: 'medium',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.launchTeam).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName: 'opencode-runtime-team',
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'opencode/minimax-m2.5-free',
+          effort: 'medium',
+        }),
+        expect.any(Function)
+      );
     });
 
     it('handleReplaceMembers accepts members: []', async () => {

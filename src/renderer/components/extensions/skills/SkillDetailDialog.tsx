@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { CodeBlockViewer } from '@renderer/components/chat/viewers/CodeBlockViewer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
@@ -48,6 +49,7 @@ export const SkillDetailDialog = ({
   onEdit,
   onDeleted,
 }: SkillDetailDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const fetchSkillDetail = useStore((s) => s.fetchSkillDetail);
   const deleteSkill = useStore((s) => s.deleteSkill);
   const detail = useStore(useShallow((s) => (skillId ? s.skillsDetailsById[skillId] : undefined)));
@@ -86,13 +88,15 @@ export const SkillDetailDialog = ({
   const issuesTone = item?.issues.length ? getIssuesTone(item.issues) : null;
 
   function formatScopeLabel(scope: 'user' | 'project'): string {
-    return scope === 'project' ? 'This project only' : 'Your personal skills';
+    return scope === 'project'
+      ? t('skillDetail.scope.projectOnly')
+      : t('skillDetail.scope.personal');
   }
 
   function formatInvocationLabel(invocationMode: 'auto' | 'manual-only'): string {
     return invocationMode === 'manual-only'
-      ? 'Only runs when you explicitly ask for it.'
-      : 'Runs automatically when it matches the task.';
+      ? t('skillDetail.invocation.manualOnly')
+      : t('skillDetail.invocation.auto');
   }
 
   function getIssuesTone(issues: SkillValidationIssue[]): {
@@ -104,14 +108,14 @@ export const SkillDetailDialog = ({
     if (informationalOnly) {
       return {
         className: 'border-blue-500/30 bg-blue-500/5',
-        title: 'This skill includes bundled scripts',
+        title: t('skillDetail.issues.bundledScripts'),
         Icon: Info,
       };
     }
 
     return {
       className: 'border-amber-500/30 bg-amber-500/5',
-      title: 'Review this skill carefully before using it',
+      title: t('skillDetail.issues.reviewCarefully'),
       Icon: AlertTriangle,
     };
   }
@@ -128,7 +132,7 @@ export const SkillDetailDialog = ({
       setDeleteConfirmOpen(false);
       onDeleted();
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Failed to delete skill');
+      setDeleteError(error instanceof Error ? error.message : t('skillDetail.errors.deleteFailed'));
     } finally {
       setDeleteLoading(false);
     }
@@ -138,14 +142,14 @@ export const SkillDetailDialog = ({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{item?.name ?? 'Skill details'}</DialogTitle>
+          <DialogTitle>{item?.name ?? t('skillDetail.titleFallback')}</DialogTitle>
           <DialogDescription>
-            {item?.description ?? 'Inspect discovered skill metadata and raw instructions.'}
+            {item?.description ?? t('skillDetail.descriptionFallback')}
           </DialogDescription>
         </DialogHeader>
 
         {(loading || (open && skillId && detail === undefined)) && (
-          <p className="text-sm text-text-muted">Loading skill details...</p>
+          <p className="text-sm text-text-muted">{t('skillDetail.loading')}</p>
         )}
 
         {!loading && detailError && (
@@ -159,7 +163,7 @@ export const SkillDetailDialog = ({
                   void fetchSkillDetail(skillId, effectiveProjectPath).catch(() => undefined);
                 }}
               >
-                Retry
+                {t('skillDetail.actions.retry')}
               </Button>
             )}
           </div>
@@ -167,7 +171,7 @@ export const SkillDetailDialog = ({
 
         {!loading && !detailError && detail === null && (
           <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-400">
-            Unable to load this skill.
+            {t('skillDetail.errors.loadFailed')}
           </div>
         )}
 
@@ -180,14 +184,24 @@ export const SkillDetailDialog = ({
             )}
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{formatScopeLabel(item.scope)}</Badge>
-              <Badge variant="outline">Stored in {formatSkillRootKind(item.rootKind)}</Badge>
+              <Badge variant="outline">
+                {t('skillDetail.badges.storedIn', { root: formatSkillRootKind(item.rootKind) })}
+              </Badge>
               <Badge variant="outline">{getSkillAudienceLabel(item.rootKind)}</Badge>
               <Badge variant="secondary">
-                {item.invocationMode === 'manual-only' ? 'Manual use' : 'Auto use'}
+                {item.invocationMode === 'manual-only'
+                  ? t('skillDetail.badges.manualUse')
+                  : t('skillDetail.badges.autoUse')}
               </Badge>
-              {item.flags.hasScripts && <Badge variant="destructive">Has scripts</Badge>}
-              {item.flags.hasReferences && <Badge variant="secondary">References</Badge>}
-              {item.flags.hasAssets && <Badge variant="secondary">Assets</Badge>}
+              {item.flags.hasScripts && (
+                <Badge variant="destructive">{t('skillDetail.badges.hasScripts')}</Badge>
+              )}
+              {item.flags.hasReferences && (
+                <Badge variant="secondary">{t('skillDetail.badges.references')}</Badge>
+              )}
+              {item.flags.hasAssets && (
+                <Badge variant="secondary">{t('skillDetail.badges.assets')}</Badge>
+              )}
             </div>
 
             {item.issues.length > 0 && (
@@ -224,28 +238,28 @@ export const SkillDetailDialog = ({
             <div className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-3">
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                  Who can use it
+                  {t('skillDetail.summary.whoCanUse')}
                 </p>
                 <p className="text-sm text-text">{formatScopeLabel(item.scope)}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                  How it is used
+                  {t('skillDetail.summary.howUsed')}
                 </p>
                 <p className="text-sm text-text">{formatInvocationLabel(item.invocationMode)}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                  What comes with it
+                  {t('skillDetail.summary.included')}
                 </p>
                 <p className="text-sm text-text">
                   {[
-                    item.flags.hasReferences ? 'references' : null,
-                    item.flags.hasScripts ? 'scripts' : null,
-                    item.flags.hasAssets ? 'assets' : null,
+                    item.flags.hasReferences ? t('skillDetail.includes.references') : null,
+                    item.flags.hasScripts ? t('skillDetail.includes.scripts') : null,
+                    item.flags.hasAssets ? t('skillDetail.includes.assets') : null,
                   ]
                     .filter(Boolean)
-                    .join(', ') || 'Just the skill instructions'}
+                    .join(', ') || t('skillDetail.includes.instructionsOnly')}
                 </p>
               </div>
             </div>
@@ -253,7 +267,7 @@ export const SkillDetailDialog = ({
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={onEdit}>
                 <Pencil className="mr-1.5 size-3.5" />
-                Edit Skill
+                {t('skillDetail.actions.editSkill')}
               </Button>
               <Button
                 variant="outline"
@@ -262,7 +276,9 @@ export const SkillDetailDialog = ({
                 disabled={deleteLoading}
               >
                 <Trash2 className="mr-1.5 size-3.5" />
-                {deleteLoading ? 'Deleting...' : 'Delete'}
+                {deleteLoading
+                  ? t('skillDetail.actions.deleting')
+                  : t('skillDetail.actions.delete')}
               </Button>
             </div>
 
@@ -279,13 +295,13 @@ export const SkillDetailDialog = ({
               <div className="space-y-4">
                 <div className="rounded-lg border border-border p-3 text-sm text-text-secondary">
                   <div className="space-y-2">
-                    <p className="font-medium text-text">Stored at</p>
+                    <p className="font-medium text-text">{t('skillDetail.files.storedAt')}</p>
                     <p className="break-all text-xs text-text-muted">{item.skillDir}</p>
                   </div>
 
                   {detail.scriptFiles.length > 0 && (
                     <div className="mt-4 space-y-1">
-                      <p className="font-medium text-text">Scripts</p>
+                      <p className="font-medium text-text">{t('skillDetail.files.scripts')}</p>
                       {detail.scriptFiles.map((file) => (
                         <p key={file} className="text-xs text-text-muted">
                           {file}
@@ -296,7 +312,7 @@ export const SkillDetailDialog = ({
 
                   {detail.referencesFiles.length > 0 && (
                     <div className="mt-4 space-y-1">
-                      <p className="font-medium text-text">References</p>
+                      <p className="font-medium text-text">{t('skillDetail.files.references')}</p>
                       {detail.referencesFiles.map((file) => (
                         <p key={file} className="text-xs text-text-muted">
                           {file}
@@ -307,7 +323,7 @@ export const SkillDetailDialog = ({
 
                   {detail.assetFiles.length > 0 && (
                     <div className="mt-4 space-y-1">
-                      <p className="font-medium text-text">Assets</p>
+                      <p className="font-medium text-text">{t('skillDetail.files.assets')}</p>
                       {detail.assetFiles.map((file) => (
                         <p key={file} className="text-xs text-text-muted">
                           {file}
@@ -319,7 +335,7 @@ export const SkillDetailDialog = ({
 
                 <details className="rounded-lg border border-border p-3 text-sm text-text-secondary">
                   <summary className="cursor-pointer font-medium text-text">
-                    Advanced file details
+                    {t('skillDetail.files.advancedDetails')}
                   </summary>
                   <div className="mt-3 space-y-3">
                     <div className="flex flex-wrap gap-2">
@@ -329,7 +345,7 @@ export const SkillDetailDialog = ({
                         onClick={() => void api.showInFolder(item.skillFile)}
                       >
                         <FolderOpen className="mr-1.5 size-3.5" />
-                        Open Folder
+                        {t('skillDetail.actions.openFolder')}
                       </Button>
                       <Button
                         variant="outline"
@@ -337,7 +353,7 @@ export const SkillDetailDialog = ({
                         onClick={() => void api.openPath(item.skillFile, effectiveProjectPath)}
                       >
                         <ExternalLink className="mr-1.5 size-3.5" />
-                        Open SKILL.md
+                        {t('skillDetail.actions.openSkillFile')}
                       </Button>
                     </div>
                     <CodeBlockViewer
@@ -356,17 +372,21 @@ export const SkillDetailDialog = ({
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete skill?</AlertDialogTitle>
+            <AlertDialogTitle>{t('skillDetail.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
               {item
-                ? `Delete "${item.name}" and move it to Trash? You can restore it later from Trash if needed.`
-                : 'Delete this skill and move it to Trash?'}
+                ? t('skillDetail.deleteDialog.descriptionWithName', { name: item.name })
+                : t('skillDetail.deleteDialog.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteLoading}>
+              {t('skillDetail.actions.cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction onClick={() => void handleDelete()} disabled={deleteLoading}>
-              {deleteLoading ? 'Deleting...' : 'Delete Skill'}
+              {deleteLoading
+                ? t('skillDetail.actions.deleting')
+                : t('skillDetail.actions.deleteSkill')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

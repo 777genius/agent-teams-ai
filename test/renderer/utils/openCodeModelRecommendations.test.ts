@@ -165,579 +165,579 @@ describe('getOpenCodeTeamModelRecommendation', () => {
   it('marks OpenRouter routes missing from the OpenCode catalog as unavailable, not bad', () => {
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-coder-plus')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-coder-next')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-coder:free')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-next-80b-a3b-instruct:free')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/google/gemini-2.0-flash-lite-001')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-4.1-nano')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-4o-mini-2024-07-18')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-4o-mini-search-preview')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-plus')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-turbo')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-235b-a22b-2507')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/deepseek/deepseek-v3.2-exp')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-32b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-14b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-8b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwq-32b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/deepseek/deepseek-chat')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-nemo')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-small-24b-instruct-2501')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/cohere/command-r7b-12-2024')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/cohere/command-r-08-2024')).toMatchObject(
       {
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       }
     );
     expect(getOpenCodeTeamModelRecommendation('openrouter/rekaai/reka-flash-3')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/rekaai/reka-edge')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/nvidia/nemotron-3-nano-30b-a3b')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-01')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/nvidia/llama-3.3-nemotron-super-49b-v1.5')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-max-thinking')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-large-2512')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/devstral-medium')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/mistralai/devstral-small')).toMatchObject(
       {
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       }
     );
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/ministral-14b-2512')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/ministral-8b-2512')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/ministral-3b-2512')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-m2-her')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/xiaomi/mimo-v2.5')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/xiaomi/mimo-v2.5-pro')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/x-ai/grok-4.20')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/google/gemini-3.1-flash-image-preview')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/z-ai/glm-5v-turbo')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/x-ai/grok-4.20-multi-agent')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-small-creative')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-5.3-chat')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/voxtral-small-24b-2507')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-5-chat')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-2.5-72b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/tngtech/deepseek-r1t2-chimera')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/google/gemini-2.5-pro-preview')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-saba')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-large-2411')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-30b-a3b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/inclusionai/ling-2.6-1t:free')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/inclusionai/ling-2.6-flash:free')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/meta-llama/llama-3.1-8b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-2.5-7b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/amazon/nova-lite-v1')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/z-ai/glm-4-32b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/bytedance-seed/seed-1.6-flash')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/meta-llama/llama-4-scout')).toMatchObject(
       {
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       }
     );
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/meta-llama/llama-3.3-70b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/bytedance-seed/seed-2.0-mini')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-32b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/alibaba/tongyi-deepresearch-30b-a3b')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/arcee-ai/trinity-large-preview')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/amazon/nova-micro-v1')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/arcee-ai/trinity-mini')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3.5-9b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/essentialai/rnj-1-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/upstage/solar-pro-3')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/allenai/olmo-3.1-32b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-plus-2025-07-28')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/tencent/hy3-preview:free')).toMatchObject(
       {
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       }
     );
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-8b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/nex-agi/deepseek-v3.1-nex-n1')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/baidu/ernie-4.5-vl-28b-a3b')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/thedrummer/rocinante-12b')).toMatchObject(
       {
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       }
     );
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/meta-llama/llama-3.1-70b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-plus-2025-07-28:thinking')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/z-ai/glm-4.6v')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/anthropic/claude-3-haiku')).toMatchObject(
       {
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       }
     );
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/bytedance-seed/seed-2.0-lite')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-235b-a22b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3.5-122b-a10b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/deepseek/deepseek-r1-0528')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/amazon/nova-2-lite-v1')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/o3-mini')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/mistral-large-2407')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/thedrummer/unslopnemo-12b')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-235b-a22b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-8b-thinking')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/kwaipilot/kat-coder-pro-v2')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/o4-mini-high')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/o3-mini-high')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-4o')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/cohere/command-r-plus-08-2024')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-30b-a3b-thinking')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/sao10k/l3.1-euryale-70b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3.5-27b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/arcee-ai/virtuoso-large')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-3.5-turbo')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/bytedance-seed/seed-1.6')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/nvidia/llama-3.1-nemotron-70b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-vl-max')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-vl-235b-a22b-thinking')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/openai/gpt-audio-mini')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/amazon/nova-pro-v1')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/relace/relace-search')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen-max')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/pixtral-large-2411')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/mistralai/mixtral-8x22b-instruct')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3.5-35b-a3b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/qwen/qwen3-30b-a3b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(getOpenCodeTeamModelRecommendation('openrouter/baidu/ernie-4.5-21b-a3b')).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/nousresearch/hermes-4-70b')
     ).toMatchObject({
       level: 'unavailable-in-opencode',
-      label: 'Unavailable in OpenCode',
+      label: 'Not verified in OpenCode',
     });
     for (const modelId of [
       'openrouter/openai/gpt-3.5-turbo-16k',
@@ -793,7 +793,7 @@ describe('getOpenCodeTeamModelRecommendation', () => {
     ]) {
       expect(getOpenCodeTeamModelRecommendation(modelId)).toMatchObject({
         level: 'unavailable-in-opencode',
-        label: 'Unavailable in OpenCode',
+        label: 'Not verified in OpenCode',
       });
     }
     expect(isOpenCodeTeamModelRecommended('openrouter/qwen/qwen3-coder-plus')).toBe(false);

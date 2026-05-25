@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CompactMarkdownPreview } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import {
@@ -560,6 +561,7 @@ const LeadThoughtsGroupRowComponent = ({
   onExpand,
   expandItemKey,
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -832,7 +834,7 @@ const LeadThoughtsGroupRowComponent = ({
                 <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                   <MemberBadge name={leadName} color={memberColor} hideAvatar />
                   <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-                    {thoughts.length} thoughts
+                    {t('activity.thoughts.count', { count: thoughts.length })}
                   </span>
                 </div>
                 <div className="relative flex shrink-0 items-center">
@@ -849,7 +851,7 @@ const LeadThoughtsGroupRowComponent = ({
                   {onExpand && expandItemKey && (
                     <button
                       type="button"
-                      aria-label="Expand thoughts"
+                      aria-label={t('activity.thoughts.expand')}
                       className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
                       style={{ color: CARD_ICON_MUTED }}
                       onClick={(e) => {
@@ -918,7 +920,7 @@ const LeadThoughtsGroupRowComponent = ({
                 ) : null}
                 <MemberBadge name={leadName} color={memberColor} hideAvatar />
                 <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-                  {thoughts.length} thoughts
+                  {t('activity.thoughts.count', { count: thoughts.length })}
                 </span>
                 <div className="relative ml-auto flex shrink-0 items-center">
                   <span
@@ -934,7 +936,7 @@ const LeadThoughtsGroupRowComponent = ({
                   {onExpand && expandItemKey && (
                     <button
                       type="button"
-                      aria-label="Expand thoughts"
+                      aria-label={t('activity.thoughts.expand')}
                       className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
                       style={{ color: CARD_ICON_MUTED }}
                       onClick={(e) => {
@@ -1002,7 +1004,7 @@ const LeadThoughtsGroupRowComponent = ({
               ) : null}
               <MemberBadge name={leadName} color={memberColor} hideAvatar />
               <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-                {thoughts.length} thoughts
+                {t('activity.thoughts.count', { count: thoughts.length })}
               </span>
               {totalToolSummary ? (
                 <Tooltip>
@@ -1033,7 +1035,7 @@ const LeadThoughtsGroupRowComponent = ({
                 {onExpand && expandItemKey && (
                   <button
                     type="button"
-                    aria-label="Expand thoughts"
+                    aria-label={t('activity.thoughts.expand')}
                     className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
                     style={{ color: CARD_ICON_MUTED }}
                     onClick={(e) => {
@@ -1101,7 +1103,7 @@ const LeadThoughtsGroupRowComponent = ({
             }}
           >
             <ChevronDown size={12} />
-            Show more
+            {t('activity.thoughts.showMore')}
           </button>
         </div>
       ) : null}
@@ -1116,7 +1118,7 @@ const LeadThoughtsGroupRowComponent = ({
             }}
           >
             <ChevronUp size={12} />
-            Show less
+            {t('activity.thoughts.showLess')}
           </button>
         </div>
       ) : null}

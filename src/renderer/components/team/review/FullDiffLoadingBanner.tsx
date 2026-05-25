@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Clock3, FileDiff, LoaderCircle, Sparkles } from 'lucide-react';
 
 interface FullDiffLoadingBannerProps {
@@ -17,14 +18,17 @@ export const FullDiffLoadingBanner = ({
   snippetCount,
   activeFileName,
 }: FullDiffLoadingBannerProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const title =
-    loadingFilesCount === 1 ? 'Preparing Full Diff' : `Preparing ${loadingFilesCount} Full Diffs`;
+    loadingFilesCount === 1
+      ? t('review.fullDiffLoading.titleOne')
+      : t('review.fullDiffLoading.titleMany', { count: loadingFilesCount });
   const subtitle =
     loadingFilesCount === 1
       ? activeFileName
-        ? `Finalizing the exact editor diff for ${activeFileName}.`
-        : 'Finalizing the exact editor diff for the current file.'
-      : 'Resolving exact before/after baselines for the files currently loading.';
+        ? t('review.fullDiffLoading.subtitleForFile', { file: activeFileName })
+        : t('review.fullDiffLoading.subtitleCurrentFile')
+      : t('review.fullDiffLoading.subtitleMany');
   const showFileProgress = totalFilesCount > 1;
   const progressPercent =
     totalFilesCount > 0 ? Math.max(0, Math.min(100, (readyFilesCount / totalFilesCount) * 100)) : 0;
@@ -57,20 +61,23 @@ export const FullDiffLoadingBanner = ({
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sidebar px-2 py-1 text-[11px] text-text-secondary">
                 <FileDiff className="size-3.5" strokeWidth={1.8} />
-                {snippetCount} preview{snippetCount === 1 ? '' : 's'} ready
+                {t('review.fullDiffLoading.previewsReady', { count: snippetCount })}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sidebar px-2 py-1 text-[11px] text-text-secondary">
                 <Clock3 className="size-3.5" strokeWidth={1.8} />
-                Editor view loading
+                {t('review.fullDiffLoading.editorViewLoading')}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sidebar px-2 py-1 text-[11px] text-text-secondary">
                 <FileDiff className="size-3.5" strokeWidth={1.8} />
-                {loadingFilesCount} file{loadingFilesCount === 1 ? '' : 's'} in progress
+                {t('review.fullDiffLoading.filesInProgress', { count: loadingFilesCount })}
               </span>
               {showFileProgress ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sidebar px-2 py-1 text-[11px] text-text-secondary">
                   <FileDiff className="size-3.5" strokeWidth={1.8} />
-                  {readyFilesCount}/{totalFilesCount} files ready
+                  {t('review.fullDiffLoading.filesReady', {
+                    ready: readyFilesCount,
+                    total: totalFilesCount,
+                  })}
                 </span>
               ) : null}
             </div>
@@ -91,8 +98,11 @@ export const FullDiffLoadingBanner = ({
           </div>
           <p className="mt-2 text-[11px] text-text-muted">
             {showFileProgress
-              ? `${readyFilesCount} ready, ${loadingFilesCount} still loading. Preview diffs stay visible below while the remaining baselines are resolved.`
-              : 'Preview diffs stay visible below while the exact baseline is resolved.'}
+              ? t('review.fullDiffLoading.progressDescription', {
+                  ready: readyFilesCount,
+                  loading: loadingFilesCount,
+                })
+              : t('review.fullDiffLoading.singleDescription')}
           </p>
         </div>
       </div>

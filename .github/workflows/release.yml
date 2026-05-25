@@ -1,17 +1,34 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to build into a draft, for example v2.0.0
+        required: true
+        type: string
+      publish_release:
+        description: Publish the release after all assets are uploaded
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ inputs.release_tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  IS_RELEASE_BUILD: ${{ github.event_name == 'workflow_dispatch' }}
+  RELEASE_TAG: ${{ inputs.release_tag }}
+  PUBLISH_RELEASE: ${{ inputs.publish_release }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -28,35 +45,82 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Restore pnpm node-gyp executable bit
+        shell: bash
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Validate release metadata
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          set -euo pipefail
+          case "${RELEASE_TAG:-}" in
+            v[0-9]*) ;;
+            *)
+              echo "release_tag must start with v and include a numeric version, got '${RELEASE_TAG:-<empty>}'" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Set version from release tag
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
           pnpm pkg set version="$VERSION"
+
+      - name: Verify Sentry release env
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs prebuild
 
       - name: Build app
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: quant-jump-pro
-          SENTRY_PROJECT: electron
+          SENTRY_DSN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_DSN || '' }}
+          SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: pnpm build
 
+      - name: Verify Sentry source map upload
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs postbuild
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          set -euo pipefail
+          TAG="${RELEASE_TAG}"
+          existing_is_draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
+          if [ -n "$existing_is_draft" ]; then
+            if [ "${PUBLISH_RELEASE}" != "true" ] && [ "$existing_is_draft" != "true" ]; then
+              echo "Release $TAG already exists and is not a draft; refusing to overwrite it from draft mode." >&2
+              exit 1
+            fi
+            echo "Release $TAG already exists, skipping creation"
+            exit 0
+          fi
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "$TAG" \
             --generate-notes \
-            --draft=false 2>/dev/null || echo "Release $TAG already exists, skipping creation"
+            --draft=true
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v7
@@ -69,35 +133,59 @@ jobs:
 
   prepare-runtime:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Validate release metadata
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        run: |
+          set -euo pipefail
+          case "${RELEASE_TAG:-}" in
+            v[0-9]*) ;;
+            *)
+              echo "release_tag must start with v and include a numeric version, got '${RELEASE_TAG:-<empty>}'" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          set -euo pipefail
+          TAG="${RELEASE_TAG}"
+          existing_is_draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
+          if [ -n "$existing_is_draft" ]; then
+            if [ "${PUBLISH_RELEASE}" != "true" ] && [ "$existing_is_draft" != "true" ]; then
+              echo "Release $TAG already exists and is not a draft; refusing to overwrite it from draft mode." >&2
+              exit 1
+            fi
+            echo "Release $TAG already exists, skipping creation"
+            exit 0
+          fi
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "$TAG" \
             --generate-notes \
-            --draft=false 2>/dev/null || echo "Release $TAG already exists, skipping creation"
+            --draft=true
 
-      - name: Skip runtime asset preparation for manual builds
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: echo "Runtime asset preparation is only needed for tagged releases."
+      - name: Skip runtime asset preparation for non-release builds
+        if: ${{ env.IS_RELEASE_BUILD != 'true' }}
+        run: echo "Runtime asset preparation is only needed for release builds."
 
       - name: Check runtime assets
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         id: runtime-assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="${RELEASE_TAG}"
           existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null || true)"
           missing=0
           while IFS= read -r asset; do
@@ -120,7 +208,7 @@ jobs:
             exit 1
           fi
 
-          TARGET_TAG="${GITHUB_REF#refs/tags/}"
+          TARGET_TAG="${RELEASE_TAG}"
           SOURCE_REPO="$(node ./scripts/runtime-lock.mjs source-repository)"
           SOURCE_REF="$(node ./scripts/runtime-lock.mjs source-ref)"
           RUNTIME_VERSION="$(node ./scripts/runtime-lock.mjs version)"
@@ -190,7 +278,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="${RELEASE_TAG}"
           for attempt in $(seq 1 12); do
             existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null || true)"
             all_found=1
@@ -216,6 +304,7 @@ jobs:
 
   release-mac:
     needs: [build, prepare-runtime]
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -253,13 +342,18 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Set version from release tag
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${RELEASE_TAG#v}"
           pnpm pkg set version="$VERSION"
 
       - name: Stage bundled runtime (macOS ${{ matrix.arch }})
@@ -268,21 +362,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "${IS_RELEASE_BUILD}" == "true" ]]; then
+            TAG="${RELEASE_TAG}"
             node ./scripts/stage-runtime.mjs --platform "darwin-${{ matrix.arch }}" --release-tag "$TAG"
           else
             node ./scripts/stage-runtime.mjs --platform "darwin-${{ matrix.arch }}"
           fi
 
+      - name: Verify Sentry release env (macOS ${{ matrix.arch }})
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs prebuild
+
       - name: Build app (macOS ${{ matrix.arch }})
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+          SENTRY_DSN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_DSN || '' }}
+          SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: pnpm build
+
+      - name: Verify Sentry source map upload (macOS ${{ matrix.arch }})
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: quant-jump-pro
-          SENTRY_PROJECT: electron
-        run: pnpm build
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs postbuild
 
       - name: Verify packaged inputs (macOS ${{ matrix.arch }})
         run: |
@@ -303,28 +415,28 @@ jobs:
         run: ${{ matrix.dist_command }} --publish never
 
       - name: Validate packaged bundle (macOS ${{ matrix.arch }})
-        run: node ./scripts/electron-builder/verifyBundle.cjs "release/mac-${{ matrix.arch }}/Agent Teams UI.app" darwin ${{ matrix.arch }}
+        run: node ./scripts/electron-builder/verifyBundle.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin ${{ matrix.arch }}
 
       - name: Smoke packaged app (macOS ${{ matrix.arch }})
-        run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/mac-${{ matrix.arch }}/Agent Teams UI.app" darwin
+        run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/mac-${{ matrix.arch }}/Agent Teams AI.app" darwin
 
       - name: Upload assets to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="${RELEASE_TAG}"
           for f in release/*.dmg release/*.zip release/*.blockmap; do
             [ -f "$f" ] || continue
             echo "Uploading: $f"
             gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1 || \
-              (sleep 5 && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1) || \
-              echo "WARNING: failed to upload $f, continuing..."
+              (sleep 5 && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1)
           done
 
   release-win:
     needs: [build, prepare-runtime]
     runs-on: windows-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -351,14 +463,20 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Restore pnpm node-gyp executable bit
+        shell: bash
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Set version from release tag
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         shell: bash
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${RELEASE_TAG#v}"
           pnpm pkg set version="$VERSION"
 
       - name: Stage bundled runtime (Windows)
@@ -367,21 +485,39 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
-          if ($env:GITHUB_REF -like 'refs/tags/v*') {
-            $tag = $env:GITHUB_REF.Replace('refs/tags/', '')
+          if ($env:IS_RELEASE_BUILD -eq 'true') {
+            $tag = $env:RELEASE_TAG
             node ./scripts/stage-runtime.mjs --platform win32-x64 --release-tag $tag
           } else {
             node ./scripts/stage-runtime.mjs --platform win32-x64
           }
 
+      - name: Verify Sentry release env (Windows)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs prebuild
+
       - name: Build app (Windows)
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+          SENTRY_DSN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_DSN || '' }}
+          SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: pnpm build
+
+      - name: Verify Sentry source map upload (Windows)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: quant-jump-pro
-          SENTRY_PROJECT: electron
-        run: pnpm build
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs postbuild
 
       - name: Verify packaged inputs (Windows)
         shell: bash
@@ -406,23 +542,23 @@ jobs:
         run: node ./scripts/electron-builder/smokePackagedApp.cjs "release/win-unpacked" win32
 
       - name: Upload assets to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="${RELEASE_TAG}"
           for f in release/*.exe release/*.blockmap; do
             [ -f "$f" ] || continue
             echo "Uploading: $f"
             gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1 || \
-              (sleep 5 && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1) || \
-              echo "WARNING: failed to upload $f, continuing..."
+              (sleep 5 && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1)
           done
 
   release-linux:
     needs: [build, prepare-runtime]
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -454,13 +590,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libarchive-tools rpm xvfb
 
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Set version from release tag
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${RELEASE_TAG#v}"
           pnpm pkg set version="$VERSION"
 
       - name: Stage bundled runtime (Linux)
@@ -469,21 +610,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "${IS_RELEASE_BUILD}" == "true" ]]; then
+            TAG="${RELEASE_TAG}"
             node ./scripts/stage-runtime.mjs --platform linux-x64 --release-tag "$TAG"
           else
             node ./scripts/stage-runtime.mjs --platform linux-x64
           fi
 
+      - name: Verify Sentry release env (Linux)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs prebuild
+
       - name: Build app (Linux)
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+          SENTRY_DSN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_DSN || '' }}
+          SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: pnpm build
+
+      - name: Verify Sentry source map upload (Linux)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: quant-jump-pro
-          SENTRY_PROJECT: electron
-        run: pnpm build
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: node ./scripts/ci/verify-sentry-release.cjs postbuild
 
       - name: Verify packaged inputs (Linux)
         run: |
@@ -498,6 +657,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm pack:linux --publish never
 
+      - name: Validate Linux installers
+        run: node ./scripts/electron-builder/verifyLinuxInstallers.cjs release
+
       - name: Validate packaged bundle (Linux)
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/linux-unpacked" linux x64
 
@@ -505,39 +667,49 @@ jobs:
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "release/linux-unpacked" linux
 
       - name: Upload assets to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="${RELEASE_TAG}"
           ls -la release/ || true
           for f in release/*.AppImage release/*.deb release/*.rpm release/*.pacman release/*.blockmap; do
             [ -f "$f" ] || continue
             echo "Uploading: $f"
             gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1 || \
-              (sleep 5 && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1) || \
-              echo "WARNING: failed to upload $f, continuing..."
+              (sleep 5 && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber 2>&1)
           done
 
   upload-stable-links:
     needs: [release-mac, release-win, release-linux]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'workflow_dispatch' }}
 
     steps:
-      - name: Upload stable-named assets for /latest/download links
+      - name: Upload stable download aliases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${RELEASE_TAG#v}"
+          TAG="${RELEASE_TAG}"
           REPO="${GITHUB_REPOSITORY}"
-          DOWNLOAD_BASE="https://github.com/${REPO}/releases/download/v${VERSION}"
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
 
-          declare -A FILES=(
+          declare -A STABLE_ALIASES=(
+            ["Agent.Teams.AI-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
+            ["Agent.Teams.AI-x64.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
+            ["Agent.Teams.AI.Setup.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
+            ["Agent.Teams.AI.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
+            ["agent-teams-ai-amd64.deb"]="agent-teams-ai_${VERSION}_amd64.deb"
+            ["agent-teams-ai-x86_64.rpm"]="agent-teams-ai-${VERSION}.x86_64.rpm"
+            ["agent-teams-ai.pacman"]="agent-teams-ai-${VERSION}.pacman"
+          )
+
+          declare -A LEGACY_STABLE_ALIASES=(
             ["Claude-Agent-Teams-UI-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
             ["Claude-Agent-Teams-UI-x64.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
             ["Claude-Agent-Teams-UI-Setup.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
@@ -547,22 +719,51 @@ jobs:
             ["Claude-Agent-Teams-UI.pacman"]="agent-teams-ai-${VERSION}.pacman"
           )
 
-          # Download versioned files and re-upload with stable names
-          for STABLE_NAME in "${!FILES[@]}"; do
-            VERSIONED_NAME="${FILES[$STABLE_NAME]}"
-            echo "Downloading ${VERSIONED_NAME} -> ${STABLE_NAME}"
-            curl -fSL -o "${TMP_DIR}/${VERSIONED_NAME}" "${DOWNLOAD_BASE}/${VERSIONED_NAME}"
-            cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${STABLE_NAME}"
-            gh release upload "v${VERSION}" "${TMP_DIR}/${STABLE_NAME}" --repo "$REPO" --clobber
-          done
+          declare -A LEGACY_UPDATER_ALIASES=(
+            ["Claude.Agent.Teams.UI-${VERSION}-arm64-mac.zip"]="Agent.Teams.AI-${VERSION}-arm64-mac.zip"
+            ["Claude.Agent.Teams.UI-${VERSION}-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
+            ["Claude.Agent.Teams.UI-${VERSION}-mac.zip"]="Agent.Teams.AI-${VERSION}-x64-mac.zip"
+            ["Claude.Agent.Teams.UI-${VERSION}.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
+            ["Claude.Agent.Teams.UI.Setup.${VERSION}.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
+            ["Claude.Agent.Teams.UI-${VERSION}.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
+          )
+
+          upload_aliases() {
+            local label="$1"
+            local -n aliases="$2"
+
+            for ALIAS_NAME in "${!aliases[@]}"; do
+              VERSIONED_NAME="${aliases[$ALIAS_NAME]}"
+              echo "Uploading ${label} alias: ${ALIAS_NAME} -> ${VERSIONED_NAME}"
+              download_once "${VERSIONED_NAME}"
+              cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${ALIAS_NAME}"
+              gh release upload "${TAG}" "${TMP_DIR}/${ALIAS_NAME}" --repo "$REPO" --clobber
+            done
+          }
+
+          download_once() {
+            local name="$1"
+            if [[ -f "${TMP_DIR}/${name}" ]]; then
+              return
+            fi
+            gh release download "${TAG}" \
+              --repo "$REPO" \
+              --pattern "${name}" \
+              --dir "$TMP_DIR" \
+              --clobber
+          }
+
+          upload_aliases "stable" STABLE_ALIASES
+          upload_aliases "legacy stable" LEGACY_STABLE_ALIASES
+          upload_aliases "legacy updater" LEGACY_UPDATER_ALIASES
 
       - name: Publish canonical updater metadata
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          TAG="v${VERSION}"
+          VERSION="${RELEASE_TAG#v}"
+          TAG="${RELEASE_TAG}"
           REPO="${GITHUB_REPOSITORY}"
           RELEASE_DATE="$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")"
           TMP_DIR="$(mktemp -d)"
@@ -578,61 +779,122 @@ jobs:
 
           download_asset() {
             local name="$1"
-            curl -fSL -o "$name" "https://github.com/${REPO}/releases/download/${TAG}/${name}"
+            gh release download "${TAG}" \
+              --repo "${REPO}" \
+              --pattern "$name" \
+              --dir . \
+              --clobber
           }
 
           # Canonical Windows feed
-          download_asset "Claude-Agent-Teams-UI-Setup.exe"
-          WIN_SHA="$(sha512_base64 "Claude-Agent-Teams-UI-Setup.exe")"
-          WIN_SIZE="$(file_size "Claude-Agent-Teams-UI-Setup.exe")"
+          WIN_ASSET="Agent.Teams.AI.Setup.${VERSION}.exe"
+          download_asset "${WIN_ASSET}"
+          WIN_SHA="$(sha512_base64 "${WIN_ASSET}")"
+          WIN_SIZE="$(file_size "${WIN_ASSET}")"
           cat > latest.yml <<EOF
           version: ${VERSION}
           files:
-            - url: Claude-Agent-Teams-UI-Setup.exe
+            - url: ${WIN_ASSET}
               sha512: ${WIN_SHA}
               size: ${WIN_SIZE}
-          path: Claude-Agent-Teams-UI-Setup.exe
+          path: ${WIN_ASSET}
           sha512: ${WIN_SHA}
           releaseDate: '${RELEASE_DATE}'
           EOF
 
           # Canonical Linux feed
-          download_asset "Claude-Agent-Teams-UI.AppImage"
-          LINUX_SHA="$(sha512_base64 "Claude-Agent-Teams-UI.AppImage")"
-          LINUX_SIZE="$(file_size "Claude-Agent-Teams-UI.AppImage")"
+          LINUX_ASSET="Agent.Teams.AI-${VERSION}.AppImage"
+          download_asset "${LINUX_ASSET}"
+          LINUX_SHA="$(sha512_base64 "${LINUX_ASSET}")"
+          LINUX_SIZE="$(file_size "${LINUX_ASSET}")"
           cat > latest-linux.yml <<EOF
           version: ${VERSION}
           files:
-            - url: Claude-Agent-Teams-UI.AppImage
+            - url: ${LINUX_ASSET}
               sha512: ${LINUX_SHA}
               size: ${LINUX_SIZE}
-          path: Claude-Agent-Teams-UI.AppImage
+          path: ${LINUX_ASSET}
           sha512: ${LINUX_SHA}
           releaseDate: '${RELEASE_DATE}'
           EOF
 
           # Canonical macOS feed.
-          # electron-updater on GitHub still consumes a single latest-mac.yml, so we
-          # publish the Apple Silicon feed here and suppress Intel auto-update in-app
-          # until we switch to universal packaging or an arch-aware provider.
+          # Include both architectures so legacy Intel builds can see the
+          # update without downloading the Apple Silicon zip.
           download_asset "Agent.Teams.AI-${VERSION}-arm64-mac.zip"
           download_asset "Agent.Teams.AI-${VERSION}-arm64.dmg"
-          MAC_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
-          MAC_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
-          MAC_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64.dmg")"
-          MAC_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          download_asset "Agent.Teams.AI-${VERSION}-x64-mac.zip"
+          download_asset "Agent.Teams.AI-${VERSION}-x64.dmg"
+          MAC_ARM64_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
+          MAC_ARM64_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
+          MAC_ARM64_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          MAC_ARM64_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64.dmg")"
+          MAC_X64_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-x64-mac.zip")"
+          MAC_X64_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-x64-mac.zip")"
+          MAC_X64_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-x64.dmg")"
+          MAC_X64_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-x64.dmg")"
           cat > latest-mac.yml <<EOF
           version: ${VERSION}
           files:
             - url: Agent.Teams.AI-${VERSION}-arm64-mac.zip
-              sha512: ${MAC_ZIP_SHA}
-              size: ${MAC_ZIP_SIZE}
+              sha512: ${MAC_ARM64_ZIP_SHA}
+              size: ${MAC_ARM64_ZIP_SIZE}
             - url: Agent.Teams.AI-${VERSION}-arm64.dmg
-              sha512: ${MAC_DMG_SHA}
-              size: ${MAC_DMG_SIZE}
+              sha512: ${MAC_ARM64_DMG_SHA}
+              size: ${MAC_ARM64_DMG_SIZE}
+            - url: Agent.Teams.AI-${VERSION}-x64-mac.zip
+              sha512: ${MAC_X64_ZIP_SHA}
+              size: ${MAC_X64_ZIP_SIZE}
+            - url: Agent.Teams.AI-${VERSION}-x64.dmg
+              sha512: ${MAC_X64_DMG_SHA}
+              size: ${MAC_X64_DMG_SIZE}
           path: Agent.Teams.AI-${VERSION}-arm64-mac.zip
-          sha512: ${MAC_ZIP_SHA}
+          sha512: ${MAC_ARM64_ZIP_SHA}
           releaseDate: '${RELEASE_DATE}'
           EOF
 
           gh release upload "${TAG}" latest.yml latest-linux.yml latest-mac.yml --repo "${REPO}" --clobber
+
+      - name: Publish release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_TAG}"
+          gh release edit "${TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false --latest
+
+      - name: Update README version badge
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          DEFAULT_BRANCH="$(gh repo view "${GITHUB_REPOSITORY}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+          git fetch origin "${DEFAULT_BRANCH}"
+          BADGE_WORKTREE="$(mktemp -d)"
+          git worktree add --detach "${BADGE_WORKTREE}" "origin/${DEFAULT_BRANCH}"
+          trap 'git worktree remove --force "${BADGE_WORKTREE}" >/dev/null 2>&1 || true' EXIT
+
+          BADGE_LABEL_WIDTH=51
+          BADGE_VALUE="${RELEASE_TAG}"
+          BADGE_VALUE_WIDTH=$(( ${#BADGE_VALUE} * 7 + 10 ))
+          BADGE_WIDTH=$(( BADGE_LABEL_WIDTH + BADGE_VALUE_WIDTH ))
+          BADGE_LABEL_X=$(( BADGE_LABEL_WIDTH / 2 ))
+          BADGE_VALUE_X=$(( BADGE_LABEL_WIDTH + BADGE_VALUE_WIDTH / 2 ))
+          mkdir -p "${BADGE_WORKTREE}/.github/badges"
+          cat > "${BADGE_WORKTREE}/.github/badges/version.svg" <<EOF
+          <svg xmlns="http://www.w3.org/2000/svg" width="${BADGE_WIDTH}" height="20" role="img" aria-label="version: ${BADGE_VALUE}"><title>version: ${BADGE_VALUE}</title><g shape-rendering="crispEdges"><rect width="${BADGE_LABEL_WIDTH}" height="20" fill="#555"/><rect x="${BADGE_LABEL_WIDTH}" width="${BADGE_VALUE_WIDTH}" height="20" fill="#007ec6"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11"><text x="${BADGE_LABEL_X}" y="14">version</text><text x="${BADGE_VALUE_X}" y="14">${BADGE_VALUE}</text></g></svg>
+          EOF
+          if git -C "${BADGE_WORKTREE}" diff --quiet -- .github/badges/version.svg; then
+            exit 0
+          fi
+          git -C "${BADGE_WORKTREE}" config user.name "github-actions[bot]"
+          git -C "${BADGE_WORKTREE}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "${BADGE_WORKTREE}" add .github/badges/version.svg
+          git -C "${BADGE_WORKTREE}" commit -m "docs(readme): update release badge to ${BADGE_VALUE}"
+          git -C "${BADGE_WORKTREE}" push origin "HEAD:${DEFAULT_BRANCH}"
+
+      - name: Keep release as draft
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish_release }}
+        run: echo "Draft release ${RELEASE_TAG} is ready. It was not published because publish_release=false."

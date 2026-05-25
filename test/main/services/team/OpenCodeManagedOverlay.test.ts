@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -150,6 +149,35 @@ describe('OpenCodeManagedOverlay', () => {
         kind: 'project_opencode_dir',
         exists: true,
         fileCount: 1,
+      })
+    );
+  });
+
+  it('reads JSONC global config as a user-owned behavior source', async () => {
+    await fs.mkdir(path.join(homePath, '.config/opencode'), { recursive: true });
+    await fs.writeFile(
+      path.join(homePath, '.config/opencode/opencode.jsonc'),
+      `{
+        // global user-owned MCP must be observed, not overwritten
+        "mcp": {
+          "agent-teams": { "type": "local", "command": "custom", "enabled": true }
+        }
+      }`,
+      'utf8'
+    );
+    const scanner = new OpenCodeBehaviorSourceScanner({ homePath });
+
+    await expect(scanner.readDeclaredMcpNames(projectPath)).resolves.toEqual(
+      new Set(['agent-teams'])
+    );
+    const sources = await scanner.scan(projectPath);
+
+    expect(sources).toContainEqual(
+      expect.objectContaining({
+        kind: 'global_config',
+        exists: true,
+        fileCount: 1,
+        fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
       })
     );
   });

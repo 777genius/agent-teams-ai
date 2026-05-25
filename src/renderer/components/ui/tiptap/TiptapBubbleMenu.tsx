@@ -1,9 +1,11 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 import { useCurrentEditor, useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { Bold, Code, Italic, Strikethrough } from 'lucide-react';
 
 export const TiptapBubbleMenu = () => {
+  const { t } = useAppTranslation('common');
   const { editor } = useCurrentEditor();
 
   const state = useEditorState({
@@ -42,7 +44,7 @@ export const TiptapBubbleMenu = () => {
         type="button"
         className={btnClass(state.isBold)}
         onClick={() => editor.chain().focus().toggleBold().run()}
-        aria-label="Bold"
+        aria-label={t('editorFormatting.bold')}
       >
         <Bold size={12} />
       </button>
@@ -50,7 +52,7 @@ export const TiptapBubbleMenu = () => {
         type="button"
         className={btnClass(state.isItalic)}
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        aria-label="Italic"
+        aria-label={t('editorFormatting.italic')}
       >
         <Italic size={12} />
       </button>
@@ -58,7 +60,7 @@ export const TiptapBubbleMenu = () => {
         type="button"
         className={btnClass(state.isStrike)}
         onClick={() => editor.chain().focus().toggleStrike().run()}
-        aria-label="Strike"
+        aria-label={t('editorFormatting.strike')}
       >
         <Strikethrough size={12} />
       </button>
@@ -66,7 +68,7 @@ export const TiptapBubbleMenu = () => {
         type="button"
         className={btnClass(state.isCode)}
         onClick={() => editor.chain().focus().toggleCode().run()}
-        aria-label="Code"
+        aria-label={t('editorFormatting.code')}
       >
         <Code size={12} />
       </button>

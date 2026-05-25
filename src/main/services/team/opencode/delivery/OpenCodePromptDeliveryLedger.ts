@@ -11,6 +11,7 @@ import type { AgentActionMode, InboxMessage, InboxMessageKind, TaskRef } from '@
 export const OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION = 1;
 export const OPENCODE_PROMPT_DELIVERY_RESPONDED_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export const OPENCODE_PROMPT_DELIVERY_FAILED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export const OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS = 5;
 
 export type OpenCodePromptDeliveryStatus =
   | 'pending'
@@ -46,6 +47,9 @@ export interface OpenCodePromptDeliveryLedgerRecord {
   responseState: OpenCodeDeliveryResponseState;
   attempts: number;
   maxAttempts: number;
+  sessionRefreshAttempts?: number;
+  maxSessionRefreshAttempts?: number;
+  lastSessionRefreshReason?: string | null;
   acceptanceUnknown: boolean;
   nextAttemptAt: string | null;
   lastAttemptAt: string | null;
@@ -233,6 +237,9 @@ export class OpenCodePromptDeliveryLedgerStore {
         responseState: 'not_observed',
         attempts: 0,
         maxAttempts: input.maxAttempts ?? 3,
+        sessionRefreshAttempts: 0,
+        maxSessionRefreshAttempts: OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
+        lastSessionRefreshReason: null,
         acceptanceUnknown: false,
         nextAttemptAt: null,
         lastAttemptAt: null,
@@ -310,6 +317,11 @@ export class OpenCodePromptDeliveryLedgerStore {
       const observation = input.responseObservation;
       const responseState =
         observation?.state ?? (input.accepted ? record.responseState : 'not_observed');
+      const sessionRefreshState = isOpenCodeSessionRefreshResponseState({
+        responseState,
+        reason: input.reason ?? observation?.reason ?? record.lastReason,
+        diagnostics: input.diagnostics,
+      });
       const responded = isOpenCodePromptResponseStateResponded(responseState);
       const unanswered = isOpenCodePromptDeliveryUnansweredResponseState(responseState);
       const acceptedRuntimePromptMessageId =
@@ -336,7 +348,8 @@ export class OpenCodePromptDeliveryLedgerStore {
       const shouldIncrementAttempts =
         (input.accepted || input.attempted === true) &&
         !acceptedAttemptAlreadyRecorded &&
-        !acceptedPromptAlreadyRecorded;
+        !acceptedPromptAlreadyRecorded &&
+        !sessionRefreshState;
       const lastRuntimePromptMessageId =
         acceptedRuntimePromptMessageId ??
         record.lastRuntimePromptMessageId ??
@@ -381,6 +394,9 @@ export class OpenCodePromptDeliveryLedgerStore {
         visibleReplyCorrelation:
           observation?.visibleReplyCorrelation ?? record.visibleReplyCorrelation,
         lastReason: input.reason ?? observation?.reason ?? record.lastReason,
+        lastSessionRefreshReason: sessionRefreshState
+          ? (input.reason ?? observation?.reason ?? record.lastSessionRefreshReason ?? null)
+          : (record.lastSessionRefreshReason ?? null),
         diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
         updatedAt: input.now,
       };
@@ -400,6 +416,11 @@ export class OpenCodePromptDeliveryLedgerStore {
       const unanswered = isOpenCodePromptDeliveryUnansweredResponseState(
         input.responseObservation.state
       );
+      const sessionRefreshState = isOpenCodeSessionRefreshResponseState({
+        responseState: input.responseObservation.state,
+        reason: input.responseObservation.reason ?? record.lastReason,
+        diagnostics: input.diagnostics,
+      });
       const previousRuntimePromptMessageIds = getOpenCodeRuntimePromptMessageIds(record);
       const deliveredRuntimePromptMessageId =
         input.responseObservation.deliveredUserMessageId?.trim() || null;
@@ -457,6 +478,9 @@ export class OpenCodePromptDeliveryLedgerStore {
         visibleReplyCorrelation:
           input.responseObservation.visibleReplyCorrelation ?? record.visibleReplyCorrelation,
         lastReason: input.responseObservation.reason ?? record.lastReason,
+        lastSessionRefreshReason: sessionRefreshState
+          ? (input.responseObservation.reason ?? record.lastSessionRefreshReason ?? null)
+          : (record.lastSessionRefreshReason ?? null),
         diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
         updatedAt: input.observedAt,
       };
@@ -470,23 +494,34 @@ export class OpenCodePromptDeliveryLedgerStore {
       input.visibleReplyCorrelation === 'plain_assistant_text'
         ? 'responded_plain_text'
         : 'responded_visible_message';
-    return await this.updateExisting(input.id, (record) => ({
-      ...record,
-      status: input.semanticallySufficient ? 'responded' : record.status,
-      responseState,
-      lastObservedAt: input.observedAt,
-      respondedAt: input.semanticallySufficient
-        ? (record.respondedAt ?? input.observedAt)
-        : record.respondedAt,
-      visibleReplyInbox: input.visibleReplyInbox,
-      visibleReplyMessageId: input.visibleReplyMessageId,
-      visibleReplyCorrelation: input.visibleReplyCorrelation,
-      lastReason: input.semanticallySufficient
-        ? record.lastReason
-        : selectOpenCodeDestinationProofInsufficientReason(input.diagnostics),
-      diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
-      updatedAt: input.observedAt,
-    }));
+    return await this.updateExisting(input.id, (record) => {
+      const diagnostics = input.semanticallySufficient
+        ? mergeDiagnostics(record.diagnostics, [
+            ...(record.lastReason ? [record.lastReason] : []),
+            ...(input.diagnostics ?? []),
+          ])
+        : mergeDiagnostics(record.diagnostics, input.diagnostics ?? []);
+      return {
+        ...record,
+        status: input.semanticallySufficient ? 'responded' : record.status,
+        responseState,
+        acceptanceUnknown: input.semanticallySufficient ? false : record.acceptanceUnknown,
+        nextAttemptAt: input.semanticallySufficient ? null : record.nextAttemptAt,
+        lastObservedAt: input.observedAt,
+        respondedAt: input.semanticallySufficient
+          ? (record.respondedAt ?? input.observedAt)
+          : record.respondedAt,
+        failedAt: input.semanticallySufficient ? null : record.failedAt,
+        visibleReplyInbox: input.visibleReplyInbox,
+        visibleReplyMessageId: input.visibleReplyMessageId,
+        visibleReplyCorrelation: input.visibleReplyCorrelation,
+        lastReason: input.semanticallySufficient
+          ? null
+          : selectOpenCodeDestinationProofInsufficientReason(input.diagnostics),
+        diagnostics,
+        updatedAt: input.observedAt,
+      };
+    });
   }
 
   async markAcceptanceUnknown(input: {
@@ -525,6 +560,70 @@ export class OpenCodePromptDeliveryLedgerStore {
       lastReason: input.reason,
       updatedAt: input.scheduledAt,
     }));
+  }
+
+  async markSessionRefreshScheduled(input: {
+    id: string;
+    nextAttemptAt: string;
+    reason: string;
+    scheduledAt: string;
+    maxSessionRefreshAttempts?: number;
+    diagnostics?: string[];
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => {
+      const maxSessionRefreshAttempts =
+        record.maxSessionRefreshAttempts ??
+        input.maxSessionRefreshAttempts ??
+        OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
+      const sessionRefreshAttempts = (record.sessionRefreshAttempts ?? 0) + 1;
+      return {
+        ...record,
+        status: 'retry_scheduled',
+        responseState: 'session_stale',
+        nextAttemptAt: input.nextAttemptAt,
+        sessionRefreshAttempts,
+        maxSessionRefreshAttempts,
+        lastSessionRefreshReason: input.reason,
+        lastReason: input.reason,
+        diagnostics: mergeDiagnostics(record.diagnostics, [
+          input.reason,
+          ...(input.diagnostics ?? []),
+        ]),
+        updatedAt: input.scheduledAt,
+      };
+    });
+  }
+
+  async markSessionStaleObservationScheduled(input: {
+    id: string;
+    nextAttemptAt: string;
+    reason: string;
+    scheduledAt: string;
+    maxSessionRefreshAttempts?: number;
+    diagnostics?: string[];
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => {
+      const maxSessionRefreshAttempts =
+        record.maxSessionRefreshAttempts ??
+        input.maxSessionRefreshAttempts ??
+        OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
+      const sessionRefreshAttempts = (record.sessionRefreshAttempts ?? 0) + 1;
+      return {
+        ...record,
+        status: 'accepted',
+        responseState: 'session_stale',
+        nextAttemptAt: input.nextAttemptAt,
+        sessionRefreshAttempts,
+        maxSessionRefreshAttempts,
+        lastSessionRefreshReason: input.reason,
+        lastReason: input.reason,
+        diagnostics: mergeDiagnostics(record.diagnostics, [
+          input.reason,
+          ...(input.diagnostics ?? []),
+        ]),
+        updatedAt: input.scheduledAt,
+      };
+    });
   }
 
   async markRetryAttempted(input: {
@@ -770,6 +869,20 @@ export function getLatestOpenCodeRuntimePromptMessageId(
   return ids[ids.length - 1] ?? null;
 }
 
+export function buildOpenCodePromptDeliveryAttemptId(
+  record: Pick<
+    OpenCodePromptDeliveryLedgerRecord,
+    'id' | 'attempts' | 'payloadHash' | 'sessionRefreshAttempts'
+  >
+): string {
+  const base = [record.id, record.attempts + 1, record.payloadHash.slice(0, 12)];
+  const sessionRefreshAttempts = record.sessionRefreshAttempts ?? 0;
+  if (sessionRefreshAttempts > 0) {
+    base.push(`refresh${sessionRefreshAttempts}`);
+  }
+  return base.join(':');
+}
+
 export function isOpenCodePromptResponseStateResponded(
   state: OpenCodeDeliveryResponseState
 ): boolean {
@@ -785,6 +898,137 @@ function isOpenCodePromptDeliveryUnansweredResponseState(
   state: OpenCodeDeliveryResponseState
 ): boolean {
   return state === 'empty_assistant_turn' || state === 'prompt_delivered_no_assistant_message';
+}
+
+export function isOpenCodeResolvedBehaviorChangedReason(
+  reason: string | null | undefined
+): boolean {
+  return isCleanOpenCodeSessionRefreshReason(
+    reason,
+    /\bresolved_behavior_changed:[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/i
+  );
+}
+
+export function isOpenCodeSessionTransportChangedReason(
+  reason: string | null | undefined
+): boolean {
+  return isCleanOpenCodeSessionRefreshReason(
+    reason,
+    /\bopencode_app_mcp_transport_changed:[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/i
+  );
+}
+
+const OPENCODE_SESSION_REFRESH_FAILURE_PATTERN =
+  // eslint-disable-next-line sonarjs/regex-complexity -- Keyword taxonomy is kept literal to preserve diagnostic behavior.
+  /(?:^|[_\s:;.\/()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;.\/(),-])/i;
+const OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN =
+  /\b(?:resolved_behavior_changed|opencode_app_mcp_transport_changed):[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/gi;
+const OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN =
+  /\b(?:not_observed|pending|prompt_not_indexed|responded_tool_call|responded_visible_message|responded_non_visible_tool|responded_plain_text|permission_blocked|tool_error|empty_assistant_turn|prompt_delivered_no_assistant_message|session_stale|session_error|reconcile_failed)\b/g;
+
+function isCleanOpenCodeSessionRefreshReason(
+  reason: string | null | undefined,
+  pattern: RegExp
+): boolean {
+  const normalized = reason?.trim().toLowerCase() ?? '';
+  if (!pattern.test(normalized)) {
+    return false;
+  }
+  const markerText = stripOpenCodeGenericApiErrorPrefix(normalized);
+  if (hasOpenCodeSessionRefreshFailureConflict(markerText)) {
+    return false;
+  }
+  const rawRemainder = markerText.replace(OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN, '');
+  const remainder = rawRemainder.replace(/[().,;:\s-]+/g, '');
+  if (remainder.length === 0) {
+    return true;
+  }
+  const staleLogProjectionContext =
+    normalized.includes('session is stale') ||
+    normalized.includes('stored session is stale') ||
+    normalized.includes('session reconcile skipped');
+  if (!staleLogProjectionContext) {
+    return false;
+  }
+  return isBenignOpenCodeSessionRefreshRemainder(rawRemainder);
+}
+
+function isBenignOpenCodeSessionRefreshRemainder(rawRemainder: string): boolean {
+  if (OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(rawRemainder)) {
+    return false;
+  }
+  const normalized = rawRemainder.replace(/[().,;:\s-]+/g, ' ').trim();
+  return (
+    normalized === 'opencode session is stale' ||
+    normalized ===
+      'opencode session is stale reading historical messages for log projection only' ||
+    normalized === 'opencode session reconcile skipped because the stored session is stale' ||
+    normalized === 'stored session is stale'
+  );
+}
+
+function isOpenCodeSessionRefreshScheduledReason(message: string | null | undefined): boolean {
+  const normalized = stripOpenCodeGenericApiErrorPrefix(
+    message?.trim().toLowerCase() ?? ''
+  ).replace(/[.:\s-]+$/, '');
+  return (
+    normalized === 'opencode prompt delivery session refresh scheduled' ||
+    normalized === 'opencode_prompt_delivery_session_refresh_scheduled' ||
+    normalized === 'opencode session refresh scheduled after resolved behavior changed' ||
+    normalized === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed' ||
+    normalized === 'opencode session changed; refreshing the session before retry'
+  );
+}
+
+function stripOpenCodeGenericApiErrorPrefix(message: string): string {
+  return message.replace(/^opencode api error(?:[.:\s-]+|$)/i, '');
+}
+
+function hasOpenCodeSessionRefreshFailureConflict(value: string): boolean {
+  return OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(
+    value.replace(OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN, 'state')
+  );
+}
+
+export function isOpenCodeSessionRefreshResponseState(input: {
+  responseState?: OpenCodeDeliveryResponseState;
+  reason?: string | null;
+  diagnostics?: readonly string[];
+}): boolean {
+  const candidates = [input.reason, ...(input.diagnostics ?? [])];
+  const hasActionRequiredConflict = candidates.some(isOpenCodeSessionRefreshActionRequiredConflict);
+  if (input.responseState === 'session_stale') {
+    return !hasActionRequiredConflict;
+  }
+  return (
+    !hasActionRequiredConflict &&
+    candidates.some(
+      (candidate) =>
+        isOpenCodeResolvedBehaviorChangedReason(candidate) ||
+        isOpenCodeSessionTransportChangedReason(candidate) ||
+        isOpenCodeSessionRefreshScheduledReason(candidate)
+    )
+  );
+}
+
+function isOpenCodeSessionRefreshActionRequiredConflict(
+  message: string | null | undefined
+): boolean {
+  const normalized = message?.trim().toLowerCase() ?? '';
+  if (!normalized) {
+    return false;
+  }
+  if (normalized.replace(/[.:\s-]+$/, '') === 'opencode api error') {
+    return false;
+  }
+  if (
+    isOpenCodeResolvedBehaviorChangedReason(normalized) ||
+    isOpenCodeSessionTransportChangedReason(normalized) ||
+    isOpenCodeSessionRefreshScheduledReason(normalized)
+  ) {
+    return false;
+  }
+  return OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(normalized);
 }
 
 export function isOpenCodePromptDeliveryAttemptDue(
@@ -845,6 +1089,9 @@ function isOpenCodePromptDeliveryLedgerRecord(
     isOpenCodeDeliveryResponseState(record.responseState) &&
     isNonNegativeInteger(record.attempts) &&
     isNonNegativeInteger(record.maxAttempts) &&
+    isOptionalNonNegativeInteger(record.sessionRefreshAttempts) &&
+    isOptionalNonNegativeInteger(record.maxSessionRefreshAttempts) &&
+    isOptionalNullableString(record.lastSessionRefreshReason) &&
     typeof record.acceptanceUnknown === 'boolean' &&
     isOptionalNullableString(record.nextAttemptAt) &&
     isOptionalNullableString(record.lastAttemptAt) &&
@@ -945,6 +1192,10 @@ function isOptionalStringArray(value: unknown): value is string[] | undefined {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0;
+}
+
+function isOptionalNonNegativeInteger(value: unknown): value is number | undefined {
+  return value === undefined || isNonNegativeInteger(value);
 }
 
 function isTaskRefArray(value: unknown): value is TaskRef[] {

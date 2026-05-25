@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 import {
   getTeamModelBadgeLabel,
@@ -32,14 +33,17 @@ function getAvailabilityReason(
   return modelAvailability?.find((item) => item.modelId === model)?.reason ?? null;
 }
 
-function getAvailabilityChip(status: CliProviderModelAvailabilityStatus | null): string | null {
+function getAvailabilityChip(
+  status: CliProviderModelAvailabilityStatus | null,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string | null {
   switch (status) {
     case 'checking':
-      return 'Checking';
+      return t('providerModelBadges.checking');
     case 'unavailable':
-      return 'Unavailable';
+      return t('providerModelBadges.unavailable');
     case 'unknown':
-      return 'Check failed';
+      return t('providerModelBadges.checkFailed');
     case 'available':
     default:
       return null;
@@ -53,7 +57,11 @@ function getCatalogBadgeLabel(
   const catalogItem = providerStatus?.modelCatalog?.models.find(
     (item) => item.launchModel === model || item.id === model
   );
-  return catalogItem?.badgeLabel?.trim() || null;
+  const badgeLabel = catalogItem?.badgeLabel?.trim();
+  if (badgeLabel) {
+    return badgeLabel;
+  }
+  return catalogItem?.metadata?.free === true ? 'Free' : null;
 }
 
 function normalizeBadgeText(value: string): string {
@@ -104,6 +112,7 @@ export const ProviderModelBadges = ({
   readonly collapseAfter?: number;
   readonly maxCollapsedRows?: number;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [collapsedModelLimit, setCollapsedModelLimit] = useState<number | null>(null);
   const [measureTick, setMeasureTick] = useState(0);
@@ -184,15 +193,17 @@ export const ProviderModelBadges = ({
   const renderModelBadge = (model: string, index: number): React.JSX.Element => {
     const availabilityStatus = getAvailabilityStatus(model, displayModelAvailability);
     const availabilityReason = getAvailabilityReason(model, displayModelAvailability);
-    const availabilityChip = getAvailabilityChip(availabilityStatus);
+    const availabilityChip = getAvailabilityChip(availabilityStatus, t);
     const modelLabel = formatModelBadgeLabel(providerId, model);
     const catalogBadgeLabel = getCatalogBadgeLabel(model, providerStatus);
+    const catalogBadgeIsFree = catalogBadgeLabel === 'Free';
+    const localizedCatalogBadgeLabel = catalogBadgeIsFree
+      ? t('providerModelBadges.free')
+      : catalogBadgeLabel;
     const showCatalogBadge = shouldRenderCatalogBadge(modelLabel, catalogBadgeLabel);
     const title = [
       availabilityReason ?? availabilityChip,
-      showCatalogBadge && catalogBadgeLabel === 'Free'
-        ? 'Reported by OpenCode metadata. Availability and limits may change.'
-        : null,
+      showCatalogBadge && catalogBadgeIsFree ? t('providerModelBadges.freeTooltip') : null,
     ]
       .filter(Boolean)
       .join(' - ');
@@ -207,7 +218,7 @@ export const ProviderModelBadges = ({
         <span>{modelLabel}</span>
         {showCatalogBadge ? (
           <span className="rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
-            {catalogBadgeLabel}
+            {localizedCatalogBadgeLabel}
           </span>
         ) : null}
         {availabilityChip ? (
@@ -239,14 +250,14 @@ export const ProviderModelBadges = ({
         {shouldCollapse && !expanded ? (
           <button type="button" className={buttonClassName} onClick={() => setExpanded(true)}>
             <ChevronDown className="size-3" />
-            <span>+{hiddenCount} more</span>
+            <span>{t('list.moreCount', { count: hiddenCount })}</span>
           </button>
         ) : null}
       </div>
       {shouldCollapse && expanded ? (
         <button type="button" className={buttonClassName} onClick={() => setExpanded(false)}>
           <ChevronUp className="size-3" />
-          <span>Hide</span>
+          <span>{t('actions.hide')}</span>
         </button>
       ) : null}
     </div>

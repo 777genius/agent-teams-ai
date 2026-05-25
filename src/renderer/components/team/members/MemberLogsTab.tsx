@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
@@ -130,6 +131,7 @@ export const MemberLogsTab = ({
   showLeadPreview = false,
   onPreviewOnlineChange,
 }: MemberLogsTabProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   // Visibility check: skip polling when tab is hidden (display:none) to avoid OOM
   const tabId = useTabIdOptional();
   const activeTabId = useStore((s) => s.activeTabId);
@@ -718,7 +720,7 @@ export const MemberLogsTab = ({
     return (
       <div className="flex items-center justify-center gap-2 py-8 text-xs text-[var(--color-text-muted)]">
         <Loader2 size={14} className="animate-spin" />
-        Searching logs...
+        {t('members.logs.searching')}
       </div>
     );
   }
@@ -736,13 +738,13 @@ export const MemberLogsTab = ({
     return (
       <div className="py-8 text-center text-xs text-[var(--color-text-muted)]">
         <FileText size={20} className="mx-auto mb-2 opacity-40" />
-        No logs found
+        {t('members.logs.empty')}
         <p className="mt-1 text-[10px] opacity-60">
           {taskId != null
             ? taskStatus === 'in_progress'
-              ? 'Task is in progress — waiting for session activity (auto-refreshing)...'
-              : 'No session activity for this task yet'
-            : 'This member has no recorded session activity yet'}
+              ? t('members.logs.waitingForTaskActivity')
+              : t('members.logs.noTaskActivity')
+            : t('members.logs.noMemberActivity')}
         </p>
       </div>
     );
@@ -787,6 +789,7 @@ const LogCard = ({
   detailLoading,
   onToggle,
 }: LogCardProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const createdAgo = formatRelativeTime(log.startTime);
   const lastActivityTime = useMemo(() => {
     const startMs = new Date(log.startTime).getTime();
@@ -837,8 +840,8 @@ const LogCard = ({
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[240px] text-center">
                       {log.kind === 'lead_session'
-                        ? 'Full team lead session logs - useful for global orchestration context, not specific to this agent'
-                        : 'Full persistent teammate session logs - useful when work runs in a root member session instead of a subagent file'}
+                        ? t('members.logs.leadSessionTooltip')
+                        : t('members.logs.memberSessionTooltip')}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -850,7 +853,9 @@ const LogCard = ({
                       <Clock size={10} />
                       {updatedAgo}
                     </span>
-                    <span style={{ opacity: 0.4 }}>started {createdAgo}</span>
+                    <span style={{ opacity: 0.4 }}>
+                      {t('members.logs.startedAt', { time: createdAgo })}
+                    </span>
                   </>
                 ) : (
                   <span className="flex items-center gap-1">
@@ -864,7 +869,9 @@ const LogCard = ({
                   {log.messageCount}
                 </span>
                 {log.isOngoing && (
-                  <span className="rounded-full bg-green-500/20 px-1.5 text-green-400">active</span>
+                  <span className="rounded-full bg-green-500/20 px-1.5 text-green-400">
+                    {t('members.logs.active')}
+                  </span>
                 )}
               </div>
               {log.lastOutputPreview && !expanded && (
@@ -878,7 +885,9 @@ const LogCard = ({
             </div>
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{expanded ? 'Hide details' : 'Show details'}</TooltipContent>
+        <TooltipContent side="bottom">
+          {expanded ? t('members.logs.hideDetails') : t('members.logs.showDetails')}
+        </TooltipContent>
       </Tooltip>
 
       {expanded && (
@@ -886,12 +895,12 @@ const LogCard = ({
           {detailLoading && (
             <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-text-muted)]">
               <Loader2 size={12} className="animate-spin" />
-              Loading details...
+              {t('members.logs.loadingDetails')}
             </div>
           )}
           {!detailLoading && !detailChunks && (
             <div className="py-4 text-xs text-[var(--color-text-muted)]">
-              Failed to load details
+              {t('members.logs.failedToLoadDetails')}
             </div>
           )}
           {!detailLoading && detailChunks && (

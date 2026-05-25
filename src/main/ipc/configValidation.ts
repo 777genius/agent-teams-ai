@@ -3,6 +3,7 @@
  * Prevents invalid/unknown data from mutating persisted config.
  */
 
+import { isAppLocalePreference } from '@features/localization';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as path from 'path';
 
@@ -51,6 +52,7 @@ const VALID_SECTIONS = new Set<ConfigSection>([
   'ssh',
 ]);
 const MAX_SNOOZE_MINUTES = 24 * 60;
+const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -62,6 +64,30 @@ function isStringArray(value: unknown): value is string[] {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function validateAnthropicCompatibleBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must use http:// or https://';
+    }
+    if (url.username || url.password) {
+      return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must not include credentials';
+    }
+    if (FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)) {
+      return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must not be a first-party Anthropic API host';
+    }
+  } catch {
+    return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must be a valid URL';
+  }
+
+  return null;
 }
 
 function isValidTrigger(trigger: unknown): trigger is NotificationTrigger {
@@ -303,6 +329,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'multimodelEnabled',
     'claudeRootPath',
     'agentLanguage',
+    'appLocale',
     'autoExpandAIGroups',
     'useNativeTitleBar',
     'telemetryEnabled',
@@ -381,6 +408,12 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           return { valid: false, error: 'general.agentLanguage must be a non-empty string' };
         }
         result.agentLanguage = value.trim();
+        break;
+      case 'appLocale':
+        if (!isAppLocalePreference(value)) {
+          return { valid: false, error: 'general.appLocale must be a supported app locale' };
+        }
+        result.appLocale = value;
         break;
       case 'autoExpandAIGroups':
         if (typeof value !== 'boolean') {
@@ -496,7 +529,11 @@ function validateProviderConnectionsSection(
       const anthropicUpdate: Partial<ProviderConnectionsConfig['anthropic']> = {};
 
       for (const [connectionKey, connectionValue] of Object.entries(value)) {
-        if (connectionKey !== 'authMode' && connectionKey !== 'fastModeDefault') {
+        if (
+          connectionKey !== 'authMode' &&
+          connectionKey !== 'fastModeDefault' &&
+          connectionKey !== 'compatibleEndpoint'
+        ) {
           return {
             valid: false,
             error: `providerConnections.anthropic.${connectionKey} is not a valid setting`,
@@ -516,6 +553,64 @@ function validateProviderConnectionsSection(
           }
 
           anthropicUpdate.authMode = connectionValue;
+          continue;
+        }
+
+        if (connectionKey === 'compatibleEndpoint') {
+          if (!isPlainObject(connectionValue)) {
+            return {
+              valid: false,
+              error: 'providerConnections.anthropic.compatibleEndpoint must be an object',
+            };
+          }
+
+          const compatibleEndpoint: Partial<
+            ProviderConnectionsConfig['anthropic']['compatibleEndpoint']
+          > = {};
+          for (const [endpointKey, endpointValue] of Object.entries(connectionValue)) {
+            if (endpointKey !== 'enabled' && endpointKey !== 'baseUrl') {
+              return {
+                valid: false,
+                error: `providerConnections.anthropic.compatibleEndpoint.${endpointKey} is not a valid setting`,
+              };
+            }
+
+            if (endpointKey === 'enabled') {
+              if (typeof endpointValue !== 'boolean') {
+                return {
+                  valid: false,
+                  error:
+                    'providerConnections.anthropic.compatibleEndpoint.enabled must be a boolean',
+                };
+              }
+              compatibleEndpoint.enabled = endpointValue;
+              continue;
+            }
+
+            if (typeof endpointValue !== 'string') {
+              return {
+                valid: false,
+                error: 'providerConnections.anthropic.compatibleEndpoint.baseUrl must be a string',
+              };
+            }
+
+            const error = validateAnthropicCompatibleBaseUrl(endpointValue);
+            if (error) {
+              return { valid: false, error };
+            }
+            compatibleEndpoint.baseUrl = endpointValue.trim();
+          }
+
+          if (compatibleEndpoint.enabled === true && !compatibleEndpoint.baseUrl?.trim()) {
+            return {
+              valid: false,
+              error:
+                'providerConnections.anthropic.compatibleEndpoint.baseUrl is required when enabled',
+            };
+          }
+
+          anthropicUpdate.compatibleEndpoint =
+            compatibleEndpoint as ProviderConnectionsConfig['anthropic']['compatibleEndpoint'];
           continue;
         }
 

@@ -47,7 +47,7 @@ For project conventions and architecture guidance, refer to these canonical file
 
 ## 1. Run from source or download
 
-**Download the packaged app** for macOS, Windows, or Linux from the <a href="/download/" target="_self">download page</a> — no prerequisites needed. The app guides runtime detection and provider authentication from the UI.
+**Download the packaged app** for macOS, Windows, or Linux from the <a href="/download/" target="_self">download page</a> - no prerequisites needed. Start with the free model with no auth, or connect provider auth from the UI when you want more models.
 
 **Or run from source** for development:
 
@@ -84,7 +84,7 @@ The setup flow auto-detects installed runtimes on your machine. A common first s
 | -------- | ----------------------------------------------- |
 | Claude   | Claude Code users and existing Anthropic access |
 | Codex    | Codex-native workflows and OpenAI access        |
-| OpenCode | Multi-model teams and many provider backends    |
+| OpenCode | Free model with no auth, multi-model teams, and many provider backends |
 
 ::: info
 Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current provider status.
@@ -92,7 +92,7 @@ Gemini is available as a supported provider path. See [Providers and runtimes](/
 
 See [Runtime setup](/guide/runtime-setup) for detailed configuration per provider.
 
-To verify the selected runtime outside the app, check the binary and test auth:
+To verify a paid or account-backed runtime outside the app, check the binary and test auth:
 
 ```bash
 # Check that the runtime is installed and on PATH
@@ -101,7 +101,7 @@ command -v codex && codex --version
 command -v opencode && opencode --version
 ```
 
-If the command fails, fix the runtime installation or `PATH` first. Team prompts cannot work around a missing binary or missing provider auth.
+If the command fails, fix the runtime installation or `PATH` first. Team prompts cannot work around a missing binary or missing provider auth for models that require it.
 
 ::: tip
 If the binary is found but the app reports "not logged in", the environment may differ between your terminal and the app. See the [auth diagnostic log](/guide/troubleshooting#auth-diagnostic-log) to compare them.
@@ -162,7 +162,7 @@ Before approving the first task, check three things:
 | Symptom | Likely cause | Check |
 | --- | --- | --- |
 | App does not detect a runtime | Binary not on `PATH`, or app and terminal see different environments | Run `command -v <runtime>` in a terminal, then use the same terminal env to launch the app |
-| Team launch hangs | Missing provider auth, wrong model string, or runtime binary not found | See [Troubleshooting](/guide/troubleshooting#team-does-not-launch) |
+| Team launch hangs | Missing provider auth for a paid/account model, wrong model string, or runtime binary not found | See [Troubleshooting](/guide/troubleshooting#team-does-not-launch) |
 | OpenCode lane stuck on `registered` | Lane evidence not committed yet, or model string mismatch | Inspect `~/.claude/teams/<team>/.opencode-runtime/lanes/` |
 | Agent replies missing | Runtime delivery retry, parsing, or task attribution issue | Open task logs and check the delivery ledger |
 | Provider returns 429s | Rate limit reached | Wait for reset or switch model/provider |

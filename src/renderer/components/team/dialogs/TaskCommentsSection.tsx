@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { AnimatedHeightReveal } from '@renderer/components/team/activity/AnimatedHeightReveal';
@@ -93,6 +94,7 @@ export const TaskCommentsSection = ({
   focusCommentId,
   registerCommentForViewport,
 }: TaskCommentsSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
   const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
@@ -222,7 +224,7 @@ export const TaskCommentsSection = ({
       {!hideHeader ? (
         <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
           <MessageSquare size={12} />
-          Comments
+          {t('taskDetail.sections.comments')}
           {comments.length > 0 ? (
             <span className="rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0 text-[10px]">
               {comments.length}
@@ -235,8 +237,10 @@ export const TaskCommentsSection = ({
         <div className="mb-3">
           {comments.length > MAX_COMMENTS_TO_RENDER ? (
             <div className="mb-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
-              Showing the most recent {MAX_COMMENTS_TO_RENDER.toLocaleString()} comments to keep the
-              UI responsive.
+              {t('taskDetail.comments.renderLimit', {
+                count: MAX_COMMENTS_TO_RENDER,
+                formattedCount: MAX_COMMENTS_TO_RENDER.toLocaleString(),
+              })}
             </div>
           ) : null}
 
@@ -285,19 +289,19 @@ export const TaskCommentsSection = ({
                     {comment.type === 'review_approved' ? (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
                         <CheckCircle2 size={10} />
-                        Approved
+                        {t('taskDetail.comments.badges.approved')}
                       </span>
                     ) : comment.type === 'review_request' ? (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
                         <Eye size={10} />
-                        Review requested
+                        {t('taskDetail.comments.badges.reviewRequested')}
                       </span>
                     ) : null}
                     <span>
                       {(() => {
                         const date = new Date(comment.createdAt);
                         return isNaN(date.getTime())
-                          ? 'unknown time'
+                          ? t('taskDetail.comments.unknownTime')
                           : formatDistanceToNow(date, { addSuffix: true });
                       })()}
                     </span>
@@ -318,10 +322,12 @@ export const TaskCommentsSection = ({
                           }}
                         >
                           <Reply size={11} />
-                          Reply
+                          {t('taskDetail.comments.actions.reply')}
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="left">Reply to comment</TooltipContent>
+                      <TooltipContent side="left">
+                        {t('taskDetail.comments.actions.replyToComment')}
+                      </TooltipContent>
                     </Tooltip>
                     <span className="opacity-0 transition-opacity group-hover:opacity-100">
                       <CopyButton text={comment.text} inline />
@@ -405,7 +411,10 @@ export const TaskCommentsSection = ({
                   setVisibleCount((v) => Math.min(sortedComments.length, v + VISIBLE_COMMENTS_STEP))
                 }
               >
-                Show more comments ({visibleComments.length}/{sortedComments.length})
+                {t('taskDetail.comments.actions.showMore', {
+                  visible: visibleComments.length,
+                  total: sortedComments.length,
+                })}
               </button>
             </div>
           ) : null}
@@ -418,7 +427,7 @@ export const TaskCommentsSection = ({
           open
           onClose={() => setPreviewImageUrl(null)}
           src={previewImageUrl}
-          alt="Attachment preview"
+          alt={t('taskDetail.comments.attachments.previewAlt')}
         />
       ) : null}
 
@@ -428,7 +437,7 @@ export const TaskCommentsSection = ({
             <div className="mb-2 flex items-start gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2">
               <div className="min-w-0 flex-1">
                 <div className="mb-0.5 flex items-center gap-1 text-[10px] font-medium text-[var(--color-text-muted)]">
-                  Replying to
+                  {t('taskDetail.comments.replyingTo')}
                   <MemberBadge name={replyTo.author} color={colorMap.get(replyTo.author)} />
                 </div>
                 <div className="line-clamp-3 text-[11px] text-[var(--color-text-muted)]">
@@ -445,7 +454,9 @@ export const TaskCommentsSection = ({
                     <X size={12} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="left">Cancel reply</TooltipContent>
+                <TooltipContent side="left">
+                  {t('taskDetail.comments.actions.cancelReply')}
+                </TooltipContent>
               </Tooltip>
             </div>
           ) : null}
@@ -453,7 +464,7 @@ export const TaskCommentsSection = ({
           <div className="relative">
             <MentionableTextarea
               id={`task-comment-${taskId}`}
-              placeholder="Add a comment... (Enter to send)"
+              placeholder={t('taskDetail.comments.input.placeholder')}
               value={draft.value}
               onValueChange={draft.setValue}
               suggestions={mentionSuggestions}
@@ -476,7 +487,7 @@ export const TaskCommentsSection = ({
                   onClick={() => void handleSubmit()}
                 >
                   <Send size={12} />
-                  Comment
+                  {t('taskDetail.comments.actions.comment')}
                 </button>
               }
               footerRight={
@@ -485,11 +496,13 @@ export const TaskCommentsSection = ({
                     <span
                       className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
                     >
-                      {remaining} chars left
+                      {t('taskDetail.comments.input.charsLeft', { count: remaining })}
                     </span>
                   ) : null}
                   {draft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">
+                      {t('tasks.createTask.saved')}
+                    </span>
                   ) : null}
                 </div>
               }
@@ -518,6 +531,7 @@ const CommentAttachmentThumbnail = ({
   taskId,
   onPreview,
 }: CommentAttachmentThumbnailProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const getTaskAttachmentData = useStore((s) => s.getTaskAttachmentData);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -586,7 +600,11 @@ const CommentAttachmentThumbnail = ({
                 a.remove();
                 URL.revokeObjectURL(url);
               } catch (err) {
-                setDownloadError(err instanceof Error ? err.message : 'Download failed');
+                setDownloadError(
+                  err instanceof Error
+                    ? err.message
+                    : t('taskDetail.comments.attachments.downloadFailed')
+                );
               } finally {
                 setDownloading(false);
               }

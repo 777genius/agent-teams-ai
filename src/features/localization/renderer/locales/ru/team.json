@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Создать задачу из сообщения",
+      "expandMessage": "Развернуть сообщение",
+      "replyToMessage": "Ответить на сообщение",
+      "restartTeam": "Перезапустить команду"
+    },
+    "authError": {
+      "description": "Не удалось пройти authentication. Перезапуск команды обновит session и может исправить проблему. Если ошибка повторится, проверьте API credentials или попробуйте позже."
+    },
+    "automation": {
+      "reviewPickup": "Teammate получил просьбу забрать review",
+      "stallNudge": "Teammate получил просьбу продолжить stalled task",
+      "workSyncBody": "Teammate получил просьбу синхронизировать текущую работу"
+    },
+    "badges": {
+      "automation": "automation",
+      "bootstrap": "bootstrap",
+      "command": "command",
+      "comment": "Комментарий",
+      "live": "live",
+      "note": "note",
+      "rateLimited": "Rate limit",
+      "restart": "restart",
+      "result": "result",
+      "session": "session",
+      "stallNudge": "stall nudge",
+      "start": "start",
+      "workSync": "work sync"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap подтверждён",
+      "restarting": "Перезапуск teammate",
+      "starting": "Запуск teammate"
+    },
+    "rawJson": "Raw JSON",
+    "unread": "Непрочитано",
+    "thoughts": {
+      "count": "{{count}} мыслей",
+      "count_one": "{{count}} мысль",
+      "count_few": "{{count}} мысли",
+      "count_many": "{{count}} мыслей",
+      "count_other": "{{count}} мысли",
+      "expand": "Развернуть мысли",
+      "showMore": "Показать больше",
+      "showLess": "Показать меньше",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - мысли"
+    },
+    "timeline": {
+      "loadingMessages": "Загрузка сообщений...",
+      "noMessages": "Нет сообщений",
+      "emptyHint": "Отправьте сообщение участнику, чтобы увидеть активность.",
+      "newSession": "Новая сессия",
+      "olderCount": "+{{count}} старых",
+      "olderCount_one": "+{{count}} старое",
+      "olderCount_few": "+{{count}} старых",
+      "olderCount_many": "+{{count}} старых",
+      "olderCount_other": "+{{count}} старых",
+      "showMore": "Показать ещё {{count}}",
+      "showAll": "Показать все"
+    },
+    "pendingReplies": {
+      "title": "Ожидают ответа",
+      "openMember": "Открыть участника",
+      "messageSentAwaitingReply": "Сообщение отправлено, ожидается ответ",
+      "awaitingReply": "ожидает ответа",
+      "externalTeam": "внешняя команда",
+      "crossTeamAwaitingReply": "Межкомандное сообщение отправлено, ожидается ответ",
+      "user": "пользователь",
+      "awaitingApproval": "ожидает подтверждения"
+    },
+    "reply": {
+      "replyingTo": "Ответ на",
+      "action": "Ответить"
+    },
+    "activeTasks": {
+      "inProgress": "В работе"
+    },
+    "expandDialog": {
+      "description": "Развёрнутый просмотр сообщения"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Создать",
+      "creating": "Создание...",
+      "openExisting": "Открыть существующую команду",
+      "skipPreflightAndCreate": "Пропустить preflight и создать"
+    },
+    "conflict": {
+      "description": "Запуск двух команд в одной директории рискован - они могут конфликтовать при изменении одних и тех же файлов. Лучше выбрать другую директорию или git worktree для изоляции.",
+      "title": "Другая команда \"{{team}}\" уже работает в этой working directory",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "copy": "Создать новую команду на основе существующей.",
+      "create": "Настройте команду и выберите, как она будет запускаться."
+    },
+    "errors": {
+      "nameExists": "Команда с таким именем уже существует",
+      "nameLaunching": "Команда с таким именем сейчас запускается",
+      "createConfigFailed": "Не удалось создать конфиг команды",
+      "loadProjectsFailed": "Не удалось загрузить проекты"
+    },
+    "fields": {
+      "color": "Цвет (optional)",
+      "description": "Описание (optional)",
+      "prompt": "Prompt для team lead (optional)",
+      "teamName": "Имя команды"
+    },
+    "launchAfterCreate": {
+      "description": "Сразу запустить команду через локальный Claude CLI.",
+      "label": "Выполнить команду после создания"
+    },
+    "localOnly": "Доступно только в локальном Electron mode.",
+    "onDisk": "На диске:",
+    "placeholders": {
+      "description": "Краткое описание назначения команды",
+      "prompt": "Инструкции для team lead во время provisioning..."
+    },
+    "saved": "Сохранено",
+    "solo": {
+      "description": "Будет запущен только team lead (main process) - teammates не будут созданы. Работает как обычная agent session в выбранном runtime (Claude Code, Codex, OpenCode, Gemini), но с доступом к task board для планирования. Экономит tokens за счёт отсутствия coordination overhead между teammates. Участников можно добавить позже в настройках команды.",
+      "label": "Solo team"
+    },
+    "title": {
+      "copy": "Копировать команду",
+      "create": "Создать команду"
+    },
+    "optional": {
+      "launchSettingsTitle": "Опциональные настройки запуска",
+      "launchSettingsDescription": "Промпт, безопасность и переопределения CLI находятся здесь, когда они нужны.",
+      "teamDetailsTitle": "Опциональные детали команды",
+      "teamDetailsDescription": "Основной поток остаётся компактным. Открывайте этот блок, когда нужен дополнительный контекст или свой цвет."
+    },
+    "prepare": {
+      "unsupportedPreload": "Текущая версия preload не поддерживает team:prepareProvisioning. Перезапустите dev app.",
+      "selectWorkingDirectory": "Выберите рабочую директорию, чтобы проверить окружение запуска.",
+      "someProvidersNeedAttention": "Некоторым выбранным providers нужно внимание.",
+      "readyWithNotes": "Все выбранные providers готовы, есть заметки.",
+      "ready": "Все выбранные providers готовы.",
+      "failed": "Не удалось подготовить выбранных providers",
+      "checkingProviders": "Проверка выбранных providers...",
+      "preparingEnvironment": "Подготовка окружения...",
+      "selectedProvidersReadyWithNotes": "Выбранные providers готовы (есть заметки)",
+      "selectedProvidersReady": "Выбранные providers готовы"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Имя должно содержать хотя бы одну букву или цифру",
+      "nameTooLong": "Имя слишком длинное (максимум 128 символов)",
+      "selectWorkingDirectory": "Выберите рабочую директорию (cwd)",
+      "memberNameRequired": "Имя участника не может быть пустым",
+      "memberNameInvalid": "Имя участника должно начинаться с буквы или цифры и содержать только [a-zA-Z0-9._-], максимум 128 символов",
+      "memberNamesUnique": "Имена участников должны быть уникальными",
+      "openCodeLeadModelRequired": "Для lead на OpenCode нужно выбрать модель.",
+      "openCodeTeammateRequired": "Для lead на OpenCode нужен хотя бы один teammate OpenCode.",
+      "teamLaunching": "Команда сейчас запускается",
+      "teamNameExists": "Команда с таким именем уже существует",
+      "checkFormFields": "Проверьте поля формы"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Отмена",
+      "save": "Сохранить"
+    },
+    "addMemberLockReason": "Используйте отдельный диалог добавления участника, чтобы добавлять teammates во время работы команды.",
+    "description": "Измените имя, описание и цвет команды",
+    "errors": {
+      "changesSavedRefreshFailed": "Изменения команды сохранены, но не удалось обновить последний вид: {{message}}",
+      "liveRenameBlocked": "Нельзя переименовывать существующих teammates, пока команда работает. Переименованы: {{names}}",
+      "memberNameEmpty": "Имя участника не может быть пустым",
+      "memberNameInvalid": "Имя участника должно начинаться с буквы или цифры, использовать только [a-zA-Z0-9._-] и быть не длиннее 128 символов",
+      "memberNameNumericSuffix": "Имя участника \"{{name}}\" недоступно, потому что зарезервировано для auto-suffix Claude CLI. Используйте \"{{base}}\".",
+      "memberNameReserved": "Имя участника \"{{name}}\" зарезервировано",
+      "memberNamesUnique": "Перед сохранением имена участников должны быть уникальными",
+      "newLiveTeammates": "Добавляйте новых teammates через отдельный диалог добавления участника, пока команда работает. Edit Team поддерживает только изменение существующих teammates.",
+      "provisioning": "Настройки команды нельзя редактировать, пока provisioning ещё идёт. Дождитесь завершения запуска и попробуйте снова.",
+      "restartFailedMany": "Команда сохранена, но не удалось перезапустить этих teammates: {{failures}}",
+      "restartFailedOne": "Команда сохранена, но не удалось перезапустить этого teammate: {{failures}}",
+      "saveFailed": "Не удалось сохранить",
+      "settingsChanged": "Настройки команды изменились, пока диалог был открыт. Откройте его заново и проверьте актуальное состояние перед сохранением.",
+      "settingsSavedMembersAndRefreshFailed": "Настройки команды сохранены, но изменения участников не применились: {{message}}. Обновление тоже завершилось ошибкой: {{refreshError}}",
+      "settingsSavedMembersFailed": "Настройки команды сохранены, но изменения участников не применились: {{message}}",
+      "settingsSavedRefreshFailed": "Настройки команды сохранены, но не удалось обновить последний вид: {{message}}",
+      "teamNameEmpty": "Имя команды не может быть пустым",
+      "unsupportedMixedPrimaryMutation": "Live-изменения primary-owned teammates в mixed OpenCode teams пока не поддерживаются. Остановите команду, измените roster и запустите заново. Затронуты: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Цвет (необязательно)",
+      "description": "Описание",
+      "name": "Имя"
+    },
+    "memberRestartWarning": "Сохранение перезапустит этого teammate, чтобы применить изменения роли, workflow, worktree isolation, provider, model, effort или MCP access.",
+    "notices": {
+      "liveRenameBlocked": "Live-сохранение заблокировано, потому что существующие teammates были переименованы. Отмените эти identity changes или сначала остановите команду.",
+      "newLiveTeammates": "Новых teammates нельзя добавлять из Edit Team, пока команда работает. Используйте диалог добавления участника.",
+      "provisioning": "Provisioning команды ещё идёт. Редактирование временно заблокировано до завершения запуска.",
+      "restartMany": "Сохранение перезапустит или перезапустит заново этих teammates, чтобы применить изменения роли, workflow, worktree isolation, provider, model, effort или MCP access: {{names}}.",
+      "restartOne": "Сохранение перезапустит или перезапустит заново этого teammate, чтобы применить изменения роли, workflow, worktree isolation, provider, model, effort или MCP access: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Live-изменения или удаления primary-owned teammates в mixed OpenCode teams требуют остановки и повторного запуска команды: {{names}}."
+    },
+    "placeholders": {
+      "description": "Описание команды (необязательно)",
+      "teamName": "Имя команды"
+    },
+    "teamLead": {
+      "changeRuntime": "Изменить runtime lead",
+      "changeRuntimeDescription": "Откройте Relaunch Team, чтобы изменить provider, model или effort для lead.",
+      "modelLockReason": "Runtime team lead управляется через Relaunch Team.",
+      "readOnlyHint": "Имя и роль team lead здесь доступны только для чтения. Откройте runtime panel в строке lead, чтобы изменить provider, model или effort.",
+      "role": "Team Lead"
+    },
+    "title": "Редактировать команду"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Удалить участника",
+      "removeAria": "Удалить {{name}}",
+      "restore": "Восстановить участника",
+      "restoreAria": "Восстановить {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "настройка контекста по умолчанию",
+      "description": "Контекст Anthropic действует на всю команду для этого запуска: {{mode}}. Используйте checkbox Limit context в runtime panel lead, чтобы изменить это.",
+      "limitEnabled": "лимит 200K включён"
+    },
+    "mcp": {
+      "buttonInherit": "MCP inherit",
+      "buttonScopes": "MCP scopes",
+      "chooseScopes": "Выбрать scopes",
+      "inheritLead": "Наследовать lead",
+      "lockedInfo": "Для всех teammates включён режим только Agent Teams MCP. Этот teammate запустится только с Agent Teams server.",
+      "mode": "MCP mode",
+      "scopes": {
+        "local": "local",
+        "project": "project",
+        "user": "user"
+      },
+      "serverNames": "Имена servers",
+      "settingInfo": "Agent Teams MCP запускает этого teammate только с Agent Teams server. Scope и allowlist modes применяются только к запуску этого teammate.",
+      "strictAllowlist": "Строгий allowlist",
+      "tooltip": "{{label}}: управление MCP inheritance policy этого участника",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} provider, {{model}}",
+      "currentLeadRuntime": "Текущий runtime lead",
+      "default": "По умолчанию",
+      "inheritedTooltip": "Provider, model и effort наследуются от lead, пока включена синхронизация.",
+      "leadSuffix": "{{label}} (lead)",
+      "liveDisabled": "Изменения provider, model и effort отключены, пока команда работает. Переподключите команду, чтобы применить их безопасно.",
+      "lockedActionFallback": "Изменения runtime lead открывают Relaunch Team, где можно обновить provider, model и effort.",
+      "restartWholeTeam": "Сохранение этих runtime changes перезапустит всю команду."
+    },
+    "nameAria": "Имя участника {{index}}",
+    "nameFallback": "участник {{index}}",
+    "noRole": "Без роли",
+    "removed": "Удалён",
+    "workflow": {
+      "addTooltip": "Добавить workflow teammate",
+      "editTooltip": "Редактировать workflow teammate",
+      "label": "Workflow (необязательно)",
+      "placeholder": "Как этот agent должен работать и взаимодействовать с другими...",
+      "saved": "Сохранено"
+    },
+    "worktree": {
+      "description": "Запускать этого teammate в отдельном git worktree. Apply/reject changes будут работать с этим worktree, а не с workspace lead.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "Добавить участников",
+      "description": "Добавить новых участников в {{teamName}}"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Добавить",
+      "cancel": "Отмена",
+      "delete": "Удалить",
+      "editCode": "Редактировать код",
+      "launch": "Запустить",
+      "remove": "Удалить",
+      "stop": "Остановить",
+      "task": "Задача",
+      "visualize": "Визуализировать"
+    },
+    "deleteTeam": {
+      "description": "Удалить команду \"{{team}}\"? Это действие необратимо. Все данные команды и задачи будут удалены.",
+      "title": "Удалить команду"
+    },
+    "draft": {
+      "descriptionPrefix": "Это draft-команда -",
+      "descriptionSuffix": "настроена с {{count}} {{member}}, но ещё не provisioned через CLI. Нажмите «Запустить», чтобы выбрать модель и стартовать команду.",
+      "descriptionSuffix_few": "настроена с {{count}} {{member}}, но ещё не provisioned через CLI. Нажмите «Запустить», чтобы выбрать модель и стартовать команду.",
+      "descriptionSuffix_many": "настроена с {{count}} {{member}}, но ещё не provisioned через CLI. Нажмите «Запустить», чтобы выбрать модель и стартовать команду.",
+      "descriptionSuffix_one": "настроена с {{count}} {{member}}, но ещё не provisioned через CLI. Нажмите «Запустить», чтобы выбрать модель и стартовать команду.",
+      "descriptionSuffix_other": "настроена с {{count}} {{member}}, но ещё не provisioned через CLI. Нажмите «Запустить», чтобы выбрать модель и стартовать команду.",
+      "member": "участниками",
+      "member_few": "участниками",
+      "member_many": "участниками",
+      "member_one": "участником",
+      "member_other": "участниками",
+      "title": "Команда ещё не запущена"
+    },
+    "invalidTab": "Некорректная вкладка команды",
+    "kanbanSafeData": "Не удалось полностью загрузить kanban. Показаны безопасные данные.",
+    "loadFailed": "Не удалось загрузить команду",
+    "loading": "Загрузка команды",
+    "loadingSidebar": "Загрузка sidebar команды",
+    "offline": {
+      "offline": "Команда offline",
+      "partialFailed": "Последний запуск частично не удался",
+      "partialMissing": "Последний запуск частично не удался - {{missing}}/{{expected}} teammates не подключились",
+      "reconciling": "Последний запуск ещё сверяется"
+    },
+    "previous": "Предыдущие: {{paths}}",
+    "removeMember": {
+      "description": "Удалить \"{{member}}\" из команды? Задачи и сообщения сохранятся, но это имя нельзя будет использовать повторно.",
+      "title": "Удалить участника"
+    },
+    "sections": {
+      "team": "Команда"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Активно",
+      "launching": "Запуск...",
+      "running": "Работает"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memory"
+    },
+    "tooltips": {
+      "deleteTeam": "Удалить команду",
+      "editTeam": "Редактировать команду",
+      "editUnavailableProvisioning": "Редактирование недоступно, пока provisioning ещё выполняется",
+      "openBuiltInEditor": "Открыть проект во встроенном редакторе",
+      "openTeamGraph": "Открыть граф команды",
+      "stopTeam": "Остановить команду"
+    },
+    "waitingForProvisioning": "Данные команды появятся после завершения provisioning",
+    "context": {
+      "title": "Контекст"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Принять",
+        "discard": "Отменить",
+        "discardTooltip": "Отменить все правки в этом файле",
+        "keepMyDraft": "Оставить мой черновик",
+        "reject": "Отклонить",
+        "reloadFromDisk": "Перезагрузить с диска",
+        "restore": "Восстановить",
+        "restoreTooltip": "Создать или восстановить этот файл на диске из предпросмотра",
+        "saveFile": "Сохранить файл",
+        "saveFileTooltip": "Сохранить файл на диск"
+      },
+      "badges": {
+        "deleted": "УДАЛЁН",
+        "manualReview": "РУЧНОЙ REVIEW",
+        "new": "НОВЫЙ",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Текущее состояние диска",
+        "file-history": "История файла",
+        "git-fallback": "Git fallback",
+        "ledger-exact": "Task ledger",
+        "ledger-snapshot": "Снимок ledger",
+        "snippet-reconstruction": "Реконструировано",
+        "unavailable": "Содержимое недоступно"
+      },
+      "contentUnavailable": {
+        "badge": "Содержимое недоступно",
+        "description": "В ledger записаны metadata для этого изменения, но полный текст недоступен. Обычно это binary, большой файл или hash-only content.",
+        "safety": "Автоматические accept/reject отключены для этого файла, чтобы избежать небезопасной записи на диск.",
+        "title": "Текстовое содержимое недоступно"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Accept/Reject отключён, потому что полный текст недоступен.",
+        "acceptRejectMissingOnDisk": "Accept/Reject отключён, пока файл отсутствует на диске.",
+        "rejectBaselineUnavailable": "Reject отключён, потому что исходный baseline недоступен.",
+        "rejectContentUnavailable": "Reject отключён, потому что полный текст недоступен.",
+        "rejectManualLedgerReview": "Reject отключён, потому что это ledger-изменение содержит binary, большой или недоступный content."
+      },
+      "externalChange": {
+        "changedOnDisk": "Изменён на диске",
+        "deletedOnDisk": "Удалён на диске",
+        "recreatedOnDisk": "Создан заново на диске"
+      },
+      "missingOnDisk": {
+        "badge": "Отсутствует на диске",
+        "description": "Предпросмотр из agent logs всё ещё доступен, но filesystem не синхронизирован.",
+        "restorePrefix": "Нажмите",
+        "restoreSuffix": "чтобы записать preview content обратно на диск.",
+        "restoreUnavailable": "Полное содержимое файла недоступно для автоматического восстановления.",
+        "title": "Файл отсутствует на диске"
+      },
+      "pathChange": {
+        "from": "Из {{path}}",
+        "to": "В {{path}}"
+      },
+      "worktree": {
+        "isolated": "Изолированный worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} pending",
+        "pending_one": "{{count}} pending",
+        "pending_few": "{{count}} pending",
+        "pending_many": "{{count}} pending",
+        "pending_other": "{{count}} pending",
+        "accepted": "{{count}} accepted",
+        "accepted_one": "{{count}} accepted",
+        "accepted_few": "{{count}} accepted",
+        "accepted_many": "{{count}} accepted",
+        "accepted_other": "{{count}} accepted",
+        "rejected": "{{count}} rejected",
+        "rejected_one": "{{count}} rejected",
+        "rejected_few": "{{count}} rejected",
+        "rejected_many": "{{count}} rejected",
+        "rejected_other": "{{count}} rejected",
+        "acrossFiles": "в {{count}} файлах",
+        "acrossFiles_one": "в {{count}} файле",
+        "acrossFiles_few": "в {{count}} файлах",
+        "acrossFiles_many": "в {{count}} файлах",
+        "acrossFiles_other": "в {{count}} файлах",
+        "edited": "{{count}} edited",
+        "edited_one": "{{count}} edited",
+        "edited_few": "{{count}} edited",
+        "edited_many": "{{count}} edited",
+        "edited_other": "{{count}} edited"
+      },
+      "actions": {
+        "auto": "Auto",
+        "undo": "Отменить",
+        "acceptAll": "Принять всё",
+        "rejectAll": "Отклонить всё",
+        "applying": "Применение...",
+        "applyRejections": "Применить отклонения"
+      },
+      "tooltips": {
+        "autoOn": "Auto-mark файлов как viewed при прокрутке до конца (ON)",
+        "autoOff": "Auto-mark файлов как viewed при прокрутке до конца (OFF)",
+        "undo": "Отменить последнюю review operation (Ctrl+Z)",
+        "acceptAll": "Принять все изменения во всех файлах",
+        "rejectAll": "Отклонить все безопасно отклоняемые изменения во всех файлах",
+        "rejectAllDisabled": "У pending файлов нет безопасного original baseline для отклонения.",
+        "applyRejections": "Применить отклонённые hunks на диск; принятые изменения останутся как есть"
+      }
+    },
+    "diffError": {
+      "title": "Не удалось отрендерить diff view",
+      "unexpected": "При рендеринге diff произошла неожиданная ошибка.",
+      "actions": {
+        "retry": "Повторить"
+      },
+      "raw": {
+        "show": "Показать raw diff data",
+        "file": "Файл: {{file}}",
+        "original": "--- Original",
+        "modified": "+++ Modified",
+        "charsTotal": "... (всего символов: {{count}})",
+        "charsTotal_one": "... (всего {{count}} символ)",
+        "charsTotal_few": "... (всего {{count}} символа)",
+        "charsTotal_many": "... (всего {{count}} символов)",
+        "charsTotal_other": "... (всего {{count}} символов)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Просмотрено",
+      "badges": {
+        "new": "new",
+        "deleted": "deleted"
+      },
+      "collapseFolder": "Свернуть {{name}}",
+      "expandFolder": "Развернуть {{name}}",
+      "empty": {
+        "noChangedFiles": "Нет изменённых файлов",
+        "noMatchingFiles": "Нет подходящих файлов"
+      },
+      "searchPlaceholder": "Поиск файлов…",
+      "filters": {
+        "unresolved": "Нерешённые",
+        "rejected": "Отклонённые",
+        "new": "Новые",
+        "clear": "Очистить"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Предыдущий chunk",
+      "nextChunk": "Следующий chunk",
+      "rejectChange": "Отклонить изменение (⌘N)",
+      "acceptChange": "Принять изменение (⌘Y)",
+      "undo": "Отменить",
+      "keep": "Оставить",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "Обнаружен конфликт",
+      "description": "Файл был изменён после правок агента",
+      "cancel": "Отмена",
+      "saveResolution": "Сохранить решение",
+      "editManually": "Редактировать вручную",
+      "useOriginal": "Использовать исходный вариант",
+      "keepCurrent": "Оставить текущий вариант"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Подготовка полного diff",
+      "titleMany": "Подготовка полных diff: {{count}}",
+      "subtitleForFile": "Финализируется точный editor diff для {{file}}.",
+      "subtitleCurrentFile": "Финализируется точный editor diff для текущего файла.",
+      "subtitleMany": "Определяются точные before/after baseline для загружаемых файлов.",
+      "previewsReady": "готово preview: {{count}}",
+      "previewsReady_one": "готово {{count}} preview",
+      "previewsReady_few": "готово preview: {{count}}",
+      "previewsReady_many": "готово preview: {{count}}",
+      "previewsReady_other": "готово preview: {{count}}",
+      "editorViewLoading": "Загружается editor view",
+      "filesInProgress": "файлов в процессе: {{count}}",
+      "filesInProgress_one": "{{count}} файл в процессе",
+      "filesInProgress_few": "файлов в процессе: {{count}}",
+      "filesInProgress_many": "файлов в процессе: {{count}}",
+      "filesInProgress_other": "файлов в процессе: {{count}}",
+      "filesReady": "готово файлов: {{ready}}/{{total}}",
+      "progressDescription": "Готово: {{ready}}, ещё загружается: {{loading}}. Preview diff остаются видимыми ниже, пока остальные baseline определяются.",
+      "singleDescription": "Preview diff остаются видимыми ниже, пока определяется точный baseline."
+    },
+    "fileMissingPrefix": "Файл отсутствует на диске. Этот diff может быть только предпросмотром из логов агента. Используйте",
+    "restore": "Восстановить",
+    "fileMissingSuffix": "чтобы создать файл на диске.",
+    "filePlaceholder": {
+      "loading": "Загрузка",
+      "description": "Подготовка полного editor diff для этого файла."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "обработано ledger-объектов: {{count}}",
+      "ledgerObjectsProcessed_one": "обработан {{count}} ledger-объект",
+      "ledgerObjectsProcessed_few": "обработано {{count}} ledger-объекта",
+      "ledgerObjectsProcessed_many": "обработано {{count}} ledger-объектов",
+      "ledgerObjectsProcessed_other": "обработано {{count}} ledger-объектов",
+      "phases": {
+        "readingLedger": "Чтение task ledger...",
+        "resolvingFiles": "Определение состояния файлов...",
+        "checkingWorktree": "Проверка worktree...",
+        "preparingDiffs": "Подготовка review diff..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} просмотрено"
+    },
+    "scope": {
+      "readMore": "Подробнее",
+      "tiers": {
+        "exact": {
+          "title": "Область задачи определена точно",
+          "detail": "В логе сессии найдены маркеры начала и завершения. Diff включает только изменения этой задачи - изменения других задач в тех же файлах исключены."
+        },
+        "endEstimated": {
+          "title": "Граница завершения оценена приблизительно",
+          "detail": "Найден только маркер начала - у задачи ещё нет маркера завершения. Показаны изменения от старта задачи до конца сессии. Если после неё в той же сессии выполнялись другие задачи, их изменения тоже могут попасть в diff."
+        },
+        "startEstimated": {
+          "title": "Граница начала оценена приблизительно",
+          "detail": "Найден только маркер завершения - начало работы не было зафиксировано. Если до этой задачи в той же сессии выполнялись другие задачи, их изменения в тех же файлах тоже могут попасть в diff."
+        },
+        "allSession": {
+          "title": "Показаны все изменения сессии",
+          "detail": "В логе сессии нет маркеров задачи. Нельзя изолировать конкретную задачу - показаны все изменения файлов за всю сессию, включая изменения других задач. Такое возможно со старыми версиями CLI или нестандартными workflows."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Изменения зафиксированы task ledger",
+          "detail": "Orchestrator зафиксировал эти изменения файлов во время работы агента над задачей.",
+          "badge": "Точно по ledger"
+        },
+        "limited": {
+          "title": "Изменения зафиксированы с ограниченной проверяемостью",
+          "detail": "Orchestrator зафиксировал эти изменения для задачи, но хотя бы одно изменение пришло из snapshot или metadata-only источника. Проверяйте точные текстовые diff там, где они доступны; binary или недоступный контент может требовать ручного review.",
+          "mixedBadge": "Смешанная проверяемость",
+          "needsReviewBadge": "Нужен review"
+        }
+      },
+      "workInterval": {
+        "title": "Область задана сохранённым рабочим интервалом",
+        "detail": "Маркер начала задачи недоступен в логе сессии, поэтому diff ограничен рабочим интервалом задачи, сохранённым на доске.",
+        "badge": "По интервалу"
+      },
+      "confidence": {
+        "high": "Высокая уверенность",
+        "medium": "Средняя уверенность",
+        "low": "Низкая уверенность",
+        "bestEffort": "Best effort"
+      }
+    },
+    "shortcuts": {
+      "title": "Горячие клавиши",
+      "actions": {
+        "nextChange": "Следующее изменение",
+        "previousChange": "Предыдущее изменение",
+        "nextFile": "Следующий файл",
+        "previousFile": "Предыдущий файл",
+        "acceptChange": "Принять изменение",
+        "rejectChange": "Отклонить изменение",
+        "saveFile": "Сохранить файл",
+        "undo": "Отменить",
+        "redo": "Повторить",
+        "toggleShortcuts": "Показать/скрыть подсказки",
+        "closeDialog": "Закрыть диалог"
+      }
+    },
+    "timeline": {
+      "empty": "Нет событий редактирования",
+      "titleWithCount": "История правок ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "Нет изменений файлов для ревью"
+    },
+    "empty": {
+      "noSafeDiff": "Нет безопасного diff",
+      "noFileChangesRecorded": "Изменения файлов не записаны",
+      "noSafeDiffDescription": "Журнал задачи не предоставил безопасный diff файлов для этой задачи.",
+      "noSafeDiffDiagnosticsDescription": "Журнал задачи не предоставил безопасный diff файлов для этой задачи. Диагностика ниже объясняет причину.",
+      "noFileEventsYet": "В журнале задачи пока нет событий файлов.",
+      "noFileEvents": "В журнале задачи нет событий файлов."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Действия нижней панели сообщений",
+      "collapseAll": "Свернуть все сообщения",
+      "collapseSheet": "Свернуть панель",
+      "expandAll": "Развернуть все сообщения",
+      "expandSheet": "Развернуть панель",
+      "floatComposer": "Открепить composer",
+      "floatMessagesComposer": "Открепить composer сообщений",
+      "hideSearch": "Скрыть поиск",
+      "loadOlder": "Загрузить старые сообщения",
+      "markAllRead": "Отметить всё прочитанным",
+      "messageActions": "Действия сообщений",
+      "moveMessagesToBottomSheet": "Переместить сообщения в нижнюю панель",
+      "moveMessagesToSidebar": "Переместить сообщения в sidebar",
+      "moveToBottomSheet": "Переместить в нижнюю панель",
+      "moveToInline": "Переместить inline",
+      "moveToSidebar": "Переместить в sidebar",
+      "panelActions": "Действия панели сообщений",
+      "searchMessages": "Искать сообщения"
+    },
+    "delivery": {
+      "copied": "Скопировано",
+      "copyDebugDetails": "Копировать debug details",
+      "details": "Детали",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "Режим панели сообщений",
+    "title": "Сообщения",
+    "unread": {
+      "new": "Новых: {{count}}",
+      "new_few": "Новых: {{count}}",
+      "new_many": "Новых: {{count}}",
+      "new_one": "Новое: {{count}}",
+      "new_other": "Новых: {{count}}",
+      "unread": "Непрочитано: {{count}}",
+      "unread_few": "Непрочитано: {{count}}",
+      "unread_many": "Непрочитано: {{count}}",
+      "unread_one": "Непрочитанное: {{count}}",
+      "unread_other": "Непрочитано: {{count}}"
+    },
+    "filter": {
+      "ariaLabel": "Фильтровать сообщения",
+      "tooltip": "Фильтровать сообщения",
+      "from": "От",
+      "to": "Кому",
+      "noData": "Нет данных",
+      "showStatusUpdates": "Показывать status updates (idle/shutdown)",
+      "actions": {
+        "reset": "Сбросить",
+        "save": "Сохранить"
+      }
+    },
+    "status": {
+      "title": "Статус"
+    },
+    "actionMode": {
+      "label": "Режим действия"
+    },
+    "search": {
+      "placeholder": "Поиск..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Настроено",
+      "connected": "Подключено",
+      "failed": "Ошибка",
+      "free": "Бесплатно",
+      "local": "Локально",
+      "needsTest": "Нужен тест",
+      "verified": "Проверено",
+      "unavailable": "Недоступно",
+      "issue": "Проблема"
+    },
+    "customModelId": "Custom model id",
+    "label": "Модель (optional)",
+    "multimodelRequired": "Codex и Gemini требуют Multimodel mode.",
+    "openCode": {
+      "allSources": "Все OpenCode sources",
+      "filterSource": "Фильтровать {{source}}",
+      "filterSources": "Фильтровать OpenCode sources",
+      "freeOnly": "Только бесплатные",
+      "freeTooltip": "OpenCode помечает эту модель как бесплатную.",
+      "loadingModels": "Загрузка моделей OpenCode...",
+      "noSourcesFound": "Sources не найдены.",
+      "recommendedOnly": "Только рекомендованные",
+      "searchSources": "Поиск sources",
+      "sourcesCount": "OpenCode sources: {{count}}",
+      "sourcesCount_few": "OpenCode sources: {{count}}",
+      "sourcesCount_many": "OpenCode sources: {{count}}",
+      "sourcesCount_one": "OpenCode source: {{count}}",
+      "sourcesCount_other": "OpenCode sources: {{count}}"
+    },
+    "reason": "Причина: {{reason}}",
+    "runtimeModelsSyncing": "Явные модели загружаются из текущего runtime. Default остаётся доступным, пока список синхронизируется.",
+    "fastMode": {
+      "codexLabel": "Быстрый режим (2x credits)",
+      "optionalLabel": "Быстрый режим (опционально)",
+      "defaultOff": "По умолчанию (выкл.)",
+      "fast": "Fast",
+      "off": "Выкл.",
+      "defaultFast": "По умолчанию (Fast)",
+      "defaultResolvesTo": "Сейчас default resolves to {{mode}}.",
+      "runtimeBackedHint": "Fast mode зависит от runtime и доступен только когда resolved Anthropic launch model его поддерживает."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Открыть документацию Anthropic по ценам"
+    },
+    "searchModels": "Поиск моделей",
+    "defaultModel": "По умолчанию",
+    "empty": {
+      "noSearchMatches": "По этому поиску модели не найдены.",
+      "recommendedFreeOpenCode": "В текущем списке runtime нет рекомендованных бесплатных моделей OpenCode.",
+      "freeOpenCode": "В текущем списке runtime нет бесплатных моделей OpenCode.",
+      "recommendedOpenCode": "В текущем списке runtime нет рекомендованных моделей OpenCode.",
+      "noModels": "В текущем списке runtime нет моделей."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode не готов к запуску команды",
+      "freeModelsAvailableTitle": "Доступны бесплатные модели OpenCode",
+      "providerNotConnectedTitle": "Provider OpenCode не подключён",
+      "readyTitle": "OpenCode готов",
+      "readyMessage": "OpenCode прошёл проверку готовности provider. Выберите его, чтобы использовать модели OpenCode для этой команды.",
+      "useOpenCode": "Использовать OpenCode",
+      "badges": {
+        "check": "Проверка",
+        "install": "Установить",
+        "free": "Free",
+        "setup": "Настроить"
+      },
+      "summary": {
+        "checking": "Статус OpenCode: проверка runtime",
+        "status": "Статус OpenCode: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "запуск команды заблокирован",
+        "providerOptional": "подключение provider необязательно",
+        "providerModelsNeedSetup": "provider-backed модели требуют настройки",
+        "teamLaunchReady": "запуск команды готов",
+        "runtimeDetected": "runtime найден",
+        "runtimeMissing": "runtime не найден",
+        "freeWithoutAuth": "free модели доступны без auth",
+        "providerConnected": "provider подключён",
+        "providerNotConnected": "provider не подключён"
+      },
+      "messages": {
+        "checking": "Приложение ещё проверяет OpenCode runtime. Дождитесь завершения проверки provider status и попробуйте снова.",
+        "unsupported": "OpenCode не установлен, не найден или найденный runtime не поддерживается. Установите или обновите OpenCode, затем обновите статус provider. Также можно использовать кнопку Install на домашней странице.",
+        "freeAvailable": "OpenCode найден. Можно использовать free модели OpenCode, например Big Pickle, без подключения provider. Подключайте provider только если нужны provider-backed модели.",
+        "noFreeListed": "OpenCode найден, но free модель OpenCode пока не указана. Обновите provider status или подключите provider в OpenCode для provider-backed моделей.",
+        "launchBlocked": "OpenCode установлен и authenticated, но готовность Agent Teams launch заблокирована.",
+        "ready": "OpenCode готов к запуску команды."
+      },
+      "loadingRuntime": "Статус OpenCode runtime ещё загружается."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping не подтверждён",
+      "note": "Заметка"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "Конфиг OpenCode",
+      "builtinFree": "Бесплатные встроенные",
+      "connectedProviders": "Подключённые providers",
+      "otherCatalog": "Другой каталог OpenCode"
+    },
+    "pricing": {
+      "free": "Бесплатно",
+      "inputShort": "in {{rate}}",
+      "outputShort": "out {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Input: {{rate}} за 1M tokens",
+      "outputTitle": "Output: {{rate}} за 1M tokens",
+      "cacheReadTitle": "Cache read: {{rate}} за 1M tokens",
+      "cacheWriteTitle": "Cache write: {{rate}} за 1M tokens"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Использует default model Anthropic-compatible endpoint.\nСейчас resolves to {{model}}.",
+      "anthropicCompatible": "Использует default model Anthropic-compatible endpoint.",
+      "anthropic": "Использует default model команды Claude.\nResolves to {{longContextModel}} с 1M context или {{limitedContextModel}} с 200K context, когда включён Limit context.",
+      "openCodeWithResolved": "Использует default model OpenCode.\nСейчас resolves to {{model}}.",
+      "openCode": "Использует runtime default model OpenCode.",
+      "runtime": "Использует runtime default для выбранного provider."
+    },
+    "multimodelOff": "Multimodel выключен",
+    "unavailableInRuntime": "Недоступно в текущем runtime"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Отмена",
+      "delete": "Удалить",
+      "markResolved": "Отметить решённым",
+      "save": "Сохранить"
+    },
+    "attachments": {
+      "commentAttachment": "Вложение комментария",
+      "fromComments": "Из комментариев",
+      "preview": "Предпросмотр {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "требует внимания",
+        "noSafeDiff": "нет безопасного diff"
+      },
+      "empty": {
+        "noFileChangesRecorded": "Изменения файлов не записаны",
+        "noFileChangesRecordedYet": "Изменения файлов пока не записаны",
+        "noReviewableChangesRecovered": "Не удалось восстановить изменения файлов для review",
+        "noSafeDiffAvailable": "Безопасный diff недоступен"
+      },
+      "loadFailed": "Не удалось загрузить сводку изменений задачи",
+      "loading": "Загрузка изменений...",
+      "fileCount": "Файлов: {{count}}",
+      "fileCount_few": "Файла: {{count}}",
+      "fileCount_many": "Файлов: {{count}}",
+      "fileCount_one": "Файл: {{count}}",
+      "fileCount_other": "Файла: {{count}}",
+      "fileRowsHidden": "Скрыто строк файлов: {{count}}",
+      "fileRowsHidden_few": "Скрыто строки файлов: {{count}}",
+      "fileRowsHidden_many": "Скрыто строк файлов: {{count}}",
+      "fileRowsHidden_one": "Скрыта строка файла: {{count}}",
+      "fileRowsHidden_other": "Скрыто строки файлов: {{count}}",
+      "moreDiagnostics": "Ещё диагностик: {{count}}",
+      "moreDiagnostics_few": "Ещё диагностики: {{count}}",
+      "moreDiagnostics_many": "Ещё диагностик: {{count}}",
+      "moreDiagnostics_one": "Ещё диагностика: {{count}}",
+      "moreDiagnostics_other": "Ещё диагностики: {{count}}",
+      "moreFiles": "Ещё файлов: {{count}}",
+      "moreFiles_few": "Ещё файла: {{count}}",
+      "moreFiles_many": "Ещё файлов: {{count}}",
+      "moreFiles_one": "Ещё файл: {{count}}",
+      "moreFiles_other": "Ещё файла: {{count}}",
+      "openInEditor": "Открыть в редакторе",
+      "openTask": "Открыть задачу {{subject}}",
+      "refresh": "Обновить изменения",
+      "refreshFailed": "Не удалось обновить: {{error}}",
+      "refreshing": "Обновление",
+      "refreshingChanges": "Обновление изменений...",
+      "refreshTeamChanges": "Обновить изменения команды",
+      "refreshShort": "Обновить",
+      "reviewDiff": "Открыть diff для review",
+      "reviewTaskDiff": "Открыть diff задачи для review",
+      "scannedCandidateTasks": "Просканировано {{requested}} из {{eligible}} candidate tasks",
+      "tasksDeferred": "Отложено задач за этот проход: {{count}}",
+      "tasksDeferred_few": "Отложено задачи за этот проход: {{count}}",
+      "tasksDeferred_many": "Отложено задач за этот проход: {{count}}",
+      "tasksDeferred_one": "Отложена задача за этот проход: {{count}}",
+      "tasksDeferred_other": "Отложено задачи за этот проход: {{count}}",
+      "title": "Изменения"
+    },
+    "clarification": {
+      "awaitingLead": "Ожидается уточнение от team lead",
+      "awaitingUser": "Ожидается уточнение от вас"
+    },
+    "description": {
+      "add": "Добавить описание...",
+      "edit": "Редактировать описание",
+      "placeholder": "Описание задачи (поддерживает markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Загрузка данных команды",
+      "title": "Загрузка задачи..."
+    },
+    "logs": {
+      "newArriving": "Поступают новые task logs"
+    },
+    "notFound": "Задача не найдена",
+    "related": {
+      "blockedBy": "Заблокировано",
+      "blocks": "Блокирует",
+      "linkedFrom": "Ссылаются из",
+      "links": "Связано",
+      "title": "Связанные задачи"
+    },
+    "review": {
+      "reviewer": "Reviewer: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Вложения",
+      "changes": "Изменения",
+      "comments": "Комментарии",
+      "description": "Описание",
+      "taskLogs": "Логи задачи",
+      "workflowHistory": "История workflow"
+    },
+    "unassigned": "Не назначено",
+    "workflow": {
+      "implementationTimeTitle": "Время реализации по сохранённым рабочим интервалам",
+      "inProgressTime": "Время в работе {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Показаны последние {{formattedCount}} комментариев, чтобы интерфейс оставался отзывчивым.",
+      "badges": {
+        "approved": "Одобрено",
+        "reviewRequested": "Запрошен review"
+      },
+      "unknownTime": "неизвестное время",
+      "actions": {
+        "reply": "Ответить",
+        "replyToComment": "Ответить на комментарий",
+        "showMore": "Показать ещё комментарии ({{visible}}/{{total}})",
+        "cancelReply": "Отменить ответ",
+        "comment": "Комментировать"
+      },
+      "attachments": {
+        "previewAlt": "Предпросмотр вложения",
+        "downloadFailed": "Не удалось скачать"
+      },
+      "replyingTo": "Ответ на",
+      "input": {
+        "placeholder": "Добавьте комментарий... (Enter для отправки)",
+        "charsLeft": "Осталось символов: {{count}}",
+        "charsLeft_one": "Остался {{count}} символ",
+        "charsLeft_few": "Осталось {{count}} символа",
+        "charsLeft_many": "Осталось {{count}} символов",
+        "charsLeft_other": "Осталось {{count}} символов"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "История workflow не записана",
+      "currentImplementationInterval": "Текущий интервал реализации",
+      "implementationIntervalEnded": "Интервал реализации завершился на этом переходе",
+      "runningPrefix": "идёт ",
+      "createdAs": "Создано как",
+      "by": "от",
+      "reassigned": "Переназначено",
+      "assignedTo": "Назначено",
+      "unassignedFrom": "Снято с",
+      "ownerChanged": "Владелец изменён",
+      "reviewRequested": "Запрошен review",
+      "reviewStarted": "Review начат",
+      "changesRequested": "Запрошены изменения",
+      "approved": "Одобрено",
+      "unknownEvent": "Неизвестное событие"
+    },
+    "reviewStates": {
+      "approved": "Одобрено",
+      "needsFix": "Нужны правки",
+      "inReview": "На review"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Исполнитель",
+      "assigneeOptional": "Исполнитель (необязательно)",
+      "blockedByOptional": "Блокируется задачами (необязательно)",
+      "blockedBySummary": "Задачу будут блокировать: {{tasks}}",
+      "cancel": "Отмена",
+      "create": "Создать",
+      "creating": "Создание...",
+      "description": "Задача будет создана в директории tasks/ команды и появится на Kanban-доске.",
+      "descriptionOptional": "Описание (необязательно)",
+      "detailsPlaceholder": "Детали задачи (поддерживается Markdown)",
+      "hideOptionalFields": "Скрыть дополнительные поля",
+      "offlineNotice": {
+        "after": "- запустите команду, чтобы начать выполнение.",
+        "before": "Команда офлайн. Задача будет добавлена в"
+      },
+      "promptOptional": "Prompt для исполнителя (необязательно)",
+      "promptPlaceholder": "Дополнительные инструкции для участника команды...",
+      "relatedOptional": "Связанные задачи (необязательно)",
+      "relatedSummary": "Связанные: {{tasks}}",
+      "saved": "Сохранено",
+      "searchTasks": "Поиск задач...",
+      "selectMember": "Выберите участника",
+      "selectMemberOptional": "Выберите участника...",
+      "showOptionalFields": "Показать дополнительные поля",
+      "startImmediately": "Запустить сразу",
+      "startOfflineHint": "Команда офлайн. Сначала запустите команду, чтобы сразу стартовать задачи.",
+      "subject": "Тема",
+      "subjectPlaceholder": "Что нужно сделать?",
+      "title": "Создать задачу",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Заблокировано",
+        "blocks": "Блокирует",
+        "id": "ID",
+        "owner": "Владелец",
+        "status": "Статус",
+        "subject": "Тема"
+      },
+      "empty": "В этой команде нет задач",
+      "filters": {
+        "allOwners": "Все владельцы",
+        "allStatuses": "Все статусы",
+        "ownerAria": "Фильтр задач по владельцу",
+        "statusAria": "Фильтр задач по статусу"
+      },
+      "showing": "Показано {{shown}} из {{total}}"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "Задачи: выполнено {{completed}}/{{total}}",
+      "inProgress": "{{count}} в работе",
+      "inProgress_one": "{{count}} в работе",
+      "inProgress_few": "{{count}} в работе",
+      "inProgress_many": "{{count}} в работе",
+      "inProgress_other": "{{count}} в работе",
+      "pending": "{{count}} ожидают",
+      "pending_one": "{{count}} ожидает",
+      "pending_few": "{{count}} ожидают",
+      "pending_many": "{{count}} ожидают",
+      "pending_other": "{{count}} ожидают",
+      "completed": "{{count}} выполнено",
+      "completed_one": "{{count}} выполнена",
+      "completed_few": "{{count}} выполнено",
+      "completed_many": "{{count}} выполнено",
+      "completed_other": "{{count}} выполнено"
+    },
+    "unassigned": "Не назначено",
+    "teamPrefix": "Команда:",
+    "openTask": "Открыть задачу",
+    "deleteConfirm": {
+      "title": "Удалить задачу",
+      "message": "Переместить задачу #{{taskId}} в корзину?",
+      "confirmLabel": "Удалить",
+      "cancelLabel": "Отмена"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Отмена",
+      "closeEditor": "Закрыть редактор",
+      "closeTab": "Закрыть вкладку",
+      "closeTooltip": "Закрыть редактор (Esc)",
+      "discard": "Отменить изменения",
+      "discardAndClose": "Отменить и закрыть",
+      "keep": "Оставить",
+      "keepMine": "Оставить мои изменения",
+      "keyboardShortcuts": "Горячие клавиши",
+      "overwrite": "Перезаписать",
+      "refreshAria": "Обновить (F5)",
+      "refreshTooltip": "Обновить git status (F5)",
+      "reload": "Перезагрузить",
+      "retry": "Повторить",
+      "save": "Сохранить",
+      "saveAllAndClose": "Сохранить всё и закрыть"
+    },
+    "ariaLabel": "Редактор проекта",
+    "dialogs": {
+      "conflictDescription": "Файл был изменён извне после открытия. Перезаписать его вашими изменениями?",
+      "conflictTitle": "Конфликт сохранения",
+      "unsavedDescription": "Есть несохранённые изменения. Что сделать?",
+      "unsavedFileDescription": "В этом файле есть несохранённые изменения. Что сделать?",
+      "unsavedTitle": "Несохранённые изменения"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Имя не может быть пустым",
+        "invalidName": "Недопустимое имя",
+        "invalidCharacters": "Имя содержит недопустимые символы",
+        "nameTooLong": "Имя слишком длинное"
+      },
+      "placeholders": {
+        "fileName": "Имя файла...",
+        "folderName": "Имя папки..."
+      },
+      "aria": {
+        "newFileName": "Имя нового файла",
+        "newFolderName": "Имя новой папки"
+      }
+    },
+    "draftRecovered": "Восстановлены несохранённые изменения из предыдущей сессии.",
+    "externalChange": {
+      "changed": "Файл изменён на диске.",
+      "deleted": "Файла больше нет на диске."
+    },
+    "saveFailed": "Не удалось сохранить: {{error}}",
+    "sidebar": {
+      "explorer": "Проводник",
+      "hide": "Скрыть sidebar",
+      "hideWithShortcut": "Скрыть sidebar ({{shortcut}})",
+      "show": "Показать sidebar",
+      "showWithShortcut": "Показать sidebar ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Поиск по файлам",
+      "closeSearch": "Закрыть поиск",
+      "closeSearchShortcut": "Закрыть поиск (Esc)",
+      "searchPlaceholder": "Искать...",
+      "matchCase": "Учитывать регистр",
+      "matchCaseToggle": "Aa",
+      "noResults": "Ничего не найдено",
+      "resultsSummary": "{{count}} совпадений в {{fileCount}} файлах",
+      "resultsSummary_one": "{{count}} совпадение в {{fileCount}} файлах",
+      "resultsSummary_few": "{{count}} совпадения в {{fileCount}} файлах",
+      "resultsSummary_many": "{{count}} совпадений в {{fileCount}} файлах",
+      "resultsSummary_other": "{{count}} совпадений в {{fileCount}} файлах",
+      "truncated": "(обрезано)"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Не удалось загрузить файлы: {{error}}",
+      "loading": "Загрузка файлов...",
+      "empty": "Файлы не найдены",
+      "dropForProjectRoot": "Перетащите сюда для корня проекта",
+      "moveToTrash": "Переместить в корзину",
+      "moveToTrashConfirm": "Переместить \"{{name}}\" в корзину?",
+      "cancel": "Отмена"
+    },
+    "goToLine": {
+      "title": "Перейти к строке",
+      "position": "(текущая: {{current}}, всего: {{total}})",
+      "placeholder": "Номер строки, +смещение, -смещение или %",
+      "go": "Перейти"
+    },
+    "searchPanel": {
+      "previousMatch": "Предыдущее совпадение",
+      "nextMatch": "Следующее совпадение",
+      "close": "Закрыть",
+      "replacePlaceholder": "Замена",
+      "replace": "Заменить",
+      "replaceNext": "Заменить следующее",
+      "all": "Все",
+      "replaceAll": "Заменить все"
+    },
+    "statusBar": {
+      "position": "Стр {{line}}, Кол {{col}}",
+      "enableWatcher": "Включить отслеживание файлов",
+      "disableWatcher": "Отключить отслеживание файлов",
+      "watch": "следить",
+      "watching": "слежение",
+      "watchExternalChanges": "Следить за внешними изменениями",
+      "disableExternalWatcher": "Отключить отслеживание внешних изменений",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Пробелы: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Загрузка предпросмотра...",
+      "openFullSize": "Открыть полноразмерный предпросмотр",
+      "openSystemViewer": "Открыть в системном просмотрщике"
+    },
+    "quickOpen": {
+      "title": "Быстрое открытие",
+      "searchPlaceholder": "Поиск файлов по имени...",
+      "loading": "Загрузка файлов...",
+      "empty": "Файлы не найдены"
+    },
+    "errorBoundary": {
+      "crashed": "Редактор упал",
+      "unknownError": "Неизвестная ошибка"
+    },
+    "binaryPlaceholder": {
+      "file": "Бинарный файл ({{size}})"
+    },
+    "unsavedChanges": "Несохранённые изменения",
+    "empty": {
+      "selectFile": "Выберите файл в дереве, чтобы редактировать"
+    },
+    "search": {
+      "toggleReplace": "Переключить замену",
+      "placeholder": "Поиск"
+    },
+    "shortcuts": {
+      "title": "Горячие клавиши",
+      "groups": {
+        "fileOperations": "Операции с файлами",
+        "search": "Поиск",
+        "navigation": "Навигация",
+        "editing": "Редактирование",
+        "markdown": "Markdown",
+        "general": "Общее"
+      },
+      "actions": {
+        "quickOpen": "Быстрое открытие",
+        "save": "Сохранить",
+        "saveAll": "Сохранить всё",
+        "closeTab": "Закрыть вкладку",
+        "findInFile": "Найти в файле",
+        "searchInFiles": "Поиск по файлам",
+        "goToLine": "Перейти к строке",
+        "nextTab": "Следующая вкладка",
+        "previousTab": "Предыдущая вкладка",
+        "cycleTabs": "Переключать вкладки",
+        "toggleSidebar": "Переключить боковую панель",
+        "undo": "Отменить",
+        "redo": "Повторить",
+        "selectNextMatch": "Выбрать следующее совпадение",
+        "toggleComment": "Переключить комментарий",
+        "splitPreview": "Разделённый предпросмотр",
+        "fullPreview": "Полный предпросмотр",
+        "closeEditor": "Закрыть редактор"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Включить перенос строк",
+      "disableWordWrap": "Отключить перенос строк",
+      "closeSplitPreview": "Закрыть разделённый предпросмотр",
+      "closePreview": "Закрыть предпросмотр"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Создать расписание",
+      "creating": "Создание...",
+      "goToDashboard": "Перейти в Dashboard",
+      "launchTeam": "Запустить команду",
+      "launching": "Запуск...",
+      "relaunchTeam": "Перезапустить команду",
+      "relaunching": "Перезапуск...",
+      "saveChanges": "Сохранить изменения",
+      "saving": "Сохранение..."
+    },
+    "billing": {
+      "prefix": "С 15 июня 2026 года Anthropic списывает использование",
+      "readArticle": "Открыть статью Anthropic",
+      "suffix": "и Agent SDK из ежемесячного Agent SDK credit отдельно от интерактивных лимитов Claude Code. Credit обновляется каждый billing cycle, неиспользованный остаток не переносится."
+    },
+    "conflict": {
+      "description": "Запуск двух команд в одной директории рискован - они могут конфликтовать при изменении одних и тех же файлов. Лучше выбрать другую директорию или git worktree для изоляции.",
+      "title": "Другая команда \"{{team}}\" уже работает в этой working directory",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "createSchedule": "Настроить автоматическое выполнение Claude task",
+      "createScheduleForTeam": "Настроить автоматические запуски для команды \"{{team}}\"",
+      "editSchedule": "Редактирование расписания для команды \"{{team}}\"",
+      "launchPrefix": "Запустить команду",
+      "launchSuffix": "через локальный Claude CLI.",
+      "relaunchPrefix": "Остановить текущий запуск для",
+      "relaunchSuffix": "и запустить его заново через локальный Claude CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "запуск",
+        "relaunch": "перезапуск"
+      },
+      "blocked": "Runtime environment недоступен - {{action}} заблокирован",
+      "checkingProviders": "Проверка выбранных providers...",
+      "failed": "Не удалось подготовить выбранных providers",
+      "preflight": "Pre-flight проверка, чтобы поймать ошибки до действия: {{action}}",
+      "preparingEnvironment": "Подготовка environment...",
+      "ready": "Все выбранные providers готовы.",
+      "readyWithNotes": "Все выбранные providers готовы, есть заметки.",
+      "unsupportedPreload": "Текущая версия preload не поддерживает team:prepareProvisioning. Перезапустите dev app.",
+      "selectWorkingDirectory": "Выберите рабочую директорию, чтобы проверить окружение запуска.",
+      "someProvidersNeedAttention": "Некоторым выбранным providers нужно внимание."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "Этот prompt будет передан в",
+      "oneShotSuffix": "для one-shot выполнения",
+      "saved": "Сохранено",
+      "schedulePlaceholder": "Инструкции для Claude, которые нужно выполнить по расписанию...",
+      "teamLeadOptional": "Prompt для team lead (optional)",
+      "teamLeadPlaceholder": "Инструкции для team lead..."
+    },
+    "providerChanged": "Provider изменён с {{from}} на {{to}}. Предыдущая lead session не будет возобновлена, lead начнёт с fresh context, чтобы новый runtime применился корректно.",
+    "relaunchFreshSession": "Team relaunch запускает fresh lead session. Durable team state, task board и настройки участников будут rehydrated в launch prompt.",
+    "relaunchWarning": {
+      "description": "Сохранение этих настроек остановит текущий team process, сохранит обновлённый roster и снова запустит команду с новым runtime.",
+      "title": "Relaunch перезапустит текущий team run"
+    },
+    "schedule": {
+      "labelOptional": "Label (optional)",
+      "labelPlaceholder": "Например: Daily code review, Nightly tests...",
+      "maxBudgetUsd": "Max budget (USD)",
+      "maxTurns": "Max turns",
+      "noLimit": "Без лимита",
+      "noMatches": "Команды не найдены по поиску.",
+      "noTeams": "Нет доступных команд. Сначала создайте команду.",
+      "searchTeams": "Поиск команд...",
+      "selectTeam": "Выберите команду...",
+      "team": "Команда",
+      "title": "Расписание"
+    },
+    "title": {
+      "createSchedule": "Создать расписание",
+      "editSchedule": "Редактировать расписание",
+      "launch": "Запуск команды",
+      "relaunch": "Перезапуск команды"
+    },
+    "errors": {
+      "loadProjectsFailed": "Не удалось загрузить проекты",
+      "saveScheduleFailed": "Не удалось сохранить расписание",
+      "relaunchFailed": "Не удалось перезапустить команду",
+      "launchFailed": "Не удалось запустить команду"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "Для lead на OpenCode нужно выбрать модель.",
+      "openCodeTeammateRequired": "Для lead на OpenCode нужен хотя бы один teammate OpenCode.",
+      "selectWorkingDirectory": "Выберите рабочую директорию (cwd)",
+      "fixMemberNames": "Исправьте имена участников перед запуском",
+      "memberNamesUnique": "Имена участников должны быть уникальными перед запуском"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Настройки перезапуска",
+      "title": "Дополнительные настройки запуска",
+      "relaunchDescription": "Проверьте состав и runtime lead перед перезапуском команды.",
+      "description": "Оставьте запуск сфокусированным на пути проекта и раскрывайте этот блок только когда нужен дополнительный контроль."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Скопировать команду",
+      "createTeam": "Создать команду",
+      "deleteForever": "Удалить навсегда",
+      "deletePermanently": "Удалить окончательно",
+      "deleteTeam": "Удалить команду",
+      "launching": "Запуск...",
+      "launchTeam": "Запустить команду",
+      "relaunchTeam": "Перезапустить команду",
+      "restore": "Восстановить",
+      "restoreTeam": "Восстановить команду",
+      "retry": "Повторить",
+      "stopTeam": "Остановить команду",
+      "stopping": "Остановка..."
+    },
+    "electronOnly": {
+      "description": "В browser mode доступ к локальным директориям `~/.claude/teams` недоступен.",
+      "title": "Команды доступны только в Electron mode"
+    },
+    "empty": {
+      "description": "Создайте команду здесь, чтобы начать. Она автоматически появится в списке.",
+      "localOnly": "Создание команд доступно только в локальном Electron mode.",
+      "title": "Команды не найдены"
+    },
+    "filter": {
+      "clearAll": "Очистить всё",
+      "label": "Фильтровать команды",
+      "projectPriority": "Приоритет проекта",
+      "status": "Статус"
+    },
+    "loadFailed": "Не удалось загрузить команды",
+    "loading": "Загрузка команд...",
+    "localOnly": "Доступно только в локальном Electron mode.",
+    "membersCount": "Участников: {{count}}",
+    "membersCount_few": "Участников: {{count}}",
+    "membersCount_many": "Участников: {{count}}",
+    "membersCount_one": "Участник: {{count}}",
+    "membersCount_other": "Участников: {{count}}",
+    "noDescription": "Нет описания",
+    "noMatches": "Нет команд по текущим фильтрам",
+    "partial": {
+      "pending": "Последний запуск ещё сверяется.",
+      "skipped": "В последнем запуске были пропущены teammates.",
+      "skippedWithCount": "Последний запуск пропустил {{count}}/{{expected}} teammate.",
+      "skippedWithCount_few": "Последний запуск пропустил {{count}}/{{expected}} teammates.",
+      "skippedWithCount_many": "Последний запуск пропустил {{count}}/{{expected}} teammates.",
+      "skippedWithCount_one": "Последний запуск пропустил {{count}}/{{expected}} teammate.",
+      "skippedWithCount_other": "Последний запуск пропустил {{count}}/{{expected}} teammates.",
+      "stopped": "Последний запуск остановился до подключения всех teammates.",
+      "stoppedWithCount": "Последний запуск остановился до подключения {{count}}/{{expected}} teammate.",
+      "stoppedWithCount_few": "Последний запуск остановился до подключения {{count}}/{{expected}} teammates.",
+      "stoppedWithCount_many": "Последний запуск остановился до подключения {{count}}/{{expected}} teammates.",
+      "stoppedWithCount_one": "Последний запуск остановился до подключения {{count}}/{{expected}} teammate.",
+      "stoppedWithCount_other": "Последний запуск остановился до подключения {{count}}/{{expected}} teammates."
+    },
+    "searchPlaceholder": "Поиск команд...",
+    "sections": {
+      "otherTeams": "Другие команды",
+      "projectTeams": "Команды для {{project}}",
+      "selectedProject": "выбранного проекта"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Активно",
+      "deleted": "Удалено",
+      "launching": "Запуск...",
+      "offline": "Offline",
+      "partialFailure": "Запуск частично не удался",
+      "partialPending": "Bootstrap ожидает",
+      "partialSkipped": "Запуск пропустил участника",
+      "running": "Работает"
+    },
+    "title": "Выбор команды",
+    "trash": "Корзина ({{count}})",
+    "trash_few": "Корзина ({{count}})",
+    "trash_many": "Корзина ({{count}})",
+    "trash_one": "Корзина ({{count}})",
+    "trash_other": "Корзина ({{count}})",
+    "deleteDraft": {
+      "title": "Удалить черновик",
+      "message": "Удалить черновик команды «{{teamName}}»? Это действие нельзя отменить.",
+      "confirmLabel": "Удалить",
+      "cancelLabel": "Отмена"
+    },
+    "moveToTrash": {
+      "title": "Переместить в корзину",
+      "message": "Переместить команду «{{teamName}}» в корзину? Её можно будет восстановить позже.",
+      "confirmLabel": "В корзину",
+      "cancelLabel": "Отмена"
+    },
+    "deleteForever": {
+      "title": "Удалить навсегда",
+      "message": "Удалить команду «{{teamName}}» навсегда? Все данные будут потеряны.",
+      "confirmLabel": "Удалить навсегда",
+      "cancelLabel": "Отмена"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Совет: cross-team сообщения идут team lead целевой команды. Если ответ должен вернуться вашему team lead, а не вам, явно напишите это в сообщении."
+    },
+    "attachments": {
+      "attachFiles": "Прикрепить файлы (paste или drag & drop)",
+      "unavailable": "Вложения недоступны",
+      "disabledHint": "Файлы можно отправлять online team lead и online OpenCode teammates. Удалите вложения или смените получателя.",
+      "restrictions": {
+        "crossTeam": "Файловые вложения не поддерживаются для cross-team сообщений",
+        "teamOffline": "Команда должна быть online, чтобы прикреплять файлы",
+        "unsupportedRecipient": "Файлы можно отправлять team lead или OpenCode teammates",
+        "openCodeOffline": "Команда должна быть online, чтобы прикреплять файлы для OpenCode teammates",
+        "sending": "Дождитесь завершения текущей отправки перед добавлением файлов",
+        "maximumReached": "Достигнут лимит вложений",
+        "leadOnly": "Файлы можно отправлять только team lead"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Slash commands требуют live team lead и не отправляются с вложениями",
+        "crossTeam": "Slash commands можно запускать только на team lead текущей команды",
+        "notLead": "Slash commands можно отправлять только team lead",
+        "leadOffline": "Slash commands требуют, чтобы team lead был online"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Повторно использован недавний cross-team request",
+      "teamOffline": "Команда offline"
+    },
+    "input": {
+      "charsLeft": "Осталось символов: {{count}}",
+      "charsLeft_one": "Остался {{count}} символ",
+      "charsLeft_few": "Осталось {{count}} символа",
+      "charsLeft_many": "Осталось {{count}} символов",
+      "charsLeft_other": "Осталось {{count}} символов",
+      "teamLaunchingPlaceholder": "Команда запускается... сообщение будет поставлено в очередь inbox delivery.",
+      "crossTeamPlaceholder": "Cross-team сообщение для {{team}}...",
+      "teamFallback": "команда",
+      "placeholder": "Напишите сообщение... (Enter для отправки, Shift+Enter для новой строки)",
+      "slashTip": "Совет: используйте \"/\", чтобы запускать любые Claude commands."
+    },
+    "teamSelector": {
+      "thisTeam": "Эта команда",
+      "current": "текущая",
+      "online": "online",
+      "offline": "offline",
+      "onlineTitle": "Online",
+      "offlineTitle": "Offline"
+    },
+    "recipient": {
+      "select": "Выбрать...",
+      "searchPlaceholder": "Поиск...",
+      "noResults": "Ничего не найдено"
+    },
+    "actions": {
+      "voiceToText": "Voice to text",
+      "send": "Отправить",
+      "sendingUnavailableLaunching": "Отправка недоступна, пока команда запускается"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Фильтровать логи",
+      "tooltip": "Фильтровать логи",
+      "sections": {
+        "stream": "Stream",
+        "content": "Content"
+      },
+      "kinds": {
+        "output": "Output",
+        "thinking": "Thinking",
+        "tool": "Tool calls"
+      },
+      "actions": {
+        "reset": "Сбросить",
+        "save": "Сохранить"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "сырых строк: {{formattedCount}}",
+    "rawLineCount_one": "{{formattedCount}} сырая строка",
+    "rawLineCount_few": "сырых строки: {{formattedCount}}",
+    "rawLineCount_many": "сырых строк: {{formattedCount}}",
+    "rawLineCount_other": "сырых строки: {{formattedCount}}",
+    "rawLinesCaptured": "{{count}} записано",
+    "emptyRawLogs": "{{count}}; среди них пока нет assistant/tool output.",
+    "noLogsYet": "Логов пока нет.",
+    "teamNotRunning": "Команда не запущена.",
+    "searchPlaceholder": "Искать в логах...",
+    "clearSearch": "Очистить поиск",
+    "newCount": "+{{count}} новых",
+    "loading": "Загрузка...",
+    "showMore": "Показать больше",
+    "noLogsCaptured": "Логи не записаны.",
+    "noMatchingLogs": "Подходящих логов нет.",
+    "openFullscreen": "Открыть логи на весь экран",
+    "fullscreen": "На весь экран",
+    "viewingFullscreen": "Просмотр в полноэкранном режиме",
+    "logsTitle": "Логи",
+    "sourceSelect": {
+      "placeholder": "Выберите источник логов...",
+      "searchPlaceholder": "Искать источники логов...",
+      "emptyMessage": "Источники логов не найдены.",
+      "ariaLabel": "Источник логов",
+      "leadLabel": "Лид",
+      "selectSourceEmpty": "Выберите источник логов."
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "Внешняя команда",
+      "process": {
+        "startedBy": "Запущено:",
+        "at": "Время:",
+        "openUrl": "Открыть URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Скрытые задачи",
+        "empty": "Нет доступных скрытых задач."
+      },
+      "member": {
+        "lead": "Lead",
+        "workingOn": "работает над",
+        "recentTools": "Недавние tools",
+        "spawn": {
+          "waitingToStart": "ожидает запуска",
+          "starting": "запускается",
+          "failed": "ошибка"
+        },
+        "state": {
+          "active": "активен",
+          "idle": "ожидает",
+          "offline": "offline",
+          "runningTool": "запускает tool"
+        },
+        "activeTool": {
+          "running": "Tool выполняется",
+          "failed": "Tool завершился ошибкой",
+          "finished": "Tool завершён"
+        },
+        "actions": {
+          "message": "Сообщение",
+          "profile": "Профиль",
+          "task": "Задача"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Логи",
+      "loading": "Загрузка логов",
+      "more": "+{{count}} ещё",
+      "more_one": "+{{count}} ещё",
+      "more_few": "+{{count}} ещё",
+      "more_many": "+{{count}} ещё",
+      "more_other": "+{{count}} ещё"
+    },
+    "blockingEdge": {
+      "title": "Блокирующая зависимость",
+      "blocks": "блокирует",
+      "close": "Закрыть",
+      "blockingHiddenTasks": "Скрытые блокирующие задачи",
+      "blockedHiddenTasks": "Скрытые заблокированные задачи"
+    },
+    "activityHud": {
+      "activity": "Активность",
+      "noRecentActivity": "Недавней активности нет",
+      "more": "+{{count}} ещё",
+      "more_one": "+{{count}} ещё",
+      "more_few": "+{{count}} ещё",
+      "more_many": "+{{count}} ещё",
+      "more_other": "+{{count}} ещё"
+    },
+    "provisioning": {
+      "launchDetails": "Детали запуска",
+      "launchDetailsDescription": "Подробный прогресс запуска команды, live-вывод и логи CLI."
+    }
+  },
+  "projectPath": {
+    "label": "Проект",
+    "source": {
+      "claude": "Найдено Claude",
+      "codex": "Найдено Codex",
+      "mixed": "Найдено Claude и Codex"
+    },
+    "deleted": {
+      "title": "Папка проекта больше не существует",
+      "label": "Удалён"
+    },
+    "mode": {
+      "projectList": "Из списка проектов",
+      "customPath": "Свой путь"
+    },
+    "loadingProjects": "Загрузка проектов...",
+    "selectProject": "Выберите проект...",
+    "searchPlaceholder": "Поиск проекта по имени или пути",
+    "empty": "Ничего не найдено",
+    "selectFromList": "Выберите проект из списка",
+    "noProjects": "Проекты не найдены, переключитесь на свой путь.",
+    "customWorkingDirectory": "Custom working directory",
+    "browse": "Выбрать",
+    "createAutomatically": "Если директории нет, она будет создана автоматически."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "Локальная нагрузка runtime",
+      "description": "Только parent и child processes. Remote LLM inference не учитывается.",
+      "cpu": "CPU",
+      "memory": "Память",
+      "summedRss": "суммарный RSS",
+      "sharedHost": "Метрика shared OpenCode host. Она не эксклюзивна для этого участника.",
+      "processTreeCapped": "Process tree был ограничен для этого sample.",
+      "rssHint": "RSS может включать shared pages, поэтому это лучше читать как сигнал нагрузки, а не эксклюзивную память."
+    },
+    "editor": {
+      "title": "Участники",
+      "addMember": "Добавить участника",
+      "editAsJson": "Редактировать как JSON",
+      "runInSeparateWorktrees": "Запускать участников в отдельных worktree",
+      "agentTeamsMcpOnly": "Только Agent Teams MCP",
+      "removedCount": "Удалённые ({{count}})",
+      "removedModelLockReason": "Удалённые участники сохранены для истории soft delete. Восстановите их, чтобы редактировать настройки.",
+      "memberNamesUnique": "Имена участников должны быть уникальными"
+    },
+    "stats": {
+      "computing": "Расчёт статистики...",
+      "empty": "Статистика недоступна",
+      "lines": "Строки",
+      "linesInfo": "Приблизительно. Точно для инструментов Edit и Write. Записи файлов через Bash оцениваются по паттернам команд (heredoc, echo, sed) и могут быть занижены.",
+      "files": "Файлы",
+      "toolCalls": "Вызовы инструментов",
+      "tokens": "Токены",
+      "toolUsage": "Использование инструментов",
+      "filesTouched": "Затронутые файлы ({{count}})",
+      "viewAllChanges": "Показать все изменения",
+      "showLess": "Показать меньше",
+      "moreFiles": "+{{count}} ещё",
+      "footer": "{{count}} сессий · рассчитано {{computedAgo}}",
+      "footer_one": "{{count}} сессия · рассчитано {{computedAgo}}",
+      "footer_few": "{{count}} сессии · рассчитано {{computedAgo}}",
+      "footer_many": "{{count}} сессий · рассчитано {{computedAgo}}",
+      "footer_other": "{{count}} сессии · рассчитано {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "Поиск логов...",
+      "empty": "Логи не найдены",
+      "waitingForTaskActivity": "Задача выполняется - ожидаем активность сессии (автообновление)...",
+      "noTaskActivity": "Для этой задачи пока нет активности сессии",
+      "noMemberActivity": "У этого участника пока нет записанной активности сессии",
+      "leadSessionTooltip": "Полные логи сессии team lead - полезны для общего orchestration-контекста, не специфичного для этого агента",
+      "memberSessionTooltip": "Полные логи постоянной сессии участника - полезны, когда работа идёт в корневой member session, а не в subagent-файле",
+      "startedAt": "начато {{time}}",
+      "active": "активно",
+      "showDetails": "Показать детали",
+      "hideDetails": "Скрыть детали",
+      "loadingDetails": "Загрузка деталей...",
+      "failedToLoadDetails": "Не удалось загрузить детали"
+    },
+    "detail": {
+      "relaunchOpenCode": "Перезапустить OpenCode",
+      "restart": "Перезапустить",
+      "legacyLogsFallback": "Fallback legacy-логов",
+      "copyDiagnostics": "Скопировать диагностику",
+      "pid": "PID {{pid}}",
+      "removedAt": "Удалён {{date}}",
+      "failedToRestartMember": "Не удалось перезапустить участника",
+      "sendMessage": "Отправить сообщение",
+      "assignTask": "Назначить задачу",
+      "remove": "Удалить"
+    },
+    "list": {
+      "loading": "Загрузка участников команды",
+      "unavailable": "Состав участников недоступен",
+      "unavailableDescription": "{{count}} участников известны из метаданных команды, но детали состава отсутствуют.",
+      "unavailableDescription_one": "{{count}} участник известен из метаданных команды, но детали состава отсутствуют.",
+      "unavailableDescription_few": "{{count}} участника известны из метаданных команды, но детали состава отсутствуют.",
+      "unavailableDescription_many": "{{count}} участников известны из метаданных команды, но детали состава отсутствуют.",
+      "unavailableDescription_other": "{{count}} участника известны из метаданных команды, но детали состава отсутствуют.",
+      "soloLeadOnly": "Solo team - только lead",
+      "removedCount": "Удалённые ({{count}})"
+    },
+    "executionLog": {
+      "empty": "Нечего показать",
+      "emptyUserMessage": "{{time}} - (пусто)",
+      "agentInstructions": "Инструкции агента",
+      "memberTurn": "{{member}} turn",
+      "agentTurn": "Ход агента",
+      "turn": "ход"
+    },
+    "recentMessages": {
+      "latest": "Последние сообщения",
+      "latestForMember": "Последние сообщения - {{member}}",
+      "loadMore": "Загрузить ещё",
+      "expand": "Развернуть",
+      "collapse": "Свернуть"
+    },
+    "leadModel": {
+      "defaultModel": "По умолчанию",
+      "providerModelAria": "Провайдер {{provider}}, модель {{model}}",
+      "leadShort": "лид",
+      "teamLead": "Лид команды",
+      "syncWithTeammates": "Синхронизировать модель с участниками",
+      "anthropicTeamWide": "Anthropic для всей команды",
+      "runtimeInheritance": "Рантайм лида применяется к участникам, если они не задали собственного провайдера или модель.",
+      "anthropicContextLimit": "Лимит контекста 200K действует на всю команду для рантаймов Anthropic в этом запуске, включая кастомных участников Anthropic."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Автообновление",
+      "wrapLines": "Перенос строк",
+      "loadingTail": "Загрузка хвоста лога процесса...",
+      "empty": "Лог процесса для этого участника пока не сохранен."
+    },
+    "tasks": {
+      "empty": "У этого участника нет назначенных задач"
+    },
+    "messages": {
+      "loadOlder": "Загрузить более старые сообщения",
+      "filters": {
+        "all": "Все",
+        "messages": "Сообщения",
+        "comments": "Комментарии"
+      },
+      "empty": {
+        "loading": "Загрузка активности...",
+        "noComments": "У этого участника нет комментариев",
+        "noLoadedMessages": "Загруженных сообщений этого участника пока нет",
+        "noMessages": "Сообщений с этим участником нет",
+        "noLoadedActivity": "Загруженной активности этого участника пока нет",
+        "noActivity": "Активности с этим участником нет"
+      }
+    },
+    "actions": {
+      "openProfile": "Открыть профиль",
+      "editRole": "Редактировать роль",
+      "sendMessage": "Отправить сообщение",
+      "assignTask": "Назначить задачу"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Введите свою роль..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} schedules",
+    "count_one": "{{count}} schedule",
+    "count_few": "{{count}} schedules",
+    "count_many": "{{count}} schedules",
+    "count_other": "{{count}} schedules",
+    "nextRun": "Next: {{next}}",
+    "actions": {
+      "runNow": "Запустить сейчас",
+      "edit": "Редактировать",
+      "pause": "Пауза",
+      "resume": "Возобновить",
+      "delete": "Удалить",
+      "addSchedule": "Добавить schedule"
+    },
+    "runHistory": {
+      "loading": "Загрузка run history...",
+      "empty": "Запусков ещё нет"
+    },
+    "runLog": {
+      "title": "Лог запуска",
+      "exitCode": "exit {{code}}",
+      "retryCount": "retry {{count}}/{{max}}",
+      "stillRunning": "Задача ещё выполняется...",
+      "loadingLogs": "Загрузка логов...",
+      "errors": "Ошибки",
+      "close": "Закрыть"
+    },
+    "cron": {
+      "expression": "Cron-выражение",
+      "highFrequencyWarning": "Высокая частота расписания (интервал меньше 5 минут)",
+      "nextRuns": "Следующие запуски:",
+      "timezone": "Часовой пояс",
+      "selectTimezone": "Выберите часовой пояс",
+      "warmUpTime": "Время прогрева",
+      "warmUpDescription": "Подготавливает выбранных провайдеров перед запуском по расписанию",
+      "errors": {
+        "enterExpression": "Введите cron-выражение",
+        "invalidExpression": "Некорректное cron-выражение"
+      },
+      "presets": {
+        "everyHour": "Каждый час",
+        "everySixHours": "Каждые 6 часов",
+        "dailyAtNine": "Ежедневно в 9:00",
+        "weekdaysAtNine": "По будням в 9:00",
+        "mondayAtNine": "В понедельник в 9:00",
+        "everyThirtyMinutes": "Каждые 30 минут"
+      },
+      "warmUpOptions": {
+        "none": "Без прогрева",
+        "fiveMinutes": "5 мин",
+        "tenMinutes": "10 мин",
+        "fifteenMinutes": "15 мин",
+        "thirtyMinutes": "30 мин"
+      }
+    },
+    "empty": {
+      "title": "Расписаний пока нет",
+      "description": "Создайте расписание, чтобы автоматически запускать задачи Claude по cron."
+    },
+    "title": "Расписания",
+    "status": {
+      "active": "Активно",
+      "paused": "Пауза",
+      "disabled": "Отключено"
+    },
+    "runStatus": {
+      "pending": "Ожидает",
+      "warmingUp": "Прогрев",
+      "warm": "Готово к запуску",
+      "running": "Выполняется",
+      "completed": "Завершено",
+      "failed": "Ошибка",
+      "interrupted": "Прервано",
+      "cancelled": "Отменено"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Локальные модели OpenCode могут использовать бюджет контекста OpenCode вместо ограничений только в промпте.",
+    "description": "Добавьте соответствующие лимиты в конфиг OpenCode для провайдера и модели этого участника. Это поможет OpenCode выполнять compact и prune до того, как локальная модель переполнит контекстное окно.",
+    "replacePrefix": "Замените",
+    "and": "и",
+    "replaceSuffix": "на ID провайдера и модели из вашей настройки OpenCode. Инструкции в промпте вроде",
+    "promptInstructionsSuffix": "слабее, потому что запрос собирается до того, как модель их прочитает.",
+    "providerLimits": "Лимиты провайдера",
+    "compactionConfig": "Конфиг compaction"
+  },
+  "sessions": {
+    "noProjectPath": "Путь проекта не привязан",
+    "provisioningHint": "Сессии появятся после provisioning команды",
+    "projectNotFound": "Проект не найден",
+    "loading": "Загрузка сессий...",
+    "empty": "Сессии не найдены",
+    "showAllSessions": "Показать для всех сессий",
+    "lead": "lead",
+    "removeFilter": "Убрать фильтр",
+    "filterBySession": "Фильтровать по этой сессии",
+    "openSession": "Открыть сессию",
+    "title": "Сессии"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Отменить",
+    "moreWarningsHidden": "Скрыто ещё {{count}} предупреждений",
+    "diagnostics": "Диагностика",
+    "liveOutput": "Живой вывод",
+    "diagnosticsCopied": "Диагностика скопирована",
+    "copyDiagnostics": "Скопировать диагностику",
+    "copied": "Скопировано",
+    "noOutput": "Вывод пока не записан.",
+    "cliLogs": "Логи CLI",
+    "steps": {
+      "starting": "Запуск",
+      "configuring": "Настройка команды",
+      "assembling": "Подключение участников",
+      "finalizing": "Завершение"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "проверка...",
+        "ready": "OK",
+        "notes": "OK (есть заметки)",
+        "failed": "ERR",
+        "pending": "ожидание"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI binary не найден",
+        "openCodeRuntimeMissing": "OpenCode runtime отсутствует",
+        "openCodeWindowsAccessBlocked": "Доступ OpenCode в Windows заблокирован",
+        "openCodeNoOutput": "Проверка OpenCode runtime не вернула вывод",
+        "openCodeMcpUnreachable": "OpenCode app MCP недоступен",
+        "workingDirectoryMissing": "Working directory отсутствует",
+        "cliBinaryCouldNotStart": "CLI binary не удалось запустить",
+        "cliPreflightIncomplete": "CLI preflight не завершился",
+        "authenticationRequired": "Требуется аутентификация",
+        "runtimeProviderNotConfigured": "Runtime provider не настроен",
+        "cliPreflightFailed": "CLI preflight завершился с ошибкой",
+        "selectedModelCompatible": "Выбранная модель совместима",
+        "selectedModelCompatibilityPending": "Совместимость выбранной модели ещё проверяется",
+        "selectedModelAvailable": "Выбранная модель доступна",
+        "selectedModelVerified": "Выбранная модель проверена",
+        "selectedModelUnavailable": "Выбранная модель недоступна",
+        "selectedModelTimedOut": "Проверка выбранной модели истекла по таймауту",
+        "selectedModelCheckFailed": "Проверка выбранной модели не удалась",
+        "selectedModelDeferred": "Проверка выбранной модели отложена",
+        "selectedModelPingNotConfirmed": "Ping выбранной модели не подтверждён",
+        "readyWithNotes": "Готово с заметками",
+        "needsAttention": "Требует внимания"
+      },
+      "modelChecksSummary": "Проверки выбранных моделей - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} модель недоступна",
+        "unavailable_one": "{{count}} модель недоступна",
+        "unavailable_few": "{{count}} модели недоступны",
+        "unavailable_many": "{{count}} моделей недоступно",
+        "unavailable_other": "{{count}} модели недоступны",
+        "checkFailed": "{{count}} проверка модели не удалась",
+        "checkFailed_one": "{{count}} проверка модели не удалась",
+        "checkFailed_few": "{{count}} проверки моделей не удались",
+        "checkFailed_many": "{{count}} проверок моделей не удались",
+        "checkFailed_other": "{{count}} проверки моделей не удались",
+        "timedOut": "{{count}} модель по таймауту",
+        "timedOut_one": "{{count}} модель по таймауту",
+        "timedOut_few": "{{count}} модели по таймауту",
+        "timedOut_many": "{{count}} моделей по таймауту",
+        "timedOut_other": "{{count}} модели по таймауту",
+        "deferred": "{{count}} проверка отложена",
+        "deferred_one": "{{count}} проверка отложена",
+        "deferred_few": "{{count}} проверки отложены",
+        "deferred_many": "{{count}} проверок отложено",
+        "deferred_other": "{{count}} проверки отложены",
+        "pingNotConfirmed": "{{count}} ping не подтверждён",
+        "pingNotConfirmed_one": "{{count}} ping не подтверждён",
+        "pingNotConfirmed_few": "{{count}} ping не подтверждены",
+        "pingNotConfirmed_many": "{{count}} ping не подтверждены",
+        "pingNotConfirmed_other": "{{count}} ping не подтверждены",
+        "compatibilityPending": "{{count}} совместима, глубокая проверка продолжается",
+        "compatibilityPending_one": "{{count}} совместима, глубокая проверка продолжается",
+        "compatibilityPending_few": "{{count}} совместимы, глубокая проверка продолжается",
+        "compatibilityPending_many": "{{count}} совместимы, глубокая проверка продолжается",
+        "compatibilityPending_other": "{{count}} совместимы, глубокая проверка продолжается",
+        "compatible": "{{count}} совместима",
+        "compatible_one": "{{count}} совместима",
+        "compatible_few": "{{count}} совместимы",
+        "compatible_many": "{{count}} совместимы",
+        "compatible_other": "{{count}} совместимы",
+        "checking": "{{count}} проверяется",
+        "checking_one": "{{count}} проверяется",
+        "checking_few": "{{count}} проверяются",
+        "checking_many": "{{count}} проверяются",
+        "checking_other": "{{count}} проверяются",
+        "available": "{{count}} доступна",
+        "available_one": "{{count}} доступна",
+        "available_few": "{{count}} доступны",
+        "available_many": "{{count}} доступны",
+        "available_other": "{{count}} доступны",
+        "verified": "{{count}} проверена",
+        "verified_one": "{{count}} проверена",
+        "verified_few": "{{count}} проверены",
+        "verified_many": "{{count}} проверены",
+        "verified_other": "{{count}} проверены"
+      },
+      "openProviderSettings": "Открыть настройки {{provider}}",
+      "copied": "Скопировано",
+      "copyDiagnostics": "Скопировать диагностику",
+      "deepVerificationPending": "Глубокая проверка ещё выполняется. Бесплатные модели OpenCode могут проверяться около 20 секунд.",
+      "progress": {
+        "checkingSelectedProviders": "Проверка выбранных провайдеров параллельно...",
+        "checkingProvider": "Проверка провайдера {{provider}}...",
+        "checkingProviders": "Проверка провайдеров {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Исправьте права на папку или перенесите проект в папку, доступную пользователю для записи. Запуск от администратора - только временный обходной путь.",
+        "openCodeBridgeNoOutput": "Перезапустите приложение и runtime OpenCode, затем повторите. Если повторится, скопируйте diagnostics.",
+        "workingDirectoryMissing": "Выберите существующую рабочую папку, затем откройте этот диалог заново.",
+        "authenticationRequired": "Авторизуйте нужного провайдера в Claude CLI, затем откройте этот диалог заново.",
+        "runtimeProviderNotConfigured": "Настройте выбранный provider runtime, затем откройте этот диалог заново.",
+        "openCodeRuntimeMissing": "Установите или повторите запуск runtime OpenCode из карточки статуса провайдера, затем откройте этот диалог заново.",
+        "openCodeAppMcpUnreachable": "Повторите launch, чтобы обновить OpenCode app MCP bridge. Если повторится, перезапустите приложение и runtime OpenCode.",
+        "cliBinaryMissing": "Убедитесь, что локальный бинарь Claude CLI существует и может запускаться, затем откройте этот диалог заново.",
+        "default": "Исправьте проблему выше, затем откройте этот диалог заново."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} участник(ов) ожидает подтверждения permission",
+      "nameListWithMore": "{{names}}, +{{count}} ещё",
+      "waitingForOpenCode": "Ожидание OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap завис: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; ожидание OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} - {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap завис",
+        "shellOnly": "Только shell",
+        "waitingForBootstrap": "Ожидание bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap не подтверждён",
+        "awaitingPermission": "Ожидание permission",
+        "waitingForRuntime": "Ожидание runtime",
+        "shellOnlyLower": "только shell",
+        "waitingForBootstrapLower": "ожидает bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap не подтверждён",
+        "awaitingPermissionLower": "ожидает permission",
+        "waitingForRuntimeLower": "ожидает runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} не запустился",
+        "teammatesFailedToStart": "{{count}} участник(ов) не запустилось",
+        "teammatesFailedRatio": "{{count}}/{{total}} участник(ов) не запустилось"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} пропущен для этого запуска",
+        "memberSkippedWithReason": "{{name}} пропущен для этого запуска - {{reason}}",
+        "memberSkippedCompact": "{{name}} пропущен",
+        "teammatesSkipped": "{{count}} участник(ов) пропущено",
+        "teammatesSkippedList": "Пропущенные участники: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} участник(ов) пропущено для этого запуска"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} участник(ов) ещё подключается",
+        "teammatesStillJoining_one": "{{count}} участник ещё подключается",
+        "teammatesStillJoining_few": "{{count}} участника ещё подключаются",
+        "teammatesStillJoining_many": "{{count}} участников ещё подключается",
+        "teammatesStillJoining_other": "{{count}} участника(ов) ещё подключается",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} участников подтверждено"
+      },
+      "ready": {
+        "leadOnline": "Lead online",
+        "allTeammatesJoined": "Все участники подключились: {{count}}",
+        "teamProvisionedLeadOnline": "Команда подготовлена - lead online",
+        "teamProvisionedAllJoined": "Команда подготовлена - все участники подключились: {{count}}",
+        "teamProvisionedStillJoining": "Команда подготовлена - участники ещё подключаются",
+        "launchFinishedWithErrors": "Запуск завершён с ошибками - {{count}}/{{total}} участник(ов) не запустилось",
+        "launchContinuedSkipped": "Запуск продолжен - {{count}}/{{total}} участник(ов) пропущено",
+        "teamLaunchedLeadOnline": "Команда запущена - lead online",
+        "teamLaunchedAllJoined": "Команда запущена - все участники подключились: {{count}}"
+      },
+      "panel": {
+        "launchFailed": "Запуск не удался",
+        "launchDetails": "Детали запуска",
+        "launchFinishedWithErrors": "Запуск завершён с ошибками",
+        "launchContinuedSkipped": "Запуск продолжен с пропущенными участниками",
+        "coreTeamReady": "Основная команда готова",
+        "finishingLaunch": "Завершение запуска",
+        "teamLaunched": "Команда запущена",
+        "launchingTeam": "Запуск команды"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Статус live runtime",
+    "description": "Информационный heartbeat и состояние запуска. Управление процессами находится ниже.",
+    "source": "источник: {{source}}",
+    "lane": "lane {{lane}}",
+    "diagnosticOnly": "Только для диагностики",
+    "updated": "обновлено {{value}}",
+    "states": {
+      "running": "Работает",
+      "starting": "Запускается",
+      "waiting": "Ожидает",
+      "degraded": "Требует внимания",
+      "stopped": "Остановлен",
+      "unknown": "Неизвестно"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Точные логи задачи",
+      "loading": "Загрузка точных логов задачи...",
+      "description": "Точные фрагменты transcript отображаются теми же компонентами execution-log, что и в логах.",
+      "emptyTitle": "Точных логов задачи пока нет",
+      "emptyDescription": "Точные transcript bundles появятся здесь, когда будут доступны явные метаданные transcript, связанные с задачей.",
+      "summaryOnly": "только summary"
+    },
+    "executionSessions": {
+      "title": "Сессии выполнения",
+      "online": "Онлайн",
+      "updating": "Обновление...",
+      "description": "Просмотр и предпросмотр старых транскриптов, сгруппированных по сессиям."
+    },
+    "stream": {
+      "title": "Поток логов задачи"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Отменить задачу {{taskId}}",
+      "cancel": "Отменить",
+      "moveBackToTodoConfirm": "Переместить задачу обратно в TODO и уведомить команду?",
+      "confirm": "Подтвердить",
+      "keep": "Оставить",
+      "changesNeedAttention": "Изменения требуют внимания",
+      "changes": "Изменения",
+      "deleteTask": "Удалить задачу",
+      "taskLogsActive": "Логи задачи активны",
+      "newTaskLogsArriving": "Поступают новые логи задачи",
+      "awaitingUser": "Ожидает пользователя",
+      "awaitingLead": "Ожидает lead",
+      "blockedBy": "Заблокировано",
+      "blocks": "Блокирует",
+      "start": "Начать",
+      "complete": "Завершить",
+      "approve": "Одобрить",
+      "requestReview": "Запросить ревью",
+      "manualReview": "Ручное ревью",
+      "requestChanges": "Запросить правки"
+    },
+    "filter": {
+      "title": "Фильтр задач",
+      "session": "Сессия",
+      "allSessions": "Все сессии",
+      "teammate": "Участник",
+      "unassigned": "(не назначено)",
+      "column": "Колонка",
+      "clearAll": "Очистить всё"
+    },
+    "board": {
+      "addTask": "Добавить задачу",
+      "noTasks": "Нет задач",
+      "showMore": "Показать ещё {{count}}",
+      "hiddenCount": "Скрыто: {{count}}",
+      "trash": "Корзина",
+      "gridView": "Вид сеткой",
+      "columnsView": "Вид колонками"
+    },
+    "trash": {
+      "title": "Корзина",
+      "empty": "Удалённых задач нет",
+      "subject": "Тема",
+      "owner": "Исполнитель",
+      "deleted": "Удалено",
+      "unassigned": "Не назначено",
+      "restoreTask": "Восстановить задачу",
+      "restore": "Восстановить",
+      "close": "Закрыть"
+    },
+    "sort": {
+      "title": "Сортировка задач",
+      "sortBy": "Сортировать по",
+      "reset": "Сбросить",
+      "options": {
+        "updatedAt": {
+          "label": "Последнее обновление",
+          "description": "Сначала недавно обновлённые"
+        },
+        "createdAt": {
+          "label": "Создано",
+          "description": "Сначала новые"
+        },
+        "owner": {
+          "label": "Исполнитель",
+          "description": "По имени исполнителя"
+        },
+        "manual": {
+          "label": "Вручную",
+          "description": "Порядок drag-and-drop"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Очистить поиск",
+      "tasks": "Задачи",
+      "createdAgo": "создано {{time}}",
+      "updatedAgo": "обновлено {{time}}",
+      "placeholder": "Поиск задач... (#id или текст)"
+    },
+    "grid": {
+      "addTask": "Добавить задачу",
+      "noTasks": "Нет задач"
+    },
+    "title": "Канбан",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "В РАБОТЕ",
+      "review": "РЕВЬЮ",
+      "done": "ГОТОВО",
+      "approved": "ОДОБРЕНО"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Проверка Git-репозитория для worktree участников...",
+    "ready": "Git worktree готовы.",
+    "readyOnBranch": "Git worktree готовы на ветке {{branch}}.",
+    "needsSetup": "Для worktree isolation нужна настройка Git",
+    "initialCommitNotice": "Действие initial commit добавит в индекс и закоммитит все текущие файлы с сообщением",
+    "initializeRepository": "Инициализировать Git-репозиторий",
+    "createInitialCommit": "Создать initial commit",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Настройки",
+    "autoAllowAllTools": "Автоматически разрешать все инструменты",
+    "autoAllowFileEdits": "Автоматически разрешать правки файлов (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Автоматически разрешать безопасные команды (git, pnpm, npm, ls...)",
+    "onTimeout": "При таймауте:",
+    "after": "через",
+    "secondsShort": "сек",
+    "timeoutActions": {
+      "wait": "Ждать всегда",
+      "allow": "Разрешить",
+      "deny": "Отклонить"
+    },
+    "submit": "Отправить",
+    "allow": "Разрешить",
+    "deny": "Отклонить",
+    "allowAll": "Разрешить всё",
+    "pendingCount": "ожидает: {{count}}",
+    "autoActionIn": "Авто-{{action}} через {{time}}",
+    "diff": {
+      "previewChanges": "Предпросмотр изменений",
+      "readingFile": "Чтение файла...",
+      "binaryFile": "Бинарный файл - предпросмотр невозможен",
+      "truncated": "Файл обрезан на 2MB - diff может быть неполным",
+      "newFile": "Новый файл"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Синхронизация работы участника",
+      "actionableItems": "Действия",
+      "fingerprint": "Fingerprint",
+      "report": "Отчёт",
+      "none": "нет",
+      "shadowWouldNudge": "Shadow отправил бы nudge",
+      "yes": "да",
+      "no": "нет",
+      "moreActionableItems": "Ещё действий: {{count}}",
+      "diagnostics": "Диагностика: {{diagnostics}}"
+    },
+    "title": "Синхронизация работы участника",
+    "loadingDiagnostics": "Загрузка диагностики синхронизации работы участника.",
+    "diagnosticsUnavailable": "Диагностика синхронизации работы участника недоступна."
+  },
+  "advancedCli": {
+    "title": "Дополнительно",
+    "useWorktree": "Использовать worktree",
+    "recent": "Недавние",
+    "commandPreview": "Предпросмотр команды",
+    "customArguments": "Пользовательские аргументы",
+    "validate": "Проверить",
+    "validation": {
+      "allFlagsValid": "Все флаги корректны",
+      "unknownFlags": "Неизвестные: {{flags}}",
+      "protectedFlags": "Защищённые: {{flags}}",
+      "failed": "Проверка не удалась"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} назад",
+    "stoppedAgo": "остановлен {{time}} назад",
+    "running": "Работает",
+    "stopped": "Остановлен",
+    "stopProcess": "Остановить процесс (SIGTERM)",
+    "kill": "Убить",
+    "openInBrowser": "Открыть в браузере",
+    "open": "Открыть",
+    "pid": "PID{{pid}}",
+    "title": "Процессы CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "Загрузка деталей активности...",
+    "contextUnavailable": "Детальный transcript-контекст для этой активности больше недоступен.",
+    "loading": "Загрузка активности задачи...",
+    "lowSignalOnly": "Ключевая активность задачи пока не найдена. Низкоуровневые детали выполнения доступны ниже в Task Log Stream.",
+    "empty": "Явная активность задачи пока не найдена в доступных transcript. Более старые или эвристические логи сессий могут быть доступны ниже в Execution Sessions.",
+    "title": "Активность задачи",
+    "description": "Ключевая runtime-активность, связанная с задачей через transcript metadata."
+  },
+  "sendMessage": {
+    "title": "Отправить сообщение",
+    "description": "Отправить прямое сообщение участнику команды.",
+    "recipientLabel": "Получатель",
+    "selectMemberPlaceholder": "Выберите участника...",
+    "messageLabel": "Сообщение",
+    "placeholder": "Напишите сообщение... (Enter для отправки)",
+    "send": "Отправить",
+    "sending": "Отправка...",
+    "charsLeft": "осталось символов: {{count}}",
+    "saved": "Сохранено",
+    "attachments": {
+      "teamOnlineRequired": "Команда должна быть онлайн, чтобы прикреплять файлы",
+      "recipientUnsupported": "Файлы можно отправлять лиду команды или участникам OpenCode",
+      "openCodeOnlineRequired": "Команда должна быть онлайн, чтобы прикреплять файлы для участников OpenCode",
+      "disabledHint": "Файлы поддерживаются для онлайн-лида команды и онлайн-участников OpenCode. Удалите вложения или смените получателя.",
+      "attachFiles": "Прикрепить файлы (вставка или drag & drop)",
+      "unavailable": "Вложения недоступны"
+    },
+    "quote": {
+      "remove": "Удалить цитату",
+      "replyingTo": "Ответ для"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Отменить ответ",
+    "replyingTo": "Ответ для",
+    "placeholder": "Добавьте комментарий... (Enter для отправки)",
+    "attachFile": "Прикрепить файл (или вставить)",
+    "voiceToText": "Голос в текст",
+    "comment": "Комментарий",
+    "charsLeft": "осталось символов: {{count}}",
+    "saved": "Сохранено",
+    "awaitingReplyFrom": "Ожидается ответ от",
+    "or": "или"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Перетащите изображение сюда",
+    "attachImage": "Прикрепить изображение",
+    "pasteOrDragDrop": "или вставьте / перетащите",
+    "fromOriginalMessage": "Из исходного сообщения",
+    "dropFilesHere": "Перетащите файлы сюда",
+    "loading": "Загрузка вложений..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Автоодобрение всех инструментов",
+    "autonomousModeDescription": "Автономный режим: инструменты команды выполняются без подтверждения. Будьте осторожны с недоверенным кодом.",
+    "manualModeDescription": "Ручной режим: вы будете одобрять или отклонять каждый вызов инструмента в реальном времени."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Выполнение",
+      "process": "Процесс"
+    },
+    "filters": {
+      "all": "Все"
+    },
+    "logs": {
+      "title": "Логи",
+      "loading": "Загрузка потока логов участника...",
+      "emptyTitle": "Для этого участника пока не найдено записей потока логов.",
+      "emptyDescription": "Транскрипт участника и runtime-логи появятся здесь, когда будут доступны."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Опишите, что нужно изменить... (Enter для отправки)",
+    "submit": "Отправить",
+    "charsLeft": "осталось символов: {{count}}",
+    "saved": "Сохранено",
+    "title": "Запросить изменения"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Открыть дашборд",
+      "openTeam": "Открыть команду",
+      "cancel": "Отмена"
+    },
+    "membersJson": {
+      "hide": "Скрыть JSON"
+    },
+    "optional": {
+      "badge": "Опционально"
+    }
+  },
+  "runningTeams": {
+    "title": "Активные команды"
+  },
+  "layout": {
+    "maxPanesReached": "Достигнут максимум панелей: {{count}}"
+  },
+  "codexReconnect": {
+    "description": "Сессия Codex выглядит устаревшей. Переподключитесь, чтобы продолжить.",
+    "useCode": "Использовать код"
+  },
+  "effortLevel": {
+    "label": "Уровень усилий (опционально)",
+    "maxDescription": "Max даёт модели больше всего времени на рассуждение для сложных задач."
+  },
+  "contextLimit": {
+    "limitTo200k": "Ограничить контекст до 200K токенов",
+    "always200k": "(для этой модели всегда 200K)",
+    "tooltipContent": "Ограничивает запуск окном контекста 200K токенов, когда это поддерживается.",
+    "tooltipTitle": "Лимит контекста"
+  },
+  "roleSelect": {
+    "noRole": "Без роли",
+    "customRole": "Своя роль...",
+    "searchPlaceholder": "Поиск ролей...",
+    "empty": "Роли не найдены.",
+    "reservedRole": "Эта роль зарезервирована"
+  }
+}

@@ -43,11 +43,12 @@
     "sectionSubtitle": "强大的工具，让多智能体协作真正有效。"
   },
   "pricing": {
-    "sectionTitle": "100% 免费，没有附加条件。",
-    "sectionSubtitle": "开源，无需 API 密钥，无需配置。安装即用。",
+    "sectionTitle": "免费安装。内置免费模型。",
+    "sectionSubtitle": "可立即使用无需认证的免费模型 - 无需账号、API 密钥或信用卡。只有在需要更多模型时，才连接 Claude、Codex、OpenCode/OpenRouter 或其他提供商。",
     "getStarted": "立即下载",
     "popular": "免费",
-    "note": "开源。无需 API 密钥。无需配置。完全本地运行。"
+    "freeModelCallout": "已包含无需认证的免费模型",
+    "note": "Agent Teams 没有自己的付费套餐。无需认证的免费模型可让你立即试用；付费提供商的使用是可选的，并由你选择的提供商控制。"
   },
   "testimonials": {
     "sectionTitle": "开发者怎么说",
@@ -64,6 +65,7 @@
     "sectionTitle": "功能对比",
     "sectionSubtitle": "与其他 AI 编程工具的逐项功能对比。",
     "feature": "功能",
+    "robotBubble": "你来判断",
     "features": {
       "crossTeam": "跨团队通信",
       "agentMessaging": "智能体间消息",
@@ -77,12 +79,17 @@
       "reviewWorkflow": "审查流程",
       "zeroSetup": "零配置",
       "kanban": "看板",
-      "execLog": "执行日志查看器",
+      "execLog": "执行日志",
       "liveProcesses": "实时进程",
+      "runtimeLoad": "每个队友的 CPU/RAM",
       "perTaskReview": "按任务代码审查",
       "flexAutonomy": "灵活自主",
       "worktree": "Git worktree 隔离",
-      "multiAgent": "多智能体后端",
+      "multiAgent": "混合 AI 队友",
+      "liveWorkGraph": "实时团队地图",
+      "liveTeam": "实时队友",
+      "teamWorkspace": "团队工作区",
+      "launchProof": "队友启动状态",
       "orgGovernance": "组织架构 / 治理",
       "budgetControls": "预算控制",
       "price": "价格"
@@ -98,6 +105,7 @@
   "footer": {
     "copyright": "© {year} Agent Teams",
     "tagline": "面向开发者的 AI 智能体编排",
+    "robotBubble": "我在等你",
     "links": {
       "github": "GitHub",
       "docs": "文档"
@@ -105,7 +113,7 @@
   },
   "meta": {
     "homeTitle": "Agent Teams - 面向开发者的 AI 智能体编排",
-    "homeDescription": "免费开源桌面应用，用于组建 AI 智能体团队。看板、代码审查、跨团队通信。完全本地运行。",
+    "homeDescription": "面向 AI 智能体团队的免费开源桌面应用。先使用无需认证的免费模型，需要更多模型时再连接 Claude、Codex 或 OpenCode。",
     "downloadTitle": "下载适用于 macOS、Windows 和 Linux 的 Agent Teams",
     "downloadDescription": "下载适用于 macOS、Windows 和 Linux 的 Agent Teams。面向 Claude、Codex 和 OpenCode 智能体团队的免费开源桌面应用。"
   },

@@ -2,6 +2,7 @@
  * Placeholder for non-previewable binary files — shows file info and "Open in System Viewer" button.
  */
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
 import { FileQuestion } from 'lucide-react';
@@ -17,6 +18,7 @@ export const EditorBinaryPlaceholder = ({
   fileName,
   size,
 }: EditorBinaryPlaceholderProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const projectPath = useStore((s) => s.editorProjectPath);
   const sizeFormatted =
     size < 1024
@@ -33,9 +35,9 @@ export const EditorBinaryPlaceholder = ({
     <div className="flex h-full flex-col items-center justify-center gap-3 text-text-muted">
       <FileQuestion className="size-12 opacity-30" />
       <p className="text-sm font-medium text-text-secondary">{fileName}</p>
-      <p className="text-xs">Binary file ({sizeFormatted})</p>
+      <p className="text-xs">{t('editor.binaryPlaceholder.file', { size: sizeFormatted })}</p>
       <Button variant="outline" size="sm" className="mt-2" onClick={handleOpenExternal}>
-        Open in System Viewer
+        {t('editor.imagePreview.openSystemViewer')}
       </Button>
     </div>
   );

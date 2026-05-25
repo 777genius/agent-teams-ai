@@ -31,6 +31,13 @@ function parseJsonToolResult(result: unknown) {
 
 describe('agent-teams-mcp tools', () => {
   const tools = collectTools();
+  const tempDirs: string[] = [];
+
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 
   function getTool(name: string) {
     const tool = tools.get(name);
@@ -39,7 +46,9 @@ describe('agent-teams-mcp tools', () => {
   }
 
   function makeClaudeDir() {
-    return fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-mcp-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-mcp-'));
+    tempDirs.push(dir);
+    return dir;
   }
 
   function writeTeamConfig(
@@ -448,6 +457,18 @@ describe('agent-teams-mcp tools', () => {
         })
       );
       expect(status.state).toBe('needs_sync');
+      expect(status.statusOnlyIncomplete).toBe(true);
+      expect(status.nextRequiredToolCall).toMatchObject({
+        tool: 'member_work_sync_report',
+        arguments: {
+          teamName: 'alpha',
+          memberName: 'alice',
+          controlUrl: server.baseUrl,
+          state: 'caught_up',
+          agendaFingerprint: 'agenda:v1:abc',
+          reportToken: 'wrs:v1.test.token',
+        },
+      });
 
       const report = parseJsonToolResult(
         await getTool('member_work_sync_report').execute({
@@ -535,6 +556,180 @@ describe('agent-teams-mcp tools', () => {
       expect(launched.progress.state).toBe('ready');
     } finally {
       await server.close();
+    }
+  });
+
+  it('discovers the work-sync control endpoint from the published state file', async () => {
+    const claudeDir = makeClaudeDir();
+    writeTeamConfig(claudeDir, 'alpha', {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+    const statePath = path.join(claudeDir, 'team-control-api.json');
+    const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+
+    const server = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+      if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/alice/refresh') {
+        return {
+          body: {
+            teamName: 'alpha',
+            memberName: 'alice',
+            state: 'needs_sync',
+            agenda: {
+              teamName: 'alpha',
+              memberName: 'alice',
+              generatedAt: '2026-04-29T00:00:00.000Z',
+              fingerprint: 'agenda:v1:state-file',
+              items: [{ taskId: 'task-1' }],
+              diagnostics: [],
+            },
+            reportToken: 'wrs:v1.state.file.token',
+            reportTokenExpiresAt: '2026-04-29T00:15:00.000Z',
+            evaluatedAt: '2026-04-29T00:00:00.000Z',
+            diagnostics: ['no_current_report'],
+          },
+        };
+      }
+      if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/report') {
+        return { body: { accepted: true, code: 'accepted', status: body } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      fs.writeFileSync(
+        statePath,
+        JSON.stringify({ baseUrl: server.baseUrl, updatedAt: new Date().toISOString() }, null, 2)
+      );
+
+      const status = parseJsonToolResult(
+        await getTool('member_work_sync_status').execute({
+          claudeDir,
+          teamName: 'alpha',
+          from: 'alice',
+        })
+      );
+      expect(status.nextRequiredToolCall).toMatchObject({
+        tool: 'member_work_sync_report',
+        arguments: {
+          teamName: 'alpha',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:state-file',
+          reportToken: 'wrs:v1.state.file.token',
+          taskIds: ['task-1'],
+        },
+      });
+
+      const report = parseJsonToolResult(
+        await getTool('member_work_sync_report').execute({
+          claudeDir,
+          teamName: 'alpha',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:state-file',
+          reportToken: 'wrs:v1.state.file.token',
+          taskIds: ['task-1'],
+        })
+      );
+      expect(report.accepted).toBe(true);
+      expect(calls.map((call) => call.url)).toEqual([
+        '/api/teams/alpha/member-work-sync/alice/refresh',
+        '/api/teams/alpha/member-work-sync/report',
+      ]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('falls back from a stale explicit work-sync control URL to the published state file', async () => {
+    const claudeDir = makeClaudeDir();
+    writeTeamConfig(claudeDir, 'alpha', {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+    const statePath = path.join(claudeDir, 'team-control-api.json');
+    const staleCalls: Array<{ method?: string; url?: string }> = [];
+    const freshCalls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+
+    const staleServer = await startControlServer(async ({ method, url }) => {
+      staleCalls.push({ method, url });
+      return { statusCode: 404, body: { error: 'stale control server' } };
+    });
+    const freshServer = await startControlServer(async ({ method, url, body }) => {
+      freshCalls.push({ method, url, body });
+      if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/alice/refresh') {
+        return {
+          body: {
+            teamName: 'alpha',
+            memberName: 'alice',
+            state: 'needs_sync',
+            agenda: {
+              teamName: 'alpha',
+              memberName: 'alice',
+              generatedAt: '2026-04-29T00:00:00.000Z',
+              fingerprint: 'agenda:v1:fresh-state-file',
+              items: [{ taskId: 'task-1' }],
+              diagnostics: [],
+            },
+            reportToken: 'wrs:v1.fresh.state.token',
+            reportTokenExpiresAt: '2026-04-29T00:15:00.000Z',
+            evaluatedAt: '2026-04-29T00:00:00.000Z',
+            diagnostics: ['no_current_report'],
+          },
+        };
+      }
+      if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/report') {
+        return { body: { accepted: true, code: 'accepted', status: body } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      fs.writeFileSync(
+        statePath,
+        JSON.stringify({ baseUrl: freshServer.baseUrl, updatedAt: new Date().toISOString() })
+      );
+
+      const status = parseJsonToolResult(
+        await getTool('member_work_sync_status').execute({
+          claudeDir,
+          teamName: 'alpha',
+          controlUrl: staleServer.baseUrl,
+          from: 'alice',
+        })
+      );
+      expect(status.agenda.fingerprint).toBe('agenda:v1:fresh-state-file');
+
+      const report = parseJsonToolResult(
+        await getTool('member_work_sync_report').execute({
+          claudeDir,
+          teamName: 'alpha',
+          controlUrl: staleServer.baseUrl,
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:fresh-state-file',
+          reportToken: 'wrs:v1.fresh.state.token',
+          taskIds: ['task-1'],
+        })
+      );
+      expect(report.accepted).toBe(true);
+      expect(staleCalls.map((call) => call.url)).toEqual([
+        '/api/teams/alpha/member-work-sync/alice/refresh',
+        '/api/teams/alpha/member-work-sync/report',
+      ]);
+      expect(freshCalls.map((call) => call.url)).toEqual([
+        '/api/teams/alpha/member-work-sync/alice/refresh',
+        '/api/teams/alpha/member-work-sync/report',
+      ]);
+    } finally {
+      await staleServer.close();
+      await freshServer.close();
     }
   });
 
@@ -813,6 +1008,20 @@ describe('agent-teams-mcp tools', () => {
     );
     expect(openCodeMemberBriefingText).not.toContain('task_get_comment {');
     expect(openCodeMemberBriefingText).not.toContain('notify your team lead via SendMessage');
+
+    const codexMemberBriefing = await getTool('member_briefing').execute({
+      claudeDir,
+      teamName,
+      memberName: 'alice',
+      runtimeProvider: 'codex',
+    });
+    const codexMemberBriefingText = (
+      codexMemberBriefing as { content: Array<{ text: string }> }
+    ).content[0]?.text;
+    expect(codexMemberBriefingText).toContain('agent-teams_message_send');
+    expect(codexMemberBriefingText).toContain('Codex Native visible messaging rule');
+    expect(codexMemberBriefingText).toContain('mcp__agent-teams__task_get');
+    expect(codexMemberBriefingText).not.toContain('notify your team lead via SendMessage');
   });
 
   it('keeps owner-backed MCP tasks pending by default, supports explicit startImmediately, sends owner notifications, and returns compact task_briefing output', async () => {
@@ -1009,6 +1218,31 @@ describe('agent-teams-mcp tools', () => {
     expect(inboxResolvedBriefingText).not.toContain(
       'Warning: Member metadata was not found in config.json, members.meta.json, or inbox files yet.'
     );
+  });
+
+  it('uses Codex-native MCP wording for task_create owner notifications', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'codex-owner';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'bob', role: 'developer', providerId: 'codex', model: 'gpt-5.4-mini' },
+      ],
+    });
+
+    await getTool('task_create').execute({
+      claudeDir,
+      teamName,
+      subject: 'Codex assigned work',
+      owner: 'bob',
+    });
+
+    const ownerInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'bob.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
+    expect(ownerInbox[0].text).toContain('MCP tool agent-teams_message_send');
+    expect(ownerInbox[0].text).toContain('Codex Native visible messaging rule');
+    expect(ownerInbox[0].text).toContain('mcp__agent-teams__task_get');
+    expect(ownerInbox[0].text).not.toContain('notify your lead via SendMessage');
   });
 
   it('returns compact lead_briefing output and filtered task_list inventory', async () => {

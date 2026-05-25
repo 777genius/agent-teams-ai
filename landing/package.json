@@ -18,11 +18,13 @@
     "format:fix": "prettier . --write"
   },
   "dependencies": {
+    "@firecms/neat": "^0.8.0",
     "@mdi/js": "^7.4.47",
+    "@mux/mux-video": "^0.31.0",
     "@nuxtjs/i18n": "^9.5.6",
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/nuxt": "^10.11.1",
-    "nuxt": "^3.20.2",
+    "nuxt": "^3.21.6",
     "nuxt-icon": "^0.6.10",
     "pinia": "^3.0.4",
     "swiper": "^12.1.2",
@@ -36,7 +38,7 @@
     "@nuxt/eslint": "^1.12.1",
     "@shikijs/transformers": "3.22.0",
     "autoprefixer": "^10.5.0",
-    "eslint": "^9.39.2",
+    "eslint": "^9.39.4",
     "medium-zoom": "^1.1.0",
     "prettier": "^3.8.0",
     "sass": "^1.97.2",

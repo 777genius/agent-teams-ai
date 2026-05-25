@@ -1,9 +1,9 @@
 import { constants as fsConstants, promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -15,30 +15,29 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { getTeamBootstrapStatePath } from '../../../../src/main/services/team/TeamBootstrapStateReader';
-import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
-import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
-import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
-import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
-import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
 import {
   readOpenCodeRuntimeLaneIndex,
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
+import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
+import { getTeamBootstrapStatePath } from '../../../../src/main/services/team/TeamBootstrapStateReader';
+import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
+import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
+import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
+import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 
+import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import type { RuntimeStoreManifestReader } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import type { OpenCodeBridgeCommandExecutor } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type {
   TeamRuntimeLaunchInput,
   TeamRuntimeStopInput,
 } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
-import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import type { RuntimeStoreManifestReader } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import type { OpenCodeBridgeCommandExecutor } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 
 const liveDescribe =
   process.env.OPENCODE_E2E === '1' && process.env.OPENCODE_E2E_MIXED_RECOVERY === '1'
@@ -47,7 +46,7 @@ const liveDescribe =
 const liveMultiLaneIt = process.env.OPENCODE_E2E_MIXED_RECOVERY_MULTI === '1' ? it : it.skip;
 
 const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() || process.cwd();
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli';
+const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_MODEL = 'opencode/big-pickle';
 
 liveDescribe('OpenCode mixed recovery live e2e', () => {
@@ -81,6 +80,7 @@ liveDescribe('OpenCode mixed recovery live e2e', () => {
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcpLaunchSpec.args),
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify(mcpLaunchSpec.env ?? {}),
     };
     const bridgeClient = new OpenCodeBridgeCommandClient({
       binaryPath: orchestratorCli,
@@ -193,6 +193,7 @@ liveDescribe('OpenCode mixed recovery live e2e', () => {
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcpLaunchSpec.args),
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify(mcpLaunchSpec.env ?? {}),
       };
       const bridgeClient = new OpenCodeBridgeCommandClient({
         binaryPath: orchestratorCli,
@@ -348,7 +349,15 @@ async function commitMixedOpenCodeLaunchResult(input: {
   memberName: string;
   result: Awaited<ReturnType<OpenCodeTeamRuntimeAdapter['launch']>>;
 }): Promise<Awaited<ReturnType<OpenCodeTeamRuntimeAdapter['launch']>>> {
-  return (input.service as any).guardCommittedOpenCodeSecondaryLaneEvidence({
+  const service = input.service as unknown as {
+    guardCommittedOpenCodeSecondaryLaneEvidence(args: {
+      teamName: string;
+      laneId: string;
+      memberName: string;
+      result: Awaited<ReturnType<OpenCodeTeamRuntimeAdapter['launch']>>;
+    }): Promise<Awaited<ReturnType<OpenCodeTeamRuntimeAdapter['launch']>>>;
+  };
+  return service.guardCommittedOpenCodeSecondaryLaneEvidence({
     teamName: input.teamName,
     laneId: input.laneId,
     memberName: input.memberName,

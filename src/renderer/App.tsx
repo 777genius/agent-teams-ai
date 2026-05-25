@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 
+import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
 import { ConfirmDialog } from './components/common/ConfirmDialog';
@@ -16,6 +17,7 @@ declare global {
   interface Window {
     __claudeTeamsSplashEnhancedStartedAt?: number;
     __claudeTeamsSplashScene?: SplashSceneHandle;
+    __claudeTeamsSplashEnhancedDisabled?: boolean;
     __claudeTeamsSplashStartedAt?: number;
   }
 }
@@ -32,13 +34,18 @@ const SPLASH_REDUCED_AVATAR_READY_MAX_WAIT_MS = 160;
 export const App = (): React.JSX.Element => {
   // Initialize theme on app load
   useTheme();
+  const appConfig = useStore((s) => s.appConfig);
 
   // Upgrade the static preload splash, then dismiss it after the scene is visible.
   useEffect(() => {
     const splash = document.getElementById('splash');
     if (splash) {
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const scene = window.__claudeTeamsSplashScene ?? startSplashScene(splash, { reducedMotion });
+      const scene: SplashSceneHandle =
+        window.__claudeTeamsSplashScene ??
+        (window.__claudeTeamsSplashEnhancedDisabled
+          ? { stop: () => undefined, ready: Promise.resolve() }
+          : startSplashScene(splash, { reducedMotion }));
       const startedAt = window.__claudeTeamsSplashStartedAt ?? performance.now();
       const enhancedStartedAt = window.__claudeTeamsSplashEnhancedStartedAt ?? performance.now();
       const elapsed = performance.now() - startedAt;
@@ -62,6 +69,7 @@ export const App = (): React.JSX.Element => {
           scene.stop();
           window.__claudeTeamsSplashScene = undefined;
           window.__claudeTeamsSplashEnhancedStartedAt = undefined;
+          window.__claudeTeamsSplashEnhancedDisabled = undefined;
           splash.remove();
         }, fadeDuration);
       };
@@ -98,13 +106,15 @@ export const App = (): React.JSX.Element => {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
-        <ContextSwitchOverlay />
-        <TabbedLayout />
-        <ConfirmDialog />
-        <ToolApprovalSheet />
-      </TooltipProvider>
-    </ErrorBoundary>
+    <LocalizationProvider appConfig={appConfig}>
+      <ErrorBoundary>
+        <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
+          <ContextSwitchOverlay />
+          <TabbedLayout />
+          <ConfirmDialog />
+          <ToolApprovalSheet />
+        </TooltipProvider>
+      </ErrorBoundary>
+    </LocalizationProvider>
   );
 };

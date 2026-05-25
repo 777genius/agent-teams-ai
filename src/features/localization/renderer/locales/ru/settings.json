@@ -1,0 +1,983 @@
+{
+  "tabs": {
+    "advanced": {
+      "description": "Расширенные параметры: экспорт и импорт конфигурации, сброс настроек и редактирование raw-конфигурации.",
+      "label": "Расширенные"
+    },
+    "general": {
+      "description": "Основные настройки приложения: тема, язык, плотность интерфейса и поведение при запуске.",
+      "label": "Общие"
+    },
+    "infoAriaLabel": "Что такое «{{label}}»?",
+    "notifications": {
+      "description": "Настройте, когда и как получать уведомления об активности агентов, завершении задач и ошибках.",
+      "label": "Уведомления"
+    }
+  },
+  "view": {
+    "description": "Управление настройками приложения",
+    "loading": "Загрузка настроек...",
+    "title": "Настройки"
+  },
+  "runtimeProvider": {
+    "actions": {
+      "cancel": "Отмена",
+      "test": "Тест"
+    },
+    "defaults": {
+      "allProjects": "Все проекты",
+      "allProjectsHint": "Тесты используют {{project}}. Default применяется, если у проекта нет своего override.",
+      "loadingContexts": "Загрузка contexts...",
+      "projectHint": "Сохранение изменит override только для {{project}}.",
+      "projectOverrideContext": "Project override context",
+      "scopeDescriptionAllProjects": "Default для всех проектов, у которых нет собственного OpenCode override.",
+      "scopeDescriptionProject": "Override только для выбранного проекта. Уже запущенные команды не изменяются.",
+      "selectProjectContext": "Выберите project context",
+      "selectProjectHint": "Выберите проект перед тестированием local models или сохранением defaults.",
+      "selectValidationContext": "Выберите validation context",
+      "setAllProjectsDefault": "Задать default для всех проектов",
+      "setProjectDefault": "Задать default для проекта",
+      "thisProject": "Этот проект",
+      "title": "OpenCode defaults",
+      "validationContext": "Validation context"
+    },
+    "diagnostics": {
+      "copied": "Diagnostics скопированы",
+      "copiedShort": "Скопировано",
+      "copy": "Скопировать diagnostics",
+      "hints": "Подсказки",
+      "likelyCause": "Вероятная причина:"
+    },
+    "models": {
+      "alreadyDefault": "Это уже выбранный OpenCode default.",
+      "empty": "Модели не найдены.",
+      "emptyFree": "Free models не найдены.",
+      "emptyRecommended": "Recommended models не найдены.",
+      "emptyRecommendedFree": "Recommended free models не найдены.",
+      "freeOnly": "Только free",
+      "launchableDescription": "Routes, которые можно тестировать или использовать в team picker: local config, free built-in models и текущий default.",
+      "launchableTitle": "Launchable OpenCode models",
+      "loadingRoutes": "Загрузка OpenCode model routes...",
+      "noRoutesMatch": "OpenCode model routes не найдены по запросу \"{{query}}\".",
+      "noneReported": "Launchable OpenCode model routes пока не получены. Настройте local route в OpenCode или используйте вкладку Providers для просмотра catalog providers.",
+      "recommendedOnly": "Только recommended",
+      "searchPlaceholder": "Поиск моделей",
+      "selectProjectBeforeTesting": "Выберите project context перед тестированием моделей.",
+      "selectProjectBeforeTestingDefaults": "Выберите project context перед тестированием или сохранением OpenCode defaults.",
+      "useInTeamPicker": "Использовать в team picker"
+    },
+    "providers": {
+      "catalog": "OpenCode provider catalog",
+      "countFallback": "OpenCode providers",
+      "description": "{{count}}. Connected и recommended providers показаны первыми.",
+      "description_few": "{{count}}. Connected и recommended providers показаны первыми.",
+      "description_many": "{{count}}. Connected и recommended providers показаны первыми.",
+      "description_one": "{{count}}. Connected и recommended providers показаны первыми.",
+      "description_other": "{{count}}. Connected и recommended providers показаны первыми.",
+      "loadMore": "Загрузить ещё providers",
+      "loading": "Загрузка OpenCode providers",
+      "noMatches": "Providers не найдены по поиску.",
+      "noneReported": "Managed runtime не сообщил OpenCode providers.",
+      "recommended": "Recommended",
+      "refreshCatalog": "Обновить catalog",
+      "searchPlaceholder": "Поиск providers"
+    },
+    "setup": {
+      "loading": "Загрузка provider setup..."
+    },
+    "summary": {
+      "defaultModel": "OpenCode default: {{model}}",
+      "loading": "Загрузка managed OpenCode runtime, connected providers и model defaults...",
+      "source": "Источник: {{source}}",
+      "title": "OpenCode runtime"
+    },
+    "tabs": {
+      "models": "Модели",
+      "providers": "Providers"
+    },
+    "modelRoutes": {
+      "searchPlaceholder": "Поиск маршрутов моделей"
+    },
+    "badges": {
+      "usedInTeamPicker": "Используется в выборе команды",
+      "free": "free",
+      "local": "local",
+      "configured": "настроено",
+      "connected": "подключено",
+      "verified": "проверено",
+      "needsTest": "нужен тест",
+      "failed": "ошибка",
+      "unknown": "неизвестно",
+      "default": "по умолчанию"
+    },
+    "compatibleEndpoint": {
+      "baseUrlPlaceholder": "http://localhost:1234"
+    }
+  },
+  "general": {
+    "agentLanguage": {
+      "description": "Язык общения с агентами",
+      "descriptionWithDetected": "Язык общения с агентами (определён: {{detected}})",
+      "emptyMessage": "Язык не найден.",
+      "label": "Язык",
+      "searchPlaceholder": "Поиск языка...",
+      "selectPlaceholder": "Выберите язык...",
+      "title": "Язык агентов"
+    },
+    "appLanguage": {
+      "description": "Язык интерфейса приложения.",
+      "label": "Язык",
+      "title": "Язык приложения"
+    },
+    "appearance": {
+      "autoExpandAIGroups": {
+        "description": "Автоматически раскрывать каждый ответ при открытии транскрипта или получении нового сообщения",
+        "label": "Раскрывать ответы AI по умолчанию"
+      },
+      "nativeTitleBar": {
+        "description": "Использовать стандартную системную рамку окна вместо кастомной панели заголовка",
+        "label": "Использовать системную панель заголовка",
+        "restartConfirm": {
+          "confirmLabel": "Перезапустить",
+          "message": "Чтобы применить изменение панели заголовка, приложение нужно перезапустить. Перезапустить сейчас?",
+          "title": "Требуется перезапуск"
+        }
+      },
+      "theme": {
+        "description": "Выберите предпочитаемую цветовую тему",
+        "label": "Тема",
+        "options": {
+          "dark": "Тёмная",
+          "light": "Светлая",
+          "system": "Системная"
+        }
+      },
+      "title": "Внешний вид"
+    },
+    "browserAccess": {
+      "serverMode": {
+        "description": "Запустить HTTP-сервер для доступа к интерфейсу из браузера или встраивания в iframe",
+        "label": "Включить режим сервера"
+      },
+      "title": "Доступ из браузера"
+    },
+    "localClaudeRoot": {
+      "actions": {
+        "selectFolder": "Выбрать папку",
+        "selectFolderManually": "Выбрать папку вручную",
+        "useAutoDetect": "Использовать автоопределение",
+        "useFolder": "Использовать папку",
+        "usePath": "Использовать путь",
+        "useThisPath": "Использовать этот путь",
+        "useWsl": "Используете Linux/WSL?"
+      },
+      "confirm": {
+        "noProjectsDir": {
+          "message": "В этой папке нет директории \"projects\". Всё равно продолжить?",
+          "title": "Директория projects не найдена"
+        },
+        "notClaudeDir": {
+          "message": "Эта папка называется \"{{folderName}}\", а не \".claude\". Всё равно продолжить?",
+          "title": "Выбранная папка не является .claude"
+        },
+        "noWslPaths": {
+          "message": "Не удалось автоматически найти WSL-дистрибутивы с данными Claude. Выбрать папку вручную?",
+          "title": "Пути Claude в WSL не найдены"
+        },
+        "wslNoProjectsDir": {
+          "message": "В \"{{path}}\" нет директории \"projects\". Всё равно продолжить?",
+          "title": "В пути WSL нет директории projects"
+        }
+      },
+      "current": {
+        "autoDetected": "Автоопределено: {{path}}",
+        "autoDetectedPath": "Используется автоопределённый путь",
+        "customPath": "Используется пользовательский путь",
+        "label": "Текущий локальный корень"
+      },
+      "description": "Выберите локальную папку, которая будет считаться корнем данных Claude",
+      "errors": {
+        "detectWslFailed": "Не удалось определить пути корня Claude в WSL",
+        "loadFailed": "Не удалось загрузить настройки локального корня Claude",
+        "updateFailed": "Не удалось обновить корень Claude"
+      },
+      "title": "Локальный корень Claude",
+      "wslModal": {
+        "closeAriaLabel": "Закрыть окно выбора пути WSL",
+        "description": "Найденные WSL-дистрибутивы и кандидаты корня Claude",
+        "noProjectsDir": "Директория projects не найдена",
+        "title": "Выберите корень Claude в WSL"
+      }
+    },
+    "privacy": {
+      "telemetry": {
+        "description": "Помогите улучшить приложение, отправляя анонимные отчёты о сбоях и производительности",
+        "label": "Отправлять отчёты о сбоях"
+      },
+      "title": "Приватность"
+    },
+    "server": {
+      "runningOn": "Запущено на",
+      "standaloneModeDescription": "Приложение работает в автономном режиме. HTTP-сервер всегда активен. Системные уведомления недоступны - триггеры уведомлений записываются только внутри приложения.",
+      "title": "Сервер"
+    },
+    "startup": {
+      "launchAtLogin": {
+        "description": "Автоматически запускать приложение при входе в систему",
+        "label": "Запускать при входе"
+      },
+      "showDockIcon": {
+        "description": "Показывать значок приложения в Dock (macOS)",
+        "label": "Показывать значок в Dock"
+      },
+      "title": "Запуск"
+    }
+  },
+  "notifications": {
+    "dev": {
+      "descriptionPrefix": "В режиме разработки уведомления могут работать некорректно. macOS определяет приложение как \"Electron\" (bundle ID",
+      "descriptionSuffix": "), а не как production-приложение. Проверьте разрешения в System Settings > Notifications > Electron.",
+      "title": "Режим разработки"
+    },
+    "ignoredRepositories": {
+      "description": "Уведомления из этих репозиториев будут игнорироваться",
+      "empty": "Игнорируемых репозиториев нет",
+      "selectPlaceholder": "Выберите репозиторий для игнорирования...",
+      "title": "Игнорируемые репозитории"
+    },
+    "settings": {
+      "enabled": {
+        "description": "Показывать системные уведомления об ошибках и событиях",
+        "label": "Включить системные уведомления"
+      },
+      "sound": {
+        "description": "Воспроизводить звук при появлении уведомлений",
+        "label": "Воспроизводить звук"
+      },
+      "subagentErrors": {
+        "description": "Обнаруживать ошибки в сессиях субагентов и уведомлять о них",
+        "label": "Включать ошибки субагентов"
+      },
+      "title": "Настройки уведомлений"
+    },
+    "snooze": {
+      "clear": "Снять паузу",
+      "description": "Временно приостановить уведомления",
+      "descriptionWithTime": "Приостановлено до {{time}}",
+      "label": "Приостановить уведомления",
+      "options": {
+        "15": "15 минут",
+        "30": "30 минут",
+        "60": "1 час",
+        "120": "2 часа",
+        "240": "4 часа",
+        "-1": "До завтра"
+      },
+      "selectDuration": "Выберите длительность..."
+    },
+    "taskCompletion": {
+      "description": "Получайте системные уведомления, когда Claude завершает задачи: звуки, баннеры и бейджи Dock/панели задач. Работает на macOS, Linux и Windows.",
+      "installPlugin": "Установить плагин claude-notifications-go",
+      "title": "Уведомления о завершении задач"
+    },
+    "team": {
+      "allTasksCompleted": {
+        "description": "Уведомлять, когда все задачи в команде переходят в статус completed",
+        "label": "Все задачи завершены"
+      },
+      "autoResumeOnRateLimit": {
+        "description": "Когда Claude сообщает время сброса лимита, запланировать follow-up для лида команды после восстановления лимита",
+        "label": "Автовозобновление после rate limit"
+      },
+      "clarifications": {
+        "description": "Показывать системные уведомления, когда задаче нужен ваш ввод",
+        "label": "Уведомления об уточнениях по задачам"
+      },
+      "crossTeamMessage": {
+        "description": "Уведомлять, когда приходит сообщение от другой команды",
+        "label": "Уведомления о сообщениях между командами"
+      },
+      "leadInbox": {
+        "description": "Уведомлять, когда участники команды отправляют сообщения лиду команды",
+        "label": "Уведомления inbox лида"
+      },
+      "statusChange": {
+        "description": "Показывать системные уведомления при изменении статуса задачи",
+        "label": "Уведомления об изменении статуса задач",
+        "onlySolo": {
+          "description": "Уведомлять только когда в команде нет участников",
+          "label": "Только в Solo-режиме"
+        },
+        "statuses": {
+          "description": "Какие целевые статусы вызывают уведомление",
+          "label": "Уведомлять по этим статусам",
+          "options": {
+            "approved": "Одобрено",
+            "completed": "Завершено",
+            "deleted": "Удалено",
+            "in_progress": "Запущено",
+            "needsFix": "Нужны исправления",
+            "pending": "Ожидание",
+            "review": "Ревью"
+          }
+        }
+      },
+      "taskComments": {
+        "description": "Показывать системные уведомления, когда агенты комментируют задачи",
+        "label": "Уведомления о комментариях к задачам"
+      },
+      "taskCreated": {
+        "description": "Показывать системные уведомления при создании новой задачи",
+        "label": "Уведомления о новых задачах"
+      },
+      "teamLaunched": {
+        "description": "Уведомлять, когда команда завершила запуск и готова к работе",
+        "label": "Уведомления о запуске команды"
+      },
+      "title": "Уведомления команды",
+      "toolApproval": {
+        "description": "Уведомлять, когда инструменту нужно ваше подтверждение (Allow/Deny), пока приложение не в фокусе",
+        "label": "Уведомления о подтверждении инструментов"
+      },
+      "userInbox": {
+        "description": "Уведомлять, когда участники команды отправляют сообщения вам",
+        "label": "Уведомления вашего inbox"
+      }
+    },
+    "test": {
+      "action": "Отправить тест",
+      "description": "Отправить тестовое уведомление, чтобы проверить доставку",
+      "failedToSend": "Не удалось отправить тестовое уведомление",
+      "label": "Тестовое уведомление",
+      "sending": "Отправка...",
+      "sent": "Отправлено!",
+      "unknownError": "Неизвестная ошибка"
+    }
+  },
+  "advanced": {
+    "about": {
+      "appIconAlt": "Значок приложения",
+      "description": "Собирайте команды AI-агентов, которые автономно работают параллельно, общаются между командами и управляют задачами на kanban-доске - со встроенным code review, живым мониторингом процессов и полной видимостью инструментов.",
+      "standalone": "Автономно",
+      "title": "О приложении",
+      "version": "Версия {{version}}"
+    },
+    "configuration": {
+      "editConfig": "Редактировать конфиг",
+      "exportConfig": "Экспортировать конфиг",
+      "importConfig": "Импортировать конфиг",
+      "openInEditor": "Открыть в редакторе",
+      "resetToDefaults": "Сбросить по умолчанию",
+      "title": "Конфигурация"
+    },
+    "updates": {
+      "available": "Доступна v{{version}}",
+      "check": "Проверить обновления",
+      "checking": "Проверка...",
+      "ready": "Обновление готово",
+      "unknownVersion": "неизвестная",
+      "upToDate": "Актуальная версия"
+    },
+    "appName": "Agent Teams AI"
+  },
+  "configEditor": {
+    "errors": {
+      "loadFailed": "Не удалось загрузить конфиг",
+      "saveFailed": "Не удалось сохранить конфиг"
+    },
+    "footer": {
+      "autoSave": "Изменения сохраняются автоматически после редактирования",
+      "toClose": "чтобы закрыть",
+      "escapeKey": "Esc"
+    },
+    "loading": "Загрузка конфига...",
+    "status": {
+      "invalidJson": "Некорректный JSON",
+      "saveFailed": "Сохранение не удалось",
+      "saved": "Сохранено",
+      "saving": "Сохранение..."
+    },
+    "title": "Редактирование конфигурации"
+  },
+  "notificationTriggers": {
+    "add": {
+      "cancel": "Отмена",
+      "submit": "Добавить триггер",
+      "title": "Добавить свой триггер"
+    },
+    "builtin": {
+      "description": "Стандартные триггеры, встроенные в приложение. Их можно включать или отключать и настраивать их паттерны.",
+      "title": "Встроенные триггеры"
+    },
+    "card": {
+      "builtinBadge": "Встроенный",
+      "collapseAriaLabel": "Свернуть",
+      "deleteAriaLabel": "Удалить триггер",
+      "editNameAriaLabel": "Редактировать имя",
+      "expandAriaLabel": "Развернуть"
+    },
+    "color": {
+      "customHexTitle": "Пользовательский HEX-цвет",
+      "invalidHex": "Некорректный HEX"
+    },
+    "configuration": {
+      "alertIfGreaterThan": "Уведомить если >",
+      "emptyPatternHint": "Оставьте пустым, чтобы совпадало с любым содержимым. Используется синтаксис JavaScript regex.",
+      "errorStatusDescription": "Срабатывает, когда выполнение инструмента сообщает об ошибке (is_error: true).",
+      "tokensUnit": "токенов",
+      "matchPatternPlaceholder": "например, error|failed|exception"
+    },
+    "custom": {
+      "description": "Создавайте собственные триггеры для уведомлений по конкретным паттернам или выводам инструментов.",
+      "empty": "Пользовательские триггеры пока не настроены.",
+      "title": "Пользовательские триггеры"
+    },
+    "errors": {
+      "invalidRegexPattern": "Некорректный regex-паттерн"
+    },
+    "fields": {
+      "contentType": "Тип содержимого",
+      "matchField": "Поле для поиска",
+      "matchPattern": "Паттерн совпадения (Regex)",
+      "scopeToolName": "Область / инструмент",
+      "scopeToolNameOptional": "Область / инструмент (необязательно)",
+      "threshold": "Порог",
+      "tokenType": "Тип токенов",
+      "triggerNamePlaceholder": "например, Ошибка сборки",
+      "triggerNameRequired": "Название триггера *"
+    },
+    "ignorePatterns": {
+      "hint": "Нажмите Enter, чтобы добавить. Уведомление пропускается, если совпал любой паттерн.",
+      "placeholder": "Добавить ignore regex...",
+      "removeAriaLabel": "Удалить ignore-паттерн",
+      "summary": "Дополнительно: правила исключения",
+      "title": "Ignore-паттерны (пропустить при совпадении)"
+    },
+    "options": {
+      "contentTypes": {
+        "text": "Текстовый вывод",
+        "thinking": "Thinking",
+        "tool_result": "Результат инструмента",
+        "tool_use": "Вызов инструмента"
+      },
+      "matchFields": {
+        "args": "Аргументы",
+        "command": "Команда",
+        "content": "Содержимое",
+        "description": "Описание",
+        "file_path": "Путь к файлу",
+        "fullInput": "Весь ввод (JSON)",
+        "glob": "Glob-фильтр",
+        "new_string": "Новая строка",
+        "old_string": "Старая строка",
+        "path": "Путь",
+        "pattern": "Паттерн",
+        "prompt": "Промпт",
+        "query": "Запрос",
+        "skill": "Название skill",
+        "subagent_type": "Тип субагента",
+        "text": "Текстовое содержимое",
+        "thinking": "Thinking-содержимое",
+        "url": "URL"
+      },
+      "modes": {
+        "content_match": "Паттерн в содержимом",
+        "error_status": "Ошибка выполнения",
+        "token_threshold": "Высокий расход токенов"
+      },
+      "tokenTypes": {
+        "input": "Входные токены",
+        "output": "Выходные токены",
+        "total": "Всего токенов"
+      },
+      "toolNames": {
+        "anyTool": "Любой инструмент"
+      }
+    },
+    "preview": {
+      "defaultTestTriggerName": "Тестовый триггер",
+      "detectedSuffix": "ошибок было бы обнаружено",
+      "more": "...и ещё {{count}}",
+      "more_few": "...и ещё {{count}}",
+      "more_many": "...и ещё {{count}}",
+      "more_one": "...и ещё {{count}}",
+      "more_other": "...и ещё {{count}}",
+      "testTrigger": "Проверить триггер",
+      "testing": "Проверка...",
+      "title": "Предпросмотр",
+      "truncatedWarning": "Поиск остановлен раньше времени (таймаут или лимит количества). Фактических совпадений может быть больше.",
+      "viewSession": "Открыть сессию"
+    },
+    "repositoryScope": {
+      "empty": "Репозитории не выбраны - триггер применяется ко всем репозиториям",
+      "hint": "Если репозитории выбраны, триггер срабатывает только для ошибок в этих репозиториях.",
+      "placeholder": "Выберите репозиторий для добавления...",
+      "summary": "Дополнительно: область репозиториев",
+      "title": "Ограничить репозиториями (применяется только к выбранным)"
+    },
+    "sections": {
+      "configuration": "Конфигурация",
+      "dotColor": "Цвет точки",
+      "generalInfo": "Основная информация",
+      "triggerCondition": "Условие триггера"
+    }
+  },
+  "workspaceProfiles": {
+    "actions": {
+      "addProfile": "Добавить профиль",
+      "cancel": "Отмена",
+      "deleteProfile": "Удалить профиль",
+      "editProfile": "Редактировать профиль",
+      "save": "Сохранить"
+    },
+    "authMethods": {
+      "agent": "SSH Agent",
+      "auto": "Auto (из SSH Config)",
+      "password": "Пароль",
+      "privateKey": "Приватный ключ"
+    },
+    "deleteConfirm": {
+      "confirmLabel": "Удалить",
+      "message": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+      "title": "Удалить профиль"
+    },
+    "description": "Сохраняйте SSH-профили для быстрого повторного подключения",
+    "empty": {
+      "description": "Добавьте SSH-профиль, чтобы быстро подключаться",
+      "title": "Сохранённых профилей нет"
+    },
+    "form": {
+      "authentication": "Аутентификация",
+      "host": "Хост",
+      "name": "Название",
+      "passwordPrompt": "Пароль будет запрошен при подключении.",
+      "port": "Порт",
+      "privateKeyPath": "Путь к приватному ключу",
+      "username": "Имя пользователя",
+      "namePlaceholder": "Мой сервер",
+      "hostPlaceholder": "hostname или IP",
+      "usernamePlaceholder": "user"
+    },
+    "loading": "Загрузка профилей...",
+    "title": "Профили рабочих окружений"
+  },
+  "connection": {
+    "actions": {
+      "connect": "Подключиться",
+      "connecting": "Подключение...",
+      "disconnect": "Отключиться",
+      "testConnection": "Проверить подключение",
+      "testing": "Проверка..."
+    },
+    "currentMode": {
+      "description": "Источник данных для файлов сессий",
+      "label": "Текущий режим",
+      "local": "Локально ({{path}})"
+    },
+    "description": "Подключитесь к удалённой машине, чтобы просматривать сессии Claude Code, запущенные там",
+    "form": {
+      "authentication": "Аутентификация",
+      "host": "Хост",
+      "password": "Пароль",
+      "port": "Порт",
+      "privateKeyPath": "Путь к приватному ключу",
+      "username": "Имя пользователя",
+      "hostPlaceholder": "hostname или alias из SSH config",
+      "usernamePlaceholder": "user"
+    },
+    "savedProfiles": {
+      "title": "Сохранённые профили"
+    },
+    "ssh": {
+      "title": "SSH-подключение"
+    },
+    "status": {
+      "connectedTo": "Подключено к {{host}}",
+      "remoteSessions": "Просмотр удалённых сессий через SSH"
+    },
+    "test": {
+      "failed": "Подключение не удалось: {{error}}",
+      "success": "Подключение успешно",
+      "unknownError": "Неизвестная ошибка"
+    },
+    "title": "Удалённое подключение"
+  },
+  "providerRuntime": {
+    "actions": {
+      "cancel": "Отмена",
+      "cancelLogin": "Отменить вход",
+      "connectChatGpt": "Подключить ChatGPT",
+      "delete": "Удалить",
+      "disable": "Отключить",
+      "disconnectAccount": "Отключить аккаунт",
+      "generateLink": "Создать ссылку",
+      "openLogin": "Открыть вход",
+      "reconnectAnthropic": "Переподключить Anthropic",
+      "refresh": "Обновить",
+      "replaceKey": "Заменить ключ",
+      "saveEndpoint": "Сохранить endpoint",
+      "saveKey": "Сохранить ключ",
+      "saving": "Сохранение...",
+      "setApiKey": "Задать API key",
+      "updateKey": "Обновить ключ",
+      "useCode": "Использовать код"
+    },
+    "apiKey": {
+      "loadingStoredCredentials": "Загрузка сохранённых credentials...",
+      "projectScope": "Проект",
+      "scope": "Scope",
+      "storedIn": "Хранится в {{backend}}",
+      "userScope": "Пользователь",
+      "storedInApp": "Сохранено в приложении",
+      "providers": {
+        "anthropic": {
+          "name": "Anthropic API Key",
+          "title": "API key",
+          "description": "Используйте прямой Anthropic API key для доступа с API-billing. Сессия подписки Anthropic останется доступной после переключения обратно.",
+          "placeholder": "sk-ant-..."
+        },
+        "codex": {
+          "name": "Codex API Key",
+          "title": "API key",
+          "description": "Используйте OpenAI API key как дополнительный способ аутентификации Codex. При переключении Codex в режим API key приложение отзеркалит OPENAI_API_KEY в CODEX_API_KEY для native launches.",
+          "placeholder": "sk-proj-..."
+        },
+        "gemini": {
+          "name": "Gemini API Key",
+          "title": "API access",
+          "description": "Используйте `GEMINI_API_KEY` для Gemini API backend. CLI SDK и ADC не требуют его.",
+          "placeholder": "AIza..."
+        }
+      }
+    },
+    "codex": {
+      "account": {
+        "appServer": "App-server: {{state}}",
+        "connected": "Подключено",
+        "description": "Управляйте локальной сессией Codex app-server account, которая используется для subscription-backed native launches.",
+        "loginInProgress": "Вход выполняется",
+        "plan": "План: {{plan}}",
+        "reconnectRequired": "Нужно переподключить",
+        "title": "ChatGPT account",
+        "hints": {
+          "autoUsesApiKeyUntilChatgpt": "{{message}} Auto продолжит использовать найденный API key, пока ChatGPT не подключён.",
+          "detectedApiKeyNeedsApiMode": "{{message}} Найденный API key используется только после переключения Codex в API key mode.",
+          "localArtifactsNoSession": "Codex CLI сейчас не видит активный ChatGPT account. Локальные данные Codex account есть, но активная managed session не выбрана. Лимиты появятся здесь только после того, как Codex CLI увидит аккаунт.",
+          "noActiveAccount": "Codex CLI сейчас не видит активный ChatGPT account. Лимиты появятся здесь только после того, как Codex CLI увидит аккаунт.",
+          "reconnectBeforeUsage": "В Codex локально выбран ChatGPT account, но текущей сессии нужно переподключение, прежде чем здесь загрузятся лимиты.",
+          "usageLimitsAfterReport": "Лимиты появятся здесь после того, как Codex сообщит их для подключённого ChatGPT account."
+        }
+      },
+      "install": {
+        "checking": "Проверка",
+        "downloading": "Загрузка",
+        "installCli": "Установить Codex CLI",
+        "installing": "Установка",
+        "retryInstall": "Повторить установку",
+        "title": "Установить Codex CLI в данные приложения"
+      },
+      "rateLimits": {
+        "credits": "Credits",
+        "creditsDescription": "Credits показываются отдельно от window-based subscription usage и могут быть недоступны для plan-backed ChatGPT-сессий.",
+        "noSecondaryWindow": "Codex не вернул secondary window для этого account snapshot.",
+        "notReported": "Не передано",
+        "primaryReset": "Сброс primary",
+        "primaryUsed": "Primary использовано",
+        "primaryWindow": "Primary window",
+        "remainingLeft": "{{value}} осталось",
+        "remainingUnknown": "Остаток неизвестен",
+        "secondaryReset": "Сброс secondary",
+        "secondaryUsed": "Secondary использовано",
+        "secondaryWindow": "Secondary window",
+        "usedQuotaNote": "Эти проценты показывают использованную квоту, а не остаток.",
+        "weeklyReset": "Сброс weekly",
+        "weeklyUsed": "Weekly использовано",
+        "weeklyUsedOneWeek": "Weekly использовано (1w)",
+        "weeklyWindow": "Weekly window",
+        "secondaryFallback": "secondary",
+        "secondaryWindowNote": " Weekly-лимиты показаны отдельно в окне {{window}}.",
+        "usageExplanationGeneric": "Показывает использованную квоту, а не остаток.",
+        "usageExplanationWindowOnly": "Показывает использованную квоту в текущем окне {{window}}, а не остаток.",
+        "usageExplanationWithRemaining": "Использовано {{used}} - примерно {{remaining}} осталось в текущем окне {{window}}."
+      }
+    },
+    "compatibleEndpoint": {
+      "authToken": "Auth token",
+      "authTokenMissing": "Auth token не настроен.",
+      "baseUrl": "Base URL",
+      "description": "Использовать локальный runtime endpoint, совместимый с Anthropic.",
+      "keepSavedToken": "Оставьте пустым, чтобы сохранить текущий token",
+      "title": "Локальный / compatible endpoint",
+      "tokenStatus": "Token {{status}}",
+      "validation": {
+        "baseUrlRequired": "Base URL обязателен",
+        "firstPartyAnthropic": "Для первого-party Anthropic используйте Auto, Subscription или API key",
+        "httpRequired": "Base URL должен использовать http:// или https://",
+        "invalidUrl": "Недопустимый URL",
+        "noCredentials": "Base URL не должен содержать credentials"
+      },
+      "status": {
+        "endpointDisabledTokenKept": "Endpoint отключён. Сохранённый token оставлен.",
+        "endpointSaved": "Endpoint сохранён",
+        "endpointSavedTokenMissing": "Endpoint сохранён. Auth token не настроен."
+      }
+    },
+    "connection": {
+      "authenticationMethod": "Метод аутентификации",
+      "descriptions": {
+        "anthropic": "Выберите, как запуски Anthropic из приложения проходят аутентификацию.",
+        "codex": "Выберите, должен ли Codex предпочитать ChatGPT subscription или API key при native runtime запуске.",
+        "gemini": "Настройте опциональный API-доступ. CLI SDK и ADC всё равно определяются автоматически.",
+        "opencode": "Аутентификация OpenCode и список провайдеров управляются runtime OpenCode."
+      },
+      "method": "Метод подключения",
+      "mode": "Режим: {{mode}}",
+      "selected": "Выбрано",
+      "switching": "Переключение...",
+      "title": "Подключение"
+    },
+    "connectionCards": {
+      "apiKey": {
+        "title": "API key"
+      },
+      "anthropic": {
+        "apiKeyDescription": "Использовать ANTHROPIC_API_KEY и биллинг Anthropic API.",
+        "autoDescription": "Использовать runtime-настройки Anthropic по умолчанию и лучший локальный credential.",
+        "hint": "Auto оставляет Anthropic на стандартном локальном выборе credentials.",
+        "subscriptionDescription": "Использовать локальную Anthropic sign-in сессию и subscription access.",
+        "subscriptionTitle": "Anthropic subscription"
+      },
+      "auto": {
+        "title": "Авто"
+      },
+      "codex": {
+        "apiKeyDescription": "Использовать OPENAI_API_KEY и CODEX_API_KEY billing для native Codex launches.",
+        "autoDescription": "Предпочитать ChatGPT account и subscription. API key mode использовать только при необходимости.",
+        "chatgptDescription": "Использовать подключённый ChatGPT account и Codex subscription.",
+        "chatgptTitle": "ChatGPT account",
+        "hint": "Codex всегда работает через native runtime. Auto предпочитает ChatGPT account перед API-key credentials."
+      }
+    },
+    "description": "Управляйте тем, как каждый провайдер подключается, и какой backend должен использовать multimodel runtime, если это поддерживается.",
+    "fastMode": {
+      "defaultOff": "По умолчанию выкл.",
+      "description": "Включать Claude Code Fast mode по умолчанию для новых запусков Anthropic-команд, когда выбранные модель и runtime это поддерживают.",
+      "disabledHint": "Новые Anthropic-запуски остаются на обычной скорости, если команда явно не включает Fast mode.",
+      "enabledHint": "Новые Anthropic-запуски будут запрашивать Fast mode по умолчанию, когда выбранная модель это поддерживает.",
+      "notExposed": "Этот Anthropic runtime не предоставляет Fast mode.",
+      "preferFast": "Предпочитать Fast",
+      "title": "Fast mode по умолчанию",
+      "unavailableForRuntime": "Fast mode сейчас недоступен для этого Anthropic runtime."
+    },
+    "alerts": {
+      "anthropicApiKeyMissing": "Выбран API key mode, но Anthropic API credential пока недоступен.",
+      "anthropicStoredKeyAvailable": "Сохранённый API key доступен, но запуски Anthropic из приложения используют его только после переключения в API key mode.",
+      "anthropicSubscriptionMissing": "Выбран Anthropic subscription mode. Войдите в Anthropic, чтобы использовать этого провайдера.",
+      "authTokenMissing": "Auth token не настроен. Многим локальным Anthropic-compatible endpoints нужен непустой token.",
+      "chatgptLoginPending": "Ожидание завершения входа в ChatGPT account...",
+      "chatgptLoginStarting": "Запуск входа в ChatGPT...",
+      "codexApiKeyMissing": "Выбран API key mode, но OPENAI_API_KEY или CODEX_API_KEY credential пока недоступен.",
+      "codexLocalArtifactsNoSession": "Codex CLI сейчас не видит активный ChatGPT account. Локальные данные Codex account есть, но активная managed session не выбрана.",
+      "codexNeedsReconnect": "В Codex локально выбран ChatGPT account, но текущей сессии нужно переподключение.",
+      "codexNoChatgptAccount": "Codex CLI сейчас не видит активный ChatGPT account. Подключите ChatGPT, чтобы использовать subscription.",
+      "codexNoCredential": "ChatGPT account или API key пока недоступны.",
+      "geminiApiUnavailable": "Gemini API сейчас недоступен. Настройте `GEMINI_API_KEY` здесь или используйте корректные Google ADC credentials.",
+      "withApiKeyFallback": "{{message}} Переключитесь в API key mode, чтобы использовать найденный API key."
+    },
+    "authModeDescriptions": {
+      "anthropic": {
+        "apiKey": "Принудительно использовать API key credential для Anthropic-запусков из приложения.",
+        "auto": "Использовать стандартное поведение runtime. Сохранённые API keys в приложении используются только после переключения в API key mode.",
+        "oauth": "Принудительно использовать локальную Anthropic subscription session для Anthropic-запусков из приложения."
+      },
+      "codex": {
+        "apiKey": "Принудительно использовать OPENAI_API_KEY / CODEX_API_KEY billing для native Codex launches.",
+        "auto": "Предпочитать ChatGPT account, когда он доступен. Переходить к API key mode только при необходимости.",
+        "chatgpt": "Принудительно использовать подключённый ChatGPT account и subscription для native Codex launches."
+      }
+    },
+    "progress": {
+      "applyingConnectionChanges": "Применение изменений подключения...",
+      "refreshingProviderStatus": "Обновление статуса провайдера...",
+      "savingCompatibleEndpoint": "Сохранение compatible endpoint...",
+      "switchingAnthropicSubscription": "Переключение на Anthropic subscription...",
+      "switchingApiKey": "Переключение на API key...",
+      "switchingApiKeyMode": "Переключение в API key mode...",
+      "switchingAuto": "Переключение на Авто...",
+      "switchingChatgpt": "Переключение в ChatGPT account mode..."
+    },
+    "provider": "Провайдер",
+    "runtime": {
+      "descriptions": {
+        "anthropic": "У Anthropic сейчас нет отдельного выбора runtime backend.",
+        "codex": "Codex теперь работает только через native runtime path.",
+        "gemini": "Выберите, какой Gemini runtime backend должен использовать multimodel.",
+        "opencode": "OpenCode использует собственный managed runtime host. Desktop сейчас показывает только статус."
+      },
+      "title": "Runtime",
+      "updating": "Обновление runtime..."
+    },
+    "runtimeSummary": "Runtime: {{runtime}}",
+    "status": {
+      "configured": "настроен",
+      "enabled": "Включено",
+      "notConfigured": "Не настроен",
+      "notSet": "не задан",
+      "off": "Выкл.",
+      "unknown": "Неизвестно"
+    },
+    "title": "Настройки провайдера",
+    "usage": {
+      "apiKey": "Используется API key",
+      "apiKeyRequired": "Нужен API key",
+      "compatibleEndpoint": "Используется compatible endpoint",
+      "notConnected": "Не подключено",
+      "usingMethod": "Используется {{method}}"
+    },
+    "errors": {
+      "apiKeyDeletedRefreshFailed": "API key удалён, но не удалось обновить статус провайдера.",
+      "apiKeySavedRefreshFailed": "API key сохранён, но не удалось обновить статус провайдера.",
+      "connectionUpdatedRefreshFailed": "Подключение обновлено, но не удалось обновить статус провайдера.",
+      "deleteApiKey": "Не удалось удалить API key",
+      "disableEndpoint": "Не удалось отключить endpoint",
+      "endpointDisabledRefreshFailed": "Endpoint отключён, но не удалось обновить статус провайдера.",
+      "endpointSavedRefreshFailed": "Endpoint сохранён, но не удалось обновить статус провайдера.",
+      "refreshCodexAccount": "Не удалось обновить Codex account",
+      "saveApiKey": "Не удалось сохранить API key",
+      "saveEndpoint": "Не удалось сохранить endpoint",
+      "updateAnthropicFastMode": "Не удалось обновить Anthropic Fast mode",
+      "updateConnection": "Не удалось обновить подключение",
+      "updateRuntimeBackend": "Не удалось обновить runtime backend",
+      "apiKeyRequired": "API key обязателен"
+    },
+    "connectionUi": {
+      "authMode": {
+        "auto": "Авто",
+        "oauth": "Подписка / OAuth",
+        "chatgpt": "Аккаунт ChatGPT",
+        "apiKey": "API key",
+        "anthropicSubscription": "Подписка Anthropic"
+      },
+      "authMethod": {
+        "apiKey": "API key",
+        "apiKeyHelper": "API key helper",
+        "oauth": "OAuth",
+        "claudeSubscription": "Подписка Claude",
+        "geminiCli": "Gemini CLI",
+        "googleAccount": "Аккаунт Google",
+        "serviceAccount": "service account"
+      },
+      "runtime": {
+        "codexNative": "Codex native",
+        "currentRuntime": "Текущий runtime",
+        "selectedRuntime": "Выбранный runtime",
+        "summary": "{{prefix}}: {{runtime}}"
+      },
+      "status": {
+        "checking": "Проверка...",
+        "checked": "Проверено",
+        "providerActivity": "Активность провайдеров",
+        "notConnected": "Не подключено",
+        "startingChatGptLogin": "Запускается вход в ChatGPT...",
+        "waitingForChatGptLogin": "Ожидание входа в аккаунт ChatGPT...",
+        "chatGptVerificationDegraded": "Аккаунт ChatGPT найден - проверка аккаунта сейчас работает в ограниченном режиме.",
+        "chatGptAccountReady": "Аккаунт ChatGPT готов",
+        "apiKeyReady": "API key готов",
+        "codexLocalAccountNeedsReconnect": "В Codex локально выбран аккаунт ChatGPT, но текущей сессии нужно переподключение.",
+        "codexNoActiveManagedSession": "Codex CLI сообщает, что активного входа ChatGPT нет. Локальные данные аккаунта Codex есть, но активная управляемая сессия не выбрана.",
+        "codexNoActiveChatGptLogin": "Codex CLI сообщает, что активного входа ChatGPT нет",
+        "connectChatGptForSubscription": "Подключите аккаунт ChatGPT, чтобы использовать подписку Codex.",
+        "codexNativeReady": "Codex native готов",
+        "codexNativeUnavailable": "Codex native недоступен",
+        "unavailableInCurrentRuntime": "Недоступно в текущем runtime",
+        "connectedViaApiKey": "Подключено через API key",
+        "apiKeyConfiguredNotVerified": "API key настроен, но ещё не проверен",
+        "apiKeyModeMissingCredential": "Выбран режим API key, но API key не настроен",
+        "connectedVia": "Подключено через {{method}}",
+        "unableToVerify": "Не удалось проверить"
+      },
+      "mode": {
+        "selectedAuth": "Выбранная аутентификация: {{authMode}}",
+        "preferredAuth": "Предпочитаемая аутентификация: {{authMode}}"
+      },
+      "credential": {
+        "apiKeyConfigured": "API key настроен",
+        "savedApiKeyAvailable": "Сохранённый API key доступен в Manage",
+        "apiKeyAlsoConfigured": "API key также настроен в Manage",
+        "apiKeyConfiguredInManage": "API key настроен в Manage",
+        "apiKeyFallbackInManage": "API key также доступен в Manage как fallback",
+        "availableAsFallback": "{{summary}} - доступен как fallback",
+        "savedApiKeyAvailableIfSwitch": "Сохранённый API key доступен в Manage, если переключиться в режим API key",
+        "availableIfSwitch": "{{summary}} - доступен при переключении в режим API key",
+        "autoWillUseUntilChatGpt": "{{summary}} - Auto будет использовать его, пока ChatGPT не подключён"
+      },
+      "actions": {
+        "connect": "Подключить",
+        "connectAnthropic": "Подключить Anthropic",
+        "connectChatGpt": "Подключить ChatGPT",
+        "disconnect": "Отключить",
+        "openLogin": "Открыть вход"
+      },
+      "disconnect": {
+        "anthropicTitle": "Отключить подписку Anthropic?",
+        "anthropic": "Это удалит локальную сессию подписки Anthropic из runtime Claude CLI.",
+        "anthropicWithApiKey": "Это удалит локальную сессию подписки Anthropic из runtime Claude CLI. Сохранённые API keys в Manage останутся доступными.",
+        "geminiTitle": "Отключить Gemini CLI?",
+        "gemini": "Это очистит локальные метаданные сессии Gemini CLI. Внешние ADC credentials и сохранённые API keys не удаляются."
+      }
+    }
+  },
+  "cliRuntime": {
+    "actions": {
+      "checkForUpdates": "Проверить обновления",
+      "checking": "Проверка...",
+      "extensions": "Расширения",
+      "installRuntime": "Установить {{runtime}}",
+      "manage": "Управлять",
+      "recheck": "Проверить снова",
+      "reinstallRuntime": "Переустановить {{runtime}}",
+      "retry": "Повторить",
+      "update": "Обновить"
+    },
+    "installer": {
+      "checkingLatest": "Проверка последней версии...",
+      "downloading": "Загрузка...",
+      "failed": "Установка не удалась",
+      "installed": "Установлено v{{version}}",
+      "installing": "Установка...",
+      "latest": "latest",
+      "verifying": "Проверка checksum..."
+    },
+    "labels": {
+      "multimodel": "Multimodel"
+    },
+    "loading": {
+      "aiProviders": "Проверка AI-провайдеров...",
+      "claudeCli": "Проверка Claude CLI..."
+    },
+    "provider": {
+      "backend": "Backend: {{backend}}",
+      "loadingModels": "Загрузка моделей...",
+      "modelsUnavailable": "Модели недоступны для этой сборки runtime",
+      "runtime": "Runtime: {{runtime}}"
+    },
+    "providerTerminal": {
+      "authFailed": "Аутентификация не удалась",
+      "authUpdated": "Аутентификация обновлена",
+      "loggedOut": "Провайдер отключён",
+      "login": "Вход",
+      "logout": "Выход",
+      "logoutFailed": "Выход не удался"
+    },
+    "status": {
+      "configuredNotFound": "Настроенный {{runtime}} не найден.",
+      "foundButFailed": "{{runtime}} найден, но не запустился",
+      "healthCheckFailed": "Настроенный {{runtime}} не прошёл health check запуска.",
+      "notInstalled": "{{runtime}} не установлен"
+    },
+    "title": "CLI Runtime"
+  },
+  "cliStatus": {
+    "versionUpgrade": "v{{current}} -> v{{latest}}"
+  }
+}

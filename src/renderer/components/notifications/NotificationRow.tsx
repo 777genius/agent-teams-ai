@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { getTriggerColorDef } from '@shared/constants/triggerColors';
 import { formatDistanceToNow } from 'date-fns';
 import { ArrowRight, Bot, Check, Trash2, Users } from 'lucide-react';
@@ -32,6 +33,7 @@ export const NotificationRow = ({
   onArchive,
   onDelete,
 }: Readonly<NotificationRowProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [isHovered, setIsHovered] = useState(false);
   const isUnread = !error.isRead;
   const projectName = error.context?.projectName || 'Unknown Project';
@@ -113,7 +115,7 @@ export const NotificationRow = ({
               }}
             >
               <Users className="size-3" />
-              team
+              {t('notifications.row.team')}
             </span>
           )}
           {error.subagentId && (
@@ -126,7 +128,7 @@ export const NotificationRow = ({
               }}
             >
               <Bot className="size-3" />
-              subagent
+              {t('notifications.row.subagent')}
             </span>
           )}
         </div>
@@ -174,6 +176,7 @@ const HoverActions = ({
   onDeleteClick,
   onNavigateClick,
 }: HoverActionsProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   const getButtonStyle = (buttonId: string, isDelete = false): React.CSSProperties => ({
@@ -196,7 +199,7 @@ const HoverActions = ({
           onMouseLeave={() => setHoveredButton(null)}
           className="rounded p-1.5 transition-colors"
           style={getButtonStyle('archive')}
-          title="Mark as read"
+          title={t('notifications.row.markAsRead')}
         >
           <Check className="size-4" />
         </button>
@@ -208,7 +211,7 @@ const HoverActions = ({
         onMouseLeave={() => setHoveredButton(null)}
         className="rounded p-1.5 transition-colors"
         style={getButtonStyle('delete', true)}
-        title="Delete"
+        title={t('notifications.row.delete')}
       >
         <Trash2 className="size-4" />
       </button>
@@ -219,7 +222,7 @@ const HoverActions = ({
         onMouseLeave={() => setHoveredButton(null)}
         className="rounded p-1.5 transition-colors"
         style={getButtonStyle('navigate')}
-        title="View in session"
+        title={t('notifications.row.viewInSession')}
       >
         <ArrowRight className="size-4" />
       </button>

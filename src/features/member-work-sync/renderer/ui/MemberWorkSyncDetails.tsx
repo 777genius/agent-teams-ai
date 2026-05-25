@@ -1,3 +1,5 @@
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { toMemberWorkSyncStatusViewModel } from '../adapters/memberWorkSyncStatusViewModel';
 
 import { MemberWorkSyncBadge } from './MemberWorkSyncBadge';
@@ -22,6 +24,7 @@ export function MemberWorkSyncDetails({
   status,
   showDiagnostics = false,
 }: MemberWorkSyncDetailsProps): React.ReactElement {
+  const { t } = useAppTranslation('team');
   const viewModel = toMemberWorkSyncStatusViewModel(status);
   const agendaItems = status?.agenda.items ?? [];
 
@@ -29,7 +32,9 @@ export function MemberWorkSyncDetails({
     <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--color-text)]">Member work sync</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
+            {t('memberWorkSync.details.title')}
+          </h3>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">{viewModel.tooltip}</p>
         </div>
         <MemberWorkSyncBadge viewModel={viewModel} />
@@ -37,25 +42,33 @@ export function MemberWorkSyncDetails({
 
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div>
-          <dt className="text-[var(--color-text-muted)]">Actionable items</dt>
+          <dt className="text-[var(--color-text-muted)]">
+            {t('memberWorkSync.details.actionableItems')}
+          </dt>
           <dd className="font-medium text-[var(--color-text)]">{viewModel.actionableCount}</dd>
         </div>
         <div>
-          <dt className="text-[var(--color-text-muted)]">Fingerprint</dt>
+          <dt className="text-[var(--color-text-muted)]">
+            {t('memberWorkSync.details.fingerprint')}
+          </dt>
           <dd className="font-mono text-[var(--color-text)]">
             {shortFingerprint(viewModel.fingerprint)}
           </dd>
         </div>
         <div>
-          <dt className="text-[var(--color-text-muted)]">Report</dt>
+          <dt className="text-[var(--color-text-muted)]">{t('memberWorkSync.details.report')}</dt>
           <dd className="font-medium text-[var(--color-text)]">
-            {viewModel.reportState ?? 'none'}
+            {viewModel.reportState ?? t('memberWorkSync.details.none')}
           </dd>
         </div>
         <div>
-          <dt className="text-[var(--color-text-muted)]">Shadow would nudge</dt>
+          <dt className="text-[var(--color-text-muted)]">
+            {t('memberWorkSync.details.shadowWouldNudge')}
+          </dt>
           <dd className="font-medium text-[var(--color-text)]">
-            {viewModel.wouldNudge ? 'yes' : 'no'}
+            {viewModel.wouldNudge
+              ? t('memberWorkSync.details.yes')
+              : t('memberWorkSync.details.no')}
           </dd>
         </div>
       </dl>
@@ -69,7 +82,7 @@ export function MemberWorkSyncDetails({
           ))}
           {agendaItems.length > 3 ? (
             <li className="text-[var(--color-text-muted)]">
-              {agendaItems.length - 3} more actionable item(s)
+              {t('memberWorkSync.details.moreActionableItems', { count: agendaItems.length - 3 })}
             </li>
           ) : null}
         </ul>
@@ -77,7 +90,7 @@ export function MemberWorkSyncDetails({
 
       {showDiagnostics && status?.diagnostics.length ? (
         <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-          Diagnostics: {status.diagnostics.join(', ')}
+          {t('memberWorkSync.details.diagnostics', { diagnostics: status.diagnostics.join(', ') })}
         </p>
       ) : null}
     </section>

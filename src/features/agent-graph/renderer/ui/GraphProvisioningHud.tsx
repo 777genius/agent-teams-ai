@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { DISPLAY_STEPS } from '@renderer/components/team/provisioningSteps';
 import { StepProgressBar } from '@renderer/components/team/StepProgressBar';
 import { TeamProvisioningPanel } from '@renderer/components/team/TeamProvisioningPanel';
@@ -15,7 +16,6 @@ import {
 import type { TeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import type { CSSProperties } from 'react';
 
-const MINI_STEPS = DISPLAY_STEPS.map((step) => ({ key: step.key, label: step.label }));
 const HUD_STEPPER_STYLE: CSSProperties = {
   ['--stepper-done' as string]: '#22c55e',
   ['--stepper-done-glow' as string]: 'rgba(34, 197, 94, 0.24)',
@@ -46,6 +46,8 @@ export const GraphProvisioningHud = ({
   teamName,
   enabled = true,
 }: GraphProvisioningHudProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const miniSteps = DISPLAY_STEPS.map((step) => ({ key: step.key, label: t(step.labelKey) }));
   const { presentation, runInstanceKey } = useTeamProvisioningPresentation(teamName);
   const lastActiveStepRef = useRef(-1);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -88,7 +90,7 @@ export const GraphProvisioningHud = ({
       >
         <div className="px-1 py-0.5" style={HUD_STEPPER_STYLE}>
           <StepProgressBar
-            steps={MINI_STEPS}
+            steps={miniSteps}
             currentIndex={presentation.currentStepIndex}
             active={presentation.isActive}
             errorIndex={errorStepIndex}
@@ -101,9 +103,9 @@ export const GraphProvisioningHud = ({
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="w-[min(1120px,92vw)] max-w-5xl p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Launch details</DialogTitle>
+            <DialogTitle>{t('agentGraph.provisioning.launchDetails')}</DialogTitle>
             <DialogDescription>
-              Detailed team launch progress, live output and CLI logs.
+              {t('agentGraph.provisioning.launchDetailsDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[85vh] overflow-y-auto p-4">

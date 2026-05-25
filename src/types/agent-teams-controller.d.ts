@@ -43,7 +43,10 @@ declare module 'agent-teams-controller' {
     unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
     memberBriefing(
       memberName: string,
-      options?: { runtimeProvider?: 'native' | 'opencode'; includeActiveProcesses?: boolean }
+      options?: {
+        runtimeProvider?: 'native' | 'opencode' | 'codex';
+        includeActiveProcesses?: boolean;
+      }
     ): Promise<string>;
     leadBriefing(): Promise<string>;
     taskBriefing(memberName: string): Promise<string>;
@@ -51,7 +54,7 @@ declare module 'agent-teams-controller' {
 
   export interface ControllerKanbanApi {
     getKanbanState(): unknown;
-    setKanbanColumn(taskId: string, column: string): unknown;
+    setKanbanColumn(taskId: string, column: string, options?: Record<string, unknown>): unknown;
     clearKanban(taskId: string): unknown;
     listReviewers(): string[];
     addReviewer(reviewer: string): string[];

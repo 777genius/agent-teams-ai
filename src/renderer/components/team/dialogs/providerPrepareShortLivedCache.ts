@@ -56,11 +56,13 @@ export function getShortLivedProviderPrepareModelIssueReasons({
   providerId: TeamProviderId;
   cacheKey: string;
 }): {
+  modelAdvisoryReasonByValue: Record<string, string>;
   modelIssueReasonByValue: Record<string, string>;
   modelUnavailableReasonByValue: Record<string, string>;
 } {
   if (providerId !== 'opencode') {
     return {
+      modelAdvisoryReasonByValue: {},
       modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {},
     };
@@ -71,11 +73,13 @@ export function getShortLivedProviderPrepareModelIssueReasons({
   const entry = shortLivedProviderPrepareIssueCache.get(cacheKey);
   if (!entry) {
     return {
+      modelAdvisoryReasonByValue: {},
       modelIssueReasonByValue: {},
       modelUnavailableReasonByValue: {},
     };
   }
 
+  const modelAdvisoryReasonByValue: Record<string, string> = {};
   const modelIssueReasonByValue: Record<string, string> = {};
   const modelUnavailableReasonByValue: Record<string, string> = {};
   for (const [modelId, result] of Object.entries(entry.modelResultsById)) {
@@ -86,11 +90,12 @@ export function getShortLivedProviderPrepareModelIssueReasons({
     if (result.status === 'failed') {
       modelUnavailableReasonByValue[modelId] = reason;
     } else if (result.status === 'notes') {
-      modelIssueReasonByValue[modelId] = reason;
+      modelAdvisoryReasonByValue[modelId] = reason;
     }
   }
 
   return {
+    modelAdvisoryReasonByValue,
     modelIssueReasonByValue,
     modelUnavailableReasonByValue,
   };
@@ -132,6 +137,22 @@ export function storeShortLivedProviderPrepareModelResults({
   }
 
   if (Object.keys(issueResultsById).length > 0) {
+    const existingEntry = shortLivedProviderPrepareCache.get(cacheKey);
+    if (existingEntry) {
+      const nextReadyResultsById = { ...existingEntry.modelResultsById };
+      for (const modelId of Object.keys(issueResultsById)) {
+        delete nextReadyResultsById[modelId];
+      }
+      if (Object.keys(nextReadyResultsById).length > 0) {
+        shortLivedProviderPrepareCache.set(cacheKey, {
+          expiresAt: existingEntry.expiresAt,
+          modelResultsById: nextReadyResultsById,
+        });
+      } else {
+        shortLivedProviderPrepareCache.delete(cacheKey);
+      }
+    }
+
     const existingIssueEntry = shortLivedProviderPrepareIssueCache.get(cacheKey);
     const nextIssueResultsById = {
       ...(existingIssueEntry?.modelResultsById ?? {}),

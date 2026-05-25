@@ -6,6 +6,7 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Label } from '@renderer/components/ui/label';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
@@ -28,6 +29,7 @@ export const CodexFastModeSelector: React.FC<CodexFastModeSelectorProps> = ({
   providerBackendId,
   id,
 }) => {
+  const { t } = useAppTranslation('team');
   const { providerStatus } = useEffectiveCliProviderStatus('codex');
   const selection = useMemo(
     () =>
@@ -65,15 +67,23 @@ export const CodexFastModeSelector: React.FC<CodexFastModeSelectorProps> = ({
   return (
     <div className="mb-3">
       <Label htmlFor={id} className="label-optional mb-1.5 block">
-        Fast mode (2x credits)
+        {t('modelSelector.fastMode.codexLabel')}
       </Label>
       <div className="flex items-center gap-2">
         <Zap size={16} className="shrink-0 text-[var(--color-text-muted)]" />
         <div className="inline-flex flex-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
           {[
-            { value: 'inherit' as const, label: 'Default (Off)', disabled: false },
-            { value: 'on' as const, label: 'Fast', disabled: !resolution.selectable },
-            { value: 'off' as const, label: 'Off', disabled: false },
+            {
+              value: 'inherit' as const,
+              label: t('modelSelector.fastMode.defaultOff'),
+              disabled: false,
+            },
+            {
+              value: 'on' as const,
+              label: t('modelSelector.fastMode.fast'),
+              disabled: !resolution.selectable,
+            },
+            { value: 'off' as const, label: t('modelSelector.fastMode.off'), disabled: false },
           ].map((option) => (
             <button
               key={option.value}

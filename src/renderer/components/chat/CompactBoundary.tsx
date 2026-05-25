@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CODE_BG,
   CODE_BORDER,
@@ -31,6 +32,7 @@ interface CompactBoundaryProps {
 export const CompactBoundary = memo(function CompactBoundary({
   compactGroup,
 }: Readonly<CompactBoundaryProps>): React.JSX.Element {
+  const { t } = useAppTranslation('common');
   const { timestamp, message } = compactGroup;
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -62,7 +64,7 @@ export const CompactBoundary = memo(function CompactBoundary({
         onClick={() => setIsExpanded(!isExpanded)}
         className="group flex w-full cursor-pointer items-center transition-opacity hover:opacity-90"
         aria-expanded={isExpanded}
-        aria-label="Toggle compacted content"
+        aria-label={t('chat.compact.toggle')}
       >
         {/* Left line */}
         <div className="h-px flex-1" style={{ backgroundColor: TOOL_CALL_TEXT, opacity: 0.3 }} />
@@ -82,7 +84,7 @@ export const CompactBoundary = memo(function CompactBoundary({
             className="whitespace-nowrap text-[11px] font-medium"
             style={{ color: TOOL_CALL_TEXT }}
           >
-            Context compacted
+            {t('chat.compact.contextCompacted')}
           </span>
 
           {/* Token delta */}
@@ -95,7 +97,9 @@ export const CompactBoundary = memo(function CompactBoundary({
               {formatTokens(compactGroup.tokenDelta.postCompactionTokens)}
               <span style={{ color: 'var(--diff-added-text)' }}>
                 {' '}
-                ({formatTokens(Math.abs(compactGroup.tokenDelta.delta))} freed)
+                {t('chat.compact.freedTokens', {
+                  tokens: formatTokens(Math.abs(compactGroup.tokenDelta.delta)),
+                })}
               </span>
             </span>
           )}
@@ -109,7 +113,7 @@ export const CompactBoundary = memo(function CompactBoundary({
                 color: 'var(--compact-phase-text)',
               }}
             >
-              Phase {compactGroup.startingPhaseNumber}
+              {t('chat.compact.phase', { phase: compactGroup.startingPhaseNumber })}
             </span>
           )}
 
@@ -152,12 +156,9 @@ export const CompactBoundary = memo(function CompactBoundary({
                 <Layers size={14} className="mt-0.5 shrink-0" style={{ color: COLOR_TEXT_MUTED }} />
                 <div className="text-xs leading-relaxed" style={{ color: COLOR_TEXT_MUTED }}>
                   <p className="mb-1 font-medium" style={{ color: COLOR_TEXT_SECONDARY }}>
-                    Conversation Compacted
+                    {t('chat.compact.conversationCompacted')}
                   </p>
-                  <p>
-                    Previous messages were summarized to save context. The full conversation history
-                    is preserved in the session file.
-                  </p>
+                  <p>{t('chat.compact.summary')}</p>
                 </div>
               </div>
             )}

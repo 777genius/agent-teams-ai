@@ -5,6 +5,7 @@ import {
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
   isTeamModelAvailableForUi,
+  isTeamProviderModelVerificationPending,
   normalizeTeamModelForUi,
 } from '../teamModelAvailability';
 
@@ -202,6 +203,32 @@ describe('team model availability Codex catalog integration', () => {
       availabilityStatus: 'available',
     });
     expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toBeNull();
+  });
+
+  it('does not reject a selected Codex model while provider status is still loading', () => {
+    const providerStatus = {
+      ...createCodexProviderStatus([
+        {
+          id: 'gpt-5.1-codex',
+          launchModel: 'gpt-5.1-codex',
+          displayName: 'GPT-5.1 Codex',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high'],
+          defaultReasoningEffort: 'medium',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'static-fallback',
+        },
+      ]),
+      verificationState: 'unknown' as const,
+      statusMessage: 'Checking...',
+    };
+
+    expect(isTeamProviderModelVerificationPending('codex', providerStatus)).toBe(true);
+    expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toBeNull();
+    expect(normalizeTeamModelForUi('codex', 'gpt-5.5', providerStatus)).toBe('gpt-5.5');
   });
 
   it('orders GPT-5.5 first after the virtual default option', () => {

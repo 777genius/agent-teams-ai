@@ -4,6 +4,8 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { ToolOutputItem } from '../items/ToolOutputItem';
 
 import { CollapsibleSection } from './CollapsibleSection';
@@ -25,11 +27,13 @@ export const ToolOutputsSection = ({
   onToggle,
   onNavigateToTurn,
 }: Readonly<ToolOutputsSectionProps>): React.ReactElement | null => {
+  const { t } = useAppTranslation('common');
+
   if (injections.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="Tool Outputs"
+      title={t('tokens.toolOutputs')}
       count={injections.length}
       tokenCount={tokenCount}
       isExpanded={isExpanded}

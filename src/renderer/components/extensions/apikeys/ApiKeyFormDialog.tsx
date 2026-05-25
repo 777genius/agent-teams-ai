@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -39,11 +40,6 @@ interface ApiKeyFormDialogProps {
 
 type Scope = 'user' | 'project';
 
-const SCOPE_OPTIONS: { value: Scope; label: string }[] = [
-  { value: 'user', label: 'User (global)' },
-  { value: 'project', label: 'Project' },
-];
-
 export const ApiKeyFormDialog = ({
   open,
   editingKey,
@@ -51,6 +47,7 @@ export const ApiKeyFormDialog = ({
   currentProjectLabel,
   onClose,
 }: ApiKeyFormDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const saveApiKey = useStore((s) => s.saveApiKey);
   const apiKeySaving = useStore((s) => s.apiKeySaving);
   const storageStatus = useStore((s) => s.apiKeyStorageStatus);
@@ -101,7 +98,7 @@ export const ApiKeyFormDialog = ({
       return;
     }
     if (!ENV_KEY_RE.test(v)) {
-      setEnvVarError('Use letters, digits, underscores. Must start with a letter or underscore.');
+      setEnvVarError(t('apiKeys.form.errors.invalidEnvVarFormat'));
     } else {
       setEnvVarError(null);
     }
@@ -112,23 +109,23 @@ export const ApiKeyFormDialog = ({
     setError(null);
 
     if (!name.trim()) {
-      setError('Name is required');
+      setError(t('apiKeys.form.errors.nameRequired'));
       return;
     }
     if (!envVarName.trim()) {
-      setError('Environment variable name is required');
+      setError(t('apiKeys.form.errors.envVarRequired'));
       return;
     }
     if (!ENV_KEY_RE.test(envVarName)) {
-      setError('Invalid environment variable name');
+      setError(t('apiKeys.form.errors.invalidEnvVar'));
       return;
     }
     if (!value) {
-      setError('Key value is required');
+      setError(t('apiKeys.form.errors.valueRequired'));
       return;
     }
     if (scope === 'project' && !effectiveProjectPath) {
-      setError('Project-scoped API keys require an active project');
+      setError(t('apiKeys.form.errors.projectScopeRequiresProject'));
       return;
     }
 
@@ -143,7 +140,7 @@ export const ApiKeyFormDialog = ({
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      setError(err instanceof Error ? err.message : t('apiKeys.form.errors.saveFailed'));
     }
   };
 
@@ -165,11 +162,11 @@ export const ApiKeyFormDialog = ({
               <Key className="size-4 text-text-muted" />
             </div>
             <div>
-              <DialogTitle>{isEdit ? 'Edit API Key' : 'Add API Key'}</DialogTitle>
+              <DialogTitle>
+                {isEdit ? t('apiKeys.form.editTitle') : t('apiKeys.form.addTitle')}
+              </DialogTitle>
               <DialogDescription>
-                {isEdit
-                  ? 'Update the key details. You must re-enter the value.'
-                  : 'Store an API key for auto-filling in MCP server installations.'}
+                {isEdit ? t('apiKeys.form.editDescription') : t('apiKeys.form.addDescription')}
               </DialogDescription>
             </div>
           </div>
@@ -178,8 +175,7 @@ export const ApiKeyFormDialog = ({
         {storageStatus && storageStatus.encryptionMethod !== 'os-keychain' && (
           <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-400">
             <AlertTriangle className="size-3.5 shrink-0" />
-            OS keychain unavailable — keys encrypted with AES-256 locally. Install gnome-keyring for
-            OS-level protection.
+            {t('apiKeys.form.keychainUnavailable')}
           </div>
         )}
 
@@ -187,13 +183,13 @@ export const ApiKeyFormDialog = ({
           {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="apikey-name" className="text-xs">
-              Name
+              {t('apiKeys.form.name')}
             </Label>
             <Input
               id="apikey-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. OpenAI Production"
+              placeholder={t('apiKeys.form.namePlaceholder')}
               className="h-8 text-sm"
               autoFocus
             />
@@ -202,7 +198,7 @@ export const ApiKeyFormDialog = ({
           {/* Env var name */}
           <div className="space-y-1.5">
             <Label htmlFor="apikey-envvar" className="text-xs">
-              Environment Variable Name
+              {t('apiKeys.form.environmentVariableName')}
             </Label>
             <Input
               id="apikey-envvar"
@@ -211,7 +207,7 @@ export const ApiKeyFormDialog = ({
                 setEnvVarName(e.target.value);
                 validateEnvVar(e.target.value);
               }}
-              placeholder="e.g. OPENAI_API_KEY"
+              placeholder={t('apiKeys.form.envVarPlaceholder')}
               className={`h-8 font-mono text-sm ${envVarError ? 'border-red-500/50' : ''}`}
             />
             {envVarError && <p className="text-xs text-red-400">{envVarError}</p>}
@@ -220,43 +216,47 @@ export const ApiKeyFormDialog = ({
           {/* Value */}
           <div className="space-y-1.5">
             <Label htmlFor="apikey-value" className="text-xs">
-              Value
+              {t('apiKeys.form.value')}
             </Label>
             <Input
               id="apikey-value"
               type="password"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={isEdit ? 'Re-enter key value' : 'sk-...'}
+              placeholder={
+                isEdit ? t('apiKeys.form.reenterValue') : t('apiKeys.form.valuePlaceholder')
+              }
               className="h-8 text-sm"
             />
           </div>
 
           {/* Scope */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Scope</Label>
+            <Label className="text-xs">{t('apiKeys.form.scope')}</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SCOPE_OPTIONS.map((opt) => (
+                {(['user', 'project'] as const).map((scopeOption) => (
                   <SelectItem
-                    key={opt.value}
-                    value={opt.value}
-                    disabled={opt.value === 'project' && !canUseProjectScope}
+                    key={scopeOption}
+                    value={scopeOption}
+                    disabled={scopeOption === 'project' && !canUseProjectScope}
                   >
-                    {opt.value === 'project'
+                    {scopeOption === 'project'
                       ? effectiveProjectPath
-                        ? `Project: ${effectiveProjectLabel}`
-                        : 'Project unavailable'
-                      : opt.label}
+                        ? t('apiKeys.form.projectScopeLabel', { project: effectiveProjectLabel })
+                        : t('apiKeys.form.projectUnavailable')
+                      : t('apiKeys.form.userScopeLabel')}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {scope === 'project' && effectiveProjectPath && (
-              <p className="text-xs text-text-muted">Bound to {effectiveProjectPath}</p>
+              <p className="text-xs text-text-muted">
+                {t('apiKeys.form.boundTo', { path: effectiveProjectPath })}
+              </p>
             )}
           </div>
 
@@ -270,10 +270,14 @@ export const ApiKeyFormDialog = ({
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Cancel
+              {t('apiKeys.form.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={!canSubmit}>
-              {apiKeySaving ? 'Saving...' : isEdit ? 'Update' : 'Save'}
+              {apiKeySaving
+                ? t('apiKeys.form.saving')
+                : isEdit
+                  ? t('apiKeys.form.update')
+                  : t('apiKeys.form.save')}
             </Button>
           </div>
         </form>

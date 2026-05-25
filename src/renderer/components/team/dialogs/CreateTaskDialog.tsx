@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -77,6 +78,7 @@ export const CreateTaskDialog = ({
   onSubmit,
   submitting = false,
 }: CreateTaskDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const projectPath = useStore(
     (s) => selectTeamDataForName(s, teamName)?.config.projectPath ?? null
@@ -202,13 +204,17 @@ export const CreateTaskDialog = ({
   const assigneeField = (
     <div className="grid gap-2">
       <Label className={requiresOwner ? undefined : 'label-optional'}>
-        {requiresOwner ? 'Assignee' : 'Assignee (optional)'}
+        {requiresOwner ? t('tasks.createTask.assignee') : t('tasks.createTask.assigneeOptional')}
       </Label>
       <MemberSelect
         members={members}
         value={owner || null}
         onChange={(v) => setOwner(v ?? '')}
-        placeholder={requiresOwner ? 'Select a member' : 'Select member...'}
+        placeholder={
+          requiresOwner
+            ? t('tasks.createTask.selectMember')
+            : t('tasks.createTask.selectMemberOptional')
+        }
         allowUnassigned={!requiresOwner}
       />
     </div>
@@ -218,11 +224,8 @@ export const CreateTaskDialog = ({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[580px]">
         <DialogHeader>
-          <DialogTitle>Create Task</DialogTitle>
-          <DialogDescription>
-            The task will be created in the team&apos;s tasks/ directory and appear on the Kanban
-            board.
-          </DialogDescription>
+          <DialogTitle>{t('tasks.createTask.title')}</DialogTitle>
+          <DialogDescription>{t('tasks.createTask.description')}</DialogDescription>
         </DialogHeader>
 
         {!isTeamAlive ? (
@@ -236,18 +239,19 @@ export const CreateTaskDialog = ({
           >
             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             <p className="text-xs leading-relaxed">
-              Team is offline. The task will be added to <strong>TODO</strong> &mdash; launch the
-              team to start execution.
+              {t('tasks.createTask.offlineNotice.before')}{' '}
+              <strong>{t('tasks.createTask.todo')}</strong>{' '}
+              {t('tasks.createTask.offlineNotice.after')}
             </p>
           </div>
         ) : null}
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label htmlFor="task-subject">Subject</Label>
+            <Label htmlFor="task-subject">{t('tasks.createTask.subject')}</Label>
             <Input
               id="task-subject"
-              placeholder="What needs to be done?"
+              placeholder={t('tasks.createTask.subjectPlaceholder')}
               value={subject}
               autoFocus
               onChange={(e) => setSubject(e.target.value)}
@@ -266,7 +270,11 @@ export const CreateTaskDialog = ({
             onClick={() => setShowOptionalFields((prev) => !prev)}
           >
             {showOptionalFields ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <span>{showOptionalFields ? 'Hide optional fields' : 'Show optional fields'}</span>
+            <span>
+              {showOptionalFields
+                ? t('tasks.createTask.hideOptionalFields')
+                : t('tasks.createTask.showOptionalFields')}
+            </span>
           </button>
 
           {/* Collapsible optional fields */}
@@ -277,11 +285,13 @@ export const CreateTaskDialog = ({
             <div className="min-h-0 overflow-hidden">
               <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label className="label-optional">Description (optional)</Label>
+                  <Label className="label-optional">
+                    {t('tasks.createTask.descriptionOptional')}
+                  </Label>
                   <TiptapEditor
                     content={descriptionDraft.value}
                     onChange={descriptionDraft.setValue}
-                    placeholder="Task details (supports markdown)"
+                    placeholder={t('tasks.createTask.detailsPlaceholder')}
                     minHeight="100px"
                     maxHeight="200px"
                     toolbar
@@ -290,11 +300,11 @@ export const CreateTaskDialog = ({
 
                 <div className="grid gap-2">
                   <Label htmlFor="task-prompt" className="label-optional">
-                    Prompt for assignee (optional)
+                    {t('tasks.createTask.promptOptional')}
                   </Label>
                   <MentionableTextarea
                     id="task-prompt"
-                    placeholder="Custom instructions for the team member..."
+                    placeholder={t('tasks.createTask.promptPlaceholder')}
                     value={promptDraft.value}
                     onValueChange={promptDraft.setValue}
                     suggestions={mentionSuggestions}
@@ -304,7 +314,9 @@ export const CreateTaskDialog = ({
                     maxRows={12}
                     footerRight={
                       promptDraft.isSaved ? (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                          {t('tasks.createTask.saved')}
+                        </span>
                       ) : null
                     }
                   />
@@ -312,7 +324,9 @@ export const CreateTaskDialog = ({
 
                 {availableTasks.length > 0 ? (
                   <div className="grid gap-2">
-                    <Label className="label-optional">Blocked by tasks (optional)</Label>
+                    <Label className="label-optional">
+                      {t('tasks.createTask.blockedByOptional')}
+                    </Label>
                     <div className="overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
                       {availableTasks.length > 3 ? (
                         <div className="relative border-b border-[var(--color-border)] px-2 py-1.5">
@@ -322,7 +336,7 @@ export const CreateTaskDialog = ({
                           />
                           <input
                             type="text"
-                            placeholder="Search tasks..."
+                            placeholder={t('tasks.createTask.searchTasks')}
                             value={blockedBySearch}
                             onChange={(e) => setBlockedBySearch(e.target.value)}
                             className="w-full bg-transparent py-0.5 pl-5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
@@ -374,8 +388,9 @@ export const CreateTaskDialog = ({
                     </div>
                     {blockedBy.length > 0 ? (
                       <p className="text-[11px] text-yellow-300">
-                        Task will be blocked by:{' '}
-                        {blockedBy.map((id) => `#${deriveTaskDisplayId(id)}`).join(', ')}
+                        {t('tasks.createTask.blockedBySummary', {
+                          tasks: blockedBy.map((id) => `#${deriveTaskDisplayId(id)}`).join(', '),
+                        })}
                       </p>
                     ) : null}
                   </div>
@@ -383,7 +398,9 @@ export const CreateTaskDialog = ({
 
                 {availableTasks.length > 0 ? (
                   <div className="grid gap-2">
-                    <Label className="label-optional">Related tasks (optional)</Label>
+                    <Label className="label-optional">
+                      {t('tasks.createTask.relatedOptional')}
+                    </Label>
                     <div className="overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
                       {availableTasks.length > 3 ? (
                         <div className="relative border-b border-[var(--color-border)] px-2 py-1.5">
@@ -393,7 +410,7 @@ export const CreateTaskDialog = ({
                           />
                           <input
                             type="text"
-                            placeholder="Search tasks..."
+                            placeholder={t('tasks.createTask.searchTasks')}
                             value={relatedSearch}
                             onChange={(e) => setRelatedSearch(e.target.value)}
                             className="w-full bg-transparent py-0.5 pl-5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
@@ -445,7 +462,9 @@ export const CreateTaskDialog = ({
                     </div>
                     {related.length > 0 ? (
                       <p className="text-[11px] text-purple-300">
-                        Related: {related.map((id) => `#${deriveTaskDisplayId(id)}`).join(', ')}
+                        {t('tasks.createTask.relatedSummary', {
+                          tasks: related.map((id) => `#${deriveTaskDisplayId(id)}`).join(', '),
+                        })}
                       </p>
                     ) : null}
                   </div>
@@ -467,12 +486,12 @@ export const CreateTaskDialog = ({
                   htmlFor="task-start-immediately"
                   className={`text-xs font-normal ${!isTeamAlive ? 'text-[var(--color-text-muted)]' : ''}`}
                 >
-                  Start immediately
+                  {t('tasks.createTask.startImmediately')}
                 </Label>
               </div>
               {!isTeamAlive ? (
                 <p className="text-[10px] text-[var(--color-text-muted)]">
-                  Team is offline. Launch the team first to start tasks immediately.
+                  {t('tasks.createTask.startOfflineHint')}
                 </p>
               ) : null}
             </div>
@@ -481,10 +500,10 @@ export const CreateTaskDialog = ({
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
-            Cancel
+            {t('tasks.createTask.cancel')}
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-            {submitting ? 'Creating...' : 'Create'}
+            {submitting ? t('tasks.createTask.creating') : t('tasks.createTask.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

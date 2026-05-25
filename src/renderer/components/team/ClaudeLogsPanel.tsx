@@ -8,6 +8,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
 import { Search, X } from 'lucide-react';
@@ -29,6 +30,8 @@ interface ClaudeLogsPanelProps {
   /** Extra className for the panel wrapper. */
   className?: string;
   compactMetaInTooltip?: boolean;
+  toolbarAccessory?: React.ReactNode;
+  toolbarControlsStart?: React.ReactNode;
 }
 
 // =============================================================================
@@ -41,7 +44,10 @@ export const ClaudeLogsPanel = ({
   viewerMaxHeight,
   className,
   compactMetaInTooltip = false,
+  toolbarAccessory,
+  toolbarControlsStart,
 }: ClaudeLogsPanelProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const {
     data,
     loading,
@@ -65,10 +71,13 @@ export const ClaudeLogsPanel = ({
     handleScroll,
   } = ctrl;
 
-  const rawLineLabel = data.total === 1 ? '1 raw line' : `${data.total.toLocaleString()} raw lines`;
-  const rawLinesCapturedLabel = `${rawLineLabel} captured`;
+  const rawLineLabel = t('claudeLogs.rawLineCount', {
+    count: data.total,
+    formattedCount: data.total.toLocaleString(),
+  });
+  const rawLinesCapturedLabel = t('claudeLogs.rawLinesCaptured', { count: rawLineLabel });
   const emptyRawLogsMessage =
-    data.total > 0 ? `${rawLinesCapturedLabel}; none are assistant/tool output yet.` : undefined;
+    data.total > 0 ? t('claudeLogs.emptyRawLogs', { count: rawLinesCapturedLabel }) : undefined;
 
   return (
     <div className={cn('min-w-0', className)}>
@@ -76,24 +85,29 @@ export const ClaudeLogsPanel = ({
       <div className="flex items-center justify-between gap-2 pb-2">
         <span className="text-[11px] text-[var(--color-text-muted)]">
           {data.total > 0 ? (
-            <>
-              <span className="font-mono">{data.total.toLocaleString()}</span> raw line
-              {data.total === 1 ? '' : 's'} captured
-            </>
+            <>{rawLinesCapturedLabel}</>
           ) : isAlive ? (
-            'No logs yet.'
+            t('claudeLogs.noLogsYet')
           ) : (
-            'Team is not running.'
+            t('claudeLogs.teamNotRunning')
           )}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          {toolbarControlsStart ? (
+            <div className="min-w-0 shrink-0">{toolbarControlsStart}</div>
+          ) : null}
           {data.total > 0 ? (
             <>
-              <div className="flex w-48 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1',
+                  compactMetaInTooltip ? 'min-w-0 max-w-48 flex-1' : 'w-48'
+                )}
+              >
                 <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
                 <input
                   type="text"
-                  placeholder="Search logs..."
+                  placeholder={t('claudeLogs.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
@@ -103,12 +117,13 @@ export const ClaudeLogsPanel = ({
                     type="button"
                     className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
                     onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
+                    aria-label={t('claudeLogs.clearSearch')}
                   >
                     <X size={14} />
                   </button>
                 )}
               </div>
+              {toolbarAccessory}
               <ClaudeLogsFilterPopover
                 filter={filter}
                 open={filterOpen}
@@ -124,7 +139,7 @@ export const ClaudeLogsPanel = ({
               className="h-7 border-blue-500/30 bg-blue-600 px-2 text-xs text-white hover:bg-blue-500"
               onClick={applyPending}
             >
-              +{pendingNewCount} new
+              {t('claudeLogs.newCount', { count: pendingNewCount })}
             </Button>
           )}
         </div>
@@ -156,7 +171,7 @@ export const ClaudeLogsPanel = ({
                     onClick={() => void loadOlderLogs()}
                     disabled={loadingMore}
                   >
-                    {loadingMore ? 'Loading…' : 'Show more'}
+                    {loadingMore ? t('claudeLogs.loading') : t('claudeLogs.showMore')}
                   </Button>
                 </div>
               ) : null
@@ -165,11 +180,13 @@ export const ClaudeLogsPanel = ({
         ) : null}
         {!error && data.lines.length === 0 && isAlive ? (
           <p className="p-2 text-xs text-[var(--color-text-muted)]">
-            {loading ? 'Loading…' : 'No logs captured.'}
+            {loading ? t('claudeLogs.loading') : t('claudeLogs.noLogsCaptured')}
           </p>
         ) : null}
         {!error && data.lines.length > 0 && filteredText.trim().length === 0 ? (
-          <p className="p-2 text-xs text-[var(--color-text-muted)]">No matching logs.</p>
+          <p className="p-2 text-xs text-[var(--color-text-muted)]">
+            {t('claudeLogs.noMatchingLogs')}
+          </p>
         ) : null}
       </div>
     </div>

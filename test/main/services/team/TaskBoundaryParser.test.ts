@@ -263,4 +263,71 @@ describe('TaskBoundaryParser', () => {
     expect(result.boundaries.map((entry) => entry.taskId)).toEqual(['task-123', 'task-123']);
     expect(result.boundaries.map((entry) => entry.event)).toEqual(['start', 'complete']);
   });
+
+  it('includes every metadata changes path in scoped file paths', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-boundary-parser-'));
+    const jsonlPath = path.join(tmpDir, 'metadata-changes.jsonl');
+    await fs.writeFile(
+      jsonlPath,
+      [
+        JSON.stringify({
+          timestamp: '2026-03-01T10:00:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-start',
+                name: 'task_start',
+                input: { taskId: 'task-123' },
+              },
+            ],
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-03-01T10:01:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-edit',
+                name: 'Edit',
+                input: {
+                  file_path: '/repo/dfdf/calc.js',
+                  changes: [
+                    { path: '/repo/dfdf/calc.js', kind: 'add' },
+                    { path: '/repo/dfdf/style.css', kind: 'add' },
+                  ],
+                },
+              },
+            ],
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-03-01T10:02:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-complete',
+                name: 'task_complete',
+                input: { taskId: 'task-123' },
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const result = await new TaskBoundaryParser().parseBoundaries(jsonlPath);
+
+    expect(result.scopes[0]?.toolUseIds).toEqual(['tool-edit']);
+    expect(result.scopes[0]?.filePaths).toEqual(['/repo/dfdf/calc.js', '/repo/dfdf/style.css']);
+  });
 });

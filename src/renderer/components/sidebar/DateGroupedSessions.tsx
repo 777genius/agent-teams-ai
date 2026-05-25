@@ -7,6 +7,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -185,6 +186,7 @@ function matchesSessionSearch(session: Session, query: string): boolean {
 }
 
 export const DateGroupedSessions = memo((): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const {
     sessions,
     selectedSessionId,
@@ -274,24 +276,26 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
   // Loading guards in the store actions prevent duplicate IPC calls
   // when the centralized init chain has already started a fetch.
   const repositoryGroupsLoading = useStore((s) => s.repositoryGroupsLoading);
+  const repositoryGroupsInitialized = useStore((s) => s.repositoryGroupsInitialized);
   const repositoryGroupsError = useStore((s) => s.repositoryGroupsError);
   const projectsLoading = useStore((s) => s.projectsLoading);
+  const projectsInitialized = useStore((s) => s.projectsInitialized);
   const projectsError = useStore((s) => s.projectsError);
   useEffect(() => {
     if (
       viewMode === 'grouped' &&
-      repositoryGroups.length === 0 &&
+      !repositoryGroupsInitialized &&
       !repositoryGroupsLoading &&
       !repositoryGroupsError
     ) {
       void fetchRepositoryGroups();
-    } else if (viewMode === 'flat' && projects.length === 0 && !projectsLoading && !projectsError) {
+    } else if (viewMode === 'flat' && !projectsInitialized && !projectsLoading && !projectsError) {
       void fetchProjects();
     }
   }, [
     viewMode,
-    repositoryGroups.length,
-    projects.length,
+    repositoryGroupsInitialized,
+    projectsInitialized,
     repositoryGroupsLoading,
     repositoryGroupsError,
     projectsLoading,
@@ -621,11 +625,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
           options={projectComboboxOptions}
           value={activeProjectValue ?? ''}
           onValueChange={handleProjectValueChange}
-          placeholder="Select Project"
-          searchPlaceholder="Search..."
-          emptyMessage="Nothing found"
+          placeholder={t('sessionFilters.project.selectProject')}
+          searchPlaceholder={t('search.placeholder')}
+          emptyMessage={t('search.nothingFound')}
           className="text-[12px]"
-          resetLabel="Reset selection"
+          resetLabel={t('actions.resetSelection')}
           onReset={clearActiveProject}
           renderOption={(option, isSelected) => {
             const sessionCount = (option.meta?.sessionCount as number) ?? 0;
@@ -716,7 +720,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
                   className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  Switch Worktree
+                  {t('sessions.worktree.switch')}
                 </div>
                 {mainWorktree && (
                   <WorktreeItem
@@ -762,7 +766,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Search sessions..."
+          placeholder={t('sessions.search.placeholder')}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           className="min-w-0 flex-1 bg-transparent text-[12px] text-text placeholder:text-text-muted focus:outline-none"
@@ -775,7 +779,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
               setSearchQuery('');
               searchInputRef.current?.focus();
             }}
-            aria-label="Clear session search"
+            aria-label={t('sessions.search.clear')}
           >
             <X className="size-3" />
           </button>
@@ -795,7 +799,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
         {projectSelector}
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            <p>Select a project to view sessions</p>
+            <p>{t('sessions.empty.selectProject')}</p>
           </div>
         </div>
       </div>
@@ -848,7 +852,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
             }}
           >
             <p className="mb-1 font-semibold" style={{ color: 'var(--color-text)' }}>
-              Error loading sessions
+              {t('sessions.errors.loading')}
             </p>
             <p>{sessionsError}</p>
           </div>
@@ -864,8 +868,8 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
             <MessageSquareOff className="mx-auto mb-2 size-8 opacity-50" />
-            <p className="mb-2">No sessions found</p>
-            <p className="text-xs opacity-70">This project has no sessions yet</p>
+            <p className="mb-2">{t('sessions.empty.noSessions')}</p>
+            <p className="text-xs opacity-70">{t('sessions.empty.noSessionsDescription')}</p>
           </div>
         </div>
       </div>
@@ -879,11 +883,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
             <Search className="mx-auto mb-2 size-8 opacity-50" />
-            <p className="mb-2">No matching sessions</p>
+            <p className="mb-2">{t('sessions.empty.noMatchingSessions')}</p>
             <p className="text-xs opacity-70">
               {hasActiveSearch || hasActiveProviderFilter
-                ? 'Try another query or reset the provider filter.'
-                : 'This project has no matching sessions yet.'}
+                ? t('sessions.empty.noMatchingSessionsFiltered')
+                : t('sessions.empty.noMatchingSessionsDescription')}
             </p>
           </div>
         </div>
@@ -900,7 +904,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
           className="text-[12px] font-semibold text-text-secondary"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          {sessionSortMode === 'most-context' ? 'By Context' : 'Sessions'}
+          {sessionSortMode === 'most-context' ? t('sessions.sort.byContext') : t('sessions.title')}
         </h2>
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- tooltip trigger via hover, not interactive */}
         <span
@@ -930,10 +934,8 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {filteredSessions.length} matching sessions loaded so far — scroll down to load more.
-              {sessionSortMode === 'most-context'
-                ? ' Context sorting only ranks loaded sessions.'
-                : ''}
+              {t('sessions.loadedMatchingMore', { count: filteredSessions.length })}
+              {sessionSortMode === 'most-context' ? ` ${t('sessions.sort.contextLoadedOnly')}` : ''}
             </div>,
             document.body
           )}
@@ -942,7 +944,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
           <button
             onClick={toggleSidebarMultiSelect}
             className="rounded p-1 transition-colors hover:bg-white/5"
-            title={sidebarMultiSelectActive ? 'Exit selection mode' : 'Select sessions'}
+            title={
+              sidebarMultiSelectActive
+                ? t('sessions.selection.exitMode')
+                : t('sessions.selection.selectSessions')
+            }
             style={{
               color: sidebarMultiSelectActive ? '#818cf8' : 'var(--color-text-muted)',
             }}
@@ -954,7 +960,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
             <button
               onClick={toggleShowHiddenSessions}
               className="rounded p-1 transition-colors hover:bg-white/5"
-              title={showHiddenSessions ? 'Hide hidden sessions' : 'Show hidden sessions'}
+              title={
+                showHiddenSessions
+                  ? t('sessions.visibility.hideHidden')
+                  : t('sessions.visibility.showHidden')
+              }
               style={{
                 color: showHiddenSessions ? '#818cf8' : 'var(--color-text-muted)',
               }}
@@ -968,7 +978,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
               setSessionSortMode(sessionSortMode === 'recent' ? 'most-context' : 'recent')
             }
             className="rounded p-1 transition-colors hover:bg-white/5"
-            title={sessionSortMode === 'recent' ? 'Sort by context consumption' : 'Sort by recent'}
+            title={
+              sessionSortMode === 'recent'
+                ? t('sessions.sort.byContextTooltip')
+                : t('sessions.sort.byRecentTooltip')
+            }
             style={{
               color: sessionSortMode === 'most-context' ? '#818cf8' : 'var(--color-text-muted)',
             }}
@@ -991,40 +1005,40 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
             className="text-[11px] font-medium"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            {sidebarSelectedSessionIds.length} selected
+            {t('sessions.selection.selected', { count: sidebarSelectedSessionIds.length })}
           </span>
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={handleBulkPin}
               className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:bg-white/5"
               style={{ color: 'var(--color-text-secondary)' }}
-              title="Pin selected sessions"
+              title={t('sessions.selection.pinSelected')}
             >
-              <Pin className="inline-block size-3" /> Pin
+              <Pin className="inline-block size-3" /> {t('sessions.actions.pin')}
             </button>
             <button
               onClick={handleBulkHide}
               className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:bg-white/5"
               style={{ color: 'var(--color-text-secondary)' }}
-              title="Hide selected sessions"
+              title={t('sessions.selection.hideSelected')}
             >
-              <EyeOff className="inline-block size-3" /> Hide
+              <EyeOff className="inline-block size-3" /> {t('sessions.actions.hide')}
             </button>
             {showHiddenSessions && someSelectedAreHidden && (
               <button
                 onClick={handleBulkUnhide}
                 className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:bg-white/5"
                 style={{ color: 'var(--color-text-secondary)' }}
-                title="Unhide selected sessions"
+                title={t('sessions.selection.unhideSelected')}
               >
-                <Eye className="inline-block size-3" /> Unhide
+                <Eye className="inline-block size-3" /> {t('sessions.actions.unhide')}
               </button>
             )}
             <button
               onClick={clearSidebarSelection}
               className="rounded p-0.5 transition-colors hover:bg-white/5"
               style={{ color: 'var(--color-text-muted)' }}
-              title="Cancel selection"
+              title={t('sessions.selection.cancel')}
             >
               <X className="size-3.5" />
             </button>
@@ -1067,7 +1081,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
                     }}
                   >
                     <Pin className="size-3" />
-                    Pinned
+                    {t('sessions.pinned')}
                   </div>
                 ) : item.type === 'header' ? (
                   <div
@@ -1089,10 +1103,10 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
                     {sessionsLoadingMore ? (
                       <>
                         <Loader2 className="mr-2 size-4 animate-spin" />
-                        <span className="text-xs">Loading more sessions...</span>
+                        <span className="text-xs">{t('sessions.loadingMore')}</span>
                       </>
                     ) : (
-                      <span className="text-xs opacity-50">Scroll to load more</span>
+                      <span className="text-xs opacity-50">{t('sessions.scrollToLoadMore')}</span>
                     )}
                   </div>
                 ) : (

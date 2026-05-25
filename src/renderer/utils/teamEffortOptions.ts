@@ -1,9 +1,13 @@
-import { resolveAnthropicRuntimeSelection } from '@features/anthropic-runtime-profile/renderer';
+import {
+  resolveAnthropicEffortSupport,
+  resolveAnthropicRuntimeSelection,
+} from '@features/anthropic-runtime-profile/renderer';
 
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
 
 const BASE_EFFORT_OPTIONS = [{ value: '', label: 'Default' }] as const;
 const SAFE_SHARED_EFFORTS = new Set<EffortLevel>(['low', 'medium', 'high']);
+const ANTHROPIC_FALLBACK_EFFORTS: readonly EffortLevel[] = ['low', 'medium', 'high', 'max'];
 
 export const TEAM_EFFORT_LABELS: Record<EffortLevel, string> = {
   none: 'None',
@@ -67,6 +71,22 @@ function normalizeEfforts(
   return candidateEfforts.filter((effort) => SAFE_SHARED_EFFORTS.has(effort));
 }
 
+function getAnthropicEffortsFromRuntimeOrFallback(params: {
+  providerStatus?: CliProviderStatus | null;
+  selection: ReturnType<typeof resolveAnthropicRuntimeSelection>;
+}): EffortLevel[] {
+  const runtimeEfforts = params.providerStatus?.runtimeCapabilities?.reasoningEffort?.values ?? [];
+  const candidateEfforts = runtimeEfforts.length > 0 ? runtimeEfforts : ANTHROPIC_FALLBACK_EFFORTS;
+  return candidateEfforts.filter(
+    (effort): effort is EffortLevel =>
+      resolveAnthropicEffortSupport({
+        selection: params.selection,
+        effort,
+        runtimeCapabilities: params.providerStatus?.runtimeCapabilities,
+      }).kind === 'supported'
+  );
+}
+
 export function getTeamEffortOptions(params: {
   providerId?: TeamProviderId;
   model?: string;
@@ -90,9 +110,15 @@ export function getTeamEffortOptions(params: {
     const defaultLabel = selection.defaultEffort
       ? `Default (${TEAM_EFFORT_LABELS[selection.defaultEffort]})`
       : 'Default';
+    const effortValues = selection.catalogModel
+      ? selection.supportedEfforts
+      : getAnthropicEffortsFromRuntimeOrFallback({
+          providerStatus: params.providerStatus,
+          selection,
+        });
     return [
       { value: '', label: defaultLabel },
-      ...selection.supportedEfforts.map((effort) => ({
+      ...effortValues.map((effort) => ({
         value: effort,
         label: TEAM_EFFORT_LABELS[effort],
       })),
@@ -163,17 +189,16 @@ export function getTeamEffortSelectorPresentation(params: {
     selectedModel: params.model,
     limitContext: params.limitContext === true,
   });
-  const hasCatalogTruth =
-    selection.catalogSource !== 'unavailable' && selection.catalogStatus !== 'unavailable';
+  const hasExactCatalogTruth = selection.catalogModel !== null;
   const supportsConfigurableEffort = selection.supportedEfforts.length > 0;
 
-  if (!hasCatalogTruth || supportsConfigurableEffort) {
+  if (!hasExactCatalogTruth || supportsConfigurableEffort) {
     return {
       options,
       disabled: false,
       helperText: defaultHelperText,
       unavailableText: null,
-      canValidateValue: hasCatalogTruth,
+      canValidateValue: hasExactCatalogTruth,
     };
   }
 
@@ -187,4 +212,20 @@ export function getTeamEffortSelectorPresentation(params: {
     unavailableText: 'Effort is unavailable for this model.',
     canValidateValue: true,
   };
+}
+
+export function getAvailableTeamEffortValue(params: {
+  providerId?: TeamProviderId;
+  model?: string;
+  limitContext?: boolean;
+  providerStatus?: CliProviderStatus | null;
+  value?: string | null;
+}): string {
+  const value = params.value?.trim() ?? '';
+  if (!value) {
+    return '';
+  }
+
+  const presentation = getTeamEffortSelectorPresentation(params);
+  return presentation.disabled && presentation.canValidateValue ? '' : value;
 }

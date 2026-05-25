@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('refreshCliStatusForCurrentMode', () => {
   it('uses provider-first bootstrap when multimodel is enabled', async () => {
@@ -14,6 +13,24 @@ describe('refreshCliStatusForCurrentMode', () => {
     });
 
     expect(bootstrapCliStatus).toHaveBeenCalledWith({ multimodelEnabled: true });
+    expect(fetchCliStatus).not.toHaveBeenCalled();
+  });
+
+  it('passes deferred provider status mode to multimodel bootstrap when requested', async () => {
+    const bootstrapCliStatus = vi.fn().mockResolvedValue(undefined);
+    const fetchCliStatus = vi.fn().mockResolvedValue(undefined);
+
+    await refreshCliStatusForCurrentMode({
+      multimodelEnabled: true,
+      providerStatusMode: 'defer',
+      bootstrapCliStatus,
+      fetchCliStatus,
+    });
+
+    expect(bootstrapCliStatus).toHaveBeenCalledWith({
+      multimodelEnabled: true,
+      providerStatusMode: 'defer',
+    });
     expect(fetchCliStatus).not.toHaveBeenCalled();
   });
 

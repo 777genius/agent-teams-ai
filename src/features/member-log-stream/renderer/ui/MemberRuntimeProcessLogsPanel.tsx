@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Check, Clipboard, Loader2, RefreshCw } from 'lucide-react';
 
@@ -118,6 +119,8 @@ export function MemberRuntimeProcessLogsPanel({
   enabled,
   loadRuntimeLogTail,
 }: Readonly<MemberRuntimeProcessLogsPanelProps>): React.JSX.Element {
+  const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const [kind, setKind] = useState<MemberRuntimeLogKind>('stdout');
   const [log, setLog] = useState<MemberRuntimeLogTailResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -222,7 +225,7 @@ export function MemberRuntimeProcessLogsPanel({
               checked={autoRefresh}
               onChange={(event) => setAutoRefresh(event.target.checked)}
             />
-            Auto-refresh
+            {t('members.runtimeLogs.autoRefresh')}
           </label>
           <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs text-[var(--color-text-muted)]">
             <input
@@ -231,7 +234,7 @@ export function MemberRuntimeProcessLogsPanel({
               checked={wrapLines}
               onChange={(event) => setWrapLines(event.target.checked)}
             />
-            Wrap lines
+            {t('members.runtimeLogs.wrapLines')}
           </label>
           <button
             type="button"
@@ -240,7 +243,7 @@ export function MemberRuntimeProcessLogsPanel({
             disabled={loading}
           >
             {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-            Refresh
+            {tCommon('actions.refresh')}
           </button>
           <button
             type="button"
@@ -267,13 +270,13 @@ export function MemberRuntimeProcessLogsPanel({
       {loading && !log ? (
         <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-3 py-10 text-sm text-[var(--color-text-muted)]">
           <Loader2 size={16} className="animate-spin" />
-          Loading process log tail...
+          {t('members.runtimeLogs.loadingTail')}
         </div>
       ) : hasContent ? (
         <ProcessLogVirtualList content={log?.content ?? ''} wrapLines={wrapLines} />
       ) : (
         <div className="rounded-xl border border-[var(--color-border)] px-3 py-10 text-sm text-[var(--color-text-muted)]">
-          {statusText ?? 'No process log file captured for this member yet.'}
+          {statusText ?? t('members.runtimeLogs.empty')}
         </div>
       )}
     </div>

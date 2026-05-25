@@ -1,47 +1,14 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  WorkspaceTrustCoordinator,
-  WorkspaceTrustExecutionPlan,
-} from '../../../../src/features/workspace-trust/core/application/WorkspaceTrustCoordinator';
+import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
-import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import {
-  getMixedLaunchFallbackRecoveryError,
-  TeamProvisioningService,
-} from '../../../../src/main/services/team/TeamProvisioningService';
-import type {
-  OpenCodeTeamRuntimeMessageInput,
-  OpenCodeTeamRuntimeMessageResult,
-} from '../../../../src/main/services/team/runtime';
-import {
-  TeamRuntimeAdapterRegistry,
-  type TeamLaunchRuntimeAdapter,
-  type TeamRuntimeLaunchInput,
-  type TeamRuntimeMemberLaunchEvidence,
-  type TeamRuntimeMemberSpec,
-  type TeamRuntimeLaunchResult,
-  type TeamRuntimePrepareResult,
-  type TeamRuntimeReconcileInput,
-  type TeamRuntimeReconcileResult,
-  type TeamRuntimeStopInput,
-  type TeamRuntimeStopResult,
-} from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
-import {
-  encodePath,
-  extractBaseDir,
-  getProjectsBasePath,
-  getTeamsBasePath,
-  setClaudeBasePathOverride,
-} from '../../../../src/main/utils/pathDecoder';
-import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
-import {
-  getOpenCodeRuntimeManifestPath,
   getOpenCodeRuntimeLaneIndexPath,
+  getOpenCodeRuntimeManifestPath,
+  readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
   setOpenCodeRuntimeActiveRunManifest,
   upsertOpenCodeRuntimeLaneIndexEntry,
@@ -52,8 +19,49 @@ import {
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
+import {
+  type TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+  type TeamRuntimeLaunchInput,
+  type TeamRuntimeLaunchResult,
+  type TeamRuntimeMemberLaunchEvidence,
+  type TeamRuntimeMemberSpec,
+  type TeamRuntimePermissionAnswerInput,
+  type TeamRuntimePrepareResult,
+  type TeamRuntimeReconcileInput,
+  type TeamRuntimeReconcileResult,
+  type TeamRuntimeStopInput,
+  type TeamRuntimeStopResult,
+} from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
+import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
+import { createPersistedLaunchSnapshot } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
+import {
+  getMixedLaunchFallbackRecoveryError,
+  TeamProvisioningService,
+} from '../../../../src/main/services/team/TeamProvisioningService';
+import {
+  encodePath,
+  extractBaseDir,
+  getProjectsBasePath,
+  getTeamsBasePath,
+  setClaudeBasePathOverride,
+} from '../../../../src/main/utils/pathDecoder';
 
-import type { InboxMessage, TaskRef, TeamProvisioningProgress } from '../../../../src/shared/types';
+import type {
+  WorkspaceTrustCoordinator,
+  WorkspaceTrustExecutionPlan,
+} from '../../../../src/features/workspace-trust/core/application/WorkspaceTrustCoordinator';
+import type {
+  OpenCodeTeamRuntimeMessageInput,
+  OpenCodeTeamRuntimeMessageResult,
+} from '../../../../src/main/services/team/runtime';
+import type {
+  InboxMessage,
+  TaskRef,
+  TeamProvisioningProgress,
+  ToolApprovalEvent,
+  ToolApprovalRequest,
+} from '../../../../src/shared/types';
 
 const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = 60_000;
 const WORKSPACE_TRUST_TEST_ENV_NAMES = [
@@ -66,6 +74,19 @@ const WORKSPACE_TRUST_TEST_ENV_NAMES = [
 ] as const;
 
 type WorkspaceTrustTestEnvName = (typeof WORKSPACE_TRUST_TEST_ENV_NAMES)[number];
+type RuntimeUsageStatsForTest = { rssBytes: number; cpuPercent?: number };
+
+function createRuntimeUsageStatsMap(
+  entries: readonly (readonly [number, number])[]
+): Map<number, RuntimeUsageStatsForTest> {
+  return new Map(entries.map(([pid, rssBytes]) => [pid, { rssBytes }]));
+}
+
+function createRuntimeUsageStatsByPid(
+  pids: readonly number[]
+): Map<number, RuntimeUsageStatsForTest> {
+  return createRuntimeUsageStatsMap(pids.map((pid) => [pid, pid * 1_000] as const));
+}
 
 describe('Team agent launch matrix safe e2e', () => {
   let tempDir: string;
@@ -358,6 +379,73 @@ describe('Team agent launch matrix safe e2e', () => {
       pendingPermissionRequestIds: ['perm-alice'],
     });
     expect(statuses.summary?.pendingCount).toBe(1);
+  });
+
+  it('routes OpenCode runtime approval UI responses back through the adapter', async () => {
+    const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending');
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const approvalEvents: ToolApprovalEvent[] = [];
+    svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
+
+    const launch = await svc.createTeam(
+      {
+        teamName: 'approve-opencode-safe-e2e',
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: false,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+
+    const approval = approvalEvents.find(
+      (event): event is ToolApprovalRequest =>
+        !('dismissed' in event) && !('autoResolved' in event)
+    );
+    expect(approval).toMatchObject({
+      runId: launch.runId,
+      teamName: 'approve-opencode-safe-e2e',
+      providerId: 'opencode',
+      source: 'alice',
+      toolName: 'Bash',
+      runtimePermission: {
+        providerId: 'opencode',
+        laneId: 'primary',
+        memberName: 'alice',
+        providerRequestId: 'perm-alice',
+      },
+    });
+    expect(approval?.toolInput).toMatchObject({
+      provider: 'opencode',
+      providerRequestId: 'perm-alice',
+      command: 'git status',
+    });
+
+    await svc.respondToToolApproval(
+      'approve-opencode-safe-e2e',
+      launch.runId!,
+      approval!.requestId,
+      true
+    );
+
+    expect(adapter.permissionAnswerInputs).toEqual([
+      expect.objectContaining({
+        runId: launch.runId,
+        teamName: 'approve-opencode-safe-e2e',
+        laneId: 'primary',
+        memberName: 'alice',
+        requestId: 'perm-alice',
+        decision: 'allow',
+      }),
+    ]);
+    const statuses = await svc.getMemberSpawnStatuses('approve-opencode-safe-e2e');
+    expect(statuses.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(statuses.statuses.alice?.pendingPermissionRequestIds).toBeUndefined();
   });
 
   it('blocks createTeam at workspace trust preflight before spawn and preserves existing launch state', async () => {
@@ -2987,13 +3075,13 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(runtimeSnapshot.members.alice).toMatchObject({
       providerId: 'anthropic',
       laneKind: 'primary',
-      alive: false,
+      alive: true,
       runtimeModel: 'haiku',
     });
     expect(runtimeSnapshot.members.bob).toMatchObject({
       providerId: 'anthropic',
       laneKind: 'primary',
-      alive: false,
+      alive: true,
       runtimeModel: 'sonnet',
     });
   });
@@ -4030,8 +4118,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () =>
-      new Map([[sharedHostPid, 183.9 * 1024 * 1024]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, 183.9 * 1024 * 1024]]);
 
     await waitForCondition(async () => {
       const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
@@ -4136,7 +4224,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4237,7 +4326,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4358,7 +4448,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -4441,8 +4532,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (restartedService as any).readProcessRssBytesByPid = async () =>
-      new Map([[sharedHostPid, 188.4 * 1024 * 1024]]);
+    (restartedService as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, 188.4 * 1024 * 1024]]);
 
     const runtimeSnapshot = await restartedService.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -5200,7 +5291,8 @@ describe('Team agent launch matrix safe e2e', () => {
           },
         ],
       ]);
-    (svc as any).readProcessRssBytesByPid = async () => new Map([[sharedHostPid, sharedRssBytes]]);
+    (svc as any).readProcessUsageStatsByPid = async () =>
+      createRuntimeUsageStatsMap([[sharedHostPid, sharedRssBytes]]);
 
     const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
 
@@ -10212,7 +10304,7 @@ describe('Team agent launch matrix safe e2e', () => {
     addGeminiPrimaryToMixedRun(currentRun);
     staleRun.runId = `run-${teamName}-stale`;
     currentRun.runId = `run-${teamName}-current`;
-    markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
     trackLiveRun(svc, staleRun);
     trackLiveRun(svc, currentRun);
 
@@ -10238,6 +10330,89 @@ describe('Team agent launch matrix safe e2e', () => {
       messageId: 'msg-current-direct-opencode',
     });
     expect(adapter.messageInputs[0]?.runId).not.toBe(staleRun.runId);
+  });
+
+  it('refreshes stale mixed OpenCode secondary session evidence before direct delivery when MCP transport changed', async () => {
+    const teamName = 'mixed-opencode-secondary-transport-refresh-safe-e2e';
+    await writeMixedTeamConfig({
+      teamName,
+      projectPath,
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, {
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    addGeminiPrimaryToMixedRun(run);
+    run.runId = `run-${teamName}-current`;
+    await markMixedOpenCodeLaneConfirmedForTest(run, 'bob', {
+      sessionId: 'oc-session-bob-stale-mixed-transport',
+      appMcpTransportHash: 'old-mixed-safe-e2e-transport-hash',
+    });
+    trackLiveRun(svc, run);
+
+    const transportSpy = vi
+      .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+      .mockReturnValue({
+        url: 'http://127.0.0.1:43126/mcp',
+        port: 43126,
+        child: { pid: 43126 },
+        generation: 5,
+        urlHash: 'current-mixed-safe-e2e-transport-hash',
+        transportEvidence: {
+          schemaVersion: 1,
+          transport: 'httpStream',
+          host: '127.0.0.1',
+          port: 43126,
+          endpoint: '/mcp',
+          url: 'http://127.0.0.1:43126/mcp',
+          urlHash: 'current-mixed-safe-e2e-transport-hash',
+          generation: 5,
+          observedAt: '2026-04-23T10:00:00.000Z',
+        },
+        diagnostics: [],
+      } as any);
+
+    try {
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'bob',
+          text: 'refresh stale mixed transport before opencode send',
+          messageId: 'msg-mixed-transport-refresh-safe-e2e',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+    } finally {
+      transportSpy.mockRestore();
+    }
+
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: run.runId,
+      teamName,
+      laneId: 'secondary:opencode:bob',
+      memberName: 'bob',
+      forceSessionRefreshReason:
+        'opencode_app_mcp_transport_changed:old-mixed-safe-e2e-transport-hash->current-mixed-safe-e2e-transport-hash',
+    });
+
+    const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'secondary:opencode:bob',
+    });
+    expect(evidence.sessions[0]).toMatchObject({
+      id: 'session-bob',
+      appMcpTransportHash: 'current-mixed-safe-e2e-transport-hash',
+    });
   });
 
   it('routes direct OpenCode member messages only to the targeted live mixed OpenCode lane', async () => {
@@ -10282,7 +10457,7 @@ describe('Team agent launch matrix safe e2e', () => {
     addGeminiPrimaryToMixedRun(secondRun);
     firstRun.child = { stdin: { writable: true } };
     secondRun.child = { stdin: { writable: true } };
-    markMixedOpenCodeLaneConfirmedForTest(secondRun, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(secondRun, 'bob');
     trackLiveRun(svc, firstRun);
     trackLiveRun(svc, secondRun);
 
@@ -10573,7 +10748,7 @@ describe('Team agent launch matrix safe e2e', () => {
     const currentRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
     addGeminiPrimaryToMixedRun(currentRun);
     currentRun.runId = `run-${teamName}-current`;
-    markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(currentRun, 'bob');
     trackLiveRun(svc, currentRun);
     injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
@@ -10650,6 +10825,90 @@ describe('Team agent launch matrix safe e2e', () => {
       messageId: 'msg-current-pure-opencode',
     });
     expect(adapter.messageInputs[0]?.runId).not.toBe(first.runId);
+  });
+
+  it('refreshes stale OpenCode session evidence before direct delivery when MCP transport changed', async () => {
+    const teamName = 'pure-opencode-direct-message-transport-refresh-safe-e2e';
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const launch = await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+    await writeOpenCodeBootstrapSessionEvidenceForTest({
+      teamName,
+      laneId: 'primary',
+      runId: launch.runId,
+      memberName: 'alice',
+      sessionId: 'oc-session-alice-stale-transport',
+      appMcpTransportHash: 'old-safe-e2e-transport-hash',
+    });
+
+    const transportSpy = vi
+      .spyOn(agentTeamsMcpHttpServer, 'getCurrentHandle')
+      .mockReturnValue({
+        url: 'http://127.0.0.1:43125/mcp',
+        port: 43125,
+        child: { pid: 43125 },
+        generation: 4,
+        urlHash: 'current-safe-e2e-transport-hash',
+        transportEvidence: {
+          schemaVersion: 1,
+          transport: 'httpStream',
+          host: '127.0.0.1',
+          port: 43125,
+          endpoint: '/mcp',
+          url: 'http://127.0.0.1:43125/mcp',
+          urlHash: 'current-safe-e2e-transport-hash',
+          generation: 4,
+          observedAt: '2026-04-23T10:00:00.000Z',
+        },
+        diagnostics: [],
+      } as any);
+
+    try {
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'alice',
+          text: 'refresh stale transport before pure opencode send',
+          messageId: 'msg-transport-refresh-safe-e2e',
+        })
+      ).resolves.toEqual({
+        delivered: true,
+        diagnostics: [],
+      });
+    } finally {
+      transportSpy.mockRestore();
+    }
+
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: launch.runId,
+      teamName,
+      laneId: 'primary',
+      memberName: 'alice',
+      forceSessionRefreshReason:
+        'opencode_app_mcp_transport_changed:old-safe-e2e-transport-hash->current-safe-e2e-transport-hash',
+    });
+
+    const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'primary',
+    });
+    expect(evidence.sessions[0]).toMatchObject({
+      id: 'session-alice',
+      appMcpTransportHash: 'current-safe-e2e-transport-hash',
+    });
   });
 
   it('routes direct OpenCode member messages only to the targeted live pure OpenCode team', async () => {
@@ -13248,7 +13507,7 @@ describe('Team agent launch matrix safe e2e', () => {
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
     const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
     addGeminiPrimaryToMixedRun(run);
-    markMixedOpenCodeLaneConfirmedForTest(run, 'tom');
+    await markMixedOpenCodeLaneConfirmedForTest(run, 'tom');
     trackLiveRun(svc, run);
 
     await expect(
@@ -13304,7 +13563,7 @@ describe('Team agent launch matrix safe e2e', () => {
     svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
     const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
     addGeminiPrimaryToMixedRun(run);
-    markMixedOpenCodeLaneConfirmedForTest(run, 'bob');
+    await markMixedOpenCodeLaneConfirmedForTest(run, 'bob');
     trackLiveRun(svc, run);
 
     await expect(
@@ -13368,22 +13627,29 @@ describe('Team agent launch matrix safe e2e', () => {
     await (svc as any).launchMixedSecondaryLaneIfNeeded(currentRun);
     await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-    svc.stopTeam(teamName);
+    const killTracker = trackProcessKillsForPids([64901, 64902]);
+    try {
+      svc.stopTeam(teamName);
 
-    await waitForCondition(() => adapter.stopInputs.length === 1);
-    expectDirectChildKillCount(staleKillCount, 0);
-    expectDirectChildKillCount(currentKillCount, 1);
-    expect(staleRun.cancelRequested).toBe(false);
-    expect(currentRun.cancelRequested).toBe(true);
-    expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
-      'secondary:opencode:bob',
-    ]);
-    expect(await svc.getRuntimeState(teamName)).toMatchObject({
-      teamName,
-      isAlive: false,
-      runId: null,
-      progress: null,
-    });
+      await waitForCondition(() => adapter.stopInputs.length === 1);
+      expectProcessKillCount(killTracker.killedPids, 64901, 0);
+      expectProcessKillCount(killTracker.killedPids, 64902, 1);
+      expectDirectChildKillCount(staleKillCount, 0);
+      expectDirectChildKillCount(currentKillCount, 0);
+      expect(staleRun.cancelRequested).toBe(false);
+      expect(currentRun.cancelRequested).toBe(true);
+      expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
+        'secondary:opencode:bob',
+      ]);
+      expect(await svc.getRuntimeState(teamName)).toMatchObject({
+        teamName,
+        isAlive: false,
+        runId: null,
+        progress: null,
+      });
+    } finally {
+      killTracker.restore();
+    }
   });
 
   it('cancels a stale Anthropic and Gemini mixed run without stopping current OpenCode lanes', async () => {
@@ -13425,43 +13691,50 @@ describe('Team agent launch matrix safe e2e', () => {
     await (svc as any).launchMixedSecondaryLaneIfNeeded(currentRun);
     await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-    await svc.cancelProvisioning(staleRun.runId);
+    const killTracker = trackProcessKillsForPids([65001, 65002]);
+    try {
+      await svc.cancelProvisioning(staleRun.runId);
 
-    expectDirectChildKillCount(staleKillCount, 1);
-    expectDirectChildKillCount(currentKillCount, 0);
-    expect(staleRun.cancelRequested).toBe(true);
-    expect(currentRun.cancelRequested).toBe(false);
-    expect(adapter.stopInputs).toEqual([]);
-    expect(svc.isTeamAlive(teamName)).toBe(true);
-    expect(await svc.getRuntimeState(teamName)).toMatchObject({
-      teamName,
-      isAlive: true,
-      runId: currentRun.runId,
-    });
+      expectProcessKillCount(killTracker.killedPids, 65001, 1);
+      expectProcessKillCount(killTracker.killedPids, 65002, 0);
+      expectDirectChildKillCount(staleKillCount, 0);
+      expectDirectChildKillCount(currentKillCount, 0);
+      expect(staleRun.cancelRequested).toBe(true);
+      expect(currentRun.cancelRequested).toBe(false);
+      expect(adapter.stopInputs).toEqual([]);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      expect(await svc.getRuntimeState(teamName)).toMatchObject({
+        teamName,
+        isAlive: true,
+        runId: currentRun.runId,
+      });
 
-    adapter.releaseLaunches();
-    await waitForCondition(() => adapter.launchInputs.length === 2);
-    await waitForCondition(() =>
-      currentRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
-    );
+      adapter.releaseLaunches();
+      await waitForCondition(() => adapter.launchInputs.length === 2);
+      await waitForCondition(() =>
+        currentRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
+      );
 
-    const statuses = await svc.getMemberSpawnStatuses(teamName);
-    expect(statuses.teamLaunchState).toBe('clean_success');
-    expect(statuses.statuses.reviewer).toMatchObject({
-      status: 'online',
-      launchState: 'confirmed_alive',
-      hardFailure: false,
-    });
-    expect(statuses.statuses.bob).toMatchObject({
-      status: 'online',
-      launchState: 'confirmed_alive',
-      hardFailure: false,
-    });
-    expect(statuses.statuses.tom).toMatchObject({
-      status: 'online',
-      launchState: 'confirmed_alive',
-      hardFailure: false,
-    });
+      const statuses = await svc.getMemberSpawnStatuses(teamName);
+      expect(statuses.teamLaunchState).toBe('clean_success');
+      expect(statuses.statuses.reviewer).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+        hardFailure: false,
+      });
+      expect(statuses.statuses.bob).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+        hardFailure: false,
+      });
+      expect(statuses.statuses.tom).toMatchObject({
+        status: 'online',
+        launchState: 'confirmed_alive',
+        hardFailure: false,
+      });
+    } finally {
+      killTracker.restore();
+    }
   });
 
   it('stops the current pure Anthropic run instead of a stale same-team run', async () => {
@@ -13491,18 +13764,25 @@ describe('Team agent launch matrix safe e2e', () => {
       runId: currentRun.runId,
     });
 
-    svc.stopTeam(teamName);
+    const killTracker = trackProcessKillsForPids([63101, 63102]);
+    try {
+      svc.stopTeam(teamName);
 
-    expectDirectChildKillCount(staleKillCount, 0);
-    expectDirectChildKillCount(currentKillCount, 1);
-    expect(staleRun.cancelRequested).toBe(false);
-    expect(currentRun.cancelRequested).toBe(true);
-    expect(await svc.getRuntimeState(teamName)).toMatchObject({
-      teamName,
-      isAlive: false,
-      runId: null,
-      progress: null,
-    });
+      expectProcessKillCount(killTracker.killedPids, 63101, 0);
+      expectProcessKillCount(killTracker.killedPids, 63102, 1);
+      expectDirectChildKillCount(staleKillCount, 0);
+      expectDirectChildKillCount(currentKillCount, 0);
+      expect(staleRun.cancelRequested).toBe(false);
+      expect(currentRun.cancelRequested).toBe(true);
+      expect(await svc.getRuntimeState(teamName)).toMatchObject({
+        teamName,
+        isAlive: false,
+        runId: null,
+        progress: null,
+      });
+    } finally {
+      killTracker.restore();
+    }
   });
 
   it('cancels a stale pure Anthropic run without stopping the current same-team run', async () => {
@@ -13526,20 +13806,27 @@ describe('Team agent launch matrix safe e2e', () => {
     trackLiveRun(svc, staleRun);
     trackLiveRun(svc, currentRun);
 
-    await svc.cancelProvisioning(staleRun.runId);
+    const killTracker = trackProcessKillsForPids([63301, 63302]);
+    try {
+      await svc.cancelProvisioning(staleRun.runId);
 
-    expectDirectChildKillCount(staleKillCount, 1);
-    expectDirectChildKillCount(currentKillCount, 0);
-    expect(staleRun.cancelRequested).toBe(true);
-    expect(currentRun.cancelRequested).toBe(false);
-    expect(svc.isTeamAlive(teamName)).toBe(true);
-    expect(await svc.getRuntimeState(teamName)).toMatchObject({
-      teamName,
-      isAlive: true,
-      runId: currentRun.runId,
-    });
+      expectProcessKillCount(killTracker.killedPids, 63301, 1);
+      expectProcessKillCount(killTracker.killedPids, 63302, 0);
+      expectDirectChildKillCount(staleKillCount, 0);
+      expectDirectChildKillCount(currentKillCount, 0);
+      expect(staleRun.cancelRequested).toBe(true);
+      expect(currentRun.cancelRequested).toBe(false);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
+      expect(await svc.getRuntimeState(teamName)).toMatchObject({
+        teamName,
+        isAlive: true,
+        runId: currentRun.runId,
+      });
 
-    await svc.sendMessageToTeam(teamName, 'current run still receives messages');
+      await svc.sendMessageToTeam(teamName, 'current run still receives messages');
+    } finally {
+      killTracker.restore();
+    }
   });
 
   it('cancels the current pure Anthropic run without resurrecting a stale same-team run', async () => {
@@ -13563,22 +13850,29 @@ describe('Team agent launch matrix safe e2e', () => {
     trackLiveRun(svc, staleRun);
     trackLiveRun(svc, currentRun);
 
-    await svc.cancelProvisioning(currentRun.runId);
+    const killTracker = trackProcessKillsForPids([63501, 63502]);
+    try {
+      await svc.cancelProvisioning(currentRun.runId);
 
-    expectDirectChildKillCount(staleKillCount, 0);
-    expectDirectChildKillCount(currentKillCount, 1);
-    expect(staleRun.cancelRequested).toBe(false);
-    expect(currentRun.cancelRequested).toBe(true);
-    expect(svc.isTeamAlive(teamName)).toBe(false);
-    expect(await svc.getRuntimeState(teamName)).toMatchObject({
-      teamName,
-      isAlive: false,
-      runId: null,
-      progress: null,
-    });
-    await expect(svc.sendMessageToTeam(teamName, 'must not hit stale run')).rejects.toThrow(
-      `No active process for team "${teamName}"`
-    );
+      expectProcessKillCount(killTracker.killedPids, 63501, 0);
+      expectProcessKillCount(killTracker.killedPids, 63502, 1);
+      expectDirectChildKillCount(staleKillCount, 0);
+      expectDirectChildKillCount(currentKillCount, 0);
+      expect(staleRun.cancelRequested).toBe(false);
+      expect(currentRun.cancelRequested).toBe(true);
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      expect(await svc.getRuntimeState(teamName)).toMatchObject({
+        teamName,
+        isAlive: false,
+        runId: null,
+        progress: null,
+      });
+      await expect(svc.sendMessageToTeam(teamName, 'must not hit stale run')).rejects.toThrow(
+        `No active process for team "${teamName}"`
+      );
+    } finally {
+      killTracker.restore();
+    }
   });
 
   it('refreshes runtime snapshot cache after same-team pure Anthropic relaunch', async () => {
@@ -13596,8 +13890,8 @@ describe('Team agent launch matrix safe e2e', () => {
         ['alice', { alive: true, pid: 64102, model: 'haiku-stale' }],
         ['bob', { alive: true, pid: 64103, model: 'sonnet-stale' }],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const staleSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(staleSnapshot).toMatchObject({
@@ -13645,8 +13939,8 @@ describe('Team agent launch matrix safe e2e', () => {
         ['alice', { alive: true, pid: 64502, model: 'haiku-before-stop' }],
         ['bob', { alive: true, pid: 64503, model: 'sonnet-before-stop' }],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const beforeStop = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(beforeStop).toMatchObject({
@@ -13680,6 +13974,638 @@ describe('Team agent launch matrix safe e2e', () => {
     });
   });
 
+  it('keeps runtime snapshot on current Anthropic provider while stale Codex relaunch metadata remains', async () => {
+    const teamName = 'provider-switch-codex-anthropic-runtime-card-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    const svc = new TeamProvisioningService();
+
+    const firstRun = createMixedLiveRun({ teamName, projectPath });
+    firstRun.runId = `run-${teamName}-codex`;
+    firstRun.child = { pid: 64611, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, firstRun);
+
+    const beforeSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(beforeSwitch).toMatchObject({
+      runId: firstRun.runId,
+      providerBackendId: 'codex-native',
+      members: {
+        'team-lead': { runtimeModel: 'gpt-5.4' },
+        alice: { providerId: 'codex', runtimeModel: 'gpt-5.4-mini' },
+        bob: { providerId: 'opencode', runtimeModel: 'opencode/minimax-m2.5-free' },
+      },
+    });
+
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    TeamConfigReader.invalidateTeam(teamName);
+    const secondRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    secondRun.runId = `run-${teamName}-anthropic`;
+    secondRun.request.model = 'haiku';
+    secondRun.request.effort = 'low';
+    secondRun.launchIdentity = {
+      ...secondRun.launchIdentity,
+      providerId: 'anthropic',
+      providerBackendId: null,
+      selectedModel: 'haiku',
+      resolvedLaunchModel: 'haiku',
+      catalogId: 'haiku',
+      selectedEffort: 'low',
+      resolvedEffort: 'low',
+    };
+    secondRun.child = { pid: 64621, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, secondRun);
+
+    const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(afterSwitch).toMatchObject({
+      runId: secondRun.runId,
+      members: {
+        'team-lead': { runtimeModel: 'haiku' },
+        alice: { providerId: 'anthropic', runtimeModel: 'haiku' },
+        bob: { providerId: 'opencode', runtimeModel: 'opencode/minimax-m2.5-free' },
+        tom: { providerId: 'opencode', runtimeModel: 'opencode/nemotron-3-super-free' },
+      },
+    });
+    expect(afterSwitch.providerBackendId).toBeUndefined();
+    expect(afterSwitch.members.alice.providerBackendId).toBeUndefined();
+  });
+
+  it('ignores stale Codex live metadata model for the current Anthropic provider snapshot', async () => {
+    const teamName = 'provider-switch-anthropic-stale-live-codex-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    const svc = new TeamProvisioningService();
+
+    const firstRun = createMixedLiveRun({ teamName, projectPath });
+    firstRun.runId = `run-${teamName}-codex`;
+    firstRun.child = { pid: 64651, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, firstRun);
+
+    const beforeSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(beforeSwitch.members.alice).toMatchObject({
+      providerId: 'codex',
+      runtimeModel: 'gpt-5.4-mini',
+    });
+
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    TeamConfigReader.invalidateTeam(teamName);
+    const secondRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    secondRun.runId = `run-${teamName}-anthropic`;
+    secondRun.child = { pid: 64661, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, secondRun);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64662,
+            providerId: 'codex',
+            model: 'gpt-5.4-mini',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(afterSwitch).toMatchObject({
+      runId: secondRun.runId,
+      members: {
+        'team-lead': { runtimeModel: 'sonnet' },
+        alice: {
+          providerId: 'anthropic',
+          runtimeModel: 'haiku',
+          pid: 64662,
+          rssBytes: 64_662_000,
+        },
+      },
+    });
+    expect(afterSwitch.providerBackendId).toBeUndefined();
+    expect(afterSwitch.members.alice.providerBackendId).toBeUndefined();
+  });
+
+  it('ignores stale Codex live provider evidence even when the live model cannot be inferred', async () => {
+    const teamName = 'provider-switch-anthropic-stale-live-codex-unknown-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    const svc = new TeamProvisioningService();
+
+    const firstRun = createMixedLiveRun({ teamName, projectPath });
+    firstRun.runId = `run-${teamName}-codex`;
+    firstRun.child = { pid: 64711, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, firstRun);
+
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    TeamConfigReader.invalidateTeam(teamName);
+    const secondRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    secondRun.runId = `run-${teamName}-anthropic`;
+    secondRun.child = { pid: 64721, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, secondRun);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64722,
+            providerId: 'codex',
+            model: 'legacy-enterprise-custom-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(afterSwitch).toMatchObject({
+      runId: secondRun.runId,
+      members: {
+        alice: {
+          providerId: 'anthropic',
+          runtimeModel: 'haiku',
+          pid: 64722,
+          rssBytes: 64_722_000,
+        },
+      },
+    });
+    expect(afterSwitch.members.alice.providerBackendId).toBeUndefined();
+  });
+
+  it('keeps matching-provider custom live models that cannot be inferred', async () => {
+    const teamName = 'provider-switch-anthropic-live-custom-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    run.runId = `run-${teamName}-anthropic`;
+    run.child = { pid: 64731, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64732,
+            providerId: 'anthropic',
+            model: 'enterprise-custom-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      runtimeModel: 'enterprise-custom-model',
+      pid: 64732,
+      rssBytes: 64_732_000,
+    });
+    expect(snapshot.members.alice.providerBackendId).toBeUndefined();
+  });
+
+  it('ignores a live Codex model even when stale metadata claims the current Anthropic provider', async () => {
+    const teamName = 'provider-switch-anthropic-conflicting-live-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    run.runId = `run-${teamName}-anthropic`;
+    run.child = { pid: 64801, kill: () => undefined, stdin: { writable: true } };
+    delete run.effectiveMembers[0].providerId;
+    delete run.allEffectiveMembers[0].providerId;
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64802,
+            providerId: 'anthropic',
+            model: 'gpt-5.4-mini',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      runtimeModel: 'haiku',
+      pid: 64802,
+      rssBytes: 64_802_000,
+    });
+    expect(snapshot.members.alice.providerBackendId).toBeUndefined();
+  });
+
+  it('ignores stale Codex live provider evidence for a current OpenCode side-lane unknown model', async () => {
+    const teamName = 'provider-switch-opencode-stale-live-codex-unknown-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    run.runId = `run-${teamName}-anthropic`;
+    run.child = { pid: 64761, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'bob',
+          {
+            alive: true,
+            pid: 64762,
+            providerId: 'codex',
+            model: 'legacy-enterprise-custom-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot.members.bob).toMatchObject({
+      providerId: 'opencode',
+      runtimeModel: 'opencode/minimax-m2.5-free',
+      pid: 64762,
+      rssBytes: 64_762_000,
+    });
+    expect(snapshot.members.bob.providerBackendId).toBeUndefined();
+  });
+
+  it('keeps matching OpenCode custom live models that cannot be inferred', async () => {
+    const teamName = 'provider-switch-opencode-live-custom-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    run.runId = `run-${teamName}-anthropic`;
+    run.child = { pid: 64771, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'bob',
+          {
+            alive: true,
+            pid: 64772,
+            providerId: 'opencode',
+            model: 'local-custom-opencode-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot.members.bob).toMatchObject({
+      providerId: 'opencode',
+      runtimeModel: 'local-custom-opencode-model',
+      pid: 64772,
+      rssBytes: 64_772_000,
+    });
+    expect(snapshot.members.bob.providerBackendId).toBeUndefined();
+  });
+
+  it('ignores stale Codex live provider evidence for a current Gemini teammate unknown model', async () => {
+    const teamName = 'provider-switch-gemini-stale-live-codex-unknown-model-safe-e2e';
+    await writeMixedTeamConfig({
+      teamName,
+      projectPath,
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, {
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    addGeminiPrimaryToMixedRun(run);
+    run.runId = `run-${teamName}-anthropic`;
+    run.child = { pid: 64781, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'reviewer',
+          {
+            alive: true,
+            pid: 64782,
+            providerId: 'codex',
+            model: 'legacy-enterprise-custom-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot.members.reviewer).toMatchObject({
+      providerId: 'gemini',
+      runtimeModel: 'gemini-2.5-flash',
+      pid: 64782,
+      rssBytes: 64_782_000,
+    });
+    expect(snapshot.members.reviewer.providerBackendId).toBeUndefined();
+  });
+
+  it('keeps matching Gemini custom live models that cannot be inferred', async () => {
+    const teamName = 'provider-switch-gemini-live-custom-model-safe-e2e';
+    await writeMixedTeamConfig({
+      teamName,
+      projectPath,
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, {
+      includeGeminiPrimary: true,
+      primaryProviderId: 'anthropic',
+    });
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    addGeminiPrimaryToMixedRun(run);
+    run.runId = `run-${teamName}-anthropic`;
+    run.child = { pid: 64791, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'reviewer',
+          {
+            alive: true,
+            pid: 64792,
+            providerId: 'gemini',
+            model: 'enterprise-custom-gemini-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot.members.reviewer).toMatchObject({
+      providerId: 'gemini',
+      runtimeModel: 'enterprise-custom-gemini-model',
+      pid: 64792,
+      rssBytes: 64_792_000,
+    });
+    expect(snapshot.members.reviewer.providerBackendId).toBeUndefined();
+  });
+
+  it('drops stale Codex launch-state backend when the current active run is Anthropic', async () => {
+    const teamName = 'provider-switch-anthropic-stale-launch-state-backend-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    await writeMixedTeamLaunchState({
+      teamName,
+      members: {
+        alice: mixedMemberState({
+          name: 'alice',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4-mini',
+          laneId: 'primary',
+          laneKind: 'primary',
+          laneOwnerProviderId: 'codex',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+        }),
+      },
+    });
+    const svc = new TeamProvisioningService();
+
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    TeamConfigReader.invalidateTeam(teamName);
+    const currentRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    currentRun.runId = `run-${teamName}-anthropic`;
+    currentRun.child = { pid: 64671, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, currentRun);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot).toMatchObject({
+      runId: currentRun.runId,
+      members: {
+        alice: {
+          providerId: 'anthropic',
+          runtimeModel: 'haiku',
+        },
+      },
+    });
+    expect(snapshot.providerBackendId).toBeUndefined();
+    expect(snapshot.members.alice.providerBackendId).toBeUndefined();
+  });
+
+  it('restores Codex backend on current Codex relaunch while stale Anthropic metadata remains', async () => {
+    const teamName = 'provider-switch-anthropic-codex-runtime-card-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const firstRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    firstRun.runId = `run-${teamName}-anthropic`;
+    firstRun.child = { pid: 64631, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, firstRun);
+
+    const beforeSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(beforeSwitch.runId).toBe(firstRun.runId);
+    expect(beforeSwitch.providerBackendId).toBeUndefined();
+    expect(beforeSwitch.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      runtimeModel: 'haiku',
+    });
+
+    await writeMixedTeamConfig({ teamName, projectPath });
+    TeamConfigReader.invalidateTeam(teamName);
+    const secondRun = createMixedLiveRun({ teamName, projectPath });
+    secondRun.runId = `run-${teamName}-codex`;
+    secondRun.child = { pid: 64641, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, secondRun);
+
+    const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(afterSwitch).toMatchObject({
+      runId: secondRun.runId,
+      providerBackendId: 'codex-native',
+      members: {
+        'team-lead': { runtimeModel: 'gpt-5.4' },
+        alice: { providerId: 'codex', runtimeModel: 'gpt-5.4-mini' },
+        bob: { providerId: 'opencode', runtimeModel: 'opencode/minimax-m2.5-free' },
+        tom: { providerId: 'opencode', runtimeModel: 'opencode/nemotron-3-super-free' },
+      },
+    });
+  });
+
+  it('ignores stale Anthropic live metadata model for the current Codex provider snapshot', async () => {
+    const teamName = 'provider-switch-codex-stale-live-anthropic-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const firstRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    firstRun.runId = `run-${teamName}-anthropic`;
+    firstRun.child = { pid: 64681, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, firstRun);
+
+    const beforeSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(beforeSwitch.members.alice).toMatchObject({
+      providerId: 'anthropic',
+      runtimeModel: 'haiku',
+    });
+
+    await writeMixedTeamConfig({ teamName, projectPath });
+    TeamConfigReader.invalidateTeam(teamName);
+    const secondRun = createMixedLiveRun({ teamName, projectPath });
+    secondRun.runId = `run-${teamName}-codex`;
+    secondRun.child = { pid: 64691, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, secondRun);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64692,
+            providerId: 'anthropic',
+            model: 'haiku',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(afterSwitch).toMatchObject({
+      runId: secondRun.runId,
+      providerBackendId: 'codex-native',
+      members: {
+        'team-lead': { runtimeModel: 'gpt-5.4' },
+        alice: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          runtimeModel: 'gpt-5.4-mini',
+          pid: 64692,
+          rssBytes: 64_692_000,
+        },
+      },
+    });
+  });
+
+  it('ignores stale Anthropic live provider evidence with an unknown model for the current Codex snapshot', async () => {
+    const teamName = 'provider-switch-codex-stale-live-anthropic-unknown-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
+    await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
+    const svc = new TeamProvisioningService();
+
+    const firstRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
+    firstRun.runId = `run-${teamName}-anthropic`;
+    firstRun.child = { pid: 64741, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, firstRun);
+
+    await writeMixedTeamConfig({ teamName, projectPath });
+    TeamConfigReader.invalidateTeam(teamName);
+    const secondRun = createMixedLiveRun({ teamName, projectPath });
+    secondRun.runId = `run-${teamName}-codex`;
+    secondRun.child = { pid: 64751, kill: () => undefined, stdin: { writable: true } };
+    trackLiveRun(svc, secondRun);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64752,
+            providerId: 'anthropic',
+            model: 'legacy-enterprise-custom-model',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const afterSwitch = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(afterSwitch).toMatchObject({
+      runId: secondRun.runId,
+      providerBackendId: 'codex-native',
+      members: {
+        alice: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          runtimeModel: 'gpt-5.4-mini',
+          pid: 64752,
+          rssBytes: 64_752_000,
+        },
+      },
+    });
+  });
+
+  it('ignores a live Anthropic model even when stale metadata claims the current Codex provider', async () => {
+    const teamName = 'provider-switch-codex-conflicting-live-model-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    const svc = new TeamProvisioningService();
+
+    const run = createMixedLiveRun({ teamName, projectPath });
+    run.runId = `run-${teamName}-codex`;
+    run.child = { pid: 64811, kill: () => undefined, stdin: { writable: true } };
+    delete run.effectiveMembers[0].providerId;
+    delete run.allEffectiveMembers[0].providerId;
+    trackLiveRun(svc, run);
+    (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
+      new Map([
+        [
+          'alice',
+          {
+            alive: true,
+            pid: 64812,
+            providerId: 'codex',
+            model: 'haiku',
+          },
+        ],
+      ]);
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
+
+    const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(snapshot).toMatchObject({
+      runId: run.runId,
+      providerBackendId: 'codex-native',
+      members: {
+        alice: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          runtimeModel: 'gpt-5.4-mini',
+          pid: 64812,
+          rssBytes: 64_812_000,
+        },
+      },
+    });
+  });
+
   it('refreshes runtime snapshot cache after same-team Anthropic and Gemini mixed relaunch', async () => {
     const teamName = 'mixed-anthropic-gemini-runtime-cache-relaunch-safe-e2e';
     await writeMixedTeamConfig({
@@ -13706,8 +14632,8 @@ describe('Team agent launch matrix safe e2e', () => {
         ['bob', { alive: true, pid: 64704, model: 'opencode/minimax-stale' }],
         ['tom', { alive: true, pid: 64705, model: 'opencode/nemotron-stale' }],
       ]);
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const staleSnapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
     expect(staleSnapshot).toMatchObject({
@@ -13831,8 +14757,8 @@ describe('Team agent launch matrix safe e2e', () => {
               ['bob', { alive: true, pid: 50203, model: 'sonnet-runtime' }],
             ]
       );
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const firstSnapshot = await svc.getTeamAgentRuntimeSnapshot(firstTeamName);
     const secondSnapshot = await svc.getTeamAgentRuntimeSnapshot(secondTeamName);
@@ -13911,8 +14837,8 @@ describe('Team agent launch matrix safe e2e', () => {
             ]
       );
     };
-    (svc as any).readProcessRssBytesByPid = async (pids: number[]) =>
-      new Map(pids.map((pid) => [pid, pid * 1_000]));
+    (svc as any).readProcessUsageStatsByPid = async (pids: number[]) =>
+      createRuntimeUsageStatsByPid(pids);
 
     const beforeStop = await svc.getTeamAgentRuntimeSnapshot(stoppedTeamName);
     expect(beforeStop.members['team-lead']).toMatchObject({
@@ -17440,6 +18366,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
   readonly launchInputs: TeamRuntimeLaunchInput[] = [];
   readonly messageInputs: OpenCodeTeamRuntimeMessageInput[] = [];
+  readonly permissionAnswerInputs: TeamRuntimePermissionAnswerInput[] = [];
   readonly reconcileInputs: TeamRuntimeReconcileInput[] = [];
   readonly stopInputs: TeamRuntimeStopInput[] = [];
 
@@ -17503,6 +18430,30 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         : `prompt-${input.memberName}-${this.messageInputs.length}`,
       runtimePid: 12_000 + this.messageInputs.length,
       diagnostics: [],
+    };
+  }
+
+  async answerRuntimePermission(
+    input: TeamRuntimePermissionAnswerInput
+  ): Promise<TeamRuntimeLaunchResult> {
+    this.permissionAnswerInputs.push(input);
+    this.memberOutcomes = {
+      ...this.memberOutcomes,
+      [input.memberName]: input.decision === 'allow' ? 'confirmed' : 'failed',
+    };
+    return {
+      runId: input.runId,
+      teamName: input.teamName,
+      launchPhase: 'finished',
+      teamLaunchState: this.aggregateLaunchState(input.expectedMembers),
+      members: Object.fromEntries(
+        input.expectedMembers.map((member, index) => [
+          member.name,
+          this.buildMemberEvidence(member, index),
+        ])
+      ),
+      warnings: [],
+      diagnostics: ['fake OpenCode permission answer'],
     };
   }
 
@@ -17584,6 +18535,26 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       hardFailure: failed,
       hardFailureReason: failed ? 'fake_open_code_launch_failure' : undefined,
       pendingPermissionRequestIds: permissionPending ? [`perm-${member.name}`] : undefined,
+      pendingPermissions: permissionPending
+        ? [
+            {
+              providerId: 'opencode',
+              requestId: `perm-${member.name}`,
+              sessionId: `session-${member.name}`,
+              tool: 'bash',
+              title: `Run git status for ${member.name}`,
+              kind: 'tool',
+              raw: {
+                requestID: `perm-${member.name}`,
+                sessionID: `session-${member.name}`,
+                tool: 'bash',
+                title: `Run git status for ${member.name}`,
+                kind: 'tool',
+                patterns: ['git status'],
+              },
+            },
+          ]
+        : undefined,
       sessionId: failed ? undefined : `session-${member.name}`,
       runtimePid: failed ? undefined : 10_000 + index,
       livenessKind,
@@ -17808,6 +18779,7 @@ async function writeOpenCodeBootstrapSessionEvidenceForTest(input: {
   runId?: string | null;
   memberName?: string;
   sessionId?: string;
+  appMcpTransportHash?: string;
 }): Promise<void> {
   const runId = input.runId ?? null;
   const descriptor = OPENCODE_RUNTIME_STORE_DESCRIPTORS.find(
@@ -17858,6 +18830,9 @@ async function writeOpenCodeBootstrapSessionEvidenceForTest(input: {
               runId,
               observedAt: '2026-04-23T10:00:00.000Z',
               source: 'runtime_bootstrap_checkin',
+              ...(input.appMcpTransportHash
+                ? { appMcpTransportHash: input.appMcpTransportHash }
+                : {}),
             },
           ],
         },
@@ -18037,9 +19012,17 @@ function createMixedLiveRun(input: {
   };
 }
 
-function markMixedOpenCodeLaneConfirmedForTest(run: any, memberName: string): void {
+async function markMixedOpenCodeLaneConfirmedForTest(
+  run: any,
+  memberName: string,
+  options: {
+    sessionId?: string;
+    appMcpTransportHash?: string;
+  } = {}
+): Promise<void> {
   const now = '2026-04-23T10:00:00.000Z';
   const laneId = `secondary:opencode:${memberName}`;
+  const sessionId = options.sessionId ?? `session-${memberName}`;
   const lane = run.mixedSecondaryLanes?.find((candidate: any) => candidate.laneId === laneId);
   if (!lane) {
     throw new Error(`Missing mixed OpenCode lane fixture for ${memberName}`);
@@ -18060,7 +19043,7 @@ function markMixedOpenCodeLaneConfirmedForTest(run: any, memberName: string): vo
         runtimeAlive: true,
         bootstrapConfirmed: true,
         hardFailure: false,
-        sessionId: `session-${memberName}`,
+        sessionId,
         runtimePid: 10_000,
         livenessKind: 'confirmed_bootstrap',
         pidSource: 'opencode_bridge',
@@ -18071,6 +19054,14 @@ function markMixedOpenCodeLaneConfirmedForTest(run: any, memberName: string): vo
     warnings: [],
     diagnostics: ['fake OpenCode launch ready'],
   };
+  await writeOpenCodeBootstrapSessionEvidenceForTest({
+    teamName: run.teamName,
+    laneId,
+    runId: run.runId,
+    memberName,
+    sessionId,
+    appMcpTransportHash: options.appMcpTransportHash,
+  });
 }
 
 function removeMixedOpenCodeLaneForTest(run: any, memberName: string): void {
@@ -18229,7 +19220,38 @@ async function writeStoppedProcessRegistry(teamName: string): Promise<void> {
 }
 
 function expectDirectChildKillCount(actual: number, expected: number): void {
-  // Windows uses taskkill.exe for process-tree termination, so fake child.kill is not called.
+  expect(actual).toBe(expected);
+}
+
+function trackProcessKillsForPids(pids: readonly number[]): {
+  killedPids: number[];
+  restore: () => void;
+} {
+  const targetPids = new Set(pids);
+  const killedPids: number[] = [];
+  const spy = vi.spyOn(process, 'kill').mockImplementation(((
+    pid: number | string,
+    signal?: number | string
+  ) => {
+    const numericPid = Number(pid);
+    if (targetPids.has(numericPid) && signal !== 0) {
+      killedPids.push(numericPid);
+    }
+    return true;
+  }) as typeof process.kill);
+  return {
+    killedPids,
+    restore: () => spy.mockRestore(),
+  };
+}
+
+function expectProcessKillCount(
+  killedPids: readonly number[],
+  pid: number,
+  expected: number
+): void {
+  const actual = killedPids.filter((killedPid) => killedPid === pid).length;
+  // Windows uses taskkill.exe for process-tree termination, so process.kill is not called.
   expect(actual).toBe(process.platform === 'win32' ? 0 : expected);
 }
 

@@ -438,16 +438,7 @@ export class TeamMemberRuntimeAdvisoryService {
 
     const memberKeysWithRecentErrors = new Set<string>();
     for (const [memberKey, records] of recordsByMember) {
-      if (
-        records.some((record) => {
-          const observedAt = getOpenCodeRuntimeDeliveryRecordTimeMs(record);
-          return (
-            isPotentialOpenCodeRuntimeDeliveryError(record) &&
-            Number.isFinite(observedAt) &&
-            now - observedAt <= OPENCODE_DELIVERY_ERROR_LOOKBACK_MS
-          );
-        })
-      ) {
+      if (records.some((record) => this.isOpenCodeDeliveryAdvisoryCandidate(record, now))) {
         memberKeysWithRecentErrors.add(memberKey);
       }
     }
@@ -507,23 +498,10 @@ export class TeamMemberRuntimeAdvisoryService {
           getOpenCodeRuntimeDeliveryRecordTimeMs(right) -
           getOpenCodeRuntimeDeliveryRecordTimeMs(left)
       );
-    const latestSuccess = ordered.find(isTerminalSuccessfulOpenCodeDeliveryRecord);
     const latestError = ordered.find((record) => {
-      const observedAt = getOpenCodeRuntimeDeliveryRecordTimeMs(record);
-      return (
-        isPotentialOpenCodeRuntimeDeliveryError(record) &&
-        Number.isFinite(observedAt) &&
-        now - observedAt <= OPENCODE_DELIVERY_ERROR_LOOKBACK_MS
-      );
+      return this.isOpenCodeDeliveryAdvisoryCandidate(record, now);
     });
     if (!latestError) {
-      return null;
-    }
-    if (
-      latestSuccess &&
-      getOpenCodeRuntimeDeliveryRecordTimeMs(latestSuccess) >
-        getOpenCodeRuntimeDeliveryRecordTimeMs(latestError)
-    ) {
       return null;
     }
 
@@ -540,12 +518,85 @@ export class TeamMemberRuntimeAdvisoryService {
     if (!message || !decision.observedAt) {
       return null;
     }
+    const retryWindow = this.extractOpenCodeDeliveryRetryWindow(latestError, now);
     return {
       kind: 'api_error',
       observedAt: decision.observedAt,
       reasonCode: decision.reasonCode,
       message,
+      ...(retryWindow ? retryWindow : {}),
     };
+  }
+
+  private extractOpenCodeDeliveryRetryWindow(
+    record: OpenCodePromptDeliveryLedgerRecord,
+    now: number
+  ): Pick<MemberRuntimeAdvisory, 'retryUntil' | 'retryDelayMs'> | null {
+    const candidates = [
+      ...record.diagnostics.slice().reverse(),
+      record.lastReason,
+      record.nextAttemptAt,
+    ];
+    for (const candidate of candidates) {
+      const retryAt = this.parseOpenCodeRetryAt(candidate);
+      if (!retryAt || retryAt <= now) {
+        continue;
+      }
+      return {
+        retryUntil: new Date(retryAt).toISOString(),
+        retryDelayMs: retryAt - now,
+      };
+    }
+    return null;
+  }
+
+  private parseOpenCodeRetryAt(value: string | null | undefined): number | null {
+    const text = value?.trim();
+    if (!text) {
+      return null;
+    }
+    const lowerText = text.toLowerCase();
+    const nextMarker = 'next=';
+    const tokenStart = lowerText.indexOf(nextMarker);
+    const valueStart = tokenStart >= 0 ? tokenStart + nextMarker.length : 0;
+    let valueEnd = valueStart;
+    while (valueEnd < text.length) {
+      const char = text[valueEnd];
+      if (
+        char === ' ' ||
+        char === '\t' ||
+        char === '\n' ||
+        char === '\r' ||
+        char === ',' ||
+        char === ';'
+      ) {
+        break;
+      }
+      valueEnd += 1;
+    }
+    let cleaned = text.slice(valueStart, valueEnd);
+    while (cleaned.endsWith('.') || cleaned.endsWith(')') || cleaned.endsWith(']')) {
+      cleaned = cleaned.slice(0, -1);
+    }
+    const parsed = Date.parse(cleaned);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private isOpenCodeDeliveryAdvisoryCandidate(
+    record: OpenCodePromptDeliveryLedgerRecord,
+    now: number
+  ): boolean {
+    if (!isPotentialOpenCodeRuntimeDeliveryError(record)) {
+      return false;
+    }
+    if (
+      !isTerminalSuccessfulOpenCodeDeliveryRecord(record) &&
+      record.status !== 'failed_terminal'
+    ) {
+      return true;
+    }
+    const observedAt = getOpenCodeRuntimeDeliveryRecordTimeMs(record);
+    return Number.isFinite(observedAt) && now - observedAt <= OPENCODE_DELIVERY_ERROR_LOOKBACK_MS;
   }
 
   private async findRecentMemberAdvisoriesFromBatchRefs(

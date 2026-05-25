@@ -2,6 +2,7 @@ import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRea
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
@@ -559,6 +560,7 @@ export class TeamConfigReader {
           name: existing?.name ?? name,
           role: m.role?.trim() || existing?.role,
           color: m.color?.trim() || existing?.color,
+          mcpPolicy: normalizeTeamMemberMcpPolicy(m.mcpPolicy) ?? existing?.mcpPolicy,
         });
       };
 

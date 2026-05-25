@@ -1,5 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
+import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
@@ -27,6 +29,9 @@ interface StoreState {
   openCodeRuntimeStatus: Record<string, unknown> | null;
   openCodeRuntimeStatusLoading: boolean;
   openCodeRuntimeError: string | null;
+  codexRuntimeStatus: Record<string, unknown> | null;
+  codexRuntimeStatusLoading: boolean;
+  codexRuntimeError: string | null;
   bootstrapCliStatus: ReturnType<typeof vi.fn>;
   fetchCliStatus: ReturnType<typeof vi.fn>;
   fetchCliProviderStatus: ReturnType<typeof vi.fn>;
@@ -35,6 +40,9 @@ interface StoreState {
   fetchOpenCodeRuntimeStatus: ReturnType<typeof vi.fn>;
   installOpenCodeRuntime: ReturnType<typeof vi.fn>;
   invalidateOpenCodeRuntimeStatus: ReturnType<typeof vi.fn>;
+  fetchCodexRuntimeStatus: ReturnType<typeof vi.fn>;
+  installCodexRuntime: ReturnType<typeof vi.fn>;
+  invalidateCodexRuntimeStatus: ReturnType<typeof vi.fn>;
   appConfig: {
     general: {
       multimodelEnabled: boolean;
@@ -165,6 +173,14 @@ vi.mock('@renderer/store', () => {
 
 import { CliStatusBanner } from '@renderer/components/dashboard/CliStatusBanner';
 import { CliStatusSection } from '@renderer/components/settings/sections/CliStatusSection';
+
+async function flushLazyImports(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
 
 function createInstalledCliStatus(
   overrides?: Partial<Record<string, unknown>>
@@ -298,6 +314,30 @@ function createCodexNativeRolloutProvider(
   };
 }
 
+function createDeferredMultimodelProvider(
+  providerId: 'anthropic' | 'codex' | 'opencode',
+  displayName: string
+): Record<string, unknown> {
+  return {
+    providerId,
+    displayName,
+    supported: false,
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'unknown',
+    statusMessage: CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
+    models: [],
+    modelAvailability: [],
+    canLoginFromUi: providerId !== 'opencode',
+    capabilities: {
+      teamLaunch: false,
+      oneShot: false,
+    },
+    backend: null,
+    availableBackends: [],
+  };
+}
+
 describe('CLI status visibility during completed install state', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -328,6 +368,9 @@ describe('CLI status visibility during completed install state', () => {
     storeState.openCodeRuntimeStatus = null;
     storeState.openCodeRuntimeStatusLoading = false;
     storeState.openCodeRuntimeError = null;
+    storeState.codexRuntimeStatus = null;
+    storeState.codexRuntimeStatusLoading = false;
+    storeState.codexRuntimeError = null;
     storeState.bootstrapCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliProviderStatus = vi.fn().mockResolvedValue(undefined);
@@ -336,6 +379,9 @@ describe('CLI status visibility during completed install state', () => {
     storeState.fetchOpenCodeRuntimeStatus = vi.fn().mockResolvedValue(undefined);
     storeState.installOpenCodeRuntime = vi.fn().mockResolvedValue(undefined);
     storeState.invalidateOpenCodeRuntimeStatus = vi.fn().mockResolvedValue(undefined);
+    storeState.fetchCodexRuntimeStatus = vi.fn().mockResolvedValue(undefined);
+    storeState.installCodexRuntime = vi.fn().mockResolvedValue(undefined);
+    storeState.invalidateCodexRuntimeStatus = vi.fn().mockResolvedValue(undefined);
     storeState.appConfig = {
       general: {
         multimodelEnabled: true,
@@ -358,7 +404,7 @@ describe('CLI status visibility during completed install state', () => {
     window.localStorage.clear();
   });
 
-  it('shows multimodel status without exposing the legacy runtime toggle', async () => {
+  it('does not expose the legacy runtime toggle or multimodel banner label', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -369,7 +415,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Multimodel');
+    expect(host.textContent).not.toContain('Multimodel');
     expect(host.textContent).toContain('Login');
 
     const toggle = host.querySelector('[data-testid="multimodel-toggle"]');
@@ -437,6 +483,192 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('keeps the dashboard terminal modal unmounted until login is requested', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = createInstalledCliStatus({
+      authLoggedIn: false,
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await flushLazyImports();
+    });
+
+    expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+
+    const loginButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Login'
+    );
+    expect(loginButton).not.toBeUndefined();
+
+    await act(async () => {
+      loginButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushLazyImports();
+    });
+
+    expect(host.querySelector('[data-testid="terminal-modal"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushLazyImports();
+    });
+  });
+
+  it('loads the installer terminal log only while installation is active', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'installing';
+    storeState.cliInstallerRawChunks = ['installing...\n'];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await flushLazyImports();
+    });
+
+    expect(host.textContent).toContain('terminal-log');
+
+    await act(async () => {
+      root.unmount();
+      await flushLazyImports();
+    });
+  });
+
+  it('shows deferred multimodel provider snapshots as pending instead of disconnected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      authStatusChecking: true,
+      providers: [
+        createDeferredMultimodelProvider('anthropic', 'Anthropic'),
+        createDeferredMultimodelProvider('codex', 'Codex'),
+        createDeferredMultimodelProvider('opencode', 'OpenCode'),
+      ],
+    });
+    storeState.cliProviderStatusLoading = {
+      anthropic: true,
+      codex: true,
+      opencode: true,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Checking providers...');
+    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).not.toContain('Providers: 0/3 connected');
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps connected provider details visible while a refresh is in flight', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      authStatusChecking: true,
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'oauth',
+          verificationState: 'verified',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-3-5-sonnet'],
+          modelAvailability: [],
+          canLoginFromUi: true,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          backend: null,
+        },
+        createCodexNativeRolloutProvider({
+          state: 'ready',
+          statusMessage: 'ChatGPT account ready',
+          models: ['gpt-5-codex'],
+        }),
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: [],
+          modelAvailability: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: null,
+          modelCatalogRefreshState: 'idle',
+          runtimeCapabilities: {
+            modelCatalog: {
+              dynamic: true,
+              source: 'runtime',
+            },
+          },
+        },
+      ],
+    });
+    storeState.cliProviderStatusLoading = {
+      codex: true,
+      opencode: true,
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Providers: 3/3 connected');
+    expect(host.textContent).toContain('ChatGPT account ready');
+    expect(host.textContent).toContain('Loading models...');
+    expect(host.textContent).not.toContain('Checking...');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows an OpenCode install action on the dashboard when the OpenCode CLI is missing', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -490,6 +722,69 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(storeState.installOpenCodeRuntime).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows a Codex install action on the dashboard when the Codex native runtime is missing', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.125.0',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      providers: [
+        createCodexNativeRolloutProvider({
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          state: 'runtime-missing',
+          available: false,
+          selectable: false,
+          statusMessage:
+            'Codex CLI not found. Install Codex to use native account management.',
+          detailMessage: 'Codex native runtime is missing.',
+          models: [],
+        }),
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Codex');
+    expect(host.textContent).toContain('Install');
+
+    const installButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Install'
+    );
+    expect(installButton).not.toBeUndefined();
+
+    await act(async () => {
+      installButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();
@@ -562,6 +857,66 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('does not show OpenCode retry install when the provider is effectively ready', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: false,
+      source: 'app-managed',
+      state: 'failed',
+      error: 'app-managed OpenCode install failed earlier',
+    };
+    storeState.openCodeRuntimeStatusLoading = false;
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: 'Ready',
+          models: ['opencode/big-pickle'],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: null,
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Connected via opencode managed');
+    expect(host.textContent).not.toContain('Retry install');
+    const retryButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Retry install'
+    );
+    expect(retryButton).toBeUndefined();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('always shows a provider-level Free models badge on the OpenCode dashboard card', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -615,10 +970,77 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('preserves dashboard runtime backend refresh errors for the manage dialog', async () => {
+  it('shows compact OpenCode configured-local and verified counts on the dashboard card', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
-    storeState.fetchCliProviderStatus = vi.fn(() => Promise.reject(new Error('refresh failed')));
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_configured_local',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-12T00:00:00.000Z',
+            staleAt: '2026-05-12T00:10:00.000Z',
+            defaultModelId: 'llama.cpp/qwen-test:0.5b',
+            defaultLaunchModel: 'llama.cpp/qwen-test:0.5b',
+            models: [
+              {
+                id: 'llama.cpp/qwen-test:0.5b',
+                launchModel: 'llama.cpp/qwen-test:0.5b',
+                displayName: 'qwen-test:0.5b',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: null,
+                metadata: {
+                  opencode: {
+                    providerId: 'llama.cpp',
+                    modelId: 'qwen-test:0.5b',
+                    sourceLabel: 'llama.cpp',
+                    accessKind: 'verified',
+                    routeKind: 'configured_local',
+                    proofState: 'verified',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        },
+      ],
+    });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -626,6 +1048,295 @@ describe('CLI status visibility during completed install state', () => {
 
     await act(async () => {
       root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Free models');
+    expect(host.textContent).toContain('1 configured local');
+    expect(host.textContent).toContain('1 verified');
+    expect(host.textContent).not.toContain('qwen-test:0.5b qwen-test:0.5b');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows OpenCode model loading instead of the summary-only big-pickle badge', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: ['opencode/big-pickle'],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: null,
+          modelCatalogRefreshState: 'idle',
+          runtimeCapabilities: {
+            modelCatalog: {
+              dynamic: true,
+              source: 'app-server',
+            },
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Loading models...');
+    expect(host.textContent).not.toContain('big-pickle');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows OpenCode catalog models on the dashboard when provider models are empty', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: 'Ready',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-12T00:00:00.000Z',
+            staleAt: '2026-05-12T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'opencode/big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+              },
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'openai/gpt-5.4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: null,
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('GPT-5.4');
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows OpenCode catalog models in settings when provider models are empty', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusMessage: 'Ready',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-12T00:00:00.000Z',
+            staleAt: '2026-05-12T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'opencode/big-pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+              },
+              {
+                id: 'openai/gpt-5.4',
+                launchModel: 'openai/gpt-5.4',
+                displayName: 'openai/gpt-5.4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: null,
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusSection));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).toContain('GPT-5.4');
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('preserves dashboard runtime backend refresh errors for the manage dialog', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.fetchCliProviderStatus = vi.fn(() => Promise.reject(new Error('refresh failed')));
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [createCodexNativeRolloutProvider()],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(providerRuntimeSettingsDialogProps).toBeNull();
+
+    const manageButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Manage'
+    );
+    expect(manageButton).not.toBeUndefined();
+
+    await act(async () => {
+      manageButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
       await Promise.resolve();
     });
 

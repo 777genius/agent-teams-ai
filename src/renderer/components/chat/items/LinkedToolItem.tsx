@@ -8,6 +8,7 @@
 
 import React, { memo, useRef } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -78,6 +79,7 @@ export const LinkedToolItem = memo(
     registerRef,
     titleText,
   }: LinkedToolItemProps): React.JSX.Element => {
+    const { t } = useAppTranslation('common');
     const status = getToolStatus(linkedTool);
     const { isLight } = useTheme();
     const summary = getToolSummary(linkedTool.name, linkedTool.input);
@@ -107,7 +109,7 @@ export const LinkedToolItem = memo(
     const isTeammateSpawned = linkedTool.result?.toolUseResult?.status === 'teammate_spawned';
     if (isTeammateSpawned) {
       const teamResult = linkedTool.result!.toolUseResult!;
-      const name = (teamResult.name as string) || 'teammate';
+      const name = (teamResult.name as string) || t('members.teammateFallback');
       const color = (teamResult.color as string) || '';
       const colors = getTeamColorSet(color);
       return (
@@ -120,7 +122,7 @@ export const LinkedToolItem = memo(
             {name}
           </span>
           <span className="text-xs" style={{ color: CARD_ICON_MUTED }}>
-            Teammate spawned
+            {t('chat.tools.teammateSpawned')}
           </span>
         </div>
       );
@@ -130,12 +132,12 @@ export const LinkedToolItem = memo(
     const isShutdownRequest =
       linkedTool.name === 'SendMessage' && linkedTool.input?.type === 'shutdown_request';
     if (isShutdownRequest) {
-      const target = (linkedTool.input?.recipient as string) || 'teammate';
+      const target = (linkedTool.input?.recipient as string) || t('members.teammateFallback');
       return (
         <div ref={handleRef} className="flex items-center gap-2 px-3 py-1.5">
           <span className="size-2 rounded-full bg-zinc-500" />
           <span className="text-xs" style={{ color: CARD_ICON_MUTED }}>
-            Shutdown requested &rarr;{' '}
+            {t('chat.tools.shutdownRequested')}{' '}
             <span className="font-medium text-text-secondary">{target}</span>
           </span>
         </div>
@@ -223,13 +225,13 @@ export const LinkedToolItem = memo(
               style={{ color: 'var(--tool-item-muted)' }}
             >
               <StatusDot status="orphaned" />
-              No result received
+              {t('chat.tools.noResultReceived')}
             </div>
           )}
 
           {/* Timing */}
           <div className="text-xs" style={{ color: 'var(--tool-item-muted)' }}>
-            Duration: {formatDuration(linkedTool.durationMs)}
+            {t('chat.tools.duration', { duration: formatDuration(linkedTool.durationMs) })}
           </div>
         </BaseItem>
       </div>

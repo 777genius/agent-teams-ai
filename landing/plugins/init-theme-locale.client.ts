@@ -4,11 +4,20 @@ export default defineNuxtPlugin({
   setup(nuxtApp) {
     const { initTheme } = useBrowserTheme();
     const { initLocale } = useLocation();
+    let initialized = false;
 
-    // Run after hydration to avoid SSR/CSR mismatches.
-    nuxtApp.hook("app:mounted", () => {
+    const initializeBrowserState = () => {
+      if (initialized) return;
+      initialized = true;
       initTheme();
       initLocale();
-    });
+    };
+
+    if (nuxtApp.isHydrating) {
+      nuxtApp.hooks.hookOnce("app:suspense:resolve", initializeBrowserState);
+      return;
+    }
+
+    nuxtApp.hook("app:mounted", initializeBrowserState);
   }
 });

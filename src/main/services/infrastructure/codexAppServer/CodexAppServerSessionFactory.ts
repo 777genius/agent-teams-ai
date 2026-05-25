@@ -114,7 +114,7 @@ export class CodexAppServerSessionFactory {
       {
         clientInfo: {
           name: 'agent-teams-ai',
-          title: 'Agent Teams UI',
+          title: 'Agent Teams AI',
           version: '0.1.0',
         },
         capabilities: {

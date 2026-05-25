@@ -5,6 +5,28 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as fs from 'fs/promises';
 
 import { TaskChangeComputer } from '../../../../src/main/services/team/TaskChangeComputer';
+import type { TaskChangeTaskMeta } from '../../../../src/main/services/team/taskChangeWorkerTypes';
+
+const NO_TASK_BOUNDARIES_WARNING =
+  'No task boundaries found - showing all changes from related sessions.';
+
+const noBoundaryTerminalCases: Array<{
+  name: string;
+  taskMeta: TaskChangeTaskMeta;
+}> = [
+  {
+    name: 'completed',
+    taskMeta: { status: 'completed', reviewState: 'none' },
+  },
+  {
+    name: 'review',
+    taskMeta: { status: 'completed', reviewState: 'review' },
+  },
+  {
+    name: 'approved',
+    taskMeta: { status: 'completed', reviewState: 'approved' },
+  },
+];
 
 async function writeJsonl(filePath: string, entries: object[]): Promise<void> {
   await fs.writeFile(
@@ -14,9 +36,14 @@ async function writeJsonl(filePath: string, entries: object[]): Promise<void> {
   );
 }
 
-function writeToolUse(toolUseId: string, filePath: string, content: string): object {
+function writeToolUse(
+  toolUseId: string,
+  filePath: string,
+  content: string,
+  timestamp = '2026-03-01T10:00:00.000Z'
+): object {
   return {
-    timestamp: '2026-03-01T10:00:00.000Z',
+    timestamp,
     type: 'assistant',
     message: {
       role: 'assistant',
@@ -32,6 +59,99 @@ function writeToolUse(toolUseId: string, filePath: string, content: string): obj
   };
 }
 
+function metadataOnlyEditToolUse(toolUseId: string, filePath: string): object {
+  return {
+    timestamp: '2026-03-01T10:00:00.000Z',
+    type: 'assistant',
+    message: {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          id: toolUseId,
+          name: 'Edit',
+          input: {
+            file_path: filePath,
+            changes: [{ path: filePath, kind: 'update' }],
+          },
+        },
+      ],
+    },
+  };
+}
+
+function metadataOnlyMultiFileEditToolUse(
+  toolUseId: string,
+  filePaths: string[],
+  primaryPath = filePaths[0] ?? ''
+): object {
+  return {
+    timestamp: '2026-03-01T10:00:00.000Z',
+    type: 'assistant',
+    message: {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          id: toolUseId,
+          name: 'Edit',
+          input: {
+            file_path: primaryPath,
+            changes: filePaths.map((filePath) => ({ path: filePath, kind: 'add' })),
+          },
+        },
+      ],
+    },
+  };
+}
+
+function createNoLogTaskChangeComputer(): TaskChangeComputer {
+  const logsFinder = {
+    findLogFileRefsForTask: () => Promise.resolve([]),
+  };
+  const boundaryParser = {
+    parseBoundaries: () =>
+      Promise.resolve({
+        boundaries: [],
+        scopes: [],
+        isSingleTaskSession: true,
+        detectedMechanism: 'none' as const,
+      }),
+  };
+  return new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+}
+
+function createNoBoundaryTaskChangeComputer(logPath: string): TaskChangeComputer {
+  const logsFinder = {
+    findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'team-lead' }]),
+  };
+  const boundaryParser = {
+    parseBoundaries: () =>
+      Promise.resolve({
+        boundaries: [],
+        scopes: [],
+        isSingleTaskSession: true,
+        detectedMechanism: 'none' as const,
+      }),
+  };
+  return new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+}
+
+async function writeNoBoundaryTaskMentionLog(tmpDir: string, content: string): Promise<string> {
+  const logPath = path.join(tmpDir, 'lead.jsonl');
+  await writeJsonl(logPath, [
+    {
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'user',
+      message: {
+        role: 'user',
+        content,
+      },
+    },
+  ]);
+  return logPath;
+}
+
 describe('TaskChangeComputer', () => {
   let tmpDir: string | null = null;
 
@@ -40,6 +160,188 @@ describe('TaskChangeComputer', () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
       tmpDir = null;
     }
+  });
+
+  it('keeps active tasks without logs quiet even when request status is stale', async () => {
+    const computer = createNoLogTaskChangeComputer();
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'in_progress',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps newly created pending tasks without logs quiet', async () => {
+    const computer = createNoLogTaskChangeComputer();
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'pending',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps pending tasks quiet when related logs exist but no file edits were captured yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = await writeNoBoundaryTaskMentionLog(
+      tmpDir,
+      'Task task-1 was created and is waiting to start.'
+    );
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'pending',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps in-progress related logs quiet when no boundaries or file edits were captured yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = await writeNoBoundaryTaskMentionLog(
+      tmpDir,
+      'Task task-1 is in progress and has not edited files yet.'
+    );
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'in_progress',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('keeps reopened needs-fix related logs quiet when no boundaries or file edits were captured', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = await writeNoBoundaryTaskMentionLog(
+      tmpDir,
+      'Task task-1 was reopened for fixes and is waiting for edits.'
+    );
+
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'completed',
+        reviewState: 'needsFix',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it.each(noBoundaryTerminalCases)(
+    'warns when $name related logs have no task boundaries or file edits',
+    async ({ taskMeta }) => {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+      const logPath = await writeNoBoundaryTaskMentionLog(
+        tmpDir,
+        'Task task-1 completed but no edit data was captured.'
+      );
+
+      const computer = createNoBoundaryTaskChangeComputer(logPath);
+
+      const result = await computer.computeTaskChanges({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskMeta,
+        effectiveOptions: { status: 'in_progress' },
+        projectPath: '/repo',
+        includeDetails: false,
+      });
+
+      expect(result.files).toEqual([]);
+      expect(result.confidence).toBe('fallback');
+      expect(result.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
+    }
+  );
+
+  it('warns when completed tasks have no logs even when request status is stale', async () => {
+    const computer = createNoLogTaskChangeComputer();
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'completed',
+        reviewState: 'none',
+      },
+      effectiveOptions: { status: 'in_progress' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual(['No log files found for this task.']);
+  });
+
+  it('keeps reopened needs-fix tasks quiet even when their base status is completed', async () => {
+    const computer = createNoLogTaskChangeComputer();
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: {
+        status: 'completed',
+        reviewState: 'needsFix',
+      },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.confidence).toBe('fallback');
+    expect(result.warnings).toEqual([]);
   });
 
   it('shares concurrent JSONL parsing and invalidates when the file changes', async () => {
@@ -75,7 +377,9 @@ describe('TaskChangeComputer', () => {
     ]);
 
     expect(first.files.map((file) => file.relativePath)).toEqual(['src/a.ts']);
+    expect(first.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
     expect(second.files).toEqual(first.files);
+    expect(second.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     await writeJsonl(logPath, [
@@ -89,5 +393,362 @@ describe('TaskChangeComputer', () => {
         .map((file) => file.relativePath)
         .sort((left, right) => left.localeCompare(right))
     ).toEqual(['src/a.ts', 'src/b.ts']);
+    expect(afterChange.warnings).toEqual([NO_TASK_BOUNDARIES_WARNING]);
+  });
+
+  it('does not pull unrelated log changes into a precise task scope with no file edits', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const leadLogPath = path.join(tmpDir, 'lead.jsonl');
+    const memberLogPath = path.join(tmpDir, 'alice.jsonl');
+    await writeJsonl(leadLogPath, [
+      writeToolUse('lead-write', '/repo/src/unrelated.ts', 'export const unrelated = true;\n'),
+    ]);
+    await writeJsonl(memberLogPath, []);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () =>
+        Promise.resolve([
+          { filePath: leadLogPath, memberName: 'team-lead' },
+          { filePath: memberLogPath, memberName: 'alice' },
+        ]),
+    };
+    const boundaryParser = {
+      parseBoundaries: (filePath: string) =>
+        Promise.resolve(
+          filePath === memberLogPath
+            ? {
+                boundaries: [],
+                scopes: [
+                  {
+                    taskId: 'task-1',
+                    memberName: '',
+                    startLine: 1,
+                    endLine: 1,
+                    startTimestamp: '2026-03-01T10:00:00.000Z',
+                    endTimestamp: '2026-03-01T10:01:00.000Z',
+                    toolUseIds: [],
+                    filePaths: [],
+                    confidence: { tier: 1, label: 'high', reason: 'Both markers found' },
+                  },
+                ],
+                isSingleTaskSession: true,
+                detectedMechanism: 'mcp' as const,
+              }
+            : {
+                boundaries: [],
+                scopes: [],
+                isSingleTaskSession: true,
+                detectedMechanism: 'none' as const,
+              }
+        ),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.totalFiles).toBe(0);
+    expect(result.confidence).toBe('high');
+  });
+
+  it('prefers persisted workIntervals over low-confidence complete-only scopes', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'alice.jsonl');
+    await writeJsonl(logPath, [
+      writeToolUse(
+        'outside-tool',
+        '/repo/src/outside.ts',
+        'export const outside = true;\n',
+        '2026-03-01T09:55:00.000Z'
+      ),
+      writeToolUse(
+        'inside-tool',
+        '/repo/src/inside.ts',
+        'export const inside = true;\n',
+        '2026-03-01T10:05:00.000Z'
+      ),
+    ]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'alice' }]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [
+            {
+              taskId: 'task-1',
+              memberName: '',
+              startLine: 1,
+              endLine: 2,
+              startTimestamp: '',
+              endTimestamp: '2026-03-01T10:06:00.000Z',
+              toolUseIds: ['outside-tool', 'inside-tool'],
+              filePaths: ['/repo/src/outside.ts', '/repo/src/inside.ts'],
+              confidence: {
+                tier: 3,
+                label: 'low',
+                reason: 'Only complete marker found, start assumed at file beginning',
+              },
+            },
+          ],
+          isSingleTaskSession: true,
+          detectedMechanism: 'mcp' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: { owner: 'alice', status: 'completed' },
+      effectiveOptions: {
+        intervals: [
+          {
+            startedAt: '2026-03-01T10:00:00.000Z',
+            completedAt: '2026-03-01T10:10:00.000Z',
+          },
+        ],
+      },
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.confidence).toBe('medium');
+    expect(result.warnings).toEqual([
+      'Task start boundary missing - scoped by persisted workIntervals timestamps.',
+    ]);
+    expect(result.files.map((file) => file.relativePath)).toEqual(['src/inside.ts']);
+    expect(result.scope.toolUseIds).toEqual(['inside-tool']);
+  });
+
+  it('does not pull lead-session interval edits into a member complete-only scope', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const leadLogPath = path.join(tmpDir, 'lead.jsonl');
+    const memberLogPath = path.join(tmpDir, 'alice.jsonl');
+    await writeJsonl(leadLogPath, [
+      writeToolUse(
+        'lead-inside-tool',
+        '/repo/src/lead.ts',
+        'export const lead = true;\n',
+        '2026-03-01T10:05:00.000Z'
+      ),
+    ]);
+    await writeJsonl(memberLogPath, [
+      writeToolUse(
+        'member-inside-tool',
+        '/repo/src/member.ts',
+        'export const member = true;\n',
+        '2026-03-01T10:06:00.000Z'
+      ),
+    ]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () =>
+        Promise.resolve([
+          { filePath: leadLogPath, memberName: 'team-lead' },
+          { filePath: memberLogPath, memberName: 'alice' },
+        ]),
+    };
+    const boundaryParser = {
+      parseBoundaries: (filePath: string) =>
+        Promise.resolve(
+          filePath === memberLogPath
+            ? {
+                boundaries: [],
+                scopes: [
+                  {
+                    taskId: 'task-1',
+                    memberName: '',
+                    startLine: 1,
+                    endLine: 1,
+                    startTimestamp: '',
+                    endTimestamp: '2026-03-01T10:07:00.000Z',
+                    toolUseIds: ['member-inside-tool'],
+                    filePaths: ['/repo/src/member.ts'],
+                    confidence: {
+                      tier: 3,
+                      label: 'low',
+                      reason: 'Only complete marker found, start assumed at file beginning',
+                    },
+                  },
+                ],
+                isSingleTaskSession: true,
+                detectedMechanism: 'mcp' as const,
+              }
+            : {
+                boundaries: [],
+                scopes: [],
+                isSingleTaskSession: true,
+                detectedMechanism: 'none' as const,
+              }
+        ),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: { owner: 'alice', status: 'completed' },
+      effectiveOptions: {
+        intervals: [
+          {
+            startedAt: '2026-03-01T10:00:00.000Z',
+            completedAt: '2026-03-01T10:10:00.000Z',
+          },
+        ],
+      },
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files.map((file) => file.relativePath)).toEqual(['src/member.ts']);
+    expect(result.scope.toolUseIds).toEqual(['member-inside-tool']);
+  });
+
+  it('keeps metadata-only synthetic Edit entries as file-change hints', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'agent.jsonl');
+    await writeJsonl(logPath, [metadataOnlyEditToolUse('tool-1', '/repo/src/a.ts')]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'alice' }]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files.map((file) => file.relativePath)).toEqual(['src/a.ts']);
+    expect(result.files[0]?.snippets).toHaveLength(1);
+    expect(result.files[0]?.snippets[0]?.oldString).toBe('');
+    expect(result.files[0]?.snippets[0]?.newString).toBe('');
+    expect(result.totalFiles).toBe(1);
+  });
+
+  it('expands metadata-only Edit changes arrays into all changed file hints', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'agent.jsonl');
+    await writeJsonl(logPath, [
+      metadataOnlyMultiFileEditToolUse('tool-1', ['/repo/dfdf/calc.js', '/repo/dfdf/style.css']),
+    ]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'tom' }]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [
+            {
+              taskId: 'task-1',
+              memberName: '',
+              startLine: 1,
+              endLine: 1,
+              startTimestamp: '2026-03-01T10:00:00.000Z',
+              endTimestamp: '2026-03-01T10:01:00.000Z',
+              toolUseIds: ['tool-1'],
+              filePaths: ['/repo/dfdf/calc.js', '/repo/dfdf/style.css'],
+              confidence: { tier: 1, label: 'high', reason: 'Both markers found' },
+            },
+          ],
+          isSingleTaskSession: true,
+          detectedMechanism: 'mcp' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files.map((file) => file.relativePath)).toEqual([
+      'dfdf/calc.js',
+      'dfdf/style.css',
+    ]);
+    expect(result.files.every((file) => file.snippets[0]?.toolUseId === 'tool-1')).toBe(true);
+    expect(result.files.every((file) => file.linesAdded === 0 && file.linesRemoved === 0)).toBe(
+      true
+    );
+  });
+
+  it('does not include repeated tool ids from outside the scoped source lines', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'agent.jsonl');
+    await writeJsonl(logPath, [
+      metadataOnlyMultiFileEditToolUse('tool-1', ['/repo/index.html', '/repo/style.css']),
+      metadataOnlyMultiFileEditToolUse(
+        'tool-1',
+        ['/repo/177/landing.css'],
+        '/repo/177/landing.css'
+      ),
+    ]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'tom' }]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [
+            {
+              taskId: 'task-1',
+              memberName: '',
+              startLine: 2,
+              endLine: 2,
+              startTimestamp: '2026-03-01T09:59:00.000Z',
+              endTimestamp: '2026-03-01T10:01:00.000Z',
+              toolUseIds: ['tool-1'],
+              filePaths: ['/repo/177/landing.css'],
+              confidence: { tier: 1, label: 'high', reason: 'Both markers found' },
+            },
+          ],
+          isSingleTaskSession: true,
+          detectedMechanism: 'mcp' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files.map((file) => file.relativePath)).toEqual(['177/landing.css']);
+    expect(result.scope.filePaths).toEqual(['/repo/177/landing.css']);
   });
 });

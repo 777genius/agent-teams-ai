@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { AlertTriangle, CheckCircle, FileCheck, XCircle } from 'lucide-react';
@@ -41,6 +42,7 @@ export const LastOutputDisplay = ({
   isLastGroup = false,
   isSessionOngoing = false,
 }: Readonly<LastOutputDisplayProps>): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   // Only re-render if THIS AI group has search matches
   const { searchQuery, searchMatches, currentSearchIndex } = useStore(
     useShallow((s) => {
@@ -152,7 +154,7 @@ export const LastOutputDisplay = ({
               className="text-xs font-medium"
               style={{ color: 'var(--tool-result-error-text)' }}
             >
-              Error
+              {t('states.error')}
             </span>
           )}
         </div>
@@ -185,7 +187,7 @@ export const LastOutputDisplay = ({
           style={{ color: 'var(--warning-text, #f59e0b)' }}
         />
         <span className="text-sm" style={{ color: 'var(--warning-text, #f59e0b)' }}>
-          Request interrupted by user
+          {t('chat.lastOutput.requestInterrupted')}
         </span>
       </div>
     );
@@ -234,7 +236,7 @@ export const LastOutputDisplay = ({
             <div className="flex items-center gap-2">
               <FileCheck className="size-4" style={{ color: 'var(--plan-exit-text)' }} />
               <span className="text-sm font-medium" style={{ color: 'var(--plan-exit-text)' }}>
-                Plan Ready for Approval
+                {t('chat.lastOutput.planReadyForApproval')}
               </span>
             </div>
             <CopyButton text={planContent} inline />

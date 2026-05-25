@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -56,12 +57,7 @@ interface PluginsPanelProps {
   cliStatusLoading?: boolean;
 }
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: 'popularity:desc', label: 'Popular' },
-  { value: 'name:asc', label: 'Name A-Z' },
-  { value: 'name:desc', label: 'Name Z-A' },
-  { value: 'category:asc', label: 'Category' },
-];
+const SORT_OPTIONS = ['popularity:desc', 'name:asc', 'name:desc', 'category:asc'] as const;
 
 /** Pure function: filter + sort the catalog */
 function selectFilteredPlugins(
@@ -134,6 +130,7 @@ export const PluginsPanel = ({
   cliStatus: cliStatusOverride,
   cliStatusLoading,
 }: PluginsPanelProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const {
     catalog,
     loading,
@@ -191,6 +188,20 @@ export const PluginsPanel = ({
     }
     return counts.size;
   }, [catalog]);
+
+  const getSortLabel = (value: (typeof SORT_OPTIONS)[number]): string => {
+    switch (value) {
+      case 'popularity:desc':
+        return t('pluginsPanel.sort.popular');
+      case 'name:asc':
+        return t('pluginsPanel.sort.nameAsc');
+      case 'name:desc':
+        return t('pluginsPanel.sort.nameDesc');
+      case 'category:asc':
+        return t('pluginsPanel.sort.category');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {cliStatus?.flavor === 'agent_teams_orchestrator' &&
@@ -206,10 +217,7 @@ export const PluginsPanel = ({
 
           return (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-300">
-              In the multimodel runtime, plugins are currently guaranteed only for Anthropic
-              sessions. We are actively building broader plugin support for all agents, including
-              both universal plugins and agent-specific plugins.
-              {capability.reason ? ` ${capability.reason}` : ''}
+              {t('pluginsPanel.providerSupportNotice')}
             </div>
           );
         })()}
@@ -219,7 +227,7 @@ export const PluginsPanel = ({
           <SearchInput
             value={pluginFilters.search}
             onChange={updatePluginSearch}
-            placeholder="Search plugins..."
+            placeholder={t('pluginsPanel.searchPlaceholder')}
           />
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -235,9 +243,9 @@ export const PluginsPanel = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SORT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+              {SORT_OPTIONS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {getSortLabel(value)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -251,7 +259,7 @@ export const PluginsPanel = ({
               checked={pluginFilters.installedOnly}
               onCheckedChange={toggleInstalledOnly}
             />
-            Installed only
+            {t('pluginsPanel.installedOnly')}
           </Label>
         </div>
       </div>
@@ -267,25 +275,25 @@ export const PluginsPanel = ({
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-sm font-semibold text-text">Browse by fit</h2>
+                    <h2 className="text-sm font-semibold text-text">
+                      {t('pluginsPanel.browseByFit')}
+                    </h2>
                     <Badge variant="outline" className="text-[11px] text-text-muted">
-                      {activeFilterCount} active
+                      {t('pluginsPanel.activeFilters', { count: activeFilterCount })}
                     </Badge>
                   </div>
-                  <p className="text-xs text-text-muted">
-                    Narrow the catalog by category, capability, or installed state.
-                  </p>
+                  <p className="text-xs text-text-muted">{t('pluginsPanel.filterDescription')}</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] text-text-muted">
                 <Badge variant="secondary" className="font-normal">
-                  {catalog.length} plugins
+                  {t('pluginsPanel.counts.plugins', { count: catalog.length })}
                 </Badge>
                 <Badge variant="secondary" className="font-normal">
-                  {totalCategoryCount} categories
+                  {t('pluginsPanel.counts.categories', { count: totalCategoryCount })}
                 </Badge>
                 <Badge variant="secondary" className="font-normal">
-                  {totalCapabilityCount} capabilities
+                  {t('pluginsPanel.counts.capabilities', { count: totalCapabilityCount })}
                 </Badge>
               </div>
             </div>
@@ -296,7 +304,7 @@ export const PluginsPanel = ({
                 onClick={clearFilters}
                 className="justify-start rounded-lg border border-border px-3 text-xs text-text-secondary hover:text-text lg:justify-center"
               >
-                Clear all filters
+                {t('pluginsPanel.clearAllFilters')}
               </Button>
             )}
           </div>
@@ -306,10 +314,12 @@ export const PluginsPanel = ({
               <section className="space-y-3 p-3 xl:border-r xl:border-border">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
-                    Categories
+                    {t('pluginsPanel.categories')}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {pluginFilters.categories.length} selected
+                    {t('pluginsPanel.selectedCount', {
+                      count: pluginFilters.categories.length,
+                    })}
                   </span>
                 </div>
                 <CategoryChips
@@ -322,10 +332,12 @@ export const PluginsPanel = ({
               <section className="space-y-3 border-t border-border p-3 xl:border-t-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
-                    Capabilities
+                    {t('pluginsPanel.capabilities')}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {pluginFilters.capabilities.length} selected
+                    {t('pluginsPanel.selectedCount', {
+                      count: pluginFilters.capabilities.length,
+                    })}
                   </span>
                 </div>
                 <CapabilityChips
@@ -343,12 +355,10 @@ export const PluginsPanel = ({
       {!loading && !error && filtered.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-text-muted">
-            Showing {filtered.length} of {catalog.length} plugin{catalog.length !== 1 ? 's' : ''}
+            {t('pluginsPanel.showing', { shown: filtered.length, total: catalog.length })}
           </p>
           {hasActiveFilters && (
-            <p className="text-xs text-text-muted">
-              Results update instantly as you refine filters.
-            </p>
+            <p className="text-xs text-text-muted">{t('pluginsPanel.resultsUpdateInstantly')}</p>
           )}
         </div>
       )}
@@ -399,16 +409,18 @@ export const PluginsPanel = ({
             )}
           </div>
           <p className="text-sm text-text-secondary">
-            {hasActiveFilters ? 'No plugins match your filters' : 'No plugins available'}
+            {hasActiveFilters
+              ? t('pluginsPanel.empty.filteredTitle')
+              : t('pluginsPanel.empty.title')}
           </p>
           <p className="text-xs text-text-muted">
             {hasActiveFilters
-              ? 'Try adjusting your search or filter criteria'
-              : 'Check back later for new plugins'}
+              ? t('pluginsPanel.empty.filteredDescription')
+              : t('pluginsPanel.empty.description')}
           </p>
           {hasActiveFilters && (
             <Button variant="outline" size="sm" onClick={clearFilters}>
-              Clear filters
+              {t('pluginsPanel.clearFilters')}
             </Button>
           )}
         </div>

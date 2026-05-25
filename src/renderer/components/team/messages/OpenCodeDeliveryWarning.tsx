@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   formatOpenCodeRuntimeDeliveryDebugDetails,
   type OpenCodeRuntimeDeliveryDebugDetails,
@@ -19,6 +20,7 @@ export const OpenCodeDeliveryWarning = ({
   debugDetails,
   pendingDelayMs = 10_000,
 }: OpenCodeDeliveryWarningProps): JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const detailsKey = `${warning ?? ''}:${debugDetails?.messageId ?? ''}:${debugDetails?.statusMessageId ?? ''}:${debugDetails?.userVisibleState ?? ''}`;
   const delayPendingWarning =
     debugDetails?.userVisibleState === 'checking' ||
@@ -112,46 +114,80 @@ export const OpenCodeDeliveryWarning = ({
               setExpandedKey((currentKey) => (currentKey === detailsKey ? null : detailsKey))
             }
           >
-            Details
+            {t('messages.delivery.details')}
           </button>
         ) : null}
       </span>
       {expanded && debugDetails ? (
         <span className="z-10 block max-w-[min(34rem,calc(100vw-3rem))] rounded border border-amber-500/20 bg-[var(--color-bg-primary)] p-2 text-left text-[10px] text-[var(--color-text-secondary)] shadow-xl">
           <span className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
-            <span className="text-[var(--color-text-muted)]">messageId</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.messageId')}
+            </span>
             <span className="break-all">{debugDetails.messageId}</span>
-            <span className="text-[var(--color-text-muted)]">statusMessageId</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.statusMessageId')}
+            </span>
             <span className="break-all">{debugDetails.statusMessageId}</span>
-            <span className="text-[var(--color-text-muted)]">providerId</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.providerId')}
+            </span>
             <span>{debugDetails.providerId}</span>
-            <span className="text-[var(--color-text-muted)]">delivered</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.delivered')}
+            </span>
             <span>{String(debugDetails.delivered)}</span>
-            <span className="text-[var(--color-text-muted)]">responsePending</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.responsePending')}
+            </span>
             <span>{String(debugDetails.responsePending)}</span>
-            <span className="text-[var(--color-text-muted)]">responseState</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.responseState')}
+            </span>
             <span>{debugDetails.responseState ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">ledgerStatus</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.ledgerStatus')}
+            </span>
             <span>{debugDetails.ledgerStatus ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">visibleReplyMessageId</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.visibleReplyMessageId')}
+            </span>
             <span className="break-all">{debugDetails.visibleReplyMessageId ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">visibleReplyCorrelation</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.visibleReplyCorrelation')}
+            </span>
             <span>{debugDetails.visibleReplyCorrelation ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">queuedBehindMessageId</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.queuedBehindMessageId')}
+            </span>
             <span className="break-all">{debugDetails.queuedBehindMessageId ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">acceptanceUnknown</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.acceptanceUnknown')}
+            </span>
             <span>{String(debugDetails.acceptanceUnknown)}</span>
-            <span className="text-[var(--color-text-muted)]">userVisibleState</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.userVisibleState')}
+            </span>
             <span>{debugDetails.userVisibleState ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">userVisibleReasonCode</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.userVisibleReasonCode')}
+            </span>
             <span>{debugDetails.userVisibleReasonCode ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">userVisibleNextReviewAt</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.userVisibleNextReviewAt')}
+            </span>
             <span>{debugDetails.userVisibleNextReviewAt ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">userVisibleMessage</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.userVisibleMessage')}
+            </span>
             <span>{debugDetails.userVisibleMessage ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">reason</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.reason')}
+            </span>
             <span>{debugDetails.reason ?? 'null'}</span>
-            <span className="text-[var(--color-text-muted)]">diagnostics</span>
+            <span className="text-[var(--color-text-muted)]">
+              {t('messages.delivery.fields.diagnostics')}
+            </span>
             <span>
               {debugDetails.diagnostics.length ? debugDetails.diagnostics.join('; ') : '[]'}
             </span>
@@ -161,7 +197,7 @@ export const OpenCodeDeliveryWarning = ({
             className="mt-2 rounded border border-amber-500/20 px-2 py-1 text-[10px] text-amber-200 hover:border-amber-400/40 hover:text-amber-100"
             onClick={() => void handleCopy()}
           >
-            {copied ? 'Copied' : 'Copy debug details'}
+            {copied ? t('messages.delivery.copied') : t('messages.delivery.copyDebugDetails')}
           </button>
         </span>
       ) : null}

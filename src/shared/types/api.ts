@@ -84,6 +84,7 @@ import type {
   TeamLaunchResponse,
   TeamMemberActivityMeta,
   TeamMessageNotificationData,
+  TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
@@ -494,7 +495,8 @@ export interface TeamsAPI {
     providerIds?: TeamLaunchRequest['providerId'][],
     selectedModels?: string[],
     limitContext?: boolean,
-    modelVerificationMode?: TeamProvisioningModelVerificationMode
+    modelVerificationMode?: TeamProvisioningModelVerificationMode,
+    selectedModelChecks?: TeamProvisioningModelCheckRequest[]
   ) => Promise<TeamProvisioningPrepareResult>;
   getWorktreeGitStatus: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
@@ -576,6 +578,7 @@ export interface TeamsAPI {
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
+  restoreMember: (teamName: string, memberName: string) => Promise<void>;
   updateMemberRole: (
     teamName: string,
     memberName: string,
@@ -791,6 +794,27 @@ export interface ReviewAPI {
 }
 
 // =============================================================================
+// Telemetry API
+// =============================================================================
+
+export interface SentryTelemetryContext {
+  userId: string;
+  tags: Record<string, string>;
+}
+
+export interface TelemetryAPI {
+  getSentryContext: () => Promise<SentryTelemetryContext | null>;
+}
+
+export interface WindowsElevationStatus {
+  platform: string;
+  isWindows: boolean;
+  isAdministrator: boolean | null;
+  checkFailed: boolean;
+  error: string | null;
+}
+
+// =============================================================================
 // Main Electron API
 // =============================================================================
 
@@ -799,7 +823,9 @@ export interface ReviewAPI {
  */
 export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElectronApi {
   startup?: AppStartupAPI;
+  telemetry: TelemetryAPI;
   getAppVersion: () => Promise<string>;
+  getWindowsElevationStatus: () => Promise<WindowsElevationStatus>;
   getProjects: () => Promise<Project[]>;
   getSessions: (projectId: string) => Promise<Session[]>;
   getSessionsPaginated: (

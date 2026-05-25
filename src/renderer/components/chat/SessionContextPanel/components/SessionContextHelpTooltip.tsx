@@ -5,9 +5,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { HelpCircle } from 'lucide-react';
 
 export const SessionContextHelpTooltip = (): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const [arrowStyle, setArrowStyle] = useState<React.CSSProperties>({});
@@ -119,41 +121,37 @@ export const SessionContextHelpTooltip = (): React.ReactElement => {
               {/* Metric definitions */}
               <div>
                 <div className="mb-1 font-semibold" style={{ color: 'var(--color-text)' }}>
-                  Context Used
+                  {t('sessionContext.help.contextUsed.title')}
                 </div>
                 <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  Prompt input plus output tokens currently occupying the model&apos;s context
-                  window.
+                  {t('sessionContext.help.contextUsed.description')}
                 </p>
               </div>
 
               <div className="pt-2" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
                 <div className="mb-1 font-semibold" style={{ color: 'var(--color-text)' }}>
-                  Prompt Input
+                  {t('sessionContext.help.promptInput.title')}
                 </div>
                 <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  Tokens sent to the model before generation. For Claude this includes `input_tokens
-                  + cache_creation_input_tokens + cache_read_input_tokens`.
+                  {t('sessionContext.help.promptInput.description')}
                 </p>
               </div>
 
               <div className="pt-2" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
                 <div className="mb-1 font-semibold" style={{ color: 'var(--color-text)' }}>
-                  Visible Context
+                  {t('sessionContext.help.visibleContext.title')}
                 </div>
                 <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  The inspectable subset of prompt input: files, CLAUDE.md, tool outputs, user
-                  messages, and similar injections that you can optimize directly.
+                  {t('sessionContext.help.visibleContext.description')}
                 </p>
               </div>
 
               <div className="pt-2" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
                 <div className="mb-1 font-semibold" style={{ color: 'var(--color-text)' }}>
-                  Availability
+                  {t('sessionContext.help.availability.title')}
                 </div>
                 <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  If a provider runtime does not expose prompt-side usage yet, the panel shows
-                  metrics as unavailable instead of pretending they are zero.
+                  {t('sessionContext.help.availability.description')}
                 </p>
               </div>
             </div>

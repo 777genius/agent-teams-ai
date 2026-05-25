@@ -4,6 +4,7 @@ import {
   resolveAnthropicFastMode,
   resolveAnthropicRuntimeSelection,
 } from '@features/anthropic-runtime-profile/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Label } from '@renderer/components/ui/label';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
@@ -28,6 +29,7 @@ export const AnthropicFastModeSelector: React.FC<AnthropicFastModeSelectorProps>
   limitContext,
   id,
 }) => {
+  const { t } = useAppTranslation('team');
   const { providerStatus } = useEffectiveCliProviderStatus('anthropic');
 
   const selection = useMemo(
@@ -57,25 +59,34 @@ export const AnthropicFastModeSelector: React.FC<AnthropicFastModeSelectorProps>
     return null;
   }
 
-  const defaultLabel = providerFastModeDefault ? 'Default (Fast)' : 'Default (Off)';
+  const defaultLabel = providerFastModeDefault
+    ? t('modelSelector.fastMode.defaultFast')
+    : t('modelSelector.fastMode.defaultOff');
   const helperText =
     value === 'inherit'
-      ? `Default currently resolves to ${resolution.resolvedFastMode ? 'Fast' : 'Off'}.`
-      : (resolution.disabledReason ??
-        'Fast mode is runtime-backed and only unlocks when the resolved Anthropic launch model supports it.');
+      ? t('modelSelector.fastMode.defaultResolvesTo', {
+          mode: resolution.resolvedFastMode
+            ? t('modelSelector.fastMode.fast')
+            : t('modelSelector.fastMode.off'),
+        })
+      : (resolution.disabledReason ?? t('modelSelector.fastMode.runtimeBackedHint'));
 
   return (
     <div className="mb-3">
       <Label htmlFor={id} className="label-optional mb-1.5 block">
-        Fast mode (optional)
+        {t('modelSelector.fastMode.optionalLabel')}
       </Label>
       <div className="flex items-center gap-2">
         <Zap size={16} className="shrink-0 text-[var(--color-text-muted)]" />
         <div className="inline-flex flex-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
           {[
             { value: 'inherit' as const, label: defaultLabel, disabled: false },
-            { value: 'on' as const, label: 'Fast', disabled: !resolution.selectable },
-            { value: 'off' as const, label: 'Off', disabled: false },
+            {
+              value: 'on' as const,
+              label: t('modelSelector.fastMode.fast'),
+              disabled: !resolution.selectable,
+            },
+            { value: 'off' as const, label: t('modelSelector.fastMode.off'), disabled: false },
           ].map((option) => (
             <button
               key={option.value}

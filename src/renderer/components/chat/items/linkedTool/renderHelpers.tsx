@@ -15,10 +15,25 @@ import {
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
 import { getAgentToolDisplayDetails } from '@shared/utils/toolSummary';
 
+export interface RenderInputLabels {
+  replaceAll: string;
+  agentAction: string;
+  agentTeammate: string;
+  agentTeam: string;
+  agentRuntime: string;
+  agentType: string;
+  startupInstructionsHidden: string;
+  noInputRecorded: string;
+}
+
 /**
  * Renders the input section based on tool type with theme-aware styling.
  */
-export function renderInput(toolName: string, input: Record<string, unknown>): React.ReactElement {
+export function renderInput(
+  toolName: string,
+  input: Record<string, unknown>,
+  labels: RenderInputLabels
+): React.ReactElement {
   const normalizedToolName = toolName.toLowerCase();
   // Special rendering for Edit tool - show diff-like format
   if (normalizedToolName === 'edit') {
@@ -34,7 +49,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
             {filePath}
             {replaceAll && (
               <span className="ml-2" style={{ color: COLOR_TEXT_MUTED }}>
-                (replace all)
+                {labels.replaceAll}
               </span>
             )}
           </div>
@@ -110,7 +125,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
         <div className="space-y-2">
           <div>
             <div className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-              action
+              {labels.agentAction}
             </div>
             <div className="whitespace-pre-wrap break-all">{details.action}</div>
           </div>
@@ -118,7 +133,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
           {details.teammateName && (
             <div>
               <div className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-                teammate
+                {labels.agentTeammate}
               </div>
               <div>{details.teammateName}</div>
             </div>
@@ -127,7 +142,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
           {details.teamName && (
             <div>
               <div className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-                team
+                {labels.agentTeam}
               </div>
               <div>{details.teamName}</div>
             </div>
@@ -136,7 +151,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
           {details.runtime && (
             <div>
               <div className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-                runtime
+                {labels.agentRuntime}
               </div>
               <div>{details.runtime}</div>
             </div>
@@ -145,7 +160,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
           {details.subagentType && (
             <div>
               <div className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-                type
+                {labels.agentType}
               </div>
               <div>{details.subagentType}</div>
             </div>
@@ -160,7 +175,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
             color: COLOR_TEXT_MUTED,
           }}
         >
-          Startup instructions are hidden in the UI.
+          {labels.startupInstructionsHidden}
         </div>
       </div>
     );
@@ -180,7 +195,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
         ))
       ) : (
         <div className="italic" style={{ color: COLOR_TEXT_MUTED }}>
-          No input recorded for this tool call.
+          {labels.noInputRecorded}
         </div>
       )}
     </div>

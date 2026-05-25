@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Check, Copy } from 'lucide-react';
 
 interface CodexLoginLinkCopyButtonProps {
@@ -15,6 +16,7 @@ export const CodexLoginLinkCopyButton = ({
   disabled = false,
   size = 'sm',
 }: CodexLoginLinkCopyButtonProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export const CodexLoginLinkCopyButton = ({
       return;
     }
 
-    const text = userCode ? `${authUrl}\nCode: ${userCode}` : authUrl;
+    const text = userCode ? `${authUrl}\n${t('code.code')}: ${userCode}` : authUrl;
     void navigator.clipboard.writeText(text).then(
       () => setCopyState('copied'),
       () => setCopyState('failed')
@@ -50,16 +52,16 @@ export const CodexLoginLinkCopyButton = ({
         borderColor: 'rgba(245, 158, 11, 0.28)',
         backgroundColor: 'rgba(245, 158, 11, 0.08)',
       }}
-      title={userCode ? 'Copy ChatGPT login link and code' : 'Copy ChatGPT login link'}
+      title={userCode ? t('codexLogin.copyLoginLinkAndCode') : t('codexLogin.copyLoginLink')}
     >
       {copyState === 'copied' ? <Check className="size-3" /> : <Copy className="size-3" />}
       {copyState === 'copied'
-        ? 'Copied'
+        ? t('actions.copied')
         : copyState === 'failed'
-          ? 'Copy failed'
+          ? t('codexLogin.copyFailed')
           : userCode
-            ? 'Copy link + code'
-            : 'Copy link'}
+            ? t('codexLogin.copyLinkAndCode')
+            : t('codexLogin.copyLink')}
     </button>
   );
 };
@@ -69,6 +71,7 @@ export const CodexLoginUserCodeBadge = ({
 }: {
   userCode?: string | null;
 }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   if (!userCode) {
     return null;
   }
@@ -81,9 +84,9 @@ export const CodexLoginUserCodeBadge = ({
         backgroundColor: 'rgba(245, 158, 11, 0.06)',
         color: '#fbbf24',
       }}
-      title="Enter this code on the ChatGPT login page"
+      title={t('codexLogin.enterCodeOnLoginPage')}
     >
-      Code <span className="font-mono tracking-wide text-amber-100">{userCode}</span>
+      {t('code.code')} <span className="font-mono tracking-wide text-amber-100">{userCode}</span>
     </span>
   );
 };

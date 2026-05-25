@@ -1,11 +1,8 @@
-import robotAmber from "~/assets/images/hero/robots/robot-amber-v1.webp";
-import robotCyan from "~/assets/images/hero/robots/robot-cyan-v1.webp";
-import robotMagenta from "~/assets/images/hero/robots/robot-magenta-v1.webp";
-
-export const HERO_SCENE_VIEWBOX = {
-  width: 1600,
-  height: 900,
-} as const;
+import robotAvatarCyan from "~/assets/images/hero/robots/robot-avatar-cyan-cat-v1.webp";
+import robotAvatarReviewerTeal from "~/assets/images/hero/robots/robot-avatar-reviewer-teal-v1.webp";
+import robotAvatarSeatedMagenta from "~/assets/images/hero/robots/robot-avatar-seated-magenta-v1.webp";
+import robotAvatarYellow from "~/assets/images/hero/robots/robot-avatar-yellow-star-v1.webp";
+import robotRedPurpleHandshake from "~/assets/images/hero/robots/robot-red-purple-handshake-v1.webp";
 
 export const HERO_SCENE_BREAKPOINTS = {
   desktop: 1200,
@@ -25,6 +22,7 @@ export type HeroAgentRole =
   | "fixer";
 
 export type HeroAccent = "cyan" | "magenta" | "violet" | "amber" | "red";
+export type HeroMessagePhase = "sender" | "packet" | "receiver" | "cooldown";
 
 export type HeroCardSide = "left" | "right" | "bottom";
 
@@ -41,6 +39,8 @@ export type HeroAgent = {
   label: string;
   asset: string;
   accent: HeroAccent;
+  facing?: -1 | 1;
+  lean?: number;
   priority?: boolean;
   desktop: HeroAgentPosition;
   tablet: HeroAgentPosition;
@@ -53,21 +53,10 @@ export type HeroAgent = {
   tasks: string[];
 };
 
-export type HeroConnection = {
-  id: string;
-  from: HeroAgentRole | "video";
-  to: HeroAgentRole | "video";
-  accent: Extract<HeroAccent, "cyan" | "magenta" | "amber">;
-  pathDesktop: string;
-  packetDelayMs: number;
-  packetDurationMs: number;
-};
-
 export type HeroMessage = {
   id: string;
   from: HeroAgentRole;
   to: HeroAgentRole | "video";
-  connectionId: string;
   text: string;
   response: string;
   fromX: number;
@@ -80,11 +69,13 @@ export const heroAgents: readonly HeroAgent[] = [
   {
     id: "planner",
     label: "Planner",
-    asset: robotCyan,
-    accent: "cyan",
+    asset: robotAvatarSeatedMagenta,
+    accent: "magenta",
+    facing: 1,
+    lean: -2,
     priority: true,
-    desktop: { x: 34, y: 12, scale: 0.66, depth: 0.35, card: "right" },
-    tablet: { x: 18, y: 11, scale: 0.55, depth: 0.22, card: "bottom" },
+    desktop: { x: 32.65, y: 19.45, scale: 0.44, depth: 0.35, card: "right" },
+    tablet: { x: 20, y: 31, scale: 0.44, depth: 0.22, card: "bottom" },
     mobile: { visible: true, order: 1, compactLabel: "Plan" },
     status: "Planning",
     tasks: ["Analyze requirements", "Break down tasks", "Create plan"],
@@ -92,256 +83,227 @@ export const heroAgents: readonly HeroAgent[] = [
   {
     id: "lead",
     label: "Lead",
-    asset: robotCyan,
+    asset: robotAvatarCyan,
     accent: "cyan",
+    facing: -1,
+    lean: 2,
     priority: true,
-    desktop: { x: 55, y: 9, scale: 0.62, depth: 0.32, card: "right" },
-    tablet: { x: 50, y: 8, scale: 0.52, depth: 0.2, card: "bottom" },
+    desktop: { x: 58.9, y: 32.76, scale: 0.48, depth: 0.32, card: "right" },
+    tablet: { x: 50, y: 31, scale: 0.42, depth: 0.2, card: "bottom" },
     mobile: { visible: true, order: 2, compactLabel: "Lead" },
     status: "Leading",
     tasks: ["Define architecture", "Set priorities", "Coordinate team"],
   },
   {
-    id: "reviewer",
-    label: "Reviewer",
-    asset: robotMagenta,
-    accent: "magenta",
-    priority: true,
-    desktop: { x: 75, y: 13, scale: 0.58, depth: 0.34, card: "left" },
-    tablet: { x: 82, y: 12, scale: 0.48, depth: 0.22, card: "bottom" },
-    mobile: { visible: true, order: 3, compactLabel: "Review" },
-    status: "Reviewing",
-    tasks: ["Review code", "Check quality", "Request changes"],
-  },
-  {
-    id: "researcher",
-    label: "Researcher",
-    asset: robotCyan,
-    accent: "violet",
-    desktop: { x: 27, y: 39, scale: 0.48, depth: 0.45, card: "right" },
-    tablet: { x: 16, y: 45, scale: 0.44, depth: 0.25, card: "bottom" },
-    mobile: { visible: false },
-    status: "Researching",
-    tasks: ["Research options", "Compare solutions", "Summarize findings"],
-  },
-  {
     id: "developer",
     label: "Developer",
-    asset: robotCyan,
-    accent: "cyan",
-    desktop: { x: 74, y: 34, scale: 0.5, depth: 0.52, card: "left" },
-    tablet: { x: 88, y: 44, scale: 0.42, depth: 0.26, card: "bottom" },
-    mobile: { visible: false },
+    asset: robotAvatarYellow,
+    accent: "amber",
+    facing: 1,
+    lean: -1,
+    priority: true,
+    desktop: { x: 72, y: 32.4, scale: 0.48, depth: 0.34, card: "right" },
+    tablet: { x: 80, y: 31, scale: 0.4, depth: 0.22, card: "bottom" },
+    mobile: { visible: true, order: 3, compactLabel: "Code" },
     status: "Coding",
-    tasks: ["Write code", "Implement feature", "Commit changes"],
-  },
-  {
-    id: "tester",
-    label: "Tester",
-    asset: robotMagenta,
-    accent: "magenta",
-    desktop: { x: 72, y: 59, scale: 0.48, depth: 0.58, card: "left" },
-    tablet: { x: 76, y: 77, scale: 0.4, depth: 0.28, card: "bottom" },
-    mobile: { visible: false },
-    status: "Testing",
-    tasks: ["Write tests", "Run tests", "Report issues"],
-  },
-  {
-    id: "docs",
-    label: "Docs",
-    asset: robotMagenta,
-    accent: "violet",
-    desktop: { x: 30, y: 64, scale: 0.43, depth: 0.55, card: "right" },
-    tablet: { x: 25, y: 78, scale: 0.36, depth: 0.28, card: "bottom" },
-    mobile: { visible: false },
-    status: "Writing",
-    tasks: ["Write docs", "API reference", "Examples"],
-  },
-  {
-    id: "ops",
-    label: "Ops",
-    asset: robotAmber,
-    accent: "amber",
-    desktop: { x: 43, y: 84, scale: 0.46, depth: 0.7, card: "right" },
-    tablet: { x: 42, y: 83, scale: 0.38, depth: 0.34, card: "bottom" },
-    mobile: { visible: false },
-    status: "Deploying",
-    tasks: ["Deploy services", "Monitor health", "Manage infra"],
-  },
-  {
-    id: "security",
-    label: "Security",
-    asset: robotAmber,
-    accent: "red",
-    desktop: { x: 63, y: 85, scale: 0.42, depth: 0.68, card: "right" },
-    tablet: { x: 60, y: 82, scale: 0.34, depth: 0.32, card: "bottom" },
-    mobile: { visible: false },
-    status: "Secure",
-    tasks: ["Scan dependencies", "Check permissions", "Security review"],
-  },
-  {
-    id: "fixer",
-    label: "Fixer",
-    asset: robotAmber,
-    accent: "amber",
-    desktop: { x: 69, y: 83, scale: 0.42, depth: 0.72, card: "left" },
-    tablet: { x: 90, y: 82, scale: 0.36, depth: 0.34, card: "bottom" },
-    mobile: { visible: false },
-    status: "Fixing",
-    tasks: ["Fix issues", "Refactor code", "Optimize"],
+    tasks: ["Implement feature", "Update code", "Run checks"],
   },
 ] as const;
 
-export const heroConnections: readonly HeroConnection[] = [
-  {
-    id: "planner-lead",
-    from: "planner",
-    to: "lead",
-    accent: "cyan",
-    pathDesktop: "M 545 195 C 680 210, 735 185, 860 190",
-    packetDelayMs: 0,
-    packetDurationMs: 4200,
-  },
-  {
-    id: "lead-reviewer",
-    from: "lead",
-    to: "reviewer",
-    accent: "magenta",
-    pathDesktop: "M 950 205 C 1050 185, 1130 190, 1265 220",
-    packetDelayMs: 700,
-    packetDurationMs: 3900,
-  },
-  {
-    id: "developer-reviewer",
-    from: "developer",
-    to: "reviewer",
-    accent: "magenta",
-    pathDesktop: "M 1390 370 C 1325 320, 1305 270, 1260 230",
-    packetDelayMs: 500,
-    packetDurationMs: 3400,
-  },
-  {
-    id: "researcher-video",
-    from: "researcher",
-    to: "video",
-    accent: "cyan",
-    pathDesktop: "M 520 425 C 625 410, 680 405, 755 420",
-    packetDelayMs: 1100,
-    packetDurationMs: 4400,
-  },
-  {
-    id: "video-tester",
-    from: "video",
-    to: "tester",
-    accent: "magenta",
-    pathDesktop: "M 1290 540 C 1365 555, 1410 575, 1480 615",
-    packetDelayMs: 1300,
-    packetDurationMs: 4100,
-  },
-  {
-    id: "tester-lead",
-    from: "tester",
-    to: "lead",
-    accent: "cyan",
-    pathDesktop: "M 1450 625 C 1365 650, 1170 642, 1030 630 C 940 620, 880 585, 850 515",
-    packetDelayMs: 1800,
-    packetDurationMs: 5200,
-  },
-  {
-    id: "ops-security",
-    from: "ops",
-    to: "security",
-    accent: "amber",
-    pathDesktop: "M 745 740 C 835 725, 910 725, 1000 742",
-    packetDelayMs: 2200,
-    packetDurationMs: 4600,
-  },
-  {
-    id: "security-fixer",
-    from: "security",
-    to: "fixer",
-    accent: "amber",
-    pathDesktop: "M 1100 745 C 1185 725, 1270 730, 1375 755",
-    packetDelayMs: 2600,
-    packetDurationMs: 4600,
-  },
-] as const;
+export const heroReviewerFeatureCard = {
+  label: "Reviewer",
+  asset: robotAvatarReviewerTeal,
+  accent: "cyan",
+  status: "Reviewing",
+  tasks: ["Review code", "Check quality", "Request changes"],
+} as const;
+
+export const heroCollaborationFeature = {
+  asset: robotRedPurpleHandshake,
+} as const;
 
 export const heroMessages: readonly HeroMessage[] = [
   {
-    id: "code-review",
+    id: "plan-ready",
+    from: "planner",
+    to: "lead",
+    text: "Plan ready.",
+    response: "Priority set.",
+    fromX: 29.2,
+    fromY: 13,
+    toX: 58.8,
+    toY: 8.6,
+  },
+  {
+    id: "build-ready",
+    from: "lead",
+    to: "developer",
+    text: "Build scope set.",
+    response: "Coding started.",
+    fromX: 58.8,
+    fromY: 8.6,
+    toX: 72,
+    toY: 7,
+  },
+  {
+    id: "review-build",
     from: "developer",
     to: "reviewer",
-    connectionId: "developer-reviewer",
-    text: "Code ready. Request review.",
-    response: "Review started.",
-    fromX: 78,
-    fromY: 43,
-    toX: 73,
-    toY: 20,
+    text: "Review build.",
+    response: "Checking quality.",
+    fromX: 72,
+    fromY: 7,
+    toX: 84,
+    toY: 82,
   },
   {
-    id: "tests-passed",
-    from: "tester",
-    to: "lead",
-    connectionId: "tester-lead",
-    text: "Tests passed. Looks good.",
-    response: "Ship it.",
-    fromX: 78,
-    fromY: 62,
-    toX: 58,
-    toY: 21,
-  },
-  {
-    id: "research-ready",
-    from: "researcher",
-    to: "video",
-    connectionId: "researcher-video",
-    text: "Findings ready.",
-    response: "Plan updated.",
-    fromX: 32,
-    fromY: 45,
-    toX: 50,
-    toY: 53,
-  },
-  {
-    id: "ops-secure",
-    from: "ops",
-    to: "security",
-    connectionId: "ops-security",
-    text: "Deployed to staging.",
-    response: "Dependencies checked.",
-    fromX: 44,
-    fromY: 72,
-    toX: 62,
-    toY: 74,
+    id: "review-pass",
+    from: "reviewer",
+    to: "developer",
+    text: "Review passed.",
+    response: "Ready to ship.",
+    fromX: 84,
+    fromY: 82,
+    toX: 72,
+    toY: 7,
   },
 ] as const;
 
 export const heroFeatureRail = [
   {
     id: "autonomous",
-    title: "Autonomous Team",
-    text: "Specialized agents coordinate work together.",
+    title: "Give the Team a Goal",
+    text: "Agents break it into tasks and start moving without babysitting.",
   },
   {
     id: "kanban",
-    title: "Kanban at Lightspeed",
-    text: "Tasks move as agents build, review, and test.",
+    title: "Kanban That Updates Itself",
+    text: "Cards shift as agents build, test, review, and unblock each other.",
   },
   {
     id: "developers",
-    title: "Built for Developers",
-    text: "Open source, extensible, and API-first.",
+    title: "Bring Your AI Stack",
+    text: "Claude, Codex, and OpenCode teammates in one desktop cockpit.",
   },
   {
     id: "secure",
-    title: "Secure by Default",
-    text: "Your code and data stay protected.",
+    title: "Stay in the Loop",
+    text: "Jump in with comments, approvals, direct messages, or quick actions.",
   },
   {
     id: "local",
-    title: "Local First",
-    text: "Runs on your machine. Your data stays yours.",
+    title: "Your Machine, Your Code",
+    text: "Track activity, logs, file changes, and what every agent is doing inside each task.",
   },
 ] as const;
+
+const ruHeroAgentCopy: Record<HeroAgentRole, Pick<HeroAgent, "label" | "status" | "tasks"> & { compactLabel?: string }> = {
+  planner: {
+    label: "Планировщик",
+    compactLabel: "План",
+    status: "Планирует",
+    tasks: ["Анализ требований", "Декомпозиция задач", "Создание плана"],
+  },
+  lead: {
+    label: "Лид",
+    compactLabel: "Лид",
+    status: "Координирует",
+    tasks: ["Архитектура", "Приоритеты", "Координация команды"],
+  },
+  developer: {
+    label: "Разработчик",
+    compactLabel: "Код",
+    status: "Пишет код",
+    tasks: ["Реализация фичи", "Обновление кода", "Запуск проверок"],
+  },
+  reviewer: {
+    label: "Ревьюер",
+    status: "Ревьюит",
+    tasks: ["Ревью кода", "Проверка качества", "Запрос правок"],
+  },
+  tester: { label: "Тестировщик", status: "Тестирует", tasks: [] },
+  researcher: { label: "Ресёрчер", status: "Исследует", tasks: [] },
+  docs: { label: "Документация", status: "Документирует", tasks: [] },
+  ops: { label: "Операции", status: "Следит", tasks: [] },
+  security: { label: "Безопасность", status: "Проверяет", tasks: [] },
+  fixer: { label: "Фиксер", status: "Исправляет", tasks: [] },
+};
+
+const ruHeroMessages: Record<string, Pick<HeroMessage, "text" | "response">> = {
+  "plan-ready": { text: "План готов.", response: "Приоритет задан." },
+  "build-ready": { text: "Скоуп задан.", response: "Кодинг начат." },
+  "review-build": { text: "Проверь сборку.", response: "Проверяю качество." },
+  "review-pass": { text: "Ревью пройдено.", response: "Готово к релизу." },
+};
+
+const ruHeroFeatureRail: Record<string, { title: string; text: string }> = {
+  autonomous: {
+    title: "Дайте команде цель",
+    text: "Агенты сами разобьют её на задачи и начнут двигаться без микроменеджмента.",
+  },
+  kanban: {
+    title: "Канбан обновляется сам",
+    text: "Карточки двигаются, пока агенты пишут, тестируют, ревьюят и разблокируют друг друга.",
+  },
+  developers: {
+    title: "Подключайте свой AI-стек",
+    text: "Claude, Codex и OpenCode в одном десктопном центре управления.",
+  },
+  secure: {
+    title: "Оставайтесь в контуре",
+    text: "Подключайтесь через комментарии, подтверждения, прямые сообщения и быстрые действия.",
+  },
+  local: {
+    title: "Ваша машина, ваш код",
+    text: "Легко отслеживайте активность, логи, изменения файлов и работу каждого агента внутри каждой задачи.",
+  },
+};
+
+const isRuLocale = (locale: string) => locale.toLowerCase().startsWith("ru");
+
+export function getLocalizedHeroAgents(locale: string): readonly HeroAgent[] {
+  if (!isRuLocale(locale)) return heroAgents;
+
+  return heroAgents.map((agent) => {
+    const copy = ruHeroAgentCopy[agent.id];
+    return {
+      ...agent,
+      label: copy.label,
+      status: copy.status,
+      tasks: copy.tasks,
+      mobile: {
+        ...agent.mobile,
+        compactLabel: copy.compactLabel ?? agent.mobile.compactLabel,
+      },
+    };
+  });
+}
+
+export function getLocalizedHeroReviewerFeatureCard(locale: string): typeof heroReviewerFeatureCard {
+  if (!isRuLocale(locale)) return heroReviewerFeatureCard;
+  const copy = ruHeroAgentCopy.reviewer;
+  return {
+    ...heroReviewerFeatureCard,
+    label: copy.label,
+    status: copy.status,
+    tasks: copy.tasks,
+  };
+}
+
+export function getLocalizedHeroMessages(locale: string): readonly HeroMessage[] {
+  if (!isRuLocale(locale)) return heroMessages;
+
+  return heroMessages.map((message) => ({
+    ...message,
+    ...(ruHeroMessages[message.id] ?? {}),
+  }));
+}
+
+export function getLocalizedHeroFeatureRail(locale: string): typeof heroFeatureRail {
+  if (!isRuLocale(locale)) return heroFeatureRail;
+
+  return heroFeatureRail.map((feature) => ({
+    ...feature,
+    ...(ruHeroFeatureRail[feature.id] ?? {}),
+  })) as typeof heroFeatureRail;
+}

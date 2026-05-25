@@ -31,6 +31,10 @@ jobs:
         working-directory: landing
         run: npm ci
 
+      - name: Audit dependencies
+        working-directory: landing
+        run: npm audit --audit-level high
+
       - name: Generate static site
         working-directory: landing
         env:

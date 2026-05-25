@@ -1,15 +1,17 @@
 import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 
-import { resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath } from '../infrastructure/OpenCodeRuntimeInstallerService';
+import { resolveVerifiedOpenCodeRuntimeBinaryPath } from '../infrastructure/OpenCodeRuntimeInstallerService';
 
 import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
+import { applyOpenCodeRuntimeBinaryEnv } from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 type ProviderEnvTargetId = CliProviderId | TeamProviderId | undefined;
+const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
 
 export interface ProviderAwareCliEnvOptions {
   binaryPath?: string | null;
@@ -19,6 +21,7 @@ export interface ProviderAwareCliEnvOptions {
   env?: NodeJS.ProcessEnv;
   connectionMode?: 'strict' | 'augment';
   allowStoredApiKeyDecryption?: boolean;
+  allowedStoredApiKeyEnvVarNames?: readonly string[];
 }
 
 export interface ProviderAwareCliEnvResult {
@@ -27,14 +30,24 @@ export interface ProviderAwareCliEnvResult {
   providerArgs: string[];
 }
 
+function removeGlobalElectronRunAsNodeEnv(env: NodeJS.ProcessEnv): void {
+  delete env[ELECTRON_RUN_AS_NODE_ENV];
+}
+
 export async function buildProviderAwareCliEnv(
   options: ProviderAwareCliEnvOptions = {}
 ): Promise<ProviderAwareCliEnvResult> {
   const connectionMode = options.connectionMode ?? 'strict';
   const storedApiKeyAccessArgs =
-    options.allowStoredApiKeyDecryption === undefined
+    options.allowStoredApiKeyDecryption === undefined &&
+    options.allowedStoredApiKeyEnvVarNames === undefined
       ? []
-      : [{ allowStoredApiKeyDecryption: options.allowStoredApiKeyDecryption }];
+      : [
+          {
+            allowStoredApiKeyDecryption: options.allowStoredApiKeyDecryption,
+            allowedStoredApiKeyEnvVarNames: options.allowedStoredApiKeyEnvVarNames,
+          },
+        ];
   const shellEnv = options.shellEnv ?? getCachedShellEnv() ?? {};
   const { env, resolvedProviderId } = buildRuntimeBaseEnv({
     binaryPath: options.binaryPath,
@@ -42,14 +55,11 @@ export async function buildProviderAwareCliEnv(
     providerBackendId: options.providerBackendId,
     shellEnv,
     env: options.env,
+    mergePathFallbacks: true,
   });
-  const appManagedOpenCodeBinary = await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
-  if (
-    appManagedOpenCodeBinary &&
-    !env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH &&
-    (!resolvedProviderId || resolvedProviderId === 'opencode')
-  ) {
-    env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = appManagedOpenCodeBinary;
+  if (!resolvedProviderId || resolvedProviderId === 'opencode') {
+    const openCodeBinary = await resolveVerifiedOpenCodeRuntimeBinaryPath();
+    applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary);
   }
   const appManagedCodexBinary = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
   if (
@@ -74,6 +84,7 @@ export async function buildProviderAwareCliEnv(
         options.providerBackendId,
         ...storedApiKeyAccessArgs
       );
+      removeGlobalElectronRunAsNodeEnv(env);
       return {
         env,
         connectionIssues: {},
@@ -87,22 +98,25 @@ export async function buildProviderAwareCliEnv(
       options.providerBackendId,
       ...storedApiKeyAccessArgs
     );
+    removeGlobalElectronRunAsNodeEnv(env);
 
+    const providerArgs = await providerConnectionService.getConfiguredConnectionLaunchArgs(
+      env,
+      resolvedProviderId,
+      options.providerBackendId,
+      options.binaryPath
+    );
+    const connectionIssues = await providerConnectionService.getConfiguredConnectionIssues(
+      env,
+      [resolvedProviderId],
+      resolvedProviderId === 'codex' || resolvedProviderId === 'gemini'
+        ? { [resolvedProviderId]: options.providerBackendId?.trim() || undefined }
+        : undefined
+    );
     return {
       env,
-      providerArgs: await providerConnectionService.getConfiguredConnectionLaunchArgs(
-        env,
-        resolvedProviderId,
-        options.providerBackendId,
-        options.binaryPath
-      ),
-      connectionIssues: await providerConnectionService.getConfiguredConnectionIssues(
-        env,
-        [resolvedProviderId],
-        resolvedProviderId === 'codex' || resolvedProviderId === 'gemini'
-          ? { [resolvedProviderId]: options.providerBackendId?.trim() || undefined }
-          : undefined
-      ),
+      providerArgs,
+      connectionIssues,
     };
   }
 
@@ -111,6 +125,7 @@ export async function buildProviderAwareCliEnv(
       env,
       ...storedApiKeyAccessArgs
     );
+    removeGlobalElectronRunAsNodeEnv(env);
     return {
       env,
       connectionIssues: {},
@@ -119,9 +134,11 @@ export async function buildProviderAwareCliEnv(
   }
 
   await providerConnectionService.applyAllConfiguredConnectionEnv(env, ...storedApiKeyAccessArgs);
+  removeGlobalElectronRunAsNodeEnv(env);
+  const connectionIssues = await providerConnectionService.getConfiguredConnectionIssues(env);
   return {
     env,
-    connectionIssues: await providerConnectionService.getConfiguredConnectionIssues(env),
+    connectionIssues,
     providerArgs: [],
   };
 }

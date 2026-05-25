@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markdown';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { MemberHoverCard } from '@renderer/components/team/members/MemberHoverCard';
@@ -338,6 +339,7 @@ const LocalImage = React.memo(function LocalImage({
   alt,
   baseDir,
 }: LocalImageProps): React.ReactElement {
+  const { t } = useAppTranslation('common');
   const [dataUrl, setDataUrl] = React.useState<string | null>(null);
   const [error, setError] = React.useState(false);
 
@@ -366,7 +368,7 @@ const LocalImage = React.memo(function LocalImage({
   if (error) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-text-muted">
-        [Image: {alt || src}]
+        {t('markdown.imageFallback', { label: alt || src })}
       </span>
     );
   }
@@ -959,6 +961,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
   teamColorByName: providedTeamColorByName,
   onTeamClick: providedOnTeamClick,
 }) {
+  const { t } = useAppTranslation('common');
   const [showRaw, setShowRaw] = React.useState(false);
   const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
   const { isLight } = useTheme();
@@ -1016,7 +1019,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
               {label}
             </span>
             <span className="ml-2 text-[11px]" style={{ color: COLOR_TEXT_MUTED }}>
-              Raw
+              {t('markdown.raw')}
             </span>
             <span className="flex-1" />
             <button
@@ -1025,13 +1028,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
               style={{ color: PROSE_LINK }}
               onClick={() => setShowRaw(false)}
               disabled={isTooLarge}
-              title={
-                isTooLarge
-                  ? 'Large content is shown as raw to prevent UI freeze'
-                  : 'Render markdown'
-              }
+              title={isTooLarge ? t('markdown.largeContentTitle') : t('markdown.renderMarkdown')}
             >
-              Render markdown
+              {t('markdown.renderMarkdown')}
             </button>
             {copyable && <CopyButton text={content} inline />}
           </div>
@@ -1042,28 +1041,23 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
             className="flex items-center justify-between px-3 py-2 text-xs"
             style={{ color: COLOR_TEXT_MUTED }}
           >
-            <span>Raw preview</span>
+            <span>{t('markdown.rawPreview')}</span>
             <button
               type="button"
               className="underline"
               style={{ color: PROSE_LINK }}
               onClick={() => setShowRaw(false)}
               disabled={isTooLarge}
-              title={
-                isTooLarge
-                  ? 'Large content is shown as raw to prevent UI freeze'
-                  : 'Render markdown'
-              }
+              title={isTooLarge ? t('markdown.largeContentTitle') : t('markdown.renderMarkdown')}
             >
-              Render markdown
+              {t('markdown.renderMarkdown')}
             </button>
           </div>
         )}
 
         {isTooLarge && (
           <div className="px-3 pb-2 text-[11px]" style={{ color: COLOR_TEXT_MUTED }}>
-            Content is very large ({content.length.toLocaleString()} chars). Showing raw preview to
-            keep the UI responsive.
+            {t('markdown.largeContentNotice', { count: content.length.toLocaleString() })}
           </div>
         )}
 
@@ -1077,7 +1071,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
           {isTruncated && (
             <div className="flex items-center justify-between gap-2 px-4 pb-4 text-xs">
               <span style={{ color: COLOR_TEXT_MUTED }}>
-                Showing {shown.length.toLocaleString()} / {content.length.toLocaleString()} chars
+                {t('markdown.showingChars', {
+                  shown: shown.length.toLocaleString(),
+                  total: content.length.toLocaleString(),
+                })}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -1086,7 +1083,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
                   style={{ borderColor: CODE_BORDER, color: PROSE_LINK }}
                   onClick={() => setRawLimit((v) => Math.min(content.length, v * 2))}
                 >
-                  Show more
+                  {t('markdown.showMore')}
                 </button>
                 <button
                   type="button"
@@ -1094,7 +1091,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
                   style={{ borderColor: CODE_BORDER, color: PROSE_LINK }}
                   onClick={() => setRawLimit(content.length)}
                 >
-                  Show all
+                  {t('markdown.showAll')}
                 </button>
               </div>
             </div>
@@ -1175,9 +1172,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
             className="text-xs underline"
             style={{ color: PROSE_LINK }}
             onClick={() => setShowRaw(true)}
-            title="Show raw"
+            title={t('markdown.showRaw')}
           >
-            Show raw
+            {t('markdown.showRaw')}
           </button>
           {copyable && <CopyButton text={content} inline />}
         </div>
@@ -1195,9 +1192,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
             className="underline"
             style={{ color: PROSE_LINK }}
             onClick={() => setShowRaw(true)}
-            title="Show raw"
+            title={t('markdown.showRaw')}
           >
-            Show raw
+            {t('markdown.showRaw')}
           </button>
         </div>
       )}

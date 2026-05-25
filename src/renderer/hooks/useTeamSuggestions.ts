@@ -15,19 +15,31 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
+import type { TeamSummary } from '@shared/types';
 
 export interface UseTeamSuggestionsResult {
   suggestions: MentionSuggestion[];
   loading: boolean;
 }
 
+interface UseTeamSuggestionsOptions {
+  enabled?: boolean;
+}
+
+const EMPTY_TEAMS: TeamSummary[] = [];
+const EMPTY_TEAM_SUGGESTIONS: MentionSuggestion[] = [];
+
 /**
  * Returns team MentionSuggestion[] sorted by online status (online first).
  *
  * @param currentTeamName - The current team name to exclude from suggestions
  */
-export function useTeamSuggestions(currentTeamName: string | null): UseTeamSuggestionsResult {
-  const teams = useStore(useShallow((s) => s.teams));
+export function useTeamSuggestions(
+  currentTeamName: string | null,
+  options: UseTeamSuggestionsOptions = {}
+): UseTeamSuggestionsResult {
+  const enabled = options.enabled ?? true;
+  const teams = useStore(useShallow((s) => (enabled ? s.teams : EMPTY_TEAMS)));
   const [aliveTeams, setAliveTeams] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
@@ -45,11 +57,19 @@ export function useTeamSuggestions(currentTeamName: string | null): UseTeamSugge
 
   // Fetch on mount and when teams list changes
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     void fetchAlive();
-  }, [fetchAlive, teams]);
+  }, [enabled, fetchAlive, teams]);
 
   // Build suggestion list sorted: online first, then offline
   const suggestions = useMemo<MentionSuggestion[]>(() => {
+    if (!enabled) {
+      return EMPTY_TEAM_SUGGESTIONS;
+    }
+
     const nonDeleted = teams.filter((t) => !t.deletedAt && t.teamName !== currentTeamName);
 
     const result: MentionSuggestion[] = nonDeleted.map((t) => {
@@ -72,7 +92,7 @@ export function useTeamSuggestions(currentTeamName: string | null): UseTeamSugge
     });
 
     return result;
-  }, [teams, currentTeamName, aliveTeams]);
+  }, [enabled, teams, currentTeamName, aliveTeams]);
 
   return { suggestions, loading };
 }

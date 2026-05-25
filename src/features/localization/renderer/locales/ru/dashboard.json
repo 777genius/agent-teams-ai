@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "Уже вошли?",
+      "becomeSponsor": "Стать спонсором",
+      "cancel": "Отмена",
+      "checkNow": "Проверить сейчас",
+      "checkUpdates": "Проверить обновления",
+      "checking": "Проверка...",
+      "connect": "Подключить",
+      "extensions": "Расширения",
+      "login": "Войти",
+      "manage": "Управлять",
+      "manageProviders": "Управлять провайдерами",
+      "plan": "План",
+      "recheck": "Проверить снова",
+      "recheckProvider": "Проверить {{provider}} снова",
+      "retry": "Повторить",
+      "updateTo": "Обновить до v{{version}}",
+      "useCode": "Использовать код"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud - full-modal AI inference platform, который даёт разработчикам единый AI API для доступа к video generation, image generation и LLM API. Вместо нескольких интеграций с вендорами вы подключаетесь один раз и получаете единый доступ к 300+ отобранным моделям во всех модальностях. Посмотрите новую coding plan promotion Atlas Cloud для более бюджетного API-доступа.",
+      "openCodeProvider": "OpenCode provider",
+      "plan": "Coding plan Atlas Cloud",
+      "sponsor": "Спонсор"
+    },
+    "errors": {
+      "checkStatusFailed": "Не удалось проверить статус CLI",
+      "installationFailed": "Установка не удалась",
+      "refreshFailed": "Не удалось проверить обновления. Проверьте сетевое подключение и повторите попытку.",
+      "runtimeUpdatedRefreshFailed": "Runtime обновлён, но не удалось обновить статус провайдера."
+    },
+    "hints": {
+      "backgroundStatus": "Статус {{runtime}} будет проверен в фоне.",
+      "codexApiKeyFallback": "{{hint}} API key fallback доступен, если переключить режим аутентификации.",
+      "codexAutoApiKey": "{{hint}} Auto продолжит использовать API key, пока ChatGPT не подключён.",
+      "codexFinishLogin": "Завершите вход ChatGPT в браузере. Если потребуется, введите показанный код.",
+      "codexNoActiveLogin": "Лимиты появятся только после того, как Codex CLI увидит активный ChatGPT account. Сейчас он сообщает, что активного входа ChatGPT нет.",
+      "codexNoActiveManagedSession": "Лимиты появятся только после того, как Codex CLI увидит активный ChatGPT account. Локальные данные account есть, но активная managed-сессия сейчас не выбрана.",
+      "codexReconnectNeeded": "Лимиты появятся только после того, как Codex обновит текущую выбранную ChatGPT-сессию. Сейчас локальную сессию нужно переподключить.",
+      "firstCheckSlow": "Первая проверка может занять до 30 секунд",
+      "loginRequiredForTeams": "Просмотр сессий и проектов работает без входа. Вход нужен только для запуска agent teams.",
+      "troubleshootTitle": "Если вы уверены, что уже вошли, попробуйте:"
+    },
+    "installer": {
+      "checkingLatest": "Проверка последней версии...",
+      "downloading": "Загрузка {{runtime}}...",
+      "installing": "Установка {{runtime}}...",
+      "success": "{{runtime}} успешно установлен, версия v{{version}}",
+      "verifying": "Проверка checksum..."
+    },
+    "labels": {
+      "apiKeyRequired": "Требуется API key",
+      "comingSoon": "Скоро",
+      "collapseProviderDetails": "Свернуть детали провайдера",
+      "expandProviderDetails": "Развернуть детали провайдера",
+      "generateLink": "Создать ссылку",
+      "loadingRateLimits": "Загрузка лимитов",
+      "loggedOut": "Провайдер отключён",
+      "loginAuthFailed": "Аутентификация не удалась",
+      "loginAuthUpdated": "Аутентификация обновлена",
+      "loginComplete": "Вход выполнен",
+      "loginFailed": "Войти не удалось",
+      "loginTitle": "Вход",
+      "logoutFailed": "Выход не удался",
+      "logoutTitle": "Выход",
+      "notLoggedIn": "Вход не выполнен",
+      "openLogin": "Открыть вход",
+      "providerActionRequired": "Требуется действие с провайдером",
+      "resets": "сброс {{time}}",
+      "runtimeLoginTitle": "Вход в {{runtime}}"
+    },
+    "loading": {
+      "aiProviders": "Проверка AI-провайдеров...",
+      "claudeCli": "Проверка Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Аутентифицировано",
+      "backend": "Backend: {{backend}}",
+      "checkingAuthentication": "Проверка аутентификации...",
+      "checkingProviders": "Проверка провайдеров...",
+      "configuredLocalCount": "{{count}} локальных настроено",
+      "configuredLocalCount_few": "{{count}} локальных настроено",
+      "configuredLocalCount_many": "{{count}} локальных настроено",
+      "configuredLocalCount_one": "{{count}} локальный настроен",
+      "configuredLocalCount_other": "{{count}} локальных настроено",
+      "configuredLocalTitle": "Локальные маршруты OpenCode, импортированные из вашей конфигурации OpenCode.",
+      "connectedCount": "Провайдеры: {{connected}}/{{denominator}} подключено",
+      "freeModels": "Бесплатные модели",
+      "freeModelsTitle": "OpenCode включает бесплатные варианты моделей, например Big Pickle, если они доступны в вашей настройке. OpenRouter через OpenCode тоже может показывать бесплатные модели, но не каждая модель OpenCode/OpenRouter бесплатна. Доступность и лимиты могут меняться.",
+      "loadingModels": "Загрузка моделей...",
+      "modelsUnavailable": "Модели недоступны для этой сборки runtime",
+      "runtime": "Runtime: {{runtime}}",
+      "verifiedCount": "{{count}} проверено",
+      "verifiedCount_few": "{{count}} проверено",
+      "verifiedCount_many": "{{count}} проверено",
+      "verifiedCount_one": "{{count}} проверен",
+      "verifiedCount_other": "{{count}} проверено",
+      "verifiedTitle": "Маршруты OpenCode с успешным proof выполнения."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "Настроенный {{runtime}} не прошёл health check запуска.",
+      "configuredNotFound": "Настроенный {{runtime}} не найден.",
+      "foundButFailed": "{{runtime}} найден, но не запустился",
+      "healthCheckFailedDescription": "Приложение нашло настроенный {{runtime}}, но его startup health check не прошёл. Почините или переустановите его, затем повторите.",
+      "install": "Установить {{runtime}}",
+      "installRequiredDescription": "{{runtime}} нужен для provisioning команд и управления сессиями. Установите его, чтобы начать.",
+      "isRequired": "Требуется {{runtime}}",
+      "reinstall": "Переустановить {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Проверка",
+      "codexTitle": "Установить Codex CLI в данные приложения",
+      "downloading": "Загрузка",
+      "downloadingPercent": "Загрузка {{percent}}%",
+      "install": "Установить",
+      "installing": "Установка",
+      "openCodeTitle": "Установить OpenCode runtime в данные приложения",
+      "retryInstall": "Повторить установку"
+    },
+    "troubleshoot": {
+      "again": "снова",
+      "authStatusCommand": "настроенную команду проверки статуса аутентификации CLI",
+      "checkLoggedIn": "- проверьте, показывает ли она \"Logged in\"",
+      "click": "Нажмите",
+      "loginCommand": "команду входа runtime",
+      "logoutCommand": "команду выхода runtime",
+      "openTerminal": "Откройте терминал и выполните:",
+      "reloginPrefix": "Если команда говорит, что вход выполнен, но приложение этого не видит, попробуйте:",
+      "sameRuntime": "Убедитесь, что CLI в терминале совпадает с runtime, который использует приложение",
+      "statusCacheHint": "- иногда статус кэшируется на несколько секунд",
+      "then": "затем"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Один или несколько провайдеров работают в режиме API key, но API key не настроен. Откройте управление провайдерами, чтобы добавить ключи или переключить режим подключения.",
+      "multipleApiKeysNeedAttention": "Один или несколько провайдеров работают в режиме API key и требуют внимания. Откройте управление провайдерами, чтобы проверить сохранённые ключи или переключить режим подключения.",
+      "notAuthenticated": "{{runtime}} установлен, но вход не выполнен. Вход нужен для provisioning команд и AI-функций.",
+      "singleApiKeyMissing": "{{provider}} работает в режиме API key, но API key не настроен. Откройте управление провайдерами, чтобы добавить ключ или переключить режим подключения.",
+      "singleApiKeyNeedsAttention": "{{provider}} работает в режиме API key, но не подключён. Откройте управление провайдерами, чтобы проверить сохранённый ключ или переключить режим подключения."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Выбрать папку проекта",
+    "selectFolder": "Выбрать папку",
+    "failedToLoad": "Не удалось загрузить проекты",
+    "retry": "Повторить",
+    "noProjects": "Проекты не найдены",
+    "noMatches": "Нет совпадений для \"{{query}}\"",
+    "noRecentProjects": "Недавние проекты не найдены",
+    "emptyDescription": "Здесь появится недавняя активность Claude и Codex.",
+    "loadMore": "Загрузить ещё",
+    "card": {
+      "deleted": "Удалён",
+      "projectFolderMissing": "Папка проекта больше не существует",
+      "taskCounts": {
+        "active": "{{count}} активных",
+        "active_one": "{{count}} активная",
+        "active_few": "{{count}} активные",
+        "active_many": "{{count}} активных",
+        "active_other": "{{count}} активных",
+        "pending": "{{count}} ожидают",
+        "pending_one": "{{count}} ожидает",
+        "pending_few": "{{count}} ожидают",
+        "pending_many": "{{count}} ожидают",
+        "pending_other": "{{count}} ожидают",
+        "done": "{{count}} готово",
+        "done_one": "{{count}} готова",
+        "done_few": "{{count}} готово",
+        "done_many": "{{count}} готово",
+        "done_other": "{{count}} готово"
+      }
+    },
+    "title": "Недавние проекты",
+    "searchResults": "Результаты поиска",
+    "searchPlaceholder": "Поиск проектов..."
+  },
+  "actions": {
+    "selectTeam": "Выбрать команду",
+    "or": "или",
+    "clearSearch": "Очистить поиск"
+  },
+  "windowsAdmin": {
+    "title": "Рекомендуется режим администратора Windows",
+    "description": "Проверки рантайма OpenCode могут завершаться по таймауту, если Agent Teams AI не запущен с повышенными правами. Перезапустите приложение через Run as administrator перед запуском команд OpenCode."
+  },
+  "webPreview": {
+    "title": "Откройте desktop-приложение для полной функциональности",
+    "description": "Браузерная версия всё ещё в разработке. Действия с проектами, интеграции и live-статусы здесь могут быть ограничены. Используйте desktop-приложение для надёжного доступа ко всем возможностям."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Доступна новая версия",
+    "restartNow": "Перезапустить сейчас",
+    "viewDetails": "Подробнее"
+  }
+}

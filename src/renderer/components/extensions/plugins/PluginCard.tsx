@@ -2,6 +2,7 @@
  * PluginCard — grid card for a single plugin in the catalog.
  */
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { useStore } from '@renderer/store';
 import {
@@ -38,6 +39,7 @@ export const PluginCard = ({
   cliStatus,
   cliStatusLoading,
 }: PluginCardProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const capabilities = inferCapabilities(plugin);
   const category = normalizeCategory(plugin.category);
   const operationKey = getPluginOperationKey(plugin.pluginId, 'user');
@@ -73,7 +75,7 @@ export const PluginCard = ({
       {plugin.source === 'official' && (
         <div className="pointer-events-none absolute -left-px -top-px size-16 overflow-hidden">
           <div className="absolute left-[-24px] top-[4px] w-[80px] -rotate-45 bg-blue-500/90 text-center text-[9px] font-semibold leading-[18px] text-white shadow-sm">
-            Official
+            {t('pluginCard.official')}
           </div>
         </div>
       )}

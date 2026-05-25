@@ -1,6 +1,6 @@
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
-import { getShellPreferredHome, resolveInteractiveShellEnv } from '@main/utils/shellEnv';
+import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -124,6 +124,9 @@ async function collectNvmWindowsCandidates(): Promise<string[]> {
 }
 
 async function resolveFromPathEnv(binaryName: string, pathEnv?: string): Promise<string | null> {
+  // TODO: Consider migrating this PATH candidate collection to runtimePathBinaryResolver once
+  // Claude-specific executable checks, Windows PATHEXT handling, and parallel stat behavior
+  // can be preserved exactly.
   const rawPath = pathEnv && pathEnv.length > 0 ? pathEnv : process.env.PATH;
   if (!rawPath) {
     return null;
@@ -299,7 +302,23 @@ export class ClaudeBinaryResolver {
       }
     }
 
-    await resolveInteractiveShellEnv({
+    const shouldTryBundledOrchestratorBeforeShell =
+      flavor === 'agent_teams_orchestrator' && (!overrideRaw || overrideIsExplicitPath);
+    if (shouldTryBundledOrchestratorBeforeShell) {
+      emitProgress(options, 'bundled-runtime', 'Checking bundled Agent Teams runtime...');
+      const bundledBinary = await resolveBundledOrchestratorBinary();
+      if (bundledBinary) {
+        cachedPath = bundledBinary;
+        cacheVerifiedAt = Date.now();
+        emitProgress(options, 'bundled-runtime-found', 'Using bundled Agent Teams runtime...');
+        return cachedPath;
+      }
+    }
+
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
       onProgress: (progress) => emitProgress(options, progress.phase, progress.message),
     });
     const enrichedPath = buildMergedCliPath(null);
@@ -317,13 +336,15 @@ export class ClaudeBinaryResolver {
     }
 
     if (flavor === 'agent_teams_orchestrator') {
-      emitProgress(options, 'bundled-runtime', 'Checking bundled Agent Teams runtime...');
-      const bundledBinary = await resolveBundledOrchestratorBinary();
-      if (bundledBinary) {
-        cachedPath = bundledBinary;
-        cacheVerifiedAt = Date.now();
-        emitProgress(options, 'bundled-runtime-found', 'Using bundled Agent Teams runtime...');
-        return cachedPath;
+      if (!shouldTryBundledOrchestratorBeforeShell) {
+        emitProgress(options, 'bundled-runtime', 'Checking bundled Agent Teams runtime...');
+        const bundledBinary = await resolveBundledOrchestratorBinary();
+        if (bundledBinary) {
+          cachedPath = bundledBinary;
+          cacheVerifiedAt = Date.now();
+          emitProgress(options, 'bundled-runtime-found', 'Using bundled Agent Teams runtime...');
+          return cachedPath;
+        }
       }
 
       // Keep agent_teams_orchestrator resolution generic. Dev flows should

@@ -30,7 +30,8 @@ vi.mock('../../../../src/renderer/hooks/useTheme', () => ({
 }));
 
 vi.mock('../../../../src/renderer/components/ui/tooltip', () => ({
-  Tooltip: ({ children }: React.PropsWithChildren) => React.createElement(React.Fragment, null, children),
+  Tooltip: ({ children }: React.PropsWithChildren) =>
+    React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: React.PropsWithChildren) =>
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: React.PropsWithChildren) =>
@@ -62,7 +63,7 @@ vi.mock('../../../../src/shared/utils/reviewState', () => ({
 }));
 
 vi.mock('zustand/react/shallow', () => ({
-  useShallow: <T,>(selector: T) => selector,
+  useShallow: <T>(selector: T) => selector,
 }));
 
 vi.mock('lucide-react', () => {
@@ -133,6 +134,69 @@ describe('SidebarTaskItem unread styling', () => {
     const button = host.querySelector('button');
     expect(button?.className).toContain('bg-blue-500/[0.05]');
     expect(button?.className).not.toContain('bg-blue-500/[0.08]');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('animates the in-progress status icon', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('svg')?.getAttribute('class')).toContain('animate-spin');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('pauses the in-progress status icon when the task team is offline', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(SidebarTaskItem, { task: makeTask(), teamOffline: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('svg')?.getAttribute('class')).not.toContain('animate-spin');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('can hide the project label when the parent already groups by project', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SidebarTaskItem, { task: makeTask(), hideProjectName: true })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('hookplex');
+    expect(host.textContent).toContain('alice');
 
     await act(async () => {
       root.unmount();

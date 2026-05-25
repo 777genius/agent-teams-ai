@@ -18,7 +18,9 @@ const defaultRuntimeCacheRoot = path.join(os.homedir(), '.agent-teams', 'runtime
 const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
   ? path.resolve(process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT.trim())
   : defaultRuntimeCacheRoot;
-const shouldPrintRuntimePath = process.argv.includes('--print-runtime-path');
+const scriptArgs = process.argv.slice(2);
+const shouldPrintRuntimePath = scriptArgs.includes('--print-runtime-path');
+const electronViteArgs = scriptArgs.filter((arg) => arg !== '--print-runtime-path' && arg !== '--');
 const runtimeDisplayName = 'teams orchestrator';
 const WINDOWS_SHELL_COMMANDS = new Set(['pnpm', 'npm', 'npx', 'yarn', 'yarnpkg', 'corepack']);
 
@@ -542,7 +544,7 @@ async function main() {
   delete uiEnv.CLAUDE_CLI_PATH;
   const uiPackageManager = readPackageManagerCommand(uiRepoRoot);
 
-  runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev'], {
+  runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev', ...electronViteArgs], {
     cwd: uiRepoRoot,
     env: uiEnv,
   });

@@ -44,7 +44,7 @@ export function isTeamTaskStallAlertsEnabled(): boolean {
 }
 
 export function getTeamTaskStallScanIntervalMs(): number {
-  return readInt(process.env.CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS, 60_000);
+  return readInt(process.env.CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS, 30_000);
 }
 
 export function getTeamTaskStallStartupGraceMs(): number {
@@ -52,10 +52,10 @@ export function getTeamTaskStallStartupGraceMs(): number {
 }
 
 export function getTeamTaskStallActivationGraceMs(): number {
-  return readInt(process.env.CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS, 120_000);
+  return readInt(process.env.CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS, 60_000);
 }
 
 export function getOpenCodeWeakStartStallThresholdMs(): number {
   // Shorter OpenCode threshold for "started work" comments that do not contain concrete progress.
-  return readInt(process.env.CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS, 120_000);
+  return readInt(process.env.CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS, 100_000);
 }

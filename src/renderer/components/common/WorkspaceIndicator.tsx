@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { Check, ChevronDown } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -15,6 +16,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { ConnectionStatusBadge } from './ConnectionStatusBadge';
 
 export const WorkspaceIndicator = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const { activeContextId, isContextSwitching, availableContexts, switchContext } = useStore(
     useShallow((s) => ({
       activeContextId: s.activeContextId,
@@ -109,7 +111,7 @@ export const WorkspaceIndicator = (): React.JSX.Element | null => {
               className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              Switch Workspace
+              {t('context.switchWorkspace')}
             </div>
 
             {/* Context list */}

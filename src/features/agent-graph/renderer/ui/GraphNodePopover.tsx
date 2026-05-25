@@ -6,6 +6,7 @@
 
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -24,6 +25,10 @@ import { useGraphMemberPopoverContext } from '../hooks/useGraphMemberPopoverCont
 import { GraphTaskCard } from './GraphTaskCard';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
+import type {
+  MemberActivityFilter,
+  MemberDetailTab,
+} from '@renderer/components/team/members/memberDetailTypes';
 import type { TeamTaskWithKanban } from '@shared/types';
 
 // ─── Tool name/preview formatters ───────────────────────────────────────────
@@ -74,7 +79,13 @@ interface GraphNodePopoverProps {
   onClose: () => void;
   onSendMessage?: (memberName: string) => void;
   onOpenTaskDetail?: (taskId: string) => void;
-  onOpenMemberProfile?: (memberName: string) => void;
+  onOpenMemberProfile?: (
+    memberName: string,
+    options?: {
+      initialActivityFilter?: MemberActivityFilter;
+      initialTab?: MemberDetailTab;
+    }
+  ) => void;
   onCreateTask?: (owner: string) => void;
   onStartTask?: (taskId: string) => void;
   onCompleteTask?: (taskId: string) => void;
@@ -83,6 +94,7 @@ interface GraphNodePopoverProps {
   onRequestChanges?: (taskId: string) => void;
   onCancelTask?: (taskId: string) => void;
   onMoveBackToDone?: (taskId: string) => void;
+  onViewChanges?: (taskId: string) => void;
   onDeleteTask?: (taskId: string) => void;
 }
 
@@ -101,8 +113,10 @@ export const GraphNodePopover = ({
   onRequestChanges,
   onCancelTask,
   onMoveBackToDone,
+  onViewChanges,
   onDeleteTask,
 }: GraphNodePopoverProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   if (node.kind === 'member' || node.kind === 'lead') {
     return (
       <MemberPopoverContent
@@ -140,6 +154,7 @@ export const GraphNodePopover = ({
         onRequestChanges={onRequestChanges}
         onCancelTask={onCancelTask}
         onMoveBackToDone={onMoveBackToDone}
+        onViewChanges={onViewChanges}
         onDeleteTask={onDeleteTask}
       />
     );
@@ -155,7 +170,9 @@ export const GraphNodePopover = ({
           <span className="text-sm text-purple-400">{'\u{2194}'}</span>
           <span className="font-mono text-xs font-bold text-purple-300">{extTeamName}</span>
         </div>
-        <div className="mt-1 text-[10px] text-[var(--color-text-muted)]">External team</div>
+        <div className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+          {t('agentGraph.popover.externalTeam')}
+        </div>
       </div>
     );
   }
@@ -172,11 +189,15 @@ export const GraphNodePopover = ({
       <div className="mt-2 space-y-0.5 text-[10px] text-[var(--color-text-muted)]">
         {node.processRegisteredBy && (
           <div>
-            Started by: <span className="text-[var(--color-text)]">{node.processRegisteredBy}</span>
+            {t('agentGraph.popover.process.startedBy')}{' '}
+            <span className="text-[var(--color-text)]">{node.processRegisteredBy}</span>
           </div>
         )}
         {node.processRegisteredAt && (
-          <div>At: {new Date(node.processRegisteredAt).toLocaleTimeString()}</div>
+          <div>
+            {t('agentGraph.popover.process.at')}{' '}
+            {new Date(node.processRegisteredAt).toLocaleTimeString()}
+          </div>
         )}
         {node.exceptionLabel && (
           <Badge
@@ -198,7 +219,7 @@ export const GraphNodePopover = ({
           rel="noreferrer"
           className="mt-2 flex items-center gap-1 text-xs text-blue-400 hover:underline"
         >
-          <ExternalLink size={12} /> Open URL
+          <ExternalLink size={12} /> {t('agentGraph.popover.process.openUrl')}
         </a>
       )}
     </div>
@@ -216,6 +237,7 @@ const OverflowPopoverContent = ({
   onClose: () => void;
   onOpenTaskDetail?: (taskId: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { teamData } = useGraphActivityContext(teamName);
   const tasksById = new Map((teamData?.tasks ?? []).map((task) => [task.id, task]));
   const hiddenTasks = (node.overflowTaskIds ?? [])
@@ -225,14 +247,18 @@ const OverflowPopoverContent = ({
   return (
     <div className="min-w-[240px] max-w-[320px] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 shadow-xl">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold text-[var(--color-text)]">Hidden tasks</div>
+        <div className="text-sm font-semibold text-[var(--color-text)]">
+          {t('agentGraph.popover.overflow.hiddenTasks')}
+        </div>
         <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
           {node.overflowCount ?? hiddenTasks.length}
         </Badge>
       </div>
       <div className="mt-2 max-h-[260px] space-y-1 overflow-y-auto pr-1">
         {hiddenTasks.length === 0 ? (
-          <div className="text-xs text-[var(--color-text-muted)]">No hidden tasks available.</div>
+          <div className="text-xs text-[var(--color-text-muted)]">
+            {t('agentGraph.popover.overflow.empty')}
+          </div>
         ) : (
           hiddenTasks.map((task) => {
             const reviewer = resolveTaskReviewer(task, teamData?.kanbanState.tasks[task.id]);
@@ -290,6 +316,7 @@ const MemberPopoverContent = ({
   onCreateTask?: (owner: string) => void;
   onOpenTask?: (taskId: string) => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const memberName =
     node.domainRef.kind === 'member' || node.domainRef.kind === 'lead'
       ? node.domainRef.memberName
@@ -302,6 +329,7 @@ const MemberPopoverContent = ({
     teamData,
     teamMembers,
     spawnEntry,
+    runtimeEntry,
     leadActivity,
     progress,
     memberSpawnSnapshot,
@@ -328,6 +356,7 @@ const MemberPopoverContent = ({
           members: teamMembers,
           memberSpawnStatuses,
           memberSpawnSnapshot,
+          t,
         })
       : null;
   const launchPresentation = member
@@ -342,6 +371,12 @@ const MemberPopoverContent = ({
         spawnRuntimeAlive: spawnEntry?.runtimeAlive,
         spawnBootstrapConfirmed: spawnEntry?.bootstrapConfirmed,
         spawnBootstrapStalled: spawnEntry?.bootstrapStalled,
+        spawnAgentToolAccepted: spawnEntry?.agentToolAccepted,
+        spawnHardFailure: spawnEntry?.hardFailure,
+        spawnLivenessKind: spawnEntry?.livenessKind,
+        spawnFirstSpawnAcceptedAt: spawnEntry?.firstSpawnAcceptedAt,
+        spawnUpdatedAt: spawnEntry?.updatedAt,
+        runtimeEntry,
         runtimeAdvisory: member.runtimeAdvisory,
         isLaunchSettling: provisioningPresentation?.hasMembersStillJoining ?? false,
         isTeamAlive: teamData?.isAlive,
@@ -352,11 +387,11 @@ const MemberPopoverContent = ({
   const fallbackSpawnStatusLabel =
     node.spawnStatus && node.spawnStatus !== 'online'
       ? node.spawnStatus === 'waiting'
-        ? 'waiting to start'
+        ? t('agentGraph.popover.member.spawn.waitingToStart')
         : node.spawnStatus === 'spawning'
-          ? 'starting'
+          ? t('agentGraph.popover.member.spawn.starting')
           : node.spawnStatus === 'error'
-            ? 'failed'
+            ? t('agentGraph.popover.member.spawn.failed')
             : node.spawnStatus
       : null;
   const statusLabel =
@@ -365,13 +400,13 @@ const MemberPopoverContent = ({
     launchPresentation?.presenceLabel ??
     fallbackSpawnStatusLabel ??
     (node.state === 'active'
-      ? 'active'
+      ? t('agentGraph.popover.member.state.active')
       : node.state === 'idle'
-        ? 'idle'
+        ? t('agentGraph.popover.member.state.idle')
         : node.state === 'terminated'
-          ? 'offline'
+          ? t('agentGraph.popover.member.state.offline')
           : node.state === 'tool_calling'
-            ? 'running tool'
+            ? t('agentGraph.popover.member.state.runningTool')
             : node.state);
   const statusDotClass =
     launchPresentation?.dotClass ??
@@ -444,7 +479,7 @@ const MemberPopoverContent = ({
             variant="outline"
             className="border-blue-500/30 px-1.5 py-0 text-[10px] text-blue-400"
           >
-            Lead
+            {t('agentGraph.popover.member.lead')}
           </Badge>
         )}
         {(launchPresentation?.spawnBadgeLabel ?? fallbackSpawnStatusLabel) &&
@@ -479,7 +514,9 @@ const MemberPopoverContent = ({
             className="size-3 shrink-0 animate-spin"
             style={{ color: node.color ?? '#66ccff' }}
           />
-          <span className="shrink-0 text-[var(--color-text-muted)]">working on</span>
+          <span className="shrink-0 text-[var(--color-text-muted)]">
+            {t('agentGraph.popover.member.workingOn')}
+          </span>
           <button
             type="button"
             className="min-w-0 truncate rounded px-1.5 py-0.5 font-medium text-[var(--color-text)] transition-opacity hover:opacity-90"
@@ -513,10 +550,10 @@ const MemberPopoverContent = ({
             />
             <span className="font-medium text-[var(--color-text)]">
               {node.activeTool.state === 'running'
-                ? 'Running tool'
+                ? t('agentGraph.popover.member.activeTool.running')
                 : node.activeTool.state === 'error'
-                  ? 'Tool failed'
-                  : 'Tool finished'}
+                  ? t('agentGraph.popover.member.activeTool.failed')
+                  : t('agentGraph.popover.member.activeTool.finished')}
             </span>
           </div>
           <div className="mt-1 font-mono text-[var(--color-text-muted)]">
@@ -535,7 +572,7 @@ const MemberPopoverContent = ({
       {node.recentTools && node.recentTools.length > 0 && (
         <div className="mt-2">
           <div className="mb-1 text-[10px] font-medium text-[var(--color-text-muted)]">
-            Recent tools
+            {t('agentGraph.popover.member.recentTools')}
           </div>
           <div className="space-y-1">
             {node.recentTools.slice(0, 5).map((tool) => {
@@ -574,7 +611,7 @@ const MemberPopoverContent = ({
             onClose();
           }}
         >
-          <MessageSquare size={12} /> Message
+          <MessageSquare size={12} /> {t('agentGraph.popover.member.actions.message')}
         </Button>
         <Button
           variant="outline"
@@ -585,7 +622,7 @@ const MemberPopoverContent = ({
             onClose();
           }}
         >
-          <User size={12} /> Profile
+          <User size={12} /> {t('agentGraph.popover.member.actions.profile')}
         </Button>
         <Button
           variant="outline"
@@ -596,7 +633,7 @@ const MemberPopoverContent = ({
             onClose();
           }}
         >
-          <Plus size={12} /> Task
+          <Plus size={12} /> {t('agentGraph.popover.member.actions.task')}
         </Button>
       </div>
     </div>

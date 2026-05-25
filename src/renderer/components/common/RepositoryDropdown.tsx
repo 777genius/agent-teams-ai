@@ -11,6 +11,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { ChevronDown, FolderOpen, GitBranch } from 'lucide-react';
 
@@ -39,6 +40,7 @@ export const RepositoryDropdown = ({
   dropUp = false,
   className = '',
 }: Readonly<RepositoryDropdownProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -115,7 +117,7 @@ export const RepositoryDropdown = ({
       >
         <span className="flex items-center gap-2">
           <FolderOpen className="size-3" />
-          {isEmpty ? 'No repositories available' : placeholder}
+          {isEmpty ? t('repositories.noneAvailable') : placeholder}
         </span>
         <ChevronDown
           className={`size-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -150,6 +152,7 @@ const RepositoryDropdownItemComponentInner = ({
   item: RepositoryDropdownItem;
   onSelect: () => void;
 }>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   return (
     <button
       type="button"
@@ -167,7 +170,7 @@ const RepositoryDropdownItemComponentInner = ({
             </span>
           )}
           <span className="shrink-0 text-[10px] text-text-muted">
-            {item.totalSessions} session{item.totalSessions !== 1 ? 's' : ''}
+            {t('sessions.count', { count: item.totalSessions })}
           </span>
         </div>
         <span className="block truncate text-[10px] text-text-muted">{item.path}</span>
@@ -190,6 +193,7 @@ const SelectedRepositoryItemInner = ({
   onRemove: () => void;
   disabled?: boolean;
 }>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   return (
     <div className="flex items-center gap-2 border-b border-border-subtle py-1.5">
       <FolderOpen className="size-3 shrink-0 text-indigo-400" />
@@ -212,7 +216,7 @@ const SelectedRepositoryItemInner = ({
         onClick={onRemove}
         disabled={disabled}
         className={`shrink-0 rounded p-1 text-text-muted transition-colors hover:bg-red-500/10 hover:text-red-400 ${disabled ? 'cursor-not-allowed opacity-50' : ''} `}
-        aria-label="Remove repository"
+        aria-label={t('repositories.remove')}
       >
         <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path

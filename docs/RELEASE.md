@@ -1,5 +1,9 @@
 # Release Guide
 
+## Published: v2.1.2 (2026-05-23)
+
+Performance and reliability release: faster startup, deferred provider/runtime hydration, resilient file watching under watcher limits, safer context switching, better team launch diagnostics, and packaged app entry/runtime fixes. GitHub release: [v2.1.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.1.2).
+
 ## Published: v1.2.0 (2026-03-31)
 
 Agent Graph, per-team tool approval, interactive AskUserQuestion, task comment notifications, cross-team ghost nodes. Major graph improvements: force-directed visualization with kanban task layout, fullscreen/tab mode, animated particles, member hexagons with avatars, popover actions. Permission system overhaul with proper Write/Edit/NotebookEdit seeding and MCP tool catalog integration. Full list: [CHANGELOG.md](./CHANGELOG.md).
@@ -131,11 +135,32 @@ EOF
 )"
 ```
 
+Public release notes must follow this standard every time:
+
+- Start with a short user-facing summary. Explain what changed and why users should care.
+- Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body; the GitHub release title already shows the version.
+- Use the sections `What's New`, `Improvements`, and `Bug Fixes`; omit a section only if it would be empty.
+- Keep internal-only CI, lint, dependency, and refactor work out of public notes unless it directly explains a user-visible fix.
+- Put `Downloads` as the final section, after all text notes.
+- Use badge/button links in `Downloads`, not bare asset links.
+- Verify actual asset names with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json assets` before writing links.
+- Prefer versioned installer links for release-specific notes: `Agent.Teams.AI-<VERSION>-arm64.dmg`, `Agent.Teams.AI-<VERSION>-x64.dmg`, `Agent.Teams.AI.Setup.<VERSION>.exe`, `Agent.Teams.AI-<VERSION>.AppImage`, `agent-teams-ai_<VERSION>_amd64.deb`, `agent-teams-ai-<VERSION>.x86_64.rpm`, and `agent-teams-ai-<VERSION>.pacman`.
+
+### 4. Required release closeout gate
+
+Do not publish or call a release finished until this is true:
+
+- The GitHub release body is not just auto-generated `Full Changelog`.
+- The release body starts with short user-facing notes: what changed, why users care, and the most important fixes.
+- The `Downloads` table from the template is present and every link points to the current `v<VERSION>` assets.
+- The asset names in the notes match the assets uploaded by `release.yml`.
+- `gh release view v<VERSION> --json body,assets,isDraft,isPrerelease` confirms the release is public, has notes, and has the expected installer assets.
+
+If a draft was published before notes were written, immediately edit the public release body with `gh release edit`; do not leave a release with only generated notes.
+
 ## Release Notes Template
 
 ```markdown
-## Agent Teams v<VERSION>
-
 <1-2 sentence summary of the release>
 
 ### What's New
@@ -169,7 +194,9 @@ EOF
     <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
   </a>
   <br />
-  <sub>May trigger SmartScreen — click "More info" → "Run anyway"</sub>
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v<VERSION>/Agent.Teams.AI-<VERSION>.AppImage">
@@ -194,6 +221,22 @@ EOF
 
 Write changelog entries from the **user's perspective**, not the developer's.
 
+Release notes must stay short, concrete, and user-facing. Do not include internal
+maintenance details unless they directly change what users can do or clearly fix
+a user-visible problem.
+
+Avoid entries about:
+
+- CI/lint/test gates, smoke tests, or validation infrastructure.
+- README/docs cleanup, roadmap checkbox changes, or release-process polish.
+- Runtime artifact internals, bundled runtime version numbers, stable aliases,
+  compatibility aliases, or updater plumbing.
+- Refactors, dependency bumps, or workflow changes without a user-visible effect.
+
+If a change only made future releases, tests, packaging, or developer validation
+more reliable, keep it out of the public notes or fold it into one concise
+user-facing line only when it explains a real fix.
+
 **Good:**
 
 - "Add team member activity timeline with live status tracking"
@@ -205,6 +248,11 @@ Write changelog entries from the **user's perspective**, not the developer's.
 - "Refactor ChunkBuilder to use new pipeline"
 - "Update dependencies"
 - "Fix bug in useEffect cleanup"
+- "Fix CI lint gate"
+- "Stabilize provider smoke tests"
+- "Update README install guidance"
+- "Bundled runtime remains vX.Y.Z"
+- "Compatibility aliases are still included"
 
 Group entries by type: `What's New` > `Improvements` > `Bug Fixes` > `Breaking Changes` (if any).
 
@@ -212,17 +260,17 @@ Group entries by type: `What's New` > `Improvements` > `Bug Fixes` > `Breaking C
 
 electron-builder generates these artifacts per platform:
 
-| Platform        | Versioned Name                       | Stable Name (for /latest/download) |
-| --------------- | ------------------------------------ | ---------------------------------- |
-| macOS arm64 DMG | `Agent.Teams.AI-<VER>-arm64.dmg`     | `Claude-Agent-Teams-UI-arm64.dmg`  |
-| macOS x64 DMG   | `Agent.Teams.AI-<VER>-x64.dmg`       | `Claude-Agent-Teams-UI-x64.dmg`    |
-| macOS arm64 ZIP | `Agent.Teams.AI-<VER>-arm64-mac.zip` | -                                  |
-| macOS x64 ZIP   | `Agent.Teams.AI-<VER>-x64-mac.zip`   | -                                  |
-| Windows         | `Agent.Teams.AI.Setup.<VER>.exe`     | `Claude-Agent-Teams-UI-Setup.exe`  |
-| Linux AppImage  | `Agent.Teams.AI-<VER>.AppImage`      | `Claude-Agent-Teams-UI.AppImage`   |
-| Linux deb       | `agent-teams-ai_<VER>_amd64.deb`     | `Claude-Agent-Teams-UI-amd64.deb`  |
-| Linux rpm       | `agent-teams-ai-<VER>.x86_64.rpm`    | `Claude-Agent-Teams-UI-x86_64.rpm` |
-| Linux pacman    | `agent-teams-ai-<VER>.pacman`        | `Claude-Agent-Teams-UI.pacman`     |
+| Platform        | Versioned Name                       | Stable Name (for /latest/download) | Compatibility Alias                |
+| --------------- | ------------------------------------ | ---------------------------------- | ---------------------------------- |
+| macOS arm64 DMG | `Agent.Teams.AI-<VER>-arm64.dmg`     | `Agent.Teams.AI-arm64.dmg`         | `Claude-Agent-Teams-UI-arm64.dmg`  |
+| macOS x64 DMG   | `Agent.Teams.AI-<VER>-x64.dmg`       | `Agent.Teams.AI-x64.dmg`           | `Claude-Agent-Teams-UI-x64.dmg`    |
+| macOS arm64 ZIP | `Agent.Teams.AI-<VER>-arm64-mac.zip` | -                                  | -                                  |
+| macOS x64 ZIP   | `Agent.Teams.AI-<VER>-x64-mac.zip`   | -                                  | -                                  |
+| Windows         | `Agent.Teams.AI.Setup.<VER>.exe`     | `Agent.Teams.AI.Setup.exe`         | `Claude-Agent-Teams-UI-Setup.exe`  |
+| Linux AppImage  | `Agent.Teams.AI-<VER>.AppImage`      | `Agent.Teams.AI.AppImage`          | `Claude-Agent-Teams-UI.AppImage`   |
+| Linux deb       | `agent-teams-ai_<VER>_amd64.deb`     | `agent-teams-ai-amd64.deb`         | `Claude-Agent-Teams-UI-amd64.deb`  |
+| Linux rpm       | `agent-teams-ai-<VER>.x86_64.rpm`    | `agent-teams-ai-x86_64.rpm`        | `Claude-Agent-Teams-UI-x86_64.rpm` |
+| Linux pacman    | `agent-teams-ai-<VER>.pacman`        | `agent-teams-ai.pacman`            | `Claude-Agent-Teams-UI.pacman`     |
 
 ## Stable Download Links
 
@@ -232,10 +280,11 @@ It starts only after **release-mac** (two matrix jobs), **release-win**, and **r
 This enables permanent links in README that always point to the latest release:
 
 ```
-https://github.com/777genius/agent-teams-ai/releases/latest/download/Claude-Agent-Teams-UI-arm64.dmg
+https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI-arm64.dmg
 ```
 
 GitHub automatically redirects `/releases/latest/download/FILENAME` to the asset from the most recent release. No README updates needed when releasing a new version.
+The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility with older links and clients.
 
 ## macOS Code Signing
 

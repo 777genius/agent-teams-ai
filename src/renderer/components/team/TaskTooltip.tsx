@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -74,6 +75,7 @@ export const TaskTooltip = memo(function TaskTooltip({
   children,
   side = 'top',
 }: TaskTooltipProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const { selectedTeamName, selectedTeamData, selectedTeamMembers, globalTasks, teamByName } =
     useStore(
       useShallow((s) => ({
@@ -180,7 +182,9 @@ export const TaskTooltip = memo(function TaskTooltip({
           ) : task.owner ? (
             <span className="text-[10px] text-[var(--color-text-secondary)]">{task.owner}</span>
           ) : (
-            <span className="text-[10px] text-[var(--color-text-muted)]">Unassigned</span>
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              {t('tasks.unassigned')}
+            </span>
           )}
         </div>
 

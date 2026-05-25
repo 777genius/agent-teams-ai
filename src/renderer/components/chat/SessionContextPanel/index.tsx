@@ -5,6 +5,7 @@
 
 import React, { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   COLOR_BORDER,
   COLOR_SURFACE,
@@ -57,6 +58,7 @@ export const SessionContextPanel = ({
   onPhaseChange,
   side = 'left',
 }: Readonly<SessionContextPanelProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   // View mode: category sections or ranked list
   const [viewMode, setViewMode] = useState<ContextViewMode>('category');
   // Flat sub-toggle within "By Size" view
@@ -212,7 +214,7 @@ export const SessionContextPanel = ({
             className="flex h-full items-center justify-center text-sm"
             style={{ color: COLOR_TEXT_MUTED }}
           >
-            No context injections detected in this session
+            {t('sessionContext.empty')}
           </div>
         ) : viewMode === 'category' ? (
           <>
@@ -278,7 +280,7 @@ export const SessionContextPanel = ({
                   color: !flatMode ? '#818cf8' : COLOR_TEXT_MUTED,
                 }}
               >
-                Grouped
+                {t('sessionContext.view.grouped')}
               </button>
               <button
                 onClick={() => setFlatMode(true)}
@@ -288,7 +290,7 @@ export const SessionContextPanel = ({
                   color: flatMode ? '#818cf8' : COLOR_TEXT_MUTED,
                 }}
               >
-                Flat
+                {t('sessionContext.view.flat')}
               </button>
             </div>
             {flatMode ? (

@@ -11,11 +11,12 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 import { killProcessByPid } from '../../../../src/main/utils/processKill';
+
 import {
   createOpenCodeLiveHarness,
+  type OpenCodeLiveHarness,
   waitForOpenCodeLanesStopped,
   waitUntil,
-  type OpenCodeLiveHarness,
 } from './openCodeLiveTestHarness';
 
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
@@ -36,10 +37,10 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli';
+const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_ANTHROPIC_MODEL = 'haiku';
 const DEFAULT_CODEX_MODEL = 'gpt-5.4-mini';
-const DEFAULT_OPENCODE_MODEL = 'openai/gpt-5.4-mini';
+const DEFAULT_OPENCODE_MODEL = 'opencode/big-pickle';
 
 liveDescribe('Mixed provider team launch live e2e', () => {
   let tempDir: string;

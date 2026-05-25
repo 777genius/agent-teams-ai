@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -56,6 +57,7 @@ export const McpServerCard = ({
   cliStatus: cliStatusOverride,
   cliStatusLoading,
 }: McpServerCardProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const storedCliStatus = useStore((s) => s.cliStatus);
   const cliStatus = cliStatusOverride ?? storedCliStatus;
   const sharedScope = getDefaultMcpSharedScope(cliStatus?.flavor);
@@ -179,19 +181,19 @@ export const McpServerCard = ({
           {server.tools.length > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-surface-raised px-1.5 py-0.5 ring-1 ring-border">
               <Wrench className="size-3" />
-              {server.tools.length} {server.tools.length === 1 ? 'tool' : 'tools'}
+              {t('mcpCard.toolsCount', { count: server.tools.length })}
             </span>
           )}
           {server.envVars.length > 0 && (
             <span className="inline-flex items-center gap-1">
               <KeyRound className="size-3" />
-              {server.envVars.length} {server.envVars.length === 1 ? 'env' : 'envs'}
+              {t('mcpCard.envCount', { count: server.envVars.length })}
             </span>
           )}
           {server.requiresAuth && (
             <span className="inline-flex items-center gap-1 text-amber-400">
               <Lock className="size-3" />
-              Auth
+              {t('mcpCard.auth')}
             </span>
           )}
           {server.version && (
@@ -206,23 +208,25 @@ export const McpServerCard = ({
               {formatRelativeTime(server.updatedAt)}
             </span>
           )}
-          {server.author && <span className="truncate">by {server.author}</span>}
+          {server.author && (
+            <span className="truncate">{t('mcpCard.byAuthor', { author: server.author })}</span>
+          )}
           {server.hostingType === 'remote' && (
             <span className="inline-flex items-center gap-1">
               <Cloud className="size-3" />
-              Remote
+              {t('mcpCard.hosting.remote')}
             </span>
           )}
           {server.hostingType === 'local' && (
             <span className="inline-flex items-center gap-1">
               <Monitor className="size-3" />
-              Local
+              {t('mcpCard.hosting.local')}
             </span>
           )}
           {server.hostingType === 'both' && (
             <span className="inline-flex items-center gap-1">
               <Globe className="size-3" />
-              Both
+              {t('mcpCard.hosting.both')}
             </span>
           )}
           {/* External links + stars */}
@@ -245,7 +249,7 @@ export const McpServerCard = ({
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="top">Repository</TooltipContent>
+              <TooltipContent side="top">{t('mcpCard.repository')}</TooltipContent>
             </Tooltip>
           )}
           {server.websiteUrl && (
@@ -261,7 +265,7 @@ export const McpServerCard = ({
                   <Globe className="size-3.5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="top">Website</TooltipContent>
+              <TooltipContent side="top">{t('mcpCard.website')}</TooltipContent>
             </Tooltip>
           )}
         </div>

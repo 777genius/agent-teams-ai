@@ -25,6 +25,12 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: vi.fn(async (_binaryPath: string | null, args: string[]) => {
+    if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
+      return {
+        stdout: JSON.stringify({ execPath: process.execPath, version: process.versions.node }),
+        stderr: '',
+      };
+    }
     if (args.includes('model') && args.includes('list')) {
       return {
         stdout: JSON.stringify({
@@ -79,6 +85,19 @@ vi.mock('@main/utils/childProcess', () => ({
   killProcessTree: vi.fn(),
 }));
 
+vi.mock('@main/utils/shellEnv', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/utils/shellEnv')>();
+  return {
+    ...actual,
+    getCachedShellEnv: () => ({ PATH: process.env.PATH ?? '', HOME: hoisted.paths.claudeRoot }),
+    getShellPreferredHome: () => hoisted.paths.claudeRoot || actual.getShellPreferredHome(),
+    resolveInteractiveShellEnv: vi.fn(async () => ({
+      PATH: process.env.PATH ?? '',
+      HOME: hoisted.paths.claudeRoot,
+    })),
+  };
+});
+
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@main/utils/pathDecoder')>();
   return {
@@ -130,6 +149,7 @@ function extractBootstrapSpec(callIndex = 0): {
   team?: { name?: string; cwd?: string };
   lead?: { permissionSeedTools?: string[] };
   members?: Array<Record<string, unknown>>;
+  launch?: { bootstrapTimeoutMs?: number; continueOnPartialFailure?: boolean };
 } {
   const args = vi.mocked(spawnCli).mock.calls[callIndex]?.[1] as string[] | undefined;
   const specFlagIndex = args?.indexOf('--team-bootstrap-spec') ?? -1;
@@ -142,6 +162,7 @@ function extractBootstrapSpec(callIndex = 0): {
     team?: { name?: string; cwd?: string };
     lead?: { permissionSeedTools?: string[] };
     members?: Array<Record<string, unknown>>;
+    launch?: { bootstrapTimeoutMs?: number; continueOnPartialFailure?: boolean };
   };
 }
 
@@ -265,18 +286,20 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(writeSpy).not.toHaveBeenCalled();
     const prompt = extractPromptFromBootstrapFile();
     expect(prompt).toContain('SOLO MODE: This team CURRENTLY has ZERO teammates.');
-    expect(prompt).toContain('This launch/bootstrap step has already been completed deterministically by the runtime.');
+    expect(prompt).toContain(
+      'This launch/bootstrap step has already been completed deterministically by the runtime.'
+    );
     expect(prompt).toContain('Do NOT start implementation in this turn.');
-    expect(prompt).toContain('Use this turn only to refresh context, review the current board snapshot, and confirm you are ready.');
+    expect(prompt).toContain(
+      'Use this turn only to review the current board snapshot and confirm operational readiness.'
+    );
     expect(prompt).toContain(
       'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
     );
     expect(prompt).toContain(
       'review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request'
     );
-    expect(prompt).toContain(
-      'Review is a state transition on the EXISTING work task.'
-    );
+    expect(prompt).toContain('Review is a state transition on the EXISTING work task.');
     expect(prompt).toContain(
       'The REVIEW column is for the same task #X moving through review. It is NOT a signal to create another task for review.'
     );
@@ -330,8 +353,59 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
         cwd: process.cwd(),
       }),
     ]);
+    expect(bootstrapSpec.launch).toMatchObject({
+      bootstrapTimeoutMs: 120_000,
+      continueOnPartialFailure: true,
+    });
 
     await svc.cancelProvisioning(runId);
+  });
+
+  it('createTeam scales deterministic bootstrap timeout with member count', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    let runId: string | undefined;
+    try {
+      const created = await svc.createTeam(
+        {
+          teamName: 'large-team',
+          cwd: process.cwd(),
+          members: [
+            { name: 'alice' },
+            { name: 'atlas' },
+            { name: 'bob' },
+            { name: 'jack' },
+            { name: 'tom' },
+          ],
+        },
+        () => {}
+      );
+      runId = created.runId;
+
+      expect(extractBootstrapSpec().launch).toMatchObject({
+        bootstrapTimeoutMs: 375_000,
+        continueOnPartialFailure: true,
+      });
+
+      expect(setTimeoutSpy.mock.calls.some((call) => call[1] === 405_000)).toBe(true);
+    } finally {
+      if (runId) {
+        await svc.cancelProvisioning(runId);
+      }
+      setTimeoutSpy.mockRestore();
+    }
   });
 
   it('createTeam bootstrap spec includes worktree isolation only for selected teammates', async () => {
@@ -520,7 +594,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(message).toContain('Teammate "alice" with role "Reviewer" was restarted from the UI.');
     expect(message).toContain('team_name="forge-labs", name="alice"');
     expect(message).toContain('provider="codex", model="gpt-5.4-mini", effort="medium"');
-    expect(message).toContain('This is a restart of an existing persistent teammate, not a new teammate.');
+    expect(message).toContain(
+      'This is a restart of an existing persistent teammate, not a new teammate.'
+    );
     expect(message).toContain(
       'If the Agent tool returns duplicate_skipped with reason bootstrap_pending, treat that as a pending restart and wait for teammate check-in.'
     );
@@ -545,6 +621,41 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(addMessage).toContain('isolation="worktree"');
     expect(restartMessage).toContain('isolation="worktree"');
     expect(normalAddMessage).not.toContain('isolation="worktree"');
+  });
+
+  it('add and restart teammate prompts can carry strict MCP launch overrides for Agent tool spawns', () => {
+    const mcpLaunchConfig = {
+      mcpConfigPath: '/tmp/team path/alice-mcp.json',
+      mcpSettingSources: 'user,project,local',
+      strictMcpConfig: true,
+    };
+    const addMessage = buildAddMemberSpawnMessage(
+      'forge-labs',
+      'Forge Labs',
+      'lead',
+      {
+        name: 'alice',
+        providerId: 'codex',
+      },
+      mcpLaunchConfig
+    );
+    const restartMessage = buildRestartMemberSpawnMessage(
+      'forge-labs',
+      'Forge Labs',
+      'lead',
+      {
+        name: 'alice',
+        providerId: 'codex',
+      },
+      mcpLaunchConfig
+    );
+
+    expect(addMessage).toContain(
+      'mcp_config="/tmp/team path/alice-mcp.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+    );
+    expect(restartMessage).toContain(
+      'mcp_config="/tmp/team path/alice-mcp.json", mcp_setting_sources="user,project,local", strict_mcp_config=true'
+    );
   });
 
   it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {
@@ -623,11 +734,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       role: 'developer',
     });
 
-    expect(prompt).toContain('Review flow rule: review is a state transition on the SAME work task');
-    expect(prompt).toContain('Do NOT create a separate "review task"');
     expect(prompt).toContain(
-      'If no reviewer exists, leave #X completed.'
+      'Review flow rule: review is a state transition on the SAME work task'
     );
+    expect(prompt).toContain('Do NOT create a separate "review task"');
+    expect(prompt).toContain('If no reviewer exists, leave #X completed.');
     expect(prompt).toContain(
       'If you are the reviewer for task #X, call review_start on #X first, then review_approve or review_request_changes on #X itself.'
     );
@@ -731,9 +842,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     expect(writeSpy).not.toHaveBeenCalled();
     const prompt = extractPromptFromBootstrapFile();
-    expect(prompt).toContain(
-      'Teammate task comments are auto-forwarded to you.'
-    );
+    expect(prompt).toContain('Teammate task comments are auto-forwarded to you.');
 
     await svc.cancelProvisioning(runId);
   });
@@ -790,25 +899,29 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     expect(writeSpy).not.toHaveBeenCalled();
     const prompt = extractPromptFromBootstrapFile();
-    expect(prompt).toContain('This launch/bootstrap step has already been completed deterministically by the runtime.');
+    expect(prompt).toContain(
+      'This launch/bootstrap step has already been completed deterministically by the runtime.'
+    );
     expect(prompt).toContain('Do NOT use Agent to spawn or restore teammates.');
-    expect(prompt).toContain('Use this turn only to refresh context and review the current board snapshot.');
+    expect(prompt).toContain(
+      'Use this turn only to review the current board snapshot and teammate readiness.'
+    );
     expect(prompt).toContain(
       'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
     );
     expect(prompt).toContain('DELEGATION-FIRST (behavior rule for ALL future turns):');
     expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
-    expect(prompt).toContain('Messages to "user" (the human) must NEVER contain agent-only blocks.');
+    expect(prompt).toContain(
+      'Messages to "user" (the human) must NEVER contain agent-only blocks.'
+    );
     expect(prompt).toContain('task_create_from_message');
     expect(prompt).toContain('task_set_owner');
     expect(prompt).toContain('cross_team_send');
     expect(prompt).toContain(
       'lead_briefing is the primary lead queue. Decisions about what to act on now come from lead_briefing, not from raw task_list rows.'
     );
-    expect(prompt).toContain(
-      'Browse/search compact inventory rows only: task_list'
-    );
+    expect(prompt).toContain('Browse/search compact inventory rows only: task_list');
     expect(prompt).toContain(
       `Browse/search compact inventory rows only: task_list { teamName: "${teamName}", owner?: "<member>", status?: "pending|in_progress|completed"`
     );
@@ -816,20 +929,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       `Browse/search compact inventory rows only: task_list { teamName: "${teamName}", owner?: "<member>", status?: "pending|in_progress|completed|deleted"`
     );
     expect(prompt).toContain(
-      'task_list is inventory/search/drill-down only. Do NOT treat task_list as the lead\'s working queue.'
+      "task_list is inventory/search/drill-down only. Do NOT treat task_list as the lead's working queue."
     );
-    expect(prompt).toContain(
-      'review_request already notifies the reviewer'
-    );
-    expect(prompt).toContain(
-      'By default, NEVER create a separate "review task".'
-    );
-    expect(prompt).toContain(
-      'Only move #X into REVIEW when a real reviewer exists for #X.'
-    );
-    expect(prompt).not.toContain(
-      'Only create a separate review reminder/assignment task'
-    );
+    expect(prompt).toContain('review_request already notifies the reviewer');
+    expect(prompt).toContain('By default, NEVER create a separate "review task".');
+    expect(prompt).toContain('Only move #X into REVIEW when a real reviewer exists for #X.');
+    expect(prompt).not.toContain('Only create a separate review reminder/assignment task');
     expect(prompt).toContain(
       'Correct flow: finish implementation on #X -> task_complete #X -> review_request #X -> reviewer runs review_start #X -> reviewer runs review_approve or review_request_changes on #X.'
     );

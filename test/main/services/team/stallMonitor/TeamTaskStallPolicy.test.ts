@@ -186,6 +186,84 @@ describe('TeamTaskStallPolicy', () => {
     });
   });
 
+  it.each([
+    ['turn_ended_after_touch', 4],
+    ['touch_then_other_turns', 5],
+    ['mid_turn_after_touch', 10],
+  ] as const)('uses the aggressive work threshold for %s', (signal, thresholdMinutes) => {
+    const task: TeamTask = {
+      id: 'task-work-threshold',
+      displayId: 'abcd4444',
+      subject: 'Work threshold',
+      owner: 'alice',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+    };
+    const turnEndRow = createExactRow({
+      sourceOrder: 2,
+      messageUuid: 'msg-turn-end',
+      systemSubtype: 'turn_duration',
+      parsedMessage: createParsedMessage({
+        uuid: 'msg-turn-end',
+        type: 'system',
+      }),
+    });
+    const laterAssistantRow = createExactRow({
+      sourceOrder: 3,
+      messageUuid: 'msg-later',
+      parsedMessage: createParsedMessage({
+        uuid: 'msg-later',
+        type: 'assistant',
+      }),
+    });
+    const postTouchRows =
+      signal === 'touch_then_other_turns'
+        ? [turnEndRow, laterAssistantRow]
+        : signal === 'mid_turn_after_touch'
+          ? [laterAssistantRow]
+          : [turnEndRow];
+    const snapshot = createSnapshot({
+      activeTasks: [task],
+      allTasksById: new Map([[task.id, task]]),
+      inProgressTasks: [task],
+      recordsByTaskId: new Map([[task.id, [createRecord()]]]),
+      exactRowsByFilePath: new Map([
+        [
+          '/tmp/session.jsonl',
+          [
+            createExactRow({
+              messageUuid: 'msg-touch',
+              toolUseIds: ['tool-1'],
+            }),
+            ...postTouchRows,
+          ],
+        ],
+      ]),
+    });
+    const touchAtMs = Date.parse('2026-04-19T12:00:00.000Z');
+
+    expect(
+      policy.evaluateWork({
+        now: new Date(touchAtMs + thresholdMinutes * 60_000 - 1),
+        task,
+        snapshot,
+      })
+    ).toMatchObject({
+      status: 'skip',
+      skipReason: 'below_threshold',
+    });
+    expect(
+      policy.evaluateWork({
+        now: new Date(touchAtMs + thresholdMinutes * 60_000),
+        task,
+        snapshot,
+      })
+    ).toMatchObject({
+      status: 'alert',
+      signal,
+    });
+  });
+
   it('alerts OpenCode-owned tasks faster after weak start-only task comments', () => {
     const task: TeamTask = {
       id: 'task-open-weak',
@@ -259,13 +337,26 @@ describe('TeamTaskStallPolicy', () => {
       ]),
     });
 
-    const evaluation = policy.evaluateWork({
-      now: new Date('2026-04-19T12:07:00.000Z'),
-      task,
-      snapshot,
-    });
+    const touchAtMs = Date.parse('2026-04-19T12:00:00.000Z');
 
-    expect(evaluation).toMatchObject({
+    expect(
+      policy.evaluateWork({
+        now: new Date(touchAtMs + 100_000 - 1),
+        task,
+        snapshot,
+      })
+    ).toMatchObject({
+      status: 'skip',
+      taskId: 'task-open-weak',
+      skipReason: 'below_threshold',
+    });
+    expect(
+      policy.evaluateWork({
+        now: new Date(touchAtMs + 100_000),
+        task,
+        snapshot,
+      })
+    ).toMatchObject({
       status: 'alert',
       taskId: 'task-open-weak',
       progressSignal: 'weak_start_only',
@@ -273,7 +364,7 @@ describe('TeamTaskStallPolicy', () => {
     });
   });
 
-  it('keeps existing thresholds for weak comments from non-OpenCode owners', () => {
+  it('uses normal work thresholds for weak comments from non-OpenCode owners', () => {
     const task: TeamTask = {
       id: 'task-codex-weak',
       displayId: 'feed2222',
@@ -347,7 +438,7 @@ describe('TeamTaskStallPolicy', () => {
     });
 
     const evaluation = policy.evaluateWork({
-      now: new Date('2026-04-19T12:07:00.000Z'),
+      now: new Date('2026-04-19T12:03:00.000Z'),
       task,
       snapshot,
     });
@@ -433,7 +524,7 @@ describe('TeamTaskStallPolicy', () => {
     });
 
     const evaluation = policy.evaluateWork({
-      now: new Date('2026-04-19T12:07:00.000Z'),
+      now: new Date('2026-04-19T12:03:00.000Z'),
       task,
       snapshot,
     });
@@ -748,6 +839,123 @@ describe('TeamTaskStallPolicy', () => {
       taskId: 'task-c',
       branch: 'review',
       signal: 'turn_ended_after_touch',
+    });
+  });
+
+  it.each([
+    ['turn_ended_after_touch', 5],
+    ['touch_then_other_turns', 6],
+    ['mid_turn_after_touch', 12],
+  ] as const)('uses the aggressive review threshold for %s', (signal, thresholdMinutes) => {
+    const task: TeamTask = {
+      id: 'task-review-threshold',
+      displayId: 'c0ffee55',
+      subject: 'Review threshold',
+      status: 'completed',
+      reviewState: 'review',
+      historyEvents: [
+        {
+          id: 'evt-review-started',
+          type: 'review_started',
+          timestamp: '2026-04-19T12:00:00.000Z',
+          from: 'review',
+          to: 'review',
+          actor: 'bob',
+        },
+      ],
+    };
+    const turnEndRow = createExactRow({
+      filePath: '/tmp/review-threshold.jsonl',
+      sourceOrder: 2,
+      messageUuid: 'msg-review-threshold-end',
+      systemSubtype: 'turn_duration',
+      parsedMessage: createParsedMessage({
+        uuid: 'msg-review-threshold-end',
+        type: 'system',
+      }),
+    });
+    const laterAssistantRow = createExactRow({
+      filePath: '/tmp/review-threshold.jsonl',
+      sourceOrder: 3,
+      messageUuid: 'msg-review-threshold-later',
+      parsedMessage: createParsedMessage({
+        uuid: 'msg-review-threshold-later',
+        type: 'assistant',
+      }),
+    });
+    const postTouchRows =
+      signal === 'touch_then_other_turns'
+        ? [turnEndRow, laterAssistantRow]
+        : signal === 'mid_turn_after_touch'
+          ? [laterAssistantRow]
+          : [turnEndRow];
+    const record = createRecord({
+      timestamp: '2026-04-19T12:00:00.000Z',
+      actor: {
+        memberName: 'bob',
+        role: 'member',
+        sessionId: 'session-b',
+        isSidechain: true,
+      },
+      actorContext: {
+        relation: 'same_task',
+        activePhase: 'review',
+      },
+      action: {
+        canonicalToolName: 'review_start',
+        category: 'review',
+        toolUseId: 'tool-review-threshold',
+      },
+      source: {
+        messageUuid: 'msg-review-threshold',
+        filePath: '/tmp/review-threshold.jsonl',
+        toolUseId: 'tool-review-threshold',
+        sourceOrder: 1,
+      },
+    });
+    const snapshot = createSnapshot({
+      activeTasks: [task],
+      allTasksById: new Map([[task.id, task]]),
+      reviewOpenTasks: [task],
+      resolvedReviewersByTaskId: new Map([
+        [task.id, { reviewer: 'bob', source: 'history_review_started_actor' }],
+      ]),
+      recordsByTaskId: new Map([[task.id, [record]]]),
+      exactRowsByFilePath: new Map([
+        [
+          '/tmp/review-threshold.jsonl',
+          [
+            createExactRow({
+              filePath: '/tmp/review-threshold.jsonl',
+              messageUuid: 'msg-review-threshold',
+              toolUseIds: ['tool-review-threshold'],
+            }),
+            ...postTouchRows,
+          ],
+        ],
+      ]),
+    });
+    const touchAtMs = Date.parse('2026-04-19T12:00:00.000Z');
+
+    expect(
+      policy.evaluateReview({
+        now: new Date(touchAtMs + thresholdMinutes * 60_000 - 1),
+        task,
+        snapshot,
+      })
+    ).toMatchObject({
+      status: 'skip',
+      skipReason: 'below_threshold',
+    });
+    expect(
+      policy.evaluateReview({
+        now: new Date(touchAtMs + thresholdMinutes * 60_000),
+        task,
+        snapshot,
+      })
+    ).toMatchObject({
+      status: 'alert',
+      signal,
     });
   });
 

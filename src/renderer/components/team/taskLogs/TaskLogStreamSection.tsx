@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   ExecutionLogStreamView,
   normalizeExecutionLogStream,
@@ -54,6 +55,7 @@ export const TaskLogStreamSection = ({
   taskStatus,
   liveEnabled = true,
 }: TaskLogStreamSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [stream, setStream] = useState<BoardTaskLogStreamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,7 +181,7 @@ export const TaskLogStreamSection = ({
 
   return (
     <ExecutionLogStreamView
-      title="Task Log Stream"
+      title={t('taskLogs.stream.title')}
       description={streamDescription}
       stream={stream}
       loading={loading}

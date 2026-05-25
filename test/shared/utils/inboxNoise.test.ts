@@ -93,6 +93,11 @@ describe('isThoughtProtocolNoise', () => {
     ).toBe(true);
   });
 
+  it('does not hide ordinary one-word acknowledgements', () => {
+    expect(isThoughtProtocolNoise('OK')).toBe(false);
+    expect(isThoughtProtocolNoise('ok.')).toBe(false);
+  });
+
   it('returns false for normal text', () => {
     expect(isThoughtProtocolNoise('Reviewing the PR now.')).toBe(false);
   });

@@ -42,6 +42,12 @@ interface SpawnDegradation {
   diagnosticSeverity: TeamAgentRuntimeDiagnosticSeverity;
 }
 
+interface SpawnStoppedEvidence {
+  reason: string;
+  diagnostic?: string;
+  diagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
+}
+
 const ACTIVE_SPAWN_STATUSES = new Set(['waiting', 'spawning']);
 
 export function buildTeamRuntimeDisplayRows({
@@ -134,12 +140,16 @@ function buildRuntimeBackedDisplayRow(
 ): TeamRuntimeDisplayRow {
   const hasErrorDiagnostic = runtime.runtimeDiagnosticSeverity === 'error';
   const spawnDegradation = getSpawnDegradation(spawn);
-  const state = getRuntimeBackedState(runtime, hasErrorDiagnostic, spawnDegradation != null);
+  const spawnStoppedEvidence = spawnDegradation ? null : getSpawnStoppedEvidence(runtime, spawn);
+  const state = spawnStoppedEvidence
+    ? 'stopped'
+    : getRuntimeBackedState(runtime, hasErrorDiagnostic, spawnDegradation != null);
   const degradedReason = spawnDegradation
     ? withLiveProcessContext(spawnDegradation.reason, runtime)
     : undefined;
   const stateReason =
     degradedReason ??
+    spawnStoppedEvidence?.reason ??
     runtime.runtimeDiagnostic ??
     (runtime.alive === true ? 'Runtime heartbeat is alive' : 'Runtime heartbeat is not alive');
 
@@ -157,8 +167,13 @@ function buildRuntimeBackedDisplayRow(
     diagnostic:
       spawnDegradation && degradedReason
         ? withLiveProcessContext(spawnDegradation.diagnostic ?? degradedReason, runtime)
-        : runtime.runtimeDiagnostic,
-    diagnosticSeverity: spawnDegradation?.diagnosticSeverity ?? runtime.runtimeDiagnosticSeverity,
+        : spawnStoppedEvidence
+          ? spawnStoppedEvidence.diagnostic
+          : runtime.runtimeDiagnostic,
+    diagnosticSeverity:
+      spawnDegradation?.diagnosticSeverity ??
+      spawnStoppedEvidence?.diagnosticSeverity ??
+      runtime.runtimeDiagnosticSeverity,
     pidLabel: formatRuntimePidLabel(runtime),
     actionsAllowed: false,
   };
@@ -207,6 +222,24 @@ function getSpawnDegradation(spawn?: MemberSpawnStatusEntry): SpawnDegradation |
   return null;
 }
 
+function getSpawnStoppedEvidence(
+  runtime: TeamAgentRuntimeEntry,
+  spawn?: MemberSpawnStatusEntry
+): SpawnStoppedEvidence | null {
+  if (!spawn || spawn.runtimeAlive !== false || runtime.livenessKind !== 'confirmed_bootstrap') {
+    return null;
+  }
+  if (spawn.status !== 'online' && spawn.launchState !== 'confirmed_alive') {
+    return null;
+  }
+  const reason = spawn.runtimeDiagnostic ?? 'Spawn status reports runtime is not alive';
+  return {
+    reason,
+    diagnostic: spawn.runtimeDiagnostic ?? reason,
+    diagnosticSeverity: spawn.runtimeDiagnosticSeverity ?? 'warning',
+  };
+}
+
 function getRuntimeBackedState(
   runtime: TeamAgentRuntimeEntry,
   hasErrorDiagnostic: boolean,
@@ -220,7 +253,11 @@ function getRuntimeBackedState(
 }
 
 function withLiveProcessContext(reason: string, runtime: TeamAgentRuntimeEntry): string {
-  if (runtime.alive !== true || /process is still alive/i.test(reason)) {
+  if (
+    runtime.alive !== true ||
+    runtime.livenessKind === 'confirmed_bootstrap' ||
+    /process is still alive/i.test(reason)
+  ) {
     return reason;
   }
   return `${reason}. Process is still alive.`;
@@ -241,6 +278,21 @@ function buildSpawnBackedDisplayRow(
       runtimeModel: spawn.runtimeModel,
       diagnostic: spawnDegradation.diagnostic,
       diagnosticSeverity: spawnDegradation.diagnosticSeverity,
+      actionsAllowed: false,
+    };
+  }
+
+  const spawnStoppedEvidence = getSpawnOnlyStoppedEvidence(spawn);
+  if (spawnStoppedEvidence) {
+    return {
+      memberName,
+      state: 'stopped',
+      stateReason: spawnStoppedEvidence.reason,
+      source: 'spawn-status',
+      updatedAt: spawn.livenessLastCheckedAt ?? spawn.updatedAt,
+      runtimeModel: spawn.runtimeModel,
+      diagnostic: spawnStoppedEvidence.diagnostic,
+      diagnosticSeverity: spawnStoppedEvidence.diagnosticSeverity,
       actionsAllowed: false,
     };
   }
@@ -303,6 +355,18 @@ function buildSpawnBackedDisplayRow(
     diagnostic: spawn.runtimeDiagnostic,
     diagnosticSeverity: spawn.runtimeDiagnosticSeverity,
     actionsAllowed: false,
+  };
+}
+
+function getSpawnOnlyStoppedEvidence(spawn: MemberSpawnStatusEntry): SpawnStoppedEvidence | null {
+  if (spawn.runtimeAlive !== false) return null;
+  if (spawn.status !== 'online' && spawn.launchState !== 'confirmed_alive') return null;
+
+  const reason = spawn.runtimeDiagnostic ?? 'Spawn status reports runtime is not alive';
+  return {
+    reason,
+    diagnostic: spawn.runtimeDiagnostic ?? reason,
+    diagnosticSeverity: spawn.runtimeDiagnosticSeverity ?? 'warning',
   };
 }
 

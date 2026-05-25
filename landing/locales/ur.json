@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "features": "محفوظات",
+    "screenshots": "سکرین شاٹس",
+    "docs": "دستاویز",
+    "comparison": "موازنہ کریں",
+    "download": "گر تے ہوئے",
+    "pricing": "مفت",
+    "faq": "FAQ",
+    "viewOnGithub": "دیکھیں GitHub"
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "اب ڈاؤن لوڈ کریں",
+    "ctaPrimary": "گر تے هو ئے {platform}",
+    "ctaSecondary": "موازنہ کریں",
+    "ctaDocs": "دستاویز",
+    "preview": "پھلدار نظریہ",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "کیبان بورڈ",
+      "openSource": "کھولیں"
+    },
+    "watchDemo": "دیمو",
+    "videoUnavailable": "ویڈیو غیر درج شدہ"
+  },
+  "download": {
+    "title": "گر تے ہوئے",
+    "detected": "غیر متصل",
+    "systemRequirements": "سسٹم تقاضوں",
+    "version": "ورژن {version}"
+  },
+  "theme": {
+    "dark": "اندھیرا",
+    "light": "روشنی"
+  },
+  "language": {
+    "label": "زبان",
+    "search": "تلاش زبان..."
+  },
+  "features": {
+    "sectionTitle": "آپ کے لئے سب کچھ کی ضرورت ہے AI ایجنٹ دوبارہ شروع",
+    "sectionSubtitle": "طاقت ور آلات جو کثرت سے تعاون کرتے ہیں اصل میں کام کرتے ہیں۔"
+  },
+  "pricing": {
+    "sectionTitle": "نصب کرنے کے لیے مفت۔ آزاد ماڈل شامل تھا۔",
+    "sectionSubtitle": "ایک مفت ماڈل کے ساتھ فوری طور پر شروع کریں API کلیدی یا کریڈٹ کارڈ ۔ پرنٹ Claude, Codex, OpenCode/OpenRouter.",
+    "getStarted": "اب ڈاؤن لوڈ کریں",
+    "popular": "مفت",
+    "freeModelCallout": "مفت ماڈل جس میں کوئی Auth شامل نہیں ہے۔",
+    "note": "Agent Teams کوئی ادائیگی نہیں ہے. اگر آپ اِسے فوراً آزما لیتے ہیں تو آپ کو اِس کا فائدہ ہوتا ہے ۔"
+  },
+  "testimonials": {
+    "sectionTitle": "ترقی کرنے والے کہتے ہیں",
+    "sectionSubtitle": "حقیقی معماروں کے حقیقی ردِعمل",
+    "showMore": "دکھائیں",
+    "showLess": "طےشدہ",
+    "feedbackCta": "کیا آپ اپنے تجربے کو بتانا چاہتے ہیں ؟ شمارے کھولیں"
+  },
+  "faq": {
+    "sectionTitle": "سوال؟ ہم جواب ملا ہے",
+    "subtitle": "آپ کے بارے میں سب کچھ جاننا چاہیے Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "ہم کس طرح موازنہ کرتے ہیں",
+    "sectionSubtitle": "دوسرے کے مقابلے میں قابل ذکر ہے۔ AI مصنوعی آلات.",
+    "feature": "محفوظ",
+    "robotBubble": "خود فیصلہ",
+    "features": {
+      "crossTeam": "کراس-تیم رابطہ",
+      "agentMessaging": "ایجنٹ",
+      "linkedTasks": "متصل کام",
+      "sessionAnalysis": "تجزیاتی تجزیہ",
+      "taskAttachments": "عارضی وابستگی",
+      "hunkReview": "Hunk-level جائزہ",
+      "codeEditor": "ا تصال:",
+      "fullAutonomy": "پوري",
+      "taskDeps": "جگہ",
+      "reviewWorkflow": "دوبارہ شروع",
+      "zeroSetup": "صفر سیٹ اپ",
+      "kanban": "کیبن بورڈ",
+      "execLog": "انتظامی لاگس",
+      "liveProcesses": "عمل",
+      "runtimeLoad": "CPU/RAM ٹیم میں",
+      "perTaskReview": "پر ون ڈے کوڈ جائز",
+      "flexAutonomy": "بچے کی پیدائش",
+      "worktree": "جی‌نہیں ۔",
+      "multiAgent": "معطل AI ٹیمیں",
+      "liveWorkGraph": "فعال ٹیم کا نقشہ",
+      "liveTeam": "زندہ ٹیمیں",
+      "teamWorkspace": "ٹیم کا کام",
+      "launchProof": "گروپ لانچ حالت",
+      "orgGovernance": "برج / حکومت",
+      "budgetControls": "بجٹ کنٹرول",
+      "price": "قیمت"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "اسے عمل میں دیکھیں",
+    "sectionSubtitle": "ایپ کی طرف سے حقیقی اسکرین — کابینہ بورڈ ، کوڈ جائزہ ، ایجنٹ ٹیموں اور زیادہ سے زیادہ"
+  },
+  "common": {
+    "learnMore": "مزید سیکھیں"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI ترقی‌پذیر اشخاص کیلئے ایجنٹ تحریک",
+    "robotBubble": "میں انتظار کر رہا ہوں",
+    "links": {
+      "github": "GitHub",
+      "docs": "دستاویز"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - AI ترقی‌پذیر اشخاص کیلئے ایجنٹ اور انتخاب",
+    "homeDescription": "مفت، اوپن-source ڈیسک ٹاپ ایپ کے لیے AI ایجنٹ ٹیمیں. ایک آزاد ماڈل سے شروع کریں بغیر Auth، پھر رابطہ کریں Claude, Codex) OpenCode جب آپ کو مزید ماڈل کی ضرورت ہے.",
+    "downloadTitle": "گر تے ہوئے Agent Teams میکوز، ونڈوز اور لینکس کے لیے",
+    "downloadDescription": "گر تے ہوئے Agent Teams میکوز، ونڈوز اور لینکس کے لیے. فری اوپن ڈیسک ٹاپ ایپ کے لیے Claude, Codex، اور OpenCode ایجنٹ ٹیمیں."
+  },
+  "error": {
+    "notFoundTitle": "صفحہ نہیں پائی گئی",
+    "notFoundDescription": "جو صفحہ آپ کو تلاش کر رہے ہیں وہ نہ تو موجود ہے اور نہ ہی تحریک پا چکا ہے۔",
+    "genericTitle": "کچھ غلط ہو گیا",
+    "genericDescription": "ایک غیر متوقع غلطی ہوئی. براہ مہربانی بعد میں کوشش کریں.",
+    "goHome": "گھریلو صفحات پر جائیں"
+  }
+}

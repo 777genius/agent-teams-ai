@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
+import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   formatTeamModelSummary,
   getProviderScopedTeamModelLabel,
@@ -16,6 +18,13 @@ import { HoverTooltip } from '@renderer/components/ui/hover-tooltip';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
@@ -25,19 +34,30 @@ import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUti
 import { isAnthropicSonnetOneMillionContextTeamModel } from '@renderer/utils/teamModelCatalog';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import {
+  normalizeTeamMemberMcpPolicy,
+  resolveTeamMemberMcpScopes,
+} from '@shared/utils/teamMemberMcpPolicy';
+import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
   GitBranch,
   Info,
+  Plug,
   RotateCcw,
   Trash2,
+  Workflow as WorkflowIcon,
 } from 'lucide-react';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { EffortLevel, TeamProviderId } from '@shared/types';
+import type {
+  EffortLevel,
+  TeamMemberMcpMode,
+  TeamMemberMcpPolicy,
+  TeamProviderId,
+} from '@shared/types';
 
 interface MemberDraftRowProps {
   member: MemberDraft;
@@ -64,6 +84,7 @@ interface MemberDraftRowProps {
   mentionSuggestions?: MentionSuggestion[];
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
+  onWorkflowSuggestionsNeeded?: () => void;
   lockProviderModel?: boolean;
   lockRole?: boolean;
   lockedRoleLabel?: string;
@@ -78,6 +99,9 @@ interface MemberDraftRowProps {
   infoText?: string | null;
   disableGeminiOption?: boolean;
   modelIssueText?: string | null;
+  modelAdvisoryReasonByProvider?: Partial<
+    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
+  >;
   modelIssueReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
@@ -87,6 +111,8 @@ interface MemberDraftRowProps {
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
+  onMcpPolicyChange?: (id: string, policy: TeamMemberMcpPolicy | undefined) => void;
+  agentTeamsMcpLocked?: boolean;
   lockedModelAction?: {
     label: string;
     description?: string;
@@ -120,6 +146,7 @@ export const MemberDraftRow = ({
   mentionSuggestions = [],
   taskSuggestions,
   teamSuggestions,
+  onWorkflowSuggestionsNeeded,
   lockProviderModel = false,
   lockRole = false,
   lockedRoleLabel,
@@ -134,13 +161,17 @@ export const MemberDraftRow = ({
   infoText,
   disableGeminiOption = false,
   modelIssueText,
+  modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
   onWorktreeIsolationChange,
+  onMcpPolicyChange,
+  agentTeamsMcpLocked = false,
   lockedModelAction,
 }: MemberDraftRowProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const memberColorSet = getTeamColorSet(
     resolvedColor ??
@@ -148,6 +179,7 @@ export const MemberDraftRow = ({
   );
   const [workflowExpanded, setWorkflowExpanded] = useState(false);
   const [modelExpanded, setModelExpanded] = useState(false);
+  const [mcpExpanded, setMcpExpanded] = useState(false);
 
   // Pre-warm file list cache when workflow section is expanded
   useFileListCacheWarmer(workflowExpanded && projectPath ? projectPath : null);
@@ -197,6 +229,99 @@ export const MemberDraftRow = ({
     [chips, member.id, onWorkflowChange, onWorkflowChipsChange, workflowDraft]
   );
 
+  const effectiveMcpPolicy = useMemo<TeamMemberMcpPolicy | undefined>(
+    () => (agentTeamsMcpLocked ? { mode: 'appOnly' } : member.mcpPolicy),
+    [agentTeamsMcpLocked, member.mcpPolicy]
+  );
+  const mcpMode: TeamMemberMcpMode = effectiveMcpPolicy?.mode ?? 'inheritLead';
+  const mcpScopes = useMemo(
+    () => resolveTeamMemberMcpScopes(effectiveMcpPolicy),
+    [effectiveMcpPolicy]
+  );
+  const mcpServerNames = useMemo(
+    () => effectiveMcpPolicy?.serverNames ?? [],
+    [effectiveMcpPolicy?.serverNames]
+  );
+  const mcpButtonLabel =
+    mcpMode === 'appOnly'
+      ? 'Agent Teams MCP'
+      : mcpMode === 'strictAllowlist'
+        ? `MCP ${mcpServerNames.length || 'strict'}`
+        : mcpMode === 'inheritScopes'
+          ? t('memberDraft.mcp.buttonScopes')
+          : t('memberDraft.mcp.buttonInherit');
+  const updateMcpPolicy = useCallback(
+    (policy: TeamMemberMcpPolicy | undefined) => {
+      if (agentTeamsMcpLocked) {
+        return;
+      }
+      onMcpPolicyChange?.(member.id, normalizeTeamMemberMcpPolicy(policy));
+    },
+    [agentTeamsMcpLocked, member.id, onMcpPolicyChange]
+  );
+  const handleMcpModeChange = useCallback(
+    (mode: string) => {
+      if (mode === 'inheritLead') {
+        updateMcpPolicy(undefined);
+        return;
+      }
+      if (mode === 'appOnly') {
+        updateMcpPolicy({ mode: 'appOnly' });
+        return;
+      }
+      if (mode === 'inheritScopes' || mode === 'strictAllowlist') {
+        updateMcpPolicy({
+          mode,
+          scopes: mcpScopes,
+          ...(mode === 'strictAllowlist' && mcpServerNames.length > 0
+            ? { serverNames: mcpServerNames }
+            : {}),
+        });
+      }
+    },
+    [mcpScopes, mcpServerNames, updateMcpPolicy]
+  );
+  const updateMcpScope = useCallback(
+    (scope: 'user' | 'project' | 'local', enabled: boolean) => {
+      if (mcpMode !== 'inheritScopes' && mcpMode !== 'strictAllowlist') {
+        return;
+      }
+      updateMcpPolicy({
+        mode: mcpMode,
+        scopes: { ...mcpScopes, [scope]: enabled },
+        ...(mcpMode === 'strictAllowlist' && mcpServerNames.length > 0
+          ? { serverNames: mcpServerNames }
+          : {}),
+      });
+    },
+    [mcpMode, mcpScopes, mcpServerNames, updateMcpPolicy]
+  );
+  const updateMcpServerNames = useCallback(
+    (value: string) => {
+      const serverNames = value
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean);
+      updateMcpPolicy({
+        mode: 'strictAllowlist',
+        scopes: mcpScopes,
+        serverNames,
+      });
+    },
+    [mcpScopes, updateMcpPolicy]
+  );
+
+  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string => {
+    switch (scope) {
+      case 'user':
+        return t('memberDraft.mcp.scopes.user');
+      case 'project':
+        return t('memberDraft.mcp.scopes.project');
+      case 'local':
+        return t('memberDraft.mcp.scopes.local');
+    }
+  };
+
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -221,14 +346,17 @@ export const MemberDraftRow = ({
     : (member.effort ?? inheritedEffort);
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
-    : 'Default';
+    : t('memberDraft.model.default');
   const modelButtonLabel = forceInheritedModelSettings
-    ? `${modelButtonLabelBase} (lead)`
+    ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
     : modelButtonLabelBase;
-  const modelButtonAriaLabel = `${getTeamProviderLabel(effectiveProviderId)} provider, ${modelButtonLabel}`;
+  const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
+    provider: getTeamProviderLabel(effectiveProviderId),
+    model: modelButtonLabel,
+  });
   const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
   const modelTooltipText = forceInheritedModelSettings
-    ? 'Provider, model, and effort are inherited from the lead while sync is enabled.'
+    ? t('memberDraft.model.inheritedTooltip')
     : lockProviderModel
       ? (lockedModelAction?.description ?? modelLockReason)
       : undefined;
@@ -237,7 +365,7 @@ export const MemberDraftRow = ({
   const worktreeIsolationDescription =
     worktreeIsolationDisabledReason && member.isolation !== 'worktree'
       ? worktreeIsolationDisabledReason
-      : 'Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.';
+      : t('memberDraft.worktree.description');
   const worktreeIsolationDescriptionId = showWorktreeIsolationControls
     ? `member-${member.id}-worktree-isolation-description`
     : undefined;
@@ -251,27 +379,41 @@ export const MemberDraftRow = ({
     modelUnavailableReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
       ? modelUnavailableReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
       : null;
+  const selectedModelAdvisoryText =
+    effectiveModelKey && modelAdvisoryReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
+      ? modelAdvisoryReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
+      : null;
   const currentModelIssueText =
     modelIssueText ?? selectedModelUnavailableText ?? selectedModelIssueText ?? null;
+  const currentModelAdvisoryText = currentModelIssueText ? null : selectedModelAdvisoryText;
   const hasModelIssue = Boolean(currentModelIssueText);
+  const hasModelAdvisory = Boolean(currentModelAdvisoryText);
   const modelButtonDisabled = (lockProviderModel && !canOpenLockedModelPanel) || isRemoved;
   const modelButtonTitle =
-    [currentModelIssueText, modelTooltipText]
+    [currentModelIssueText ?? currentModelAdvisoryText, modelTooltipText]
       .filter((message): message is string => Boolean(message))
       .join('\n') || undefined;
-  const modelIssueDescriptionId = hasModelIssue ? `member-${member.id}-model-issue` : undefined;
+  const modelIssueDescriptionId =
+    hasModelIssue || hasModelAdvisory ? `member-${member.id}-model-issue` : undefined;
   const modelHelpDescriptionId = modelTooltipText ? `member-${member.id}-model-help` : undefined;
   const modelButtonDescribedBy =
     [modelIssueDescriptionId, modelHelpDescriptionId].filter(Boolean).join(' ') || undefined;
   const modelButtonTooltipContent =
-    currentModelIssueText || modelTooltipText ? (
+    currentModelIssueText || currentModelAdvisoryText || modelTooltipText ? (
       <>
         {currentModelIssueText ? (
           <span className="block text-red-300">{currentModelIssueText}</span>
         ) : null}
+        {currentModelAdvisoryText ? (
+          <span className="block text-amber-200">{currentModelAdvisoryText}</span>
+        ) : null}
         {modelTooltipText ? (
           <span
-            className={cn('block', currentModelIssueText && 'mt-1 border-t border-white/10 pt-1')}
+            className={cn(
+              'block',
+              (currentModelIssueText || currentModelAdvisoryText) &&
+                'mt-1 border-t border-white/10 pt-1'
+            )}
           >
             {modelTooltipText}
           </span>
@@ -290,13 +432,30 @@ export const MemberDraftRow = ({
   );
   const hasWarnings = warningMessages.length > 0 || showSonnetExtraUsageWarning;
   const anthropicContextModeLabel = limitContext
-    ? '200K limit enabled'
-    : '1M-capable context allowed';
+    ? t('memberDraft.anthropicContext.limitEnabled')
+    : t('memberDraft.anthropicContext.defaultSetting');
+  const workflowTooltipText = workflowDraft.value.trim()
+    ? t('memberDraft.workflow.editTooltip')
+    : t('memberDraft.workflow.addTooltip');
+  const mcpTooltipText = t('memberDraft.mcp.tooltip', { label: mcpButtonLabel });
+  const mcpLockedInfoText = t('memberDraft.mcp.lockedInfo');
+  const mcpSettingInfoText = agentTeamsMcpLocked
+    ? mcpLockedInfoText
+    : t('memberDraft.mcp.settingInfo');
   const runtimeSummary = formatTeamModelSummary(
     effectiveProviderId,
     effectiveModel?.trim() ?? '',
     effectiveEffort
   );
+  const toggleWorkflowExpanded = useCallback(() => {
+    setWorkflowExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        onWorkflowSuggestionsNeeded?.();
+      }
+      return next;
+    });
+  }, [onWorkflowSuggestionsNeeded]);
 
   return (
     <div
@@ -326,10 +485,11 @@ export const MemberDraftRow = ({
           <Input
             className="h-8 text-xs"
             value={member.name}
-            aria-label={`Member ${index + 1} name`}
+            aria-label={t('memberDraft.nameAria', { index: index + 1 })}
             disabled={isRemoved || lockIdentity}
+            title={lockIdentity ? identityLockReason : undefined}
             onChange={(event) => onNameChange(member.id, event.target.value)}
-            placeholder="member-name"
+            placeholder={t('memberDraft.placeholders.name')}
           />
         </div>
         {nameError ? <p className="text-[10px] text-red-300">{nameError}</p> : null}
@@ -337,7 +497,10 @@ export const MemberDraftRow = ({
       <div>
         {lockRole ? (
           <div className="flex h-8 items-center rounded-md border border-[var(--color-border)] bg-transparent px-3 text-xs text-[var(--color-text)] opacity-80">
-            {lockedRoleLabel || member.customRole || member.roleSelection || 'No role'}
+            {lockedRoleLabel ||
+              member.customRole ||
+              member.roleSelection ||
+              t('memberDraft.noRole')}
           </div>
         ) : (
           <RoleSelect
@@ -353,25 +516,6 @@ export const MemberDraftRow = ({
       </div>
       <div className="space-y-1">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-          {showWorkflow && onWorkflowChange ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="relative h-8 shrink-0 gap-1"
-              disabled={isRemoved}
-              onClick={() => setWorkflowExpanded((prev) => !prev)}
-            >
-              {workflowExpanded ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
-              )}
-              Workflow
-              {!workflowExpanded && workflowDraft.value.trim() ? (
-                <span className="absolute -right-1 -top-1 size-2 rounded-full bg-blue-500" />
-              ) : null}
-            </Button>
-          ) : null}
           <div className="w-full min-w-0 space-y-1 sm:w-[150px] sm:min-w-[150px]">
             <HoverTooltip
               content={modelButtonTooltipContent}
@@ -386,7 +530,9 @@ export const MemberDraftRow = ({
                 className={cn(
                   'h-8 w-full justify-start gap-1 overflow-hidden text-left',
                   hasModelIssue &&
-                    'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50'
+                    'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
+                  hasModelAdvisory &&
+                    'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
                 )}
                 aria-label={modelButtonAriaLabel}
                 aria-describedby={modelButtonDescribedBy}
@@ -403,6 +549,7 @@ export const MemberDraftRow = ({
                 {hasModelIssue ? (
                   <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
                 ) : null}
+                {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
               </Button>
             </HoverTooltip>
             {modelTooltipText ? (
@@ -410,13 +557,20 @@ export const MemberDraftRow = ({
                 {modelTooltipText}
               </span>
             ) : null}
-            {currentModelIssueText ? (
+            {currentModelIssueText || currentModelAdvisoryText ? (
               <p
                 id={modelIssueDescriptionId}
-                className="flex items-start gap-1 text-[10px] leading-snug text-red-300"
+                className={cn(
+                  'flex items-start gap-1 text-[10px] leading-snug',
+                  currentModelIssueText ? 'text-red-300' : 'text-amber-200'
+                )}
               >
-                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
-                <span>{currentModelIssueText}</span>
+                {currentModelIssueText ? (
+                  <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                ) : (
+                  <Info className="mt-0.5 size-3 shrink-0" />
+                )}
+                <span>{currentModelIssueText ?? currentModelAdvisoryText}</span>
               </p>
             ) : null}
           </div>
@@ -453,7 +607,7 @@ export const MemberDraftRow = ({
                     )}
                   >
                     <GitBranch className="size-3.5 shrink-0" />
-                    <span>Worktree</span>
+                    <span>{t('memberDraft.worktree.label')}</span>
                   </Label>
                 </div>
               </HoverTooltip>
@@ -462,13 +616,79 @@ export const MemberDraftRow = ({
               </span>
             </div>
           ) : null}
+          {showWorkflow && onWorkflowChange ? (
+            <HoverTooltip
+              content={workflowTooltipText}
+              title={workflowTooltipText}
+              dismissOnClick
+              className="shrink-0"
+              contentClassName="max-w-64"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'relative size-8 shrink-0 px-0',
+                  workflowExpanded &&
+                    'border-blue-400/50 bg-blue-500/10 text-blue-100 hover:bg-blue-500/15'
+                )}
+                aria-label={workflowTooltipText}
+                aria-expanded={workflowExpanded}
+                disabled={isRemoved}
+                onClick={toggleWorkflowExpanded}
+              >
+                <WorkflowIcon className="size-3.5" />
+                {!workflowExpanded && workflowDraft.value.trim() ? (
+                  <span className="absolute -right-1 -top-1 size-2 rounded-full bg-blue-500" />
+                ) : null}
+              </Button>
+            </HoverTooltip>
+          ) : null}
+          {onMcpPolicyChange ? (
+            <HoverTooltip
+              content={mcpTooltipText}
+              title={mcpTooltipText}
+              dismissOnClick
+              className="shrink-0"
+              contentClassName="max-w-64"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'relative size-8 shrink-0 px-0',
+                  agentTeamsMcpLocked &&
+                    'border-amber-300/50 bg-amber-400/10 text-amber-100 hover:bg-amber-400/15',
+                  !agentTeamsMcpLocked &&
+                    (mcpExpanded || mcpMode !== 'inheritLead') &&
+                    'border-sky-400/45 bg-sky-500/10 text-sky-100 hover:bg-sky-500/15'
+                )}
+                aria-label={mcpTooltipText}
+                aria-expanded={mcpExpanded}
+                disabled={isRemoved}
+                onClick={() => setMcpExpanded((prev) => !prev)}
+              >
+                <Plug className="size-3.5" />
+                {agentTeamsMcpLocked || mcpMode !== 'inheritLead' ? (
+                  <span
+                    className={cn(
+                      'absolute -right-1 -top-1 size-2 rounded-full',
+                      agentTeamsMcpLocked ? 'bg-amber-300' : 'bg-sky-400'
+                    )}
+                  />
+                ) : null}
+              </Button>
+            </HoverTooltip>
+          ) : null}
           {hideActionButton ? null : isRemoved ? (
             <Button
               variant="outline"
               size="sm"
               className="size-8 shrink-0 px-0"
-              aria-label={`Restore ${member.name || `member ${index + 1}`}`}
-              title="Restore member"
+              aria-label={t('memberDraft.actions.restoreAria', {
+                name: member.name || t('memberDraft.nameFallback', { index: index + 1 }),
+              })}
+              title={t('memberDraft.actions.restore')}
               onClick={() => onRestore?.(member.id)}
             >
               <RotateCcw className="size-3.5" />
@@ -478,8 +698,10 @@ export const MemberDraftRow = ({
               variant="outline"
               size="sm"
               className="size-8 shrink-0 border-red-500/40 px-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
-              aria-label={`Remove ${member.name || `member ${index + 1}`}`}
-              title="Remove member"
+              aria-label={t('memberDraft.actions.removeAria', {
+                name: member.name || t('memberDraft.nameFallback', { index: index + 1 }),
+              })}
+              title={t('memberDraft.actions.remove')}
               onClick={() => onRemove(member.id)}
             >
               <Trash2 className="size-3.5" />
@@ -487,7 +709,9 @@ export const MemberDraftRow = ({
           )}
         </div>
         {isRemoved ? (
-          <div className="pl-1 text-[11px] text-[var(--color-text-muted)]">Removed</div>
+          <div className="pl-1 text-[11px] text-[var(--color-text-muted)]">
+            {t('memberDraft.removed')}
+          </div>
         ) : null}
       </div>
       {!isRemoved && hasWarnings ? (
@@ -511,13 +735,98 @@ export const MemberDraftRow = ({
           </div>
         </div>
       ) : null}
+      {!isRemoved && onMcpPolicyChange && mcpExpanded ? (
+        <div className="space-y-3 pl-3 md:col-span-3">
+          <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(160px,220px)_1fr]">
+              <div className="space-y-1">
+                <Label
+                  htmlFor={`member-${member.id}-mcp-mode`}
+                  className="text-[10px] text-[var(--color-text-muted)]"
+                >
+                  {t('memberDraft.mcp.mode')}
+                </Label>
+                <Select
+                  value={mcpMode}
+                  onValueChange={handleMcpModeChange}
+                  disabled={agentTeamsMcpLocked}
+                >
+                  <SelectTrigger
+                    id={`member-${member.id}-mcp-mode`}
+                    className="h-8 text-xs"
+                    disabled={agentTeamsMcpLocked}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inheritLead">{t('memberDraft.mcp.inheritLead')}</SelectItem>
+                    <SelectItem value="inheritScopes">
+                      {t('memberDraft.mcp.chooseScopes')}
+                    </SelectItem>
+                    <SelectItem value="strictAllowlist">
+                      {t('memberDraft.mcp.strictAllowlist')}
+                    </SelectItem>
+                    <SelectItem value="appOnly">{t('memberDraft.mcp.agentTeamsMcp')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(['user', 'project', 'local'] as const).map((scope) => (
+                    <label
+                      key={scope}
+                      className={cn(
+                        'flex h-8 items-center gap-2 rounded-md border border-[var(--color-border)] px-2 text-xs text-[var(--color-text-secondary)]',
+                        (agentTeamsMcpLocked ||
+                          mcpMode === 'inheritLead' ||
+                          mcpMode === 'appOnly') &&
+                          'opacity-50'
+                      )}
+                    >
+                      <Checkbox
+                        checked={mcpMode === 'appOnly' ? false : mcpScopes[scope]}
+                        disabled={
+                          agentTeamsMcpLocked || mcpMode === 'inheritLead' || mcpMode === 'appOnly'
+                        }
+                        onCheckedChange={(checked) => updateMcpScope(scope, checked === true)}
+                      />
+                      <span className="capitalize">{getMcpScopeLabel(scope)}</span>
+                    </label>
+                  ))}
+                </div>
+                {mcpMode === 'strictAllowlist' ? (
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor={`member-${member.id}-mcp-servers`}
+                      className="text-[10px] text-[var(--color-text-muted)]"
+                    >
+                      {t('memberDraft.mcp.serverNames')}
+                    </Label>
+                    <Input
+                      id={`member-${member.id}-mcp-servers`}
+                      className="h-8 text-xs"
+                      value={mcpServerNames.join(', ')}
+                      disabled={agentTeamsMcpLocked}
+                      onChange={(event) => updateMcpServerNames(event.target.value)}
+                      placeholder={t('memberDraft.placeholders.mcpServers')}
+                    />
+                  </div>
+                ) : null}
+                {mcpMode !== 'inheritLead' ? (
+                  <p className="text-[10px] leading-snug text-amber-200">{mcpSettingInfoText}</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showWorkflow && onWorkflowChange && workflowExpanded ? (
         <div className="space-y-0.5 pl-3 md:col-span-3">
           <label
             htmlFor={`member-${member.id}-workflow`}
             className="block text-[10px] font-medium text-[var(--color-text-muted)]"
           >
-            Workflow (optional)
+            {t('memberDraft.workflow.label')}
           </label>
           <MentionableTextarea
             id={`member-${member.id}-workflow`}
@@ -533,10 +842,12 @@ export const MemberDraftRow = ({
             onChipRemove={handleChipRemove}
             projectPath={projectPath ?? undefined}
             onFileChipInsert={handleFileChipInsert}
-            placeholder="How this agent should behave, interact with others..."
+            placeholder={t('memberDraft.workflow.placeholder')}
             footerRight={
               workflowDraft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                <span className="text-[10px] text-[var(--color-text-muted)]">
+                  {t('memberDraft.workflow.saved')}
+                </span>
               ) : null
             }
           />
@@ -548,16 +859,15 @@ export const MemberDraftRow = ({
             <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
               <div className="space-y-1">
                 <p className="text-[11px] font-medium text-[var(--color-text)]">
-                  Current lead runtime
+                  {t('memberDraft.model.currentLeadRuntime')}
                 </p>
                 <p className="text-[11px] text-[var(--color-text-muted)]">{runtimeSummary}</p>
               </div>
               <p className="text-[11px] text-[var(--color-text-muted)]">
-                {lockedModelAction.description ??
-                  'Lead runtime changes open Relaunch Team, where provider, model, and effort can be updated.'}
+                {lockedModelAction.description ?? t('memberDraft.model.lockedActionFallback')}
               </p>
               <p className="text-[11px] text-amber-300">
-                Saving those runtime changes restarts the whole team.
+                {t('memberDraft.model.restartWholeTeam')}
               </p>
               <Button
                 type="button"
@@ -585,6 +895,7 @@ export const MemberDraftRow = ({
                 }}
                 id={`member-${member.id}-model`}
                 disableGeminiOption={disableGeminiOption}
+                modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[effectiveProviderId]}
                 modelIssueReasonByValue={{
                   ...(modelIssueReasonByProvider?.[effectiveProviderId] ?? {}),
                   ...(effectiveModelKey && modelIssueText
@@ -606,19 +917,20 @@ export const MemberDraftRow = ({
                 model={effectiveModel}
                 limitContext={limitContext}
               />
+              {effectiveProviderId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
               {effectiveProviderId === 'anthropic' ? (
                 <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
                   <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
                   <p className="text-[11px] leading-relaxed text-sky-300">
-                    Anthropic context is team-wide for this launch: {anthropicContextModeLabel}. Use
-                    the lead runtime panel&apos;s Limit context checkbox to change it.
+                    {t('memberDraft.anthropicContext.description', {
+                      mode: anthropicContextModeLabel,
+                    })}
                   </p>
                 </div>
               ) : null}
               {lockProviderModel && (
                 <p className="text-[11px] text-amber-300">
-                  {modelLockReason ??
-                    'Provider, model, and effort changes are disabled while the team is live. Reconnect the team to apply them safely.'}
+                  {modelLockReason ?? t('memberDraft.model.liveDisabled')}
                 </p>
               )}
             </>

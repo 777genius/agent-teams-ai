@@ -1,6 +1,7 @@
 /* eslint-disable react/jsx-props-no-spreading -- Standard shadcn pattern: forward remaining props to underlying elements */
 import * as React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn } from '@renderer/lib/utils';
 import { X } from 'lucide-react';
@@ -28,31 +29,35 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="pointer-events-auto relative">
-        <DialogPrimitive.Close className="absolute -right-4 -top-4 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-lg ring-1 ring-[var(--color-border)] transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-border-emphasis)] disabled:pointer-events-none">
-          <X className="size-4 text-[var(--color-text-muted)]" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-        <DialogPrimitive.Content
-          ref={ref}
-          className={cn(
-            'grid w-full max-w-lg gap-4 border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
-            'max-h-[90vh] min-h-0 overflow-y-auto overflow-x-hidden',
-            'focus:outline-none',
-            className
-          )}
-          {...props}
-        >
-          {children}
-        </DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => {
+  const { t } = useAppTranslation('common');
+
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="pointer-events-auto relative">
+          <DialogPrimitive.Close className="absolute -right-4 -top-4 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-lg ring-1 ring-[var(--color-border)] transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-border-emphasis)] disabled:pointer-events-none">
+            <X className="size-4 text-[var(--color-text-muted)]" />
+            <span className="sr-only">{t('actions.close')}</span>
+          </DialogPrimitive.Close>
+          <DialogPrimitive.Content
+            ref={ref}
+            className={cn(
+              'grid w-full max-w-lg gap-4 border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+              'max-h-[90vh] min-h-0 overflow-y-auto overflow-x-hidden',
+              'focus:outline-none',
+              className
+            )}
+            {...props}
+          >
+            {children}
+          </DialogPrimitive.Content>
+        </div>
       </div>
-    </div>
-  </DialogPortal>
-));
+    </DialogPortal>
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({

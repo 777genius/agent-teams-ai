@@ -43,11 +43,12 @@
     "sectionSubtitle": "أدوات قوية تجعل التعاون متعدد الوكلاء يعمل فعلاً."
   },
   "pricing": {
-    "sectionTitle": "مجاني 100%. بدون شروط.",
-    "sectionSubtitle": "مفتوح المصدر، بدون مفاتيح API، بدون إعدادات. فقط ثبّت وابدأ.",
+    "sectionTitle": "التثبيت مجاني. نموذج مجاني مضمّن.",
+    "sectionSubtitle": "ابدأ فوراً بنموذج مجاني بدون مصادقة - بدون حساب أو مفتاح API أو بطاقة. وصّل Claude أو Codex أو OpenCode/OpenRouter أو مزودين آخرين فقط عندما تحتاج نماذج إضافية.",
     "getStarted": "حمّل الآن",
     "popular": "مجاني",
-    "note": "مفتوح المصدر. بدون مفاتيح API. بدون إعدادات. يعمل محلياً بالكامل."
+    "freeModelCallout": "نموذج مجاني بدون مصادقة مضمّن",
+    "note": "لا يملك Agent Teams أي خطة مدفوعة. النموذج المجاني بدون مصادقة يتيح التجربة فوراً؛ استخدام المزودين المدفوعين اختياري ويتبع المزود الذي تختاره."
   },
   "testimonials": {
     "sectionTitle": "ماذا يقول المطورون",
@@ -64,6 +65,7 @@
     "sectionTitle": "كيف نقارن",
     "sectionSubtitle": "مقارنة تفصيلية للمميزات مع أدوات البرمجة بالذكاء الاصطناعي الأخرى.",
     "feature": "الميزة",
+    "robotBubble": "احكم بنفسك",
     "features": {
       "crossTeam": "التواصل بين الفرق",
       "agentMessaging": "مراسلة بين الوكلاء",
@@ -77,12 +79,17 @@
       "reviewWorkflow": "سير عمل المراجعة",
       "zeroSetup": "بدون إعداد",
       "kanban": "لوحة كانبان",
-      "execLog": "عارض سجلات التنفيذ",
+      "execLog": "سجلات التنفيذ",
       "liveProcesses": "عمليات مباشرة",
+      "runtimeLoad": "CPU/RAM لكل زميل",
       "perTaskReview": "مراجعة كود لكل مهمة",
       "flexAutonomy": "استقلالية مرنة",
       "worktree": "عزل Git worktree",
-      "multiAgent": "خلفية متعددة الوكلاء",
+      "multiAgent": "زملاء AI مختلطون",
+      "liveWorkGraph": "خريطة فريق حية",
+      "liveTeam": "زملاء مباشرين",
+      "teamWorkspace": "مساحة عمل الفريق",
+      "launchProof": "حالة تشغيل الزملاء",
       "orgGovernance": "الهيكل التنظيمي / الحوكمة",
       "budgetControls": "ضوابط الميزانية",
       "price": "السعر"
@@ -98,6 +105,7 @@
   "footer": {
     "copyright": "© {year} Agent Teams",
     "tagline": "تنسيق وكلاء الذكاء الاصطناعي للمطورين",
+    "robotBubble": "أنا أنتظر",
     "links": {
       "github": "GitHub",
       "docs": "التوثيق"
@@ -105,7 +113,7 @@
   },
   "meta": {
     "homeTitle": "Agent Teams - تنسيق وكلاء الذكاء الاصطناعي للمطورين",
-    "homeDescription": "تطبيق سطح مكتب مجاني ومفتوح المصدر لتشكيل فرق وكلاء الذكاء الاصطناعي. لوحة كانبان، مراجعة الكود، تواصل بين الفرق. يعمل محلياً بالكامل.",
+    "homeDescription": "تطبيق سطح مكتب مجاني ومفتوح المصدر لفرق وكلاء الذكاء الاصطناعي. ابدأ بنموذج مجاني بدون مصادقة، ثم وصّل Claude أو Codex أو OpenCode عند الحاجة.",
     "downloadTitle": "تنزيل Agent Teams لنظام macOS وWindows وLinux",
     "downloadDescription": "نزّل Agent Teams لنظام macOS وWindows وLinux. تطبيق سطح مكتب مجاني ومفتوح المصدر لفرق وكلاء Claude وCodex وOpenCode."
   },

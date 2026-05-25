@@ -295,6 +295,56 @@ describe('resolveLaunchDialogPrefill', () => {
     });
   });
 
+  it('does not carry a stale Codex backend into an Anthropic lead prefill', () => {
+    const members = [
+      {
+        name: 'team-lead',
+        agentType: 'team-lead',
+        providerId: 'anthropic',
+        model: 'haiku',
+        effort: 'low',
+      },
+    ] as ResolvedTeamMember[];
+
+    const result = resolveLaunchDialogPrefill({
+      members,
+      savedRequest: {
+        teamName: 'signal-ops-22',
+        cwd: '/Users/test/project',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        effort: 'medium',
+        members: [],
+      } as TeamCreateRequest,
+      previousLaunchParams: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        effort: 'medium',
+        limitContext: false,
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'codex',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: false,
+      getStoredModel: createStoredModelGetter({
+        anthropic: 'sonnet',
+        codex: 'gpt-5.4',
+      }),
+    });
+
+    expect(result).toEqual({
+      providerId: 'anthropic',
+      providerBackendId: undefined,
+      model: 'haiku',
+      effort: 'low',
+      fastMode: 'inherit',
+      limitContext: false,
+    });
+  });
+
   it('preserves literal [1m] suffixes for non-anthropic providers', () => {
     const result = resolveLaunchDialogPrefill({
       members: [],

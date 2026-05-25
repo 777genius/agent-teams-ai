@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RuntimeProviderManagementPanelView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView';
@@ -56,6 +57,7 @@ function createState(
     directoryLoading: false,
     directoryRefreshing: false,
     directoryError: null,
+    directoryErrorDiagnostics: null,
     directoryEntries: [],
     directoryTotalCount: null,
     directoryNextCursor: null,
@@ -66,7 +68,9 @@ function createState(
     setupForm: null,
     setupFormLoading: false,
     setupFormError: null,
+    setupFormErrorDiagnostics: null,
     setupSubmitError: null,
+    setupSubmitErrorDiagnostics: null,
     setupMetadata: {},
     apiKeyValue: '',
     modelPickerProviderId: null,
@@ -75,6 +79,7 @@ function createState(
     models: [],
     modelsLoading: false,
     modelsError: null,
+    modelsErrorDiagnostics: null,
     selectedModelId: null,
     testingModelIds: [],
     savingDefaultModelId: null,
@@ -82,6 +87,7 @@ function createState(
     loading: false,
     savingProviderId: null,
     error: null,
+    errorDiagnostics: null,
     successMessage: null,
     ...overrides,
   };
@@ -110,6 +116,16 @@ function createActions(): RuntimeProviderManagementActions {
     testModel: vi.fn(() => Promise.resolve()),
     setDefaultModel: vi.fn(() => Promise.resolve()),
   };
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  if (!setter) {
+    throw new Error('HTMLInputElement value setter not found');
+  }
+
+  setter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 describe('RuntimeProviderManagementPanelView', () => {
@@ -145,14 +161,844 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.textContent).toContain('Checking runtime');
     expect(host.textContent).toContain('Loading managed OpenCode runtime');
-    expect(host.textContent).toContain('Loading OpenCode providers');
-    expect(host.querySelector('[data-testid="runtime-provider-loading-skeleton"]')).not.toBeNull();
-    expect(host.querySelectorAll('.skeleton-shimmer').length).toBeGreaterThanOrEqual(10);
+    expect(host.textContent).toContain('Loading OpenCode model routes');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).not.toBeNull();
+    expect(host.querySelectorAll('.skeleton-shimmer').length).toBeGreaterThanOrEqual(8);
     expect(host.textContent).toContain('Checking...');
     const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Checking...')
     );
     expect(refreshButton?.disabled).toBe(true);
+
+    expect(host.textContent).not.toContain('No launchable OpenCode model routes were reported yet');
+  });
+
+  it('renders runtime command errors with a readable headline and multiline details', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message = [
+      'OpenCode provider settings could not read the runtime response.',
+      'Expected a JSON object from the Agent Teams runtime provider command.',
+      'Resolved runtime binary: /opt/homebrew/bin/opencode',
+      'Command: /opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+      'stdout preview:',
+      'Commands:',
+      '  opencode providers',
+    ].join('\n');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ error: message }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const alert = host.querySelector<HTMLElement>('[data-testid="runtime-provider-error"]');
+    const details = alert?.querySelector('pre');
+
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(alert?.textContent).toContain(
+      'OpenCode provider settings could not read the runtime response.'
+    );
+    expect(details?.textContent).toContain('Resolved runtime binary: /opt/homebrew/bin/opencode');
+    expect(details?.textContent).toContain('  opencode providers');
+    expect(details?.className).toContain('whitespace-pre-wrap');
+    expect(details?.className).toContain('font-mono');
+  });
+
+  it('copies fallback error text when structured diagnostics are unavailable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'Runtime provider crashed\nstderr preview:\nmissing bun',
+            errorDiagnostics: null,
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith(
+      'OpenCode provider settings diagnostics\n\nMessage:\nRuntime provider crashed\nstderr preview:\nmissing bun'
+    );
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('copies diagnostics with the selection fallback when clipboard API is unavailable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const execCommandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'Runtime provider crashed\nstderr preview:\nmissing bun',
+            errorDiagnostics: null,
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(host.textContent).toContain('Copied');
+    expect(document.querySelector('textarea')).toBeNull();
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+    if (execCommandDescriptor) {
+      Object.defineProperty(document, 'execCommand', execCommandDescriptor);
+    } else {
+      Reflect.deleteProperty(document, 'execCommand');
+    }
+  });
+
+  it('renders structured runtime diagnostics and copies the full redacted report', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'OpenCode provider settings could not read the runtime response.',
+            errorDiagnostics: {
+              errorCode: 'runtime-unhealthy',
+              summary: 'OpenCode provider settings could not read the runtime response.',
+              likelyCause:
+                'The app is launching the OpenCode CLI itself instead of the Agent Teams runtime.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command:
+                '/opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+              projectPath: '/Users/test/project',
+              exitCode: 1,
+              stderrPreview: 'Command failed before JSON',
+              stdoutPreview: 'Commands:\n  opencode providers',
+              hints: [
+                'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
+                'Those environment variables must not point to opencode.',
+              ],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Likely cause');
+    expect(host.textContent).toContain('/opt/homebrew/bin/opencode');
+    expect(host.textContent).toContain('Command failed before JSON');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-error-stderr-preview"]')?.textContent
+    ).toContain('stderr preview');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-error-stdout-preview"]')?.textContent
+    ).toContain('opencode providers');
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0][0]).toContain('OpenCode provider settings diagnostics');
+    expect(writeText.mock.calls[0][0]).toContain('Error code: runtime-unhealthy');
+    expect(writeText.mock.calls[0][0]).toContain('Resolved runtime binary: /opt/homebrew/bin/opencode');
+    expect(writeText.mock.calls[0][0]).toContain('stderr preview:');
+    expect(writeText.mock.calls[0][0]).toContain('stdout preview:');
+    expect(host.textContent).toContain('Copied');
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('does not activate a provider row when copying model diagnostics', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const actions = createActions();
+    const base = createState();
+    const provider = {
+      ...base.view!.providers[0],
+      state: 'connected' as const,
+      modelCount: 2,
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...base.view!,
+              providers: [provider],
+            },
+            providers: [provider],
+            selectedProviderId: provider.providerId,
+            modelPickerProviderId: provider.providerId,
+            modelPickerMode: 'use',
+            modelsError: 'Model list failed',
+            modelsErrorDiagnostics: {
+              summary: 'Model list failed',
+              likelyCause: 'The runtime returned a malformed models response.',
+              binaryPath: '/repo/cli-dev',
+              command: '/repo/cli-dev runtime providers models --runtime opencode',
+              projectPath: '/Users/test/project',
+              exitCode: 1,
+              stderrPreview: 'bad models payload',
+              stdoutPreview: null,
+              hints: ['Retry after refreshing the runtime.'],
+            },
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(actions.selectProvider).not.toHaveBeenCalled();
+    expect(actions.startConnect).not.toHaveBeenCalled();
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('renders structured diagnostics in provider form and model picker errors', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      modelCount: 4,
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [provider],
+            selectedProviderId: provider.providerId,
+            activeFormProviderId: provider.providerId,
+            modelPickerProviderId: provider.providerId,
+            modelPickerMode: 'use',
+            setupSubmitError: 'Provider connect failed before JSON.',
+            setupSubmitErrorDiagnostics: {
+              summary: 'Provider connect failed before JSON.',
+              likelyCause: 'The runtime command printed CLI help instead of JSON.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command: '/opt/homebrew/bin/opencode runtime providers connect',
+              projectPath: null,
+              exitCode: 1,
+              stderrPreview: 'unknown command',
+              stdoutPreview: 'Commands:\n  opencode providers',
+              hints: ['Check the resolved runtime binary.'],
+            },
+            modelsError: 'Provider models failed before JSON.',
+            modelsErrorDiagnostics: {
+              summary: 'Provider models failed before JSON.',
+              likelyCause: 'The runtime command printed CLI help instead of JSON.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command: '/opt/homebrew/bin/opencode runtime providers models',
+              projectPath: null,
+              exitCode: 1,
+              stderrPreview: 'unknown command',
+              stdoutPreview: 'Commands:\n  opencode providers',
+              hints: ['Check the resolved runtime binary.'],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-setup-submit-error"]')?.textContent
+    ).toContain('Provider connect failed before JSON.');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-setup-submit-error"]')?.textContent
+    ).toContain('/opt/homebrew/bin/opencode');
+    expect(host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent).toContain(
+      'Provider models failed before JSON.'
+    );
+    expect(host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent).toContain(
+      'opencode providers'
+    );
+  });
+
+  it('renders provider directory errors with preserved multiline details', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message = [
+      'OpenCode provider settings could not read the runtime response.',
+      'stderr preview:',
+      'runtime crashed before JSON',
+    ].join('\n');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryError: message,
+            directoryLoaded: true,
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const alert = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-directory-error"]'
+    );
+    const details = alert?.querySelector('pre');
+
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(details?.textContent).toContain('stderr preview:');
+    expect(details?.textContent).toContain('runtime crashed before JSON');
+    expect(details?.className).toContain('whitespace-pre-wrap');
+  });
+
+  it('keeps project context out of the runtime summary and labels it as validation context', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [
+                {
+                  providerId: 'llama.cpp',
+                  modelId: 'llama.cpp/qwen-test:0.5b',
+                  displayName: 'qwen-test:0.5b',
+                  sourceLabel: 'llama.cpp',
+                  free: false,
+                  default: false,
+                  availability: 'available',
+                  accessKind: 'verified',
+                  routeKind: 'configured_local',
+                  proofState: 'verified',
+                  requiresExecutionProof: false,
+                  accessReason: null,
+                },
+              ],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/Users/belief/dev/projects/321',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode defaults');
+    expect(host.textContent).toContain('Validation context');
+    expect(host.textContent).toContain('Tests use 321. Default applies unless');
+    expect(host.textContent).not.toContain('Project context: 321');
+    expect(host.textContent).not.toContain('Current context: 321');
+    expect(host.textContent).not.toContain('Managing selected project profile');
+    expect(host.textContent).not.toContain('/Users/belief/dev/projects/321');
+  });
+
+  it('renders configured OpenCode model routes with local proof actions', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const configuredModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Execution proof required',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [configuredModel],
+            },
+            selectedModelId: 'llama.cpp/qwen-test:0.5b',
+          }),
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]'
+    );
+    expect(host.textContent).toContain('Launchable OpenCode models');
+    expect(row?.textContent).toContain('local');
+    expect(row?.textContent).toContain('configured');
+    expect(row?.textContent).toContain('needs test');
+
+    const buttons = Array.from(row?.querySelectorAll('button') ?? []);
+    await act(async () => {
+      buttons.find((button) => button.textContent?.includes('Test'))?.click();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      buttons.find((button) => button.textContent?.includes('Use in team picker'))?.click();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      buttons.find((button) => button.textContent?.includes('Set all-projects default'))?.click();
+      await Promise.resolve();
+    });
+
+    expect(actions.testModel).toHaveBeenCalledWith('llama.cpp', 'llama.cpp/qwen-test:0.5b');
+    expect(actions.useModelForNewTeams).toHaveBeenCalledWith('llama.cpp/qwen-test:0.5b');
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'llama.cpp',
+      'llama.cpp/qwen-test:0.5b',
+      'all_projects'
+    );
+  });
+
+  it('can set an all-projects OpenCode default from the model scope controls', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const configuredModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'verified' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [configuredModel],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project-a',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Set all-projects default'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'Default for every project that does not have its own OpenCode override'
+    );
+    expect(host.textContent).toContain('Validation context');
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'llama.cpp',
+      'llama.cpp/qwen-test:0.5b',
+      'all_projects'
+    );
+  });
+
+  it('filters launchable OpenCode model routes by route text', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const localModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'verified' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+    const freeModel = {
+      providerId: 'opencode',
+      modelId: 'opencode/big-pickle',
+      displayName: 'big-pickle',
+      sourceLabel: 'OpenCode',
+      free: true,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'builtin_free' as const,
+      routeKind: 'builtin_free' as const,
+      proofState: 'not_required' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [localModel, freeModel],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/tmp/project-a',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const searchInput = host.querySelector<HTMLInputElement>(
+      'input[placeholder="Search model routes"]'
+    );
+    expect(searchInput).not.toBeNull();
+    expect(host.textContent).toContain('qwen-test:0.5b');
+    expect(host.textContent).toContain('big-pickle');
+
+    await act(async () => {
+      setInputValue(searchInput!, 'pickle');
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('qwen-test:0.5b');
+    expect(host.textContent).toContain('big-pickle');
+
+    await act(async () => {
+      setInputValue(searchInput!, 'missing-route');
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('No OpenCode model routes match');
+    expect(host.textContent).toContain('missing-route');
+  });
+
+  it('opens launchable routes first when they exist and keeps providers in a separate tab', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const baseState = createState();
+    const configuredModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Execution proof required',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...baseState.view!,
+              configuredModels: [configuredModel],
+            },
+            providers: baseState.view?.providers ?? [],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Launchable OpenCode models');
+    expect(host.textContent).toContain('llama.cpp/qwen-test:0.5b');
+    expect(host.textContent).toContain('Providers');
+    expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).toBeNull();
+  });
+
+  it('shows unknown OpenCode defaults without enabling launch actions', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const unknownDefaultModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/moonshotai/kimi-k2',
+      displayName: 'moonshotai/kimi-k2',
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: true,
+      availability: 'untested' as const,
+      accessKind: 'unknown_model' as const,
+      routeKind: 'catalog_provider' as const,
+      proofState: 'not_required' as const,
+      requiresExecutionProof: false,
+      accessReason: 'Model was not found in the live catalog',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [unknownDefaultModel],
+            },
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="configured-opencode-model-row-openrouter/moonshotai/kimi-k2"]'
+    );
+    expect(row?.textContent).toContain('unknown');
+    expect(row?.textContent).toContain('default');
+
+    const buttons = Array.from(row?.querySelectorAll('button') ?? []);
+    expect(buttons.map((button) => button.disabled)).toEqual([true, true, true]);
+    await act(async () => {
+      buttons.forEach((button) => button.click());
+      await Promise.resolve();
+    });
+    expect(actions.testModel).not.toHaveBeenCalled();
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+  });
+
+  it('renders duplicate runtime diagnostics without React key warnings', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const baseState = createState();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...baseState.view!,
+              diagnostics: [
+                'Unable to connect. Is the computer able to access the url?',
+                'Unable to connect. Is the computer able to access the url?',
+              ],
+            },
+            providers: baseState.view?.providers ?? [],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const duplicateDiagnostics = host.textContent?.match(
+      /Unable to connect\. Is the computer able to access the url\?/g
+    );
+    const duplicateKeyWarnings = consoleError.mock.calls.filter((call) =>
+      call.some(
+        (argument) =>
+          typeof argument === 'string' &&
+          argument.includes('Encountered two children with the same key')
+      )
+    );
+    consoleError.mockRestore();
+
+    expect(duplicateDiagnostics).toHaveLength(2);
+    expect(duplicateKeyWarnings).toHaveLength(0);
+  });
+
+  it('renders duplicate structured diagnostic hints without React key warnings', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'OpenCode provider settings are using the wrong runtime binary.',
+            errorDiagnostics: {
+              summary: 'OpenCode provider settings are using the wrong runtime binary.',
+              likelyCause:
+                'The app resolved the OpenCode CLI itself as the Agent Teams runtime binary.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command:
+                '/opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+              projectPath: null,
+              exitCode: null,
+              stderrPreview: null,
+              stdoutPreview: null,
+              hints: [
+                'Those environment variables must not point to opencode.',
+                'Those environment variables must not point to opencode.',
+              ],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const duplicateHints = host.textContent?.match(
+      /Those environment variables must not point to opencode\./g
+    );
+    const duplicateKeyWarnings = consoleError.mock.calls.filter((call) =>
+      call.some(
+        (argument) =>
+          typeof argument === 'string' &&
+          argument.includes('Encountered two children with the same key')
+      )
+    );
+    consoleError.mockRestore();
+
+    expect(duplicateHints).toHaveLength(2);
+    expect(duplicateKeyWarnings).toHaveLength(0);
   });
 
   it('renders provider actions and opens API-key form state without exposing a raw secret', async () => {
@@ -517,6 +1363,7 @@ describe('RuntimeProviderManagementPanelView', () => {
                   hasKnownModels: true,
                   requiresManualConfig: false,
                   supportedInlineAuth: false,
+                  configuredAuthless: false,
                 },
               },
               {
@@ -547,6 +1394,7 @@ describe('RuntimeProviderManagementPanelView', () => {
                   hasKnownModels: true,
                   requiresManualConfig: false,
                   supportedInlineAuth: true,
+                  configuredAuthless: false,
                 },
               },
             ],
@@ -685,6 +1533,7 @@ describe('RuntimeProviderManagementPanelView', () => {
                   hasKnownModels: true,
                   requiresManualConfig: true,
                   supportedInlineAuth: true,
+                  configuredAuthless: false,
                 },
               },
             ],
@@ -705,6 +1554,72 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(actionLabels).toContain('Connect');
     expect(actionLabels).toContain('Configure manually');
+  });
+
+  it('opens model list for configured authless local directory providers', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'llama.cpp',
+                displayName: 'llama.cpp',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: [],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: null,
+                authMethods: [],
+                actions: [
+                  {
+                    id: 'test',
+                    label: 'Test',
+                    enabled: true,
+                    disabledReason: null,
+                    requiresSecret: false,
+                    ownershipScope: 'runtime',
+                  },
+                ],
+                sources: ['config-provider'],
+                sourceLabel: 'configured',
+                providerSource: null,
+                detail: 'Configured local OpenCode model route is available',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: true,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-directory-row-llama.cpp"]'
+    );
+    expect(row?.textContent).toContain('Configured local');
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.selectDirectoryProvider).toHaveBeenCalledWith('llama.cpp');
   });
 
   it('uses the unified provider search when compact search has no matches', async () => {
@@ -743,6 +1658,7 @@ describe('RuntimeProviderManagementPanelView', () => {
                   hasKnownModels: true,
                   requiresManualConfig: false,
                   supportedInlineAuth: false,
+                  configuredAuthless: false,
                 },
               },
             ],
@@ -884,24 +1800,25 @@ describe('RuntimeProviderManagementPanelView', () => {
           state,
           actions,
           disabled: false,
+          projectPath: '/tmp/project',
         })
       );
       await Promise.resolve();
     });
 
     expect(host.textContent).toContain('openrouter/openai/gpt-oss-20b:free');
-    expect(host.textContent).toContain('Used for new teams');
+    expect(host.textContent).toContain('Used in team picker');
     expect(host.textContent).toContain('Model probe passed');
     expect(host.textContent).toContain('Recommended');
     expect(host.textContent).toContain('Not recommended');
-    expect(host.textContent).toContain('Unavailable in OpenCode');
+    expect(host.textContent).toContain('Not verified in OpenCode');
     expect(host.textContent).toContain('Tested');
     expect(host.textContent).toContain('Tested with limits');
     expect(host.textContent).toContain('Recommended only');
     expect(host.textContent).not.toContain('Set OpenCode default');
     expect(
       Array.from(host.querySelectorAll('button')).some(
-        (button) => button.textContent?.trim() === 'Use for new teams'
+        (button) => button.textContent?.trim() === 'Use in team picker'
       )
     ).toBe(false);
     expect(
@@ -989,6 +1906,74 @@ describe('RuntimeProviderManagementPanelView', () => {
       'openrouter/openai/gpt-oss-20b:free'
     );
     expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+  });
+
+  it('filters provider model picker rows to free models', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 2,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/anthropic/claude-haiku-4.5',
+                displayName: 'anthropic/claude-haiku-4.5',
+                sourceLabel: 'OpenRouter',
+                free: true,
+                default: false,
+                availability: 'untested',
+                routeKind: 'connected_provider',
+              },
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/anthropic/claude-sonnet-4.6',
+                displayName: 'anthropic/claude-sonnet-4.6',
+                sourceLabel: 'OpenRouter',
+                free: false,
+                default: false,
+                availability: 'untested',
+                routeKind: 'connected_provider',
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Free only');
+    expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
+    expect(host.textContent).toContain('anthropic/claude-sonnet-4.6');
+
+    await act(async () => {
+      host.querySelector<HTMLElement>('#runtime-provider-openrouter-free-only')?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
+    expect(host.textContent).not.toContain('anthropic/claude-sonnet-4.6');
   });
 
   it('keeps the model search input enabled while model results are loading', async () => {
@@ -1131,6 +2116,7 @@ describe('RuntimeProviderManagementPanelView', () => {
         hasKnownModels: true,
         requiresManualConfig: false,
         supportedInlineAuth: true,
+        configuredAuthless: false,
       },
     };
     const state = createState({

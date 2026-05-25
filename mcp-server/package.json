@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "agent-teams-controller": "workspace:*",
-    "fastmcp": "^3.34.0",
+    "fastmcp": "^3.35.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

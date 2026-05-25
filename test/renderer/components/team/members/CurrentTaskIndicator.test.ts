@@ -100,4 +100,29 @@ describe('CurrentTaskIndicator', () => {
       await Promise.resolve();
     });
   });
+
+  it('pauses the spinner when the activity timer is not running', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(CurrentTaskIndicator, {
+          task,
+          borderColor: '#3b82f6',
+          isTimerRunning: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('svg.animate-spin')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

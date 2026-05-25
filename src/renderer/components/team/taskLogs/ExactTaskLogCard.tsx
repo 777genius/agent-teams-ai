@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import { ChevronDown, ChevronRight, Clock, FileText, Loader2 } from 'lucide-react';
 
@@ -67,6 +68,7 @@ export const ExactTaskLogCard = ({
   detailState,
   onToggle,
 }: ExactTaskLogCardProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const loadStateText = describeDetailState(detailState);
 
   return (
@@ -101,7 +103,7 @@ export const ExactTaskLogCard = ({
               {formatRelativeTime(summary.timestamp)}
             </span>
             <span>{anchorKindLabel(summary)}</span>
-            {!summary.canLoadDetail ? <span>summary only</span> : null}
+            {!summary.canLoadDetail ? <span>{t('taskLogs.exact.summaryOnly')}</span> : null}
           </div>
         </div>
       </button>
@@ -111,7 +113,7 @@ export const ExactTaskLogCard = ({
           {detailState?.status === 'loading' ? (
             <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-text-muted)]">
               <Loader2 size={12} className="animate-spin" />
-              Loading exact task logs...
+              {t('taskLogs.exact.loading')}
             </div>
           ) : null}
           {detailState?.status === 'ok' && detailState.chunks ? (

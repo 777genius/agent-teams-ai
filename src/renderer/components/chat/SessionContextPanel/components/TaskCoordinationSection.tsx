@@ -4,6 +4,8 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { TaskCoordinationItem } from '../items/TaskCoordinationItem';
 
 import { CollapsibleSection } from './CollapsibleSection';
@@ -25,11 +27,13 @@ export const TaskCoordinationSection = ({
   onToggle,
   onNavigateToTurn,
 }: Readonly<TaskCoordinationSectionProps>): React.ReactElement | null => {
+  const { t } = useAppTranslation('common');
+
   if (injections.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="Task Coordination"
+      title={t('tokens.taskCoordination')}
       count={injections.length}
       tokenCount={tokenCount}
       isExpanded={isExpanded}

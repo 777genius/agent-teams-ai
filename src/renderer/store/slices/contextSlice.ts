@@ -48,7 +48,13 @@ function getEmptyContextState(): Partial<AppState> {
   return {
     ...getFullResetState(),
     projects: [],
+    projectsLoading: false,
+    projectsInitialized: false,
+    projectsError: null,
     repositoryGroups: [],
+    repositoryGroupsLoading: false,
+    repositoryGroupsInitialized: false,
+    repositoryGroupsError: null,
     sessions: [],
     notifications: [],
     unreadCount: 0,
@@ -148,8 +154,14 @@ function validateSnapshot(
   return {
     // Restored from snapshot (use fresh data for projects/repoGroups)
     projects: freshProjects,
+    projectsLoading: false,
+    projectsInitialized: true,
+    projectsError: null,
     selectedProjectId,
     repositoryGroups: freshRepoGroups,
+    repositoryGroupsLoading: false,
+    repositoryGroupsInitialized: true,
+    repositoryGroupsError: null,
     selectedRepositoryId,
     selectedWorktreeId,
     viewMode: snapshot.viewMode,
@@ -306,7 +318,13 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
       if (targetSnapshot) {
         set({
           projects: targetSnapshot.projects,
+          projectsLoading: false,
+          projectsInitialized: true,
+          projectsError: null,
           repositoryGroups: targetSnapshot.repositoryGroups,
+          repositoryGroupsLoading: false,
+          repositoryGroupsInitialized: true,
+          repositoryGroupsError: null,
           selectedProjectId: targetSnapshot.selectedProjectId,
           selectedRepositoryId: targetSnapshot.selectedRepositoryId,
           selectedWorktreeId: targetSnapshot.selectedWorktreeId,
@@ -360,7 +378,9 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
           set({
             ...getEmptyContextState(),
             projects: freshProjects,
+            projectsInitialized: true,
             repositoryGroups: freshRepoGroups,
+            repositoryGroupsInitialized: true,
             activeContextId: targetContextId,
             isContextSwitching: false,
             targetContextId: null,

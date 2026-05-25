@@ -26,8 +26,9 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
   getCachedShellEnv,
   getShellPreferredHome,
-  resolveInteractiveShellEnv,
+  resolveInteractiveShellEnvBestEffort,
 } from '@main/utils/shellEnv';
+import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -50,7 +51,9 @@ import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor
 
 import type {
   CliInstallationStatus,
+  CliInstallerGetStatusOptions,
   CliInstallerProgress,
+  CliInstallerProviderStatusMode,
   CliPlatform,
   CliProviderId,
   CliProviderModelAvailability,
@@ -69,6 +72,54 @@ const GCS_BASE =
   'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases';
 
 const CLI_INSTALLER_PROGRESS_CHANNEL = 'cliInstaller:progress';
+const FRONTEND_MULTIMODEL_PROVIDER_IDS: CliProviderId[] = [
+  'anthropic',
+  'codex',
+  'opencode',
+  'kilocode',
+];
+const FRONTEND_MULTIMODEL_PROVIDER_ID_SET = new Set<CliProviderId>(
+  FRONTEND_MULTIMODEL_PROVIDER_IDS
+);
+
+function getProviderDisplayName(providerId: CliProviderId): string {
+  switch (providerId) {
+    case 'anthropic':
+      return 'Anthropic';
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'opencode':
+      return 'OpenCode (200+ models)';
+    case 'kilocode':
+      return 'KiloCode';
+  }
+}
+
+function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
+  return FRONTEND_MULTIMODEL_PROVIDER_ID_SET.has(providerId);
+}
+
+function getFrontendAuthenticatedProvider(
+  providers: CliProviderStatus[]
+): CliProviderStatus | null {
+  return (
+    providers.find(
+      (provider) => isFrontendMultimodelProviderId(provider.providerId) && provider.authenticated
+    ) ?? null
+  );
+}
+
+function hasFrontendAuthenticatedProvider(providers: CliProviderStatus[]): boolean {
+  return providers.some(
+    (provider) => isFrontendMultimodelProviderId(provider.providerId) && provider.authenticated
+  );
+}
+
+function filterFrontendMultimodelProviders(providers: CliProviderStatus[]): CliProviderStatus[] {
+  return providers.filter((provider) => isFrontendMultimodelProviderId(provider.providerId));
+}
 
 /** Timeout for `claude --version` (ms) */
 const VERSION_TIMEOUT_MS = 10_000;
@@ -90,6 +141,10 @@ const GET_STATUS_TIMEOUT_MS = 30_000;
 
 /** Overall timeout for the auth status check (covers both attempts + retry delay) (ms) */
 const AUTH_TOTAL_TIMEOUT_MS = 15_000;
+
+/** Initial multimodel provider status budget for startup metadata (final status hydrates async). */
+const MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS = 1_500;
+const GET_STATUS_TIMING_LOG_THRESHOLD_MS = 2_000;
 
 /** Max retries for EBUSY (antivirus scanning the new binary) */
 const EBUSY_MAX_RETRIES = 3;
@@ -127,6 +182,7 @@ function parseClaudeAuthStatusStdout(stdout: string): { loggedIn?: boolean; auth
 
 /** NDJSON: strip C0 controls (except \\t \\n \\r) so logs stay valid text and tiny. */
 function stripControlForDiag(s: string): string {
+  // eslint-disable-next-line no-control-regex -- Strip raw terminal C0 controls before diagnostic logging.
   return s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '\uFFFD');
 }
 
@@ -153,6 +209,7 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
     providers: status.providers.map((provider) => ({
       ...provider,
       modelVerificationState: provider.modelVerificationState ?? 'idle',
+      modelCatalogRefreshState: provider.modelCatalogRefreshState ?? 'idle',
       modelCatalog: provider.modelCatalog ? structuredClone(provider.modelCatalog) : null,
       detailMessage: provider.detailMessage ?? null,
       modelAvailability: provider.modelAvailability?.map((item) => ({ ...item })) ?? [],
@@ -174,6 +231,32 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
       backend: provider.backend ? { ...provider.backend } : null,
       models: [...provider.models],
     })),
+  };
+}
+
+function mergeProviderStatusCatalogCache(
+  incomingProvider: CliProviderStatus,
+  currentProvider: CliProviderStatus
+): CliProviderStatus {
+  const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
+  const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
+  const shouldPreserveCurrentModels =
+    incomingProvider.models.length === 0 ||
+    (incomingProvider.providerId === 'opencode' &&
+      incomingProvider.modelCatalog == null &&
+      incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+      currentProvider.models.length > incomingProvider.models.length);
+
+  return {
+    ...incomingProvider,
+    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
+    modelCatalog,
+    modelCatalogRefreshState:
+      modelCatalog && incomingRefreshState !== 'error'
+        ? 'ready'
+        : (incomingRefreshState ?? currentProvider.modelCatalogRefreshState ?? 'idle'),
+    runtimeCapabilities:
+      incomingProvider.runtimeCapabilities ?? currentProvider.runtimeCapabilities ?? null,
   };
 }
 
@@ -330,6 +413,12 @@ interface CliInstallerStatusRunDiag {
   authStdoutTail: string;
   authTimedOut: boolean;
   gatherError: string | null;
+  shellEnvMs: number | null;
+  binaryResolveMs: number | null;
+  versionProbeMs: number | null;
+  providerInitialWaitMs: number | null;
+  totalMs: number | null;
+  diagWriteScheduled: boolean;
 }
 
 function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
@@ -341,6 +430,12 @@ function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
     authStdoutTail: '',
     authTimedOut: false,
     gatherError: null,
+    shellEnvMs: null,
+    binaryResolveMs: null,
+    versionProbeMs: null,
+    providerInitialWaitMs: null,
+    totalMs: null,
+    diagWriteScheduled: false,
   };
 }
 
@@ -352,6 +447,16 @@ function resetGatherDiag(diag: CliInstallerStatusRunDiag): void {
   diag.authStdoutTail = '';
   diag.authTimedOut = false;
   diag.gatherError = null;
+  diag.shellEnvMs = null;
+  diag.binaryResolveMs = null;
+  diag.versionProbeMs = null;
+  diag.providerInitialWaitMs = null;
+  diag.totalMs = null;
+  diag.diagWriteScheduled = false;
+}
+
+function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstallerStatusRunDiag {
+  return { ...diag };
 }
 
 // =============================================================================
@@ -370,6 +475,7 @@ export class CliInstallerService {
   private latestStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusObservedAt = 0;
+  private statusGatherGeneration = 0;
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
 
   private rememberHealthyStatus(status: CliInstallationStatus): void {
@@ -457,7 +563,51 @@ export class CliInstallerService {
       authStdoutTail: clipTailForDiag(diag.authStdoutTail, DIAG_AUTH_STDOUT_TAIL),
       authProbeTimedOut: diag.authTimedOut,
       gatherThrownError: diag.gatherError,
+      shellEnvMs: diag.shellEnvMs,
+      binaryResolveMs: diag.binaryResolveMs,
+      versionProbeMs: diag.versionProbeMs,
+      providerInitialWaitMs: diag.providerInitialWaitMs,
+      totalMs: diag.totalMs,
+      diagWriteScheduled: diag.diagWriteScheduled,
     });
+  }
+
+  private scheduleCliInstallerStatusDiag(
+    r: CliInstallationStatus,
+    diag: CliInstallerStatusRunDiag
+  ): void {
+    const statusForDiag = cloneCliInstallationStatus(r);
+    const diagForWrite = cloneCliInstallerRunDiag(diag);
+
+    queueMicrotask(() => {
+      const writeStartedAt = Date.now();
+      void this.writeCliInstallerStatusDiag(statusForDiag, diagForWrite)
+        .then(() => {
+          const diagWriteMs = Date.now() - writeStartedAt;
+          if (diagWriteMs >= GET_STATUS_TIMING_LOG_THRESHOLD_MS) {
+            logger.warn(`getStatus diagnostic write slow diagWriteMs=${diagWriteMs}`);
+          }
+        })
+        .catch((diagErr) => {
+          logger.error('writeCliInstallerStatusDiag failed:', getErrorMessage(diagErr));
+        });
+    });
+  }
+
+  private logGetStatusTimingIfSlow(diag: CliInstallerStatusRunDiag): void {
+    const totalMs = diag.totalMs ?? 0;
+    if (totalMs < GET_STATUS_TIMING_LOG_THRESHOLD_MS && !diag.authTimedOut) {
+      return;
+    }
+
+    logger.warn(
+      `getStatus timing totalMs=${totalMs}` +
+        ` shellEnvMs=${diag.shellEnvMs ?? 'n/a'}` +
+        ` binaryResolveMs=${diag.binaryResolveMs ?? 'n/a'}` +
+        ` versionProbeMs=${diag.versionProbeMs ?? 'n/a'}` +
+        ` providerInitialWaitMs=${diag.providerInitialWaitMs ?? 'n/a'}` +
+        ` diagWriteScheduled=${diag.diagWriteScheduled}`
+    );
   }
 
   setMainWindow(window: BrowserWindow | null): void {
@@ -469,6 +619,7 @@ export class CliInstallerService {
   }
 
   invalidateStatusCache(): void {
+    this.statusGatherGeneration += 1;
     this.latestStatusSnapshot = null;
     this.latestProviderSignatures.clear();
     this.modelAvailabilityService.invalidate();
@@ -486,31 +637,9 @@ export class CliInstallerService {
     const ui = getCliFlavorUiOptions(flavor);
     const providers =
       flavor === 'agent_teams_orchestrator'
-        ? (
-            [
-              {
-                providerId: 'anthropic',
-                displayName: 'Anthropic',
-              },
-              {
-                providerId: 'codex',
-                displayName: 'Codex',
-              },
-              {
-                providerId: 'gemini',
-                displayName: 'Gemini',
-              },
-              {
-                providerId: 'opencode',
-                displayName: 'OpenCode (200+ models)',
-              },
-              {
-                providerId: 'kilocode',
-                displayName: 'KiloCode',
-              },
-            ] as const
-          ).map((provider) => ({
-            ...provider,
+        ? FRONTEND_MULTIMODEL_PROVIDER_IDS.map((providerId) => ({
+            providerId,
+            displayName: getProviderDisplayName(providerId),
             supported: false,
             authenticated: false,
             authMethod: null,
@@ -519,7 +648,7 @@ export class CliInstallerService {
             statusMessage: 'Checking...',
             models: [],
             modelAvailability: [],
-            canLoginFromUi: provider.providerId !== 'opencode',
+            canLoginFromUi: providerId !== 'opencode',
             capabilities: {
               teamLaunch: false,
               oneShot: false,
@@ -567,6 +696,14 @@ export class CliInstallerService {
       type: 'status',
       status: cloneCliInstallationStatus(this.latestStatusSnapshot),
     });
+  }
+
+  private publishStatusSnapshotIfCurrent(status: CliInstallationStatus, generation: number): void {
+    if (generation !== this.statusGatherGeneration) {
+      return;
+    }
+
+    this.publishStatusSnapshot(status);
   }
 
   private buildProviderModelAvailabilityContext(
@@ -658,6 +795,13 @@ export class CliInstallerService {
 
   private updateLatestProviderStatus(providerStatus: CliProviderStatus): void {
     if (
+      this.latestStatusSnapshot?.flavor === 'agent_teams_orchestrator' &&
+      !isFrontendMultimodelProviderId(providerStatus.providerId)
+    ) {
+      return;
+    }
+
+    if (
       providerStatus.modelVerificationState !== 'verifying' &&
       (providerStatus.modelAvailability?.length ?? 0) <= 0
     ) {
@@ -673,24 +817,73 @@ export class CliInstallerService {
     );
     const nextProviders = hasProvider
       ? this.latestStatusSnapshot.providers.map((provider) =>
-          provider.providerId === providerStatus.providerId ? providerStatus : provider
+          provider.providerId === providerStatus.providerId
+            ? mergeProviderStatusCatalogCache(providerStatus, provider)
+            : provider
         )
       : [...this.latestStatusSnapshot.providers, providerStatus];
-    const authenticatedProvider = nextProviders.find((provider) => provider.authenticated) ?? null;
+    const authenticatedProvider = getFrontendAuthenticatedProvider(nextProviders);
 
     this.latestStatusSnapshot = {
       ...this.latestStatusSnapshot,
       providers: nextProviders,
-      authLoggedIn: nextProviders.some((provider) => provider.authenticated),
+      authLoggedIn: hasFrontendAuthenticatedProvider(nextProviders),
       authMethod: authenticatedProvider?.authMethod ?? null,
     };
+  }
+
+  private updateLatestProviderStatusIfCurrent(
+    providerStatus: CliProviderStatus,
+    generation: number
+  ): boolean {
+    if (generation !== this.statusGatherGeneration) {
+      return false;
+    }
+
+    this.updateLatestProviderStatus(providerStatus);
+    return true;
+  }
+
+  private getLatestProviderStatusForModelVerification(
+    providerId: CliProviderId,
+    binaryPath: string,
+    installedVersion: string | null
+  ): CliProviderStatus | null {
+    const snapshot = this.latestStatusSnapshot;
+    if (
+      !snapshot ||
+      snapshot.flavor !== 'agent_teams_orchestrator' ||
+      snapshot.binaryPath !== binaryPath ||
+      snapshot.installedVersion !== installedVersion
+    ) {
+      return null;
+    }
+
+    const provider =
+      cloneCliInstallationStatus(snapshot).providers.find(
+        (candidate) => candidate.providerId === providerId
+      ) ?? null;
+    if (
+      !provider ||
+      provider.models.length <= 0 ||
+      provider.supported !== true ||
+      provider.authenticated !== true ||
+      provider.capabilities.oneShot !== true
+    ) {
+      return null;
+    }
+
+    return provider;
   }
 
   // ---------------------------------------------------------------------------
   // Public: getStatus
   // ---------------------------------------------------------------------------
 
-  async getStatus(): Promise<CliInstallationStatus> {
+  async getStatus(options: CliInstallerGetStatusOptions = {}): Promise<CliInstallationStatus> {
+    const statusStartedAt = Date.now();
+    const providerStatusMode: CliInstallerProviderStatusMode = options.providerStatusMode ?? 'full';
+    const generation = ++this.statusGatherGeneration;
     const result = this.createInitialStatus();
     this.latestProviderSignatures.clear();
     this.latestStatusSnapshot = cloneCliInstallationStatus(result);
@@ -702,7 +895,7 @@ export class CliInstallerService {
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
       await Promise.race([
-        this.gatherStatus(ref, runDiag),
+        this.gatherStatus(ref, runDiag, generation, providerStatusMode),
         new Promise<void>((resolve) => {
           timer = setTimeout(() => {
             logger.warn(
@@ -720,16 +913,19 @@ export class CliInstallerService {
       if (timer) {
         clearTimeout(timer);
       }
-      try {
-        await this.writeCliInstallerStatusDiag(result, runDiag);
-      } catch (diagErr) {
-        logger.error('writeCliInstallerStatusDiag failed:', getErrorMessage(diagErr));
-      }
+      runDiag.totalMs = Date.now() - statusStartedAt;
+      runDiag.diagWriteScheduled = true;
+      this.scheduleCliInstallerStatusDiag(result, runDiag);
+      this.logGetStatusTimingIfSlow(runDiag);
     }
   }
 
   async getProviderStatus(providerId: CliProviderId): Promise<CliProviderStatus | null> {
-    await resolveInteractiveShellEnv();
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
 
     if (providerId === 'kilocode') {
       return this.resolveKilocodeProviderStatus();
@@ -746,6 +942,7 @@ export class CliInstallerService {
       return fullStatus.providers.find((provider) => provider.providerId === providerId) ?? null;
     }
 
+    const generation = this.statusGatherGeneration;
     const versionProbe = await this.probeCliVersion(binaryPath);
     if (!versionProbe.ok) {
       return null;
@@ -753,14 +950,26 @@ export class CliInstallerService {
 
     const providerStatus = await this.multimodelBridgeService.getProviderStatus(
       binaryPath,
-      providerId
+      providerId,
+      (hydratedProviderStatus) => {
+        if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
+          return;
+        }
+        if (this.latestStatusSnapshot) {
+          this.publishStatusSnapshot(this.latestStatusSnapshot);
+        }
+      }
     );
-    this.updateLatestProviderStatus(providerStatus);
+    this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
     return providerStatus;
   }
 
   async verifyProviderModels(providerId: CliProviderId): Promise<CliProviderStatus | null> {
-    await resolveInteractiveShellEnv();
+    await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv: process.env,
+      background: false,
+    });
 
     if (providerId === 'kilocode') {
       return this.resolveKilocodeProviderStatus();
@@ -776,6 +985,7 @@ export class CliInstallerService {
       return this.getProviderStatus(providerId);
     }
 
+    const generation = this.statusGatherGeneration;
     const versionProbe = await this.probeCliVersion(binaryPath);
     if (!versionProbe.ok) {
       return null;
@@ -791,24 +1001,34 @@ export class CliInstallerService {
         modelVerificationState: 'idle' as const,
         modelAvailability: [],
       };
-      this.updateLatestProviderStatus(nextProviderStatus);
-      if (this.latestStatusSnapshot) {
+      if (
+        this.updateLatestProviderStatusIfCurrent(nextProviderStatus, generation) &&
+        this.latestStatusSnapshot
+      ) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
       return nextProviderStatus;
     }
 
-    const providerStatus = await this.multimodelBridgeService.getProviderStatus(
-      binaryPath,
-      providerId
-    );
+    const providerStatus =
+      this.getLatestProviderStatusForModelVerification(
+        providerId,
+        binaryPath,
+        versionProbe.version
+      ) ?? (await this.multimodelBridgeService.getProviderStatus(binaryPath, providerId));
+    if (generation !== this.statusGatherGeneration) {
+      return providerStatus;
+    }
+
     const nextProviderStatus = this.applyProviderModelAvailabilityToProvider(
       binaryPath,
       versionProbe.version,
       providerStatus
     );
-    this.updateLatestProviderStatus(nextProviderStatus);
-    if (this.latestStatusSnapshot) {
+    if (
+      this.updateLatestProviderStatusIfCurrent(nextProviderStatus, generation) &&
+      this.latestStatusSnapshot
+    ) {
       this.publishStatusSnapshot(this.latestStatusSnapshot);
     }
     return nextProviderStatus;
@@ -823,32 +1043,56 @@ export class CliInstallerService {
    */
   private async gatherStatus(
     ref: { current: CliInstallationStatus },
-    diag: CliInstallerStatusRunDiag
+    diag: CliInstallerStatusRunDiag,
+    generation: number,
+    providerStatusMode: CliInstallerProviderStatusMode
   ): Promise<void> {
     resetGatherDiag(diag);
-    await resolveInteractiveShellEnv();
+    if (providerStatusMode === 'defer') {
+      diag.shellEnvMs = 0;
+    } else {
+      const shellEnvStartedAt = Date.now();
+      await resolveInteractiveShellEnvBestEffort({
+        timeoutMs: 1_500,
+        fallbackEnv: process.env,
+        background: false,
+      });
+      diag.shellEnvMs = Date.now() - shellEnvStartedAt;
+    }
 
     const r = ref.current;
+    const binaryResolveStartedAt = Date.now();
     const binaryPath = await ClaudeBinaryResolver.resolve();
+    diag.binaryResolveMs = Date.now() - binaryResolveStartedAt;
     if (binaryPath) {
       r.binaryPath = binaryPath;
+      const versionProbeStartedAt = Date.now();
       const versionProbe = await this.probeCliVersion(binaryPath);
+      diag.versionProbeMs = Date.now() - versionProbeStartedAt;
       if (versionProbe.ok) {
         r.installed = true;
         r.installedVersion = versionProbe.version;
         r.launchError = null;
         r.authStatusChecking = true;
+
+        if (r.flavor === 'agent_teams_orchestrator' && providerStatusMode === 'defer') {
+          r.authStatusChecking = false;
+          this.markProvidersDeferred(r);
+          this.publishStatusSnapshotIfCurrent(r, generation);
+          return;
+        }
+
         this.rememberHealthyStatus(r);
-        this.publishStatusSnapshot(r);
+        this.publishStatusSnapshotIfCurrent(r, generation);
 
         // Auth and GCS version check are independent — run in parallel.
         // Both mutate `r` directly so partial results survive the outer timeout.
         await Promise.all([
-          this.checkAuthStatus(binaryPath, r, diag),
+          this.checkAuthStatus(binaryPath, r, diag, generation),
           r.supportsSelfUpdate ? this.fetchLatestVersion(r) : Promise.resolve(),
         ]);
         this.rememberHealthyStatus(r);
-        this.publishStatusSnapshot(r);
+        this.publishStatusSnapshotIfCurrent(r, generation);
       } else {
         const recoveredHealthyStatus = this.getRecoverableHealthyStatus(binaryPath);
         if (recoveredHealthyStatus) {
@@ -858,7 +1102,7 @@ export class CliInstallerService {
           Object.assign(r, recoveredHealthyStatus, {
             launchError: null,
           });
-          this.publishStatusSnapshot(r);
+          this.publishStatusSnapshotIfCurrent(r, generation);
           return;
         }
 
@@ -877,7 +1121,7 @@ export class CliInstallerService {
         if (r.supportsSelfUpdate) {
           await this.fetchLatestVersion(r);
         }
-        this.publishStatusSnapshot(r);
+        this.publishStatusSnapshotIfCurrent(r, generation);
       }
     } else {
       // No binary — still check latest version for "install" prompt
@@ -887,7 +1131,7 @@ export class CliInstallerService {
       if (r.supportsSelfUpdate) {
         await this.fetchLatestVersion(r);
       }
-      this.publishStatusSnapshot(r);
+      this.publishStatusSnapshotIfCurrent(r, generation);
     }
   }
 
@@ -965,6 +1209,7 @@ export class CliInstallerService {
       authMethod: null,
       verificationState: 'error',
       modelVerificationState: 'idle',
+      modelCatalogRefreshState: 'error',
       statusMessage: message,
       models: [],
       modelAvailability: [],
@@ -1022,6 +1267,28 @@ export class CliInstallerService {
     return status;
   }
 
+  private markProvidersDeferred(result: CliInstallationStatus): void {
+    if (result.flavor !== 'agent_teams_orchestrator') {
+      return;
+    }
+
+    result.providers = result.providers.map((provider) => ({
+      ...provider,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      modelVerificationState: 'idle',
+      modelCatalogRefreshState: 'idle',
+      statusMessage: CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
+      detailMessage: null,
+      models: [],
+      modelAvailability: [],
+      backend: null,
+    }));
+    result.authLoggedIn = false;
+    result.authMethod = null;
+  }
+
   /**
    * Check auth status with retry — covers stale lock files after Ctrl+C interruption.
    * Wrapped in its own timeout to prevent slow auth from blocking the overall status.
@@ -1031,49 +1298,95 @@ export class CliInstallerService {
   private async checkAuthStatus(
     binaryPath: string,
     result: CliInstallationStatus,
-    diag: CliInstallerStatusRunDiag
+    diag: CliInstallerStatusRunDiag,
+    generation: number
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
-      const mergeWithNonBridgeProviders = async (
-        bridgeProviders: CliProviderStatus[]
+      let statusTarget = result;
+      const buildFrontendProviders = async (
+        providersSnapshot: CliProviderStatus[]
       ): Promise<CliProviderStatus[]> => {
-        const bridgeIds = new Set(bridgeProviders.map((p) => p.providerId));
-        const nonBridgeStatuses = await Promise.all(
-          result.providers
-            .filter((p) => !bridgeIds.has(p.providerId))
-            .map((p) =>
-              p.providerId === 'kilocode'
-                ? this.resolveKilocodeProviderStatus()
-                : Promise.resolve(p)
-            )
-        );
-        return [...bridgeProviders, ...nonBridgeStatuses];
-      };
-      try {
-        const providers = await this.multimodelBridgeService.getProviderStatuses(
-          binaryPath,
-          (providersSnapshot) => {
-            mergeWithNonBridgeProviders(providersSnapshot).then((merged) => {
-              result.providers = merged;
-              result.authLoggedIn = merged.some((provider) => provider.authenticated);
-              result.authMethod =
-                merged.find((provider) => provider.authenticated)?.authMethod ?? null;
-              this.publishStatusSnapshot(result);
-            });
+        const providersById = new Map(providersSnapshot.map((provider) => [provider.providerId, provider]));
+        const frontendProviders: CliProviderStatus[] = [];
+        for (const providerId of FRONTEND_MULTIMODEL_PROVIDER_IDS) {
+          if (providerId === 'kilocode') {
+            frontendProviders.push(await this.resolveKilocodeProviderStatus());
+            continue;
           }
+          const provider = providersById.get(providerId);
+          if (provider) {
+            frontendProviders.push(provider);
+          }
+        }
+        return frontendProviders;
+      };
+      const applyProviders = async (
+        providersSnapshot: CliProviderStatus[],
+        final: boolean
+      ): Promise<void> => {
+        if (generation !== this.statusGatherGeneration) {
+          return;
+        }
+
+        const target = statusTarget;
+        const frontendProviders = await buildFrontendProviders(
+          filterFrontendMultimodelProviders(providersSnapshot)
         );
-        const merged = await mergeWithNonBridgeProviders(providers);
-        result.providers = merged;
-        result.authLoggedIn = merged.some((provider) => provider.authenticated);
-        result.authMethod = merged.find((provider) => provider.authenticated)?.authMethod ?? null;
-        result.authStatusChecking = false;
-        this.publishStatusSnapshot(result);
-      } catch (error) {
-        const msg = getErrorMessage(error);
-        diag.authLastError = msg;
-        result.authStatusChecking = false;
-        logger.warn(`Provider status check failed for claude-multimodel: ${msg}`);
+        if (generation !== this.statusGatherGeneration) {
+          return;
+        }
+        target.providers = frontendProviders;
+        target.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
+        target.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
+        if (final) {
+          target.authStatusChecking = false;
+          this.rememberHealthyStatus(target);
+        }
+        this.publishStatusSnapshot(target);
+      };
+
+      const completion = this.multimodelBridgeService
+        .getProviderStatuses(binaryPath, (providersSnapshot) => {
+          void applyProviders(providersSnapshot, false);
+        })
+        .then((providers) => {
+          return applyProviders(providers, true);
+        })
+        .catch((error) => {
+          if (generation !== this.statusGatherGeneration) {
+            return;
+          }
+
+          const msg = getErrorMessage(error);
+          diag.authLastError = msg;
+          result.authStatusChecking = false;
+          logger.warn(`Provider status check failed for claude-multimodel: ${msg}`);
+          this.publishStatusSnapshot(result);
+        });
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const timeout = new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(() => {
+          statusTarget = cloneCliInstallationStatus(result);
+          resolve('timeout');
+        }, MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS);
+        timer.unref?.();
+      });
+
+      const providerInitialWaitStartedAt = Date.now();
+      const outcome = await Promise.race([completion.then(() => 'completed' as const), timeout]);
+      diag.providerInitialWaitMs = Date.now() - providerInitialWaitStartedAt;
+      if (timer) {
+        clearTimeout(timer);
+      }
+
+      if (outcome === 'timeout') {
+        diag.authTimedOut = true;
+        logger.warn(
+          `Provider status check still running after ${MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS}ms; returning partial CLI status`
+        );
+        this.publishStatusSnapshotIfCurrent(result, generation);
       }
       return;
     }

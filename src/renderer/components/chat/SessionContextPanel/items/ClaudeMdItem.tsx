@@ -4,6 +4,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CopyablePath } from '@renderer/components/common/CopyablePath';
 import { resolveAbsolutePath, shortenDisplayPath } from '@renderer/utils/pathDisplay';
 
@@ -23,6 +24,7 @@ export const ClaudeMdItem = ({
   projectRoot,
   onNavigateToTurn,
 }: Readonly<ClaudeMdItemProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const turnIndex = parseTurnIndex(injection.firstSeenInGroup);
   const isClickable = onNavigateToTurn && turnIndex >= 0;
   const displayPath = shortenDisplayPath(injection.path, projectRoot);
@@ -38,7 +40,7 @@ export const ClaudeMdItem = ({
       />
       <div className="mt-0.5 flex items-center gap-2">
         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          ~{formatTokens(injection.estimatedTokens)} tokens
+          {t('tokens.approxTokens', { tokens: formatTokens(injection.estimatedTokens) })}
         </span>
         {isClickable ? (
           <button

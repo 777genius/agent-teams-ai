@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "¿Ya has iniciado sesión?",
+      "becomeSponsor": "Conviértete en patrocinador",
+      "cancel": "Cancelar",
+      "checkNow": "Ahora.",
+      "checkUpdates": "Check for Updates",
+      "checking": "Comprobando...",
+      "connect": "Conectar",
+      "extensions": "Extensiones",
+      "login": "Iniciar sesión",
+      "manage": "Manage",
+      "manageProviders": "Gestionar proveedores",
+      "plan": "Plan",
+      "recheck": "Re-check",
+      "recheckProvider": "Re-check{{provider}}",
+      "retry": "Entrada",
+      "updateTo": "Actualización a v{{version}}",
+      "useCode": "Código de uso"
+    },
+    "atlas": {
+      "alt": "Atlas Cloud",
+      "description": "Atlas Cloud es una plataforma de inferencia de IA modal que proporciona a los desarrolladores una única API de IA API para acceder a la generación de vídeo, la generación de imágenes y las API de LLM. En lugar de gestionar múltiples integraciones de proveedores, conecta una vez y consigue un acceso unificado a 300+ modelos curados en todas las modalidades. Echa un vistazo a la nueva promoción de planes de codificación de Atlas Cloud para un acceso API más adecuado para el presupuesto.",
+      "openCodeProvider": "OpenCode provider",
+      "plan": "Plan de codificación de Atlas Cloud",
+      "sponsor": "Sponsor"
+    },
+    "errors": {
+      "checkStatusFailed": "Failed to check CLI status",
+      "installationFailed": "La instalación falló",
+      "refreshFailed": "Failed to check for updates. Revise su conexión de red e intente de nuevo.",
+      "runtimeUpdatedRefreshFailed": "Tiempo de ejecución actualizado, pero no refrescó el estado del proveedor."
+    },
+    "hints": {
+      "backgroundStatus": "El estado {{runtime}} será revisado en el fondo.",
+      "codexApiKeyFallback": "{{hint}} API llave es disponible si cambia el modo auth.",
+      "codexAutoApiKey": "{{hint}} Auto seguirá utilizando la tecla API hasta que ChatGPT esté conectado.",
+      "codexFinishLogin": "Terminar la sesión ChatGPT en el navegador. Introduzca el código mostrado si se solicita.",
+      "codexNoActiveLogin": "Los límites de uso aparecen sólo después de Codex CLI ve una cuenta activa de ChatGPT. En este momento no reporta ningún login activo de ChatGPT.",
+      "codexNoActiveManagedSession": "Los límites de uso aparecen sólo después de Codex CLI ve una cuenta activa de ChatGPT. Existen datos de cuenta de Codex local, pero no se selecciona ninguna sesión activa gestionada en este momento.",
+      "codexReconnectNeeded": "Los límites de uso aparecen sólo después de que Codex refresca la sesión ChatGPT seleccionada actualmente. Ahora mismo, la sesión local necesita reconectarse.",
+      "firstCheckSlow": "El primer cheque puede tardar hasta 30 segundos",
+      "loginRequiredForTeams": "Sesiones de navegación y proyectos funciona sin login. Iniciar sesión sólo es necesario para ejecutar equipos de agente.",
+      "troubleshootTitle": "Si estás seguro de que has iniciado sesión, prueba estos pasos:"
+    },
+    "installer": {
+      "checkingLatest": "Comprobando la última versión...",
+      "downloading": "Descargar {{runtime}}...",
+      "installing": "Instalar {{runtime}}...",
+      "success": "Instalación exitosa {{runtime}} v{{version}}",
+      "verifying": "Verificando cheques..."
+    },
+    "labels": {
+      "apiKeyRequired": "API llave necesaria",
+      "comingSoon": "Pronto.",
+      "collapseProviderDetails": "Detalles del proveedor de colapso",
+      "expandProviderDetails": "Ampliar los detalles del proveedor",
+      "generateLink": "Generar enlace",
+      "loadingRateLimits": "Tasa límite de carga",
+      "loggedOut": "Proveedor conectado",
+      "loginAuthFailed": "Falló la autenticación",
+      "loginAuthUpdated": "Autenticación actualizada",
+      "loginComplete": "Conexión completa",
+      "loginFailed": "Login fallido",
+      "loginTitle": "Iniciar sesión",
+      "logoutFailed": "Falló la sesión",
+      "logoutTitle": "Cerrar sesión",
+      "notLoggedIn": "No conectado",
+      "openLogin": "Abrir sesión",
+      "providerActionRequired": "Medidas necesarias para el proveedor",
+      "resets": "resetea {{time}}",
+      "runtimeLoginTitle": "{{runtime}} Iniciar sesión"
+    },
+    "loading": {
+      "aiProviders": "Comprobando proveedores de inteligencia...",
+      "claudeCli": "Revisando Claude CLI..."
+    },
+    "provider": {
+      "authenticated": "Authenticated",
+      "backend": "Backend:{{backend}}",
+      "checkingAuthentication": "Comprobando autenticación...",
+      "checkingProviders": "Proveedores de chequeo...",
+      "configuredLocalCount": "{{count}} configurado local",
+      "configuredLocalCount_few": "{{count}} configurado local",
+      "configuredLocalCount_many": "{{count}} configurado local",
+      "configuredLocalCount_one": "{{count}} configurado local",
+      "configuredLocalCount_other": "{{count}} configurado local",
+      "configuredLocalTitle": "Rutas locales OpenCode importadas de su configuración OpenCode.",
+      "connectedCount": "Proveedores: {{connected}}/{{denominator}} conectado",
+      "freeModels": "Modelos libres",
+      "freeModelsTitle": "OpenCode incluye opciones de modelo gratis como Big Pickle cuando está disponible en su configuración. OpenRouter a través de OpenCode también puede exponer modelos gratuitos, pero no todos los modelos OpenCode/OpenRouter son gratuitos. La disponibilidad y los límites pueden cambiar.",
+      "loadingModels": "Cargando modelos...",
+      "modelsUnavailable": "Modelos no disponibles para esta construcción de tiempo de ejecución",
+      "runtime": "Duración: {{runtime}}",
+      "verifiedCount": "{{count}} verificado",
+      "verifiedCount_few": "{{count}} verificado",
+      "verifiedCount_many": "{{count}} verificado",
+      "verifiedCount_one": "{{count}} verificado",
+      "verifiedCount_other": "{{count}} verificado",
+      "verifiedTitle": "Rutas OpenCode con una prueba de ejecución exitosa."
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "El {{runtime}} configurado falló su cheque de salud de inicio.",
+      "configuredNotFound": "No se encontró el {{runtime}} configurado.",
+      "foundButFailed": "{{runtime}} fue encontrado pero no comenzó",
+      "healthCheckFailedDescription": "La aplicación encontró el {{runtime}} configurado, pero su comprobación de salud de inicio falló. Repararlo o reinstalarlo, luego reingresar.",
+      "install": "Instala {{runtime}}",
+      "installRequiredDescription": "{{runtime}} es necesario para la gestión de equipos y sesiones. Instala para empezar.",
+      "isRequired": "{{runtime}} es necesario",
+      "reinstall": "Reinstalar {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "Verificación",
+      "codexTitle": "Instalar Codex CLI en datos de aplicaciones",
+      "downloading": "Descarga",
+      "downloadingPercent": "Descargar {{percent}}%",
+      "install": "Instala",
+      "installing": "Instalación",
+      "openCodeTitle": "Instalar OpenCode tiempo de ejecución en datos de aplicaciones",
+      "retryInstall": "Retry install"
+    },
+    "troubleshoot": {
+      "again": "otra vez",
+      "authStatusCommand": "su comando configurado CLI auth status",
+      "checkLoggedIn": "- ver si muestra \"Logged in\"",
+      "click": "Haga clic",
+      "loginCommand": "el comando de inicio de sesión",
+      "logoutCommand": "el comando runtime logout",
+      "openTerminal": "Abre tu terminal y corre:",
+      "reloginPrefix": "Si dice haber iniciado sesión, pero la aplicación no lo ve, intente:",
+      "sameRuntime": "Asegúrese de que el CLI en su terminal es el mismo tiempo de ejecución que utiliza la aplicación",
+      "statusCacheHint": "- a veces el estado está cacheado por unos segundos",
+      "then": "entonces"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "Uno o más proveedores se establecen en el modo clave API, pero no se configura la clave ZXCV. Open Manage Proveedores para añadir claves o cambiar el modo de conexión.",
+      "multipleApiKeysNeedAttention": "Uno o más proveedores se fijan en el modo clave API y necesitan atención. Open Manage Proveedores para revisar las teclas guardadas o cambiar el modo de conexión.",
+      "notAuthenticated": "{{runtime}} está instalado pero no está autenticado. Es necesario iniciar sesión para proporcionar equipo y funciones de inteligencia artificial.",
+      "singleApiKeyMissing": "{{provider}} se establece en el modo clave API, pero no se configura la tecla API. Open Manage Proveedores para agregar una llave o cambiar el modo de conexión.",
+      "singleApiKeyNeedsAttention": "{{provider}} se establece en el modo clave API, pero no está conectado. Open Manage Proveedores para revisar la llave guardada o cambiar el modo de conexión."
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "Seleccione una carpeta de proyecto",
+    "selectFolder": "Seleccione carpeta",
+    "failedToLoad": "Failed to load projects",
+    "retry": "Entrada",
+    "noProjects": "No se han encontrado proyectos",
+    "noMatches": "No hay coincidencias para \"{{query}}\"",
+    "noRecentProjects": "No se han encontrado proyectos recientes",
+    "emptyDescription": "La actividad reciente de Claude y Codex aparecerá aquí.",
+    "loadMore": "Carga más",
+    "card": {
+      "deleted": "Suprimido",
+      "projectFolderMissing": "Carpeta de proyecto ya no existe",
+      "taskCounts": {
+        "active": "{{count}}activo",
+        "active_one": "{{count}}activo",
+        "active_other": "{{count}}activo",
+        "active_few": "{{count}}activo",
+        "active_many": "{{count}}activo",
+        "pending": "{{count}} pendiente",
+        "pending_one": "{{count}} pendiente",
+        "pending_other": "{{count}} pendiente",
+        "pending_few": "{{count}} pendiente",
+        "pending_many": "{{count}} pendiente",
+        "done": "{{count}} hecho",
+        "done_one": "{{count}} hecho",
+        "done_other": "{{count}} hecho",
+        "done_few": "{{count}} hecho",
+        "done_many": "{{count}} hecho"
+      }
+    },
+    "title": "Proyectos recientes",
+    "searchResults": "Resultados de la búsqueda",
+    "searchPlaceholder": "Proyectos de búsqueda..."
+  },
+  "actions": {
+    "selectTeam": "Seleccionar equipo",
+    "or": "o",
+    "clearSearch": "Búsqueda clara"
+  },
+  "windowsAdmin": {
+    "title": "Modo Administrador de Windows recomendado",
+    "description": "Los cheques de tiempo de ejecución OpenCode pueden pasar el tiempo cuando el Agente Teams AI no es elevado. Reinicie la aplicación con Run como administrador antes de lanzar equipos OpenCode."
+  },
+  "webPreview": {
+    "title": "Abra la aplicación de escritorio para toda la funcionalidad",
+    "description": "La versión del navegador todavía está en desarrollo. Acciones de proyectos, integraciones y actualizaciones de estado en vivo pueden ser limitadas aquí. Utilice la aplicación de escritorio para acceder a todas las funciones de forma fiable."
+  },
+  "updateBanner": {
+    "newVersionAvailable": "Nueva versión disponible",
+    "restartNow": "Reinicie ahora",
+    "viewDetails": "Ver detalles"
+  }
+}

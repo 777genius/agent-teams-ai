@@ -1,19 +1,12 @@
 import { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import type { RuntimeDisplayState, TeamRuntimeDisplayRow } from './teamRuntimeDisplayRows';
 
 interface LiveRuntimeStatusSectionProps {
   rows: readonly TeamRuntimeDisplayRow[];
 }
-
-const STATE_LABELS: Record<RuntimeDisplayState, string> = {
-  running: 'Running',
-  starting: 'Starting',
-  waiting: 'Waiting',
-  degraded: 'Needs attention',
-  stopped: 'Stopped',
-  unknown: 'Unknown',
-};
 
 const STATE_CLASS_NAMES: Record<RuntimeDisplayState, string> = {
   running: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
@@ -27,14 +20,13 @@ const STATE_CLASS_NAMES: Record<RuntimeDisplayState, string> = {
 export const LiveRuntimeStatusSection = memo(function LiveRuntimeStatusSection({
   rows,
 }: LiveRuntimeStatusSectionProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
   if (rows.length === 0) return null;
 
   return (
-    <div className="space-y-3" aria-label="Live runtime status">
-      <span className="sr-only">Live runtime status</span>
-      <p className="text-muted-foreground text-xs">
-        Display-only heartbeat and launch state. Process controls remain below.
-      </p>
+    <div className="space-y-3" aria-label={t('liveRuntimeStatus.title')}>
+      <span className="sr-only">{t('liveRuntimeStatus.title')}</span>
+      <p className="text-muted-foreground text-xs">{t('liveRuntimeStatus.description')}</p>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
           <article
@@ -51,26 +43,35 @@ export const LiveRuntimeStatusSection = memo(function LiveRuntimeStatusSection({
               <span
                 className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATE_CLASS_NAMES[row.state]}`}
               >
-                {STATE_LABELS[row.state]}
+                {t(`liveRuntimeStatus.states.${row.state}`)}
               </span>
             </div>
 
             <div className="text-muted-foreground mt-3 flex flex-wrap gap-1.5 text-[11px]">
-              <span className="bg-muted rounded-full px-2 py-0.5">source: {row.source}</span>
+              <span className="bg-muted rounded-full px-2 py-0.5">
+                {t('liveRuntimeStatus.source', { source: row.source })}
+              </span>
               {row.runtimeModel ? (
                 <span className="bg-muted rounded-full px-2 py-0.5">{row.runtimeModel}</span>
               ) : null}
               {row.laneKind ? (
-                <span className="bg-muted rounded-full px-2 py-0.5">{row.laneKind} lane</span>
+                <span className="bg-muted rounded-full px-2 py-0.5">
+                  {t('liveRuntimeStatus.lane', { lane: row.laneKind })}
+                </span>
               ) : null}
               {row.pidLabel ? (
-                <span className="bg-muted rounded-full px-2 py-0.5" title="Diagnostic only">
+                <span
+                  className="bg-muted rounded-full px-2 py-0.5"
+                  title={t('liveRuntimeStatus.diagnosticOnly')}
+                >
                   {row.pidLabel}
                 </span>
               ) : null}
               {row.updatedAt ? (
                 <span className="bg-muted rounded-full px-2 py-0.5">
-                  updated {formatRuntimeUpdatedAt(row.updatedAt)}
+                  {t('liveRuntimeStatus.updated', {
+                    value: formatRuntimeUpdatedAt(row.updatedAt),
+                  })}
                 </span>
               ) : null}
             </div>

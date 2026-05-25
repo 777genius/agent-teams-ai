@@ -15,18 +15,20 @@ import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMem
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import {
+  getTasksBasePath,
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+
 import {
   assertExecutable,
   formatMemberWorkSyncDiagnostics,
   formatProgressDump,
+  type MemberWorkSyncLiveControlServer,
   readRuntimeTurnSettledProcessedMetas,
   restoreEnv,
   startMemberWorkSyncControlServer,
   throwIfClaudeTranscriptApiError,
-  type MemberWorkSyncLiveControlServer,
   waitUntil,
 } from './memberWorkSyncLiveHarness';
 
@@ -48,9 +50,8 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli';
+const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_MODEL = 'sonnet';
-const DEFAULT_EFFORT = 'low' as const;
 
 type ClaudeStopHookLiveScenarioState = 'still_working' | 'caught_up';
 
@@ -97,17 +98,16 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
   let previousHome: string | undefined;
   let previousHistFile: string | undefined;
   let previousUserProfile: string | undefined;
+  let claudeJsonConfigRoot: string;
+  let previousClaudeJsonConfig: string | null | undefined;
   let svc: TeamProvisioningService | null;
   let feature: MemberWorkSyncFeatureFacade | null;
   let controlServer: MemberWorkSyncLiveControlServer | null;
   let teamName: string | null;
+  let usingConnectedClaudeAccount = false;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'member-work-sync-claude-stop-live-'));
-    tempClaudeRoot = path.join(tempDir, '.claude');
-    await fs.mkdir(tempClaudeRoot, { recursive: true });
-    setClaudeBasePathOverride(tempClaudeRoot);
-
     previousCliPath = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
     previousCliFlavor = process.env.CLAUDE_TEAM_CLI_FLAVOR;
     previousControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
@@ -116,12 +116,24 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     previousHome = process.env.HOME;
     previousHistFile = process.env.HISTFILE;
     previousUserProfile = process.env.USERPROFILE;
+    previousClaudeJsonConfig = undefined;
 
-    const shouldUseConnectedAccountHome = allowConnectedClaudeAccount && !hasLiveAnthropicApiKey();
-    tempHome = shouldUseConnectedAccountHome
-      ? resolveConnectedClaudeHome(previousHome)
+    usingConnectedClaudeAccount = allowConnectedClaudeAccount && !hasLiveAnthropicApiKey();
+    tempHome = usingConnectedClaudeAccount
+      ? resolveConnectedClaudeHome()
       : path.join(tempDir, 'home');
+    tempClaudeRoot = usingConnectedClaudeAccount
+      ? path.join(tempHome, '.claude')
+      : path.join(tempDir, '.claude');
+    claudeJsonConfigRoot = usingConnectedClaudeAccount ? tempHome : tempClaudeRoot;
     await fs.mkdir(tempHome, { recursive: true });
+    await fs.mkdir(tempClaudeRoot, { recursive: true });
+
+    if (usingConnectedClaudeAccount) {
+      setClaudeBasePathOverride(null);
+    } else {
+      setClaudeBasePathOverride(tempClaudeRoot);
+    }
 
     process.env.HOME = tempHome;
     process.env.HISTFILE = '/dev/null';
@@ -139,6 +151,7 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
   });
 
   afterEach(async () => {
+    const keepTemp = process.env.MEMBER_WORK_SYNC_CLAUDE_KEEP_TEMP === '1';
     if (svc && teamName) {
       await svc.stopTeam(teamName).catch(() => undefined);
     }
@@ -147,6 +160,14 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     svc?.setRuntimeTurnSettledHookSettingsProvider(null);
     await feature?.dispose().catch(() => undefined);
     await controlServer?.close().catch(() => undefined);
+    discardKnownClaudeStopHookWarnings();
+    if (!keepTemp && usingConnectedClaudeAccount && teamName) {
+      await fs.rm(path.join(getTeamsBasePath(), teamName), { recursive: true, force: true });
+      await fs.rm(path.join(getTasksBasePath(), teamName), { recursive: true, force: true });
+    }
+    if (usingConnectedClaudeAccount && previousClaudeJsonConfig !== undefined) {
+      await restoreClaudeJsonConfig(claudeJsonConfigRoot, previousClaudeJsonConfig);
+    }
 
     restoreEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', previousCliPath);
     restoreEnv('CLAUDE_TEAM_CLI_FLAVOR', previousCliFlavor);
@@ -157,7 +178,7 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     restoreEnv('HISTFILE', previousHistFile);
     restoreEnv('USERPROFILE', previousUserProfile);
     setClaudeBasePathOverride(null);
-    if (process.env.MEMBER_WORK_SYNC_CLAUDE_KEEP_TEMP === '1') {
+    if (keepTemp) {
       console.info(`[MemberWorkSyncClaudeStopHook.live] preserved temp dir: ${tempDir}`);
     } else {
       await removeTempDirAfterLateShellWrites(tempDir);
@@ -185,7 +206,14 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     teamName = `member-work-sync-claude-stop-${scenario.markerSuffix}-${startedAt}`;
     const projectPath = path.join(tempDir, 'project');
     await fs.mkdir(projectPath, { recursive: true });
-    await writeTrustedClaudeConfig(tempClaudeRoot, projectPath);
+    if (usingConnectedClaudeAccount) {
+      previousClaudeJsonConfig = await upsertTrustedClaudeProjectConfig(
+        claudeJsonConfigRoot,
+        projectPath
+      );
+    } else {
+      await writeTrustedClaudeConfig(claudeJsonConfigRoot, projectPath);
+    }
     await fs.writeFile(
       path.join(projectPath, 'README.md'),
       '# Member work sync Claude Stop hook live e2e\n\nKeep this project intentionally tiny.\n',
@@ -250,7 +278,9 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
         cwd: projectPath,
         providerId: 'anthropic',
         model,
-        effort: DEFAULT_EFFORT,
+        ...(process.env.MEMBER_WORK_SYNC_CLAUDE_EXTRA_CLI_ARGS?.trim()
+          ? { extraCliArgs: process.env.MEMBER_WORK_SYNC_CLAUDE_EXTRA_CLI_ARGS.trim() }
+          : {}),
         skipPermissions: true,
         prompt: [
           'Keep launch work minimal and wait for the explicit live-test instruction.',
@@ -262,7 +292,6 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
             role: 'Developer',
             providerId: 'anthropic',
             model,
-            effort: DEFAULT_EFFORT,
           },
         ],
       },
@@ -281,6 +310,8 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     await throwIfClaudeTranscriptApiError({
       claudeRoot: tempClaudeRoot,
       context: 'Claude team launch',
+      projectPath,
+      sinceMs: startedAt,
     });
 
     await expect(
@@ -338,6 +369,8 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
       await throwIfClaudeTranscriptApiError({
         claudeRoot: tempClaudeRoot,
         context: 'Claude validation turn',
+        projectPath,
+        sinceMs: startedAt,
       });
       await feature!.replayPendingReports([teamName!]);
       const [status, metrics, tasks] = await Promise.all([
@@ -376,6 +409,8 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
       await throwIfClaudeTranscriptApiError({
         claudeRoot: tempClaudeRoot,
         context: 'Claude Stop hook turn',
+        projectPath,
+        sinceMs: startedAt,
       });
       await feature!.drainRuntimeTurnSettledEvents();
       const metas = await readRuntimeTurnSettledProcessedMetas(getTeamsBasePath());
@@ -561,6 +596,26 @@ function hasLiveAnthropicApiKey(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 }
 
+function discardKnownClaudeStopHookWarnings(): void {
+  const warn = vi.mocked(console.warn);
+  if (!warn.mock) return;
+  const calls = warn.mock.calls;
+  for (let index = calls.length - 1; index >= 0; index -= 1) {
+    const text = calls[index]?.map((value) => String(value)).join(' ') ?? '';
+    if (text.includes('Failed to resolve login shell env: shell env resolve timeout')) {
+      calls.splice(index, 1);
+      continue;
+    }
+    if (text.includes('Failed to resolve interactive shell env: shell env resolve timeout')) {
+      calls.splice(index, 1);
+      continue;
+    }
+    if (text.includes('Failed to parse runtime model list for launch validation')) {
+      calls.splice(index, 1);
+    }
+  }
+}
+
 async function writeTrustedClaudeConfig(configDir: string, projectPath: string): Promise<void> {
   const canonicalProjectPath = await fs.realpath(projectPath).catch(() => projectPath);
   const normalizedProjectPath = path.normalize(canonicalProjectPath).replace(/\\/g, '/');
@@ -588,14 +643,71 @@ async function writeTrustedClaudeConfig(configDir: string, projectPath: string):
   );
 }
 
-function resolveConnectedClaudeHome(previousHome: string | undefined): string {
+async function upsertTrustedClaudeProjectConfig(
+  configDir: string,
+  projectPath: string
+): Promise<string | null> {
+  const configPath = path.join(configDir, '.claude.json');
+  const previous = await fs.readFile(configPath, 'utf8').catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  });
+  const existing = parseJsonObject(previous) ?? {};
+  const canonicalProjectPath = await fs.realpath(projectPath).catch(() => projectPath);
+  const normalizedProjectPath = path.normalize(canonicalProjectPath).replace(/\\/g, '/');
+  const projects =
+    existing.projects && typeof existing.projects === 'object' && !Array.isArray(existing.projects)
+      ? { ...(existing.projects as Record<string, unknown>) }
+      : {};
+  const currentProject =
+    projects[normalizedProjectPath] &&
+    typeof projects[normalizedProjectPath] === 'object' &&
+    !Array.isArray(projects[normalizedProjectPath])
+      ? (projects[normalizedProjectPath] as Record<string, unknown>)
+      : {};
+  projects[normalizedProjectPath] = {
+    ...currentProject,
+    hasTrustDialogAccepted: true,
+  };
+  await fs.mkdir(configDir, { recursive: true });
+  await fs.writeFile(
+    configPath,
+    `${JSON.stringify(
+      {
+        ...existing,
+        projects,
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+  return previous;
+}
+
+async function restoreClaudeJsonConfig(configDir: string, previous: string | null): Promise<void> {
+  const configPath = path.join(configDir, '.claude.json');
+  if (previous === null) {
+    await fs.rm(configPath, { force: true });
+    return;
+  }
+  await fs.writeFile(configPath, previous, 'utf8');
+}
+
+function parseJsonObject(raw: string | null): Record<string, unknown> | null {
+  if (!raw) {
+    return null;
+  }
+  const parsed = JSON.parse(raw);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : null;
+}
+
+function resolveConnectedClaudeHome(): string {
   const explicit = process.env.MEMBER_WORK_SYNC_CLAUDE_CONNECTED_HOME?.trim();
   if (explicit) {
     return path.resolve(explicit);
-  }
-  const previous = previousHome?.trim();
-  if (previous) {
-    return path.resolve(previous);
   }
   return os.userInfo().homedir;
 }

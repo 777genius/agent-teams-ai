@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -41,6 +42,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
   headerRight,
   onMemberClick,
 }: PendingRepliesBlockProps): React.JSX.Element | null {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
   const colorMap = buildMemberColorMap(members);
@@ -79,7 +81,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
     <div className="mb-3 space-y-1.5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-          Awaiting replies
+          {t('activity.pendingReplies.title')}
         </p>
         {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
       </div>
@@ -139,7 +141,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                       border: `1px solid ${colors.border}40`,
                     }}
                     onClick={() => onMemberClick(member)}
-                    title="Open member"
+                    title={t('activity.pendingReplies.openMember')}
                   >
                     {displayMemberName(member.name)}
                   </button>
@@ -163,9 +165,9 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                 <span
                   className={`min-w-0 flex-1 truncate text-[10px] ${isRetrying ? 'text-amber-300' : ''}`}
                   style={isRetrying ? undefined : { color: CARD_ICON_MUTED }}
-                  title={advisoryTitle ?? 'Message sent, awaiting reply'}
+                  title={advisoryTitle ?? t('activity.pendingReplies.messageSentAwaitingReply')}
                 >
-                  {advisoryLabel ?? 'awaiting reply'}
+                  {advisoryLabel ?? t('activity.pendingReplies.awaitingReply')}
                 </span>
                 {isRetrying ? (
                   <Loader2 className="size-3 shrink-0 animate-spin text-amber-400" />
@@ -210,14 +212,14 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                   {entry.teamName}
                 </span>
                 <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-                  external team
+                  {t('activity.pendingReplies.externalTeam')}
                 </span>
                 <span
                   className="min-w-0 flex-1 truncate text-[10px]"
                   style={{ color: CARD_ICON_MUTED }}
-                  title="Cross-team message sent, awaiting reply"
+                  title={t('activity.pendingReplies.crossTeamAwaitingReply')}
                 >
-                  awaiting reply
+                  {t('activity.pendingReplies.awaitingReply')}
                 </span>
                 <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                   {since}
@@ -254,14 +256,14 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                   border: '1px solid var(--color-border-emphasis)',
                 }}
               >
-                user
+                {t('activity.pendingReplies.user')}
               </span>
               <span
                 className="min-w-0 flex-1 truncate text-[10px]"
                 style={{ color: CARD_ICON_MUTED }}
                 title={`Tool approval: ${entry.toolName}`}
               >
-                awaiting approval
+                {t('activity.pendingReplies.awaitingApproval')}
               </span>
               <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                 {since}

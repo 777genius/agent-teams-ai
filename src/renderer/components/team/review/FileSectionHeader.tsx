@@ -1,22 +1,21 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
 import { ChevronDown, ChevronRight, FilePlus, GitBranch, Loader2, Save, Undo2 } from 'lucide-react';
 
+import {
+  getResolvedReviewModifiedContent,
+  getReviewRejectBlockReason,
+  isReviewFileMissingOnDisk,
+  isReviewTextContentUnavailable,
+  requiresManualLedgerReview,
+} from './reviewContentPreview';
+
 import type { FileChangeWithContent, HunkDecision } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
-
-const CONTENT_SOURCE_LABELS: Record<string, string> = {
-  'ledger-exact': 'Task Ledger',
-  'ledger-snapshot': 'Ledger Snapshot',
-  'file-history': 'File History',
-  'snippet-reconstruction': 'Reconstructed',
-  'disk-current': 'Current Disk',
-  'git-fallback': 'Git Fallback',
-  unavailable: 'Content unavailable',
-};
 
 interface FileSectionHeaderProps {
   file: FileChangeSummary;
@@ -57,40 +56,30 @@ export const FileSectionHeader = ({
   onAcceptFile,
   onRejectFile,
 }: FileSectionHeaderProps): React.ReactElement => {
-  const isMissingOnDisk = fileContent ? fileContent.modifiedFullContent == null : false;
-  const isContentUnavailable = fileContent?.contentSource === 'unavailable';
+  const { t } = useAppTranslation('team');
+  const restoreContent = getResolvedReviewModifiedContent(file, fileContent);
+  const isMissingOnDisk = isReviewFileMissingOnDisk(fileContent);
+  const isContentUnavailable = isReviewTextContentUnavailable(file, fileContent);
   const isPreviewOnly = isMissingOnDisk || isContentUnavailable;
-  const requiresManualLedgerReview = file.snippets.some(
-    (snippet) =>
-      !!snippet.ledger &&
-      (!!snippet.ledger.beforeState?.unavailableReason ||
-        !!snippet.ledger.afterState?.unavailableReason) &&
-      (snippet.ledger.originalFullContent == null || snippet.ledger.modifiedFullContent == null)
-  );
-  const rejectDisabled = isPreviewOnly || requiresManualLedgerReview;
-  const restoreContent =
-    fileContent?.modifiedFullContent ??
-    (() => {
-      const writeSnippets = file.snippets.filter(
-        (s) => !s.isError && (s.type === 'write-new' || s.type === 'write-update')
-      );
-      if (writeSnippets.length === 0) return null;
-      return writeSnippets[writeSnippets.length - 1].newString;
-    })();
+  const manualLedgerReviewRequired = requiresManualLedgerReview(file);
+  const rejectBlockReason = getReviewRejectBlockReason(file, fileContent);
+  const rejectDisabled = rejectBlockReason !== null;
   const canRestore =
-    !!onRestoreMissingFile &&
-    isMissingOnDisk &&
-    !isContentUnavailable &&
-    !hasEdits &&
-    restoreContent != null;
+    !!onRestoreMissingFile && isMissingOnDisk && !hasEdits && restoreContent != null;
   const externalChangeLabel =
     externalChange?.type === 'unlink'
-      ? 'Deleted on disk'
+      ? t('review.fileHeader.externalChange.deletedOnDisk')
       : externalChange?.type === 'add'
-        ? 'Recreated on disk'
+        ? t('review.fileHeader.externalChange.recreatedOnDisk')
         : externalChange?.type === 'change'
-          ? 'Changed on disk'
+          ? t('review.fileHeader.externalChange.changedOnDisk')
           : null;
+  const contentSourceLabel =
+    fileContent?.contentSource != null
+      ? t(`review.fileHeader.contentSource.${fileContent.contentSource}`, {
+          defaultValue: fileContent.contentSource,
+        })
+      : null;
 
   const handleHeaderClick = (e: React.MouseEvent): void => {
     // Don't collapse when clicking action buttons
@@ -121,13 +110,13 @@ export const FileSectionHeader = ({
 
       {file.isNewFile && (
         <span className="rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] text-green-400">
-          NEW
+          {t('review.fileHeader.badges.new')}
         </span>
       )}
 
       {pathChangeLabel?.kind === 'deleted' && (
         <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-300">
-          DELETED
+          {t('review.fileHeader.badges.deleted')}
         </span>
       )}
 
@@ -139,7 +128,9 @@ export const FileSectionHeader = ({
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
-            {pathChangeLabel.direction === 'from' ? 'From' : 'To'} {pathChangeLabel.otherPath}
+            {pathChangeLabel.direction === 'from'
+              ? t('review.fileHeader.pathChange.from', { path: pathChangeLabel.otherPath })
+              : t('review.fileHeader.pathChange.to', { path: pathChangeLabel.otherPath })}
           </TooltipContent>
         </Tooltip>
       )}
@@ -154,45 +145,49 @@ export const FileSectionHeader = ({
               ].join(' ')}
             >
               {isContentUnavailable
-                ? 'Content unavailable'
+                ? t('review.fileHeader.contentUnavailable.badge')
                 : isMissingOnDisk
-                  ? 'Missing on disk'
-                  : (CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource)}
+                  ? t('review.fileHeader.missingOnDisk.badge')
+                  : contentSourceLabel}
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
             {isContentUnavailable ? (
               <div className="space-y-1">
-                <div className="font-medium text-text">Text content is unavailable</div>
-                <div className="text-text-muted">
-                  The ledger recorded metadata for this change, but full text content is not
-                  available. This usually means binary, large, or hash-only content.
+                <div className="font-medium text-text">
+                  {t('review.fileHeader.contentUnavailable.title')}
                 </div>
                 <div className="text-text-muted">
-                  Automatic accept/reject is disabled for this file to avoid unsafe disk writes.
+                  {t('review.fileHeader.contentUnavailable.description')}
+                </div>
+                <div className="text-text-muted">
+                  {t('review.fileHeader.contentUnavailable.safety')}
                 </div>
               </div>
             ) : isMissingOnDisk ? (
               <div className="space-y-1">
-                <div className="font-medium text-text">File is missing on disk</div>
+                <div className="font-medium text-text">
+                  {t('review.fileHeader.missingOnDisk.title')}
+                </div>
                 <div className="text-text-muted">
-                  We can still show a preview from agent logs, but your filesystem is out of sync.
+                  {t('review.fileHeader.missingOnDisk.description')}
                 </div>
                 {restoreContent != null ? (
                   <div className="text-text-muted">
-                    Use <span className="font-medium text-text">Restore</span> to write the preview
-                    content back to disk.
+                    {t('review.fileHeader.missingOnDisk.restorePrefix')}{' '}
+                    <span className="font-medium text-text">
+                      {t('review.fileHeader.actions.restore')}
+                    </span>{' '}
+                    {t('review.fileHeader.missingOnDisk.restoreSuffix')}
                   </div>
                 ) : (
                   <div className="text-text-muted">
-                    Full file content is not available to restore automatically.
+                    {t('review.fileHeader.missingOnDisk.restoreUnavailable')}
                   </div>
                 )}
               </div>
             ) : (
-              <span>
-                {CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource}
-              </span>
+              <span>{contentSourceLabel}</span>
             )}
           </TooltipContent>
         </Tooltip>
@@ -203,13 +198,13 @@ export const FileSectionHeader = ({
           <TooltipTrigger asChild>
             <span className="inline-flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-300">
               <GitBranch className="size-3" />
-              WORKTREE
+              {t('review.fileHeader.badges.worktree')}
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-sm">
             <div className="space-y-1">
               <div className="font-medium text-text">
-                {file.ledgerSummary.worktreeBranch ?? 'Isolated worktree'}
+                {file.ledgerSummary.worktreeBranch ?? t('review.fileHeader.worktree.isolated')}
               </div>
               <div className="break-all text-text-muted">{file.ledgerSummary.worktreePath}</div>
               {file.ledgerSummary.dirtyLeaderWarning && (
@@ -240,9 +235,9 @@ export const FileSectionHeader = ({
         </span>
       )}
 
-      {requiresManualLedgerReview && (
+      {manualLedgerReviewRequired && (
         <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300">
-          MANUAL REVIEW
+          {t('review.fileHeader.badges.manualReview')}
         </span>
       )}
 
@@ -254,14 +249,14 @@ export const FileSectionHeader = ({
               disabled={applying}
               className="rounded bg-blue-500/15 px-2 py-1 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-500/25 disabled:opacity-50"
             >
-              Reload from disk
+              {t('review.fileHeader.actions.reloadFromDisk')}
             </button>
             <button
               onClick={() => onKeepDraft(file.filePath)}
               disabled={applying}
               className="rounded bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
             >
-              Keep my draft
+              {t('review.fileHeader.actions.keepMyDraft')}
             </button>
           </div>
         )}
@@ -282,15 +277,15 @@ export const FileSectionHeader = ({
                           : 'bg-green-500/15 text-green-400 hover:bg-green-500/25',
                       ].join(' ')}
                     >
-                      Accept
+                      {t('review.fileHeader.actions.accept')}
                     </button>
                   </span>
                 </TooltipTrigger>
                 {isPreviewOnly && (
                   <TooltipContent side="bottom">
                     {isContentUnavailable
-                      ? 'Accept/Reject is disabled because full text content is unavailable.'
-                      : 'Accept/Reject is disabled while the file is missing on disk.'}
+                      ? t('review.fileHeader.disabled.acceptRejectContentUnavailable')
+                      : t('review.fileHeader.disabled.acceptRejectMissingOnDisk')}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -309,17 +304,19 @@ export const FileSectionHeader = ({
                           : 'bg-red-500/15 text-red-400 hover:bg-red-500/25',
                       ].join(' ')}
                     >
-                      Reject
+                      {t('review.fileHeader.actions.reject')}
                     </button>
                   </span>
                 </TooltipTrigger>
                 {rejectDisabled && (
                   <TooltipContent side="bottom">
-                    {requiresManualLedgerReview
-                      ? 'Reject is disabled because this ledger change has binary, large, or unavailable content.'
-                      : isContentUnavailable
-                        ? 'Reject is disabled because full text content is unavailable.'
-                        : 'Accept/Reject is disabled while the file is missing on disk.'}
+                    {rejectBlockReason === 'manual-ledger-review'
+                      ? t('review.fileHeader.disabled.rejectManualLedgerReview')
+                      : rejectBlockReason === 'content-unavailable'
+                        ? t('review.fileHeader.disabled.rejectContentUnavailable')
+                        : rejectBlockReason === 'missing-on-disk'
+                          ? t('review.fileHeader.disabled.acceptRejectMissingOnDisk')
+                          : t('review.fileHeader.disabled.rejectBaselineUnavailable')}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -335,11 +332,11 @@ export const FileSectionHeader = ({
                 className="flex items-center gap-1 rounded bg-blue-500/15 px-2 py-1 text-xs text-blue-300 transition-colors hover:bg-blue-500/25 disabled:opacity-50"
               >
                 <FilePlus className="size-3" />
-                Restore
+                {t('review.fileHeader.actions.restore')}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              Create/restore this file on disk from the preview
+              {t('review.fileHeader.actions.restoreTooltip')}
             </TooltipContent>
           </Tooltip>
         )}
@@ -352,10 +349,12 @@ export const FileSectionHeader = ({
                   className="flex items-center gap-1 rounded bg-orange-500/15 px-2 py-1 text-xs text-orange-400 transition-colors hover:bg-orange-500/25"
                 >
                   <Undo2 className="size-3" />
-                  Discard
+                  {t('review.fileHeader.actions.discard')}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Discard all edits for this file</TooltipContent>
+              <TooltipContent side="bottom">
+                {t('review.fileHeader.actions.discardTooltip')}
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -369,11 +368,11 @@ export const FileSectionHeader = ({
                   ) : (
                     <Save className="size-3" />
                   )}
-                  Save File
+                  {t('review.fileHeader.actions.saveFile')}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <span>Save file to disk</span>
+                <span>{t('review.fileHeader.actions.saveFileTooltip')}</span>
                 <kbd className="ml-2 rounded border border-border bg-surface-raised px-1 py-0.5 font-mono text-[10px] text-text-muted">
                   {shortcutLabel('⌘ S', 'Ctrl+S')}
                 </kbd>

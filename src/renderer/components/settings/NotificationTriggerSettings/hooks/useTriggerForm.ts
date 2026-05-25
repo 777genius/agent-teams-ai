@@ -4,6 +4,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { createLogger } from '@shared/utils/logger';
@@ -58,6 +59,7 @@ interface UseTriggerFormReturn {
  * Shared form state and validation logic for trigger forms.
  */
 export function useTriggerForm(_options: UseTriggerFormOptions = {}): UseTriggerFormReturn {
+  const { t } = useAppTranslation('settings');
   const [patternError, setPatternError] = useState<string | null>(null);
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
 
@@ -67,11 +69,14 @@ export function useTriggerForm(_options: UseTriggerFormOptions = {}): UseTrigger
   /**
    * Validate a regex pattern.
    */
-  const validatePattern = useCallback((pattern: string): boolean => {
-    const error = validateRegexPattern(pattern);
-    setPatternError(error);
-    return error === null;
-  }, []);
+  const validatePattern = useCallback(
+    (pattern: string): boolean => {
+      const error = validateRegexPattern(pattern);
+      setPatternError(error ? t('notificationTriggers.errors.invalidRegexPattern') : null);
+      return error === null;
+    },
+    [t]
+  );
 
   /**
    * Clear the preview result.
@@ -148,7 +153,7 @@ export function useTriggerForm(_options: UseTriggerFormOptions = {}): UseTrigger
     }): NotificationTrigger => {
       return {
         id: `test-${generateId()}`,
-        name: formState.name.trim() || 'Test Trigger',
+        name: formState.name.trim() || t('notificationTriggers.preview.defaultTestTriggerName'),
         enabled: true,
         contentType: formState.contentType,
         mode: formState.mode,
@@ -170,7 +175,7 @@ export function useTriggerForm(_options: UseTriggerFormOptions = {}): UseTrigger
           formState.repositoryIds.length > 0 && { repositoryIds: formState.repositoryIds }),
       };
     },
-    []
+    [t]
   );
 
   return {

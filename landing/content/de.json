@@ -44,7 +44,7 @@
     {
       "id": "isFree",
       "question": "Ist es wirklich kostenlos?",
-      "answer": "Ja. Die App ist kostenlos und Open Source. Die App selbst hat kein Bezahlmodell. Um Agenten auszuführen, brauchen Sie nur Zugriff auf einen unterstützten Provider bzw. Runtime wie Anthropic oder Codex."
+      "answer": "Ja. Die App ist kostenlos und Open Source, und Sie können mit einem kostenlosen Modell ohne Authentifizierung starten - ohne Registrierung, API-Schlüssel oder Kreditkarte. Für mehr Modelle verbinden Sie Claude, Codex, OpenCode/OpenRouter oder einen anderen unterstützten Provider."
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "Was brauche ich zum Start?",
-      "answer": "Einfach die App installieren - sie führt Sie in der UI durch Runtime-Erkennung und Provider-Authentifizierung. Zero-Setup-Onboarding bringt Sie in Minuten zum Laufen."
+      "answer": "Einfach die App installieren - starten Sie mit dem kostenlosen Modell ohne Authentifizierung und verbinden Sie provider-backed Modelle in der UI erst, wenn Sie sie brauchen."
     }
   ],
   "download": {
@@ -85,16 +85,16 @@
       "name": "Kostenlos",
       "price": "0€",
       "period": "",
-      "description": "Alles inklusive. Keine Limits, keine API-Schlüssel, keine Kreditkarte.",
+      "description": "Starten Sie mit dem enthaltenen kostenlosen Modell ohne Authentifizierung. Keine Registrierung, kein API-Schlüssel, keine Kreditkarte.",
       "features": [
+        "Kostenloses Modell ohne Authentifizierung für erste Läufe",
+        "Kein Konto und kein Provider-Login zum Testen erforderlich",
+        "Optionaler Zugriff auf Claude, Codex und OpenCode",
         "Unbegrenzte Agenten-Teams",
         "Kanban-Board mit Echtzeit-Updates",
         "Code-Review mit Diff-Ansicht",
         "Teamübergreifende Kommunikation",
-        "Solo- und Team-Modi",
-        "Live-Prozessüberwachung",
-        "Integrierter Code-Editor",
-        "MCP-Integration"
+        "Solo- und Team-Modi"
       ],
       "highlighted": true
     }

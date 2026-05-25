@@ -13,10 +13,10 @@ interface LaunchJoinMemberLike {
 
 /** Display steps for the provisioning stepper (0-indexed). */
 export const DISPLAY_STEPS = [
-  { key: 'starting', label: 'Starting' },
-  { key: 'configuring', label: 'Team setup' },
-  { key: 'assembling', label: 'Members joining' },
-  { key: 'finalizing', label: 'Finalizing' },
+  { key: 'starting', labelKey: 'provisioning.steps.starting' },
+  { key: 'configuring', labelKey: 'provisioning.steps.configuring' },
+  { key: 'assembling', labelKey: 'provisioning.steps.assembling' },
+  { key: 'finalizing', labelKey: 'provisioning.steps.finalizing' },
 ] as const;
 
 export const DISPLAY_COMPLETE_STEP_INDEX = DISPLAY_STEPS.length;

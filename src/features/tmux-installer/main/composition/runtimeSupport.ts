@@ -34,7 +34,7 @@ export async function listTmuxPaneRuntimeInfoForCurrentPlatform(
   return runtimeCommandExecutor.listPaneRuntimeInfo(paneIds);
 }
 
-export async function listRuntimeProcessesForCurrentTmuxPlatform(): Promise<
+export async function listRuntimeProcessTableForCurrentPlatform(): Promise<
   RuntimeProcessTableRow[]
 > {
   return runtimeCommandExecutor.listRuntimeProcesses();

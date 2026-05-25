@@ -5,6 +5,7 @@
  */
 
 import { useDndContext } from '@dnd-kit/core';
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { MAX_PANES } from '@renderer/types/panes';
 import { useShallow } from 'zustand/react/shallow';
@@ -17,6 +18,7 @@ interface PaneViewProps {
 }
 
 export const PaneView = ({ paneId }: PaneViewProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const { pane, isFocused, paneCount, focusPane } = useStore(
     useShallow((s) => ({
       pane: s.paneLayout.panes.find((p) => p.id === paneId),
@@ -66,7 +68,7 @@ export const PaneView = ({ paneId }: PaneViewProps): React.JSX.Element => {
               color: 'var(--color-text-muted)',
             }}
           >
-            Maximum {MAX_PANES} panes reached
+            {t('layout.maxPanesReached', { count: MAX_PANES })}
           </div>
         </div>
       )}

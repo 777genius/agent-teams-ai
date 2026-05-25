@@ -1,5 +1,5 @@
 /**
- * Notification and configuration types for Agent Teams UI.
+ * Notification and configuration types for Agent Teams AI.
  *
  * Re-exports types from shared for backwards compatibility.
  * The canonical definitions are in @shared/types/notifications.

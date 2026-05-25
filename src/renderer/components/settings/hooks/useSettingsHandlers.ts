@@ -31,6 +31,7 @@ interface SettingsHandlers {
   handleGeneralToggle: (key: keyof AppConfig['general'], value: boolean) => void;
   handleThemeChange: (value: 'dark' | 'light' | 'system') => void;
   handleLanguageChange: (value: string) => void;
+  handleAppLocaleChange: (value: string) => void;
   handleDefaultTabChange: (value: 'dashboard' | 'last-session') => void;
 
   // Notification handlers
@@ -92,6 +93,13 @@ export function useSettingsHandlers({
   const handleLanguageChange = useCallback(
     (value: string) => {
       fireAndForgetConfigUpdate('general', { agentLanguage: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleAppLocaleChange = useCallback(
+    (value: string) => {
+      fireAndForgetConfigUpdate('general', { appLocale: value });
     },
     [fireAndForgetConfigUpdate]
   );
@@ -324,6 +332,7 @@ export function useSettingsHandlers({
           multimodelEnabled: true,
           claudeRootPath: null,
           agentLanguage: 'system',
+          appLocale: 'system',
           autoExpandAIGroups: false,
           useNativeTitleBar: false,
           telemetryEnabled: true,
@@ -332,6 +341,10 @@ export function useSettingsHandlers({
           anthropic: {
             authMode: 'auto',
             fastModeDefault: false,
+            compatibleEndpoint: {
+              enabled: false,
+              baseUrl: '',
+            },
           },
           codex: {
             preferredAuthMode: 'auto',
@@ -431,6 +444,7 @@ export function useSettingsHandlers({
     handleGeneralToggle,
     handleThemeChange,
     handleLanguageChange,
+    handleAppLocaleChange,
     handleDefaultTabChange,
     handleNotificationToggle,
     handleStatusChangeStatusesUpdate,

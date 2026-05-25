@@ -4,11 +4,14 @@
  * Visible during download and after the update is ready to install.
  */
 
+import { useAppTranslation } from '@features/localization/renderer';
+import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { CheckCircle, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 export const UpdateBanner = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const {
     showUpdateBanner,
     updateStatus,
@@ -34,14 +37,20 @@ export const UpdateBanner = (): React.JSX.Element | null => {
   const isDownloading = updateStatus === 'downloading';
   const percent = Math.round(downloadProgress);
   const clampedPercent = Math.max(0, Math.min(percent, 100));
+  const isMacElectron =
+    isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac');
 
   return (
     <div
       className="relative border-b px-4 py-2.5"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
-      }}
+      style={
+        {
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+          paddingLeft: isMacElectron ? 'var(--macos-traffic-light-padding-left, 72px)' : undefined,
+          WebkitAppRegion: isMacElectron ? 'drag' : undefined,
+        } as React.CSSProperties
+      }
     >
       {isDownloading ? (
         <div className="pr-8">
@@ -50,7 +59,7 @@ export const UpdateBanner = (): React.JSX.Element | null => {
             style={{ color: 'var(--color-text-secondary)' }}
           >
             <Loader2 className="size-3.5 shrink-0 animate-spin text-blue-600 dark:text-blue-400" />
-            <span>Updating app</span>
+            <span>{t('updates.updatingApp')}</span>
             <span className="tabular-nums" style={{ color: 'var(--color-text-muted)' }}>
               {clampedPercent}%
             </span>
@@ -69,7 +78,7 @@ export const UpdateBanner = (): React.JSX.Element | null => {
         <div className="flex items-center gap-2 pr-8">
           <CheckCircle className="size-4 shrink-0 text-green-400" />
           <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Update ready
+            {t('updates.updateReady')}
             {availableVersion ? (
               <span className="ml-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 v{availableVersion}
@@ -79,12 +88,15 @@ export const UpdateBanner = (): React.JSX.Element | null => {
           <button
             onClick={installUpdate}
             className="ml-auto rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
-            style={{
-              borderColor: 'var(--color-border-emphasis)',
-              color: 'var(--color-text)',
-            }}
+            style={
+              {
+                borderColor: 'var(--color-border-emphasis)',
+                color: 'var(--color-text)',
+                WebkitAppRegion: isMacElectron ? 'no-drag' : undefined,
+              } as React.CSSProperties
+            }
           >
-            Restart now
+            {t('updates.restartNow')}
           </button>
         </div>
       )}
@@ -93,7 +105,12 @@ export const UpdateBanner = (): React.JSX.Element | null => {
       <button
         onClick={dismissUpdateBanner}
         className="absolute right-3 top-1/2 shrink-0 -translate-y-1/2 rounded p-0.5 transition-colors hover:bg-white/10"
-        style={{ color: 'var(--color-text-muted)' }}
+        style={
+          {
+            color: 'var(--color-text-muted)',
+            WebkitAppRegion: isMacElectron ? 'no-drag' : undefined,
+          } as React.CSSProperties
+        }
       >
         <X className="size-3.5" />
       </button>

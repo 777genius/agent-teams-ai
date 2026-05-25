@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { assessmentColor, assessmentLabel } from '@renderer/utils/reportAssessments';
 import { Clock } from 'lucide-react';
 
@@ -23,31 +24,32 @@ export const TimelineSection = ({
   keyEvents,
   defaultCollapsed,
 }: TimelineSectionProps) => {
+  const { t } = useAppTranslation('report');
   const idleColor = assessmentColor(idle.idleAssessment);
 
   return (
-    <ReportSection title="Timeline & Activity" icon={Clock} defaultCollapsed={defaultCollapsed}>
+    <ReportSection title={t('timeline.title')} icon={Clock} defaultCollapsed={defaultCollapsed}>
       {/* Idle stats */}
       <div className="mb-4">
         <div className="mb-2 flex items-center gap-2">
-          <span className="text-xs font-medium text-text-muted">Idle Analysis</span>
+          <span className="text-xs font-medium text-text-muted">{t('timeline.idleAnalysis')}</span>
           <AssessmentBadge assessment={idle.idleAssessment} metricKey="idle" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
-            <div className="text-xs text-text-muted">Idle Gaps</div>
+            <div className="text-xs text-text-muted">{t('timeline.metrics.idleGaps')}</div>
             <div className="text-sm font-medium text-text">{idle.idleGapCount}</div>
           </div>
           <div>
-            <div className="text-xs text-text-muted">Total Idle</div>
+            <div className="text-xs text-text-muted">{t('timeline.metrics.totalIdle')}</div>
             <div className="text-sm font-medium text-text">{idle.totalIdleHuman}</div>
           </div>
           <div>
-            <div className="text-xs text-text-muted">Active Time</div>
+            <div className="text-xs text-text-muted">{t('timeline.metrics.activeTime')}</div>
             <div className="text-sm font-medium text-text">{idle.activeWorkingHuman}</div>
           </div>
           <div>
-            <div className="text-xs text-text-muted">Idle %</div>
+            <div className="text-xs text-text-muted">{t('timeline.metrics.idlePercent')}</div>
             <div className="text-sm font-medium" style={{ color: idleColor }}>
               {idle.idlePct}%
             </div>
@@ -60,7 +62,7 @@ export const TimelineSection = ({
         <div className="mb-4">
           <div className="mb-2 flex items-center gap-2">
             <span className="text-xs font-medium text-text-muted">
-              Model Switches ({modelSwitches.count})
+              {t('timeline.modelSwitches', { count: modelSwitches.count })}
             </span>
             {modelSwitches.switchPattern && (
               <span
@@ -80,7 +82,9 @@ export const TimelineSection = ({
                 <span className="text-text-secondary">{sw.from}</span>
                 <span className="text-text-muted">&rarr;</span>
                 <span className="text-text">{sw.to}</span>
-                <span className="ml-auto text-text-muted">msg #{sw.messageIndex}</span>
+                <span className="ml-auto text-text-muted">
+                  {t('timeline.messageNumber', { number: sw.messageIndex })}
+                </span>
               </div>
             ))}
           </div>
@@ -90,7 +94,7 @@ export const TimelineSection = ({
       {/* Key events */}
       {keyEvents.length > 0 && (
         <div>
-          <div className="mb-2 text-xs font-medium text-text-muted">Key Events</div>
+          <div className="mb-2 text-xs font-medium text-text-muted">{t('timeline.keyEvents')}</div>
           <div className="flex flex-col gap-1">
             {keyEvents.map((event, idx) => (
               <div key={idx} className="flex items-center gap-2 px-2 py-0.5 text-xs">

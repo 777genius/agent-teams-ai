@@ -86,7 +86,10 @@ function callWorker(
   });
 }
 
-async function callListTeams(worker: Worker, teamsDir: string): Promise<{
+async function callListTeams(
+  worker: Worker,
+  teamsDir: string
+): Promise<{
   teams: unknown[];
   diag?: Record<string, unknown>;
 }> {
@@ -107,7 +110,10 @@ async function callListTeams(worker: Worker, teamsDir: string): Promise<{
   };
 }
 
-async function callGetAllTasks(worker: Worker, tasksBase: string): Promise<{
+async function callGetAllTasks(
+  worker: Worker,
+  tasksBase: string
+): Promise<{
   tasks: unknown[];
   diag?: Record<string, unknown>;
 }> {
@@ -274,6 +280,38 @@ describe('team-fs-worker integration', () => {
         memberCount: 1,
         leadName: 'team-lead',
         leadColor: '#123456',
+      });
+    } finally {
+      await worker.terminate();
+    }
+  });
+
+  it('uses lead cwd as the project path when config.projectPath is missing', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
+    const teamName = 'lead-cwd-project-team';
+    const teamDir = path.join(tempDir, teamName);
+    const projectPath = path.join(tempDir, 'project-321');
+    await fs.mkdir(teamDir, { recursive: true });
+
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Lead Cwd Project Team',
+        projectPath: null,
+        members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
+      }),
+      'utf8'
+    );
+
+    const worker = createWorker(workerPath);
+    try {
+      const { teams } = await callListTeams(worker, tempDir);
+      expect(teams).toHaveLength(1);
+      expect(teams[0]).toMatchObject({
+        teamName,
+        displayName: 'Lead Cwd Project Team',
+        projectPath,
       });
     } finally {
       await worker.terminate();

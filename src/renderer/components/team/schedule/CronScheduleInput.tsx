@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -33,11 +34,11 @@ const TIMEZONE_PRESETS = [
 ] as const;
 
 const WARMUP_OPTIONS = [
-  { value: 0, label: 'No warm-up' },
-  { value: 5, label: '5 min' },
-  { value: 10, label: '10 min' },
-  { value: 15, label: '15 min' },
-  { value: 30, label: '30 min' },
+  { value: 0, labelKey: 'none' },
+  { value: 5, labelKey: 'fiveMinutes' },
+  { value: 10, labelKey: 'tenMinutes' },
+  { value: 15, labelKey: 'fifteenMinutes' },
+  { value: 30, labelKey: 'thirtyMinutes' },
 ] as const;
 
 // =============================================================================
@@ -45,12 +46,12 @@ const WARMUP_OPTIONS = [
 // =============================================================================
 
 const CRON_PRESETS = [
-  { label: 'Every hour', cron: '0 * * * *' },
-  { label: 'Every 6 hours', cron: '0 */6 * * *' },
-  { label: 'Daily at 9am', cron: '0 9 * * *' },
-  { label: 'Weekdays at 9am', cron: '0 9 * * 1-5' },
-  { label: 'Monday at 9am', cron: '0 9 * * 1' },
-  { label: 'Every 30 min', cron: '*/30 * * * *' },
+  { labelKey: 'everyHour', cron: '0 * * * *' },
+  { labelKey: 'everySixHours', cron: '0 */6 * * *' },
+  { labelKey: 'dailyAtNine', cron: '0 9 * * *' },
+  { labelKey: 'weekdaysAtNine', cron: '0 9 * * 1-5' },
+  { labelKey: 'mondayAtNine', cron: '0 9 * * 1' },
+  { labelKey: 'everyThirtyMinutes', cron: '*/30 * * * *' },
 ] as const;
 
 // =============================================================================
@@ -78,10 +79,16 @@ export const CronScheduleInput = ({
   warmUpMinutes,
   onWarmUpMinutesChange,
 }: CronScheduleInputProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   // Parse and validate cron expression
   const cronInfo = useMemo(() => {
     if (!cronExpression.trim()) {
-      return { valid: false, description: null, nextRuns: [], error: 'Enter a cron expression' };
+      return {
+        valid: false,
+        description: null,
+        nextRuns: [],
+        error: t('schedule.cron.errors.enterExpression'),
+      };
     }
 
     try {
@@ -115,7 +122,7 @@ export const CronScheduleInput = ({
         valid: false,
         description: null,
         nextRuns: [],
-        error: err instanceof Error ? err.message : 'Invalid cron expression',
+        error: err instanceof Error ? err.message : t('schedule.cron.errors.invalidExpression'),
       };
     }
   }, [cronExpression, timezone]);
@@ -138,7 +145,7 @@ export const CronScheduleInput = ({
       <div className="space-y-1.5">
         <Label className="flex items-center gap-1.5">
           <Calendar className="size-3.5" />
-          Cron expression
+          {t('schedule.cron.expression')}
         </Label>
 
         <div className="flex items-center gap-2">
@@ -159,7 +166,7 @@ export const CronScheduleInput = ({
               className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text-secondary)]"
               onClick={() => onCronExpressionChange(preset.cron)}
             >
-              {preset.label}
+              {t(`schedule.cron.presets.${preset.labelKey}`)}
             </button>
           ))}
         </div>
@@ -182,7 +189,7 @@ export const CronScheduleInput = ({
             style={{ color: 'var(--warning-text)' }}
           >
             <AlertCircle className="size-3 shrink-0" />
-            <span>High frequency schedule (less than 5 min interval)</span>
+            <span>{t('schedule.cron.highFrequencyWarning')}</span>
           </div>
         ) : null}
       </div>
@@ -191,7 +198,7 @@ export const CronScheduleInput = ({
       {cronInfo.valid && cronInfo.nextRuns.length > 0 ? (
         <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">
           <p className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">
-            Next runs:
+            {t('schedule.cron.nextRuns')}
           </p>
           <div className="space-y-0.5">
             {cronInfo.nextRuns.map((run, i) => (
@@ -211,11 +218,11 @@ export const CronScheduleInput = ({
       <div className="space-y-1.5">
         <Label className="flex items-center gap-1.5">
           <Globe className="size-3.5" />
-          Timezone
+          {t('schedule.cron.timezone')}
         </Label>
         <Select value={timezone} onValueChange={onTimezoneChange}>
           <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Select timezone" />
+            <SelectValue placeholder={t('schedule.cron.selectTimezone')} />
           </SelectTrigger>
           <SelectContent>
             {TIMEZONE_PRESETS.map((tz) => (
@@ -229,7 +236,7 @@ export const CronScheduleInput = ({
 
       {/* Warm-up time */}
       <div className="space-y-1.5">
-        <Label className="label-optional">Warm-up time</Label>
+        <Label className="label-optional">{t('schedule.cron.warmUpTime')}</Label>
         <Select
           value={String(warmUpMinutes)}
           onValueChange={(val) => onWarmUpMinutesChange(Number(val))}
@@ -240,13 +247,13 @@ export const CronScheduleInput = ({
           <SelectContent>
             {WARMUP_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
-                {opt.label}
+                {t(`schedule.cron.warmUpOptions.${opt.labelKey}`)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <p className="text-[11px] text-[var(--color-text-muted)]">
-          Pre-warms CLI environment before scheduled execution
+          {t('schedule.cron.warmUpDescription')}
         </p>
       </div>
     </div>

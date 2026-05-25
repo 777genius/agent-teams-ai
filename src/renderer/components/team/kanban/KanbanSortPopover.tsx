@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -10,37 +11,37 @@ export interface KanbanSortState {
   field: KanbanSortField;
 }
 
-const SORT_OPTIONS: {
-  field: KanbanSortField;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-}[] = [
+const SORT_OPTIONS = [
   {
     field: 'updatedAt',
-    label: 'Last updated',
-    description: 'Recently updated first',
+    labelKey: 'kanban.sort.options.updatedAt.label',
+    descriptionKey: 'kanban.sort.options.updatedAt.description',
     icon: <Clock size={14} />,
   },
   {
     field: 'createdAt',
-    label: 'Created',
-    description: 'Newest first',
+    labelKey: 'kanban.sort.options.createdAt.label',
+    descriptionKey: 'kanban.sort.options.createdAt.description',
     icon: <Calendar size={14} />,
   },
   {
     field: 'owner',
-    label: 'Owner',
-    description: 'Alphabetically by assignee',
+    labelKey: 'kanban.sort.options.owner.label',
+    descriptionKey: 'kanban.sort.options.owner.description',
     icon: <User size={14} />,
   },
   {
     field: 'manual',
-    label: 'Manual',
-    description: 'Drag-and-drop order',
+    labelKey: 'kanban.sort.options.manual.label',
+    descriptionKey: 'kanban.sort.options.manual.description',
     icon: <GripVertical size={14} />,
   },
-];
+] as const satisfies readonly {
+  field: KanbanSortField;
+  labelKey: string;
+  descriptionKey: string;
+  icon: React.ReactNode;
+}[];
 
 interface KanbanSortPopoverProps {
   sort: KanbanSortState;
@@ -51,6 +52,7 @@ export const KanbanSortPopover = ({
   sort,
   onSortChange,
 }: KanbanSortPopoverProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const isNonDefault = sort.field !== 'updatedAt';
 
   return (
@@ -62,7 +64,7 @@ export const KanbanSortPopover = ({
               variant="ghost"
               size="sm"
               className="relative h-7 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              aria-label="Sort tasks"
+              aria-label={t('kanban.sort.title')}
             >
               <ArrowUpDown size={14} />
               {isNonDefault && (
@@ -73,12 +75,12 @@ export const KanbanSortPopover = ({
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Sort tasks</TooltipContent>
+        <TooltipContent side="bottom">{t('kanban.sort.title')}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="w-56 p-0">
         <div className="p-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Sort by
+            {t('kanban.sort.sortBy')}
           </p>
           <div className="space-y-0.5">
             {SORT_OPTIONS.map((option) => {
@@ -104,14 +106,14 @@ export const KanbanSortPopover = ({
                     {option.icon}
                   </span>
                   <div className="min-w-0">
-                    <div className="font-medium">{option.label}</div>
+                    <div className="font-medium">{t(option.labelKey)}</div>
                     <div
                       className={cn(
                         'text-[10px]',
                         isSelected ? 'text-blue-300/70' : 'text-[var(--color-text-muted)]'
                       )}
                     >
-                      {option.description}
+                      {t(option.descriptionKey)}
                     </div>
                   </div>
                   {isSelected && (
@@ -130,7 +132,7 @@ export const KanbanSortPopover = ({
               className="h-6 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               onClick={() => onSortChange({ field: 'updatedAt' })}
             >
-              Reset
+              {t('kanban.sort.reset')}
             </Button>
           </div>
         )}

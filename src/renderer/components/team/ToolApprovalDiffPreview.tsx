@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { computeDiffLineStats, DiffViewer } from '@renderer/components/chat/viewers/DiffViewer';
 import { useToolApprovalDiff } from '@renderer/hooks/useToolApprovalDiff';
 import { AlertTriangle, ChevronDown, ChevronRight, FileDiff, Loader2 } from 'lucide-react';
@@ -59,6 +60,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
   requestId,
   onExpandedChange,
 }) => {
+  const { t } = useAppTranslation('team');
   const [expanded, setExpanded] = useState(loadExpandedPref);
   const diff = useToolApprovalDiff(toolName, toolInput, requestId, expanded);
 
@@ -106,7 +108,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
         }}
       >
         <FileDiff className="size-3" />
-        <span>Preview changes</span>
+        <span>{t('toolApproval.diff.previewChanges')}</span>
         {stats && (
           <>
             {stats.added > 0 && <span style={{ color: 'rgb(46, 160, 67)' }}>+{stats.added}</span>}
@@ -131,7 +133,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
               }}
             >
               <Loader2 className="size-3.5 animate-spin" />
-              <span>Reading file...</span>
+              <span>{t('toolApproval.diff.readingFile')}</span>
             </div>
           )}
 
@@ -145,7 +147,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
               }}
             >
               <AlertTriangle className="size-3.5 shrink-0" />
-              <span>Binary file — cannot preview</span>
+              <span>{t('toolApproval.diff.binaryFile')}</span>
             </div>
           )}
 
@@ -173,7 +175,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
               }}
             >
               <AlertTriangle className="size-3 shrink-0" />
-              <span>File truncated at 2MB — diff may be incomplete</span>
+              <span>{t('toolApproval.diff.truncated')}</span>
             </div>
           )}
 
@@ -187,7 +189,7 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
                     color: 'rgb(46, 160, 67)',
                   }}
                 >
-                  New file
+                  {t('toolApproval.diff.newFile')}
                 </span>
               )}
               <DiffViewer

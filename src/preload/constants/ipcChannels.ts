@@ -23,6 +23,16 @@ export const APP_STARTUP_GET_STATUS = 'appStartup:getStatus';
 /** Main -> renderer startup progress update */
 export const APP_STARTUP_PROGRESS = 'appStartup:progress';
 
+/** Renderer -> main Windows elevation status request */
+export const APP_GET_WINDOWS_ELEVATION_STATUS = 'app:getWindowsElevationStatus';
+
+// =============================================================================
+// Telemetry Channels
+// =============================================================================
+
+/** Get Sentry-safe anonymous telemetry context */
+export const TELEMETRY_GET_SENTRY_CONTEXT = 'telemetry:getSentryContext';
+
 // =============================================================================
 // Config API Channels
 // =============================================================================
@@ -381,6 +391,9 @@ export const TEAM_REPLACE_MEMBERS = 'team:replaceMembers';
 
 /** Soft-delete a team member */
 export const TEAM_REMOVE_MEMBER = 'team:removeMember';
+
+/** Restore a soft-deleted team member */
+export const TEAM_RESTORE_MEMBER = 'team:restoreMember';
 
 /** Update a team member's role */
 export const TEAM_UPDATE_MEMBER_ROLE = 'team:updateMemberRole';

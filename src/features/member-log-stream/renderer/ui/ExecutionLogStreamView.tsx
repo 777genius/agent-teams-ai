@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
@@ -237,6 +238,7 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
   buildSegmentRenderKey,
   getSegmentMetaLabel,
 }: Readonly<ExecutionLogStreamViewProps<TStream>>): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const [selectedParticipantKey, setSelectedParticipantKey] = useState<string>('all');
   const appliedSelectionResetKeyRef = useRef<string | null>(null);
   const participants = stream?.participants ?? [];
@@ -329,7 +331,7 @@ export function ExecutionLogStreamView<TStream extends ExecutionLogStreamLike>({
             }`}
             onClick={() => setSelectedParticipantKey('all')}
           >
-            All
+            {t('memberLogStream.filters.all')}
           </button>
           {participants.map((participant) => (
             <ParticipantFilterChip

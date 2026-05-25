@@ -35,6 +35,7 @@ export type CliFlavor = 'claude' | 'agent_teams_orchestrator';
 
 export type CliProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode' | 'kilocode';
 export type CliProviderAuthMode = 'auto' | 'oauth' | 'chatgpt' | 'api_key';
+export const CLI_PROVIDER_STATUS_DEFERRED_MESSAGE = 'Provider status will refresh when needed.';
 
 export interface CliProviderConnectionInfo {
   supportsOAuth: boolean;
@@ -44,6 +45,13 @@ export interface CliProviderConnectionInfo {
   apiKeyConfigured: boolean;
   apiKeySource: 'stored' | 'environment' | null;
   apiKeySourceLabel?: string | null;
+  compatibleEndpoint?: {
+    enabled: boolean;
+    baseUrl: string;
+    tokenConfigured: boolean;
+    tokenSource: 'stored' | 'environment' | null;
+    tokenSourceLabel?: string | null;
+  } | null;
   codex?: {
     preferredAuthMode: CodexAccountAuthMode;
     effectiveAuthMode: CodexAccountEffectiveAuthMode;
@@ -128,9 +136,39 @@ export type CliProviderReasoningEffort =
 
 export type CliProviderModelCatalogSource =
   | 'anthropic-models-api'
+  | 'anthropic-compatible-api'
   | 'app-server'
   | 'static-fallback';
 export type CliProviderModelCatalogStatus = 'ready' | 'stale' | 'degraded' | 'unavailable';
+
+export type OpenCodeModelAccessKind =
+  | 'no_model'
+  | 'unknown_model'
+  | 'credentialed'
+  | 'builtin_free'
+  | 'configured_authless'
+  | 'verified'
+  | 'not_authenticated'
+  | 'execution_failed';
+
+export type OpenCodeModelRouteKind =
+  | 'connected_provider'
+  | 'builtin_free'
+  | 'configured_local'
+  | 'catalog_provider';
+
+export type OpenCodeModelProofState = 'not_required' | 'needs_probe' | 'verified' | 'failed';
+
+export interface OpenCodeModelRouteMetadata {
+  providerId: string | null;
+  modelId: string | null;
+  sourceLabel: string | null;
+  accessKind: OpenCodeModelAccessKind;
+  routeKind: OpenCodeModelRouteKind;
+  proofState: OpenCodeModelProofState;
+  requiresExecutionProof: boolean;
+  reason: string | null;
+}
 
 export interface CliProviderModelCatalogItem {
   id: string;
@@ -152,6 +190,7 @@ export interface CliProviderModelCatalogItem {
     context?: number | null;
     limits?: unknown;
     free?: boolean;
+    opencode?: OpenCodeModelRouteMetadata | null;
   } | null;
 }
 
@@ -214,6 +253,7 @@ export interface CliProviderStatus {
   detailMessage?: string | null;
   models: string[];
   modelCatalog?: CliProviderModelCatalog | null;
+  modelCatalogRefreshState?: 'idle' | 'loading' | 'ready' | 'error';
   modelAvailability?: CliProviderModelAvailability[];
   runtimeCapabilities?: CliProviderRuntimeCapabilities | null;
   subscriptionRateLimits?: CliProviderSubscriptionRateLimitSnapshot | null;
@@ -312,6 +352,16 @@ export interface CliInstallerProgress {
   status?: CliInstallationStatus;
 }
 
+export type CliInstallerProviderStatusMode = 'full' | 'defer';
+
+export interface CliInstallerGetStatusOptions {
+  /**
+   * `defer` keeps startup lightweight by checking only the runtime binary/version.
+   * Explicit refreshes should keep the default `full` mode.
+   */
+  providerStatusMode?: CliInstallerProviderStatusMode;
+}
+
 // =============================================================================
 // Preload API
 // =============================================================================
@@ -321,7 +371,7 @@ export interface CliInstallerProgress {
  */
 export interface CliInstallerAPI {
   /** Get current CLI installation status */
-  getStatus: () => Promise<CliInstallationStatus>;
+  getStatus: (options?: CliInstallerGetStatusOptions) => Promise<CliInstallationStatus>;
   /** Get current runtime/auth status for a single provider */
   getProviderStatus: (providerId: CliProviderId) => Promise<CliProviderStatus | null>;
   /** Start on-demand model verification for a single runtime provider */

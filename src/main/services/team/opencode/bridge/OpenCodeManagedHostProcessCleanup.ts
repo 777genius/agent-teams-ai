@@ -1,5 +1,5 @@
 import {
-  listRuntimeProcessesForCurrentTmuxPlatform,
+  listRuntimeProcessTableForCurrentPlatform,
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
 import { killProcessByPid } from '@main/utils/processKill';
@@ -62,7 +62,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
 
   const rows = await (
     options.listProcessRows ??
-    (platform === 'win32' ? listWindowsProcessTable : listRuntimeProcessesForCurrentTmuxPlatform)
+    (platform === 'win32' ? listWindowsProcessTable : listRuntimeProcessTableForCurrentPlatform)
   )();
   const excludePids = options.excludePids ?? new Set<number>();
   const requiredDetailsMarkers = options.requiredDetailsMarkers ?? [];

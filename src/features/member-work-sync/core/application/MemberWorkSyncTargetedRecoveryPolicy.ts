@@ -4,11 +4,13 @@ import type { MemberWorkSyncStatus } from '../../contracts';
 
 export type MemberWorkSyncTargetedRecoveryReason =
   | 'opencode_targeted_shadow_collecting'
-  | 'lead_targeted_shadow_collecting';
+  | 'lead_targeted_shadow_collecting'
+  | 'native_targeted_shadow_collecting';
 
 export type MemberWorkSyncTargetedRecoveryCapability =
   | 'opencode_runtime_delivery'
-  | 'lead_inbox_relay';
+  | 'lead_inbox_relay'
+  | 'native_inbox_watch';
 
 export type MemberWorkSyncTargetedRecoveryDecision =
   | {
@@ -31,6 +33,10 @@ function isLeadLikeMemberName(memberName: string): boolean {
   );
 }
 
+function isNativeInboxWatchProvider(providerId: MemberWorkSyncStatus['providerId']): boolean {
+  return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
+}
+
 function resolveTargetedRecoveryCapability(status: MemberWorkSyncStatus): {
   capability: MemberWorkSyncTargetedRecoveryCapability;
   reason: MemberWorkSyncTargetedRecoveryReason;
@@ -46,6 +52,13 @@ function resolveTargetedRecoveryCapability(status: MemberWorkSyncStatus): {
     return {
       capability: 'lead_inbox_relay',
       reason: 'lead_targeted_shadow_collecting',
+    };
+  }
+
+  if (isNativeInboxWatchProvider(status.providerId)) {
+    return {
+      capability: 'native_inbox_watch',
+      reason: 'native_targeted_shadow_collecting',
     };
   }
 

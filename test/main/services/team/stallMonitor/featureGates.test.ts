@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  getTeamTaskStallActivationGraceMs,
   getOpenCodeWeakStartStallThresholdMs,
+  getTeamTaskStallActivationGraceMs,
   getTeamTaskStallScanIntervalMs,
   getTeamTaskStallStartupGraceMs,
   isOpenCodeTaskStallRemediationEnabled,
@@ -21,10 +21,10 @@ describe('stallMonitor feature gates', () => {
     expect(isOpenCodeTaskStallRemediationEnabled()).toBe(true);
     expect(isTeamTaskStallScannerEnabled()).toBe(true);
     expect(isTeamTaskStallAlertsEnabled()).toBe(true);
-    expect(getTeamTaskStallScanIntervalMs()).toBe(60_000);
+    expect(getTeamTaskStallScanIntervalMs()).toBe(30_000);
     expect(getTeamTaskStallStartupGraceMs()).toBe(180_000);
-    expect(getTeamTaskStallActivationGraceMs()).toBe(120_000);
-    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(120_000);
+    expect(getTeamTaskStallActivationGraceMs()).toBe(60_000);
+    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
   });
 
   it('parses truthy and falsy environment values', () => {
@@ -75,6 +75,6 @@ describe('stallMonitor feature gates', () => {
     expect(isOpenCodeTaskStallRemediationEnabled()).toBe(true);
     expect(isTeamTaskStallScannerEnabled()).toBe(true);
     expect(isTeamTaskStallAlertsEnabled()).toBe(true);
-    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(120_000);
+    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
   });
 });

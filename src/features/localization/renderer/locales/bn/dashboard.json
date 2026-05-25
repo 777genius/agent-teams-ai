@@ -1,0 +1,197 @@
+{
+  "cliStatus": {
+    "actions": {
+      "alreadyLoggedIn": "বর্তমানে লগইন করা হয়েছে কি?",
+      "becomeSponsor": "আপনি একজন স্পন্সর হবেন",
+      "cancel": "বাতিল",
+      "checkNow": "এখন পরীক্ষা করুন",
+      "checkUpdates": "আপডেটের উপস্থিতি পরীক্ষণ: ( h)",
+      "checking": "পরীক্ষা করা হচ্ছে...",
+      "connect": "সংযোগ স্থাপন করুন",
+      "extensions": "এক্সটেনশন",
+      "login": "লগ-ইন",
+      "manage": "ব্যবস্থাপনা",
+      "manageProviders": "পরিসেবা উপলব্ধকারী পরিচালনা করুন",
+      "plan": "পরিকল্পনা",
+      "recheck": "পুনরায় পরীক্ষা করুন",
+      "recheckProvider": "পুনরায় পরীক্ষা করুন {{provider}}",
+      "retry": "পুনরায় চেষ্টা করুন",
+      "updateTo": "v থেকে আপডেট{{version}}",
+      "useCode": "কোড ব্যবহার করো"
+    },
+    "atlas": {
+      "alt": "এ্যাটলাস ক্লাউড",
+      "description": "এ্যাটলাস ক্লাউড হলো একটি পূর্ণ-মর্দশক প্লাটফর্ম যা ডেভেলপারদের একটি মাত্র AI প্রদান করে API ভিডিও প্রজন্ম, ছবি প্রজন্ম, এবং LLM APIএকাধিক বিক্রেতার সমন্বয় ব্যবস্থাপনার পরিবর্তে, আপনি একবার একে অপরের সাথে যোগাযোগ করেন এবং সকল আণবিক মডেলকে একত্রিত করেন। এ্যাটলাস ক্লাউডের নতুন কোডিং পরিকল্পনা বাজেটের জন্য প্রচারণা API প্রবেশ.",
+      "openCodeProvider": "Opencade পরিসেবা খুলুন",
+      "plan": "এ্যাটলাস ক্লাউড এনকোডিং পরিকল্পনা",
+      "sponsor": "নিক্তি"
+    },
+    "errors": {
+      "checkStatusFailed": "পরীক্ষা করতে ব্যর্থ CLI অবস্থা",
+      "installationFailed": "ইনস্টলেশন ব্যর্থ",
+      "refreshFailed": "আপডেটের উপস্থিতি পরীক্ষণ বিফল। আপনার নেটওয়ার্ক সংযোগ পরীক্ষা করে পুনরায় প্রচেষ্টা করুন।",
+      "runtimeUpdatedRefreshFailed": "আপডেট আরম্ভ করতে ব্যর্থ, কিন্তু পরিসেবা উপলব্ধকারী দ্বারা নিশ্চিত করতে ব্যর্থ।"
+    },
+    "hints": {
+      "backgroundStatus": "{{runtime}} গতিপথকে পটভূমির রঙের সাথে মিলিয়ে দেওয়া হবে কি?",
+      "codexApiKeyFallback": "{{hint}} API সঠিক মোড সক্রিয় করা হলে, উপস্থিত ফল-ব্যাক মোডে পরিবর্তন করা হবে।",
+      "codexAutoApiKey": "{{hint}} Auto will keep using the API key until ChatGPT is connected.",
+      "codexFinishLogin": "Finish ChatGPT login in the browser. Enter the shown code if prompted.",
+      "codexNoActiveLogin": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Right now it reports no active ChatGPT login.",
+      "codexNoActiveManagedSession": "Usage limits appear only after Codex CLI sees an active ChatGPT account. Local Codex account data exists, but no active managed session is selected right now.",
+      "codexReconnectNeeded": "Usage limits appear only after Codex refreshes the currently selected ChatGPT session. Right now the local session needs reconnect.",
+      "firstCheckSlow": "প্রথম পরীক্ষা ৩০ সেকেন্ডের মধ্যে নিতে পারে",
+      "loginRequiredForTeams": "লগ-ইন বিনা সেশান ও প্রজেক্ট নির্মাণ করা হবে। এজেন্ট টিম চালানোর জন্য লগ ইন করা দরকার.",
+      "troubleshootTitle": "যদি আপনি নিশ্চিত থাকেন যে আপনি লগ-ইন করেছেন, তাহলে এই ধাপটি চেষ্টা করুন:"
+    },
+    "installer": {
+      "checkingLatest": "সর্বশেষ সংস্করণের উপস্থিতি পরীক্ষা করুন...",
+      "downloading": "ডাউনলোড ব্যবস্থা {{runtime}}...",
+      "installing": "ইনস্টল করা হচ্ছে {{runtime}}...",
+      "success": "সাফল্যের সাথে ইনস্টল করা হয়েছে {{runtime}} voice{{version}}",
+      "verifying": "যাচাই করা হচ্ছে..."
+    },
+    "labels": {
+      "apiKeyRequired": "API কি আবশ্যক",
+      "comingSoon": "শীঘ্রই আসছি",
+      "collapseProviderDetails": "পরিচিতদের তথ্য মুছে ফেলুন",
+      "expandProviderDetails": "অতিরিক্ত বিবরণ",
+      "generateLink": "লিংক নির্মাণ করুন ( r)",
+      "loadingRateLimits": "হারের সীমা",
+      "loggedOut": "উপলব্ধকারী লগ-ইন",
+      "loginAuthFailed": "প্রমাণীকরণ ব্যর্থ",
+      "loginAuthUpdated": "প্রমাণীকরণ ব্যর্থ হয়েছে",
+      "loginComplete": "লগ-ইন সমাপ্ত",
+      "loginFailed": "লগ-ইন ব্যর্থ",
+      "loginTitle": "লগ-ইন",
+      "logoutFailed": "লগ-আউট ব্যর্থ",
+      "logoutTitle": "লগ-আউট করুন",
+      "notLoggedIn": "আপনি লগ-ইন করেননি",
+      "openLogin": "লগ-ইন খুলুন",
+      "providerActionRequired": "উপলব্ধকারী আবশ্যক",
+      "resets": "পুনঃসেট করুন {{time}}",
+      "runtimeLoginTitle": "{{runtime}} লগ-ইন"
+    },
+    "loading": {
+      "aiProviders": "AI পরিসেবা পরীক্ষা করা হচ্ছে...",
+      "claudeCli": "পরীক্ষা করা হচ্ছে CLI..."
+    },
+    "provider": {
+      "authenticated": "অনুমোদিত",
+      "backend": "ব্যাক-এন্ড {{backend}}",
+      "checkingAuthentication": "পরিচয় প্রমাণ করা হচ্ছে...",
+      "checkingProviders": "সরবরাহকারী...",
+      "configuredLocalCount": "{{count}} স্থানীয় কনফিগার করা হয়েছে",
+      "configuredLocalCount_few": "{{count}} স্থানীয় কনফিগার করা হয়েছে",
+      "configuredLocalCount_many": "{{count}} স্থানীয় কনফিগার করা হয়েছে",
+      "configuredLocalCount_one": "{{count}} স্থানীয় কনফিগার করা হয়েছে",
+      "configuredLocalCount_other": "{{count}} স্থানীয় কনফিগার করা হয়েছে",
+      "configuredLocalTitle": "আপনার ওপেনডেডেডে রুট ইম্পোর্ট করা হয়েছে.",
+      "connectedCount": "পরিসেবা উপলব্ধকারী: {{connected}}/{{denominator}} সংযোগ স্থাপিত",
+      "freeModels": "মুক্ত মডেল",
+      "freeModelsTitle": "ওপেনCode - এর মধ্যে মুক্ত মডেল অপশন অন্তর্ভুক্ত আছে যেমন বিগ পিকলার আপনার তৈরি করতে পারেন। মুক্ত মডেলও খোলা যেতে পারে, কিন্তু ওপেনCRORoute/ OpenRouteter মডেলগুলো খালি। ক্ষমতা আর সীমা বদলে যেতে পারে.",
+      "loadingModels": "মডেল লোড করা হচ্ছে...",
+      "modelsUnavailable": "এই ঘরের জন্য কোনো মডেল উপলব্ধ নয়",
+      "runtime": "সঞ্চালিত সময়: {{runtime}}",
+      "verifiedCount": "{{count}} পরীক্ষা",
+      "verifiedCount_few": "{{count}} পরীক্ষা",
+      "verifiedCount_many": "{{count}} পরীক্ষা",
+      "verifiedCount_one": "{{count}} পরীক্ষা",
+      "verifiedCount_other": "{{count}} পরীক্ষা",
+      "verifiedTitle": "একটি সফল মৃত্যুদণ্ড প্রমাণ দিয়ে ওপেনকডে রুট খোলা।"
+    },
+    "runtime": {
+      "configuredHealthCheckFailed": "কনফিগার {{runtime}} পরীক্ষা আরম্ভ করতে ব্যর্থ ।",
+      "configuredNotFound": "কনফিগার {{runtime}} ফাইলটি পাওয়া যায়নি।",
+      "foundButFailed": "{{runtime}} আরম্ভ করতে ব্যর্থ কিন্তু এটি চালু করা হয়েছে",
+      "healthCheckFailedDescription": "অ্যাপ্লিকেশন কনফিগার করা হয়েছে {{runtime}}কিন্তু তার স্বাস্থ্য পরীক্ষা ব্যর্থ হয়েছে। নতুন করে মেরামত করুন অথবা নতুন করে পুনরায় প্রচেষ্টা করুন।",
+      "install": "ইনস্টল করুন {{runtime}}",
+      "installRequiredDescription": "{{runtime}} দল পরিচালনা এবং সেশান পরিচালনার জন্য আবশ্যক। শুরু করতে এটি ইনস্টল করুন।",
+      "isRequired": "{{runtime}} আবশ্যক",
+      "reinstall": "পুনরায় ইনস্টল করা হয়েছে {{runtime}}"
+    },
+    "runtimeInstall": {
+      "checking": "পরীক্ষণ",
+      "codexTitle": "ইনস্টল করো CLI অ্যাপ্লিকেশনের মধ্যে তথ্য অন্তর্ভুক্ত করুন",
+      "downloading": "ডাউনলোড ব্যবস্থা",
+      "downloadingPercent": "ডাউনলোড ব্যবস্থা {{percent}}%",
+      "install": "ইনস্টল করুন",
+      "installing": "ইনস্টল করা হচ্ছে",
+      "openCodeTitle": "অ্যাপ্লিকেশন ডাটার মধ্যে OpenCocdhor আরম্ভ করুন",
+      "retryInstall": "পুনরায় ইনস্টলের প্রচেষ্টা করুন"
+    },
+    "troubleshoot": {
+      "again": "আবার",
+      "authStatusCommand": "কনফিগার করা হয়েছে CLI অনুমোদনের কমান্ড",
+      "checkLoggedIn": "- চেক করো যদি এটা \"লগলগন্ত\" দেখায়",
+      "click": "ক্লিক করুন",
+      "loginCommand": "কমান্ডের লগ-ইন সংক্রান্ত কমান্ড",
+      "logoutCommand": "অটো-রানের কমান্ড",
+      "openTerminal": "টার্মিন্যাল খুলুন ও খুলুন",
+      "reloginPrefix": "এটি যদি বলে তবে অ্যাপ্লিকেশনটি দেখে না, চেষ্টা করে দেখুন:",
+      "sameRuntime": "নিশ্চিত করুন CLI আপনার টার্মিন্যালে এই অ্যাপ্লিকেশনের দ্বারা ব্যবহৃত ল্যাপটপের অনুরূপ",
+      "statusCacheHint": "- মাঝে মাঝে কয়েক সেকেন্ডের জন্য অবস্থা ক্যাশে করা হয়",
+      "then": "এর পরে"
+    },
+    "warnings": {
+      "multipleApiKeysMissing": "এক বা একাধিক প্রোভাইডার তৈরি করা হয়েছে API চাবি মোড, কিন্তু কিছুই নেই API চাবি কনফিগার করা হয়েছে । একটি সেশন কী যোগ করতে অথবা সংযোগ মোড চালু করতে অথেন্টিকেশন করুন।",
+      "multipleApiKeysNeedAttention": "এক বা একাধিক প্রোভাইডার তৈরি করা হয়েছে API চাবি এবং মনোযোগের প্রয়োজন। কি- র সাথে সংযোগ স্থাপন অথবা পরিবর্তন করার জন্য বৈশিষ্ট্য পরিচালন ব্যবস্থা আরম্ভ করুন।",
+      "notAuthenticated": "{{runtime}} ইনস্টল করা হলেও অনুমোদিত নয়। দল পরিচালনার জন্য লগ-ইনের জন্য লগ-ইন আবশ্যক।",
+      "singleApiKeyMissing": "{{provider}} নির্ধারিত API চাবি মোড, কিন্তু কিছুই নেই API চাবি কনফিগার করা হয়েছে । কোনো কি পরিচালন ব্যবস্থা কনফিগার অথবা সংযোগ করার জন্য কোনো কি ক্লিক করুন।",
+      "singleApiKeyNeedsAttention": "{{provider}} নির্ধারিত API কী এর ধরন, কিন্তু এটি সংযুক্ত নয়। সংরক্ষিত কী এবং সংযোগ মোড পরিবর্তন করার জন্য Openper উপলব্ধকারীর খুলুন ।"
+    }
+  },
+  "recentProjects": {
+    "selectFolderTitle": "একটি প্রকল্প নির্বাচন করুন",
+    "selectFolder": "ফোল্ডার নির্বাচন করুন",
+    "failedToLoad": "প্রজেক্ট লোড করতে ব্যর্থ",
+    "retry": "পুনরায় চেষ্টা করুন",
+    "noProjects": "কোনো প্রজেক্ট পাওয়া যায়নি",
+    "noMatches": "No matches for \"{{query}}\"",
+    "noRecentProjects": "কোনো সাম্প্রতিক প্রকল্প পাওয়া যায়নি",
+    "emptyDescription": "সম্প্রতি ক্লড এবং কোডেক্সের কার্যক্রম এখানে দেখা যাবে ।",
+    "loadMore": "অতিরিক্ত ভার",
+    "card": {
+      "deleted": "মুছে ফেলা হয়েছে",
+      "projectFolderMissing": "প্রজেক্টের বিষয়বস্তু বর্তমানে উপস্থিত নেই",
+      "taskCounts": {
+        "active": "{{count}} সক্রিয়",
+        "active_one": "{{count}} সক্রিয়",
+        "active_other": "{{count}} সক্রিয়",
+        "active_few": "{{count}} সক্রিয়",
+        "active_many": "{{count}} সক্রিয়",
+        "pending": "{{count}} অপেক্ষারত",
+        "pending_one": "{{count}} অপেক্ষারত",
+        "pending_other": "{{count}} অপেক্ষারত",
+        "pending_few": "{{count}} অপেক্ষারত",
+        "pending_many": "{{count}} অপেক্ষারত",
+        "done": "{{count}} সম্পন্ন",
+        "done_one": "{{count}} সম্পন্ন",
+        "done_other": "{{count}} সম্পন্ন",
+        "done_few": "{{count}} সম্পন্ন",
+        "done_many": "{{count}} সম্পন্ন"
+      }
+    },
+    "title": "সাম্প্রতিক প্রকল্প",
+    "searchResults": "অনুসন্ধানের ফলাফল",
+    "searchPlaceholder": "প্লাগ-ইন অনুসন্ধান..."
+  },
+  "actions": {
+    "selectTeam": "নির্বাচন করো...",
+    "or": "অথবা",
+    "clearSearch": "অনুসন্ধানের তথ্য মুছে ফেলুন"
+  },
+  "windowsAdmin": {
+    "title": "Windows অ্যাডমিনিস্ট্রেটর দ্বারা সমর্থিত",
+    "description": "ওপেনCodhers পরীক্ষা সময় সময় শেষ করতে পারে যখন এজেন্ট টিম AI আপ নয়. ওপেনCode অ্যাকাউন্ট চালু করার আগে অ্যাডমিনিস্ট্রেটর হিসেবে অ্যাপ পুনরায় চালু করুন।"
+  },
+  "webPreview": {
+    "title": "সম্পূর্ণ ডেস্কটপের জন্য অ্যাপ্লিকেশন খুলুন",
+    "description": "ব্রাউজারের সংস্করণ এখনো ডিভেলপমেন্ট সংস্করণে উপস্থিত রয়েছে। প্রকল্পের কাজ, সহযোগিতা এবং লাইভ স্ট্যাটাস আপডেট এখানে সীমিত হতে পারে। সব বৈশিষ্ট্য পুনরায় ব্যবহারের জন্য ডেস্কটপের অ্যাপ্লিকেশন নির্বাচন করুন ।"
+  },
+  "updateBanner": {
+    "newVersionAvailable": "নতুন সংস্করণ উপলব্ধ রয়েছে",
+    "restartNow": "এখন পুনরায় আরম্ভ করুন",
+    "viewDetails": "বিস্তারিত দেখুন"
+  }
+}

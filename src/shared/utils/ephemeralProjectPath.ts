@@ -11,6 +11,13 @@ function getBasename(normalizedPath: string): string {
   return segments[segments.length - 1] ?? '';
 }
 
+function hasPathSegmentWithPrefix(normalizedPath: string, prefix: string): boolean {
+  return normalizedPath
+    .split('/')
+    .filter(Boolean)
+    .some((segment) => segment.startsWith(prefix));
+}
+
 function isKnownTempRoot(normalizedPath: string): boolean {
   return (
     normalizedPath.startsWith('/private/var/folders/') ||
@@ -37,5 +44,9 @@ export function isEphemeralProjectPath(projectPath: string | null | undefined): 
   }
 
   const basename = getBasename(normalizedPath);
-  return basename.startsWith('codex-agent-teams-appstyle-') && isKnownTempRoot(normalizedPath);
+  return (
+    (basename.startsWith('codex-agent-teams-appstyle-') ||
+      hasPathSegmentWithPrefix(normalizedPath, 'provider-launch-stress-live-')) &&
+    isKnownTempRoot(normalizedPath)
+  );
 }

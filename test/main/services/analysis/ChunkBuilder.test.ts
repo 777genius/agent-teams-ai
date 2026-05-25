@@ -170,6 +170,32 @@ describe('ChunkBuilder', () => {
         }
       });
 
+      it('should extract semantic output from string assistant content', () => {
+        const messages = [
+          createMessage({
+            type: 'assistant',
+            content: 'Assistant: visible activity from member logs',
+          }),
+        ];
+
+        const chunks = builder.buildChunks(messages);
+        expect(chunks).toHaveLength(1);
+        expect(isAIChunk(chunks[0])).toBe(true);
+
+        if (isAIChunk(chunks[0])) {
+          expect(chunks[0].semanticSteps).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                type: 'output',
+                content: expect.objectContaining({
+                  outputText: 'Assistant: visible activity from member logs',
+                }),
+              }),
+            ])
+          );
+        }
+      });
+
       it('should group consecutive assistant messages into one AIChunk', () => {
         const messages = [
           createMessage({
@@ -273,7 +299,7 @@ describe('ChunkBuilder', () => {
         expect(chunks).toHaveLength(0);
       });
 
-      it('should filter out synthetic assistant messages', () => {
+      it('should filter out empty synthetic assistant messages', () => {
         const messages = [
           createMessage({
             type: 'assistant',
@@ -284,6 +310,33 @@ describe('ChunkBuilder', () => {
 
         const chunks = builder.buildChunks(messages);
         expect(chunks).toHaveLength(0);
+      });
+
+      it('should keep synthetic assistant messages with renderable content', () => {
+        const messages = [
+          createMessage({
+            type: 'assistant',
+            content: [{ type: 'text', text: 'Codex-native assistant activity' }],
+            model: '<synthetic>',
+          }),
+        ];
+
+        const chunks = builder.buildChunks(messages);
+        expect(chunks).toHaveLength(1);
+        expect(isAIChunk(chunks[0])).toBe(true);
+
+        if (isAIChunk(chunks[0])) {
+          expect(chunks[0].semanticSteps).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                type: 'output',
+                content: expect.objectContaining({
+                  outputText: 'Codex-native assistant activity',
+                }),
+              }),
+            ])
+          );
+        }
       });
 
       it('should filter out caveat messages', () => {

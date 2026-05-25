@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
+import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
 
 import type {
   CodexAccountSnapshotDto,
@@ -11,6 +12,9 @@ const CODEX_PENDING_LOGIN_REFRESH_MS = 3_000;
 const CODEX_VISIBLE_RATE_LIMITS_REFRESH_MS = 10_000;
 const CODEX_VISIBLE_STANDARD_REFRESH_MS = 20_000;
 const CODEX_HIDDEN_REFRESH_MS = 60_000;
+export const CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS = 2_000;
+export const CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS = 30_000;
+export const CODEX_ACCOUNT_STARTUP_IDLE_DELAY_MS = CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS;
 
 function isDocumentVisible(): boolean {
   if (typeof document === 'undefined') {
@@ -41,6 +45,8 @@ function getRefreshIntervalMs(options: {
 export function useCodexAccountSnapshot(options: {
   enabled: boolean;
   includeRateLimits?: boolean;
+  initialRefreshDelayMs?: number;
+  initialRefreshMaxDelayMs?: number;
 }): {
   snapshot: CodexAccountSnapshotDto | null;
   loading: boolean;
@@ -62,6 +68,11 @@ export function useCodexAccountSnapshot(options: {
   const [error, setError] = useState<string | null>(null);
   const [visible, setVisible] = useState(() => isDocumentVisible());
   const lastUpdatedAtRef = useRef<number | null>(null);
+  const initialRefreshDelayMs = options.initialRefreshDelayMs ?? 0;
+  const initialRefreshMaxDelayMs = options.initialRefreshMaxDelayMs;
+  const [initialRefreshAttempted, setInitialRefreshAttempted] = useState(
+    () => initialRefreshDelayMs <= 0
+  );
 
   const applySnapshot = useCallback((nextSnapshot: CodexAccountSnapshotDto) => {
     lastUpdatedAtRef.current = Date.now();
@@ -117,38 +128,85 @@ export function useCodexAccountSnapshot(options: {
       return;
     }
 
-    setLoading(true);
-    if (options.includeRateLimits) {
-      setRateLimitsLoading(true);
-    }
-    setError(null);
+    let active = true;
+    let cancelInitialRefresh: (() => void) | null = null;
 
-    const initialSnapshotRequest = options.includeRateLimits
-      ? api.refreshCodexAccountSnapshot({
-          includeRateLimits: true,
+    const startInitialSnapshotRequest = (): void => {
+      if (!active || lastUpdatedAtRef.current !== null) {
+        return;
+      }
+
+      setLoading(true);
+      if (options.includeRateLimits) {
+        setRateLimitsLoading(true);
+      }
+      setError(null);
+
+      const initialSnapshotRequest = options.includeRateLimits
+        ? api.refreshCodexAccountSnapshot({
+            includeRateLimits: true,
+          })
+        : api.getCodexAccountSnapshot();
+
+      void initialSnapshotRequest
+        .then((nextSnapshot) => {
+          if (active) {
+            applySnapshot(nextSnapshot);
+          }
         })
-      : api.getCodexAccountSnapshot();
+        .catch((nextError) => {
+          if (active) {
+            setError(
+              nextError instanceof Error ? nextError.message : 'Failed to load Codex account'
+            );
+          }
+        })
+        .finally(() => {
+          if (!active) {
+            return;
+          }
+          setInitialRefreshAttempted(true);
+          setLoading(false);
+          if (options.includeRateLimits) {
+            setRateLimitsLoading(false);
+          }
+        });
+    };
 
-    void initialSnapshotRequest
-      .then((nextSnapshot) => {
-        applySnapshot(nextSnapshot);
-      })
-      .catch((nextError) => {
-        setError(nextError instanceof Error ? nextError.message : 'Failed to load Codex account');
-      })
-      .finally(() => {
-        setLoading(false);
-        if (options.includeRateLimits) {
-          setRateLimitsLoading(false);
-        }
-      });
+    if (initialRefreshDelayMs > 0) {
+      if (typeof initialRefreshMaxDelayMs === 'number') {
+        cancelInitialRefresh = scheduleStartupIdleTask(startInitialSnapshotRequest, {
+          minDelayMs: initialRefreshDelayMs,
+          maxDelayMs: initialRefreshMaxDelayMs,
+        });
+      } else {
+        const initialRefreshTimer = window.setTimeout(
+          startInitialSnapshotRequest,
+          initialRefreshDelayMs
+        );
+        cancelInitialRefresh = () => window.clearTimeout(initialRefreshTimer);
+      }
+    } else {
+      startInitialSnapshotRequest();
+    }
 
     const unsubscribe = api.onCodexAccountSnapshotChanged((_event, nextSnapshot) => {
       applySnapshot(nextSnapshot);
     });
 
-    return unsubscribe;
-  }, [applySnapshot, electronMode, options.enabled, options.includeRateLimits]);
+    return () => {
+      active = false;
+      cancelInitialRefresh?.();
+      unsubscribe();
+    };
+  }, [
+    applySnapshot,
+    electronMode,
+    initialRefreshDelayMs,
+    initialRefreshMaxDelayMs,
+    options.enabled,
+    options.includeRateLimits,
+  ]);
 
   useEffect(() => {
     if (!electronMode || !options.enabled || typeof document === 'undefined') {
@@ -168,6 +226,15 @@ export function useCodexAccountSnapshot(options: {
         : CODEX_VISIBLE_STANDARD_REFRESH_MS;
 
       if (
+        initialRefreshDelayMs > 0 &&
+        lastUpdatedAtRef.current === null &&
+        snapshot === null &&
+        !initialRefreshAttempted
+      ) {
+        return;
+      }
+
+      if (
         lastUpdatedAtRef.current === null ||
         Date.now() - lastUpdatedAtRef.current >= staleAfterMs
       ) {
@@ -182,10 +249,21 @@ export function useCodexAccountSnapshot(options: {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [electronMode, options.enabled, options.includeRateLimits, refresh]);
+  }, [
+    electronMode,
+    initialRefreshAttempted,
+    initialRefreshDelayMs,
+    options.enabled,
+    options.includeRateLimits,
+    refresh,
+    snapshot,
+  ]);
 
   useEffect(() => {
     if (!electronMode || !options.enabled) {
+      return;
+    }
+    if (initialRefreshDelayMs > 0 && snapshot === null && !initialRefreshAttempted) {
       return;
     }
 
@@ -206,9 +284,12 @@ export function useCodexAccountSnapshot(options: {
     };
   }, [
     electronMode,
+    initialRefreshAttempted,
+    initialRefreshDelayMs,
     options.enabled,
     options.includeRateLimits,
     refresh,
+    snapshot,
     snapshot?.login.status,
     visible,
   ]);

@@ -4,6 +4,7 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
@@ -115,13 +116,13 @@ const SCROLLABLE_OVERFLOW_VALUES = new Set(['auto', 'scroll', 'overlay']);
 const INITIAL_VISIBLE_TASKS_PER_COLUMN = 20;
 const LOAD_MORE_TASKS_PER_COLUMN = 20;
 
-const COLUMNS: { id: KanbanColumnId; title: string }[] = [
-  { id: 'todo', title: 'TODO' },
-  { id: 'in_progress', title: 'IN PROGRESS' },
-  { id: 'review', title: 'REVIEW' },
-  { id: 'done', title: 'DONE' },
-  { id: 'approved', title: 'APPROVED' },
-];
+const COLUMNS = [
+  { id: 'todo', titleKey: 'kanban.columns.todo' },
+  { id: 'in_progress', titleKey: 'kanban.columns.inProgress' },
+  { id: 'review', titleKey: 'kanban.columns.review' },
+  { id: 'done', titleKey: 'kanban.columns.done' },
+  { id: 'approved', titleKey: 'kanban.columns.approved' },
+] as const satisfies readonly { id: KanbanColumnId; titleKey: string }[];
 
 function getTaskColumn(task: TeamTask, kanbanState: KanbanState): KanbanColumnId | null {
   // Kanban state is authoritative for review/approved placement.
@@ -351,6 +352,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   deletedTaskCount,
   onOpenTrash,
 }: KanbanBoardProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const boardRef = useRef<HTMLDivElement>(null);
   const scrollRestoreTimeoutsRef = useRef<number[]>([]);
   const [viewMode, setViewMode] = useState<KanbanViewMode>('grid');
@@ -538,7 +540,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text-secondary)]"
         >
           <Plus size={13} />
-          Add task
+          {t('kanban.board.addTask')}
         </button>
       ) : null;
 
@@ -546,7 +548,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         return (
           addButton ?? (
             <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
-              No tasks
+              {t('kanban.board.noTasks')}
             </div>
           )
         );
@@ -562,9 +564,9 @@ export const KanbanBoard = memo(function KanbanBoard({
             className="flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 text-xs text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text-secondary)]"
           >
             <ChevronDown size={13} />
-            Show {nextRevealCount} more
+            {t('kanban.board.showMore', { count: nextRevealCount })}
             <span className="text-[10px] text-[var(--color-text-muted)]">
-              {hiddenTaskCount} hidden
+              {t('kanban.board.hiddenCount', { count: hiddenTaskCount })}
             </span>
           </button>
         ) : null;
@@ -741,7 +743,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         const accent = COLUMN_ACCENTS[column.id];
         return {
           id: column.id,
-          title: column.title,
+          title: t(column.titleKey),
           count: columnTasks.length,
           icon: accent.icon,
           headerBg: accent.headerBg,
@@ -762,6 +764,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       renderableColumnTasks,
       kanbanState,
       hasReviewers,
+      t,
     ]
   );
 
@@ -804,7 +807,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                   <span className="ml-1 text-xs">{deletedTaskCount}</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Trash</TooltipContent>
+              <TooltipContent side="bottom">{t('kanban.board.trash')}</TooltipContent>
             </Tooltip>
           ) : null}
           <div className="inline-flex rounded-md border border-[var(--color-border)]">
@@ -820,12 +823,12 @@ export const KanbanBoard = memo(function KanbanBoard({
                       : 'text-[var(--color-text-muted)]'
                   )}
                   onClick={() => switchViewMode('grid')}
-                  aria-label="Grid view"
+                  aria-label={t('kanban.board.gridView')}
                 >
                   <LayoutGrid size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Grid view</TooltipContent>
+              <TooltipContent side="bottom">{t('kanban.board.gridView')}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -839,12 +842,12 @@ export const KanbanBoard = memo(function KanbanBoard({
                       : 'text-[var(--color-text-muted)]'
                   )}
                   onClick={() => switchViewMode('columns')}
-                  aria-label="Columns view"
+                  aria-label={t('kanban.board.columnsView')}
                 >
                   <Columns3 size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Columns view</TooltipContent>
+              <TooltipContent side="bottom">{t('kanban.board.columnsView')}</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -870,7 +873,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                 <div key={column.id} className="flex shrink-0">
                   <div style={{ width }}>
                     <KanbanColumn
-                      title={column.title}
+                      title={t(column.titleKey)}
                       count={columnTasks.length}
                       icon={accent.icon}
                       headerBg={accent.headerBg}

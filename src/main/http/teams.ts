@@ -8,7 +8,7 @@ import {
 } from '@shared/utils/effortLevels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
@@ -32,6 +32,9 @@ type CreateTeamBody = TeamCreateConfigRequest;
 
 class HttpBadRequestError extends Error {}
 class HttpFeatureUnavailableError extends Error {}
+
+const PROVIDER_BACKEND_ERROR =
+  'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)';
 
 function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
@@ -212,14 +215,30 @@ function parseProviderBackendId(
   const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
   const providerBackendId = migrateProviderBackendId(providerId, rawProviderBackendId);
   if (rawProviderBackendId && !providerBackendId) {
-    throw new HttpBadRequestError(
-      'providerBackendId must be one of auto, adapter, api, cli-sdk, or codex-native'
-    );
+    throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
   }
   return providerBackendId;
 }
 
-function parseCreateMembers(payloadMembers: unknown): TeamCreateConfigRequest['members'] {
+function parseLaunchProviderBackendId(
+  providerId: TeamLaunchRequest['providerId'],
+  value: unknown
+): TeamLaunchRequest['providerBackendId'] | undefined {
+  const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
+  const providerBackendId = migrateProviderBackendId(providerId, rawProviderBackendId);
+  if (providerBackendId || !rawProviderBackendId) {
+    return providerBackendId;
+  }
+  if (isTeamProviderBackendId(rawProviderBackendId)) {
+    return undefined;
+  }
+  throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
+}
+
+function parseCreateMembers(
+  payloadMembers: unknown,
+  defaultProviderId: TeamLaunchRequest['providerId']
+): TeamCreateConfigRequest['members'] {
   if (payloadMembers == null) {
     return [];
   }
@@ -250,9 +269,12 @@ function parseCreateMembers(payloadMembers: unknown): TeamCreateConfigRequest['m
     }
     const providerId =
       rawMember.providerId == null ? undefined : parseProviderId(rawMember.providerId);
-    const providerBackendId = parseProviderBackendId(providerId, rawMember.providerBackendId);
+    const providerBackendId = parseProviderBackendId(
+      providerId ?? defaultProviderId,
+      rawMember.providerBackendId
+    );
     const model = assertOptionalString(rawMember.model, 'member model');
-    const effort = assertOptionalEffort(rawMember.effort, providerId);
+    const effort = assertOptionalEffort(rawMember.effort, providerId ?? defaultProviderId);
     const fastMode = assertOptionalFastMode(rawMember.fastMode);
 
     return {
@@ -273,9 +295,9 @@ function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest 
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   const providerId = parseProviderId(payload.providerId);
   const prompt = assertOptionalString(payload.prompt, 'prompt');
-  const providerBackendId = parseProviderBackendId(providerId, payload.providerBackendId);
+  const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
   const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort, providerId);
+  const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
   const fastMode = assertOptionalFastMode(payload.fastMode);
   const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');
   const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
@@ -320,14 +342,14 @@ function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   const teamName = assertProvisioningTeamName(payload.teamName);
   const providerId = payload.providerId == null ? undefined : parseProviderId(payload.providerId);
-  const providerBackendId = parseProviderBackendId(providerId, payload.providerBackendId);
+  const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
   const displayName = assertOptionalString(payload.displayName, 'displayName');
   const description = assertOptionalString(payload.description, 'description');
   const color = assertOptionalString(payload.color, 'color');
   const cwd = assertOptionalCwd(payload.cwd);
   const prompt = assertOptionalString(payload.prompt, 'prompt');
   const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort, providerId);
+  const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
   const fastMode = assertOptionalFastMode(payload.fastMode);
   const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
   const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
@@ -336,7 +358,7 @@ function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
 
   return {
     teamName,
-    members: parseCreateMembers(payload.members),
+    members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
     ...(displayName ? { displayName } : {}),
     ...(description ? { description } : {}),
     ...(color ? { color } : {}),
@@ -389,19 +411,29 @@ function parseDraftLaunchCreateRequest(
   const providerId = Object.hasOwn(payload, 'providerId')
     ? parseProviderId(payload.providerId)
     : (savedRequest.providerId ?? 'anthropic');
-  const providerBackendId = parseProviderBackendId(
+  const providerChangedFromSaved =
+    Object.hasOwn(payload, 'providerId') && providerId !== (savedRequest.providerId ?? 'anthropic');
+  const providerBackendId = parseLaunchProviderBackendId(
     providerId,
     Object.hasOwn(payload, 'providerBackendId')
       ? payload.providerBackendId
-      : savedRequest.providerBackendId
+      : providerChangedFromSaved
+        ? undefined
+        : savedRequest.providerBackendId
   );
   const effort = assertOptionalEffort(
-    Object.hasOwn(payload, 'effort') ? payload.effort : savedRequest.effort,
+    Object.hasOwn(payload, 'effort')
+      ? payload.effort
+      : providerChangedFromSaved
+        ? undefined
+        : savedRequest.effort,
     providerId
   );
   const fastMode = Object.hasOwn(payload, 'fastMode')
     ? assertOptionalFastMode(payload.fastMode)
-    : savedRequest.fastMode;
+    : providerChangedFromSaved
+      ? undefined
+      : savedRequest.fastMode;
   const extraCliArgs = Object.hasOwn(payload, 'extraCliArgs')
     ? assertOptionalExtraCliArgs(payload.extraCliArgs)
     : savedRequest.extraCliArgs;
@@ -419,13 +451,18 @@ function parseDraftLaunchCreateRequest(
     prompt: pickOptionalString(payload, 'prompt', savedRequest.prompt, 'prompt'),
     providerId,
     ...(providerBackendId ? { providerBackendId } : {}),
-    model: pickOptionalString(payload, 'model', savedRequest.model, 'model'),
+    model: pickOptionalString(
+      payload,
+      'model',
+      providerChangedFromSaved ? undefined : savedRequest.model,
+      'model'
+    ),
     ...(effort ? { effort } : {}),
     ...(fastMode ? { fastMode } : {}),
     limitContext: pickOptionalBoolean(
       payload,
       'limitContext',
-      savedRequest.limitContext,
+      providerChangedFromSaved ? undefined : savedRequest.limitContext,
       'limitContext'
     ),
     skipPermissions: pickOptionalBoolean(

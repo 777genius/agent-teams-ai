@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
@@ -79,6 +80,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
   customArgs,
   onCustomArgsChange,
 }) => {
+  const { t } = useAppTranslation('team');
   const [isOpen, setIsOpen] = useState(false);
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -148,20 +150,26 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
       const result = await window.electronAPI.teams.validateCliArgs(customArgs);
       if (result.valid) {
         setValidationState('success');
-        setValidationMessage('All flags valid');
+        setValidationMessage(t('advancedCli.validation.allFlagsValid'));
       } else {
         setValidationState('error');
         const flags = result.invalidFlags ?? [];
         const unknown = flags.filter((f) => !PROTECTED_CLI_FLAGS.has(f));
         const protectedOnes = flags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
         const parts: string[] = [];
-        if (unknown.length > 0) parts.push(`Unknown: ${unknown.join(', ')}`);
-        if (protectedOnes.length > 0) parts.push(`Protected: ${protectedOnes.join(', ')}`);
+        if (unknown.length > 0) {
+          parts.push(t('advancedCli.validation.unknownFlags', { flags: unknown.join(', ') }));
+        }
+        if (protectedOnes.length > 0) {
+          parts.push(
+            t('advancedCli.validation.protectedFlags', { flags: protectedOnes.join(', ') })
+          );
+        }
         setValidationMessage(parts.join(' | '));
       }
     } catch (err) {
       setValidationState('error');
-      setValidationMessage(err instanceof Error ? err.message : 'Validation failed');
+      setValidationMessage(err instanceof Error ? err.message : t('advancedCli.validation.failed'));
     }
   }, [customArgs]);
 
@@ -197,7 +205,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
           className={`size-3.5 transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
         />
         <Terminal className="size-3" />
-        <span>Advanced</span>
+        <span>{t('advancedCli.title')}</span>
       </button>
 
       {isOpen && (
@@ -214,7 +222,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
                 htmlFor={`worktree-${teamName}`}
                 className="cursor-pointer text-xs font-normal text-text-secondary"
               >
-                Use worktree
+                {t('advancedCli.useWorktree')}
               </Label>
             </div>
 
@@ -222,7 +230,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
               <Popover open={showHistory && filteredHistory.length > 0}>
                 <PopoverAnchor asChild>
                   <Input
-                    placeholder="worktree-name"
+                    placeholder={t('advancedCli.placeholders.worktreeName')}
                     className="h-7 font-mono text-xs"
                     value={worktreeName}
                     onChange={(e) => onWorktreeNameChange(e.target.value)}
@@ -244,7 +252,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
                 >
                   <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-text-muted">
                     <Clock className="size-3" />
-                    <span>Recent</span>
+                    <span>{t('advancedCli.recent')}</span>
                   </div>
                   {filteredHistory.map((name) => (
                     <button
@@ -268,7 +276,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
           {/* Command preview */}
           <div className="space-y-1">
             <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
-              Command preview
+              {t('advancedCli.commandPreview')}
             </span>
             <div className="overflow-x-auto rounded border border-border bg-surface-sidebar px-2.5 py-1.5">
               <code className="flex flex-wrap gap-x-1 gap-y-0.5 font-mono text-[11px] leading-relaxed">
@@ -284,7 +292,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
           {/* Custom arguments */}
           <div className="space-y-1.5">
             <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
-              Custom arguments
+              {t('advancedCli.customArguments')}
             </span>
             <div className="flex items-center gap-2">
               <Input
@@ -305,7 +313,7 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
                   {validationState === 'loading' ? (
                     <Loader2 className="mr-1 size-3 animate-spin" />
                   ) : null}
-                  Validate
+                  {t('advancedCli.validate')}
                 </Button>
               )}
             </div>

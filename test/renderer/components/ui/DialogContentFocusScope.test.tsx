@@ -8,13 +8,23 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 
-describe('DialogContent FocusScope integration', () => {
+describe('Radix ref lifecycle integration', () => {
   let host: HTMLDivElement;
   let root: ReturnType<typeof createRoot>;
+  let originalScrollIntoView: typeof HTMLElement.prototype.scrollIntoView;
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = vi.fn();
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
@@ -25,6 +35,7 @@ describe('DialogContent FocusScope integration', () => {
       root.unmount();
     });
     document.body.innerHTML = '';
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     vi.unstubAllGlobals();
   });
 
@@ -51,5 +62,32 @@ describe('DialogContent FocusScope integration', () => {
     }).not.toThrow();
 
     expect(document.body.textContent).toContain('Create team updated');
+  });
+
+  it('keeps the Radix select and popper refs stable while an open select rerenders', () => {
+    const renderSelect = (label: string): void => {
+      root.render(
+        <Select open value="codex">
+          <SelectTrigger>
+            <SelectValue placeholder="Provider" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="claude">Claude {label}</SelectItem>
+            <SelectItem value="codex">Codex {label}</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    };
+
+    expect(() => {
+      act(() => {
+        renderSelect('initial');
+      });
+      act(() => {
+        renderSelect('updated');
+      });
+    }).not.toThrow();
+
+    expect(document.body.textContent).toContain('Codex updated');
   });
 });

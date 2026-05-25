@@ -41,7 +41,11 @@ const logger = createLogger('Util:jsonl');
 const defaultProvider = new LocalFileSystemProvider();
 
 // Re-export for backwards compatibility
-export { extractCwd, extractFirstUserMessagePreview } from './metadataExtraction';
+export {
+  extractCwd,
+  extractCwdFromKnownJsonlFile,
+  extractFirstUserMessagePreview,
+} from './metadataExtraction';
 export { checkMessagesOngoing } from './sessionStateDetection';
 
 // =============================================================================

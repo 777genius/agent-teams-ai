@@ -4,6 +4,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { formatTokens } from '../utils/formatting';
@@ -25,6 +26,8 @@ export const CollapsibleSection = ({
   onToggle,
   children,
 }: Readonly<CollapsibleSectionProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
+
   return (
     <div
       className="overflow-hidden rounded-lg"
@@ -60,7 +63,7 @@ export const CollapsibleSection = ({
           </span>
         </div>
         <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          ~{formatTokens(tokenCount)} tokens
+          {t('tokens.approxTokens', { tokens: formatTokens(tokenCount) })}
         </span>
       </button>
 

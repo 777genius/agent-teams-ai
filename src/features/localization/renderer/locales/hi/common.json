@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "copied": "कॉपी हो गया",
+    "copyUrl": "URL कॉपी करें",
+    "open": "खोलें",
+    "reveal": "फ़ोल्डर में दिखाएं",
+    "retry": "फिर कोशिश करें",
+    "save": "सहेजें",
+    "showLess": "कम दिखाएं",
+    "showMore": "और दिखाएं",
+    "refresh": "रीफ्रेश करें",
+    "reset": "रीसेट करें",
+    "copyToClipboard": "क्लिपबोर्ड में कॉपी करें",
+    "moreActions": "और क्रियाएं",
+    "closeDialog": "डायलॉग बंद करें",
+    "goToDashboard": "डैशबोर्ड पर जाएं",
+    "or": "या",
+    "hide": "छिपाएं",
+    "resetSelection": "चयन रीसेट करें"
+  },
+  "code": {
+    "line": "{{line}}",
+    "lines": "{{from}}-{{to}}",
+    "moreLines": "({{count}} अधिक लाइनें)",
+    "moreLines_few": "({{count}} अधिक लाइनें)",
+    "moreLines_many": "({{count}} अधिक लाइनें)",
+    "moreLines_one": "({{count}} अधिक लाइन)",
+    "moreLines_other": "({{count}} अधिक लाइनें)",
+    "code": "कोड",
+    "preview": "पूर्वावलोकन",
+    "markdownPreview": "मार्कडाउन पूर्वावलोकन",
+    "linesParenthesized": "(line {{from}}-{{to}})",
+    "mermaidSyntaxError": "मरमेड सिंटैक्स त्रुटि"
+  },
+  "contextBadge": {
+    "badge": "संदर्भ",
+    "breakdown": {
+      "text": "पाठ",
+      "thinking": "सोचना"
+    },
+    "detailsAria": "Context इंजेक्शन विवरण",
+    "sectionSummary": "{{title}} ({{count}}) ~ {{tokens}} टोकन",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md फ़ाइलें",
+      "mentionedFiles": "उल्लेखित फ़ाइलें",
+      "taskCoordination": "कार्य समन्वय",
+      "thinkingText": "सोच + पाठ",
+      "toolOutputs": "उपकरण आउटपुट",
+      "userMessages": "उपयोगकर्ता संदेश"
+    },
+    "title": "नई संदर्भ में इस मोड़ में शामिल",
+    "tokenCount": "~{{tokens}} टोकन",
+    "totalNewTokens": "कुल नई टोकन",
+    "turn": "{{turn}}",
+    "sectionSummary_few": "{{title}} ({{count}}) ~ {{tokens}} टोकन",
+    "sectionSummary_many": "{{title}} ({{count}}) ~ {{tokens}} टोकन",
+    "sectionSummary_one": "{{title}} ({{count}}) ~ {{tokens}} टोकन",
+    "sectionSummary_other": "{{title}} ({{count}}) ~ {{tokens}} टोकन"
+  },
+  "locales": {
+    "emptyMessage": "कोई भाषा नहीं मिली।",
+    "names": {
+      "en": "अंग्रेज़ी",
+      "ru": "रूसी",
+      "zh": "चीनी",
+      "ja": "जापानी",
+      "ko": "कोरियाई",
+      "es": "स्पैनिश",
+      "hi": "हिंदी",
+      "pt": "पुर्तगाली",
+      "fr": "फ़्रेंच",
+      "ar": "अरबी",
+      "bn": "बांग्ला",
+      "ur": "उर्दू",
+      "id": "इंडोनेशियाई",
+      "de": "जर्मन",
+      "system": "सिस्टम"
+    },
+    "searchPlaceholder": "भाषा खोजें...",
+    "selectPlaceholder": "ऐप भाषा चुनें...",
+    "systemWithResolved": "सिस्टम - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "कोई सदस्य नहीं मिला।",
+    "searchPlaceholder": "सदस्य खोजें...",
+    "unassigned": "असाइन नहीं किया गया",
+    "teammateFallback": "टीममेट"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "जांच",
+        "downloading": "डाउनलोड",
+        "installCli": "Codex CLI स्थापित करें",
+        "installing": "स्थापना",
+        "retryInstall": "इंस्टॉल फिर से करें"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "कोई मिलती-जुलती सुझाव नहीं",
+    "searching": "खोज रहे हैं...",
+    "searchingFiles": "फ़ाइलें खोज रहे हैं...",
+    "findInConversation": "बातचीत में खोजें...",
+    "resultCount": "{{current}} / {{total}}",
+    "resultCountCapped": "{{current}} / {{total}}+",
+    "noResults": "कोई परिणाम नहीं",
+    "previousResultShortcut": "पिछला परिणाम (Shift+Enter)",
+    "nextResultShortcut": "अगला परिणाम (Enter)",
+    "closeShortcut": "बंद करें (Esc)",
+    "nothingFound": "कुछ नहीं मिला",
+    "placeholder": "खोजें..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "अनुसूची जोड़ें",
+      "clearFilters": "साफ़ फिल्टर",
+      "createSchedule": "अनुसूची बनाएँ",
+      "delete": "डिलीट",
+      "edit": "संपादित करें",
+      "pause": "Pause",
+      "resume": "फिर से शुरू",
+      "runNow": "अब भागो"
+    },
+    "empty": {
+      "description": "क्रोन अभिव्यक्तियों के साथ क्लाउड कार्य निष्पादन को स्वचालित करने के लिए किसी भी टीम पर एक अनुसूची बनाएं। सभी टीमों से अनुसूची यहां दिखाई देगी।",
+      "noMatches": "कोई अनुसूची वर्तमान फिल्टर से मेल नहीं खाती",
+      "title": "कोई निर्धारित कार्य नहीं"
+    },
+    "filters": {
+      "allTeams": "सभी टीमों"
+    },
+    "item": {
+      "loadingRunHistory": "प्रदर्शन इतिहास",
+      "nextRun": "अगला: {{value}}",
+      "noRunsYet": "अभी तक कोई रन नहीं"
+    },
+    "loading": "कार्यक्रम लोड हो रहा है...",
+    "searchPlaceholder": "कार्यक्रम खोजें...",
+    "status": {
+      "active": "सक्रिय",
+      "all": "सब",
+      "disabled": "विकलांग",
+      "paused": "दलित"
+    },
+    "title": "अनुसूची"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "छुपाना",
+      "pin": "पिन",
+      "unhide": "Unhide"
+    },
+    "empty": {
+      "noMatchingSessions": "कोई मिलान सत्र नहीं",
+      "noMatchingSessionsDescription": "इस परियोजना में अभी तक कोई मिलान सत्र नहीं है।",
+      "noMatchingSessionsFiltered": "किसी अन्य प्रश्न का प्रयास करें या प्रदाता फ़िल्टर को रीसेट करें।",
+      "noSessions": "कोई सत्र नहीं मिला",
+      "noSessionsDescription": "इस परियोजना में अभी तक कोई सत्र नहीं है",
+      "selectProject": "सत्र देखने के लिए एक परियोजना का चयन करें"
+    },
+    "errors": {
+      "loading": "त्रुटि लोडिंग सत्र"
+    },
+    "loadedMatchingMore": "{{count}} मिलान सत्र अब तक लोड हो गया - अधिक लोड करने के लिए नीचे स्क्रॉल करें।",
+    "loadingMore": "अधिक सत्र लोड हो रहा है...",
+    "pinned": "पिन",
+    "scrollToLoadMore": "अधिक लोड करने के लिए स्क्रॉल करें",
+    "search": {
+      "clear": "सत्र खोज साफ़ करें",
+      "placeholder": "सत्र खोजें..."
+    },
+    "selection": {
+      "cancel": "चयन रद्द करना",
+      "exitMode": "निकास चयन मोड",
+      "hideSelected": "चयनित सत्रों को छुपाएं",
+      "pinSelected": "पिन चयनित सत्र",
+      "selectSessions": "सत्र चुनें",
+      "selected": "{{count}} चयनित",
+      "unhideSelected": "Unhide चयनित सत्र",
+      "selected_few": "{{count}} चयनित",
+      "selected_many": "{{count}} चयनित",
+      "selected_one": "{{count}} चयनित",
+      "selected_other": "{{count}} चयनित"
+    },
+    "sort": {
+      "byContext": "संदर्भ",
+      "byContextTooltip": "संदर्भ खपत द्वारा क्रमबद्ध",
+      "byRecentTooltip": "हाल ही में",
+      "contextLoadedOnly": "कॉन्टेक्स्ट सॉर्टिंग केवल रैंक लोडेड सत्र है।"
+    },
+    "title": "सत्र",
+    "visibility": {
+      "hideHidden": "छिपा सत्र छिपाएँ",
+      "showHidden": "छिपा सत्र"
+    },
+    "worktree": {
+      "switch": "वर्कट्री स्विच करें"
+    },
+    "loadedMatchingMore_few": "{{count}} मिलान सत्र अब तक लोड हो गया - अधिक लोड करने के लिए नीचे स्क्रॉल करें।",
+    "loadedMatchingMore_many": "{{count}} मिलान सत्र अब तक लोड हो गया - अधिक लोड करने के लिए नीचे स्क्रॉल करें।",
+    "loadedMatchingMore_one": "{{count}} मिलान सत्र अब तक लोड हो गया - अधिक लोड करने के लिए नीचे स्क्रॉल करें।",
+    "loadedMatchingMore_other": "{{count}} मिलान सत्र अब तक लोड हो गया - अधिक लोड करने के लिए नीचे स्क्रॉल करें।",
+    "failedToLoad": "लोड सत्र में विफल",
+    "loading": "सत्र लोड हो रहा है",
+    "filter": {
+      "title": "फ़िल्टर सत्र"
+    },
+    "count": "{{count}} सत्र",
+    "count_one": "{{count}} सत्र",
+    "count_other": "{{count}} सत्र",
+    "count_few": "{{count}} सत्र",
+    "count_many": "{{count}} सत्र",
+    "inProgress": "सत्र प्रगति पर है..."
+  },
+  "states": {
+    "loading": "लोड हो रहा है...",
+    "offline": "ऑफ़लाइन",
+    "online": "ऑनलाइन",
+    "unknown": "अज्ञात",
+    "error": "त्रुटि"
+  },
+  "markdown": {
+    "imageFallback": "[चित्र:{{label}}]",
+    "largeContentNotice": "सामग्री बहुत बड़ी है ({{count}} chars). यूआई उत्तरदायी रखने के लिए कच्चे पूर्वावलोकन दिखा रहा है।",
+    "largeContentTitle": "यूआई फ्रीज को रोकने के लिए बड़ी सामग्री को कच्चे के रूप में दिखाया गया है",
+    "raw": "रॉ",
+    "rawPreview": "रॉ पूर्वावलोकन",
+    "renderMarkdown": "रेंडर मार्कडाउन",
+    "showAll": "सब दिखाओ",
+    "showMore": "और देखो",
+    "showRaw": "कच्चे प्रदर्शन",
+    "showingChars": "दिखा {{shown}} / {{total}} char",
+    "largeContentNotice_few": "सामग्री बहुत बड़ी है ({{count}} chars). यूआई उत्तरदायी रखने के लिए कच्चे पूर्वावलोकन दिखा रहा है।",
+    "largeContentNotice_many": "सामग्री बहुत बड़ी है ({{count}} chars). यूआई उत्तरदायी रखने के लिए कच्चे पूर्वावलोकन दिखा रहा है।",
+    "largeContentNotice_one": "सामग्री बहुत बड़ी है ({{count}} chars). यूआई उत्तरदायी रखने के लिए कच्चे पूर्वावलोकन दिखा रहा है।",
+    "largeContentNotice_other": "सामग्री बहुत बड़ी है ({{count}} chars). यूआई उत्तरदायी रखने के लिए कच्चे पूर्वावलोकन दिखा रहा है।"
+  },
+  "terminal": {
+    "checkOutputForDetails": "विवरण के लिए ऊपर टर्मिनल आउटपुट की जाँच करें",
+    "closingInSeconds": "{{count}}s में समापन...",
+    "closingInSeconds_few": "{{count}}s में समापन...",
+    "closingInSeconds_many": "{{count}}s में समापन...",
+    "closingInSeconds_one": "{{count}}s में समापन...",
+    "closingInSeconds_other": "{{count}}s में समापन...",
+    "completedSuccessfully": "सफलतापूर्वक पूरा",
+    "exitCode": "(exit code {{code}})",
+    "processFailed": "प्रक्रिया विफल",
+    "title": "टर्मिनल"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "बिना दोहराव के पूरे सत्र में जमा करना",
+    "cacheRead": "कैश पढ़ना",
+    "cacheWrite": "कैश राइट",
+    "costUsd": "लागत (USD)",
+    "inputTokens": "इनपुट टोकन",
+    "model": "आदर्श",
+    "outputTokens": "आउटपुट टोकन",
+    "phase": "चरण{{phase}}/{{total}}",
+    "promptInputShare": "त्वरित इनपुट का {{percent}}%",
+    "taskCoordination": "कार्य समन्वय",
+    "thinkingText": "सोच + पाठ",
+    "toolOutputs": "उपकरण आउटपुट",
+    "total": "कुल",
+    "userMessages": "उपयोगकर्ता संदेश",
+    "visibleContext": "दृश्य",
+    "includesClaudeMd": "CLAUDE.md शामिल ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@ फ़ाइलें",
+    "percentValue": "({{percent}}%)",
+    "approxTokens": "~{{tokens}} टोकन",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "कॉपी टीम",
+      "createTeam": "टीम बनाएँ",
+      "deleteForever": "हमेशा के लिए हटाएं",
+      "deletePermanently": "स्थायी रूप से हटाएं",
+      "deleteTeam": "टीम",
+      "launching": "लॉन्च करना",
+      "launchTeam": "लॉन्च टीम",
+      "relaunchTeam": "Relaunch टीम",
+      "restore": "स्टोर",
+      "restoreTeam": "पुनर्स्थापना टीम",
+      "retry": "Retry",
+      "stopTeam": "बंद करो टीम",
+      "stopping": "..."
+    },
+    "status": {
+      "active": "सक्रिय",
+      "deleted": "हटाना",
+      "launching": "लॉन्च करना",
+      "offline": "ऑफलाइन",
+      "partialFailure": "प्रक्षेपण असफल",
+      "partialPending": "बूटस्ट्रैप लंबित",
+      "partialSkipped": "प्रक्षेपित सदस्य",
+      "running": "दौड़ना"
+    },
+    "partial": {
+      "pending": "लास्ट लॉन्च अभी भी पुनर्निर्माण है।",
+      "skipped": "पिछले प्रक्षेपण ने टीममेट्स को छोड़ दिया है।",
+      "skippedWithCount": "अंतिम प्रक्षेपण छोड़ दिया {{count}}/{{expected}} टीममेट।",
+      "skippedWithCount_few": "अंतिम प्रक्षेपण छोड़ दिया {{count}}/{{expected}} टीममेट्स।",
+      "skippedWithCount_many": "अंतिम प्रक्षेपण छोड़ दिया {{count}}/{{expected}} टीममेट्स।",
+      "skippedWithCount_one": "अंतिम प्रक्षेपण छोड़ दिया {{count}}/{{expected}} टीममेट।",
+      "skippedWithCount_other": "अंतिम प्रक्षेपण छोड़ दिया {{count}}/{{expected}} टीममेट्स।",
+      "stopped": "आखिरी लॉन्च सभी टीममेट्स में शामिल होने से पहले बंद हो गया।",
+      "stoppedWithCount": "अंतिम प्रक्षेपण {{count}}/{{expected}} टीममेट में शामिल होने से पहले बंद हो गया।",
+      "stoppedWithCount_few": "अंतिम प्रक्षेपण {{count}}/{{expected}} टीममेट में शामिल होने से पहले बंद हो गया।",
+      "stoppedWithCount_many": "अंतिम प्रक्षेपण {{count}}/{{expected}} टीममेट में शामिल होने से पहले बंद हो गया।",
+      "stoppedWithCount_one": "अंतिम प्रक्षेपण {{count}}/{{expected}} टीममेट में शामिल होने से पहले बंद हो गया।",
+      "stoppedWithCount_other": "अंतिम प्रक्षेपण {{count}}/{{expected}} टीममेट में शामिल होने से पहले बंद हो गया।"
+    },
+    "noDescription": "कोई विवरण नहीं",
+    "solo": "एकल",
+    "membersCount": "सदस्य: {{count}}",
+    "membersCount_few": "सदस्य: {{count}}",
+    "membersCount_many": "सदस्य: {{count}}",
+    "membersCount_one": "सदस्य: {{count}}",
+    "membersCount_other": "सदस्य: {{count}}",
+    "all": "सब",
+    "moreCount": "{{count}} अधिक",
+    "moreCount_one": "{{count}} अधिक",
+    "moreCount_other": "{{count}} अधिक",
+    "moreCount_few": "{{count}} अधिक",
+    "moreCount_many": "{{count}} अधिक"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "हर परियोजना के लिए डिफ़ॉल्ट है कि अपने स्वयं के OpenCode ओवरराइड नहीं है।",
+      "scopeDescriptionProject": "केवल चयनित परियोजना को ओवरराइड करें। रनिंग टीमों को नहीं बदला गया है।",
+      "setAllProjectsDefault": "सभी प्रोजेक्ट डिफ़ॉल्ट सेट करें",
+      "setProjectDefault": "परियोजना डिफ़ॉल्ट सेट करें",
+      "validationContext": "प्रमाणीकरण",
+      "projectOverrideContext": "परियोजना ओवरराइड संदर्भ",
+      "selectProjectHint": "स्थानीय मॉडल या डिफॉल्ट की बचत से पहले एक परियोजना का चयन करें।",
+      "allProjectsHint": "टेस्ट {{project}} का उपयोग करते हैं। डिफ़ॉल्ट तब तक लागू होता है जब तक किसी परियोजना में ओवरराइड नहीं होता।",
+      "projectHint": "बचत ओवरराइड केवल {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "संदर्भ",
+      "closePanel": "बंद पैनल",
+      "phase": "चरण:",
+      "current": "वर्तमान",
+      "view": "देखें:",
+      "category": "श्रेणी",
+      "bySize": "आकार"
+    },
+    "metrics": {
+      "unavailable": "उपलब्ध नहीं",
+      "contextUsed": "संदर्भ प्रयुक्त",
+      "promptInput": "प्रॉम्प्ट इनपुट",
+      "visibleContext": "दृश्य",
+      "ofContext": "संदर्भ",
+      "ofPrompt": "शीघ्र",
+      "codexTelemetryUnavailable": "Codex तत्काल साइड उपयोग वर्तमान रनटाइम टेलीमेट्री द्वारा अभी तक उजागर नहीं किया गया है, इसलिए प्रॉम्प्ट इनपुट और कॉन्टेक्स्ट ने नकली शून्य दिखाने के बजाय अनुपलब्ध रहने का इस्तेमाल किया।",
+      "sessionCost": "सत्र की लागत:",
+      "parentPlus": "माता-पिता",
+      "subagents": "एजेंट",
+      "details": "विवरण"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "संदर्भ प्रयुक्त",
+        "description": "वर्तमान में प्रोम्प्ट इनपुट प्लस आउटपुट टोकन मॉडल की संदर्भ विंडो पर कब्जा कर लेते हैं।"
+      },
+      "promptInput": {
+        "title": "प्रॉम्प्ट इनपुट",
+        "description": "Tokens ने उत्पादन से पहले मॉडल को भेजा। क्लाउड के लिए इसमें `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` शामिल है।"
+      },
+      "visibleContext": {
+        "title": "दृश्य",
+        "description": "शीघ्र इनपुट का निरीक्षण करने योग्य सबसेट: फाइलें, CLAUDE.md, उपकरण आउटपुट, उपयोगकर्ता संदेश और इसी तरह के इंजेक्शन जो आप सीधे अनुकूलन कर सकते हैं।"
+      },
+      "availability": {
+        "title": "उपलब्धता",
+        "description": "यदि कोई प्रदाता रनटाइम अभी तक तत्काल उपयोग को उजागर नहीं करता है, तो पैनल मेट्रिक्स को दिखाने के बजाय अनुपलब्ध दिखाता है कि वे शून्य हैं।"
+      }
+    },
+    "items": {
+      "turn": "@Turn{{turn}}",
+      "tokensApprox": "~{{tokens}} टोकन",
+      "toolsCount": "{{count}} उपकरण",
+      "toolsCount_one": "{{count}} उपकरण",
+      "toolsCount_other": "{{count}} उपकरण",
+      "toolsCount_few": "{{count}} उपकरण",
+      "toolsCount_many": "{{count}} उपकरण",
+      "itemsCount": "{{count}} आइटम",
+      "itemsCount_one": "{{count}} आइटम",
+      "itemsCount_other": "{{count}} आइटम",
+      "itemsCount_few": "{{count}} आइटम",
+      "itemsCount_many": "{{count}} आइटम",
+      "missing": "लापता",
+      "thinking": "सोचना",
+      "text": "पाठ"
+    },
+    "empty": "इस सत्र में कोई संदर्भ इंजेक्शन नहीं मिला",
+    "view": {
+      "grouped": "समूह",
+      "flat": "फ्लैट"
+    },
+    "claudeMdFiles": "CLAUDE.md फ़ाइलें",
+    "mentionedFiles": "उल्लेखित फ़ाइलें"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "एजेंट",
+      "shutdownConfirmed": "शटडाउन की पुष्टि",
+      "summary": {
+        "tools": "{{count}} उपकरण",
+        "tools_one": "{{count}} उपकरण",
+        "tools_other": "{{count}} उपकरण",
+        "tools_few": "{{count}} उपकरण",
+        "tools_many": "{{count}} उपकरण"
+      },
+      "meta": {
+        "type": "प्रकार",
+        "duration": "अवधि",
+        "model": "आदर्श",
+        "id": "आईडी"
+      },
+      "metrics": {
+        "contextWindow": "संदर्भ विंडो",
+        "contextUsage": "संदर्भ",
+        "mainContext": "मुख्य संदर्भ",
+        "totalOutput": "कुल उत्पादन",
+        "turns": "({{count}} बदल जाता है)",
+        "turns_one": "({{count}} बारी)",
+        "turns_other": "({{count}} बदल जाता है)",
+        "subagentContext": "Subagent Context",
+        "phase": "चरण {{phase}}",
+        "turns_few": "({{count}} बदल जाता है)",
+        "turns_many": "({{count}} बदल जाता है)"
+      },
+      "trace": {
+        "title": "निष्पादन ट्रेस"
+      }
+    },
+    "user": {
+      "you": "आप",
+      "showMore": "और देखो",
+      "showLess": "कम दिखाएं",
+      "backgroundTask": "पृष्ठभूमि कार्य",
+      "exitCode": "बाहर निकलें {{code}}",
+      "imagesAttached": "{{count}} छवियां संलग्न",
+      "imagesAttached_one": "{{count}} छवि संलग्न",
+      "imagesAttached_few": "{{count}} छवियां संलग्न",
+      "imagesAttached_many": "{{count}} छवियां संलग्न",
+      "imagesAttached_other": "{{count}} छवियां संलग्न"
+    },
+    "compact": {
+      "toggle": "Toggle कॉम्पैक्ट सामग्री",
+      "contextCompacted": "Context कॉम्पैक्ट",
+      "freedTokens": "({{tokens}} मुक्त)",
+      "phase": "चरण {{phase}}",
+      "conversationCompacted": "वार्तालाप कॉम्पैक्ट",
+      "summary": "पिछले संदेशों को संदर्भ बचाने के लिए संक्षेप में प्रस्तुत किया गया था। पूर्ण वार्तालाप इतिहास सत्र फ़ाइल में संरक्षित है।",
+      "compacted": "कॉम्पैक्ट"
+    },
+    "executionTrace": {
+      "empty": "कोई निष्पादन आइटम नहीं",
+      "nested": "नेस्टेड: {{name}}",
+      "input": "इनपुट"
+    },
+    "items": {
+      "empty": "प्रदर्शित करने के लिए कोई आइटम नहीं"
+    },
+    "tools": {
+      "teammateSpawned": "टीममेट स्पॉन्ड",
+      "shutdownRequested": "शटडाउन अनुरोध ->",
+      "noResultReceived": "कोई परिणाम नहीं मिला",
+      "duration": "अवधि: {{duration}}",
+      "result": "परिणाम",
+      "write": {
+        "createdFile": "फ़ाइल बनाना",
+        "wroteToFile": "फाइल करने के लिए"
+      },
+      "skill": {
+        "instructions": "कौशल निर्देश",
+        "unknown": "अज्ञात कौशल"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "उपयोगकर्ता द्वारा बाधित अनुरोध",
+      "planReadyForApproval": "स्वीकृति के लिए योजना तैयार"
+    },
+    "empty": {
+      "icon": "To make a good way.",
+      "title": "कोई वार्तालाप इतिहास नहीं",
+      "description": "इस सत्र में अभी तक कोई संदेश नहीं है।"
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% छोड़ दिया)",
+      "count": "संदर्भ ({{count}})",
+      "count_one": "संदर्भ ({{count}})",
+      "count_other": "संदर्भ ({{count}})",
+      "count_few": "संदर्भ ({{count}})",
+      "count_many": "संदर्भ ({{count}})"
+    },
+    "scrollToBottom": "नीचे स्क्रॉल करें",
+    "bottom": "नीचे",
+    "teammateMessage": {
+      "message": "संदेश",
+      "resent": "Resent",
+      "fallback": "टीममेट संदेश"
+    },
+    "system": {
+      "label": "सिस्टम"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux स्थापित नहीं है",
+    "detectedOs": "पता लगाया गया ओएस: {{os}}",
+    "runtimePath": "रनटाइम पथ: {{path}}",
+    "phase": "चरण: {{phase}}",
+    "actions": {
+      "cancel": "रद्द करना",
+      "manualGuide": "मैनुअल गाइड",
+      "hideSetupSteps": "गाइड सेटअप कदम",
+      "showSetupSteps": "सेटअप कदम दिखाएं ({{count}})",
+      "showSetupSteps_one": "सेटअप कदम दिखाएं ({{count}})",
+      "showSetupSteps_other": "सेटअप कदम दिखाएं ({{count}})",
+      "recheck": "फिर से जांच",
+      "showSetupSteps_few": "सेटअप कदम दिखाएं ({{count}})",
+      "showSetupSteps_many": "सेटअप कदम दिखाएं ({{count}})"
+    },
+    "installerProgress": "इंस्टॉलर प्रगति",
+    "input": {
+      "placeholder": "इंस्टॉलर को इनपुट भेजें",
+      "send": "इनपुट भेजें",
+      "passwordNotice": "पासवर्ड इनपुट सीधे इंस्टॉलर टर्मिनल में भेजा जाता है और लॉग आउटपुट में जोड़ा नहीं जाता है।"
+    },
+    "details": {
+      "show": "विवरण दिखाएं",
+      "hide": "विवरण छुपाएं"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "हाल ही में गतिविधि नहीं",
+    "sessionsCount": "{{count}} सत्र",
+    "sessionsCount_one": "{{count}} सत्र",
+    "sessionsCount_other": "{{count}} सत्र",
+    "mode": {
+      "searchProjects": "परियोजनाएँ",
+      "searchAcrossProjects": "सभी परियोजनाओं में खोजें",
+      "searchInProject": "परियोजना में खोजें"
+    },
+    "currentProject": "वर्तमान परियोजना",
+    "global": "वैश्विक",
+    "placeholders": {
+      "projects": "परियोजनाएँ खोजें...",
+      "conversations": "बातचीत खोजें..."
+    },
+    "empty": {
+      "noProjectsForQuery": "\"{{query}}\" के लिए कोई प्रोजेक्ट नहीं मिला",
+      "noProjects": "कोई प्रोजेक्ट नहीं मिला",
+      "minChars": "खोज करने के लिए कम से कम 2 अक्षर टाइप करें",
+      "noFastResults": "\"{{query}}\" के लिए हाल के सत्रों में कोई तेजी से परिणाम नहीं",
+      "noResults": "\"{{query}}\" के लिए कोई परिणाम नहीं मिला"
+    },
+    "footer": {
+      "projectsCount": "{{count}} परियोजनाओं",
+      "projectsCount_one": "{{count}} परियोजना",
+      "projectsCount_other": "{{count}} परियोजनाओं",
+      "results": "{{count}} {{speed}}परिणाम",
+      "results_one": "{{count}} {{speed}}परिणाम",
+      "results_other": "{{count}} {{speed}}परिणाम",
+      "resultsAcrossProjects": "सभी परियोजनाओं में {{count}} {{speed}}results",
+      "resultsAcrossProjects_one": "सभी परियोजनाओं में {{count}} {{speed}}result",
+      "resultsAcrossProjects_other": "सभी परियोजनाओं में {{count}} {{speed}}results",
+      "fastPrefix": "तेज",
+      "typeToSearch": "खोज के लिए टाइप करें",
+      "navigate": "नेविगेट",
+      "select": "चयन",
+      "open": "खुला",
+      "global": "वैश्विक",
+      "close": "बंद करना",
+      "results_few": "{{count}} {{speed}}परिणाम",
+      "results_many": "{{count}} {{speed}}परिणाम",
+      "resultsAcrossProjects_few": "सभी परियोजनाओं में {{count}} {{speed}}results",
+      "resultsAcrossProjects_many": "सभी परियोजनाओं में {{count}} {{speed}}results",
+      "projectsCount_few": "{{count}} परियोजनाओं",
+      "projectsCount_many": "{{count}} परियोजनाओं",
+      "upDownKey": "↓",
+      "escapeKey": "Esc"
+    },
+    "sessionsCount_few": "{{count}} सत्र",
+    "sessionsCount_many": "{{count}} सत्र"
+  },
+  "tasksPanel": {
+    "title": "कार्य हटाएँ",
+    "searchPlaceholder": "कार्य खोजें...",
+    "pinned": "पिन",
+    "groupByLabel": "समूह द्वारा:",
+    "groupByAria": "समूह द्वारा",
+    "groupModes": {
+      "none": "कोई नहीं",
+      "project": "परियोजना",
+      "time": "समय"
+    },
+    "showArchived": "संग्रहित",
+    "hideArchived": "Hide संग्रहित",
+    "empty": {
+      "noMatchingTasks": "कोई मिलान कार्य नहीं",
+      "noTasks": "कोई कार्य नहीं मिला"
+    },
+    "teamLabel": "टीम: {{team}}",
+    "showMore": "और देखो",
+    "showLess": "कम दिखाएं",
+    "deleteConfirm": {
+      "title": "कार्य हटाएँ",
+      "message": "कार्य #{{taskId}} to trash?",
+      "confirmLabel": "डिलीट",
+      "cancelLabel": "रद्द करना"
+    },
+    "deleteFailed": {
+      "title": "कार्य को हटाने में विफल",
+      "fallbackMessage": "अप्रत्याशित त्रुटि हुई",
+      "confirmLabel": "ठीक"
+    },
+    "sort": {
+      "byTime": "समय",
+      "byUnread": "बिना पढ़े",
+      "byProject": "परियोजना",
+      "byTeam": "टीम द्वारा"
+    }
+  },
+  "toolViewer": {
+    "input": "इनपुट",
+    "replaceAll": "(सभी को बदलना)",
+    "noInputRecorded": "इस टूल कॉल के लिए कोई इनपुट दर्ज नहीं किया गया है।",
+    "agent": {
+      "action": "कार्रवाई",
+      "teammate": "सहपाठी",
+      "team": "टीम",
+      "runtime": "रनटाइम",
+      "type": "प्रकार",
+      "startupInstructionsHidden": "स्टार्टअप निर्देश यूआई में छिपे हुए हैं।"
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "अनपिन",
+    "pin": "पिन",
+    "rename": "नाम बदलें",
+    "markUnread": "बिना पढ़े",
+    "unarchive": "आर्काइव से हटाएँ",
+    "archive": "आर्काइव करें",
+    "deleteTask": "कार्य हटाएँ"
+  },
+  "updateDialog": {
+    "closeDialog": "संवाद",
+    "updateAvailable": "उपलब्ध अद्यतन",
+    "updateReady": "Ready",
+    "noReleaseNotes": "उपलब्ध नहीं है।",
+    "viewOnGitHub": "GitHub पर देखें",
+    "later": "बाद में",
+    "restartNow": "अभी शुरू करें",
+    "download": "डाउनलोड"
+  },
+  "errorBoundary": {
+    "title": "कुछ गलत हो गया",
+    "description": "आवेदन में अप्रत्याशित त्रुटि हुई। आप पृष्ठ को पुनः लोड करने या त्रुटि स्थिति को रीसेट करने की कोशिश कर सकते हैं।",
+    "componentStack": "घटक स्टैक",
+    "tryAgain": "फिर से प्रयास करें",
+    "copied": "Copied",
+    "copyErrorDetails": "त्रुटि विवरण कॉपी करें",
+    "reportBugOnGitHub": "GitHub पर रिपोर्ट बग",
+    "reloadApp": "रीलोड ऐप",
+    "diagnosticsNotice": "गिटहब बग रिपोर्ट और कॉपी किए गए निदान में त्रुटि संदेश, स्टैक ट्रेस, ऐप संस्करण, सक्रिय टैब, चयनित टीम, कार्य संदर्भ और पर्यावरण विवरण शामिल हैं।"
+  },
+  "runtimeBackendSelector": {
+    "label": "रनटाइम बैकेंड",
+    "resolved": "हल:{{backend}}",
+    "current": "वर्तमान",
+    "recommended": "अनुशंसित",
+    "unavailable": "उपलब्ध नहीं",
+    "cannotSelectYet": "इस बैकएंड को अभी तक चुना नहीं जा सकता है।",
+    "auto": "ऑटो",
+    "autoCurrently": "ऑटो (वर्तमान में: {{backend}})",
+    "audience": {
+      "internal": "आंतरिक"
+    },
+    "states": {
+      "locked": "बंद करना",
+      "disabled": "विकलांग",
+      "authRequired": "आवश्यक",
+      "runtimeMissing": "रनटाइम लापता",
+      "degraded": "कमज़ोर",
+      "unavailable": "उपलब्ध नहीं"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "जांच",
+    "unavailable": "उपलब्ध नहीं",
+    "checkFailed": "असफल",
+    "free": "फ्री",
+    "freeTooltip": "OpenCode मेटाडाटा द्वारा रिपोर्ट किया गया। उपलब्धता और सीमाएं बदल सकती हैं।"
+  },
+  "taskFilters": {
+    "status": "स्थिति",
+    "clearAll": "सभी को साफ़ करें",
+    "selectAll": "सभी का चयन करें",
+    "team": "टीम",
+    "allTeams": "सभी टीमों",
+    "searchTeams": "टीम खोजें...",
+    "noTeamsFound": "कोई टीम नहीं मिली",
+    "project": "परियोजना",
+    "allProjects": "सभी परियोजनाएं",
+    "searchProjects": "परियोजनाएँ खोजें...",
+    "noProjects": "कोई परियोजना नहीं",
+    "comments": "टिप्पणियाँ",
+    "apply": "आवेदन",
+    "read": {
+      "all": "सब",
+      "unread": "पढ़ना",
+      "read": "पढ़ें"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "PROGRESS",
+      "needsFix": "FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "कुल संदर्भ: {{tokens}} टोकन",
+    "context": "संदर्भ: {{tokens}}",
+    "phase": "चरण {{phase}}:",
+    "compactedTo": "({{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "टीम",
+      "subagent": "सब्ज़ी",
+      "markAsRead": "पढ़ना",
+      "delete": "डिलीट",
+      "viewInSession": "सत्र में देखें"
+    },
+    "title": "अधिसूचनाएं",
+    "loading": "अधिसूचना लोड हो रहा है...",
+    "actions": {
+      "markFilteredAsRead": "निशान पढ़ने के रूप में फ़िल्टर",
+      "markAllAsRead": "सभी को पढ़ने के लिए चिह्नित करें",
+      "markFilteredRead": "Mark Filtered read",
+      "markAllRead": "सभी पढ़े",
+      "clearFilteredNotifications": "स्पष्ट फिल्टर सूचनाएं",
+      "clearAllNotifications": "सभी सूचनाएं साफ़ करें",
+      "clickToConfirm": "पुष्टि करने के लिए क्लिक करें",
+      "clearFiltered": "साफ़ फ़िल्टर्ड",
+      "clearAll": "सभी को साफ़ करें"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} फ़िल्टर में unreaded",
+      "unreadInFilter_one": "{{count}} फ़िल्टर में unreaded",
+      "unreadInFilter_few": "{{count}} फ़िल्टर में unreaded",
+      "unreadInFilter_many": "{{count}} फ़िल्टर में unreaded",
+      "unreadInFilter_other": "{{count}} फ़िल्टर में unreaded",
+      "inFilter": "फ़िल्टर में {{count}}",
+      "inFilter_one": "फ़िल्टर में {{count}}",
+      "inFilter_few": "फ़िल्टर में {{count}}",
+      "inFilter_many": "फ़िल्टर में {{count}}",
+      "inFilter_other": "फ़िल्टर में {{count}}",
+      "unread": "{{count}} unreaded",
+      "unread_one": "{{count}} unreaded",
+      "unread_few": "{{count}} unreaded",
+      "unread_many": "{{count}} unreaded",
+      "unread_other": "{{count}} unreaded",
+      "total": "{{count}} कुल",
+      "total_one": "{{count}} कुल",
+      "total_few": "{{count}} कुल",
+      "total_many": "{{count}} कुल",
+      "total_other": "{{count}} कुल"
+    },
+    "filters": {
+      "other": "अन्य"
+    },
+    "empty": {
+      "noMatching": "कोई मिलान अधिसूचना नहीं",
+      "noNotifications": "कोई अधिसूचना नहीं",
+      "tryDifferentFilter": "एक अलग फिल्टर आज़माएं",
+      "allCaughtUp": "आप सभी पकड़े गए हैं!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "अद्यतन करने के लिए शुरू",
+    "updateApp": "ऐप अपडेट करें",
+    "downloadedRestartTooltip": "डाउनलोड अद्यतन करें, लागू करने के लिए पुनः आरंभ करें",
+    "newVersionAvailable": "नया संस्करण उपलब्ध",
+    "updatingApp": "अद्यतन",
+    "updateReady": "तैयार करना",
+    "restartNow": "अभी शुरू करें"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "डिसकॉर्ड",
+    "expandSidebar": "साइडबार का विस्तार",
+    "collapseSidebarShortcut": "कोलैप्स साइडबार ({{shortcut}})",
+    "sidebarView": "साइडबार दृश्य",
+    "resizeSidebar": "साइडबार आकार",
+    "closeTab": "बंद टैब",
+    "openedFromSearch": "खोज से खुला",
+    "pinnedSession": "पिन्ड सत्र",
+    "jumpToSection": "अनुभाग में कूदो",
+    "newTab": "नया टैब",
+    "newTabDashboard": "नया टैब (Dashboard)",
+    "refreshSession": "ताज़ा सत्र",
+    "refreshSessionWithShortcut": "ताज़ा सत्र ({{shortcut}})",
+    "loadingTab": "टैब लोड",
+    "menu": {
+      "teams": "टीम",
+      "settings": "सेटिंग",
+      "extensions": "एक्सटेंशन",
+      "search": "खोज",
+      "schedules": "अनुसूची",
+      "docs": "डोक",
+      "exportMarkdown": "मार्कडाउन",
+      "exportJson": "JSON",
+      "exportPlainText": "सादा पाठ के रूप में निर्यात करें",
+      "analyzeSession": "सत्र का विश्लेषण"
+    },
+    "tabMenu": {
+      "closeTabs": "बंद {{count}} टैब",
+      "closeTabs_one": "बंद {{count}} टैब",
+      "closeTabs_few": "बंद {{count}} टैब",
+      "closeTabs_many": "बंद {{count}} टैब",
+      "closeTabs_other": "बंद {{count}} टैब",
+      "closeTab": "टैब",
+      "closeOtherTabs": "अन्य टैब बंद करें",
+      "splitRight": "स्प्लिट राइट",
+      "splitLeft": "स्प्लिट लेफ्ट",
+      "pinToSidebar": "पिन साइडबार",
+      "unpinFromSidebar": "साइडबार से अनपिन",
+      "hideFromSidebar": "साइडबार से छुपाएं",
+      "unhideFromSidebar": "साइडबार से अनहाइड",
+      "closeAllTabs": "सभी टैब बंद करें"
+    },
+    "sections": {
+      "team": "टीम",
+      "sessions": "सत्र",
+      "kanban": "कार्बन",
+      "claudeLogs": "लॉग",
+      "messages": "संदेश"
+    }
+  },
+  "editorFormatting": {
+    "bold": "बोल्ड",
+    "italic": "इटालिक",
+    "strike": "हड़ताल",
+    "code": "कोड"
+  },
+  "diff": {
+    "changed": "बदलना",
+    "noChangesDetected": "कोई बदलाव नहीं"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPT लॉगिन लिंक और कोड कॉपी करें",
+    "copyLoginLink": "ChatGPT लॉगिन लिंक कॉपी करें",
+    "copyFailed": "प्रतिलिपि विफल",
+    "copyLinkAndCode": "कॉपी लिंक + कोड",
+    "copyLink": "लिंक कॉपी करें",
+    "enterCodeOnLoginPage": "ChatGPT लॉगिन पेज पर इस कोड को दर्ज करें"
+  },
+  "window": {
+    "minimize": "छोटा करना",
+    "maximize": "अधिकतम",
+    "restore": "स्टोर"
+  },
+  "context": {
+    "local": "स्थानीय",
+    "switchingTo": "{{workspace}} को स्विचिंग",
+    "loadingWorkspace": "कार्यस्थल",
+    "switchWorkspace": "कार्यस्थल"
+  },
+  "repositories": {
+    "noneAvailable": "उपलब्ध नहीं है",
+    "remove": "रिपॉज़िटरी निकालें"
+  },
+  "export": {
+    "session": "निर्यात सत्र",
+    "sessionTitle": "निर्यात सत्र"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "कोई सत्र डेटा उपलब्ध नहीं है",
+    "title": "सत्र रिपोर्ट"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "परियोजना"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "अद्यतन",
+      "updatedYesterday": "कल",
+      "yesterday": "कल"
+    },
+    "reviewState": {
+      "needsFix": "आवश्यकताएँ फिक्स"
+    },
+    "unassigned": "असाइन"
+  }
+}

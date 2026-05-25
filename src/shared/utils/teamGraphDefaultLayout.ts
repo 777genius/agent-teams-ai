@@ -15,7 +15,7 @@ export interface TeamGraphDefaultLayoutSeed {
   assignments: Record<string, GraphOwnerSlotAssignment>;
 }
 
-const SMALL_TEAM_CARDINAL_SLOT_PRESETS: readonly (readonly GraphOwnerSlotAssignment[])[] = [
+const DEFAULT_OWNER_SLOT_PRESETS: readonly (readonly GraphOwnerSlotAssignment[])[] = [
   [],
   [{ ringIndex: 0, sectorIndex: 0 }],
   [
@@ -117,6 +117,23 @@ const SMALL_TEAM_CARDINAL_SLOT_PRESETS: readonly (readonly GraphOwnerSlotAssignm
     { ringIndex: 3, sectorIndex: 1 },
     { ringIndex: 3, sectorIndex: 2 },
   ],
+  [],
+  [
+    { ringIndex: 0, sectorIndex: 0 },
+    { ringIndex: 0, sectorIndex: 1 },
+    { ringIndex: 0, sectorIndex: 2 },
+    { ringIndex: 1, sectorIndex: 0 },
+    { ringIndex: 1, sectorIndex: 1 },
+    { ringIndex: 1, sectorIndex: 2 },
+    { ringIndex: 2, sectorIndex: 0 },
+    { ringIndex: 2, sectorIndex: 1 },
+    { ringIndex: 3, sectorIndex: 0 },
+    { ringIndex: 3, sectorIndex: 1 },
+    { ringIndex: 3, sectorIndex: 2 },
+    { ringIndex: 4, sectorIndex: 0 },
+    { ringIndex: 4, sectorIndex: 1 },
+    { ringIndex: 4, sectorIndex: 2 },
+  ],
 ];
 
 export function buildOrderedVisibleTeamGraphOwnerIds(
@@ -164,7 +181,7 @@ export function buildTeamGraphDefaultLayoutSeed(
 ): TeamGraphDefaultLayoutSeed {
   const orderedVisibleOwnerIds = buildOrderedVisibleTeamGraphOwnerIds(members, configMembers);
   const signature = orderedVisibleOwnerIds.length > 0 ? orderedVisibleOwnerIds.join('|') : null;
-  const preset = SMALL_TEAM_CARDINAL_SLOT_PRESETS[orderedVisibleOwnerIds.length];
+  const preset = DEFAULT_OWNER_SLOT_PRESETS[orderedVisibleOwnerIds.length];
   const assignments: Record<string, GraphOwnerSlotAssignment> = {};
 
   if (preset?.length === orderedVisibleOwnerIds.length) {

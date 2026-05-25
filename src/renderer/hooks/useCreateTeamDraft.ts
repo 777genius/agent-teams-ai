@@ -26,6 +26,7 @@ import {
   setStoredCreateTeamMemberRuntimePreferences,
   setStoredCreateTeamSyncModelsWithLead,
 } from '@renderer/services/createTeamPreferences';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 
@@ -73,7 +74,7 @@ const DEBOUNCE_MS = 400;
 
 function serializeMembers(members: MemberDraft[]): SerializedMemberDraft[] {
   return members.map(
-    ({ id, name, roleSelection, customRole, workflow, isolation, providerId, model, effort }) => ({
+    ({
       id,
       name,
       roleSelection,
@@ -83,6 +84,18 @@ function serializeMembers(members: MemberDraft[]): SerializedMemberDraft[] {
       providerId,
       model,
       effort,
+      mcpPolicy,
+    }) => ({
+      id,
+      name,
+      roleSelection,
+      customRole,
+      workflow,
+      isolation,
+      providerId,
+      model,
+      effort,
+      mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy),
     })
   );
 }
@@ -99,6 +112,7 @@ function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] 
       providerId: m.providerId,
       model: m.model,
       effort: m.effort,
+      mcpPolicy: normalizeTeamMemberMcpPolicy(m.mcpPolicy),
     })
   );
 }

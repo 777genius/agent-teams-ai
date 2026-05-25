@@ -99,6 +99,27 @@ describe('TeamMessageFeedService', () => {
     expect(feed.messages.map((message) => message.messageId)).toEqual(['visible-user-message']);
   });
 
+  it('includes Codex runtimeProvider in synthetic teammate bootstrap prompts', async () => {
+    const service = new TeamMessageFeedService({
+      getConfig: vi.fn(async () => ({
+        name: 'codex-team',
+        members: [
+          { name: 'team-lead', role: 'Lead' },
+          { name: 'bob', role: 'Developer', providerId: 'codex' as const, model: 'gpt-5.4-mini' },
+        ],
+      })),
+      getInboxMessages: vi.fn(async () => []),
+      getLeadSessionMessages: vi.fn(async () => []),
+      getSentMessages: vi.fn(async () => []),
+    });
+
+    const feed = await service.getFeed('codex-team');
+
+    expect(feed.messages).toHaveLength(1);
+    expect(feed.messages[0].text).toContain('runtimeProvider: "codex"');
+    expect(feed.messages[0].text).toContain('member_briefing');
+  });
+
   it('does not hide user-authored text just because it resembles an internal prompt', async () => {
     const service = new TeamMessageFeedService({
       getConfig: vi.fn(async () => config),

@@ -3,15 +3,15 @@ const { baseURL } = useRuntimeConfig().app;
 </script>
 
 <template>
-  <NuxtLink to="/" class="app-logo">
+  <NuxtLink to="/" class="app-logo" :prefetch="false">
     <img
       :src="`${baseURL}logo-192.png`"
-      alt="Agent Teams"
+      alt="Agent Teams AI"
       class="app-logo__img"
       width="36"
       height="36"
     >
-    <span class="app-logo__text">Agent Teams</span>
+    <span class="app-logo__text">Agent Teams AI</span>
   </NuxtLink>
 </template>
 
@@ -46,12 +46,13 @@ const { baseURL } = useRuntimeConfig().app;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.22);
 }
 </style>
 
 <style>
 .v-theme--light .app-logo__text {
-  background: linear-gradient(135deg, #1e293b, #0891b2);
+  background: linear-gradient(135deg, #ffffff 0%, #dff8ff 44%, #43efff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

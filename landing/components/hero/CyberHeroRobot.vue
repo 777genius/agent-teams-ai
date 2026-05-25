@@ -7,16 +7,20 @@ const props = defineProps<{
   activeReceiver?: HeroAgentRole | "video" | null;
 }>();
 
+const { locale } = useI18n();
 const isSender = computed(() => props.activeSender === props.agent.id);
 const isReceiver = computed(() => props.activeReceiver === props.agent.id);
 const imageLoading = computed(() => (props.agent.priority ? "eager" : "lazy"));
 const imageFetchPriority = computed(() => (props.agent.priority ? "high" : "auto"));
+const statusLabel = computed(() => locale.value === "ru" ? "Статус:" : "Status:");
 
 const rootStyle = computed(() => ({
   "--agent-x": String(props.agent.desktop.x),
   "--agent-y": String(props.agent.desktop.y),
   "--agent-scale": String(props.agent.desktop.scale),
   "--agent-depth": String(props.agent.desktop.depth),
+  "--agent-face": String(props.agent.facing ?? 1),
+  "--agent-lean": `${props.agent.lean ?? 0}deg`,
   "--agent-tablet-x": String(props.agent.tablet.x),
   "--agent-tablet-y": String(props.agent.tablet.y),
   "--agent-tablet-scale": String(props.agent.tablet.scale),
@@ -60,7 +64,7 @@ const rootStyle = computed(() => ({
         <li v-for="task in agent.tasks" :key="task">{{ task }}</li>
       </ul>
       <div class="cyber-agent__status">
-        <span>Status:</span>
+        <span>{{ statusLabel }}</span>
         <strong>{{ agent.status }}</strong>
       </div>
     </div>

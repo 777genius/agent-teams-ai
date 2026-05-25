@@ -45,14 +45,12 @@ import {
   registerHttpServerHandlers,
   removeHttpServerHandlers,
 } from './httpServer';
+import { registerNotificationHandlers, removeNotificationHandlers } from './notifications';
 import {
   initializeOpenCodeRuntimeHandlers,
   registerOpenCodeRuntimeHandlers,
   removeOpenCodeRuntimeHandlers,
 } from './openCodeRuntime';
-
-const logger = createLogger('IPC:handlers');
-import { registerNotificationHandlers, removeNotificationHandlers } from './notifications';
 import {
   initializeProjectHandlers,
   registerProjectHandlers,
@@ -79,6 +77,7 @@ import {
   removeSubagentHandlers,
 } from './subagents';
 import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
+import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
   initializeTerminalHandlers,
   registerTerminalHandlers,
@@ -132,6 +131,8 @@ import type { SchedulerService } from '../services/schedule/SchedulerService';
 import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
+
+const logger = createLogger('IPC:handlers');
 
 /**
  * Initializes IPC handlers with service registry.
@@ -268,6 +269,7 @@ export function initializeIpcHandlers(
   registerWindowHandlers(ipcMain);
   registerRendererLogHandlers(ipcMain);
   registerScheduleHandlers(ipcMain);
+  registerTelemetryHandlers(ipcMain);
   if (cliInstaller) {
     registerCliInstallerHandlers(ipcMain);
   }
@@ -315,6 +317,7 @@ export function removeIpcHandlers(): void {
   removeWindowHandlers(ipcMain);
   removeRendererLogHandlers(ipcMain);
   removeScheduleHandlers(ipcMain);
+  removeTelemetryHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
   removeOpenCodeRuntimeHandlers(ipcMain);
   removeCodexRuntimeHandlers(ipcMain);

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { ChevronRight, Settings2 } from 'lucide-react';
@@ -10,6 +11,7 @@ interface OptionalSettingsSectionProps {
   summary?: string[];
   defaultOpen?: boolean;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -61,8 +63,10 @@ export const OptionalSettingsSection = ({
   summary = [],
   defaultOpen = false,
   className,
+  onOpenChange,
   children,
 }: OptionalSettingsSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const { isLight } = useTheme();
 
@@ -106,6 +110,12 @@ export const OptionalSettingsSection = ({
     ? 'color-mix(in srgb, var(--color-text-muted) 64%, var(--color-text) 36%)'
     : 'color-mix(in srgb, var(--color-text-muted) 54%, white 46%)';
 
+  const handleToggleOpen = (): void => {
+    const nextOpen = !isOpen;
+    setIsOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+
   return (
     <div
       className={cn(
@@ -119,7 +129,7 @@ export const OptionalSettingsSection = ({
       <button
         type="button"
         className="flex w-full items-center gap-3 p-2.5 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleToggleOpen}
         aria-expanded={isOpen}
       >
         <div
@@ -137,7 +147,7 @@ export const OptionalSettingsSection = ({
             className="shrink-0 rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium"
             style={{ color: headerMutedColor }}
           >
-            Optional
+            {t('dialogs.optional.badge')}
           </span>
 
           {!isOpen && chips.length > 0 ? (

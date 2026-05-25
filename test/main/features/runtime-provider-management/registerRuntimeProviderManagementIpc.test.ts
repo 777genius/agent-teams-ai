@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { registerRuntimeProviderManagementIpc } from '../../../../src/features/runtime-provider-management/main';
 import {
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
@@ -9,16 +8,17 @@ import {
   RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM,
   RUNTIME_PROVIDER_MANAGEMENT_VIEW,
 } from '../../../../src/features/runtime-provider-management/contracts';
+import { registerRuntimeProviderManagementIpc } from '../../../../src/features/runtime-provider-management/main';
 
-import type { RuntimeProviderManagementFeatureFacade } from '../../../../src/features/runtime-provider-management/main';
 import type {
   RuntimeProviderManagementDirectoryResponse,
+  RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementProviderResponse,
   RuntimeProviderManagementSetupFormResponse,
   RuntimeProviderManagementViewResponse,
-  RuntimeProviderManagementModelsResponse,
-  RuntimeProviderManagementModelTestResponse,
 } from '../../../../src/features/runtime-provider-management/contracts';
+import type { RuntimeProviderManagementFeatureFacade } from '../../../../src/features/runtime-provider-management/main';
 import type { IpcMain } from 'electron';
 
 describe('registerRuntimeProviderManagementIpc', () => {
@@ -233,5 +233,152 @@ describe('registerRuntimeProviderManagementIpc', () => {
       query: 'free',
       limit: 10,
     });
+  });
+
+  it('sanitizes unexpected IPC error messages before returning them to the renderer', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        handlers.set(channel, handler);
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const feature: RuntimeProviderManagementFeatureFacade = {
+      loadView: vi.fn(() =>
+        Promise.reject(
+          new Error(
+            '\u001B]8;;https://logs.example/secret\u0007\u001B[31mProvider failed with api_key: sk-secret-value-123456 and Authorization: Bearer live-token-123456789 and key=AIzaSyD-test-secret-value-123456789 and OPENAI_API_KEY=plain_provider_secret_123456 and PROVIDER_TOKEN=provider_token_value_123456\u001B[0m\u001B]8;;\u0007'
+          )
+        )
+      ),
+      loadProviderDirectory: vi.fn(),
+      loadSetupForm: vi.fn(),
+      connectProvider: vi.fn(),
+      connectWithApiKey: vi.fn(),
+      forgetCredential: vi.fn(),
+      loadModels: vi.fn(),
+      testModel: vi.fn(),
+      setDefaultModel: vi.fn(),
+    };
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+
+    const response = (await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_VIEW)?.(
+      {},
+      { runtimeId: 'opencode' }
+    )) as RuntimeProviderManagementViewResponse;
+
+    expect(response.error?.message).toContain('api_key: ...redacted');
+    expect(response.error?.message).toContain('Authorization: Bearer ...redacted');
+    expect(response.error?.message).toContain('key=...redacted');
+    expect(response.error?.message).toContain('OPENAI_API_KEY=...redacted');
+    expect(response.error?.message).toContain('PROVIDER_TOKEN=...redacted');
+    expect(response.error?.message).not.toContain('sk-secret-value-123456');
+    expect(response.error?.message).not.toContain('live-token-123456789');
+    expect(response.error?.message).not.toContain('AIzaSyD-test-secret-value-123456789');
+    expect(response.error?.message).not.toContain('plain_provider_secret_123456');
+    expect(response.error?.message).not.toContain('provider_token_value_123456');
+    expect(response.error?.message).not.toContain('logs.example/secret');
+    expect(response.error?.message).not.toContain('[31m');
+    expect(response.error?.message).not.toContain(']8;;');
+    expect(response.error?.diagnostics?.summary).toContain('api_key: ...redacted');
+    expect(response.error?.diagnostics?.errorCode).toBe('runtime-unhealthy');
+    expect(response.error?.diagnostics?.stderrPreview).toContain(
+      'Authorization: Bearer ...redacted'
+    );
+    expect(JSON.stringify(response.error?.diagnostics)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).toContain('api_key: ...redacted');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).toContain('key=...redacted');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('live-token-123456789');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(
+      'AIzaSyD-test-secret-value-123456789'
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('bounds unexpected IPC diagnostics before returning them to the renderer', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        handlers.set(channel, handler);
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const feature: RuntimeProviderManagementFeatureFacade = {
+      loadView: vi.fn(() => Promise.reject(new Error(`x${'y'.repeat(3_000)}`))),
+      loadProviderDirectory: vi.fn(),
+      loadSetupForm: vi.fn(),
+      connectProvider: vi.fn(),
+      connectWithApiKey: vi.fn(),
+      forgetCredential: vi.fn(),
+      loadModels: vi.fn(),
+      testModel: vi.fn(),
+      setDefaultModel: vi.fn(),
+    };
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+
+    const response = (await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_VIEW)?.(
+      {},
+      { runtimeId: 'opencode' }
+    )) as RuntimeProviderManagementViewResponse;
+
+    expect(response.error?.message.endsWith('...')).toBe(true);
+    expect(response.error?.message.length).toBeLessThanOrEqual(1_603);
+    expect(response.error?.diagnostics?.stderrPreview).toBe(response.error?.message);
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('does not log raw secrets when connect handlers throw non-Error values', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        handlers.set(channel, handler);
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const feature: RuntimeProviderManagementFeatureFacade = {
+      loadView: vi.fn(),
+      loadProviderDirectory: vi.fn(),
+      loadSetupForm: vi.fn(),
+      connectProvider: vi.fn(() =>
+        Promise.reject(
+          'Provider failed with api_key: sk-secret-value-123456 and token=provider-token-123456789'
+        )
+      ),
+      connectWithApiKey: vi.fn(),
+      forgetCredential: vi.fn(),
+      loadModels: vi.fn(),
+      testModel: vi.fn(),
+      setDefaultModel: vi.fn(),
+    };
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+
+    const response = (await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CONNECT)?.(
+      {},
+      {
+        runtimeId: 'opencode',
+        providerId: 'openrouter',
+        method: 'api',
+        apiKey: 'sk-input-secret-value',
+        metadata: {},
+      }
+    )) as RuntimeProviderManagementProviderResponse;
+
+    expect(response.error?.message).toContain('api_key: ...redacted');
+    expect(response.error?.message).toContain('token=...redacted');
+    expect(response.error?.diagnostics?.errorCode).toBe('auth-failed');
+    expect(response.error?.diagnostics?.stderrPreview).toContain('token=...redacted');
+    expect(JSON.stringify(response)).not.toContain('sk-input-secret-value');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).toContain('api_key: ...redacted');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).toContain('token=...redacted');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('sk-secret-value-123456');
+    expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('provider-token-123456789');
+    consoleErrorSpy.mockRestore();
   });
 });

@@ -216,7 +216,7 @@ describe('TmuxInstallerBannerAdapter', () => {
           version: 'tmux 3.6a',
           binaryPath: '/opt/homebrew/bin/tmux',
           runtimeReady: true,
-          detail: 'tmux is available as an optional pane transport.',
+          detail: 'tmux is available.',
         },
       },
       snapshot: {

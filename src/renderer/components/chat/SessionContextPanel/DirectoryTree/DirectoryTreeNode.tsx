@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CopyablePath } from '@renderer/components/common/CopyablePath';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 import { ChevronRight } from 'lucide-react';
@@ -24,6 +25,7 @@ export const DirectoryTreeNode = ({
   depth = 0,
   onNavigateToTurn,
 }: Readonly<DirectoryTreeNodeProps>): React.ReactElement | null => {
+  const { t } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(true);
   const indent = depth * 12;
 
@@ -48,7 +50,9 @@ export const DirectoryTreeNode = ({
           className="text-xs"
           style={{ color: COLOR_TEXT_SECONDARY }}
         />
-        <span style={{ color: COLOR_TEXT_MUTED }}>(~{formatTokens(node.tokens ?? 0)})</span>
+        <span style={{ color: COLOR_TEXT_MUTED }}>
+          {t('tokens.approxTokensParenthesized', { tokens: formatTokens(node.tokens ?? 0) })}
+        </span>
         {node.firstSeenInGroup &&
           (isClickable ? (
             <button

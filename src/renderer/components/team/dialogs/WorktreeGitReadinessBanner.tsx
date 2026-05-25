@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle, CheckCircle2, GitBranch, Loader2 } from 'lucide-react';
@@ -154,6 +155,7 @@ export const WorktreeGitReadinessBanner = ({
   state: WorktreeGitReadinessState;
   showReady?: boolean;
 }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const { status, loading, actionLoading, error, initializeRepository, createInitialCommit } =
     state;
 
@@ -161,7 +163,7 @@ export const WorktreeGitReadinessBanner = ({
     return (
       <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] leading-relaxed text-sky-300">
         <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin" />
-        <p>Checking Git repository status for teammate worktrees...</p>
+        <p>{t('worktreeGitReadiness.checking')}</p>
       </div>
     );
   }
@@ -185,8 +187,9 @@ export const WorktreeGitReadinessBanner = ({
       <div className="flex items-start gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[11px] leading-relaxed text-emerald-300">
         <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
         <p>
-          Git worktrees are ready
-          {status.branch ? ` on branch ${status.branch}` : ''}.
+          {status.branch
+            ? t('worktreeGitReadiness.readyOnBranch', { branch: status.branch })
+            : t('worktreeGitReadiness.ready')}
         </p>
       </div>
     );
@@ -197,15 +200,15 @@ export const WorktreeGitReadinessBanner = ({
       <div className="flex items-start gap-2">
         <GitBranch className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-amber-100">Worktree isolation needs Git setup</p>
+          <p className="font-medium text-amber-100">{t('worktreeGitReadiness.needsSetup')}</p>
           <p className="mt-0.5 text-amber-100/85">
             {status.message ??
               'Worktree isolation requires a Git repository with an initial commit.'}
           </p>
           {status.reason === 'missing_head' ? (
             <p className="mt-1 text-amber-100/70">
-              The initial commit action stages and commits all current files with message{' '}
-              <span className="font-mono">chore: initial commit</span>.
+              {t('worktreeGitReadiness.initialCommitNotice')}{' '}
+              <span className="font-mono">{t('worktreeGitReadiness.initialCommitMessage')}</span>.
             </p>
           ) : null}
         </div>
@@ -221,7 +224,7 @@ export const WorktreeGitReadinessBanner = ({
             onClick={initializeRepository}
           >
             {actionLoading === 'init' ? <Loader2 className="mr-1.5 size-3 animate-spin" /> : null}
-            Initialize Git repository
+            {t('worktreeGitReadiness.initializeRepository')}
           </Button>
         ) : null}
         {status.reason === 'missing_head' ? (
@@ -234,7 +237,7 @@ export const WorktreeGitReadinessBanner = ({
             onClick={createInitialCommit}
           >
             {actionLoading === 'commit' ? <Loader2 className="mr-1.5 size-3 animate-spin" /> : null}
-            Create initial commit
+            {t('worktreeGitReadiness.createInitialCommit')}
           </Button>
         ) : null}
       </div>

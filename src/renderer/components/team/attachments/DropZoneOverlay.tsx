@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { Ban, Paperclip } from 'lucide-react';
 
 interface DropZoneOverlayProps {
@@ -13,6 +14,8 @@ export const DropZoneOverlay = ({
   rejected,
   rejectionReason,
 }: DropZoneOverlayProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+
   if (!active) return null;
 
   if (rejected) {
@@ -47,7 +50,7 @@ export const DropZoneOverlay = ({
         style={{ color: 'var(--color-accent, #6366f1)' }}
       >
         <Paperclip size={24} />
-        <span className="text-xs font-medium">Drop files here</span>
+        <span className="text-xs font-medium">{t('taskAttachments.dropFilesHere')}</span>
       </div>
     </div>
   );

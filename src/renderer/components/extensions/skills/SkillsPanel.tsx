@@ -4,6 +4,7 @@ import {
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -81,26 +82,6 @@ function sortSkills(skills: SkillCatalogItem[], sort: SkillsSortState): SkillCat
   return next;
 }
 
-function getScopeLabel(skill: SkillCatalogItem): string {
-  return skill.scope === 'project' ? 'This project' : 'Personal';
-}
-
-function getInvocationLabel(skill: SkillCatalogItem): string {
-  return skill.invocationMode === 'manual-only'
-    ? 'Only runs when you explicitly ask for it'
-    : 'Runs automatically when it fits';
-}
-
-function getSkillStatus(skill: SkillCatalogItem): string {
-  if (!skill.isValid) {
-    return 'Needs attention before you rely on it';
-  }
-  if (skill.flags.hasScripts) {
-    return 'Includes scripts, so review it carefully';
-  }
-  return 'Ready to use';
-}
-
 function getPrimarySkillIssue(skill: SkillCatalogItem): SkillValidationIssue | null {
   return (
     skill.issues.find((issue) => issue.severity === 'error') ??
@@ -150,6 +131,7 @@ export const SkillsPanel = ({
   selectedSkillId,
   setSelectedSkillId,
 }: SkillsPanelProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const catalogKey = projectPath ?? USER_SKILLS_CATALOG_KEY;
   const fetchSkillsCatalog = useStore((s) => s.fetchSkillsCatalog);
   const fetchSkillDetail = useStore((s) => s.fetchSkillDetail);
@@ -344,14 +326,29 @@ export const SkillsPanel = ({
     [visibleSkills]
   );
   const isRefreshing = skillsLoading && mergedSkills.length > 0;
+  const getScopeLabel = (skill: SkillCatalogItem): string =>
+    skill.scope === 'project' ? t('skillsPanel.scope.project') : t('skillsPanel.scope.user');
+  const getInvocationLabel = (skill: SkillCatalogItem): string =>
+    skill.invocationMode === 'manual-only'
+      ? t('skillsPanel.invocation.manualOnly')
+      : t('skillsPanel.invocation.auto');
+  const getSkillStatus = (skill: SkillCatalogItem): string => {
+    if (!skill.isValid) {
+      return t('skillsPanel.status.needsAttention');
+    }
+    if (skill.flags.hasScripts) {
+      return t('skillsPanel.status.hasScripts');
+    }
+    return t('skillsPanel.status.ready');
+  };
 
   return (
     <div className="flex flex-col gap-4">
       {effectiveCliStatus?.flavor === 'agent_teams_orchestrator' && (
         <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-blue-300">
-          Shared skills in `.claude`, `.cursor`, and `.agents` are available to{' '}
-          {skillsAudienceLabel ?? 'the configured runtime'}. Skills stored in `.codex` stay
-          Codex-only when Codex support is available.
+          {t('skillsPanel.runtimeAudience', {
+            audience: skillsAudienceLabel ?? t('skillsPanel.configuredRuntime'),
+          })}
         </div>
       )}
       <div className="bg-surface-raised/20 rounded-xl border border-border p-4">
@@ -359,21 +356,19 @@ export const SkillsPanel = ({
           <div className="min-w-0 flex-1 space-y-1 xl:max-w-2xl">
             <div className="flex items-center gap-2">
               <BookOpen className="size-4 text-text-muted" />
-              <h2 className="text-sm font-semibold text-text">Teach repeatable work</h2>
+              <h2 className="text-sm font-semibold text-text">{t('skillsPanel.hero.title')}</h2>
             </div>
             <p className="max-w-2xl text-sm leading-5 text-text-muted">
-              Skills are reusable instructions that help the runtime handle the same kind of task
-              more consistently.{' '}
+              {t('skillsPanel.hero.description')}{' '}
               {projectPath
-                ? `You are seeing skills for ${projectLabel ?? projectPath} plus your personal skills.`
-                : 'You are seeing only your personal skills right now.'}
+                ? t('skillsPanel.hero.projectContext', { project: projectLabel ?? projectPath })
+                : t('skillsPanel.hero.personalContext')}
             </p>
             <p className="max-w-2xl text-xs leading-5 text-text-muted">
-              Use personal skills for habits you want everywhere. Use project skills for workflows
-              that only make sense inside one codebase.
+              {t('skillsPanel.hero.guidance')}
               {codexSkillOverlayAvailable
-                ? ' Use `.codex` when a skill should stay Codex-only.'
-                : ' Existing `.codex` skills stay editable here, but new Codex-only skills need the Codex runtime enabled.'}
+                ? ` ${t('skillsPanel.hero.codexAvailable')}`
+                : ` ${t('skillsPanel.hero.codexUnavailable')}`}
             </p>
           </div>
 
@@ -383,17 +378,17 @@ export const SkillsPanel = ({
                 <SearchInput
                   value={skillsSearchQuery}
                   onChange={setSkillsSearchQuery}
-                  placeholder="Search by skill name or what it helps with..."
+                  placeholder={t('skillsPanel.searchPlaceholder')}
                 />
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
                   <Plus className="mr-1.5 size-3.5" />
-                  Create Skill
+                  {t('skillsPanel.actions.createSkill')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
                   <Download className="mr-1.5 size-3.5" />
-                  Import
+                  {t('skillsPanel.actions.import')}
                 </Button>
                 <Popover open={sortMenuOpen} onOpenChange={setSortMenuOpen}>
                   <Tooltip>
@@ -403,13 +398,13 @@ export const SkillsPanel = ({
                           variant="outline"
                           size="icon"
                           className="size-9 shrink-0"
-                          aria-label="Sort skills"
+                          aria-label={t('skillsPanel.sort.label')}
                         >
                           <ArrowUpDown className="size-4" />
                         </Button>
                       </PopoverTrigger>
                     </TooltipTrigger>
-                    <TooltipContent>Sort skills</TooltipContent>
+                    <TooltipContent>{t('skillsPanel.sort.label')}</TooltipContent>
                   </Tooltip>
                   <PopoverContent align="end" className="w-44 p-1">
                     <button
@@ -421,7 +416,7 @@ export const SkillsPanel = ({
                       }}
                     >
                       <ArrowUpAZ className="mr-2 size-3.5" />
-                      Name
+                      {t('skillsPanel.sort.name')}
                       {skillsSort === 'name-asc' && <Check className="ml-auto size-3.5" />}
                     </button>
                     <button
@@ -433,7 +428,7 @@ export const SkillsPanel = ({
                       }}
                     >
                       <Clock3 className="mr-2 size-3.5" />
-                      Recent
+                      {t('skillsPanel.sort.recent')}
                       {skillsSort === 'recent-desc' && <Check className="ml-auto size-3.5" />}
                     </button>
                   </PopoverContent>
@@ -443,20 +438,20 @@ export const SkillsPanel = ({
 
             <div className="flex flex-wrap gap-2 text-[11px] text-text-muted xl:justify-end">
               <Badge variant="secondary" className="font-normal">
-                {mergedSkills.length} total
+                {t('skillsPanel.counts.total', { count: mergedSkills.length })}
               </Badge>
               <Badge variant="secondary" className="font-normal">
-                {projectSkills.length} project
+                {t('skillsPanel.counts.project', { count: projectSkills.length })}
               </Badge>
               <Badge variant="secondary" className="font-normal">
-                {userSkills.length} personal
+                {t('skillsPanel.counts.personal', { count: userSkills.length })}
               </Badge>
               <Badge variant="secondary" className="font-normal">
-                {sharedSkillsCount} shared
+                {t('skillsPanel.counts.shared', { count: sharedSkillsCount })}
               </Badge>
               {showCodexOnlyUi && (
                 <Badge variant="secondary" className="font-normal">
-                  {codexOnlySkillsCount} Codex only
+                  {t('skillsPanel.counts.codexOnly', { count: codexOnlySkillsCount })}
                 </Badge>
               )}
             </div>
@@ -467,15 +462,18 @@ export const SkillsPanel = ({
       <div className="flex flex-wrap gap-2">
         {(
           [
-            ['all', 'All skills'],
-            ['project', 'Project'],
-            ['personal', 'Personal'],
-            ['shared', 'Shared'],
+            ['all', t('skillsPanel.filters.all')],
+            ['project', t('skillsPanel.filters.project')],
+            ['personal', t('skillsPanel.filters.personal')],
+            ['shared', t('skillsPanel.filters.shared')],
             ...(showCodexOnlyUi
-              ? ([['codex-only', 'Codex only']] as [SkillsQuickFilter, string][])
+              ? ([['codex-only', t('skillsPanel.filters.codexOnly')]] as [
+                  SkillsQuickFilter,
+                  string,
+                ][])
               : []),
-            ['needs-attention', 'Needs attention'],
-            ['has-scripts', 'Has scripts'],
+            ['needs-attention', t('skillsPanel.filters.needsAttention')],
+            ['has-scripts', t('skillsPanel.filters.hasScripts')],
           ] as [SkillsQuickFilter, string][]
         ).map(([value, label]) => (
           <Button
@@ -505,13 +503,13 @@ export const SkillsPanel = ({
 
       {isRefreshing && (
         <div className="rounded-md border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-300">
-          Refreshing skills...
+          {t('skillsPanel.loading.refreshing')}
         </div>
       )}
 
       {skillsLoading && visibleSkills.length === 0 && (
         <div className="rounded-lg border border-border p-6 text-sm text-text-muted">
-          Loading skills...
+          {t('skillsPanel.loading.loading')}
         </div>
       )}
 
@@ -521,12 +519,12 @@ export const SkillsPanel = ({
             <Search className="size-5 text-text-muted" />
           </div>
           <p className="text-sm text-text-secondary">
-            {skillsSearchQuery ? 'No skills match your search' : 'No skills yet'}
+            {skillsSearchQuery ? t('skillsPanel.empty.noMatches') : t('skillsPanel.empty.noSkills')}
           </p>
           <p className="text-xs text-text-muted">
             {skillsSearchQuery
-              ? 'Try a different search term or switch filters.'
-              : 'Create your first skill to teach a repeatable workflow, or import one you already use.'}
+              ? t('skillsPanel.empty.noMatchesDescription')
+              : t('skillsPanel.empty.noSkillsDescription')}
           </p>
         </div>
       )}
@@ -537,9 +535,11 @@ export const SkillsPanel = ({
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-text">Project skills</h3>
+                  <h3 className="text-sm font-semibold text-text">
+                    {t('skillsPanel.sections.project.title')}
+                  </h3>
                   <p className="text-xs text-text-muted">
-                    Workflows that only make sense for this codebase.
+                    {t('skillsPanel.sections.project.description')}
                   </p>
                 </div>
                 <Badge variant="secondary" className="font-normal">
@@ -573,7 +573,7 @@ export const SkillsPanel = ({
                                 variant="outline"
                                 className="border-amber-500/40 text-amber-700 dark:text-amber-300"
                               >
-                                Needs attention
+                                {t('skillsPanel.badges.needsAttention')}
                               </Badge>
                             )}
                           </div>
@@ -591,24 +591,26 @@ export const SkillsPanel = ({
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Badge variant="secondary" className="font-normal">
-                          Stored in {formatSkillRootKind(skill.rootKind)}
+                          {t('skillsPanel.badges.storedIn', {
+                            root: formatSkillRootKind(skill.rootKind),
+                          })}
                         </Badge>
                         <Badge variant="outline" className="font-normal">
                           {getSkillAudienceLabel(skill.rootKind)}
                         </Badge>
                         {skill.flags.hasScripts && (
                           <Badge variant="destructive" className="font-normal">
-                            Has scripts
+                            {t('skillsPanel.badges.hasScripts')}
                           </Badge>
                         )}
                         {skill.flags.hasReferences && (
                           <Badge variant="secondary" className="font-normal">
-                            References
+                            {t('skillsPanel.badges.references')}
                           </Badge>
                         )}
                         {skill.flags.hasAssets && (
                           <Badge variant="secondary" className="font-normal">
-                            Assets
+                            {t('skillsPanel.badges.assets')}
                           </Badge>
                         )}
                       </div>
@@ -632,9 +634,11 @@ export const SkillsPanel = ({
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-text">Personal skills</h3>
+                  <h3 className="text-sm font-semibold text-text">
+                    {t('skillsPanel.sections.personal.title')}
+                  </h3>
                   <p className="text-xs text-text-muted">
-                    Habits and instructions you want available everywhere.
+                    {t('skillsPanel.sections.personal.description')}
                   </p>
                 </div>
                 <Badge variant="secondary" className="font-normal">
@@ -668,7 +672,7 @@ export const SkillsPanel = ({
                                 variant="outline"
                                 className="border-amber-500/40 text-amber-700 dark:text-amber-300"
                               >
-                                Needs attention
+                                {t('skillsPanel.badges.needsAttention')}
                               </Badge>
                             )}
                           </div>
@@ -686,24 +690,26 @@ export const SkillsPanel = ({
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Badge variant="secondary" className="font-normal">
-                          Stored in {formatSkillRootKind(skill.rootKind)}
+                          {t('skillsPanel.badges.storedIn', {
+                            root: formatSkillRootKind(skill.rootKind),
+                          })}
                         </Badge>
                         <Badge variant="outline" className="font-normal">
                           {getSkillAudienceLabel(skill.rootKind)}
                         </Badge>
                         {skill.flags.hasScripts && (
                           <Badge variant="destructive" className="font-normal">
-                            Has scripts
+                            {t('skillsPanel.badges.hasScripts')}
                           </Badge>
                         )}
                         {skill.flags.hasReferences && (
                           <Badge variant="secondary" className="font-normal">
-                            References
+                            {t('skillsPanel.badges.references')}
                           </Badge>
                         )}
                         {skill.flags.hasAssets && (
                           <Badge variant="secondary" className="font-normal">
-                            Assets
+                            {t('skillsPanel.badges.assets')}
                           </Badge>
                         )}
                       </div>
@@ -749,7 +755,7 @@ export const SkillsPanel = ({
         onClose={() => setCreateOpen(false)}
         onSaved={(skillId) => {
           setCreateOpen(false);
-          setSuccessMessage('Skill created successfully.');
+          setSuccessMessage(t('skillsPanel.success.created'));
           setHighlightedSkillId(skillId);
           setSelectedSkillId(null);
         }}
@@ -769,7 +775,7 @@ export const SkillsPanel = ({
         onSaved={(skillId) => {
           setEditOpen(false);
           setEditingDetail(null);
-          setSuccessMessage('Skill saved successfully.');
+          setSuccessMessage(t('skillsPanel.success.saved'));
           setSelectedSkillId(skillId);
         }}
       />
@@ -782,7 +788,7 @@ export const SkillsPanel = ({
         onClose={() => setImportOpen(false)}
         onImported={(skillId) => {
           setImportOpen(false);
-          setSuccessMessage('Skill imported successfully.');
+          setSuccessMessage(t('skillsPanel.success.imported'));
           setSelectedSkillId(skillId);
         }}
       />

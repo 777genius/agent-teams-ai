@@ -478,8 +478,9 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
-  it('clears pending replies from durable user_sent history even if the local pending timestamp drifted later', () => {
+  it('does not clear a fresh pending reply from older durable send history', () => {
     const pendingSentAtMs = Date.parse('2026-04-08T12:02:00.000Z');
+    const pending = { forge: pendingSentAtMs };
     const messages: InboxMessage[] = [
       makeMessage({
         messageId: 'user-send',
@@ -499,7 +500,32 @@ describe('MessagesPanel idle summary invariants', () => {
       }),
     ];
 
-    expect(reconcilePendingRepliesByMember({ forge: pendingSentAtMs }, messages)).toEqual({});
+    expect(reconcilePendingRepliesByMember(pending, messages)).toBe(pending);
+  });
+
+  it('keeps pending replies when a new local send has not materialized after an older lead answer', () => {
+    const pendingSentAtMs = Date.parse('2026-04-08T12:02:00.000Z');
+    const pending = { lead: pendingSentAtMs };
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'older-user-send',
+        from: 'user',
+        to: 'lead',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:00.000Z',
+        text: 'Предыдущий вопрос.',
+      }),
+      makeMessage({
+        messageId: 'older-lead-thought-reply',
+        from: 'lead',
+        to: undefined,
+        source: 'lead_session',
+        timestamp: '2026-04-08T12:01:00.000Z',
+        text: 'Предыдущий ответ.',
+      }),
+    ];
+
+    expect(reconcilePendingRepliesByMember(pending, messages)).toBe(pending);
   });
 
   it('clears pending replies when the team lead answers through a visible lead thought', () => {

@@ -16,6 +16,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -106,6 +107,7 @@ export const EditorFileTree = ({
   onCreateTask,
   onSendMessage,
 }: EditorFileTreeProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   fileTreeRenderCount++;
   if (fileTreeRenderCount % 5 === 0) {
     console.debug(`[perf] EditorFileTree render #${fileTreeRenderCount}`);
@@ -446,15 +448,19 @@ export const EditorFileTree = ({
   // ─── Early returns ─────────────────────────────────────────────────────────
 
   if (error) {
-    return <div className="p-3 text-xs text-red-400">Failed to load files: {error}</div>;
+    return (
+      <div className="p-3 text-xs text-red-400">
+        {t('editor.fileTree.failedToLoadFiles', { error })}
+      </div>
+    );
   }
 
   if (loading && !fileTree) {
-    return <div className="p-3 text-xs text-text-muted">Loading files...</div>;
+    return <div className="p-3 text-xs text-text-muted">{t('editor.fileTree.loading')}</div>;
   }
 
   if (treeNodes.length === 0) {
-    return <div className="p-3 text-xs text-text-muted">No files found</div>;
+    return <div className="p-3 text-xs text-text-muted">{t('editor.fileTree.empty')}</div>;
   }
 
   return (
@@ -546,7 +552,10 @@ export const EditorFileTree = ({
           </div>
           {/* Spacer at bottom — drop here to move to project root */}
           {draggedItem && (
-            <div className="h-16 w-full shrink-0" aria-label="Drop here for project root" />
+            <div
+              className="h-16 w-full shrink-0"
+              aria-label={t('editor.fileTree.dropForProjectRoot')}
+            />
           )}
         </RootDropZone>
         <DragOverlay dropAnimation={null}>
@@ -558,17 +567,19 @@ export const EditorFileTree = ({
       <Dialog open={!!deleteConfirmPath} onOpenChange={(open) => !open && handleCancelDelete()}>
         <DialogContent className="w-96 max-w-96">
           <DialogHeader>
-            <DialogTitle className="text-sm">Move to Trash</DialogTitle>
+            <DialogTitle className="text-sm">{t('editor.fileTree.moveToTrash')}</DialogTitle>
             <DialogDescription>
-              Move &ldquo;{deleteConfirmPath ? getBasename(deleteConfirmPath) : ''}&rdquo; to Trash?
+              {t('editor.fileTree.moveToTrashConfirm', {
+                name: deleteConfirmPath ? getBasename(deleteConfirmPath) : '',
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={handleCancelDelete}>
-              Cancel
+              {t('editor.fileTree.cancel')}
             </Button>
             <Button variant="destructive" size="sm" onClick={() => void handleConfirmDelete()}>
-              Move to Trash
+              {t('editor.fileTree.moveToTrash')}
             </Button>
           </DialogFooter>
         </DialogContent>

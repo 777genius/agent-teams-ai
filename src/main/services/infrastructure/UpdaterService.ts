@@ -13,6 +13,10 @@
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import {
+  formatUpdaterReleaseNotes,
+  getUpdaterReleaseNoteForVersion,
+} from '@shared/utils/releaseNotes';
 import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { app, net } from 'electron';
 import electronUpdater from 'electron-updater';
@@ -97,6 +101,7 @@ export class UpdaterService {
   constructor() {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.fullChangelog = true;
 
     this.bindEvents();
   }
@@ -241,11 +246,14 @@ export class UpdaterService {
       return;
     }
 
+    const latestReleaseNote = getUpdaterReleaseNoteForVersion(info.releaseNotes, info.version);
+    const releaseNotes = formatUpdaterReleaseNotes(info.releaseNotes);
+
     if (
       shouldSkipReleaseForUpdater({
         tag_name: `v${info.version}`,
         name: typeof info.releaseName === 'string' ? info.releaseName : undefined,
-        body: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
+        body: latestReleaseNote,
       })
     ) {
       logger.warn(`Suppressing updater notification for locally marked release ${info.version}`);
@@ -278,7 +286,7 @@ export class UpdaterService {
     this.sendStatus({
       type: 'available',
       version: info.version,
-      releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
+      releaseNotes,
     });
   }
 

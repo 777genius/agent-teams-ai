@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CARD_ICON_MUTED,
   CODE_BG,
@@ -56,6 +57,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
     searchExpandedItemId,
     registerToolRef,
   }): React.JSX.Element => {
+    const { t } = useAppTranslation('common');
     const [manualExpandedItemId, setManualExpandedItemId] = useState<string | null>(null);
 
     // Use searchExpandedItemId if set, otherwise use manually expanded item
@@ -68,7 +70,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
     if (!items || items.length === 0) {
       return (
         <div className="px-3 py-2 text-xs" style={{ color: CARD_ICON_MUTED }}>
-          No execution items
+          {t('chat.executionTrace.empty')}
         </div>
       );
     }
@@ -157,7 +159,9 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
                   className="px-2 py-1 text-xs"
                   style={{ color: CARD_ICON_MUTED }}
                 >
-                  Nested: {item.subagent.description ?? item.subagent.id}
+                  {t('chat.executionTrace.nested', {
+                    name: item.subagent.description ?? item.subagent.id,
+                  })}
                 </div>
               );
 
@@ -168,7 +172,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
                 <BaseItem
                   key={itemId}
                   icon={<MailOpen className="size-4" />}
-                  label="Input"
+                  label={t('chat.executionTrace.input')}
                   summary={truncateText(item.content, 80)}
                   tokenCount={item.tokenCount}
                   timestamp={item.timestamp}
@@ -222,7 +226,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
                       className="shrink-0 text-xs font-medium"
                       style={{ color: TOOL_CALL_TEXT }}
                     >
-                      Compacted
+                      {t('chat.compact.compacted')}
                     </span>
                     {item.tokenDelta && (
                       <span
@@ -233,7 +237,9 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
                         {formatTokensCompact(item.tokenDelta.postCompactionTokens)}
                         <span style={{ color: '#4ade80' }}>
                           {' '}
-                          ({formatTokensCompact(Math.abs(item.tokenDelta.delta))} freed)
+                          {t('chat.compact.freedTokens', {
+                            tokens: formatTokensCompact(Math.abs(item.tokenDelta.delta)),
+                          })}
                         </span>
                       </span>
                     )}
@@ -244,7 +250,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
                         color: '#818cf8',
                       }}
                     >
-                      Phase {item.phaseNumber}
+                      {t('chat.compact.phase', { phase: item.phaseNumber })}
                     </span>
                     <span
                       className="ml-auto shrink-0 text-[11px]"

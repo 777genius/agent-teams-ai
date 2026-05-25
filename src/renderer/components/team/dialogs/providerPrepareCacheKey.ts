@@ -6,12 +6,14 @@ export function buildProviderPrepareModelCacheKey({
   backendSummary,
   limitContext,
   runtimeStatusSignature,
+  modelChecksSignature,
 }: {
   cwd: string;
   providerId: TeamProviderId;
   backendSummary: string | null | undefined;
   limitContext: boolean;
   runtimeStatusSignature?: string | null;
+  modelChecksSignature?: string | null;
 }): string {
   return [
     cwd,
@@ -19,5 +21,6 @@ export function buildProviderPrepareModelCacheKey({
     backendSummary ?? '',
     limitContext ? 'limit-context:on' : 'limit-context:off',
     runtimeStatusSignature ?? '',
+    modelChecksSignature ?? '',
   ].join('::');
 }

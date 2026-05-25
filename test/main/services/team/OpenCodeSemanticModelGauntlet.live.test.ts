@@ -282,6 +282,40 @@ describe('OpenCode semantic model gauntlet report helpers', () => {
     expect(getRunOutcome(category)).toBe('provider-infra-blocked');
   });
 
+  it('classifies OpenCode quota, auth, and rate failures as provider infrastructure', () => {
+    const stages = createPassingStages({ launchBootstrap: false });
+    const diagnostics = [
+      'OpenCode error: Free usage exceeded. Please subscribe to Go to continue.',
+      'OpenCode session_error: token refresh failed for provider profile',
+      'OpenCode provider returned authentication_failed',
+      'OpenCode provider returned 429 rate limited, retry later',
+      'OpenCode auth failed with HTTP 403',
+    ];
+
+    for (const diagnostic of diagnostics) {
+      const category = classifyGauntletFailure({ diagnostics: [diagnostic], stages });
+
+      expect(category, diagnostic).toBe('provider-infra');
+      expect(isCountedForRecommendation(category), diagnostic).toBe(false);
+      expect(getRunOutcome(category), diagnostic).toBe('provider-infra-blocked');
+    }
+  });
+
+  it('keeps transcript failures without provider signals as model behavior', () => {
+    const stages = createPassingStages({ peerRelayAB: false });
+    const category = classifyGauntletFailure({
+      diagnostics: [
+        'runId=abc429def',
+        'transcript: peer relay reply missing expected taskRef',
+      ],
+      stages,
+    });
+
+    expect(category).toBe('model-behavior');
+    expect(isCountedForRecommendation(category)).toBe(true);
+    expect(getRunOutcome(category)).toBe('behavioral-fail');
+  });
+
   it('does not promote a single perfect run to Recommended', () => {
     const qualified = isModelQualified({
       averageScore: 100,
@@ -1348,6 +1382,49 @@ function isHardProtocolFailure(stages: RunGauntletResult['stages']): boolean {
   );
 }
 
+const PROVIDER_INFRA_TEXT_PATTERNS = [
+  'free usage exceeded',
+  'usage exceeded',
+  'quota exhausted',
+  'quota exceeded',
+  'subscribe to go',
+  'insufficient credits',
+  'requires more credits',
+  'can only afford',
+  'key limit exceeded',
+  'total limit exceeded',
+  'rate limit',
+  'rate limited',
+  'too many requests',
+  'model cooldown',
+  'capacity exceeded',
+  'provider overloaded',
+  'token refresh failed',
+  'authentication_failed',
+  'authentication failed',
+  'unauthorized',
+  'forbidden',
+  'invalid api key',
+  'missing credentials',
+  'not logged in',
+  'login required',
+  'does not have access',
+  'no endpoints found',
+  'selected model',
+  'not found in the live provider catalog',
+  'unable to connect',
+  'provider unavailable',
+];
+
+const PROVIDER_INFRA_HTTP_STATUS_PATTERN = /\b(?:401|402|403|429)\b/;
+
+function hasProviderInfraSignal(text: string): boolean {
+  return (
+    PROVIDER_INFRA_TEXT_PATTERNS.some((pattern) => text.includes(pattern)) ||
+    PROVIDER_INFRA_HTTP_STATUS_PATTERN.test(text)
+  );
+}
+
 function classifyGauntletFailure(input: {
   diagnostics: readonly string[];
   stages: RunGauntletResult['stages'];
@@ -1356,23 +1433,7 @@ function classifyGauntletFailure(input: {
   if (!text && !isHardProtocolFailure(input.stages)) {
     return 'none';
   }
-  if (
-    [
-      'key limit exceeded',
-      'total limit exceeded',
-      'requires more credits',
-      'can only afford',
-      'rate limit',
-      '429',
-      '402',
-      'no endpoints found',
-      'selected model',
-      'not found in the live provider catalog',
-      'unable to connect',
-      'provider unavailable',
-      'insufficient credits',
-    ].some((pattern) => text.includes(pattern))
-  ) {
+  if (hasProviderInfraSignal(text)) {
     return 'provider-infra';
   }
   if (

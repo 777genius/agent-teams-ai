@@ -6,6 +6,7 @@ import {
   LEAD_PARTICIPANT_AVATAR_URL,
   PARTICIPANT_AVATAR_URLS,
 } from './memberAvatarCatalog';
+import { isHealthyOpenCodeAppMcpConnectivityAdvisory } from './openCodeAdvisoryHealth';
 
 import type {
   LeadActivityState,
@@ -304,8 +305,62 @@ function formatRetryCountdown(ms: number): string {
     return `${totalSeconds}s`;
   }
   const minutes = Math.floor(totalSeconds / 60);
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  }
   const seconds = totalSeconds % 60;
   return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+}
+
+function getRuntimeAdvisoryRetryRemainingMs(
+  advisory: MemberRuntimeAdvisory,
+  nowMs: number
+): number | null {
+  const retryUntilMs = advisory.retryUntil ? Date.parse(advisory.retryUntil) : Number.NaN;
+  if (!Number.isFinite(retryUntilMs)) {
+    return null;
+  }
+  const remainingMs = retryUntilMs - nowMs;
+  return remainingMs > 0 ? remainingMs : null;
+}
+
+function isRetryTimedApiAdvisory(
+  advisory: MemberRuntimeAdvisory,
+  providerId: TeamProviderId | undefined
+): boolean {
+  return (
+    advisory.kind === 'api_error' &&
+    providerId === 'opencode' &&
+    (advisory.reasonCode === 'quota_exhausted' || advisory.reasonCode === 'rate_limited')
+  );
+}
+
+function formatRetryUntilUtc(value: string | undefined): string | null {
+  const retryUntilMs = value ? Date.parse(value) : Number.NaN;
+  if (!Number.isFinite(retryUntilMs)) {
+    return null;
+  }
+  const date = new Date(retryUntilMs);
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${hours}:${minutes} UTC`;
+}
+
+function appendRuntimeAdvisoryRetryHint(
+  base: string,
+  advisory: MemberRuntimeAdvisory,
+  providerId: TeamProviderId | undefined
+): string {
+  if (!isRetryTimedApiAdvisory(advisory, providerId)) {
+    return base;
+  }
+  const retryAt = formatRetryUntilUtc(advisory.retryUntil);
+  if (!retryAt) {
+    return base;
+  }
+  return `${base} Waiting for OpenCode retry or quota reset around ${retryAt}.`;
 }
 
 function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined): string | null {
@@ -323,13 +378,98 @@ function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined)
   }
 }
 
-function appendRuntimeAdvisoryRawMessage(base: string, message: string | undefined): string {
-  const trimmed = formatRuntimeAdvisoryDisplayMessage(message);
+function appendRuntimeAdvisoryRawMessage(
+  base: string,
+  message: string | undefined,
+  providerId?: TeamProviderId
+): string {
+  const trimmed = formatRuntimeAdvisoryDisplayMessage(message, providerId);
+  if (trimmed === base) {
+    return base;
+  }
   return trimmed ? `${base}\n\n${trimmed}` : base;
 }
 
+const OPENCODE_SESSION_REFRESH_REASON_PATTERN =
+  /\b(?:resolved_behavior_changed|opencode_app_mcp_transport_changed):[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/i;
+const OPENCODE_SESSION_REFRESH_FAILURE_PATTERN =
+  // eslint-disable-next-line sonarjs/regex-complexity -- Keyword taxonomy is kept literal to preserve diagnostic behavior.
+  /(?:^|[_\s:;.\/()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;.\/(),-])/i;
+const OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN =
+  /\b(?:resolved_behavior_changed|opencode_app_mcp_transport_changed):[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/gi;
+const OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN =
+  /\b(?:not_observed|pending|prompt_not_indexed|responded_tool_call|responded_visible_message|responded_non_visible_tool|responded_plain_text|permission_blocked|tool_error|empty_assistant_turn|prompt_delivered_no_assistant_message|session_stale|session_error|reconcile_failed)\b/g;
+
+function isRecoverableOpenCodeSessionRefreshMessage(message: string | undefined): boolean {
+  const normalized = message?.trim().toLowerCase() ?? '';
+  const refreshText = stripOpenCodeGenericApiErrorPrefix(normalized);
+  const refreshMarkerText = refreshText.replace(/[.:\s-]+$/, '');
+  if (
+    refreshMarkerText === 'session_stale' ||
+    refreshMarkerText === 'opencode session changed; refreshing the session before retry' ||
+    refreshMarkerText === 'opencode session refresh scheduled after resolved behavior changed' ||
+    refreshMarkerText === 'opencode_prompt_delivery_session_refresh_scheduled' ||
+    refreshMarkerText === 'opencode_session_refresh_scheduled_after_resolved_behavior_changed'
+  ) {
+    return true;
+  }
+  if (!OPENCODE_SESSION_REFRESH_REASON_PATTERN.test(refreshText)) {
+    return false;
+  }
+  const markerText = refreshText;
+  if (hasOpenCodeSessionRefreshFailureConflict(markerText)) {
+    return false;
+  }
+  const rawRemainder = markerText.replace(OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN, '');
+  const remainder = rawRemainder.replace(/[().,;:\s-]+/g, '');
+  if (remainder.length === 0) {
+    return true;
+  }
+  const staleLogProjectionContext =
+    normalized.includes('session is stale') ||
+    normalized.includes('stored session is stale') ||
+    normalized.includes('session reconcile skipped');
+  return staleLogProjectionContext && isBenignOpenCodeSessionRefreshRemainder(rawRemainder);
+}
+
+function stripOpenCodeGenericApiErrorPrefix(message: string): string {
+  return message.replace(/^opencode api error(?:[.:\s-]+|$)/i, '');
+}
+
+function isBenignOpenCodeSessionRefreshRemainder(rawRemainder: string): boolean {
+  if (OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(rawRemainder)) {
+    return false;
+  }
+  const normalized = rawRemainder.replace(/[().,;:\s-]+/g, ' ').trim();
+  return (
+    normalized === 'opencode session is stale' ||
+    normalized ===
+      'opencode session is stale reading historical messages for log projection only' ||
+    normalized === 'opencode session reconcile skipped because the stored session is stale' ||
+    normalized === 'stored session is stale'
+  );
+}
+
+function hasOpenCodeSessionRefreshFailureConflict(value: string): boolean {
+  return OPENCODE_SESSION_REFRESH_FAILURE_PATTERN.test(
+    value.replace(OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN, 'state')
+  );
+}
+
+function canTreatAdvisoryAsOpenCodeSessionRefresh(
+  advisory: MemberRuntimeAdvisory | undefined
+): boolean {
+  return (
+    Boolean(advisory) &&
+    (advisory?.reasonCode == null ||
+      advisory.reasonCode === 'backend_error' ||
+      advisory.reasonCode === 'unknown') &&
+    isRecoverableOpenCodeSessionRefreshMessage(advisory?.message)
+  );
+}
+
 function isOpenCodeRuntimeDeliveryAdvisoryMessage(message: string | undefined): boolean {
-  const displayMessage = formatRuntimeAdvisoryDisplayMessage(message);
+  const displayMessage = formatRuntimeAdvisoryDisplayMessage(message, 'opencode');
   return (
     displayMessage.startsWith('OpenCode runtime delivery') ||
     displayMessage.startsWith('OpenCode returned an empty assistant turn') ||
@@ -341,7 +481,10 @@ function isOpenCodeRuntimeDeliveryAdvisoryMessage(message: string | undefined): 
   );
 }
 
-function formatRuntimeAdvisoryDisplayMessage(message: string | undefined): string {
+function formatRuntimeAdvisoryDisplayMessage(
+  message: string | undefined,
+  providerId?: TeamProviderId
+): string {
   const trimmed = message?.trim();
   if (!trimmed) {
     return '';
@@ -354,6 +497,9 @@ function formatRuntimeAdvisoryDisplayMessage(message: string | undefined): strin
   }
   if (trimmed === 'opencode_prompt_acceptance_unknown_after_bridge_timeout') {
     return OPENCODE_BRIDGE_OUTCOME_UNKNOWN_AFTER_TIMEOUT_MESSAGE;
+  }
+  if (providerId === 'opencode' && isRecoverableOpenCodeSessionRefreshMessage(trimmed)) {
+    return 'OpenCode session changed; refreshing the session before retry.';
   }
   if (
     trimmed === 'visible_reply_still_required' ||
@@ -396,6 +542,9 @@ function formatRuntimeAdvisoryBaseLabel(
 ): string {
   const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
   if (advisory.kind === 'api_error') {
+    if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
+      return 'OpenCode session refresh';
+    }
     switch (advisory.reasonCode) {
       case 'quota_exhausted':
         return providerLabel ? `${providerLabel} quota error` : 'Quota error';
@@ -458,45 +607,71 @@ function formatRuntimeAdvisoryTitle(
 ): string {
   const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
   if (advisory.kind === 'api_error') {
+    if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
+      return appendRuntimeAdvisoryRawMessage(
+        'OpenCode session changed; refreshing the session before retry.',
+        advisory.message,
+        providerId
+      );
+    }
     switch (advisory.reasonCode) {
       case 'quota_exhausted':
         return appendRuntimeAdvisoryRawMessage(
-          `${providerLabel ?? 'Provider'} quota exhausted.`,
-          advisory.message
+          appendRuntimeAdvisoryRetryHint(
+            `${providerLabel ?? 'Provider'} quota exhausted.`,
+            advisory,
+            providerId
+          ),
+          advisory.message,
+          providerId
         );
       case 'rate_limited':
         return appendRuntimeAdvisoryRawMessage(
-          `${providerLabel ?? 'Provider'} rate limited the request.`,
-          advisory.message
+          appendRuntimeAdvisoryRetryHint(
+            `${providerLabel ?? 'Provider'} rate limited the request.`,
+            advisory,
+            providerId
+          ),
+          advisory.message,
+          providerId
         );
       case 'auth_error':
         return appendRuntimeAdvisoryRawMessage(
           `${providerLabel ?? 'Provider'} authentication error.`,
-          advisory.message
+          advisory.message,
+          providerId
         );
       case 'codex_native_timeout':
         return appendRuntimeAdvisoryRawMessage(
           'Codex native mailbox turn timed out. The runtime stopped this turn after its watchdog limit; it was not an automatic SDK retry.',
-          advisory.message
+          advisory.message,
+          providerId
         );
       case 'network_error':
-        return appendRuntimeAdvisoryRawMessage('Network or connectivity error.', advisory.message);
+        return appendRuntimeAdvisoryRawMessage(
+          'Network or connectivity error.',
+          advisory.message,
+          providerId
+        );
       case 'filesystem_error':
         return appendRuntimeAdvisoryRawMessage(
           'Local disk is full or unavailable.',
-          advisory.message
+          advisory.message,
+          providerId
         );
       case 'provider_overloaded':
         return appendRuntimeAdvisoryRawMessage(
           'Provider is temporarily overloaded.',
-          advisory.message
+          advisory.message,
+          providerId
         );
       case 'protocol_proof_missing':
         return appendRuntimeAdvisoryRawMessage(
           providerId === 'opencode'
             ? 'OpenCode delivery completed without required visible/progress proof.'
             : 'Runtime delivery completed without required protocol proof.',
-          advisory.message
+          advisory.message,
+          providerId
         );
       case 'backend_error':
       case 'unknown':
@@ -506,12 +681,14 @@ function formatRuntimeAdvisoryTitle(
         ) {
           return appendRuntimeAdvisoryRawMessage(
             'OpenCode runtime delivery error.',
-            advisory.message
+            advisory.message,
+            providerId
           );
         }
         return appendRuntimeAdvisoryRawMessage(
           `${providerLabel ?? 'Provider'} API error.`,
-          advisory.message
+          advisory.message,
+          providerId
         );
       default:
         return advisory.message?.trim() || 'Provider API error.';
@@ -522,50 +699,59 @@ function formatRuntimeAdvisoryTitle(
     case 'quota_exhausted':
       return appendRuntimeAdvisoryRawMessage(
         `${providerLabel ?? 'Provider'} quota exhausted. SDK is retrying automatically.`,
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'rate_limited':
       return appendRuntimeAdvisoryRawMessage(
         `${providerLabel ?? 'Provider'} rate limited the request. SDK is retrying automatically.`,
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'auth_error':
       return appendRuntimeAdvisoryRawMessage(
         `${providerLabel ?? 'Provider'} authentication issue. SDK is retrying automatically.`,
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'codex_native_timeout':
       return appendRuntimeAdvisoryRawMessage(
         'Codex native mailbox turn timed out. A retry window was reported by the runtime.',
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'network_error':
       return appendRuntimeAdvisoryRawMessage(
         'Network or connectivity issue. SDK is retrying automatically.',
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'filesystem_error':
       return appendRuntimeAdvisoryRawMessage(
         'Local disk is full or unavailable. SDK is retrying automatically.',
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'provider_overloaded':
       return appendRuntimeAdvisoryRawMessage(
         'Provider is temporarily overloaded. SDK is retrying automatically.',
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'protocol_proof_missing':
       return appendRuntimeAdvisoryRawMessage(
         providerId === 'opencode'
           ? 'OpenCode delivery is waiting for required visible/progress proof.'
           : 'Runtime delivery is waiting for required protocol proof.',
-        advisory.message
+        advisory.message,
+        providerId
       );
     case 'backend_error':
     case 'unknown':
       return appendRuntimeAdvisoryRawMessage(
         'The SDK is retrying this request after a provider or backend error.',
-        advisory.message
+        advisory.message,
+        providerId
       );
     default:
       return (
@@ -584,18 +770,17 @@ export function getMemberRuntimeAdvisoryLabel(
     return null;
   }
   const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId);
+  const remainingMs = getRuntimeAdvisoryRetryRemainingMs(advisory, nowMs);
   if (advisory.kind === 'api_error') {
+    if (remainingMs && isRetryTimedApiAdvisory(advisory, providerId)) {
+      return `${baseLabel} · retry ${formatRetryCountdown(remainingMs)}`;
+    }
     return baseLabel;
   }
   if (advisory.kind !== 'sdk_retrying') {
     return null;
   }
-  const retryUntilMs = advisory.retryUntil ? Date.parse(advisory.retryUntil) : Number.NaN;
-  if (!Number.isFinite(retryUntilMs)) {
-    return baseLabel;
-  }
-  const remainingMs = retryUntilMs - nowMs;
-  if (remainingMs <= 0) {
+  if (!remainingMs) {
     return baseLabel;
   }
   return `${baseLabel} · ${formatRetryCountdown(remainingMs)}`;
@@ -612,10 +797,14 @@ export function getMemberRuntimeAdvisoryTitle(
 }
 
 export function getMemberRuntimeAdvisoryTone(
-  advisory: MemberRuntimeAdvisory | undefined
+  advisory: MemberRuntimeAdvisory | undefined,
+  providerId?: TeamProviderId
 ): 'error' | 'warning' | null {
   if (!advisory) {
     return null;
+  }
+  if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
+    return 'warning';
   }
   if (advisory.reasonCode === 'protocol_proof_missing') {
     return 'warning';
@@ -736,7 +925,7 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
     case 'starting_stale':
       return 'bg-amber-400';
     case 'registered_only':
-      return SPAWN_DOT_COLORS.waiting;
+      return STATUS_DOT_COLORS.terminated;
     case 'shell_only':
       return 'bg-amber-400';
     case 'stale_runtime':
@@ -744,6 +933,141 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
     default:
       return null;
   }
+}
+
+function getCurrentRuntimeOfflineVisualState(
+  member: ResolvedTeamMember,
+  runtimeEntry: TeamAgentRuntimeEntry | undefined,
+  spawnStatus: MemberSpawnStatus | undefined,
+  spawnLaunchState: MemberLaunchState | undefined,
+  spawnRuntimeAlive: boolean | undefined,
+  spawnBootstrapConfirmed: boolean | undefined,
+  isTeamProvisioning: boolean | undefined
+): MemberLaunchVisualState {
+  if (runtimeEntry?.livenessKind === 'registered_only') {
+    return 'registered_only';
+  }
+  if (
+    runtimeEntry?.livenessKind === 'stale_metadata' ||
+    runtimeEntry?.livenessKind === 'not_found'
+  ) {
+    return 'stale_runtime';
+  }
+  if (
+    runtimeEntry?.alive === false &&
+    (runtimeEntry.livenessKind == null ||
+      runtimeEntry.livenessKind === 'runtime_process' ||
+      runtimeEntry.livenessKind === 'confirmed_bootstrap')
+  ) {
+    return 'stale_runtime';
+  }
+  if (
+    spawnRuntimeAlive === false &&
+    (spawnStatus === 'online' || spawnLaunchState === 'confirmed_alive')
+  ) {
+    return 'stale_runtime';
+  }
+  if (
+    shouldTreatCodexNativeRuntimeAsOffline({
+      member,
+      runtimeEntry,
+      spawnStatus,
+      spawnLaunchState,
+      spawnRuntimeAlive,
+      spawnBootstrapConfirmed,
+      isTeamProvisioning,
+    })
+  ) {
+    return 'stale_runtime';
+  }
+  return null;
+}
+
+function isCodexNativeProcessTeammate(member: ResolvedTeamMember): boolean {
+  if (isLeadMember(member)) {
+    return false;
+  }
+  return (
+    member.providerId === 'codex' &&
+    (member.providerBackendId == null || member.providerBackendId === 'codex-native')
+  );
+}
+
+function hasLiveRuntimeProcessEvidence(runtimeEntry: TeamAgentRuntimeEntry | undefined): boolean {
+  return runtimeEntry?.alive === true && runtimeEntry.livenessKind === 'runtime_process';
+}
+
+function hasSpawnRuntimeLiveClaim({
+  spawnStatus,
+  spawnLaunchState,
+  spawnRuntimeAlive,
+  spawnBootstrapConfirmed,
+}: {
+  spawnStatus?: MemberSpawnStatus;
+  spawnLaunchState?: MemberLaunchState;
+  spawnRuntimeAlive?: boolean;
+  spawnBootstrapConfirmed?: boolean;
+}): boolean {
+  return (
+    spawnStatus === 'online' ||
+    spawnLaunchState === 'confirmed_alive' ||
+    spawnRuntimeAlive === true ||
+    spawnBootstrapConfirmed === true
+  );
+}
+
+function shouldTreatCodexNativeRuntimeAsOffline({
+  member,
+  runtimeEntry,
+  spawnStatus,
+  spawnLaunchState,
+  spawnRuntimeAlive,
+  spawnBootstrapConfirmed,
+  isTeamProvisioning,
+}: {
+  member: ResolvedTeamMember;
+  runtimeEntry?: TeamAgentRuntimeEntry;
+  spawnStatus?: MemberSpawnStatus;
+  spawnLaunchState?: MemberLaunchState;
+  spawnRuntimeAlive?: boolean;
+  spawnBootstrapConfirmed?: boolean;
+  isTeamProvisioning?: boolean;
+}): boolean {
+  if (!isCodexNativeProcessTeammate(member)) {
+    return false;
+  }
+  if (
+    spawnLaunchState === 'starting' ||
+    spawnLaunchState === 'runtime_pending_bootstrap' ||
+    spawnLaunchState === 'runtime_pending_permission'
+  ) {
+    return false;
+  }
+  if (hasLiveRuntimeProcessEvidence(runtimeEntry)) {
+    return false;
+  }
+  if (
+    isTeamProvisioning === true &&
+    runtimeEntry == null &&
+    !hasSpawnRuntimeLiveClaim({
+      spawnStatus,
+      spawnLaunchState,
+      spawnRuntimeAlive,
+      spawnBootstrapConfirmed,
+    })
+  ) {
+    return false;
+  }
+  return (
+    runtimeEntry != null ||
+    hasSpawnRuntimeLiveClaim({
+      spawnStatus,
+      spawnLaunchState,
+      spawnRuntimeAlive,
+      spawnBootstrapConfirmed,
+    }) ||
+    spawnStatus == null
+  );
 }
 
 export function shouldDisplayMemberCurrentTask({
@@ -785,10 +1109,13 @@ export function shouldDisplayMemberCurrentTask({
   ) {
     return false;
   }
-  if (runtimeEntry?.alive === false && spawnStatus !== 'online') {
+  if (runtimeEntry?.alive === false) {
     return false;
   }
-  if (spawnRuntimeAlive === false && spawnStatus !== 'online') {
+  if (spawnRuntimeAlive === false) {
+    return false;
+  }
+  if (isCodexNativeProcessTeammate(member) && !hasLiveRuntimeProcessEvidence(runtimeEntry)) {
     return false;
   }
   return true;
@@ -951,6 +1278,9 @@ export function buildMemberLaunchPresentation({
   spawnRuntimeAlive,
   spawnBootstrapConfirmed,
   spawnBootstrapStalled,
+  spawnAgentToolAccepted,
+  spawnHardFailure,
+  spawnLivenessKind,
   spawnFirstSpawnAcceptedAt,
   spawnUpdatedAt,
   runtimeAdvisory,
@@ -968,6 +1298,9 @@ export function buildMemberLaunchPresentation({
   spawnRuntimeAlive: boolean | undefined;
   spawnBootstrapConfirmed?: boolean;
   spawnBootstrapStalled?: boolean;
+  spawnAgentToolAccepted?: boolean;
+  spawnHardFailure?: boolean;
+  spawnLivenessKind?: TeamAgentRuntimeEntry['livenessKind'];
   spawnFirstSpawnAcceptedAt?: string;
   spawnUpdatedAt?: string;
   runtimeAdvisory: MemberRuntimeAdvisory | undefined;
@@ -978,20 +1311,49 @@ export function buildMemberLaunchPresentation({
   leadActivity?: LeadActivityState;
   nowMs?: number;
 }): MemberLaunchPresentation {
+  const currentRuntimeOfflineVisualState = getCurrentRuntimeOfflineVisualState(
+    member,
+    runtimeEntry,
+    spawnStatus,
+    spawnLaunchState,
+    spawnRuntimeAlive,
+    spawnBootstrapConfirmed,
+    isTeamProvisioning
+  );
   const hasConfirmedSpawnLaunch =
     spawnLaunchState === 'confirmed_alive' && spawnBootstrapConfirmed === true;
+  const suppressOpenCodeAppMcpAdvisory = isHealthyOpenCodeAppMcpConnectivityAdvisory({
+    providerId: member.providerId,
+    runtimeAdvisory,
+    spawnStatus,
+    launchState: spawnLaunchState,
+    runtimeAlive: spawnRuntimeAlive,
+    bootstrapConfirmed: spawnBootstrapConfirmed,
+    agentToolAccepted: spawnAgentToolAccepted,
+    hardFailure: spawnHardFailure,
+    livenessKind: spawnLivenessKind ?? runtimeEntry?.livenessKind,
+    runtimeEntry,
+  });
+  const displayRuntimeAdvisory = suppressOpenCodeAppMcpAdvisory ? undefined : runtimeAdvisory;
   const effectiveSpawnStatus =
-    hasConfirmedSpawnLaunch && (spawnStatus === 'waiting' || spawnStatus === 'spawning')
+    hasConfirmedSpawnLaunch &&
+    currentRuntimeOfflineVisualState == null &&
+    (spawnStatus === 'waiting' || spawnStatus === 'spawning')
       ? 'online'
       : spawnStatus;
-  const effectiveSpawnRuntimeAlive = hasConfirmedSpawnLaunch ? true : spawnRuntimeAlive;
+  const effectiveSpawnRuntimeAlive =
+    currentRuntimeOfflineVisualState != null
+      ? false
+      : hasConfirmedSpawnLaunch
+        ? true
+        : spawnRuntimeAlive;
   const presenceLabel = getLaunchAwarePresenceLabel(
     member,
     effectiveSpawnStatus,
     spawnLaunchState,
     spawnLivenessSource,
     effectiveSpawnRuntimeAlive,
-    runtimeAdvisory,
+    displayRuntimeAdvisory,
     isLaunchSettling,
     isTeamAlive,
     isTeamProvisioning,
@@ -1015,9 +1377,18 @@ export function buildMemberLaunchPresentation({
     isTeamAlive,
     isTeamProvisioning
   );
-  const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
-  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(runtimeAdvisory, member.providerId);
-  const runtimeAdvisoryTone = getMemberRuntimeAdvisoryTone(runtimeAdvisory);
+  const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(
+    displayRuntimeAdvisory,
+    member.providerId
+  );
+  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
+    displayRuntimeAdvisory,
+    member.providerId
+  );
+  const runtimeAdvisoryTone = getMemberRuntimeAdvisoryTone(
+    displayRuntimeAdvisory,
+    member.providerId
+  );
   const keepLaunchSettlingVisuals = isTeamProvisioning === true || isLaunchSettling;
   const startingIsStale =
     !hasConfirmedSpawnLaunch &&
@@ -1039,21 +1410,12 @@ export function buildMemberLaunchPresentation({
       launchVisualState = 'permission_pending';
     } else if (spawnBootstrapStalled === true) {
       launchVisualState = 'bootstrap_stalled';
-    } else if (!hasConfirmedSpawnLaunch && runtimeEntry?.livenessKind === 'shell_only') {
+    } else if (currentRuntimeOfflineVisualState != null) {
+      launchVisualState = currentRuntimeOfflineVisualState;
+    } else if (runtimeEntry?.livenessKind === 'shell_only') {
       launchVisualState = 'shell_only';
-    } else if (
-      !hasConfirmedSpawnLaunch &&
-      runtimeEntry?.livenessKind === 'runtime_process_candidate'
-    ) {
+    } else if (runtimeEntry?.livenessKind === 'runtime_process_candidate') {
       launchVisualState = 'runtime_candidate';
-    } else if (!hasConfirmedSpawnLaunch && runtimeEntry?.livenessKind === 'registered_only') {
-      launchVisualState = 'registered_only';
-    } else if (
-      !hasConfirmedSpawnLaunch &&
-      (runtimeEntry?.livenessKind === 'stale_metadata' ||
-        runtimeEntry?.livenessKind === 'not_found')
-    ) {
-      launchVisualState = 'stale_runtime';
     } else if (!hasConfirmedSpawnLaunch && startingIsStale) {
       launchVisualState = 'starting_stale';
     } else if (

@@ -82,6 +82,8 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 
+import { api } from '@renderer/api';
+
 import { initializeNotificationListeners, useStore } from '../../../src/renderer/store';
 import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
 import {
@@ -90,7 +92,6 @@ import {
   summarizeTeamRefreshFanout,
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
-import { api } from '@renderer/api';
 
 describe('team change throttling', () => {
   let cleanup: (() => void) | null = null;
@@ -188,6 +189,17 @@ describe('team change throttling', () => {
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1200);
     expect(fetchTeamsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not scan repository groups during centralized startup initialization', async () => {
+    const getRepositoryGroupsSpy = vi.mocked(api.getRepositoryGroups);
+    getRepositoryGroupsSpy.mockClear();
+
+    cleanup?.();
+    cleanup = initializeNotificationListeners();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(getRepositoryGroupsSpy).not.toHaveBeenCalled();
   });
 
   it('allows next refresh after throttle window passes', async () => {

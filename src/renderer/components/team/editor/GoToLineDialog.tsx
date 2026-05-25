@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { EditorView } from '@codemirror/view';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { editorBridge } from '@renderer/utils/editorBridge';
@@ -73,6 +74,7 @@ function parseLineInput(input: string, view: EditorView): ParsedTarget | null {
 // =============================================================================
 
 export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -145,15 +147,15 @@ export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactEle
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Go to Line"
+        aria-label={t('editor.goToLine.title')}
         className="relative z-10 w-[360px] overflow-hidden rounded-lg border border-border-emphasis bg-surface shadow-2xl"
       >
         <div className="flex flex-col gap-2 p-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-text-secondary">
-              Go to Line{' '}
+              {t('editor.goToLine.title')}{' '}
               <span className="text-text-muted">
-                (current: {currentLine}, total: {totalLines})
+                {t('editor.goToLine.position', { current: currentLine, total: totalLines })}
               </span>
             </span>
           </div>
@@ -162,7 +164,7 @@ export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactEle
             <Input
               ref={inputRef}
               className="h-8 flex-1 bg-transparent text-sm"
-              placeholder="Line number, +offset, -offset, or %"
+              placeholder={t('editor.goToLine.placeholder')}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -176,7 +178,7 @@ export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactEle
               onClick={handleGo}
               disabled={!value.trim()}
             >
-              Go
+              {t('editor.goToLine.go')}
             </Button>
           </div>
         </div>

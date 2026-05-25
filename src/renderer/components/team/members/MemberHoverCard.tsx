@@ -1,5 +1,6 @@
 import { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
 import {
@@ -69,6 +70,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
   onOpenTask,
   children,
 }: MemberHoverCardProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const selectedTeamName = useStore((s) => s.selectedTeamName);
   const effectiveTeamName = teamName ?? selectedTeamName;
@@ -159,6 +161,9 @@ export const MemberHoverCard = memo(function MemberHoverCard({
     spawnRuntimeAlive: spawnEntry?.runtimeAlive,
     spawnBootstrapConfirmed: spawnEntry?.bootstrapConfirmed,
     spawnBootstrapStalled: spawnEntry?.bootstrapStalled,
+    spawnAgentToolAccepted: spawnEntry?.agentToolAccepted,
+    spawnHardFailure: spawnEntry?.hardFailure,
+    spawnLivenessKind: spawnEntry?.livenessKind,
     spawnFirstSpawnAcceptedAt: spawnEntry?.firstSpawnAcceptedAt,
     spawnUpdatedAt: spawnEntry?.updatedAt,
     runtimeEntry,
@@ -192,6 +197,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
     teamName: effectiveTeamName,
     runId: runtimeRunId ?? memberSpawnSnapshot?.runId ?? progress?.runId,
     memberName: member.name,
+    member,
     spawnEntry,
     runtimeEntry,
   });
@@ -199,7 +205,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
   const showCopyDiagnostics =
     hasMemberLaunchDiagnosticsError(launchDiagnosticsPayload) &&
     hasMemberLaunchDiagnosticsDetails(launchDiagnosticsPayload);
-  const reviewTask: TeamTaskWithKanban | null = tasks
+  const reviewTaskCandidate: TeamTaskWithKanban | null = tasks
     ? (tasks.find(
         (task) =>
           task.reviewer === member.name &&
@@ -207,6 +213,18 @@ export const MemberHoverCard = memo(function MemberHoverCard({
           getTeamTaskWorkflowColumn(task) === 'review'
       ) ?? null)
     : null;
+  const reviewTask =
+    reviewTaskCandidate &&
+    shouldDisplayMemberCurrentTask({
+      member,
+      isTeamAlive,
+      spawnStatus: spawnEntry?.status,
+      spawnLaunchState: spawnEntry?.launchState,
+      spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+      runtimeEntry,
+    })
+      ? reviewTaskCandidate
+      : null;
 
   return (
     <HoverCard openDelay={300} closeDelay={200}>
@@ -310,7 +328,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
               }}
             >
               <ExternalLink size={12} />
-              Open profile
+              {t('members.actions.openProfile')}
             </button>
           </div>
         </div>

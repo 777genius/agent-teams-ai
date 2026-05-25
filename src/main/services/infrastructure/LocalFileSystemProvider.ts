@@ -23,6 +23,10 @@ const STAT_TIMEOUT_MS = 2000;
 // let callers stat only the files they actually need.
 const STAT_PREFETCH_LIMIT = 1500;
 
+export interface LocalFileSystemProviderReaddirOptions {
+  prefetchEntryStats?: boolean;
+}
+
 async function statWithTimeout(filePath: string, timeoutMs: number): Promise<fs.Stats> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_resolve, reject) => {
@@ -81,9 +85,12 @@ export class LocalFileSystemProvider implements FileSystemProvider {
     };
   }
 
-  async readdir(dirPath: string): Promise<FsDirent[]> {
+  async readdir(
+    dirPath: string,
+    options: LocalFileSystemProviderReaddirOptions = {}
+  ): Promise<FsDirent[]> {
     const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    if (entries.length > STAT_PREFETCH_LIMIT) {
+    if (options.prefetchEntryStats === false || entries.length > STAT_PREFETCH_LIMIT) {
       return entries.map((entry) => ({
         name: entry.name,
         isFile: () => entry.isFile(),

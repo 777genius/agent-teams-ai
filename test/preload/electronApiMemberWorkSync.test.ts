@@ -41,6 +41,7 @@ describe('preload electronAPI memberWorkSync wiring', () => {
     vi.resetModules();
     vi.useFakeTimers();
     mocks.contextBridge.exposeInMainWorld.mockClear();
+    mocks.ipcRenderer.invoke.mockClear();
     mocks.createMemberWorkSyncBridge.mockClear();
   });
 
@@ -63,5 +64,25 @@ describe('preload electronAPI memberWorkSync wiring', () => {
 
     expect(apiName).toBe('electronAPI');
     expect(electronAPI.memberWorkSync).toBe(mocks.memberWorkSyncBridge);
+  });
+
+  it('wires the Windows elevation status API to the app IPC channel', async () => {
+    await import('../../src/preload/index');
+
+    const [, electronAPI] = mocks.contextBridge.exposeInMainWorld.mock.calls[0] as [
+      string,
+      ElectronAPI,
+    ];
+    const expectedStatus = {
+      platform: 'win32',
+      isWindows: true,
+      isAdministrator: false,
+      checkFailed: false,
+      error: null,
+    };
+    mocks.ipcRenderer.invoke.mockResolvedValueOnce(expectedStatus);
+
+    await expect(electronAPI.getWindowsElevationStatus()).resolves.toBe(expectedStatus);
+    expect(mocks.ipcRenderer.invoke).toHaveBeenCalledWith('app:getWindowsElevationStatus');
   });
 });

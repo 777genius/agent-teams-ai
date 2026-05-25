@@ -98,13 +98,17 @@ async function requestJson(baseUrl, pathname, options = {}) {
   }
 }
 
+function isRetryableControlApiStatus(statusCode) {
+  return statusCode === 404 || statusCode === 408 || statusCode === 429 || statusCode >= 500;
+}
+
 async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
   let lastError = null;
   for (const baseUrl of baseUrls) {
     try {
       return await requestJson(baseUrl, pathname, options);
     } catch (error) {
-      if (error && error.controlApiStatus) {
+      if (error && error.controlApiStatus && !isRetryableControlApiStatus(error.controlApiStatus)) {
         throw error;
       }
       lastError = error;

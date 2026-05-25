@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { X } from 'lucide-react';
@@ -163,6 +164,7 @@ const SortableEditorTab = ({
   onCloseToRight,
   onCloseAll,
 }: SortableEditorTabProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
   });
@@ -224,7 +226,7 @@ const SortableEditorTab = ({
               {isModified && (
                 <span
                   className="size-1.5 shrink-0 rounded-full bg-amber-400"
-                  aria-label="Unsaved changes"
+                  aria-label={t('editor.unsavedChanges')}
                 />
               )}
               <FileIcon fileName={tab.fileName} className="size-3.5" />

@@ -2,11 +2,12 @@
  * TriggerCardHeader - Header row for TriggerCard with name, badges, toggle, and actions.
  */
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { SettingsToggle } from '@renderer/components/settings/components';
 import { getTriggerColorDef } from '@shared/constants/triggerColors';
 import { ChevronDown, ChevronUp, Pencil, Shield, X } from 'lucide-react';
 
-import { CONTENT_TYPE_OPTIONS, MODE_OPTIONS } from '../utils/constants';
+import { CONTENT_TYPE_OPTIONS, getContentTypeLabelKey, getModeLabelKey } from '../utils/constants';
 
 import type { NotificationTrigger, TriggerMode } from '@renderer/types/data';
 
@@ -39,6 +40,9 @@ export const TriggerCardHeader = ({
   onToggleExpanded,
   onRemove,
 }: Readonly<TriggerCardHeaderProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('settings');
+  const contentTypeOption = CONTENT_TYPE_OPTIONS.find((o) => o.value === trigger.contentType);
+
   return (
     <div className="flex items-center justify-between py-3">
       {/* Left side: Name and badges */}
@@ -70,7 +74,7 @@ export const TriggerCardHeader = ({
               {trigger.isBuiltin && (
                 <span className="flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] text-indigo-400">
                   <Shield className="size-2.5" />
-                  Builtin
+                  {t('notificationTriggers.card.builtinBadge')}
                 </span>
               )}
               {!trigger.isBuiltin && (
@@ -78,7 +82,7 @@ export const TriggerCardHeader = ({
                   onClick={() => onSetEditingName(true)}
                   disabled={saving}
                   className="rounded p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
-                  aria-label="Edit name"
+                  aria-label={t('notificationTriggers.card.editNameAriaLabel')}
                 >
                   <Pencil className="size-3" />
                 </button>
@@ -87,11 +91,12 @@ export const TriggerCardHeader = ({
           )}
           {/* Description line showing mode and content type */}
           <div className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
-            <span>{MODE_OPTIONS.find((m) => m.value === localMode)?.label ?? localMode}</span>
+            <span>{t(getModeLabelKey(localMode))}</span>
             <span className="text-text-muted">-</span>
             <span>
-              {CONTENT_TYPE_OPTIONS.find((o) => o.value === trigger.contentType)?.label ??
-                trigger.contentType}
+              {contentTypeOption
+                ? t(getContentTypeLabelKey(contentTypeOption.value))
+                : trigger.contentType}
             </span>
           </div>
         </div>
@@ -104,7 +109,11 @@ export const TriggerCardHeader = ({
         <button
           onClick={onToggleExpanded}
           className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
-          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          aria-label={
+            isExpanded
+              ? t('notificationTriggers.card.collapseAriaLabel')
+              : t('notificationTriggers.card.expandAriaLabel')
+          }
         >
           {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
         </button>
@@ -114,7 +123,7 @@ export const TriggerCardHeader = ({
             onClick={onRemove}
             disabled={saving}
             className={`rounded p-1 text-text-muted transition-colors hover:bg-red-500/10 hover:text-red-400 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
-            aria-label="Delete trigger"
+            aria-label={t('notificationTriggers.card.deleteAriaLabel')}
           >
             <X className="size-4" />
           </button>

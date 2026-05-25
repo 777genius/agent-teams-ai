@@ -9,6 +9,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { PROSE_PRE_BG, PROSE_PRE_BORDER } from '@renderer/constants/cssVariables';
 import DOMPurify from 'dompurify';
 import mermaid from 'mermaid';
@@ -52,6 +53,7 @@ interface MermaidDiagramProps {
 export const MermaidDiagram = React.memo(function MermaidDiagram({
   code,
 }: MermaidDiagramProps): React.ReactElement {
+  const { t } = useAppTranslation('common');
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,7 +99,7 @@ export const MermaidDiagram = React.memo(function MermaidDiagram({
           border: `1px solid ${PROSE_PRE_BORDER}`,
         }}
       >
-        <div className="mb-2 text-amber-400">Mermaid syntax error</div>
+        <div className="mb-2 text-amber-400">{t('code.mermaidSyntaxError')}</div>
         <pre className="whitespace-pre-wrap font-mono text-text-muted">{code}</pre>
       </div>
     );

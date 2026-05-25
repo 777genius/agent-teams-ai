@@ -23,16 +23,16 @@ Agent Teams распространяется как desktop-приложение
 
 ## Требования
 
-Пакетная сборка рассчитана на zero-setup onboarding. Приложение само помогает с runtime detection и provider authentication — ручная настройка CLI не нужна.
+Пакетная сборка рассчитана на zero-setup onboarding. Можно начать с бесплатной модели без авторизации - без регистрации, API-ключей и карты. Если нужны дополнительные модели, приложение само помогает с runtime detection и provider authentication.
 
-Для работы агентных рантаймов нужен доступ хотя бы к одному провайдеру:
+Для платных или account-backed моделей подключите хотя бы один провайдер:
 
 | Провайдер          | Способ доступа                                             |
 | ------------------ | ---------------------------------------------------------- |
 | Claude (Anthropic) | Claude Code CLI login или API key                          |
 | Codex (OpenAI)     | Codex CLI login или API key                                |
 | Gemini (Google)    | Google ADC, Gemini CLI или API key                         |
-| OpenCode           | API key для поддерживаемого бэкенда (например, OpenRouter) |
+| OpenCode           | Встроенная бесплатная модель без авторизации или API key для поддерживаемого бэкенда (например, OpenRouter) |
 
 ::: info
 Gemini — поддерживаемый провайдер. Варианты auth смотрите в разделе [Провайдеры и рантаймы](/ru/reference/providers-runtimes).

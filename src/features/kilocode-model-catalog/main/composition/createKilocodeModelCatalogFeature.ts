@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { createStaticKilocodeModelCatalogModels } from '../../core/domain/kilocodeModelCatalogFallback';
 import { InMemoryKilocodeModelCatalogCache } from '../infrastructure/InMemoryKilocodeModelCatalogCache';
 import { KilocodeGatewayClient } from '../infrastructure/KilocodeGatewayClient';
@@ -28,8 +30,8 @@ function staleAtIso(): string {
   return new Date(Date.now() + CATALOG_CACHE_TTL_MS).toISOString();
 }
 
-function buildCacheKey(apiKeyPrefix: string): string {
-  return `kilocode:${apiKeyPrefix}`;
+function buildCacheKey(apiKey: string): string {
+  return `kilocode:${createHash('sha256').update(apiKey).digest('hex')}`;
 }
 
 function normalizeGatewayModels(
@@ -96,7 +98,7 @@ export function createKilocodeModelCatalogFeature(options: {
       });
     }
 
-    const cacheKey = buildCacheKey(apiKey.slice(0, 8));
+    const cacheKey = buildCacheKey(apiKey);
 
     if (request.forceRefresh !== true) {
       const cached = cache.get(cacheKey, CATALOG_CACHE_TTL_MS);

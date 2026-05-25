@@ -3,9 +3,11 @@
  * Adapted from agent-flow's hit-detection.ts (Apache 2.0).
  */
 
-import type { GraphEdge, GraphNode } from '../ports/types';
-import { BEAM, NODE, TASK_PILL, HIT_DETECTION } from '../constants/canvas-constants';
+import { BEAM, HIT_DETECTION, KANBAN_ZONE, NODE, TASK_PILL } from '../constants/canvas-constants';
+
 import { bezierPoint, computeControlPoints } from './draw-edges';
+
+import type { GraphEdge, GraphNode } from '../ports/types';
 
 /**
  * Find the node at the given world-space coordinates.
@@ -39,7 +41,8 @@ export function findNodeAt(
       }
       case 'task': {
         const halfW = TASK_PILL.width / 2 + HIT_DETECTION.taskPadding;
-        const halfH = TASK_PILL.height / 2 + HIT_DETECTION.taskPadding;
+        const taskHeight = node.isOverflowStack ? KANBAN_ZONE.overflowHeight : TASK_PILL.height;
+        const halfH = taskHeight / 2 + HIT_DETECTION.taskPadding;
         if (
           worldX >= x - halfW &&
           worldX <= x + halfW &&

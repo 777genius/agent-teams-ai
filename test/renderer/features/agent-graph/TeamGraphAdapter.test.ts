@@ -1,12 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import {
   TeamGraphAdapter,
   type TeamGraphData,
 } from '@features/agent-graph/renderer/adapters/TeamGraphAdapter';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { InboxMessage, TeamTaskWithKanban } from '@shared/types/team';
 import type { GraphDataPort } from '@claude-teams/agent-graph';
+import type {
+  InboxMessage,
+  MemberSpawnStatusEntry,
+  TeamAgentRuntimeEntry,
+  TeamTaskWithKanban,
+} from '@shared/types/team';
 
 function createBaseTeamData(
   overrides?: Partial<TeamGraphData> & {
@@ -60,6 +64,23 @@ function createBaseTeamData(
 
 function findNode(graph: GraphDataPort, nodeId: string) {
   return graph.nodes.find((node) => node.id === nodeId);
+}
+
+function createLiveRuntimeEntry(
+  memberName: string,
+  overrides: Partial<TeamAgentRuntimeEntry> = {}
+): TeamAgentRuntimeEntry {
+  return {
+    memberName,
+    alive: true,
+    restartable: true,
+    providerId: 'codex',
+    providerBackendId: 'codex-native',
+    livenessKind: 'runtime_process',
+    pid: 12345,
+    updatedAt: '2026-03-28T19:00:00.000Z',
+    ...overrides,
+  };
 }
 
 function adaptWithActiveTaskLogActivity(
@@ -185,6 +206,62 @@ describe('TeamGraphAdapter particles', () => {
     expect(graph.layout?.mode).toBe('grid-under-lead');
   });
 
+  it('uses runtime entries when deriving member launch status', () => {
+    const adapter = TeamGraphAdapter.create();
+    const spawnStatuses: Record<string, MemberSpawnStatusEntry> = {
+      alice: {
+        status: 'online',
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        livenessKind: 'runtime_process',
+        updatedAt: '2026-03-28T19:00:00.000Z',
+      },
+    };
+    const teamData = createBaseTeamData({
+      members: [
+        {
+          name: 'team-lead',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+          agentType: 'team-lead',
+        },
+        {
+          name: 'alice',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 1,
+          lastActiveAt: null,
+          messageCount: 0,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+        },
+      ],
+    });
+
+    const withoutRuntime = adapter.adapt(teamData, 'my-team', spawnStatuses);
+    expect(findNode(withoutRuntime, 'member:my-team:alice')?.launchStatusLabel).toBe(
+      'stale runtime'
+    );
+
+    const withRuntime = adapter.adapt(
+      {
+        ...teamData,
+        runtimeEntriesByMember: {
+          alice: createLiveRuntimeEntry('alice'),
+        },
+      },
+      'my-team',
+      spawnStatuses
+    );
+
+    expect(findNode(withRuntime, 'member:my-team:alice')?.launchStatusLabel).toBeUndefined();
+    expect(findNode(withRuntime, 'member:my-team:alice')?.launchVisualState).toBeUndefined();
+  });
+
   it('applies saved grid owner order only in grid-under-lead mode', () => {
     const adapter = TeamGraphAdapter.create();
     const teamData = createBaseTeamData({
@@ -304,6 +381,87 @@ describe('TeamGraphAdapter particles', () => {
       progress: 0,
       label: '✉ Please check the latest build output now',
     });
+  });
+
+  it('creates a message edge and correctly directed particles for teammate-to-teammate messages', () => {
+    const adapter = TeamGraphAdapter.create();
+    adapter.adapt(createBaseTeamData(), 'my-team');
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        messages: [
+          {
+            from: 'alice',
+            to: 'bob',
+            text: 'Can you review this handoff?',
+            timestamp: '2026-03-28T19:00:01.000Z',
+            read: false,
+            messageId: 'msg-alice-bob',
+          },
+          {
+            from: 'bob',
+            to: 'alice',
+            text: 'Review done, sending notes back',
+            timestamp: '2026-03-28T19:00:02.000Z',
+            read: false,
+            messageId: 'msg-bob-alice',
+          },
+        ],
+      }),
+      'my-team'
+    );
+
+    const messageEdges = graph.edges.filter((edge) => edge.type === 'message');
+    expect(messageEdges).toEqual([
+      expect.objectContaining({
+        id: 'edge:msg:member:my-team:alice:member:my-team:bob',
+        source: 'member:my-team:alice',
+        target: 'member:my-team:bob',
+      }),
+    ]);
+
+    expect(
+      graph.particles.find((particle) => particle.id.endsWith(':msg-alice-bob'))
+    ).toMatchObject({
+      edgeId: 'edge:msg:member:my-team:alice:member:my-team:bob',
+      reverse: false,
+    });
+    expect(
+      graph.particles.find((particle) => particle.id.endsWith(':msg-bob-alice'))
+    ).toMatchObject({
+      edgeId: 'edge:msg:member:my-team:alice:member:my-team:bob',
+      reverse: true,
+    });
+  });
+
+  it('keeps teammate-to-teammate message edges in the initial graph snapshot without replaying old particles', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        messages: [
+          {
+            from: 'alice',
+            to: 'bob',
+            text: 'Earlier handoff that should remain visible',
+            timestamp: '2026-03-28T18:59:59.000Z',
+            read: true,
+            messageId: 'msg-existing-alice-bob',
+          },
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(graph.particles).toEqual([]);
+    expect(graph.edges).toContainEqual(
+      expect.objectContaining({
+        id: 'edge:msg:member:my-team:alice:member:my-team:bob',
+        source: 'member:my-team:alice',
+        target: 'member:my-team:bob',
+        type: 'message',
+      })
+    );
   });
 
   it('creates a comment particle for the first new task comment with preview text', () => {
@@ -619,7 +777,7 @@ describe('TeamGraphAdapter particles', () => {
     expect(graph.particles).toHaveLength(0);
   });
 
-  it('creates a synthetic message edge for comments from non-owner participants', () => {
+  it('routes comments from non-owner participants through a participant message edge', () => {
     const adapter = TeamGraphAdapter.create();
     const baseline = createBaseTeamData({
       tasks: [
@@ -663,11 +821,52 @@ describe('TeamGraphAdapter particles', () => {
     expect(graph.particles).toHaveLength(1);
     expect(graph.particles[0]).toMatchObject({
       kind: 'task_comment',
+      edgeId: 'edge:msg:member:my-team:alice:member:my-team:bob',
       label: '💬 I found the root cause, handing notes over now',
+      reverse: false,
     });
     expect(
-      graph.edges.some((edge) => edge.id === 'edge:msg:member:my-team:alice:task:my-team:task-2')
+      graph.edges.some((edge) => edge.id === 'edge:msg:member:my-team:alice:member:my-team:bob')
     ).toBe(true);
+  });
+
+  it('keeps existing cross-participant comment edges without replaying old comment particles', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-existing-comment',
+            displayId: '#12',
+            subject: 'Existing review',
+            owner: 'bob',
+            status: 'in_progress',
+            comments: [
+              {
+                id: 'comment-existing',
+                author: 'alice',
+                text: 'Existing comment visible as participant traffic',
+                createdAt: '2026-03-28T18:59:59.000Z',
+                type: 'regular',
+              },
+            ],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(graph.particles).toEqual([]);
+    expect(graph.edges).toContainEqual(
+      expect.objectContaining({
+        id: 'edge:msg:member:my-team:alice:member:my-team:bob',
+        source: 'member:my-team:alice',
+        target: 'member:my-team:bob',
+        type: 'message',
+      })
+    );
   });
 
   it('does not collapse two new inbox particles that share a timestamp but differ in content', () => {

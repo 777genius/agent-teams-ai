@@ -8,6 +8,8 @@ import {
   getActiveTeamPendingReplyWaits,
   hasActiveTeamPendingReplyWait,
   getCurrentProvisioningProgressForTeam,
+  loadPersistedMessagesPanelMode,
+  savePersistedMessagesPanelMode,
   selectMemberMessagesForTeamMember,
   selectResolvedMemberForTeamName,
   selectResolvedMembersForTeamName,
@@ -344,11 +346,37 @@ describe('teamSlice actions', () => {
     });
     hoisted.restartMember.mockResolvedValue(undefined);
     hoisted.skipMemberForLaunch.mockResolvedValue(undefined);
+    window.localStorage.removeItem('team:messagesPanelMode');
   });
 
   afterEach(() => {
     restoreWindowAnimationFrame();
     vi.useRealTimers();
+  });
+
+  it('restores the selected messages panel mode from localStorage', () => {
+    window.localStorage.setItem('team:messagesPanelMode', 'bottom-sheet');
+
+    const store = createSliceStore();
+
+    expect(store.getState().messagesPanelMode).toBe('bottom-sheet');
+  });
+
+  it('persists messages panel mode changes and ignores invalid stored values', () => {
+    const store = createSliceStore();
+
+    store.getState().setMessagesPanelMode('floating-composer');
+
+    expect(window.localStorage.getItem('team:messagesPanelMode')).toBe('floating-composer');
+    expect(loadPersistedMessagesPanelMode()).toBe('floating-composer');
+
+    window.localStorage.setItem('team:messagesPanelMode', 'bad-mode');
+
+    expect(loadPersistedMessagesPanelMode()).toBe('sidebar');
+
+    savePersistedMessagesPanelMode('inline');
+
+    expect(window.localStorage.getItem('team:messagesPanelMode')).toBe('inline');
   });
 
   it('records terminal provisioning fanout diagnostics without changing visible graph hydrate behavior', () => {
@@ -4274,6 +4302,151 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
   });
 
+  it('updates runtime snapshots when resource history changes', async () => {
+    const store = createSliceStore();
+    const firstResourceHistory = [
+      {
+        timestamp: '2026-03-12T10:00:00.000Z',
+        rssBytes: 256 * 1024 * 1024,
+        cpuPercent: 4,
+        pid: 4242,
+      },
+    ];
+    const snapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          cpuPercent: 4,
+          resourceHistory: firstResourceHistory,
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const nextSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          cpuPercent: 14,
+          resourceHistory: [
+            ...firstResourceHistory,
+            {
+              timestamp: '2026-03-12T10:00:05.000Z',
+              rssBytes: 270 * 1024 * 1024,
+              cpuPercent: 14,
+              pid: 4242,
+            },
+          ],
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(nextSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).not.toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
+  });
+
+  it('does not crash when runtime resource history contains malformed samples', async () => {
+    const store = createSliceStore();
+    const validSample = {
+      timestamp: '2026-03-12T10:00:00.000Z',
+      rssBytes: 256 * 1024 * 1024,
+      cpuPercent: 4,
+      pid: 4242,
+    };
+    const snapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          cpuPercent: 4,
+          resourceHistory: [null, validSample] as any,
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const semanticallySameSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          resourceHistory: [null, { ...validSample }] as any,
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(semanticallySameSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
+  });
+
+  it('updates runtime snapshots when aggregate runtime load breakdown changes', async () => {
+    const store = createSliceStore();
+    const firstBreakdownHistorySample = {
+      timestamp: '2026-03-12T10:00:00.000Z',
+      rssBytes: 300 * 1024 * 1024,
+      cpuPercent: 12,
+      primaryCpuPercent: 12,
+      primaryRssBytes: 300 * 1024 * 1024,
+      processCount: 1,
+      runtimeLoadScope: 'single-process',
+      pid: 4242,
+    };
+    const snapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          cpuPercent: 12,
+          rssBytes: 300 * 1024 * 1024,
+          primaryCpuPercent: 12,
+          primaryRssBytes: 300 * 1024 * 1024,
+          processCount: 1,
+          runtimeLoadScope: 'single-process',
+          resourceHistory: [firstBreakdownHistorySample],
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const nextSnapshot = createRuntimeSnapshot({
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          childCpuPercent: 8,
+          childRssBytes: 80 * 1024 * 1024,
+          processCount: 3,
+          runtimeLoadScope: 'process-tree',
+          resourceHistory: [
+            {
+              ...firstBreakdownHistorySample,
+              childCpuPercent: 8,
+              childRssBytes: 80 * 1024 * 1024,
+              processCount: 3,
+              runtimeLoadScope: 'process-tree',
+            },
+          ],
+        },
+      },
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(nextSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).not.toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(nextSnapshot);
+  });
+
   it('updates runtime snapshots when copy-diagnostics details change', async () => {
     const store = createSliceStore();
     const snapshot = createRuntimeSnapshot({
@@ -5020,8 +5193,233 @@ describe('teamSlice actions', () => {
       });
     });
 
+    it('stages changed launchTeam params before the launch IPC resolves', async () => {
+      const store = createSliceStore();
+      const launchRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+      store.setState({
+        launchParamsByTeam: {
+          'my-team': {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            limitContext: false,
+          },
+        },
+      });
+
+      const launchPromise = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+      });
+      await Promise.resolve();
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual({
+        providerId: 'anthropic',
+        providerBackendId: undefined,
+        model: 'sonnet',
+        effort: 'low',
+        limitContext: false,
+      });
+
+      launchRequest.resolve({ runId: 'run-2' });
+      await launchPromise;
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual({
+        providerId: 'anthropic',
+        providerBackendId: undefined,
+        model: 'sonnet',
+        effort: 'low',
+        limitContext: false,
+      });
+    });
+
+    it('sanitizes stale providerBackendId before staging launchTeam params', async () => {
+      const store = createSliceStore();
+      const launchRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+
+      const launchPromise = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        providerBackendId: 'codex-native',
+        model: 'haiku',
+        effort: 'low',
+      });
+      await Promise.resolve();
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual({
+        providerId: 'anthropic',
+        providerBackendId: undefined,
+        model: 'haiku',
+        effort: 'low',
+        limitContext: false,
+      });
+
+      launchRequest.resolve({ runId: 'run-2' });
+      await launchPromise;
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual({
+        providerId: 'anthropic',
+        providerBackendId: undefined,
+        model: 'haiku',
+        effort: 'low',
+        limitContext: false,
+      });
+    });
+
+    it('does not stage a previous model when launchTeam changes provider without a model', async () => {
+      const store = createSliceStore();
+      const launchRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+      store.setState({
+        launchParamsByTeam: {
+          'my-team': {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            limitContext: true,
+          },
+        },
+      });
+
+      const launchPromise = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+      });
+      await Promise.resolve();
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual({
+        providerId: 'anthropic',
+        providerBackendId: undefined,
+        model: 'default',
+        effort: undefined,
+        limitContext: false,
+      });
+
+      launchRequest.resolve({ runId: 'run-2' });
+      await launchPromise;
+    });
+
+    it('stages Default when launchTeam keeps the provider but explicitly clears the model', async () => {
+      const store = createSliceStore();
+      const launchRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+      store.setState({
+        launchParamsByTeam: {
+          'my-team': {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.5',
+            effort: 'medium',
+            limitContext: false,
+          },
+        },
+      });
+
+      const launchPromise = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: undefined,
+        effort: 'low',
+      });
+      await Promise.resolve();
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual({
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'default',
+        effort: 'low',
+        limitContext: false,
+      });
+
+      launchRequest.resolve({ runId: 'run-2' });
+      await launchPromise;
+    });
+
+    it('keeps previous launch params while a metadata-only relaunch request is pending', async () => {
+      const store = createSliceStore();
+      const previousParams = {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        effort: 'medium',
+        limitContext: false,
+      };
+      store.setState({
+        launchParamsByTeam: {
+          'my-team': previousParams,
+        },
+      });
+      const launchRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+
+      const launchPromise = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+      });
+      await Promise.resolve();
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
+
+      launchRequest.resolve({ runId: 'run-2' });
+      await launchPromise;
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
+    });
+
+    it('rolls back staged launch params when launchTeam fails before provisioning starts', async () => {
+      const store = createSliceStore();
+      const previousParams = {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        effort: 'medium',
+        limitContext: false,
+      };
+      store.setState({
+        launchParamsByTeam: {
+          'my-team': previousParams,
+        },
+      });
+      hoisted.launchTeam.mockRejectedValueOnce(new Error('launch failed'));
+
+      await expect(
+        store.getState().launchTeam({
+          teamName: 'my-team',
+          cwd: '/tmp/project',
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+        })
+      ).rejects.toThrow('launch failed');
+
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
+    });
+
     it('rolls back optimistic pending run on early createTeam failure', async () => {
       const store = createSliceStore();
+      const previousParams = {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.5',
+        effort: 'medium',
+        limitContext: false,
+      };
+      store.setState({
+        launchParamsByTeam: {
+          'my-team': previousParams,
+        },
+      });
       hoisted.createTeam.mockRejectedValue(new Error('create failed'));
 
       await expect(
@@ -5029,12 +5427,16 @@ describe('teamSlice actions', () => {
           teamName: 'my-team',
           cwd: '/tmp/project',
           members: [],
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
         })
       ).rejects.toThrow('create failed');
 
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
       expect(Object.values(store.getState().provisioningRuns)).toHaveLength(0);
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe('create failed');
+      expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
     });
 
     it('hydrates visible non-selected graph tabs when config becomes ready', () => {

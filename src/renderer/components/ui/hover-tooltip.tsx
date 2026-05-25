@@ -13,6 +13,7 @@ interface HoverTooltipProps {
   className?: string;
   contentClassName?: string;
   disabled?: boolean;
+  dismissOnClick?: boolean;
   side?: HoverTooltipSide;
   stopClickPropagation?: boolean;
   title?: string;
@@ -45,11 +46,13 @@ export const HoverTooltip = ({
   className,
   contentClassName,
   disabled = false,
+  dismissOnClick = false,
   side = 'top',
   stopClickPropagation = false,
   title,
 }: Readonly<HoverTooltipProps>): React.JSX.Element => {
   const TooltipWrapper = as;
+  const [dismissed, setDismissed] = React.useState(false);
 
   if (disabled || !content) {
     return <TooltipWrapper className={className}>{children}</TooltipWrapper>;
@@ -58,17 +61,25 @@ export const HoverTooltip = ({
   return (
     <TooltipWrapper
       className={cn('group/hover-tooltip relative inline-flex min-w-0', className)}
-      title={title}
-      onClick={
-        stopClickPropagation ? (event: React.MouseEvent) => event.stopPropagation() : undefined
-      }
+      title={dismissed ? undefined : title}
+      onBlur={dismissOnClick ? () => setDismissed(false) : undefined}
+      onClick={(event: React.MouseEvent) => {
+        if (dismissOnClick) {
+          setDismissed(true);
+        }
+        if (stopClickPropagation) {
+          event.stopPropagation();
+        }
+      }}
+      onMouseLeave={dismissOnClick ? () => setDismissed(false) : undefined}
     >
       {children}
       <span
         aria-hidden="true"
         className={cn(
           'pointer-events-none absolute z-[80] w-max max-w-72 rounded-md border border-[var(--color-border-emphasis)] bg-[var(--color-surface-overlay)] px-2.5 py-1.5 text-left text-xs font-normal leading-relaxed text-[var(--color-text)] opacity-0 shadow-2xl shadow-black/40 ring-1 ring-black/10 transition-opacity duration-100',
-          'group-focus-within/hover-tooltip:opacity-100 group-hover/hover-tooltip:opacity-100',
+          !dismissed &&
+            'group-focus-within/hover-tooltip:opacity-100 group-hover/hover-tooltip:opacity-100',
           sideClassBySide[side],
           alignClassByAlign[align],
           contentClassName

@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import {
   CodexLoginLinkCopyButton,
@@ -76,6 +77,7 @@ export const CodexReconnectPrompt = ({
   onReconnect: () => void;
   onDeviceCodeReconnect: () => void;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   return (
     <div
       className="mt-2 rounded-md border px-2.5 py-2"
@@ -86,8 +88,7 @@ export const CodexReconnectPrompt = ({
     >
       <div className="flex flex-wrap items-center gap-2">
         <p className="min-w-0 flex-1 text-[11px] text-amber-100/90">
-          Codex found the local ChatGPT account, but this session is stale. Sign in with ChatGPT,
-          enter the code if shown, then retry this dialog.
+          {t('codexReconnect.description')}
         </p>
         <CodexLoginUserCodeBadge userCode={userCode} />
         <CodexLoginLinkCopyButton
@@ -107,7 +108,7 @@ export const CodexReconnectPrompt = ({
               backgroundColor: 'rgba(245, 158, 11, 0.05)',
             }}
           >
-            Use code
+            {t('codexReconnect.useCode')}
           </button>
         ) : null}
         <button

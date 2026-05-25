@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmDialogState {
@@ -67,6 +68,7 @@ export async function confirm(opts: {
  * ConfirmDialog component. Mount once at the app root (e.g. in App.tsx).
  */
 export const ConfirmDialog = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const [state, setState] = useState<ConfirmDialogState>(initialState);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -115,7 +117,7 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
         className="absolute inset-0 cursor-default"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
         onClick={() => close(false)}
-        aria-label="Close dialog"
+        aria-label={t('actions.closeDialog')}
         tabIndex={-1}
       />
       <div

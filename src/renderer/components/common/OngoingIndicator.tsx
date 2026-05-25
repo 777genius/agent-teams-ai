@@ -5,6 +5,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Loader2 } from 'lucide-react';
 
 interface OngoingIndicatorProps {
@@ -50,6 +51,8 @@ export const OngoingIndicator = ({
  * Shows animated spinner and text.
  */
 export const OngoingBanner = (): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
+
   return (
     <div
       className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3"
@@ -60,7 +63,7 @@ export const OngoingBanner = (): React.JSX.Element => {
     >
       <Loader2 className="size-4 shrink-0 animate-spin" style={{ color: 'var(--info-text)' }} />
       <span className="text-sm font-medium" style={{ color: 'var(--info-text)' }}>
-        Session is in progress...
+        {t('sessions.inProgress')}
       </span>
     </div>
   );

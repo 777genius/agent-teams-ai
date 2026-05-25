@@ -20,6 +20,7 @@ interface TeamRosterEditorSectionProps {
   projectPath?: string | null;
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
+  onWorkflowSuggestionsNeeded?: () => void;
   hideMembersContent?: boolean;
   existingMembers?: readonly { name: string; color?: string; removedAt?: number | string | null }[];
   defaultProviderId?: TeamProviderId;
@@ -42,6 +43,7 @@ interface TeamRosterEditorSectionProps {
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
   headerTop?: React.ReactNode;
   headerBottom?: React.ReactNode;
+  leadProviderNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
   softDeleteMembers?: boolean;
   leadWarningText?: string | null;
   memberWarningById?: Record<string, string | null | undefined>;
@@ -49,6 +51,9 @@ interface TeamRosterEditorSectionProps {
   disableGeminiOption?: boolean;
   leadModelIssueText?: string | null;
   memberModelIssueById?: Record<string, string | null | undefined>;
+  modelAdvisoryReasonByProvider?: Partial<
+    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
+  >;
   modelIssueReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
@@ -72,6 +77,7 @@ const TeamRosterEditorSectionImpl = ({
   projectPath,
   taskSuggestions,
   teamSuggestions,
+  onWorkflowSuggestionsNeeded,
   hideMembersContent = false,
   existingMembers,
   defaultProviderId = 'anthropic',
@@ -94,6 +100,7 @@ const TeamRosterEditorSectionImpl = ({
   onSyncModelsWithTeammatesChange,
   headerTop,
   headerBottom,
+  leadProviderNoticeById,
   softDeleteMembers = false,
   leadWarningText,
   memberWarningById,
@@ -101,6 +108,7 @@ const TeamRosterEditorSectionImpl = ({
   disableGeminiOption = false,
   leadModelIssueText,
   memberModelIssueById,
+  modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
   showWorktreeIsolationControls = false,
@@ -147,6 +155,7 @@ const TeamRosterEditorSectionImpl = ({
       projectPath={projectPath}
       taskSuggestions={taskSuggestions}
       teamSuggestions={teamSuggestions}
+      onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
       hideContent={hideMembersContent}
       existingMembers={existingMembers}
       defaultProviderId={defaultProviderId}
@@ -161,6 +170,7 @@ const TeamRosterEditorSectionImpl = ({
       softDeleteMembers={softDeleteMembers}
       disableGeminiOption={disableGeminiOption}
       memberModelIssueById={memberModelIssueById}
+      modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
       modelIssueReasonByProvider={modelIssueReasonByProvider}
       modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
       showWorktreeIsolationControls={showWorktreeIsolationControls}
@@ -183,7 +193,9 @@ const TeamRosterEditorSectionImpl = ({
             onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
             warningText={leadWarningText}
             disableGeminiOption={disableGeminiOption}
+            providerNoticeById={leadProviderNoticeById}
             modelIssueText={leadModelIssueText}
+            modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
             modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
             modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
             showAnthropicContextLimit={hasAnthropicRuntime}

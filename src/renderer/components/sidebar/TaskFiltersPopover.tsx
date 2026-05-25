@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Combobox } from '@renderer/components/ui/combobox';
@@ -15,10 +16,10 @@ import {
 
 import type { ComboboxOption } from '../ui/combobox';
 
-const READ_FILTER_OPTIONS: { value: ReadFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'unread', label: 'Unread' },
-  { value: 'read', label: 'Read' },
+const READ_FILTER_OPTIONS: { value: ReadFilter; labelKey: 'all' | 'unread' | 'read' }[] = [
+  { value: 'all', labelKey: 'all' },
+  { value: 'unread', labelKey: 'unread' },
+  { value: 'read', labelKey: 'read' },
 ];
 
 interface TaskFiltersPopoverProps {
@@ -40,6 +41,7 @@ export const TaskFiltersPopover = ({
   onFiltersChange,
   onApply,
 }: TaskFiltersPopoverProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   // Draft state — all changes accumulate here and only commit on Apply
   const [draft, setDraft] = useState<TaskFiltersState>(filters);
 
@@ -91,13 +93,15 @@ export const TaskFiltersPopover = ({
         <div className="space-y-3">
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-text-secondary">Status</span>
+              <span className="text-[11px] font-semibold text-text-secondary">
+                {t('taskFilters.status')}
+              </span>
               <button
                 type="button"
                 className="text-[10px] text-text-muted hover:text-text-secondary"
                 onClick={handleSelectAll}
               >
-                {allSelected ? 'Clear all' : 'Select all'}
+                {allSelected ? t('taskFilters.clearAll') : t('taskFilters.selectAll')}
               </button>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -115,17 +119,19 @@ export const TaskFiltersPopover = ({
                     className="inline-block size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: opt.color }}
                   />
-                  {opt.label}
+                  {t(`taskFilters.statusOptions.${opt.labelKey}`)}
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <span className="mb-1.5 block text-[11px] font-semibold text-text-secondary">Team</span>
+            <span className="mb-1.5 block text-[11px] font-semibold text-text-secondary">
+              {t('taskFilters.team')}
+            </span>
             <Combobox
               options={[
-                { value: '__all__', label: 'All teams' },
+                { value: '__all__', label: t('taskFilters.allTeams') },
                 ...teams.map((t) => ({ value: t.teamName, label: t.displayName })),
               ]}
               value={draft.teamName ?? '__all__'}
@@ -135,9 +141,9 @@ export const TaskFiltersPopover = ({
                   teamName: v === '__all__' ? null : v,
                 })
               }
-              placeholder="All teams"
-              searchPlaceholder="Search teams..."
-              emptyMessage="No teams found"
+              placeholder={t('taskFilters.allTeams')}
+              searchPlaceholder={t('taskFilters.searchTeams')}
+              emptyMessage={t('taskFilters.noTeamsFound')}
               className="text-[12px]"
             />
           </div>
@@ -145,17 +151,17 @@ export const TaskFiltersPopover = ({
           {projectOptions.length > 0 && (
             <div>
               <span className="mb-1.5 block text-[11px] font-semibold text-text-secondary">
-                Project
+                {t('taskFilters.project')}
               </span>
               <Combobox
                 options={projectOptions}
                 value={draft.projectPath ?? ''}
                 onValueChange={(v) => setDraft({ ...draft, projectPath: v || null })}
-                placeholder="All Projects"
-                searchPlaceholder="Search projects..."
-                emptyMessage="No projects"
+                placeholder={t('taskFilters.allProjects')}
+                searchPlaceholder={t('taskFilters.searchProjects')}
+                emptyMessage={t('taskFilters.noProjects')}
                 className="text-[12px]"
-                resetLabel="All Projects"
+                resetLabel={t('taskFilters.allProjects')}
                 onReset={() => setDraft({ ...draft, projectPath: null })}
               />
             </div>
@@ -163,7 +169,7 @@ export const TaskFiltersPopover = ({
 
           <div>
             <span className="mb-1.5 block text-[11px] font-semibold text-text-secondary">
-              Comments
+              {t('taskFilters.comments')}
             </span>
             <div className="flex rounded-md border border-[var(--color-border)]">
               {READ_FILTER_OPTIONS.map((opt) => (
@@ -183,7 +189,7 @@ export const TaskFiltersPopover = ({
                     })
                   }
                 >
-                  {opt.label}
+                  {t(`taskFilters.read.${opt.labelKey}`)}
                 </button>
               ))}
             </div>
@@ -196,7 +202,7 @@ export const TaskFiltersPopover = ({
             className="w-full"
             onClick={handleApply}
           >
-            Apply
+            {t('taskFilters.apply')}
           </Button>
         </div>
       </PopoverContent>

@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { severityColor } from '@renderer/utils/reportAssessments';
 import { MessageSquareWarning } from 'lucide-react';
 
@@ -13,13 +14,14 @@ interface FrictionSectionProps {
 }
 
 export const FrictionSection = ({ data, thrashing, defaultCollapsed }: FrictionSectionProps) => {
+  const { t } = useAppTranslation('report');
   const frictionSeverity =
     data.frictionRate <= 0.1 ? 'good' : data.frictionRate <= 0.25 ? 'warning' : 'danger';
   const frictionColor = severityColor(frictionSeverity);
 
   return (
     <ReportSection
-      title="Friction Signals"
+      title={t('friction.title')}
       icon={MessageSquareWarning}
       defaultCollapsed={defaultCollapsed}
     >
@@ -31,16 +33,18 @@ export const FrictionSection = ({ data, thrashing, defaultCollapsed }: FrictionS
             color: frictionColor,
           }}
         >
-          Friction Rate: {(data.frictionRate * 100).toFixed(1)}%
+          {t('friction.rate', { rate: (data.frictionRate * 100).toFixed(1) })}
         </span>
         <span className="text-xs text-text-muted">
-          {data.correctionCount} correction{data.correctionCount !== 1 ? 's' : ''}
+          {t('friction.correctionsCount', { count: data.correctionCount })}
         </span>
       </div>
 
       {data.corrections.length > 0 && (
         <div className="mb-4">
-          <div className="mb-2 text-xs font-medium text-text-muted">Corrections</div>
+          <div className="mb-2 text-xs font-medium text-text-muted">
+            {t('friction.corrections')}
+          </div>
           <div className="flex flex-col gap-1">
             {data.corrections.map((corr, idx) => (
               <div key={idx} className="flex items-start gap-2 rounded px-2 py-1 text-xs">
@@ -63,13 +67,17 @@ export const FrictionSection = ({ data, thrashing, defaultCollapsed }: FrictionS
       {(thrashing.bashNearDuplicates.length > 0 || thrashing.editReworkFiles.length > 0) && (
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-xs font-medium text-text-muted">Thrashing Signals</span>
+            <span className="text-xs font-medium text-text-muted">
+              {t('friction.thrashingSignals')}
+            </span>
             <AssessmentBadge assessment={thrashing.thrashingAssessment} metricKey="thrashing" />
           </div>
 
           {thrashing.bashNearDuplicates.length > 0 && (
             <div className="mb-2">
-              <div className="mb-1 text-xs text-text-muted">Repeated Bash Commands</div>
+              <div className="mb-1 text-xs text-text-muted">
+                {t('friction.repeatedBashCommands')}
+              </div>
               {thrashing.bashNearDuplicates.map((dup, idx) => (
                 <div key={idx} className="flex items-center gap-2 px-2 py-0.5 text-xs">
                   <span className="text-text-muted">{dup.count}x</span>
@@ -81,7 +89,7 @@ export const FrictionSection = ({ data, thrashing, defaultCollapsed }: FrictionS
 
           {thrashing.editReworkFiles.length > 0 && (
             <div>
-              <div className="mb-1 text-xs text-text-muted">Reworked Files (3+ edits)</div>
+              <div className="mb-1 text-xs text-text-muted">{t('friction.reworkedFiles')}</div>
               {thrashing.editReworkFiles.map((file, idx) => (
                 <div key={idx} className="flex items-center gap-2 px-2 py-0.5 text-xs">
                   <span className="text-text-muted">{file.editIndices.length}x</span>

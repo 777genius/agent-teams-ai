@@ -7,9 +7,10 @@
  * Class with ES #private methods, single source of truth from KANBAN_ZONE constants.
  */
 
-import type { GraphNode } from '../ports/types';
 import { KANBAN_ZONE, TASK_PILL } from '../constants/canvas-constants';
 import { COLORS } from '../constants/colors';
+
+import type { GraphNode } from '../ports/types';
 import type { SlotFrame, StableRect } from './stableSlots';
 
 /** Column header info for rendering */
@@ -18,10 +19,6 @@ export interface KanbanColumnHeader {
   x: number;
   y: number;
   color: string;
-  /** Number of hidden overflow tasks in this column */
-  overflowCount: number;
-  /** Y position for the overflow badge */
-  overflowY: number;
 }
 
 /** Zone info per owner for rendering headers */
@@ -40,6 +37,18 @@ const COLUMN_LABELS: Record<string, { label: string; color: string }> = {
   review: { label: 'Review', color: COLORS.reviewPending },
   approved: { label: 'Approved', color: COLORS.reviewApproved },
 };
+
+function getOverflowFooterCenterY(baseY: number): number {
+  const overflowGap = KANBAN_ZONE.rowHeight - TASK_PILL.height;
+  return (
+    baseY +
+    KANBAN_ZONE.headerHeight +
+    (KANBAN_ZONE.maxVisibleRows - 1) * KANBAN_ZONE.rowHeight +
+    TASK_PILL.height / 2 +
+    overflowGap +
+    KANBAN_ZONE.overflowHeight / 2
+  );
+}
 
 export function getOwnerKanbanBaseX(args: {
   ownerX: number;
@@ -200,8 +209,6 @@ export class KanbanLayoutEngine {
     for (const [colIdx, col] of activeColumns.entries()) {
       const colX = baseX + colIdx * columnWidth;
       const config = COLUMN_LABELS[col.name] ?? { label: col.name, color: '#888' };
-      const overflow = col.tasks.find((task) => task.isOverflowStack)?.overflowCount ?? 0;
-      const visibleCount = col.tasks.length;
 
       // Column header — centered over pill area (pill center = colX since drawTaskPill translates to x,y)
       headers.push({
@@ -209,14 +216,15 @@ export class KanbanLayoutEngine {
         x: colX, // pill center = task.x = colX
         y: baseY,
         color: config.color,
-        overflowCount: overflow,
-        overflowY: baseY + headerHeight + visibleCount * rowHeight,
       });
 
-      // Position tasks below header
+      // Position tasks below header. Overflow stacks render as a compact footer after
+      // the full visible task budget instead of consuming a task-card row.
       for (const [rowIdx, task] of col.tasks.entries()) {
         const targetX = colX;
-        const targetY = baseY + headerHeight + rowIdx * rowHeight;
+        const targetY = task.isOverflowStack
+          ? getOverflowFooterCenterY(baseY)
+          : baseY + headerHeight + rowIdx * rowHeight;
         task.x = slotFrame
           ? targetX
           : task.x != null
@@ -264,7 +272,6 @@ export class KanbanLayoutEngine {
       const baseX = unassignedTaskRect.left + TASK_PILL.width / 2;
       const headerY = unassignedTaskRect.top;
       const baseY = headerY + KANBAN_ZONE.headerHeight;
-      const overflowCount = tasks.reduce((sum, task) => sum + (task.overflowCount ?? 0), 0);
 
       this.zones.push({
         ownerId: '__unassigned__',
@@ -276,8 +283,6 @@ export class KanbanLayoutEngine {
             x: 0,
             y: headerY,
             color: COLORS.taskPending,
-            overflowCount,
-            overflowY: baseY + KANBAN_ZONE.maxVisibleRows * rowHeight,
           },
         ],
       });
@@ -286,7 +291,7 @@ export class KanbanLayoutEngine {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
         const targetX = baseX + col * columnWidth;
-        const targetY = baseY + row * rowHeight;
+        const targetY = task.isOverflowStack ? getOverflowFooterCenterY(headerY) : baseY + row * rowHeight;
         task.x = targetX;
         task.y = targetY;
         task.fx = targetX;
@@ -322,7 +327,6 @@ export class KanbanLayoutEngine {
 
     // Add zone header for unassigned section
     if (tasks.length > 0) {
-      const overflowCount = tasks.reduce((sum, task) => sum + (task.overflowCount ?? 0), 0);
       this.zones.push({
         ownerId: '__unassigned__',
         ownerX: centerX,
@@ -333,8 +337,6 @@ export class KanbanLayoutEngine {
             x: centerX,
             y: headerY,
             color: COLORS.taskPending,
-            overflowCount,
-            overflowY: baseY + KANBAN_ZONE.maxVisibleRows * rowHeight,
           },
         ],
       });
@@ -344,7 +346,7 @@ export class KanbanLayoutEngine {
       const col = idx % cols;
       const row = Math.floor(idx / cols);
       const targetX = baseX + col * columnWidth;
-      const targetY = baseY + row * rowHeight;
+      const targetY = task.isOverflowStack ? getOverflowFooterCenterY(headerY) : baseY + row * rowHeight;
       task.x = task.x != null ? task.x + (targetX - task.x) * 0.15 : targetX;
       task.y = task.y != null ? task.y + (targetY - task.y) * 0.15 : targetY;
       task.fx = task.x;

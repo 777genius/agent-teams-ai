@@ -44,7 +44,7 @@
     {
       "id": "isFree",
       "question": "É realmente grátis?",
-      "answer": "Sim. O app é gratuito e open source. O app não tem plano pago próprio. Para rodar agentes, você só precisa de acesso a um provider/runtime compatível, como Anthropic ou Codex."
+      "answer": "Sim. O app é gratuito e open source, e você pode começar com um modelo gratuito sem autenticação - sem cadastro, chave de API ou cartão. Para mais modelos, conecte Claude, Codex, OpenCode/OpenRouter ou outro provedor compatível."
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "O que preciso para começar?",
-      "answer": "Basta instalar o app - ele guia a detecção do runtime e a autenticação do provider pela interface. O onboarding sem configuração coloca você em ação em minutos."
+      "answer": "Basta instalar o app - comece com o modelo gratuito sem autenticação, depois conecte modelos com provedor pela interface só quando precisar."
     }
   ],
   "download": {
@@ -85,16 +85,16 @@
       "name": "Grátis",
       "price": "$0",
       "period": "",
-      "description": "Tudo incluído. Sem limites, sem chaves de API, sem cartão de crédito.",
+      "description": "Comece com o modelo gratuito sem autenticação incluído. Sem cadastro, sem chave de API, sem cartão.",
       "features": [
+        "Modelo gratuito sem autenticação para os primeiros usos",
+        "Não precisa de conta nem login de provedor para testar",
+        "Acesso opcional a Claude, Codex e OpenCode",
         "Equipes de agentes ilimitadas",
         "Quadro kanban com atualizações em tempo real",
         "Revisão de código com visualização diff",
         "Comunicação entre equipes",
-        "Modo solo e equipe",
-        "Monitoramento de processos ao vivo",
-        "Editor de código integrado",
-        "Integração MCP"
+        "Modo solo e equipe"
       ],
       "highlighted": true
     }

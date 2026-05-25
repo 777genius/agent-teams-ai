@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "취소",
+    "close": "닫기",
+    "copied": "복사됨",
+    "copyUrl": "URL 복사",
+    "open": "열기",
+    "reveal": "파일 위치 열기",
+    "retry": "다시 시도",
+    "save": "저장",
+    "showLess": "간단히 보기",
+    "showMore": "더 보기",
+    "refresh": "새로고침",
+    "reset": "초기화",
+    "copyToClipboard": "클립보드에 복사",
+    "moreActions": "추가 작업",
+    "closeDialog": "대화상자 닫기",
+    "goToDashboard": "대시보드로 이동",
+    "or": "또는",
+    "hide": "숨기기",
+    "resetSelection": "선택 초기화"
+  },
+  "code": {
+    "line": "라인 {{line}}",
+    "lines": "라인 {{from}}-{{to}}",
+    "moreLines": "({{count}} 더 많은 라인...)",
+    "moreLines_few": "({{count}} 더 많은 라인...)",
+    "moreLines_many": "({{count}} 더 많은 라인...)",
+    "moreLines_one": "({{count}} 더 라인...)",
+    "moreLines_other": "({{count}} 더 많은 라인...)",
+    "code": "이름 *",
+    "preview": "다운로드",
+    "markdownPreview": "Markdown 미리보기",
+    "linesParenthesized": "(라인 {{from}}-{{to}})",
+    "mermaidSyntaxError": "Mermaid 구문 오류"
+  },
+  "contextBadge": {
+    "badge": "설정하기",
+    "breakdown": {
+      "text": "이름 *",
+      "thinking": "더 보기"
+    },
+    "detailsAria": "Context 주입 세부사항",
+    "sectionSummary": "{{title}} ({{count}}) ~{{tokens}} 토큰",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md 파일",
+      "mentionedFiles": "관련 파일",
+      "taskCoordination": "작업 조정",
+      "thinkingText": "사고 + 이름 *",
+      "toolOutputs": "공구 산출",
+      "userMessages": "사용자 메시지"
+    },
+    "title": "새로운 Context Injected 에 이 차례",
+    "tokenCount": "~{{tokens}} 토큰",
+    "totalNewTokens": "새로운 토큰",
+    "turn": "{{turn}}를 켭니다",
+    "sectionSummary_few": "{{title}} ({{count}}) ~{{tokens}} 토큰",
+    "sectionSummary_many": "{{title}} ({{count}}) ~{{tokens}} 토큰",
+    "sectionSummary_one": "{{title}} ({{count}}) ~{{tokens}} 토큰",
+    "sectionSummary_other": "{{title}} ({{count}}) ~{{tokens}} 토큰"
+  },
+  "locales": {
+    "emptyMessage": "언어를 찾을 수 없습니다.",
+    "names": {
+      "en": "영어",
+      "ru": "러시아어",
+      "zh": "중국어",
+      "ja": "일본어",
+      "ko": "한국어",
+      "es": "스페인어",
+      "hi": "힌디어",
+      "pt": "포르투갈어",
+      "fr": "프랑스어",
+      "ar": "아랍어",
+      "bn": "벵골어",
+      "ur": "우르두어",
+      "id": "인도네시아어",
+      "de": "독일어",
+      "system": "시스템"
+    },
+    "searchPlaceholder": "언어 검색...",
+    "selectPlaceholder": "앱 언어 선택...",
+    "systemWithResolved": "시스템 - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "멤버를 찾을 수 없습니다.",
+    "searchPlaceholder": "멤버 검색...",
+    "unassigned": "미지정",
+    "teammateFallback": "팀원"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Check",
+        "downloading": "다운로드",
+        "installCli": "코덱 CLI 설치",
+        "installing": "설치하기",
+        "retryInstall": "Retry 설치"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "일치하는 제안이 없습니다",
+    "searching": "검색 중...",
+    "searchingFiles": "파일 검색 중...",
+    "findInConversation": "대화에서 찾기...",
+    "resultCount": "{{current}} / {{total}}",
+    "resultCountCapped": "{{current}} / {{total}}+",
+    "noResults": "결과 없음",
+    "previousResultShortcut": "이전 결과 (Shift+Enter)",
+    "nextResultShortcut": "다음 결과 (Enter)",
+    "closeShortcut": "닫기 (Esc)",
+    "nothingFound": "찾을 수 없음",
+    "placeholder": "검색..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "자주 묻는 질문",
+      "clearFilters": "명확한 필터",
+      "createSchedule": "자주 묻는 질문",
+      "delete": "이름 *",
+      "edit": "제품정보",
+      "pause": "팟캐스트",
+      "resume": "제품 설명",
+      "runNow": "지금 시작"
+    },
+    "empty": {
+      "description": "모든 팀에 일정을 작성하여 Cron 표현으로 Claude 작업 실행을 자동화합니다. 모든 팀의 일정은 여기에 나타납니다.",
+      "noMatches": "현재 필터와 일치하는 일정 없음",
+      "title": "예약된 작업"
+    },
+    "filters": {
+      "allTeams": "모든 팀"
+    },
+    "item": {
+      "loadingRunHistory": "로딩...",
+      "nextRun": "다음 것: {{value}}",
+      "noRunsYet": "아직 실행되지 않음"
+    },
+    "loading": "로딩...",
+    "searchPlaceholder": "검색 일정...",
+    "status": {
+      "active": "지원하다",
+      "all": "모든 것",
+      "disabled": "지원하다",
+      "paused": "뚱 베어"
+    },
+    "title": "일정표"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "이름 *",
+      "pin": "핀 핀",
+      "unhide": "이름 *"
+    },
+    "empty": {
+      "noMatchingSessions": "일치하는 세션 없음",
+      "noMatchingSessionsDescription": "이 프로젝트는 아직 일치하는 세션이 없습니다.",
+      "noMatchingSessionsFiltered": "다른 쿼리를 시도하거나 공급자 필터를 재설정하십시오.",
+      "noSessions": "자주 묻는 질문",
+      "noSessionsDescription": "이 프로젝트는 아직 세션이 없습니다.",
+      "selectProject": "세션을 보기 위한 프로젝트 선택"
+    },
+    "errors": {
+      "loading": "오류 로딩 세션"
+    },
+    "loadedMatchingMore": "{{count}} 매칭 세션이 지금까지로드되었습니다.",
+    "loadingMore": "더 많은 세션을 로딩...",
+    "pinned": "연락처",
+    "scrollToLoadMore": "더 많은 것을 적재하기 위하여 스크롤",
+    "search": {
+      "clear": "Clear session 검색",
+      "placeholder": "검색 세션..."
+    },
+    "selection": {
+      "cancel": "자주 묻는 질문",
+      "exitMode": "출구 선택 형태",
+      "hideSelected": "선택된 세션 숨기기",
+      "pinSelected": "Pin 선택한 세션",
+      "selectSessions": "세션 선택",
+      "selected": "{{count}} 선택",
+      "unhideSelected": "선택된 세션",
+      "selected_few": "{{count}} 선택",
+      "selected_many": "{{count}} 선택",
+      "selected_one": "{{count}} 선택",
+      "selected_other": "{{count}} 선택"
+    },
+    "sort": {
+      "byContext": "으로 Context",
+      "byContextTooltip": "카테고리",
+      "byRecentTooltip": "정렬 기준",
+      "contextLoadedOnly": "Context 정렬 만 등급로드 세션."
+    },
+    "title": "교육과정",
+    "visibility": {
+      "hideHidden": "숨겨진 세션 숨기기",
+      "showHidden": "숨겨진 세션보기"
+    },
+    "worktree": {
+      "switch": "스위치 Worktree"
+    },
+    "loadedMatchingMore_few": "{{count}} 매칭 세션이 지금까지로드되었습니다.",
+    "loadedMatchingMore_many": "{{count}} 매칭 세션이 지금까지로드되었습니다.",
+    "loadedMatchingMore_one": "{{count}} 매칭 세션이 지금까지로드되었습니다.",
+    "loadedMatchingMore_other": "{{count}} 매칭 세션이 지금까지로드되었습니다.",
+    "failedToLoad": "로딩",
+    "loading": "로딩...",
+    "filter": {
+      "title": "필터 세션"
+    },
+    "count": "{{count}} 세션",
+    "count_one": "{{count}} 세션",
+    "count_other": "{{count}} 세션",
+    "count_few": "{{count}} 세션",
+    "count_many": "{{count}} 세션",
+    "inProgress": "세션은 진행 중입니다..."
+  },
+  "states": {
+    "loading": "로딩 중...",
+    "offline": "오프라인",
+    "online": "온라인",
+    "unknown": "알 수 없음",
+    "error": "오류"
+  },
+  "markdown": {
+    "imageFallback": "[이미지: {{label}}]",
+    "largeContentNotice": "내용이 매우 크다 ({{count}} chars). UI 응답을 유지하기 위해 원시 미리보기를 표시합니다.",
+    "largeContentTitle": "큰 내용은 UI 동결을 방지하기 위하여 원료로 보입니다",
+    "raw": "주요 특징",
+    "rawPreview": "원시 미리보기",
+    "renderMarkdown": "비밀번호",
+    "showAll": "모두보기",
+    "showMore": "더 보기",
+    "showRaw": "감사합니다.",
+    "showingChars": "{{shown}} / {{total}} 숯 표시",
+    "largeContentNotice_few": "내용이 매우 크다 ({{count}} chars). UI 응답을 유지하기 위해 원시 미리보기를 표시합니다.",
+    "largeContentNotice_many": "내용이 매우 크다 ({{count}} chars). UI 응답을 유지하기 위해 원시 미리보기를 표시합니다.",
+    "largeContentNotice_one": "내용이 매우 크다 ({{count}} chars). UI 응답을 유지하기 위해 원시 미리보기를 표시합니다.",
+    "largeContentNotice_other": "내용이 매우 크다 ({{count}} chars). UI 응답을 유지하기 위해 원시 미리보기를 표시합니다."
+  },
+  "terminal": {
+    "checkOutputForDetails": "세부사항을 위해 위 맨끝 산출을 검사하십시오",
+    "closingInSeconds": "{{count}}s에서 폐쇄...",
+    "closingInSeconds_few": "{{count}}s에서 폐쇄...",
+    "closingInSeconds_many": "{{count}}s에서 폐쇄...",
+    "closingInSeconds_one": "{{count}}s에서 폐쇄...",
+    "closingInSeconds_other": "{{count}}s에서 폐쇄...",
+    "completedSuccessfully": "성공적으로 완료",
+    "exitCode": "(예: {{code}})",
+    "processFailed": "프로세스 실패",
+    "title": "기타 제품"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "중복없이 전체 세션에서 축적",
+    "cacheRead": "캐시 읽기",
+    "cacheWrite": "Cache 쓰기",
+    "costUsd": "비용 (USD)",
+    "inputTokens": "입력 토큰",
+    "model": "주요 특징",
+    "outputTokens": "산출 토큰",
+    "phase": "단계 {{phase}}/{{total}}",
+    "promptInputShare": "신속한 입력의 {{percent}}%",
+    "taskCoordination": "작업 조정",
+    "thinkingText": "사고 + 이름 *",
+    "toolOutputs": "공구 산출",
+    "total": "·",
+    "userMessages": "사용자 메시지",
+    "visibleContext": "눈에 보이는 Context",
+    "includesClaudeMd": "뚱 베어 CLAUDE.md ×{{count}}",
+    "claudeMd": "사이트맵",
+    "mentionedFiles": "@파일",
+    "percentValue": "(주){{percent}}%)",
+    "approxTokens": "~{{tokens}} 토큰",
+    "approxTokensParenthesized": "(~){{tokens}}·"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "복사 팀",
+      "createTeam": "팀 만들기",
+      "deleteForever": "자주 묻는 질문",
+      "deletePermanently": "영구적으로 삭제",
+      "deleteTeam": "팀 삭제",
+      "launching": "시작...",
+      "launchTeam": "시작 팀",
+      "relaunchTeam": "Relaunch 팀",
+      "restore": "관련 상품",
+      "restoreTeam": "Restore 팀",
+      "retry": "이름 *",
+      "stopTeam": "정지 팀",
+      "stopping": "기타..."
+    },
+    "status": {
+      "active": "지원하다",
+      "deleted": "파일 형식",
+      "launching": "시작...",
+      "offline": "옵션 정보",
+      "partialFailure": "시작 실패 partway",
+      "partialPending": "부츠 스트랩",
+      "partialSkipped": "회원가입",
+      "running": "지원하다"
+    },
+    "partial": {
+      "pending": "마지막 발사는 아직도 재건축입니다.",
+      "skipped": "마지막 발사는 teammates를 건너 뛰었습니다.",
+      "skippedWithCount": "마지막 발사는 {{count}}/{{expected}} teammate를 건너 뛰었습니다.",
+      "skippedWithCount_few": "마지막 발사는 {{count}}/{{expected}} teammates를 건너 뛰었습니다.",
+      "skippedWithCount_many": "마지막 발사는 {{count}}/{{expected}} teammates를 건너 뛰었습니다.",
+      "skippedWithCount_one": "마지막 발사는 {{count}}/{{expected}} teammate를 건너 뛰었습니다.",
+      "skippedWithCount_other": "마지막 발사는 {{count}}/{{expected}} teammates를 건너 뛰었습니다.",
+      "stopped": "마지막 출시는 모든 팀원이 합류하기 전에 중단되었습니다.",
+      "stoppedWithCount": "마지막 발사는 {{count}}/{{expected}} teammate가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_few": "마지막 발사는 {{count}}/{{expected}} 팀 동료가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_many": "마지막 발사는 {{count}}/{{expected}} 팀 동료가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_one": "마지막 발사는 {{count}}/{{expected}} teammate가 합류하기 전에 중단했습니다.",
+      "stoppedWithCount_other": "마지막 발사는 {{count}}/{{expected}} 팀 동료가 합류하기 전에 중단했습니다."
+    },
+    "noDescription": "설명 없음",
+    "solo": "한국어",
+    "membersCount": "회원: {{count}}",
+    "membersCount_few": "회원: {{count}}",
+    "membersCount_many": "회원: {{count}}",
+    "membersCount_one": "회원: {{count}}",
+    "membersCount_other": "회원: {{count}}",
+    "all": "모든 것",
+    "moreCount": "+{{count}} 더보기",
+    "moreCount_one": "+{{count}} 더보기",
+    "moreCount_other": "+{{count}} 더보기",
+    "moreCount_few": "+{{count}} 더보기",
+    "moreCount_many": "+{{count}} 더보기"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "자체 OpenCode override가 없는 모든 프로젝트에 대한 기본값.",
+      "scopeDescriptionProject": "선택한 프로젝트만 오버라이드. 팀은 변경되지 않습니다.",
+      "setAllProjectsDefault": "모든 프로젝트 기본값 설정",
+      "setProjectDefault": "프로젝트 기본값 설정",
+      "validationContext": "유효성 검사",
+      "projectOverrideContext": "프로젝트 override 컨텍스트",
+      "selectProjectHint": "로컬 모델을 테스트하거나 기본값을 저장하기 전에 프로젝트를 선택하십시오.",
+      "allProjectsHint": "테스트 사용 {{project}}. Default는 프로젝트가 override가 없는 경우에 적용됩니다.",
+      "projectHint": "저장 overrides만 {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "설정하기",
+      "closePanel": "닫기 패널",
+      "phase": "단계:",
+      "current": "현재 위치",
+      "view": "보기:",
+      "category": "(주)",
+      "bySize": "이름 *"
+    },
+    "metrics": {
+      "unavailable": "이용안내",
+      "contextUsed": "Context 사용",
+      "promptInput": "Prompt 입력",
+      "visibleContext": "눈에 보이는 Context",
+      "ofContext": "질문하기",
+      "ofPrompt": "의 신속한",
+      "codexTelemetryUnavailable": "Codex prompt-side 사용법은 현재 실행 시간 원격 측정에 의해 아직 노출되지 않습니다, 그래서 Prompt 입력 및 Context는 가짜 0을 보여주는 대신 사용할 수 없습니다.",
+      "sessionCost": "세션 비용:",
+      "parentPlus": "부모 +",
+      "subagents": "관련 기사",
+      "details": "이름 *"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Context 사용",
+        "description": "Prompt 입력 플러스 출력 토큰은 현재 모델의 컨텍스트 창을 차지합니다."
+      },
+      "promptInput": {
+        "title": "Prompt 입력",
+        "description": "생성하기 전에 모델에 전송된 토큰. Claude는 `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`를 포함합니다."
+      },
+      "visibleContext": {
+        "title": "눈에 보이는 Context",
+        "description": "신속한 입력의 검사 가능한 잠수함: 파일, CLAUDE.md, 도구 출력, 사용자 메시지 및 직접 최적화 할 수있는 유사한 주사."
+      },
+      "availability": {
+        "title": "제품정보",
+        "description": "공급자 런타임이 아직 프롬프트 사이드 사용을 노출하지 않는 경우 패널은 사전 종료 대신 사용할 수없는 메트릭을 보여줍니다."
+      }
+    },
+    "items": {
+      "turn": "@ 턴 {{turn}}",
+      "tokensApprox": "~{{tokens}} 토큰",
+      "toolsCount": "{{count}} 도구",
+      "toolsCount_one": "{{count}} 도구",
+      "toolsCount_other": "{{count}} 도구",
+      "toolsCount_few": "{{count}} 도구",
+      "toolsCount_many": "{{count}} 도구",
+      "itemsCount": "{{count}} 아이템",
+      "itemsCount_one": "{{count}} 아이템",
+      "itemsCount_other": "{{count}} 아이템",
+      "itemsCount_few": "{{count}} 아이템",
+      "itemsCount_many": "{{count}} 아이템",
+      "missing": "한국어",
+      "thinking": "더 보기",
+      "text": "이름 *"
+    },
+    "empty": "이 세션에서 감지 된 컨텍스트 주입 없음",
+    "view": {
+      "grouped": "이름 *",
+      "flat": "뚱 베어"
+    },
+    "claudeMdFiles": "CLAUDE.md 파일",
+    "mentionedFiles": "관련 파일"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "이름 *",
+      "shutdownConfirmed": "Shutdown 확인",
+      "summary": {
+        "tools": "{{count}} 도구",
+        "tools_one": "{{count}} 도구",
+        "tools_other": "{{count}} 도구",
+        "tools_few": "{{count}} 도구",
+        "tools_many": "{{count}} 도구"
+      },
+      "meta": {
+        "type": "제품정보",
+        "duration": "(주)",
+        "model": "주요 특징",
+        "id": "이름 *"
+      },
+      "metrics": {
+        "contextWindow": "Context 창",
+        "contextUsage": "Context 사용법",
+        "mainContext": "주요 Context",
+        "totalOutput": "총 출력",
+        "turns": "({{count}} 회전)",
+        "turns_one": "({{count}} 회전)",
+        "turns_other": "({{count}} 회전)",
+        "subagentContext": "Subagent 텍스트",
+        "phase": "단계 {{phase}}",
+        "turns_few": "({{count}} 회전)",
+        "turns_many": "({{count}} 회전)"
+      },
+      "trace": {
+        "title": "실행 Trace"
+      }
+    },
+    "user": {
+      "you": "이름 *",
+      "showMore": "더 보기",
+      "showLess": "더보기",
+      "backgroundTask": "배경 작업",
+      "exitCode": "{{code}} 출구",
+      "imagesAttached": "{{count}} 이미지 첨부",
+      "imagesAttached_one": "{{count}} 이미지 첨부",
+      "imagesAttached_few": "{{count}} 이미지 첨부",
+      "imagesAttached_many": "{{count}} 이미지 첨부",
+      "imagesAttached_other": "{{count}} 이미지 첨부"
+    },
+    "compact": {
+      "toggle": "콘텐츠 삭제",
+      "contextCompacted": "Context 압축",
+      "freedTokens": "({{tokens}} 무료)",
+      "phase": "단계 {{phase}}",
+      "conversationCompacted": "통합 압축",
+      "summary": "이전 메시지는 context를 저장하기 위해 요약되었습니다. 전체 대화 기록은 세션 파일에 보존됩니다.",
+      "compacted": "제품정보"
+    },
+    "executionTrace": {
+      "empty": "실행 항목 없음",
+      "nested": "배열하는: {{name}}",
+      "input": "이름 *"
+    },
+    "items": {
+      "empty": "표시 항목 없음"
+    },
+    "tools": {
+      "teammateSpawned": "팀메이트",
+      "shutdownRequested": "종료 요청 ->",
+      "noResultReceived": "결과 없음",
+      "duration": "기간: {{duration}}",
+      "result": "제품정보",
+      "write": {
+        "createdFile": "파일 생성",
+        "wroteToFile": "Wrote 파일"
+      },
+      "skill": {
+        "instructions": "기술 지침",
+        "unknown": "잘 알려진 기술"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "자주 묻는 질문",
+      "planReadyForApproval": "승인 준비 계획"
+    },
+    "empty": {
+      "icon": "₢ 킹",
+      "title": "대화의 역사",
+      "description": "이 세션은 아직 어떤 메시지를 포함하지 않습니다."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% 왼쪽)",
+      "count": "텍스트 ({{count}})",
+      "count_one": "텍스트 ({{count}})",
+      "count_other": "텍스트 ({{count}})",
+      "count_few": "텍스트 ({{count}})",
+      "count_many": "텍스트 ({{count}})"
+    },
+    "scrollToBottom": "맨 위로",
+    "bottom": "이름 *",
+    "teammateMessage": {
+      "message": "이름 *",
+      "resent": "견적 요청",
+      "fallback": "Teammate 메시지"
+    },
+    "system": {
+      "label": "시스템"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux는 설치되지 않습니다",
+    "detectedOs": "검출된 OS: {{os}}",
+    "runtimePath": "런타임 경로: {{path}}",
+    "phase": "단계: {{phase}}",
+    "actions": {
+      "cancel": "이름 *",
+      "manualGuide": "수동 가이드",
+      "hideSetupSteps": "설정 단계 숨기기",
+      "showSetupSteps": "설정 단계 표시 ({{count}})",
+      "showSetupSteps_one": "설정 단계 표시 ({{count}})",
+      "showSetupSteps_other": "설정 단계 표시 ({{count}})",
+      "recheck": "재검사",
+      "showSetupSteps_few": "설정 단계 표시 ({{count}})",
+      "showSetupSteps_many": "설정 단계 표시 ({{count}})"
+    },
+    "installerProgress": "Installer 진행",
+    "input": {
+      "placeholder": "installer에 입력을 보내십시오",
+      "send": "연락처",
+      "passwordNotice": "비밀번호 입력은 설치 터미널에 직접 전송되며 로그 출력에 추가되지 않습니다."
+    },
+    "details": {
+      "show": "자주 묻는 질문",
+      "hide": "자주 묻는 질문"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "최근 활동",
+    "sessionsCount": "{{count}} 세션",
+    "sessionsCount_one": "{{count}} 세션",
+    "sessionsCount_other": "{{count}} 세션",
+    "mode": {
+      "searchProjects": "검색 프로젝트",
+      "searchAcrossProjects": "모든 프로젝트에서 검색",
+      "searchInProject": "프로젝트"
+    },
+    "currentProject": "현재 프로젝트",
+    "global": "주요사업",
+    "placeholders": {
+      "projects": "검색...",
+      "conversations": "검색 대화..."
+    },
+    "empty": {
+      "noProjectsForQuery": "\"{{query}}\"에 대한 프로젝트가 없습니다.",
+      "noProjects": "제안 없음",
+      "minChars": "적어도 2 문자를 입력하여 검색",
+      "noFastResults": "\"{{query}}\"의 최근 세션에서 빠른 결과가 없습니다.",
+      "noResults": "\"{{query}}\"에 대한 결과가 없습니다."
+    },
+    "footer": {
+      "projectsCount": "{{count}} 프로젝트",
+      "projectsCount_one": "{{count}} 프로젝트",
+      "projectsCount_other": "{{count}} 프로젝트",
+      "results": "{{count}} {{speed}}results에 대 한",
+      "results_one": "{{count}} {{speed}}result 정보",
+      "results_other": "{{count}} {{speed}}results에 대 한",
+      "resultsAcrossProjects": "모든 프로젝트의 {{count}} {{speed}}results",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}result 모든 프로젝트",
+      "resultsAcrossProjects_other": "모든 프로젝트의 {{count}} {{speed}}results",
+      "fastPrefix": "빠른 속도",
+      "typeToSearch": "자주 묻는 질문",
+      "navigate": "기타 제품",
+      "select": "제품정보",
+      "open": "이름 *",
+      "global": "주요사업",
+      "close": "이름 *",
+      "results_few": "{{count}} {{speed}}results에 대 한",
+      "results_many": "{{count}} {{speed}}results에 대 한",
+      "resultsAcrossProjects_few": "모든 프로젝트의 {{count}} {{speed}}results",
+      "resultsAcrossProjects_many": "모든 프로젝트의 {{count}} {{speed}}results",
+      "projectsCount_few": "{{count}} 프로젝트",
+      "projectsCount_many": "{{count}} 프로젝트",
+      "upDownKey": "↑↓",
+      "escapeKey": "사이트맵"
+    },
+    "sessionsCount_few": "{{count}} 세션",
+    "sessionsCount_many": "{{count}} 세션"
+  },
+  "tasksPanel": {
+    "title": "기타",
+    "searchPlaceholder": "작업 검색...",
+    "pinned": "연락처",
+    "groupByLabel": "그룹:",
+    "groupByAria": "그룹으로",
+    "groupModes": {
+      "none": "이름 *",
+      "project": "회사연혁",
+      "time": "(주)"
+    },
+    "showArchived": "아카이브",
+    "hideArchived": "관련 기사",
+    "empty": {
+      "noMatchingTasks": "일치하는 작업",
+      "noTasks": "자주 묻는 질문"
+    },
+    "teamLabel": "팀: {{team}}",
+    "showMore": "더 보기",
+    "showLess": "더보기",
+    "deleteConfirm": {
+      "title": "작업 삭제",
+      "message": "작업 이동 #{{taskId}} 쓰레기에?",
+      "confirmLabel": "이름 *",
+      "cancelLabel": "이름 *"
+    },
+    "deleteFailed": {
+      "title": "작업 삭제 실패",
+      "fallbackMessage": "예상치 못한 오류가 발생했습니다.",
+      "confirmLabel": "이름 *"
+    },
+    "sort": {
+      "byTime": "이용안내",
+      "byUnread": "읽음",
+      "byProject": "프로젝트",
+      "byTeam": "으로 팀"
+    }
+  },
+  "toolViewer": {
+    "input": "이름 *",
+    "replaceAll": "(모든 것)",
+    "noInputRecorded": "이 도구 호출에 대한 입력이 없습니다.",
+    "agent": {
+      "action": "이름 *",
+      "teammate": "팀메이트",
+      "team": "팀 팀",
+      "runtime": "운영시간",
+      "type": "제품정보",
+      "startupInstructionsHidden": "시작 지침은 UI에 숨겨져 있습니다."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "뚱 베어",
+    "pin": "핀 핀",
+    "rename": "이름 *",
+    "markUnread": "읽음",
+    "unarchive": "지원하다",
+    "archive": "- 연혁",
+    "deleteTask": "작업 삭제"
+  },
+  "updateDialog": {
+    "closeDialog": "닫기 대화 상자",
+    "updateAvailable": "자주 묻는 질문",
+    "updateReady": "업데이트",
+    "noReleaseNotes": "사용할 수 없습니다.",
+    "viewOnGitHub": "GitHub에서 보기",
+    "later": "이름 *",
+    "restartNow": "지금 예약",
+    "download": "다운로드"
+  },
+  "errorBoundary": {
+    "title": "뭔가 잘못되었습니다.",
+    "description": "예기치 않은 오류가 발생했습니다. 페이지를 다시로드하거나 오류 상태를 재설정 할 수 있습니다.",
+    "componentStack": "구성 요소 스택",
+    "tryAgain": "다시 시도",
+    "copied": "뚱 베어",
+    "copyErrorDetails": "비밀번호",
+    "reportBugOnGitHub": "GitHub의 버그",
+    "reloadApp": "Reload 앱",
+    "diagnosticsNotice": "GitHub 버그 보고서 및 복사 진단은 오류 메시지, 스택 추적, 앱 버전, 활성 탭, 선택한 팀, 작업 컨텍스트 및 환경 세부 사항을 포함합니다."
+  },
+  "runtimeBackendSelector": {
+    "label": "실행 시간 backend",
+    "resolved": "해결: {{backend}}",
+    "current": "현재 위치",
+    "recommended": "(주)",
+    "unavailable": "이용안내",
+    "cannotSelectYet": "이 백엔드가 아직 선택될 수 없습니다.",
+    "auto": "제품정보",
+    "autoCurrently": "자동 (현재: {{backend}})",
+    "audience": {
+      "internal": "내 계정"
+    },
+    "states": {
+      "locked": "기타 제품",
+      "disabled": "지원하다",
+      "authRequired": "Auth 필수",
+      "runtimeMissing": "Runtime 누락",
+      "degraded": "분류되지 않음",
+      "unavailable": "이용안내"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Check",
+    "unavailable": "이용안내",
+    "checkFailed": "자주 묻는 질문",
+    "free": "무료 다운로드",
+    "freeTooltip": "OpenCode 메타데이터에 의해 보고되었습니다. 가용성과 한계는 변화할지도 모릅니다."
+  },
+  "taskFilters": {
+    "status": "주요연혁",
+    "clearAll": "모든 것",
+    "selectAll": "모두 보기",
+    "team": "회사연혁",
+    "allTeams": "모든 팀",
+    "searchTeams": "팀 검색...",
+    "noTeamsFound": "찾을 수 없음",
+    "project": "회사연혁",
+    "allProjects": "모든 프로젝트",
+    "searchProjects": "검색...",
+    "noProjects": "프로젝트",
+    "comments": "이름 *",
+    "apply": "지원하다",
+    "read": {
+      "all": "모든 것",
+      "unread": "한국어",
+      "read": "지원하다"
+    },
+    "statusOptions": {
+      "todo": "사이트맵",
+      "inProgress": "PROGRESS에서",
+      "needsFix": "수정 필요",
+      "done": "사이트맵",
+      "review": "사이트맵",
+      "approved": "사이트맵"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "총 텍스트: {{tokens}} 토큰",
+    "context": "콘텍스트: {{tokens}}",
+    "phase": "단계 {{phase}}:",
+    "compactedTo": "({{tokens}}에 할당)"
+  },
+  "notifications": {
+    "row": {
+      "team": "팀 팀",
+      "subagent": "이름 *",
+      "markAsRead": "읽기로 표시",
+      "delete": "이름 *",
+      "viewInSession": "본문 바로가기"
+    },
+    "title": "공지사항",
+    "loading": "로딩 알림...",
+    "actions": {
+      "markFilteredAsRead": "표시 필터로 읽기",
+      "markAllAsRead": "모두 읽기",
+      "markFilteredRead": "Mark 필터링된 읽기",
+      "markAllRead": "모든 읽기",
+      "clearFilteredNotifications": "필터 해제 알림",
+      "clearAllNotifications": "자주 묻는 질문",
+      "clickToConfirm": "자주 묻는 질문",
+      "clearFiltered": "필터링",
+      "clearAll": "모든 것"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} 읽지 않은 필터",
+      "unreadInFilter_one": "{{count}} 읽지 않은 필터",
+      "unreadInFilter_few": "{{count}} 읽지 않은 필터",
+      "unreadInFilter_many": "{{count}} 읽지 않은 필터",
+      "unreadInFilter_other": "{{count}} 읽지 않은 필터",
+      "inFilter": "필터의 {{count}}",
+      "inFilter_one": "필터의 {{count}}",
+      "inFilter_few": "필터의 {{count}}",
+      "inFilter_many": "필터의 {{count}}",
+      "inFilter_other": "필터의 {{count}}",
+      "unread": "{{count}} 읽음",
+      "unread_one": "{{count}} 읽음",
+      "unread_few": "{{count}} 읽음",
+      "unread_many": "{{count}} 읽음",
+      "unread_other": "{{count}} 읽음",
+      "total": "{{count}} 합계",
+      "total_one": "{{count}} 합계",
+      "total_few": "{{count}} 합계",
+      "total_many": "{{count}} 합계",
+      "total_other": "{{count}} 합계"
+    },
+    "filters": {
+      "other": "이름 *"
+    },
+    "empty": {
+      "noMatching": "일치하는 알림 없음",
+      "noNotifications": "공지사항",
+      "tryDifferentFilter": "다른 필터를 시도",
+      "allCaughtUp": "모두 잡아!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "업데이트",
+    "updateApp": "앱 업데이트",
+    "downloadedRestartTooltip": "다운로드된 업데이트, 재시작",
+    "newVersionAvailable": "새 버전 사용 가능",
+    "updatingApp": "앱 업데이트",
+    "updateReady": "업데이트",
+    "restartNow": "지금 예약"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "공지사항",
+    "expandSidebar": "사이드바를 확장",
+    "collapseSidebarShortcut": "붕괴 측바 ({{shortcut}})",
+    "sidebarView": "사이드바보기",
+    "resizeSidebar": "크기 sidebar",
+    "closeTab": "닫기 탭",
+    "openedFromSearch": "자주 묻는 질문",
+    "pinnedSession": "Pinned 세션",
+    "jumpToSection": "맨 위로",
+    "newTab": "새 탭",
+    "newTabDashboard": "새로운 탭 (Dashboard)",
+    "refreshSession": "새로 고침",
+    "refreshSessionWithShortcut": "세션 새로 고침 ({{shortcut}})",
+    "loadingTab": "로딩 탭",
+    "menu": {
+      "teams": "팀 소개",
+      "settings": "지원하다",
+      "extensions": "제품정보",
+      "search": "제품정보",
+      "schedules": "일정표",
+      "docs": "사이트맵",
+      "exportMarkdown": "Markdown으로 수출",
+      "exportJson": "JSON로 수출",
+      "exportPlainText": "일반 텍스트로 내보내기",
+      "analyzeSession": "분석 세션"
+    },
+    "tabMenu": {
+      "closeTabs": "닫기 {{count}} 탭",
+      "closeTabs_one": "닫기 {{count}} ₢ 킹",
+      "closeTabs_few": "닫기 {{count}} 탭",
+      "closeTabs_many": "닫기 {{count}} 탭",
+      "closeTabs_other": "닫기 {{count}} 탭",
+      "closeTab": "닫기 탭",
+      "closeOtherTabs": "다른 탭 닫기",
+      "splitRight": "분할 권리",
+      "splitLeft": "분할 왼쪽",
+      "pinToSidebar": "Sidebar에 Pin",
+      "unpinFromSidebar": "Sidebar에서 핀",
+      "hideFromSidebar": "Sidebar에서 숨기기",
+      "unhideFromSidebar": "Sidebar에서 제거",
+      "closeAllTabs": "모든 탭 닫기"
+    },
+    "sections": {
+      "team": "회사연혁",
+      "sessions": "교육과정",
+      "kanban": "숙박 플랜",
+      "claudeLogs": "제품정보",
+      "messages": "이름 *"
+    }
+  },
+  "editorFormatting": {
+    "bold": "지원하다",
+    "italic": "인기 카테고리",
+    "strike": "스트라투스",
+    "code": "이름 *"
+  },
+  "diff": {
+    "changed": "관련 기사",
+    "noChangesDetected": "검출된 변화 없음"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "ChatGPT 로그인 링크 및 코드 복사",
+    "copyLoginLink": "CopyGPT 로그인 링크",
+    "copyFailed": "복사 실패",
+    "copyLinkAndCode": "복사 링크 + 코드",
+    "copyLink": "관련 링크",
+    "enterCodeOnLoginPage": "ChatGPT 로그인 페이지에서 이 코드를 입력하십시오."
+  },
+  "window": {
+    "minimize": "옵션 정보",
+    "maximize": "채용공고",
+    "restore": "관련 상품"
+  },
+  "context": {
+    "local": "한국어",
+    "switchingTo": "{{workspace}}로 전환",
+    "loadingWorkspace": "적재 작업 공간",
+    "switchWorkspace": "스위치 작업 공간"
+  },
+  "repositories": {
+    "noneAvailable": "예약 가능",
+    "remove": "저장소 제거"
+  },
+  "export": {
+    "session": "수출 회의",
+    "sessionTitle": "수출 세션"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "세션 데이터 없음",
+    "title": "세션 리포트"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "프로젝트"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "뚱 베어",
+      "updatedYesterday": "어제",
+      "yesterday": "1 년 전"
+    },
+    "reviewState": {
+      "needsFix": "자주 묻는 질문"
+    },
+    "unassigned": "정의되지 않음"
+  }
+}

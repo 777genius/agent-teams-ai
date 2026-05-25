@@ -14,6 +14,71 @@ const controlContextSchema = {
 
 const reportStateSchema = z.enum(['still_working', 'blocked', 'caught_up']);
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function buildRequiredReportFollowUp(input: {
+  status: unknown;
+  teamName: string;
+  memberName?: string;
+  from?: string;
+  controlUrl?: string;
+}) {
+  const status = asRecord(input.status);
+  const agenda = asRecord(status?.agenda);
+  const agendaFingerprint =
+    typeof agenda?.fingerprint === 'string' && agenda.fingerprint.trim()
+      ? agenda.fingerprint.trim()
+      : null;
+  const reportToken =
+    typeof status?.reportToken === 'string' && status.reportToken.trim()
+      ? status.reportToken.trim()
+      : null;
+  if (!status || !agendaFingerprint || !reportToken) {
+    return input.status;
+  }
+
+  const inputMemberName = input.memberName?.trim();
+  const fromMemberName = input.from?.trim();
+  let memberName = '';
+  if (typeof status.memberName === 'string') {
+    memberName = status.memberName.trim();
+  }
+  if (fromMemberName) {
+    memberName = fromMemberName;
+  }
+  if (inputMemberName) {
+    memberName = inputMemberName;
+  }
+  const items = Array.isArray(agenda?.items) ? agenda.items : [];
+  const taskIds = items
+    .map((item) => asRecord(item)?.taskId)
+    .filter((taskId): taskId is string => typeof taskId === 'string' && taskId.trim().length > 0);
+  const state = items.length > 0 ? 'still_working' : 'caught_up';
+
+  return {
+    ...status,
+    statusOnlyIncomplete: true,
+    nextRequiredAction:
+      'Do not stop after member_work_sync_status. Call member_work_sync_report in this same turn using nextRequiredToolCall.arguments.',
+    nextRequiredToolCall: {
+      tool: 'member_work_sync_report',
+      arguments: {
+        teamName: input.teamName,
+        ...(memberName ? { memberName } : {}),
+        ...(input.controlUrl ? { controlUrl: input.controlUrl } : {}),
+        state,
+        agendaFingerprint,
+        reportToken,
+        ...(taskIds.length ? { taskIds } : {}),
+      },
+    },
+  };
+}
+
 export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'member_work_sync_status',
@@ -26,12 +91,19 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, memberName, from }) => {
       assertConfiguredTeam(teamName, claudeDir);
+      const status = await getController(teamName, claudeDir).workSync.memberWorkSyncStatus({
+        ...(memberName ? { memberName } : {}),
+        ...(from ? { from } : {}),
+        ...(controlUrl ? { controlUrl } : {}),
+        ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
+      });
       return jsonTextContent(
-        await getController(teamName, claudeDir).workSync.memberWorkSyncStatus({
+        buildRequiredReportFollowUp({
+          status,
+          teamName,
           ...(memberName ? { memberName } : {}),
           ...(from ? { from } : {}),
           ...(controlUrl ? { controlUrl } : {}),
-          ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
     },

@@ -5,7 +5,6 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 interface StopChildOptions {
@@ -17,6 +16,9 @@ interface StopChildOptions {
 
 interface OpenCodeLivePreflightTestHooks {
   __opencodeLivePreflightTestHooks: {
+    findMissingOpenCodeModels(output: string, requiredModels: string[]): string[];
+    isHealthyOpenCodeHostResponse(response: { ok: boolean }): boolean;
+    parseOpenCodeModels(output: string): string[];
     stopChild(child: FakeChild, options?: StopChildOptions): Promise<void>;
     taskkillProcessTree(pid: number): Promise<void>;
   };
@@ -36,6 +38,29 @@ describe('opencode live preflight cleanup', () => {
       await fs.rm(tempDir, { recursive: true, force: true });
       tempDir = '';
     }
+  });
+
+  it('accepts an HTTP 2xx OpenCode health response without requiring a JSON body', async () => {
+    const { isHealthyOpenCodeHostResponse } = (await loadTestHooks())
+      .__opencodeLivePreflightTestHooks;
+
+    expect(isHealthyOpenCodeHostResponse({ ok: true })).toBe(true);
+    expect(isHealthyOpenCodeHostResponse({ ok: false })).toBe(false);
+  });
+
+  it('detects selected OpenCode models missing from preflight output', async () => {
+    const { findMissingOpenCodeModels, parseOpenCodeModels } = (await loadTestHooks())
+      .__opencodeLivePreflightTestHooks;
+    const output = 'opencode/big-pickle\nopencode/minimax-m2.5-free\n';
+
+    expect(parseOpenCodeModels(output)).toEqual([
+      'opencode/big-pickle',
+      'opencode/minimax-m2.5-free',
+    ]);
+    expect(findMissingOpenCodeModels(output, ['opencode/big-pickle'])).toEqual([]);
+    expect(findMissingOpenCodeModels(output, ['openai/gpt-5.4-mini'])).toEqual([
+      'openai/gpt-5.4-mini',
+    ]);
   });
 
   it('waits for child close after Windows process-tree cleanup', async () => {

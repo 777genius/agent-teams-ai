@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { buildTeamRuntimeDisplayRows } from '@renderer/components/team/teamRuntimeDisplayRows';
+import { describe, expect, it } from 'vitest';
 
 import type {
   MemberSpawnStatusEntry,
@@ -88,6 +87,95 @@ describe('buildTeamRuntimeDisplayRows', () => {
       state: 'stopped',
       source: 'mixed',
       stateReason: 'Runtime heartbeat is stale',
+      actionsAllowed: false,
+    });
+  });
+
+  it('does not show bootstrap-only runtime evidence as running when spawn says runtime is stopped', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      runtimeSnapshot: createRuntimeSnapshot({
+        alice: createRuntimeEntry({
+          alive: true,
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'bootstrap confirmed',
+          runtimeDiagnosticSeverity: 'info',
+        }),
+      }),
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          runtimeAlive: false,
+          runtimeDiagnostic: 'persisted runtime pid is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      state: 'stopped',
+      source: 'mixed',
+      stateReason: 'persisted runtime pid is not alive',
+      diagnosticSeverity: 'warning',
+      actionsAllowed: false,
+    });
+  });
+
+  it('keeps spawn degradation stronger than stopped evidence for mixed rows', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      runtimeSnapshot: createRuntimeSnapshot({
+        alice: createRuntimeEntry({
+          alive: true,
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'bootstrap confirmed',
+        }),
+      }),
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'online',
+          launchState: 'runtime_pending_permission',
+          bootstrapConfirmed: true,
+          runtimeAlive: false,
+          pendingPermissionRequestIds: ['perm-1'],
+          runtimeDiagnostic: 'Runtime is waiting for permission approval',
+          runtimeDiagnosticSeverity: 'warning',
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      state: 'degraded',
+      source: 'mixed',
+      stateReason: 'Runtime is waiting for permission approval',
+      diagnosticSeverity: 'warning',
+      actionsAllowed: false,
+    });
+  });
+
+  it('does not show spawn-only confirmed bootstrap as running when spawn says runtime is stopped', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          runtimeAlive: false,
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      state: 'stopped',
+      source: 'spawn-status',
+      stateReason: 'Spawn status reports runtime is not alive',
+      diagnosticSeverity: 'warning',
       actionsAllowed: false,
     });
   });

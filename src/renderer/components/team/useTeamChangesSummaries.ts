@@ -4,6 +4,7 @@ import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { resolveTaskChangePresenceFromResult } from '@renderer/utils/taskChangePresence';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
+import { getTaskChangeStateBucket } from '@shared/utils/taskChangeState';
 
 import { withTeamChangesLoadTimeout } from './teamChangesLoadTimeout';
 import {
@@ -167,6 +168,34 @@ function resolveCacheablePresenceFromChangeSet(
     return nextPresence;
   }
   return null;
+}
+
+function shouldClearSelectedTaskChangePresence(
+  task: TeamTaskWithKanban,
+  changeSet: TaskChangeSetV2
+): boolean {
+  if (!Array.isArray(changeSet.files) || !Array.isArray(changeSet.warnings)) {
+    return false;
+  }
+  const reviewability = classifyTaskChangeReviewability(changeSet).reviewability;
+  if (reviewability === 'diagnostic_only') {
+    return true;
+  }
+  if (reviewability !== 'unknown') {
+    return false;
+  }
+  if (changeSet.files.length > 0 || changeSet.warnings.length > 0) {
+    return false;
+  }
+  return (
+    getTaskChangeStateBucket({
+      status: task.status,
+      reviewState: task.reviewState,
+      historyEvents: task.historyEvents,
+      kanbanColumn: task.kanbanColumn,
+      deletedAt: task.deletedAt,
+    }) === 'active'
+  );
 }
 
 function isCountableTeamChangeSummary(item: TeamTaskChangeSummaryItem): boolean {
@@ -417,9 +446,16 @@ export function useTeamChangesSummaries({
         autoRefreshBlockedUntilRef.current = 0;
         const responseItems = getSafeResponseItems(response);
 
+        const currentTaskIds = new Set(tasks.map((task) => task.id));
+        const taskById = new Map<string, TeamTaskWithKanban>();
+        for (const task of tasks) {
+          if (!taskById.has(task.id)) {
+            taskById.set(task.id, task);
+          }
+        }
+
         setChangeCountByTaskId((previous) => {
           const next: Record<string, boolean> = {};
-          const currentTaskIds = new Set(tasks.map((task) => task.id));
           for (const [taskId, countable] of Object.entries(previous)) {
             if (currentTaskIds.has(taskId) && plan.eligibleTaskIds.has(taskId)) {
               next[taskId] = countable;
@@ -433,14 +469,23 @@ export function useTeamChangesSummaries({
         });
         setCounterLoaded(true);
 
-        const currentTaskIds = new Set(tasks.map((task) => task.id));
         for (const item of responseItems) {
           const changeSet = item.changeSet;
           const options = plan.requestOptionsByTaskId.get(item.taskId);
           if (!changeSet || !options) continue;
 
           const nextPresence = resolveCacheablePresenceFromChangeSet(changeSet);
-          if (!nextPresence) continue;
+          if (!nextPresence) {
+            const task = taskById.get(item.taskId);
+            if (
+              task?.changePresence &&
+              task.changePresence !== 'unknown' &&
+              shouldClearSelectedTaskChangePresence(task, changeSet)
+            ) {
+              setSelectedTeamTaskChangePresence(teamName, item.taskId, 'unknown');
+            }
+            continue;
+          }
           recordTaskChangePresence(teamName, item.taskId, options, nextPresence);
           setSelectedTeamTaskChangePresence(teamName, item.taskId, nextPresence);
         }

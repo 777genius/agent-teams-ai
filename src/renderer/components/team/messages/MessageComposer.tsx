@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
@@ -59,6 +60,7 @@ interface MessageComposerProps {
   teamName: string;
   members: ResolvedTeamMember[];
   layout?: 'default' | 'compact';
+  widthMode?: 'full' | 'floating-adaptive';
   isTeamAlive?: boolean;
   sending: boolean;
   sendError: string | null;
@@ -95,6 +97,9 @@ interface PendingSendState {
 }
 
 let pendingSendIdCounter = 0;
+const FLOATING_COMPOSER_MIN_WIDTH = 350;
+const FLOATING_COMPOSER_MAX_WIDTH = 500;
+const FLOATING_COMPOSER_TEXT_BUFFER = 4;
 
 function createPendingSendId(): string {
   const randomId = globalThis.crypto?.randomUUID?.();
@@ -107,6 +112,7 @@ export const MessageComposer = ({
   teamName,
   members,
   layout = 'default',
+  widthMode = 'full',
   isTeamAlive,
   sending,
   sendError,
@@ -118,6 +124,7 @@ export const MessageComposer = ({
   onSend,
   onCrossTeamSend,
 }: MessageComposerProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = useMemo(() => {
     // Merge internal and external refs into a single callback ref
@@ -212,9 +219,7 @@ export const MessageComposer = ({
   const isCrossTeam = selectedTeam !== null;
   const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
   const targetDisplayName = selectedTarget?.displayName ?? selectedTeam;
-  const crossTeamHintText = isCrossTeam
-    ? 'Tip: Cross-team messages go to the target team lead. If you want the reply to come back to your team lead instead of you, say that explicitly in the message.'
-    : undefined;
+  const crossTeamHintText = isCrossTeam ? t('messageComposer.crossTeam.hint') : undefined;
 
   // Members load async with team data; keep recipient stable if valid, otherwise default to lead/first.
   useEffect(() => {
@@ -365,19 +370,19 @@ export const MessageComposer = ({
   const canAttach = supportsAttachments && draft.canAddMore && !sending;
   const attachmentRestrictionReason = !supportsAttachments
     ? isCrossTeam
-      ? 'File attachments are not supported for cross-team messages'
+      ? t('messageComposer.attachments.restrictions.crossTeam')
       : !isTeamAlive
-        ? 'Team must be online to attach files'
+        ? t('messageComposer.attachments.restrictions.teamOffline')
         : !showAttachmentControl
-          ? 'Files can be sent to the team lead or OpenCode teammates'
+          ? t('messageComposer.attachments.restrictions.unsupportedRecipient')
           : (memberAttachmentUnavailableReason ??
             (isOpenCodeRecipient
-              ? 'Team must be online to attach files for OpenCode teammates'
-              : 'Team must be online to attach files'))
+              ? t('messageComposer.attachments.restrictions.openCodeOffline')
+              : t('messageComposer.attachments.restrictions.teamOffline')))
     : sending
-      ? 'Wait for current message to finish sending before adding files'
+      ? t('messageComposer.attachments.restrictions.sending')
       : !draft.canAddMore
-        ? 'Maximum attachments reached'
+        ? t('messageComposer.attachments.restrictions.maximumReached')
         : undefined;
   const attachmentPayloadRestrictionReason = validateAttachmentPayloadsForMember({
     member: selectedMember,
@@ -388,13 +393,13 @@ export const MessageComposer = ({
     (!supportsAttachments || attachmentPayloadRestrictionReason != null);
   const slashCommandRestrictionReason = standaloneSlashCommand
     ? draft.attachments.length > 0
-      ? 'Slash commands require a live team lead and cannot be sent with attachments'
+      ? t('messageComposer.slash.restrictions.attachments')
       : isCrossTeam
-        ? 'Slash commands can only be run on the current team lead'
+        ? t('messageComposer.slash.restrictions.crossTeam')
         : !isLeadRecipient
-          ? 'Slash commands can only be sent to the team lead'
+          ? t('messageComposer.slash.restrictions.notLead')
           : !isTeamAlive
-            ? 'Slash commands require the team lead to be online'
+            ? t('messageComposer.slash.restrictions.leadOffline')
             : null
     : null;
   const canSend =
@@ -527,7 +532,7 @@ export const MessageComposer = ({
     setFileRestrictionError(
       attachmentRestrictionReason ??
         attachmentPayloadRestrictionReason ??
-        'Files can only be sent to the team lead'
+        t('messageComposer.attachments.restrictions.leadOnly')
     );
     window.clearTimeout(fileRestrictionTimerRef.current);
     fileRestrictionTimerRef.current = window.setTimeout(() => {
@@ -653,6 +658,68 @@ export const MessageComposer = ({
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
   const shouldDockRecipientSelector = !hasAttachmentPreviewContent;
   const isCompactLayout = layout === 'compact';
+  const isFloatingAdaptiveWidth = widthMode === 'floating-adaptive';
+  const [floatingComposerWidth, setFloatingComposerWidth] = useState(FLOATING_COMPOSER_MIN_WIDTH);
+
+  useLayoutEffect(() => {
+    if (!isFloatingAdaptiveWidth) return;
+
+    if (draft.attachments.length > 0) {
+      setFloatingComposerWidth(FLOATING_COMPOSER_MAX_WIDTH);
+      return;
+    }
+
+    const textarea = internalTextareaRef.current;
+    if (!textarea) return;
+
+    const visibleText = stripEncodedTaskReferenceMetadata(draft.text);
+    if (visibleText.length === 0) {
+      setFloatingComposerWidth(FLOATING_COMPOSER_MIN_WIDTH);
+      return;
+    }
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    context.font =
+      computedStyle.font ||
+      [
+        computedStyle.fontStyle,
+        computedStyle.fontVariant,
+        computedStyle.fontWeight,
+        computedStyle.fontSize,
+        computedStyle.fontFamily,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+    const longestLineWidth = visibleText
+      .split(/\r\n|\r|\n/)
+      .reduce((maxWidth, line) => Math.max(maxWidth, context.measureText(line).width), 0);
+    const horizontalInset =
+      (Number.parseFloat(computedStyle.paddingLeft) || 0) +
+      (Number.parseFloat(computedStyle.paddingRight) || 0) +
+      (Number.parseFloat(computedStyle.borderLeftWidth) || 0) +
+      (Number.parseFloat(computedStyle.borderRightWidth) || 0) +
+      FLOATING_COMPOSER_TEXT_BUFFER;
+    const nextWidth = Math.min(
+      FLOATING_COMPOSER_MAX_WIDTH,
+      Math.max(FLOATING_COMPOSER_MIN_WIDTH, Math.ceil(longestLineWidth + horizontalInset))
+    );
+
+    setFloatingComposerWidth((currentWidth) =>
+      currentWidth === nextWidth ? currentWidth : nextWidth
+    );
+  }, [draft.attachments.length, draft.text, isFloatingAdaptiveWidth]);
+
+  const floatingAdaptiveStyle = isFloatingAdaptiveWidth
+    ? {
+        width: floatingComposerWidth,
+        maxWidth: `min(${FLOATING_COMPOSER_MAX_WIDTH}px, calc(100vw - 2rem))`,
+      }
+    : undefined;
   const compactFooterNotice = slashCommandRestrictionReason ? (
     <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
       <AlertCircle size={10} className="shrink-0" />
@@ -668,7 +735,7 @@ export const MessageComposer = ({
   ) : lastResult?.deduplicated ? (
     <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
       <Check size={10} className="shrink-0" />
-      Reused recent cross-team request
+      {t('messageComposer.status.reusedCrossTeamRequest')}
     </span>
   ) : null;
   const shouldShowFooterCharCount = remaining < 200;
@@ -683,11 +750,13 @@ export const MessageComposer = ({
               <span
                 className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
               >
-                {remaining} chars left
+                {t('messageComposer.input.charsLeft', { count: remaining })}
               </span>
             ) : null}
             {shouldShowSavedIndicator ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">
+                {t('tasks.createTask.saved')}
+              </span>
             ) : null}
           </div>
         ) : null}
@@ -698,6 +767,7 @@ export const MessageComposer = ({
   return (
     <div
       className={cn('relative', isCompactLayout ? 'pb-1' : 'mb-1.5 pb-1.5')}
+      style={floatingAdaptiveStyle}
       role="group"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -740,8 +810,8 @@ export const MessageComposer = ({
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   {canAttach
-                    ? 'Attach files (paste or drag & drop)'
-                    : (attachmentRestrictionReason ?? 'Attachments are unavailable')}
+                    ? t('messageComposer.attachments.attachFiles')
+                    : (attachmentRestrictionReason ?? t('messageComposer.attachments.unavailable'))}
                 </TooltipContent>
               </Tooltip>
             </>
@@ -750,7 +820,7 @@ export const MessageComposer = ({
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {!isTeamAlive && !isLaunchBlocking && (
               <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
-                Team offline
+                {t('messageComposer.status.teamOffline')}
               </span>
             )}
 
@@ -805,7 +875,9 @@ export const MessageComposer = ({
                             style={{ backgroundColor: currentTeamColor }}
                           />
                         ) : null}
-                        <span className="text-[var(--color-text-secondary)]">This team</span>
+                        <span className="text-[var(--color-text-secondary)]">
+                          {t('messageComposer.teamSelector.thisTeam')}
+                        </span>
                       </>
                     )}
                     <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
@@ -832,9 +904,11 @@ export const MessageComposer = ({
                           style={{ backgroundColor: currentTeamColor }}
                         />
                       ) : null}
-                      <span className="truncate text-[var(--color-text)]">This team</span>
+                      <span className="truncate text-[var(--color-text)]">
+                        {t('messageComposer.teamSelector.thisTeam')}
+                      </span>
                       <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                        current
+                        {t('messageComposer.teamSelector.current')}
                       </span>
                       {!isCrossTeam ? (
                         <Check size={12} className="ml-auto shrink-0 text-blue-400" />
@@ -874,7 +948,11 @@ export const MessageComposer = ({
                                       ? getTeamColorSet(target.color).border
                                       : nameColorSet(target.displayName).border,
                                 }}
-                                title={target.isOnline ? 'Online' : 'Offline'}
+                                title={
+                                  target.isOnline
+                                    ? t('messageComposer.teamSelector.onlineTitle')
+                                    : t('messageComposer.teamSelector.offlineTitle')
+                                }
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5">
@@ -889,7 +967,9 @@ export const MessageComposer = ({
                                         : 'text-[var(--color-text-muted)]'
                                     )}
                                   >
-                                    {target.isOnline ? 'online' : 'offline'}
+                                    {target.isOnline
+                                      ? t('messageComposer.teamSelector.online')
+                                      : t('messageComposer.teamSelector.offline')}
                                   </span>
                                 </div>
                                 {target.description ? (
@@ -937,7 +1017,9 @@ export const MessageComposer = ({
                         disableHoverCard
                       />
                     ) : (
-                      <span className="text-[var(--color-text-muted)]">Select...</span>
+                      <span className="text-[var(--color-text-muted)]">
+                        {t('messageComposer.recipient.select')}
+                      </span>
                     )}
                     <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
                   </button>
@@ -961,7 +1043,7 @@ export const MessageComposer = ({
                         ref={recipientSearchRef}
                         type="text"
                         className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
-                        placeholder="Search..."
+                        placeholder={t('messageComposer.recipient.searchPlaceholder')}
                         value={recipientSearch}
                         onChange={(e) => setRecipientSearch(e.target.value)}
                       />
@@ -977,7 +1059,7 @@ export const MessageComposer = ({
                       if (filtered.length === 0) {
                         return (
                           <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
-                            No results
+                            {t('messageComposer.recipient.noResults')}
                           </div>
                         );
                       }
@@ -1043,7 +1125,7 @@ export const MessageComposer = ({
             disabledHint={
               attachmentPayloadRestrictionReason ??
               attachmentRestrictionReason ??
-              'File attachments are supported for the online team lead and online OpenCode teammates. Remove attachments or switch recipient.'
+              t('messageComposer.attachments.disabledHint')
             }
           />
         ) : null}
@@ -1060,10 +1142,12 @@ export const MessageComposer = ({
           id={`compose-${teamName}`}
           placeholder={
             isLaunchBlocking
-              ? 'Team is launching... message will be queued for inbox delivery.'
+              ? t('messageComposer.input.teamLaunchingPlaceholder')
               : isCrossTeam
-                ? `Cross-team message to ${targetDisplayName ?? 'team'}...`
-                : 'Write a message... (Enter to send, Shift+Enter for new line)'
+                ? t('messageComposer.input.crossTeamPlaceholder', {
+                    team: targetDisplayName ?? t('messageComposer.input.teamFallback'),
+                  })
+                : t('messageComposer.input.placeholder')
           }
           value={draft.text}
           onValueChange={draft.setText}
@@ -1080,7 +1164,7 @@ export const MessageComposer = ({
           onModEnter={handleSend}
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
-          extraTips={['Tip: You can use "/" to run any Claude commands.']}
+          extraTips={[t('messageComposer.input.slashTip')]}
           surfaceClassName="message-composer-shell message-composer-orbit-surface border border-transparent bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.03)]"
           surfaceDecoration="orbit-border"
           surfaceFadeColor="var(--color-surface-raised)"
@@ -1113,7 +1197,9 @@ export const MessageComposer = ({
                     <Mic size={14} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Voice to text</TooltipContent>
+                <TooltipContent side="top">
+                  {t('messageComposer.actions.voiceToText')}
+                </TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1125,7 +1211,7 @@ export const MessageComposer = ({
                       onClick={handleSend}
                     >
                       <Send size={12} />
-                      Send
+                      {t('messageComposer.actions.send')}
                     </button>
                   </span>
                 </TooltipTrigger>
@@ -1133,7 +1219,7 @@ export const MessageComposer = ({
                   <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
                 ) : isLaunchBlocking && !sending ? (
                   <TooltipContent side="top">
-                    Sending unavailable while team is launching
+                    {t('messageComposer.actions.sendingUnavailableLaunching')}
                   </TooltipContent>
                 ) : null}
               </Tooltip>

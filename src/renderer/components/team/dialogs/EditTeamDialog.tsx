@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { MemberDraftRow } from '@renderer/components/team/members/MemberDraftRow';
 import {
@@ -95,7 +96,13 @@ function getInvalidMemberNamesError(
   members: readonly {
     name: string;
     removedAt?: number | string | null;
-  }[]
+  }[],
+  messages: {
+    empty: string;
+    invalid: string;
+    reserved: (name: string) => string;
+    numericSuffix: (name: string, base: string) => string;
+  }
 ): string | null {
   for (const member of members) {
     if (member.removedAt) {
@@ -103,18 +110,18 @@ function getInvalidMemberNamesError(
     }
     const name = member.name.trim();
     if (!name) {
-      return 'Member name cannot be empty';
+      return messages.empty;
     }
     if (validateMemberNameInline(name) !== null) {
-      return 'Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+      return messages.invalid;
     }
     const lower = name.toLowerCase();
     if (lower === 'user' || lower === 'team-lead') {
-      return `Member name "${name}" is reserved`;
+      return messages.reserved(name);
     }
     const suffixInfo = parseNumericSuffixName(name);
     if (suffixInfo && suffixInfo.suffix >= 2) {
-      return `Member name "${name}" is not allowed (reserved for Claude CLI auto-suffix). Use "${suffixInfo.base}" instead.`;
+      return messages.numericSuffix(name, suffixInfo.base);
     }
   }
   return null;
@@ -150,6 +157,7 @@ export const EditTeamDialog = ({
   onChangeLeadRuntime,
   onSaved,
 }: EditTeamDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription);
@@ -182,13 +190,13 @@ export const EditTeamDialog = ({
       name: displayMemberName(leadMember.name),
       originalName: leadMember.name,
       roleSelection: '',
-      customRole: 'Team Lead',
+      customRole: t('editTeam.teamLead.role'),
       workflow: leadMember.workflow,
       providerId: leadMember.providerId,
       model: leadMember.model ?? '',
       effort: leadMember.effort,
     });
-  }, [leadMember]);
+  }, [leadMember, t]);
 
   useEffect(() => {
     const wasOpen = wasOpenRef.current;
@@ -232,7 +240,17 @@ export const EditTeamDialog = ({
   }, [open, teamName, currentName, currentDescription, currentColor, currentMembers]);
 
   const builtMembers = useMemo(() => buildMembersFromDrafts(members), [members]);
-  const invalidMemberNamesError = useMemo(() => getInvalidMemberNamesError(members), [members]);
+  const invalidMemberNamesError = useMemo(
+    () =>
+      getInvalidMemberNamesError(members, {
+        empty: t('editTeam.errors.memberNameEmpty'),
+        invalid: t('editTeam.errors.memberNameInvalid'),
+        reserved: (memberName) => t('editTeam.errors.memberNameReserved', { name: memberName }),
+        numericSuffix: (memberName, base) =>
+          t('editTeam.errors.memberNameNumericSuffix', { name: memberName, base }),
+      }),
+    [members, t]
+  );
   const hasDuplicateMembers = useMemo(() => {
     const names = members
       .filter((member) => !member.removedAt)
@@ -380,15 +398,15 @@ export const EditTeamDialog = ({
       members.map((member) => [
         member.id,
         restartNames.has(member.name.trim().toLowerCase())
-          ? 'Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, or effort changes.'
+          ? t('editTeam.memberRestartWarning')
           : null,
       ])
     );
-  }, [liveRuntimeRefreshMemberNames, members]);
+  }, [liveRuntimeRefreshMemberNames, members, t]);
 
   const handleSave = (): void => {
     if (!name.trim()) {
-      setError('Team name cannot be empty');
+      setError(t('editTeam.errors.teamNameEmpty'));
       return;
     }
     if (invalidMemberNamesError) {
@@ -396,7 +414,7 @@ export const EditTeamDialog = ({
       return;
     }
     if (hasDuplicateMembers) {
-      setError('Member names must be unique before saving');
+      setError(t('editTeam.errors.memberNamesUnique'));
       return;
     }
     const latestSourceSnapshot = buildEditTeamSourceSnapshot({
@@ -411,32 +429,30 @@ export const EditTeamDialog = ({
       )
     );
     if (allowedSourceSnapshots.size > 0 && !allowedSourceSnapshots.has(latestSourceSnapshot)) {
-      setError(
-        'Team settings changed while this dialog was open. Reopen it and review the latest state before saving.'
-      );
+      setError(t('editTeam.errors.settingsChanged'));
       return;
     }
     if (hasBlockedLiveIdentityChanges) {
       setError(
-        `Existing teammates cannot be renamed while the team is live. renamed: ${liveIdentityChanges.renamed.join(', ')}`
+        t('editTeam.errors.liveRenameBlocked', {
+          names: liveIdentityChanges.renamed.join(', '),
+        })
       );
       return;
     }
     if (isTeamProvisioning) {
-      setError(
-        'Team settings cannot be edited while provisioning is still in progress. Wait for launch to finish, then try again.'
-      );
+      setError(t('editTeam.errors.provisioning'));
       return;
     }
     if (hasNewLiveTeammates) {
-      setError(
-        'Add new teammates from the dedicated Add member dialog while the team is live. Edit Team only supports updating existing teammates.'
-      );
+      setError(t('editTeam.errors.newLiveTeammates'));
       return;
     }
     if (unsupportedLiveMixedPrimaryMutationNames.length > 0) {
       setError(
-        `Live edits to primary-owned teammates in mixed OpenCode teams are not supported yet. Stop the team, edit the roster, then relaunch. Affected: ${unsupportedLiveMixedPrimaryMutationNames.join(', ')}`
+        t('editTeam.errors.unsupportedMixedPrimaryMutation', {
+          names: unsupportedLiveMixedPrimaryMutationNames.join(', '),
+        })
       );
       return;
     }
@@ -478,6 +494,7 @@ export const EditTeamDialog = ({
             model: member.model,
             effort: member.effort,
             isolation: member.isolation,
+            mcpPolicy: member.mcpPolicy,
           })) as ResolvedTeamMember[],
         });
 
@@ -516,14 +533,14 @@ export const EditTeamDialog = ({
           )
         );
         setSaveOutcomeError(
-          `Team saved, but failed to restart ${restartFailures.length === 1 ? 'this teammate' : 'these teammates'}: ${restartFailures.join(', ')}`
+          restartFailures.length === 1
+            ? t('editTeam.errors.restartFailedOne', { failures: restartFailures.join(', ') })
+            : t('editTeam.errors.restartFailedMany', { failures: restartFailures.join(', ') })
         );
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Failed to save';
+        const message = e instanceof Error ? e.message : t('editTeam.errors.saveFailed');
         if (membersSaved) {
-          setSaveOutcomeError(
-            `Team changes were saved, but failed to refresh the latest view: ${message}`
-          );
+          setSaveOutcomeError(t('editTeam.errors.changesSavedRefreshFailed', { message }));
         } else if (configSaved) {
           pendingCommittedSourceSnapshotRef.current = buildEditTeamSourceSnapshot({
             name: name.trim(),
@@ -532,9 +549,7 @@ export const EditTeamDialog = ({
             members: committedMembersForSnapshot,
           });
           if (refreshAfterSaveAttempted) {
-            setSaveOutcomeError(
-              `Team settings were saved, but failed to refresh the latest view: ${message}`
-            );
+            setSaveOutcomeError(t('editTeam.errors.settingsSavedRefreshFailed', { message }));
             return;
           }
           let refreshErrorDetail: string | null = null;
@@ -546,8 +561,11 @@ export const EditTeamDialog = ({
           }
           setSaveOutcomeError(
             refreshErrorDetail
-              ? `Team settings were saved, but member changes failed: ${message}. Refresh also failed: ${refreshErrorDetail}`
-              : `Team settings were saved, but member changes failed: ${message}`
+              ? t('editTeam.errors.settingsSavedMembersAndRefreshFailed', {
+                  message,
+                  refreshError: refreshErrorDetail,
+                })
+              : t('editTeam.errors.settingsSavedMembersFailed', { message })
           );
         } else {
           setError(message);
@@ -562,8 +580,8 @@ export const EditTeamDialog = ({
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Edit Team</DialogTitle>
-          <DialogDescription>Change team name, description and color</DialogDescription>
+          <DialogTitle>{t('editTeam.title')}</DialogTitle>
+          <DialogDescription>{t('editTeam.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -572,7 +590,7 @@ export const EditTeamDialog = ({
               htmlFor="edit-team-name"
               className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
             >
-              Name
+              {t('editTeam.fields.name')}
             </label>
             <input
               id="edit-team-name"
@@ -586,7 +604,7 @@ export const EditTeamDialog = ({
                 if (e.key === 'Enter' && !saving && name.trim()) handleSave();
               }}
               className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
-              placeholder="Team name"
+              placeholder={t('editTeam.placeholders.teamName')}
             />
           </div>
           <div>
@@ -594,7 +612,7 @@ export const EditTeamDialog = ({
               htmlFor="edit-team-description"
               className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
             >
-              Description
+              {t('editTeam.fields.description')}
             </label>
             <textarea
               id="edit-team-description"
@@ -605,7 +623,7 @@ export const EditTeamDialog = ({
               }}
               rows={3}
               className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
-              placeholder="Team description (optional)"
+              placeholder={t('editTeam.placeholders.description')}
             />
           </div>
           <div>
@@ -642,21 +660,19 @@ export const EditTeamDialog = ({
                       projectPath={projectPath ?? null}
                       lockProviderModel
                       lockRole
-                      lockedRoleLabel="Team Lead"
+                      lockedRoleLabel={t('editTeam.teamLead.role')}
                       lockIdentity
                       hideActionButton
-                      modelLockReason="Team lead runtime is managed from Relaunch Team."
+                      modelLockReason={t('editTeam.teamLead.modelLockReason')}
                       lockedModelAction={{
-                        label: 'Change lead runtime',
-                        description:
-                          'Open Relaunch Team to change the lead provider, model, or effort.',
+                        label: t('editTeam.teamLead.changeRuntime'),
+                        description: t('editTeam.teamLead.changeRuntimeDescription'),
                         onClick: onChangeLeadRuntime,
                         disabled: isTeamProvisioning,
                       }}
                     />
                     <p className="text-[11px] text-[var(--color-text-muted)]">
-                      Team lead name and role stay read-only here. Open the runtime panel on the
-                      lead row to change provider, model, or effort.
+                      {t('editTeam.teamLead.readOnlyHint')}
                     </p>
                   </div>
                 ) : null
@@ -670,48 +686,42 @@ export const EditTeamDialog = ({
               lockExistingMemberIdentity={isTeamAlive}
               identityLockReason={undefined}
               disableAddMember={isTeamAlive}
-              addMemberLockReason="Use the dedicated Add member dialog to add new teammates while the team is live."
+              addMemberLockReason={t('editTeam.addMemberLockReason')}
               memberWarningById={memberWarningById}
               disableGeminiOption={isGeminiUiFrozen()}
             />
           </div>
           {isTeamProvisioning ? (
-            <p className="text-xs text-amber-300">
-              Team provisioning is still in progress. Editing is temporarily locked until launch
-              finishes.
-            </p>
+            <p className="text-xs text-amber-300">{t('editTeam.notices.provisioning')}</p>
           ) : null}
           {isTeamAlive && hasNewLiveTeammates ? (
-            <p className="text-xs text-red-300">
-              New teammates cannot be added from Edit Team while the team is live. Use the Add
-              member dialog instead.
-            </p>
+            <p className="text-xs text-red-300">{t('editTeam.notices.newLiveTeammates')}</p>
           ) : null}
           {isTeamAlive && hasBlockedLiveIdentityChanges ? (
-            <p className="text-xs text-red-300">
-              Live save is blocked because existing teammates were renamed. Revert those identity
-              changes or stop the team first.
-            </p>
+            <p className="text-xs text-red-300">{t('editTeam.notices.liveRenameBlocked')}</p>
           ) : null}
           {unsupportedLiveMixedPrimaryMutationNames.length > 0 ? (
             <p className="text-xs text-red-300">
-              Live edits/removals for primary-owned teammates in mixed OpenCode teams require
-              stopping and relaunching the team:{' '}
-              {unsupportedLiveMixedPrimaryMutationNames.join(', ')}.
+              {t('editTeam.notices.unsupportedMixedPrimaryMutation', {
+                names: unsupportedLiveMixedPrimaryMutationNames.join(', '),
+              })}
             </p>
           ) : null}
           {isTeamAlive && liveRuntimeRefreshMemberNames.length > 0 ? (
             <p className="text-xs text-amber-300">
-              Saving will restart or relaunch{' '}
-              {liveRuntimeRefreshMemberNames.length === 1 ? 'this teammate' : 'these teammates'} to
-              apply role, workflow, worktree isolation, provider, model, or effort changes:{' '}
-              {liveRuntimeRefreshMemberNames.join(', ')}.
+              {liveRuntimeRefreshMemberNames.length === 1
+                ? t('editTeam.notices.restartOne', {
+                    names: liveRuntimeRefreshMemberNames.join(', '),
+                  })
+                : t('editTeam.notices.restartMany', {
+                    names: liveRuntimeRefreshMemberNames.join(', '),
+                  })}
             </p>
           ) : null}
           <div>
             {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Color picker is a group of buttons, not a single input */}
             <label className="label-optional mb-1 block text-xs font-medium">
-              Color (optional)
+              {t('editTeam.fields.colorOptional')}
             </label>
             <div className="flex flex-wrap gap-2">
               {TEAM_COLOR_NAMES.map((colorName) => {
@@ -751,7 +761,7 @@ export const EditTeamDialog = ({
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('editTeam.actions.cancel')}
           </Button>
           <Button
             size="sm"
@@ -766,7 +776,7 @@ export const EditTeamDialog = ({
             }
           >
             {saving && <Loader2 size={14} className="mr-1.5 animate-spin" />}
-            Save
+            {t('editTeam.actions.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -28,6 +29,7 @@ export const SessionFiltersPopover = ({
   providerCounts,
   onProviderIdsChange,
 }: SessionFiltersPopoverProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const activeCount = useMemo(
     () => (selectedProviderIds.size === SESSION_PROVIDER_IDS.length ? 0 : 1),
     [selectedProviderIds]
@@ -60,7 +62,7 @@ export const SessionFiltersPopover = ({
               variant="ghost"
               size="sm"
               className="relative h-7 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              aria-label="Filter sessions"
+              aria-label={t('sessions.filter.title')}
             >
               <Filter size={14} />
               {activeCount > 0 && (
@@ -71,13 +73,13 @@ export const SessionFiltersPopover = ({
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Filter sessions</TooltipContent>
+        <TooltipContent side="bottom">{t('sessions.filter.title')}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="w-72 p-0">
         <div className="border-b border-[var(--color-border)] p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-              Provider
+              {t('providerRuntime.provider')}
             </p>
             <button
               type="button"
@@ -85,7 +87,7 @@ export const SessionFiltersPopover = ({
               disabled={activeCount === 0}
               onClick={handleReset}
             >
-              Reset
+              {t('actions.reset')}
             </button>
           </div>
           <div className="space-y-1">

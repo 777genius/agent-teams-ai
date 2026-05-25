@@ -1,16 +1,14 @@
 // @vitest-environment node
-import { chmod, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import path from 'path';
-
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import {
   clearShellEnvCache,
   getCachedShellEnv,
   resolveInteractiveShellEnv,
   resolveInteractiveShellEnvBestEffort,
 } from '@main/utils/shellEnv';
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const describePosix = process.platform === 'win32' ? describe.skip : describe;
 
@@ -134,6 +132,37 @@ setTimeout(() => {
     });
   });
 
+  it('returns fallback without spawning shell when background resolution is disabled', async () => {
+    const invocationFile = path.join(tempDir, 'no-background-invocations.log');
+    process.env.FAKE_SHELL_INVOCATIONS = invocationFile;
+    const fakeShell = await createFakeShell(
+      tempDir,
+      'no-background-shell.js',
+      envWriterSource(`
+const fs = require('fs');
+fs.appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, 'spawned\\n');
+writeEnv({
+  PATH: '/should-not-run/bin',
+  HOME: '/should-not-run-home',
+});
+`)
+    );
+    process.env.SHELL = fakeShell;
+
+    const startedAt = Date.now();
+    const env = await resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 25,
+      fallbackEnv: { PATH: 'FALLBACK_PATH', HOME: 'FALLBACK_HOME' },
+      background: false,
+    });
+    const elapsedMs = Date.now() - startedAt;
+
+    expect(elapsedMs).toBeLessThan(150);
+    expect(env).toMatchObject({ PATH: 'FALLBACK_PATH', HOME: 'FALLBACK_HOME' });
+    expect(getCachedShellEnv()).toBeNull();
+    await expect(readFile(invocationFile, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('falls back from a failed login shell process to a successful interactive shell process', async () => {
     const fakeShell = await createFakeShell(
       tempDir,
@@ -154,10 +183,7 @@ writeEnv({
       PATH: '/interactive-real/bin:/usr/bin',
       HOME: '/interactive-home',
     });
-    expect(console.warn).toHaveBeenCalledWith(
-      '[Utils:shellEnv]',
-      'Failed to resolve login shell env: shell env command exited with code 42'
-    );
+    expect(console.warn).not.toHaveBeenCalled();
     vi.mocked(console.warn).mockClear();
     expect(getCachedShellEnv()).toMatchObject({
       PATH: '/interactive-real/bin:/usr/bin',

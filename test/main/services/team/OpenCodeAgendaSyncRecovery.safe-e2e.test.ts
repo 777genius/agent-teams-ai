@@ -1,11 +1,4 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
-import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import {
   OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -14,7 +7,12 @@ import {
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeLaneIndexPath,
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { InboxMessage, TaskRef } from '@shared/types/team';
 
@@ -55,7 +53,9 @@ async function seedNonBlockingShadowCollectingMetrics(input: {
   teamsBasePath: string;
   teamName: string;
   memberName: string;
+  statusEventCount?: number;
 }): Promise<void> {
+  const statusEventCount = input.statusEventCount ?? 18;
   const metricsPath = path.join(
     input.teamsBasePath,
     input.teamName,
@@ -78,7 +78,7 @@ async function seedNonBlockingShadowCollectingMetrics(input: {
             evaluatedAt: '2026-01-01T00:00:00.000Z',
           },
         },
-        recentEvents: Array.from({ length: 18 }, (_, index) => ({
+        recentEvents: Array.from({ length: statusEventCount }, (_, index) => ({
           id: `seed-status-${index}`,
           teamName: input.teamName,
           memberName: input.memberName,
@@ -100,7 +100,9 @@ async function seedTeamConfig(input: {
   teamsBasePath: string;
   teamName: string;
   memberName: string;
+  providerId?: 'opencode' | 'codex';
 }): Promise<void> {
+  const providerId = input.providerId ?? 'opencode';
   const configPath = path.join(input.teamsBasePath, input.teamName, 'config.json');
   await fs.promises.mkdir(path.dirname(configPath), { recursive: true });
   await fs.promises.writeFile(
@@ -114,8 +116,8 @@ async function seedTeamConfig(input: {
           {
             name: input.memberName,
             role: 'developer',
-            providerId: 'opencode',
-            model: 'openrouter/test',
+            providerId,
+            model: providerId === 'codex' ? 'gpt-5.4-mini' : 'openrouter/test',
           },
         ],
       },
@@ -295,13 +297,15 @@ function createFeature(input: {
   memberName: string;
   service: TeamProvisioningService;
   nudgeDeliveryWake: { schedule: ReturnType<typeof vi.fn> };
+  providerId?: 'opencode' | 'codex';
 }) {
+  const providerId = input.providerId ?? 'opencode';
   return createMemberWorkSyncFeature({
     teamsBasePath: input.teamsBasePath,
     configReader: {
       getConfig: vi.fn(async () => ({
         name: input.teamName,
-        members: [{ name: input.memberName, providerId: 'opencode' }],
+        members: [{ name: input.memberName, providerId }],
       })),
     } as never,
     taskReader: {
@@ -326,17 +330,81 @@ function createFeature(input: {
       getMembers: vi.fn(async () => []),
     } as never,
     isTeamActive: vi.fn(async () => true),
-    extraBusySignals: [
-      {
-        isBusy: (busyInput) => input.service.getOpenCodeMemberDeliveryBusyStatus(busyInput),
-      },
-    ],
+    extraBusySignals:
+      providerId === 'opencode'
+        ? [
+            {
+              isBusy: (busyInput) => input.service.getOpenCodeMemberDeliveryBusyStatus(busyInput),
+            },
+          ]
+        : [],
     nudgeDeliveryWake: input.nudgeDeliveryWake,
     queueQuietWindowMs: 1,
   });
 }
 
 describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
+  it('delivers a Codex work-sync nudge during shadow collection with prefixed MCP aliases and schedules a Codex wake', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-codex-agenda-sync-nudge';
+    const memberName = 'bob';
+    const service = new TeamProvisioningService();
+    const nudgeDeliveryWake = { schedule: vi.fn(async () => undefined) };
+    const feature = createFeature({
+      teamsBasePath,
+      teamName,
+      memberName,
+      service,
+      nudgeDeliveryWake,
+      providerId: 'codex',
+    });
+
+    try {
+      await seedTeamConfig({ teamsBasePath, teamName, memberName, providerId: 'codex' });
+      await seedNonBlockingShadowCollectingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+      });
+
+      await feature.refreshStatus({ teamName, memberName });
+      await feature.dispatchDueNudges([teamName]);
+
+      await waitForAssertion(async () => {
+        const inbox = await readInboxMessages({ teamsBasePath, teamName, memberName });
+        const nudges = inbox.filter((message) => message.messageKind === 'member_work_sync_nudge');
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('Required sync action: call member_work_sync_status');
+        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_status');
+        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_report');
+        expect(nudges[0]?.text).toContain('Do not search the filesystem');
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: { state: 'collecting_shadow_data' },
+        });
+        expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+          teamName,
+          memberName,
+          messageId: nudges[0]?.messageId,
+          providerId: 'codex',
+          reason: 'member_work_sync_nudge_inserted',
+          delayMs: 500,
+        });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([
+          expect.objectContaining({
+            status: 'delivered',
+            deliveredMessageId: nudges[0]?.messageId,
+          }),
+        ]);
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('delivers a work-sync nudge without marking the proof-missing foreground message read', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);

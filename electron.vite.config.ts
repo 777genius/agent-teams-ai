@@ -44,30 +44,42 @@ function nativeModuleStub(): Plugin {
   }
 }
 
-// Sentry source map upload — only active in CI when SENTRY_AUTH_TOKEN is set.
-const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
-  ? [
-      sentryVitePlugin({
-        org: process.env.SENTRY_ORG ?? 'quant-jump-pro',
-        project: process.env.SENTRY_PROJECT ?? 'electron',
-        authToken: process.env.SENTRY_AUTH_TOKEN,
-        release: { name: `agent-teams-ai@${pkg.version}` },
-        sourcemaps: {
-          filesToDeleteAfterUpload: ['./out/renderer/**/*.map', './dist-electron/**/*.map'],
-        },
-      }),
-    ]
-  : []
+const sentrySourceMapTargets = {
+  main: {
+    assets: ['./dist-electron/main/**/*.{js,cjs,mjs,map}'],
+    filesToDeleteAfterUpload: ['./dist-electron/main/**/*.map'],
+  },
+  renderer: {
+    assets: ['./out/renderer/**/*.{js,cjs,mjs,map}'],
+    filesToDeleteAfterUpload: ['./out/renderer/**/*.map'],
+  },
+} as const
+
+// Sentry source map upload - only active in CI when SENTRY_AUTH_TOKEN is set.
+function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugin[] {
+  if (!process.env.SENTRY_AUTH_TOKEN) return []
+
+  return [
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG ?? 'quant-jump-pro',
+      project: process.env.SENTRY_PROJECT ?? 'electron',
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      release: { name: `agent-teams-ai@${pkg.version}` },
+      sourcemaps: sentrySourceMapTargets[target],
+    }) as Plugin,
+  ]
+}
 
 export default defineConfig({
   main: {
     plugins: [
       nativeModuleStub(),
-      ...sentryPlugins,
+      ...createSentryPlugins('main'),
     ],
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
-      // Inject DSN at compile time — process.env.SENTRY_DSN is NOT available
+      // Inject DSN at compile time - process.env.SENTRY_DSN is NOT available
       // at runtime in packaged Electron apps (only during CI build).
       'process.env.SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
     },
@@ -148,10 +160,14 @@ export default defineConfig({
         '@renderer': resolve(__dirname, 'src/renderer'),
         '@shared': resolve(__dirname, 'src/shared'),
         '@main': resolve(__dirname, 'src/main'),
+        '@radix-ui/react-compose-refs': resolve(
+          __dirname,
+          'src/renderer/vendor/radixComposeRefs.ts'
+        ),
         '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },
-    plugins: [react(), ...sentryPlugins],
+    plugins: [react(), ...createSentryPlugins('renderer')],
     build: {
       sourcemap: 'hidden',
       rollupOptions: {

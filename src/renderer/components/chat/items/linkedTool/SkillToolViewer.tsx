@@ -6,6 +6,7 @@
 
 import React, { memo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CodeBlockViewer } from '@renderer/components/chat/viewers';
 
 import type { LinkedToolItem } from '@renderer/types/groups';
@@ -15,8 +16,9 @@ interface SkillToolViewerProps {
 }
 
 export const SkillToolViewer = memo(function SkillToolViewer({ linkedTool }: SkillToolViewerProps) {
+  const { t } = useAppTranslation('common');
   const skillInstructions = linkedTool.skillInstructions;
-  const skillName = (linkedTool.input.skill as string) || 'Unknown Skill';
+  const skillName = (linkedTool.input.skill as string) || t('chat.tools.skill.unknown');
 
   const resultContent = linkedTool.result?.content;
   const resultText =
@@ -34,7 +36,7 @@ export const SkillToolViewer = memo(function SkillToolViewer({ linkedTool }: Ski
       {resultText && (
         <div>
           <div className="mb-1 text-xs" style={{ color: 'var(--tool-item-muted)' }}>
-            Result
+            {t('chat.tools.result')}
           </div>
           <div
             className="overflow-x-auto rounded p-3 font-mono text-xs"
@@ -53,7 +55,7 @@ export const SkillToolViewer = memo(function SkillToolViewer({ linkedTool }: Ski
       {skillInstructions && (
         <div>
           <div className="mb-1 text-xs" style={{ color: 'var(--tool-item-muted)' }}>
-            Skill Instructions
+            {t('chat.tools.skill.instructions')}
           </div>
           <CodeBlockViewer
             fileName={`${skillName} skill`}

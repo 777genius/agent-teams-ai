@@ -4,6 +4,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 import { MessageSquare } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export const UserMessageItem = ({
   injection,
   onNavigateToTurn,
 }: Readonly<UserMessageItemProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const turnIndex = injection.turnIndex;
   const isClickable = onNavigateToTurn && turnIndex >= 0;
 
@@ -45,15 +47,17 @@ export const UserMessageItem = ({
               }
             }}
           >
-            @Turn {turnIndex + 1}
+            {t('sessionContext.items.turn', { turn: turnIndex + 1 })}
           </span>
         ) : (
           <span className="text-xs" style={{ color: COLOR_TEXT_SECONDARY }}>
-            @Turn {turnIndex + 1}
+            {t('sessionContext.items.turn', { turn: turnIndex + 1 })}
           </span>
         )}
         <span className="text-xs" style={{ color: COLOR_TEXT_MUTED }}>
-          ~{formatTokens(injection.estimatedTokens)} tokens
+          {t('sessionContext.items.tokensApprox', {
+            tokens: formatTokens(injection.estimatedTokens),
+          })}
         </span>
       </div>
       {injection.textPreview && (

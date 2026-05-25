@@ -6,6 +6,7 @@
 
 import { Fragment, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { HEADER_ROW1_HEIGHT } from '@renderer/constants/layout';
@@ -17,6 +18,7 @@ import { TabBar } from './TabBar';
 import { TabBarActions } from './TabBarActions';
 
 export const TabBarRow = (): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const { panes, focusedPaneId, openDashboard } = useStore(
     useShallow((s) => ({
       panes: s.paneLayout.panes,
@@ -85,12 +87,12 @@ export const TabBarRow = (): React.JSX.Element => {
                   backgroundColor: newTabHover ? 'var(--color-surface-raised)' : 'transparent',
                 } as React.CSSProperties
               }
-              aria-label="New tab"
+              aria-label={t('layout.newTab')}
             >
               <Plus className="size-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">New tab (Dashboard)</TooltipContent>
+          <TooltipContent side="bottom">{t('layout.newTabDashboard')}</TooltipContent>
         </Tooltip>
       </div>
 

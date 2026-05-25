@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { isImageMime } from '@renderer/utils/attachmentUtils';
 import { Loader2 } from 'lucide-react';
@@ -20,6 +21,7 @@ export const AttachmentDisplay = ({
   messageId,
   attachments,
 }: AttachmentDisplayProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const [state, setState] = useState<{
     loaded: AttachmentFileData[];
     loading: boolean;
@@ -56,7 +58,7 @@ export const AttachmentDisplay = ({
     return (
       <div className="flex items-center gap-1.5 py-1 text-[11px] text-[var(--color-text-muted)]">
         <Loader2 size={14} className="animate-spin" />
-        Loading attachments...
+        {t('taskAttachments.loading')}
       </div>
     );
   }

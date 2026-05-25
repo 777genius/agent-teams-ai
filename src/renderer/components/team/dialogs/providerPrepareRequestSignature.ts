@@ -1,8 +1,31 @@
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
-import type { CliProviderStatus, TeamProviderId } from '@shared/types';
+import type {
+  CliProviderStatus,
+  TeamProviderId,
+  TeamProvisioningModelCheckRequest,
+} from '@shared/types';
 
 type RuntimeProviderStatusById = ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
-type SelectedModelChecksByProvider = ReadonlyMap<TeamProviderId, readonly string[]>;
+type ProviderModelCheckSignatureInput =
+  | string
+  | Pick<TeamProvisioningModelCheckRequest, 'model' | 'effort'>;
+type SelectedModelChecksByProvider = ReadonlyMap<
+  TeamProviderId,
+  readonly ProviderModelCheckSignatureInput[]
+>;
+
+function getCodexPrepareRuntimeSignature(
+  codex: NonNullable<NonNullable<CliProviderStatus['connection']>['codex']>
+): Record<string, unknown> {
+  return {
+    preferredAuthMode: codex.preferredAuthMode,
+    effectiveAuthMode: codex.effectiveAuthMode,
+    managedAccountType: codex.managedAccount?.type ?? null,
+    requiresOpenaiAuth: codex.requiresOpenaiAuth ?? null,
+    launchAllowed: codex.launchAllowed,
+    launchReadinessState: codex.launchAllowed ? 'launchable' : codex.launchReadinessState,
+  };
+}
 
 function normalizeModelIds(modelIds: readonly string[] | null | undefined): string[] {
   return Array.from(
@@ -10,10 +33,33 @@ function normalizeModelIds(modelIds: readonly string[] | null | undefined): stri
   ).sort();
 }
 
+function normalizeModelChecks(
+  checks: readonly ProviderModelCheckSignatureInput[] | null | undefined
+): { model: string; effort: string | null }[] {
+  const seen = new Set<string>();
+  const normalized: { model: string; effort: string | null }[] = [];
+  for (const check of checks ?? []) {
+    const model = (typeof check === 'string' ? check : check.model).trim();
+    if (!model) {
+      continue;
+    }
+    const effort = typeof check === 'string' ? null : (check.effort ?? null);
+    const key = `${model}\n${effort ?? ''}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push({ model, effort });
+  }
+  return normalized.sort(
+    (left, right) =>
+      left.model.localeCompare(right.model) || (left.effort ?? '').localeCompare(right.effort ?? '')
+  );
+}
+
 export function buildProviderPrepareMembersSignature(members: readonly MemberDraft[]): string {
   return JSON.stringify(
     members.map((member) => ({
-      id: member.id,
       providerId: member.providerId ?? null,
       model: member.model?.trim() || null,
       effort: member.effort ?? null,
@@ -29,7 +75,10 @@ export function buildProviderPrepareModelChecksSignature(
     Array.from(modelChecksByProvider.entries())
       .map(([providerId, modelIds]) => ({
         providerId,
-        modelIds: normalizeModelIds(modelIds),
+        modelIds: normalizeModelIds(
+          modelIds.map((modelId) => (typeof modelId === 'string' ? modelId : modelId.model))
+        ),
+        modelChecks: normalizeModelChecks(modelIds),
       }))
       .sort((left, right) => left.providerId.localeCompare(right.providerId))
   );
@@ -51,12 +100,11 @@ export function buildProviderPrepareRuntimeStatusSignature(
           authMethod: provider?.authMethod ?? null,
           selectedBackendId: provider?.selectedBackendId ?? null,
           resolvedBackendId: provider?.resolvedBackendId ?? null,
-          models: normalizeModelIds(provider?.models),
-          modelCatalogSource: provider?.modelCatalog?.source ?? null,
-          modelCatalogStatus: provider?.modelCatalog?.status ?? null,
-          modelCatalogModels: normalizeModelIds(
-            provider?.modelCatalog?.models?.map((model) => model.id)
-          ),
+          // Facts:
+          // - Selected models are already represented by modelChecksSignature.
+          // - OpenCode/Codex live catalogs can expand while preflight is running.
+          // - Including catalog contents here retriggers duplicate preflights and can
+          //   make still-running OpenCode PONG probes look like persistent busy.
           connection: provider?.connection
             ? {
                 supportsOAuth: provider.connection.supportsOAuth,
@@ -65,35 +113,10 @@ export function buildProviderPrepareRuntimeStatusSignature(
                 apiKeyConfigured: provider.connection.apiKeyConfigured,
                 apiKeySource: provider.connection.apiKeySource ?? null,
                 codex: provider.connection.codex
-                  ? {
-                      preferredAuthMode: provider.connection.codex.preferredAuthMode,
-                      effectiveAuthMode: provider.connection.codex.effectiveAuthMode,
-                      appServerState: provider.connection.codex.appServerState,
-                      managedAccountType: provider.connection.codex.managedAccount?.type ?? null,
-                      managedAccountEmail: provider.connection.codex.managedAccount?.email ?? null,
-                      requiresOpenaiAuth: provider.connection.codex.requiresOpenaiAuth ?? null,
-                      localAccountArtifactsPresent:
-                        provider.connection.codex.localAccountArtifactsPresent ?? null,
-                      localActiveChatgptAccountPresent:
-                        provider.connection.codex.localActiveChatgptAccountPresent ?? null,
-                      loginStatus: provider.connection.codex.login?.status ?? null,
-                      launchAllowed: provider.connection.codex.launchAllowed,
-                      launchIssueMessage: provider.connection.codex.launchIssueMessage ?? null,
-                      launchReadinessState: provider.connection.codex.launchReadinessState,
-                    }
+                  ? getCodexPrepareRuntimeSignature(provider.connection.codex)
                   : null,
               }
             : null,
-          availableBackends: (provider?.availableBackends ?? [])
-            .map((backend) => ({
-              id: backend.id,
-              available: backend.available,
-              selectable: backend.selectable,
-              state: backend.state ?? null,
-              recommended: backend.recommended,
-              audience: backend.audience ?? null,
-            }))
-            .sort((left, right) => left.id.localeCompare(right.id)),
         };
       })
   );

@@ -1,24 +1,29 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  useRuntimeProviderManagement,
   type RuntimeProviderManagementActions,
   type RuntimeProviderManagementState,
+  useRuntimeProviderManagement,
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
   getStoredCreateTeamModel,
   getStoredCreateTeamProvider,
 } from '../../../../src/renderer/services/createTeamPreferences';
 
-import type { ElectronAPI } from '../../../../src/shared/types/api';
 import type {
   RuntimeProviderConnectionDto,
   RuntimeProviderDirectoryEntryDto,
+  RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementModelTestResponse,
+  RuntimeProviderManagementProviderResponse,
+  RuntimeProviderManagementSetupFormResponse,
   RuntimeProviderManagementViewDto,
+  RuntimeProviderManagementViewResponse,
 } from '../../../../src/features/runtime-provider-management/contracts';
+import type { ElectronAPI } from '../../../../src/shared/types/api';
 
 function installRuntimeProviderManagementApi(
   response: RuntimeProviderManagementModelTestResponse
@@ -79,6 +84,7 @@ function createOpenAiLocalDirectoryEntry(): RuntimeProviderDirectoryEntryDto {
       hasKnownModels: true,
       requiresManualConfig: false,
       supportedInlineAuth: false,
+      configuredAuthless: false,
     },
   };
 }
@@ -102,6 +108,20 @@ describe('useRuntimeProviderManagement', () => {
     const hook = useRuntimeProviderManagement({
       runtimeId: 'opencode',
       enabled: true,
+      projectPath: props.projectPath,
+    });
+    state = hook[0];
+    actions = hook[1];
+    return React.createElement('div');
+  }
+
+  function ConfigurableHarness(props: {
+    enabled: boolean;
+    projectPath?: string | null;
+  }): React.ReactElement {
+    const hook = useRuntimeProviderManagement({
+      runtimeId: 'opencode',
+      enabled: props.enabled,
       projectPath: props.projectPath,
     });
     state = hook[0];
@@ -168,6 +188,697 @@ describe('useRuntimeProviderManagement', () => {
     expect(loadView).toHaveBeenCalledWith({
       runtimeId: 'opencode',
       projectPath: '/tmp/project-a',
+    });
+  });
+
+  it('clears structured errors and stale provider state when disabled', async () => {
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-misconfigured',
+          message: 'OpenCode provider settings are using the wrong runtime binary.',
+          recoverable: true,
+          diagnostics: {
+            summary: 'OpenCode provider settings are using the wrong runtime binary.',
+            likelyCause:
+              'The app resolved the OpenCode CLI itself as the Agent Teams runtime binary.',
+            binaryPath: '/opt/homebrew/bin/opencode',
+            command:
+              '/opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+            projectPath: null,
+            exitCode: null,
+            stderrPreview: null,
+            stdoutPreview: null,
+            hints: ['Those environment variables must not point to opencode.'],
+          },
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(ConfigurableHarness, { enabled: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(state?.error).toContain('wrong runtime binary');
+    expect(state?.errorDiagnostics?.binaryPath).toBe('/opt/homebrew/bin/opencode');
+
+    await act(async () => {
+      root.render(React.createElement(ConfigurableHarness, { enabled: false }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view).toBeNull();
+    expect(state?.selectedProviderId).toBeNull();
+    expect(state?.error).toBeNull();
+    expect(state?.errorDiagnostics).toBeNull();
+    expect(state?.loading).toBe(false);
+  });
+
+  it('ignores pending directory and setup-form responses after being disabled', async () => {
+    let resolveDirectory:
+      | ((response: RuntimeProviderManagementDirectoryResponse) => void)
+      | null = null;
+    let resolveSetupForm:
+      | ((response: RuntimeProviderManagementSetupFormResponse) => void)
+      | null = null;
+    const directoryResponse = new Promise<RuntimeProviderManagementDirectoryResponse>(
+      (resolve) => {
+        resolveDirectory = resolve;
+      }
+    );
+    const setupFormResponse = new Promise<RuntimeProviderManagementSetupFormResponse>(
+      (resolve) => {
+        resolveSetupForm = resolve;
+      }
+    );
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: createRuntimeView(),
+      })
+    );
+    const loadProviderDirectory = vi.fn(() => directoryResponse);
+    const loadSetupForm = vi.fn(() => setupFormResponse);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          loadProviderDirectory,
+          loadSetupForm,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(ConfigurableHarness, { enabled: true }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(loadProviderDirectory).toHaveBeenCalled();
+      });
+      actions?.startConnect('openrouter');
+    });
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(loadSetupForm).toHaveBeenCalled();
+      });
+    });
+
+    await act(async () => {
+      root.render(React.createElement(ConfigurableHarness, { enabled: false }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      resolveDirectory?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          totalCount: 1,
+          returnedCount: 1,
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [createOpenAiLocalDirectoryEntry()],
+          diagnostics: [],
+          fetchedAt: '2026-05-22T00:00:00.000Z',
+        },
+      });
+      resolveSetupForm?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        setupForm: {
+          runtimeId: 'opencode',
+          providerId: 'openrouter',
+          displayName: 'OpenRouter',
+          method: 'api',
+          supported: true,
+          title: 'Connect OpenRouter',
+          description: null,
+          submitLabel: 'Connect',
+          disabledReason: null,
+          source: 'curated',
+          secret: {
+            key: 'key',
+            label: 'API key',
+            placeholder: 'Paste API key',
+            required: true,
+          },
+          prompts: [],
+        },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(state?.directoryEntries).toEqual([]);
+    expect(state?.directoryLoaded).toBe(false);
+    expect(state?.setupForm).toBeNull();
+    expect(state?.activeFormProviderId).toBeNull();
+    expect(state?.setupFormLoading).toBe(false);
+  });
+
+  it('ignores stale provider views after project context changes', async () => {
+    let resolveProjectA:
+      | ((response: {
+          schemaVersion: 1;
+          runtimeId: 'opencode';
+          view: RuntimeProviderManagementViewDto;
+        }) => void)
+      | null = null;
+    const projectAResponse = new Promise<{
+      schemaVersion: 1;
+      runtimeId: 'opencode';
+      view: RuntimeProviderManagementViewDto;
+    }>((resolve) => {
+      resolveProjectA = resolve;
+    });
+    const loadView = vi.fn((input: { projectPath?: string | null }) => {
+      if (input.projectPath === '/tmp/project-a') {
+        return projectAResponse;
+      }
+      return Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-b',
+          defaultModel: 'opencode/project-b',
+        },
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+
+    await act(async () => {
+      resolveProjectA?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          defaultModel: 'opencode/project-a',
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.view?.defaultModel).toBe('opencode/project-b');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('restarts provider directory loading when project context changes while loading', async () => {
+    let resolveProjectADirectory:
+      | ((response: RuntimeProviderManagementDirectoryResponse) => void)
+      | null = null;
+    let resolveProjectBDirectory:
+      | ((response: RuntimeProviderManagementDirectoryResponse) => void)
+      | null = null;
+    const projectBEntry: RuntimeProviderDirectoryEntryDto = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'project-b-provider',
+      displayName: 'Project B Provider',
+    };
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+        },
+      })
+    );
+    const loadProviderDirectory = vi.fn((input: { projectPath?: string | null }) => {
+      if (input.projectPath === '/tmp/project-a') {
+        return new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          resolveProjectADirectory = resolve;
+        });
+      }
+      return new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+        resolveProjectBDirectory = resolve;
+      });
+    });
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          loadProviderDirectory,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 10));
+      await vi.waitFor(() => {
+        expect(loadProviderDirectory).toHaveBeenCalledWith({
+          runtimeId: 'opencode',
+          projectPath: '/tmp/project-a',
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          refresh: false,
+        });
+      });
+    });
+
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 10));
+      await vi.waitFor(() => {
+        expect(loadProviderDirectory).toHaveBeenCalledWith({
+          runtimeId: 'opencode',
+          projectPath: '/tmp/project-b',
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          refresh: false,
+        });
+      });
+    });
+
+    await act(async () => {
+      resolveProjectBDirectory?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          totalCount: 1,
+          returnedCount: 1,
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          fetchedAt: '2026-05-22T00:00:00.000Z',
+          entries: [projectBEntry],
+          diagnostics: [],
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual([
+      'project-b-provider',
+    ]);
+
+    await act(async () => {
+      resolveProjectADirectory?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          totalCount: 1,
+          returnedCount: 1,
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          fetchedAt: '2026-05-22T00:00:00.000Z',
+          entries: [createOpenAiLocalDirectoryEntry()],
+          diagnostics: [],
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual([
+      'project-b-provider',
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('drops stale model probe results after project context changes', async () => {
+    const modelId = 'llama.cpp/qwen-test:0.5b';
+    let resolveProbe: ((value: RuntimeProviderManagementModelTestResponse) => void) | null = null;
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    const testModel = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
+          resolveProbe = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          testModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    let probe: Promise<void> | null = null;
+    await act(async () => {
+      probe = actions?.testModel('llama.cpp', modelId) ?? null;
+      await Promise.resolve();
+    });
+
+    expect(testModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'llama.cpp',
+      modelId,
+      projectPath: '/tmp/project-a',
+    });
+    expect(state?.testingModelIds).toEqual([modelId]);
+
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.testingModelIds).toEqual([]);
+
+    await act(async () => {
+      resolveProbe?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'llama.cpp',
+          modelId,
+          ok: true,
+          availability: 'available',
+          message: 'Stale project A probe passed',
+          diagnostics: [],
+        },
+      });
+      await probe;
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.modelResults[modelId]).toBeUndefined();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('drops stale set-default responses after project context changes', async () => {
+    const projectAModelId = 'llama.cpp/project-a:0.5b';
+    let resolveSetDefault: ((value: RuntimeProviderManagementViewResponse) => void) | null = null;
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    const setDefaultModel = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
+          resolveSetDefault = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          setDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    let setDefault: Promise<void> | null = null;
+    await act(async () => {
+      setDefault = actions?.setDefaultModel('llama.cpp', projectAModelId, 'project') ?? null;
+      await Promise.resolve();
+    });
+
+    expect(setDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'llama.cpp',
+      modelId: projectAModelId,
+      probe: true,
+      scope: 'project',
+      projectPath: '/tmp/project-a',
+    });
+    expect(state?.savingDefaultModelId).toBe(projectAModelId);
+
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.savingDefaultModelId).toBeNull();
+
+    await act(async () => {
+      resolveSetDefault?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: '/tmp/project-a',
+          defaultModel: projectAModelId,
+        },
+      });
+      await setDefault;
+    });
+
+    expect(state?.view?.projectPath).toBe('/tmp/project-b');
+    expect(state?.view?.defaultModel).toBe('opencode/project-b');
+    expect(state?.selectedModelId).toBeNull();
+    expect(state?.successMessage).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('clears pending provider save state after project context changes', async () => {
+    const connectedProvider: RuntimeProviderConnectionDto = {
+      ...createOpenAiLocalProvider(),
+      ownership: ['managed'],
+      detail: 'Connected via managed OpenCode credential',
+    };
+    let resolveConnect: ((value: RuntimeProviderManagementProviderResponse) => void) | null =
+      null;
+    const loadView = vi.fn((input: { projectPath?: string | null }) =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          projectPath: input.projectPath ?? null,
+          defaultModel: input.projectPath === '/tmp/project-b' ? 'opencode/project-b' : null,
+        },
+      })
+    );
+    const loadProviderDirectory = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: {
+          runtimeId: 'opencode',
+          totalCount: 1,
+          returnedCount: 1,
+          query: null,
+          filter: 'all',
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          fetchedAt: '2026-04-25T00:00:00.000Z',
+          entries: [createOpenAiLocalDirectoryEntry()],
+          diagnostics: [],
+        },
+      })
+    );
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        setupForm: {
+          runtimeId: 'opencode',
+          providerId: 'openai',
+          displayName: 'OpenAI',
+          method: 'api',
+          supported: true,
+          title: 'Connect OpenAI',
+          description: null,
+          submitLabel: 'Connect',
+          disabledReason: null,
+          source: 'curated',
+          secret: {
+            key: 'key',
+            label: 'API key',
+            placeholder: 'Paste API key',
+            required: true,
+          },
+          prompts: [],
+        },
+      })
+    );
+    const connectProvider = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementProviderResponse>((resolve) => {
+          resolveConnect = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          loadProviderDirectory,
+          loadSetupForm,
+          connectProvider,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      actions?.startConnect('openai');
+      actions?.setApiKeyValue('sk-project-a');
+      await vi.waitFor(() => {
+        expect(loadSetupForm).toHaveBeenCalled();
+      });
+    });
+
+    let submitPromise: Promise<void> | null = null;
+    await act(async () => {
+      submitPromise = actions?.submitConnect('openai') ?? null;
+      await vi.waitFor(() => {
+        expect(connectProvider).toHaveBeenCalledWith({
+          runtimeId: 'opencode',
+          providerId: 'openai',
+          method: 'api',
+          apiKey: 'sk-project-a',
+          metadata: {},
+          projectPath: '/tmp/project-a',
+        });
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.savingProviderId).toBe('openai');
+
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => {
+      expect(loadView).toHaveBeenCalledWith({
+        runtimeId: 'opencode',
+        projectPath: '/tmp/project-b',
+      });
+    });
+
+    expect(state?.savingProviderId).toBeNull();
+    expect(state?.activeFormProviderId).toBeNull();
+
+    await act(async () => {
+      resolveConnect?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        provider: connectedProvider,
+      });
+      await submitPromise;
+    });
+
+    expect(state?.view?.providers).toEqual([]);
+    expect(state?.savingProviderId).toBeNull();
+    expect(state?.setupSubmitError).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
     });
   });
 
@@ -613,6 +1324,7 @@ describe('useRuntimeProviderManagement', () => {
               hasKnownModels: true,
               requiresManualConfig: false,
               supportedInlineAuth: false,
+              configuredAuthless: false,
             },
           },
         ],
@@ -696,6 +1408,7 @@ describe('useRuntimeProviderManagement', () => {
                 hasKnownModels: true,
                 requiresManualConfig: false,
                 supportedInlineAuth: true,
+                configuredAuthless: false,
               },
             },
           ],
@@ -794,6 +1507,68 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.error).toBeNull();
     expect(state?.setupSubmitError).toBe('Invalid API key');
     expect(state?.apiKeyValue).toBe('sk-bad-value');
+  });
+
+  it('keeps setup form diagnostics available when submit is attempted after form load failure', async () => {
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-misconfigured',
+          message: 'OpenCode provider settings are using the wrong runtime binary.',
+          recoverable: true,
+          diagnostics: {
+            summary: 'OpenCode provider settings are using the wrong runtime binary.',
+            likelyCause: 'The app resolved the OpenCode CLI itself as the runtime binary.',
+            binaryPath: '/opt/homebrew/bin/opencode',
+            command: '/opt/homebrew/bin/opencode runtime providers setup-form',
+            projectPath: null,
+            exitCode: null,
+            stderrPreview: null,
+            stdoutPreview: null,
+            hints: ['Those environment variables must not point to opencode.'],
+          },
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadSetupForm,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    act(() => {
+      actions?.startConnect('openrouter');
+    });
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(loadSetupForm).toHaveBeenCalled();
+      });
+    });
+
+    expect(state?.setupFormError).toBe(
+      'OpenCode provider settings are using the wrong runtime binary.'
+    );
+    expect(state?.setupFormErrorDiagnostics?.binaryPath).toBe('/opt/homebrew/bin/opencode');
+
+    await act(async () => {
+      await actions?.submitConnect('openrouter');
+    });
+
+    expect(state?.setupSubmitError).toBe(
+      'OpenCode provider settings are using the wrong runtime binary.'
+    );
+    expect(state?.setupSubmitErrorDiagnostics?.binaryPath).toBe('/opt/homebrew/bin/opencode');
   });
 
   it('submits a supported setup form without a secret as a null API key', async () => {
@@ -1199,6 +1974,47 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.modelResults[modelId]?.message).toBe(message);
   });
 
+  it('promotes structured model probe failures to the global diagnostics alert state', async () => {
+    const modelId = 'openrouter/anthropic/claude-3.5-haiku';
+    installRuntimeProviderManagementApi({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      error: {
+        code: 'runtime-misconfigured',
+        message: 'OpenCode provider settings are using the wrong runtime binary.',
+        recoverable: true,
+        diagnostics: {
+          summary: 'OpenCode provider settings are using the wrong runtime binary.',
+          likelyCause: 'The app resolved the OpenCode CLI itself as the runtime binary.',
+          binaryPath: '/opt/homebrew/bin/opencode',
+          command: '/opt/homebrew/bin/opencode runtime providers test-model',
+          projectPath: null,
+          exitCode: null,
+          stderrPreview: null,
+          stdoutPreview: null,
+          hints: ['Those environment variables must not point to opencode.'],
+        },
+      },
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.testModel('openrouter', modelId);
+    });
+
+    expect(state?.error).toBe('OpenCode provider settings are using the wrong runtime binary.');
+    expect(state?.errorDiagnostics?.binaryPath).toBe('/opt/homebrew/bin/opencode');
+    expect(state?.modelResults[modelId]).toMatchObject({
+      ok: false,
+      message: 'OpenCode provider settings are using the wrong runtime binary.',
+    });
+  });
+
   it('keeps successful model probes scoped to the model card instead of a global success banner', async () => {
     const modelId = 'openrouter/openai/gpt-oss-20b:free';
     installRuntimeProviderManagementApi({
@@ -1228,5 +2044,161 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.error).toBeNull();
     expect(state?.modelResults[modelId]?.ok).toBe(true);
     expect(state?.modelResults[modelId]?.message).toBe('Model probe passed');
+  });
+
+  it('keeps a successful set-default probe visible as verified model state', async () => {
+    const modelId = 'llama.cpp/qwen-test:0.5b';
+    const setDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          defaultModel: modelId,
+          configuredModels: [
+            {
+              providerId: 'llama.cpp',
+              modelId,
+              displayName: 'qwen-test:0.5b',
+              sourceLabel: 'llama.cpp',
+              free: false,
+              default: true,
+              availability: 'untested',
+              accessKind: 'configured_authless',
+              routeKind: 'configured_local',
+              proofState: 'needs_probe',
+              requiresExecutionProof: true,
+              accessReason: 'Execution proof required',
+            },
+          ],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          setDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.setDefaultModel('llama.cpp', modelId);
+      await Promise.resolve();
+    });
+
+    expect(setDefaultModel).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'llama.cpp',
+      modelId,
+      probe: true,
+      scope: 'project',
+      projectPath: null,
+    });
+    expect(state?.view?.configuredModels?.[0]).toMatchObject({
+      modelId,
+      default: true,
+      availability: 'available',
+      accessKind: 'verified',
+      proofState: 'verified',
+      requiresExecutionProof: false,
+    });
+    expect(state?.modelResults[modelId]).toMatchObject({
+      ok: true,
+      availability: 'available',
+      message: 'Model probe passed',
+    });
+  });
+
+  it('keeps the effective project default selected when an all-projects default is shadowed', async () => {
+    const allProjectsModelId = 'llama.cpp/qwen-test:0.5b';
+    const projectModelId = 'llama.cpp/project-test:1b';
+    const setDefaultModel = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        view: {
+          ...createRuntimeView(),
+          defaultModel: projectModelId,
+          projectDefaultModel: projectModelId,
+          allProjectsDefaultModel: allProjectsModelId,
+          defaultModelSource: 'project',
+          configuredModels: [
+            {
+              providerId: 'llama.cpp',
+              modelId: allProjectsModelId,
+              displayName: 'qwen-test:0.5b',
+              sourceLabel: 'llama.cpp',
+              free: false,
+              default: false,
+              availability: 'untested',
+              accessKind: 'configured_authless',
+              routeKind: 'configured_local',
+              proofState: 'needs_probe',
+              requiresExecutionProof: true,
+              accessReason: 'Execution proof required',
+            },
+            {
+              providerId: 'llama.cpp',
+              modelId: projectModelId,
+              displayName: 'project-test:1b',
+              sourceLabel: 'llama.cpp',
+              free: false,
+              default: true,
+              availability: 'available',
+              accessKind: 'verified',
+              routeKind: 'configured_local',
+              proofState: 'verified',
+              requiresExecutionProof: false,
+              accessReason: null,
+            },
+          ],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          setDefaultModel,
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await actions?.setDefaultModel('llama.cpp', allProjectsModelId, 'all_projects');
+      await Promise.resolve();
+    });
+
+    expect(state?.selectedModelId).toBe(projectModelId);
+    expect(state?.view?.defaultModel).toBe(projectModelId);
+    expect(state?.view?.defaultModelSource).toBe('project');
+    expect(
+      state?.view?.configuredModels?.find((model) => model.modelId === allProjectsModelId)
+    ).toMatchObject({
+      default: false,
+      availability: 'available',
+      accessKind: 'verified',
+      proofState: 'verified',
+    });
+    expect(
+      state?.view?.configuredModels?.find((model) => model.modelId === projectModelId)
+    ).toMatchObject({
+      default: true,
+      accessKind: 'verified',
+    });
   });
 });

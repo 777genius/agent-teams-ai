@@ -19,6 +19,7 @@ export interface ProjectSlice {
   projects: Project[];
   selectedProjectId: string | null;
   projectsLoading: boolean;
+  projectsInitialized: boolean;
   projectsError: string | null;
 
   // Actions
@@ -35,6 +36,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   projects: [],
   selectedProjectId: null,
   projectsLoading: false,
+  projectsInitialized: false,
   projectsError: null,
 
   // Fetch all projects from main process
@@ -48,7 +50,7 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
       const sorted = [...projects].sort(
         (a, b) => (b.mostRecentSession ?? 0) - (a.mostRecentSession ?? 0)
       );
-      set({ projects: sorted, projectsLoading: false });
+      set({ projects: sorted, projectsLoading: false, projectsInitialized: true });
     } catch (error) {
       set({
         projectsError: error instanceof Error ? error.message : 'Failed to fetch projects',

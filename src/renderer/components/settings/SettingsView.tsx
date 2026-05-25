@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { Loader2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -19,6 +20,8 @@ import {
 import { type SettingsSection, SettingsTabs } from './SettingsTabs';
 
 export const SettingsView = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('settings');
+  const { t: commonT } = useAppTranslation('common');
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
   const { pendingSettingsSection, clearPendingSettingsSection } = useStore(
     useShallow((s) => ({
@@ -70,7 +73,7 @@ export const SettingsView = (): React.JSX.Element | null => {
       >
         <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)' }}>
           <Loader2 className="size-5 animate-spin" />
-          <span>Loading settings...</span>
+          <span>{t('view.loading')}</span>
         </div>
       </div>
     );
@@ -93,7 +96,7 @@ export const SettingsView = (): React.JSX.Element | null => {
               color: 'var(--color-text-secondary)',
             }}
           >
-            Retry
+            {commonT('actions.retry')}
           </button>
         </div>
       </div>
@@ -108,10 +111,10 @@ export const SettingsView = (): React.JSX.Element | null => {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-lg font-medium" style={{ color: 'var(--color-text)' }}>
-            Settings
+            {t('view.title')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Manage your app preferences
+            {t('view.description')}
           </p>
           {error && (
             <div className="mt-4 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2">
@@ -132,6 +135,7 @@ export const SettingsView = (): React.JSX.Element | null => {
               onGeneralToggle={handlers.handleGeneralToggle}
               onThemeChange={handlers.handleThemeChange}
               onLanguageChange={handlers.handleLanguageChange}
+              onAppLocaleChange={handlers.handleAppLocaleChange}
             />
           )}
 

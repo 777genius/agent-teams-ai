@@ -43,11 +43,12 @@
     "sectionSubtitle": "Des outils puissants pour une collaboration multi-agents efficace."
   },
   "pricing": {
-    "sectionTitle": "100% Gratuit. Sans conditions.",
-    "sectionSubtitle": "Open source, sans clé API, sans configuration. Installez et c'est parti.",
+    "sectionTitle": "Installation gratuite. Modèle gratuit inclus.",
+    "sectionSubtitle": "Commencez immédiatement avec un modèle gratuit sans authentification - sans compte, clé API ni carte bancaire. Connectez Claude, Codex, OpenCode/OpenRouter ou un autre provider seulement si vous voulez plus de modèles.",
     "getStarted": "Télécharger",
     "popular": "Gratuit",
-    "note": "Open source. Sans clé API. Sans configuration. Fonctionne entièrement en local."
+    "freeModelCallout": "Modèle gratuit sans authentification inclus",
+    "note": "Agent Teams n'a pas d'offre payante. Le modèle gratuit sans authentification permet d'essayer tout de suite; l'usage de providers payants est optionnel et dépend du provider choisi."
   },
   "testimonials": {
     "sectionTitle": "Ce que disent les développeurs",
@@ -64,6 +65,7 @@
     "sectionTitle": "Comment nous nous comparons",
     "sectionSubtitle": "Comparaison fonctionnalité par fonctionnalité avec d'autres outils IA.",
     "feature": "Fonctionnalité",
+    "robotBubble": "Juge par toi-même",
     "features": {
       "crossTeam": "Communication inter-équipes",
       "agentMessaging": "Messagerie entre agents",
@@ -77,12 +79,17 @@
       "reviewWorkflow": "Flux de revue",
       "zeroSetup": "Zéro configuration",
       "kanban": "Tableau Kanban",
-      "execLog": "Journal d'exécution",
+      "execLog": "Logs d'exécution",
       "liveProcesses": "Processus en direct",
+      "runtimeLoad": "CPU/RAM par coéquipier",
       "perTaskReview": "Revue de code par tâche",
       "flexAutonomy": "Autonomie flexible",
       "worktree": "Isolation Git worktree",
-      "multiAgent": "Backend multi-agents",
+      "multiAgent": "Coéquipiers IA mixtes",
+      "liveWorkGraph": "Carte d'équipe en direct",
+      "liveTeam": "Coéquipiers en direct",
+      "teamWorkspace": "Espace de travail d'équipe",
+      "launchProof": "Statut de lancement des coéquipiers",
       "orgGovernance": "Organigramme / gouvernance",
       "budgetControls": "Contrôle budgétaire",
       "price": "Prix"
@@ -98,6 +105,7 @@
   "footer": {
     "copyright": "© {year} Agent Teams",
     "tagline": "Orchestration d'agents IA pour développeurs",
+    "robotBubble": "J'attends",
     "links": {
       "github": "GitHub",
       "docs": "Documentation"
@@ -105,7 +113,7 @@
   },
   "meta": {
     "homeTitle": "Agent Teams - Orchestration d'agents IA pour développeurs",
-    "homeDescription": "Application desktop gratuite et open source pour gérer des équipes d'agents IA. Tableau kanban, revue de code, communication inter-équipes. Fonctionne entièrement en local.",
+    "homeDescription": "Application desktop gratuite et open source pour équipes d'agents IA. Commencez avec un modèle gratuit sans authentification, puis connectez Claude, Codex ou OpenCode si besoin.",
     "downloadTitle": "Télécharger Agent Teams pour macOS, Windows et Linux",
     "downloadDescription": "Téléchargez Agent Teams pour macOS, Windows et Linux. Application desktop gratuite et open source pour équipes d'agents Claude, Codex et OpenCode."
   },

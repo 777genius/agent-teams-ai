@@ -1,5 +1,5 @@
 /**
- * Parsed message types and type guards for Agent Teams UI.
+ * Parsed message types and type guards for Agent Teams AI.
  *
  * ParsedMessage is the application's internal representation after parsing
  * raw JSONL entries. This module also contains type guards for classifying
@@ -310,7 +310,7 @@ export function isParsedInternalUserMessage(msg: ParsedMessage): boolean {
  * - Interruption messages: [Request interrupted by user...]
  *
  * Filtered assistant messages:
- * - Synthetic messages with model='<synthetic>' (system-generated placeholders)
+ * - Empty synthetic messages with model='<synthetic>' (system-generated placeholders)
  */
 export function isParsedHardNoiseMessage(msg: ParsedMessage): boolean {
   // Filter structural metadata types - these should never be displayed
@@ -319,8 +319,13 @@ export function isParsedHardNoiseMessage(msg: ParsedMessage): boolean {
   if (msg.type === 'file-history-snapshot') return true;
   if (msg.type === 'queue-operation') return true;
 
-  // Filter synthetic assistant messages (system-generated placeholders)
-  if (msg.type === 'assistant' && msg.model === '<synthetic>') {
+  // Filter empty synthetic assistant placeholders, but keep Codex-native synthetic
+  // entries that carry real text or tool calls for member/task logs.
+  if (
+    msg.type === 'assistant' &&
+    msg.model === '<synthetic>' &&
+    !hasRenderableAssistantContent(msg.content)
+  ) {
     return true;
   }
 
@@ -366,6 +371,29 @@ export function isParsedHardNoiseMessage(msg: ParsedMessage): boolean {
   }
 
   return false;
+}
+
+function hasRenderableAssistantContent(content: ParsedMessage['content']): boolean {
+  if (typeof content === 'string') {
+    return content.trim().length > 0;
+  }
+
+  if (!Array.isArray(content)) {
+    return false;
+  }
+
+  return content.some((block) => {
+    if (block.type === 'text') {
+      return block.text.trim().length > 0;
+    }
+    if (block.type === 'thinking') {
+      return block.thinking.trim().length > 0;
+    }
+    if (block.type === 'tool_use') {
+      return block.name.trim().length > 0;
+    }
+    return false;
+  });
 }
 
 /**

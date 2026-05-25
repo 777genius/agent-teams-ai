@@ -133,6 +133,12 @@ function createStats(
   } as Awaited<ReturnType<typeof fs.stat>>;
 }
 
+function createFsError(code: string): NodeJS.ErrnoException {
+  const error = new Error(code) as NodeJS.ErrnoException;
+  error.code = code;
+  return error;
+}
+
 // =============================================================================
 // Tests
 // =============================================================================
@@ -350,6 +356,39 @@ describe('Editor IPC handlers', () => {
       expect(result).toEqual({
         success: false,
         error: expect.stringContaining('not initialized'),
+      });
+    });
+  });
+
+  describe('project:listFiles', () => {
+    it('returns an empty list for deleted project paths', async () => {
+      vi.mocked(fs.stat).mockRejectedValue(createFsError('ENOENT'));
+
+      const result = await mockIpc.invoke('project:listFiles', '/tmp/deleted-project');
+
+      expect(result).toEqual({
+        success: true,
+        data: [],
+      });
+    });
+
+    it('returns an empty list for paths that are not directories', async () => {
+      vi.mocked(fs.stat).mockResolvedValue(createStats({ isDirectory: false, isFile: true }));
+
+      const result = await mockIpc.invoke('project:listFiles', '/tmp/project-file.txt');
+
+      expect(result).toEqual({
+        success: true,
+        data: [],
+      });
+    });
+
+    it('rejects empty explicit project paths', async () => {
+      const result = await mockIpc.invoke('project:listFiles', '');
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.stringContaining('projectPath is required'),
       });
     });
   });

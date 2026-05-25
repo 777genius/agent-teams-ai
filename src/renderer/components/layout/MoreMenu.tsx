@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
@@ -52,6 +53,7 @@ export const MoreMenu = ({
   activeTabSessionDetail,
   activeTabId,
 }: Readonly<MoreMenuProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [buttonHover, setButtonHover] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -128,7 +130,7 @@ export const MoreMenu = ({
   const topItems: MenuItem[] = [
     {
       id: 'teams',
-      label: 'Teams',
+      label: t('layout.menu.teams'),
       icon: Users,
       onClick: () => {
         openTeamsTab();
@@ -137,7 +139,7 @@ export const MoreMenu = ({
     },
     {
       id: 'settings',
-      label: 'Settings',
+      label: t('layout.menu.settings'),
       icon: Settings,
       onClick: () => {
         openSettingsTab();
@@ -146,7 +148,7 @@ export const MoreMenu = ({
     },
     {
       id: 'extensions',
-      label: 'Extensions',
+      label: t('layout.menu.extensions'),
       icon: Puzzle,
       onClick: () => {
         openExtensionsTab();
@@ -155,7 +157,7 @@ export const MoreMenu = ({
     },
     {
       id: 'search',
-      label: 'Search',
+      label: t('layout.menu.search'),
       icon: Search,
       shortcut: formatShortcut('K'),
       onClick: () => {
@@ -165,7 +167,7 @@ export const MoreMenu = ({
     },
     {
       id: 'schedules',
-      label: 'Schedules',
+      label: t('layout.menu.schedules'),
       icon: Calendar,
       onClick: () => {
         openSchedulesTab();
@@ -174,7 +176,7 @@ export const MoreMenu = ({
     },
     {
       id: 'docs',
-      label: 'Docs',
+      label: t('layout.menu.docs'),
       icon: BookOpen,
       onClick: () => {
         void handleOpenDocs();
@@ -186,28 +188,28 @@ export const MoreMenu = ({
     ? [
         {
           id: 'export-md',
-          label: 'Export as Markdown',
+          label: t('layout.menu.exportMarkdown'),
           icon: FileText,
           shortcut: '.md',
           onClick: () => handleExport('markdown'),
         },
         {
           id: 'export-json',
-          label: 'Export as JSON',
+          label: t('layout.menu.exportJson'),
           icon: Braces,
           shortcut: '.json',
           onClick: () => handleExport('json'),
         },
         {
           id: 'export-txt',
-          label: 'Export as Plain Text',
+          label: t('layout.menu.exportPlainText'),
           icon: Type,
           shortcut: '.txt',
           onClick: () => handleExport('plaintext'),
         },
         {
           id: 'analyze',
-          label: 'Analyze Session',
+          label: t('layout.menu.analyzeSession'),
           icon: Activity,
           onClick: () => {
             if (activeTabId) openSessionReport(activeTabId);
@@ -258,12 +260,12 @@ export const MoreMenu = ({
               backgroundColor:
                 buttonHover || isOpen ? 'var(--color-surface-raised)' : 'transparent',
             }}
-            aria-label="More actions"
+            aria-label={t('actions.moreActions')}
           >
             <MoreHorizontal className="size-4" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">More actions</TooltipContent>
+        <TooltipContent side="bottom">{t('actions.moreActions')}</TooltipContent>
       </Tooltip>
 
       {/* Dropdown menu */}

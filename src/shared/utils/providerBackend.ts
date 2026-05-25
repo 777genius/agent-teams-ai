@@ -6,7 +6,10 @@ const TEAM_PROVIDER_BACKEND_IDS = new Set<TeamProviderBackendId>([
   'api',
   'cli-sdk',
   'codex-native',
+  'opencode-cli',
 ]);
+const GEMINI_PROVIDER_BACKEND_IDS = new Set<TeamProviderBackendId>(['auto', 'api', 'cli-sdk']);
+const OPENCODE_PROVIDER_BACKEND_IDS = new Set<TeamProviderBackendId>(['adapter', 'opencode-cli']);
 
 function normalizeOptionalBackendId(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -46,15 +49,31 @@ export function migrateProviderBackendId(
   providerBackendId: string | null | undefined
 ): TeamProviderBackendId | undefined {
   const normalizedBackendId = normalizeOptionalBackendId(providerBackendId);
-  if (providerId !== 'codex') {
-    return isTeamProviderBackendId(normalizedBackendId) ? normalizedBackendId : undefined;
+  if (providerId === undefined || providerId === 'anthropic') {
+    return undefined;
   }
 
-  if (!normalizedBackendId || isLegacyCodexProviderBackendId(normalizedBackendId)) {
-    return 'codex-native';
+  if (providerId === 'codex') {
+    if (!normalizedBackendId || isLegacyCodexProviderBackendId(normalizedBackendId)) {
+      return 'codex-native';
+    }
+
+    return normalizedBackendId === 'codex-native' ? normalizedBackendId : undefined;
   }
 
-  return isTeamProviderBackendId(normalizedBackendId) ? normalizedBackendId : undefined;
+  if (!isTeamProviderBackendId(normalizedBackendId)) {
+    return undefined;
+  }
+
+  if (providerId === 'gemini') {
+    return GEMINI_PROVIDER_BACKEND_IDS.has(normalizedBackendId) ? normalizedBackendId : undefined;
+  }
+
+  if (providerId === 'opencode') {
+    return OPENCODE_PROVIDER_BACKEND_IDS.has(normalizedBackendId) ? normalizedBackendId : undefined;
+  }
+
+  return undefined;
 }
 
 export function formatProviderBackendLabel(

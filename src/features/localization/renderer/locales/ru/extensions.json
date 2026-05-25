@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Добавить custom",
+      "openDashboard": "Открыть Dashboard",
+      "refreshCatalog": "Обновить каталог"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Plugins: {{status}}",
+      "skills": "Skills: {{status}}"
+    },
+    "desktopOnly": "Доступно только в desktop app.",
+    "provider": {
+      "checkingStatus": "Проверка статуса provider...",
+      "connected": "Подключён",
+      "loading": "Загрузка...",
+      "needsSetup": "Нужна настройка",
+      "readyToConfigure": "Готов к настройке",
+      "unsupported": "Не поддерживается"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Extensions требуют настроенный runtime для управления plugins, MCP servers, skills и provider connections.",
+      "checkingAvailabilityTitle": "Проверка доступности runtime для extensions",
+      "failedToStartDescription": "Extensions отключены, пока runtime не пройдёт startup health check. Откройте Dashboard, чтобы исправить или переустановить его.",
+      "failedToStartTitle": "Настроенный runtime найден, но не запустился",
+      "multimodelCapabilitiesDescription": "Поддержка providers может отличаться по секциям. Plugins показываются только там, где runtime явно сообщает поддержку.",
+      "multimodelCapabilitiesTitle": "Возможности multimodel runtime",
+      "needsSignInDescription": "{{runtime}} найден{{version}}, но установка plugins отключена, пока вы не войдёте через Dashboard.",
+      "needsSignInTitle": "{{runtime}} требует вход",
+      "notAvailableDescription": "Extensions отключены, пока runtime не установлен. Откройте Dashboard, установите его и повторите попытку.",
+      "notAvailableTitle": "Настроенный runtime недоступен",
+      "readyDescription": "Plugins можно устанавливать с этой страницы{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} готов",
+      "requiredForMutations": "Настроенный runtime требуется для установки или удаления extensions. Установите или исправьте его через Dashboard."
+    },
+    "sessionsRestartWarning": "Запущенные сессии не увидят изменения extensions до перезапуска.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Secret keys для online services. Добавьте их здесь, чтобы plugins, servers и integrations могли подключаться и работать.",
+        "label": "API Keys"
+      },
+      "mcpServers": {
+        "description": "Подключения к внешним tools и apps. Они позволяют runtime читать данные или выполнять действия за пределами приложения.",
+        "label": "MCP Servers"
+      },
+      "plugins": {
+        "description": "Небольшие add-ons для runtime. В multimodel mode сейчас применяются к Anthropic sessions, когда поддерживаются. Более широкая поддержка providers в разработке.",
+        "label": "Plugins"
+      },
+      "skills": {
+        "description": "Готовые инструкции для типовых задач. Они помогают runtime стабильнее выполнять повторяемые действия.",
+        "label": "Skills"
+      }
+    },
+    "title": "Extensions"
+  },
+  "pluginsPanel": {
+    "activeFilters": "Активно: {{count}}",
+    "activeFilters_few": "Активно: {{count}}",
+    "activeFilters_many": "Активно: {{count}}",
+    "activeFilters_one": "Активен: {{count}}",
+    "activeFilters_other": "Активно: {{count}}",
+    "browseByFit": "Подбор по назначению",
+    "capabilities": "Возможности",
+    "categories": "Категории",
+    "clearAllFilters": "Сбросить все фильтры",
+    "clearFilters": "Сбросить фильтры",
+    "counts": {
+      "capabilities": "Возможностей: {{count}}",
+      "capabilities_few": "Возможностей: {{count}}",
+      "capabilities_many": "Возможностей: {{count}}",
+      "capabilities_one": "Возможность: {{count}}",
+      "capabilities_other": "Возможностей: {{count}}",
+      "categories": "Категорий: {{count}}",
+      "categories_few": "Категории: {{count}}",
+      "categories_many": "Категорий: {{count}}",
+      "categories_one": "Категория: {{count}}",
+      "categories_other": "Категории: {{count}}",
+      "plugins": "Plugins: {{count}}",
+      "plugins_few": "Plugins: {{count}}",
+      "plugins_many": "Plugins: {{count}}",
+      "plugins_one": "Plugin: {{count}}",
+      "plugins_other": "Plugins: {{count}}"
+    },
+    "empty": {
+      "description": "Проверьте позже, когда появятся новые plugins",
+      "filteredDescription": "Попробуйте изменить поиск или критерии фильтра",
+      "filteredTitle": "Нет plugins под выбранные фильтры",
+      "title": "Plugins недоступны"
+    },
+    "filterDescription": "Сужайте каталог по категории, возможностям или статусу установки.",
+    "installedOnly": "Только установленные",
+    "providerSupportNotice": "Поддержка plugins сейчас гарантирована только для Anthropic (Claude) sessions. Мы работаем над поддержкой plugins во всех agents.",
+    "resultsUpdateInstantly": "Результаты обновляются сразу при изменении фильтров.",
+    "searchPlaceholder": "Поиск plugins...",
+    "selectedCount": "Выбрано: {{count}}",
+    "selectedCount_few": "Выбрано: {{count}}",
+    "selectedCount_many": "Выбрано: {{count}}",
+    "selectedCount_one": "Выбран: {{count}}",
+    "selectedCount_other": "Выбрано: {{count}}",
+    "showing": "Показано {{shown}} из {{total}} plugins",
+    "sort": {
+      "category": "Категория",
+      "nameAsc": "Имя A-Z",
+      "nameDesc": "Имя Z-A",
+      "popular": "Популярные"
+    }
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Добавить",
+      "cancel": "Отмена",
+      "install": "Установить",
+      "installing": "Установка..."
+    },
+    "description": "Добавьте server вручную без каталога.",
+    "errors": {
+      "installFailed": "Не удалось установить",
+      "invalidServerName": "Некорректное имя server. Используйте латинские буквы, цифры, дефисы, подчёркивания и точки.",
+      "npmPackageRequired": "Требуется имя npm package",
+      "serverNameRequired": "Требуется имя server",
+      "serverUrlRequired": "Требуется URL server"
+    },
+    "fields": {
+      "environmentVariables": "Environment variables",
+      "headers": "Headers",
+      "npmPackage": "npm package",
+      "scope": "Scope",
+      "serverName": "Имя server",
+      "serverUrl": "URL server",
+      "transport": "Transport",
+      "transportType": "Тип transport",
+      "versionOptional": "Версия (необязательно)"
+    },
+    "title": "Добавить custom MCP server",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Remote MCP servers могут требовать custom headers или API keys, даже если registry их не описывает. Если connection после установки не работает, проверьте provider docs.",
+      "required": "Этот server требует authentication"
+    },
+    "diagnostics": {
+      "launchTarget": "Launch Target"
+    },
+    "form": {
+      "autoFilled": "Заполнено автоматически",
+      "environmentVariables": "Environment variables",
+      "headers": "Headers",
+      "scope": "Scope",
+      "serverName": "Имя server"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Этот server требует ручной настройки. Проверьте repository для инструкций по установке.",
+      "manualSetupRequired": "Требуется ручная настройка",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Управление установкой",
+      "install": "Установить server"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Repository",
+      "website": "Website"
+    },
+    "metadata": {
+      "author": "Автор",
+      "githubStars": "GitHub Stars",
+      "hosting": "Hosting",
+      "installType": "Тип установки",
+      "license": "Лицензия",
+      "published": "Опубликовано",
+      "source": "Источник",
+      "updated": "Обновлено",
+      "version": "Версия"
+    },
+    "scope": {
+      "local": "Local",
+      "project": "Project"
+    },
+    "tools": {
+      "title": "Tools ({{count}})",
+      "title_few": "Tools ({{count}})",
+      "title_many": "Tools ({{count}})",
+      "title_one": "Tool ({{count}})",
+      "title_other": "Tools ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Отмена",
+      "createSkill": "Создать skill",
+      "preparing": "Подготовка...",
+      "reviewAndCreate": "Проверить и создать",
+      "reviewAndSave": "Проверить и сохранить",
+      "saveSkill": "Сохранить skill"
+    },
+    "advanced": {
+      "customDescription": "Этот skill использует собственный markdown-формат, поэтому редактируйте его напрямую здесь.",
+      "customTitle": "2. Редактор SKILL.md",
+      "description": "В большинстве случаев это можно пропустить. Открывайте только если нужен прямой контроль над raw markdown-файлом.",
+      "hide": "Скрыть расширенный редактор",
+      "resetFromStructuredFields": "Сбросить из структурированных полей",
+      "show": "Показать расширенный редактор",
+      "title": "4. Расширенный редактор SKILL.md"
+    },
+    "basics": {
+      "description": "Дайте skill понятное имя, выберите, кто может его использовать, и где он должен храниться.",
+      "title": "1. Основное"
+    },
+    "description": {
+      "create": "Опишите workflow простым языком, проверьте файлы, которые будут созданы, затем сохраните skill.",
+      "edit": "Обновите этот skill, проверьте итоговые изменения файлов, затем сохраните."
+    },
+    "extraFiles": {
+      "addedFiles": "Добавленные файлы:",
+      "assets": "Assets",
+      "assetsDescription": "Добавляйте screenshots или bundled media только если они помогают объяснить workflow.",
+      "description": "Добавляйте supporting docs, scripts или assets только если этот skill действительно в них нуждается.",
+      "lockedForEdits": "Root и folder заблокированы при редактировании",
+      "optionalDescription": "Добавьте starter files, которые попадут в review и будут записаны вместе с `SKILL.md`.",
+      "optionalTitle": "Дополнительные файлы",
+      "references": "References",
+      "referencesDescription": "Добавьте supporting docs, links или examples, которые runtime сможет использовать.",
+      "scripts": "Scripts",
+      "scriptsDescription": "Добавьте helper commands или setup notes. Внимательно проверьте перед публикацией skill.",
+      "title": "3. Дополнительные файлы"
+    },
+    "fields": {
+      "compatibility": "Compatibility",
+      "description": "Описание",
+      "folderName": "Имя folder",
+      "folderNameHint": "Мы предлагаем его автоматически из имени skill, чтобы review сразу работал корректно.",
+      "invocation": "Как его использовать",
+      "license": "Лицензия",
+      "name": "Имя skill",
+      "notes": "Дополнительные notes или guardrails",
+      "root": "Где хранить",
+      "scope": "Кто может использовать",
+      "steps": "Основные шаги",
+      "whenToUse": "Когда использовать"
+    },
+    "instructions": {
+      "description": "Эти секции генерируют skill-файл автоматически, поэтому markdown можно не редактировать вручную.",
+      "locked": "Структурированные поля заблокированы, потому что вы переключились на ручное редактирование `SKILL.md` ниже.",
+      "title": "2. Инструкции"
+    },
+    "invocation": {
+      "auto": "Можно использовать автоматически",
+      "manualOnly": "Только когда вы явно попросите"
+    },
+    "placeholders": {
+      "description": "С чем помогает этот skill",
+      "name": "Напишите короткое имя skill",
+      "notes": "Пример: отметьте отсутствующие тесты, регрессии и рискованные assumptions.",
+      "steps": "1. Проверьте релевантные файлы.\n2. Сначала объясните главный риск.\n3. Предложите самый безопасный fix.",
+      "whenToUse": "Пример: используйте это для code review или bug triage.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Создание skill",
+      "hint": "Сначала проверьте изменения файлов, затем подтвердите сохранение на следующем шаге.",
+      "saving": "Сохранение skill"
+    },
+    "root": {
+      "codexOnly": " - только Codex",
+      "shared": " - общий"
+    },
+    "scope": {
+      "project": "Проект: {{project}}",
+      "projectUnavailable": "Проект недоступен",
+      "user": "Пользователь"
+    },
+    "title": {
+      "create": "Создать skill",
+      "edit": "Редактировать skill"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Отмена",
+      "delete": "Удалить",
+      "deleteSkill": "Удалить skill",
+      "deleting": "Удаление...",
+      "editSkill": "Редактировать skill",
+      "openFolder": "Открыть папку",
+      "openSkillFile": "Открыть SKILL.md",
+      "retry": "Повторить"
+    },
+    "badges": {
+      "assets": "Assets",
+      "autoUse": "Auto use",
+      "hasScripts": "Есть scripts",
+      "manualUse": "Manual use",
+      "references": "References",
+      "storedIn": "Хранится в {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Удалить этот skill и переместить его в Trash?",
+      "descriptionWithName": "Удалить \"{{name}}\" и переместить в Trash? При необходимости его можно восстановить из Trash.",
+      "title": "Удалить skill?"
+    },
+    "descriptionFallback": "Просмотр найденных metadata skill и raw instructions.",
+    "errors": {
+      "deleteFailed": "Не удалось удалить skill",
+      "loadFailed": "Не удалось загрузить этот skill."
+    },
+    "files": {
+      "advancedDetails": "Расширенные сведения о файле",
+      "assets": "Assets",
+      "references": "References",
+      "scripts": "Scripts",
+      "storedAt": "Хранится в"
+    },
+    "includes": {
+      "assets": "assets",
+      "instructionsOnly": "Только инструкции skill",
+      "references": "references",
+      "scripts": "scripts"
+    },
+    "invocation": {
+      "auto": "Запускается автоматически, когда подходит к задаче.",
+      "manualOnly": "Запускается только по явному запросу."
+    },
+    "issues": {
+      "bundledScripts": "Этот skill содержит bundled scripts",
+      "reviewCarefully": "Внимательно проверьте skill перед использованием"
+    },
+    "loading": "Загрузка сведений о skill...",
+    "scope": {
+      "personal": "Ваши личные skills",
+      "projectOnly": "Только этот проект"
+    },
+    "summary": {
+      "howUsed": "Как используется",
+      "included": "Что входит",
+      "whoCanUse": "Кто может использовать"
+    },
+    "titleFallback": "Сведения о skill"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Создать skill",
+      "import": "Импорт"
+    },
+    "badges": {
+      "assets": "Assets",
+      "hasScripts": "Есть scripts",
+      "needsAttention": "Требует внимания",
+      "references": "References",
+      "storedIn": "Хранится в {{root}}"
+    },
+    "configuredRuntime": "настроенный runtime",
+    "counts": {
+      "codexOnly": "Codex only: {{count}}",
+      "codexOnly_few": "Codex only: {{count}}",
+      "codexOnly_many": "Codex only: {{count}}",
+      "codexOnly_one": "Codex only: {{count}}",
+      "codexOnly_other": "Codex only: {{count}}",
+      "personal": "Личных: {{count}}",
+      "personal_few": "Личных: {{count}}",
+      "personal_many": "Личных: {{count}}",
+      "personal_one": "Личный: {{count}}",
+      "personal_other": "Личных: {{count}}",
+      "project": "Проектных: {{count}}",
+      "project_few": "Проектных: {{count}}",
+      "project_many": "Проектных: {{count}}",
+      "project_one": "Проектный: {{count}}",
+      "project_other": "Проектных: {{count}}",
+      "shared": "Общих: {{count}}",
+      "shared_few": "Общих: {{count}}",
+      "shared_many": "Общих: {{count}}",
+      "shared_one": "Общий: {{count}}",
+      "shared_other": "Общих: {{count}}",
+      "total": "Всего: {{count}}",
+      "total_few": "Всего: {{count}}",
+      "total_many": "Всего: {{count}}",
+      "total_one": "Всего: {{count}}",
+      "total_other": "Всего: {{count}}"
+    },
+    "empty": {
+      "noMatches": "Skills под поиск не найдены",
+      "noMatchesDescription": "Попробуйте другой запрос или переключите фильтры.",
+      "noSkills": "Skills пока нет",
+      "noSkillsDescription": "Создайте первый skill для повторяемого workflow или импортируйте уже используемый."
+    },
+    "filters": {
+      "all": "Все skills",
+      "codexOnly": "Codex only",
+      "hasScripts": "Есть scripts",
+      "needsAttention": "Требует внимания",
+      "personal": "Личные",
+      "project": "Проектные",
+      "shared": "Общие"
+    },
+    "hero": {
+      "codexAvailable": "Используйте `.codex`, если skill должен оставаться только для Codex.",
+      "codexUnavailable": "Существующие `.codex` skills можно редактировать здесь, но для новых Codex-only skills нужен включённый Codex runtime.",
+      "description": "Skills - это переиспользуемые инструкции, которые помогают runtime стабильнее выполнять однотипные задачи.",
+      "guidance": "Используйте личные skills для привычек, нужных везде. Используйте проектные skills для workflows, которые имеют смысл только внутри одного codebase.",
+      "personalContext": "Сейчас показаны только ваши личные skills.",
+      "projectContext": "Показаны skills для {{project}} плюс ваши личные skills.",
+      "title": "Обучить повторяемой работе"
+    },
+    "invocation": {
+      "auto": "Запускается автоматически, когда подходит",
+      "manualOnly": "Запускается только по явному запросу"
+    },
+    "loading": {
+      "loading": "Загрузка skills...",
+      "refreshing": "Обновление skills..."
+    },
+    "runtimeAudience": "Shared skills в `.claude`, `.cursor` и `.agents` доступны для {{audience}}. Skills в `.codex` остаются Codex-only, когда поддержка Codex доступна.",
+    "scope": {
+      "project": "Этот проект",
+      "user": "Личный"
+    },
+    "searchPlaceholder": "Поиск по имени skill или назначению...",
+    "sections": {
+      "personal": {
+        "description": "Привычки и инструкции, которые должны быть доступны везде.",
+        "title": "Личные skills"
+      },
+      "project": {
+        "description": "Workflows, которые имеют смысл только для этого codebase.",
+        "title": "Проектные skills"
+      }
+    },
+    "sort": {
+      "label": "Сортировать skills",
+      "name": "Имя",
+      "recent": "Недавние"
+    },
+    "status": {
+      "hasScripts": "Содержит scripts, поэтому внимательно проверьте",
+      "needsAttention": "Требует внимания перед использованием",
+      "ready": "Готов к использованию"
+    },
+    "success": {
+      "created": "Skill успешно создан.",
+      "imported": "Skill успешно импортирован.",
+      "saved": "Skill успешно сохранён."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Неизвестно",
+    "metadata": {
+      "author": "Автор",
+      "category": "Категория",
+      "source": "Источник",
+      "version": "Версия",
+      "capabilities": "Возможности",
+      "installs": "Установки"
+    },
+    "scope": {
+      "label": "Scope:",
+      "options": {
+        "user": "User (global)",
+        "project": "Project (shared)",
+        "local": "Local (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Homepage",
+      "contact": "Контакт"
+    },
+    "readme": {
+      "loading": "Загрузка README...",
+      "empty": "README недоступен."
+    }
+  },
+  "skillImport": {
+    "title": "Импорт skill",
+    "description": "Выберите существующую папку skill, проверьте, что будет скопировано, затем импортируйте её в одну из поддерживаемых локаций skills.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Выберите папку skill",
+        "description": "Это должна быть папка, где уже есть файл `SKILL.md`, `Skill.md` или `skill.md`."
+      },
+      "location": {
+        "title": "2. Выберите, где хранить skill",
+        "description": "Личные skills работают везде. Проектные skills показываются только для одного codebase."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Исходная папка",
+      "destinationFolderName": "Имя целевой папки",
+      "audience": "Кто может использовать",
+      "storage": "Где хранить"
+    },
+    "placeholders": {
+      "defaultFolderName": "По умолчанию имя исходной папки"
+    },
+    "actions": {
+      "browse": "Выбрать",
+      "cancel": "Отмена",
+      "preparing": "Подготовка...",
+      "reviewAndImport": "Проверить и импортировать",
+      "importSkill": "Импортировать skill",
+      "backToImport": "Назад к импорту"
+    },
+    "scope": {
+      "user": "User",
+      "project": "Project: {{project}}",
+      "projectUnavailable": "Project недоступен"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Codex only",
+      "shared": " - Shared"
+    },
+    "reviewHint": "Сначала проверьте скопированные файлы, затем подтвердите импорт на следующем шаге.",
+    "reviewLabel": "Импорт этого skill",
+    "errors": {
+      "missingSkillFile": "Эта папка пока не похожа на skill. Нужен файл SKILL.md, Skill.md или skill.md.",
+      "symbolicLinks": "В этой папке есть symbolic links. Импортируйте реальные файлы вместо links.",
+      "tooManyFiles": "В этой папке skill слишком много файлов для одного импорта. Уберите лишние файлы и повторите попытку.",
+      "tooLarge": "Эта папка skill слишком большая для безопасного импорта. Уменьшите крупные assets и повторите попытку.",
+      "invalidFolderName": "Выберите более простое имя целевой папки: буквы, цифры, точки, дефисы или подчёркивания.",
+      "mustBeDirectory": "Выберите папку для импорта, а не отдельный файл.",
+      "reviewFailed": "Не удалось подготовить review изменений импорта",
+      "importFailed": "Не удалось импортировать skill"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "toolsDesc": "Больше всего tools"
+    },
+    "health": {
+      "title": "MCP health status",
+      "checkingViaRuntime": "Проверка установленных MCP servers через {{runtime}} ...",
+      "lastChecked": "Последняя проверка {{time}}",
+      "description": "Запустите diagnostics на этой странице, чтобы проверить подключение установленных MCP.",
+      "checking": "Проверка...",
+      "checkStatus": "Проверить status"
+    },
+    "diagnostics": {
+      "title": "Runtime MCP diagnostics",
+      "serversCount": "{{count}} servers",
+      "serversCount_one": "{{count}} server",
+      "serversCount_few": "{{count}} servers",
+      "serversCount_many": "{{count}} servers",
+      "serversCount_other": "{{count}} servers",
+      "waiting": "Ожидание результатов diagnostics...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Проверка runtime status...",
+        "checkingRuntimeAvailability": "Проверка доступности runtime...",
+        "runtimeFailedToStart": "Настроенный runtime найден, но не запустился. Откройте Dashboard, чтобы repair или reinstall его.",
+        "runtimeRequired": "Требуется настроенный runtime. Установите или repair его из Dashboard."
+      }
+    },
+    "searchPlaceholder": "Поиск MCP servers...",
+    "runtime": {
+      "notAvailable": "{{runtime}} недоступен",
+      "notInstalled": "{{runtime}} не установлен",
+      "requiredDescription": "MCP health checks требуют {{runtime}}. Перейдите в Dashboard, чтобы установить или repair его."
+    },
+    "empty": {
+      "searchTitle": "Servers не найдены",
+      "title": "MCP servers недоступны",
+      "searchDescription": "Попробуйте другой поисковый запрос",
+      "description": "Новые servers могут появиться позже"
+    },
+    "loadMore": "Загрузить ещё"
+  },
+  "apiKeys": {
+    "description": "Безопасно храните API keys для auto-fill при установке MCP servers.",
+    "storage": {
+      "osKeychain": "Keys шифруются через {{backend}} и хранятся с ограниченными file permissions (только owner).",
+      "localEncryption": "OS keychain недоступен - keys шифруются локально через AES-256. Для более сильной защиты установите keyring service (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Добавить API key",
+      "addFirst": "Добавить первый key",
+      "edit": "Редактировать"
+    },
+    "empty": {
+      "title": "API keys не сохранены",
+      "description": "Добавьте keys для auto-fill environment variables при установке MCP servers."
+    },
+    "form": {
+      "addTitle": "Добавить API-ключ",
+      "editTitle": "Редактировать API-ключ",
+      "addDescription": "Сохраните API-ключ для автозаполнения при установке MCP-серверов.",
+      "editDescription": "Обновите детали ключа. Значение нужно ввести заново.",
+      "keychainUnavailable": "OS keychain недоступен - ключи локально шифруются AES-256. Установите gnome-keyring для защиты на уровне ОС.",
+      "name": "Название",
+      "namePlaceholder": "например OpenAI Production",
+      "environmentVariableName": "Имя переменной окружения",
+      "envVarPlaceholder": "например OPENAI_API_KEY",
+      "value": "Значение",
+      "reenterValue": "Введите значение ключа заново",
+      "valuePlaceholder": "sk-...",
+      "scope": "Область",
+      "userScopeLabel": "Пользователь (глобально)",
+      "projectScopeLabel": "Проект: {{project}}",
+      "projectUnavailable": "Проект недоступен",
+      "boundTo": "Привязано к {{path}}",
+      "cancel": "Отмена",
+      "saving": "Сохранение...",
+      "update": "Обновить",
+      "save": "Сохранить",
+      "errors": {
+        "invalidEnvVarFormat": "Используйте буквы, цифры и подчёркивания. Должно начинаться с буквы или подчёркивания.",
+        "nameRequired": "Название обязательно",
+        "envVarRequired": "Имя переменной окружения обязательно",
+        "invalidEnvVar": "Некорректное имя переменной окружения",
+        "valueRequired": "Значение ключа обязательно",
+        "projectScopeRequiresProject": "API-ключи уровня проекта требуют активный проект",
+        "saveFailed": "Не удалось сохранить"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Проверка изменений навыка",
+    "description": "{{reviewLabel}} сначала показывает изменения файловой системы. Ничего не будет записано до подтверждения ниже.",
+    "noPreview": "Предпросмотр недоступен.",
+    "confirmPromptPrefix": "Проверьте diff ниже, затем нажмите",
+    "confirmPromptSuffix": "чтобы применить изменения.",
+    "noChanges": "Изменения файлов пока не обнаружены.",
+    "binaryBadge": "бинарный",
+    "binaryPreviewHidden": "Предпросмотр бинарного файла не показывается. Файл будет скопирован как есть.",
+    "summary": {
+      "fileChanges": "{{count}} изменений файлов",
+      "fileChanges_one": "{{count}} изменение файла",
+      "fileChanges_few": "{{count}} изменения файлов",
+      "fileChanges_many": "{{count}} изменений файлов",
+      "fileChanges_other": "{{count}} изменений файлов",
+      "new": "{{count}} новых",
+      "updated": "{{count}} обновлено",
+      "removed": "{{count}} удалено",
+      "binary": "{{count}} бинарных"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} инструментов",
+    "toolsCount_one": "{{count}} инструмент",
+    "toolsCount_few": "{{count}} инструмента",
+    "toolsCount_many": "{{count}} инструментов",
+    "toolsCount_other": "{{count}} инструментов",
+    "envCount": "{{count}} env-переменных",
+    "envCount_one": "{{count}} env-переменная",
+    "envCount_few": "{{count}} env-переменные",
+    "envCount_many": "{{count}} env-переменных",
+    "envCount_other": "{{count}} env-переменных",
+    "auth": "Авторизация",
+    "byAuthor": "от {{author}}",
+    "hosting": {
+      "remote": "Удаленный",
+      "local": "Локальный",
+      "both": "Оба варианта"
+    },
+    "repository": "Репозиторий",
+    "website": "Сайт"
+  },
+  "installButton": {
+    "installing": "Установка...",
+    "removing": "Удаление...",
+    "done": "Готово",
+    "retry": "Повторить",
+    "uninstall": "Удалить",
+    "install": "Установить"
+  },
+  "pluginCard": {
+    "official": "Официальный"
+  }
+}

@@ -9,7 +9,7 @@ import type {
 export const OPEN_CODE_BRIDGE_SCHEMA_VERSION = 1 as const;
 export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
-export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 1 as const;
+export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 2 as const;
 
 export type OpenCodeBridgeCommandName =
   | 'opencode.handshake'
@@ -64,10 +64,21 @@ export interface OpenCodeLaunchTeamCommandBody {
   teamName: string;
   projectPath: string;
   selectedModel: string;
+  skipPermissions?: boolean;
   members: OpenCodeTeamLaunchMemberCommandSpec[];
   leadPrompt: string;
   expectedCapabilitySnapshotId: string | null;
   manifestHighWatermark: number | null;
+  capabilitySnapshotRecoveryAttemptId?: string;
+}
+
+export interface OpenCodeRuntimePermissionCommandData {
+  requestId: string;
+  sessionId: string | null;
+  tool: string | null;
+  title: string | null;
+  kind: string | null;
+  raw?: Record<string, unknown>;
 }
 
 export interface OpenCodeTeamMemberLaunchCommandData {
@@ -77,6 +88,7 @@ export interface OpenCodeTeamMemberLaunchCommandData {
   bootstrapMode?: OpenCodeBootstrapMode;
   appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
   pendingPermissionRequestIds?: string[];
+  pendingPermissions?: OpenCodeRuntimePermissionCommandData[];
   diagnostics?: string[];
   model: string;
   runtimePid?: number;
@@ -131,6 +143,30 @@ export interface OpenCodeStopTeamCommandData {
   runtimeStoreManifestHighWatermark?: number | null;
 }
 
+export interface OpenCodeAnswerPermissionCommandBody {
+  runId: string;
+  laneId: string;
+  teamId: string;
+  teamName: string;
+  projectPath: string;
+  memberName?: string;
+  requestId: string;
+  decision: 'allow' | 'always' | 'reject';
+  expectedCapabilitySnapshotId?: string | null;
+  manifestHighWatermark?: number | null;
+}
+
+export interface OpenCodeListRuntimePermissionsCommandBody {
+  teamId: string;
+  teamName: string;
+  laneId?: string;
+  projectPath?: string;
+}
+
+export interface OpenCodeListRuntimePermissionsCommandData {
+  permissions: OpenCodeRuntimePermissionCommandData[];
+}
+
 export interface OpenCodeCleanupHostsCommandBody {
   reason: 'startup' | 'shutdown' | 'manual' | string;
   mode?: 'stale' | 'force';
@@ -172,6 +208,7 @@ export interface OpenCodeSendMessageCommandBody {
   text: string;
   messageId?: string;
   deliveryAttemptId?: string;
+  forceSessionRefreshReason?: string;
   payloadHash?: string;
   settlementMode?: 'observed' | 'acceptance';
   fileParts?: {
@@ -588,6 +625,7 @@ export function assertBridgeResultCanMutateState<TData>(
     command: OpenCodeBridgeCommandName;
     runId: string | null;
     capabilitySnapshotId: string | null;
+    allowCapabilitySnapshotRecovery?: boolean;
   }
 ): asserts result is OpenCodeBridgeSuccess<TData> {
   if (!result.ok) {
@@ -610,10 +648,26 @@ export function assertBridgeResultCanMutateState<TData>(
 
   if (
     expected.capabilitySnapshotId !== null &&
-    result.runtime.capabilitySnapshotId !== expected.capabilitySnapshotId
+    result.runtime.capabilitySnapshotId !== expected.capabilitySnapshotId &&
+    !(
+      expected.allowCapabilitySnapshotRecovery === true &&
+      hasOpenCodeBridgeDataDiagnosticCode(result.data, 'opencode_capability_snapshot_recovery')
+    )
   ) {
     throw new Error('OpenCode bridge capability snapshot mismatch');
   }
+}
+
+function hasOpenCodeBridgeDataDiagnosticCode(value: unknown, code: string): boolean {
+  if (!isRecord(value) || !Array.isArray(value.diagnostics)) {
+    return false;
+  }
+  return value.diagnostics.some((diagnostic) => {
+    if (!isRecord(diagnostic)) {
+      return false;
+    }
+    return diagnostic.code === code;
+  });
 }
 
 export function validateOpenCodeBridgeHandshake(input: {
@@ -690,8 +744,7 @@ export function validateOpenCodeBridgeHandshake(input: {
   ) {
     return {
       ok: false,
-      reason:
-        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 1. Falling back to observed delivery mode is required.',
+      reason: `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
     };
   }
 
@@ -743,6 +796,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
   manifest: RuntimeStoreManifestEvidence;
   idempotencyKey: string;
   enforceManifestHighWatermark?: boolean;
+  allowCapabilitySnapshotRecovery?: boolean;
 }): asserts input is {
   result: OpenCodeBridgeSuccess<unknown>;
   requestId: string;
@@ -757,6 +811,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
     command: input.command,
     runId: input.runId,
     capabilitySnapshotId: input.capabilitySnapshotId,
+    allowCapabilitySnapshotRecovery: input.allowCapabilitySnapshotRecovery,
   });
 
   const resultManifestHighWatermark = extractManifestHighWatermark(input.result.data);

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { getTeamColorSet, getThemedText } from '@renderer/constants/teamColors';
@@ -57,6 +58,7 @@ export const MentionSuggestionList = ({
   hasFileSearch,
   filesLoading,
 }: MentionSuggestionListProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const listRef = useRef<HTMLUListElement>(null);
   const { isLight } = useTheme();
 
@@ -71,10 +73,10 @@ export const MentionSuggestionList = ({
 
   if (suggestions.length === 0) {
     const emptyStateText = filesLoading
-      ? 'Searching...'
+      ? t('search.searching')
       : hasFileSearch
-        ? 'No matching suggestions'
-        : 'No matching suggestions';
+        ? t('search.noMatchingSuggestions')
+        : t('search.noMatchingSuggestions');
     return (
       <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
         {emptyStateText}
@@ -195,9 +197,9 @@ export const MentionSuggestionList = ({
                     ? { color: 'rgb(245 158 11)' }
                     : isSkill
                       ? { color: 'rgb(6 182 212)' }
-                    : colorSet
-                      ? { color: getThemedText(colorSet, isLight) }
-                      : undefined
+                      : colorSet
+                        ? { color: getThemedText(colorSet, isLight) }
+                        : undefined
               }
             >
               <HighlightedName
@@ -241,7 +243,7 @@ export const MentionSuggestionList = ({
           <span
             className="inline-block size-1.5 shrink-0 rounded-full"
             style={{ backgroundColor: s.isOnline ? '#22c55e' : '#71717a' }}
-            title={s.isOnline ? 'Online' : 'Offline'}
+            title={s.isOnline ? t('states.online') : t('states.offline')}
           />
         ) : null}
         {s.subtitle && isFileOrFolder ? (
@@ -266,7 +268,7 @@ export const MentionSuggestionList = ({
       {filesLoading ? (
         <li className="flex items-center gap-2 px-3 py-1.5 text-[10px] text-[var(--color-text-muted)]">
           <Loader2 size={10} className="shrink-0 animate-spin" />
-          <span>Searching files...</span>
+          <span>{t('search.searchingFiles')}</span>
         </li>
       ) : null}
     </ul>

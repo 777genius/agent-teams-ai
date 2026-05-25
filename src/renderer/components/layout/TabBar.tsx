@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useDroppable } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
@@ -26,6 +27,7 @@ interface TabBarProps {
 }
 
 export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const {
     pane,
     isFocused,
@@ -305,12 +307,14 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
                 onMouseEnter={() => setRefreshHover(true)}
                 onMouseLeave={() => setRefreshHover(false)}
                 onClick={handleRefresh}
-                aria-label="Refresh session"
+                aria-label={t('layout.refreshSession')}
               >
                 <RefreshCw className="size-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">{`Refresh Session (${formatShortcut('R')})`}</TooltipContent>
+            <TooltipContent side="bottom">
+              {t('layout.refreshSessionWithShortcut', { shortcut: formatShortcut('R') })}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { execCli } from '@main/utils/childProcess';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
@@ -38,6 +38,14 @@ export interface OpenCodeBridgeProcessRunner {
   run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult>;
 }
 
+interface OpenCodeBridgeOutputReadResult {
+  content: string;
+  outputSource: 'stdout' | 'file' | 'none';
+  stdoutBytes: number;
+  outputFileBytes: number | null;
+  outputReadError: string | null;
+}
+
 export interface OpenCodeBridgeDiagnosticsSink {
   append(event: OpenCodeBridgeDiagnosticEvent): Promise<void>;
 }
@@ -58,6 +66,10 @@ export interface OpenCodeBridgeCommandClientOptions {
 const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
 const DEFAULT_STDERR_LIMIT_BYTES = 256_000;
 const WINDOWS_BATCH_EXTENSIONS = new Set(['.cmd', '.bat']);
+const EMPTY_STDOUT_READ_ONLY_MAX_ATTEMPTS = 2;
+const EMPTY_STDOUT_READ_ONLY_STDOUT_FALLBACK_ATTEMPTS = 1;
+const EMPTY_STDOUT_READ_ONLY_RETRY_DELAY_MS = 250;
+const SAFE_BRIDGE_INPUT_FILE_REQUEST_ID = /^[A-Za-z0-9._-]{1,120}$/;
 
 export function resolveOpenCodeBridgeProcessCwd(
   binaryPath: string,
@@ -160,60 +172,161 @@ export class OpenCodeBridgeCommandClient {
       body,
     };
     const inputPath = await this.writeInputFile(envelope);
+    const outputPath = `${inputPath}.output.json`;
 
     try {
-      const processResult = await this.processRunner.run({
-        binaryPath: this.binaryPath,
-        args: ['runtime', 'opencode-command', '--json', '--input', inputPath],
-        cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
-        timeoutMs: options.timeoutMs,
-        stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
-        stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
-        env: await this.resolveEnv(),
-      });
-
-      if (processResult.timedOut) {
-        return this.contractFailure(
-          envelope,
-          'timeout',
-          'OpenCode bridge command timed out',
-          true,
-          {
-            stderr: redactBridgeDiagnosticText(processResult.stderr),
-          }
+      const maxAttempts = isReadOnlyRetryableBridgeCommand(command)
+        ? EMPTY_STDOUT_READ_ONLY_MAX_ATTEMPTS + EMPTY_STDOUT_READ_ONLY_STDOUT_FALLBACK_ATTEMPTS
+        : 1;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const useStdoutOnlyFallback = shouldUseReadOnlyStdoutOnlyFallback(
+          command,
+          attempt,
+          maxAttempts
         );
-      }
-
-      if (processResult.exitCode !== 0) {
-        return this.contractFailure(
-          envelope,
-          'provider_error',
-          'OpenCode bridge command failed',
-          true,
-          {
-            exitCode: processResult.exitCode,
-            stderr: redactBridgeDiagnosticText(processResult.stderr),
-          }
-        );
-      }
-
-      const parsed = parseSingleBridgeJsonResult<TData>(processResult.stdout);
-      if (!parsed.ok) {
-        return this.contractFailure(envelope, 'contract_violation', parsed.error, false, {
-          stdoutPreview: redactBridgeDiagnosticText(processResult.stdout.slice(0, 2_000)),
+        const bridgeArgs = ['runtime', 'opencode-command', '--json', '--input', inputPath];
+        if (!useStdoutOnlyFallback) {
+          bridgeArgs.push('--output', outputPath);
+        }
+        const processResult = await this.processRunner.run({
+          binaryPath: this.binaryPath,
+          args: bridgeArgs,
+          cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
+          timeoutMs: options.timeoutMs,
+          stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
+          stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
+          env: await this.resolveEnv(),
         });
+        const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
+        const processDetails = {
+          exitCode: processResult.exitCode,
+          timedOut: processResult.timedOut,
+          stdoutBytes: bridgeOutput.stdoutBytes,
+          stderrBytes: byteLength(processResult.stderr),
+          outputSource: bridgeOutput.outputSource,
+          outputFileBytes: bridgeOutput.outputFileBytes,
+          outputReadError: bridgeOutput.outputReadError,
+        };
+
+        if (processResult.timedOut) {
+          return this.contractFailure(
+            envelope,
+            'timeout',
+            'OpenCode bridge command timed out',
+            true,
+            {
+              stderr: redactBridgeDiagnosticText(processResult.stderr),
+              attempts: attempt,
+              ...processDetails,
+            }
+          );
+        }
+
+        if (processResult.exitCode !== 0) {
+          return this.contractFailure(
+            envelope,
+            'provider_error',
+            'OpenCode bridge command failed',
+            true,
+            {
+              stderr: redactBridgeDiagnosticText(processResult.stderr),
+              attempts: attempt,
+              ...processDetails,
+            }
+          );
+        }
+
+        const parsed = parseSingleBridgeJsonResult<TData>(bridgeOutput.content);
+        if (!parsed.ok) {
+          if (shouldRetryEmptyReadOnlyStdout(command, parsed.error, attempt, maxAttempts)) {
+            await sleep(EMPTY_STDOUT_READ_ONLY_RETRY_DELAY_MS);
+            continue;
+          }
+
+          return this.contractFailure(envelope, 'contract_violation', parsed.error, false, {
+            stdoutPreview: redactBridgeDiagnosticText(bridgeOutput.content.slice(0, 2_000)),
+            stderrPreview: redactBridgeDiagnosticText(processResult.stderr.slice(0, 2_000)),
+            attempts: attempt,
+            ...processDetails,
+          });
+        }
+
+        const validation = validateBridgeResultEnvelope(parsed.value, envelope);
+        if (!validation.ok) {
+          return this.contractFailure(envelope, 'contract_violation', validation.reason, false, {
+            attempts: attempt,
+            ...processDetails,
+          });
+        }
+
+        return parsed.value;
       }
 
-      const validation = validateBridgeResultEnvelope(parsed.value, envelope);
-      if (!validation.ok) {
-        return this.contractFailure(envelope, 'contract_violation', validation.reason, false, {});
-      }
-
-      return parsed.value;
+      return this.contractFailure(
+        envelope,
+        'contract_violation',
+        'Bridge stdout was empty after retry',
+        false,
+        { attempts: maxAttempts }
+      );
     } finally {
       if (!this.keepInputFile) {
         await fs.unlink(inputPath).catch(() => undefined);
       }
+      await fs.unlink(outputPath).catch(() => undefined);
+    }
+  }
+
+  private async readBridgeOutput(
+    stdout: string,
+    outputPath: string
+  ): Promise<OpenCodeBridgeOutputReadResult> {
+    const stdoutBytes = byteLength(stdout);
+    try {
+      const output = await fs.readFile(outputPath, 'utf8');
+      const outputFileBytes = byteLength(output);
+      if (output.trim().length > 0) {
+        return {
+          content: output,
+          outputSource: 'file',
+          stdoutBytes,
+          outputFileBytes,
+          outputReadError: null,
+        };
+      }
+      if (stdout.trim().length > 0) {
+        return {
+          content: stdout,
+          outputSource: 'stdout',
+          stdoutBytes,
+          outputFileBytes,
+          outputReadError: null,
+        };
+      }
+      return {
+        content: output,
+        outputSource: 'none',
+        stdoutBytes,
+        outputFileBytes,
+        outputReadError: null,
+      };
+    } catch (error) {
+      if (stdout.trim().length > 0) {
+        return {
+          content: stdout,
+          outputSource: 'stdout',
+          stdoutBytes,
+          outputFileBytes: 0,
+          outputReadError: getBridgeOutputReadError(error),
+        };
+      }
+      return {
+        content: stdout,
+        outputSource: 'none',
+        stdoutBytes,
+        outputFileBytes: 0,
+        outputReadError: getBridgeOutputReadError(error),
+      };
     }
   }
 
@@ -228,7 +341,7 @@ export class OpenCodeBridgeCommandClient {
     envelope: OpenCodeBridgeCommandEnvelope<TBody>
   ): Promise<string> {
     await fs.mkdir(this.tempDirectory, { recursive: true, mode: 0o700 });
-    const inputPath = path.join(this.tempDirectory, `opencode-command-${envelope.requestId}.json`);
+    const inputPath = path.join(this.tempDirectory, buildBridgeInputFileName(envelope.requestId));
     await fs.writeFile(inputPath, `${JSON.stringify(envelope, null, 2)}\n`, {
       encoding: 'utf8',
       mode: 0o600,
@@ -244,6 +357,13 @@ export class OpenCodeBridgeCommandClient {
     details: Record<string, unknown>
   ): Promise<OpenCodeBridgeFailure> {
     const completedAt = this.clock().toISOString();
+    const diagnosticDetails = {
+      command: envelope.command,
+      requestId: envelope.requestId,
+      cwd: redactBridgeDiagnosticText(envelope.cwd),
+      binaryPath: redactBridgeDiagnosticText(this.binaryPath),
+      ...details,
+    };
     const diagnostic: OpenCodeBridgeDiagnosticEvent = {
       id: this.diagnosticIdFactory(),
       type:
@@ -254,11 +374,11 @@ export class OpenCodeBridgeCommandClient {
       runId: extractRunId(envelope.body) ?? undefined,
       severity: retryable ? 'warning' : 'error',
       message,
-      data: details,
+      data: diagnosticDetails,
       createdAt: completedAt,
     };
 
-    await this.diagnostics?.append(diagnostic);
+    await this.diagnostics?.append(diagnostic).catch(() => undefined);
 
     return {
       ok: false,
@@ -271,7 +391,7 @@ export class OpenCodeBridgeCommandClient {
         kind,
         message,
         retryable,
-        details,
+        details: diagnosticDetails,
       },
       diagnostics: [diagnostic],
     };
@@ -285,6 +405,39 @@ export function redactBridgeDiagnosticText(value: string): string {
     .replace(/((?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s"'`]+/gi, '$1[redacted]');
 }
 
+function shouldRetryEmptyReadOnlyStdout(
+  command: OpenCodeBridgeCommandName,
+  error: string,
+  attempt: number,
+  maxAttempts: number
+): boolean {
+  return (
+    isReadOnlyRetryableBridgeCommand(command) &&
+    error === 'Bridge stdout was empty' &&
+    attempt < maxAttempts
+  );
+}
+
+function shouldUseReadOnlyStdoutOnlyFallback(
+  command: OpenCodeBridgeCommandName,
+  attempt: number,
+  maxAttempts: number
+): boolean {
+  return isReadOnlyRetryableBridgeCommand(command) && attempt === maxAttempts && maxAttempts > 1;
+}
+
+function isReadOnlyRetryableBridgeCommand(command: OpenCodeBridgeCommandName): boolean {
+  return (
+    command === 'opencode.handshake' ||
+    command === 'opencode.commandStatus' ||
+    command === 'opencode.readiness'
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function bufferToString(value: string | Buffer | undefined): string {
   if (typeof value === 'string') {
     return value;
@@ -293,4 +446,39 @@ function bufferToString(value: string | Buffer | undefined): string {
     return value.toString('utf8');
   }
   return '';
+}
+
+function byteLength(value: string): number {
+  return Buffer.byteLength(value, 'utf8');
+}
+
+function buildBridgeInputFileName(requestId: string): string {
+  const trimmed = requestId.trim();
+  if (requestId === trimmed && SAFE_BRIDGE_INPUT_FILE_REQUEST_ID.test(trimmed)) {
+    return `opencode-command-${trimmed}.json`;
+  }
+
+  const sanitized =
+    Array.from(trimmed, (char) => (isUnsafeBridgeInputFileNameChar(char) ? '_' : char))
+      .join('')
+      .replace(/\s+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^\.+/, '_')
+      .slice(0, 80) || 'request';
+  const fingerprint = createHash('sha256').update(requestId).digest('hex').slice(0, 12);
+  return `opencode-command-${sanitized}-${fingerprint}.json`;
+}
+
+function isUnsafeBridgeInputFileNameChar(char: string): boolean {
+  return char.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(char);
+}
+
+function getBridgeOutputReadError(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' && code.trim()) {
+      return code.trim();
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
 }

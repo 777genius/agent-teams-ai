@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { computePendingCrossTeamReplies } from '@renderer/utils/crossTeamPendingReplies';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { ChevronRight } from 'lucide-react';
@@ -38,6 +39,7 @@ export const StatusBlock = ({
   onMemberClick,
   onTaskClick,
 }: StatusBlockProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const [collapsed, setCollapsed] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -86,7 +88,7 @@ export const StatusBlock = ({
         size={12}
         className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
       />
-      Status
+      {t('messages.status.title')}
     </button>
   );
   const flowInlineToggle = layout === 'flow' && !collapsed ? toggleButton : null;

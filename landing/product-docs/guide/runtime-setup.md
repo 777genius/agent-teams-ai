@@ -12,6 +12,7 @@ Agent Teams is a coordination layer. The actual model work runs through supporte
 | --- | --- |
 | Already use Claude Code or have Anthropic access | **Claude** - familiar auth, minimal setup |
 | Use Codex or OpenAI-based workflows | **Codex** - native integration |
+| Want to try Agent Teams without signup or API keys | **OpenCode** - use the included free model with no auth |
 | Want multi-model routing or broad provider coverage | **OpenCode** - most flexible, one config for many backends |
 | Are not sure which runtime fits | **OpenCode** - covers the most provider options and lets you switch later |
 
@@ -23,7 +24,7 @@ Start with one runtime and one teammate. Confirm one launch works before expandi
 Before launching a team, make sure:
 
 - The runtime binary is installed and on your `PATH`.
-- Your provider account has active access to the model you intend to use.
+- Your provider account has active access to the model you intend to use, unless you start with the included free OpenCode model with no auth.
 - The project path exists and is readable.
 - The app and your terminal use the same home/config environment when you test auth manually.
 
@@ -55,10 +56,10 @@ Gemini is available as a supported provider path with Google ADC (`gcloud auth`)
 
 ## Provider access
 
-Agent Teams has no paid tier of its own. You bring the provider access you already have: subscriptions, local runtime auth, or API keys depending on the path you choose.
+Agent Teams has no paid tier of its own. You can start with the included free OpenCode model with no auth - no registration, API keys, or credit card. For additional models, bring the provider access you already have: subscriptions, local runtime auth, or API keys depending on the path you choose.
 
 - **Claude** and **Codex** paths rely on their respective CLI auth tools.
-- **OpenCode** needs provider-specific API keys in a config file (e.g., `openrouter`, `openai`, `anthropic`).
+- **OpenCode** can run the included free model with no auth first. Other OpenCode models may need provider-specific API keys in a config file (e.g., `openrouter`, `openai`, `anthropic`).
 
 ## Auth configuration
 
@@ -96,7 +97,7 @@ Codex-native launches use Codex account state and model catalog data when availa
 
 ### OpenCode
 
-Create or edit `~/.opencode/config.json` (or the equivalent path on your platform) with the provider key you want:
+To use the included free model with no auth, select it in the app and launch without provider signup. To use other OpenCode backends, create or edit `~/.opencode/config.json` (or the equivalent path on your platform) with the provider key you want:
 
 ```json
 {

@@ -1,10 +1,5 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
+import { useAppTranslation } from '@features/localization/renderer';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@renderer/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -111,6 +106,7 @@ export const ProviderRuntimeBackendSelector = ({
   disabled = false,
   onSelect,
 }: Props): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const options = getVisibleProviderRuntimeBackendOptions(provider);
   if (options.length === 0) {
     return null;
@@ -123,15 +119,52 @@ export const ProviderRuntimeBackendSelector = ({
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
-  const selectedLabel = getOptionDisplayLabel(provider, selectedOption, resolvedOption);
-  const selectedStateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
-  const selectedAudienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
+  const localizeStateLabel = (
+    option: NonNullable<CliProviderStatus['availableBackends']>[number]
+  ): string | null => {
+    switch (getProviderRuntimeBackendStateLabel(option)) {
+      case 'Locked':
+        return t('runtimeBackendSelector.states.locked');
+      case 'Disabled':
+        return t('runtimeBackendSelector.states.disabled');
+      case 'Auth required':
+        return t('runtimeBackendSelector.states.authRequired');
+      case 'Runtime missing':
+        return t('runtimeBackendSelector.states.runtimeMissing');
+      case 'Degraded':
+        return t('runtimeBackendSelector.states.degraded');
+      case 'Unavailable':
+        return t('runtimeBackendSelector.states.unavailable');
+      default:
+        return null;
+    }
+  };
+  const localizeAudienceLabel = (
+    option: NonNullable<CliProviderStatus['availableBackends']>[number]
+  ): string | null =>
+    getProviderRuntimeBackendAudienceLabel(option)
+      ? t('runtimeBackendSelector.audience.internal')
+      : null;
+  const localizeOptionDisplayLabel = (
+    option: NonNullable<CliProviderStatus['availableBackends']>[number]
+  ): string => {
+    if (option.id === 'auto') {
+      if (resolvedOption?.label) {
+        return t('runtimeBackendSelector.autoCurrently', { backend: resolvedOption.label });
+      }
+      return t('runtimeBackendSelector.auto');
+    }
+    return getOptionDisplayLabel(provider, option, resolvedOption);
+  };
+  const selectedLabel = localizeOptionDisplayLabel(selectedOption);
+  const selectedStateLabel = localizeStateLabel(selectedOption);
+  const selectedAudienceLabel = localizeAudienceLabel(selectedOption);
 
   return (
     <div className="mt-2 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
-          Runtime backend
+          {t('runtimeBackendSelector.label')}
         </span>
         {provider.resolvedBackendId &&
           provider.resolvedBackendId !== provider.selectedBackendId && (
@@ -142,7 +175,9 @@ export const ProviderRuntimeBackendSelector = ({
                 backgroundColor: 'rgba(255, 255, 255, 0.04)',
               }}
             >
-              Resolved: {resolvedOption?.label ?? provider.resolvedBackendId}
+              {t('runtimeBackendSelector.resolved', {
+                backend: resolvedOption?.label ?? provider.resolvedBackendId,
+              })}
             </span>
           )}
       </div>
@@ -154,7 +189,7 @@ export const ProviderRuntimeBackendSelector = ({
         <SelectTrigger className="h-10 text-sm">
           <div className="flex min-w-0 items-center gap-2">
             <span className="shrink-0 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-              Current
+              {t('runtimeBackendSelector.current')}
             </span>
             <span className="truncate">{selectedLabel}</span>
           </div>
@@ -172,9 +207,7 @@ export const ProviderRuntimeBackendSelector = ({
             >
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate">
-                    {getOptionDisplayLabel(provider, option, resolvedOption)}
-                  </span>
+                  <span className="truncate">{localizeOptionDisplayLabel(option)}</span>
                   {option.recommended ? (
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
@@ -183,10 +216,10 @@ export const ProviderRuntimeBackendSelector = ({
                         backgroundColor: 'rgba(74, 222, 128, 0.14)',
                       }}
                     >
-                      Recommended
+                      {t('runtimeBackendSelector.recommended')}
                     </span>
                   ) : null}
-                  {getProviderRuntimeBackendAudienceLabel(option) ? (
+                  {localizeAudienceLabel(option) ? (
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
                       style={{
@@ -194,10 +227,10 @@ export const ProviderRuntimeBackendSelector = ({
                         backgroundColor: 'rgba(59, 130, 246, 0.14)',
                       }}
                     >
-                      {getProviderRuntimeBackendAudienceLabel(option)}
+                      {localizeAudienceLabel(option)}
                     </span>
                   ) : null}
-                  {getProviderRuntimeBackendStateLabel(option) ? (
+                  {localizeStateLabel(option) ? (
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
                       style={{
@@ -219,7 +252,7 @@ export const ProviderRuntimeBackendSelector = ({
                             : 'rgba(255, 255, 255, 0.08)',
                       }}
                     >
-                      {getProviderRuntimeBackendStateLabel(option)}
+                      {localizeStateLabel(option)}
                     </span>
                   ) : null}
                 </div>
@@ -251,7 +284,7 @@ export const ProviderRuntimeBackendSelector = ({
                   backgroundColor: 'rgba(74, 222, 128, 0.14)',
                 }}
               >
-                Recommended
+                {t('runtimeBackendSelector.recommended')}
               </span>
             ) : null}
             {selectedAudienceLabel ? (
@@ -276,11 +309,13 @@ export const ProviderRuntimeBackendSelector = ({
                         backgroundColor: 'rgba(248, 113, 113, 0.14)',
                       }}
                     >
-                      Unavailable
+                      {t('runtimeBackendSelector.unavailable')}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {selectedOption.detailMessage ?? selectedOption.statusMessage ?? 'Unavailable'}
+                    {selectedOption.detailMessage ??
+                      selectedOption.statusMessage ??
+                      t('runtimeBackendSelector.unavailable')}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -307,7 +342,7 @@ export const ProviderRuntimeBackendSelector = ({
                   <TooltipContent>
                     {selectedOption.detailMessage ??
                       selectedOption.statusMessage ??
-                      'This backend cannot be selected yet.'}
+                      t('runtimeBackendSelector.cannotSelectYet')}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

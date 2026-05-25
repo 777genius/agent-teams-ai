@@ -1,0 +1,912 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "copied": "Copiado",
+    "copyUrl": "Copiar URL",
+    "open": "Abrir",
+    "reveal": "Mostrar en carpeta",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "showLess": "Mostrar menos",
+    "showMore": "Mostrar más",
+    "refresh": "Actualizar",
+    "reset": "Restablecer",
+    "copyToClipboard": "Copiar al portapapeles",
+    "moreActions": "Más acciones",
+    "closeDialog": "Cerrar diálogo",
+    "goToDashboard": "Ir al panel",
+    "or": "o",
+    "hide": "Ocultar",
+    "resetSelection": "Restablecer selección"
+  },
+  "code": {
+    "line": "línea {{line}}",
+    "lines": "líneas {{from}}-{{to}}",
+    "moreLines": "({{count}} más líneas...)",
+    "moreLines_few": "({{count}} más líneas...)",
+    "moreLines_many": "({{count}} más líneas...)",
+    "moreLines_one": "({{count}} más línea...)",
+    "moreLines_other": "({{count}} más líneas...)",
+    "code": "Código",
+    "preview": "Vista previa",
+    "markdownPreview": "Vista previa",
+    "linesParenthesized": "(líneas {{from}}-{{to}})",
+    "mermaidSyntaxError": "Error de sintaxis sirena"
+  },
+  "contextBadge": {
+    "badge": "Contexto",
+    "breakdown": {
+      "text": "Texto",
+      "thinking": "Pensando"
+    },
+    "detailsAria": "Detalles de la inyección de texto",
+    "sectionSummary": "{{title}}(G){{count}}~{{tokens}}tokens",
+    "sections": {
+      "claudeMdFiles": "CLAUDE.md Archivos",
+      "mentionedFiles": "Archivos Mencionados",
+      "taskCoordination": "Coordinación de tareas",
+      "thinkingText": "Pensamiento + Texto",
+      "toolOutputs": "Productos de la herramienta",
+      "userMessages": "Mensajes de usuario"
+    },
+    "title": "Nuevo contexto inyectado en este giro",
+    "tokenCount": "~{{tokens}}tokens",
+    "totalNewTokens": "Total de nuevas fichas",
+    "turn": "Gire {{turn}}",
+    "sectionSummary_few": "{{title}}(G){{count}}~{{tokens}}tokens",
+    "sectionSummary_many": "{{title}}(G){{count}}~{{tokens}}tokens",
+    "sectionSummary_one": "{{title}}(G){{count}}~{{tokens}}tokens",
+    "sectionSummary_other": "{{title}}(G){{count}}~{{tokens}}tokens"
+  },
+  "locales": {
+    "emptyMessage": "No se encontró ningún idioma.",
+    "names": {
+      "en": "Inglés",
+      "ru": "Ruso",
+      "zh": "Chino",
+      "ja": "Japonés",
+      "ko": "Coreano",
+      "es": "Español",
+      "hi": "Hindi",
+      "pt": "Portugués",
+      "fr": "Francés",
+      "ar": "Árabe",
+      "bn": "Bengalí",
+      "ur": "Urdu",
+      "id": "Indonesio",
+      "de": "Alemán",
+      "system": "Sistema"
+    },
+    "searchPlaceholder": "Buscar idioma...",
+    "selectPlaceholder": "Seleccionar idioma de la app...",
+    "systemWithResolved": "Sistema - {{locale}}"
+  },
+  "members": {
+    "emptyMessage": "No se encontraron miembros.",
+    "searchPlaceholder": "Buscar miembros...",
+    "unassigned": "Sin asignar",
+    "teammateFallback": "compañero"
+  },
+  "providerRuntime": {
+    "codex": {
+      "install": {
+        "checking": "Verificación",
+        "downloading": "Descarga",
+        "installCli": "Instalar Codex CLI",
+        "installing": "Instalación",
+        "retryInstall": "Retry install"
+      }
+    }
+  },
+  "search": {
+    "noMatchingSuggestions": "No hay sugerencias coincidentes",
+    "searching": "Buscando...",
+    "searchingFiles": "Buscando archivos...",
+    "findInConversation": "Buscar en la conversación...",
+    "resultCount": "{{current}} de {{total}}",
+    "resultCountCapped": "{{current}} de {{total}}+",
+    "noResults": "Sin resultados",
+    "previousResultShortcut": "Resultado anterior (Shift+Enter)",
+    "nextResultShortcut": "Resultado siguiente (Enter)",
+    "closeShortcut": "Cerrar (Esc)",
+    "nothingFound": "No se encontró nada",
+    "placeholder": "Buscar..."
+  },
+  "schedules": {
+    "actions": {
+      "addSchedule": "Agregar calendario",
+      "clearFilters": "Filtros claros",
+      "createSchedule": "Crear programa",
+      "delete": "Suprimir",
+      "edit": "Editar",
+      "pause": "Pausa",
+      "resume": "Resumen",
+      "runNow": "Corre ahora"
+    },
+    "empty": {
+      "description": "Cree un horario en cualquier equipo para automatizar la ejecución de tareas de Claude con expresiones cron. Los horarios de todos los equipos aparecerán aquí.",
+      "noMatches": "Sin horarios coinciden con los filtros actuales",
+      "title": "Sin tareas programadas"
+    },
+    "filters": {
+      "allTeams": "Todos los equipos"
+    },
+    "item": {
+      "loadingRunHistory": "Carga de historia de ejecución...",
+      "nextRun": "Siguiente: {{value}}",
+      "noRunsYet": "No hay carreras todavía"
+    },
+    "loading": "Cargando horarios...",
+    "searchPlaceholder": "Horarios de búsqueda...",
+    "status": {
+      "active": "Activo",
+      "all": "Todos",
+      "disabled": "Discapacitados",
+      "paused": "Pausa"
+    },
+    "title": "Cuadros"
+  },
+  "sessions": {
+    "actions": {
+      "hide": "Oculto",
+      "pin": "Pin",
+      "unhide": "Unhide"
+    },
+    "empty": {
+      "noMatchingSessions": "Sin sesiones de coincidencia",
+      "noMatchingSessionsDescription": "Este proyecto aún no tiene sesiones iguales.",
+      "noMatchingSessionsFiltered": "Pruebe otra consulta o reajuste el filtro del proveedor.",
+      "noSessions": "No se encontraron sesiones",
+      "noSessionsDescription": "Este proyecto aún no tiene sesiones.",
+      "selectProject": "Seleccione un proyecto para ver las sesiones"
+    },
+    "errors": {
+      "loading": "Sesiones de carga de errores"
+    },
+    "loadedMatchingMore": "{{count}} sesiones de emparejamiento cargadas hasta ahora - desplazarse hacia abajo para cargar más.",
+    "loadingMore": "Cargando más sesiones...",
+    "pinned": "Pinned",
+    "scrollToLoadMore": "Desplazamiento para cargar más",
+    "search": {
+      "clear": "Búsqueda clara del período de sesiones",
+      "placeholder": "Sesiones de búsqueda..."
+    },
+    "selection": {
+      "cancel": "Cancelar selección",
+      "exitMode": "Modo de selección de salida",
+      "hideSelected": "Esconder sesiones seleccionadas",
+      "pinSelected": "Pin sesiones seleccionadas",
+      "selectSessions": "Seleccionar sesiones",
+      "selected": "{{count}} seleccionado",
+      "unhideSelected": "Períodos de sesiones seleccionados",
+      "selected_few": "{{count}} seleccionado",
+      "selected_many": "{{count}} seleccionado",
+      "selected_one": "{{count}} seleccionado",
+      "selected_other": "{{count}} seleccionado"
+    },
+    "sort": {
+      "byContext": "Por Contexto",
+      "byContextTooltip": "Ordenar por consumo de contexto",
+      "byRecentTooltip": "Ordenar por recientemente",
+      "contextLoadedOnly": "Contexto clasificando sólo clasifica sesiones cargadas."
+    },
+    "title": "Período de sesiones",
+    "visibility": {
+      "hideHidden": "Ocultar sesiones ocultas",
+      "showHidden": "Mostrar sesiones ocultas"
+    },
+    "worktree": {
+      "switch": "Switch Worktree"
+    },
+    "loadedMatchingMore_few": "{{count}} sesiones de emparejamiento cargadas hasta ahora - desplazarse hacia abajo para cargar más.",
+    "loadedMatchingMore_many": "{{count}} sesiones de emparejamiento cargadas hasta ahora - desplazarse hacia abajo para cargar más.",
+    "loadedMatchingMore_one": "{{count}} sesiones de emparejamiento cargadas hasta ahora - desplazarse hacia abajo para cargar más.",
+    "loadedMatchingMore_other": "{{count}} sesiones de emparejamiento cargadas hasta ahora - desplazarse hacia abajo para cargar más.",
+    "failedToLoad": "Failed to load session",
+    "loading": "Cargando sesión...",
+    "filter": {
+      "title": "Sesiones de filtro"
+    },
+    "count": "Sesiones {{count}}",
+    "count_one": "Sesión {{count}}",
+    "count_other": "Sesiones {{count}}",
+    "count_few": "Sesiones {{count}}",
+    "count_many": "Sesiones {{count}}",
+    "inProgress": "La sesión está en marcha..."
+  },
+  "states": {
+    "loading": "Cargando...",
+    "offline": "Sin conexión",
+    "online": "En línea",
+    "unknown": "Desconocido",
+    "error": "Error"
+  },
+  "markdown": {
+    "imageFallback": "[Imágen: {{label}}]",
+    "largeContentNotice": "El contenido es muy grande ({{count}} chars). Mostrando una vista previa cruda para mantener la interfaz de usuario sensible.",
+    "largeContentTitle": "El contenido grande se muestra como crudo para prevenir la congelación UI",
+    "raw": "Raw",
+    "rawPreview": "Previsión prima",
+    "renderMarkdown": "Render Markdown",
+    "showAll": "Mostrar todo",
+    "showMore": "Mostrar más",
+    "showRaw": "Mostrar crudo",
+    "showingChars": "Mostrando {{shown}} / {{total}} chars",
+    "largeContentNotice_few": "El contenido es muy grande ({{count}} chars). Mostrando una vista previa cruda para mantener la interfaz de usuario sensible.",
+    "largeContentNotice_many": "El contenido es muy grande ({{count}} chars). Mostrando una vista previa cruda para mantener la interfaz de usuario sensible.",
+    "largeContentNotice_one": "El contenido es muy grande ({{count}} chars). Mostrando una vista previa cruda para mantener la interfaz de usuario sensible.",
+    "largeContentNotice_other": "El contenido es muy grande ({{count}} chars). Mostrando una vista previa cruda para mantener la interfaz de usuario sensible."
+  },
+  "terminal": {
+    "checkOutputForDetails": "Comprobar salida terminal arriba para detalles",
+    "closingInSeconds": "Cierre en {{count}}s...",
+    "closingInSeconds_few": "Cierre en {{count}}s...",
+    "closingInSeconds_many": "Cierre en {{count}}s...",
+    "closingInSeconds_one": "Cierre en {{count}}s...",
+    "closingInSeconds_other": "Cierre en {{count}}s...",
+    "completedSuccessfully": "Completado con éxito",
+    "exitCode": "(código de salida {{code}})",
+    "processFailed": "Proceso fallado",
+    "title": "Terminal"
+  },
+  "tokens": {
+    "accumulatedWithoutDuplication": "Acumulado en todo el período de sesiones sin duplicación",
+    "cacheRead": "Cache Read",
+    "cacheWrite": "Cache Write",
+    "costUsd": "Costo (USD)",
+    "inputTokens": "Tokens de entrada",
+    "model": "Modelo",
+    "outputTokens": "Tokens de productos",
+    "phase": "Fase {{phase}}/{{total}}",
+    "promptInputShare": "{{percent}}% de entrada rápida",
+    "taskCoordination": "Coordinación de tareas",
+    "thinkingText": "Pensamiento + Texto",
+    "toolOutputs": "Productos de la herramienta",
+    "total": "Total",
+    "userMessages": "Mensajes de usuario",
+    "visibleContext": "Contexto visible",
+    "includesClaudeMd": "incl. CLAUDE.md ×{{count}}",
+    "claudeMd": "CLAUDE.md",
+    "mentionedFiles": "@files",
+    "percentValue": "(G){{percent}}%)",
+    "approxTokens": "~{{tokens}}tokens",
+    "approxTokensParenthesized": "(~{{tokens}})"
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Equipo de copia",
+      "createTeam": "Crear equipo",
+      "deleteForever": "Suprimir para siempre",
+      "deletePermanently": "Suprimir permanentemente",
+      "deleteTeam": "Eliminar el equipo",
+      "launching": "Lanzando...",
+      "launchTeam": "Equipo de lanzamiento",
+      "relaunchTeam": "Relaunch team",
+      "restore": "Restauración",
+      "restoreTeam": "Restore team",
+      "retry": "Entrada",
+      "stopTeam": "Para el equipo",
+      "stopping": "Parar..."
+    },
+    "status": {
+      "active": "Activo",
+      "deleted": "Suprimido",
+      "launching": "Lanzando...",
+      "offline": "Sin conexión",
+      "partialFailure": "Lanzamiento fallido",
+      "partialPending": "Bootstrap pending",
+      "partialSkipped": "Miembro saltado",
+      "running": "Corriendo"
+    },
+    "partial": {
+      "pending": "El último lanzamiento sigue conciliando.",
+      "skipped": "El último lanzamiento ha saltado compañeros de equipo.",
+      "skippedWithCount": "Último lanzamiento saltó {{count}}/{{expected}} compañero de equipo.",
+      "skippedWithCount_few": "Último lanzamiento saltó {{count}}/{{expected}} compañeros de equipo.",
+      "skippedWithCount_many": "Último lanzamiento saltó {{count}}/{{expected}} compañeros de equipo.",
+      "skippedWithCount_one": "Último lanzamiento saltó {{count}}/{{expected}} compañero de equipo.",
+      "skippedWithCount_other": "Último lanzamiento saltó {{count}}/{{expected}} compañeros de equipo.",
+      "stopped": "El último lanzamiento se detuvo antes de que todos los compañeros se unieran.",
+      "stoppedWithCount": "El último lanzamiento se detuvo antes{{count}}/{{expected}}compañero de equipo se unió.",
+      "stoppedWithCount_few": "El último lanzamiento se detuvo antes{{count}}/{{expected}}compañeros de equipo se unieron.",
+      "stoppedWithCount_many": "El último lanzamiento se detuvo antes{{count}}/{{expected}}compañeros de equipo se unieron.",
+      "stoppedWithCount_one": "El último lanzamiento se detuvo antes{{count}}/{{expected}}compañero de equipo se unió.",
+      "stoppedWithCount_other": "El último lanzamiento se detuvo antes{{count}}/{{expected}}compañeros de equipo se unieron."
+    },
+    "noDescription": "No hay descripción",
+    "solo": "Solo",
+    "membersCount": "Miembros: {{count}}",
+    "membersCount_few": "Miembros: {{count}}",
+    "membersCount_many": "Miembros: {{count}}",
+    "membersCount_one": "Miembro: {{count}}",
+    "membersCount_other": "Miembros: {{count}}",
+    "all": "Todos",
+    "moreCount": "+{{count}} más",
+    "moreCount_one": "+{{count}} más",
+    "moreCount_other": "+{{count}} más",
+    "moreCount_few": "+{{count}} más",
+    "moreCount_many": "+{{count}} más"
+  },
+  "runtimeProvider": {
+    "defaults": {
+      "scopeDescriptionAllProjects": "Default para cada proyecto que no tenga su propia anulación OpenCode.",
+      "scopeDescriptionProject": "Superar sólo el proyecto seleccionado. Los equipos que corren no cambian.",
+      "setAllProjectsDefault": "Establecer todos los proyectos por defecto",
+      "setProjectDefault": "Establecer predeterminado del proyecto",
+      "validationContext": "Contexto de validación",
+      "projectOverrideContext": "Project override context",
+      "selectProjectHint": "Seleccione un proyecto antes de probar modelos locales o guardar defectos.",
+      "allProjectsHint": "Las pruebas usan {{project}}. El incumplimiento se aplica a menos que un proyecto tenga una anulación.",
+      "projectHint": "Salvar anula sólo {{project}}."
+    }
+  },
+  "sessionContext": {
+    "header": {
+      "title": "Contexto",
+      "closePanel": "Panel cerrado",
+      "phase": "Fase:",
+      "current": "Corriente",
+      "view": "Vista:",
+      "category": "Categoría",
+      "bySize": "Por tamaño"
+    },
+    "metrics": {
+      "unavailable": "No disponible",
+      "contextUsed": "Contexto usado",
+      "promptInput": "Prompt Input",
+      "visibleContext": "Contexto visible",
+      "ofContext": "de contexto",
+      "ofPrompt": "of prompt",
+      "codexTelemetryUnavailable": "El uso rápido de Codex no está expuesto por la telemetría actual de tiempo de ejecución, por lo que Prompt Input and Context Usado permanecer indisponible en lugar de mostrar un cero falso.",
+      "sessionCost": "Costo del período de sesiones:",
+      "parentPlus": "padre +",
+      "subagents": "subagents",
+      "details": "detalles"
+    },
+    "help": {
+      "contextUsed": {
+        "title": "Contexto usado",
+        "description": "Prompt entrada más fichas de salida actualmente ocupando la ventana contextual del modelo."
+      },
+      "promptInput": {
+        "title": "Prompt Input",
+        "description": "Tokens envió al modelo antes de la generación. Para Claude esto incluye `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`."
+      },
+      "visibleContext": {
+        "title": "Contexto visible",
+        "description": "El subconjunto inspectable de entrada rápida: archivos, CLAUDE.md, salidas de herramientas, mensajes de usuario y inyecciones similares que puede optimizar directamente."
+      },
+      "availability": {
+        "title": "Disponibilidad",
+        "description": "Si un proveedor de tiempo de ejecución no expone el uso del lado inmediato todavía, el panel muestra las métricas como no disponibles en lugar de pretender que son cero."
+      }
+    },
+    "items": {
+      "turn": "@Turn{{turn}}",
+      "tokensApprox": "~{{tokens}}tokens",
+      "toolsCount": "Herramientas {{count}}",
+      "toolsCount_one": "herramienta {{count}}",
+      "toolsCount_other": "Herramientas {{count}}",
+      "toolsCount_few": "Herramientas {{count}}",
+      "toolsCount_many": "Herramientas {{count}}",
+      "itemsCount": "{{count}}Temas",
+      "itemsCount_one": "{{count}}Tema",
+      "itemsCount_other": "{{count}}Temas",
+      "itemsCount_few": "{{count}}Temas",
+      "itemsCount_many": "{{count}}Temas",
+      "missing": "desaparecido",
+      "thinking": "Pensando",
+      "text": "Texto"
+    },
+    "empty": "No se detectan inyecciones de contexto en esta sesión",
+    "view": {
+      "grouped": "Grouped",
+      "flat": "Piso"
+    },
+    "claudeMdFiles": "CLAUDE.md Archivos",
+    "mentionedFiles": "Archivos Mencionados"
+  },
+  "chat": {
+    "subagent": {
+      "fallbackName": "Subagent",
+      "shutdownConfirmed": "Cancelación confirmada",
+      "summary": {
+        "tools": "Herramientas {{count}}",
+        "tools_one": "herramienta {{count}}",
+        "tools_other": "Herramientas {{count}}",
+        "tools_few": "Herramientas {{count}}",
+        "tools_many": "Herramientas {{count}}"
+      },
+      "meta": {
+        "type": "Tipo",
+        "duration": "Duración",
+        "model": "Modelo",
+        "id": "ID"
+      },
+      "metrics": {
+        "contextWindow": "Ventana de contexto",
+        "contextUsage": "Context Usage",
+        "mainContext": "Contexto principal",
+        "totalOutput": "Total de productos",
+        "turns": "({{count}} turn)",
+        "turns_one": "(G){{count}}turn)",
+        "turns_other": "({{count}} turn)",
+        "subagentContext": "Subagent Context",
+        "phase": "Fase {{phase}}",
+        "turns_few": "({{count}} turn)",
+        "turns_many": "({{count}} turn)"
+      },
+      "trace": {
+        "title": "Trace de ejecución"
+      }
+    },
+    "user": {
+      "you": "Tú.",
+      "showMore": "Mostrar más",
+      "showLess": "Mostrar menos",
+      "backgroundTask": "Tareas de antecedentes",
+      "exitCode": "salida {{code}}",
+      "imagesAttached": "{{count}} imágenes adjuntas",
+      "imagesAttached_one": "{{count}} imagen adjunta",
+      "imagesAttached_few": "{{count}} imágenes adjuntas",
+      "imagesAttached_many": "{{count}} imágenes adjuntas",
+      "imagesAttached_other": "{{count}} imágenes adjuntas"
+    },
+    "compact": {
+      "toggle": "Toggle compacto content",
+      "contextCompacted": "Contexto compacto",
+      "freedTokens": "({{tokens}} liberado)",
+      "phase": "Fase {{phase}}",
+      "conversationCompacted": "Conversación compactada",
+      "summary": "Se resumieron mensajes anteriores para salvar el contexto. La historia de la conversación completa se conserva en el archivo de sesión.",
+      "compacted": "Compactado"
+    },
+    "executionTrace": {
+      "empty": "No hay elementos de ejecución",
+      "nested": "Anidado: {{name}}",
+      "input": "Input"
+    },
+    "items": {
+      "empty": "No hay elementos para mostrar"
+    },
+    "tools": {
+      "teammateSpawned": "Compañero de equipo",
+      "shutdownRequested": "Desplazamiento solicitado - título",
+      "noResultReceived": "No result received",
+      "duration": "Duración: {{duration}}",
+      "result": "Resultado",
+      "write": {
+        "createdFile": "Archivo creado",
+        "wroteToFile": "Wrote to file"
+      },
+      "skill": {
+        "instructions": "Instrucciones de habilidad",
+        "unknown": "Habilidad desconocida"
+      }
+    },
+    "lastOutput": {
+      "requestInterrupted": "Solicitud interrumpida por el usuario",
+      "planReadyForApproval": "Plan Listo para aprobación"
+    },
+    "empty": {
+      "icon": "💬",
+      "title": "Sin historia de conversación",
+      "description": "Esta sesión no contiene ningún mensaje todavía."
+    },
+    "context": {
+      "remainingPercent": "({{percent}}% izquierdo)",
+      "count": "Contexto ({{count}})",
+      "count_one": "Contexto ({{count}})",
+      "count_other": "Contexto ({{count}})",
+      "count_few": "Contexto ({{count}})",
+      "count_many": "Contexto ({{count}})"
+    },
+    "scrollToBottom": "Pergamino a fondo",
+    "bottom": "Bottom",
+    "teammateMessage": {
+      "message": "Mensaje",
+      "resent": "Resentimiento",
+      "fallback": "Mensaje de compañero de equipo"
+    },
+    "system": {
+      "label": "Sistema"
+    }
+  },
+  "tmuxInstaller": {
+    "summaryTitle": "tmux no está instalado",
+    "detectedOs": "Sistema operativo detectado: {{os}}",
+    "runtimePath": "Ruta del tiempo de ejecución: {{path}}",
+    "phase": "Fase: {{phase}}",
+    "actions": {
+      "cancel": "Cancelar",
+      "manualGuide": "Guía manual",
+      "hideSetupSteps": "Ocultar los pasos de configuración",
+      "showSetupSteps": "Mostrar pasos de configuración ({{count}})",
+      "showSetupSteps_one": "Mostrar paso de configuración ({{count}})",
+      "showSetupSteps_other": "Mostrar pasos de configuración ({{count}})",
+      "recheck": "Re-check",
+      "showSetupSteps_few": "Mostrar pasos de configuración ({{count}})",
+      "showSetupSteps_many": "Mostrar pasos de configuración ({{count}})"
+    },
+    "installerProgress": "Progresos de instalación",
+    "input": {
+      "placeholder": "Enviar entrada al instalador",
+      "send": "Enviar entrada",
+      "passwordNotice": "La entrada de contraseña se envía directamente a la terminal del instalador y no se agrega a la salida del registro."
+    },
+    "details": {
+      "show": "Mostrar detalles",
+      "hide": "Ocultar detalles"
+    }
+  },
+  "commandPalette": {
+    "noRecentActivity": "Ninguna actividad reciente",
+    "sessionsCount": "Sesiones {{count}}",
+    "sessionsCount_one": "Sesión {{count}}",
+    "sessionsCount_other": "Sesiones {{count}}",
+    "mode": {
+      "searchProjects": "Proyectos de búsqueda",
+      "searchAcrossProjects": "Buscar en todos los proyectos",
+      "searchInProject": "Búsqueda en proyecto"
+    },
+    "currentProject": "Proyecto actual",
+    "global": "Global",
+    "placeholders": {
+      "projects": "Proyectos de búsqueda...",
+      "conversations": "Buscar conversaciones..."
+    },
+    "empty": {
+      "noProjectsForQuery": "No se han encontrado proyectos para \"{{query}}\"",
+      "noProjects": "No se han encontrado proyectos",
+      "minChars": "Escribe al menos 2 caracteres para buscar",
+      "noFastResults": "No resultados rápidos en sesiones recientes para \"{{query}}\"",
+      "noResults": "No se han encontrado resultados para \"{{query}}\""
+    },
+    "footer": {
+      "projectsCount": "Proyectos {{count}}",
+      "projectsCount_one": "Proyecto {{count}}",
+      "projectsCount_other": "Proyectos {{count}}",
+      "results": "{{count}} {{speed}}resultados",
+      "results_one": "{{count}} {{speed}}resultado",
+      "results_other": "{{count}} {{speed}}resultados",
+      "resultsAcrossProjects": "{{count}} {{speed}}results en todos los proyectos",
+      "resultsAcrossProjects_one": "{{count}} {{speed}}result en todos los proyectos",
+      "resultsAcrossProjects_other": "{{count}} {{speed}}results en todos los proyectos",
+      "fastPrefix": "rápido",
+      "typeToSearch": "Tipo de búsqueda",
+      "navigate": "Navigate",
+      "select": "seleccionar",
+      "open": "abierto",
+      "global": "mundial",
+      "close": "cerca",
+      "results_few": "{{count}} {{speed}}resultados",
+      "results_many": "{{count}} {{speed}}resultados",
+      "resultsAcrossProjects_few": "{{count}} {{speed}}results en todos los proyectos",
+      "resultsAcrossProjects_many": "{{count}} {{speed}}results en todos los proyectos",
+      "projectsCount_few": "Proyectos {{count}}",
+      "projectsCount_many": "Proyectos {{count}}",
+      "upDownKey": "↑",
+      "escapeKey": "esc"
+    },
+    "sessionsCount_few": "Sesiones {{count}}",
+    "sessionsCount_many": "Sesiones {{count}}"
+  },
+  "tasksPanel": {
+    "title": "Tareas",
+    "searchPlaceholder": "Buscar tareas...",
+    "pinned": "Pinned",
+    "groupByLabel": "Grupo por:",
+    "groupByAria": "Group by",
+    "groupModes": {
+      "none": "Ninguno",
+      "project": "Proyecto",
+      "time": "Hora"
+    },
+    "showArchived": "Mostrar archivado",
+    "hideArchived": "Ocultar archivado",
+    "empty": {
+      "noMatchingTasks": "Sin tareas coincidentes",
+      "noTasks": "No se encontraron tareas"
+    },
+    "teamLabel": "Equipo: {{team}}",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos",
+    "deleteConfirm": {
+      "title": "Suprimir la tarea",
+      "message": "Mover la tarea #{{taskId}} a la basura?",
+      "confirmLabel": "Suprimir",
+      "cancelLabel": "Cancelar"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete task",
+      "fallbackMessage": "Un error inesperado ocurrió",
+      "confirmLabel": "OK"
+    },
+    "sort": {
+      "byTime": "Con el tiempo",
+      "byUnread": "Sin leer",
+      "byProject": "Por proyecto",
+      "byTeam": "Por equipo"
+    }
+  },
+  "toolViewer": {
+    "input": "Input",
+    "replaceAll": "(sustitución total)",
+    "noInputRecorded": "No hay entrada grabada para esta llamada de herramienta.",
+    "agent": {
+      "action": "acción",
+      "teammate": "compañero de equipo",
+      "team": "equipo",
+      "runtime": "Hora de correr",
+      "type": "Tipo",
+      "startupInstructionsHidden": "Las instrucciones de inicio están ocultas en la UI."
+    }
+  },
+  "taskContextMenu": {
+    "unpin": "Unpin",
+    "pin": "Pin",
+    "rename": "Rename",
+    "markUnread": "Marcar como no leído",
+    "unarchive": "Unarchive",
+    "archive": "Archivo",
+    "deleteTask": "Suprimir la tarea"
+  },
+  "updateDialog": {
+    "closeDialog": "Cerrar diálogo",
+    "updateAvailable": "Actualización disponible",
+    "updateReady": "Actualización",
+    "noReleaseNotes": "No hay notas de liberación disponibles.",
+    "viewOnGitHub": "Vista en GitHub",
+    "later": "Más tarde",
+    "restartNow": "Reinicie ahora",
+    "download": "Descargar"
+  },
+  "errorBoundary": {
+    "title": "Algo salió mal.",
+    "description": "Un error inesperado ocurrió en la aplicación. Puede intentar volver a cargar la página o restablecer el estado de error.",
+    "componentStack": "Componente Stack",
+    "tryAgain": "Otra vez.",
+    "copied": "Copiado",
+    "copyErrorDetails": "Copiar datos de error",
+    "reportBugOnGitHub": "Report Bug on GitHub",
+    "reloadApp": "Reload App",
+    "diagnosticsNotice": "Los informes de fallos de GitHub y los diagnósticos copiados incluyen el mensaje de error, las huellas, la versión de aplicación, la pestaña activa, el equipo seleccionado, el contexto de tarea y los detalles del entorno."
+  },
+  "runtimeBackendSelector": {
+    "label": "Backend de tiempo de ejecución",
+    "resolved": "Resolvido: {{backend}}",
+    "current": "Corriente",
+    "recommended": "Recomendado",
+    "unavailable": "No disponible",
+    "cannotSelectYet": "Este backend no puede ser seleccionado todavía.",
+    "auto": "Auto",
+    "autoCurrently": "Auto (actualmente: {{backend}})",
+    "audience": {
+      "internal": "Internos"
+    },
+    "states": {
+      "locked": "Cerrado",
+      "disabled": "Discapacitados",
+      "authRequired": "Auth required",
+      "runtimeMissing": "Hora de irse",
+      "degraded": "Degradado",
+      "unavailable": "No disponible"
+    }
+  },
+  "providerModelBadges": {
+    "checking": "Verificación",
+    "unavailable": "No disponible",
+    "checkFailed": "El cheque falló",
+    "free": "Gratis",
+    "freeTooltip": "Reported by OpenCode metadata. La disponibilidad y los límites pueden cambiar."
+  },
+  "taskFilters": {
+    "status": "Situación",
+    "clearAll": "Despejado todo",
+    "selectAll": "Seleccione todo",
+    "team": "Equipo",
+    "allTeams": "Todos los equipos",
+    "searchTeams": "Equipos de búsqueda...",
+    "noTeamsFound": "No hay equipos encontrados",
+    "project": "Proyecto",
+    "allProjects": "Todos los proyectos",
+    "searchProjects": "Proyectos de búsqueda...",
+    "noProjects": "No hay proyectos",
+    "comments": "Comentarios",
+    "apply": "Aplicar",
+    "read": {
+      "all": "Todos",
+      "unread": "No.",
+      "read": "Leer"
+    },
+    "statusOptions": {
+      "todo": "TODO",
+      "inProgress": "EN PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
+    }
+  },
+  "sessionItem": {
+    "totalContext": "Total Contexto: {{tokens}} tokens",
+    "context": "Contexto: {{tokens}}",
+    "phase": "Fase {{phase}}:",
+    "compactedTo": "(compactado a {{tokens}})"
+  },
+  "notifications": {
+    "row": {
+      "team": "equipo",
+      "subagent": "subagent",
+      "markAsRead": "Marcar como leído",
+      "delete": "Suprimir",
+      "viewInSession": "View in session"
+    },
+    "title": "Notificaciones",
+    "loading": "Cargando notificaciones...",
+    "actions": {
+      "markFilteredAsRead": "Marca filtrada como leída",
+      "markAllAsRead": "Marcar todo como leído",
+      "markFilteredRead": "Marca filtrada de lectura",
+      "markAllRead": "Marcar todo leído",
+      "clearFilteredNotifications": "Notificaciones filtradas claras",
+      "clearAllNotifications": "Limpiar todas las notificaciones",
+      "clickToConfirm": "Haga clic para confirmar",
+      "clearFiltered": "Filtros claros",
+      "clearAll": "Despejado todo"
+    },
+    "counts": {
+      "unreadInFilter": "{{count}} sin leer en el filtro",
+      "unreadInFilter_one": "{{count}} sin leer en el filtro",
+      "unreadInFilter_few": "{{count}} sin leer en el filtro",
+      "unreadInFilter_many": "{{count}} sin leer en el filtro",
+      "unreadInFilter_other": "{{count}} sin leer en el filtro",
+      "inFilter": "{{count}} en filtro",
+      "inFilter_one": "{{count}} en filtro",
+      "inFilter_few": "{{count}} en filtro",
+      "inFilter_many": "{{count}} en filtro",
+      "inFilter_other": "{{count}} en filtro",
+      "unread": "{{count}}sin leer",
+      "unread_one": "{{count}}sin leer",
+      "unread_few": "{{count}}sin leer",
+      "unread_many": "{{count}}sin leer",
+      "unread_other": "{{count}}sin leer",
+      "total": "Total {{count}}",
+      "total_one": "Total {{count}}",
+      "total_few": "Total {{count}}",
+      "total_many": "Total {{count}}",
+      "total_other": "Total {{count}}"
+    },
+    "filters": {
+      "other": "Otros"
+    },
+    "empty": {
+      "noMatching": "No hay notificaciones coincidentes",
+      "noNotifications": "No notificaciones",
+      "tryDifferentFilter": "Pruebe otro filtro",
+      "allCaughtUp": "¡Están todos atrapados!"
+    }
+  },
+  "updates": {
+    "restartToUpdate": "Reinicie a la actualización",
+    "updateApp": "Aplicación actualizada",
+    "downloadedRestartTooltip": "Actualizar descargado, reiniciar para aplicar",
+    "newVersionAvailable": "Nueva versión disponible",
+    "updatingApp": "Aplicación actualizada",
+    "updateReady": "Actualización",
+    "restartNow": "Reinicie ahora"
+  },
+  "layout": {
+    "github": "GitHub",
+    "discord": "Discord",
+    "expandSidebar": "Ampliar la barra lateral",
+    "collapseSidebarShortcut": "Barra lateral de colapso ({{shortcut}})",
+    "sidebarView": "Vista lateral",
+    "resizeSidebar": "Resize sidebar",
+    "closeTab": "Cerrar ficha",
+    "openedFromSearch": "Abierto de búsqueda",
+    "pinnedSession": "Sesión celebrada en Pinned",
+    "jumpToSection": "Ir a la sección",
+    "newTab": "Nueva pestaña",
+    "newTabDashboard": "Nueva pestaña (Dashboard)",
+    "refreshSession": "Período de sesiones de reforma",
+    "refreshSessionWithShortcut": "Sesión de reflexión ({{shortcut}})",
+    "loadingTab": "Cargando ficha",
+    "menu": {
+      "teams": "Equipos",
+      "settings": "Ajustes",
+      "extensions": "Extensiones",
+      "search": "Búsqueda",
+      "schedules": "Cuadros",
+      "docs": "Docs",
+      "exportMarkdown": "Exportar como marcación",
+      "exportJson": "Exportar como JSON",
+      "exportPlainText": "Exportar como texto simple",
+      "analyzeSession": "Sesión de análisis"
+    },
+    "tabMenu": {
+      "closeTabs": "Cerrar {{count}} Tabs",
+      "closeTabs_one": "Cerrar {{count}} Tab",
+      "closeTabs_few": "Cerrar {{count}} Tabs",
+      "closeTabs_many": "Cerrar {{count}} Tabs",
+      "closeTabs_other": "Cerrar {{count}} Tabs",
+      "closeTab": "Cerrar Tab",
+      "closeOtherTabs": "Cerrar Otras pestañas",
+      "splitRight": "Dividir",
+      "splitLeft": "Split izquierda",
+      "pinToSidebar": "Pin a Sidebar",
+      "unpinFromSidebar": "Unpin de Sidebar",
+      "hideFromSidebar": "Escóndete de Sidebar",
+      "unhideFromSidebar": "Unhide desde Sidebar",
+      "closeAllTabs": "Cerrar Todas las pestañas"
+    },
+    "sections": {
+      "team": "Equipo",
+      "sessions": "Período de sesiones",
+      "kanban": "Kanban",
+      "claudeLogs": "Logs",
+      "messages": "Mensajes"
+    }
+  },
+  "editorFormatting": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "Strike",
+    "code": "Código"
+  },
+  "diff": {
+    "changed": "Cambios",
+    "noChangesDetected": "No se detectan cambios"
+  },
+  "codexLogin": {
+    "copyLoginLinkAndCode": "Copiar ChatGPT vínculo de inicio de sesión y código",
+    "copyLoginLink": "Copiar enlace para la sesión ChatGPT",
+    "copyFailed": "Copia fallado",
+    "copyLinkAndCode": "Copiar enlace + código",
+    "copyLink": "Copiar el enlace",
+    "enterCodeOnLoginPage": "Introduzca este código en la página de inicio de sesión de ChatGPT"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximizar",
+    "restore": "Restauración"
+  },
+  "context": {
+    "local": "Local",
+    "switchingTo": "Cambiar a {{workspace}}",
+    "loadingWorkspace": "Cargando espacio de trabajo",
+    "switchWorkspace": "Cambiar espacio de trabajo"
+  },
+  "repositories": {
+    "noneAvailable": "No hay depósitos disponibles",
+    "remove": "Eliminar el repositorio"
+  },
+  "export": {
+    "session": "Período de sesiones de exportación",
+    "sessionTitle": "Período de sesiones de exportación"
+  },
+  "brand": {
+    "claude": "Claude"
+  },
+  "sessionReport": {
+    "noSessionData": "No se dispone de datos del período de sesiones",
+    "title": "Informe del período de sesiones"
+  },
+  "sessionFilters": {
+    "project": {
+      "selectProject": "Seleccionar proyecto"
+    }
+  },
+  "tasks": {
+    "date": {
+      "updatedPrefix": "arriba",
+      "updatedYesterday": "ayer arriba",
+      "yesterday": "Ayer"
+    },
+    "reviewState": {
+      "needsFix": "Necesidades Arreglos"
+    },
+    "unassigned": "no asignados"
+  }
+}

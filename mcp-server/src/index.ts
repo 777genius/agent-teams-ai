@@ -9,6 +9,11 @@ const HTTP_TRANSPORT = 'httpStream';
 const STDIO_TRANSPORT = 'stdio';
 const DEFAULT_HTTP_HOST = '127.0.0.1';
 const DEFAULT_HTTP_ENDPOINT = '/mcp';
+const MCP_HTTP_IDENTITY_SERVICE = 'agent-teams-mcp-http';
+const MCP_HTTP_IDENTITY_SERVICE_ENV = 'AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE';
+const MCP_HTTP_CLAUDE_DIR_HASH_ENV = 'AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH';
+const MCP_HTTP_LAUNCH_SPEC_HASH_ENV = 'AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH';
+const MCP_HTTP_OWNER_INSTANCE_ID_ENV = 'AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID';
 
 export type AgentTeamsMcpStartOptions =
   | {
@@ -23,10 +28,32 @@ export type AgentTeamsMcpStartOptions =
       };
     };
 
-export function createServer() {
+export interface AgentTeamsMcpHttpHealthIdentity {
+  schemaVersion: 1;
+  service: typeof MCP_HTTP_IDENTITY_SERVICE;
+  transport: typeof HTTP_TRANSPORT;
+  host: string;
+  port: number;
+  endpoint: `/${string}`;
+  claudeDirHash: string;
+  launchSpecHash: string;
+  ownerInstanceId: string;
+}
+
+export function createServer(input: { healthIdentity?: AgentTeamsMcpHttpHealthIdentity | null } = {}) {
   const server = new FastMCP({
     name: 'agent-teams-mcp',
     version: '1.0.0',
+    ...(input.healthIdentity
+      ? {
+          health: {
+            enabled: true,
+            path: '/health',
+            status: 200,
+            message: JSON.stringify(input.healthIdentity),
+          },
+        }
+      : {}),
   });
 
   registerTools(server);
@@ -64,6 +91,45 @@ function parsePort(value: string | null | undefined): number {
   return parsed;
 }
 
+function readIdentityValue(env: NodeJS.ProcessEnv, name: string): string | null {
+  const value = env[name]?.trim();
+  return value && value.length > 0 ? value : null;
+}
+
+export function buildHttpHealthIdentity(
+  options: AgentTeamsMcpStartOptions,
+  env: NodeJS.ProcessEnv = process.env
+): AgentTeamsMcpHttpHealthIdentity | null {
+  if (options.transportType !== HTTP_TRANSPORT) {
+    return null;
+  }
+
+  const service = readIdentityValue(env, MCP_HTTP_IDENTITY_SERVICE_ENV);
+  const claudeDirHash = readIdentityValue(env, MCP_HTTP_CLAUDE_DIR_HASH_ENV);
+  const launchSpecHash = readIdentityValue(env, MCP_HTTP_LAUNCH_SPEC_HASH_ENV);
+  const ownerInstanceId = readIdentityValue(env, MCP_HTTP_OWNER_INSTANCE_ID_ENV);
+  if (
+    service !== MCP_HTTP_IDENTITY_SERVICE ||
+    !claudeDirHash ||
+    !launchSpecHash ||
+    !ownerInstanceId
+  ) {
+    return null;
+  }
+
+  return {
+    schemaVersion: 1,
+    service: MCP_HTTP_IDENTITY_SERVICE,
+    transport: HTTP_TRANSPORT,
+    host: options.httpStream.host,
+    port: options.httpStream.port,
+    endpoint: options.httpStream.endpoint,
+    claudeDirHash,
+    launchSpecHash,
+    ownerInstanceId,
+  };
+}
+
 export function resolveStartOptions(
   argv: string[] = process.argv,
   env: NodeJS.ProcessEnv = process.env
@@ -92,6 +158,7 @@ export function resolveStartOptions(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const server = createServer();
-  void server.start(resolveStartOptions());
+  const startOptions = resolveStartOptions();
+  const server = createServer({ healthIdentity: buildHttpHealthIdentity(startOptions) });
+  void server.start(startOptions);
 }

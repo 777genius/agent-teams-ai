@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { HeroMessage } from "~/data/heroScene";
+import type { HeroMessage, HeroMessagePhase } from "~/data/heroScene";
 
 const props = defineProps<{
   message: HeroMessage | null;
-  phase: "sender" | "packet" | "receiver" | "cooldown";
+  phase: HeroMessagePhase;
   reducedMotion?: boolean;
 }>();
 
@@ -17,34 +17,40 @@ const receiverStyle = computed(() => ({
   "--bubble-y": props.message ? String(props.message.toY) : "0",
 }));
 
-const showSender = computed(() => props.message && (props.phase === "sender" || props.phase === "packet"));
-const showReceiver = computed(() => props.message && props.phase === "receiver");
+const showSender = computed(() =>
+  props.message && props.message.from !== "reviewer" && (props.phase === "sender" || props.phase === "packet"),
+);
+const showReceiver = computed(() =>
+  props.message && props.message.to !== "reviewer" && props.phase === "receiver",
+);
 </script>
 
 <template>
   <div class="cyber-messages" aria-hidden="true">
     <Transition name="cyber-bubble">
-      <div
+      <CyberHeroSpeechBubble
         v-if="showSender && message && !reducedMotion"
-        class="cyber-message cyber-message--sender cyber-panel"
-        :style="senderStyle"
+        variant="sender"
+        :role="message.from"
+        :bubble-style="senderStyle"
       >
         {{ message.text }}
-      </div>
+      </CyberHeroSpeechBubble>
     </Transition>
 
     <Transition name="cyber-bubble">
-      <div
+      <CyberHeroSpeechBubble
         v-if="showReceiver && message && !reducedMotion"
-        class="cyber-message cyber-message--receiver cyber-panel"
-        :style="receiverStyle"
+        variant="receiver"
+        :role="message.to"
+        :bubble-style="receiverStyle"
       >
         {{ message.response }}
-      </div>
+      </CyberHeroSpeechBubble>
     </Transition>
 
-    <div v-if="reducedMotion" class="cyber-message cyber-message--static cyber-panel">
+    <CyberHeroSpeechBubble v-if="reducedMotion" class="cyber-panel" variant="static">
       Agents coordinate work automatically.
-    </div>
+    </CyberHeroSpeechBubble>
   </div>
 </template>

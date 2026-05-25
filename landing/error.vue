@@ -7,9 +7,34 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const config = useRuntimeConfig();
+const siteUrl = ((config.public.siteUrl as string) || "https://777genius.github.io/agent-teams-ai").replace(/\/+$/, "");
+const ogImage = `${siteUrl}/og-image-agent-teams-v5.png`;
 
 const statusCode = computed(() => props.error?.statusCode || 404);
 const isNotFound = computed(() => statusCode.value === 404);
+const errorTitle = computed(() => (isNotFound.value ? t("error.notFoundTitle") : t("error.genericTitle")));
+const errorDescription = computed(() => (isNotFound.value ? t("error.notFoundDescription") : t("error.genericDescription")));
+
+useSeoMeta({
+  title: errorTitle,
+  description: errorDescription,
+  robots: "noindex, nofollow",
+  ogTitle: errorTitle,
+  ogDescription: errorDescription,
+  ogType: "website",
+  ogSiteName: "Agent Teams",
+  ogImage,
+  ogImageType: "image/png",
+  ogImageWidth: "1200",
+  ogImageHeight: "630",
+  ogImageAlt: "Agent Teams - AI agent orchestration",
+  twitterCard: "summary_large_image",
+  twitterTitle: errorTitle,
+  twitterDescription: errorDescription,
+  twitterImage: ogImage,
+  twitterImageAlt: "Agent Teams - AI agent orchestration"
+});
 
 const handleGoHome = () => clearError({ redirect: "/" });
 </script>

@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
@@ -32,6 +33,10 @@ interface RenderedTeamChangeSummary {
 }
 
 const EMPTY_MEMBER_COLOR_MAP = new Map<string, string>();
+const COMPACT_HIDDEN_INTERVAL_SCOPE_WARNINGS = new Set([
+  'Task boundaries missing - scoped by workIntervals timestamps.',
+  'Task start boundary missing - scoped by persisted workIntervals timestamps.',
+]);
 
 function getChangeSetFiles(changeSet: TaskChangeSetV2 | null): FileChangeSummary[] {
   if (!Array.isArray(changeSet?.files)) {
@@ -102,13 +107,37 @@ function getVisibleFilePath(file: FileChangeSummary): string {
     : file.filePath;
 }
 
-function getTaskSummaryBadge(changeSet: TaskChangeSetV2 | null): string | undefined {
+function getTaskSummaryBadge(
+  changeSet: TaskChangeSetV2 | null,
+  labels: {
+    files: (count: number) => string;
+    attention: string;
+    noSafeDiff: string;
+  }
+): string | undefined {
   if (!changeSet) return undefined;
   const reviewability = classifyTaskChangeReviewability(changeSet).reviewability;
-  if (changeSet.totalFiles > 0) return `${changeSet.totalFiles} files`;
-  if (reviewability === 'attention_required') return 'attention';
-  if (reviewability === 'diagnostic_only') return 'no safe diff';
+  if (changeSet.totalFiles > 0) return labels.files(changeSet.totalFiles);
+  if (reviewability === 'attention_required') return labels.attention;
+  if (reviewability === 'diagnostic_only') return labels.noSafeDiff;
   return undefined;
+}
+
+function isWorkIntervalScopedFileChange(changeSet: TaskChangeSetV2): boolean {
+  const reason = changeSet.scope?.confidence?.reason;
+  return (
+    getChangeSetFiles(changeSet).length > 0 &&
+    changeSet.confidence === 'medium' &&
+    typeof reason === 'string' &&
+    reason.toLowerCase().includes('workinterval')
+  );
+}
+
+function shouldHideCompactDiagnostic(changeSet: TaskChangeSetV2, message: string): boolean {
+  return (
+    isWorkIntervalScopedFileChange(changeSet) &&
+    COMPACT_HIDDEN_INTERVAL_SCOPE_WARNINGS.has(message.trim())
+  );
 }
 
 function getTaskChangeDiagnosticMessages(changeSet: TaskChangeSetV2): string[] {
@@ -120,7 +149,13 @@ function getTaskChangeDiagnosticMessages(changeSet: TaskChangeSetV2): string[] {
     status.diagnostics.length > 0
       ? status.diagnostics.map((diagnostic) => diagnostic.message)
       : getChangeSetWarnings(changeSet);
-  return [...new Set(messages.filter((message) => message.trim().length > 0))];
+  return [
+    ...new Set(
+      messages.filter(
+        (message) => message.trim().length > 0 && !shouldHideCompactDiagnostic(changeSet, message)
+      )
+    ),
+  ];
 }
 
 export const TeamChangesSection = memo(function TeamChangesSection({
@@ -130,6 +165,7 @@ export const TeamChangesSection = memo(function TeamChangesSection({
   onOpenTask,
   onViewChanges,
 }: TeamChangesSectionProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
   const [sectionOpen, setSectionOpen] = useState(false);
   const { summariesByTaskId, badgeCount, stats, loading, refreshing, error, refresh } =
     useTeamChangesSummaries({
@@ -176,7 +212,7 @@ export const TeamChangesSection = memo(function TeamChangesSection({
   return (
     <CollapsibleTeamSection
       sectionId="changes"
-      title="Changes"
+      title={t('taskDetail.changes.title')}
       icon={<FileDiff size={14} />}
       badge={badge}
       defaultOpen={false}
@@ -198,7 +234,7 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                   refresh();
                 }}
                 disabled={loading || refreshing}
-                aria-label="Refresh team changes"
+                aria-label={t('taskDetail.changes.refreshTeamChanges')}
               >
                 <RefreshCw
                   size={12}
@@ -206,7 +242,7 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                 />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top">Refresh</TooltipContent>
+            <TooltipContent side="top">{t('taskDetail.changes.refreshShort')}</TooltipContent>
           </Tooltip>
         ) : null
       }
@@ -223,9 +259,15 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                 : 'unknown';
               const contributors = getTaskChangeContributors(task, changeSet);
               const contributorLabel =
-                contributors.length > 0 ? contributors.slice(0, 3).join(', ') : 'Unassigned';
+                contributors.length > 0
+                  ? contributors.slice(0, 3).join(', ')
+                  : t('taskDetail.unassigned');
               const extraContributors = Math.max(0, contributors.length - 3);
-              const badgeText = getTaskSummaryBadge(changeSet);
+              const badgeText = getTaskSummaryBadge(changeSet, {
+                files: (count) => t('taskDetail.changes.fileCount', { count }),
+                attention: t('taskDetail.changes.badges.attention'),
+                noSafeDiff: t('taskDetail.changes.badges.noSafeDiff'),
+              });
               const diagnosticMessages = changeSet
                 ? getTaskChangeDiagnosticMessages(changeSet)
                 : [];
@@ -244,7 +286,7 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                       type="button"
                       className="flex min-w-0 flex-1 items-center gap-2 text-left"
                       onClick={() => onOpenTask(task)}
-                      aria-label={`Open task ${task.subject}`}
+                      aria-label={t('taskDetail.changes.openTask', { subject: task.subject })}
                     >
                       <span className="shrink-0 font-mono text-[10px] text-[var(--color-text-muted)]">
                         #{deriveTaskDisplayId(task.id)}
@@ -289,12 +331,14 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                           type="button"
                           className="shrink-0 rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
                           onClick={() => onViewChanges(task.id)}
-                          aria-label="Review task diff"
+                          aria-label={t('taskDetail.changes.reviewTaskDiff')}
                         >
                           <GitCompareArrows size={13} />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Review diff</TooltipContent>
+                      <TooltipContent side="top">
+                        {t('taskDetail.changes.reviewDiff')}
+                      </TooltipContent>
                     </Tooltip>
                   </div>
 
@@ -332,17 +376,23 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                       {visibleFiles.map((file) => (
                         <div
                           key={`${summary.taskId}:${file.filePath}`}
-                          className="group flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]"
+                          role="button"
+                          tabIndex={0}
+                          title={getVisibleFilePath(file)}
+                          className="group flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
+                          onClick={() => onViewChanges(task.id, file.filePath)}
+                          onKeyDown={(event) => {
+                            if (event.target !== event.currentTarget) return;
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onViewChanges(task.id, file.filePath);
+                            }
+                          }}
                         >
                           <FileIcon fileName={getVisibleFileName(file)} className="size-3.5" />
-                          <button
-                            type="button"
-                            className="min-w-0 flex-1 truncate text-left font-mono text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
-                            onClick={() => onViewChanges(task.id, file.filePath)}
-                            title={getVisibleFilePath(file)}
-                          >
+                          <span className="min-w-0 flex-1 truncate text-left font-mono text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-text)]">
                             {getVisibleFilePath(file)}
-                          </button>
+                          </span>
                           <span className="flex shrink-0 items-center gap-1.5">
                             {file.linesAdded > 0 ? (
                               <span className="text-emerald-400">+{file.linesAdded}</span>
@@ -357,13 +407,18 @@ export const TeamChangesSection = memo(function TeamChangesSection({
                                 <button
                                   type="button"
                                   className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
-                                  onClick={() => onViewChanges(task.id, file.filePath)}
-                                  aria-label="Review diff"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onViewChanges(task.id, file.filePath);
+                                  }}
+                                  aria-label={t('taskDetail.changes.reviewDiff')}
                                 >
                                   <GitCompareArrows size={13} />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="top">Review diff</TooltipContent>
+                              <TooltipContent side="top">
+                                {t('taskDetail.changes.reviewDiff')}
+                              </TooltipContent>
                             </Tooltip>
                           </span>
                         </div>
@@ -373,7 +428,9 @@ export const TeamChangesSection = memo(function TeamChangesSection({
 
                   {files.length > visibleFiles.length && fileBudget > 0 ? (
                     <div className="border-t border-[var(--color-border)] px-2 py-1.5 text-xs text-[var(--color-text-muted)]">
-                      {files.length - visibleFiles.length} more files
+                      {t('taskDetail.changes.moreFiles', {
+                        count: files.length - visibleFiles.length,
+                      })}
                     </div>
                   ) : null}
                 </div>
@@ -385,29 +442,40 @@ export const TeamChangesSection = memo(function TeamChangesSection({
             {loading || refreshing ? (
               <span className="inline-flex items-center gap-1">
                 <Loader2 size={11} className="animate-spin" />
-                Refreshing
+                {t('taskDetail.changes.refreshing')}
               </span>
             ) : null}
-            {error ? <span className="text-red-400">Refresh failed: {error}</span> : null}
-            {hiddenFileRows > 0 ? <span>{hiddenFileRows} file rows hidden</span> : null}
+            {error ? (
+              <span className="text-red-400">
+                {t('taskDetail.changes.refreshFailed', { error })}
+              </span>
+            ) : null}
+            {hiddenFileRows > 0 ? (
+              <span>{t('taskDetail.changes.fileRowsHidden', { count: hiddenFileRows })}</span>
+            ) : null}
             {stats.deferredCount > 0 ? (
-              <span>{stats.deferredCount} tasks deferred this pass</span>
+              <span>{t('taskDetail.changes.tasksDeferred', { count: stats.deferredCount })}</span>
             ) : null}
           </div>
         </div>
       ) : loading || refreshing ? (
         <div className="flex items-center gap-2 py-2 text-xs text-[var(--color-text-muted)]">
           <Loader2 size={14} className="animate-spin" />
-          {loading ? 'Loading changes...' : 'Refreshing changes...'}
+          {loading ? t('taskDetail.changes.loading') : t('taskDetail.changes.refreshingChanges')}
         </div>
       ) : error ? (
         <p className="text-xs text-red-400">{error}</p>
       ) : (
         <div className="space-y-1 py-1">
-          <p className="text-xs text-[var(--color-text-muted)]">No file changes recorded</p>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            {t('taskDetail.changes.empty.noFileChangesRecorded')}
+          </p>
           {stats.eligibleCount > 0 ? (
             <p className="text-[10px] text-[var(--color-text-muted)]">
-              Scanned {stats.requestedCount} of {stats.eligibleCount} candidate tasks
+              {t('taskDetail.changes.scannedCandidateTasks', {
+                requested: stats.requestedCount,
+                eligible: stats.eligibleCount,
+              })}
             </p>
           ) : null}
         </div>

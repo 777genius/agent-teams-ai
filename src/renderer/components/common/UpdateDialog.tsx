@@ -9,15 +9,18 @@
 import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
+import { stripDownloadsSection } from '@shared/utils/releaseNotes';
 import { ExternalLink, X } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
 
 export const UpdateDialog = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('common');
   const {
     showUpdateDialog,
     updateStatus,
@@ -94,10 +97,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
   const isDownloaded = updateStatus === 'downloaded';
 
-  // Strip "Downloads" section (and everything after it) from release notes
-  const filteredNotes = releaseNotes
-    ? releaseNotes.replace(/\n#{1,3}\s+Downloads[\s\S]*$/i, '').trimEnd()
-    : releaseNotes;
+  const filteredNotes = releaseNotes ? stripDownloadsSection(releaseNotes) : releaseNotes;
 
   const releaseUrl = availableVersion
     ? `https://github.com/777genius/agent-teams-ai/releases/tag/v${availableVersion}`
@@ -119,7 +119,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
         className="absolute inset-0 cursor-default"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
         onClick={dismissUpdateDialog}
-        aria-label="Close dialog"
+        aria-label={t('updateDialog.closeDialog')}
         tabIndex={-1}
       />
       <div
@@ -127,7 +127,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
         className="relative mx-4 w-full max-w-2xl rounded-md border p-5 shadow-lg"
         role="dialog"
         aria-modal="true"
-        aria-label="Update available"
+        aria-label={t('updateDialog.updateAvailable')}
         style={{
           backgroundColor: 'var(--color-surface-overlay)',
           borderColor: 'var(--color-border-emphasis)',
@@ -144,7 +144,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
         <div className="mb-3 pr-8">
           <h2 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-            {isDownloaded ? 'Update Ready' : 'Update Available'}
+            {isDownloaded ? t('updateDialog.updateReady') : t('updateDialog.updateAvailable')}
           </h2>
           {availableVersion && (
             <div
@@ -180,7 +180,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
             </ReactMarkdown>
           ) : (
             <p className="italic" style={{ color: 'var(--color-text-muted)' }}>
-              No release notes available.
+              {t('updateDialog.noReleaseNotes')}
             </p>
           )}
         </div>
@@ -194,7 +194,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
               style={{ color: 'var(--color-text-muted)' }}
             >
               <ExternalLink className="size-3" />
-              View on GitHub
+              {t('updateDialog.viewOnGitHub')}
             </button>
           )}
           <div className="flex-1" />
@@ -206,21 +206,21 @@ export const UpdateDialog = (): React.JSX.Element | null => {
               color: 'var(--color-text-secondary)',
             }}
           >
-            Later
+            {t('updateDialog.later')}
           </button>
           {isDownloaded ? (
             <button
               onClick={installUpdate}
               className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-500"
             >
-              Restart now
+              {t('updateDialog.restartNow')}
             </button>
           ) : (
             <button
               onClick={downloadUpdate}
               className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
             >
-              Download
+              {t('updateDialog.download')}
             </button>
           )}
         </div>

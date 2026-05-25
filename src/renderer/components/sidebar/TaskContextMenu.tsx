@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,6 +33,8 @@ export const TaskContextMenu = ({
   onDelete,
   children,
 }: TaskContextMenuProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -42,24 +45,24 @@ export const TaskContextMenu = ({
           {isPinned ? (
             <>
               <PinOff className="size-3.5 shrink-0" />
-              <span>Unpin</span>
+              <span>{t('taskContextMenu.unpin')}</span>
             </>
           ) : (
             <>
               <Pin className="size-3.5 shrink-0" />
-              <span>Pin</span>
+              <span>{t('taskContextMenu.pin')}</span>
             </>
           )}
         </ContextMenuItem>
 
         <ContextMenuItem onSelect={onRename}>
           <Pencil className="size-3.5 shrink-0" />
-          <span>Rename</span>
+          <span>{t('taskContextMenu.rename')}</span>
         </ContextMenuItem>
 
         <ContextMenuItem onSelect={onMarkUnread}>
           <Mail className="size-3.5 shrink-0" />
-          <span>Mark as unread</span>
+          <span>{t('taskContextMenu.markUnread')}</span>
         </ContextMenuItem>
 
         <ContextMenuSeparator />
@@ -68,12 +71,12 @@ export const TaskContextMenu = ({
           {isArchived ? (
             <>
               <ArchiveRestore className="size-3.5 shrink-0" />
-              <span>Unarchive</span>
+              <span>{t('taskContextMenu.unarchive')}</span>
             </>
           ) : (
             <>
               <Archive className="size-3.5 shrink-0" />
-              <span>Archive</span>
+              <span>{t('taskContextMenu.archive')}</span>
             </>
           )}
         </ContextMenuItem>
@@ -83,7 +86,7 @@ export const TaskContextMenu = ({
             <ContextMenuSeparator />
             <ContextMenuItem onSelect={onDelete} className="text-red-400 focus:text-red-400">
               <Trash2 className="size-3.5 shrink-0" />
-              <span>Delete task</span>
+              <span>{t('taskContextMenu.deleteTask')}</span>
             </ContextMenuItem>
           </>
         )}

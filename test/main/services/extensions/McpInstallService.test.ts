@@ -23,6 +23,14 @@ import { execCli } from '@main/utils/childProcess';
 
 const mockExecCli = vi.mocked(execCli);
 
+function findMcpCliArgs(command: 'add' | 'remove'): string[] {
+  const call = mockExecCli.mock.calls.find(([, args]) => args[0] === 'mcp' && args[1] === command);
+  if (!call) {
+    throw new Error(`Expected a claude mcp ${command} CLI call`);
+  }
+  return call[1];
+}
+
 // ── Mock aggregator ──────────────────────────────────────────────────────────
 
 function makeStdioServer(): McpCatalogItem {
@@ -60,7 +68,7 @@ function makeHttpServer(): McpCatalogItem {
 }
 
 function createMockAggregator(
-  getByIdResult: McpCatalogItem | null = makeStdioServer(),
+  getByIdResult: McpCatalogItem | null = makeStdioServer()
 ): McpCatalogAggregator {
   return {
     search: vi.fn(),
@@ -101,8 +109,20 @@ describe('McpInstallService', () => {
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
         '/usr/local/bin/claude',
-        ['mcp', 'add', '-s', 'user', '-e', 'UPSTASH_API_KEY=test-key-123', 'context7', '--', 'npx', '-y', '@upstash/context7-mcp@1.0.0'],
-        expect.objectContaining({ timeout: 30_000 }),
+        [
+          'mcp',
+          'add',
+          '-s',
+          'user',
+          '-e',
+          'UPSTASH_API_KEY=test-key-123',
+          'context7',
+          '--',
+          'npx',
+          '-y',
+          '@upstash/context7-mcp@1.0.0',
+        ],
+        expect.objectContaining({ timeout: 30_000 })
       );
     });
 
@@ -118,7 +138,7 @@ describe('McpInstallService', () => {
         headers: [],
       });
 
-      const args = mockExecCli.mock.calls[0]?.[1];
+      const args = findMcpCliArgs('add');
       expect(args).toContain('-s');
       expect(args).toContain('project');
     });
@@ -135,7 +155,7 @@ describe('McpInstallService', () => {
         headers: [],
       });
 
-      const args = mockExecCli.mock.calls[0]?.[1];
+      const args = findMcpCliArgs('add');
       expect(args).not.toContain('-s');
     });
   });
@@ -159,8 +179,19 @@ describe('McpInstallService', () => {
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
         '/usr/local/bin/claude',
-        ['mcp', 'add', '-s', 'user', '-t', 'sse', '-H', 'Authorization: Bearer token123', 'example-http', 'https://mcp.example.com/sse'],
-        expect.objectContaining({ timeout: 30_000 }),
+        [
+          'mcp',
+          'add',
+          '-s',
+          'user',
+          '-t',
+          'sse',
+          '-H',
+          'Authorization: Bearer token123',
+          'example-http',
+          'https://mcp.example.com/sse',
+        ],
+        expect.objectContaining({ timeout: 30_000 })
       );
     });
   });
@@ -252,7 +283,7 @@ describe('McpInstallService', () => {
   describe('install (secret masking)', () => {
     it('masks env values in error messages', async () => {
       mockExecCli.mockRejectedValue(
-        new Error('Command failed: UPSTASH_API_KEY=super-secret-key-12345'),
+        new Error('Command failed: UPSTASH_API_KEY=super-secret-key-12345')
       );
 
       const result = await service.install({
@@ -271,9 +302,7 @@ describe('McpInstallService', () => {
     it('masks header values in error messages', async () => {
       aggregator = createMockAggregator(makeHttpServer());
       service = new McpInstallService(aggregator);
-      mockExecCli.mockRejectedValue(
-        new Error('Auth failed with Bearer my-token-value'),
-      );
+      mockExecCli.mockRejectedValue(new Error('Auth failed with Bearer my-token-value'));
 
       const result = await service.install({
         registryId: 'test',
@@ -336,7 +365,7 @@ describe('McpInstallService', () => {
       expect(mockExecCli).toHaveBeenCalledWith(
         '/usr/local/bin/claude',
         ['mcp', 'remove', 'context7'],
-        expect.objectContaining({ timeout: 30_000 }),
+        expect.objectContaining({ timeout: 30_000 })
       );
     });
 
@@ -345,7 +374,7 @@ describe('McpInstallService', () => {
 
       await service.uninstall('context7', 'user');
 
-      const args = mockExecCli.mock.calls[0]?.[1];
+      const args = findMcpCliArgs('remove');
       expect(args).toContain('-s');
       expect(args).toContain('user');
     });

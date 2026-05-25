@@ -1,3 +1,4 @@
+import { useAppTranslation } from '@features/localization/renderer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
@@ -36,12 +37,13 @@ export const WorkflowTimeline = ({
   implementationDurationTask,
   nowMs,
 }: WorkflowTimelineProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const implementationNowMs = nowMs ?? 0;
 
   if (events.length === 0) {
     return (
       <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
-        No workflow history recorded
+        {t('taskDetail.workflowTimeline.empty')}
       </div>
     );
   }
@@ -80,11 +82,13 @@ export const WorkflowTimeline = ({
                       className="shrink-0 rounded bg-[var(--color-bg-secondary)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text-muted)]"
                       title={
                         implementationDuration.running
-                          ? 'Current implementation interval'
-                          : 'Implementation interval ended at this transition'
+                          ? t('taskDetail.workflowTimeline.currentImplementationInterval')
+                          : t('taskDetail.workflowTimeline.implementationIntervalEnded')
                       }
                     >
-                      {implementationDuration.running ? 'running ' : ''}
+                      {implementationDuration.running
+                        ? t('taskDetail.workflowTimeline.runningPrefix')
+                        : ''}
                       {formatTaskImplementationDuration(implementationDuration.elapsedMs)}
                     </span>
                   ) : null}
@@ -120,16 +124,19 @@ const EventContent = ({
   event: TaskHistoryEvent;
   memberColorMap?: Map<string, string>;
 }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   switch (event.type) {
     case 'task_created':
       return (
         <span className="flex items-center gap-1">
           <Plus size={10} />
-          Created as
+          {t('taskDetail.workflowTimeline.createdAs')}
           <StatusBadge status={event.status} />
           {event.actor ? (
             <>
-              <span className="text-[var(--color-text-muted)]">by</span>
+              <span className="text-[var(--color-text-muted)]">
+                {t('taskDetail.workflowTimeline.by')}
+              </span>
               <MemberBadge
                 name={event.actor}
                 color={memberColorMap?.get(event.actor)}
@@ -154,7 +161,7 @@ const EventContent = ({
           <UserRound size={10} className="text-cyan-400" />
           {event.from && event.to ? (
             <>
-              Reassigned
+              {t('taskDetail.workflowTimeline.reassigned')}
               <MemberBadge
                 name={event.from}
                 color={memberColorMap?.get(event.from)}
@@ -171,7 +178,7 @@ const EventContent = ({
             </>
           ) : event.to ? (
             <>
-              Assigned to
+              {t('taskDetail.workflowTimeline.assignedTo')}
               <MemberBadge
                 name={event.to}
                 color={memberColorMap?.get(event.to)}
@@ -181,7 +188,7 @@ const EventContent = ({
             </>
           ) : event.from ? (
             <>
-              Unassigned from
+              {t('taskDetail.workflowTimeline.unassignedFrom')}
               <MemberBadge
                 name={event.from}
                 color={memberColorMap?.get(event.from)}
@@ -190,7 +197,7 @@ const EventContent = ({
               />
             </>
           ) : (
-            'Owner changed'
+            t('taskDetail.workflowTimeline.ownerChanged')
           )}
         </span>
       );
@@ -198,7 +205,7 @@ const EventContent = ({
       return (
         <span className="flex items-center gap-1">
           <Eye size={10} className="text-purple-400" />
-          Review requested
+          {t('taskDetail.workflowTimeline.reviewRequested')}
           {event.reviewer ? (
             <MemberBadge
               name={event.reviewer}
@@ -213,14 +220,14 @@ const EventContent = ({
       return (
         <span className="flex items-center gap-1">
           <Eye size={10} className="text-purple-400" />
-          Review started
+          {t('taskDetail.workflowTimeline.reviewStarted')}
         </span>
       );
     case 'review_changes_requested':
       return (
         <span className="flex items-center gap-1">
           <MessageSquareX size={10} className="text-amber-400" />
-          Changes requested
+          {t('taskDetail.workflowTimeline.changesRequested')}
           <ReviewStateBadge state="needsFix" />
         </span>
       );
@@ -228,18 +235,19 @@ const EventContent = ({
       return (
         <span className="flex items-center gap-1">
           <ShieldCheck size={10} className="text-emerald-400" />
-          Approved
+          {t('taskDetail.workflowTimeline.approved')}
           <ReviewStateBadge state="approved" />
         </span>
       );
     default:
-      return <span>Unknown event</span>;
+      return <span>{t('taskDetail.workflowTimeline.unknownEvent')}</span>;
   }
 };
 
 const StatusBadge = ({ status }: { status: TeamTaskStatus }): React.JSX.Element => {
   const style = TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.pending;
-  const label = TASK_STATUS_LABELS[status] ?? status;
+  const { t } = useAppTranslation('team');
+  const label = TASK_STATUS_LABELS[status] ? getStatusLabel(status, t) : status;
   return (
     <span
       className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-medium', style.bg, style.text)}
@@ -250,6 +258,7 @@ const StatusBadge = ({ status }: { status: TeamTaskStatus }): React.JSX.Element 
 };
 
 const ReviewStateBadge = ({ state }: { state: TeamReviewState }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   if (state === 'none') return null;
   const display = REVIEW_STATE_DISPLAY[state];
   if (!display) return null;
@@ -257,10 +266,46 @@ const ReviewStateBadge = ({ state }: { state: TeamReviewState }): React.JSX.Elem
     <span
       className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-medium', display.bg, display.text)}
     >
-      {display.label}
+      {getReviewStateLabel(state, t)}
     </span>
   );
 };
+
+function getStatusLabel(
+  status: TeamTaskStatus,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string {
+  switch (status) {
+    case 'pending':
+      return t('tasks.status.pending');
+    case 'in_progress':
+      return t('tasks.status.inProgress');
+    case 'completed':
+      return t('tasks.status.completed');
+    case 'deleted':
+      return t('tasks.status.deleted');
+    default:
+      return status;
+  }
+}
+
+function getReviewStateLabel(
+  state: TeamReviewState,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string {
+  switch (state) {
+    case 'approved':
+      return t('taskDetail.reviewStates.approved');
+    case 'needsFix':
+      return t('taskDetail.reviewStates.needsFix');
+    case 'review':
+      return t('taskDetail.reviewStates.inReview');
+    case 'none':
+      return '';
+    default:
+      return state;
+  }
+}
 
 function dotColor(event: TaskHistoryEvent): string {
   switch (event.type) {

@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -82,6 +83,7 @@ export const McpServerDetailDialog = ({
   cliStatus: cliStatusOverride,
   cliStatusLoading,
 }: McpServerDetailDialogProps): React.JSX.Element => {
+  const { t } = useAppTranslation('extensions');
   const storedCliStatus = useStore((s) => s.cliStatus);
   const cliStatus = cliStatusOverride ?? storedCliStatus;
   const defaultSharedScope = getDefaultMcpSharedScope(cliStatus?.flavor);
@@ -115,8 +117,8 @@ export const McpServerDetailDialog = ({
     normalizedInstalledEntries.some((entry) => entry.scope === 'user')
       ? [{ value: 'user' as const, label: getMcpScopeLabel('user', cliStatus?.flavor) }]
       : []),
-    { value: 'project', label: 'Project' },
-    { value: 'local', label: 'Local' },
+    { value: 'project', label: t('mcpDetail.scope.project') },
+    { value: 'local', label: t('mcpDetail.scope.local') },
   ];
   const preferredInstalledEntry = getPreferredMcpInstallationEntry(normalizedInstalledEntries);
   const selectedInstalledEntry =
@@ -336,12 +338,12 @@ export const McpServerDetailDialog = ({
         {/* Metadata grid */}
         <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
-            <span className="text-text-muted">Source</span>
+            <span className="text-text-muted">{t('mcpDetail.metadata.source')}</span>
             <p className="capitalize text-text">{server.source}</p>
           </div>
           {stars != null && (
             <div>
-              <span className="text-text-muted">GitHub Stars</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.githubStars')}</span>
               <p className="flex items-center gap-1 text-text">
                 <Star className="size-3.5 fill-amber-400 text-amber-400" />
                 {stars.toLocaleString()}
@@ -350,55 +352,57 @@ export const McpServerDetailDialog = ({
           )}
           {server.version && (
             <div>
-              <span className="text-text-muted">Version</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.version')}</span>
               <p className="text-text">{server.version}</p>
             </div>
           )}
           {server.license && (
             <div>
-              <span className="text-text-muted">License</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.license')}</span>
               <p className="text-text">{server.license}</p>
             </div>
           )}
           <div>
-            <span className="text-text-muted">Install Type</span>
+            <span className="text-text-muted">{t('mcpDetail.metadata.installType')}</span>
             {server.installSpec?.type === 'stdio' ? (
               <Button
                 variant="link"
                 className="h-auto p-0 text-sm text-blue-400"
                 onClick={() => void api.openExternal(npmPackageUrl!)}
               >
-                npm: {server.installSpec.npmPackage}
+                {t('mcpDetail.install.npmPackage', { package: server.installSpec.npmPackage })}
               </Button>
             ) : (
               <p className="text-text">
                 {server.installSpec
-                  ? `HTTP: ${server.installSpec.transportType}`
-                  : 'Manual setup required'}
+                  ? t('mcpDetail.install.httpTransport', {
+                      transport: server.installSpec.transportType,
+                    })
+                  : t('mcpDetail.install.manualSetupRequired')}
               </p>
             )}
           </div>
           {server.author && (
             <div>
-              <span className="text-text-muted">Author</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.author')}</span>
               <p className="text-text">{server.author}</p>
             </div>
           )}
           {server.hostingType && (
             <div>
-              <span className="text-text-muted">Hosting</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.hosting')}</span>
               <p className="capitalize text-text">{server.hostingType}</p>
             </div>
           )}
           {server.publishedAt && (
             <div>
-              <span className="text-text-muted">Published</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.published')}</span>
               <p className="text-text">{new Date(server.publishedAt).toLocaleDateString()}</p>
             </div>
           )}
           {server.updatedAt && (
             <div>
-              <span className="text-text-muted">Updated</span>
+              <span className="text-text-muted">{t('mcpDetail.metadata.updated')}</span>
               <p className="text-text">{new Date(server.updatedAt).toLocaleDateString()}</p>
             </div>
           )}
@@ -408,13 +412,12 @@ export const McpServerDetailDialog = ({
         {server.requiresAuth && (
           <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-400">
             <Lock className="size-4" />
-            This server requires authentication
+            {t('mcpDetail.auth.required')}
           </div>
         )}
         {isHttp && !server.requiresAuth && (server.authHeaders?.length ?? 0) === 0 && (
           <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2 text-sm text-blue-400">
-            Remote MCP servers may still require custom headers or API keys even when the registry
-            does not describe them. If connection fails after install, check the provider docs.
+            {t('mcpDetail.auth.remoteMayNeedHeaders')}
           </div>
         )}
         {isInstalledForScope && (
@@ -443,7 +446,9 @@ export const McpServerDetailDialog = ({
             </div>
             {diagnostic?.target && (
               <div>
-                <p className="mb-1 text-xs text-text-muted">Launch Target</p>
+                <p className="mb-1 text-xs text-text-muted">
+                  {t('mcpDetail.diagnostics.launchTarget')}
+                </p>
                 <code className="block overflow-x-auto rounded bg-surface px-2 py-1 text-xs text-text">
                   {diagnostic.target}
                 </code>
@@ -456,19 +461,19 @@ export const McpServerDetailDialog = ({
         {canAutoInstall && (
           <div className="space-y-3 rounded-md border border-border bg-surface-raised p-4">
             <h4 className="text-sm font-medium text-text">
-              {isInstalledForScope ? 'Manage Installation' : 'Install Server'}
+              {isInstalledForScope ? t('mcpDetail.install.manage') : t('mcpDetail.install.install')}
             </h4>
 
             {/* Server name */}
             <div className="space-y-1.5">
               <Label htmlFor="server-name" className="text-xs">
-                Server Name
+                {t('mcpDetail.form.serverName')}
               </Label>
               <Input
                 id="server-name"
                 value={serverName}
                 onChange={(e) => setServerName(e.target.value)}
-                placeholder="my-server"
+                placeholder={t('mcpDetail.placeholders.serverName')}
                 className="h-8 text-sm"
                 disabled={isInstalledForScope}
               />
@@ -476,7 +481,7 @@ export const McpServerDetailDialog = ({
 
             {/* Scope */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Scope</Label>
+              <Label className="text-xs">{t('mcpDetail.form.scope')}</Label>
               <Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
@@ -498,7 +503,7 @@ export const McpServerDetailDialog = ({
             {/* Environment variables */}
             {server.envVars.length > 0 && (
               <div className="space-y-1.5">
-                <Label className="text-xs">Environment Variables</Label>
+                <Label className="text-xs">{t('mcpDetail.form.environmentVariables')}</Label>
                 <div className="space-y-2">
                   {server.envVars.map((env) => (
                     <div key={env.name} className="flex items-center gap-2">
@@ -515,7 +520,9 @@ export const McpServerDetailDialog = ({
                         placeholder={env.description ?? env.name}
                       />
                       {autoFilledFields.has(env.name) && envValues[env.name] && (
-                        <span className="shrink-0 text-[10px] text-emerald-400">Auto-filled</span>
+                        <span className="shrink-0 text-[10px] text-emerald-400">
+                          {t('mcpDetail.form.autoFilled')}
+                        </span>
                       )}
                     </div>
                   ))}
@@ -527,7 +534,7 @@ export const McpServerDetailDialog = ({
             {isHttp && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Headers</Label>
+                  <Label className="text-xs">{t('mcpDetail.form.headers')}</Label>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -552,7 +559,7 @@ export const McpServerDetailDialog = ({
                               value={header.key}
                               onChange={(e) => updateHeader(index, 'key', e.target.value)}
                               className="h-7 w-32 text-xs"
-                              placeholder="Header-Name"
+                              placeholder={t('customMcp.placeholders.headerName')}
                             />
                           )}
                           <Input
@@ -610,7 +617,7 @@ export const McpServerDetailDialog = ({
 
         {!canAutoInstall && (
           <div className="rounded-md border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted">
-            This server requires manual setup. Check the repository for installation instructions.
+            {t('mcpDetail.install.manualSetupDescription')}
           </div>
         )}
 
@@ -619,7 +626,7 @@ export const McpServerDetailDialog = ({
           <div>
             <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-text">
               <Wrench className="size-4" />
-              Tools ({server.tools.length})
+              {t('mcpDetail.tools.title', { count: server.tools.length })}
             </h4>
             <div className="max-h-48 space-y-1 overflow-y-auto">
               {server.tools.map((tool) => (
@@ -641,7 +648,7 @@ export const McpServerDetailDialog = ({
               onClick={() => void api.openExternal(server.repositoryUrl!)}
             >
               <ExternalLink className="mr-1 size-3.5" />
-              Repository
+              {t('mcpDetail.links.repository')}
             </Button>
           )}
           {server.glamaUrl && (
@@ -651,7 +658,7 @@ export const McpServerDetailDialog = ({
               onClick={() => void api.openExternal(server.glamaUrl!)}
             >
               <ExternalLink className="mr-1 size-3.5" />
-              Glama
+              {t('mcpDetail.links.glama')}
             </Button>
           )}
           {server.websiteUrl && (
@@ -661,7 +668,7 @@ export const McpServerDetailDialog = ({
               onClick={() => void api.openExternal(server.websiteUrl!)}
             >
               <ExternalLink className="mr-1 size-3.5" />
-              Website
+              {t('mcpDetail.links.website')}
             </Button>
           )}
         </div>

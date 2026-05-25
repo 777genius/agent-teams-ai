@@ -1,5 +1,5 @@
 /**
- * Notification and configuration types for Agent Teams UI.
+ * Notification and configuration types for Agent Teams AI.
  *
  * These types define:
  * - Detected errors from session files
@@ -342,6 +342,8 @@ export interface AppConfig {
     claudeRootPath: string | null;
     /** Agent communication language ('system' = use OS locale) */
     agentLanguage: string;
+    /** Application interface locale preference ('system' = use OS locale) */
+    appLocale: string;
     /** Whether to auto-expand AI response groups when opening a transcript or receiving new messages */
     autoExpandAIGroups: boolean;
     /** Whether to use the native OS title bar instead of the custom one (Linux/Windows) */
@@ -354,6 +356,10 @@ export interface AppConfig {
     anthropic: {
       authMode: 'auto' | 'oauth' | 'api_key';
       fastModeDefault: boolean;
+      compatibleEndpoint: {
+        enabled: boolean;
+        baseUrl: string;
+      };
     };
     codex: {
       preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';

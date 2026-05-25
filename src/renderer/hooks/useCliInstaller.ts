@@ -9,7 +9,12 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
-import type { CliInstallationStatus, CliProviderId, OpenCodeRuntimeStatus } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliInstallerProviderStatusMode,
+  CliProviderId,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 
 export function useCliInstaller(): {
   cliStatus: CliInstallationStatus | null;
@@ -37,7 +42,10 @@ export function useCliInstaller(): {
   codexRuntimeStatus: CodexRuntimeStatus | null;
   codexRuntimeStatusLoading: boolean;
   codexRuntimeError: string | null;
-  bootstrapCliStatus: (options?: { multimodelEnabled?: boolean }) => Promise<void>;
+  bootstrapCliStatus: (options?: {
+    multimodelEnabled?: boolean;
+    providerStatusMode?: CliInstallerProviderStatusMode;
+  }) => Promise<void>;
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
     providerId: CliProviderId,

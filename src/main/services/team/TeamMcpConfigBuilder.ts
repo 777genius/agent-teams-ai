@@ -1,19 +1,27 @@
 import { execCli } from '@main/utils/childProcess';
+import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import {
   getClaudeBasePath,
   getMcpConfigsBasePath,
   getMcpServerBasePath,
 } from '@main/utils/pathDecoder';
+import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
+import { resolveTeamMemberMcpScopes } from '@shared/utils/teamMemberMcpPolicy';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { McpConfigStateReader } from '../extensions/runtime/McpConfigStateReader';
+
 import { atomicWriteAsync } from './atomicWrite';
+
+import type { TeamMemberMcpPolicy, TeamMemberMcpScope } from '@shared/types';
 
 export interface McpLaunchSpec {
   command: string;
   args: string[];
+  env?: Record<string, string>;
 }
 
 export interface McpLaunchSpecResolveProgress {
@@ -25,11 +33,23 @@ export interface McpLaunchSpecResolveOptions {
   onProgress?: (progress: McpLaunchSpecResolveProgress) => void;
 }
 
+interface WriteMcpConfigOptions {
+  mcpPolicy?: TeamMemberMcpPolicy;
+  controlApiBaseUrl?: string | null;
+}
+
 const MCP_SERVER_NAME = 'agent-teams';
 const MCP_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
+const MCP_CONTROL_URL_ENV = 'CLAUDE_TEAM_CONTROL_URL';
+const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
 const logger = createLogger('Service:TeamMcpConfigBuilder');
 const MCP_CONFIG_PREFIX = 'agent-teams-mcp-';
 const MCP_CONFIG_REMOVE_RETRY_DELAYS_MS = [25, 75, 150] as const;
+const NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
+const ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
+const MIN_MCP_NODE_MAJOR_VERSION = 20;
+const NODE_RUNTIME_PROBE_SCRIPT =
+  'process.stdout.write(JSON.stringify({execPath:process.execPath,version:process.versions.node}))';
 /**
  * Stale configs older than this are removed on startup (best-effort).
  * 7 days is intentionally long: respawnAfterAuthFailure() reuses saved
@@ -40,8 +60,16 @@ const MCP_CONFIG_STALE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type McpServerConfig = Record<string, unknown>;
 
+interface NodeRuntimeProbeMetadata {
+  path: string;
+  version: string;
+}
+
+const MCP_CONFIG_SCOPE_PRECEDENCE: readonly TeamMemberMcpScope[] = ['user', 'project', 'local'];
+
 function isPackagedApp(): boolean {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { app } = require('electron') as typeof import('electron');
     return app.isPackaged;
   } catch {
@@ -70,6 +98,26 @@ function getPackagedServerEntry(): string {
 
 function getWorkspaceRoot(): string {
   return process.cwd();
+}
+
+function shouldUsePackagedElectronNodeRuntime(): boolean {
+  return (
+    isPackagedApp() && typeof process.execPath === 'string' && process.execPath.trim().length > 0
+  );
+}
+
+function getPackagedElectronNodeEnv(): Record<string, string> {
+  return {
+    [ELECTRON_RUN_AS_NODE_ENV]: '1',
+  };
+}
+
+function buildPackagedElectronNodeLaunchSpec(entry: string): McpLaunchSpec {
+  return {
+    command: process.execPath.trim(),
+    args: [entry],
+    env: getPackagedElectronNodeEnv(),
+  };
 }
 
 function getWorkspaceMcpServerDir(): string {
@@ -162,9 +210,11 @@ async function hasValidServerCopy(dir: string): Promise<boolean> {
 }
 
 let _resolvedNodePath: string | undefined;
+let _packagedElectronNodeRuntimeProbe: { ok: true } | { ok: false; error: unknown } | undefined;
 
 export function clearResolvedNodePathForTests(): void {
   _resolvedNodePath = undefined;
+  _packagedElectronNodeRuntimeProbe = undefined;
 }
 
 function emitProgress(
@@ -175,32 +225,264 @@ function emitProgress(
   options?.onProgress?.({ phase, message });
 }
 
+function stringifyError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function looksLikeNodeBinaryPath(candidate: string | undefined): candidate is string {
+  if (!candidate?.trim()) {
+    return false;
+  }
+  return /^node(?:-\d+)?(?:\.exe)?$/i.test(path.basename(candidate.trim()));
+}
+
+function getNodeRuntimeCommandCandidates(): string[] {
+  const candidates = [
+    process.env.NODE_BINARY,
+    'node',
+    process.env.npm_node_execpath,
+    looksLikeNodeBinaryPath(process.execPath) ? process.execPath : undefined,
+  ];
+  const seen = new Set<string>();
+  return candidates.flatMap((candidate) => {
+    const normalized = candidate?.trim();
+    if (!normalized || seen.has(normalized)) {
+      return [];
+    }
+    seen.add(normalized);
+    return [normalized];
+  });
+}
+
+function shouldPreferShellNodeProbe(): boolean {
+  if (process.platform === 'win32') {
+    return false;
+  }
+
+  const pathValue = process.env.PATH?.trim();
+  if (!pathValue) {
+    return true;
+  }
+
+  const minimalGuiPathEntries = new Set(['/usr/bin', '/bin', '/usr/sbin', '/sbin']);
+  const entries = pathValue
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return (
+    entries.length > 0 && entries.every((entry) => minimalGuiPathEntries.has(path.resolve(entry)))
+  );
+}
+
+function mergePathValues(...values: (string | undefined)[]): string | undefined {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const value of values) {
+    if (!value) {
+      continue;
+    }
+    for (const segment of value.split(path.delimiter)) {
+      if (!segment || seen.has(segment)) {
+        continue;
+      }
+      seen.add(segment);
+      merged.push(segment);
+    }
+  }
+  return merged.length > 0 ? merged.join(path.delimiter) : undefined;
+}
+
+function parseNodeMajorVersion(version: string): number | null {
+  const match = /^v?(\d+)(?:\.|$)/.exec(version.trim());
+  if (!match) {
+    return null;
+  }
+
+  const major = Number.parseInt(match[1] ?? '', 10);
+  return Number.isFinite(major) ? major : null;
+}
+
+function parseNodeRuntimeProbeMetadata(stdout: string, command: string): NodeRuntimeProbeMetadata {
+  const trimmed = stdout.trim();
+  if (!trimmed) {
+    throw new Error(`${command} did not report Node.js runtime metadata`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error(`${command} reported invalid Node.js runtime metadata`);
+  }
+
+  if (parsed === null || typeof parsed !== 'object') {
+    throw new Error(`${command} reported invalid Node.js runtime metadata`);
+  }
+
+  const metadata = parsed as { execPath?: unknown; version?: unknown };
+  const resolvedPath = typeof metadata.execPath === 'string' ? metadata.execPath.trim() : '';
+  if (!resolvedPath) {
+    throw new Error(`${command} did not report process.execPath`);
+  }
+
+  const version = typeof metadata.version === 'string' ? metadata.version.trim() : '';
+  if (!version) {
+    throw new Error(`${command} did not report process.versions.node`);
+  }
+
+  return { path: resolvedPath, version };
+}
+
+function assertSupportedMcpNodeRuntime(command: string, metadata: NodeRuntimeProbeMetadata): void {
+  const major = parseNodeMajorVersion(metadata.version);
+  if (major === null || major < MIN_MCP_NODE_MAJOR_VERSION) {
+    throw new Error(
+      `${command} resolved ${metadata.path} with Node.js ${metadata.version}; Agent Teams MCP requires Node.js ${MIN_MCP_NODE_MAJOR_VERSION}+`
+    );
+  }
+}
+
+function isWriteMcpConfigOptions(value: unknown): value is WriteMcpConfigOptions {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    ('mcpPolicy' in value || 'controlApiBaseUrl' in value)
+  );
+}
+
+function buildNodeResolveEnv(shellEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...shellEnv,
+  };
+  const mergedPath = mergePathValues(shellEnv.PATH, buildMergedCliPath(), process.env.PATH);
+  if (mergedPath) {
+    env.PATH = mergedPath;
+  }
+  return env;
+}
+
+async function probeNodeRuntimePath(
+  env: NodeJS.ProcessEnv
+): Promise<{ ok: true; path: string } | { ok: false; error: unknown }> {
+  let lastError: unknown = null;
+  for (const command of getNodeRuntimeCommandCandidates()) {
+    try {
+      const { stdout } = await execCli(command, ['-e', NODE_RUNTIME_PROBE_SCRIPT], {
+        encoding: 'utf-8',
+        timeout: NODE_RUNTIME_PROBE_TIMEOUT_MS,
+        env,
+      });
+      const metadata = parseNodeRuntimeProbeMetadata(stdout, command);
+      assertSupportedMcpNodeRuntime(command, metadata);
+      return { ok: true, path: metadata.path };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  return { ok: false, error: lastError ?? 'no Node.js candidates were available' };
+}
+
+async function probePackagedElectronNodeRuntime(
+  options?: McpLaunchSpecResolveOptions
+): Promise<{ ok: true } | { ok: false; error: unknown }> {
+  if (_packagedElectronNodeRuntimeProbe) {
+    return _packagedElectronNodeRuntimeProbe;
+  }
+
+  emitProgress(options, 'electron-node-runtime', 'Checking bundled Electron Node runtime...');
+  try {
+    const { stdout } = await execCli(
+      process.execPath.trim(),
+      ['-e', 'process.stdout.write("agent-teams-electron-node-ok")'],
+      {
+        encoding: 'utf-8',
+        timeout: ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS,
+        env: {
+          ...process.env,
+          ...getPackagedElectronNodeEnv(),
+        },
+      }
+    );
+    if (stdout.trim() !== 'agent-teams-electron-node-ok') {
+      throw new Error('Electron Node runtime probe did not return the expected marker');
+    }
+    _packagedElectronNodeRuntimeProbe = { ok: true };
+  } catch (error) {
+    _packagedElectronNodeRuntimeProbe = { ok: false, error };
+  }
+  return _packagedElectronNodeRuntimeProbe;
+}
+
+async function probeShellNodeRuntimePath(
+  options?: McpLaunchSpecResolveOptions
+): Promise<{ ok: true; path: string } | { ok: false; error: unknown }> {
+  let shellEnv: NodeJS.ProcessEnv = {};
+  try {
+    shellEnv = await resolveInteractiveShellEnv({
+      source: 'mcp-node-runtime',
+      onProgress: options?.onProgress
+        ? ({ phase, message }) => emitProgress(options, `shell-${phase}`, message)
+        : undefined,
+    });
+  } catch (error) {
+    logger.warn(`Failed to resolve shell env before Node.js lookup: ${stringifyError(error)}`);
+  }
+
+  return probeNodeRuntimePath(buildNodeResolveEnv(shellEnv));
+}
+
 /**
  * Find the real `node` binary path. In Electron, process.execPath is the
  * Electron binary — NOT node — so we must resolve node separately.
- * Uses async execFile('node', ...) which is cross-platform (no /usr/bin/env dependency).
+ * Uses the user's shell/enriched PATH so packaged GUI launches do not depend
+ * on the minimal Finder/Dock PATH.
  */
 async function resolveNodePath(options?: McpLaunchSpecResolveOptions): Promise<string> {
   if (_resolvedNodePath) return _resolvedNodePath;
 
-  try {
-    emitProgress(options, 'node-runtime', 'Resolving Node.js runtime for MCP server...');
-    const { stdout } = await execCli('node', ['-e', 'process.stdout.write(process.execPath)'], {
-      encoding: 'utf-8',
-      timeout: 5000,
-    });
-    const resolved = stdout.trim();
-    if (resolved) {
-      _resolvedNodePath = resolved;
+  emitProgress(options, 'node-runtime', 'Resolving Node.js runtime for MCP server...');
+  const preferShellNodeProbe = shouldPreferShellNodeProbe();
+  if (preferShellNodeProbe && !process.env.NODE_BINARY?.trim()) {
+    emitProgress(options, 'node-runtime-shell-fallback', 'Trying login shell Node.js runtime...');
+    const shellProbe = await probeShellNodeRuntimePath(options);
+    if (shellProbe.ok) {
+      _resolvedNodePath = shellProbe.path;
       emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
       return _resolvedNodePath;
     }
-  } catch {
-    // node not found or timed out — use bare 'node' and let the OS resolve it
   }
-  _resolvedNodePath = 'node';
-  emitProgress(options, 'node-runtime-fallback', 'Using system Node.js command...');
-  return _resolvedNodePath;
+
+  const fastProbe = await probeNodeRuntimePath(buildNodeResolveEnv({}));
+  if (fastProbe.ok) {
+    _resolvedNodePath = fastProbe.path;
+    emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
+    return _resolvedNodePath;
+  }
+
+  if (!preferShellNodeProbe) {
+    emitProgress(options, 'node-runtime-shell-fallback', 'Trying login shell Node.js runtime...');
+    const shellProbe = await probeShellNodeRuntimePath(options);
+    if (shellProbe.ok) {
+      _resolvedNodePath = shellProbe.path;
+      emitProgress(options, 'node-runtime-found', 'Using resolved Node.js runtime...');
+      return _resolvedNodePath;
+    }
+
+    emitProgress(options, 'node-runtime-missing', 'Node.js runtime for MCP server was not found.');
+    throw new Error(
+      `Node.js runtime for Agent Teams MCP was not found. Ensure Node.js is installed and available from the login shell PATH. Last error: ${
+        shellProbe.error ? stringifyError(shellProbe.error) : stringifyError(fastProbe.error)
+      }`
+    );
+  }
+
+  emitProgress(options, 'node-runtime-missing', 'Node.js runtime for MCP server was not found.');
+  throw new Error(
+    `Node.js runtime for Agent Teams MCP was not found. Ensure Node.js is installed and available from the login shell PATH. Last error: ${stringifyError(
+      fastProbe.error
+    )}`
+  );
 }
 
 /**
@@ -293,6 +575,27 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     const packagedEntry = await resolvePackagedServerEntry(options);
     checked.push(packagedEntry);
     if (await pathExists(packagedEntry)) {
+      if (shouldUsePackagedElectronNodeRuntime()) {
+        const electronProbe = await probePackagedElectronNodeRuntime(options);
+        if (electronProbe.ok) {
+          emitProgress(
+            options,
+            'electron-node-runtime-found',
+            'Using bundled Electron Node runtime...'
+          );
+          return buildPackagedElectronNodeLaunchSpec(packagedEntry);
+        }
+        logger.warn(
+          `Bundled Electron Node runtime is unavailable for Agent Teams MCP; falling back to Node.js runtime: ${stringifyError(
+            electronProbe.error
+          )}`
+        );
+        emitProgress(
+          options,
+          'electron-node-runtime-fallback',
+          'Bundled Electron Node runtime unavailable, resolving Node.js fallback...'
+        );
+      }
       return {
         command: await resolveNodePath(options),
         args: [packagedEntry],
@@ -333,26 +636,48 @@ export async function resolveAgentTeamsMcpLaunchSpec(
 }
 
 export class TeamMcpConfigBuilder {
-  async writeConfigFile(_projectPath?: string): Promise<string> {
+  async writeConfigFile(projectPath?: string, options?: WriteMcpConfigOptions): Promise<string>;
+  async writeConfigFile(projectPath?: string, mcpPolicy?: TeamMemberMcpPolicy): Promise<string>;
+  async writeConfigFile(
+    projectPath?: string,
+    optionsOrPolicy?: WriteMcpConfigOptions | TeamMemberMcpPolicy
+  ): Promise<string> {
     const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
     const configDir = getMcpConfigsBasePath();
     const configPath = path.join(
       configDir,
       `${MCP_CONFIG_PREFIX}${process.pid}-${Date.now()}-${randomUUID()}.json`
     );
+    const options = isWriteMcpConfigOptions(optionsOrPolicy)
+      ? optionsOrPolicy
+      : ({
+          mcpPolicy: optionsOrPolicy,
+        } satisfies WriteMcpConfigOptions);
+    const mcpPolicy = options.mcpPolicy;
+    const controlApiBaseUrl =
+      options.controlApiBaseUrl?.trim() || process.env[MCP_CONTROL_URL_ENV]?.trim() || '';
     // Keep the team bootstrap config minimal: recent Claude sidechain runs can
     // lose the agent-teams tool surface when we inline large user MCP bundles
     // into the generated --mcp-config. User/project/local MCP remain loaded
     // through Claude's native settings sources.
-    const generatedServers: Record<string, McpServerConfig> = {
-      [MCP_SERVER_NAME]: {
-        command: launchSpec.command,
-        args: launchSpec.args,
-        env: {
-          [MCP_CLAUDE_DIR_ENV]: getClaudeBasePath(),
-        },
+    const generatedServers: Record<string, McpServerConfig> = Object.create(null);
+    generatedServers[MCP_SERVER_NAME] = {
+      command: launchSpec.command,
+      args: launchSpec.args,
+      enabled: true,
+      env: {
+        ...launchSpec.env,
+        [MCP_CLAUDE_DIR_ENV]: getClaudeBasePath(),
+        ...(controlApiBaseUrl ? { [MCP_CONTROL_URL_ENV]: controlApiBaseUrl } : {}),
       },
     };
+    if (mcpPolicy?.mode === 'strictAllowlist') {
+      for (const [name, config] of Object.entries(
+        await this.readAllowlistedServers(projectPath, mcpPolicy)
+      )) {
+        generatedServers[name] = config;
+      }
+    }
 
     await fs.promises.mkdir(configDir, { recursive: true });
     await atomicWriteAsync(
@@ -367,6 +692,47 @@ export class TeamMcpConfigBuilder {
     );
 
     return configPath;
+  }
+
+  private async readAllowlistedServers(
+    projectPath: string | undefined,
+    policy: TeamMemberMcpPolicy
+  ): Promise<Record<string, McpServerConfig>> {
+    const allowlist = new Set(
+      (policy.serverNames ?? [])
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .map((name) => name.toLowerCase())
+    );
+    if (allowlist.size === 0) {
+      return {};
+    }
+
+    const scopes = resolveTeamMemberMcpScopes(policy);
+    const entries = await new McpConfigStateReader().readConfigured(projectPath);
+    const byScope = new Map<TeamMemberMcpScope, typeof entries>();
+    for (const scope of MCP_CONFIG_SCOPE_PRECEDENCE) {
+      byScope.set(scope, []);
+    }
+    for (const entry of entries) {
+      if (!scopes[entry.scope]) {
+        continue;
+      }
+      byScope.get(entry.scope)?.push(entry);
+    }
+
+    const selected: Record<string, McpServerConfig> = Object.create(null);
+    for (const scope of MCP_CONFIG_SCOPE_PRECEDENCE) {
+      for (const entry of byScope.get(scope) ?? []) {
+        if (entry.name.toLowerCase() === MCP_SERVER_NAME) {
+          continue;
+        }
+        if (allowlist.has(entry.name.toLowerCase())) {
+          selected[entry.name] = entry.config;
+        }
+      }
+    }
+    return selected;
   }
 
   /** Delete a single MCP config file (best-effort). */

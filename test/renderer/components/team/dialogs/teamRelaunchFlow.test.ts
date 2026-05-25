@@ -63,4 +63,42 @@ describe('executeTeamRelaunch', () => {
     expect(calls).toEqual(['replace', 'launch']);
     expect(stopTeam).not.toHaveBeenCalled();
   });
+
+  it('keeps changed relaunch provider and model in the replacement and launch payloads', async () => {
+    const calls: string[] = [];
+    const stopTeam = vi.fn(async () => {
+      calls.push('stop');
+    });
+    const replaceMembers = vi.fn(async () => {
+      calls.push('replace');
+    });
+    const launchTeam = vi.fn(async () => {
+      calls.push('launch');
+    });
+    const request = {
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic' as const,
+      model: 'sonnet',
+      effort: 'low' as const,
+    };
+    const members = [
+      { name: 'alice', role: 'Reviewer' },
+      { name: 'jack', role: 'Builder', providerId: 'anthropic' as const, model: 'sonnet' },
+    ];
+
+    await executeTeamRelaunch({
+      teamName: 'team-alpha',
+      isTeamAlive: true,
+      request,
+      members,
+      stopTeam,
+      replaceMembers,
+      launchTeam,
+    });
+
+    expect(calls).toEqual(['stop', 'replace', 'launch']);
+    expect(replaceMembers).toHaveBeenCalledWith('team-alpha', { members });
+    expect(launchTeam).toHaveBeenCalledWith(request);
+  });
 });

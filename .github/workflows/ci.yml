@@ -14,6 +14,7 @@ on:
       - 'runtime.lock.json'
       - 'test/**'
       - '.github/workflows/**'
+      - '.github/dependabot.yml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -34,6 +35,7 @@ on:
       - 'runtime.lock.json'
       - 'test/**'
       - '.github/workflows/**'
+      - '.github/dependabot.yml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -65,8 +67,16 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
 
       - name: Restore ESLint cache
         uses: actions/cache@v5
@@ -94,6 +104,11 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          find "$PNPM_STORE" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

@@ -6,6 +6,7 @@
 
 import React, { useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 
@@ -169,6 +170,7 @@ export const FlatInjectionList = ({
   onNavigateToTool,
   onNavigateToUserGroup,
 }: Readonly<FlatInjectionListProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const rows = useMemo(() => flattenInjections(injections), [injections]);
 
   return (
@@ -223,7 +225,7 @@ export const FlatInjectionList = ({
                     fontSize: '10px',
                   }}
                 >
-                  error
+                  {t('states.error')}
                 </span>
               )}
               {/* Token count */}

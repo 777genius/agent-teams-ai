@@ -8,3 +8,7 @@ export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
 } from './composition/createMemberWorkSyncFeature';
+export {
+  hasWorkSyncActiveRuntime,
+  isRuntimeEntryActiveForWorkSync,
+} from './composition/memberWorkSyncTeamActivity';

@@ -1,0 +1,2427 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "Create task from message",
+      "expandMessage": "Expand message",
+      "replyToMessage": "Reply to message",
+      "restartTeam": "Restart team"
+    },
+    "authError": {
+      "description": "Authentication failed. Restarting the team will refresh the session and may resolve this issue. If the problem persists, check your API credentials or try again later."
+    },
+    "automation": {
+      "reviewPickup": "Asked teammate to pick up review",
+      "stallNudge": "Asked teammate to continue stalled task",
+      "workSyncBody": "Asked teammate to sync current work"
+    },
+    "badges": {
+      "automation": "automation",
+      "bootstrap": "bootstrap",
+      "command": "command",
+      "comment": "Comment",
+      "live": "live",
+      "note": "note",
+      "rateLimited": "Rate Limited",
+      "restart": "restart",
+      "result": "result",
+      "session": "session",
+      "stallNudge": "stall nudge",
+      "start": "start",
+      "workSync": "work sync"
+    },
+    "bootstrap": {
+      "acknowledged": "Bootstrap acknowledged",
+      "restarting": "Restarting teammate",
+      "starting": "Starting teammate"
+    },
+    "rawJson": "Raw JSON",
+    "unread": "Unread",
+    "thoughts": {
+      "count": "{{count}} thoughts",
+      "count_one": "{{count}} thought",
+      "expand": "Expand thoughts",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "count_few": "{{count}} thoughts",
+      "count_many": "{{count}} thoughts",
+      "count_other": "{{count}} thoughts",
+      "toolSummary": "🔧 {{summary}}",
+      "titleForMember": "{{name}} - thoughts"
+    },
+    "timeline": {
+      "loadingMessages": "Loading messages...",
+      "noMessages": "No messages",
+      "emptyHint": "Send a message to a member to see activity.",
+      "newSession": "New session",
+      "olderCount": "+{{count}} older",
+      "showMore": "Show {{count}} more",
+      "showAll": "Show all",
+      "olderCount_one": "+{{count}} older",
+      "olderCount_few": "+{{count}} older",
+      "olderCount_many": "+{{count}} older",
+      "olderCount_other": "+{{count}} older"
+    },
+    "pendingReplies": {
+      "title": "Awaiting replies",
+      "openMember": "Open member",
+      "messageSentAwaitingReply": "Message sent, awaiting reply",
+      "awaitingReply": "awaiting reply",
+      "externalTeam": "external team",
+      "crossTeamAwaitingReply": "Cross-team message sent, awaiting reply",
+      "user": "user",
+      "awaitingApproval": "awaiting approval"
+    },
+    "reply": {
+      "replyingTo": "Replying to",
+      "action": "Reply"
+    },
+    "activeTasks": {
+      "inProgress": "In progress"
+    },
+    "expandDialog": {
+      "description": "Expanded message view"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "Create",
+      "creating": "Creating...",
+      "openExisting": "Open Existing Team",
+      "skipPreflightAndCreate": "Skip preflight and create"
+    },
+    "conflict": {
+      "description": "Running two teams in the same directory is risky - they may conflict editing the same files. Consider using a different directory or a git worktree for isolation.",
+      "title": "Another team \"{{team}}\" is already running for this working directory",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "copy": "Create a new team based on an existing one.",
+      "create": "Set up your team and choose how it starts."
+    },
+    "errors": {
+      "nameExists": "Team name already exists",
+      "nameLaunching": "A team with this name is currently launching",
+      "createConfigFailed": "Failed to create team config",
+      "loadProjectsFailed": "Failed to load projects"
+    },
+    "fields": {
+      "color": "Color (optional)",
+      "description": "Description (optional)",
+      "prompt": "Prompt for team lead (optional)",
+      "teamName": "Team name"
+    },
+    "launchAfterCreate": {
+      "description": "Start the team immediately via local Claude CLI.",
+      "label": "Run command after create"
+    },
+    "localOnly": "Available only in local Electron mode.",
+    "onDisk": "On disk:",
+    "placeholders": {
+      "description": "Brief description of the team purpose",
+      "prompt": "Instructions for the team lead during provisioning..."
+    },
+    "saved": "Saved",
+    "solo": {
+      "description": "Only the team lead (main process) will be started - no teammates will be spawned. Works like a regular agent session in your chosen runtime (Claude Code, Codex, OpenCode, Gemini) but with access to the task board for planning. Saves tokens by avoiding teammate coordination overhead. You can add members later from the team settings.",
+      "label": "Solo team"
+    },
+    "title": {
+      "copy": "Copy Team",
+      "create": "Create Team"
+    },
+    "optional": {
+      "launchSettingsTitle": "Optional launch settings",
+      "launchSettingsDescription": "Prompt, safety, and CLI overrides live here when you need them.",
+      "teamDetailsTitle": "Optional team details",
+      "teamDetailsDescription": "Keep the default flow compact and only open this when you want extra context or a custom color."
+    },
+    "prepare": {
+      "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app.",
+      "selectWorkingDirectory": "Select a working directory to validate the launch environment.",
+      "someProvidersNeedAttention": "Some selected providers need attention.",
+      "readyWithNotes": "All selected providers are ready, with notes.",
+      "ready": "All selected providers are ready.",
+      "failed": "Failed to prepare selected providers",
+      "checkingProviders": "Checking selected providers...",
+      "preparingEnvironment": "Preparing environment...",
+      "selectedProvidersReadyWithNotes": "Selected providers ready (with notes)",
+      "selectedProvidersReady": "Selected providers ready"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "Name must contain at least one letter or digit",
+      "nameTooLong": "Name is too long (max 128 chars)",
+      "selectWorkingDirectory": "Select working directory (cwd)",
+      "memberNameRequired": "Member name cannot be empty",
+      "memberNameInvalid": "Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars",
+      "memberNamesUnique": "Member names must be unique",
+      "openCodeLeadModelRequired": "OpenCode lead requires a selected model.",
+      "openCodeTeammateRequired": "OpenCode lead requires at least one OpenCode teammate.",
+      "teamLaunching": "Team is currently launching",
+      "teamNameExists": "Team name already exists",
+      "checkFormFields": "Check form fields"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "addMemberLockReason": "Use the dedicated Add member dialog to add new teammates while the team is live.",
+    "description": "Change team name, description and color",
+    "errors": {
+      "changesSavedRefreshFailed": "Team changes were saved, but failed to refresh the latest view: {{message}}",
+      "liveRenameBlocked": "Existing teammates cannot be renamed while the team is live. renamed: {{names}}",
+      "memberNameEmpty": "Member name cannot be empty",
+      "memberNameInvalid": "Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars",
+      "memberNameNumericSuffix": "Member name \"{{name}}\" is not allowed (reserved for Claude CLI auto-suffix). Use \"{{base}}\" instead.",
+      "memberNameReserved": "Member name \"{{name}}\" is reserved",
+      "memberNamesUnique": "Member names must be unique before saving",
+      "newLiveTeammates": "Add new teammates from the dedicated Add member dialog while the team is live. Edit Team only supports updating existing teammates.",
+      "provisioning": "Team settings cannot be edited while provisioning is still in progress. Wait for launch to finish, then try again.",
+      "restartFailedMany": "Team saved, but failed to restart these teammates: {{failures}}",
+      "restartFailedOne": "Team saved, but failed to restart this teammate: {{failures}}",
+      "saveFailed": "Failed to save",
+      "settingsChanged": "Team settings changed while this dialog was open. Reopen it and review the latest state before saving.",
+      "settingsSavedMembersAndRefreshFailed": "Team settings were saved, but member changes failed: {{message}}. Refresh also failed: {{refreshError}}",
+      "settingsSavedMembersFailed": "Team settings were saved, but member changes failed: {{message}}",
+      "settingsSavedRefreshFailed": "Team settings were saved, but failed to refresh the latest view: {{message}}",
+      "teamNameEmpty": "Team name cannot be empty",
+      "unsupportedMixedPrimaryMutation": "Live edits to primary-owned teammates in mixed OpenCode teams are not supported yet. Stop the team, edit the roster, then relaunch. Affected: {{names}}"
+    },
+    "fields": {
+      "colorOptional": "Color (optional)",
+      "description": "Description",
+      "name": "Name"
+    },
+    "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
+    "notices": {
+      "liveRenameBlocked": "Live save is blocked because existing teammates were renamed. Revert those identity changes or stop the team first.",
+      "newLiveTeammates": "New teammates cannot be added from Edit Team while the team is live. Use the Add member dialog instead.",
+      "provisioning": "Team provisioning is still in progress. Editing is temporarily locked until launch finishes.",
+      "restartMany": "Saving will restart or relaunch these teammates to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes: {{names}}.",
+      "restartOne": "Saving will restart or relaunch this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes: {{names}}.",
+      "unsupportedMixedPrimaryMutation": "Live edits/removals for primary-owned teammates in mixed OpenCode teams require stopping and relaunching the team: {{names}}."
+    },
+    "placeholders": {
+      "description": "Team description (optional)",
+      "teamName": "Team name"
+    },
+    "teamLead": {
+      "changeRuntime": "Change lead runtime",
+      "changeRuntimeDescription": "Open Relaunch Team to change the lead provider, model, or effort.",
+      "modelLockReason": "Team lead runtime is managed from Relaunch Team.",
+      "readOnlyHint": "Team lead name and role stay read-only here. Open the runtime panel on the lead row to change provider, model, or effort.",
+      "role": "Team Lead"
+    },
+    "title": "Edit Team"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "Remove member",
+      "removeAria": "Remove {{name}}",
+      "restore": "Restore member",
+      "restoreAria": "Restore {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "default context setting",
+      "description": "Anthropic context is team-wide for this launch: {{mode}}. Use the lead runtime panel's Limit context checkbox to change it.",
+      "limitEnabled": "200K limit enabled"
+    },
+    "mcp": {
+      "buttonInherit": "MCP inherit",
+      "buttonScopes": "MCP scopes",
+      "chooseScopes": "Choose scopes",
+      "inheritLead": "Inherit lead",
+      "lockedInfo": "Agent Teams MCP only is enabled for all teammates. This teammate will launch with only the Agent Teams server.",
+      "mode": "MCP mode",
+      "scopes": {
+        "local": "local",
+        "project": "project",
+        "user": "user"
+      },
+      "serverNames": "Server names",
+      "settingInfo": "Agent Teams MCP launches this teammate with only the Agent Teams server. Scope and allowlist modes apply only to this teammate launch.",
+      "strictAllowlist": "Strict allowlist",
+      "tooltip": "{{label}}: Control this member's MCP inheritance policy",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} provider, {{model}}",
+      "currentLeadRuntime": "Current lead runtime",
+      "default": "Default",
+      "inheritedTooltip": "Provider, model, and effort are inherited from the lead while sync is enabled.",
+      "leadSuffix": "{{label}} (lead)",
+      "liveDisabled": "Provider, model, and effort changes are disabled while the team is live. Reconnect the team to apply them safely.",
+      "lockedActionFallback": "Lead runtime changes open Relaunch Team, where provider, model, and effort can be updated.",
+      "restartWholeTeam": "Saving those runtime changes restarts the whole team."
+    },
+    "nameAria": "Member {{index}} name",
+    "nameFallback": "member {{index}}",
+    "noRole": "No role",
+    "removed": "Removed",
+    "workflow": {
+      "addTooltip": "Add teammate workflow",
+      "editTooltip": "Edit teammate workflow",
+      "label": "Workflow (optional)",
+      "placeholder": "How this agent should behave, interact with others...",
+      "saved": "Saved"
+    },
+    "worktree": {
+      "description": "Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.",
+      "label": "Worktree"
+    },
+    "addMembers": {
+      "title": "Add Members",
+      "description": "Add new members to {{teamName}}"
+    },
+    "placeholders": {
+      "name": "member-name",
+      "mcpServers": "github, sentry"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "Add",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "editCode": "Edit code",
+      "launch": "Launch",
+      "remove": "Remove",
+      "stop": "Stop",
+      "task": "Task",
+      "visualize": "Visualize"
+    },
+    "deleteTeam": {
+      "description": "Delete team \"{{team}}\"? This action is irreversible. All team data and tasks will be deleted.",
+      "title": "Delete team"
+    },
+    "draft": {
+      "descriptionPrefix": "This is a draft team -",
+      "descriptionSuffix": "has been configured with {{count}} {{member}} but hasn't been provisioned by CLI yet. Click Launch to select a model and start the team.",
+      "descriptionSuffix_few": "has been configured with {{count}} {{member}} but hasn't been provisioned by CLI yet. Click Launch to select a model and start the team.",
+      "descriptionSuffix_many": "has been configured with {{count}} {{member}} but hasn't been provisioned by CLI yet. Click Launch to select a model and start the team.",
+      "descriptionSuffix_one": "has been configured with {{count}} {{member}} but hasn't been provisioned by CLI yet. Click Launch to select a model and start the team.",
+      "descriptionSuffix_other": "has been configured with {{count}} {{member}} but hasn't been provisioned by CLI yet. Click Launch to select a model and start the team.",
+      "member": "members",
+      "member_few": "members",
+      "member_many": "members",
+      "member_one": "member",
+      "member_other": "members",
+      "title": "Team not launched yet"
+    },
+    "invalidTab": "Invalid team tab",
+    "kanbanSafeData": "Failed to fully load kanban. Displaying safe data.",
+    "loadFailed": "Failed to load team",
+    "loading": "Loading team",
+    "loadingSidebar": "Loading team sidebar",
+    "offline": {
+      "offline": "Team is offline",
+      "partialFailed": "Last launch failed partway",
+      "partialMissing": "Last launch failed partway - {{missing}}/{{expected}} teammates did not join",
+      "reconciling": "Last launch is still reconciling"
+    },
+    "previous": "Previous: {{paths}}",
+    "removeMember": {
+      "description": "Remove \"{{member}}\" from the team? Tasks and messages will be preserved, but this name cannot be reused.",
+      "title": "Remove member"
+    },
+    "sections": {
+      "team": "Team"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Active",
+      "launching": "Launching...",
+      "running": "Running"
+    },
+    "telemetry": {
+      "cpu": "CPU",
+      "memory": "Memory"
+    },
+    "tooltips": {
+      "deleteTeam": "Delete team",
+      "editTeam": "Edit team",
+      "editUnavailableProvisioning": "Edit team is unavailable while provisioning is still in progress",
+      "openBuiltInEditor": "Open project in built-in editor",
+      "openTeamGraph": "Open team graph",
+      "stopTeam": "Stop team"
+    },
+    "waitingForProvisioning": "Team data will appear once provisioning completes",
+    "context": {
+      "title": "Context"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "Accept",
+        "discard": "Discard",
+        "discardTooltip": "Discard all edits for this file",
+        "keepMyDraft": "Keep my draft",
+        "reject": "Reject",
+        "reloadFromDisk": "Reload from disk",
+        "restore": "Restore",
+        "restoreTooltip": "Create/restore this file on disk from the preview",
+        "saveFile": "Save File",
+        "saveFileTooltip": "Save file to disk"
+      },
+      "badges": {
+        "deleted": "DELETED",
+        "manualReview": "MANUAL REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
+      },
+      "contentSource": {
+        "disk-current": "Current Disk",
+        "file-history": "File History",
+        "git-fallback": "Git Fallback",
+        "ledger-exact": "Task Ledger",
+        "ledger-snapshot": "Ledger Snapshot",
+        "snippet-reconstruction": "Reconstructed",
+        "unavailable": "Content unavailable"
+      },
+      "contentUnavailable": {
+        "badge": "Content unavailable",
+        "description": "The ledger recorded metadata for this change, but full text content is not available. This usually means binary, large, or hash-only content.",
+        "safety": "Automatic accept/reject is disabled for this file to avoid unsafe disk writes.",
+        "title": "Text content is unavailable"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "Accept/Reject is disabled because full text content is unavailable.",
+        "acceptRejectMissingOnDisk": "Accept/Reject is disabled while the file is missing on disk.",
+        "rejectBaselineUnavailable": "Reject is disabled because the original baseline is unavailable.",
+        "rejectContentUnavailable": "Reject is disabled because full text content is unavailable.",
+        "rejectManualLedgerReview": "Reject is disabled because this ledger change has binary, large, or unavailable content."
+      },
+      "externalChange": {
+        "changedOnDisk": "Changed on disk",
+        "deletedOnDisk": "Deleted on disk",
+        "recreatedOnDisk": "Recreated on disk"
+      },
+      "missingOnDisk": {
+        "badge": "Missing on disk",
+        "description": "We can still show a preview from agent logs, but your filesystem is out of sync.",
+        "restorePrefix": "Use",
+        "restoreSuffix": "to write the preview content back to disk.",
+        "restoreUnavailable": "Full file content is not available to restore automatically.",
+        "title": "File is missing on disk"
+      },
+      "pathChange": {
+        "from": "From {{path}}",
+        "to": "To {{path}}"
+      },
+      "worktree": {
+        "isolated": "Isolated worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} pending",
+        "pending_one": "{{count}} pending",
+        "pending_other": "{{count}} pending",
+        "accepted": "{{count}} accepted",
+        "accepted_one": "{{count}} accepted",
+        "accepted_other": "{{count}} accepted",
+        "rejected": "{{count}} rejected",
+        "rejected_one": "{{count}} rejected",
+        "rejected_other": "{{count}} rejected",
+        "acrossFiles": "across {{count}} files",
+        "acrossFiles_one": "across {{count}} file",
+        "acrossFiles_other": "across {{count}} files",
+        "edited": "{{count}} edited",
+        "edited_one": "{{count}} edited",
+        "edited_other": "{{count}} edited",
+        "pending_few": "{{count}} pending",
+        "pending_many": "{{count}} pending",
+        "accepted_few": "{{count}} accepted",
+        "accepted_many": "{{count}} accepted",
+        "rejected_few": "{{count}} rejected",
+        "rejected_many": "{{count}} rejected",
+        "acrossFiles_few": "across {{count}} files",
+        "acrossFiles_many": "across {{count}} files",
+        "edited_few": "{{count}} edited",
+        "edited_many": "{{count}} edited"
+      },
+      "actions": {
+        "auto": "Auto",
+        "undo": "Undo",
+        "acceptAll": "Accept All",
+        "rejectAll": "Reject All",
+        "applying": "Applying...",
+        "applyRejections": "Apply Rejections"
+      },
+      "tooltips": {
+        "autoOn": "Auto-mark files as viewed when scrolled to end (ON)",
+        "autoOff": "Auto-mark files as viewed when scrolled to end (OFF)",
+        "undo": "Undo last review operation (Ctrl+Z)",
+        "acceptAll": "Accept all changes across all files",
+        "rejectAll": "Reject all safely rejectable changes across all files",
+        "rejectAllDisabled": "No pending files have a safe original baseline to reject.",
+        "applyRejections": "Apply rejected hunks to disk; accepted changes are kept as-is"
+      }
+    },
+    "diffError": {
+      "title": "Failed to render diff view",
+      "unexpected": "An unexpected error occurred while rendering the diff.",
+      "actions": {
+        "retry": "Retry"
+      },
+      "raw": {
+        "show": "Show raw diff data",
+        "file": "File: {{file}}",
+        "original": "--- Original",
+        "modified": "+++ Modified",
+        "charsTotal": "... ({{count}} chars total)",
+        "charsTotal_one": "... ({{count}} char total)",
+        "charsTotal_other": "... ({{count}} chars total)",
+        "charsTotal_few": "... ({{count}} chars total)",
+        "charsTotal_many": "... ({{count}} chars total)"
+      }
+    },
+    "fileTree": {
+      "viewed": "Viewed",
+      "badges": {
+        "new": "new",
+        "deleted": "deleted"
+      },
+      "collapseFolder": "Collapse {{name}}",
+      "expandFolder": "Expand {{name}}",
+      "empty": {
+        "noChangedFiles": "No changed files",
+        "noMatchingFiles": "No matching files"
+      },
+      "searchPlaceholder": "Search files…",
+      "filters": {
+        "unresolved": "Unresolved",
+        "rejected": "Rejected",
+        "new": "New",
+        "clear": "Clear"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "Previous chunk",
+      "nextChunk": "Next chunk",
+      "rejectChange": "Reject change (⌘N)",
+      "acceptChange": "Accept change (⌘Y)",
+      "undo": "Undo",
+      "keep": "Keep",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "Conflict Detected",
+      "description": "This file has been modified since the agent's changes",
+      "cancel": "Cancel",
+      "saveResolution": "Save Resolution",
+      "editManually": "Edit Manually",
+      "useOriginal": "Use Original",
+      "keepCurrent": "Keep Current"
+    },
+    "fullDiffLoading": {
+      "titleOne": "Preparing Full Diff",
+      "titleMany": "Preparing {{count}} Full Diffs",
+      "subtitleForFile": "Finalizing the exact editor diff for {{file}}.",
+      "subtitleCurrentFile": "Finalizing the exact editor diff for the current file.",
+      "subtitleMany": "Resolving exact before/after baselines for the files currently loading.",
+      "previewsReady": "{{count}} previews ready",
+      "previewsReady_one": "{{count}} preview ready",
+      "editorViewLoading": "Editor view loading",
+      "filesInProgress": "{{count}} files in progress",
+      "filesInProgress_one": "{{count}} file in progress",
+      "filesReady": "{{ready}}/{{total}} files ready",
+      "progressDescription": "{{ready}} ready, {{loading}} still loading. Preview diffs stay visible below while the remaining baselines are resolved.",
+      "singleDescription": "Preview diffs stay visible below while the exact baseline is resolved.",
+      "previewsReady_few": "{{count}} previews ready",
+      "previewsReady_many": "{{count}} previews ready",
+      "previewsReady_other": "{{count}} previews ready",
+      "filesInProgress_few": "{{count}} files in progress",
+      "filesInProgress_many": "{{count}} files in progress",
+      "filesInProgress_other": "{{count}} files in progress"
+    },
+    "fileMissingPrefix": "File is missing on disk. This diff may be only a preview from agent logs. Use",
+    "restore": "Restore",
+    "fileMissingSuffix": "to create the file on disk.",
+    "filePlaceholder": {
+      "loading": "Loading",
+      "description": "Preparing a full editor diff for this file."
+    },
+    "loading": {
+      "diff": "DIFF",
+      "ledgerObjectsProcessed": "{{count}} ledger objects processed",
+      "ledgerObjectsProcessed_one": "{{count}} ledger object processed",
+      "ledgerObjectsProcessed_other": "{{count}} ledger objects processed",
+      "ledgerObjectsProcessed_few": "{{count}} ledger objects processed",
+      "ledgerObjectsProcessed_many": "{{count}} ledger objects processed",
+      "phases": {
+        "readingLedger": "Reading task ledger...",
+        "resolvingFiles": "Resolving file states...",
+        "checkingWorktree": "Checking worktree context...",
+        "preparingDiffs": "Preparing review diffs..."
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} viewed"
+    },
+    "scope": {
+      "readMore": "Read more",
+      "tiers": {
+        "exact": {
+          "title": "Task scope determined precisely",
+          "detail": "Both start and completion markers found in the session log. The diff includes only changes made during this specific task - other tasks that modified the same files are excluded."
+        },
+        "endEstimated": {
+          "title": "End boundary estimated",
+          "detail": "Only the start marker was found - the task has no completion marker yet. Changes shown from task start to end of session. If other tasks ran after this one in the same session, their changes may also be included."
+        },
+        "startEstimated": {
+          "title": "Start boundary estimated",
+          "detail": "Only the completion marker was found - the start of work was not captured. If other tasks ran before this one in the same session, their changes to the same files may also be included."
+        },
+        "allSession": {
+          "title": "Showing all session changes",
+          "detail": "No task markers found in the session log. Cannot isolate this task - all file changes from the entire session are shown, including changes from other tasks. This can happen with older CLI versions or non-standard workflows."
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "Changes captured by task ledger",
+          "detail": "The orchestrator captured these file changes while the agent was working on this task.",
+          "badge": "Ledger exact"
+        },
+        "limited": {
+          "title": "Changes captured with limited reviewability",
+          "detail": "The orchestrator captured these file changes for this task, but at least one change was captured from a snapshot or metadata-only source. Review exact text diffs where available; binary or unavailable content may require manual review.",
+          "mixedBadge": "Mixed reviewability",
+          "needsReviewBadge": "Needs review"
+        }
+      },
+      "workInterval": {
+        "title": "Scoped by persisted work interval",
+        "detail": "The task start marker was not available in the session log, so the diff is scoped by the task work interval stored on the board.",
+        "badge": "Interval scoped"
+      },
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence",
+        "bestEffort": "Best effort"
+      }
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "actions": {
+        "nextChange": "Next change",
+        "previousChange": "Previous change",
+        "nextFile": "Next file",
+        "previousFile": "Previous file",
+        "acceptChange": "Accept change",
+        "rejectChange": "Reject change",
+        "saveFile": "Save file",
+        "undo": "Undo",
+        "redo": "Redo",
+        "toggleShortcuts": "Toggle shortcuts",
+        "closeDialog": "Close dialog"
+      }
+    },
+    "timeline": {
+      "empty": "No edit events",
+      "titleWithCount": "Edit Timeline ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "No reviewable file changes"
+    },
+    "empty": {
+      "noSafeDiff": "No safe diff available",
+      "noFileChangesRecorded": "No file changes recorded",
+      "noSafeDiffDescription": "The task ledger did not expose a safe file diff for this task.",
+      "noSafeDiffDiagnosticsDescription": "The task ledger did not expose a safe file diff for this task. The diagnostics below explain why.",
+      "noFileEventsYet": "The task ledger has no file events for this task yet.",
+      "noFileEvents": "The task ledger has no file events for this task."
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "Message bottom sheet actions",
+      "collapseAll": "Collapse all messages",
+      "collapseSheet": "Collapse sheet",
+      "expandAll": "Expand all messages",
+      "expandSheet": "Expand sheet",
+      "floatComposer": "Float composer",
+      "floatMessagesComposer": "Float messages composer",
+      "hideSearch": "Hide search",
+      "loadOlder": "Load older messages",
+      "markAllRead": "Mark all as read",
+      "messageActions": "Message actions",
+      "moveMessagesToBottomSheet": "Move messages to bottom sheet",
+      "moveMessagesToSidebar": "Move messages to sidebar",
+      "moveToBottomSheet": "Move to bottom sheet",
+      "moveToInline": "Move to inline",
+      "moveToSidebar": "Move to sidebar",
+      "panelActions": "Message panel actions",
+      "searchMessages": "Search messages"
+    },
+    "delivery": {
+      "copied": "Copied",
+      "copyDebugDetails": "Copy debug details",
+      "details": "Details",
+      "fields": {
+        "acceptanceUnknown": "acceptanceUnknown",
+        "delivered": "delivered",
+        "diagnostics": "diagnostics",
+        "ledgerStatus": "ledgerStatus",
+        "messageId": "messageId",
+        "providerId": "providerId",
+        "queuedBehindMessageId": "queuedBehindMessageId",
+        "reason": "reason",
+        "responsePending": "responsePending",
+        "responseState": "responseState",
+        "statusMessageId": "statusMessageId",
+        "userVisibleMessage": "userVisibleMessage",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "userVisibleReasonCode",
+        "userVisibleState": "userVisibleState",
+        "visibleReplyCorrelation": "visibleReplyCorrelation",
+        "visibleReplyMessageId": "visibleReplyMessageId"
+      }
+    },
+    "panelMode": "Message panel mode",
+    "title": "Messages",
+    "unread": {
+      "new": "{{count}} new",
+      "unread": "{{count}} unread",
+      "new_few": "{{count}} new",
+      "new_many": "{{count}} new",
+      "new_one": "{{count}} new",
+      "new_other": "{{count}} new",
+      "unread_few": "{{count}} unread",
+      "unread_many": "{{count}} unread",
+      "unread_one": "{{count}} unread",
+      "unread_other": "{{count}} unread"
+    },
+    "filter": {
+      "ariaLabel": "Filter messages",
+      "tooltip": "Filter messages",
+      "from": "From",
+      "to": "To",
+      "noData": "No data",
+      "showStatusUpdates": "Show status updates (idle/shutdown)",
+      "actions": {
+        "reset": "Reset",
+        "save": "Save"
+      }
+    },
+    "status": {
+      "title": "Status"
+    },
+    "actionMode": {
+      "label": "Action mode"
+    },
+    "search": {
+      "placeholder": "Search..."
+    }
+  },
+  "modelSelector": {
+    "badges": {
+      "configured": "Configured",
+      "connected": "Connected",
+      "failed": "Failed",
+      "free": "Free",
+      "local": "Local",
+      "needsTest": "Needs test",
+      "verified": "Verified",
+      "unavailable": "Unavailable",
+      "issue": "Issue"
+    },
+    "customModelId": "Custom model id",
+    "label": "Model (optional)",
+    "multimodelRequired": "Codex and Gemini require Multimodel mode.",
+    "openCode": {
+      "allSources": "All OpenCode sources",
+      "filterSource": "Filter {{source}}",
+      "filterSources": "Filter OpenCode sources",
+      "freeOnly": "Free only",
+      "freeTooltip": "OpenCode marks this model as free.",
+      "loadingModels": "Loading OpenCode models...",
+      "noSourcesFound": "No sources found.",
+      "recommendedOnly": "Recommended only",
+      "searchSources": "Search sources",
+      "sourcesCount": "{{count}} OpenCode sources",
+      "sourcesCount_few": "{{count}} OpenCode sources",
+      "sourcesCount_many": "{{count}} OpenCode sources",
+      "sourcesCount_one": "{{count}} OpenCode sources",
+      "sourcesCount_other": "{{count}} OpenCode sources"
+    },
+    "reason": "Reason: {{reason}}",
+    "runtimeModelsSyncing": "Explicit models load from the current runtime. Default remains available while the list is syncing.",
+    "fastMode": {
+      "codexLabel": "Fast mode (2x credits)",
+      "optionalLabel": "Fast mode (optional)",
+      "defaultOff": "Default (Off)",
+      "fast": "Fast",
+      "off": "Off",
+      "defaultFast": "Default (Fast)",
+      "defaultResolvesTo": "Default currently resolves to {{mode}}.",
+      "runtimeBackedHint": "Fast mode is runtime-backed and only unlocks when the resolved Anthropic launch model supports it."
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "Read Anthropic pricing docs"
+    },
+    "searchModels": "Search models",
+    "defaultModel": "Default",
+    "empty": {
+      "noSearchMatches": "No models match this search.",
+      "recommendedFreeOpenCode": "No recommended free OpenCode models are available in the current runtime list.",
+      "freeOpenCode": "No free OpenCode models are available in the current runtime list.",
+      "recommendedOpenCode": "No recommended OpenCode models are available in the current runtime list.",
+      "noModels": "No models are available in the current runtime list."
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode is not ready for team launch",
+      "freeModelsAvailableTitle": "OpenCode free models are available",
+      "providerNotConnectedTitle": "OpenCode provider is not connected",
+      "readyTitle": "OpenCode is ready",
+      "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
+      "useOpenCode": "Use OpenCode",
+      "badges": {
+        "check": "Check",
+        "install": "Install",
+        "free": "Free",
+        "setup": "Setup"
+      },
+      "summary": {
+        "checking": "OpenCode status: checking runtime",
+        "status": "OpenCode status: {{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "team launch blocked",
+        "providerOptional": "provider connection optional",
+        "providerModelsNeedSetup": "provider-backed models need setup",
+        "teamLaunchReady": "team launch ready",
+        "runtimeDetected": "runtime detected",
+        "runtimeMissing": "runtime missing",
+        "freeWithoutAuth": "free models available without auth",
+        "providerConnected": "provider connected",
+        "providerNotConnected": "provider not connected"
+      },
+      "messages": {
+        "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
+        "unsupported": "OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.",
+        "freeAvailable": "OpenCode is detected. You can use free OpenCode models such as Big Pickle without connecting a provider. Connect a provider only when you want provider-backed models.",
+        "noFreeListed": "OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
+        "launchBlocked": "OpenCode is installed and authenticated, but Agent Teams launch readiness is blocked.",
+        "ready": "OpenCode is ready for team launch."
+      },
+      "loadingRuntime": "OpenCode runtime status is still loading."
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping not confirmed",
+      "note": "Note"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode config",
+      "builtinFree": "Free built-in",
+      "connectedProviders": "Connected providers",
+      "otherCatalog": "Other OpenCode catalog"
+    },
+    "pricing": {
+      "free": "Free",
+      "inputShort": "in {{rate}}",
+      "outputShort": "out {{rate}}",
+      "perMillionSummary": "{{summary}} / 1M",
+      "inputTitle": "Input: {{rate}} per 1M tokens",
+      "outputTitle": "Output: {{rate}} per 1M tokens",
+      "cacheReadTitle": "Cache read: {{rate}} per 1M tokens",
+      "cacheWriteTitle": "Cache write: {{rate}} per 1M tokens"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "Uses the Anthropic-compatible endpoint default model.\nCurrently resolves to {{model}}.",
+      "anthropicCompatible": "Uses the Anthropic-compatible endpoint default model.",
+      "anthropic": "Uses the Claude team default model.\nResolves to {{longContextModel}} with 1M context, or {{limitedContextModel}} with 200K context when Limit context is enabled.",
+      "openCodeWithResolved": "Uses the OpenCode default model.\nCurrently resolves to {{model}}.",
+      "openCode": "Uses the OpenCode runtime default model.",
+      "runtime": "Uses the runtime default for the selected provider."
+    },
+    "multimodelOff": "Multimodel off",
+    "unavailableInRuntime": "Unavailable in current runtime"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "markResolved": "Mark resolved",
+      "save": "Save"
+    },
+    "attachments": {
+      "commentAttachment": "Comment attachment",
+      "fromComments": "From comments",
+      "preview": "Preview {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "attention",
+        "noSafeDiff": "no safe diff"
+      },
+      "empty": {
+        "noFileChangesRecorded": "No file changes recorded",
+        "noFileChangesRecordedYet": "No file changes recorded yet",
+        "noReviewableChangesRecovered": "No reviewable file changes recovered",
+        "noSafeDiffAvailable": "No safe diff available"
+      },
+      "loadFailed": "Failed to load task changes summary",
+      "loading": "Loading changes...",
+      "fileCount": "{{count}} files",
+      "fileRowsHidden": "{{count}} file rows hidden",
+      "moreDiagnostics": "{{count}} more diagnostics",
+      "moreFiles": "{{count}} more files",
+      "openInEditor": "Open in editor",
+      "openTask": "Open task {{subject}}",
+      "refresh": "Refresh changes",
+      "refreshFailed": "Refresh failed: {{error}}",
+      "refreshing": "Refreshing",
+      "refreshingChanges": "Refreshing changes...",
+      "refreshTeamChanges": "Refresh team changes",
+      "refreshShort": "Refresh",
+      "reviewDiff": "Review diff",
+      "reviewTaskDiff": "Review task diff",
+      "scannedCandidateTasks": "Scanned {{requested}} of {{eligible}} candidate tasks",
+      "tasksDeferred": "{{count}} tasks deferred this pass",
+      "title": "Changes",
+      "fileCount_few": "{{count}} files",
+      "fileCount_many": "{{count}} files",
+      "fileCount_one": "{{count}} files",
+      "fileCount_other": "{{count}} files",
+      "fileRowsHidden_few": "{{count}} file rows hidden",
+      "fileRowsHidden_many": "{{count}} file rows hidden",
+      "fileRowsHidden_one": "{{count}} file rows hidden",
+      "fileRowsHidden_other": "{{count}} file rows hidden",
+      "moreDiagnostics_few": "{{count}} more diagnostics",
+      "moreDiagnostics_many": "{{count}} more diagnostics",
+      "moreDiagnostics_one": "{{count}} more diagnostics",
+      "moreDiagnostics_other": "{{count}} more diagnostics",
+      "moreFiles_few": "{{count}} more files",
+      "moreFiles_many": "{{count}} more files",
+      "moreFiles_one": "{{count}} more files",
+      "moreFiles_other": "{{count}} more files",
+      "tasksDeferred_few": "{{count}} tasks deferred this pass",
+      "tasksDeferred_many": "{{count}} tasks deferred this pass",
+      "tasksDeferred_one": "{{count}} tasks deferred this pass",
+      "tasksDeferred_other": "{{count}} tasks deferred this pass"
+    },
+    "clarification": {
+      "awaitingLead": "Awaiting clarification from team lead",
+      "awaitingUser": "Awaiting clarification from you"
+    },
+    "description": {
+      "add": "Click to add description...",
+      "edit": "Edit description",
+      "placeholder": "Task description (supports markdown)"
+    },
+    "loading": {
+      "fetchingTeamData": "Fetching team data",
+      "title": "Loading task..."
+    },
+    "logs": {
+      "newArriving": "New task logs arriving"
+    },
+    "notFound": "Task not found",
+    "related": {
+      "blockedBy": "Blocked by",
+      "blocks": "Blocks",
+      "linkedFrom": "Linked from",
+      "links": "Links",
+      "title": "Related tasks"
+    },
+    "review": {
+      "reviewer": "Reviewer: {{reviewer}}"
+    },
+    "sections": {
+      "attachments": "Attachments",
+      "changes": "Changes",
+      "comments": "Comments",
+      "description": "Description",
+      "taskLogs": "Task Logs",
+      "workflowHistory": "Workflow History"
+    },
+    "unassigned": "Unassigned",
+    "workflow": {
+      "implementationTimeTitle": "Implementation time from persisted work intervals",
+      "inProgressTime": "In progress time {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "Showing the most recent {{formattedCount}} comments to keep the UI responsive.",
+      "badges": {
+        "approved": "Approved",
+        "reviewRequested": "Review requested"
+      },
+      "unknownTime": "unknown time",
+      "actions": {
+        "reply": "Reply",
+        "replyToComment": "Reply to comment",
+        "showMore": "Show more comments ({{visible}}/{{total}})",
+        "cancelReply": "Cancel reply",
+        "comment": "Comment"
+      },
+      "attachments": {
+        "previewAlt": "Attachment preview",
+        "downloadFailed": "Download failed"
+      },
+      "replyingTo": "Replying to",
+      "input": {
+        "placeholder": "Add a comment... (Enter to send)",
+        "charsLeft": "{{count}} chars left",
+        "charsLeft_one": "{{count}} char left",
+        "charsLeft_other": "{{count}} chars left",
+        "charsLeft_few": "{{count}} chars left",
+        "charsLeft_many": "{{count}} chars left"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "No workflow history recorded",
+      "currentImplementationInterval": "Current implementation interval",
+      "implementationIntervalEnded": "Implementation interval ended at this transition",
+      "runningPrefix": "running ",
+      "createdAs": "Created as",
+      "by": "by",
+      "reassigned": "Reassigned",
+      "assignedTo": "Assigned to",
+      "unassignedFrom": "Unassigned from",
+      "ownerChanged": "Owner changed",
+      "reviewRequested": "Review requested",
+      "reviewStarted": "Review started",
+      "changesRequested": "Changes requested",
+      "approved": "Approved",
+      "unknownEvent": "Unknown event"
+    },
+    "reviewStates": {
+      "approved": "Approved",
+      "needsFix": "Needs fix",
+      "inReview": "In review"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "Assignee",
+      "assigneeOptional": "Assignee (optional)",
+      "blockedByOptional": "Blocked by tasks (optional)",
+      "blockedBySummary": "Task will be blocked by: {{tasks}}",
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating...",
+      "description": "The task will be created in the team's tasks/ directory and appear on the Kanban board.",
+      "descriptionOptional": "Description (optional)",
+      "detailsPlaceholder": "Task details (supports markdown)",
+      "hideOptionalFields": "Hide optional fields",
+      "offlineNotice": {
+        "after": "- launch the team to start execution.",
+        "before": "Team is offline. The task will be added to"
+      },
+      "promptOptional": "Prompt for assignee (optional)",
+      "promptPlaceholder": "Custom instructions for the team member...",
+      "relatedOptional": "Related tasks (optional)",
+      "relatedSummary": "Related: {{tasks}}",
+      "saved": "Saved",
+      "searchTasks": "Search tasks...",
+      "selectMember": "Select a member",
+      "selectMemberOptional": "Select member...",
+      "showOptionalFields": "Show optional fields",
+      "startImmediately": "Start immediately",
+      "startOfflineHint": "Team is offline. Launch the team first to start tasks immediately.",
+      "subject": "Subject",
+      "subjectPlaceholder": "What needs to be done?",
+      "title": "Create Task",
+      "todo": "TODO"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "Blocked By",
+        "blocks": "Blocks",
+        "id": "ID",
+        "owner": "Owner",
+        "status": "Status",
+        "subject": "Subject"
+      },
+      "empty": "No tasks in this team",
+      "filters": {
+        "allOwners": "All owners",
+        "allStatuses": "All statuses",
+        "ownerAria": "Filter tasks by owner",
+        "statusAria": "Filter tasks by status"
+      },
+      "showing": "Showing {{shown}} of {{total}}"
+    },
+    "status": {
+      "completed": "completed",
+      "deleted": "deleted",
+      "inProgress": "in_progress",
+      "pending": "pending"
+    },
+    "statusSummary": {
+      "progressAria": "Tasks {{completed}}/{{total}} completed",
+      "inProgress": "{{count}} in_progress",
+      "inProgress_one": "{{count}} in_progress",
+      "inProgress_other": "{{count}} in_progress",
+      "inProgress_few": "{{count}} in_progress",
+      "inProgress_many": "{{count}} in_progress",
+      "pending": "{{count}} pending",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "pending_few": "{{count}} pending",
+      "pending_many": "{{count}} pending",
+      "completed": "{{count}} completed",
+      "completed_one": "{{count}} completed",
+      "completed_other": "{{count}} completed",
+      "completed_few": "{{count}} completed",
+      "completed_many": "{{count}} completed"
+    },
+    "unassigned": "Unassigned",
+    "teamPrefix": "Team:",
+    "openTask": "Open task",
+    "deleteConfirm": {
+      "title": "Delete task",
+      "message": "Move task #{{taskId}} to trash?",
+      "confirmLabel": "Delete",
+      "cancelLabel": "Cancel"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "Cancel",
+      "closeEditor": "Close editor",
+      "closeTab": "Close tab",
+      "closeTooltip": "Close editor (Esc)",
+      "discard": "Discard",
+      "discardAndClose": "Discard & Close",
+      "keep": "Keep",
+      "keepMine": "Keep mine",
+      "keyboardShortcuts": "Keyboard shortcuts",
+      "overwrite": "Overwrite",
+      "refreshAria": "Refresh (F5)",
+      "refreshTooltip": "Refresh git status (F5)",
+      "reload": "Reload",
+      "retry": "Retry",
+      "save": "Save",
+      "saveAllAndClose": "Save All & Close"
+    },
+    "ariaLabel": "Project Editor",
+    "dialogs": {
+      "conflictDescription": "The file has been modified externally since you opened it. Overwrite with your changes?",
+      "conflictTitle": "Save Conflict",
+      "unsavedDescription": "You have unsaved changes. What would you like to do?",
+      "unsavedFileDescription": "This file has unsaved changes. What would you like to do?",
+      "unsavedTitle": "Unsaved Changes"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "Name cannot be empty",
+        "invalidName": "Invalid name",
+        "invalidCharacters": "Name contains invalid characters",
+        "nameTooLong": "Name is too long"
+      },
+      "placeholders": {
+        "fileName": "File name...",
+        "folderName": "Folder name..."
+      },
+      "aria": {
+        "newFileName": "New file name",
+        "newFolderName": "New folder name"
+      }
+    },
+    "draftRecovered": "Recovered unsaved changes from a previous session.",
+    "externalChange": {
+      "changed": "File changed on disk.",
+      "deleted": "File no longer exists on disk."
+    },
+    "saveFailed": "Save failed: {{error}}",
+    "sidebar": {
+      "explorer": "Explorer",
+      "hide": "Hide sidebar",
+      "hideWithShortcut": "Hide sidebar ({{shortcut}})",
+      "show": "Show sidebar",
+      "showWithShortcut": "Show sidebar ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "Search in Files",
+      "closeSearch": "Close search",
+      "closeSearchShortcut": "Close search (Esc)",
+      "searchPlaceholder": "Search...",
+      "matchCase": "Match Case",
+      "matchCaseToggle": "Aa",
+      "noResults": "No results found",
+      "resultsSummary": "{{count}} matches in {{fileCount}} files",
+      "resultsSummary_one": "{{count}} match in {{fileCount}} files",
+      "truncated": "(truncated)",
+      "resultsSummary_few": "{{count}} matches in {{fileCount}} files",
+      "resultsSummary_many": "{{count}} matches in {{fileCount}} files",
+      "resultsSummary_other": "{{count}} matches in {{fileCount}} files"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "Failed to load files: {{error}}",
+      "loading": "Loading files...",
+      "empty": "No files found",
+      "dropForProjectRoot": "Drop here for project root",
+      "moveToTrash": "Move to Trash",
+      "moveToTrashConfirm": "Move \"{{name}}\" to Trash?",
+      "cancel": "Cancel"
+    },
+    "goToLine": {
+      "title": "Go to Line",
+      "position": "(current: {{current}}, total: {{total}})",
+      "placeholder": "Line number, +offset, -offset, or %",
+      "go": "Go"
+    },
+    "searchPanel": {
+      "previousMatch": "Previous Match",
+      "nextMatch": "Next Match",
+      "close": "Close",
+      "replacePlaceholder": "Replace",
+      "replace": "Replace",
+      "replaceNext": "Replace Next",
+      "all": "All",
+      "replaceAll": "Replace All"
+    },
+    "statusBar": {
+      "position": "Ln {{line}}, Col {{col}}",
+      "enableWatcher": "Enable file watcher",
+      "disableWatcher": "Disable file watcher",
+      "watch": "watch",
+      "watching": "watching",
+      "watchExternalChanges": "Watch for external changes",
+      "disableExternalWatcher": "Disable external change watcher",
+      "encodingUtf8": "UTF-8",
+      "spaces": "Spaces: {{count}}"
+    },
+    "imagePreview": {
+      "loading": "Loading preview...",
+      "openFullSize": "Open full-size preview",
+      "openSystemViewer": "Open in System Viewer"
+    },
+    "quickOpen": {
+      "title": "Quick Open",
+      "searchPlaceholder": "Search files by name...",
+      "loading": "Loading files...",
+      "empty": "No files found"
+    },
+    "errorBoundary": {
+      "crashed": "Editor crashed",
+      "unknownError": "Unknown error"
+    },
+    "binaryPlaceholder": {
+      "file": "Binary file ({{size}})"
+    },
+    "unsavedChanges": "Unsaved changes",
+    "empty": {
+      "selectFile": "Select a file from the tree to edit"
+    },
+    "search": {
+      "toggleReplace": "Toggle Replace",
+      "placeholder": "Search"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "groups": {
+        "fileOperations": "File Operations",
+        "search": "Search",
+        "navigation": "Navigation",
+        "editing": "Editing",
+        "markdown": "Markdown",
+        "general": "General"
+      },
+      "actions": {
+        "quickOpen": "Quick Open",
+        "save": "Save",
+        "saveAll": "Save All",
+        "closeTab": "Close Tab",
+        "findInFile": "Find in File",
+        "searchInFiles": "Search in Files",
+        "goToLine": "Go to Line",
+        "nextTab": "Next Tab",
+        "previousTab": "Previous Tab",
+        "cycleTabs": "Cycle Tabs",
+        "toggleSidebar": "Toggle Sidebar",
+        "undo": "Undo",
+        "redo": "Redo",
+        "selectNextMatch": "Select Next Match",
+        "toggleComment": "Toggle Comment",
+        "splitPreview": "Split Preview",
+        "fullPreview": "Full Preview",
+        "closeEditor": "Close Editor"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "Enable word wrap",
+      "disableWordWrap": "Disable word wrap",
+      "closeSplitPreview": "Close split preview",
+      "closePreview": "Close preview"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "Create Schedule",
+      "creating": "Creating...",
+      "goToDashboard": "Go to Dashboard",
+      "launchTeam": "Launch team",
+      "launching": "Launching...",
+      "relaunchTeam": "Relaunch team",
+      "relaunching": "Relaunching...",
+      "saveChanges": "Save Changes",
+      "saving": "Saving..."
+    },
+    "billing": {
+      "prefix": "Starting June 15, 2026, Anthropic bills",
+      "readArticle": "Read Anthropic article",
+      "suffix": "and Agent SDK usage from the monthly Agent SDK credit, separate from interactive Claude Code limits. The credit resets each billing cycle and unused credit does not roll over."
+    },
+    "conflict": {
+      "description": "Running two teams in the same directory is risky - they may conflict editing the same files. Consider using a different directory or a git worktree for isolation.",
+      "title": "Another team \"{{team}}\" is already running for this working directory",
+      "workingDirectory": "Working directory:"
+    },
+    "description": {
+      "createSchedule": "Schedule automatic Claude task execution",
+      "createScheduleForTeam": "Schedule automatic runs for team \"{{team}}\"",
+      "editSchedule": "Editing schedule for team \"{{team}}\"",
+      "launchPrefix": "Start team",
+      "launchSuffix": "via local Claude CLI.",
+      "relaunchPrefix": "Stop the current run for",
+      "relaunchSuffix": "and start it again via local Claude CLI."
+    },
+    "prepare": {
+      "action": {
+        "launch": "launch",
+        "relaunch": "relaunch"
+      },
+      "blocked": "Runtime environment is not available - {{action}} is blocked",
+      "checkingProviders": "Checking selected providers...",
+      "failed": "Failed to prepare selected providers",
+      "preflight": "Pre-flight check to catch errors before {{action}}",
+      "preparingEnvironment": "Preparing environment...",
+      "ready": "All selected providers are ready.",
+      "readyWithNotes": "All selected providers are ready, with notes.",
+      "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app.",
+      "selectWorkingDirectory": "Select a working directory to validate the launch environment.",
+      "someProvidersNeedAttention": "Some selected providers need attention."
+    },
+    "prompt": {
+      "label": "Prompt",
+      "oneShotPrefix": "This prompt will be passed to",
+      "oneShotSuffix": "for one-shot execution",
+      "saved": "Saved",
+      "schedulePlaceholder": "Instructions for Claude to execute on schedule...",
+      "teamLeadOptional": "Prompt for team lead (optional)",
+      "teamLeadPlaceholder": "Instructions for team lead..."
+    },
+    "providerChanged": "Provider changed from {{from}} to {{to}}. The previous lead session will not be resumed, and the lead will start with fresh context so the new runtime is applied correctly.",
+    "relaunchFreshSession": "Team relaunch starts a fresh lead session. Durable team state, task board, and member configuration are rehydrated into the launch prompt.",
+    "relaunchWarning": {
+      "description": "Saving these settings will stop the current team process, persist the updated roster, and launch the team again with the new runtime.",
+      "title": "Relaunch will restart the current team run"
+    },
+    "schedule": {
+      "labelOptional": "Label (optional)",
+      "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
+      "maxBudgetUsd": "Max budget (USD)",
+      "maxTurns": "Max turns",
+      "noLimit": "No limit",
+      "noMatches": "No teams match your search.",
+      "noTeams": "No teams available. Create a team first.",
+      "searchTeams": "Search teams...",
+      "selectTeam": "Select a team...",
+      "team": "Team",
+      "title": "Schedule"
+    },
+    "title": {
+      "createSchedule": "Create Schedule",
+      "editSchedule": "Edit Schedule",
+      "launch": "Launch Team",
+      "relaunch": "Relaunch Team"
+    },
+    "errors": {
+      "loadProjectsFailed": "Failed to load projects",
+      "saveScheduleFailed": "Failed to save schedule",
+      "relaunchFailed": "Failed to relaunch team",
+      "launchFailed": "Failed to launch team"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode lead requires a selected model.",
+      "openCodeTeammateRequired": "OpenCode lead requires at least one OpenCode teammate.",
+      "selectWorkingDirectory": "Select working directory (cwd)",
+      "fixMemberNames": "Fix member names before launch",
+      "memberNamesUnique": "Member names must be unique before launch"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "Relaunch settings",
+      "title": "Optional launch settings",
+      "relaunchDescription": "Review the roster and lead runtime before restarting the team.",
+      "description": "Keep the launch flow focused on the project path and only expand this when you want extra control."
+    }
+  },
+  "list": {
+    "actions": {
+      "copyTeam": "Copy team",
+      "createTeam": "Create Team",
+      "deleteForever": "Delete forever",
+      "deletePermanently": "Delete permanently",
+      "deleteTeam": "Delete team",
+      "launching": "Launching...",
+      "launchTeam": "Launch team",
+      "relaunchTeam": "Relaunch team",
+      "restore": "Restore",
+      "restoreTeam": "Restore team",
+      "retry": "Retry",
+      "stopTeam": "Stop team",
+      "stopping": "Stopping..."
+    },
+    "electronOnly": {
+      "description": "In browser mode, access to local `~/.claude/teams` directories is not available.",
+      "title": "Teams is only available in Electron mode"
+    },
+    "empty": {
+      "description": "Create a team here to get started. It will show up in the list automatically.",
+      "localOnly": "Team creation is only available in local Electron mode.",
+      "title": "No teams found"
+    },
+    "filter": {
+      "clearAll": "Clear all",
+      "label": "Filter teams",
+      "projectPriority": "Project priority",
+      "status": "Status"
+    },
+    "loadFailed": "Failed to load teams",
+    "loading": "Loading teams...",
+    "localOnly": "Only available in local Electron mode.",
+    "membersCount": "Members: {{count}}",
+    "membersCount_few": "Members: {{count}}",
+    "membersCount_many": "Members: {{count}}",
+    "membersCount_one": "Member: {{count}}",
+    "membersCount_other": "Members: {{count}}",
+    "noDescription": "No description",
+    "noMatches": "No teams matching current filters",
+    "partial": {
+      "pending": "Last launch is still reconciling.",
+      "skipped": "Last launch has skipped teammates.",
+      "skippedWithCount": "Last launch skipped {{count}}/{{expected}} teammate.",
+      "skippedWithCount_few": "Last launch skipped {{count}}/{{expected}} teammates.",
+      "skippedWithCount_many": "Last launch skipped {{count}}/{{expected}} teammates.",
+      "skippedWithCount_one": "Last launch skipped {{count}}/{{expected}} teammate.",
+      "skippedWithCount_other": "Last launch skipped {{count}}/{{expected}} teammates.",
+      "stopped": "Last launch stopped before all teammates joined.",
+      "stoppedWithCount": "Last launch stopped before {{count}}/{{expected}} teammate joined.",
+      "stoppedWithCount_few": "Last launch stopped before {{count}}/{{expected}} teammates joined.",
+      "stoppedWithCount_many": "Last launch stopped before {{count}}/{{expected}} teammates joined.",
+      "stoppedWithCount_one": "Last launch stopped before {{count}}/{{expected}} teammate joined.",
+      "stoppedWithCount_other": "Last launch stopped before {{count}}/{{expected}} teammates joined."
+    },
+    "searchPlaceholder": "Search teams...",
+    "sections": {
+      "otherTeams": "Other teams",
+      "projectTeams": "Teams for {{project}}",
+      "selectedProject": "selected project"
+    },
+    "solo": "Solo",
+    "status": {
+      "active": "Active",
+      "deleted": "Deleted",
+      "launching": "Launching...",
+      "offline": "Offline",
+      "partialFailure": "Launch failed partway",
+      "partialPending": "Bootstrap pending",
+      "partialSkipped": "Launch skipped member",
+      "running": "Running"
+    },
+    "title": "Select Team",
+    "trash": "Trash ({{count}})",
+    "trash_few": "Trash ({{count}})",
+    "trash_many": "Trash ({{count}})",
+    "trash_one": "Trash ({{count}})",
+    "trash_other": "Trash ({{count}})",
+    "deleteDraft": {
+      "title": "Delete draft",
+      "message": "Delete draft team \"{{teamName}}\"? This cannot be undone.",
+      "confirmLabel": "Delete",
+      "cancelLabel": "Cancel"
+    },
+    "moveToTrash": {
+      "title": "Move to trash",
+      "message": "Move team \"{{teamName}}\" to trash? You can restore it later.",
+      "confirmLabel": "Move to trash",
+      "cancelLabel": "Cancel"
+    },
+    "deleteForever": {
+      "title": "Delete permanently",
+      "message": "Delete team \"{{teamName}}\" permanently? All data will be lost.",
+      "confirmLabel": "Delete forever",
+      "cancelLabel": "Cancel"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "Tip: Cross-team messages go to the target team lead. If you want the reply to come back to your team lead instead of you, say that explicitly in the message."
+    },
+    "attachments": {
+      "attachFiles": "Attach files (paste or drag & drop)",
+      "unavailable": "Attachments are unavailable",
+      "disabledHint": "File attachments are supported for the online team lead and online OpenCode teammates. Remove attachments or switch recipient.",
+      "restrictions": {
+        "crossTeam": "File attachments are not supported for cross-team messages",
+        "teamOffline": "Team must be online to attach files",
+        "unsupportedRecipient": "Files can be sent to the team lead or OpenCode teammates",
+        "openCodeOffline": "Team must be online to attach files for OpenCode teammates",
+        "sending": "Wait for current message to finish sending before adding files",
+        "maximumReached": "Maximum attachments reached",
+        "leadOnly": "Files can only be sent to the team lead"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "Slash commands require a live team lead and cannot be sent with attachments",
+        "crossTeam": "Slash commands can only be run on the current team lead",
+        "notLead": "Slash commands can only be sent to the team lead",
+        "leadOffline": "Slash commands require the team lead to be online"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "Reused recent cross-team request",
+      "teamOffline": "Team offline"
+    },
+    "input": {
+      "charsLeft": "{{count}} chars left",
+      "charsLeft_one": "{{count}} char left",
+      "charsLeft_other": "{{count}} chars left",
+      "teamLaunchingPlaceholder": "Team is launching... message will be queued for inbox delivery.",
+      "crossTeamPlaceholder": "Cross-team message to {{team}}...",
+      "teamFallback": "team",
+      "placeholder": "Write a message... (Enter to send, Shift+Enter for new line)",
+      "slashTip": "Tip: You can use \"/\" to run any Claude commands.",
+      "charsLeft_few": "{{count}} chars left",
+      "charsLeft_many": "{{count}} chars left"
+    },
+    "teamSelector": {
+      "thisTeam": "This team",
+      "current": "current",
+      "online": "online",
+      "offline": "offline",
+      "onlineTitle": "Online",
+      "offlineTitle": "Offline"
+    },
+    "recipient": {
+      "select": "Select...",
+      "searchPlaceholder": "Search...",
+      "noResults": "No results"
+    },
+    "actions": {
+      "voiceToText": "Voice to text",
+      "send": "Send",
+      "sendingUnavailableLaunching": "Sending unavailable while team is launching"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "Filter logs",
+      "tooltip": "Filter logs",
+      "sections": {
+        "stream": "Stream",
+        "content": "Content"
+      },
+      "kinds": {
+        "output": "Output",
+        "thinking": "Thinking",
+        "tool": "Tool calls"
+      },
+      "actions": {
+        "reset": "Reset",
+        "save": "Save"
+      },
+      "streams": {
+        "stdout": "stdout",
+        "stderr": "stderr"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} raw lines",
+    "rawLineCount_one": "{{formattedCount}} raw line",
+    "rawLinesCaptured": "{{count}} captured",
+    "emptyRawLogs": "{{count}}; none are assistant/tool output yet.",
+    "noLogsYet": "No logs yet.",
+    "teamNotRunning": "Team is not running.",
+    "searchPlaceholder": "Search logs...",
+    "clearSearch": "Clear search",
+    "newCount": "+{{count}} new",
+    "loading": "Loading...",
+    "showMore": "Show more",
+    "noLogsCaptured": "No logs captured.",
+    "noMatchingLogs": "No matching logs.",
+    "rawLineCount_few": "{{formattedCount}} raw lines",
+    "rawLineCount_many": "{{formattedCount}} raw lines",
+    "rawLineCount_other": "{{formattedCount}} raw lines",
+    "openFullscreen": "Open fullscreen logs",
+    "fullscreen": "Fullscreen",
+    "viewingFullscreen": "Viewing in fullscreen mode",
+    "logsTitle": "Logs",
+    "sourceSelect": {
+      "placeholder": "Select log source...",
+      "searchPlaceholder": "Search log sources...",
+      "emptyMessage": "No log sources found.",
+      "ariaLabel": "Log source",
+      "leadLabel": "Lead",
+      "selectSourceEmpty": "Select a log source."
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "External team",
+      "process": {
+        "startedBy": "Started by:",
+        "at": "At:",
+        "openUrl": "Open URL"
+      },
+      "overflow": {
+        "hiddenTasks": "Hidden tasks",
+        "empty": "No hidden tasks available."
+      },
+      "member": {
+        "lead": "Lead",
+        "workingOn": "working on",
+        "recentTools": "Recent tools",
+        "spawn": {
+          "waitingToStart": "waiting to start",
+          "starting": "starting",
+          "failed": "failed"
+        },
+        "state": {
+          "active": "active",
+          "idle": "idle",
+          "offline": "offline",
+          "runningTool": "running tool"
+        },
+        "activeTool": {
+          "running": "Running tool",
+          "failed": "Tool failed",
+          "finished": "Tool finished"
+        },
+        "actions": {
+          "message": "Message",
+          "profile": "Profile",
+          "task": "Task"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "Logs",
+      "loading": "Loading logs",
+      "more": "+{{count}} more",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more",
+      "more_few": "+{{count}} more",
+      "more_many": "+{{count}} more"
+    },
+    "blockingEdge": {
+      "title": "Blocking Dependency",
+      "blocks": "blocks",
+      "close": "Close",
+      "blockingHiddenTasks": "Blocking hidden tasks",
+      "blockedHiddenTasks": "Blocked hidden tasks"
+    },
+    "activityHud": {
+      "activity": "Activity",
+      "noRecentActivity": "No recent activity",
+      "more": "+{{count}} more",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more",
+      "more_few": "+{{count}} more",
+      "more_many": "+{{count}} more"
+    },
+    "provisioning": {
+      "launchDetails": "Launch details",
+      "launchDetailsDescription": "Detailed team launch progress, live output and CLI logs."
+    }
+  },
+  "projectPath": {
+    "label": "Project",
+    "source": {
+      "claude": "Found by Claude",
+      "codex": "Found by Codex",
+      "mixed": "Found by Claude and Codex"
+    },
+    "deleted": {
+      "title": "Project folder no longer exists",
+      "label": "Deleted"
+    },
+    "mode": {
+      "projectList": "From project list",
+      "customPath": "Custom path"
+    },
+    "loadingProjects": "Loading projects...",
+    "selectProject": "Select a project...",
+    "searchPlaceholder": "Search project by name or path",
+    "empty": "Nothing found",
+    "selectFromList": "Select a project from the list",
+    "noProjects": "No projects found, switch to custom path.",
+    "customWorkingDirectory": "Custom working directory",
+    "browse": "Browse",
+    "createAutomatically": "If the directory does not exist, it will be created automatically."
+  },
+  "members": {
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "Local runtime load",
+      "description": "Parent and child processes only. Remote LLM inference is not included.",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "summedRss": "summed RSS",
+      "sharedHost": "Shared OpenCode host metric. It is not exclusive to this member.",
+      "processTreeCapped": "Process tree was capped for this sample.",
+      "rssHint": "RSS can include shared pages, so it is best read as a load signal, not exclusive memory."
+    },
+    "editor": {
+      "title": "Members",
+      "addMember": "Add member",
+      "editAsJson": "Edit as JSON",
+      "runInSeparateWorktrees": "Run teammates in separate worktrees",
+      "agentTeamsMcpOnly": "Agent Teams MCP only",
+      "removedCount": "Removed ({{count}})",
+      "removedModelLockReason": "Removed members are kept for soft delete history. Restore them to edit settings.",
+      "memberNamesUnique": "Member names must be unique"
+    },
+    "stats": {
+      "computing": "Computing stats...",
+      "empty": "No stats available",
+      "lines": "Lines",
+      "linesInfo": "Approximate. Accurate for Edit and Write tools. Bash file writes are estimated from command patterns (heredoc, echo, sed) and may be underreported.",
+      "files": "Files",
+      "toolCalls": "Tool Calls",
+      "tokens": "Tokens",
+      "toolUsage": "Tool Usage",
+      "filesTouched": "Files Touched ({{count}})",
+      "viewAllChanges": "View All Changes",
+      "showLess": "Show less",
+      "moreFiles": "+{{count}} more",
+      "footer": "{{count}} sessions · computed {{computedAgo}}",
+      "footer_one": "{{count}} session · computed {{computedAgo}}",
+      "footer_few": "{{count}} sessions · computed {{computedAgo}}",
+      "footer_many": "{{count}} sessions · computed {{computedAgo}}",
+      "footer_other": "{{count}} sessions · computed {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "Searching logs...",
+      "empty": "No logs found",
+      "waitingForTaskActivity": "Task is in progress - waiting for session activity (auto-refreshing)...",
+      "noTaskActivity": "No session activity for this task yet",
+      "noMemberActivity": "This member has no recorded session activity yet",
+      "leadSessionTooltip": "Full team lead session logs - useful for global orchestration context, not specific to this agent",
+      "memberSessionTooltip": "Full persistent teammate session logs - useful when work runs in a root member session instead of a subagent file",
+      "startedAt": "started {{time}}",
+      "active": "active",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details",
+      "loadingDetails": "Loading details...",
+      "failedToLoadDetails": "Failed to load details"
+    },
+    "detail": {
+      "relaunchOpenCode": "Relaunch OpenCode",
+      "restart": "Restart",
+      "legacyLogsFallback": "Legacy Logs Fallback",
+      "copyDiagnostics": "Copy diagnostics",
+      "pid": "PID {{pid}}",
+      "removedAt": "Removed {{date}}",
+      "failedToRestartMember": "Failed to restart member",
+      "sendMessage": "Send Message",
+      "assignTask": "Assign Task",
+      "remove": "Remove"
+    },
+    "list": {
+      "loading": "Loading team members",
+      "unavailable": "Member roster unavailable",
+      "unavailableDescription": "{{count}} teammates are known from team metadata, but roster details are missing.",
+      "unavailableDescription_one": "{{count}} teammate is known from team metadata, but roster details are missing.",
+      "soloLeadOnly": "Solo team - lead only",
+      "removedCount": "Removed ({{count}})",
+      "unavailableDescription_few": "{{count}} teammates are known from team metadata, but roster details are missing.",
+      "unavailableDescription_many": "{{count}} teammates are known from team metadata, but roster details are missing.",
+      "unavailableDescription_other": "{{count}} teammates are known from team metadata, but roster details are missing."
+    },
+    "executionLog": {
+      "empty": "Nothing to display",
+      "emptyUserMessage": "{{time}} - (empty)",
+      "agentInstructions": "Agent instructions",
+      "memberTurn": "{{member}} turn",
+      "agentTurn": "Agent turn",
+      "turn": "turn"
+    },
+    "recentMessages": {
+      "latest": "Latest messages",
+      "latestForMember": "Latest messages - {{member}}",
+      "loadMore": "Load more",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "leadModel": {
+      "defaultModel": "Default",
+      "providerModelAria": "{{provider}} provider, {{model}}",
+      "leadShort": "lead",
+      "teamLead": "Team Lead",
+      "syncWithTeammates": "Sync model with teammates",
+      "anthropicTeamWide": "Anthropic team-wide",
+      "runtimeInheritance": "Lead runtime applies to teammates unless they set their own provider or model.",
+      "anthropicContextLimit": "The 200K context limit is team-wide for Anthropic runtimes in this launch, including custom Anthropic teammates."
+    },
+    "runtimeLogs": {
+      "autoRefresh": "Auto-refresh",
+      "wrapLines": "Wrap lines",
+      "loadingTail": "Loading process log tail...",
+      "empty": "No process log file captured for this member yet."
+    },
+    "tasks": {
+      "empty": "No tasks assigned to this member"
+    },
+    "messages": {
+      "loadOlder": "Load older messages",
+      "filters": {
+        "all": "All",
+        "messages": "Messages",
+        "comments": "Comments"
+      },
+      "empty": {
+        "loading": "Loading activity...",
+        "noComments": "No comments for this member",
+        "noLoadedMessages": "No loaded messages for this member yet",
+        "noMessages": "No messages with this member",
+        "noLoadedActivity": "No loaded activity for this member yet",
+        "noActivity": "No activity with this member"
+      }
+    },
+    "actions": {
+      "openProfile": "Open profile",
+      "editRole": "Edit role",
+      "sendMessage": "Send message",
+      "assignTask": "Assign task"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "Enter custom role..."
+    }
+  },
+  "schedule": {
+    "count": "{{count}} schedules",
+    "count_one": "{{count}} schedule",
+    "count_other": "{{count}} schedules",
+    "nextRun": "Next: {{next}}",
+    "actions": {
+      "runNow": "Run now",
+      "edit": "Edit",
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete",
+      "addSchedule": "Add Schedule"
+    },
+    "runHistory": {
+      "loading": "Loading run history...",
+      "empty": "No runs yet"
+    },
+    "count_few": "{{count}} schedules",
+    "count_many": "{{count}} schedules",
+    "runLog": {
+      "title": "Run Log",
+      "exitCode": "exit {{code}}",
+      "retryCount": "retry {{count}}/{{max}}",
+      "stillRunning": "Task is still running...",
+      "loadingLogs": "Loading logs...",
+      "errors": "Errors",
+      "close": "Close"
+    },
+    "cron": {
+      "expression": "Cron expression",
+      "highFrequencyWarning": "High frequency schedule (less than 5 min interval)",
+      "nextRuns": "Next runs:",
+      "timezone": "Timezone",
+      "selectTimezone": "Select timezone",
+      "warmUpTime": "Warm-up time",
+      "warmUpDescription": "Prepares selected providers before scheduled execution",
+      "errors": {
+        "enterExpression": "Enter a cron expression",
+        "invalidExpression": "Invalid cron expression"
+      },
+      "presets": {
+        "everyHour": "Every hour",
+        "everySixHours": "Every 6 hours",
+        "dailyAtNine": "Daily at 9am",
+        "weekdaysAtNine": "Weekdays at 9am",
+        "mondayAtNine": "Monday at 9am",
+        "everyThirtyMinutes": "Every 30 min"
+      },
+      "warmUpOptions": {
+        "none": "No warm-up",
+        "fiveMinutes": "5 min",
+        "tenMinutes": "10 min",
+        "fifteenMinutes": "15 min",
+        "thirtyMinutes": "30 min"
+      }
+    },
+    "empty": {
+      "title": "No schedules yet",
+      "description": "Create a schedule to run Claude tasks automatically on a cron schedule."
+    },
+    "title": "Schedules",
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "disabled": "Disabled"
+    },
+    "runStatus": {
+      "pending": "Pending",
+      "warmingUp": "Warming up",
+      "warm": "Warm",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "interrupted": "Interrupted",
+      "cancelled": "Cancelled"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode local models can use an OpenCode context budget instead of prompt-only limits.",
+    "description": "Add matching limits to the OpenCode config for the provider and model used by this teammate. This helps OpenCode compact and prune before local models overflow their context window.",
+    "replacePrefix": "Replace",
+    "and": "and",
+    "replaceSuffix": "with the provider and model IDs from your OpenCode setup. Prompt instructions like",
+    "promptInstructionsSuffix": "are weaker because the request is assembled before the model reads them.",
+    "providerLimits": "Provider limits",
+    "compactionConfig": "Compaction config"
+  },
+  "sessions": {
+    "noProjectPath": "No project path linked",
+    "provisioningHint": "Sessions will appear after team provisioning",
+    "projectNotFound": "Project not found",
+    "loading": "Loading sessions...",
+    "empty": "No sessions found",
+    "showAllSessions": "Show for all sessions",
+    "lead": "lead",
+    "removeFilter": "Remove filter",
+    "filterBySession": "Filter by this session",
+    "openSession": "Open session",
+    "title": "Sessions"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Cancel",
+    "moreWarningsHidden": "{{count}} more warnings hidden",
+    "diagnostics": "Diagnostics",
+    "liveOutput": "Live output",
+    "diagnosticsCopied": "Diagnostics copied",
+    "copyDiagnostics": "Copy diagnostics",
+    "copied": "Copied",
+    "noOutput": "No output captured yet.",
+    "cliLogs": "CLI logs",
+    "steps": {
+      "starting": "Starting",
+      "configuring": "Team setup",
+      "assembling": "Members joining",
+      "finalizing": "Finalizing"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "checking...",
+        "ready": "OK",
+        "notes": "OK (notes)",
+        "failed": "ERR",
+        "pending": "waiting"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI binary missing",
+        "openCodeRuntimeMissing": "OpenCode runtime missing",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows access blocked",
+        "openCodeNoOutput": "OpenCode runtime check returned no output",
+        "openCodeMcpUnreachable": "OpenCode app MCP unreachable",
+        "workingDirectoryMissing": "Working directory missing",
+        "cliBinaryCouldNotStart": "CLI binary could not be started",
+        "cliPreflightIncomplete": "CLI preflight did not complete",
+        "authenticationRequired": "Authentication required",
+        "runtimeProviderNotConfigured": "Runtime provider is not configured",
+        "cliPreflightFailed": "CLI preflight failed",
+        "selectedModelCompatible": "Selected model compatible",
+        "selectedModelCompatibilityPending": "Selected model compatibility pending",
+        "selectedModelAvailable": "Selected model available",
+        "selectedModelVerified": "Selected model verified",
+        "selectedModelUnavailable": "Selected model unavailable",
+        "selectedModelTimedOut": "Selected model verification timed out",
+        "selectedModelCheckFailed": "Selected model check failed",
+        "selectedModelDeferred": "Selected model verification deferred",
+        "selectedModelPingNotConfirmed": "Selected model ping not confirmed",
+        "readyWithNotes": "Ready with notes",
+        "needsAttention": "Needs attention"
+      },
+      "modelChecksSummary": "Selected model checks - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model unavailable",
+        "unavailable_one": "{{count}} model unavailable",
+        "unavailable_other": "{{count}} models unavailable",
+        "checkFailed": "{{count}} model check failed",
+        "checkFailed_one": "{{count}} model check failed",
+        "checkFailed_other": "{{count}} models check failed",
+        "timedOut": "{{count}} model timed out",
+        "timedOut_one": "{{count}} model timed out",
+        "timedOut_other": "{{count}} models timed out",
+        "deferred": "{{count}} verification deferred",
+        "deferred_one": "{{count}} verification deferred",
+        "deferred_other": "{{count}} verification deferred",
+        "pingNotConfirmed": "{{count}} ping not confirmed",
+        "pingNotConfirmed_one": "{{count}} ping not confirmed",
+        "pingNotConfirmed_other": "{{count}} ping not confirmed",
+        "compatibilityPending": "{{count}} compatible, deep verification pending",
+        "compatibilityPending_one": "{{count}} compatible, deep verification pending",
+        "compatibilityPending_other": "{{count}} compatible, deep verification pending",
+        "compatible": "{{count}} compatible",
+        "compatible_one": "{{count}} compatible",
+        "compatible_other": "{{count}} compatible",
+        "checking": "{{count}} checking",
+        "checking_one": "{{count}} checking",
+        "checking_other": "{{count}} checking",
+        "available": "{{count}} available",
+        "available_one": "{{count}} available",
+        "available_other": "{{count}} available",
+        "verified": "{{count}} verified",
+        "verified_one": "{{count}} verified",
+        "verified_other": "{{count}} verified",
+        "unavailable_few": "{{count}} models unavailable",
+        "unavailable_many": "{{count}} models unavailable",
+        "checkFailed_few": "{{count}} models check failed",
+        "checkFailed_many": "{{count}} models check failed",
+        "timedOut_few": "{{count}} models timed out",
+        "timedOut_many": "{{count}} models timed out",
+        "deferred_few": "{{count}} verification deferred",
+        "deferred_many": "{{count}} verification deferred",
+        "pingNotConfirmed_few": "{{count}} ping not confirmed",
+        "pingNotConfirmed_many": "{{count}} ping not confirmed",
+        "compatibilityPending_few": "{{count}} compatible, deep verification pending",
+        "compatibilityPending_many": "{{count}} compatible, deep verification pending",
+        "compatible_few": "{{count}} compatible",
+        "compatible_many": "{{count}} compatible",
+        "checking_few": "{{count}} checking",
+        "checking_many": "{{count}} checking",
+        "available_few": "{{count}} available",
+        "available_many": "{{count}} available",
+        "verified_few": "{{count}} verified",
+        "verified_many": "{{count}} verified"
+      },
+      "openProviderSettings": "Open {{provider}} settings",
+      "copied": "Copied",
+      "copyDiagnostics": "Copy diagnostics",
+      "deepVerificationPending": "Deep verification is still running. OpenCode free models may take around 20 seconds.",
+      "progress": {
+        "checkingSelectedProviders": "Checking selected providers in parallel...",
+        "checkingProvider": "Checking {{provider}} provider...",
+        "checkingProviders": "Checking {{providers}} providers..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.",
+        "openCodeBridgeNoOutput": "Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.",
+        "workingDirectoryMissing": "Choose an existing working directory, then reopen this dialog.",
+        "authenticationRequired": "Authenticate the required provider in Claude CLI, then reopen this dialog.",
+        "runtimeProviderNotConfigured": "Configure the selected provider runtime, then reopen this dialog.",
+        "openCodeRuntimeMissing": "Install or retry OpenCode runtime from the provider status card, then reopen this dialog.",
+        "openCodeAppMcpUnreachable": "Retry launch to refresh the OpenCode app MCP bridge. If it repeats, restart the app and OpenCode runtime.",
+        "cliBinaryMissing": "Make sure the local Claude CLI binary exists and can be started, then reopen this dialog.",
+        "default": "Resolve the issue above, then reopen this dialog."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} teammate awaiting permission approval",
+      "nameListWithMore": "{{names}}, +{{count}} more",
+      "waitingForOpenCode": "Waiting for OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap stalled: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Waiting for OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap stalled",
+        "shellOnly": "Shell-only",
+        "waitingForBootstrap": "Waiting for bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap unconfirmed",
+        "awaitingPermission": "Awaiting permission",
+        "waitingForRuntime": "Waiting for runtime",
+        "shellOnlyLower": "shell-only",
+        "waitingForBootstrapLower": "waiting for bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap unconfirmed",
+        "awaitingPermissionLower": "awaiting permission",
+        "waitingForRuntimeLower": "waiting for runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} failed to start",
+        "teammatesFailedToStart": "{{count}} teammates failed to start",
+        "teammatesFailedRatio": "{{count}}/{{total}} teammates failed to start"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} skipped for this launch",
+        "memberSkippedWithReason": "{{name}} skipped for this launch - {{reason}}",
+        "memberSkippedCompact": "{{name}} skipped",
+        "teammatesSkipped": "{{count}} teammates skipped",
+        "teammatesSkippedList": "Skipped teammates: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} teammates skipped for this launch"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} teammates still joining",
+        "teammatesStillJoining_one": "{{count}} teammate still joining",
+        "teammatesStillJoining_few": "{{count}} teammates still joining",
+        "teammatesStillJoining_many": "{{count}} teammates still joining",
+        "teammatesStillJoining_other": "{{count}} teammates still joining",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} teammates confirmed"
+      },
+      "ready": {
+        "leadOnline": "Lead online",
+        "allTeammatesJoined": "All {{count}} teammates joined",
+        "teamProvisionedLeadOnline": "Team provisioned - lead online",
+        "teamProvisionedAllJoined": "Team provisioned - all {{count}} teammates joined",
+        "teamProvisionedStillJoining": "Team provisioned - teammates are still joining",
+        "launchFinishedWithErrors": "Launch finished with errors - {{count}}/{{total}} teammates failed to start",
+        "launchContinuedSkipped": "Launch continued - {{count}}/{{total}} teammates skipped",
+        "teamLaunchedLeadOnline": "Team launched - lead online",
+        "teamLaunchedAllJoined": "Team launched - all {{count}} teammates joined"
+      },
+      "panel": {
+        "launchFailed": "Launch failed",
+        "launchDetails": "Launch details",
+        "launchFinishedWithErrors": "Launch finished with errors",
+        "launchContinuedSkipped": "Launch continued with skipped teammates",
+        "coreTeamReady": "Core team ready",
+        "finishingLaunch": "Finishing launch",
+        "teamLaunched": "Team launched",
+        "launchingTeam": "Launching team"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Live runtime status",
+    "description": "Display-only heartbeat and launch state. Process controls remain below.",
+    "source": "source: {{source}}",
+    "lane": "{{lane}} lane",
+    "diagnosticOnly": "Diagnostic only",
+    "updated": "updated {{value}}",
+    "states": {
+      "running": "Running",
+      "starting": "Starting",
+      "waiting": "Waiting",
+      "degraded": "Needs attention",
+      "stopped": "Stopped",
+      "unknown": "Unknown"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Exact Task Logs",
+      "loading": "Loading exact task logs...",
+      "description": "Exact transcript slices rendered with the same execution-log components used in Logs.",
+      "emptyTitle": "No exact task logs yet",
+      "emptyDescription": "Exact transcript bundles will appear here when explicit task-linked transcript metadata is available.",
+      "summaryOnly": "summary only"
+    },
+    "executionSessions": {
+      "title": "Execution Sessions",
+      "online": "Online",
+      "updating": "Updating...",
+      "description": "Legacy session-centric transcript browsing and previews."
+    },
+    "stream": {
+      "title": "Task Log Stream"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Cancel task {{taskId}}",
+      "cancel": "Cancel",
+      "moveBackToTodoConfirm": "Move this task back to TODO and notify the team?",
+      "confirm": "Confirm",
+      "keep": "Keep",
+      "changesNeedAttention": "Changes need attention",
+      "changes": "Changes",
+      "deleteTask": "Delete task",
+      "taskLogsActive": "Task logs active",
+      "newTaskLogsArriving": "New task logs arriving",
+      "awaitingUser": "Awaiting user",
+      "awaitingLead": "Awaiting lead",
+      "blockedBy": "Blocked by",
+      "blocks": "Blocks",
+      "start": "Start",
+      "complete": "Complete",
+      "approve": "Approve",
+      "requestReview": "Request review",
+      "manualReview": "Manual review",
+      "requestChanges": "Request changes"
+    },
+    "filter": {
+      "title": "Filter tasks",
+      "session": "Session",
+      "allSessions": "All sessions",
+      "teammate": "Teammate",
+      "unassigned": "(unassigned)",
+      "column": "Column",
+      "clearAll": "Clear all"
+    },
+    "board": {
+      "addTask": "Add task",
+      "noTasks": "No tasks",
+      "showMore": "Show {{count}} more",
+      "hiddenCount": "{{count}} hidden",
+      "trash": "Trash",
+      "gridView": "Grid view",
+      "columnsView": "Columns view"
+    },
+    "trash": {
+      "title": "Trash",
+      "empty": "No deleted tasks",
+      "subject": "Subject",
+      "owner": "Owner",
+      "deleted": "Deleted",
+      "unassigned": "Unassigned",
+      "restoreTask": "Restore task",
+      "restore": "Restore",
+      "close": "Close"
+    },
+    "sort": {
+      "title": "Sort tasks",
+      "sortBy": "Sort by",
+      "reset": "Reset",
+      "options": {
+        "updatedAt": {
+          "label": "Last updated",
+          "description": "Recently updated first"
+        },
+        "createdAt": {
+          "label": "Created",
+          "description": "Newest first"
+        },
+        "owner": {
+          "label": "Owner",
+          "description": "Alphabetically by assignee"
+        },
+        "manual": {
+          "label": "Manual",
+          "description": "Drag-and-drop order"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Clear search",
+      "tasks": "Tasks",
+      "createdAgo": "created {{time}}",
+      "updatedAgo": "updated {{time}}",
+      "placeholder": "Search tasks... (#id or text)"
+    },
+    "grid": {
+      "addTask": "Add task",
+      "noTasks": "No tasks"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Checking Git repository status for teammate worktrees...",
+    "ready": "Git worktrees are ready.",
+    "readyOnBranch": "Git worktrees are ready on branch {{branch}}.",
+    "needsSetup": "Worktree isolation needs Git setup",
+    "initialCommitNotice": "The initial commit action stages and commits all current files with message",
+    "initializeRepository": "Initialize Git repository",
+    "createInitialCommit": "Create initial commit",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Settings",
+    "autoAllowAllTools": "Auto-allow all tools",
+    "autoAllowFileEdits": "Auto-allow file edits (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Auto-allow safe commands (git, pnpm, npm, ls...)",
+    "onTimeout": "On timeout:",
+    "after": "after",
+    "secondsShort": "sec",
+    "timeoutActions": {
+      "wait": "Wait forever",
+      "allow": "Allow",
+      "deny": "Deny"
+    },
+    "submit": "Submit",
+    "allow": "Allow",
+    "deny": "Deny",
+    "allowAll": "Allow all",
+    "pendingCount": "{{count}} pending",
+    "autoActionIn": "Auto-{{action}} in {{time}}",
+    "diff": {
+      "previewChanges": "Preview changes",
+      "readingFile": "Reading file...",
+      "binaryFile": "Binary file - cannot preview",
+      "truncated": "File truncated at 2MB - diff may be incomplete",
+      "newFile": "New file"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Member work sync",
+      "actionableItems": "Actionable items",
+      "fingerprint": "Fingerprint",
+      "report": "Report",
+      "none": "none",
+      "shadowWouldNudge": "Shadow would nudge",
+      "yes": "yes",
+      "no": "no",
+      "moreActionableItems": "{{count}} more actionable item(s)",
+      "diagnostics": "Diagnostics: {{diagnostics}}"
+    },
+    "title": "Member work sync",
+    "loadingDiagnostics": "Loading member work sync diagnostics.",
+    "diagnosticsUnavailable": "Member work sync diagnostics are unavailable."
+  },
+  "advancedCli": {
+    "title": "Advanced",
+    "useWorktree": "Use worktree",
+    "recent": "Recent",
+    "commandPreview": "Command preview",
+    "customArguments": "Custom arguments",
+    "validate": "Validate",
+    "validation": {
+      "allFlagsValid": "All flags valid",
+      "unknownFlags": "Unknown: {{flags}}",
+      "protectedFlags": "Protected: {{flags}}",
+      "failed": "Validation failed"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} ago",
+    "stoppedAgo": "stopped {{time}} ago",
+    "running": "Running",
+    "stopped": "Stopped",
+    "stopProcess": "Stop process (SIGTERM)",
+    "kill": "Kill",
+    "openInBrowser": "Open in browser",
+    "open": "Open",
+    "pid": "PID{{pid}}",
+    "title": "CLI Processes"
+  },
+  "taskActivity": {
+    "loadingDetails": "Loading activity details...",
+    "contextUnavailable": "Detailed transcript context is no longer available for this activity.",
+    "loading": "Loading task activity...",
+    "lowSignalOnly": "No key task activity was found yet. Low-level execution details are available below in Task Log Stream.",
+    "empty": "No explicit task activity was found in the available transcripts yet. Older or heuristic session logs may still be available below in Execution Sessions.",
+    "title": "Task Activity",
+    "description": "Key explicit runtime activity linked to this task from transcript metadata."
+  },
+  "sendMessage": {
+    "title": "Send Message",
+    "description": "Send a direct message to a team member.",
+    "recipientLabel": "Recipient",
+    "selectMemberPlaceholder": "Select member...",
+    "messageLabel": "Message",
+    "placeholder": "Write your message... (Enter to send)",
+    "send": "Send",
+    "sending": "Sending...",
+    "charsLeft": "{{count}} chars left",
+    "saved": "Saved",
+    "attachments": {
+      "teamOnlineRequired": "Team must be online to attach files",
+      "recipientUnsupported": "Files can be sent to the team lead or OpenCode teammates",
+      "openCodeOnlineRequired": "Team must be online to attach files for OpenCode teammates",
+      "disabledHint": "File attachments are supported for the online team lead and online OpenCode teammates. Remove attachments or switch recipient.",
+      "attachFiles": "Attach files (paste or drag & drop)",
+      "unavailable": "Attachments are unavailable"
+    },
+    "quote": {
+      "remove": "Remove quote",
+      "replyingTo": "Replying to"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Cancel reply",
+    "replyingTo": "Replying to",
+    "placeholder": "Add a comment... (Enter to send)",
+    "attachFile": "Attach file (or paste)",
+    "voiceToText": "Voice to text",
+    "comment": "Comment",
+    "charsLeft": "{{count}} chars left",
+    "saved": "Saved",
+    "awaitingReplyFrom": "Awaiting reply from",
+    "or": "or"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Drop image here",
+    "attachImage": "Attach image",
+    "pasteOrDragDrop": "or paste / drag-drop",
+    "fromOriginalMessage": "From original message",
+    "dropFilesHere": "Drop files here",
+    "loading": "Loading attachments..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Auto-approve all tools",
+    "autonomousModeDescription": "Autonomous mode: team tools execute without confirmation. Be cautious with untrusted code.",
+    "manualModeDescription": "Manual mode: you'll approve or deny each tool call in real time."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Execution",
+      "process": "Process"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "logs": {
+      "title": "Logs",
+      "loading": "Loading member log stream...",
+      "emptyTitle": "No log stream entries were found for this member yet.",
+      "emptyDescription": "Member-scoped transcript or runtime logs will appear here when available."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Describe what needs to change... (Enter to submit)",
+    "submit": "Submit",
+    "charsLeft": "{{count}} chars left",
+    "saved": "Saved",
+    "title": "Request Changes"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Open Dashboard",
+      "openTeam": "Open team",
+      "cancel": "Cancel"
+    },
+    "membersJson": {
+      "hide": "Hide JSON"
+    },
+    "optional": {
+      "badge": "Optional"
+    }
+  },
+  "runningTeams": {
+    "title": "Running Teams"
+  },
+  "layout": {
+    "maxPanesReached": "Maximum of {{count}} panes reached"
+  },
+  "codexReconnect": {
+    "description": "Your Codex session appears stale. Reconnect to continue.",
+    "useCode": "Use code"
+  },
+  "effortLevel": {
+    "label": "Effort level (optional)",
+    "maxDescription": "Max gives the model the most reasoning time for difficult tasks."
+  },
+  "contextLimit": {
+    "limitTo200k": "Limit context to 200K tokens",
+    "always200k": "(always 200K for this model)",
+    "tooltipContent": "Keeps launches within a 200K-token context window when supported.",
+    "tooltipTitle": "Context limit"
+  },
+  "roleSelect": {
+    "noRole": "No role",
+    "customRole": "Custom role...",
+    "searchPlaceholder": "Search roles...",
+    "empty": "No roles found.",
+    "reservedRole": "This role is reserved"
+  }
+}

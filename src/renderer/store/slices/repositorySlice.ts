@@ -39,6 +39,7 @@ export interface RepositorySlice {
   selectedRepositoryId: string | null;
   selectedWorktreeId: string | null;
   repositoryGroupsLoading: boolean;
+  repositoryGroupsInitialized: boolean;
   repositoryGroupsError: string | null;
   viewMode: 'flat' | 'grouped';
 
@@ -62,6 +63,7 @@ export const createRepositorySlice: StateCreator<AppState, [], [], RepositorySli
   selectedRepositoryId: null,
   selectedWorktreeId: null,
   repositoryGroupsLoading: false,
+  repositoryGroupsInitialized: false,
   repositoryGroupsError: null,
   viewMode: 'grouped', // Default to grouped view
 
@@ -78,7 +80,11 @@ export const createRepositorySlice: StateCreator<AppState, [], [], RepositorySli
         'get-repository-groups'
       );
       // Already sorted by most recent session in the scanner
-      set({ repositoryGroups: groups, repositoryGroupsLoading: false });
+      set({
+        repositoryGroups: groups,
+        repositoryGroupsLoading: false,
+        repositoryGroupsInitialized: true,
+      });
       const ms = Date.now() - startedAt;
       if (ms >= 2000) {
         logger.warn(`fetchRepositoryGroups slow ms=${ms} count=${groups.length}`);

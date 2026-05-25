@@ -5,6 +5,8 @@ const LOCAL_MCP_LAUNCH_ENV_KEYS = [
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY',
   'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON',
 ] as const;
+const OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS = ['CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON'] as const;
+const LEGACY_LOCAL_MCP_CHILD_ENV_KEYS = ['ELECTRON_RUN_AS_NODE'] as const;
 
 export type OpenCodeMcpBridgeEnv = Record<string, string | undefined>;
 
@@ -15,6 +17,17 @@ export function isOpenCodeMcpHttpBridgeEnabled(env: OpenCodeMcpBridgeEnv = proce
 
 export function hasOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): boolean {
   return LOCAL_MCP_LAUNCH_ENV_KEYS.every((key) => Boolean(env[key]?.trim()));
+}
+
+function buildLegacyLocalMcpEnvJson(env: OpenCodeMcpBridgeEnv): string | null {
+  const legacyEnv: Record<string, string> = {};
+  for (const key of LEGACY_LOCAL_MCP_CHILD_ENV_KEYS) {
+    const value = env[key]?.trim();
+    if (value) {
+      legacyEnv[key] = value;
+    }
+  }
+  return Object.keys(legacyEnv).length > 0 ? JSON.stringify(legacyEnv) : null;
 }
 
 export function shouldEnsureOpenCodeLocalMcpLaunchEnv(input: {
@@ -36,6 +49,20 @@ export function copyOpenCodeLocalMcpLaunchEnv(
       delete targetEnv[key];
     }
   }
+  for (const key of OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS) {
+    const value = sourceEnv[key]?.trim();
+    if (value) {
+      targetEnv[key] = value;
+    } else {
+      delete targetEnv[key];
+    }
+  }
+  if (!targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON?.trim()) {
+    const legacyEnvJson = buildLegacyLocalMcpEnvJson(sourceEnv);
+    if (legacyEnvJson) {
+      targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON = legacyEnvJson;
+    }
+  }
 }
 
 export function snapshotOpenCodeLocalMcpLaunchEnv(
@@ -52,6 +79,12 @@ export function snapshotOpenCodeLocalMcpLaunchEnv(
 
 export function clearOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): void {
   for (const key of LOCAL_MCP_LAUNCH_ENV_KEYS) {
+    delete env[key];
+  }
+  for (const key of OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS) {
+    delete env[key];
+  }
+  for (const key of LEGACY_LOCAL_MCP_CHILD_ENV_KEYS) {
     delete env[key];
   }
 }

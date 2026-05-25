@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   AlertTriangle,
   ChevronDown,
@@ -12,7 +13,6 @@ import {
 
 import { useTmuxInstallerBanner } from '../hooks/useTmuxInstallerBanner';
 
-const SUMMARY_TITLE = 'tmux is not installed';
 const BANNER_MIN_H = 'min-h-[4.25rem]';
 
 const SourceLink = ({
@@ -36,6 +36,7 @@ const SourceLink = ({
 );
 
 export function TmuxInstallerBannerView(): React.JSX.Element | null {
+  const { t } = useAppTranslation('common');
   const { viewModel, install, cancel, submitInput, refresh, toggleDetails, openExternal } =
     useTmuxInstallerBanner();
   const [expanded, setExpanded] = React.useState(false);
@@ -78,6 +79,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
     viewModel.manualHints.length > 0 && (!viewModel.manualHintsCollapsible || manualHintsExpanded);
   const primaryGuideUrl = viewModel.primaryGuideUrl;
   const bannerPaddingClass = expanded ? `py-3 ${BANNER_MIN_H}` : 'py-2.5';
+  const summaryTitle = t('tmuxInstaller.summaryTitle');
 
   return (
     <div
@@ -107,7 +109,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
               className="block truncate text-xs font-medium leading-5"
               style={{ color: 'var(--color-text)' }}
             >
-              {SUMMARY_TITLE}
+              {summaryTitle}
             </span>
             {!expanded && viewModel.benefitsBody && (
               <span
@@ -136,7 +138,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
       {expanded && (
         <div className="mt-3 space-y-3">
           <div className="min-w-0 max-w-4xl">
-            {viewModel.title !== SUMMARY_TITLE && (
+            {viewModel.title !== summaryTitle && (
               <div
                 className="text-sm font-medium leading-6"
                 style={{ color: 'var(--color-text-secondary)' }}
@@ -176,7 +178,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                       backgroundColor: 'rgba(255, 255, 255, 0.04)',
                     }}
                   >
-                    Detected OS: {viewModel.platformLabel}
+                    {t('tmuxInstaller.detectedOs', { os: viewModel.platformLabel })}
                   </span>
                 )}
                 {viewModel.locationLabel && (
@@ -187,7 +189,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                       backgroundColor: 'rgba(255, 255, 255, 0.04)',
                     }}
                   >
-                    Runtime path: {viewModel.locationLabel}
+                    {t('tmuxInstaller.runtimePath', { path: viewModel.locationLabel })}
                   </span>
                 )}
                 {viewModel.runtimeReadyLabel && (
@@ -220,7 +222,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                       backgroundColor: 'rgba(255, 255, 255, 0.04)',
                     }}
                   >
-                    Phase: {viewModel.phase}
+                    {t('tmuxInstaller.phase', { phase: viewModel.phase })}
                   </span>
                 )}
               </div>
@@ -258,7 +260,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 <XCircle className="size-4" />
-                Cancel
+                {t('tmuxInstaller.actions.cancel')}
               </button>
             )}
             {primaryGuideUrl && (
@@ -269,7 +271,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 <ExternalLink className="size-4" />
-                Manual guide
+                {t('tmuxInstaller.actions.manualGuide')}
               </button>
             )}
             {viewModel.manualHintsCollapsible && (
@@ -285,8 +287,10 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                   <ChevronDown className="size-4" />
                 )}
                 {manualHintsExpanded
-                  ? 'Hide setup steps'
-                  : `Show setup steps (${viewModel.manualHints.length})`}
+                  ? t('tmuxInstaller.actions.hideSetupSteps')
+                  : t('tmuxInstaller.actions.showSetupSteps', {
+                      count: viewModel.manualHints.length,
+                    })}
               </button>
             )}
             {viewModel.showRefreshButton && (
@@ -297,7 +301,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 <RefreshCw className="size-4" />
-                Re-check
+                {t('tmuxInstaller.actions.recheck')}
               </button>
             )}
           </div>
@@ -305,7 +309,9 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
           {viewModel.progressPercent !== null && (
             <div>
               <div className="mb-1 flex items-center justify-between text-[11px]">
-                <span style={{ color: 'var(--color-text-muted)' }}>Installer progress</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>
+                  {t('tmuxInstaller.installerProgress')}
+                </span>
                 <span style={{ color: 'var(--color-text-secondary)' }}>
                   {viewModel.progressPercent}%
                 </span>
@@ -343,7 +349,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                   type={viewModel.inputSecret ? 'password' : 'text'}
                   value={inputValue}
                   onChange={(event) => setInputValue(event.target.value)}
-                  placeholder={viewModel.inputPrompt ?? 'Send input to the installer'}
+                  placeholder={viewModel.inputPrompt ?? t('tmuxInstaller.input.placeholder')}
                   className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
                   style={{
                     borderColor: 'var(--color-border)',
@@ -357,13 +363,12 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                   className="inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
-                  Send input
+                  {t('tmuxInstaller.input.send')}
                 </button>
               </form>
               {viewModel.inputSecret && (
                 <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                  Password input is sent directly to the installer terminal and is not added to the
-                  log output.
+                  {t('tmuxInstaller.input.passwordNotice')}
                 </div>
               )}
             </div>
@@ -409,7 +414,9 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
                 className="text-xs underline-offset-4 hover:underline"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                {viewModel.detailsOpen ? 'Hide details' : 'Show details'}
+                {viewModel.detailsOpen
+                  ? t('tmuxInstaller.details.hide')
+                  : t('tmuxInstaller.details.show')}
               </button>
               {viewModel.detailsOpen && (
                 <pre

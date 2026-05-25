@@ -9,16 +9,19 @@ import { App } from './App';
 import { initSentryRenderer } from './sentry';
 import { initializeNotificationListeners } from './store';
 
+import type { SplashSceneHandle } from './components/splash/splashScene';
 import type { AppStartupStatus, AppStartupStep } from '@shared/types/api';
 
 declare global {
   interface Window {
     __claudeTeamsUiDidInit?: boolean;
     __claudeTeamsSplashStaticTimer?: number;
+    __claudeTeamsSplashScene?: SplashSceneHandle;
+    __claudeTeamsSplashEnhancedDisabled?: boolean;
   }
 }
 
-// Sentry must be initialised before React renders.
+// Prepare Sentry before React renders. Actual init waits for telemetry config.
 initSentryRenderer();
 
 let root: ReactDOM.Root | null = null;
@@ -170,6 +173,11 @@ function stopStartupTicker(): void {
   startupTicker = undefined;
 }
 
+function stopEnhancedSplashScene(): void {
+  window.__claudeTeamsSplashEnhancedDisabled = true;
+  window.__claudeTeamsSplashScene?.stop();
+}
+
 function mountApp(): void {
   if (root) return;
 
@@ -204,6 +212,11 @@ async function bootstrapRenderer(): Promise<void> {
         return;
       }
       updateStartupSplash(nextStatus);
+      const currentStep = getCurrentStartupStep(nextStatus);
+      const stepElapsedMs = getStepElapsedMs(currentStep, nextStatus);
+      if (!nextStatus.ready && (nextStatus.error || stepElapsedMs >= VERY_SLOW_STEP_MS)) {
+        stopEnhancedSplashScene();
+      }
       if (nextStatus.ready) {
         finished = true;
         cleanup();

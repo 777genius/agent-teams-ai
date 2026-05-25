@@ -3,6 +3,8 @@ node_modules
 .output
 .dist
 .env
+--host/
+product-docs/.vitepress/dist/
 
 # Large video files
 public/video/*.mp4

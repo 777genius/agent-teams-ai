@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   getTeamColorSet,
@@ -73,6 +74,7 @@ export const SortableTab = ({
   onClose,
   setRef,
 }: SortableTabProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [isHovered, setIsHovered] = useState(false);
   const { isLight } = useTheme();
 
@@ -185,12 +187,12 @@ export const SortableTab = ({
     >
       <Icon className="size-4 shrink-0" />
       {tab.fromSearch && (
-        <span title="Opened from search">
+        <span title={t('layout.openedFromSearch')}>
           <Search className="size-3 shrink-0 text-amber-400" />
         </span>
       )}
       {isPinned && (
-        <span title="Pinned session">
+        <span title={t('layout.pinnedSession')}>
           <Pin className="size-3 shrink-0 text-blue-400" />
         </span>
       )}
@@ -222,12 +224,12 @@ export const SortableTab = ({
               onClose(tab.id);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            aria-label="Close tab"
+            aria-label={t('layout.closeTab')}
           >
             <X className="size-3" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Close tab</TooltipContent>
+        <TooltipContent side="bottom">{t('layout.closeTab')}</TooltipContent>
       </Tooltip>
     </div>
   );

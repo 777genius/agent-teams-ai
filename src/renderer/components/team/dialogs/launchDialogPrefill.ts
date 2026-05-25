@@ -3,6 +3,7 @@ import { getDefaultProviderBackendId } from '@renderer/utils/providerBackendIden
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
@@ -107,14 +108,17 @@ export function resolveLaunchDialogPrefill({
     savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'inherit';
   const limitContext =
     previousLaunchParams?.limitContext ?? savedRequest?.limitContext ?? storedLimitContext;
+  const providerBackendId =
+    migrateProviderBackendId(
+      providerId,
+      previousLaunchParams?.providerBackendId?.trim() || savedRequest?.providerBackendId?.trim()
+    ) ??
+    getDefaultProviderBackendId(providerId) ??
+    undefined;
 
   return {
     providerId,
-    providerBackendId:
-      previousLaunchParams?.providerBackendId?.trim() ||
-      savedRequest?.providerBackendId?.trim() ||
-      getDefaultProviderBackendId(providerId) ||
-      undefined,
+    providerBackendId,
     model: matchingModel
       ? normalizeExplicitTeamModelForUi(providerId, matchingModel)
       : getStoredModel(providerId),

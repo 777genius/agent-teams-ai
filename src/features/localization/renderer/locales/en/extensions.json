@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Add Custom",
+      "openDashboard": "Open Dashboard",
+      "refreshCatalog": "Refresh catalog"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Plugins: {{status}}",
+      "skills": "Skills: {{status}}"
+    },
+    "desktopOnly": "Available in the desktop app only.",
+    "provider": {
+      "checkingStatus": "Checking provider status...",
+      "connected": "Connected",
+      "loading": "Loading...",
+      "needsSetup": "Needs setup",
+      "readyToConfigure": "Ready to configure",
+      "unsupported": "Unsupported"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Extensions need the configured runtime to manage plugins, MCP servers, skills, and provider connections.",
+      "checkingAvailabilityTitle": "Checking extensions runtime availability",
+      "failedToStartDescription": "Extensions are disabled until the runtime passes its startup health check. Open the Dashboard to repair or reinstall it.",
+      "failedToStartTitle": "The configured runtime was found but failed to start",
+      "multimodelCapabilitiesDescription": "Provider support can differ by section. Plugins are shown only where the runtime explicitly declares support.",
+      "multimodelCapabilitiesTitle": "Multimodel runtime capabilities",
+      "needsSignInDescription": "{{runtime}} was found{{version}}, but plugin installs are disabled until you sign in from the Dashboard.",
+      "needsSignInTitle": "{{runtime}} needs sign-in",
+      "notAvailableDescription": "Extensions are disabled until the runtime is installed. Open the Dashboard to install it and retry.",
+      "notAvailableTitle": "The configured runtime is not available",
+      "readyDescription": "Plugins can be installed from this page{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} is ready",
+      "requiredForMutations": "The configured runtime is required to install or uninstall extensions. Install or repair it from the Dashboard."
+    },
+    "sessionsRestartWarning": "Running sessions won't pick up extension changes until restarted.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Secret keys for online services. Add them here so plugins, servers, and integrations can connect and work.",
+        "label": "API Keys"
+      },
+      "mcpServers": {
+        "description": "Connections to outside tools and apps. They let the runtime read data or do actions beyond this app.",
+        "label": "MCP Servers"
+      },
+      "plugins": {
+        "description": "Small add-ons for the runtime. In multimodel mode they currently apply to Anthropic sessions when supported. Broader provider support is in development.",
+        "label": "Plugins"
+      },
+      "skills": {
+        "description": "Ready-made instructions for common jobs. They help the runtime handle repeatable tasks more consistently.",
+        "label": "Skills"
+      }
+    },
+    "title": "Extensions"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} active",
+    "browseByFit": "Browse by fit",
+    "capabilities": "Capabilities",
+    "categories": "Categories",
+    "clearAllFilters": "Clear all filters",
+    "clearFilters": "Clear filters",
+    "counts": {
+      "capabilities": "{{count}} capabilities",
+      "categories": "{{count}} categories",
+      "plugins": "{{count}} plugins",
+      "capabilities_few": "{{count}} capabilities",
+      "capabilities_many": "{{count}} capabilities",
+      "capabilities_one": "{{count}} capabilities",
+      "capabilities_other": "{{count}} capabilities",
+      "categories_few": "{{count}} categories",
+      "categories_many": "{{count}} categories",
+      "categories_one": "{{count}} categories",
+      "categories_other": "{{count}} categories",
+      "plugins_few": "{{count}} plugins",
+      "plugins_many": "{{count}} plugins",
+      "plugins_one": "{{count}} plugins",
+      "plugins_other": "{{count}} plugins"
+    },
+    "empty": {
+      "description": "Check back later for new plugins",
+      "filteredDescription": "Try adjusting your search or filter criteria",
+      "filteredTitle": "No plugins match your filters",
+      "title": "No plugins available"
+    },
+    "filterDescription": "Narrow the catalog by category, capability, or installed state.",
+    "installedOnly": "Installed only",
+    "providerSupportNotice": "Plugin support is currently guaranteed for Anthropic (Claude) sessions only. We're working to support plugins across all agents.",
+    "resultsUpdateInstantly": "Results update instantly as you refine filters.",
+    "searchPlaceholder": "Search plugins...",
+    "selectedCount": "{{count}} selected",
+    "showing": "Showing {{shown}} of {{total}} plugins",
+    "sort": {
+      "category": "Category",
+      "nameAsc": "Name A-Z",
+      "nameDesc": "Name Z-A",
+      "popular": "Popular"
+    },
+    "activeFilters_few": "{{count}} active",
+    "activeFilters_many": "{{count}} active",
+    "activeFilters_one": "{{count}} active",
+    "activeFilters_other": "{{count}} active",
+    "selectedCount_few": "{{count}} selected",
+    "selectedCount_many": "{{count}} selected",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Add",
+      "cancel": "Cancel",
+      "install": "Install",
+      "installing": "Installing..."
+    },
+    "description": "Add a server manually without the catalog.",
+    "errors": {
+      "installFailed": "Install failed",
+      "invalidServerName": "Invalid server name. Use alphanumeric characters, dashes, underscores, dots.",
+      "npmPackageRequired": "npm package name is required",
+      "serverNameRequired": "Server name is required",
+      "serverUrlRequired": "Server URL is required"
+    },
+    "fields": {
+      "environmentVariables": "Environment Variables",
+      "headers": "Headers",
+      "npmPackage": "npm Package",
+      "scope": "Scope",
+      "serverName": "Server Name",
+      "serverUrl": "Server URL",
+      "transport": "Transport",
+      "transportType": "Transport Type",
+      "versionOptional": "Version (optional)"
+    },
+    "title": "Add Custom MCP Server",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Remote MCP servers may still require custom headers or API keys even when the registry does not describe them. If connection fails after install, check the provider docs.",
+      "required": "This server requires authentication"
+    },
+    "diagnostics": {
+      "launchTarget": "Launch Target"
+    },
+    "form": {
+      "autoFilled": "Auto-filled",
+      "environmentVariables": "Environment Variables",
+      "headers": "Headers",
+      "scope": "Scope",
+      "serverName": "Server Name"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "This server requires manual setup. Check the repository for installation instructions.",
+      "manualSetupRequired": "Manual setup required",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Manage Installation",
+      "install": "Install Server"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Repository",
+      "website": "Website"
+    },
+    "metadata": {
+      "author": "Author",
+      "githubStars": "GitHub Stars",
+      "hosting": "Hosting",
+      "installType": "Install Type",
+      "license": "License",
+      "published": "Published",
+      "source": "Source",
+      "updated": "Updated",
+      "version": "Version"
+    },
+    "scope": {
+      "local": "Local",
+      "project": "Project"
+    },
+    "tools": {
+      "title": "Tools ({{count}})",
+      "title_few": "Tools ({{count}})",
+      "title_many": "Tools ({{count}})",
+      "title_one": "Tools ({{count}})",
+      "title_other": "Tools ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Cancel",
+      "createSkill": "Create Skill",
+      "preparing": "Preparing...",
+      "reviewAndCreate": "Review And Create",
+      "reviewAndSave": "Review And Save",
+      "saveSkill": "Save Skill"
+    },
+    "advanced": {
+      "customDescription": "This skill uses a custom markdown format, so edit it directly here.",
+      "customTitle": "2. SKILL.md editor",
+      "description": "Most people can skip this. Open it only if you want direct control over the raw markdown file.",
+      "hide": "Hide Advanced Editor",
+      "resetFromStructuredFields": "Reset From Structured Fields",
+      "show": "Show Advanced Editor",
+      "title": "4. Advanced SKILL.md editor"
+    },
+    "basics": {
+      "description": "Give this skill a clear name, choose who can use it, and decide where it should live.",
+      "title": "1. Basics"
+    },
+    "description": {
+      "create": "Describe the workflow in plain language, review the files that will be created, then save it.",
+      "edit": "Update this skill, review the resulting file changes, then save it."
+    },
+    "extraFiles": {
+      "addedFiles": "Added files:",
+      "assets": "Assets",
+      "assetsDescription": "Add screenshots or bundled media only if they help explain the workflow.",
+      "description": "Add supporting docs, scripts, or assets only if this skill really needs them.",
+      "lockedForEdits": "Root and folder are locked for edits",
+      "optionalDescription": "Add starter files that will be included in the review and written together with `SKILL.md`.",
+      "optionalTitle": "Optional files",
+      "references": "References",
+      "referencesDescription": "Add supporting docs, links, or examples the runtime can look at.",
+      "scripts": "Scripts",
+      "scriptsDescription": "Add helper commands or setup notes. Review carefully before sharing this skill.",
+      "title": "3. Extra files"
+    },
+    "fields": {
+      "compatibility": "Compatibility",
+      "description": "Description",
+      "folderName": "Folder name",
+      "folderNameHint": "We suggest this automatically from the skill name so review works right away.",
+      "invocation": "How it should be used",
+      "license": "License",
+      "name": "Skill name",
+      "notes": "Extra notes or guardrails",
+      "root": "Where to store it",
+      "scope": "Who can use it",
+      "steps": "Main steps to follow",
+      "whenToUse": "When to reach for this"
+    },
+    "instructions": {
+      "description": "These sections generate the skill file for you, so you do not need to edit markdown unless you want to.",
+      "locked": "Structured fields are locked because you switched to manual `SKILL.md` editing below.",
+      "title": "2. Instructions"
+    },
+    "invocation": {
+      "auto": "Can be used automatically",
+      "manualOnly": "Only when you ask for it"
+    },
+    "placeholders": {
+      "description": "What this skill helps with",
+      "name": "Write concise skill name",
+      "notes": "Example: Call out missing tests, regressions, and risky assumptions.",
+      "steps": "1. Inspect the relevant files.\n2. Explain the main risk first.\n3. Suggest the safest fix.",
+      "whenToUse": "Example: Use this when the task is a code review or bug triage request.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Creating a skill",
+      "hint": "Review the file changes first, then confirm save in the next step.",
+      "saving": "Saving this skill"
+    },
+    "root": {
+      "codexOnly": " - Codex only",
+      "shared": " - Shared"
+    },
+    "scope": {
+      "project": "Project: {{project}}",
+      "projectUnavailable": "Project unavailable",
+      "user": "User"
+    },
+    "title": {
+      "create": "Create skill",
+      "edit": "Edit skill"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteSkill": "Delete Skill",
+      "deleting": "Deleting...",
+      "editSkill": "Edit Skill",
+      "openFolder": "Open Folder",
+      "openSkillFile": "Open SKILL.md",
+      "retry": "Retry"
+    },
+    "badges": {
+      "assets": "Assets",
+      "autoUse": "Auto use",
+      "hasScripts": "Has scripts",
+      "manualUse": "Manual use",
+      "references": "References",
+      "storedIn": "Stored in {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Delete this skill and move it to Trash?",
+      "descriptionWithName": "Delete \"{{name}}\" and move it to Trash? You can restore it later from Trash if needed.",
+      "title": "Delete skill?"
+    },
+    "descriptionFallback": "Inspect discovered skill metadata and raw instructions.",
+    "errors": {
+      "deleteFailed": "Failed to delete skill",
+      "loadFailed": "Unable to load this skill."
+    },
+    "files": {
+      "advancedDetails": "Advanced file details",
+      "assets": "Assets",
+      "references": "References",
+      "scripts": "Scripts",
+      "storedAt": "Stored at"
+    },
+    "includes": {
+      "assets": "assets",
+      "instructionsOnly": "Just the skill instructions",
+      "references": "references",
+      "scripts": "scripts"
+    },
+    "invocation": {
+      "auto": "Runs automatically when it matches the task.",
+      "manualOnly": "Only runs when you explicitly ask for it."
+    },
+    "issues": {
+      "bundledScripts": "This skill includes bundled scripts",
+      "reviewCarefully": "Review this skill carefully before using it"
+    },
+    "loading": "Loading skill details...",
+    "scope": {
+      "personal": "Your personal skills",
+      "projectOnly": "This project only"
+    },
+    "summary": {
+      "howUsed": "How it is used",
+      "included": "What comes with it",
+      "whoCanUse": "Who can use it"
+    },
+    "titleFallback": "Skill details"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Create Skill",
+      "import": "Import"
+    },
+    "badges": {
+      "assets": "Assets",
+      "hasScripts": "Has scripts",
+      "needsAttention": "Needs attention",
+      "references": "References",
+      "storedIn": "Stored in {{root}}"
+    },
+    "configuredRuntime": "the configured runtime",
+    "counts": {
+      "codexOnly": "{{count}} Codex only",
+      "personal": "{{count}} personal",
+      "project": "{{count}} project",
+      "shared": "{{count}} shared",
+      "total": "{{count}} total",
+      "codexOnly_few": "{{count}} Codex only",
+      "codexOnly_many": "{{count}} Codex only",
+      "codexOnly_one": "{{count}} Codex only",
+      "codexOnly_other": "{{count}} Codex only",
+      "personal_few": "{{count}} personal",
+      "personal_many": "{{count}} personal",
+      "personal_one": "{{count}} personal",
+      "personal_other": "{{count}} personal",
+      "project_few": "{{count}} project",
+      "project_many": "{{count}} project",
+      "project_one": "{{count}} project",
+      "project_other": "{{count}} project",
+      "shared_few": "{{count}} shared",
+      "shared_many": "{{count}} shared",
+      "shared_one": "{{count}} shared",
+      "shared_other": "{{count}} shared",
+      "total_few": "{{count}} total",
+      "total_many": "{{count}} total",
+      "total_one": "{{count}} total",
+      "total_other": "{{count}} total"
+    },
+    "empty": {
+      "noMatches": "No skills match your search",
+      "noMatchesDescription": "Try a different search term or switch filters.",
+      "noSkills": "No skills yet",
+      "noSkillsDescription": "Create your first skill to teach a repeatable workflow, or import one you already use."
+    },
+    "filters": {
+      "all": "All skills",
+      "codexOnly": "Codex only",
+      "hasScripts": "Has scripts",
+      "needsAttention": "Needs attention",
+      "personal": "Personal",
+      "project": "Project",
+      "shared": "Shared"
+    },
+    "hero": {
+      "codexAvailable": "Use `.codex` when a skill should stay Codex-only.",
+      "codexUnavailable": "Existing `.codex` skills stay editable here, but new Codex-only skills need the Codex runtime enabled.",
+      "description": "Skills are reusable instructions that help the runtime handle the same kind of task more consistently.",
+      "guidance": "Use personal skills for habits you want everywhere. Use project skills for workflows that only make sense inside one codebase.",
+      "personalContext": "You are seeing only your personal skills right now.",
+      "projectContext": "You are seeing skills for {{project}} plus your personal skills.",
+      "title": "Teach repeatable work"
+    },
+    "invocation": {
+      "auto": "Runs automatically when it fits",
+      "manualOnly": "Only runs when you explicitly ask for it"
+    },
+    "loading": {
+      "loading": "Loading skills...",
+      "refreshing": "Refreshing skills..."
+    },
+    "runtimeAudience": "Shared skills in `.claude`, `.cursor`, and `.agents` are available to {{audience}}. Skills stored in `.codex` stay Codex-only when Codex support is available.",
+    "scope": {
+      "project": "This project",
+      "user": "Personal"
+    },
+    "searchPlaceholder": "Search by skill name or what it helps with...",
+    "sections": {
+      "personal": {
+        "description": "Habits and instructions you want available everywhere.",
+        "title": "Personal skills"
+      },
+      "project": {
+        "description": "Workflows that only make sense for this codebase.",
+        "title": "Project skills"
+      }
+    },
+    "sort": {
+      "label": "Sort skills",
+      "name": "Name",
+      "recent": "Recent"
+    },
+    "status": {
+      "hasScripts": "Includes scripts, so review it carefully",
+      "needsAttention": "Needs attention before you rely on it",
+      "ready": "Ready to use"
+    },
+    "success": {
+      "created": "Skill created successfully.",
+      "imported": "Skill imported successfully.",
+      "saved": "Skill saved successfully."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Unknown",
+    "metadata": {
+      "author": "Author",
+      "category": "Category",
+      "source": "Source",
+      "version": "Version",
+      "capabilities": "Capabilities",
+      "installs": "Installs"
+    },
+    "scope": {
+      "label": "Scope:",
+      "options": {
+        "user": "User (global)",
+        "project": "Project (shared)",
+        "local": "Local (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Homepage",
+      "contact": "Contact"
+    },
+    "readme": {
+      "loading": "Loading README...",
+      "empty": "No README available."
+    }
+  },
+  "skillImport": {
+    "title": "Import skill",
+    "description": "Pick an existing skill folder, review what will be copied, then import it into one of your supported skill locations.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Choose a skill folder",
+        "description": "This should be a folder that already contains a `SKILL.md`, `Skill.md`, or `skill.md` file."
+      },
+      "location": {
+        "title": "2. Decide where it belongs",
+        "description": "Personal skills work everywhere. Project skills only show up for one codebase."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Source folder",
+      "destinationFolderName": "Destination folder name",
+      "audience": "Who can use it",
+      "storage": "Where to store it"
+    },
+    "placeholders": {
+      "defaultFolderName": "Defaults to source folder name"
+    },
+    "actions": {
+      "browse": "Browse",
+      "cancel": "Cancel",
+      "preparing": "Preparing...",
+      "reviewAndImport": "Review And Import",
+      "importSkill": "Import Skill",
+      "backToImport": "Back To Import"
+    },
+    "scope": {
+      "user": "User",
+      "project": "Project: {{project}}",
+      "projectUnavailable": "Project unavailable"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Codex only",
+      "shared": " - Shared"
+    },
+    "reviewHint": "Review the copied files first, then confirm the import in the next step.",
+    "reviewLabel": "Importing this skill",
+    "errors": {
+      "missingSkillFile": "This folder does not look like a skill yet. It needs a SKILL.md, Skill.md, or skill.md file.",
+      "symbolicLinks": "This folder contains symbolic links. Import the real files instead of links.",
+      "tooManyFiles": "This skill folder is too large to import at once. Remove extra files and try again.",
+      "tooLarge": "This skill folder is too large to import safely. Trim large assets and try again.",
+      "invalidFolderName": "Pick a simpler destination folder name using letters, numbers, dots, dashes, or underscores.",
+      "mustBeDirectory": "Choose a folder to import, not a single file.",
+      "reviewFailed": "Failed to review import changes",
+      "importFailed": "Failed to import skill"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Name A→Z",
+      "nameDesc": "Name Z→A",
+      "toolsDesc": "Most tools"
+    },
+    "health": {
+      "title": "MCP Health Status",
+      "checkingViaRuntime": "Checking installed MCP servers via {{runtime}} ...",
+      "lastChecked": "Last checked {{time}}",
+      "description": "Run diagnostics from this page to verify installed MCP connectivity.",
+      "checking": "Checking...",
+      "checkStatus": "Check Status"
+    },
+    "diagnostics": {
+      "title": "Runtime MCP Diagnostics",
+      "serversCount": "{{count}} servers",
+      "serversCount_one": "{{count}} server",
+      "serversCount_other": "{{count}} servers",
+      "waiting": "Waiting for diagnostics results...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Checking runtime status...",
+        "checkingRuntimeAvailability": "Checking runtime availability...",
+        "runtimeFailedToStart": "The configured runtime was found but failed to start. Open the Dashboard to repair or reinstall it.",
+        "runtimeRequired": "The configured runtime is required. Install or repair it from the Dashboard."
+      },
+      "serversCount_few": "{{count}} servers",
+      "serversCount_many": "{{count}} servers"
+    },
+    "searchPlaceholder": "Search MCP servers...",
+    "runtime": {
+      "notAvailable": "{{runtime}} not available",
+      "notInstalled": "{{runtime}} not installed",
+      "requiredDescription": "MCP health checks require {{runtime}}. Go to the Dashboard to install or repair it."
+    },
+    "empty": {
+      "searchTitle": "No servers found",
+      "title": "No MCP servers available",
+      "searchDescription": "Try a different search term",
+      "description": "Check back later for new servers"
+    },
+    "loadMore": "Load more"
+  },
+  "apiKeys": {
+    "description": "Securely store API keys for auto-filling when installing MCP servers.",
+    "storage": {
+      "osKeychain": "Keys are encrypted via {{backend}} and stored with restricted file permissions (owner-only).",
+      "localEncryption": "OS keychain unavailable - keys are encrypted locally with AES-256. For stronger protection, install a keyring service (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Add API Key",
+      "addFirst": "Add your first key",
+      "edit": "Edit"
+    },
+    "empty": {
+      "title": "No API keys saved",
+      "description": "Add keys to auto-fill environment variables when installing MCP servers."
+    },
+    "form": {
+      "addTitle": "Add API Key",
+      "editTitle": "Edit API Key",
+      "addDescription": "Store an API key for auto-filling in MCP server installations.",
+      "editDescription": "Update the key details. You must re-enter the value.",
+      "keychainUnavailable": "OS keychain unavailable - keys encrypted with AES-256 locally. Install gnome-keyring for OS-level protection.",
+      "name": "Name",
+      "namePlaceholder": "e.g. OpenAI Production",
+      "environmentVariableName": "Environment Variable Name",
+      "envVarPlaceholder": "e.g. OPENAI_API_KEY",
+      "value": "Value",
+      "reenterValue": "Re-enter key value",
+      "valuePlaceholder": "sk-...",
+      "scope": "Scope",
+      "userScopeLabel": "User (global)",
+      "projectScopeLabel": "Project: {{project}}",
+      "projectUnavailable": "Project unavailable",
+      "boundTo": "Bound to {{path}}",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "update": "Update",
+      "save": "Save",
+      "errors": {
+        "invalidEnvVarFormat": "Use letters, digits, underscores. Must start with a letter or underscore.",
+        "nameRequired": "Name is required",
+        "envVarRequired": "Environment variable name is required",
+        "invalidEnvVar": "Invalid environment variable name",
+        "valueRequired": "Key value is required",
+        "projectScopeRequiresProject": "Project-scoped API keys require an active project",
+        "saveFailed": "Failed to save"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Review skill changes",
+    "description": "{{reviewLabel}} previews the filesystem changes first. Nothing is written until you confirm below.",
+    "noPreview": "No preview available.",
+    "confirmPromptPrefix": "Review the diff below, then use",
+    "confirmPromptSuffix": "to apply these changes.",
+    "noChanges": "No file changes detected yet.",
+    "binaryBadge": "binary",
+    "binaryPreviewHidden": "Binary file preview is not shown. The file will be copied as-is.",
+    "summary": {
+      "fileChanges": "{{count}} file changes",
+      "fileChanges_one": "{{count}} file change",
+      "fileChanges_other": "{{count}} file changes",
+      "new": "{{count}} new",
+      "updated": "{{count}} updated",
+      "removed": "{{count}} removed",
+      "binary": "{{count}} binary",
+      "fileChanges_few": "{{count}} file changes",
+      "fileChanges_many": "{{count}} file changes"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} tools",
+    "toolsCount_one": "{{count}} tool",
+    "toolsCount_other": "{{count}} tools",
+    "envCount": "{{count}} envs",
+    "envCount_one": "{{count}} env",
+    "envCount_other": "{{count}} envs",
+    "auth": "Auth",
+    "byAuthor": "by {{author}}",
+    "hosting": {
+      "remote": "Remote",
+      "local": "Local",
+      "both": "Both"
+    },
+    "toolsCount_few": "{{count}} tools",
+    "toolsCount_many": "{{count}} tools",
+    "envCount_few": "{{count}} envs",
+    "envCount_many": "{{count}} envs",
+    "repository": "Repository",
+    "website": "Website"
+  },
+  "installButton": {
+    "installing": "Installing...",
+    "removing": "Removing...",
+    "done": "Done",
+    "retry": "Retry",
+    "uninstall": "Uninstall",
+    "install": "Install"
+  },
+  "pluginCard": {
+    "official": "Official"
+  }
+}

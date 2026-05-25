@@ -1,5 +1,6 @@
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
@@ -19,6 +20,7 @@ function normalizeRestartSensitiveMemberContract(member: {
   providerId?: string;
   model?: string;
   effort?: string;
+  mcpPolicy?: unknown;
 }): {
   role?: string;
   workflow?: string;
@@ -26,6 +28,7 @@ function normalizeRestartSensitiveMemberContract(member: {
   model?: string;
   effort?: EffortLevel;
   isolation?: 'worktree';
+  mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
 } {
   const role = member.role?.trim() || undefined;
   const workflow = member.workflow?.trim() || undefined;
@@ -33,7 +36,8 @@ function normalizeRestartSensitiveMemberContract(member: {
   const model = member.model?.trim() || undefined;
   const effort = isTeamEffortLevel(member.effort) ? member.effort : undefined;
   const isolation = member.isolation === 'worktree' ? 'worktree' : undefined;
-  return { role, workflow, providerId, model, effort, isolation };
+  const mcpPolicy = normalizeTeamMemberMcpPolicy(member.mcpPolicy);
+  return { role, workflow, providerId, model, effort, isolation, mcpPolicy };
 }
 
 export function getMemberRuntimeContractKey(member: {
@@ -43,6 +47,7 @@ export function getMemberRuntimeContractKey(member: {
   model?: string;
   effort?: string;
   isolation?: string;
+  mcpPolicy?: unknown;
 }): string {
   return JSON.stringify(normalizeRestartSensitiveMemberContract(member));
 }
@@ -76,7 +81,8 @@ export function getMembersRequiringRuntimeRestart(params: {
       previousRuntime.providerId !== nextRuntime.providerId ||
       previousRuntime.model !== nextRuntime.model ||
       previousRuntime.effort !== nextRuntime.effort ||
-      previousRuntime.isolation !== nextRuntime.isolation
+      previousRuntime.isolation !== nextRuntime.isolation ||
+      JSON.stringify(previousRuntime.mcpPolicy) !== JSON.stringify(nextRuntime.mcpPolicy)
     ) {
       membersToRestart.push(previousMember.name);
     }
@@ -135,6 +141,7 @@ function normalizeEditableMemberSnapshot(member: {
   effort?: string;
   isolation?: string;
   fastMode?: string;
+  mcpPolicy?: unknown;
   removedAt?: number | string | null;
 }): {
   name: string;
@@ -146,6 +153,7 @@ function normalizeEditableMemberSnapshot(member: {
   effort?: EffortLevel;
   isolation?: 'worktree';
   fastMode?: TeamFastMode;
+  mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
 } | null {
   if (member.removedAt) {
     return null;

@@ -3,6 +3,7 @@ import * as path from 'path';
 
 const LEGACY_USER_DATA_DIR_NAMES = [
   'agent-teams-ai',
+  'Agent Teams AI',
   'Agent Teams UI',
   'Claude Agent Teams UI',
   'claude-agent-teams-ui',

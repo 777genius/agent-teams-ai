@@ -1,3 +1,6 @@
+import path from 'node:path';
+
+import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { getShellPreferredHome } from '@main/utils/shellEnv';
 
@@ -20,6 +23,7 @@ export interface BuildRuntimeBaseEnvOptions {
   providerBackendId?: string | null;
   shellEnv?: NodeJS.ProcessEnv | null;
   env?: NodeJS.ProcessEnv;
+  mergePathFallbacks?: boolean;
 }
 
 function getFirstNonEmptyEnvValue(...values: (string | null | undefined)[]): string | undefined {
@@ -31,18 +35,44 @@ function getFirstNonEmptyEnvValue(...values: (string | null | undefined)[]): str
   return undefined;
 }
 
+function mergePathValues(...values: (string | null | undefined)[]): string | undefined {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const value of values) {
+    for (const entry of value?.split(path.delimiter) ?? []) {
+      const normalized = entry.trim();
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        merged.push(normalized);
+      }
+    }
+  }
+  return merged.length > 0 ? merged.join(path.delimiter) : undefined;
+}
+
 export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   env: NodeJS.ProcessEnv;
   resolvedProviderId: CliProviderId | null;
 } {
   const shellEnv = options.shellEnv ?? {};
+  const enrichedEnv = buildEnrichedEnv(options.binaryPath);
+  const mergedPath = options.mergePathFallbacks
+    ? mergePathValues(options.env?.PATH, shellEnv.PATH, enrichedEnv.PATH, process.env.PATH)
+    : undefined;
   const env = {
-    ...buildEnrichedEnv(options.binaryPath),
+    ...enrichedEnv,
     ...shellEnv,
   };
+  if (mergedPath) {
+    env.PATH = mergedPath;
+  }
 
   applyConfiguredRuntimeBackendsEnv(env, configManager.getConfig().runtime);
   Object.assign(env, options.env ?? {});
+  if (mergedPath) {
+    env.PATH = mergedPath;
+  }
+  applyAgentTeamsIdentityEnv(env);
   const policyAppliedEnv = applyOpenCodeAutoUpdatePolicy(env);
   if (policyAppliedEnv.OPENCODE_DISABLE_AUTOUPDATE === undefined) {
     delete env.OPENCODE_DISABLE_AUTOUPDATE;

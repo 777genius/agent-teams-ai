@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   AlertCircle,
   Brain,
@@ -29,8 +30,9 @@ const LOG_PREVIEW_FALLBACK_WIDTH = 260;
 const LOG_PREVIEW_FALLBACK_HEIGHT = 292;
 const NEW_LOG_HIGHLIGHT_MS = 1_000;
 const COMPACT_ROW_TITLE_LIMIT = 24;
-const COMPACT_ROW_TEXT_LIMIT = 76;
-const COMPACT_ROW_MIN_PREVIEW_LIMIT = 40;
+const COMPACT_ROW_TEXT_LIMIT = 110;
+const COMPACT_ROW_MIN_PREVIEW_LIMIT = 96;
+const INTERACTIVE_LOG_CONTROL_CLASS = 'pointer-events-auto';
 
 interface StableRectLike {
   left: number;
@@ -81,7 +83,7 @@ function formatRelativeTime(timestamp: string): string {
 }
 
 function itemIcon(item: MemberLogPreviewItem): React.JSX.Element {
-  const className = 'size-3.5 shrink-0';
+  const className = 'size-3 shrink-0';
   const title = item.title.trim().toLowerCase();
   if (item.tone === 'error') {
     return <AlertCircle className={`${className} text-rose-300`} />;
@@ -253,10 +255,10 @@ function renderLoadingSkeleton(): React.JSX.Element {
       {[0, 1, 2].map((index) => (
         <span
           key={index}
-          className="flex h-[72px] min-h-[72px] w-full min-w-0 animate-pulse rounded-md border border-white/10 bg-[rgba(8,14,28,0.42)] px-2.5 py-1.5"
+          className="grid h-[72px] min-h-[72px] w-full min-w-0 grid-cols-[1rem_minmax(0,1fr)] gap-x-1.5 overflow-hidden rounded-md border border-white/10 bg-[rgba(8,14,28,0.42)] px-2 py-1.5"
         >
-          <span className="mr-2 mt-0.5 inline-flex size-5 shrink-0 rounded bg-white/10" />
-          <span className="flex min-w-0 flex-1 flex-col gap-2 pt-0.5">
+          <span className="mt-0.5 inline-flex size-4 shrink-0 animate-pulse rounded bg-white/10" />
+          <span className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
             <span className="h-3 w-2/5 rounded bg-slate-400/20" />
             <span className="h-2.5 w-full rounded bg-slate-400/15" />
             <span className="h-2.5 w-2/3 rounded bg-slate-400/10" />
@@ -278,6 +280,7 @@ export const GraphMemberLogPreviewHud = ({
   enabled = true,
   onOpenMemberProfile,
 }: GraphMemberLogPreviewHudProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const worldLayerRef = useRef<HTMLDivElement | null>(null);
   const shellRefs = useRef(new Map<string, HTMLDivElement | null>());
   const visibleKeyRef = useRef('');
@@ -427,7 +430,7 @@ export const GraphMemberLogPreviewHud = ({
 
         const baseOpacity = focusNodeIds && !focusNodeIds.has(node.id) ? 0.25 : 1;
         shell.style.opacity = String(baseOpacity);
-        shell.style.pointerEvents = 'auto';
+        shell.style.pointerEvents = 'none';
         shell.style.left = `${Math.round(laneRect.left)}px`;
         shell.style.top = `${Math.round(laneRect.top)}px`;
         shell.style.width = `${Math.round(laneRect.width)}px`;
@@ -526,35 +529,35 @@ export const GraphMemberLogPreviewHud = ({
           ? 'border-rose-400/35 bg-rose-950/20 hover:border-rose-300/50 hover:bg-rose-950/30'
           : 'border-white/10 bg-[rgba(8,14,28,0.52)] hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]';
       const iconClassName = isError
-        ? 'float-left mr-2 mt-0 inline-flex size-5 shrink-0 items-center justify-center rounded bg-rose-500/10'
-        : 'float-left mr-2 mt-0 inline-flex size-5 shrink-0 items-center justify-center rounded bg-white/5';
-      const headerClassName = 'inline align-baseline';
+        ? 'inline-flex size-4 shrink-0 items-center justify-center rounded bg-rose-500/10'
+        : 'inline-flex size-4 shrink-0 items-center justify-center rounded bg-white/5';
+      const headerClassName = 'flex h-4 min-w-0 items-center gap-1.5';
       const titleClassName = isError
-        ? 'align-baseline text-[11px] font-medium leading-5 text-rose-100'
-        : 'align-baseline text-[11px] font-medium leading-5 text-slate-200';
+        ? 'min-w-0 truncate text-[10.5px] font-medium leading-4 text-rose-100'
+        : 'min-w-0 truncate text-[10.5px] font-medium leading-4 text-slate-200';
       const timeClassName = isError
-        ? 'ml-1 align-baseline text-[9px] font-normal leading-5 text-rose-300/70'
-        : 'ml-1 align-baseline text-[9px] font-normal leading-5 text-slate-500';
+        ? 'shrink-0 text-[9px] font-normal leading-4 text-rose-300/70'
+        : 'shrink-0 text-[9px] font-normal leading-4 text-slate-500';
       const previewClassName = isError
-        ? 'ml-1 break-words align-baseline text-[10px] leading-5 text-rose-100/85'
-        : 'ml-1 break-words align-baseline text-[10px] leading-5 text-slate-300/85';
+        ? 'mt-1 line-clamp-2 min-w-0 break-words text-[10px] leading-[15px] text-rose-100/85'
+        : 'mt-1 line-clamp-2 min-w-0 break-words text-[10px] leading-[15px] text-slate-300/85';
 
       return (
         <button
           key={item.id}
           type="button"
           className={[
-            'block h-[72px] min-h-[72px] w-full min-w-0 overflow-hidden rounded-md border px-2.5 py-1 text-left text-slate-400 transition-[border-color,background-color,box-shadow] duration-500',
+            `${INTERACTIVE_LOG_CONTROL_CLASS} flex h-[72px] min-h-[72px] w-full min-w-0 flex-col overflow-hidden rounded-md border px-2 py-1.5 text-left text-slate-400 transition-[border-color,background-color,box-shadow] duration-500`,
             rowStateClassName,
           ].join(' ')}
           title={titleText}
           aria-label={titleText}
           onClick={() => openLogs(memberName)}
         >
-          <span className={iconClassName} aria-hidden="true">
-            {itemIcon(item)}
-          </span>
           <span className={headerClassName}>
+            <span className={iconClassName} aria-hidden="true">
+              {itemIcon(item)}
+            </span>
             <span className={titleClassName}>{displayTitle}</span>
             {relativeTime ? <span className={timeClassName}>{relativeTime}</span> : null}
           </span>
@@ -593,7 +596,7 @@ export const GraphMemberLogPreviewHud = ({
             ref={(element) => {
               shellRefs.current.set(node.id, element);
             }}
-            className="pointer-events-auto absolute z-10 origin-top-left select-none opacity-0"
+            className="pointer-events-none absolute z-10 origin-top-left select-none opacity-0"
             style={{
               width: `${laneWidth}px`,
               maxWidth: `${laneWidth}px`,
@@ -604,9 +607,9 @@ export const GraphMemberLogPreviewHud = ({
             }}
           >
             <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden">
-              <div className="flex h-5 min-h-5 items-center gap-1 px-1 text-[10px] font-semibold tracking-[0.2em] text-slate-400/70">
-                <Wrench className="size-3 text-slate-500" />
-                Logs
+              <div className="mb-1 flex h-4 min-h-4 items-center gap-1 px-1 text-[9px] font-semibold tracking-[0.18em] text-slate-400/70">
+                <Wrench className="size-2.5 text-slate-500" />
+                {t('agentGraph.logPreview.logs')}
               </div>
               <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                 {items.length > 0 ? (
@@ -614,18 +617,18 @@ export const GraphMemberLogPreviewHud = ({
                 ) : isEmptyLoading ? (
                   <button
                     type="button"
-                    className="flex min-h-0 flex-1 rounded-md text-left text-[11px] text-slate-400/60"
+                    className={`${INTERACTIVE_LOG_CONTROL_CLASS} flex min-h-0 flex-1 rounded-md text-left text-[11px] text-slate-400/60`}
                     aria-busy="true"
-                    aria-label="Loading logs"
+                    aria-label={t('agentGraph.logPreview.loading')}
                     onClick={() => openLogs(memberName)}
                   >
-                    <span className="sr-only">Loading logs</span>
+                    <span className="sr-only">{t('agentGraph.logPreview.loading')}</span>
                     {renderLoadingSkeleton()}
                   </button>
                 ) : (
                   <button
                     type="button"
-                    className="flex h-[72px] min-h-[72px] items-center rounded-md border border-dashed border-white/10 bg-[rgba(8,14,28,0.28)] px-3 text-left text-[11px] text-slate-400/60"
+                    className={`${INTERACTIVE_LOG_CONTROL_CLASS} flex h-[72px] min-h-[72px] items-center rounded-md border border-dashed border-white/10 bg-[rgba(8,14,28,0.28)] px-3 text-left text-[11px] text-slate-400/60`}
                     onClick={() => openLogs(memberName)}
                   >
                     {resolveEmptyText(preview, loading, error)}
@@ -634,10 +637,10 @@ export const GraphMemberLogPreviewHud = ({
                 {preview && preview.overflowCount > 0 ? (
                   <button
                     type="button"
-                    className="h-8 min-h-8 w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]"
+                    className={`${INTERACTIVE_LOG_CONTROL_CLASS} h-8 min-h-8 w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]`}
                     onClick={() => openLogs(memberName)}
                   >
-                    +{preview.overflowCount} more
+                    {t('agentGraph.logPreview.more', { count: preview.overflowCount })}
                   </button>
                 ) : null}
               </div>

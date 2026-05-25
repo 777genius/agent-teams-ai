@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { AlertCircle, FileText, Loader2 } from 'lucide-react';
@@ -17,6 +18,7 @@ export const ExactTaskLogsSection = ({
   teamName,
   taskId,
 }: ExactTaskLogsSectionProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const [summaries, setSummaries] = useState<BoardTaskExactLogSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,12 +199,12 @@ export const ExactTaskLogsSection = ({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-            Exact Task Logs
+            {t('taskLogs.exact.title')}
           </h4>
         </div>
         <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-text-muted)]">
           <Loader2 size={12} className="animate-spin" />
-          Loading exact task logs...
+          {t('taskLogs.exact.loading')}
         </div>
       </div>
     );
@@ -213,7 +215,7 @@ export const ExactTaskLogsSection = ({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-            Exact Task Logs
+            {t('taskLogs.exact.title')}
           </h4>
         </div>
         <div className="flex items-center gap-2 py-4 text-xs text-red-400">
@@ -228,21 +230,16 @@ export const ExactTaskLogsSection = ({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-          Exact Task Logs
+          {t('taskLogs.exact.title')}
         </h4>
       </div>
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Exact transcript slices rendered with the same execution-log components used in Logs.
-      </p>
+      <p className="text-xs text-[var(--color-text-muted)]">{t('taskLogs.exact.description')}</p>
 
       {visibleSummaries.length === 0 ? (
         <div className="py-8 text-center text-xs text-[var(--color-text-muted)]">
           <FileText size={20} className="mx-auto mb-2 opacity-40" />
-          No exact task logs yet
-          <p className="mt-1 text-[10px] opacity-60">
-            Exact transcript bundles will appear here when explicit task-linked transcript metadata
-            is available.
-          </p>
+          {t('taskLogs.exact.emptyTitle')}
+          <p className="mt-1 text-[10px] opacity-60">{t('taskLogs.exact.emptyDescription')}</p>
         </div>
       ) : (
         <div className="w-full min-w-0 space-y-1.5">

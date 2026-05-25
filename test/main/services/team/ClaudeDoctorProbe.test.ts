@@ -25,14 +25,14 @@ describe('ClaudeDoctorProbe', () => {
 \u001B[2J────────────────────────────────────
   Diagnostics
   └ Invoked: /Applications/Agent Teams${' '}
-  UI.app/Contents/Resources/runtime/clau
+  AI.app/Contents/Resources/runtime/clau
   de-multimodel
   └ Config install method: native
   Press Enter to continue…
 `;
 
     expect(extractDoctorInvokedCandidates(output)).toEqual([
-      '/Applications/Agent Teams UI.app/Contents/Resources/runtime/claude-multimodel',
+      '/Applications/Agent Teams AI.app/Contents/Resources/runtime/claude-multimodel',
     ]);
   });
 

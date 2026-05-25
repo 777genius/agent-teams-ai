@@ -21,6 +21,7 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(() => Promise.resolve({})),
+  resolveInteractiveShellEnvBestEffort: vi.fn(() => Promise.resolve({})),
   getCachedShellEnv: vi.fn(() => null),
   getShellPreferredHome: vi.fn(() => '/Users/tester'),
 }));

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
@@ -40,11 +41,11 @@ const LaunchTeamDialog = lazy(() =>
 // Constants
 // =============================================================================
 
-const STATUS_OPTIONS: { value: ScheduleStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'paused', label: 'Paused' },
-  { value: 'disabled', label: 'Disabled' },
+const STATUS_OPTIONS: { value: ScheduleStatus | 'all' }[] = [
+  { value: 'all' },
+  { value: 'active' },
+  { value: 'paused' },
+  { value: 'disabled' },
 ];
 
 // =============================================================================
@@ -72,6 +73,7 @@ const ScheduleListItem = ({
   onTeamClick,
   teamColor,
 }: ScheduleListItemProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
@@ -130,7 +132,7 @@ const ScheduleListItem = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="shrink-0 text-xs text-[var(--color-text-muted)]">
-              Next: {formatNextRun(schedule.nextRunAt)}
+              {t('schedules.item.nextRun', { value: formatNextRun(schedule.nextRunAt) })}
             </span>
           </TooltipTrigger>
           {schedule.nextRunAt ? (
@@ -159,7 +161,7 @@ const ScheduleListItem = ({
                 <Zap className="size-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">Run now</TooltipContent>
+            <TooltipContent side="top">{t('schedules.actions.runNow')}</TooltipContent>
           </Tooltip>
 
           <Popover>
@@ -175,7 +177,7 @@ const ScheduleListItem = ({
                 onClick={() => onEdit(schedule)}
               >
                 <Pencil className="mr-2 size-3.5" />
-                Edit
+                {t('schedules.actions.edit')}
               </button>
               {schedule.status === 'active' ? (
                 <button
@@ -184,7 +186,7 @@ const ScheduleListItem = ({
                   onClick={() => onPause(schedule.id)}
                 >
                   <Pause className="mr-2 size-3.5" />
-                  Pause
+                  {t('schedules.actions.pause')}
                 </button>
               ) : (
                 <button
@@ -193,7 +195,7 @@ const ScheduleListItem = ({
                   onClick={() => onResume(schedule.id)}
                 >
                   <Play className="mr-2 size-3.5" />
-                  Resume
+                  {t('schedules.actions.resume')}
                 </button>
               )}
               <button
@@ -202,7 +204,7 @@ const ScheduleListItem = ({
                 onClick={() => onDelete(schedule.id)}
               >
                 <Trash2 className="mr-2 size-3.5" />
-                Delete
+                {t('schedules.actions.delete')}
               </button>
             </PopoverContent>
           </Popover>
@@ -214,11 +216,11 @@ const ScheduleListItem = ({
         <div className="border-t border-[var(--color-border)]">
           {runsLoading ? (
             <div className="flex items-center justify-center py-4 text-xs text-[var(--color-text-muted)]">
-              Loading run history...
+              {t('schedules.item.loadingRunHistory')}
             </div>
           ) : runs.length === 0 ? (
             <div className="flex items-center justify-center py-4 text-xs text-[var(--color-text-muted)]">
-              No runs yet
+              {t('schedules.item.noRunsYet')}
             </div>
           ) : (
             <div className="max-h-[240px] overflow-y-auto">
@@ -246,6 +248,7 @@ const ScheduleListItem = ({
 // =============================================================================
 
 export const SchedulesView = (): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const {
     schedules,
     schedulesLoading,
@@ -392,6 +395,22 @@ export const SchedulesView = (): React.JSX.Element => {
     },
     [openTeamTab]
   );
+  const getStatusLabel = useCallback(
+    (status: ScheduleStatus | 'all'): string => {
+      switch (status) {
+        case 'active':
+          return t('schedules.status.active');
+        case 'paused':
+          return t('schedules.status.paused');
+        case 'disabled':
+          return t('schedules.status.disabled');
+        case 'all':
+        default:
+          return t('schedules.status.all');
+      }
+    },
+    [t]
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[var(--color-surface)]">
@@ -400,7 +419,9 @@ export const SchedulesView = (): React.JSX.Element => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Calendar className="size-5 text-[var(--color-text-muted)]" />
-            <h1 className="text-lg font-semibold text-[var(--color-text)]">Schedules</h1>
+            <h1 className="text-lg font-semibold text-[var(--color-text)]">
+              {t('schedules.title')}
+            </h1>
             {schedules.length > 0 && (
               <span className="rounded-full bg-[var(--color-surface-raised)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
                 {schedules.length}
@@ -409,7 +430,7 @@ export const SchedulesView = (): React.JSX.Element => {
           </div>
           <Button size="sm" className="gap-1.5" onClick={handleCreate}>
             <Plus className="size-3.5" />
-            Add Schedule
+            {t('schedules.actions.addSchedule')}
           </Button>
         </div>
 
@@ -420,7 +441,7 @@ export const SchedulesView = (): React.JSX.Element => {
             <div className="relative max-w-xs flex-1">
               <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <Input
-                placeholder="Search schedules..."
+                placeholder={t('schedules.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-8 pl-8 text-xs"
@@ -440,7 +461,7 @@ export const SchedulesView = (): React.JSX.Element => {
                   }`}
                   onClick={() => setStatusFilter(opt.value)}
                 >
-                  {opt.label}
+                  {getStatusLabel(opt.value)}
                   {statusCounts[opt.value] > 0 && (
                     <span className="ml-1 text-[10px] opacity-60">{statusCounts[opt.value]}</span>
                   )}
@@ -463,7 +484,7 @@ export const SchedulesView = (): React.JSX.Element => {
                         {teamFilter}
                       </>
                     ) : (
-                      'All teams'
+                      t('schedules.filters.allTeams')
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -477,7 +498,7 @@ export const SchedulesView = (): React.JSX.Element => {
                     } hover:bg-[var(--color-surface-raised)]`}
                     onClick={() => setTeamFilter(null)}
                   >
-                    All teams
+                    {t('schedules.filters.allTeams')}
                   </button>
                   {teamNames.map((name) => (
                     <button
@@ -508,7 +529,7 @@ export const SchedulesView = (): React.JSX.Element => {
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {schedulesLoading && schedules.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-sm text-[var(--color-text-muted)]">
-            Loading schedules...
+            {t('schedules.loading')}
           </div>
         ) : schedules.length === 0 ? (
           /* Global empty state */
@@ -516,16 +537,15 @@ export const SchedulesView = (): React.JSX.Element => {
             <Calendar className="size-12 text-[var(--color-text-muted)]" />
             <div className="space-y-1.5">
               <p className="text-sm font-medium text-[var(--color-text-secondary)]">
-                No scheduled tasks
+                {t('schedules.empty.title')}
               </p>
               <p className="max-w-sm text-xs text-[var(--color-text-muted)]">
-                Create a schedule on any team to automate Claude task execution with cron
-                expressions. Schedules from all teams will appear here.
+                {t('schedules.empty.description')}
               </p>
             </div>
             <Button size="sm" variant="outline" className="mt-2 gap-1.5" onClick={handleCreate}>
               <Plus className="size-3.5" />
-              Create Schedule
+              {t('schedules.actions.createSchedule')}
             </Button>
           </div>
         ) : filteredSchedules.length === 0 ? (
@@ -533,7 +553,7 @@ export const SchedulesView = (): React.JSX.Element => {
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <Search className="size-8 text-[var(--color-text-muted)]" />
             <p className="text-sm text-[var(--color-text-muted)]">
-              No schedules match the current filters
+              {t('schedules.empty.noMatches')}
             </p>
             <button
               type="button"
@@ -544,7 +564,7 @@ export const SchedulesView = (): React.JSX.Element => {
                 setTeamFilter(null);
               }}
             >
-              Clear filters
+              {t('schedules.actions.clearFilters')}
             </button>
           </div>
         ) : (

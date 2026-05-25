@@ -79,6 +79,20 @@ const editorFileWatcher = new EditorFileWatcher();
 const wrapHandler = createIpcWrapper('IPC:editor');
 const log = createLogger('IPC:editor');
 
+const MISSING_PROJECT_PATH_ERROR_CODES = new Set(['ENOENT', 'ENOTDIR']);
+
+function getFileSystemErrorCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return null;
+  }
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
+function isMissingProjectPathError(error: unknown): boolean {
+  return MISSING_PROJECT_PATH_ERROR_CODES.has(getFileSystemErrorCode(error) ?? '');
+}
+
 // =============================================================================
 // Handlers
 // =============================================================================
@@ -316,7 +330,15 @@ async function handleProjectListFiles(
       throw new Error('projectPath is required');
     }
     const normalized = path.resolve(projectPath);
-    await fs.access(normalized);
+    const stat = await fs.stat(normalized).catch((error: unknown) => {
+      if (isMissingProjectPathError(error)) {
+        return null;
+      }
+      throw error;
+    });
+    if (!stat?.isDirectory()) {
+      return [];
+    }
     return fileSearchService.listFiles(normalized);
   });
 }

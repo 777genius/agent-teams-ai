@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { Command } from 'cmdk';
 import { Loader2 } from 'lucide-react';
@@ -32,6 +33,7 @@ export const QuickOpenDialog = ({
   onClose,
   onSelectFile,
 }: QuickOpenDialogProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const projectPath = useStore((s) => s.editorProjectPath);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [allFiles, setAllFiles] = useState<QuickOpenFile[]>([]);
@@ -116,12 +118,12 @@ export const QuickOpenDialog = ({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Quick Open"
+        aria-label={t('editor.quickOpen.title')}
         className="relative z-10 w-[520px] overflow-hidden rounded-lg border border-border-emphasis bg-surface shadow-2xl"
       >
-        <Command label="Quick Open" shouldFilter={true}>
+        <Command label={t('editor.quickOpen.title')} shouldFilter={true}>
           <Command.Input
-            placeholder="Search files by name..."
+            placeholder={t('editor.quickOpen.searchPlaceholder')}
             className="w-full border-b border-border bg-transparent px-4 py-3 text-sm text-text outline-none placeholder:text-text-muted"
             autoFocus
           />
@@ -129,12 +131,12 @@ export const QuickOpenDialog = ({
             {loading && (
               <div className="flex items-center justify-center gap-2 p-6 text-sm text-text-muted">
                 <Loader2 className="size-4 animate-spin" />
-                <span>Loading files...</span>
+                <span>{t('editor.quickOpen.loading')}</span>
               </div>
             )}
             {!loading && (
               <Command.Empty className="p-6 text-center text-sm text-text-muted">
-                No files found
+                {t('editor.quickOpen.empty')}
               </Command.Empty>
             )}
             {fileItems.map((file) => {

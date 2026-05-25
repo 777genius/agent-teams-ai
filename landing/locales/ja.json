@@ -43,11 +43,12 @@
     "sectionSubtitle": "マルチエージェント連携を実現する強力なツール。"
   },
   "pricing": {
-    "sectionTitle": "100%無料。制約なし。",
-    "sectionSubtitle": "オープンソース、APIキー不要、設定不要。インストールするだけ。",
+    "sectionTitle": "インストール無料。無料モデル付き。",
+    "sectionSubtitle": "認証なしの無料モデルですぐに開始できます - アカウント、APIキー、クレジットカードは不要。追加モデルが必要な時だけ Claude、Codex、OpenCode/OpenRouter などを接続できます。",
     "getStarted": "ダウンロード",
     "popular": "無料",
-    "note": "オープンソース。APIキー不要。設定不要。完全にローカルで動作。"
+    "freeModelCallout": "認証なしの無料モデルが含まれています",
+    "note": "Agent Teams 自体に有料プランはありません。認証なしの無料モデルですぐに試せます。有料 provider の利用は任意で、選択した provider の条件に従います。"
   },
   "testimonials": {
     "sectionTitle": "開発者の声",
@@ -64,6 +65,7 @@
     "sectionTitle": "他ツールとの比較",
     "sectionSubtitle": "他のAIコーディングツールとの機能比較。",
     "feature": "機能",
+    "robotBubble": "自分で判断して",
     "features": {
       "crossTeam": "チーム間コミュニケーション",
       "agentMessaging": "エージェント間メッセージング",
@@ -77,12 +79,17 @@
       "reviewWorkflow": "レビューワークフロー",
       "zeroSetup": "ゼロ設定",
       "kanban": "カンバンボード",
-      "execLog": "実行ログビューア",
+      "execLog": "実行ログ",
       "liveProcesses": "ライブプロセス",
+      "runtimeLoad": "チームメイトごとのCPU/RAM",
       "perTaskReview": "タスク別コードレビュー",
       "flexAutonomy": "柔軟な自律性",
       "worktree": "Git worktree分離",
-      "multiAgent": "マルチエージェントバックエンド",
+      "multiAgent": "混在AIチームメイト",
+      "liveWorkGraph": "ライブチームマップ",
+      "liveTeam": "ライブチームメイト",
+      "teamWorkspace": "チームワークスペース",
+      "launchProof": "チームメイトの起動状態",
       "orgGovernance": "組織図 / ガバナンス",
       "budgetControls": "予算管理",
       "price": "価格"
@@ -98,6 +105,7 @@
   "footer": {
     "copyright": "© {year} Agent Teams",
     "tagline": "開発者向けAIエージェントオーケストレーション",
+    "robotBubble": "待ってるよ",
     "links": {
       "github": "GitHub",
       "docs": "ドキュメント"
@@ -105,7 +113,7 @@
   },
   "meta": {
     "homeTitle": "Agent Teams - 開発者向けAIエージェントオーケストレーション",
-    "homeDescription": "AIエージェントチームを管理する無料のオープンソースデスクトップアプリ。カンバンボード、コードレビュー、チーム間通信。完全にローカルで動作。",
+    "homeDescription": "AIエージェントチーム向けの無料オープンソースデスクトップアプリ。認証なしの無料モデルから始め、必要に応じて Claude、Codex、OpenCode を接続できます。",
     "downloadTitle": "macOS、Windows、Linux向けAgent Teamsをダウンロード",
     "downloadDescription": "macOS、Windows、Linux向けAgent Teamsをダウンロード。Claude、Codex、OpenCodeエージェントチーム用の無料オープンソースデスクトップアプリ。"
   },

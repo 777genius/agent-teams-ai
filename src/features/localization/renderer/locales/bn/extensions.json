@@ -1,0 +1,684 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "স্বনির্ধারিত হেডার",
+      "openDashboard": "ড্যাশবোর্ড খুলুন",
+      "refreshCatalog": "ক্যাটালগ পুনরায় লোড করা হবে"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "প্লাগইন: {{status}}",
+      "skills": "দক্ষতা: {{status}}"
+    },
+    "desktopOnly": "শুধুমাত্র ডেস্কটপের মধ্যে উপলব্ধ রয়েছে।",
+    "provider": {
+      "checkingStatus": "পরিসেবা উপলব্ধকারী পরীক্ষা করা হচ্ছে...",
+      "connected": "পরিচিতির সাথে সংযোগ করা হয়েছে",
+      "loading": "লোড করা হচ্ছে...",
+      "needsSetup": "বৈশিষ্ট্য নির্ধারণ",
+      "readyToConfigure": "কনফিগার করার জন্য প্রস্তুত",
+      "unsupported": "অসমর্থিত"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "প্লাগ- ইন পরিচালনার জন্য mouse কনফিগার করা আবশ্যক MCP সার্ভার, দক্ষতা ও পরিসেবা উপলব্ধকারী।",
+      "checkingAvailabilityTitle": "অতিরিক্ত সামগ্রীর উপস্থিতি পরীক্ষা করা হচ্ছে",
+      "failedToStartDescription": "নিয়মিত ব্যায়াম না করা পর্যন্ত নিয়মিত ব্যবস্থা নিষ্ক্রিয় থাকে। ড্যাশবোর্ড খুলে দাও অথবা নতুন করে ঠিক করতে হবে.",
+      "failedToStartTitle": "কনফিগার করা ফিড পাওয়া যায়নি কিন্তু আরম্ভ করতে ব্যর্থ",
+      "multimodelCapabilitiesDescription": "Provider support can differ by section. Plugins are shown only where the runtime explicitly declares support.",
+      "multimodelCapabilitiesTitle": "মাল্টি- কাস্টোমাইজের ক্ষমতা",
+      "needsSignInDescription": "{{runtime}} পাওয়া গিয়েছে{{version}}...কিন্ত boardboardboardB থেকে সাইন না করা পর্যন্ত প্লাগ-ইন নিষ্ক্রিয়।",
+      "needsSignInTitle": "{{runtime}} সাইন-ইন প্রয়োজন",
+      "notAvailableDescription": "সন্নিবেশ না হওয়া অবধি এক্সটেনশন নিষ্ক্রিয় করা হয়েছে। ড্যাশবোর্ড খুলে পুনরায় চালু করতে হবে।",
+      "notAvailableTitle": "কনফিগার করা কর্ম উপলব্ধ নয়",
+      "readyDescription": "এই পৃষ্ঠা থেকে প্লাগ-ইন ইনস্টল করা যাবে{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} প্রস্তুত",
+      "requiredForMutations": "কনফিগার করা ফিডের ক্ষেত্রে ইনস্টল অথবা আন-ইনস্টলের সামগ্রী কনফিগার করা আবশ্যক। ড্যাশবোর্ড থেকে এটা ইন্সটল করুন অথবা মেরামত করুন।"
+    },
+    "sessionsRestartWarning": "পুনরায় আরম্ভ না করা অবধি সেশান পুনরারম্ভ না করা অবধি কোনো পরিবর্তন কার্যকর হবে না।",
+    "tabs": {
+      "apiKeys": {
+        "description": "অনলাইন সেবার জন্য গোপন চাবি। এখানে তাদের সংযুক্ত করুন যাতে বানান, সার্ভার, এবং পরিচিতি যোগ করা যাবে।",
+        "label": "API কি"
+      },
+      "mcpServers": {
+        "description": "বাইরে সরঞ্জাম আর অ্যাপসের সাথে সংযোগ। তারা এই এ্যাপটি সম্পর্কে তথ্য এবং কাজ করতে দেয়।",
+        "label": "MCP সার্ভার"
+      },
+      "plugins": {
+        "description": "স্লিপিং এর জন্য ছোট ছোট ছোট দল। multiques মোডের মধ্যে বর্তমানে সমর্থিত হলে, পরিবর্তনশীল অবস্থায় রয়েছে। ব্রডনার পরিসেবা এগিয়ে চলছে।",
+        "label": "প্লাগ-ইন"
+      },
+      "skills": {
+        "description": "সাধারণ কাজের জন্য প্রস্তুত। তারা নিয়মিত করে চলতে থাকে।",
+        "label": "দক্ষতা"
+      }
+    },
+    "title": "এক্সটেনশন"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} সক্রিয়",
+    "browseByFit": "ব্রাউজ করার মোডে ব্রাউজ করুন",
+    "capabilities": "ক্ষমতা",
+    "categories": "শ্রেণীবিভাগ",
+    "clearAllFilters": "সব ফিল্টার মুছে ফেলুন",
+    "clearFilters": "ফিল্টার পরিশ্রুত করুন ( C)",
+    "counts": {
+      "capabilities": "{{count}} ক্ষমতা",
+      "categories": "{{count}} শ্রেণীবিভাগ",
+      "plugins": "{{count}} প্লাগ-ইন",
+      "capabilities_few": "{{count}} ক্ষমতা",
+      "capabilities_many": "{{count}} ক্ষমতা",
+      "capabilities_one": "{{count}} ক্ষমতা",
+      "capabilities_other": "{{count}} ক্ষমতা",
+      "categories_few": "{{count}} শ্রেণীবিভাগ",
+      "categories_many": "{{count}} শ্রেণীবিভাগ",
+      "categories_one": "{{count}} শ্রেণীবিভাগ",
+      "categories_other": "{{count}} শ্রেণীবিভাগ",
+      "plugins_few": "{{count}} প্লাগ-ইন",
+      "plugins_many": "{{count}} প্লাগ-ইন",
+      "plugins_one": "{{count}} প্লাগ-ইন",
+      "plugins_other": "{{count}} প্লাগ-ইন"
+    },
+    "empty": {
+      "description": "নতুন প্লাগ-ইনের জন্য পরে অনুসন্ধান করুন",
+      "filteredDescription": "অনুসন্ধানের মান পরিবর্তন করুন অথবা ফিল্টার প্রয়োগ করুন",
+      "filteredTitle": "ফিল্টারের জন্য কোনো প্লাগ-ইন পাওয়া যায়নি",
+      "title": "কোনো প্লাগ-ইন উপলব্ধ নয়"
+    },
+    "filterDescription": "বিভাগ, কর্মক্ষমতা অথবা ইনস্টল করা ক্যাটালগরো।",
+    "installedOnly": "শুধুমাত্র ইনস্টল করা",
+    "providerSupportNotice": "বর্তমানে আন্থোপিক (ক্যাডোড্যু) সেশনের জন্য প্লাগ-ইন সমর্থন নিশ্চিত করা হয়েছে । আমরা সব এজেন্টদের সাথে প্লাগ-ইনের জন্য কাজ করছি.",
+    "resultsUpdateInstantly": "ফলাফল অবিলম্বে আপডেট করার ফিল্টার প্রয়োগ করা হবে।",
+    "searchPlaceholder": "প্লাগ-ইন অনুসন্ধান...",
+    "selectedCount": "{{count}} নির্বাচিত",
+    "showing": "দেখাও {{shown}} এর {{total}} প্লাগ-ইন",
+    "sort": {
+      "category": "শ্রেণীবিভাগ",
+      "nameAsc": "নাম",
+      "nameDesc": "জ- একটিও নয়",
+      "popular": "জনপ্রীয়"
+    },
+    "activeFilters_few": "{{count}} সক্রিয়",
+    "activeFilters_many": "{{count}} সক্রিয়",
+    "activeFilters_one": "{{count}} সক্রিয়",
+    "activeFilters_other": "{{count}} সক্রিয়",
+    "selectedCount_few": "{{count}} নির্বাচিত",
+    "selectedCount_many": "{{count}} নির্বাচিত",
+    "selectedCount_one": "{{count}} নির্বাচিত",
+    "selectedCount_other": "{{count}} নির্বাচিত"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "যোগ করুন",
+      "cancel": "বাতিল",
+      "install": "ইনস্টল করুন",
+      "installing": "ইনস্টল করা হয়েছে..."
+    },
+    "description": "ক্যাটালগ ছাড়া একটি সার্ভার যোগ করুন ।",
+    "errors": {
+      "installFailed": "ইনস্টল করতে বিফল",
+      "invalidServerName": "সার্ভারের নাম বৈধ নয়। ভিন্ন অক্ষর ব্যবহার করুন ।",
+      "npmPackageRequired": "NPM প্যাকেজের নাম উল্লেখ করা আবশ্যক",
+      "serverNameRequired": "সার্ভারের নাম আবশ্যক",
+      "serverUrlRequired": "সার্ভার URL আবশ্যক"
+    },
+    "fields": {
+      "environmentVariables": "এনভায়রনমেন্ট ভেরিয়েবল",
+      "headers": "শীর্ষচরণ",
+      "npmPackage": "NPM প্যাকেজ",
+      "scope": "পরিধি",
+      "serverName": "সার্ভারের নাম",
+      "serverUrl": "সার্ভার URL",
+      "transport": "পরিবহণ",
+      "transportType": "পরিবহণের ধরন",
+      "versionOptional": "সংস্করণ (ঐচ্ছিক)"
+    },
+    "title": "স্বনির্ধারিত হেডার MCP সার্ভার",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (এমপিএম)"
+    },
+    "placeholders": {
+      "headerName": "হেডারName",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "আমার-সার্ভার",
+      "latest": "সর্বশেষ",
+      "value": "মান",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "দূরবর্তী MCP সার্ভারের ক্ষেত্রে স্বনির্ধারিত হেডার অথবা হেডার আবশ্যক API নিবন্ধনের সময়, এমনকি চাবিও তাদের বর্ণনা দেয় না । ইনস্টল করার পরে সংযোগ বিফল হলে, সরবরাহকারীর ডক পরীক্ষা করুন।",
+      "required": "এই সার্ভারের ক্ষেত্রে অনুমোদন আবশ্যক"
+    },
+    "diagnostics": {
+      "launchTarget": "টার্গেট আরম্ভ করুন"
+    },
+    "form": {
+      "autoFilled": "স্বয়ংক্রিয় পরিচিতি",
+      "environmentVariables": "এনভায়রনমেন্ট ভেরিয়েবল",
+      "headers": "শীর্ষচরণ",
+      "scope": "পরিধি",
+      "serverName": "সার্ভারের নাম"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "এই সার্ভারের ক্ষেত্রে সহায়িকা প্রস্তুত হওয়া আবশ্যক। ইনস্টলেশনের জন্য রিপোজিটরি চেক করো।",
+      "manualSetupRequired": "সহায়িকা প্রস্তুত করা আবশ্যক",
+      "npmPackage": "বেলা: {{package}}",
+      "manage": "ইনস্টলেশনের ব্যবস্থাপনা",
+      "install": "সার্ভার ইনস্টল করুন"
+    },
+    "links": {
+      "glama": "মেলবা",
+      "repository": "সংগ্রহস্থল",
+      "website": "ওয়েব-সাইট:"
+    },
+    "metadata": {
+      "author": "লেখক",
+      "githubStars": "গিটহাব তারা",
+      "hosting": "হোস্ট",
+      "installType": "ইনস্টলেশনের ধরন",
+      "license": "লাইসেন্স",
+      "published": "প্রকাশিত",
+      "source": "উৎস",
+      "updated": "আপডেট করা হয়েছে",
+      "version": "সংস্করণ"
+    },
+    "scope": {
+      "local": "স্থানীয়",
+      "project": "প্রজেক্ট"
+    },
+    "tools": {
+      "title": "Tools ({{count}})",
+      "title_few": "Tools ({{count}})",
+      "title_many": "Tools ({{count}})",
+      "title_one": "Tools ({{count}})",
+      "title_other": "Tools ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "আমার-সার্ভার"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "বাতিল",
+      "createSkill": "দক্ষতা স্তর তৈরি করুন",
+      "preparing": "প্রস্তুত করা হচ্ছে...",
+      "reviewAndCreate": "নতুন নির্মাণ ও",
+      "reviewAndSave": "পর্যালোচনা ও সংরক্ষণ",
+      "saveSkill": "দক্ষতার স্তর সংরক্ষণ করো"
+    },
+    "advanced": {
+      "customDescription": "এই দক্ষতাটি একটি স্বনির্ধারিত বিন্যাস ব্যবহার করে, তাই এখানে সরাসরি সম্পাদনা করুন ।",
+      "customTitle": "2. SKILLmd সম্পাদক",
+      "description": "বেশিরভাগ মানুষ এটা এড়িয়ে যেতে পারে। শুধুমাত্র raw বিশেষ চিহ্ন ফাইল- এ সরাসরি নিয়ন্ত্রণ করতে হলে এটি খোলো ।",
+      "hide": "অগ্রসর সম্পাদক আড়াল করো",
+      "resetFromStructuredFields": "গঠন ক্ষেত্র থেকে রিসেট করো",
+      "show": "অগ্রসর সম্পাদক",
+      "title": "উন্নত SKILLmd সম্পাদক"
+    },
+    "basics": {
+      "description": "এই দক্ষতাটা একটা পরিষ্কার নাম দিয়ে দিন, কে এটা ব্যবহার করতে পারে এবং ঠিক করতে হবে কোথায় সেটা থাকা উচিত।",
+      "title": "১ মৌলিক"
+    },
+    "description": {
+      "create": "সাধারণ ভাষায় কাজের ধারা বর্ণনা করুন, যা কিনা তৈরি করা হবে তা পর্যালোচনা করে, তারপর তা সংরক্ষণ করুন।",
+      "edit": "এই দক্ষতাটি আপডেট করুন, ফলাফল পর্যালোচনা করুন, তারপর তা সংরক্ষণ করুন ।"
+    },
+    "extraFiles": {
+      "addedFiles": "ফাইল সংযোজন করা হয়েছে:",
+      "assets": "আসসেট",
+      "assetsDescription": "যদি তারা কর্ম চক্রকে ব্যাখ্যা করতে সাহায্য করে তবে কেবল স্ক্রিনশট বা একাধিক মিডিয়া যোগ করুন।",
+      "description": "এই দক্ষতাটি যদি সত্যিই প্রয়োজন হয়, তবে ডাক্তার, স্ক্রিপ্ট অথবা সম্পদকে সমর্থন করুন ।",
+      "lockedForEdits": "সম্পাদনার জন্য Root এবং ফোল্ডার লক করা হয়",
+      "optionalDescription": "পর্যালোচনায় ফাইল যোগ করুন ও প্রকাশ করুন `SKILL.md`.",
+      "optionalTitle": "ঐচ্ছিক ফাইল",
+      "references": "টীকা",
+      "referencesDescription": "টিপস যোগ করুন, লিঙ্ক বা উদাহরণ দিন ।",
+      "scripts": "স্ক্রিপ্ট",
+      "scriptsDescription": "সহায়ক কমান্ড অথবা নোট সংযোজনের বৈশিষ্ট্য যোগ করুন। এই দক্ষতা শেয়ার করার আগে সতর্কতার সঙ্গে বিবেচনা করুন ।",
+      "title": "৩. অতিরিক্ত ফাইল"
+    },
+    "fields": {
+      "compatibility": "সামঞ্জস্য",
+      "description": "বিবরণ",
+      "folderName": "ফোল্ডারের নাম",
+      "folderNameHint": "আমরা এটাকে খেলার দক্ষতা থেকে স্বয়ংক্রিয়ভাবে বলতে পারি...",
+      "invocation": "কিভাবে ব্যবহার করা হবে",
+      "license": "লাইসেন্স",
+      "name": "দক্ষতার নাম",
+      "notes": "অতিরিক্ত নোট অথবা নিরাপত্তা লাইন",
+      "root": "যেখানে এটা সংরক্ষণ",
+      "scope": "কে এটা ব্যবহার করতে পারে?",
+      "steps": "পরবর্তী ধাপ",
+      "whenToUse": "যখন এর জন্য পৌঁছাতে"
+    },
+    "instructions": {
+      "description": "এই বিভাগ আপনার জন্য দক্ষতা ফাইল তৈরি করে, সুতরাং আপনি না চাইলে চিহ্ন সম্পাদন করতে হবে ।",
+      "locked": "আপনাকে ম্যানুয়াল করার জন্য কাঠামোবদ্ধ করা হয়েছে `SKILL.md` নিচে সম্পাদনা।",
+      "title": "২."
+    },
+    "invocation": {
+      "auto": "স্বয়ংক্রিয়ভাবে ব্যবহার করা হবে",
+      "manualOnly": "শুধুমাত্র যখন আপনি এটা জিজ্ঞাসা করেন"
+    },
+    "placeholders": {
+      "description": "এই দক্ষতা কাজে সাহায্য করে",
+      "name": "দক্ষতাক লিখুন",
+      "notes": "উদাহরণস্বরূপ: হারিয়ে যাওয়া পরীক্ষা, রিগ্রেশনাল এবং ঝুঁকিপূর্ণ অনুমানকে বাদ দিয়ে দিন ।",
+      "steps": "1. Inspect the relevant files.\n2. Explain the main risk first.\n3. Suggest the safest fix.",
+      "whenToUse": "উদাহরণস্বরূপ: এই ব্যবহার করুন যখন কর্ম একটি কোড পর্যালোচনা অথবা bugsupage অনুরোধ করা হয় ।",
+      "license": "MIT",
+      "compatibility": "খোলা কোড, কার্সার"
+    },
+    "review": {
+      "creating": "দক্ষতা তৈরি করা",
+      "hint": "ফাইল পরিবর্তনের পরে পরিবর্তনগুলি প্রথমে সংরক্ষণ করা হবে, তারপর পরবর্তী ধাপে সংরক্ষণ করা হবে।",
+      "saving": "এই দক্ষতাটি সংরক্ষণ করুন"
+    },
+    "root": {
+      "codexOnly": " - শুধুমাত্র কোডেক্স",
+      "shared": " - শেয়ার করা"
+    },
+    "scope": {
+      "project": "প্রজেক্ট: {{project}}",
+      "projectUnavailable": "পরিসেবা উপলব্ধ নয়",
+      "user": "ব্যবহারকারী"
+    },
+    "title": {
+      "create": "দক্ষতা তৈরি করুন",
+      "edit": "দক্ষতা স্তর সম্পাদন করো"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "বাতিল",
+      "delete": "মুছে ফেলুন",
+      "deleteSkill": "দক্ষতার স্তর মুছে ফেলো",
+      "deleting": "মুছে ফেলা হচ্ছে...",
+      "editSkill": "দক্ষতা স্তর সম্পাদন করো",
+      "openFolder": "ফোল্ডার খুলুন",
+      "openSkillFile": "খুলুন SKILLডি. এম.",
+      "retry": "পুনরায় চেষ্টা করুন"
+    },
+    "badges": {
+      "assets": "আসসেট",
+      "autoUse": "স্বয়ংক্রিয় ব্যবহার",
+      "hasScripts": "স্ক্রিপ্ট আছে",
+      "manualUse": "ব্যবহারকারী দ্বারা ব্যবহৃত",
+      "references": "টীকা",
+      "storedIn": "সংরক্ষিত পাসওয়ার্ড {{root}}"
+    },
+    "deleteDialog": {
+      "description": "এই দক্ষতাটি মুছে ফেলতে চান?",
+      "descriptionWithName": "Delete \"{{name}}\" and move it to Trash? You can restore it later from Trash if needed.",
+      "title": "দক্ষতা?"
+    },
+    "descriptionFallback": "ভালভাবে পরীক্ষা করুন মিটা-ডাটা এবং অন্যান্য নির্দেশাবলী ।",
+    "errors": {
+      "deleteFailed": "মুছে ফেলতে ব্যর্থ",
+      "loadFailed": "এই দক্ষতাটি লোড করতে অক্ষম।"
+    },
+    "files": {
+      "advancedDetails": "অতিরিক্ত বিবরণ প্রাপ্ত করুন",
+      "assets": "আসসেট",
+      "references": "টীকা",
+      "scripts": "স্ক্রিপ্ট",
+      "storedAt": "সংরক্ষিত পাসওয়ার্ড"
+    },
+    "includes": {
+      "assets": "সম্পদ",
+      "instructionsOnly": "শুধু দক্ষতা নির্দেশ",
+      "references": "রেফারেন্স",
+      "scripts": "স্ক্রিপ্ট"
+    },
+    "invocation": {
+      "auto": "কর্ম সঞ্চালনের সময় স্বয়ংক্রিয়ভাবে সঞ্চালনযোগ্য কর্ম।",
+      "manualOnly": "শুধুমাত্র কখন আপনি এটি জিজ্ঞাসা করবেন"
+    },
+    "issues": {
+      "bundledScripts": "এই দক্ষতায় বিভিন্ন স্ক্রিপ্টও অন্তর্ভুক্ত",
+      "reviewCarefully": "এটি ব্যবহার করার আগে সতর্কতার সঙ্গে এই দক্ষতাটি বিবেচনা করুন"
+    },
+    "loading": "কাজের তথ্য লোড করা হচ্ছে...",
+    "scope": {
+      "personal": "আপনার ব্যক্তিগত দক্ষতা",
+      "projectOnly": "শুধুমাত্র এই প্রজেক্ট"
+    },
+    "summary": {
+      "howUsed": "কিভাবে ব্যবহার করা হচ্ছে",
+      "included": "এটার সাথে কি আসে",
+      "whoCanUse": "কে এটা ব্যবহার করতে পারে?"
+    },
+    "titleFallback": "দক্ষতার বিবরণ"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "দক্ষতা স্তর তৈরি করুন",
+      "import": "ইম্পোর্ট"
+    },
+    "badges": {
+      "assets": "আসসেট",
+      "hasScripts": "স্ক্রিপ্ট আছে",
+      "needsAttention": "মনোযোগ দিন",
+      "references": "টীকা",
+      "storedIn": "সংরক্ষিত পাসওয়ার্ড {{root}}"
+    },
+    "configuredRuntime": "কনফিগার করো",
+    "counts": {
+      "codexOnly": "{{count}} শুধুমাত্র কোডেক্স",
+      "personal": "{{count}} ব্যক্তিগত",
+      "project": "{{count}} প্রজেক্ট",
+      "shared": "{{count}} শেয়ার করা",
+      "total": "{{count}} সর্বমোট",
+      "codexOnly_few": "{{count}} শুধুমাত্র কোডেক্স",
+      "codexOnly_many": "{{count}} শুধুমাত্র কোডেক্স",
+      "codexOnly_one": "{{count}} শুধুমাত্র কোডেক্স",
+      "codexOnly_other": "{{count}} শুধুমাত্র কোডেক্স",
+      "personal_few": "{{count}} ব্যক্তিগত",
+      "personal_many": "{{count}} ব্যক্তিগত",
+      "personal_one": "{{count}} ব্যক্তিগত",
+      "personal_other": "{{count}} ব্যক্তিগত",
+      "project_few": "{{count}} প্রজেক্ট",
+      "project_many": "{{count}} প্রজেক্ট",
+      "project_one": "{{count}} প্রজেক্ট",
+      "project_other": "{{count}} প্রজেক্ট",
+      "shared_few": "{{count}} শেয়ার করা",
+      "shared_many": "{{count}} শেয়ার করা",
+      "shared_one": "{{count}} শেয়ার করা",
+      "shared_other": "{{count}} শেয়ার করা",
+      "total_few": "{{count}} সর্বমোট",
+      "total_many": "{{count}} সর্বমোট",
+      "total_one": "{{count}} সর্বমোট",
+      "total_other": "{{count}} সর্বমোট"
+    },
+    "empty": {
+      "noMatches": "আপনার সন্ধানের মিল পাওয়া যায়নি",
+      "noMatchesDescription": "অনুসন্ধানের জন্য ভিন্ন শব্দ অথবা ফিল্টার প্রয়োগ করে পুনরায় প্রচেষ্টা করুন।",
+      "noSkills": "কোনো দক্ষতা নেই",
+      "noSkillsDescription": "আপনার প্রথম দক্ষতা তৈরি করুন পুনরাবৃত্তিযোগ্য কর্মফ্লো শেখা, অথবা আপনি বর্তমানে ব্যবহার করছেন।"
+    },
+    "filters": {
+      "all": "সব দক্ষতা",
+      "codexOnly": "শুধুমাত্র কোডেক্স",
+      "hasScripts": "স্ক্রিপ্ট আছে",
+      "needsAttention": "মনোযোগ দিন",
+      "personal": "ব্যক্তিগত",
+      "project": "প্রজেক্ট",
+      "shared": "শেয়ার করা"
+    },
+    "hero": {
+      "codexAvailable": "ব্যবহার `.codex` যখন কোন দক্ষতা শুধু কোডেক্সেই থাকবে",
+      "codexUnavailable": "উপস্থিত `.codex` দক্ষতার সাথে এখানে সম্পাদনা করা যায়, কিন্তু নতুন কোডের নতুন দক্ষতার দরকার... ...শুধুমাত্র কোডেক্সের স্লিপিং সক্রিয় করা।",
+      "description": "দক্ষতাগুলো হচ্ছে এমন এক নির্দেশনা, যা নিয়মিত কাজ করাকে সাহায্য করে ।",
+      "guidance": "অভ্যাসের জন্য ব্যক্তিগত দক্ষতা কাজে লাগান । ওয়ার্কফ্লোর জন্য প্রকল্প দক্ষতা ব্যবহার করুন যা শুধুমাত্র একটি কোডBambের মধ্যে জ্ঞান তৈরি করে।",
+      "personalContext": "আপনি এখন আপনার ব্যক্তিগত দক্ষতা দেখতে পাচ্ছেন।",
+      "projectContext": "আপনি দক্ষতা দেখছেন {{project}} আর তোমার ব্যক্তিগত দক্ষতাও।",
+      "title": "পুনরাবৃত্তিমূলক কাজ"
+    },
+    "invocation": {
+      "auto": "এটির মান স্বয়ংক্রিয়ভাবে নির্বাচন করা হয়",
+      "manualOnly": "শুধুমাত্র এটি সম্পর্কে সম্পূর্ণরূপে জিজ্ঞাসা করা হবে"
+    },
+    "loading": {
+      "loading": "দক্ষতা স্তর...",
+      "refreshing": "দক্ষতার মাত্রা..."
+    },
+    "runtimeAudience": "শেয়ার করা `.claude`, `.cursor`এবং `.agents` উপলব্ধ রয়েছে {{audience}}দক্ষতা স্তর `.codex` শুধু কোডেক্সের সাপোর্ট পাওয়া গেলেই থাকবে",
+    "scope": {
+      "project": "এই প্রজেক্ট",
+      "user": "ব্যক্তিগত"
+    },
+    "searchPlaceholder": "দক্ষতার নামে অনুসন্ধান করুন অথবা এটি কিভাবে সাহায্য করে...",
+    "sections": {
+      "personal": {
+        "description": "অভ্যাস আর নির্দেশনা সব জায়গায় পাওয়া যাবে।",
+        "title": "ব্যক্তিগত দক্ষতা"
+      },
+      "project": {
+        "description": "কাজের রোবার যে শুধু এই কোডের অর্থই বোঝে।",
+        "title": "প্রজেক্টের দক্ষতা স্তর"
+      }
+    },
+    "sort": {
+      "label": "ক্রমবিন্যাস",
+      "name": "নাম",
+      "recent": "সাম্প্রতিক"
+    },
+    "status": {
+      "hasScripts": "স্ক্রিপ্ট অন্তর্ভুক্ত করুন, তাই এটি সতর্কতা অবলম্বন করুন",
+      "needsAttention": "এটার ওপর নির্ভর করার আগে মনোযোগ দিন",
+      "ready": "ব্যবহারের জন্য প্রস্তুত"
+    },
+    "success": {
+      "created": "দক্ষতা সফলভাবে তৈরী হয়েছে।",
+      "imported": "দক্ষতার মাত্রা সাফল্যের সাথে ইম্পোর্ট করা হয়েছে।",
+      "saved": "দক্ষতার মাত্রা সাফল্যের সাথে সংরক্ষিত হয়েছে।"
+    }
+  },
+  "pluginDetail": {
+    "unknown": "অজানা",
+    "metadata": {
+      "author": "লেখক",
+      "category": "শ্রেণীবিভাগ",
+      "source": "উৎস",
+      "version": "সংস্করণ",
+      "capabilities": "ক্ষমতা",
+      "installs": "ইনস্টল করুন"
+    },
+    "scope": {
+      "label": "পরিধি:",
+      "options": {
+        "user": "ব্যবহারকারী (global)",
+        "project": "প্রজেক্ট (শেয়ার)",
+        "local": "স্থানীয় (ডিফল্ট)"
+      }
+    },
+    "links": {
+      "homepage": "হোম-পেজ",
+      "contact": "পরিচিতি"
+    },
+    "readme": {
+      "loading": "লোড করা হচ্ছে README...",
+      "empty": "না README উপলব্ধ।"
+    }
+  },
+  "skillImport": {
+    "title": "দক্ষতা স্তর ইম্পোর্ট করুন",
+    "description": "একটি বিদ্যমান দক্ষতা স্তর নির্বাচন করুন, তারপর এটি ইম্পোর্ট করুন ।",
+    "steps": {
+      "chooseFolder": {
+        "title": "১. দক্ষতা ফোল্ডার বেছে নিন",
+        "description": "এই নামের একটি ফোল্ডার বর্তমানে উপস্থিত রয়েছে `SKILL.md`, `Skill.md`অথবা `skill.md` ফাইল."
+      },
+      "location": {
+        "title": "2. Decide where it belongs",
+        "description": "ব্যক্তিগত দক্ষতা সর্বত্র কাজ করে। প্রজেক্ট দক্ষতা শুধুমাত্র কোডবেট দেখানোর জন্য।"
+      }
+    },
+    "fields": {
+      "sourceFolder": "উৎস ফোল্ডার",
+      "destinationFolderName": "উদ্দিষ্ট ফোল্ডারের নাম",
+      "audience": "কে এটা ব্যবহার করতে পারে?",
+      "storage": "যেখানে এটা সংরক্ষণ"
+    },
+    "placeholders": {
+      "defaultFolderName": "ফোল্ডারের নাম অনুসন্ধানের জন্য ডিফল্ট মান"
+    },
+    "actions": {
+      "browse": "ব্রাউজ করুন",
+      "cancel": "বাতিল",
+      "preparing": "প্রস্তুত করা হচ্ছে...",
+      "reviewAndImport": "ইম্পোর্ট এবং ইম্পোর্ট করুন",
+      "importSkill": "দক্ষতার ঝুলি",
+      "backToImport": "প্রয়োজনীয়"
+    },
+    "scope": {
+      "user": "ব্যবহারকারী",
+      "project": "প্রজেক্ট: {{project}}",
+      "projectUnavailable": "পরিসেবা উপলব্ধ নয়"
+    },
+    "rootSuffix": {
+      "codexOnly": " - শুধুমাত্র কোডেক্স",
+      "shared": " - শেয়ার করা"
+    },
+    "reviewHint": "কপিকৃত ফাইল প্রথমে পর্যালোচনা করুন, তারপর পরবর্তী ধাপে ইম্পোর্ট নিশ্চিত করুন।",
+    "reviewLabel": "এই দক্ষতাটি ইম্পোর্ট করুন",
+    "errors": {
+      "missingSkillFile": "এই ফোল্ডার- এ কোনো দক্ষতা নেই । এটি প্রয়োজন SKILL..dd, দক্ষতার, বা দক্ষতা ফাইল.",
+      "symbolicLinks": "%F-র মধ্যে মূল ফোল্ডার উপস্থিত রয়েছে। লিংকের পরিবর্তে প্রকৃত ফাইল ইম্পোর্ট করুন।",
+      "tooManyFiles": "এই দক্ষতা ফোল্ডার- এ এক সময়ে ইম্পোর্ট করা অনেক বড়। অতিরিক্ত ফাইল অপসারণ ও পুনরায় প্রচেষ্টা করুন।",
+      "tooLarge": "এই দক্ষতা ফোল্ডার সম্ভবত নিরাপদভাবে ইম্পোর্ট করা হয়েছে । বড় সম্পদ আবার চেষ্টা করে।",
+      "invalidFolderName": "অক্ষর, সংখ্যা, ডট অথবা ফাঁকা করে একটা সহজ গন্তব্য ফোল্ডার নির্বাচন করুন।",
+      "mustBeDirectory": "ইম্পোর্ট করার উদ্দেশ্যে একটি ফোল্ডার নির্বাচন করুন।",
+      "reviewFailed": "ইম্পোর্ট করতে ব্যর্থ",
+      "importFailed": "কি ইম্পোর্ট করতে ব্যর্থ"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "নাম/XZ",
+      "nameDesc": "জাউডোয়া",
+      "toolsDesc": "গুরুত্বপূর্ণ সামগ্রী"
+    },
+    "health": {
+      "title": "MCP স্বাস্থ্যের অবস্থা",
+      "checkingViaRuntime": "ইনস্টল করা হয়েছে MCP সার্ভার থেকে {{runtime}} ...",
+      "lastChecked": "সর্বশেষ পরীক্ষা {{time}}",
+      "description": "ইনস্টল করার জন্য এই পৃষ্ঠাটি থেকে ডায়াগনস্টিক সঞ্চালিত হবে MCP সংযোগ ব্যবস্থা।",
+      "checking": "পরীক্ষা করা হচ্ছে...",
+      "checkStatus": "অবস্থা পরীক্ষা করুন"
+    },
+    "diagnostics": {
+      "title": "সঞ্চালনার সময় MCP ডায়াগনস্টিক",
+      "serversCount": "{{count}} সার্ভার",
+      "serversCount_one": "{{count}} সার্ভার",
+      "serversCount_other": "{{count}} সার্ভার",
+      "waiting": "ডায়গনিক ফলাফলের জন্য অপেক্ষা করা হচ্ছে...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "সঞ্চালনার অবস্থা পরীক্ষা করা হচ্ছে...",
+        "checkingRuntimeAvailability": "সন্নিবেশ করা হচ্ছে...",
+        "runtimeFailedToStart": "কনফিগার করা ফিড পাওয়া যায়নি কিন্তু আরম্ভ করতে ব্যর্থ। ড্যাশবোর্ড খুলে দাও অথবা নতুন করে ঠিক করতে হবে.",
+        "runtimeRequired": "কনফিগার করা অ্যাড-ইনার প্রয়োজন। ড্যাশবোর্ড থেকে এটা ইন্সটল করুন অথবা মেরামত করুন।"
+      },
+      "serversCount_few": "{{count}} সার্ভার",
+      "serversCount_many": "{{count}} সার্ভার"
+    },
+    "searchPlaceholder": "অনুসন্ধান MCP সার্ভার...",
+    "runtime": {
+      "notAvailable": "{{runtime}} উপস্থিত নেই",
+      "notInstalled": "{{runtime}} ইনস্টল করা হয়নি",
+      "requiredDescription": "MCP স্বাস্থ্য পরীক্ষা সংক্রান্ত আবশ্যক {{runtime}}ড্যাশবোর্ড ইনস্টল অথবা মেরামত .."
+    },
+    "empty": {
+      "searchTitle": "কোনো সার্ভার পাওয়া যায়নি",
+      "title": "না MCP সার্ভার উপলব্ধ",
+      "searchDescription": "ভিন্ন অনুসন্ধানের নির্দেশক শব্দ পরীক্ষা করুন",
+      "description": "পরে নতুন সার্ভারের জন্য পরীক্ষা করা হবে"
+    },
+    "loadMore": "অতিরিক্ত ভার"
+  },
+  "apiKeys": {
+    "description": "নিরাপদ স্টোর API ইনস্টল করার সময় স্বয়ংক্রিয়রূপে কি-বাইন্ডিং MCP সার্ভার।",
+    "storage": {
+      "osKeychain": "এনক্রিপ্ট করা কি {{backend}} শুধুমাত্র সংরক্ষিত অনুমতি সহ ফাইল-সিস্টেম (শুধুমাত্র পাঠযোগ্য)।",
+      "localEncryption": "OS কি উপলব্ধ নয় - স্থানীয়ভাবে এনক্রিপ্ট করা হচ্ছে AES-২৫৬ সুরক্ষার জন্য, একটি কি-রিং সার্ভিস ইনস্টল করুন (gnome-keyring, কেওয়ালেটেট)।"
+    },
+    "actions": {
+      "add": "যোগ করুন API কি",
+      "addFirst": "প্রথমে কি যোগ করুন",
+      "edit": "সম্পাদনা"
+    },
+    "empty": {
+      "title": "না API সংরক্ষিত কি",
+      "description": "ইনস্টল করার সময় স্বয়ংক্রিয়রূপে এনভায়রনমেন্ট ভেরিয়েবল যোগ করুন MCP সার্ভার।"
+    },
+    "form": {
+      "addTitle": "যোগ করুন API কি",
+      "editTitle": "সম্পাদনা API কি",
+      "addDescription": "সংরক্ষণ করুন API স্বয়ংক্রিয়ভাবে কি-রিংয়ের মধ্যে লগ-ইন করা হবে MCP সার্ভারের ইনস্টলেশন।",
+      "editDescription": "কি সংক্রান্ত বিবরণ আপডেট করুন। তোমাকে অবশ্যই মূল্য পুনরায় নির্ধারণ করতে হবে।",
+      "keychainUnavailable": "কী রিং-এর মধ্যে উপলব্ধ নয় AES- স্টারলিং স্থানীয়ভাবে. OS-level প্রতিরক্ষার জন্য gnome-keyring ইনস্টল করুন।",
+      "name": "নাম",
+      "namePlaceholder": "উদাহরণ.",
+      "environmentVariableName": "এনভায়রনমেন্ট ভেরিয়েবলের নাম",
+      "envVarPlaceholder": "জি. OPENAI_API_KEY",
+      "value": "মান",
+      "reenterValue": "কি-র মান পুনরায় নির্ধারণ করুন",
+      "valuePlaceholder": "শ...",
+      "scope": "পরিধি",
+      "userScopeLabel": "ব্যবহারকারী (global)",
+      "projectScopeLabel": "প্রজেক্ট: {{project}}",
+      "projectUnavailable": "পরিসেবা উপলব্ধ নয়",
+      "boundTo": "চিহ্নিত করার জন্য সীমা {{path}}",
+      "cancel": "বাতিল",
+      "saving": "ইনস্টল করা হয়েছে...",
+      "update": "আপডেট",
+      "save": "সংরক্ষণ",
+      "errors": {
+        "invalidEnvVarFormat": "অক্ষর, সংখ্যা, ফাঁকা ব্যবহার করুন। চিঠি দিয়ে শুরু করা দরকার।",
+        "nameRequired": "নাম আবশ্যক",
+        "envVarRequired": "এনভায়রনমেন্ট ভেরিয়েবলের নাম উল্লেখ করা আবশ্যক",
+        "invalidEnvVar": "এনভায়রনমেন্ট ভেরিয়েবলের নাম বৈধ নয়",
+        "valueRequired": "কি-র মান আবশ্যক",
+        "projectScopeRequiresProject": "প্রজেক্ট API সক্রিয় কোনো প্রজেক্ট নির্বাচন করা আবশ্যক",
+        "saveFailed": "সংরক্ষণ করতে ব্যর্থ"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "পরিচিতির তথ্য পর্যালোচনা",
+    "description": "{{reviewLabel}} ফাইল-সিস্টেম দ্বারা প্রথম পরিবর্তন করা হয় । নিচে নিশ্চিত না হওয়া পর্যন্ত কোন লেখা নেই।",
+    "noPreview": "কোন প্রাকদর্শন পাওয়া যাচ্ছে না ।",
+    "confirmPromptPrefix": "নিচের অংশ পর্যালোচনা করুন, তারপর ব্যবহার করুন",
+    "confirmPromptSuffix": "to apply these changes.",
+    "noChanges": "কোনো ফাইল সনাক্ত করা যায়নি।",
+    "binaryBadge": "বাইনারি",
+    "binaryPreviewHidden": "বাইনারি ফাইলের পূর্বরূপ প্রদর্শন করা হয় না। ফাইলটি অনুলিপি করা হবে।",
+    "summary": {
+      "fileChanges": "{{count}} ফাইল পরিবর্তনের সময়",
+      "fileChanges_one": "{{count}} ফাইল পরিবর্তনের সময়",
+      "fileChanges_other": "{{count}} ফাইল পরিবর্তনের সময়",
+      "new": "{{count}} নতুন",
+      "updated": "{{count}} আপডেট করা হয়েছে",
+      "removed": "{{count}} অপসারণ করা হয়েছে",
+      "binary": "{{count}} বাইনারি",
+      "fileChanges_few": "{{count}} ফাইল পরিবর্তনের সময়",
+      "fileChanges_many": "{{count}} ফাইল পরিবর্তনের সময়"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} সরঞ্জাম",
+    "toolsCount_one": "{{count}} টুল",
+    "toolsCount_other": "{{count}} সরঞ্জাম",
+    "envCount": "{{count}} কাজ:",
+    "envCount_one": "{{count}} বিবিধ",
+    "envCount_other": "{{count}} কাজ:",
+    "auth": "অনুমোদন",
+    "byAuthor": "ব্যবহার করা হবে {{author}}",
+    "hosting": {
+      "remote": "দূরবর্তী",
+      "local": "স্থানীয়",
+      "both": "উভয়"
+    },
+    "toolsCount_few": "{{count}} সরঞ্জাম",
+    "toolsCount_many": "{{count}} সরঞ্জাম",
+    "envCount_few": "{{count}} কাজ:",
+    "envCount_many": "{{count}} কাজ:",
+    "repository": "সংগ্রহস্থল",
+    "website": "ওয়েব-সাইট:"
+  },
+  "installButton": {
+    "installing": "ইনস্টল করা হয়েছে...",
+    "removing": "মুছে ফেলা হচ্ছে...",
+    "done": "সম্পন্ন",
+    "retry": "পুনরায় চেষ্টা করুন",
+    "uninstall": "আন-ইনস্টল করুন",
+    "install": "ইনস্টল করুন"
+  },
+  "pluginCard": {
+    "official": "অফিসিয়ালি"
+  }
+}

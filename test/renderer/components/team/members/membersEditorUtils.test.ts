@@ -34,7 +34,7 @@ describe('members editor editable input filtering', () => {
         name: 'bob',
         agentType: 'developer',
       },
-    ] satisfies Array<Pick<ResolvedTeamMember, 'name' | 'agentType'>>;
+    ] satisfies Pick<ResolvedTeamMember, 'name' | 'agentType'>[];
 
     expect(filterEditableMemberInputs(members).map((member) => member.name)).toEqual([
       'alice',
@@ -57,9 +57,10 @@ describe('members editor editable input filtering', () => {
         model: 'gpt-5.4-mini',
         effort: 'medium',
       },
-    ] satisfies Array<
-      Pick<ResolvedTeamMember, 'name' | 'agentType' | 'providerId' | 'model' | 'effort'>
-    >;
+    ] satisfies Pick<
+      ResolvedTeamMember,
+      'name' | 'agentType' | 'providerId' | 'model' | 'effort'
+    >[];
 
     const drafts = createMemberDraftsFromInputs(filterEditableMemberInputs(members));
     expect(drafts).toHaveLength(1);
@@ -103,6 +104,210 @@ describe('members editor editable input filtering', () => {
     ]);
   });
 
+  it('drops hidden stale teammate backend when exporting against a new inherited provider', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          providerBackendId: 'codex-native',
+          model: 'haiku',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'anthropic',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        model: 'haiku',
+      }),
+    ]);
+    expect(exported[0]).not.toHaveProperty('providerId');
+    expect(exported[0]).not.toHaveProperty('providerBackendId');
+  });
+
+  it('keeps hidden teammate backend when it matches the inherited provider', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4-mini',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'codex',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4-mini',
+      }),
+    ]);
+    expect(exported[0]).not.toHaveProperty('providerId');
+  });
+
+  it('does not synthesize hidden teammate backend from inherited provider defaults', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          model: 'gpt-5.4-mini',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'codex',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        model: 'gpt-5.4-mini',
+      }),
+    ]);
+    expect(exported[0]).not.toHaveProperty('providerId');
+    expect(exported[0]).not.toHaveProperty('providerBackendId');
+  });
+
+  it('drops inherited teammate model when its inferred provider conflicts', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          model: 'gpt-5.4-mini',
+          effort: 'max',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'anthropic',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        effort: 'max',
+      }),
+    ]);
+    expect(exported[0]).not.toHaveProperty('model');
+  });
+
+  it('drops inherited teammate effort when selected provider does not support it', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          model: 'gpt-5.4-mini',
+          effort: 'max',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'codex',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        model: 'gpt-5.4-mini',
+      }),
+    ]);
+    expect(exported[0]).not.toHaveProperty('effort');
+  });
+
+  it('preserves legacy no-context effort export for callers without inherited provider', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          effort: 'max',
+        },
+      ] as any)
+    );
+
+    expect(buildMembersFromDrafts(drafts)).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        effort: 'max',
+      }),
+    ]);
+  });
+
+  it('uses explicit teammate provider before inherited provider while sanitizing export', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4-mini',
+          effort: 'max',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'anthropic',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4-mini',
+      }),
+    ]);
+    expect(exported[0]).not.toHaveProperty('effort');
+  });
+
+  it('keeps OpenCode custom teammate models that are not inferred as another provider', () => {
+    const drafts = createMemberDraftsFromInputs(
+      filterEditableMemberInputs([
+        {
+          name: 'alice',
+          agentType: 'reviewer',
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'qwen3-coder',
+          effort: 'medium',
+        },
+      ] as any)
+    );
+
+    const exported = buildMembersFromDrafts(drafts, {
+      inheritedProviderId: 'anthropic',
+    });
+
+    expect(exported).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+        model: 'qwen3-coder',
+        effort: 'medium',
+      }),
+    ]);
+  });
+
   it('preserves explicit codex models when exporting member inputs', () => {
     const drafts = createMemberDraftsFromInputs(
       filterEditableMemberInputs([
@@ -113,9 +318,10 @@ describe('members editor editable input filtering', () => {
           model: 'gpt-5.4-mini',
           effort: 'medium',
         },
-      ] satisfies Array<
-        Pick<ResolvedTeamMember, 'name' | 'agentType' | 'providerId' | 'model' | 'effort'>
-      >)
+      ] satisfies Pick<
+        ResolvedTeamMember,
+        'name' | 'agentType' | 'providerId' | 'model' | 'effort'
+      >[])
     );
 
     expect(buildMembersFromDrafts(drafts)).toEqual([
@@ -140,7 +346,7 @@ describe('members editor editable input filtering', () => {
           name: 'bob',
           agentType: 'reviewer',
         },
-      ] satisfies Array<Pick<ResolvedTeamMember, 'name' | 'agentType' | 'isolation'>>)
+      ] satisfies Pick<ResolvedTeamMember, 'name' | 'agentType' | 'isolation'>[])
     );
 
     const exported = buildMembersFromDrafts(drafts);

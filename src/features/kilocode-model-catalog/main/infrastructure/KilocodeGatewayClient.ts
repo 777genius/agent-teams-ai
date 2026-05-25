@@ -4,6 +4,7 @@ const GATEWAY_BASE_URL = 'https://api.kilo.ai';
 // KiloCode gateway endpoint: https://kilo.ai/docs/gateway/models-and-providers
 const MODELS_PATH = '/api/gateway/models';
 const REQUEST_TIMEOUT_MS = 8_000;
+const ERROR_BODY_PREVIEW_LIMIT = 500;
 
 interface GatewayModelObject {
   id?: string;
@@ -21,6 +22,19 @@ interface GatewayModelsResponse {
 export interface KilocodeGatewayModel {
   id: string;
   displayName: string;
+}
+
+function sanitizeErrorBody(body: string): string {
+  const sanitized = body
+    .trim()
+    .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, 'Bearer [redacted]')
+    .replace(/sk-[A-Za-z0-9_-]+/g, '[redacted-api-key]');
+  if (!sanitized) {
+    return 'empty response body';
+  }
+  return sanitized.length > ERROR_BODY_PREVIEW_LIMIT
+    ? `${sanitized.slice(0, ERROR_BODY_PREVIEW_LIMIT)}...`
+    : sanitized;
 }
 
 export class KilocodeGatewayClient {
@@ -58,13 +72,19 @@ export class KilocodeGatewayClient {
         res.on('end', () => {
           const body = Buffer.concat(chunks).toString('utf8');
           if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`KiloCode gateway responded with HTTP ${res.statusCode}: ${body}`));
+            reject(
+              new Error(
+                `KiloCode gateway responded with HTTP ${res.statusCode}: ${sanitizeErrorBody(body)}`
+              )
+            );
             return;
           }
           try {
             resolve(JSON.parse(body) as GatewayModelsResponse);
           } catch {
-            reject(new Error(`KiloCode gateway returned non-JSON response: ${body.slice(0, 200)}`));
+            reject(
+              new Error(`KiloCode gateway returned non-JSON response: ${sanitizeErrorBody(body)}`)
+            );
           }
         });
         res.on('error', reject);

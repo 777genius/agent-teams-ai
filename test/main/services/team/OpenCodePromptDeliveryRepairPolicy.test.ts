@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   decideOpenCodePromptDeliveryRepair,
   type OpenCodePromptDeliveryRepairInput,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryRepairPolicy';
+import { describe, expect, it } from 'vitest';
 
 function base(overrides: Partial<OpenCodePromptDeliveryRepairInput> = {}) {
   return {
@@ -40,6 +39,22 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.controlText).toContain('relayOfMessageId="msg-1"');
   });
 
+  it('keeps no-assistant response repair available for a bounded max-attempt recovery retry', () => {
+    const decision = decideOpenCodePromptDeliveryRepair(
+      base({
+        status: 'retry_scheduled',
+        attempts: 3,
+        maxAttempts: 3,
+        responseState: 'prompt_delivered_no_assistant_message',
+        pendingReason: 'prompt_delivered_no_assistant_message',
+      })
+    );
+
+    expect(decision.kind).toBe('no_assistant_response');
+    expect(decision.retryable).toBe(true);
+    expect(decision.controlText).toContain('You must not end this turn empty.');
+  });
+
   it('requires member work sync status and report for work-sync nudges', () => {
     const decision = decideOpenCodePromptDeliveryRepair(
       base({
@@ -55,6 +70,7 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.kind).toBe('work_sync_report_required');
     expect(decision.controlText).toContain('member_work_sync_status');
     expect(decision.controlText).toContain('member_work_sync_report');
+    expect(decision.controlText).toContain('A status-only tool call is incomplete');
     expect(decision.controlText).toContain('controlUrl="http://127.0.0.1:43123"');
     expect(decision.controlText).toContain('"task-1"');
     expect(decision.controlText).not.toContain('reportToken=');
@@ -75,6 +91,7 @@ describe('OpenCodePromptDeliveryRepairPolicy', () => {
     expect(decision.kind).toBe('work_sync_report_required');
     expect(decision.controlText).toContain('review pickup control message');
     expect(decision.controlText).toContain('start or continue the review');
+    expect(decision.controlText).toContain('A status-only tool call is incomplete');
     expect(decision.controlText).toContain('"task-1"');
     expect(decision.controlText).not.toContain('Then call agent-teams_member_work_sync_report');
   });

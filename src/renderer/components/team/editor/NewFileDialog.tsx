@@ -9,6 +9,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { FilePlus, FolderPlus } from 'lucide-react';
 
 // =============================================================================
@@ -29,12 +30,12 @@ interface NewFileDialogProps {
 // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- Intentional: validating filenames against control characters
 const INVALID_CHARS = /[\x00-\x1f/\\:*?"<>|]/;
 
-function validateName(name: string): string | null {
+function validateName(name: string, t: ReturnType<typeof useAppTranslation>['t']): string | null {
   const trimmed = name.trim();
-  if (trimmed.length === 0) return 'Name cannot be empty';
-  if (trimmed === '.' || trimmed === '..') return 'Invalid name';
-  if (INVALID_CHARS.test(trimmed)) return 'Name contains invalid characters';
-  if (trimmed.length > 255) return 'Name is too long';
+  if (trimmed.length === 0) return t('editor.newFile.validation.nameRequired');
+  if (trimmed === '.' || trimmed === '..') return t('editor.newFile.validation.invalidName');
+  if (INVALID_CHARS.test(trimmed)) return t('editor.newFile.validation.invalidCharacters');
+  if (trimmed.length > 255) return t('editor.newFile.validation.nameTooLong');
   return null;
 }
 
@@ -48,6 +49,7 @@ export const NewFileDialog = ({
   onSubmit,
   onCancel,
 }: NewFileDialogProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -80,13 +82,13 @@ export const NewFileDialog = ({
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
-    const validationError = validateName(trimmed);
+    const validationError = validateName(trimmed, t);
     if (validationError) {
       setError(validationError);
       return;
     }
     onSubmit(trimmed);
-  }, [value, onSubmit]);
+  }, [value, onSubmit, t]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -120,9 +122,17 @@ export const NewFileDialog = ({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={() => requestAnimationFrame(() => inputRef.current?.focus())}
-          placeholder={type === 'file' ? 'File name...' : 'Folder name...'}
+          placeholder={
+            type === 'file'
+              ? t('editor.newFile.placeholders.fileName')
+              : t('editor.newFile.placeholders.folderName')
+          }
           className="min-w-0 flex-1 rounded border border-border-emphasis bg-surface px-1.5 py-0.5 text-xs text-text outline-none focus:border-blue-500"
-          aria-label={type === 'file' ? 'New file name' : 'New folder name'}
+          aria-label={
+            type === 'file'
+              ? t('editor.newFile.aria.newFileName')
+              : t('editor.newFile.aria.newFolderName')
+          }
         />
       </div>
       {error && <span className="mt-0.5 pl-5 text-[10px] text-red-400">{error}</span>}

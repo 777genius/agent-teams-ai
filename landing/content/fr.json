@@ -44,7 +44,7 @@
     {
       "id": "isFree",
       "question": "C'est vraiment gratuit ?",
-      "answer": "Oui. L'application est gratuite et open source. L'application n'a pas d'offre payante. Pour exécuter des agents, vous avez seulement besoin d'un accès à un provider/runtime pris en charge, comme Anthropic ou Codex."
+      "answer": "Oui. L'application est gratuite et open source, et vous pouvez commencer avec un modèle gratuit sans authentification - sans inscription, clé API ni carte bancaire. Pour plus de modèles, connectez Claude, Codex, OpenCode/OpenRouter ou un autre provider pris en charge."
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "De quoi ai-je besoin pour commencer ?",
-      "answer": "Installez simplement l'application - elle vous guide pour la détection du runtime et l'authentification du provider depuis l'interface. L'onboarding zéro-configuration vous fait démarrer en quelques minutes."
+      "answer": "Installez simplement l'application - commencez avec le modèle gratuit sans authentification, puis connectez les modèles provider-backed depuis l'interface seulement si nécessaire."
     }
   ],
   "download": {
@@ -85,16 +85,16 @@
       "name": "Gratuit",
       "price": "0€",
       "period": "",
-      "description": "Tout inclus. Sans limites, sans clés API, sans carte bancaire.",
+      "description": "Commencez avec le modèle gratuit sans authentification inclus. Sans inscription, sans clé API, sans carte bancaire.",
       "features": [
+        "Modèle gratuit sans authentification pour les premiers essais",
+        "Aucun compte ni login provider requis pour tester",
+        "Accès optionnel à Claude, Codex et OpenCode",
         "Équipes d'agents illimitées",
         "Kanban avec mises à jour en temps réel",
         "Revue de code avec vue diff",
         "Communication inter-équipes",
-        "Modes solo et équipe",
-        "Surveillance des processus en direct",
-        "Éditeur de code intégré",
-        "Intégration MCP"
+        "Modes solo et équipe"
       ],
       "highlighted": true
     }

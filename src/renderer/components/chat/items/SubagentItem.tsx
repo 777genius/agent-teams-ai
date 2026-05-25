@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   CARD_BG,
   CARD_BORDER_STYLE,
@@ -79,7 +80,9 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
     notificationColorMap,
     registerToolRef,
   }) => {
-    const description = subagent.description ?? step.content.subagentDescription ?? 'Subagent';
+    const { t } = useAppTranslation('common');
+    const description =
+      subagent.description ?? step.content.subagentDescription ?? t('chat.subagent.fallbackName');
     const subagentType = subagent.subagentType ?? 'Task';
     const truncatedDesc = description.length > 60 ? description.slice(0, 60) + '...' : description;
 
@@ -142,10 +145,10 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
               Array.isArray(m.content) &&
               m.content.some((b) => b.type === 'tool_use')
           ).length ?? 0;
-        return toolCount > 0 ? `${toolCount} tools` : '';
+        return toolCount > 0 ? t('chat.subagent.summary.tools', { count: toolCount }) : '';
       }
       return buildSummary(displayItems);
-    }, [isExpanded, containsHighlightedError, displayItems, subagent.messages]);
+    }, [isExpanded, containsHighlightedError, displayItems, subagent.messages, t]);
 
     // Model info
     const modelInfo = useMemo(() => {
@@ -250,7 +253,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
             {subagent.team.memberName}
           </span>
           <span className="text-xs" style={{ color: CARD_ICON_MUTED }}>
-            Shutdown confirmed
+            {t('chat.subagent.shutdownConfirmed')}
           </span>
           <span className="flex-1" />
           <span
@@ -358,7 +361,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
           <MetricsPill
             mainSessionImpact={subagent.team ? undefined : subagent.mainSessionImpact}
             lastUsage={lastUsage ?? undefined}
-            isolatedLabel={subagent.team ? 'Context Window' : undefined}
+            isolatedLabel={subagent.team ? t('chat.subagent.metrics.contextWindow') : undefined}
             isolatedOverride={
               phaseData && phaseData.compactionCount > 0 ? phaseData.totalConsumption : undefined
             }
@@ -391,14 +394,14 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
               style={{ color: COLOR_TEXT_MUTED }}
             >
               <span>
-                <span style={{ color: CARD_ICON_MUTED }}>Type</span>{' '}
+                <span style={{ color: CARD_ICON_MUTED }}>{t('chat.subagent.meta.type')}</span>{' '}
                 <span className="font-mono" style={{ color: CARD_TEXT_LIGHT }}>
                   {subagentType}
                 </span>
               </span>
               <span style={{ color: CARD_SEPARATOR }}>•</span>
               <span>
-                <span style={{ color: CARD_ICON_MUTED }}>Duration</span>{' '}
+                <span style={{ color: CARD_ICON_MUTED }}>{t('chat.subagent.meta.duration')}</span>{' '}
                 <span className="font-mono tabular-nums" style={{ color: CARD_TEXT_LIGHT }}>
                   {formatDuration(subagent.durationMs)}
                 </span>
@@ -407,7 +410,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                 <>
                   <span style={{ color: CARD_SEPARATOR }}>•</span>
                   <span>
-                    <span style={{ color: CARD_ICON_MUTED }}>Model</span>{' '}
+                    <span style={{ color: CARD_ICON_MUTED }}>{t('chat.subagent.meta.model')}</span>{' '}
                     <span className={`font-mono ${getModelColorClass(modelInfo.family)}`}>
                       {modelInfo.name}
                     </span>
@@ -416,7 +419,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
               )}
               <span style={{ color: CARD_SEPARATOR }}>•</span>
               <span>
-                <span style={{ color: CARD_ICON_MUTED }}>ID</span>{' '}
+                <span style={{ color: CARD_ICON_MUTED }}>{t('chat.subagent.meta.id')}</span>{' '}
                 <span
                   className="inline-block max-w-[120px] truncate align-bottom font-mono"
                   style={{ color: CARD_ICON_MUTED }}
@@ -435,7 +438,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                   className="mb-2 text-[10px] font-semibold uppercase tracking-wider"
                   style={{ color: CARD_ICON_MUTED }}
                 >
-                  Context Usage
+                  {t('chat.subagent.metrics.contextUsage')}
                 </div>
 
                 {/* Token rows - floating alignment */}
@@ -448,7 +451,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                           style={{ color: 'rgba(251, 191, 36, 0.7)' }}
                         />
                         <span className="text-xs" style={{ color: COLOR_TEXT_SECONDARY }}>
-                          Main Context
+                          {t('chat.subagent.metrics.mainContext')}
                         </span>
                       </div>
                       <span
@@ -465,7 +468,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                       <div className="flex items-center gap-2">
                         <Sigma className="size-3" style={{ color: 'rgba(168, 85, 247, 0.7)' }} />
                         <span className="text-xs" style={{ color: COLOR_TEXT_SECONDARY }}>
-                          Total Output
+                          {t('chat.subagent.metrics.totalOutput')}
                         </span>
                       </div>
                       <span
@@ -475,7 +478,9 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                         {cumulativeMetrics.outputTokens.toLocaleString()}
                         <span style={{ color: CARD_ICON_MUTED }}>
                           {' '}
-                          ({cumulativeMetrics.turnCount} turns)
+                          {t('chat.subagent.metrics.turns', {
+                            count: cumulativeMetrics.turnCount,
+                          })}
                         </span>
                       </span>
                     </div>
@@ -489,7 +494,9 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                           style={{ color: 'rgba(56, 189, 248, 0.7)' }}
                         />
                         <span className="text-xs" style={{ color: COLOR_TEXT_SECONDARY }}>
-                          {subagent.team ? 'Context Window' : 'Subagent Context'}
+                          {subagent.team
+                            ? t('chat.subagent.metrics.contextWindow')
+                            : t('chat.subagent.metrics.subagentContext')}
                         </span>
                       </div>
                       <span
@@ -509,7 +516,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                         className="flex items-center justify-between pl-5"
                       >
                         <span className="text-[11px]" style={{ color: CARD_ICON_MUTED }}>
-                          Phase {phase.phaseNumber}
+                          {t('chat.subagent.metrics.phase', { phase: phase.phaseNumber })}
                         </span>
                         <span
                           className="font-mono text-[11px] tabular-nums"
@@ -567,7 +574,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                   />
                   <Terminal className="size-3.5" style={{ color: CARD_ICON_MUTED }} />
                   <span className="text-xs" style={{ color: COLOR_TEXT_SECONDARY }}>
-                    Execution Trace
+                    {t('chat.subagent.trace.title')}
                   </span>
                   <span className="text-[11px]" style={{ color: CARD_ICON_MUTED }}>
                     · {itemsSummary}

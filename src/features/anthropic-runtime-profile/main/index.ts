@@ -1,4 +1,5 @@
 export type {
+  AnthropicEffortSupportResolution,
   AnthropicFastModeResolution,
   AnthropicRuntimeProfileSource,
   AnthropicRuntimeReconciliation,
@@ -6,6 +7,7 @@ export type {
 } from '../core/domain/resolveAnthropicRuntimeProfile';
 export {
   reconcileAnthropicRuntimeSelections,
+  resolveAnthropicEffortSupport,
   resolveAnthropicFastMode,
   resolveAnthropicRuntimeSelection,
 } from '../core/domain/resolveAnthropicRuntimeProfile';

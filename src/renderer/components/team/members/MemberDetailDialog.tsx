@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import {
-  isMemberLogStreamUiEnabled,
-  MemberLogStreamSection,
-} from '@features/member-log-stream/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
 // import { MemberWorkSyncStatusPanel } from '@features/member-work-sync/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
@@ -11,7 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/u
 import { useMemberStats } from '@renderer/hooks/useMemberStats';
 import { useStore } from '@renderer/store';
 import { selectMemberMessagesForTeamMember } from '@renderer/store/slices/teamSlice';
-import { isOpenCodeRelaunchActionable } from '@renderer/utils/memberHelpers';
+import {
+  isOpenCodeRelaunchActionable,
+  shouldDisplayMemberCurrentTask,
+} from '@renderer/utils/memberHelpers';
 import {
   buildMemberLaunchDiagnosticsPayload,
   getMemberLaunchDiagnosticsErrorMessage,
@@ -40,7 +40,7 @@ import { MemberDetailHeader } from './MemberDetailHeader';
 import { MemberDetailStats } from './MemberDetailStats';
 import { type MemberActivityFilter, type MemberDetailTab } from './memberDetailTypes';
 import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
-import { MemberLogsTab } from './MemberLogsTab';
+import { MemberLogStreamWithLegacyFallback } from './MemberLogStreamWithLegacyFallback';
 import { MemberMessagesTab } from './MemberMessagesTab';
 import { MemberStatsTab } from './MemberStatsTab';
 import { MemberTasksTab } from './MemberTasksTab';
@@ -140,6 +140,7 @@ export const MemberDetailDialog = ({
   updatingRole,
   onViewMemberChanges,
 }: MemberDetailDialogProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   const memberTasks = useMemo(
     () => (member ? tasks.filter((t) => t.owner === member.name) : []),
     [tasks, member]
@@ -171,9 +172,20 @@ export const MemberDetailDialog = ({
         : null,
     [member?.currentTaskId, tasks]
   );
-  const displayableCurrentTask = isDisplayableCurrentTask(currentTaskCandidate)
-    ? currentTaskCandidate
-    : null;
+  const showCurrentTaskActivity =
+    member != null &&
+    shouldDisplayMemberCurrentTask({
+      member,
+      isTeamAlive,
+      spawnStatus: spawnEntry?.status,
+      spawnLaunchState: spawnEntry?.launchState,
+      spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+      runtimeEntry,
+    });
+  const displayableCurrentTask =
+    showCurrentTaskActivity && isDisplayableCurrentTask(currentTaskCandidate)
+      ? currentTaskCandidate
+      : null;
 
   const completedTasks = useMemo(
     () => memberTasks.filter(isTeamTaskFinishedForDependency).length,
@@ -183,7 +195,6 @@ export const MemberDetailDialog = ({
   const [activeTab, setActiveTab] = useState<MemberDetailTab>(initialTab);
   const [restarting, setRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
-  const [showLegacyLogsFallback, setShowLegacyLogsFallback] = useState(false);
 
   const runtimeSummary = useMemo(
     () =>
@@ -208,6 +219,7 @@ export const MemberDetailDialog = ({
             teamName,
             runId: runtimeRunId,
             memberName: member.name,
+            member,
             spawnEntry,
             runtimeEntry,
           })
@@ -233,7 +245,9 @@ export const MemberDetailDialog = ({
     ? OPENCODE_BOOTSTRAP_STALLED_MESSAGE
     : undefined;
   const isOpenCodeMember = member?.providerId === 'opencode';
-  const restartButtonLabel = isOpenCodeMember ? 'Relaunch OpenCode' : 'Restart';
+  const restartButtonLabel = isOpenCodeMember
+    ? t('members.detail.relaunchOpenCode')
+    : t('members.detail.restart');
   const hasLiveRestartContext = isTeamAlive === true || isTeamProvisioning === true;
   const canControlledOpenCodeRelaunch =
     member == null
@@ -254,7 +268,6 @@ export const MemberDetailDialog = ({
     setActiveTab(initialTab);
     setRestartError(null);
     setRestarting(false);
-    setShowLegacyLogsFallback(false);
   }, [initialTab, member, open]);
 
   const {
@@ -264,7 +277,6 @@ export const MemberDetailDialog = ({
   } = useMemberStats(teamName, member?.name ?? null);
 
   const totalTokens = memberStats ? memberStats.inputTokens + memberStats.outputTokens : null;
-  const memberLogStreamEnabled = isMemberLogStreamUiEnabled();
 
   if (!member) return null;
 
@@ -289,6 +301,9 @@ export const MemberDetailDialog = ({
               spawnRuntimeAlive={spawnEntry?.runtimeAlive}
               spawnBootstrapConfirmed={spawnEntry?.bootstrapConfirmed}
               spawnBootstrapStalled={spawnEntry?.bootstrapStalled}
+              spawnAgentToolAccepted={spawnEntry?.agentToolAccepted}
+              spawnHardFailure={spawnEntry?.hardFailure}
+              spawnLivenessKind={spawnEntry?.livenessKind}
               spawnFirstSpawnAcceptedAt={spawnEntry?.firstSpawnAcceptedAt}
               spawnUpdatedAt={spawnEntry?.updatedAt}
               runtimeEntry={runtimeEntry}
@@ -377,26 +392,11 @@ export const MemberDetailDialog = ({
             />
           </TabsContent>
           <TabsContent value="logs" className="min-w-0 overflow-hidden">
-            {memberLogStreamEnabled ? (
-              <div className="space-y-4">
-                <MemberLogStreamSection
-                  teamName={teamName}
-                  member={member}
-                  enabled={open && activeTab === 'logs'}
-                  onInitialLoadErrorChange={setShowLegacyLogsFallback}
-                />
-                {showLegacyLogsFallback ? (
-                  <div className="rounded-md border border-[var(--color-border)] p-3">
-                    <div className="mb-3 text-xs font-semibold uppercase text-[var(--color-text-muted)]">
-                      Legacy Logs Fallback
-                    </div>
-                    <MemberLogsTab teamName={teamName} memberName={member.name} />
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <MemberLogsTab teamName={teamName} memberName={member.name} />
-            )}
+            <MemberLogStreamWithLegacyFallback
+              teamName={teamName}
+              member={member}
+              enabled={open && activeTab === 'logs'}
+            />
           </TabsContent>
         </Tabs>
 
@@ -411,7 +411,7 @@ export const MemberDetailDialog = ({
               {launchDiagnosticsPayload && showCopyDiagnostics ? (
                 <MemberLaunchDiagnosticsButton
                   payload={launchDiagnosticsPayload}
-                  label="Copy diagnostics"
+                  label={t('members.detail.copyDiagnostics')}
                   className="h-auto shrink-0 gap-1.5 px-2 py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
                 />
               ) : null}
@@ -424,7 +424,7 @@ export const MemberDetailDialog = ({
             </div>
           ) : runtimeEntry?.pid ? (
             <div className="mr-auto text-xs text-[var(--color-text-muted)]">
-              PID {runtimeEntry.pid}
+              {t('members.detail.pid', { pid: runtimeEntry.pid })}
               {memorySourceLabel ? ` · ${memorySourceLabel}` : ''}
             </div>
           ) : (
@@ -432,7 +432,9 @@ export const MemberDetailDialog = ({
           )}
           {member.removedAt ? (
             <span className="text-xs text-[var(--color-text-muted)]">
-              Removed {new Date(member.removedAt).toLocaleDateString()}
+              {t('members.detail.removedAt', {
+                date: new Date(member.removedAt).toLocaleDateString(),
+              })}
             </span>
           ) : (
             <>
@@ -450,7 +452,9 @@ export const MemberDetailDialog = ({
                       await onRestartMember(member.name);
                     } catch (error) {
                       setRestartError(
-                        error instanceof Error ? error.message : 'Failed to restart member'
+                        error instanceof Error
+                          ? error.message
+                          : t('members.detail.failedToRestartMember')
                       );
                     } finally {
                       setRestarting(false);
@@ -467,11 +471,11 @@ export const MemberDetailDialog = ({
               )}
               <Button variant="outline" size="sm" className="gap-1.5" onClick={onSendMessage}>
                 <MessageSquare size={14} />
-                Send Message
+                {t('members.detail.sendMessage')}
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={onAssignTask}>
                 <ListPlus size={14} />
-                Assign Task
+                {t('members.detail.assignTask')}
               </Button>
               {onRemoveMember && !isLeadMember(member) && (
                 <Button
@@ -481,7 +485,7 @@ export const MemberDetailDialog = ({
                   onClick={onRemoveMember}
                 >
                   <UserMinus size={14} />
-                  Remove
+                  {t('members.detail.remove')}
                 </Button>
               )}
             </>

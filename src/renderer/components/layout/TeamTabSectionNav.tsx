@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { ChevronDown, Columns3, History, MessageSquare, Terminal, Users } from 'lucide-react';
 
@@ -11,18 +12,21 @@ interface TeamTabSectionNavProps {
   onActivate?: () => void;
 }
 
-const SECTIONS: readonly { id: string; label: string; icon: LucideIcon }[] = [
-  { id: 'team', label: 'Team', icon: Users },
-  { id: 'sessions', label: 'Sessions', icon: History },
-  { id: 'kanban', label: 'Kanban', icon: Columns3 },
-  { id: 'claude-logs', label: 'Claude Logs', icon: Terminal },
-  { id: 'messages', label: 'Messages', icon: MessageSquare },
+const SECTIONS: readonly { id: string; labelKey: TeamSectionLabelKey; icon: LucideIcon }[] = [
+  { id: 'team', labelKey: 'team', icon: Users },
+  { id: 'sessions', labelKey: 'sessions', icon: History },
+  { id: 'kanban', labelKey: 'kanban', icon: Columns3 },
+  { id: 'claude-logs', labelKey: 'claudeLogs', icon: Terminal },
+  { id: 'messages', labelKey: 'messages', icon: MessageSquare },
 ];
+
+type TeamSectionLabelKey = 'team' | 'sessions' | 'kanban' | 'claudeLogs' | 'messages';
 
 export const TeamTabSectionNav = ({
   teamName,
   onActivate,
 }: TeamTabSectionNavProps): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
   const messagesPanelMode = useStore((s) => s.messagesPanelMode);
   const [open, setOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -91,7 +95,7 @@ export const TeamTabSectionNav = ({
           e.stopPropagation();
           setOpen((prev) => !prev);
         }}
-        title="Jump to section"
+        title={t('layout.jumpToSection')}
       >
         <ChevronDown size={10} />
       </button>
@@ -134,7 +138,7 @@ export const TeamTabSectionNav = ({
                   }}
                 >
                   <SectionIcon size={12} className="shrink-0" />
-                  {section.label}
+                  {t(`layout.sections.${section.labelKey}`)}
                 </button>
               );
             })}

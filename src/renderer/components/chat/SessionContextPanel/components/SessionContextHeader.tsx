@@ -4,6 +4,7 @@
 
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import {
   COLOR_BORDER,
   COLOR_BORDER_SUBTLE,
@@ -53,6 +54,8 @@ export const SessionContextHeader = ({
   viewMode,
   onViewModeChange,
 }: Readonly<SessionContextHeaderProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
+
   const formatPercentLabel = (percent: number | null, suffix: string): string | null => {
     if (percent === null) {
       return null;
@@ -77,7 +80,7 @@ export const SessionContextHeader = ({
       <div className="text-right">
         <div className="font-medium tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
           {tokens === null
-            ? (options?.unavailableLabel ?? 'Unavailable')
+            ? (options?.unavailableLabel ?? t('sessionContext.metrics.unavailable'))
             : `${options?.approximate ? '~' : ''}${formatTokens(tokens)}`}
         </div>
         {percentLabel && (
@@ -99,7 +102,7 @@ export const SessionContextHeader = ({
         <div className="flex items-center gap-2">
           <FileText size={16} style={{ color: COLOR_TEXT_SECONDARY }} />
           <h2 className="text-sm font-semibold" style={{ color: COLOR_TEXT }}>
-            Context
+            {t('sessionContext.header.title')}
           </h2>
           <span
             className="rounded px-1.5 py-0.5 text-xs"
@@ -118,7 +121,7 @@ export const SessionContextHeader = ({
               onClick={onClose}
               className="rounded p-1 transition-colors hover:bg-white/10"
               style={{ color: COLOR_TEXT_SECONDARY }}
-              aria-label="Close panel"
+              aria-label={t('sessionContext.header.closePanel')}
             >
               <X size={16} />
             </button>
@@ -132,27 +135,27 @@ export const SessionContextHeader = ({
         style={{ borderTop: `1px solid ${COLOR_BORDER_SUBTLE}` }}
       >
         {renderMetricValue(
-          'Context Used',
+          t('sessionContext.metrics.contextUsed'),
           contextMetrics?.contextUsedTokens ?? null,
           formatPercentLabel(
             contextMetrics?.contextUsedPercentOfContextWindow ?? null,
-            'of context'
+            t('sessionContext.metrics.ofContext')
           )
         )}
         {renderMetricValue(
-          'Prompt Input',
+          t('sessionContext.metrics.promptInput'),
           contextMetrics?.promptInputTokens ?? null,
           formatPercentLabel(
             contextMetrics?.promptInputPercentOfContextWindow ?? null,
-            'of context'
+            t('sessionContext.metrics.ofContext')
           )
         )}
         {renderMetricValue(
-          'Visible Context',
+          t('sessionContext.metrics.visibleContext'),
           totalTokens,
           formatPercentLabel(
             contextMetrics?.visibleContextPercentOfPromptInput ?? null,
-            'of prompt'
+            t('sessionContext.metrics.ofPrompt')
           ),
           { approximate: true }
         )}
@@ -166,8 +169,7 @@ export const SessionContextHeader = ({
             color: COLOR_TEXT_MUTED,
           }}
         >
-          Codex prompt-side usage is not exposed by the current runtime telemetry yet, so Prompt
-          Input and Context Used stay unavailable instead of showing a fake zero.
+          {t('sessionContext.metrics.codexTelemetryUnavailable')}
         </div>
       )}
 
@@ -180,7 +182,9 @@ export const SessionContextHeader = ({
           {/* Cost */}
           {sessionMetrics.costUsd !== undefined && sessionMetrics.costUsd > 0 && (
             <div className="col-span-2">
-              <span style={{ color: COLOR_TEXT_MUTED }}>Session Cost: </span>
+              <span style={{ color: COLOR_TEXT_MUTED }}>
+                {t('sessionContext.metrics.sessionCost')}{' '}
+              </span>
               <span className="font-medium tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
                 {formatCostUsd(sessionMetrics.costUsd + (subagentCostUsd ?? 0))}
               </span>
@@ -188,9 +192,9 @@ export const SessionContextHeader = ({
                 <span style={{ color: COLOR_TEXT_MUTED }}>
                   {' ('}
                   {formatCostUsd(sessionMetrics.costUsd)}
-                  {' parent + '}
+                  {` ${t('sessionContext.metrics.parentPlus')} `}
                   {formatCostUsd(subagentCostUsd)}
-                  {' subagents'}
+                  {` ${t('sessionContext.metrics.subagents')}`}
                   {onViewReport && (
                     <>
                       {' · '}
@@ -199,7 +203,7 @@ export const SessionContextHeader = ({
                         className="underline"
                         style={{ color: COLOR_TEXT_SECONDARY }}
                       >
-                        details
+                        {t('sessionContext.metrics.details')}
                       </button>
                     </>
                   )}
@@ -218,7 +222,7 @@ export const SessionContextHeader = ({
           style={{ borderTop: `1px solid ${COLOR_BORDER_SUBTLE}` }}
         >
           <span className="mr-1 text-[10px]" style={{ color: COLOR_TEXT_MUTED }}>
-            Phase:
+            {t('sessionContext.header.phase')}
           </span>
           {phaseInfo.phases.map((phase) => (
             <button
@@ -247,7 +251,7 @@ export const SessionContextHeader = ({
               color: selectedPhase === null ? '#818cf8' : COLOR_TEXT_MUTED,
             }}
           >
-            Current
+            {t('sessionContext.header.current')}
           </button>
         </div>
       )}
@@ -258,7 +262,7 @@ export const SessionContextHeader = ({
         style={{ borderTop: `1px solid ${COLOR_BORDER_SUBTLE}` }}
       >
         <span className="mr-1 text-[10px]" style={{ color: COLOR_TEXT_MUTED }}>
-          View:
+          {t('sessionContext.header.view')}
         </span>
         <button
           onClick={() => onViewModeChange('category')}
@@ -270,7 +274,7 @@ export const SessionContextHeader = ({
           }}
         >
           <LayoutList size={10} />
-          Category
+          {t('sessionContext.header.category')}
         </button>
         <button
           onClick={() => onViewModeChange('ranked')}
@@ -282,7 +286,7 @@ export const SessionContextHeader = ({
           }}
         >
           <ArrowDownWideNarrow size={10} />
-          By Size
+          {t('sessionContext.header.bySize')}
         </button>
       </div>
     </div>

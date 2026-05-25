@@ -1,4 +1,55 @@
+import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+
 import type { CliProviderAuthMode, CliProviderStatus } from '@shared/types';
+
+type ProviderConnectionTranslator = object;
+
+function interpolateProviderConnectionFallback(
+  value: string,
+  options?: Record<string, unknown>
+): string {
+  if (!options) {
+    return value;
+  }
+
+  return value.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (match: string, optionKey: string) => {
+    const optionValue = options[optionKey];
+    if (optionValue === undefined || optionValue === null) {
+      return match;
+    }
+    if (
+      typeof optionValue === 'string' ||
+      typeof optionValue === 'number' ||
+      typeof optionValue === 'boolean' ||
+      typeof optionValue === 'bigint'
+    ) {
+      return String(optionValue);
+    }
+    return match;
+  });
+}
+
+function translateProviderConnection(
+  t: ProviderConnectionTranslator | undefined,
+  key: string,
+  fallback: string,
+  options?: Record<string, unknown>
+): string {
+  const interpolatedFallback = interpolateProviderConnectionFallback(fallback, options);
+  if (!t) {
+    return interpolatedFallback;
+  }
+
+  const translated = (t as (translationKey: string, options?: Record<string, unknown>) => string)(
+    key,
+    {
+      ...options,
+      defaultValue: fallback,
+    }
+  );
+
+  return interpolateProviderConnectionFallback(translated, options);
+}
 
 const CODEX_NATIVE_LABEL = 'Codex native';
 const ANTHROPIC_SUBSCRIPTION_LABEL = 'Anthropic subscription';
@@ -10,55 +61,114 @@ const AUTH_MODE_LABELS: Record<CliProviderAuthMode, string> = {
   api_key: 'API key',
 };
 
-export function formatProviderAuthModeLabel(authMode: CliProviderAuthMode | null): string | null {
-  return authMode ? AUTH_MODE_LABELS[authMode] : null;
+const AUTH_MODE_LABEL_KEYS: Record<CliProviderAuthMode, string> = {
+  auto: 'providerRuntime.connectionUi.authMode.auto',
+  oauth: 'providerRuntime.connectionUi.authMode.oauth',
+  chatgpt: 'providerRuntime.connectionUi.authMode.chatgpt',
+  api_key: 'providerRuntime.connectionUi.authMode.apiKey',
+};
+
+export function formatProviderAuthModeLabel(
+  authMode: CliProviderAuthMode | null,
+  t?: ProviderConnectionTranslator
+): string | null {
+  return authMode
+    ? translateProviderConnection(t, AUTH_MODE_LABEL_KEYS[authMode], AUTH_MODE_LABELS[authMode])
+    : null;
 }
 
 export function formatProviderAuthModeLabelForProvider(
   providerId: CliProviderStatus['providerId'],
-  authMode: CliProviderAuthMode | null
+  authMode: CliProviderAuthMode | null,
+  t?: ProviderConnectionTranslator
 ): string | null {
   if (!authMode) {
     return null;
   }
 
   if (providerId === 'anthropic' && authMode === 'oauth') {
-    return ANTHROPIC_SUBSCRIPTION_LABEL;
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.authMode.anthropicSubscription',
+      ANTHROPIC_SUBSCRIPTION_LABEL
+    );
   }
 
-  return formatProviderAuthModeLabel(authMode);
+  return formatProviderAuthModeLabel(authMode, t);
 }
 
-export function formatProviderAuthMethodLabel(authMethod: string | null): string {
+export function formatProviderAuthMethodLabel(
+  authMethod: string | null,
+  t?: ProviderConnectionTranslator
+): string {
   switch (authMethod) {
     case 'api_key':
-      return 'API key';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.apiKey',
+        'API key'
+      );
     case 'api_key_helper':
-      return 'API key helper';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.apiKeyHelper',
+        'API key helper'
+      );
     case 'oauth_token':
-      return 'OAuth';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.oauth',
+        'OAuth'
+      );
     case 'claude.ai':
-      return 'Claude subscription';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.claudeSubscription',
+        'Claude subscription'
+      );
     case 'cli_oauth_personal':
-      return 'Gemini CLI';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.geminiCli',
+        'Gemini CLI'
+      );
     case 'gemini_adc_authorized_user':
-      return 'Google account';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.googleAccount',
+        'Google account'
+      );
     case 'gemini_adc_service_account':
-      return 'service account';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.authMethod.serviceAccount',
+        'service account'
+      );
     default:
-      return authMethod ? authMethod.replaceAll('_', ' ') : 'Not connected';
+      return authMethod
+        ? authMethod.replaceAll('_', ' ')
+        : translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.status.notConnected',
+            'Not connected'
+          );
   }
 }
 
 export function formatProviderAuthMethodLabelForProvider(
   providerId: CliProviderStatus['providerId'],
-  authMethod: string | null
+  authMethod: string | null,
+  t?: ProviderConnectionTranslator
 ): string {
   if (providerId === 'anthropic' && (authMethod === 'oauth_token' || authMethod === 'claude.ai')) {
-    return ANTHROPIC_SUBSCRIPTION_LABEL;
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.authMode.anthropicSubscription',
+      ANTHROPIC_SUBSCRIPTION_LABEL
+    );
   }
 
-  return formatProviderAuthMethodLabel(authMethod);
+  return formatProviderAuthMethodLabel(authMethod, t);
 }
 
 function isCodexNativeLane(provider: CliProviderStatus): boolean {
@@ -99,24 +209,115 @@ export function isProviderInventoryOnlyFallback(provider: CliProviderStatus): bo
   );
 }
 
+export function isOpenCodeCatalogHydrating(
+  provider:
+    | Pick<
+        CliProviderStatus,
+        | 'providerId'
+        | 'models'
+        | 'modelCatalog'
+        | 'modelCatalogRefreshState'
+        | 'runtimeCapabilities'
+      >
+    | null
+    | undefined
+): boolean {
+  if (provider?.providerId !== 'opencode') {
+    return false;
+  }
+
+  if (provider.modelCatalog?.providerId === 'opencode') {
+    return false;
+  }
+
+  if (provider.modelCatalogRefreshState === 'error') {
+    return false;
+  }
+
+  return (
+    provider.modelCatalogRefreshState === 'loading' ||
+    provider.runtimeCapabilities?.modelCatalog?.dynamic === true
+  );
+}
+
+function hasKnownProviderStatus(
+  provider: Pick<
+    CliProviderStatus,
+    | 'authenticated'
+    | 'supported'
+    | 'statusMessage'
+    | 'models'
+    | 'backend'
+    | 'availableBackends'
+    | 'connection'
+    | 'modelCatalog'
+  >
+): boolean {
+  const statusMessage = provider.statusMessage?.trim() ?? '';
+  return (
+    provider.authenticated ||
+    provider.supported ||
+    provider.models.length > 0 ||
+    provider.backend != null ||
+    (provider.availableBackends?.length ?? 0) > 0 ||
+    provider.connection != null ||
+    provider.modelCatalog != null ||
+    (statusMessage.length > 0 &&
+      statusMessage !== 'Checking...' &&
+      statusMessage !== CLI_PROVIDER_STATUS_DEFERRED_MESSAGE)
+  );
+}
+
+export function shouldShowProviderStatusSkeleton(
+  provider: CliProviderStatus,
+  providerLoading: boolean
+): boolean {
+  const isPlaceholder =
+    !provider.authenticated &&
+    (provider.statusMessage === 'Checking...' ||
+      provider.statusMessage === CLI_PROVIDER_STATUS_DEFERRED_MESSAGE) &&
+    provider.models.length === 0 &&
+    provider.backend == null;
+
+  return isPlaceholder || (providerLoading && !hasKnownProviderStatus(provider));
+}
+
 export function isConnectionManagedRuntimeProvider(provider: CliProviderStatus): boolean {
   return provider.providerId === 'codex';
 }
 
-function getCodexCurrentRuntimeLabel(provider: CliProviderStatus): string {
-  return CODEX_NATIVE_LABEL;
+function getCodexCurrentRuntimeLabel(t?: ProviderConnectionTranslator): string {
+  return translateProviderConnection(
+    t,
+    'providerRuntime.connectionUi.runtime.codexNative',
+    CODEX_NATIVE_LABEL
+  );
 }
 
-function getCodexApiKeyAvailabilitySummary(provider: CliProviderStatus): string | null {
+function getCodexApiKeyAvailabilitySummary(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string | null {
   if (provider.providerId !== 'codex' || !provider.connection?.apiKeyConfigured) {
     return null;
   }
 
   if (provider.connection.apiKeySource === 'stored') {
-    return 'Saved API key available in Manage';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.credential.savedApiKeyAvailable',
+      'Saved API key available in Manage'
+    );
   }
 
-  return provider.connection.apiKeySourceLabel ?? 'API key is configured';
+  return (
+    provider.connection.apiKeySourceLabel ??
+    translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.credential.apiKeyConfigured',
+      'API key is configured'
+    )
+  );
 }
 
 function isAnthropicApiKeyModeReady(provider: CliProviderStatus): boolean {
@@ -138,7 +339,10 @@ function isAnthropicApiKeyModeMissingCredential(provider: CliProviderStatus): bo
   );
 }
 
-function getCodexMissingManagedAccountStatus(provider: CliProviderStatus): string | null {
+function getCodexMissingManagedAccountStatus(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string | null {
   if (provider.providerId !== 'codex') {
     return null;
   }
@@ -154,43 +358,95 @@ function getCodexMissingManagedAccountStatus(provider: CliProviderStatus): strin
 
   if (codexConnection.requiresOpenaiAuth) {
     if (codexConnection.localActiveChatgptAccountPresent) {
-      return 'Codex has a locally selected ChatGPT account, but the current session needs reconnect.';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.status.codexLocalAccountNeedsReconnect',
+        'Codex has a locally selected ChatGPT account, but the current session needs reconnect.'
+      );
     }
 
     return codexConnection.localAccountArtifactsPresent
-      ? 'Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.'
-      : 'Codex CLI reports no active ChatGPT login';
+      ? translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.status.codexNoActiveManagedSession',
+          'Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.'
+        )
+      : translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.status.codexNoActiveChatGptLogin',
+          'Codex CLI reports no active ChatGPT login'
+        );
   }
 
   return (
     codexConnection.launchIssueMessage ??
-    'Connect a ChatGPT account to use your Codex subscription.'
+    translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.connectChatGptForSubscription',
+      'Connect a ChatGPT account to use your Codex subscription.'
+    )
   );
 }
 
-export function getProviderCurrentRuntimeSummary(provider: CliProviderStatus): string | null {
+export function getProviderCurrentRuntimeSummary(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string | null {
   if (provider.providerId !== 'codex' || !isConnectionManagedRuntimeProvider(provider)) {
     return null;
   }
 
-  const prefix = provider.authenticated ? 'Current runtime' : 'Selected runtime';
-  return `${prefix}: ${getCodexCurrentRuntimeLabel(provider)}`;
+  const prefix = provider.authenticated
+    ? translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.runtime.currentRuntime',
+        'Current runtime'
+      )
+    : translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.runtime.selectedRuntime',
+        'Selected runtime'
+      );
+  return translateProviderConnection(
+    t,
+    'providerRuntime.connectionUi.runtime.summary',
+    '{{prefix}}: {{runtime}}',
+    {
+      prefix,
+      runtime: getCodexCurrentRuntimeLabel(t),
+    }
+  );
 }
 
-export function formatProviderStatusText(provider: CliProviderStatus): string {
+export function formatProviderStatusText(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string {
   if (isProviderInventoryOnlyFallback(provider)) {
-    return 'Checking...';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.checking',
+      'Checking...'
+    );
   }
 
   const selectedBackendOption = getSelectedRuntimeBackendOption(provider);
 
   if (provider.providerId === 'codex') {
     if (provider.connection?.codex?.login.status === 'starting') {
-      return 'Starting ChatGPT login...';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.status.startingChatGptLogin',
+        'Starting ChatGPT login...'
+      );
     }
 
     if (provider.connection?.codex?.login.status === 'pending') {
-      return 'Waiting for ChatGPT account login...';
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.status.waitingForChatGptLogin',
+        'Waiting for ChatGPT account login...'
+      );
     }
 
     if (
@@ -207,21 +463,33 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
     ) {
       return (
         provider.connection.codex.launchIssueMessage ??
-        'ChatGPT account detected - account verification is currently degraded.'
+        translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.status.chatGptVerificationDegraded',
+          'ChatGPT account detected - account verification is currently degraded.'
+        )
       );
     }
 
     if (provider.connection?.codex?.launchAllowed) {
       if (provider.connection.codex.effectiveAuthMode === 'chatgpt') {
-        return 'ChatGPT account ready';
+        return translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.status.chatGptAccountReady',
+          'ChatGPT account ready'
+        );
       }
 
       if (provider.connection.codex.effectiveAuthMode === 'api_key') {
-        return 'API key ready';
+        return translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.status.apiKeyReady',
+          'API key ready'
+        );
       }
     }
 
-    const missingManagedAccountStatus = getCodexMissingManagedAccountStatus(provider);
+    const missingManagedAccountStatus = getCodexMissingManagedAccountStatus(provider, t);
     if (missingManagedAccountStatus) {
       return missingManagedAccountStatus;
     }
@@ -234,7 +502,18 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
       return selectedBackendOption.statusMessage;
     }
     return (
-      provider.statusMessage ?? (provider.authenticated ? 'Codex native ready' : 'Not connected')
+      provider.statusMessage ??
+      (provider.authenticated
+        ? translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.status.codexNativeReady',
+            'Codex native ready'
+          )
+        : translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.status.notConnected',
+            'Not connected'
+          ))
     );
   }
 
@@ -244,7 +523,13 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
     selectedBackendOption.state !== 'ready'
   ) {
     return (
-      selectedBackendOption.statusMessage ?? provider.statusMessage ?? 'Codex native unavailable'
+      selectedBackendOption.statusMessage ??
+      provider.statusMessage ??
+      translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.status.codexNativeUnavailable',
+        'Codex native unavailable'
+      )
     );
   }
 
@@ -257,11 +542,22 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
   }
 
   if (!provider.supported) {
-    return provider.statusMessage ?? 'Unavailable in current runtime';
+    return (
+      provider.statusMessage ??
+      translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.status.unavailableInCurrentRuntime',
+        'Unavailable in current runtime'
+      )
+    );
   }
 
   if (isAnthropicApiKeyModeReady(provider)) {
-    return 'Connected via API key';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.connectedViaApiKey',
+      'Connected via API key'
+    );
   }
 
   if (
@@ -273,28 +569,61 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
     if (statusMessage && !/^connected\b/i.test(statusMessage)) {
       return statusMessage;
     }
-    return 'API key configured, but not verified yet';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.apiKeyConfiguredNotVerified',
+      'API key configured, but not verified yet'
+    );
   }
 
   if (isAnthropicApiKeyModeMissingCredential(provider)) {
-    return 'API key mode selected, but no API key is configured';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.apiKeyModeMissingCredential',
+      'API key mode selected, but no API key is configured'
+    );
   }
 
   if (provider.authenticated) {
-    return `Connected via ${formatProviderAuthMethodLabelForProvider(
-      provider.providerId,
-      provider.authMethod
-    )}`;
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.connectedVia',
+      'Connected via {{method}}',
+      {
+        method: formatProviderAuthMethodLabelForProvider(
+          provider.providerId,
+          provider.authMethod,
+          t
+        ),
+      }
+    );
   }
 
   if (provider.verificationState === 'offline') {
-    return provider.statusMessage ?? 'Unable to verify';
+    return (
+      provider.statusMessage ??
+      translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.status.unableToVerify',
+        'Unable to verify'
+      )
+    );
   }
 
-  return provider.statusMessage ?? 'Not connected';
+  return (
+    provider.statusMessage ??
+    translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.status.notConnected',
+      'Not connected'
+    )
+  );
 }
 
-export function getProviderConnectionModeSummary(provider: CliProviderStatus): string | null {
+export function getProviderConnectionModeSummary(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string | null {
   if (provider.providerId !== 'anthropic' && provider.providerId !== 'codex') {
     return null;
   }
@@ -315,24 +644,45 @@ export function getProviderConnectionModeSummary(provider: CliProviderStatus): s
 
   const authModeLabel = formatProviderAuthModeLabelForProvider(
     provider.providerId,
-    provider.connection?.configuredAuthMode ?? null
+    provider.connection?.configuredAuthMode ?? null,
+    t
   );
   if (!authModeLabel) {
     return null;
   }
 
   return provider.providerId === 'codex'
-    ? `Selected auth: ${authModeLabel}`
-    : `Preferred auth: ${authModeLabel}`;
+    ? translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.mode.selectedAuth',
+        'Selected auth: {{authMode}}',
+        { authMode: authModeLabel }
+      )
+    : translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.mode.preferredAuth',
+        'Preferred auth: {{authMode}}',
+        { authMode: authModeLabel }
+      );
 }
 
-export function getProviderCredentialSummary(provider: CliProviderStatus): string | null {
+export function getProviderCredentialSummary(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string | null {
   if (!provider.connection?.apiKeyConfigured) {
     return null;
   }
 
   if (isAnthropicApiKeyModeReady(provider)) {
-    return provider.connection?.apiKeySourceLabel ?? 'API key is configured';
+    return (
+      provider.connection?.apiKeySourceLabel ??
+      translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.credential.apiKeyConfigured',
+        'API key is configured'
+      )
+    );
   }
 
   if (
@@ -340,7 +690,11 @@ export function getProviderCredentialSummary(provider: CliProviderStatus): strin
     provider.connection.apiKeySource === 'stored' &&
     provider.connection.configuredAuthMode === 'auto'
   ) {
-    return 'Saved API key available in Manage';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.credential.savedApiKeyAvailable',
+      'Saved API key available in Manage'
+    );
   }
 
   if (
@@ -349,18 +703,36 @@ export function getProviderCredentialSummary(provider: CliProviderStatus): strin
     provider.authMethod !== 'api_key_helper'
   ) {
     return provider.connection.apiKeySource === 'stored'
-      ? 'API key also configured in Manage'
-      : (provider.connection.apiKeySourceLabel ?? 'API key is configured');
+      ? translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.credential.apiKeyAlsoConfigured',
+          'API key also configured in Manage'
+        )
+      : (provider.connection.apiKeySourceLabel ??
+          translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.credential.apiKeyConfigured',
+            'API key is configured'
+          ));
   }
 
   if (provider.authMethod !== 'api_key' && provider.providerId === 'gemini') {
     return provider.connection.apiKeySource === 'stored'
-      ? 'API key is configured in Manage'
-      : (provider.connection.apiKeySourceLabel ?? 'API key is configured');
+      ? translateProviderConnection(
+          t,
+          'providerRuntime.connectionUi.credential.apiKeyConfiguredInManage',
+          'API key is configured in Manage'
+        )
+      : (provider.connection.apiKeySourceLabel ??
+          translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.credential.apiKeyConfigured',
+            'API key is configured'
+          ));
   }
 
   if (provider.providerId === 'codex') {
-    const apiKeyAvailabilitySummary = getCodexApiKeyAvailabilitySummary(provider);
+    const apiKeyAvailabilitySummary = getCodexApiKeyAvailabilitySummary(provider, t);
     if (!apiKeyAvailabilitySummary) {
       return null;
     }
@@ -370,18 +742,41 @@ export function getProviderCredentialSummary(provider: CliProviderStatus): strin
       provider.connection.codex?.effectiveAuthMode === 'chatgpt'
     ) {
       return provider.connection.apiKeySource === 'stored'
-        ? 'API key also available in Manage as fallback'
-        : `${apiKeyAvailabilitySummary} - available as fallback`;
+        ? translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.credential.apiKeyFallbackInManage',
+            'API key also available in Manage as fallback'
+          )
+        : translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.credential.availableAsFallback',
+            '{{summary}} - available as fallback',
+            { summary: apiKeyAvailabilitySummary }
+          );
     }
 
     if (provider.connection.configuredAuthMode === 'chatgpt') {
       return provider.connection.apiKeySource === 'stored'
-        ? 'Saved API key available in Manage if you switch to API key mode'
-        : `${apiKeyAvailabilitySummary} - available if you switch to API key mode`;
+        ? translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.credential.savedApiKeyAvailableIfSwitch',
+            'Saved API key available in Manage if you switch to API key mode'
+          )
+        : translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.credential.availableIfSwitch',
+            '{{summary}} - available if you switch to API key mode',
+            { summary: apiKeyAvailabilitySummary }
+          );
     }
 
     if (provider.connection.configuredAuthMode === 'auto') {
-      return `${apiKeyAvailabilitySummary} - Auto will use this until ChatGPT is connected`;
+      return translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.credential.autoWillUseUntilChatGpt',
+        '{{summary}} - Auto will use this until ChatGPT is connected',
+        { summary: apiKeyAvailabilitySummary }
+      );
     }
 
     return apiKeyAvailabilitySummary;
@@ -391,6 +786,24 @@ export function getProviderCredentialSummary(provider: CliProviderStatus): strin
 }
 
 export function getProviderDisconnectAction(provider: CliProviderStatus): {
+  label: string;
+  confirmLabel: string;
+  title: string;
+  message: string;
+} | null;
+export function getProviderDisconnectAction(
+  provider: CliProviderStatus,
+  t: ProviderConnectionTranslator
+): {
+  label: string;
+  confirmLabel: string;
+  title: string;
+  message: string;
+} | null;
+export function getProviderDisconnectAction(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): {
   label: string;
   confirmLabel: string;
   title: string;
@@ -406,42 +819,92 @@ export function getProviderDisconnectAction(provider: CliProviderStatus): {
     }
 
     return {
-      label: 'Disconnect',
-      confirmLabel: 'Disconnect',
-      title: 'Disconnect Anthropic subscription?',
+      label: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.actions.disconnect',
+        'Disconnect'
+      ),
+      confirmLabel: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.actions.disconnect',
+        'Disconnect'
+      ),
+      title: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.disconnect.anthropicTitle',
+        'Disconnect Anthropic subscription?'
+      ),
       message: provider.connection?.apiKeyConfigured
-        ? 'This removes the local Anthropic subscription session from the Claude CLI runtime. Saved API keys in Manage stay available.'
-        : 'This removes the local Anthropic subscription session from the Claude CLI runtime.',
+        ? translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.disconnect.anthropicWithApiKey',
+            'This removes the local Anthropic subscription session from the Claude CLI runtime. Saved API keys in Manage stay available.'
+          )
+        : translateProviderConnection(
+            t,
+            'providerRuntime.connectionUi.disconnect.anthropic',
+            'This removes the local Anthropic subscription session from the Claude CLI runtime.'
+          ),
     };
   }
 
   if (provider.providerId === 'gemini' && provider.authMethod === 'cli_oauth_personal') {
     return {
-      label: 'Disconnect',
-      confirmLabel: 'Disconnect',
-      title: 'Disconnect Gemini CLI?',
-      message:
-        'This clears the local Gemini CLI session metadata. External ADC credentials and saved API keys are not removed.',
+      label: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.actions.disconnect',
+        'Disconnect'
+      ),
+      confirmLabel: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.actions.disconnect',
+        'Disconnect'
+      ),
+      title: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.disconnect.geminiTitle',
+        'Disconnect Gemini CLI?'
+      ),
+      message: translateProviderConnection(
+        t,
+        'providerRuntime.connectionUi.disconnect.gemini',
+        'This clears the local Gemini CLI session metadata. External ADC credentials and saved API keys are not removed.'
+      ),
     };
   }
 
   return null;
 }
 
-export function getProviderConnectLabel(provider: CliProviderStatus): string {
+export function getProviderConnectLabel(
+  provider: CliProviderStatus,
+  t?: ProviderConnectionTranslator
+): string {
   if (provider.providerId === 'anthropic') {
-    return 'Connect Anthropic';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.actions.connectAnthropic',
+      'Connect Anthropic'
+    );
   }
 
   if (provider.providerId === 'codex') {
-    return 'Connect ChatGPT';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.actions.connectChatGpt',
+      'Connect ChatGPT'
+    );
   }
 
   if (provider.providerId === 'gemini') {
-    return 'Open Login';
+    return translateProviderConnection(
+      t,
+      'providerRuntime.connectionUi.actions.openLogin',
+      'Open Login'
+    );
   }
 
-  return 'Connect';
+  return translateProviderConnection(t, 'providerRuntime.connectionUi.actions.connect', 'Connect');
 }
 
 export function shouldShowProviderConnectAction(provider: CliProviderStatus): boolean {

@@ -108,6 +108,77 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
     expect(provider.subscriptionRateLimits).toBeNull();
   });
 
+  test('preserves OpenCode route metadata in runtime model catalog mapping', () => {
+    const provider = mapRuntimeProviderStatus('opencode', {
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_configured_local',
+      verificationState: 'verified',
+      canLoginFromUi: false,
+      models: ['llama.cpp/qwen-test:0.5b'],
+      capabilities: {
+        teamLaunch: true,
+        oneShot: false,
+      },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-05-21T00:00:00.000Z',
+        staleAt: '2026-05-21T00:10:00.000Z',
+        defaultModelId: 'llama.cpp/qwen-test:0.5b',
+        defaultLaunchModel: 'llama.cpp/qwen-test:0.5b',
+        models: [
+          {
+            id: 'llama.cpp/qwen-test:0.5b',
+            launchModel: 'llama.cpp/qwen-test:0.5b',
+            displayName: 'qwen-test:0.5b',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: true,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+            metadata: {
+              cost: null,
+              context: 32768,
+              limits: null,
+              free: false,
+              opencode: {
+                providerId: 'llama.cpp',
+                modelId: 'qwen-test:0.5b',
+                sourceLabel: 'llama.cpp',
+                accessKind: 'configured_authless',
+                routeKind: 'configured_local',
+                proofState: 'needs_probe',
+                requiresExecutionProof: true,
+                reason: 'Execution proof required',
+              },
+            },
+          },
+        ],
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+      },
+    });
+
+    expect(provider.modelCatalog?.models[0]?.metadata?.opencode).toEqual({
+      providerId: 'llama.cpp',
+      modelId: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      accessKind: 'configured_authless',
+      routeKind: 'configured_local',
+      proofState: 'needs_probe',
+      requiresExecutionProof: true,
+      reason: 'Execution proof required',
+    });
+  });
+
   test('ignores Anthropic subscription rate limits for API key auth', () => {
     const provider = mapRuntimeProviderStatus('anthropic', {
       supported: true,

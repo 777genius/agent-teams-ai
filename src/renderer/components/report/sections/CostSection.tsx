@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { getPricing } from '@renderer/utils/sessionAnalyzer';
 import { DollarSign } from 'lucide-react';
 
@@ -34,22 +35,31 @@ interface BreakdownLine {
 const CostBreakdownCard = ({
   stats,
   pricing,
+  labels,
 }: {
   stats: ModelTokenStats;
   pricing: ModelPricing;
+  labels: {
+    input: string;
+    output: string;
+    cacheRead: string;
+    cacheWrite: string;
+    breakdownTitle: string;
+    total: string;
+  };
 }) => {
   const lines: BreakdownLine[] = [
-    { label: 'Input', tokens: stats.inputTokens, ratePerM: pricing.input },
-    { label: 'Output', tokens: stats.outputTokens, ratePerM: pricing.output },
-    { label: 'Cache Read', tokens: stats.cacheRead, ratePerM: pricing.cache_read },
-    { label: 'Cache Write', tokens: stats.cacheCreation, ratePerM: pricing.cache_creation },
+    { label: labels.input, tokens: stats.inputTokens, ratePerM: pricing.input },
+    { label: labels.output, tokens: stats.outputTokens, ratePerM: pricing.output },
+    { label: labels.cacheRead, tokens: stats.cacheRead, ratePerM: pricing.cache_read },
+    { label: labels.cacheWrite, tokens: stats.cacheCreation, ratePerM: pricing.cache_creation },
   ];
   const total = lines.reduce((sum, l) => sum + lineCost(l.tokens, l.ratePerM), 0);
 
   return (
     <div className="rounded-md border border-border bg-surface-raised px-4 py-3">
       <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-text-muted">
-        Cost Breakdown (per 1M tokens)
+        {labels.breakdownTitle}
       </div>
       <div className="flex flex-col gap-1.5 font-mono text-xs">
         {lines.map((l) => {
@@ -64,7 +74,7 @@ const CostBreakdownCard = ({
           );
         })}
         <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-border pt-1.5">
-          <span className="font-medium text-text">Total</span>
+          <span className="font-medium text-text">{labels.total}</span>
           <span className="font-medium text-text">{fmt(total)}</span>
         </div>
       </div>
@@ -79,6 +89,7 @@ export const CostSection = ({
   linesChanged,
   defaultCollapsed,
 }: CostSectionProps) => {
+  const { t } = useAppTranslation('report');
   const [expandedModel, setExpandedModel] = useState<string | null>(null);
   const modelEntries = Object.entries(data.costByModel).sort((a, b) => b[1] - a[1]);
   const showStackedBar = data.subagentCostUsd > 0;
@@ -88,7 +99,7 @@ export const CostSection = ({
       : 100;
 
   return (
-    <ReportSection title="Cost Analysis" icon={DollarSign} defaultCollapsed={defaultCollapsed}>
+    <ReportSection title={t('cost.title')} icon={DollarSign} defaultCollapsed={defaultCollapsed}>
       <div className="mb-4 text-2xl font-bold text-text">{fmt(data.totalSessionCostUsd)}</div>
 
       {/* Parent/Subagent stacked bar */}
@@ -110,14 +121,18 @@ export const CostSection = ({
                 className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: '#60a5fa' }}
               />
-              <span className="text-text-secondary">Parent: {fmt(data.parentCostUsd)}</span>
+              <span className="text-text-secondary">
+                {t('cost.parent', { cost: fmt(data.parentCostUsd) })}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span
                 className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: '#c084fc' }}
               />
-              <span className="text-text-secondary">Subagent: {fmt(data.subagentCostUsd)}</span>
+              <span className="text-text-secondary">
+                {t('cost.subagent', { cost: fmt(data.subagentCostUsd) })}
+              </span>
             </div>
           </div>
         </div>
@@ -127,24 +142,22 @@ export const CostSection = ({
         {!showStackedBar && (
           <>
             <div>
-              <div className="text-xs text-text-muted">Parent Cost</div>
+              <div className="text-xs text-text-muted">{t('cost.parentCost')}</div>
               <div className="text-sm font-medium text-text">{fmt(data.parentCostUsd)}</div>
             </div>
             <div>
-              <div className="text-xs text-text-muted">Subagent Cost</div>
+              <div className="text-xs text-text-muted">{t('cost.subagentCost')}</div>
               <div className="text-sm font-medium text-text">{fmt(data.subagentCostUsd)}</div>
             </div>
           </>
         )}
         <div>
-          <div className="text-xs text-text-muted">Per Commit</div>
+          <div className="text-xs text-text-muted">{t('cost.perCommit')}</div>
           <div className="text-[10px] text-text-muted">
             {commitCount > 0 ? (
-              <>
-                total cost {'\u00F7'} {commitCount} commit{commitCount !== 1 ? 's' : ''}
-              </>
+              <>{t('cost.perCommitFormula', { count: commitCount })}</>
             ) : (
-              'no commits'
+              t('cost.noCommits')
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -160,15 +173,12 @@ export const CostSection = ({
           </div>
         </div>
         <div>
-          <div className="text-xs text-text-muted">Per Line Changed</div>
+          <div className="text-xs text-text-muted">{t('cost.perLineChanged')}</div>
           <div className="text-[10px] text-text-muted">
             {linesChanged > 0 ? (
-              <>
-                total cost {'\u00F7'} {linesChanged.toLocaleString()} line
-                {linesChanged !== 1 ? 's' : ''}
-              </>
+              <>{t('cost.perLineFormula', { count: linesChanged })}</>
             ) : (
-              'no lines changed'
+              t('cost.noLinesChanged')
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -186,12 +196,12 @@ export const CostSection = ({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border text-left text-text-muted">
-              <th className="pb-2 pr-4">Model</th>
-              <th className="pb-2 pr-4 text-right">Input</th>
-              <th className="pb-2 pr-4 text-right">Output</th>
-              <th className="pb-2 pr-4 text-right">Cache Read</th>
-              <th className="pb-2 pr-4 text-right">Cache Write</th>
-              <th className="pb-2 pr-4 text-right">Cost</th>
+              <th className="pb-2 pr-4">{t('tokens.model')}</th>
+              <th className="pb-2 pr-4 text-right">{t('cost.input')}</th>
+              <th className="pb-2 pr-4 text-right">{t('cost.output')}</th>
+              <th className="pb-2 pr-4 text-right">{t('cost.cacheRead')}</th>
+              <th className="pb-2 pr-4 text-right">{t('cost.cacheWrite')}</th>
+              <th className="pb-2 pr-4 text-right">{t('cost.cost')}</th>
             </tr>
           </thead>
           <tbody>
@@ -245,7 +255,18 @@ export const CostSection = ({
                   {isExpanded && stats && pricing && (
                     <tr>
                       <td colSpan={6} className="px-4 pb-3 pt-1">
-                        <CostBreakdownCard stats={stats} pricing={pricing} />
+                        <CostBreakdownCard
+                          stats={stats}
+                          pricing={pricing}
+                          labels={{
+                            input: t('cost.input'),
+                            output: t('cost.output'),
+                            cacheRead: t('cost.cacheRead'),
+                            cacheWrite: t('cost.cacheWrite'),
+                            breakdownTitle: t('cost.breakdownTitle'),
+                            total: t('cost.total'),
+                          }}
+                        />
                       </td>
                     </tr>
                   )}

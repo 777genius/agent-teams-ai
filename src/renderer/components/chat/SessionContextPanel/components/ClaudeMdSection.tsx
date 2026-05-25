@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { ChevronRight } from 'lucide-react';
 
 import { buildDirectoryTree } from '../DirectoryTree/buildDirectoryTree';
@@ -28,6 +29,7 @@ export const ClaudeMdSubSection = ({
   projectRoot,
   onNavigateToTurn,
 }: Readonly<ClaudeMdSubSectionProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(true);
   const sectionTokens = injections.reduce((sum, inj) => sum + inj.estimatedTokens, 0);
 
@@ -59,7 +61,9 @@ export const ClaudeMdSubSection = ({
         >
           {injections.length}
         </span>
-        <span style={{ color: 'var(--color-text-muted)' }}>(~{formatTokens(sectionTokens)})</span>
+        <span style={{ color: 'var(--color-text-muted)' }}>
+          {t('tokens.approxTokensParenthesized', { tokens: formatTokens(sectionTokens) })}
+        </span>
       </div>
 
       {expanded && (

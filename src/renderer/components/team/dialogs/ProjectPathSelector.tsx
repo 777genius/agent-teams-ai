@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Button } from '@renderer/components/ui/button';
@@ -62,14 +63,17 @@ function isDeletedOption(option: ComboboxOption): boolean {
   return (option.meta as ProjectPathOptionMeta | undefined)?.filesystemState === 'deleted';
 }
 
-function getSourceLabel(source: DashboardRecentProjectSource): string {
+function getSourceLabel(
+  source: DashboardRecentProjectSource,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string {
   switch (source) {
     case 'claude':
-      return 'Found by Claude';
+      return t('projectPath.source.claude');
     case 'codex':
-      return 'Found by Codex';
+      return t('projectPath.source.codex');
     case 'mixed':
-      return 'Found by Claude and Codex';
+      return t('projectPath.source.mixed');
   }
 }
 
@@ -78,6 +82,7 @@ const ProjectSourceBadge = ({
 }: {
   source?: DashboardRecentProjectSource;
 }): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
   if (!source) {
     return null;
   }
@@ -92,7 +97,7 @@ const ProjectSourceBadge = ({
   return (
     <span
       className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-1 py-0.5"
-      title={getSourceLabel(source)}
+      title={getSourceLabel(source, t)}
     >
       {logos.map((providerId) => (
         <ProviderBrandLogo key={providerId} providerId={providerId} className="size-3" />
@@ -101,15 +106,18 @@ const ProjectSourceBadge = ({
   );
 };
 
-const ProjectDeletedBadge = (): React.JSX.Element => (
-  <span
-    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-300"
-    title="Project folder no longer exists"
-  >
-    <FolderX className="size-3" />
-    Deleted
-  </span>
-);
+const ProjectDeletedBadge = (): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-300"
+      title={t('projectPath.deleted.title')}
+    >
+      <FolderX className="size-3" />
+      {t('projectPath.deleted.label')}
+    </span>
+  );
+};
 
 export type CwdMode = 'project' | 'custom';
 
@@ -138,6 +146,7 @@ export const ProjectPathSelector = ({
   projectsError,
   fieldError,
 }: ProjectPathSelectorProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
   const projectOptions = React.useMemo(
     () => buildProjectPathOptions(projects, selectedProjectPath),
     [projects, selectedProjectPath]
@@ -145,7 +154,7 @@ export const ProjectPathSelector = ({
 
   return (
     <div className="space-y-1.5">
-      <Label>Project</Label>
+      <Label>{t('projectPath.label')}</Label>
       <div className="space-y-2">
         <div className="flex flex-col gap-2 md:flex-row md:items-start">
           <div className="inline-flex shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
@@ -159,7 +168,7 @@ export const ProjectPathSelector = ({
               )}
               onClick={() => onCwdModeChange('project')}
             >
-              From project list
+              {t('projectPath.mode.projectList')}
             </button>
             <button
               type="button"
@@ -171,7 +180,7 @@ export const ProjectPathSelector = ({
               )}
               onClick={() => onCwdModeChange('custom')}
             >
-              Custom path
+              {t('projectPath.mode.customPath')}
             </button>
           </div>
 
@@ -185,9 +194,13 @@ export const ProjectPathSelector = ({
                       options={projectOptions}
                       value={selectedProjectPath}
                       onValueChange={onSelectedProjectPathChange}
-                      placeholder={projectsLoading ? 'Loading projects...' : 'Select a project...'}
-                      searchPlaceholder="Search project by name or path"
-                      emptyMessage="Nothing found"
+                      placeholder={
+                        projectsLoading
+                          ? t('projectPath.loadingProjects')
+                          : t('projectPath.selectProject')
+                      }
+                      searchPlaceholder={t('projectPath.searchPlaceholder')}
+                      emptyMessage={t('projectPath.empty')}
                       disabled={projectsLoading || projectOptions.length === 0}
                       renderTriggerLabel={(option) => (
                         <span className="flex min-w-0 items-center gap-1.5">
@@ -229,13 +242,13 @@ export const ProjectPathSelector = ({
                 </div>
                 {!selectedProjectPath ? (
                   <p className="text-[11px] text-[var(--color-text-muted)]">
-                    Select a project from the list
+                    {t('projectPath.selectFromList')}
                   </p>
                 ) : null}
                 {projectsError ? <p className="text-[11px] text-red-300">{projectsError}</p> : null}
                 {!projectsLoading && projectOptions.length === 0 ? (
                   <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
-                    No projects found, switch to custom path.
+                    {t('projectPath.noProjects')}
                   </p>
                 ) : null}
               </div>
@@ -246,7 +259,7 @@ export const ProjectPathSelector = ({
                   <Input
                     className="h-8 flex-1 text-xs"
                     value={customCwd}
-                    aria-label="Custom working directory"
+                    aria-label={t('projectPath.customWorkingDirectory')}
                     onChange={(event) => onCustomCwdChange(event.target.value)}
                     placeholder="/absolute/path/to/project"
                   />
@@ -266,11 +279,11 @@ export const ProjectPathSelector = ({
                       })();
                     }}
                   >
-                    Browse
+                    {t('projectPath.browse')}
                   </Button>
                 </div>
                 <p className="text-[11px] text-[var(--color-text-muted)]">
-                  If the directory does not exist, it will be created automatically.
+                  {t('projectPath.createAutomatically')}
                 </p>
               </div>
             )}

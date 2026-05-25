@@ -332,7 +332,8 @@ function toIso(value: unknown, fallback: string): string {
 function normalizeBootstrapMemberState(
   memberName: string,
   raw: RawBootstrapMemberState,
-  updatedAt: string
+  updatedAt: string,
+  runtimeRunId?: string
 ): PersistedTeamLaunchMemberState {
   const status = typeof raw.status === 'string' ? raw.status : 'pending';
   const hardFailure = status === 'failed';
@@ -363,6 +364,7 @@ function normalizeBootstrapMemberState(
       typeof raw.failureReason === 'string' && raw.failureReason.trim().length > 0
         ? raw.failureReason.trim()
         : undefined,
+    ...(runtimeRunId ? { runtimeRunId } : {}),
     firstSpawnAcceptedAt: agentToolAccepted ? toIso(raw.lastAttemptAt, updatedAt) : undefined,
     lastHeartbeatAt: bootstrapConfirmed ? toIso(raw.lastObservedAt, updatedAt) : undefined,
     lastRuntimeAliveAt: runtimeAlive ? toIso(raw.lastObservedAt, updatedAt) : undefined,
@@ -622,6 +624,7 @@ export async function readBootstrapLaunchSnapshot(
   }
   try {
     const updatedAt = toIso(raw.updatedAt, new Date().toISOString());
+    const runtimeRunId = typeof raw.runId === 'string' ? raw.runId.trim() : '';
     const rawMembers = Array.isArray(raw.members) ? raw.members : [];
     const members: Record<string, PersistedTeamLaunchMemberState> = {};
     const expectedMembers: string[] = [];
@@ -632,7 +635,12 @@ export async function readBootstrapLaunchSnapshot(
       const memberName = typeof rawMember.name === 'string' ? rawMember.name.trim() : '';
       if (!memberName || memberName === 'team-lead' || memberName === 'user') continue;
       expectedMembers.push(memberName);
-      members[memberName] = normalizeBootstrapMemberState(memberName, rawMember, updatedAt);
+      members[memberName] = normalizeBootstrapMemberState(
+        memberName,
+        rawMember,
+        updatedAt,
+        runtimeRunId || undefined
+      );
     }
 
     const terminal =

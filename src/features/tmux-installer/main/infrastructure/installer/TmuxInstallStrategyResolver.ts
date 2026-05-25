@@ -1,6 +1,6 @@
 import { buildTmuxAutoInstallCapability } from '@features/tmux-installer/core/domain/policies/buildTmuxAutoInstallCapability';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import { getShellPreferredHome, resolveInteractiveShellEnv } from '@main/utils/shellEnv';
+import { getShellPreferredHome } from '@main/utils/shellEnv';
 
 import { TmuxPackageManagerResolver } from '../platform/TmuxPackageManagerResolver';
 import { TmuxPlatformResolver } from '../platform/TmuxPlatformResolver';
@@ -51,7 +51,6 @@ export class TmuxInstallStrategyResolver {
   }
 
   async resolve(): Promise<TmuxInstallPlan> {
-    await resolveInteractiveShellEnv();
     const env = buildEnrichedEnv();
     const cwd = getShellPreferredHome();
     const resolvedPlatform = await this.#platformResolver.resolve();
@@ -171,7 +170,7 @@ export class TmuxInstallStrategyResolver {
     if (input.effective.available) {
       return input.effective.location === 'wsl'
         ? 'tmux is available inside WSL on Windows.'
-        : 'tmux is available as an optional pane transport for teammate sessions.';
+        : 'tmux is available.';
     }
 
     if (input.platform === 'darwin') {

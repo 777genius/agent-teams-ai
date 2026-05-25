@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiOpenSourceInitiative } from '@mdi/js'
+import { mdiCheckCircleOutline, mdiOpenSourceInitiative } from '@mdi/js'
 import { useLandingContent } from '~/composables/useLandingContent'
 
 const { content } = useLandingContent()
@@ -43,6 +43,23 @@ function onGetStarted() {
                 <span v-if="plan.period" class="pricing-card__period">/ {{ plan.period }}</span>
               </div>
               <p class="pricing-card__description">{{ plan.description }}</p>
+              <div class="pricing-card__callout">
+                {{ t('pricing.freeModelCallout') }}
+              </div>
+              <ul v-if="plan.features.length" class="pricing-card__features">
+                <li
+                  v-for="feature in plan.features"
+                  :key="feature"
+                  class="pricing-card__feature"
+                >
+                  <v-icon
+                    size="16"
+                    class="pricing-card__feature-icon"
+                    :icon="mdiCheckCircleOutline"
+                  />
+                  <span>{{ feature }}</span>
+                </li>
+              </ul>
             </div>
 
             <button
@@ -177,6 +194,41 @@ function onGetStarted() {
   margin: 0;
 }
 
+.pricing-card__callout {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(57, 255, 20, 0.22);
+  border-radius: 10px;
+  background: rgba(57, 255, 20, 0.08);
+  color: #d9ffe0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.pricing-card__features {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pricing-card__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #aab4d4;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.pricing-card__feature-icon {
+  color: #39ff14;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .pricing-card__btn--primary {
   margin-top: 24px;
   width: 100%;
@@ -241,6 +293,20 @@ function onGetStarted() {
 
 .v-theme--light .pricing-card__description {
   color: #475569;
+}
+
+.v-theme--light .pricing-card__callout {
+  border-color: rgba(18, 161, 80, 0.22);
+  background: rgba(18, 161, 80, 0.08);
+  color: #116b3b;
+}
+
+.v-theme--light .pricing-card__feature {
+  color: #475569;
+}
+
+.v-theme--light .pricing-card__feature-icon {
+  color: #12a150;
 }
 
 .v-theme--light .pricing-section__note {

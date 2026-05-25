@@ -6,10 +6,11 @@ const { isDark, toggleTheme } = useBrowserTheme();
 const { trackThemeToggle } = useAnalytics();
 
 const tooltip = computed(() => isDark.value ? t('theme.light') : t('theme.dark'));
+const icon = computed(() => isDark.value ? mdiWeatherNight : mdiWeatherSunny);
 
 const onToggle = () => {
-  toggleTheme();
-  trackThemeToggle(isDark.value ? 'dark' : 'light');
+  const theme = toggleTheme();
+  trackThemeToggle(theme);
 };
 </script>
 
@@ -19,7 +20,7 @@ const onToggle = () => {
       <template #activator="{ props }">
         <v-btn
           v-bind="props"
-          :icon="isDark ? mdiWeatherSunny : mdiWeatherNight"
+          :icon="icon"
           variant="text"
           size="small"
           :aria-label="tooltip"
@@ -32,7 +33,7 @@ const onToggle = () => {
         :icon="mdiWeatherSunny"
         variant="text"
         size="small"
-        aria-label="Toggle theme"
+        :aria-label="t('theme.light')"
       />
     </template>
   </ClientOnly>
