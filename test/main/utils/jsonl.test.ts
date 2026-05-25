@@ -3,7 +3,6 @@ import * as os from 'os';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
-import type { ParsedMessage } from '../../../src/main/types';
 import {
   analyzeSessionFileMetadata,
   calculateMetrics,
@@ -12,6 +11,8 @@ import {
   parseJsonlFileWithStats,
   parseJsonlLine,
 } from '../../../src/main/utils/jsonl';
+
+import type { ParsedMessage } from '../../../src/main/types';
 
 // Helper to create a minimal ParsedMessage
 function createMessage(overrides: Partial<ParsedMessage> = {}): ParsedMessage {
