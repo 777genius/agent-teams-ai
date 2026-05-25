@@ -100,6 +100,8 @@ const TASK_LOG_ACTIVITY_PULSE_MS = 3_500;
 const STARTUP_RUNTIME_STATUS_IDLE_DELAY_MS = 30_000;
 const STARTUP_PROVIDER_STATUS_MIN_DELAY_MS = 2_000;
 const STARTUP_PROVIDER_STATUS_MAX_DELAY_MS = 30_000;
+const STARTUP_GLOBAL_TASKS_MIN_DELAY_MS = 5_000;
+const STARTUP_GLOBAL_TASKS_MAX_DELAY_MS = 30_000;
 const ACTIVE_PROVISIONING_STATES_FOR_PROCESS_LITE: ReadonlySet<TeamProvisioningProgress['state']> =
   new Set(['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying']);
 export const TEAM_PROCESS_LITE_FANOUT_STORAGE_KEY = 'team:processLiteFanout';
@@ -216,6 +218,8 @@ export function initializeNotificationListeners(): () => void {
   let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
   let runtimeStatusTimer: ReturnType<typeof setTimeout> | null = null;
   let deferredProviderStatusCleanup: (() => void) | null = null;
+  let deferredGlobalTasksCleanup: (() => void) | null = null;
+  let disposed = false;
   useStore.getState().subscribeProvisioningProgress();
   cleanupFns.push(() => {
     useStore.getState().unsubscribeProvisioningProgress();
@@ -286,18 +290,33 @@ export function initializeNotificationListeners(): () => void {
       runtimeStatusTimer = null;
     }, STARTUP_RUNTIME_STATUS_IDLE_DELAY_MS);
 
-    // Remaining visible startup fetches have no data dependency on each other.
+    // Keep immediately visible startup data first; global task aggregation can
+    // scan all team task files, so hydrate it after first paint/idle.
     await Promise.all([
-      useStore.getState().fetchAllTasks(),
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
       useStore.getState().fetchSchedules(),
     ]);
+    if (disposed) {
+      return;
+    }
+    deferredGlobalTasksCleanup = scheduleStartupIdleTask(
+      () => {
+        deferredGlobalTasksCleanup = null;
+        void useStore.getState().fetchAllTasks();
+      },
+      {
+        minDelayMs: STARTUP_GLOBAL_TASKS_MIN_DELAY_MS,
+        maxDelayMs: STARTUP_GLOBAL_TASKS_MAX_DELAY_MS,
+      }
+    );
   })();
   cleanupFns.push(() => {
+    disposed = true;
     if (cliStatusTimer) clearTimeout(cliStatusTimer);
     if (runtimeStatusTimer) clearTimeout(runtimeStatusTimer);
     if (deferredProviderStatusCleanup) deferredProviderStatusCleanup();
+    if (deferredGlobalTasksCleanup) deferredGlobalTasksCleanup();
   });
   // TODO(task-change-presence): re-enable this only after the board uses a bounded
   // batch/priority presence pipeline. The old one-task-per-tick poll was accurate

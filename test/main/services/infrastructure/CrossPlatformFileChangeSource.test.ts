@@ -595,4 +595,126 @@ describe('CrossPlatformFileChangeSource', () => {
     source.stop();
     active = false;
   });
+
+  it('builds a silent startup baseline across incomplete polling cycles', async () => {
+    let active = true;
+    const emitted: Array<[string, string]> = [];
+    const collectPollSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce({
+        files: new Map([['a.jsonl', '1']]),
+        cycleComplete: false,
+      })
+      .mockResolvedValueOnce({
+        files: new Map([['b.jsonl', '1']]),
+        cycleComplete: true,
+      })
+      .mockResolvedValueOnce({
+        files: new Map([
+          ['a.jsonl', '2'],
+          ['b.jsonl', '1'],
+        ]),
+        cycleComplete: true,
+      });
+    const source = new CrossPlatformFileChangeSource({
+      name: 'test-source',
+      pollIntervalMs: 1000,
+      collectPollSnapshot,
+      emitPolledChange: (eventType, relativePath) => emitted.push([eventType, relativePath]),
+      isOwnerActive: () => active,
+      isWatchLimitError: () => false,
+      requestRetry: vi.fn(),
+    });
+
+    await source.pollOnce();
+    expect(source.isPollingPrimed).toBe(false);
+    await source.pollOnce();
+    expect(source.isPollingPrimed).toBe(true);
+    expect(emitted).toEqual([]);
+
+    await source.pollOnce();
+
+    expect(emitted).toEqual([['change', 'a.jsonl']]);
+    source.stop();
+    active = false;
+  });
+
+  it('does not emit deletes from incomplete polling snapshots', async () => {
+    let active = true;
+    const emitted: Array<[string, string]> = [];
+    const collectPollSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Map([
+          ['a.jsonl', '1'],
+          ['b.jsonl', '1'],
+        ])
+      )
+      .mockResolvedValueOnce({
+        files: new Map([['a.jsonl', '1']]),
+        cycleComplete: false,
+      })
+      .mockResolvedValueOnce({
+        files: new Map<string, string>(),
+        cycleComplete: true,
+      });
+    const source = new CrossPlatformFileChangeSource({
+      name: 'test-source',
+      pollIntervalMs: 1000,
+      collectPollSnapshot,
+      emitPolledChange: (eventType, relativePath) => emitted.push([eventType, relativePath]),
+      isOwnerActive: () => active,
+      isWatchLimitError: () => false,
+      requestRetry: vi.fn(),
+    });
+
+    await source.pollOnce();
+    await source.pollOnce();
+    expect(emitted).toEqual([]);
+
+    await source.pollOnce();
+
+    expect(emitted).toEqual([['rename', 'b.jsonl']]);
+    source.stop();
+    active = false;
+  });
+
+  it('suppresses deletes when a completed polling cycle is not delete-safe', async () => {
+    let active = true;
+    const emitted: Array<[string, string]> = [];
+    const collectPollSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Map([
+          ['a.jsonl', '1'],
+          ['b.jsonl', '1'],
+        ])
+      )
+      .mockResolvedValueOnce({
+        files: new Map([['a.jsonl', '1']]),
+        cycleComplete: false,
+      })
+      .mockResolvedValueOnce({
+        files: new Map<string, string>(),
+        cycleComplete: true,
+        deleteSafe: false,
+      });
+    const source = new CrossPlatformFileChangeSource({
+      name: 'test-source',
+      pollIntervalMs: 1000,
+      collectPollSnapshot,
+      emitPolledChange: (eventType, relativePath) => emitted.push([eventType, relativePath]),
+      isOwnerActive: () => active,
+      isWatchLimitError: () => false,
+      requestRetry: vi.fn(),
+    });
+
+    await source.pollOnce();
+    await source.pollOnce();
+    await source.pollOnce();
+
+    expect(emitted).toEqual([]);
+    source.stop();
+    active = false;
+  });
 });

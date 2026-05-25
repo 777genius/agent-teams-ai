@@ -202,6 +202,38 @@ describe('team change throttling', () => {
     expect(getRepositoryGroupsSpy).not.toHaveBeenCalled();
   });
 
+  it('defers the initial global task fetch until the startup idle window', async () => {
+    const fetchAllTasksSpy = vi.fn(async () => undefined);
+    useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
+
+    cleanup?.();
+    cleanup = initializeNotificationListeners();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchAllTasksSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels the deferred initial global task fetch during listener cleanup', async () => {
+    const fetchAllTasksSpy = vi.fn(async () => undefined);
+    useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
+
+    cleanup?.();
+    cleanup = initializeNotificationListeners();
+    await vi.advanceTimersByTimeAsync(0);
+    cleanup();
+    cleanup = null;
+
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
+  });
+
   it('allows next refresh after throttle window passes', async () => {
     const state = useStore.getState();
     const refreshTeamDataSpy = vi.spyOn(state, 'refreshTeamData');

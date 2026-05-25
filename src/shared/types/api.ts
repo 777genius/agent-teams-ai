@@ -337,6 +337,7 @@ export interface AppStartupStatus {
   startedAt: number;
   updatedAt: number;
   steps?: AppStartupStep[];
+  memory?: AppStartupMemorySnapshot;
 }
 
 export interface AppStartupStep {
@@ -346,11 +347,21 @@ export interface AppStartupStep {
   updatedAt: number;
   finishedAt?: number;
   durationMs?: number;
+  memoryAtStart?: AppStartupMemorySnapshot;
+  memoryAtEnd?: AppStartupMemorySnapshot;
 }
 
 export interface AppStartupAPI {
   getStatus: () => Promise<AppStartupStatus>;
   onProgress: (callback: (status: AppStartupStatus) => void) => () => void;
+}
+
+export interface AppStartupMemorySnapshot {
+  rssBytes: number;
+  heapUsedBytes: number;
+  heapTotalBytes: number;
+  externalBytes: number;
+  arrayBuffersBytes?: number;
 }
 
 // =============================================================================

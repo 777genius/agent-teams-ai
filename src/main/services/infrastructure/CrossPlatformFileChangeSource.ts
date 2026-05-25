@@ -14,11 +14,19 @@ export interface WatcherLifecycle {
   isCurrent: () => boolean;
 }
 
+export interface PollSnapshotResult {
+  files: Map<string, string>;
+  cycleComplete: boolean;
+  deleteSafe?: boolean;
+}
+
+type PollSnapshot = Map<string, string> | PollSnapshotResult;
+
 export interface CrossPlatformFileChangeSourceOptions {
   name: string;
   pollIntervalMs: number;
   createWatcher?: (lifecycle: WatcherLifecycle) => Promise<CloseableWatcher> | CloseableWatcher;
-  collectPollSnapshot: () => Promise<Map<string, string>>;
+  collectPollSnapshot: () => Promise<PollSnapshot>;
   emitPolledChange: (eventType: PollingChangeEventType, relativePath: string) => void;
   isOwnerActive: () => boolean;
   isWatchLimitError: (error: unknown) => boolean;
@@ -34,6 +42,7 @@ export class CrossPlatformFileChangeSource {
   private pollingGenerationInProgress: number | null = null;
   private pollingPrimed = false;
   private pollSnapshot = new Map<string, string>();
+  private partialPollSnapshot = new Map<string, string>();
   private closedGeneration: number | null = null;
   private rejectedGeneration: number | null = null;
   private generation = 0;
@@ -180,6 +189,7 @@ export class CrossPlatformFileChangeSource {
     this.pollingGenerationInProgress = null;
     this.pollingPrimed = false;
     this.pollSnapshot.clear();
+    this.partialPollSnapshot.clear();
 
     const timer = this.pollingTimer;
     this.pollingTimer = null;
@@ -265,34 +275,51 @@ export class CrossPlatformFileChangeSource {
   }
 
   private async pollForChanges(expectedGeneration: number): Promise<void> {
-    const nextSnapshot = await this.options.collectPollSnapshot();
+    const nextSnapshot = normalizePollSnapshot(await this.options.collectPollSnapshot());
     if (expectedGeneration !== this.generation || !this.options.isOwnerActive()) {
       return;
     }
 
+    this.mergePartialPollSnapshot(nextSnapshot.files);
+
     if (!this.pollingPrimed) {
-      logger.info(`${this.options.name} polling baseline captured`);
-      this.pollSnapshot = nextSnapshot;
-      this.pollingPrimed = true;
+      if (nextSnapshot.cycleComplete) {
+        logger.info(`${this.options.name} polling baseline captured`);
+        this.pollSnapshot = this.partialPollSnapshot;
+        this.partialPollSnapshot = new Map();
+        this.pollingPrimed = true;
+      }
       return;
     }
 
-    for (const [relativePath, fingerprint] of nextSnapshot) {
+    for (const [relativePath, fingerprint] of nextSnapshot.files) {
       const previous = this.pollSnapshot.get(relativePath);
       if (previous === undefined) {
         this.options.emitPolledChange('rename', relativePath);
       } else if (previous !== fingerprint) {
         this.options.emitPolledChange('change', relativePath);
       }
+      this.pollSnapshot.set(relativePath, fingerprint);
     }
 
-    for (const relativePath of this.pollSnapshot.keys()) {
-      if (!nextSnapshot.has(relativePath)) {
-        this.options.emitPolledChange('rename', relativePath);
+    if (nextSnapshot.cycleComplete) {
+      const completedSnapshot = this.partialPollSnapshot;
+      if (nextSnapshot.deleteSafe !== false) {
+        for (const relativePath of this.pollSnapshot.keys()) {
+          if (!completedSnapshot.has(relativePath)) {
+            this.options.emitPolledChange('rename', relativePath);
+          }
+        }
       }
+      this.pollSnapshot = completedSnapshot;
+      this.partialPollSnapshot = new Map();
     }
+  }
 
-    this.pollSnapshot = nextSnapshot;
+  private mergePartialPollSnapshot(files: Map<string, string>): void {
+    for (const [relativePath, fingerprint] of files) {
+      this.partialPollSnapshot.set(relativePath, fingerprint);
+    }
   }
 
   private async closeWatcher(watcher: CloseableWatcher): Promise<void> {
@@ -317,4 +344,15 @@ export class CrossPlatformFileChangeSource {
       this.rejectedGeneration !== generation
     );
   }
+}
+
+function normalizePollSnapshot(snapshot: PollSnapshot): PollSnapshotResult {
+  if (snapshot instanceof Map) {
+    return {
+      files: snapshot,
+      cycleComplete: true,
+      deleteSafe: true,
+    };
+  }
+  return snapshot;
 }

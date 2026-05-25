@@ -641,6 +641,70 @@ describe('FileWatcher', () => {
     watcher.stop();
   });
 
+  it('chunks broad project polling baselines and still emits changes after priming', async () => {
+    const projectsDir = '/virtual/projects';
+    const todosDir = '/virtual/todos';
+    const projectNames = Array.from({ length: 65 }, (_, index) =>
+      `encoded-project-${String(index).padStart(3, '0')}`
+    );
+    const fileState = new Map(projectNames.map((name) => [name, { size: 10, mtimeMs: 1000 }]));
+    const fsProvider = {
+      type: 'local' as const,
+      exists: vi.fn().mockResolvedValue(true),
+      readFile: vi.fn().mockResolvedValue(''),
+      stat: vi.fn().mockResolvedValue({
+        size: 10,
+        mtimeMs: 1000,
+        birthtimeMs: 1000,
+        isFile: () => true,
+        isDirectory: () => false,
+      }),
+      readdir: vi.fn(async (dirPath: string) => {
+        if (dirPath === projectsDir) {
+          return projectNames.map((name) => createFsDirent(name, 'directory'));
+        }
+        const projectName = path.basename(dirPath);
+        const state = fileState.get(projectName);
+        if (state) {
+          return [createFsDirent('session-1.jsonl', 'file', state)];
+        }
+        return [];
+      }),
+      createReadStream: vi.fn(() => Readable.from([])),
+      dispose: vi.fn(),
+    };
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir, fsProvider);
+    const events: unknown[] = [];
+    watcher.on('file-change', (event) => events.push(event));
+
+    setWatcherActive(watcher);
+    const projectsSource = getChangeSource(watcher, 'projects');
+
+    await projectsSource.pollOnce();
+    expect(projectsSource.isPollingPrimed).toBe(false);
+    expect(events).toEqual([]);
+
+    await projectsSource.pollOnce();
+    expect(projectsSource.isPollingPrimed).toBe(true);
+    expect(events).toEqual([]);
+
+    fileState.set(projectNames[0], { size: 12, mtimeMs: 2000 });
+    await projectsSource.pollOnce();
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(events).toContainEqual({
+      type: 'change',
+      path: path.join(projectsDir, projectNames[0], 'session-1.jsonl'),
+      projectId: projectNames[0],
+      sessionId: 'session-1',
+      isSubagent: false,
+    });
+
+    watcher.stop();
+  });
+
   it('treats SSH not-found subagent directories as empty during project polling', async () => {
     const projectsDir = '/remote/projects';
     const todosDir = '/remote/todos';
