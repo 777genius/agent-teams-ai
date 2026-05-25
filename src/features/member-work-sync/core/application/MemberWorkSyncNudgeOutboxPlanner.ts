@@ -11,6 +11,7 @@ import type { MemberWorkSyncOutboxEnsureInput, MemberWorkSyncStatus } from '../.
 import type { MemberWorkSyncUseCaseDeps } from './ports';
 
 const STATUS_ONLY_RECOVERY_INTENT_PREFIX = 'status-only';
+const AGENDA_SYNC_REFRESH_INTENT_PREFIX = 'agenda-sync-refresh';
 
 function getReviewRequestEventIds(status: MemberWorkSyncStatus): string[] {
   return [
@@ -55,6 +56,22 @@ function shouldPlanStatusOnlyRecovery(input: {
     input.baseInput.payload.workSyncIntent === 'agenda_sync' &&
     input.baseInput.payload.workSyncIntentKey === undefined &&
     input.existingItemStatus === 'delivered' &&
+    input.status.report?.accepted !== true
+  );
+}
+
+function shouldPlanAgendaSyncRefreshRecovery(input: {
+  status: MemberWorkSyncStatus;
+  baseInput: MemberWorkSyncOutboxEnsureInput;
+  existingItem: { agendaFingerprint: string; status: string };
+}): boolean {
+  return (
+    input.status.state === 'needs_sync' &&
+    input.status.shadow?.wouldNudge === true &&
+    input.baseInput.payload.workSyncIntent === 'agenda_sync' &&
+    input.baseInput.payload.workSyncIntentKey === undefined &&
+    input.existingItem.status === 'delivered' &&
+    input.existingItem.agendaFingerprint === input.baseInput.agendaFingerprint &&
     input.status.report?.accepted !== true
   );
 }
@@ -104,6 +121,65 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       payload,
       payloadHash: buildMemberWorkSyncNudgePayloadHash(this.deps.hash, payload),
     };
+  }
+
+  private buildAgendaSyncRefreshRecoveryInput(
+    status: MemberWorkSyncStatus,
+    baseInput: MemberWorkSyncOutboxEnsureInput
+  ): MemberWorkSyncOutboxEnsureInput {
+    const intentKey = `${AGENDA_SYNC_REFRESH_INTENT_PREFIX}:${status.agenda.fingerprint}:${baseInput.payloadHash}`;
+    const payload = {
+      ...baseInput.payload,
+      workSyncIntentKey: intentKey,
+      text: [
+        'Work sync refresh: the previous work-sync nudge was delivered before the current required report instructions.',
+        'Use this latest nudge as the current required sync action.',
+        baseInput.payload.text,
+      ].join('\n'),
+    };
+
+    return {
+      ...baseInput,
+      id: buildMemberWorkSyncNudgeId({
+        teamName: status.teamName,
+        memberName: status.memberName,
+        agendaFingerprint: status.agenda.fingerprint,
+        intentKey,
+      }),
+      payload,
+      payloadHash: buildMemberWorkSyncNudgePayloadHash(this.deps.hash, payload),
+    };
+  }
+
+  private async planStatusOnlyRecovery(
+    status: MemberWorkSyncStatus,
+    baseInput: MemberWorkSyncOutboxEnsureInput
+  ): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
+    const outboxStore = this.deps.outboxStore;
+    if (!outboxStore) {
+      return { planned: false, code: 'outbox_unavailable' };
+    }
+    const recoveryInput = this.buildStatusOnlyRecoveryInput(status, baseInput);
+    const recoveryResult = await outboxStore.ensurePending(recoveryInput);
+    if (!recoveryResult.ok) {
+      this.deps.logger?.warn('member work sync status-only recovery payload conflict', {
+        teamName: status.teamName,
+        memberName: status.memberName,
+        outboxId: recoveryInput.id,
+        existingPayloadHash: recoveryResult.existingPayloadHash,
+        requestedPayloadHash: recoveryResult.requestedPayloadHash,
+      });
+      await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
+      return { planned: false, code: 'payload_conflict' };
+    }
+
+    const recoveryPlanned = recoveryResult.item.status !== 'delivered';
+    const recoveryPlanResult = {
+      planned: recoveryPlanned,
+      code: recoveryResult.outcome,
+    } as const;
+    await this.appendPlanAudit(status, recoveryPlanResult);
+    return recoveryPlanResult;
   }
 
   async plan(status: MemberWorkSyncStatus): Promise<MemberWorkSyncNudgeOutboxPlanResult> {
@@ -196,6 +272,44 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         await this.appendPlanAudit(status, { planned: false, code });
         return { planned: false, code };
       }
+      if (
+        shouldPlanAgendaSyncRefreshRecovery({
+          status,
+          baseInput: input,
+          existingItem: result.item,
+        })
+      ) {
+        const recoveryInput = this.buildAgendaSyncRefreshRecoveryInput(status, input);
+        const recoveryResult = await this.deps.outboxStore.ensurePending(recoveryInput);
+        if (!recoveryResult.ok) {
+          this.deps.logger?.warn('member work sync agenda-sync refresh payload conflict', {
+            teamName: status.teamName,
+            memberName: status.memberName,
+            outboxId: recoveryInput.id,
+            existingPayloadHash: recoveryResult.existingPayloadHash,
+            requestedPayloadHash: recoveryResult.requestedPayloadHash,
+          });
+          await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
+          return { planned: false, code: 'payload_conflict' };
+        }
+        if (
+          shouldPlanStatusOnlyRecovery({
+            status,
+            baseInput: input,
+            existingItemStatus: recoveryResult.item.status,
+          })
+        ) {
+          return this.planStatusOnlyRecovery(status, input);
+        }
+
+        const recoveryPlanned = recoveryResult.item.status !== 'delivered';
+        const recoveryPlanResult = {
+          planned: recoveryPlanned,
+          code: recoveryResult.outcome,
+        } as const;
+        await this.appendPlanAudit(status, recoveryPlanResult);
+        return recoveryPlanResult;
+      }
       this.deps.logger?.warn('member work sync nudge outbox payload conflict', {
         teamName: status.teamName,
         memberName: status.memberName,
@@ -220,27 +334,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
         existingItemStatus: result.item.status,
       })
     ) {
-      const recoveryInput = this.buildStatusOnlyRecoveryInput(status, input);
-      const recoveryResult = await this.deps.outboxStore.ensurePending(recoveryInput);
-      if (!recoveryResult.ok) {
-        this.deps.logger?.warn('member work sync status-only recovery payload conflict', {
-          teamName: status.teamName,
-          memberName: status.memberName,
-          outboxId: recoveryInput.id,
-          existingPayloadHash: recoveryResult.existingPayloadHash,
-          requestedPayloadHash: recoveryResult.requestedPayloadHash,
-        });
-        await this.appendPlanAudit(status, { planned: false, code: 'payload_conflict' });
-        return { planned: false, code: 'payload_conflict' };
-      }
-
-      const recoveryPlanned = recoveryResult.item.status !== 'delivered';
-      const recoveryPlanResult = {
-        planned: recoveryPlanned,
-        code: recoveryResult.outcome,
-      } as const;
-      await this.appendPlanAudit(status, recoveryPlanResult);
-      return recoveryPlanResult;
+      return this.planStatusOnlyRecovery(status, input);
     }
     if (
       input.payload.workSyncIntent === 'review_pickup' &&
