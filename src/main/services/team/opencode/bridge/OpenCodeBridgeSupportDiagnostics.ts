@@ -94,8 +94,8 @@ function buildOpenCodeBridgeSupportCopyText(input: {
     'Bridge command:',
     `command: ${command}`,
     `requestId: ${requestId}`,
-    `binaryPath: ${formatDiagnosticValue(input.details.binaryPath)}`,
-    `cwd: ${formatDiagnosticValue(input.details.cwd)}`,
+    `binaryPath: ${formatDiagnosticPathValue(input.details.binaryPath)}`,
+    `cwd: ${formatDiagnosticPathValue(input.details.cwd)}`,
     `attempts: ${formatDiagnosticValue(input.details.attempts)}`,
     `exitCode: ${formatDiagnosticValue(input.details.exitCode)}`,
     `timedOut: ${formatDiagnosticValue(input.details.timedOut)}`,
@@ -141,6 +141,13 @@ function formatDiagnosticValue(value: unknown, fallback: unknown = undefined): s
     return String(resolved);
   }
   return redactBridgeDiagnosticText(JSON.stringify(resolved));
+}
+
+function formatDiagnosticPathValue(value: unknown): string {
+  if (typeof value !== 'string') {
+    return formatDiagnosticValue(value);
+  }
+  return redactDiagnosticPath(value);
 }
 
 function formatPreview(value: unknown): string {
