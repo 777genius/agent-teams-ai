@@ -1,4 +1,7 @@
-import { stripProcessTableUnavailableDiagnosticSuffix } from '@shared/utils/teamLaunchFailureReason';
+import {
+  isProvisionedButNotAliveFailureReason,
+  stripProcessTableUnavailableDiagnosticSuffix,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import { mentionsProcessTableUnavailable } from './TeamProvisioningLaunchDiagnostics';
 import { isBootstrapInstructionPrompt } from './TeamProvisioningPromptBuilders';
@@ -50,6 +53,7 @@ function isBaseAutoClearableLaunchFailureReason(reason?: string): boolean {
     isNeverSpawnedDuringLaunchReason(reason) ||
     isLaunchGraceWindowFailureReason(reason) ||
     isConfigRegistrationFailureReason(reason) ||
+    isProvisionedButNotAliveFailureReason(reason) ||
     isRegisteredRuntimeMetadataFailureReason(reason) ||
     isOpenCodeBridgeLaunchFailureReason(reason) ||
     isBootstrapMcpResourceReadFailureReason(reason) ||
