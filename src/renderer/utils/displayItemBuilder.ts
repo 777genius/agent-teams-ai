@@ -405,7 +405,7 @@ export function buildDisplayItemsFromMessages(
 
     // Check for teammate messages (non-meta user messages with <teammate-message> content)
     // One user message may contain multiple <teammate-message> blocks
-    if (isHumanAuthoredUserTurn(msg) || isDisplayableTeammateProtocol(msg)) {
+    if (msg.type === 'user' && (isHumanAuthoredUserTurn(msg) || isDisplayableTeammateProtocol(msg))) {
       const rawText =
         typeof msg.content === 'string'
           ? msg.content

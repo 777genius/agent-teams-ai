@@ -155,6 +155,33 @@ describe('buildDisplayItemsFromMessages', () => {
 
       expect(items.some((item) => item.type === 'teammate_message')).toBe(true);
     });
+
+    it('does not route assistant text through subagent input', () => {
+      const assistantMsg = makeMessage({
+        uuid: 'assistant-text-1',
+        type: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Assistant output',
+          },
+        ],
+        toolResults: [],
+        timestamp: new Date('2025-01-01T00:00:00Z'),
+      });
+
+      const items = buildDisplayItemsFromMessages([assistantMsg], []);
+
+      expect(items.some((item) => item.type === 'subagent_input')).toBe(false);
+      expect(items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'output',
+            content: 'Assistant output',
+          }),
+        ])
+      );
+    });
   });
 });
 
