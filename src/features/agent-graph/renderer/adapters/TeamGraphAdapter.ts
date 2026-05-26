@@ -584,6 +584,7 @@ export class TeamGraphAdapter {
         spawnHardFailure: spawn?.hardFailure,
         spawnHardFailureReason: spawn?.hardFailureReason,
         spawnError: spawn?.error,
+        spawnRuntimeDiagnostic: spawn?.runtimeDiagnostic,
         spawnLivenessKind: spawn?.livenessKind,
         spawnRuntimeDiagnosticSeverity: spawn?.runtimeDiagnosticSeverity,
         spawnFirstSpawnAcceptedAt: spawn?.firstSpawnAcceptedAt,

@@ -46,6 +46,7 @@ interface MemberDetailHeaderProps {
   spawnHardFailure?: boolean;
   spawnHardFailureReason?: string;
   spawnError?: string;
+  spawnRuntimeDiagnostic?: string;
   spawnLivenessKind?: TeamAgentRuntimeEntry['livenessKind'];
   spawnRuntimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
   spawnFirstSpawnAcceptedAt?: string;
@@ -72,6 +73,7 @@ export const MemberDetailHeader = ({
   spawnHardFailure,
   spawnHardFailureReason,
   spawnError,
+  spawnRuntimeDiagnostic,
   spawnLivenessKind,
   spawnRuntimeDiagnosticSeverity,
   spawnFirstSpawnAcceptedAt,
@@ -108,6 +110,7 @@ export const MemberDetailHeader = ({
     spawnHardFailure,
     spawnHardFailureReason,
     spawnError,
+    spawnRuntimeDiagnostic,
     spawnLivenessKind,
     spawnRuntimeDiagnosticSeverity,
     spawnFirstSpawnAcceptedAt,

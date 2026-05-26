@@ -171,6 +171,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
     spawnHardFailure: spawnEntry?.hardFailure,
     spawnHardFailureReason: spawnEntry?.hardFailureReason,
     spawnError: spawnEntry?.error,
+    spawnRuntimeDiagnostic: spawnEntry?.runtimeDiagnostic,
     spawnLivenessKind: spawnEntry?.livenessKind,
     spawnRuntimeDiagnosticSeverity: spawnEntry?.runtimeDiagnosticSeverity,
     spawnFirstSpawnAcceptedAt: spawnEntry?.firstSpawnAcceptedAt,

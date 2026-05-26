@@ -1824,8 +1824,8 @@ describe('TeamGraphAdapter particles', () => {
     expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
       state: 'error',
       spawnStatus: 'error',
-      launchVisualState: 'stale_runtime',
-      launchStatusLabel: 'stale runtime',
+      launchVisualState: 'error',
+      launchStatusLabel: 'failed',
       exceptionTone: 'error',
       exceptionLabel: 'spawn failed',
     });

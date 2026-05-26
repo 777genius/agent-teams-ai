@@ -1327,6 +1327,7 @@ export function buildMemberLaunchPresentation({
   spawnHardFailure,
   spawnHardFailureReason,
   spawnError,
+  spawnRuntimeDiagnostic,
   spawnLivenessKind,
   spawnRuntimeDiagnosticSeverity,
   spawnFirstSpawnAcceptedAt,
@@ -1350,6 +1351,7 @@ export function buildMemberLaunchPresentation({
   spawnHardFailure?: boolean;
   spawnHardFailureReason?: string;
   spawnError?: string;
+  spawnRuntimeDiagnostic?: string;
   spawnLivenessKind?: TeamAgentRuntimeEntry['livenessKind'];
   spawnRuntimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
   spawnFirstSpawnAcceptedAt?: string;
@@ -1369,6 +1371,7 @@ export function buildMemberLaunchPresentation({
       hardFailure: spawnHardFailure,
       hardFailureReason: spawnHardFailureReason,
       error: spawnError,
+      runtimeDiagnostic: spawnRuntimeDiagnostic,
       bootstrapConfirmed: spawnBootstrapConfirmed,
       livenessKind: spawnLivenessKind ?? runtimeEntry?.livenessKind,
     });

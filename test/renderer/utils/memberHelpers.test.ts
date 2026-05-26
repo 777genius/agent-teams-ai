@@ -921,6 +921,34 @@ describe('memberHelpers spawn-aware presence', () => {
     });
   });
 
+  it('recognizes provisioned-but-not-alive when the reason is only in runtime diagnostics', () => {
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: provisionedButNotAliveSpawn.status,
+        spawnLaunchState: provisionedButNotAliveSpawn.launchState,
+        spawnLivenessSource: provisionedButNotAliveSpawn.livenessSource,
+        spawnRuntimeAlive: provisionedButNotAliveSpawn.runtimeAlive,
+        spawnBootstrapConfirmed: provisionedButNotAliveSpawn.bootstrapConfirmed,
+        spawnBootstrapStalled: provisionedButNotAliveSpawn.bootstrapStalled,
+        spawnAgentToolAccepted: provisionedButNotAliveSpawn.agentToolAccepted,
+        spawnHardFailure: provisionedButNotAliveSpawn.hardFailure,
+        spawnRuntimeDiagnostic: provisionedButNotAliveSpawn.hardFailureReason,
+        spawnLivenessKind: provisionedButNotAliveSpawn.livenessKind,
+        runtimeEntry: processTableUnavailableRuntime,
+        runtimeAdvisory: undefined,
+        isLaunchSettling: false,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      })
+    ).toMatchObject({
+      presenceLabel: 'idle',
+      launchVisualState: null,
+      launchStatusLabel: null,
+      spawnBadgeLabel: null,
+    });
+  });
+
   it('keeps runtime errors visible for bootstrap-confirmed provisioned-but-not-alive entries', () => {
     expect(
       buildMemberLaunchPresentation({
