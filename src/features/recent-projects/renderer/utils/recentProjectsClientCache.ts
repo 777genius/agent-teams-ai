@@ -9,8 +9,9 @@ const RECENT_PROJECTS_CLIENT_CACHE_TTL_MS = 15_000;
 const RECENT_PROJECTS_CLIENT_DEGRADED_CACHE_TTL_MS = 30_000;
 
 let cachedPayload: DashboardRecentProjectsPayloadLike = null;
+let cachedKey: string | null = null;
 let cachedAt = 0;
-let inFlightLoad: Promise<DashboardRecentProjectsPayload> | null = null;
+let inFlightLoad: { key: string; promise: Promise<DashboardRecentProjectsPayload> } | null = null;
 
 export interface RecentProjectsClientSnapshot {
   payload: DashboardRecentProjectsPayload;
@@ -18,7 +19,13 @@ export interface RecentProjectsClientSnapshot {
   isStale: boolean;
 }
 
-export function getRecentProjectsClientSnapshot(): RecentProjectsClientSnapshot | null {
+export function getRecentProjectsClientSnapshot(
+  cacheKey: string
+): RecentProjectsClientSnapshot | null {
+  if (cachedKey !== cacheKey) {
+    return null;
+  }
+
   const normalizedPayload = normalizeDashboardRecentProjectsPayload(cachedPayload);
   if (!normalizedPayload) {
     return null;
@@ -40,39 +47,44 @@ export function getRecentProjectsClientSnapshot(): RecentProjectsClientSnapshot 
 }
 
 export async function loadRecentProjectsWithClientCache(
+  cacheKey: string,
   loader: () => Promise<DashboardRecentProjectsPayloadLike>,
   options?: { force?: boolean }
 ): Promise<DashboardRecentProjectsPayload> {
   const force = options?.force ?? false;
-  const snapshot = getRecentProjectsClientSnapshot();
+  const snapshot = getRecentProjectsClientSnapshot(cacheKey);
 
   if (!force && snapshot && !snapshot.isStale) {
     return snapshot.payload;
   }
 
-  if (inFlightLoad) {
-    return inFlightLoad;
+  if (inFlightLoad?.key === cacheKey) {
+    return inFlightLoad.promise;
   }
 
   const request = loader()
     .then((payloadLike) => {
       const normalizedPayload = normalizeDashboardRecentProjectsPayload(payloadLike);
-      cachedPayload = normalizedPayload;
-      cachedAt = Date.now();
+      if (inFlightLoad?.key === cacheKey && inFlightLoad.promise === request) {
+        cachedKey = normalizedPayload ? cacheKey : null;
+        cachedPayload = normalizedPayload;
+        cachedAt = Date.now();
+      }
       return normalizedPayload ?? { projects: [], degraded: true };
     })
     .finally(() => {
-      if (inFlightLoad === request) {
+      if (inFlightLoad?.promise === request) {
         inFlightLoad = null;
       }
     });
 
-  inFlightLoad = request;
+  inFlightLoad = { key: cacheKey, promise: request };
   return request;
 }
 
 export function __resetRecentProjectsClientCacheForTests(): void {
   cachedPayload = null;
+  cachedKey = null;
   cachedAt = 0;
   inFlightLoad = null;
 }

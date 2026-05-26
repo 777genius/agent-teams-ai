@@ -21,7 +21,6 @@ import {
 import { useOpenRecentProject } from './useOpenRecentProject';
 
 import type { RecentProjectCardModel } from '../adapters/RecentProjectsSectionAdapter';
-import type { TeamSummary } from '@shared/types';
 
 const INITIAL_RECENT_PROJECTS = 11;
 const LOAD_MORE_STEP = 8;
@@ -70,6 +69,7 @@ export function useRecentProjectsSection(
     globalTasksLoading,
     fetchAllTasks,
     teams,
+    activeContextId,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
     provisioningSnapshotByTeam,
@@ -80,12 +80,16 @@ export function useRecentProjectsSection(
       globalTasksLoading: state.globalTasksLoading,
       fetchAllTasks: state.fetchAllTasks,
       teams: state.teams,
+      activeContextId: state.activeContextId,
       provisioningRuns: state.provisioningRuns,
       currentProvisioningRunIdByTeam: state.currentProvisioningRunIdByTeam,
       provisioningSnapshotByTeam: state.provisioningSnapshotByTeam,
     }))
   );
-  const initialSnapshot = useMemo(() => getRecentProjectsClientSnapshot(), []);
+  const initialSnapshot = useMemo(
+    () => getRecentProjectsClientSnapshot(activeContextId),
+    [activeContextId]
+  );
   const { openRecentProject, openProjectPath, selectProjectFolder } = useOpenRecentProject();
   const [recentProjects, setRecentProjects] = useState<DashboardRecentProject[]>(
     initialSnapshot?.payload.projects ?? []
@@ -105,6 +109,7 @@ export function useRecentProjectsSection(
   const recentProjectsRef = useRef<DashboardRecentProject[]>(
     initialSnapshot?.payload.projects ?? []
   );
+  const activeContextIdRef = useRef(activeContextId);
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
@@ -125,37 +130,67 @@ export function useRecentProjectsSection(
     recentProjectsRef.current = recentProjects;
   }, [recentProjects]);
 
-  const reload = useCallback(async (options?: { force?: boolean }): Promise<void> => {
-    const hasVisibleProjects =
-      recentProjectsRef.current.length > 0 || getRecentProjectsClientSnapshot() != null;
+  useEffect(() => {
+    activeContextIdRef.current = activeContextId;
+  }, [activeContextId]);
 
-    if (!hasVisibleProjects) {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const payload = await loadRecentProjectsWithClientCache(
-        () => api.getDashboardRecentProjects(),
-        options
-      );
-      setRecentProjects(payload.projects);
-      setRecentProjectsDegraded(payload.degraded);
-      setDegradedRefreshCount((current) => (payload.degraded ? current + 1 : 0));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to load recent projects');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const reload = useCallback(
+    async (options?: { force?: boolean }): Promise<void> => {
+      const requestContextId = activeContextId;
+      const hasVisibleProjects =
+        recentProjectsRef.current.length > 0 ||
+        getRecentProjectsClientSnapshot(requestContextId) != null;
+
+      if (!hasVisibleProjects) {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const payload = await loadRecentProjectsWithClientCache(
+          requestContextId,
+          () => api.getDashboardRecentProjects(),
+          options
+        );
+        if (activeContextIdRef.current !== requestContextId) {
+          return;
+        }
+        setRecentProjects(payload.projects);
+        setRecentProjectsDegraded(payload.degraded);
+        setDegradedRefreshCount((current) => (payload.degraded ? current + 1 : 0));
+      } catch (nextError) {
+        if (activeContextIdRef.current !== requestContextId) {
+          return;
+        }
+        setError(nextError instanceof Error ? nextError.message : 'Failed to load recent projects');
+      } finally {
+        if (activeContextIdRef.current === requestContextId) {
+          setLoading(false);
+        }
+      }
+    },
+    [activeContextId]
+  );
 
   useEffect(() => {
-    const snapshot = getRecentProjectsClientSnapshot();
+    const snapshot = getRecentProjectsClientSnapshot(activeContextId);
+    if (snapshot) {
+      setRecentProjects(snapshot.payload.projects);
+      setRecentProjectsDegraded(snapshot.payload.degraded);
+      setDegradedRefreshCount(snapshot.payload.degraded ? 1 : 0);
+      setLoading(false);
+    } else {
+      setRecentProjects([]);
+      setRecentProjectsDegraded(false);
+      setDegradedRefreshCount(0);
+      setLoading(true);
+    }
+
     if (snapshot && !snapshot.isStale) {
       return;
     }
 
     void reload({ force: snapshot != null });
-  }, [reload]);
+  }, [activeContextId, reload]);
 
   useEffect(() => {
     if (!recentProjectsDegraded) {
@@ -225,22 +260,21 @@ export function useRecentProjectsSection(
     });
   }, [aliveTeams, provisioningSnapshotByTeam, provisioningTeamNames, teams]);
 
-  const decoratedCards = useMemo(
-    () =>
-      adaptRecentProjectsSection({
-        projects: sortRecentProjectsByDisplayPriority(recentProjects),
-        taskCountsByProject,
-        activeTeamsByProject,
-        tasksLoading: globalTasksLoading,
-      }),
-    [
-      activeTeamsByProject,
-      globalTasksLoading,
-      openHistoryVersion,
-      recentProjects,
+  const decoratedCards = useMemo(() => {
+    void openHistoryVersion;
+    return adaptRecentProjectsSection({
+      projects: sortRecentProjectsByDisplayPriority(recentProjects),
       taskCountsByProject,
-    ]
-  );
+      activeTeamsByProject,
+      tasksLoading: globalTasksLoading,
+    });
+  }, [
+    activeTeamsByProject,
+    globalTasksLoading,
+    openHistoryVersion,
+    recentProjects,
+    taskCountsByProject,
+  ]);
 
   const filteredCards = useMemo(
     () => decoratedCards.filter((card) => matchesSearch(card.project, searchQuery)),

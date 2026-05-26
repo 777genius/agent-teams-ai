@@ -47,7 +47,9 @@ export function createRecentProjectsFeature(deps: {
   return {
     listDashboardRecentProjects: async () => {
       const activeContext = deps.getActiveContext();
-      const payload = await useCase.execute(`dashboard-recent-projects:${activeContext.id}`);
+      const payload = await useCase.execute(
+        `dashboard-recent-projects:${activeContext.type}:${activeContext.id}`
+      );
       return normalizeDashboardRecentProjectsPayload(payload) ?? { projects: [], degraded: true };
     },
   };
