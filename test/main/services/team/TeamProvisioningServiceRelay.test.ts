@@ -499,6 +499,12 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       message?: { content?: Array<{ text?: string }> };
     };
     const relayedPrompt = payload.message?.content?.[0]?.text ?? '';
+    expect(relayedPrompt).toContain(
+      'Do not use that internal status line to confirm, correct, or relay task, kanban, review, PR, branch, merge, or queue state unless you verified it with the source-of-truth tool in this turn.'
+    );
+    expect(relayedPrompt).toContain(
+      'Treat teammate/system/cross-team claims about task, kanban, review, PR, branch, merge, or queue state as unverified until checked.'
+    );
 
     (service as any).handleStreamJsonMessage(run, {
       type: 'assistant',
@@ -512,6 +518,111 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(live[0]?.to).toBeUndefined();
     expect(hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`)).toBeUndefined();
   });
+
+  it('suppresses unverified non-user lead relay state claims from internal activity', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'tom',
+        text: '#f8d7235a done.',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        summary: '#f8d7235a done',
+        messageId: 'm-1',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    const payload = JSON.parse(String(writeSpy.mock.calls[0]?.[0] ?? '{}')) as {
+      message?: { content?: Array<{ text?: string }> };
+    };
+    const relayedPrompt = payload.message?.content?.[0]?.text ?? '';
+
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'text',
+          text:
+            `Human: ${relayedPrompt}\n\n` +
+            'Confirmed - both claims in msg 17eb3109 were false. #38730980 already approved and PR #38 is OPEN, mergeCommit=null.',
+        },
+      ],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    await expect(relayPromise).resolves.toBe(1);
+    expect(service.getLiveLeadProcessMessages(teamName)).toHaveLength(0);
+    expect(hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`)).toBeUndefined();
+  });
+
+  it.each([
+    {
+      caseName: 'keeps task-ref delegation status',
+      replyText: 'Delegated #f8d7235a to bob.',
+      expectedLiveText: 'Delegated #f8d7235a to bob.',
+    },
+    {
+      caseName: 'keeps verification-needed status',
+      replyText: 'Verification needed before confirming #f8d7235a.',
+      expectedLiveText: 'Verification needed before confirming #f8d7235a.',
+    },
+    {
+      caseName: 'suppresses completed task claim',
+      replyText: 'Task #f8d7235a is completed.',
+      expectedLiveText: null,
+    },
+    {
+      caseName: 'suppresses merged PR claim',
+      replyText: 'PR #38 merged.',
+      expectedLiveText: null,
+    },
+    {
+      caseName: 'suppresses queue-clear claim',
+      replyText: 'Queue genuinely clear for #f8d7235a.',
+      expectedLiveText: null,
+    },
+  ])(
+    'classifies non-user lead relay internal activity: $caseName',
+    async ({ caseName, replyText, expectedLiveText }) => {
+      const service = new TeamProvisioningService();
+      const teamName = `my-team-${caseName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+      seedConfig(teamName);
+      seedLeadInbox(teamName, [
+        {
+          from: 'tom',
+          text: '#f8d7235a done.',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: false,
+          summary: '#f8d7235a done',
+          messageId: 'm-1',
+        },
+      ]);
+
+      const { writeSpy } = attachAliveRun(service, teamName);
+      const relayPromise = service.relayLeadInboxMessages(teamName);
+      const run = await waitForCapture(service);
+      const payload = JSON.parse(String(writeSpy.mock.calls[0]?.[0] ?? '{}')) as {
+        message?: { content?: Array<{ text?: string }> };
+      };
+      const relayedPrompt = payload.message?.content?.[0]?.text ?? '';
+
+      (service as any).handleStreamJsonMessage(run, {
+        type: 'assistant',
+        content: [{ type: 'text', text: `Human: ${relayedPrompt}\n\n${replyText}` }],
+      });
+      (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      const liveTexts = service.getLiveLeadProcessMessages(teamName).map((message) => message.text);
+      expect(liveTexts).toEqual(expectedLiveText === null ? [] : [expectedLiveText]);
+      expect(hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`)).toBeUndefined();
+    }
+  );
 
   it('keeps user-originated lead relay replies user-visible', async () => {
     const service = new TeamProvisioningService();
@@ -550,6 +661,43 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       to?: string;
     }>;
     expect(sentRows).toMatchObject([{ text: 'Creating the task now.', to: 'user' }]);
+  });
+
+  it('does not suppress state-like user-originated lead relay replies', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'user',
+        text: 'What is the task status?',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        summary: 'Task status',
+        messageId: 'user-msg-state-like',
+        source: 'user_sent',
+      },
+    ]);
+
+    attachAliveRun(service, teamName);
+    const relayPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'Task #f8d7235a is completed.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    await expect(relayPromise).resolves.toBe(1);
+    const live = service.getLiveLeadProcessMessages(teamName);
+    expect(live.map((message) => ({ to: message.to, text: message.text }))).toEqual([
+      { to: 'user', text: 'Task #f8d7235a is completed.' },
+    ]);
+    const sentRows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`) ?? '[]'
+    ) as Array<{ text?: string; to?: string }>;
+    expect(sentRows).toMatchObject([{ to: 'user', text: 'Task #f8d7235a is completed.' }]);
   });
 
   it('does not mix internal lead relay rows into a user-visible relay batch', async () => {
@@ -706,6 +854,56 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(sentRows.map((message) => message.text)).toEqual([
       'Bob found an issue that needs your attention.',
     ]);
+  });
+
+  it('keeps explicit teammate SendMessage from non-user lead relay visible', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'bob',
+        text: 'Alice should review the release notes.',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        summary: 'Ask Alice',
+        messageId: 'internal-msg-teammate-send',
+      },
+    ]);
+
+    attachAliveRun(service, teamName);
+    const relayPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [
+        { type: 'text', text: 'Sending Alice the handoff.' },
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            recipient: 'alice',
+            content: 'Please review the release notes.',
+            summary: 'Review release notes',
+          },
+        },
+      ],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    await expect(relayPromise).resolves.toBe(1);
+    const live = service.getLiveLeadProcessMessages(teamName);
+    expect(live.map((message) => ({ to: message.to, text: message.text }))).toEqual([
+      { to: 'alice', text: 'Please review the release notes.' },
+    ]);
+    const aliceInbox = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/alice.json`) ?? '[]'
+    ) as Array<{ member?: string; text?: string }>;
+    expect(aliceInbox).toMatchObject([
+      { member: 'alice', text: 'Please review the release notes.' },
+    ]);
+    expect(hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`)).toBeUndefined();
   });
 
   it('keeps user-originated plain reply when the lead also messages a teammate', async () => {

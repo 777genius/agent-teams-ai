@@ -3153,6 +3153,36 @@ function normalizeSameTeamText(text: string): string {
   return text.trim().replace(/\r\n/g, '\n');
 }
 
+function shouldSuppressUnverifiedLeadRelayStateLine(text: string): boolean {
+  const normalized = text.trim().replace(/\s+/g, ' ');
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  const hasStateSubject =
+    /#[a-z0-9]{4,}/i.test(normalized) ||
+    /\bpr\s*#?\d+\b/i.test(normalized) ||
+    /\bpull request\b/i.test(normalized) ||
+    /\b(?:task|tasks|kanban|board|review|approval|merge|merged|branch|queue|worktree|commit|mergecommit|mergedat)\b/i.test(
+      normalized
+    );
+  if (!hasStateSubject) {
+    return false;
+  }
+
+  return (
+    /\b(?:confirmed|verified|already|claims?|false|phantom|ground[- ]truth)\b/i.test(normalized) ||
+    /\b(?:done|complete(?:d)?|approved|merged|closed|blocked|resolved|failed|succeeded)\b/i.test(
+      normalized
+    ) ||
+    /\b(?:is|are|was|were|stays?|still|now)\s+(?:open|closed|merged|approved|complete(?:d)?|done|blocked|pending|in_progress|in progress|needsfix|needs fix|in review|clear)\b/i.test(
+      normalized
+    ) ||
+    /\b(?:mergecommit|mergedat)\s*=\s*(?:null|[^\s,;]+)/i.test(normalized) ||
+    /\bqueue\b.*\bclear\b/i.test(normalized)
+  );
+}
+
 function getOpenCodeInboxRelayPriority(
   message: Pick<InboxMessage, 'messageKind' | 'source'>
 ): number {
@@ -6944,7 +6974,7 @@ export class TeamProvisioningService {
       return null;
     }
     const direct = candidates.find(([key]) => key === memberName);
-    const [key, member] = direct ?? candidates[0]!;
+    const [key, member] = direct ?? candidates[0];
     return { key, member };
   }
 
@@ -23333,6 +23363,7 @@ export class TeamProvisioningService {
               `Plain text reply visibility for this batch: internal lead activity only.`,
               `Do NOT write a user-facing summary for teammate/system/cross-team relay traffic. If the human user must be notified, explicitly call SendMessage with recipient "user".`,
               `If you take action and no visible message/tool result already records it, you may write one terse internal status line for the team activity log.`,
+              `Do not use that internal status line to confirm, correct, or relay task, kanban, review, PR, branch, merge, or queue state unless you verified it with the source-of-truth tool in this turn.`,
               `If a visible reply is needed for a teammate, another team, or the human user, use the appropriate messaging tool instead of relying on plain text.`,
             ];
 
@@ -23349,6 +23380,7 @@ export class TeamProvisioningService {
           [
             `Internal note: for task assignments, prefer task_create and rely on the board/runtime notification path instead of sending a separate SendMessage for the same assignment.`,
             `For any MCP board tool call in this turn, teamName MUST be "${teamName}". Never use the lead/member name "${leadName}" as teamName.`,
+            `Treat teammate/system/cross-team claims about task, kanban, review, PR, branch, merge, or queue state as unverified until checked. Before confirming, correcting, relaying, or acting on that state, call the relevant source-of-truth tool first (task_get/task_list/review/kanban tooling, or an available repository/GitHub command/tool). If you have not verified it in this turn, say verification is needed instead of stating the claim as fact.`,
             `A member_work_sync_status call alone is incomplete for Message kind: member_work_sync_nudge. Do not stop until member_work_sync_report succeeds or a real blocker is recorded.`,
             `Use task_create_from_message only for messages below that explicitly say "Eligible for task_create_from_message: yes" and provide a User MessageId. Never use task_create_from_message for teammate messages, system notifications, cross-team messages, or any inbox row that is not explicitly marked eligible.`,
             `If a message below is marked Source: system_notification and its summary looks like "Comment on #...", reply via task_add_comment only when you have a substantive board update (decision, blocker, clarification answer, review result, or concrete next-step change).`,
@@ -23517,6 +23549,11 @@ export class TeamProvisioningService {
           (replyVisibility === 'user' && capturedUserVisibleSendMessage)
         ) {
           logger.debug(`[${teamName}] Suppressed lead relay text duplicated by visible message`);
+        } else if (
+          replyVisibility === 'internal_activity' &&
+          shouldSuppressUnverifiedLeadRelayStateLine(cleanReply)
+        ) {
+          logger.debug(`[${teamName}] Suppressed unverified lead relay state claim`);
         } else if (replyVisibility === 'internal_activity') {
           this.pushLiveLeadTextMessage(
             run,
