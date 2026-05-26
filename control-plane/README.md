@@ -29,6 +29,7 @@ NestJS is an outer framework, not the business architecture. Domain and applicat
 - [Architecture Plan](docs/architecture.md)
 - [Implementation Plan](docs/implementation-plan.md)
 - [Plan Review And Hardening](docs/plan-review-and-hardening.md)
+- [Phase 4 Persistence, Transactions, Outbox, Locks Plan](docs/phase-4-persistence-transactions-outbox-locks-plan.md)
 - [Edge Cases And Failure Modes](docs/edge-cases.md)
 - [Security And Privacy Model](docs/security-and-privacy.md)
 - [Public Error Contract](docs/error-contract.md)

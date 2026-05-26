@@ -233,6 +233,8 @@ Approximate change size:
 
 ## Phase 4 - Database, Transactions, Outbox, Locks
 
+Detailed plan: [Phase 4 Persistence, Transactions, Outbox, Locks Plan](phase-4-persistence-transactions-outbox-locks-plan.md)
+
 Goals:
 
 - add database platform package
