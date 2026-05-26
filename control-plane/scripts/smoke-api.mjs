@@ -68,6 +68,12 @@ async function waitForHealth(port, child) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/health`);
       if (response.ok) {
+        if (!response.headers.get("x-correlation-id")) {
+          throw new Error("API /health response is missing x-correlation-id");
+        }
+        if (!response.headers.get("x-request-id")) {
+          throw new Error("API /health response is missing x-request-id");
+        }
         return response.json();
       }
     } catch {

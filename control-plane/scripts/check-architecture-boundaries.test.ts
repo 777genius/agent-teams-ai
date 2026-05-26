@@ -104,6 +104,28 @@ describe("check-architecture-boundaries", () => {
     });
   });
 
+  it("fails when shared production code imports NestJS", async () => {
+    await writeSharedFile(
+      "src/framework-leak.ts",
+      'import { Injectable } from "@nestjs/common";\nexport const frameworkLeak = Injectable;\n',
+    );
+
+    await expect(runArchitectureCheck()).rejects.toMatchObject({
+      stderr: expect.stringContaining("shared kernel must not import Nest"),
+    });
+  });
+
+  it("fails when shared production code imports platform packages", async () => {
+    await writeSharedFile(
+      "src/platform-leak.ts",
+      'import { ControlPlaneConfigService } from "@agent-teams-control-plane/platform-config";\nexport const platformLeak = ControlPlaneConfigService;\n',
+    );
+
+    await expect(runArchitectureCheck()).rejects.toMatchObject({
+      stderr: expect.stringContaining("shared kernel must not import platform adapters"),
+    });
+  });
+
   async function runArchitectureCheck() {
     return execFileAsync("node", [scriptPath], {
       env: {
@@ -151,5 +173,33 @@ describe("check-architecture-boundaries", () => {
       await mkdir(dirname(filePath), { recursive: true });
       await writeFile(filePath, source);
     }
+  }
+
+  async function writeSharedFile(path: string, source: string) {
+    const sharedRoot = join(root, "packages/shared");
+    await mkdir(sharedRoot, { recursive: true });
+    await writeFile(
+      join(sharedRoot, "package.json"),
+      `${JSON.stringify(
+        {
+          name: "@agent-teams-control-plane/shared",
+          version: "0.0.0",
+          private: true,
+          type: "module",
+          exports: {
+            ".": {
+              default: "./src/index.ts",
+              types: "./src/index.ts",
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const filePath = join(sharedRoot, path);
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeFile(filePath, source);
   }
 });

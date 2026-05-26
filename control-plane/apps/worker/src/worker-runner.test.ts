@@ -10,6 +10,10 @@ describe("WorkerRunner", () => {
     const logger = createSilentLogger();
     const configService = {
       getSafeSummary: () => ({
+        build: {
+          createdAtConfigured: false,
+          revisionConfigured: false,
+        },
         environment: "test",
         github: {
           appIdConfigured: false,

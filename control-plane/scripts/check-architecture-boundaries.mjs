@@ -9,6 +9,7 @@ const root = process.env.CONTROL_PLANE_ARCHITECTURE_ROOT
 const appsRoot = join(root, "apps");
 const packagesRoot = join(root, "packages");
 const featuresRoot = join(packagesRoot, "features");
+const sharedRoot = join(packagesRoot, "shared");
 const sourceExtensions = new Set([".ts", ".tsx", ".mts", ".cts"]);
 const boundaryLayerSegments = new Set(["domain", "application"]);
 const privateFeatureExportSegments = new Set(["application", "domain", "infrastructure"]);
@@ -46,6 +47,61 @@ const forbiddenBoundaryImports = [
   {
     pattern: /^@agent-teams-control-plane\/platform-/,
     reason: "Application/domain depend on ports and shared abstractions, not platform",
+  },
+];
+
+const forbiddenSharedImports = [
+  {
+    pattern: /^@agent-teams-control-plane\/platform-/,
+    reason: "shared kernel must not import platform adapters",
+  },
+  {
+    pattern: /^@agent-teams-control-plane\/features-/,
+    reason: "shared kernel must not import feature packages",
+  },
+  { pattern: /^@nestjs(?:\/.*)?$/, reason: "shared kernel must not import Nest" },
+  {
+    pattern: /^@prisma\/client(?:\/.*)?$/,
+    reason: "shared kernel must not import DB SDKs",
+  },
+  { pattern: /^@octokit(?:\/.*)?$/, reason: "shared kernel must not import GitHub SDKs" },
+  {
+    pattern: /^fastify(?:\/.*)?$/,
+    reason: "shared kernel must not import HTTP frameworks",
+  },
+  {
+    pattern: /^express(?:\/.*)?$/,
+    reason: "shared kernel must not import HTTP frameworks",
+  },
+  {
+    pattern: /^@trpc(?:\/.*)?$/,
+    reason: "shared kernel must not import transport frameworks",
+  },
+  { pattern: /^bullmq(?:\/.*)?$/, reason: "shared kernel must not import queue SDKs" },
+  { pattern: /^pg(?:\/.*)?$/, reason: "shared kernel must not import DB clients" },
+  {
+    pattern: /^telegraf(?:\/.*)?$/,
+    reason: "shared kernel must not import messenger SDKs",
+  },
+  {
+    pattern: /^grammy(?:\/.*)?$/,
+    reason: "shared kernel must not import messenger SDKs",
+  },
+  {
+    pattern: /^@grammyjs(?:\/.*)?$/,
+    reason: "shared kernel must not import messenger SDKs",
+  },
+  {
+    pattern: /^@slack\/(?:bolt|web-api)(?:\/.*)?$/,
+    reason: "shared kernel must not import messenger SDKs",
+  },
+  {
+    pattern: /^discord\.js(?:\/.*)?$/,
+    reason: "shared kernel must not import messenger SDKs",
+  },
+  {
+    pattern: /^node-telegram-bot-api(?:\/.*)?$/,
+    reason: "shared kernel must not import messenger SDKs",
   },
 ];
 
@@ -100,6 +156,15 @@ const boundaryFiles = allSourceFiles.filter(isFeatureDomainOrApplicationFile);
 
 for (const manifestPath of packageManifestFiles) {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  if (isSharedPackageManifest(manifestPath)) {
+    const dependencyNames = listDependencyNames(manifest);
+    if (dependencyNames.length > 0) {
+      violations.push({
+        file: manifestPath,
+        message: `shared kernel package must remain dependency-free; found ${dependencyNames.join(", ")}`,
+      });
+    }
+  }
   for (const dependencyName of listDependencyNames(manifest)) {
     const match = forbiddenPhaseOneDependencies.find((item) =>
       item.pattern.test(dependencyName),
@@ -135,6 +200,21 @@ for (const file of boundaryFiles) {
 for (const file of allSourceFiles) {
   const source = readFileSync(file, "utf8");
   for (const imported of extractImportSpecifiers(source)) {
+    if (isSharedProductionFile(file)) {
+      const match = forbiddenSharedImports.find((item) => item.pattern.test(imported));
+      if (match) {
+        violations.push({
+          file,
+          message: `imports ${imported}: ${match.reason}`,
+        });
+      }
+      if (!isRelativeImport(imported)) {
+        violations.push({
+          file,
+          message: `imports ${imported}: shared kernel production code must use only relative imports`,
+        });
+      }
+    }
     if (isCrossFeatureInfrastructureImport(file, imported)) {
       violations.push({
         file,
@@ -327,6 +407,25 @@ function listDependencyNames(manifest) {
       ? Object.keys(manifest[section])
       : [],
   );
+}
+
+function isSharedPackageManifest(file) {
+  return normalize(file) === join(sharedRoot, "package.json");
+}
+
+function isSharedProductionFile(file) {
+  const relativePath = relative(sharedRoot, file);
+  return (
+    !relativePath.startsWith("..") &&
+    !relativePath.startsWith("/") &&
+    relativePath.startsWith("src") &&
+    !file.endsWith(".test.ts") &&
+    !file.endsWith(".test.tsx")
+  );
+}
+
+function isRelativeImport(imported) {
+  return imported.startsWith(".");
 }
 
 function isFeatureDomainOrApplicationFile(file) {

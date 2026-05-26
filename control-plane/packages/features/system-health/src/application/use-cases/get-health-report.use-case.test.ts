@@ -6,6 +6,10 @@ describe("GetHealthReportUseCase", () => {
   it("builds a health report without NestJS runtime", () => {
     const useCase = new GetHealthReportUseCase({
       read: () => ({
+        build: {
+          createdAt: "2026-05-26T10:20:30.000Z",
+          revision: "abc123",
+        },
         githubRestApiVersionConfigured: false,
         mode: "local-disabled",
         publicBaseUrlConfigured: false,
@@ -20,6 +24,10 @@ describe("GetHealthReportUseCase", () => {
       },
       mode: "local-disabled",
       service: {
+        build: {
+          createdAt: "2026-05-26T10:20:30.000Z",
+          revision: "abc123",
+        },
         name: "agent-teams-control-plane",
         version: "0.0.0",
       },
