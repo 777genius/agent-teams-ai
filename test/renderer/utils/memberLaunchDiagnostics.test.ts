@@ -323,6 +323,46 @@ describe('member launch diagnostics', () => {
     });
   });
 
+  it('keeps unsafe spawn diagnostics over benign runtime warnings for provisioned-but-not-alive entries', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      teamName: 'signal-ops',
+      runId: 'bb64da3b-ed5e-4bae-813d-70e26418f9e5',
+      memberName: 'tom',
+      spawnEntry: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+        livenessKind: 'not_found',
+        runtimeDiagnostic: 'Runtime is no longer registered',
+        runtimeDiagnosticSeverity: 'warning',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+      },
+      runtimeEntry: {
+        memberName: 'tom',
+        alive: false,
+        restartable: true,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeDiagnosticSeverity: 'warning',
+        updatedAt: '2026-05-25T20:14:03.317Z',
+      },
+    });
+
+    expect(payload).toMatchObject({
+      launchState: 'failed_to_start',
+      spawnStatus: 'error',
+      runtimeAlive: false,
+      hardFailure: true,
+      runtimeDiagnostic: 'Runtime is no longer registered',
+      runtimeDiagnosticSeverity: 'warning',
+    });
+    expect(payload.diagnostics).toContain('Runtime is no longer registered');
+  });
+
   it('prefers stopped runtime liveness over stale spawn liveness in copy diagnostics', () => {
     const payload = buildMemberLaunchDiagnosticsPayload({
       teamName: 'signal-ops',

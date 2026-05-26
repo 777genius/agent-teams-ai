@@ -1,5 +1,8 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import type {
   MemberSpawnStatusEntry,
@@ -82,13 +85,7 @@ function parseStatusUpdatedAtMs(value: string | undefined): number | null {
 
 function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
   if (isBootstrapConfirmedProvisionedButNotAliveFailure(entry)) {
-    return (
-      entry?.runtimeDiagnosticSeverity === 'error' ||
-      entry?.livenessKind === 'not_found' ||
-      entry?.livenessKind === 'registered_only' ||
-      entry?.livenessKind === 'shell_only' ||
-      entry?.livenessKind === 'stale_metadata'
-    );
+    return hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry);
   }
   return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
 }

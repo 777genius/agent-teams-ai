@@ -1,4 +1,7 @@
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import { isHealthyOpenCodeAppMcpConnectivityAdvisory } from './openCodeAdvisoryHealth';
 
@@ -543,26 +546,38 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     : (spawnEntry?.livenessKind ?? runtimeEntry?.livenessKind);
   const bootstrapConfirmedProvisionedButNotAlive =
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
-  const hasStoppedRuntimeEvidence =
-    hasStoppedRuntimeLivenessKind(runtimeEntry?.livenessKind) ||
-    hasStoppedRuntimeLivenessKind(spawnEntry?.livenessKind);
+  const hasUnsafeSpawnProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawnEntry);
+  const hasUnsafeRuntimeProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+      runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+      runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+      livenessKind: runtimeEntry?.livenessKind,
+    });
+  const hasUnsafeProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    (hasUnsafeSpawnProvisionedButNotAliveEvidence ||
+      hasUnsafeRuntimeProvisionedButNotAliveEvidence);
   const useBootstrapConfirmedVisualState =
     bootstrapConfirmedProvisionedButNotAlive &&
     spawnEntry?.runtimeDiagnosticSeverity !== 'error' &&
     runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
-    !hasStoppedRuntimeEvidence;
+    !hasUnsafeProvisionedButNotAliveEvidence;
   const useBootstrapConfirmedRuntimeAlive =
     useBootstrapConfirmedVisualState &&
     runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
-    spawnEntry?.runtimeDiagnosticSeverity !== 'error' &&
-    !hasStoppedRuntimeEvidence;
+    spawnEntry?.runtimeDiagnosticSeverity !== 'error';
   const runtimeEntryDiagnostic = boundedString(runtimeEntry?.runtimeDiagnostic);
   const hasRuntimeDiagnosticEvidence =
     runtimeEntryDiagnostic != null || runtimeEntry?.runtimeDiagnosticSeverity != null;
   const useSpawnDiagnosticsForHealedEntry =
     bootstrapConfirmedProvisionedButNotAlive && !hasRuntimeDiagnosticEvidence;
   const keepSpawnFailureDiagnostics =
-    useSpawnDiagnosticsForHealedEntry || spawnEntry?.runtimeDiagnosticSeverity === 'error';
+    useSpawnDiagnosticsForHealedEntry ||
+    hasUnsafeSpawnProvisionedButNotAliveEvidence ||
+    spawnEntry?.runtimeDiagnosticSeverity === 'error';
   const launchState = useBootstrapConfirmedVisualState
     ? 'confirmed_alive'
     : (spawnEntry?.launchState ?? params.launchState);
@@ -811,10 +826,7 @@ function parseStatusUpdatedAtMs(value: string | undefined): number | null {
 
 function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
   if (isBootstrapConfirmedProvisionedButNotAliveFailure(entry)) {
-    return (
-      entry?.runtimeDiagnosticSeverity === 'error' ||
-      hasStoppedRuntimeLivenessKind(entry?.livenessKind)
-    );
+    return hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry);
   }
   return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
 }

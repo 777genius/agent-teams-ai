@@ -1,6 +1,7 @@
 import { isMixedOpenCodeSideLanePlan, planTeamRuntimeLanes } from '@features/team-runtime-lanes';
 import {
   hasBootstrapConfirmationProofForLaunchFailure,
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
   isProvisionedButNotAliveLaunchFailure,
 } from '@shared/utils/teamLaunchFailureReason';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
@@ -70,26 +71,6 @@ function hasBootstrapConfirmationProof(
   );
 }
 
-function hasStoppedRuntimeLivenessKind(
-  livenessKind: PersistedTeamLaunchMemberState['livenessKind'] | undefined
-): boolean {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
-}
-
-function hasUnsafeRuntimeFailureEvidence(
-  member: PersistedTeamLaunchMemberState | undefined
-): boolean {
-  return (
-    member?.runtimeDiagnosticSeverity === 'error' ||
-    hasStoppedRuntimeLivenessKind(member?.livenessKind)
-  );
-}
-
 function shouldProjectProvisionedButNotAliveAsConfirmed(params: {
   member: PersistedTeamLaunchMemberState | undefined;
   bootstrapMember?: PersistedTeamLaunchMemberState;
@@ -99,8 +80,8 @@ function shouldProjectProvisionedButNotAliveAsConfirmed(params: {
     return false;
   }
   if (
-    hasUnsafeRuntimeFailureEvidence(member) ||
-    hasUnsafeRuntimeFailureEvidence(params.bootstrapMember)
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(member) ||
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(params.bootstrapMember)
   ) {
     return false;
   }
@@ -362,7 +343,7 @@ function reconcileSummaryProjectionWithBootstrap(
     return (
       bootstrapMember != null &&
       hasBootstrapConfirmationProofForLaunchFailure(bootstrapMember) &&
-      !hasUnsafeRuntimeFailureEvidence(bootstrapMember) &&
+      !hasUnsafeProvisionedButNotAliveRuntimeEvidence(bootstrapMember) &&
       isBootstrapMemberEvidenceCurrentForMember(
         { firstSpawnAcceptedAt: projectionBoundary, lastEvaluatedAt: projectionBoundary },
         bootstrapMember,

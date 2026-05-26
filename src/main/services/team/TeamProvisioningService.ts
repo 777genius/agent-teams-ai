@@ -122,6 +122,7 @@ import {
   isTeamInternalControlMessageText,
   stripExactInternalControlEchoPrefix,
 } from '@shared/utils/teamInternalControlMessages';
+import { hasUnsafeProvisionedButNotAliveRuntimeEvidence } from '@shared/utils/teamLaunchFailureReason';
 import {
   parseAllTeammateMessages,
   type ParsedTeammateContent,
@@ -24177,6 +24178,34 @@ export class TeamProvisioningService {
         current.bootstrapConfirmed === true || current.launchState === 'confirmed_alive';
       const shouldSuppressWeakRuntimeMetadataForConfirmedBootstrap =
         hasConfirmedBootstrap && !hasStrongEvidence;
+      const failureReason = current.hardFailureReason ?? current.error ?? current.runtimeDiagnostic;
+      const bootstrapProofClearableFailure =
+        isBootstrapProofClearableLaunchFailureReason(failureReason);
+      const metadataRuntimeDiagnosticForUnsafe = buildRuntimeDiagnosticForSpawn(metadata);
+      const unsafeRuntimeDiagnosticEvidence =
+        metadataRuntimeDiagnosticForUnsafe &&
+        current.runtimeDiagnostic &&
+        metadataRuntimeDiagnosticForUnsafe !== current.runtimeDiagnostic
+          ? `${metadataRuntimeDiagnosticForUnsafe}; ${current.runtimeDiagnostic}`
+          : (metadataRuntimeDiagnosticForUnsafe ?? current.runtimeDiagnostic);
+      const hasUnsafeProvisionedButNotAliveFailure =
+        isProvisionedButNotAliveFailureReason(failureReason) &&
+        hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+          ...current,
+          runtimeDiagnostic: unsafeRuntimeDiagnosticEvidence,
+          runtimeDiagnosticSeverity:
+            metadata.runtimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity,
+          livenessKind: metadata.livenessKind ?? current.livenessKind,
+        });
+      const shouldPreserveUnsafeMetadataLivenessKind =
+        hasUnsafeProvisionedButNotAliveFailure &&
+        (metadata.livenessKind === 'not_found' ||
+          metadata.livenessKind === 'shell_only' ||
+          ((metadata.livenessKind === 'registered_only' ||
+            metadata.livenessKind === 'stale_metadata') &&
+            (metadata.runtimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity) !== 'error' &&
+            !mentionsProcessTableUnavailable(unsafeRuntimeDiagnosticEvidence) &&
+            !mentionsProcessTableUnavailable(failureReason)));
       let runtimeDiagnostic: string | undefined;
       let runtimeDiagnosticSeverity: TeamAgentRuntimeDiagnosticSeverity | undefined;
       if (shouldPreserveProcessBootstrapTransportDiagnostic) {
@@ -24190,7 +24219,7 @@ export class TeamProvisioningService {
           runtimeDiagnostic = current.runtimeDiagnostic;
           runtimeDiagnosticSeverity = current.runtimeDiagnosticSeverity;
         } else {
-          const metadataRuntimeDiagnostic = buildRuntimeDiagnosticForSpawn(metadata);
+          const metadataRuntimeDiagnostic = metadataRuntimeDiagnosticForUnsafe;
           if (
             metadataRuntimeDiagnostic &&
             !shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(metadataRuntimeDiagnostic)
@@ -24205,7 +24234,8 @@ export class TeamProvisioningService {
       }
       const metadataLivenessKind = hasConfirmedBootstrap
         ? metadata.livenessKind === 'runtime_process' ||
-          metadata.livenessKind === 'confirmed_bootstrap'
+          metadata.livenessKind === 'confirmed_bootstrap' ||
+          shouldPreserveUnsafeMetadataLivenessKind
           ? metadata.livenessKind
           : current.livenessKind === 'stale_metadata' || current.livenessKind === 'registered_only'
             ? 'confirmed_bootstrap'
@@ -24225,9 +24255,6 @@ export class TeamProvisioningService {
             : {}),
         livenessLastCheckedAt: nowIso(),
       };
-      const failureReason = current.hardFailureReason ?? current.error;
-      const bootstrapProofClearableFailure =
-        isBootstrapProofClearableLaunchFailureReason(failureReason);
       const hasWeakEvidence =
         metadata.livenessKind != null && !hasStrongEvidence && current.bootstrapConfirmed !== true;
       if (
@@ -24271,7 +24298,8 @@ export class TeamProvisioningService {
       if (
         hasStrongEvidence &&
         current.launchState === 'failed_to_start' &&
-        bootstrapProofClearableFailure
+        bootstrapProofClearableFailure &&
+        !hasUnsafeProvisionedButNotAliveFailure
       ) {
         nextEntry.status = 'online';
         nextEntry.agentToolAccepted = true;
@@ -24282,7 +24310,12 @@ export class TeamProvisioningService {
         nextEntry.livenessSource = current.bootstrapConfirmed ? current.livenessSource : 'process';
         nextEntry.launchState = deriveMemberLaunchState(nextEntry);
       }
-      if (hasConfirmedBootstrap && current.hardFailure === true && bootstrapProofClearableFailure) {
+      if (
+        hasConfirmedBootstrap &&
+        current.hardFailure === true &&
+        bootstrapProofClearableFailure &&
+        !hasUnsafeProvisionedButNotAliveFailure
+      ) {
         nextEntry.status = 'online';
         nextEntry.agentToolAccepted = true;
         nextEntry.runtimeAlive = true;
@@ -24294,7 +24327,10 @@ export class TeamProvisioningService {
         nextEntry.launchState = deriveMemberLaunchState(nextEntry);
       }
       const healedConfirmedBootstrapFailure =
-        hasConfirmedBootstrap && current.hardFailure === true && bootstrapProofClearableFailure;
+        hasConfirmedBootstrap &&
+        current.hardFailure === true &&
+        bootstrapProofClearableFailure &&
+        !hasUnsafeProvisionedButNotAliveFailure;
       if (hasWeakEvidence && !healedConfirmedBootstrapFailure) {
         nextEntry.runtimeAlive = false;
         if (nextEntry.livenessSource === 'process') {
@@ -26663,7 +26699,14 @@ export class TeamProvisioningService {
       if (current.launchState === 'skipped_for_launch' || current.skippedForLaunch === true) {
         continue;
       }
-      const failureReason = current.hardFailureReason ?? current.error;
+      const failureReason = current.hardFailureReason ?? current.error ?? current.runtimeDiagnostic;
+      const provisionedButNotAliveFailure = isProvisionedButNotAliveFailureReason(failureReason);
+      if (
+        provisionedButNotAliveFailure &&
+        hasUnsafeProvisionedButNotAliveRuntimeEvidence(current)
+      ) {
+        continue;
+      }
       if (
         current.launchState === 'failed_to_start' &&
         !isBootstrapProofClearableLaunchFailureReason(failureReason)
@@ -26777,6 +26820,12 @@ export class TeamProvisioningService {
       const failureReason =
         current.hardFailureReason ?? persistedError ?? current.runtimeDiagnostic;
       const provisionedButNotAliveFailure = isProvisionedButNotAliveFailureReason(failureReason);
+      if (
+        provisionedButNotAliveFailure &&
+        hasUnsafeProvisionedButNotAliveRuntimeEvidence(current)
+      ) {
+        continue;
+      }
       const hasFailure =
         current.launchState === 'failed_to_start' ||
         current.hardFailure === true ||
@@ -29013,6 +29062,12 @@ export class TeamProvisioningService {
       }
       const failureReason = current.hardFailureReason ?? current.runtimeDiagnostic;
       const provisionedButNotAliveFailure = isProvisionedButNotAliveFailureReason(failureReason);
+      if (
+        provisionedButNotAliveFailure &&
+        hasUnsafeProvisionedButNotAliveRuntimeEvidence(current)
+      ) {
+        continue;
+      }
       const canClearFailedBootstrap =
         current.launchState !== 'failed_to_start' ||
         isBootstrapProofClearableLaunchFailureReason(failureReason);
@@ -29499,12 +29554,57 @@ export class TeamProvisioningService {
       const hadAutoClearableFailure = isAutoClearableLaunchFailureReason(initialFailureReason);
       const requiresConfirmedBootstrapToClearFailure =
         isCliProvisionedButNotAliveFailureReason(initialFailureReason);
+      const metadataRuntimeDiagnostic = runtimeMetadata?.[1].runtimeDiagnostic;
+      const metadataRuntimeDiagnosticSeverity = runtimeMetadata?.[1].runtimeDiagnosticSeverity;
+      const metadataLivenessKind = runtimeMetadata?.[1].livenessKind;
+      const refreshedRuntimeDiagnosticEvidence =
+        metadataRuntimeDiagnostic &&
+        current.runtimeDiagnostic &&
+        metadataRuntimeDiagnostic !== current.runtimeDiagnostic
+          ? `${metadataRuntimeDiagnostic}; ${current.runtimeDiagnostic}`
+          : (metadataRuntimeDiagnostic ?? current.runtimeDiagnostic);
+      const hasUnsafeProvisionedButNotAliveFailure =
+        requiresConfirmedBootstrapToClearFailure &&
+        hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+          ...current,
+          runtimeDiagnostic: refreshedRuntimeDiagnosticEvidence,
+          runtimeDiagnosticSeverity:
+            metadataRuntimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity,
+          livenessKind: metadataLivenessKind ?? current.livenessKind,
+        });
+      const shouldPreserveUnsafeMetadataLivenessKind =
+        hasUnsafeProvisionedButNotAliveFailure &&
+        (metadataLivenessKind === 'not_found' ||
+          metadataLivenessKind === 'shell_only' ||
+          ((metadataLivenessKind === 'registered_only' ||
+            metadataLivenessKind === 'stale_metadata') &&
+            (metadataRuntimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity) !== 'error' &&
+            !mentionsProcessTableUnavailable(refreshedRuntimeDiagnosticEvidence) &&
+            !mentionsProcessTableUnavailable(initialFailureReason)));
+      const nextLivenessKind = current.bootstrapConfirmed
+        ? metadataLivenessKind === 'runtime_process' ||
+          metadataLivenessKind === 'confirmed_bootstrap' ||
+          shouldPreserveUnsafeMetadataLivenessKind
+          ? metadataLivenessKind
+          : current.livenessKind === 'stale_metadata' || current.livenessKind === 'registered_only'
+            ? 'confirmed_bootstrap'
+            : (current.livenessKind ?? 'confirmed_bootstrap')
+        : (metadataLivenessKind ?? current.livenessKind);
       current.runtimeAlive = observedRuntimeAlive;
       current.lastRuntimeAliveAt = observedRuntimeAlive ? now : current.lastRuntimeAliveAt;
-      current.livenessKind = runtimeMetadata?.[1].livenessKind;
+      current.livenessKind = nextLivenessKind;
       current.pidSource = runtimeMetadata?.[1].pidSource;
-      current.runtimeDiagnostic = runtimeMetadata?.[1].runtimeDiagnostic;
-      current.runtimeDiagnosticSeverity = runtimeMetadata?.[1].runtimeDiagnosticSeverity;
+      const shouldKeepUnsafeRuntimeDiagnostic =
+        hasUnsafeProvisionedButNotAliveFailure &&
+        (metadataRuntimeDiagnostic == null ||
+          (current.runtimeDiagnosticSeverity === 'error' &&
+            metadataRuntimeDiagnosticSeverity !== 'error'));
+      current.runtimeDiagnostic = shouldKeepUnsafeRuntimeDiagnostic
+        ? current.runtimeDiagnostic
+        : metadataRuntimeDiagnostic;
+      current.runtimeDiagnosticSeverity = shouldKeepUnsafeRuntimeDiagnostic
+        ? current.runtimeDiagnosticSeverity
+        : metadataRuntimeDiagnosticSeverity;
       current.sources = {
         ...(current.sources ?? {}),
         processAlive: observedRuntimeAlive || undefined,
@@ -29534,6 +29634,7 @@ export class TeamProvisioningService {
       if (
         current.bootstrapConfirmed &&
         !isOpenCodeSecondaryLaneMember &&
+        !hasUnsafeProvisionedButNotAliveFailure &&
         isBootstrapProofClearableLaunchFailureReason(current.hardFailureReason)
       ) {
         if (isProvisionedButNotAliveFailureReason(current.hardFailureReason)) {
@@ -29557,6 +29658,7 @@ export class TeamProvisioningService {
       }
       const canApplyBootstrapSuccess =
         !heartbeatReason &&
+        !hasUnsafeProvisionedButNotAliveFailure &&
         (current.launchState !== 'failed_to_start' ||
           hadAutoClearableFailure ||
           isBootstrapProofClearableLaunchFailureReason(

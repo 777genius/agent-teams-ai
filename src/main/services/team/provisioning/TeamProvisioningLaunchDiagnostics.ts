@@ -1,7 +1,13 @@
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+  mentionsProcessTableUnavailable,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import type { WorkspaceTrustExecutionResult } from '@features/workspace-trust/main';
 import type { MemberSpawnStatusEntry, TeamLaunchDiagnosticItem } from '@shared/types';
+
+export { mentionsProcessTableUnavailable };
 
 export interface TeamProvisioningLaunchDiagnosticsRun {
   isLaunch: boolean;
@@ -13,19 +19,6 @@ interface LaunchDiagnosticsClockOptions {
 }
 
 const defaultNowIso = (): string => new Date().toISOString();
-
-export function mentionsProcessTableUnavailable(value: string | undefined): boolean {
-  return /\bprocess table\b.*\bunavailable\b/i.test(value ?? '');
-}
-
-function hasStoppedRuntimeLivenessKind(livenessKind: MemberSpawnStatusEntry['livenessKind']) {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
-}
 
 export function buildLaunchDiagnosticsFromRun(
   run: TeamProvisioningLaunchDiagnosticsRun,
@@ -43,8 +36,7 @@ export function buildLaunchDiagnosticsFromRun(
       isBootstrapConfirmedProvisionedButNotAliveFailure(entry);
     if (
       bootstrapConfirmedProvisionedButNotAlive &&
-      (entry.runtimeDiagnosticSeverity === 'error' ||
-        hasStoppedRuntimeLivenessKind(entry.livenessKind))
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry)
     ) {
       items.push({
         id: `${memberName}:bootstrap_stalled`,

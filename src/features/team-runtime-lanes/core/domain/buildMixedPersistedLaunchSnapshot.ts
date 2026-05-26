@@ -1,6 +1,9 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type {
@@ -95,15 +98,6 @@ function preservesStrongRuntimeAlive(value: {
   );
 }
 
-function hasStoppedRuntimeLivenessKind(livenessKind: TeamAgentRuntimeLivenessKind | undefined) {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
-}
-
 function canHealBootstrapConfirmedProvisionedButNotAliveFailure(
   entry:
     | (Parameters<typeof isBootstrapConfirmedProvisionedButNotAliveFailure>[0] & {
@@ -114,8 +108,7 @@ function canHealBootstrapConfirmedProvisionedButNotAliveFailure(
 ): boolean {
   return (
     isBootstrapConfirmedProvisionedButNotAliveFailure(entry) &&
-    entry?.runtimeDiagnosticSeverity !== 'error' &&
-    !hasStoppedRuntimeLivenessKind(entry?.livenessKind)
+    !hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry)
   );
 }
 

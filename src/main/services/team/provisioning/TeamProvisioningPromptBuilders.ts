@@ -2,7 +2,10 @@ import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { CROSS_TEAM_PREFIX_TAG } from '@shared/constants/crossTeam';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 import {
   getTeamTaskWorkflowColumn,
   isTeamTaskActivelyWorked,
@@ -20,7 +23,6 @@ import { getAgentLanguageInstruction } from './TeamProvisioningAgentLanguage';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
   MemberSpawnStatusEntry,
-  TeamAgentRuntimeLivenessKind,
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
@@ -46,27 +48,17 @@ interface CanonicalSendMessageExample {
 const SEND_MESSAGE_CANONICAL_FIELDS = ['to', 'summary', 'message'] as const;
 const SEND_MESSAGE_FORBIDDEN_ALIAS_FIELDS = ['recipient', 'content'] as const;
 
-function hasStoppedRuntimeLivenessKind(livenessKind: TeamAgentRuntimeLivenessKind | undefined) {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
-}
-
-function isErroredProvisionedButNotAliveStatus(status: MemberSpawnStatusEntry | undefined) {
+function isUnsafeProvisionedButNotAliveStatus(status: MemberSpawnStatusEntry | undefined) {
   return (
     isBootstrapConfirmedProvisionedButNotAliveFailure(status) &&
-    status?.runtimeDiagnosticSeverity === 'error'
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(status)
   );
 }
 
 function isSafelyHealedProvisionedButNotAliveStatus(status: MemberSpawnStatusEntry | undefined) {
   return (
     isBootstrapConfirmedProvisionedButNotAliveFailure(status) &&
-    !isErroredProvisionedButNotAliveStatus(status) &&
-    !hasStoppedRuntimeLivenessKind(status?.livenessKind)
+    !isUnsafeProvisionedButNotAliveStatus(status)
   );
 }
 

@@ -11,7 +11,10 @@ import { buildMemberColorMap, shouldDisplayMemberCurrentTask } from '@renderer/u
 import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 
 import { MemberCard, type RuntimeTelemetryScale } from './MemberCard';
@@ -355,17 +358,6 @@ function areMemberRuntimeEntriesEquivalent(
     }
   }
   return true;
-}
-
-function hasStoppedRuntimeLivenessKind(
-  livenessKind: TeamAgentRuntimeEntry['livenessKind'] | undefined
-): boolean {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
 }
 
 function isFiniteNonNegative(value: number | undefined): value is number {
@@ -940,14 +932,19 @@ export const MemberList = memo(function MemberList({
           const runtimeEntry = memberRuntimeEntries?.get(member.name);
           const bootstrapConfirmedProvisionedButNotAlive =
             isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
-          const hasStoppedRuntimeEvidence =
-            hasStoppedRuntimeLivenessKind(runtimeEntry?.livenessKind) ||
-            hasStoppedRuntimeLivenessKind(spawnEntry?.livenessKind);
+          const hasUnsafeProvisionedButNotAliveEvidence =
+            bootstrapConfirmedProvisionedButNotAlive &&
+            (hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawnEntry) ||
+              hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+                runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+                runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+                livenessKind: runtimeEntry?.livenessKind,
+              }));
           const canPromoteBootstrapConfirmedVisualState =
             bootstrapConfirmedProvisionedButNotAlive &&
             spawnEntry?.runtimeDiagnosticSeverity !== 'error' &&
             runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
-            !hasStoppedRuntimeEvidence;
+            !hasUnsafeProvisionedButNotAliveEvidence;
           const effectiveSpawnStatus = canPromoteBootstrapConfirmedVisualState
             ? 'online'
             : spawnEntry?.status;
@@ -957,8 +954,7 @@ export const MemberList = memo(function MemberList({
           const useBootstrapConfirmedRuntimeAlive =
             canPromoteBootstrapConfirmedVisualState &&
             runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
-            spawnEntry?.runtimeDiagnosticSeverity !== 'error' &&
-            !hasStoppedRuntimeEvidence;
+            spawnEntry?.runtimeDiagnosticSeverity !== 'error';
           const effectiveSpawnRuntimeAlive = useBootstrapConfirmedRuntimeAlive
             ? true
             : spawnEntry?.runtimeAlive;

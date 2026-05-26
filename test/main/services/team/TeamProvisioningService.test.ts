@@ -20422,6 +20422,97 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.tom?.runtimeDiagnosticSeverity).toBeUndefined();
   });
 
+  it('does not heal provisioned-but-not-alive live status when refreshed runtime metadata is unsafe', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-provisioned-not-alive-live-runtime-error-stays-failed';
+    const leadSessionId = 'lead-session';
+    const projectPath = '/Users/test/proj';
+    const acceptedAt = new Date(Date.now() - 90_000).toISOString();
+    const bootstrapAt = new Date(Date.now() - 60_000).toISOString();
+    const cleanupAt = new Date(Date.now() - 30_000).toISOString();
+    const runtimePid = 27_036;
+    const exitReason =
+      'CLI process exited (code 1) - team provisioned but not alive; process table unavailable';
+    const processTableReason =
+      'runtime pid could not be verified because process table is unavailable';
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['tom']);
+    writeLaunchState(
+      teamName,
+      leadSessionId,
+      {
+        tom: {
+          providerId: 'anthropic',
+          model: 'sonnet',
+          laneId: 'primary',
+          laneKind: 'primary',
+          laneOwnerProviderId: 'anthropic',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          runtimePid,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: exitReason,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic: processTableReason,
+          runtimeDiagnosticSeverity: 'warning',
+          firstSpawnAcceptedAt: acceptedAt,
+          lastEvaluatedAt: cleanupAt,
+        },
+      },
+      { launchPhase: 'finished', updatedAt: cleanupAt }
+    );
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'tom',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse(acceptedAt),
+          lastObservedAt: Date.parse(bootstrapAt),
+        },
+      ],
+      bootstrapAt
+    );
+
+    const svc = new TeamProvisioningService();
+    privateHarness(svc).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'tom',
+            {
+              alive: false,
+              backendType: 'process',
+              providerId: 'anthropic',
+              livenessKind: 'not_found',
+              pidSource: 'process_table',
+              runtimeDiagnostic: 'Runtime process crashed',
+              runtimeDiagnosticSeverity: 'error',
+              metricsPid: runtimePid,
+              model: 'sonnet',
+            },
+          ],
+        ])
+    );
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.statuses.tom).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      bootstrapConfirmed: true,
+      runtimeAlive: false,
+      livenessKind: 'not_found',
+      hardFailure: true,
+      hardFailureReason: exitReason,
+      runtimeDiagnostic: 'Runtime process crashed',
+      runtimeDiagnosticSeverity: 'error',
+    });
+  });
+
   it('heals process-table unavailable failure when Anthropic bootstrap confirmation slightly predates delayed app acceptance', async () => {
     allowConsoleLogs();
     const teamName = 'zz-unit-process-table-unavailable-bootstrap-skew-heals';
@@ -26967,6 +27058,187 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.tom?.hardFailureReason).toBeUndefined();
     expect(result.statuses.tom?.runtimeDiagnostic).toBeUndefined();
     expect(result.statuses.tom?.runtimeDiagnosticSeverity).toBeUndefined();
+  });
+
+  it('keeps primary provisioned-but-not-alive reporting failed when runtime evidence is unsafe', async () => {
+    const teamName = 'primary-bootstrap-cli-provisioned-not-alive-runtime-error';
+    const bootstrapRunId = 'run-primary-cli-exit-runtime-error';
+    const reason = 'CLI process exited (code 1) - team provisioned but not alive';
+    writeTeamMeta(teamName, {
+      providerId: 'anthropic',
+      model: 'sonnet',
+    });
+    writeMembersMeta(teamName, [{ name: 'tom', providerId: 'anthropic', model: 'sonnet' }]);
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['tom']);
+    writeMemberBootstrapRunId(teamName, 'tom', bootstrapRunId);
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'tom',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse('2026-05-25T20:13:46.326Z'),
+          lastObservedAt: Date.parse('2026-05-25T20:13:56.110Z'),
+        },
+      ],
+      '2026-05-25T20:14:03.317Z',
+      { runId: bootstrapRunId }
+    );
+    fs.writeFileSync(
+      getTeamLaunchStatePath(teamName),
+      `${JSON.stringify(
+        createPersistedLaunchSnapshot({
+          teamName,
+          leadSessionId: 'lead-session',
+          launchPhase: 'finished',
+          expectedMembers: ['tom'],
+          members: {
+            tom: {
+              name: 'tom',
+              providerId: 'anthropic',
+              model: 'sonnet',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'anthropic',
+              launchState: 'failed_to_start',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              runtimePid: 27_036,
+              bootstrapConfirmed: true,
+              hardFailure: true,
+              hardFailureReason: reason,
+              livenessKind: 'confirmed_bootstrap',
+              pidSource: 'persisted_metadata',
+              runtimeDiagnostic: 'Runtime process crashed',
+              runtimeDiagnosticSeverity: 'error',
+              firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+              lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+              runtimeLastSeenAt: '2026-05-25T20:13:46.326Z',
+              lastEvaluatedAt: '2026-05-25T20:14:05.411Z',
+            },
+          },
+          updatedAt: '2026-05-25T20:14:05.411Z',
+        }),
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.tom).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      bootstrapConfirmed: true,
+      runtimeAlive: false,
+      livenessKind: 'stale_metadata',
+      hardFailure: true,
+      hardFailureReason: reason,
+      runtimeDiagnostic: 'Runtime process crashed',
+      runtimeDiagnosticSeverity: 'error',
+    });
+    expect(result.teamLaunchState).toBe('partial_failure');
+  });
+
+  it('keeps provisioned-but-not-alive failed when refreshed runtime evidence is unsafe', async () => {
+    const teamName = 'primary-bootstrap-cli-provisioned-not-alive-refreshed-runtime-error';
+    const bootstrapRunId = 'run-primary-cli-exit-refreshed-runtime-error';
+    const reason =
+      'CLI process exited (code 1) - team provisioned but not alive; process table unavailable';
+    writeTeamMeta(teamName, {
+      providerId: 'anthropic',
+      model: 'sonnet',
+    });
+    writeMembersMeta(teamName, [{ name: 'tom', providerId: 'anthropic', model: 'sonnet' }]);
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['tom']);
+    writeMemberBootstrapRunId(teamName, 'tom', bootstrapRunId);
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'tom',
+          status: 'bootstrap_confirmed',
+          lastAttemptAt: Date.parse('2026-05-25T20:13:46.326Z'),
+          lastObservedAt: Date.parse('2026-05-25T20:13:56.110Z'),
+        },
+      ],
+      '2026-05-25T20:14:03.317Z',
+      { runId: bootstrapRunId }
+    );
+    fs.writeFileSync(
+      getTeamLaunchStatePath(teamName),
+      `${JSON.stringify(
+        createPersistedLaunchSnapshot({
+          teamName,
+          leadSessionId: 'lead-session',
+          launchPhase: 'finished',
+          expectedMembers: ['tom'],
+          members: {
+            tom: {
+              name: 'tom',
+              providerId: 'anthropic',
+              model: 'sonnet',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'anthropic',
+              launchState: 'failed_to_start',
+              agentToolAccepted: true,
+              runtimeAlive: false,
+              runtimePid: 27_036,
+              bootstrapConfirmed: true,
+              hardFailure: true,
+              hardFailureReason: reason,
+              livenessKind: 'registered_only',
+              pidSource: 'persisted_metadata',
+              runtimeDiagnostic:
+                'runtime pid could not be verified because process table is unavailable',
+              runtimeDiagnosticSeverity: 'warning',
+              firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+              lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+              runtimeLastSeenAt: '2026-05-25T20:13:46.326Z',
+              lastEvaluatedAt: '2026-05-25T20:14:05.411Z',
+            },
+          },
+          updatedAt: '2026-05-25T20:14:05.411Z',
+        }),
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'tom',
+            {
+              alive: false,
+              livenessKind: 'not_found',
+              runtimeDiagnostic: 'Runtime process crashed',
+              runtimeDiagnosticSeverity: 'error',
+              pidSource: 'process_table',
+            },
+          ],
+        ])
+    );
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.tom).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      bootstrapConfirmed: true,
+      runtimeAlive: false,
+      livenessKind: 'not_found',
+      hardFailure: true,
+      hardFailureReason: reason,
+      runtimeDiagnostic: 'Runtime process crashed',
+      runtimeDiagnosticSeverity: 'error',
+    });
+    expect(result.teamLaunchState).toBe('partial_failure');
   });
 
   it('cleans stale confirmed primary diagnostics from an already successful mixed launch', async () => {

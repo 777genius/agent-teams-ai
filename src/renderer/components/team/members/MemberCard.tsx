@@ -28,7 +28,10 @@ import {
 import { getRuntimeMemorySourceLabel } from '@renderer/utils/memberRuntimeSummary';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 import {
   Activity,
   AlertTriangle,
@@ -136,17 +139,6 @@ function isRuntimeTelemetryTooltipBlockedTarget(
   }
   const blockedTarget = target.closest('button,a,[title],[data-runtime-telemetry-exempt="true"]');
   return Boolean(blockedTarget && blockedTarget !== currentTarget);
-}
-
-function hasStoppedRuntimeLivenessKind(
-  livenessKind: TeamAgentRuntimeEntry['livenessKind'] | undefined
-): boolean {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
 }
 
 function splitRuntimeSummaryMemory(runtimeSummary: string | undefined): {
@@ -677,10 +669,12 @@ export const MemberCard = memo(function MemberCard({
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
   const hasUnsafeBootstrapConfirmedProvisionedButNotAlive =
     bootstrapConfirmedProvisionedButNotAlive &&
-    (spawnEntry?.runtimeDiagnosticSeverity === 'error' ||
-      runtimeEntry?.runtimeDiagnosticSeverity === 'error' ||
-      hasStoppedRuntimeLivenessKind(spawnEntry?.livenessKind) ||
-      hasStoppedRuntimeLivenessKind(runtimeEntry?.livenessKind));
+    (hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawnEntry) ||
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+        runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+        runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+        livenessKind: runtimeEntry?.livenessKind,
+      }));
   const effectiveSpawnStatus = spawnStatus;
   const effectiveSpawnLaunchState = spawnLaunchState;
   const showTaskActivity = shouldDisplayMemberCurrentTask({

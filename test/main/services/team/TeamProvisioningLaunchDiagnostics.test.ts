@@ -248,6 +248,40 @@ describe('TeamProvisioningLaunchDiagnostics', () => {
     ]);
   });
 
+  it('classifies process-table-unavailable registered metadata as confirmed', () => {
+    const diagnostics = buildLaunchDiagnosticsFromRun(
+      buildRun([
+        [
+          'tom',
+          {
+            status: 'error',
+            launchState: 'failed_to_start',
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason:
+              'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+            livenessKind: 'registered_only',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+          },
+        ],
+      ]),
+      { nowIso }
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        id: 'tom:bootstrap_confirmed',
+        memberName: 'tom',
+        severity: 'info',
+        code: 'bootstrap_confirmed',
+        label: 'tom - bootstrap confirmed',
+        observedAt: NOW,
+      },
+    ]);
+  });
+
   it('keeps error diagnostics for bootstrap-confirmed provisioned-but-not-alive entries', () => {
     const diagnostics = buildLaunchDiagnosticsFromRun(
       buildRun([

@@ -1,6 +1,7 @@
 import type {
   MemberLaunchState,
   MemberSpawnStatus,
+  TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeLivenessKind,
 } from '@shared/types';
 
@@ -11,6 +12,7 @@ export interface ProvisionedButNotAliveLaunchEntry {
   hardFailureReason?: string;
   error?: string;
   runtimeDiagnostic?: string;
+  runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
   bootstrapConfirmed?: boolean;
   livenessKind?: TeamAgentRuntimeLivenessKind;
 }
@@ -34,6 +36,10 @@ export function isCliProvisionedButNotAliveFailureReason(reason?: string): boole
   return /^CLI process exited \(code (?:unknown|-?\d+|\?)\)\s+[-\u2013\u2014]\s+team provisioned but not alive$/i.test(
     normalizedText
   );
+}
+
+export function mentionsProcessTableUnavailable(value: string | undefined): boolean {
+  return /\bprocess table\b.*\bunavailable\b/i.test(value ?? '');
 }
 
 export function hasBootstrapConfirmationProofForLaunchFailure(
@@ -72,5 +78,24 @@ export function isBootstrapConfirmedProvisionedButNotAliveFailure(
   return (
     isProvisionedButNotAliveLaunchFailure(entry) &&
     hasBootstrapConfirmationProofForLaunchFailure(entry)
+  );
+}
+
+export function hasUnsafeProvisionedButNotAliveRuntimeEvidence(
+  entry: ProvisionedButNotAliveLaunchEntry | undefined
+): boolean {
+  if (entry?.runtimeDiagnosticSeverity === 'error') {
+    return true;
+  }
+  if (entry?.livenessKind === 'not_found' || entry?.livenessKind === 'shell_only') {
+    return true;
+  }
+  if (entry?.livenessKind !== 'registered_only' && entry?.livenessKind !== 'stale_metadata') {
+    return false;
+  }
+  return !(
+    mentionsProcessTableUnavailable(entry.runtimeDiagnostic) ||
+    mentionsProcessTableUnavailable(entry.hardFailureReason) ||
+    mentionsProcessTableUnavailable(entry.error)
   );
 }

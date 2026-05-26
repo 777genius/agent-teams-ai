@@ -1,5 +1,8 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 
 import {
@@ -1102,13 +1105,21 @@ export function shouldDisplayMemberCurrentTask({
 }): boolean {
   const bootstrapConfirmedProvisionedButNotAlive =
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
-  const effectiveSpawnStatus = bootstrapConfirmedProvisionedButNotAlive ? 'online' : spawnStatus;
-  const effectiveSpawnLaunchState = bootstrapConfirmedProvisionedButNotAlive
+  const unsafeProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    (hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawnEntry) ||
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+        runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+        runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+        livenessKind: runtimeEntry?.livenessKind,
+      }));
+  const useBootstrapConfirmedVisualState =
+    bootstrapConfirmedProvisionedButNotAlive && !unsafeProvisionedButNotAliveEvidence;
+  const effectiveSpawnStatus = useBootstrapConfirmedVisualState ? 'online' : spawnStatus;
+  const effectiveSpawnLaunchState = useBootstrapConfirmedVisualState
     ? 'confirmed_alive'
     : spawnLaunchState;
-  const effectiveSpawnRuntimeAlive = bootstrapConfirmedProvisionedButNotAlive
-    ? true
-    : spawnRuntimeAlive;
+  const effectiveSpawnRuntimeAlive = useBootstrapConfirmedVisualState ? true : spawnRuntimeAlive;
   if (member.removedAt || member.status === 'terminated') {
     return false;
   }
@@ -1130,14 +1141,15 @@ export function shouldDisplayMemberCurrentTask({
     return false;
   }
   if (
-    runtimeEntry?.livenessKind === 'shell_only' ||
-    spawnEntry?.livenessKind === 'shell_only' ||
-    runtimeEntry?.livenessKind === 'registered_only' ||
-    spawnEntry?.livenessKind === 'registered_only' ||
-    runtimeEntry?.livenessKind === 'stale_metadata' ||
-    spawnEntry?.livenessKind === 'stale_metadata' ||
-    runtimeEntry?.livenessKind === 'not_found' ||
-    spawnEntry?.livenessKind === 'not_found'
+    !useBootstrapConfirmedVisualState &&
+    (runtimeEntry?.livenessKind === 'shell_only' ||
+      spawnEntry?.livenessKind === 'shell_only' ||
+      runtimeEntry?.livenessKind === 'registered_only' ||
+      spawnEntry?.livenessKind === 'registered_only' ||
+      runtimeEntry?.livenessKind === 'stale_metadata' ||
+      spawnEntry?.livenessKind === 'stale_metadata' ||
+      runtimeEntry?.livenessKind === 'not_found' ||
+      spawnEntry?.livenessKind === 'not_found')
   ) {
     return false;
   }
@@ -1268,9 +1280,12 @@ export function isOpenCodeRelaunchActionable({
   }
   if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry)) {
     return (
-      spawnEntry.runtimeDiagnosticSeverity === 'error' ||
-      hasStoppedRuntimeLivenessKind(spawnEntry.livenessKind) ||
-      hasStoppedRuntimeLivenessKind(runtimeEntry?.livenessKind)
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawnEntry) ||
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+        runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+        runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+        livenessKind: runtimeEntry?.livenessKind,
+      })
     );
   }
   if (
@@ -1372,23 +1387,37 @@ export function buildMemberLaunchPresentation({
       hardFailureReason: spawnHardFailureReason,
       error: spawnError,
       runtimeDiagnostic: spawnRuntimeDiagnostic,
+      runtimeDiagnosticSeverity: spawnRuntimeDiagnosticSeverity,
       bootstrapConfirmed: spawnBootstrapConfirmed,
       livenessKind: spawnLivenessKind ?? runtimeEntry?.livenessKind,
     });
   const hasSpawnRuntimeErrorDiagnostic = spawnRuntimeDiagnosticSeverity === 'error';
   const hasRuntimeErrorDiagnostic = runtimeEntry?.runtimeDiagnosticSeverity === 'error';
-  const hasStoppedRuntimeEvidence =
-    hasStoppedRuntimeLivenessKind(runtimeEntry?.livenessKind) ||
-    hasStoppedRuntimeLivenessKind(spawnLivenessKind);
+  const hasUnsafeProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    (hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+      status: spawnStatus,
+      launchState: spawnLaunchState,
+      hardFailure: spawnHardFailure,
+      hardFailureReason: spawnHardFailureReason,
+      error: spawnError,
+      runtimeDiagnostic: spawnRuntimeDiagnostic,
+      runtimeDiagnosticSeverity: spawnRuntimeDiagnosticSeverity,
+      bootstrapConfirmed: spawnBootstrapConfirmed,
+      livenessKind: spawnLivenessKind,
+    }) ||
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+        runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
+        runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
+        livenessKind: runtimeEntry?.livenessKind,
+      }));
   const allowBootstrapConfirmedVisualPromotion =
     bootstrapConfirmedProvisionedButNotAlive &&
     !hasSpawnRuntimeErrorDiagnostic &&
     !hasRuntimeErrorDiagnostic &&
-    !hasStoppedRuntimeEvidence;
+    !hasUnsafeProvisionedButNotAliveEvidence;
   const useBootstrapConfirmedRuntimeAlive =
-    allowBootstrapConfirmedVisualPromotion &&
-    !hasRuntimeErrorDiagnostic &&
-    !hasStoppedRuntimeEvidence;
+    allowBootstrapConfirmedVisualPromotion && !hasRuntimeErrorDiagnostic;
   const suppressConfirmedLaunchRuntimeAlivePromotion =
     bootstrapConfirmedProvisionedButNotAlive && !useBootstrapConfirmedRuntimeAlive;
   const visualSpawnStatus = allowBootstrapConfirmedVisualPromotion ? 'online' : spawnStatus;
