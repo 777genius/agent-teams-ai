@@ -81,6 +81,12 @@ High-priority risks to design around before implementation:
   tested against real Postgres, not only mocked repositories.
 - **Operational noise**: polling workers can create noisy logs and DB load unless
   empty polls are quiet, backoff is jittered, and kill switches exist.
+- **Connection pool exhaustion**: API and worker processes can exhaust Postgres
+  connections if every module creates its own client or polling loops ignore
+  pool limits.
+- **Retention drift**: outbox, dead-letter, audit, and encrypted content tables
+  will grow forever unless Phase 4 defines cleanup ownership before real
+  provider traffic starts.
 
 ## Current Dependency Research
 
@@ -104,6 +110,11 @@ Official docs checked during plan hardening:
 - [Prisma raw SQL](https://www.prisma.io/docs/orm/prisma-client/using-raw-sql/raw-queries)
   supports database-specific operations, and raw SQL can be used inside Prisma
   transactions.
+- [PostgreSQL locking clauses](https://www.postgresql.org/docs/current/sql-select.html)
+  document `FOR UPDATE` and `SKIP LOCKED` behavior for row-level claims.
+- [PostgreSQL explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html)
+  documents advisory locks and why they should be treated as application-defined
+  coordination primitives.
 
 This supports the recommended Prisma + explicit raw SQL approach, but Phase 4
 must still validate the exact Prisma 7 setup before implementation because
@@ -175,6 +186,8 @@ Phase 4 implementation PR or docs:
    rollout.
 4. **Optional mode ADR**: confirm `local-disabled` can run API and worker
    without `CONTROL_PLANE_DATABASE_URL` or encryption master key.
+5. **Operational lifecycle ADR**: confirm DB readiness semantics, Prisma client
+   lifecycle, pool configuration, retention policy, and cleanup ownership.
 
 Do not start feature code until these gates are explicit. They are small, but
 they prevent the Phase 4 implementation from quietly choosing irreversible
@@ -319,6 +332,8 @@ Domain invariants:
 - `completed` and `dead-lettered` are terminal.
 - payload must never contain raw external action content when content is large,
   sensitive, or intended for deletion.
+- `contentHash` must be an integrity/reference hash for stored ciphertext or an
+  HMAC-style value. Do not store a plain hash of low-entropy plaintext content.
 
 ### ExternalActionContent
 
@@ -332,9 +347,11 @@ Fields:
 - `encryptedDataKey`
 - `dataKeyAlgorithm`
 - `contentEncryptionAlgorithm`
-- `nonce`
-- `authTag`
-- `sha256`
+- `contentNonce`
+- `contentAuthTag`
+- `dataKeyNonce`
+- `dataKeyAuthTag`
+- `ciphertextSha256`
 - `keyRef`
 - `expiresAt`
 - `deletedAt?`
@@ -345,10 +362,11 @@ Domain invariants:
 
 - plaintext is accepted only at the application boundary and is never persisted.
 - every row uses a unique per-content data encryption key.
-- ciphertext must be hash-verifiable.
+- ciphertext must be hash-verifiable without hashing plaintext.
 - content can be deleted or cryptographically shredded after successful dispatch.
 - expired content cannot be dispatched.
-- active content must have ciphertext, encrypted data key, nonce, and auth tag.
+- active content must have ciphertext, encrypted data key, content nonce, content
+  auth tag, data key nonce, and data key auth tag.
 - shredded content must not be decryptable even if the database row remains for
   retention/audit reference.
 
@@ -494,7 +512,7 @@ workspace_id text null
 idempotency_key text not null
 payload_json jsonb not null
 content_ref_id uuid null
-content_sha256 text null
+content_integrity_hash text null
 attempts integer not null default 0
 max_attempts integer not null default 10
 next_attempt_at timestamptz not null
@@ -527,6 +545,31 @@ The `idempotency_key` must either be globally namespaced by the application
 unique index such as `(workspace_id, idempotency_key)`. Do not rely on a
 client-provided opaque key being globally unique across workspaces.
 
+Recommended constraints:
+
+```text
+check(status in ('pending', 'processing', 'completed', 'dead-lettered', 'cancelled'))
+check(attempts >= 0)
+check(max_attempts > 0)
+check(attempts <= max_attempts)
+check(event_version > 0)
+check(
+  (status = 'processing' and locked_by is not null and locked_until is not null and claim_token is not null)
+  or
+  (status <> 'processing' and locked_by is null and locked_until is null and claim_token is null)
+)
+check((status = 'completed') = (completed_at is not null))
+check((status = 'dead-lettered') = (dead_lettered_at is not null))
+check(
+  (content_ref_id is null and content_integrity_hash is null)
+  or
+  (content_ref_id is not null and content_integrity_hash is not null)
+)
+```
+
+The final SQL can use named constraints and may split these into smaller
+constraints for clearer migration errors.
+
 ### `external_action_contents`
 
 Recommended columns:
@@ -538,9 +581,11 @@ ciphertext bytea null
 encrypted_data_key bytea null
 data_key_algorithm text not null
 content_encryption_algorithm text not null
-nonce bytea null
-auth_tag bytea null
-sha256 text not null
+content_nonce bytea null
+content_auth_tag bytea null
+data_key_nonce bytea null
+data_key_auth_tag bytea null
+ciphertext_sha256 text not null
 key_ref text not null
 expires_at timestamptz not null
 deleted_at timestamptz null
@@ -548,10 +593,26 @@ shredded_at timestamptz null
 created_at timestamptz not null default now()
 ```
 
-`ciphertext`, `encrypted_data_key`, `nonce`, and `auth_tag` are nullable so
-cryptographic shredding can keep a safe reference row while removing the
-material required to decrypt. Application invariants must enforce that active
-rows have all encryption fields present and shredded rows cannot be loaded.
+`ciphertext`, `encrypted_data_key`, `content_nonce`, `content_auth_tag`,
+`data_key_nonce`, and `data_key_auth_tag` are nullable so cryptographic
+shredding can keep a safe reference row while removing the material required to
+decrypt. Application invariants must enforce that active rows have all
+encryption fields present and shredded rows cannot be loaded.
+
+Recommended constraints:
+
+```text
+check(expires_at > created_at)
+check(
+  (shredded_at is null and ciphertext is not null and encrypted_data_key is not null
+   and content_nonce is not null and content_auth_tag is not null
+   and data_key_nonce is not null and data_key_auth_tag is not null)
+  or
+  (shredded_at is not null and ciphertext is null and encrypted_data_key is null
+   and content_nonce is null and content_auth_tag is null
+   and data_key_nonce is null and data_key_auth_tag is null)
+)
+```
 
 Indexes:
 
@@ -646,6 +707,63 @@ Use Prisma Migrate for baseline schema history, but keep hand-edited SQL where
 Postgres-specific constraints, partial indexes, or lock semantics need exact
 control.
 
+## Database Platform Operational Rules
+
+The database platform package owns process-level DB behavior:
+
+- create one Prisma client per API process and one per worker process.
+- do not create Prisma clients in feature modules, repositories, or request
+  handlers.
+- connect during app bootstrap only when persistence is enabled.
+- disconnect during graceful shutdown.
+- expose a lightweight readiness probe with a short timeout.
+- keep liveness separate from readiness: `/health` can stay alive while
+  readiness reports persistence degraded or unavailable.
+- redact database URLs and pool parameters that include credentials.
+- configure API and worker pool sizes deliberately; workers should not starve
+  request traffic.
+- DB outage in hosted modes should fail readiness before accepting integration
+  work.
+
+Phase 4 should not add a full metrics stack. Logs and health/readiness status
+are enough until real connector load exists.
+
+## Raw SQL Safety
+
+Raw SQL is allowed only for repository/adapter paths that need Postgres-specific
+semantics.
+
+Rules:
+
+- prefer Prisma tagged-template raw queries or equivalent parameterized APIs.
+- forbid unsafe dynamic SQL helpers such as `$queryRawUnsafe` unless a future
+  ADR approves one exact use.
+- keep table and column names as constants owned by the adapter, not request
+  input.
+- never interpolate user input into SQL text.
+- validate raw query row mapping before returning domain objects.
+- keep claim/recover/complete SQL covered by real Postgres integration tests.
+
+Architecture checks should include a regression fixture for unsafe raw SQL
+imports/usages once Prisma is added.
+
+## Transaction Isolation And Lock Ordering
+
+Recommended v1:
+
+- use PostgreSQL `READ COMMITTED` unless a specific use case proves it needs a
+  stricter isolation level.
+- keep application transactions short and provider-free.
+- use one atomic SQL statement for outbox claims.
+- use database `now()` for lease and retry timestamps inside claim/retry SQL.
+- write multi-table side-effect intent in a consistent order inside
+  transactions: canonical state, encrypted content, outbox event, audit event.
+- do not hold a transaction open while waiting on worker shutdown, timers, or
+  network calls.
+
+If a future use case needs a different isolation level, document it at the use
+case boundary and add an integration test that proves the race it fixes.
+
 ## Outbox Claim Algorithm
 
 Use one atomic Postgres operation:
@@ -736,6 +854,24 @@ in later connector phases.
 - audit/dead-letter records must not contain enough raw payload to reconstruct
   sensitive content.
 
+## Event Payload Policy
+
+Outbox payloads are durable contracts, so they need versioning discipline:
+
+- `event_type` names a stable business event, not an adapter implementation
+  class.
+- `event_version` starts at `1` and increments only for incompatible payload
+  shape changes.
+- every handler declares the exact event type/version pairs it supports.
+- unknown type/version is dead-lettered with a safe error.
+- payload JSON must be bounded in size and must contain identifiers,
+  authorization context references, and safe metadata only.
+- large, user-authored, provider-bound, or deletion-sensitive content goes into
+  `ExternalActionContent`, never `payload_json`.
+- payload parsing failures are terminal safe errors, not retried forever.
+- future connector packages may define event-specific payload schemas, but
+  shared/domain code must not depend on connector SDKs.
+
 ## Transaction Rules
 
 Every future request that records side-effect intent must:
@@ -791,15 +927,16 @@ Recommended v1:
 - master key loaded from env as base64.
 - per-content random data encryption key.
 - content encrypted with AES-256-GCM.
-- data key wrapped/encrypted by the master key.
-- `sha256` stored for integrity/reference checks.
-- auth tag and nonce stored separately.
+- data key wrapped/encrypted by the master key with its own nonce/auth tag.
+- ciphertext SHA-256 stored for integrity/reference checks.
+- content nonce/auth tag and data-key nonce/auth tag stored separately.
 
 Config:
 
 ```text
 CONTROL_PLANE_DATABASE_URL
 CONTROL_PLANE_DATABASE_SSL_MODE
+CONTROL_PLANE_DATABASE_POOL_MAX
 CONTROL_PLANE_ENCRYPTION_MASTER_KEY
 CONTROL_PLANE_PERSISTENCE_ENABLED
 CONTROL_PLANE_OUTBOX_WORKER_ENABLED
@@ -807,6 +944,9 @@ CONTROL_PLANE_OUTBOX_BATCH_SIZE
 CONTROL_PLANE_OUTBOX_LEASE_SECONDS
 CONTROL_PLANE_OUTBOX_POLL_INTERVAL_MS
 CONTROL_PLANE_OUTBOX_MAX_ATTEMPTS
+CONTROL_PLANE_COMPLETED_OUTBOX_RETENTION_DAYS
+CONTROL_PLANE_DEAD_LETTER_RETENTION_DAYS
+CONTROL_PLANE_EXTERNAL_CONTENT_RETENTION_DAYS
 ```
 
 Hosted mode must fail fast if database URL or encryption master key is missing.
@@ -841,6 +981,29 @@ Add low-noise operational signals:
 Metrics can be log-derived in Phase 4; do not add a metrics dependency unless a
 later observability phase chooses one.
 
+## Retention And Cleanup Policy
+
+Phase 4 should define retention before real connector traffic starts:
+
+- completed outbox rows can be retained for a short operational window, then
+  compacted or deleted by an explicit cleanup job.
+- dead-letter rows are retained longer than completed rows because they are
+  operational evidence.
+- audit rows are retained according to a separate security/privacy policy, not
+  automatically coupled to outbox cleanup.
+- ExternalActionContent expires independently and should be shredded after
+  successful dispatch or explicit expiry.
+- cleanup jobs must be disabled by default until their retention values are
+  configured.
+- cleanup must be idempotent, bounded by batch size, and safe to resume after
+  crash.
+- cleanup jobs should use distributed locks with fencing tokens only if more
+  than one worker instance may run them.
+
+Do not add physical deletion of dead-letter evidence in the same commit that
+introduces the outbox worker. First prove creation, retry, dead-letter, and
+shredding behavior; then add cleanup with focused tests.
+
 ## Architecture Guardrails
 
 Update `architecture:check`:
@@ -854,6 +1017,7 @@ Update `architecture:check`:
   - tests
 - forbid external provider SDKs in Phase 4.
 - forbid raw external action content in outbox/audit field names where practical.
+- forbid `$queryRawUnsafe`/dynamic raw SQL helpers in production code.
 - forbid feature infrastructure imports across bounded contexts.
 - ensure feature public exports remain explicit.
 - replace the temporary "Prisma starts in persistence phase" dependency block
@@ -867,6 +1031,9 @@ Add regression tests:
 - shared declaring dependency fails.
 - feature infrastructure importing another feature infrastructure fails.
 - outbox package exporting private layers fails.
+- production code using `$queryRawUnsafe` fails.
+- feature packages creating their own Prisma client outside allowed adapters
+  fails where detectable.
 
 ## Implementation Steps
 
@@ -895,6 +1062,9 @@ Add:
 - `DatabaseModule`.
 - `DatabaseClient` adapter.
 - `TransactionRunner` implementation.
+- DB readiness probe.
+- Prisma client lifecycle hooks.
+- pool/connection config parsing.
 - config parsing for DB env.
 - safe health summary fields only.
 
@@ -905,6 +1075,8 @@ Verification:
 - local-disabled mode starts without DB URL when persistence is disabled.
 - no Prisma imports outside allowed infrastructure.
 - transaction context is opaque and rejected after commit/rollback.
+- health liveness remains safe while readiness reflects DB availability.
+- one Prisma client is created per process, not per module/request.
 
 ### Step 2 - Crypto Platform
 
@@ -920,10 +1092,12 @@ Add:
 - Node crypto adapter.
 - key reference metadata.
 - tests for encrypt/decrypt/hash/shred semantics.
+- separate content and data-key nonce/auth-tag handling.
 
 Verification:
 
 - plaintext never appears in persisted fixture output.
+- plain plaintext hash is not persisted for sensitive content.
 - wrong key/auth tag fails closed.
 - safe errors are returned.
 
@@ -962,6 +1136,7 @@ Add:
 - outbox domain model.
 - writer and claimer ports.
 - append/claim/complete/retry/dead-letter use cases.
+- event type/version handler registry.
 - Prisma repository adapter.
 - worker runner.
 - fake handler registry for tests.
@@ -997,6 +1172,8 @@ Add docs:
 - encryption and retention policy.
 - local DB setup.
 - dead-letter recovery procedure.
+- retention and cleanup policy.
+- readiness/liveness behavior.
 
 ### Step 7 - DB Test And CI Harness
 
@@ -1009,6 +1186,9 @@ Recommended v1:
 - `CONTROL_PLANE_TEST_DATABASE_URL` for DB integration tests.
 - `test:db` fails clearly when CI expects DB tests but the URL is absent.
 - local unit tests remain runnable without Postgres.
+- at least two independent DB connections are used in claim/lock concurrency
+  tests.
+- migration drift checks run against a clean schema.
 
 Avoid Testcontainers in Phase 4 unless Docker Compose becomes a concrete
 blocker; it would add another external dependency before the basic DB contract
@@ -1024,12 +1204,16 @@ Unit tests:
 - dead-letter transition.
 - lock lease validity.
 - envelope encryption roundtrip.
+- envelope encryption stores separate content and data-key auth metadata.
+- plaintext hash is not used as content integrity hash.
 - safe error conversion for DB/encryption errors.
+- event payload parser rejects unsupported versions and oversized payloads.
 
 Integration tests:
 
 - migrations apply to empty database.
 - migration command does not run automatically on app boot.
+- database constraints reject invalid outbox/content state combinations.
 - transaction rollback removes outbox/content writes.
 - append event inside transaction.
 - `FOR UPDATE SKIP LOCKED` claim split across concurrent workers.
@@ -1040,6 +1224,8 @@ Integration tests:
 - encrypted content store/load/shred.
 - dead-letter rows contain no plaintext.
 - database fixture grep does not find sample plaintext after content storage.
+- readiness reports DB unavailable without exposing connection details.
+- graceful shutdown disconnects database client.
 
 Architecture tests:
 
@@ -1049,6 +1235,8 @@ Architecture tests:
 - only infrastructure/platform packages can import DB clients.
 - platform/database cannot import feature packages.
 - Prisma/pg are allowed only in the explicit Phase 4 allowlist.
+- unsafe raw SQL helper usage fails.
+- feature modules cannot instantiate Prisma clients directly.
 
 Smoke tests:
 
@@ -1056,6 +1244,7 @@ Smoke tests:
 - worker still starts in local-disabled mode.
 - local-disabled smoke does not require DB URL or encryption master key.
 - DB-enabled worker processes fake outbox event.
+- DB-disabled worker does not start the outbox polling loop.
 
 Recommended commands:
 
@@ -1095,9 +1284,13 @@ pnpm --dir control-plane worker:smoke:db
   becomes claimable.
 - worker A lease expires, worker B reclaims, worker A later finishes: worker A
   completion update must affect zero rows because claim token changed.
+- handler runtime exceeds lease duration: Phase 4 fake handlers should either
+  finish within lease or prove stale-claim protection; real provider handlers
+  must add lease renewal or longer leases before external side effects.
 - worker dispatch succeeds but completion write fails: later phases need
   provider-level idempotency/update-or-create markers.
 - unknown event type/version: dead-letter, do not drop.
+- malformed known event payload: dead-letter safely, do not retry forever.
 - decryption failure: dead-letter, never regenerate content.
 - expired content: dead-letter or cancel with safe error.
 - duplicate idempotency key under concurrency: one winner, deterministic return.
@@ -1109,6 +1302,8 @@ pnpm --dir control-plane worker:smoke:db
   disabled and expose safe degraded status.
 - DB unavailable in hosted mode: API/worker fail fast or readiness fails before
   accepting integration traffic.
+- DB connection pool exhausted: readiness/logging surfaces safe degraded state;
+  worker backs off instead of tight-looping.
 - encryption master key changes accidentally: decrypt fails safe; do not
   rewrite/shred content automatically.
 - content is shredded before completion is persisted: worker must surface safe
@@ -1117,17 +1312,23 @@ pnpm --dir control-plane worker:smoke:db
   `outbox_event_id` keeps one terminal record.
 - lock owner pauses longer than lease: fencing token prevents stale owner from
   committing guarded maintenance work.
+- cleanup job crashes mid-batch: rerun safely resumes without deleting
+  unprocessed pending/processing events.
+- retention config missing: cleanup job stays disabled rather than applying an
+  implicit destructive default.
 
 ## Security And Privacy Requirements
 
 - never store raw external action content in outbox payload or audit metadata.
 - never log plaintext content.
 - never store raw provider errors.
+- never store plain hashes of sensitive plaintext content.
 - dead-letter stores safe summaries only.
 - encryption master key is never logged or exposed in config summary.
 - `safeDetails` remain primitive and non-secret.
 - DB URL must be redacted in logs.
 - audit metadata must be allowlisted, not arbitrary request bodies.
+- raw SQL must be parameterized and never include request-controlled SQL text.
 
 ## Rollback / Kill Switch
 
@@ -1164,8 +1365,12 @@ Phase 4 is complete when:
 - encrypted content can be stored, loaded, and shredded.
 - DB-backed idempotency is proven by tests.
 - local-disabled mode works without database and encryption secrets.
+- readiness/liveness behavior is explicit and secret-safe.
+- retention/cleanup ownership is documented, even if cleanup execution is
+  deferred behind a disabled-by-default switch.
 - no in-memory lock is required for correctness.
 - architecture checker enforces DB dependency boundaries.
+- architecture checker blocks unsafe raw SQL and DB client leaks where practical.
 - docs explain migration, worker, encryption, and dead-letter operations.
 - full control-plane verification passes.
 
