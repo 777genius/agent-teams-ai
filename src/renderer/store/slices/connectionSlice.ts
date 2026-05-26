@@ -103,6 +103,8 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
               },
               ...getFullResetState(),
               ...getContextScopedTeamResetState(),
+              isContextSwitching: false,
+              targetContextId: null,
             }
           : {}),
       });
@@ -165,6 +167,8 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
         },
         ...getFullResetState(),
         ...getContextScopedTeamResetState(),
+        isContextSwitching: false,
+        targetContextId: null,
       });
 
       // Re-fetch local data

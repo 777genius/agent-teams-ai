@@ -352,6 +352,8 @@ describe('context slice team/task reset', () => {
         },
       ],
       globalTasksInitialized: true,
+      isContextSwitching: true,
+      targetContextId: 'local',
     } as never);
 
     await store.getState().connectSsh({
@@ -366,6 +368,8 @@ describe('context slice team/task reset', () => {
     expect(store.getState().teams).toEqual([]);
     expect(store.getState().teamByName).toEqual({});
     expect(store.getState().globalTasks).toEqual([]);
+    expect(store.getState().isContextSwitching).toBe(false);
+    expect(store.getState().targetContextId).toBeNull();
     expect(apiMock.teams.list).toHaveBeenCalledTimes(1);
     expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);
   });
@@ -400,6 +404,8 @@ describe('context slice team/task reset', () => {
         },
       ],
       globalTasksInitialized: true,
+      isContextSwitching: true,
+      targetContextId: 'local',
     } as never);
 
     await store.getState().disconnectSsh();
@@ -408,6 +414,8 @@ describe('context slice team/task reset', () => {
     expect(store.getState().teams).toEqual([]);
     expect(store.getState().teamByName).toEqual({});
     expect(store.getState().globalTasks).toEqual([]);
+    expect(store.getState().isContextSwitching).toBe(false);
+    expect(store.getState().targetContextId).toBeNull();
     expect(apiMock.teams.list).toHaveBeenCalledTimes(1);
     expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);
   });
