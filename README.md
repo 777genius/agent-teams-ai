@@ -150,6 +150,8 @@ An orchestration layer for AI agent teams across Claude, Codex, and OpenCode.
 
 - **Zero-setup onboarding** — start with the free model with no auth, then connect paid/account providers only when you need them
 
+- **Multi-language support** - choose the app language and preferred agent communication language. Current UI languages: Arabic, Bengali, Chinese, English, French, German, Hindi, Indonesian, Japanese, Korean, Portuguese, Russian, Spanish, Urdu.
+
 - **Built-in code editor** — edit project files with Git support without leaving the app
 
 - **Branch strategy** - choose per teammate at launch: use the main checkout or run selected agents in their own git worktree. You can still spell out branch rules in the provisioning prompt.
@@ -283,7 +285,9 @@ Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. Data from `~/.cl
 
 <br />
 
-**Prerequisites:** Node.js 20+, pnpm 10+
+**Prerequisites:** Node.js 24.16.0 LTS, pnpm 10+
+
+On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git
@@ -374,9 +378,17 @@ local packaging.
 
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development guidelines. Please read our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
+## Partnerships
+
+We are open to partnerships and collaboration opportunities. If you see a way to create value together, we are ready to discuss mutually beneficial terms.
+
+Contact: [quantjumppro@gmail.com](mailto:quantjumppro@gmail.com)
+
 ## Security
 
 IPC and standalone HTTP handlers validate IDs, paths, and payload shape at the boundary. Project editing and write operations are constrained to the selected project root, while read-only discovery also accesses local Claude data under `~/.claude/` and app-owned state paths when required. Path traversal and sensitive config/credential targets are blocked. See [SECURITY.md](.github/SECURITY.md) for details.
+
+GitHub Dependabot monitors dependencies for known vulnerabilities, so security updates are surfaced quickly and applied in time.
 
 ## License
 

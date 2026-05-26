@@ -1266,7 +1266,7 @@ Binary: null bytes в первых 8KB или расширение (.png, .wasm)
 
 ### 19.8 File Watcher (Impact: MEDIUM)
 
-Проект использует `fs.watch({ recursive: true })`, не chokidar. Electron 40/Node 20+ OK.
+Проект использует `fs.watch({ recursive: true })`, не chokidar. Electron 40/Node 24.16+ OK.
 
 **Решение:** fs.watch + фильтр (node_modules/.git/dist) + debounce 200ms + **opt-in** (ручной F5 по умолчанию) + cleanup.
 

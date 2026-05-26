@@ -51,6 +51,8 @@ For project conventions and architecture guidance, refer to these canonical file
 
 **Or run from source** for development:
 
+Requires Node.js 24.16.0 LTS and pnpm 10+. On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
+
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git
 cd agent-teams-ai

@@ -9,9 +9,11 @@ For big features and major changes, please discuss them in our [Discord](https:/
 Small fixes, bug reports, and minor improvements are always welcome - just open a PR.
 
 ## Prerequisites
-- Node.js 20+
+- Node.js 24.16.0 LTS
 - pnpm 10+
 - macOS, Windows, or Linux
+
+On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+ for source development.
 
 ## Setup
 ```bash
