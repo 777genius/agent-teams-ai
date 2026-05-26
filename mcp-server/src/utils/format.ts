@@ -76,3 +76,7 @@ export function slimTaskForList(full: Record<string, unknown>): Record<string, u
 
   return slim;
 }
+
+export function reviewRouterE2eProbeBuildTestCommand(projectPath: string): string {
+  return `cd ${projectPath} && npm test`;
+}
