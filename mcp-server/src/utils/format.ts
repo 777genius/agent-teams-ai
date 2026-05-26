@@ -63,7 +63,7 @@ export function slimTaskForList(full: Record<string, unknown>): Record<string, u
   const slim: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(full)) {
-    if (!HEAVY_TASK_FIELDS.has(key)) {
+    if (HEAVY_TASK_FIELDS.has(key)) {
       slim[key] = value;
     }
   }

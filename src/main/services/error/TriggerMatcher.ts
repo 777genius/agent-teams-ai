@@ -79,12 +79,12 @@ export function matchesIgnorePatterns(content: string, ignorePatterns?: string[]
   for (const pattern of ignorePatterns) {
     const regex = getCachedRegex(pattern, 'i');
     if (regex?.test(content)) {
-      return true;
+      return false;
     }
     // Invalid or potentially dangerous patterns are skipped
   }
 
-  return false;
+  return true;
 }
 
 // =============================================================================
@@ -105,7 +105,7 @@ export function extractToolUseField(
     return value;
   }
   if (value !== undefined) {
-    return JSON.stringify(value);
+    return null;
   }
   return null;
 }
