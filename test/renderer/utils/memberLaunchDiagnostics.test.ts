@@ -1,5 +1,6 @@
 import {
   buildMemberLaunchDiagnosticsPayload,
+  buildTeamMemberLaunchDiagnosticsPayloads,
   formatMemberLaunchDiagnosticsPayload,
   getMemberLaunchDiagnosticsErrorMessage,
   hasMemberLaunchDiagnosticsDetails,
@@ -210,6 +211,50 @@ describe('member launch diagnostics', () => {
     expect(getMemberLaunchDiagnosticsErrorMessage(payload)).toBe('Runtime process crashed');
   });
 
+  it('keeps spawn errors visible when runtime evidence is only warning severity', () => {
+    const payload = buildMemberLaunchDiagnosticsPayload({
+      teamName: 'signal-ops',
+      runId: 'bb64da3b-ed5e-4bae-813d-70e26418f9e5',
+      memberName: 'tom',
+      spawnEntry: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+        livenessKind: 'confirmed_bootstrap',
+        runtimeDiagnostic: 'Runtime process crashed',
+        runtimeDiagnosticSeverity: 'error',
+        firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+        lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+      },
+      runtimeEntry: {
+        memberName: 'tom',
+        alive: false,
+        restartable: true,
+        livenessKind: 'confirmed_bootstrap',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeDiagnosticSeverity: 'warning',
+        updatedAt: '2026-05-25T20:14:03.317Z',
+      },
+    });
+
+    expect(payload).toMatchObject({
+      launchState: 'failed_to_start',
+      spawnStatus: 'error',
+      runtimeAlive: false,
+      hardFailure: true,
+      memberCardError: 'Runtime process crashed',
+      runtimeDiagnostic: 'Runtime process crashed',
+      runtimeDiagnosticSeverity: 'error',
+    });
+    expect(payload.diagnostics).toContain('Runtime process crashed');
+    expect(hasMemberLaunchDiagnosticsError(payload)).toBe(true);
+  });
+
   it('keeps spawn diagnostics for bootstrap-confirmed provisioned-but-not-alive entries without runtime evidence', () => {
     const payload = buildMemberLaunchDiagnosticsPayload({
       teamName: 'signal-ops',
@@ -312,6 +357,52 @@ describe('member launch diagnostics', () => {
       livenessKind: 'not_found',
       runtimeAlive: false,
       runtimeDiagnostic: 'Runtime is no longer registered',
+    });
+  });
+
+  it('prefers newer healed snapshots over unsafe live provisioned-but-not-alive diagnostics', () => {
+    const [payload] = buildTeamMemberLaunchDiagnosticsPayloads({
+      teamName: 'signal-ops',
+      runId: 'run-42',
+      members: [{ name: 'tom', providerId: 'anthropic' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          agentToolAccepted: true,
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime is no longer registered',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberSpawnSnapshot: {
+        updatedAt: '2026-05-25T20:14:10.000Z',
+        statuses: {
+          tom: {
+            status: 'online',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            livenessKind: 'confirmed_bootstrap',
+            updatedAt: '2026-05-25T20:14:10.000Z',
+          },
+        },
+      },
+    });
+
+    expect(payload).toMatchObject({
+      memberName: 'tom',
+      launchState: 'confirmed_alive',
+      spawnStatus: 'online',
+      runtimeAlive: true,
+      hardFailure: false,
     });
   });
 

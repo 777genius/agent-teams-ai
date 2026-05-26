@@ -561,6 +561,8 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     runtimeEntryDiagnostic != null || runtimeEntry?.runtimeDiagnosticSeverity != null;
   const useSpawnDiagnosticsForHealedEntry =
     bootstrapConfirmedProvisionedButNotAlive && !hasRuntimeDiagnosticEvidence;
+  const keepSpawnFailureDiagnostics =
+    useSpawnDiagnosticsForHealedEntry || spawnEntry?.runtimeDiagnosticSeverity === 'error';
   const launchState = useBootstrapConfirmedVisualState
     ? 'confirmed_alive'
     : (spawnEntry?.launchState ?? params.launchState);
@@ -591,13 +593,16 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     !suppressOpenCodeAppMcpAdvisory && isRuntimeAdvisoryCardError(runtimeAdvisory, providerId)
       ? (runtimeAdvisoryTitle ?? runtimeAdvisoryLabel ?? runtimeAdvisoryMessage)
       : undefined;
-  const runtimeDiagnosticSeverity = bootstrapConfirmedProvisionedButNotAlive
-    ? (runtimeEntry?.runtimeDiagnosticSeverity ??
-      (useSpawnDiagnosticsForHealedEntry ? spawnEntry?.runtimeDiagnosticSeverity : undefined))
-    : (spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity);
+  const runtimeDiagnosticSeverity =
+    spawnEntry?.runtimeDiagnosticSeverity === 'error'
+      ? spawnEntry.runtimeDiagnosticSeverity
+      : bootstrapConfirmedProvisionedButNotAlive
+        ? (runtimeEntry?.runtimeDiagnosticSeverity ??
+          (useSpawnDiagnosticsForHealedEntry ? spawnEntry?.runtimeDiagnosticSeverity : undefined))
+        : (spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity);
   const spawnRuntimeDiagnosticCardError = isRuntimeDiagnosticCardError({
     runtimeDiagnostic:
-      bootstrapConfirmedProvisionedButNotAlive && !useSpawnDiagnosticsForHealedEntry
+      bootstrapConfirmedProvisionedButNotAlive && !keepSpawnFailureDiagnostics
         ? undefined
         : spawnEntry?.runtimeDiagnostic,
     runtimeDiagnosticSeverity: spawnEntry?.runtimeDiagnosticSeverity,
@@ -609,7 +614,7 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     ? spawnEntry?.runtimeDiagnostic
     : undefined;
   const healedSpawnFailureCardError =
-    useSpawnDiagnosticsForHealedEntry && spawnEntry?.runtimeDiagnosticSeverity === 'error'
+    keepSpawnFailureDiagnostics && spawnEntry?.runtimeDiagnosticSeverity === 'error'
       ? (spawnRuntimeDiagnosticCardError ?? spawnEntry?.error ?? spawnEntry?.hardFailureReason)
       : undefined;
   const runtimeEntryDiagnosticCardError = isRuntimeDiagnosticCardError({
@@ -620,11 +625,11 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     ? runtimeEntry?.runtimeDiagnostic
     : undefined;
   const runtimeDiagnostic =
-    (bootstrapConfirmedProvisionedButNotAlive && !useSpawnDiagnosticsForHealedEntry
+    (bootstrapConfirmedProvisionedButNotAlive && !keepSpawnFailureDiagnostics
       ? undefined
       : boundedString(spawnEntry?.runtimeDiagnostic)) ??
     runtimeEntryDiagnostic ??
-    (bootstrapConfirmedProvisionedButNotAlive && !useSpawnDiagnosticsForHealedEntry
+    (bootstrapConfirmedProvisionedButNotAlive && !keepSpawnFailureDiagnostics
       ? undefined
       : (boundedString(spawnEntry?.hardFailureReason) ?? boundedString(spawnEntry?.error))) ??
     runtimeAdvisoryMessage;
@@ -654,14 +659,11 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     runtimeAdvisoryTitle ? [runtimeAdvisoryTitle] : undefined,
     runtimeAdvisoryLabel ? [runtimeAdvisoryLabel] : undefined,
     runtimeAdvisoryMessage ? [runtimeAdvisoryMessage] : undefined,
-    (!bootstrapConfirmedProvisionedButNotAlive ||
-      (useSpawnDiagnosticsForHealedEntry && spawnEntry?.runtimeDiagnosticSeverity === 'error')) &&
+    (!bootstrapConfirmedProvisionedButNotAlive || keepSpawnFailureDiagnostics) &&
       spawnEntry?.hardFailureReason
       ? [spawnEntry.hardFailureReason]
       : undefined,
-    (!bootstrapConfirmedProvisionedButNotAlive ||
-      (useSpawnDiagnosticsForHealedEntry && spawnEntry?.runtimeDiagnosticSeverity === 'error')) &&
-      spawnEntry?.error
+    (!bootstrapConfirmedProvisionedButNotAlive || keepSpawnFailureDiagnostics) && spawnEntry?.error
       ? [spawnEntry.error]
       : undefined,
     runtimeEntry?.diagnostics
@@ -809,7 +811,10 @@ function parseStatusUpdatedAtMs(value: string | undefined): number | null {
 
 function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
   if (isBootstrapConfirmedProvisionedButNotAliveFailure(entry)) {
-    return false;
+    return (
+      entry?.runtimeDiagnosticSeverity === 'error' ||
+      hasStoppedRuntimeLivenessKind(entry?.livenessKind)
+    );
   }
   return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
 }
