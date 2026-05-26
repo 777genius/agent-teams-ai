@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  invalidateContextScopedRequestEpoch,
+  resetContextScopedRequestEpochForTests,
+} from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+
 import { createTestStore } from './storeTestUtils';
 
 const apiMock = vi.hoisted(() => ({
@@ -119,6 +124,7 @@ function deferred<T>(): {
 describe('context slice team/task reset', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetContextScopedRequestEpochForTests();
     contextStorageMock.loadSnapshot.mockResolvedValue(targetSnapshot());
     apiMock.context.getActive.mockResolvedValue('local');
     apiMock.getProjects.mockResolvedValue(targetSnapshot().projects);
@@ -128,6 +134,7 @@ describe('context slice team/task reset', () => {
   });
 
   afterEach(() => {
+    resetContextScopedRequestEpochForTests();
     vi.restoreAllMocks();
   });
 
@@ -223,6 +230,53 @@ describe('context slice team/task reset', () => {
 
     expect(store.getState().activeContextId).toBe('ssh-dev');
     expect(store.getState().isContextSwitching).toBe(false);
+  });
+
+  it('does not apply a slow background project refresh after the context epoch changes again', async () => {
+    const projectScan = deferred<unknown[]>();
+    apiMock.getProjects.mockReturnValue(projectScan.promise);
+    apiMock.getRepositoryGroups.mockResolvedValue([]);
+    const store = createTestStore();
+    const localProject = {
+      id: 'local-project',
+      name: 'Local Project',
+      path: '/local/project',
+      sessions: [],
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+    };
+
+    const switchPromise = store.getState().switchContext('ssh-dev');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(store.getState().activeContextId).toBe('ssh-dev');
+    expect(store.getState().isContextSwitching).toBe(false);
+
+    invalidateContextScopedRequestEpoch();
+    store.setState({
+      activeContextId: 'local',
+      projects: [localProject],
+      repositoryGroups: [],
+      isContextSwitching: false,
+      targetContextId: null,
+    } as never);
+    projectScan.resolve([
+      {
+        id: 'late-ssh-project',
+        name: 'Late SSH Project',
+        path: '/ssh/late',
+        sessions: [],
+        createdAt: new Date(0).toISOString(),
+        updatedAt: new Date(0).toISOString(),
+      },
+    ]);
+    await switchPromise;
+
+    expect(store.getState().activeContextId).toBe('local');
+    expect(store.getState().projects).toEqual([localProject]);
+    expect(apiMock.teams.list).not.toHaveBeenCalled();
+    expect(apiMock.teams.getAllTasks).not.toHaveBeenCalled();
   });
 
   it('drops previous-context team and task caches when lazy context initialization changes context', async () => {

@@ -7,6 +7,7 @@
 
 import { api } from '@renderer/api';
 
+import { invalidateContextScopedRequestEpoch } from '../utils/contextScopedRequestEpoch';
 import { getContextScopedTeamResetState, getFullResetState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
@@ -71,6 +72,9 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
 
     try {
       const status = await api.ssh.connect(config);
+      if (status.state === 'connected') {
+        invalidateContextScopedRequestEpoch();
+      }
       set({
         connectionMode: status.state === 'connected' ? 'ssh' : 'local',
         connectionState: status.state,
@@ -134,6 +138,7 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
   disconnectSsh: async (): Promise<void> => {
     try {
       const status = await api.ssh.disconnect();
+      invalidateContextScopedRequestEpoch();
       set({
         connectionMode: 'local',
         connectionState: status.state,
