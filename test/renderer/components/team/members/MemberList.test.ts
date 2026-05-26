@@ -689,7 +689,7 @@ describe('MemberList spawn-status memoization', () => {
     expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
     expect(host.querySelector('[data-testid="retry-bob"]')).toBeNull();
     expect(host.querySelector('[data-testid="skip-bob"]')).toBeNull();
-    expect(host.textContent).not.toContain('team provisioned but not alive');
+    expect(host.textContent).toContain('team provisioned but not alive');
 
     await act(async () => {
       root.unmount();

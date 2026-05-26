@@ -946,6 +946,7 @@ export const MemberList = memo(function MemberList({
           const canPromoteBootstrapConfirmedVisualState =
             bootstrapConfirmedProvisionedButNotAlive &&
             spawnEntry?.runtimeDiagnosticSeverity !== 'error' &&
+            runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
             !hasStoppedRuntimeEvidence;
           const effectiveSpawnStatus = canPromoteBootstrapConfirmedVisualState
             ? 'online'
