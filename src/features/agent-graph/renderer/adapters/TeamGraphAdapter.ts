@@ -1275,9 +1275,15 @@ export class TeamGraphAdapter {
     spawn: MemberSpawnStatusEntry | undefined,
     pendingApproval: boolean
   ): Pick<GraphNode, 'exceptionTone' | 'exceptionLabel'> | undefined {
+    const hasStoppedRuntimeEvidence =
+      spawn?.livenessKind === 'not_found' ||
+      spawn?.livenessKind === 'registered_only' ||
+      spawn?.livenessKind === 'shell_only' ||
+      spawn?.livenessKind === 'stale_metadata';
     const hasUnsuppressedSpawnFailure =
       !isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) ||
-      spawn?.runtimeDiagnosticSeverity === 'error';
+      spawn?.runtimeDiagnosticSeverity === 'error' ||
+      hasStoppedRuntimeEvidence;
     if (
       hasUnsuppressedSpawnFailure &&
       (spawn?.launchState === 'failed_to_start' || spawn?.status === 'error')
@@ -1303,10 +1309,16 @@ export class TeamGraphAdapter {
   static #mapMemberStatus(status: string, spawn?: MemberSpawnStatusEntry): GraphNodeState {
     if (spawn?.launchState === 'runtime_pending_permission') return 'waiting';
     if (spawn?.status === 'spawning') return 'thinking';
+    const hasStoppedRuntimeEvidence =
+      spawn?.livenessKind === 'not_found' ||
+      spawn?.livenessKind === 'registered_only' ||
+      spawn?.livenessKind === 'shell_only' ||
+      spawn?.livenessKind === 'stale_metadata';
     if (
       spawn?.status === 'error' &&
       (!isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) ||
-        spawn.runtimeDiagnosticSeverity === 'error')
+        spawn.runtimeDiagnosticSeverity === 'error' ||
+        hasStoppedRuntimeEvidence)
     ) {
       return 'error';
     }
