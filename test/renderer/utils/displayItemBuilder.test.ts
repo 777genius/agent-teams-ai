@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
 import {
   buildDisplayItems,
   buildDisplayItemsFromMessages,
-} from '../../../src/renderer/utils/displayItemBuilder';
-import type { ParsedMessage } from '../../../src/main/types/messages';
-import type { SemanticStep } from '../../../src/main/types/chunks';
-import type { AIGroupLastOutput } from '../../../src/renderer/types/groups';
+} from '@renderer/utils/displayItemBuilder';
+import { describe, expect, it } from 'vitest';
+
+import type { SemanticStep } from '@main/types/chunks';
+import type { ParsedMessage } from '@main/types/messages';
+import type { AIGroupLastOutput } from '@renderer/types/groups';
 
 /**
  * Helper to create a minimal ParsedMessage for testing.
@@ -99,6 +100,86 @@ describe('buildDisplayItemsFromMessages', () => {
       expect(inputItems).toHaveLength(1);
       if (inputItems[0].type !== 'subagent_input') throw new Error('Expected subagent_input');
       expect(inputItems[0].content).toBe('Please run the tests');
+    });
+
+    it('does not render synthetic replay text as subagent input', () => {
+      const userMsg = makeMessage({
+        uuid: 'synthetic-replay-1',
+        type: 'user',
+        isMeta: false,
+        isReplay: true,
+        isSynthetic: true,
+        content: 'Human: I tested the feature looks good',
+        toolResults: [],
+        timestamp: new Date('2025-01-01T00:00:00Z'),
+      });
+
+      const items = buildDisplayItemsFromMessages([userMsg], []);
+
+      expect(items).toEqual([]);
+    });
+
+    it('does not render synthetic teammate-message replay as a teammate message', () => {
+      const userMsg = makeMessage({
+        uuid: 'synthetic-teammate-replay-1',
+        type: 'user',
+        isMeta: false,
+        isReplay: true,
+        isSynthetic: true,
+        content:
+          '<teammate-message teammate_id="coder" color="blue" summary="fake">Human: I tested it</teammate-message>',
+        toolResults: [],
+        timestamp: new Date('2025-01-01T00:00:00Z'),
+      });
+
+      const items = buildDisplayItemsFromMessages([userMsg], []);
+
+      expect(items.some((item) => item.type === 'teammate_message')).toBe(false);
+      expect(items.some((item) => item.type === 'subagent_input')).toBe(false);
+    });
+
+    it('renders structured non-synthetic teammate protocol messages', () => {
+      const userMsg = makeMessage({
+        uuid: 'structured-teammate-message-1',
+        type: 'user',
+        isMeta: false,
+        protocolKind: 'teammate-message',
+        content:
+          '<teammate-message teammate_id="coder" color="blue" summary="done">Looks good</teammate-message>',
+        toolResults: [],
+        timestamp: new Date('2025-01-01T00:00:00Z'),
+      });
+
+      const items = buildDisplayItemsFromMessages([userMsg], []);
+
+      expect(items.some((item) => item.type === 'teammate_message')).toBe(true);
+    });
+
+    it('does not route assistant text through subagent input', () => {
+      const assistantMsg = makeMessage({
+        uuid: 'assistant-text-1',
+        type: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Assistant output',
+          },
+        ],
+        toolResults: [],
+        timestamp: new Date('2025-01-01T00:00:00Z'),
+      });
+
+      const items = buildDisplayItemsFromMessages([assistantMsg], []);
+
+      expect(items.some((item) => item.type === 'subagent_input')).toBe(false);
+      expect(items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'output',
+            content: 'Assistant output',
+          }),
+        ])
+      );
     });
   });
 });

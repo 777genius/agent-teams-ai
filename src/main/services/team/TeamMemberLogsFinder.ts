@@ -1,6 +1,10 @@
 import { isLeadMember as isLeadMemberCheck } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
+import {
+  isDisplayableTeammateProtocol,
+  isHumanAuthoredUserTurn,
+} from '@shared/utils/userTurnProvenance';
 import { createReadStream } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -1831,16 +1835,17 @@ export class TeamMemberLogsFinder {
       try {
         const msg = JSON.parse(line) as Record<string, unknown>;
 
-        const role = this.extractRole(msg);
         const textContent = this.extractTextContent(msg);
 
+        const isAuthoredUserText = this.isAuthoredUserTextEntry(msg);
+
         // Skip warmup messages
-        if (role === 'user' && textContent?.trim() === 'Warmup') {
+        if (isAuthoredUserText && textContent?.trim() === 'Warmup') {
           return null;
         }
 
         // Extract description from first user message + collect teammate_id signal
-        if (role === 'user' && textContent) {
+        if (isAuthoredUserText && textContent) {
           if (textContent.trimStart().startsWith('<teammate-message')) {
             const parsed = parseAllTeammateMessages(textContent);
             if (!description) {
@@ -1862,7 +1867,9 @@ export class TeamMemberLogsFinder {
         }
 
         // Collect text_mention signal (lowest reliability — exact one member name in text)
-        const textMention = this.detectMemberFromMessage(msg, knownMembers);
+        const textMention = isAuthoredUserText
+          ? this.detectMemberFromMessage(msg, knownMembers)
+          : null;
         if (textMention) {
           signals.push({ member: textMention.name, source: 'text_mention' });
         }
@@ -1986,10 +1993,10 @@ export class TeamMemberLogsFinder {
           }
         }
 
-        const role = this.extractRole(entry);
         const textContent = this.extractTextContent(entry);
+        const isAuthoredUserText = this.isAuthoredUserTextEntry(entry);
         const lowerTextContent = textContent?.toLowerCase();
-        if (!teamMatched && lowerTextContent?.includes(normalizedTeam)) {
+        if (!teamMatched && isAuthoredUserText && lowerTextContent?.includes(normalizedTeam)) {
           if (
             lowerTextContent.includes(`on team "${normalizedTeam}"`) ||
             lowerTextContent.includes(`on team '${normalizedTeam}'`) ||
@@ -1999,7 +2006,7 @@ export class TeamMemberLogsFinder {
           }
         }
 
-        if (role === 'user' && textContent && !description) {
+        if (isAuthoredUserText && textContent && !description) {
           const normalizedText = textContent.trim();
           if (
             normalizedText.length > 0 &&
@@ -2052,7 +2059,7 @@ export class TeamMemberLogsFinder {
     msg: Record<string, unknown>,
     knownMembers: Set<string>
   ): { name: string; priority: number } | null {
-    if (this.extractRole(msg) !== 'user') return null;
+    if (!this.isAuthoredUserTextEntry(msg)) return null;
 
     const text = this.extractTextContent(msg);
     if (!text) return null;
@@ -2071,6 +2078,11 @@ export class TeamMemberLogsFinder {
     }
 
     return null;
+  }
+
+  private isAuthoredUserTextEntry(msg: Record<string, unknown>): boolean {
+    if (this.extractRole(msg) !== 'user') return false;
+    return isHumanAuthoredUserTurn(msg) || isDisplayableTeammateProtocol(msg);
   }
 
   private extractTextContent(msg: Record<string, unknown>): string | null {

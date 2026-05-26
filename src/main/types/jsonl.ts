@@ -162,6 +162,10 @@ interface ConversationalEntry extends BaseEntry {
  */
 export type ToolUseResultData = Record<string, unknown>;
 
+export interface MessageOrigin {
+  kind?: string;
+}
+
 /**
  * CRITICAL: User entries serve two purposes:
  *
@@ -182,6 +186,10 @@ export interface UserEntry extends ConversationalEntry {
   type: 'user';
   message: UserMessage;
   isMeta?: boolean;
+  isSynthetic?: boolean;
+  isReplay?: boolean;
+  origin?: MessageOrigin;
+  protocolKind?: string;
   agentId?: string;
 
   toolUseResult?: ToolUseResultData;

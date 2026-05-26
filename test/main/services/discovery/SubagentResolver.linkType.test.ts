@@ -10,12 +10,11 @@
  * - Different description but same teammate_id still matches
  */
 
+import { SubagentResolver } from '@main/services/discovery/SubagentResolver';
 import { describe, expect, it } from 'vitest';
 
-import { SubagentResolver } from '../../../../src/main/services/discovery/SubagentResolver';
-
-import type { ParsedMessage, Process, ToolCall } from '../../../../src/main/types';
-import type { ProjectScanner } from '../../../../src/main/services/discovery/ProjectScanner';
+import type { ProjectScanner } from '@main/services/discovery/ProjectScanner';
+import type { ParsedMessage, Process, ToolCall } from '@main/types';
 
 // =============================================================================
 // Helpers
@@ -68,6 +67,14 @@ function extractTaskCalls(messages: ParsedMessage[]): ToolCall[] {
   return calls;
 }
 
+type LinkToTaskCalls = (
+  subagents: Process[],
+  taskCalls: ToolCall[],
+  messages: ParsedMessage[]
+) => void;
+type IsWarmupSubagent = (messages: ParsedMessage[]) => boolean;
+type PropagateTeamMetadata = (subagents: Process[]) => void;
+
 // =============================================================================
 // Tests
 // =============================================================================
@@ -77,8 +84,42 @@ describe('SubagentResolver.linkType', () => {
 
   // Access private method via prototype for testing
   const linkToTaskCalls = (
-    resolver as unknown as { linkToTaskCalls: Function }
+    resolver as unknown as { linkToTaskCalls: LinkToTaskCalls }
   ).linkToTaskCalls.bind(resolver);
+  const isWarmupSubagent = (
+    resolver as unknown as { isWarmupSubagent: IsWarmupSubagent }
+  ).isWarmupSubagent.bind(resolver);
+
+  describe('warmup detection', () => {
+    it('detects real warmup subagents from the first authored user message', () => {
+      expect(
+        isWarmupSubagent([
+          msg({
+            type: 'user',
+            content: 'Warmup',
+          }),
+        ])
+      ).toBe(true);
+    });
+
+    it('ignores synthetic replay rows when detecting warmup subagents', () => {
+      expect(
+        isWarmupSubagent([
+          msg({
+            type: 'user',
+            content: 'Warmup',
+            isMeta: true,
+            isReplay: true,
+            isSynthetic: true,
+          }),
+          msg({
+            type: 'user',
+            content: 'Real subagent prompt',
+          }),
+        ])
+      ).toBe(false);
+    });
+  });
 
   describe('Phase 1: agent-id matching', () => {
     it('sets linkType to agent-id when agentId matches subagent id', () => {
@@ -156,6 +197,7 @@ describe('SubagentResolver.linkType', () => {
         messages: [
           msg({
             type: 'user',
+            protocolKind: 'teammate-message',
             content: `<teammate-message teammate_id="${memberName}" color="#ff0000" summary="do research">Hello</teammate-message>`,
           }),
         ],
@@ -201,6 +243,102 @@ describe('SubagentResolver.linkType', () => {
           msg({
             type: 'user',
             content: `<teammate-message teammate_id="${memberName}" color="#00ff00" summary="some other summary">Content</teammate-message>`,
+          }),
+        ],
+      });
+
+      linkToTaskCalls([sub], extractTaskCalls(messages), messages);
+
+      expect(sub.linkType).toBe('team-member-id');
+      expect(sub.parentTaskId).toBe(taskCallId);
+    });
+
+    it('ignores synthetic replay rows before teammate_id matching', () => {
+      const taskCallId = 'task-call-synthetic-prefix';
+      const memberName = 'reviewer';
+
+      const messages: ParsedMessage[] = [
+        msg({
+          type: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: taskCallId,
+              name: 'Task',
+              input: { prompt: 'review', team_name: 'team-x', name: memberName },
+            },
+          ],
+          toolCalls: [
+            {
+              id: taskCallId,
+              name: 'Task',
+              input: { prompt: 'review', team_name: 'team-x', name: memberName },
+              isTask: true,
+              taskDescription: 'review',
+              taskSubagentType: 'general-purpose',
+            },
+          ],
+        }),
+      ];
+
+      const sub = subagent({
+        id: 'team-file-with-synthetic-replay',
+        messages: [
+          msg({
+            type: 'user',
+            content: 'Human: I tested the feature looks good',
+            isMeta: true,
+            isReplay: true,
+            isSynthetic: true,
+          }),
+          msg({
+            type: 'user',
+            content: `Human: <teammate-message teammate_id="${memberName}" color="#00ff00">Review this</teammate-message>`,
+          }),
+        ],
+      });
+
+      linkToTaskCalls([sub], extractTaskCalls(messages), messages);
+
+      expect(sub.linkType).toBe('team-member-id');
+      expect(sub.parentTaskId).toBe(taskCallId);
+    });
+
+    it('still matches ordinary human replay rows by teammate_id', () => {
+      const taskCallId = 'task-call-human-replay';
+      const memberName = 'qa';
+
+      const messages: ParsedMessage[] = [
+        msg({
+          type: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: taskCallId,
+              name: 'Task',
+              input: { prompt: 'test', team_name: 'team-x', name: memberName },
+            },
+          ],
+          toolCalls: [
+            {
+              id: taskCallId,
+              name: 'Task',
+              input: { prompt: 'test', team_name: 'team-x', name: memberName },
+              isTask: true,
+              taskDescription: 'test',
+              taskSubagentType: 'general-purpose',
+            },
+          ],
+        }),
+      ];
+
+      const sub = subagent({
+        id: 'team-file-human-replay',
+        messages: [
+          msg({
+            type: 'user',
+            isReplay: true,
+            content: `<teammate-message teammate_id="${memberName}" color="#00ff00">Test this</teammate-message>`,
           }),
         ],
       });
@@ -314,7 +452,7 @@ describe('SubagentResolver.linkType', () => {
     it('propagates parent-chain linkType from ancestor', () => {
       // Access private method
       const propagate = (
-        resolver as unknown as { propagateTeamMetadata: Function }
+        resolver as unknown as { propagateTeamMetadata: PropagateTeamMetadata }
       ).propagateTeamMetadata.bind(resolver);
 
       const parentId = 'parent-last-uuid';

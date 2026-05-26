@@ -9,9 +9,16 @@
  * - Link subagents to parent Task tool calls
  */
 
-import { type ParsedMessage, type Process, type SessionMetrics, type ToolCall } from '@main/types';
+import {
+  isHumanAuthoredParsedUserMessage,
+  type ParsedMessage,
+  type Process,
+  type SessionMetrics,
+  type ToolCall,
+} from '@main/types';
 import { calculateMetrics, checkMessagesOngoing, parseJsonlFile } from '@main/utils/jsonl';
 import { createLogger } from '@shared/utils/logger';
+import { isDisplayableTeammateProtocol } from '@shared/utils/userTurnProvenance';
 import * as path from 'path';
 
 import { type ProjectScanner } from './ProjectScanner';
@@ -142,8 +149,9 @@ export class SubagentResolver {
    * - isSidechain: true (all subagents have this)
    */
   private isWarmupSubagent(messages: ParsedMessage[]): boolean {
-    // Find the first user message
-    const firstUserMessage = messages.find((m) => m.type === 'user');
+    // Find the first authored user message. Synthetic SDK replays can also be
+    // user-role rows, but they must not decide whether a subagent is warmup.
+    const firstUserMessage = messages.find((m) => this.isAuthoredUserMessage(m));
     if (!firstUserMessage) {
       return false;
     }
@@ -158,12 +166,40 @@ export class SubagentResolver {
    * Used for deterministic matching of team member files to their spawning Task calls.
    */
   private extractTeammateId(messages: ParsedMessage[]): string | undefined {
-    const firstUserMessage = messages.find((m) => m.type === 'user');
-    if (!firstUserMessage) return undefined;
+    for (const message of messages) {
+      if (!this.isAuthoredUserMessage(message)) continue;
 
-    const text = typeof firstUserMessage.content === 'string' ? firstUserMessage.content : '';
-    const match = /<teammate-message\s[^>]*?\bteammate_id="([^"]+)"/.exec(text);
-    return match?.[1];
+      const text = this.extractUserText(message);
+      const normalized = this.stripTranscriptSpeakerPrefix(text);
+      const match = /<teammate-message\s[^>]*?\bteammate_id="([^"]+)"/.exec(normalized);
+      if (match?.[1]) {
+        return match[1];
+      }
+    }
+
+    return undefined;
+  }
+
+  private isAuthoredUserMessage(message: ParsedMessage): boolean {
+    return (
+      isHumanAuthoredParsedUserMessage(message) ||
+      isDisplayableTeammateProtocol(message)
+    );
+  }
+
+  private extractUserText(message: ParsedMessage): string {
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+
+    return message.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n');
+  }
+
+  private stripTranscriptSpeakerPrefix(text: string): string {
+    return text.replace(/^(?:Human|User):\s*/i, '').trimStart();
   }
 
   /**

@@ -9,6 +9,7 @@ import {
   type EnhancedAIChunk,
   type EnhancedChunk,
   isEnhancedAIChunk,
+  isHumanAuthoredParsedUserMessage,
   type ParsedMessage,
   type Process,
   type SemanticStepGroup,
@@ -85,19 +86,7 @@ export async function buildSubagentDetail(
     // Build chunks with semantic steps
     const chunks = buildChunksFn(parsedSession.messages, nestedSubagents);
 
-    // Extract description (try to get from first user message)
-    let description = 'Subagent';
-    if (parsedSession.messages.length > 0) {
-      const firstUserMsg = parsedSession.messages.find(
-        (m) => m.type === 'user' && typeof m.content === 'string'
-      );
-      if (firstUserMsg && typeof firstUserMsg.content === 'string') {
-        description = firstUserMsg.content.substring(0, 100);
-        if (firstUserMsg.content.length > 100) {
-          description += '...';
-        }
-      }
-    }
+    const description = deriveSubagentDescription(parsedSession.messages);
 
     // Calculate timing
     const times = parsedSession.messages.map((m) => m.timestamp.getTime());
@@ -143,4 +132,20 @@ export async function buildSubagentDetail(
     logger.error(`Error building subagent detail for ${subagentId}:`, error);
     return null;
   }
+}
+
+export function deriveSubagentDescription(messages: ParsedMessage[]): string {
+  const firstUserMsg = messages.find((message) => {
+    return isHumanAuthoredParsedUserMessage(message) && typeof message.content === 'string';
+  });
+
+  if (!firstUserMsg || typeof firstUserMsg.content !== 'string') {
+    return 'Subagent';
+  }
+
+  let description = firstUserMsg.content.substring(0, 100);
+  if (firstUserMsg.content.length > 100) {
+    description += '...';
+  }
+  return description;
 }

@@ -23,6 +23,7 @@ import {
   detectSwitchPattern,
 } from '@renderer/utils/reportAssessments';
 import { calculateMessageCost } from '@shared/utils/pricing';
+import { isHumanAuthoredUserTurn } from '@shared/utils/userTurnProvenance';
 
 import type {
   AgentTreeNode,
@@ -354,6 +355,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     const msgType = m.type ?? 'unknown';
+    const isHumanUserMessage = msgType === 'user' && isHumanAuthoredUserTurn(m);
     typeCounts.set(msgType, (typeCounts.get(msgType) ?? 0) + 1);
     const msgUuid = m.uuid ?? '';
     const msgParent = m.parentUuid ?? '';
@@ -473,7 +475,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     if (msgType === 'assistant' && msgTs) {
       lastAssistantTs = msgTs;
     }
-    if (msgType === 'user' && msgTs && lastAssistantTs) {
+    if (isHumanUserMessage && msgTs && lastAssistantTs) {
       const gap = (msgTs.getTime() - lastAssistantTs.getTime()) / 1000;
       if (gap > IDLE_THRESHOLD_SEC) {
         idleGaps.push({
@@ -485,7 +487,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     }
 
     // --- First user message length (prompt quality) ---
-    if (msgType === 'user' && !firstUserSeen && !m.isMeta) {
+    if (isHumanUserMessage && !firstUserSeen) {
       const contentText = extractTextContent(m);
       if (contentText.trim()) {
         firstUserMessageLength = contentText.length;
@@ -617,7 +619,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
       let label: string | null = null;
       if (msgType === 'user' && typeof m.content === 'string') {
         const content = m.content;
-        if (content.includes('start feature')) {
+        if (isHumanUserMessage && content.includes('start feature')) {
           label = `User: ${content.slice(0, 60)}`;
         } else if (content.includes('being continued')) {
           label = 'Context compaction/continuation';
@@ -639,7 +641,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     }
 
     // --- Friction signals (user messages) ---
-    if (msgType === 'user' && !m.isMeta) {
+    if (isHumanUserMessage) {
       const contentText = extractTextContent(m);
       if (contentText.trim()) {
         userMessageCount++;

@@ -1,11 +1,9 @@
+import { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFinder';
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import * as fs from 'fs/promises';
-
-import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
-import { TeamMemberLogsFinder } from '../../../../src/main/services/team/TeamMemberLogsFinder';
 
 describe('TeamMemberLogsFinder', () => {
   let tmpDir: string | null = null;
@@ -964,6 +962,7 @@ describe('TeamMemberLogsFinder', () => {
         JSON.stringify({
           timestamp: '2026-01-01T00:00:01.000Z',
           type: 'user',
+          protocolKind: 'teammate-message',
           message: {
             role: 'user',
             content:
@@ -988,6 +987,144 @@ describe('TeamMemberLogsFinder', () => {
       expect(aliceLogs[0].subagentId).toBe('xyz789');
       expect(aliceLogs[0].description).toBe('Implement feature X');
     }
+  });
+
+  it('ignores synthetic replay text when deriving subagent attribution description', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'tSyntheticReplay';
+    const projectPath = '/Users/test/projSyntheticReplay';
+    const projectId = '-Users-test-projSyntheticReplay';
+    const leadSessionId = 'sSyntheticReplay';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [
+          { name: 'alice', agentType: 'general-purpose' },
+          { name: 'bob', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+
+    await fs.writeFile(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        type: 'user',
+        message: { role: 'user', content: 'Start' },
+      }) + '\n',
+      'utf8'
+    );
+
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob001.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          isReplay: true,
+          isSynthetic: true,
+          message: {
+            role: 'user',
+            content: 'Human: I tested the feature looks good for alice',
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content:
+              '<teammate-message teammate_id="bob" color="blue" summary="Build the real task">Please implement it</teammate-message>',
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const bobLogs = await finder.findMemberLogs(teamName, 'bob');
+    const aliceLogs = await finder.findMemberLogs(teamName, 'alice');
+
+    expect(aliceLogs).toHaveLength(0);
+    expect(bobLogs).toHaveLength(1);
+    expect(bobLogs[0]?.description).toBe('Build the real task');
+  });
+
+  it('ignores raw tool_result content when deriving subagent attribution description', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'tool-result-raw-team';
+    const projectPath = '/Users/test/tool-result-raw';
+    const projectId = '-Users-test-tool-result-raw';
+    const leadSessionId = 'lead-tool-result-raw';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [{ name: 'bob', agentType: 'general-purpose' }],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        type: 'user',
+        message: { role: 'user', content: 'Start' },
+      }) + '\n',
+      'utf8'
+    );
+
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob001.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [
+              { type: 'tool_result', tool_use_id: 'tool-1', content: 'result text' },
+              { type: 'text', text: 'Tool result should not become the description' },
+            ],
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content:
+              '<teammate-message teammate_id="bob" color="blue" summary="Build the real task">Please implement it</teammate-message>',
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const bobLogs = await new TeamMemberLogsFinder().findMemberLogs(teamName, 'bob');
+
+    expect(bobLogs).toHaveLength(1);
+    expect(bobLogs[0]?.description).toBe('Build the real task');
   });
 
   it('routing.sender overrides teammate_id="team-lead" from spawn message', async () => {

@@ -4,6 +4,7 @@
 
 import { isCommandOutputContent, sanitizeDisplayContent } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
+import { isHumanAuthoredUserTurn } from '@shared/utils/userTurnProvenance';
 import * as fs from 'fs/promises';
 import * as readline from 'readline';
 
@@ -283,6 +284,10 @@ export async function extractFirstUserMessagePreview(
 }
 
 function extractPreviewFromUserEntry(entry: UserEntry): MessagePreview | null {
+  if (!isHumanAuthoredUserTurn(entry)) {
+    return null;
+  }
+
   const timestamp = entry.timestamp ?? new Date().toISOString();
   const message = entry.message;
   if (!message) {

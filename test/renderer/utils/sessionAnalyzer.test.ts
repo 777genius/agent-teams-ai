@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-
 import { analyzeSession } from '@renderer/utils/sessionAnalyzer';
-import type { ParsedMessage, Session, SessionDetail, SessionMetrics, Process } from '@shared/types';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import type { ParsedMessage, Process, Session, SessionDetail, SessionMetrics } from '@shared/types';
 
 // =============================================================================
 // Test Helpers
@@ -419,6 +419,37 @@ describe('analyzeSession', () => {
       const report = analyzeSession(createMockDetail({ messages }));
       expect(report.frictionSignals.correctionCount).toBe(0);
     });
+
+    it('does not count synthetic user replay text as friction', () => {
+      const messages: ParsedMessage[] = [
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          isReplay: true,
+          isSynthetic: true,
+          content: 'No, wrong, actually this is synthetic replay',
+        }),
+      ];
+
+      const report = analyzeSession(createMockDetail({ messages }));
+      expect(report.frictionSignals.correctionCount).toBe(0);
+      expect(report.frictionSignals.frictionRate).toBe(0);
+    });
+
+    it('does not count structured protocol rows as friction', () => {
+      const messages: ParsedMessage[] = [
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          protocolKind: 'teammate-message',
+          content: 'No, wrong, actually this is protocol',
+        }),
+      ];
+
+      const report = analyzeSession(createMockDetail({ messages }));
+      expect(report.frictionSignals.correctionCount).toBe(0);
+      expect(report.frictionSignals.frictionRate).toBe(0);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -561,6 +592,49 @@ describe('analyzeSession', () => {
       const report = analyzeSession(createMockDetail({ messages }));
       expect(report.idleAnalysis.idleGapCount).toBe(0);
       expect(report.idleAnalysis.totalIdleSeconds).toBe(0);
+    });
+
+    it('does not treat structured protocol rows as user idle endpoints', () => {
+      const messages: ParsedMessage[] = [
+        createMockMessage({
+          type: 'assistant',
+          timestamp: new Date('2024-01-01T10:00:00Z'),
+        }),
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          protocolKind: 'teammate-message',
+          content:
+            '<teammate-message teammate_id="alice">Looks good</teammate-message>',
+          timestamp: new Date('2024-01-01T10:02:00Z'),
+        }),
+      ];
+
+      const report = analyzeSession(createMockDetail({ messages }));
+      expect(report.idleAnalysis.idleGapCount).toBe(0);
+      expect(report.idleAnalysis.totalIdleSeconds).toBe(0);
+    });
+  });
+
+  describe('key events', () => {
+    it('does not label structured protocol rows as user key events', () => {
+      const messages: ParsedMessage[] = [
+        createMockMessage({
+          type: 'user',
+          protocolKind: 'teammate-message',
+          content: 'start feature handoff note',
+          timestamp: new Date('2024-01-01T10:00:00Z'),
+        }),
+        createMockMessage({
+          type: 'user',
+          content: 'start feature implementation',
+          timestamp: new Date('2024-01-01T10:01:00Z'),
+        }),
+      ];
+
+      const report = analyzeSession(createMockDetail({ messages }));
+      expect(report.keyEvents).toHaveLength(1);
+      expect(report.keyEvents[0]?.label).toBe('User: start feature implementation');
     });
   });
 
@@ -814,6 +888,45 @@ describe('analyzeSession', () => {
       const report = analyzeSession(createMockDetail({ messages }));
       expect(report.promptQuality.assessment).toBe('underspecified');
       expect(report.promptQuality.firstMessageLengthChars).toBe('Fix the bug'.length);
+    });
+
+    it('ignores synthetic user replay text for first prompt length', () => {
+      const messages: ParsedMessage[] = [
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          isReplay: true,
+          isSynthetic: true,
+          content: 'Human: I tested the feature looks good',
+        }),
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          content: 'Build the real feature',
+        }),
+      ];
+
+      const report = analyzeSession(createMockDetail({ messages }));
+      expect(report.promptQuality.firstMessageLengthChars).toBe('Build the real feature'.length);
+    });
+
+    it('ignores structured protocol rows for first prompt length', () => {
+      const messages: ParsedMessage[] = [
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          protocolKind: 'teammate-message',
+          content: 'plain protocol payload',
+        }),
+        createMockMessage({
+          type: 'user',
+          isMeta: false,
+          content: 'Build the real feature',
+        }),
+      ];
+
+      const report = analyzeSession(createMockDetail({ messages }));
+      expect(report.promptQuality.firstMessageLengthChars).toBe('Build the real feature'.length);
     });
   });
 

@@ -141,6 +141,34 @@ describe('SearchTextExtractor', () => {
       expect(result.entries[0].text).toBe('main thread');
     });
 
+    it('does not index synthetic user-role replay text as human or AI content', () => {
+      const syntheticReplay: ParsedMessage = {
+        ...makeUserMessage('u-synthetic', 'Human: I tested the feature looks good'),
+        isMeta: true,
+        isReplay: true,
+        isSynthetic: true,
+      } as ParsedMessage;
+      const messages = [syntheticReplay, makeUserMessage('u1', 'real user text')];
+      const result = extractSearchableEntries(messages);
+
+      expect(result.sessionTitle).toBe('real user text');
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0].messageUuid).toBe('u1');
+    });
+
+    it('does not index structured protocol rows as human or AI content', () => {
+      const protocolRow: ParsedMessage = {
+        ...makeUserMessage('u-protocol', 'plain protocol payload'),
+        protocolKind: 'teammate-message',
+      } as ParsedMessage;
+      const messages = [protocolRow, makeUserMessage('u1', 'real user text')];
+      const result = extractSearchableEntries(messages);
+
+      expect(result.sessionTitle).toBe('real user text');
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0].messageUuid).toBe('u1');
+    });
+
     it('extracts sessionTitle from first user message (truncated to 100 chars)', () => {
       const longText = 'a'.repeat(200);
       const messages = [

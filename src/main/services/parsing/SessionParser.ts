@@ -9,6 +9,7 @@
  */
 
 import {
+  isHumanAuthoredParsedUserMessage,
   isParsedInternalUserMessage,
   isParsedRealUserMessage,
   type ParsedMessage,
@@ -178,8 +179,9 @@ export class SessionParser {
     for (let i = userMsgIndex + 1; i < messages.length; i++) {
       const msg = messages[i];
 
-      // Stop at next user message
-      if (msg.type === 'user') break;
+      // Stop at the next human-authored user turn. Structured protocol/meta
+      // rows can use type='user' but must not split the assistant response.
+      if (isHumanAuthoredParsedUserMessage(msg)) break;
 
       // Include assistant responses
       if (msg.type === 'assistant') {

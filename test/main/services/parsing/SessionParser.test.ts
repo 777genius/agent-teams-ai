@@ -9,17 +9,17 @@
  * - Time range calculation
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
+import {
+  type ParsedSession,
+  SessionParser,
+} from '@main/services/parsing/SessionParser';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  SessionParser,
-  type ParsedSession,
-} from '../../../../src/main/services/parsing/SessionParser';
-import type { ParsedMessage } from '../../../../src/main/types';
-import { LocalFileSystemProvider } from '../../../../src/main/services/infrastructure/LocalFileSystemProvider';
+import type { ParsedMessage } from '@main/types';
 
 // =============================================================================
 // Mock ProjectScanner
@@ -359,6 +359,48 @@ describe('SessionParser', () => {
       const responses = parser.getResponses(messages, userMsgUuid);
       expect(responses).toHaveLength(1);
       expect(responses[0].uuid).toBe('asst-1');
+    });
+
+    it('should not stop at structured non-human user-role messages', () => {
+      const userMsgUuid = 'user-1';
+      const messages = [
+        createMessage({ uuid: userMsgUuid, type: 'user', content: 'Q1' }),
+        createMessage({
+          uuid: 'protocol-1',
+          type: 'user',
+          content: '<teammate-message teammate_id="alice">Looks good</teammate-message>',
+          protocolKind: 'teammate-message',
+          origin: { kind: 'teammate' },
+          isSynthetic: true,
+        }),
+        createMessage({
+          uuid: 'asst-1',
+          type: 'assistant',
+          content: [{ type: 'text', text: 'A1' }],
+        }),
+        createMessage({
+          uuid: 'coordinator-1',
+          type: 'user',
+          content: 'queued coordination update',
+          origin: { kind: 'coordinator' },
+          isMeta: true,
+          isSynthetic: true,
+        }),
+        createMessage({
+          uuid: 'asst-2',
+          type: 'assistant',
+          content: [{ type: 'text', text: 'A2' }],
+        }),
+        createMessage({ uuid: 'user-2', type: 'user', content: 'Q2' }),
+        createMessage({
+          uuid: 'asst-3',
+          type: 'assistant',
+          content: [{ type: 'text', text: 'A3' }],
+        }),
+      ];
+
+      const responses = parser.getResponses(messages, userMsgUuid);
+      expect(responses.map((message) => message.uuid)).toEqual(['asst-1', 'asst-2']);
     });
 
     it('should return empty for non-existent message', () => {

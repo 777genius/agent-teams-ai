@@ -5,6 +5,10 @@
  */
 
 import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
+import {
+  isDisplayableTeammateProtocol,
+  isHumanAuthoredUserTurn,
+} from '@shared/utils/userTurnProvenance';
 
 import { estimateTokens, formatToolInput, formatToolResult, toDate } from './aiGroupHelpers';
 import { extractSlashes, type PrecedingSlashInfo } from './slashCommandExtractor';
@@ -235,7 +239,7 @@ export function buildDisplayItems(
   // Add teammate messages from responses (one user message may contain multiple blocks)
   if (responses) {
     for (const msg of responses) {
-      if (msg.type !== 'user' || msg.isMeta) continue;
+      if (!isDisplayableTeammateProtocol(msg)) continue;
       const rawText =
         typeof msg.content === 'string'
           ? msg.content
@@ -401,7 +405,7 @@ export function buildDisplayItemsFromMessages(
 
     // Check for teammate messages (non-meta user messages with <teammate-message> content)
     // One user message may contain multiple <teammate-message> blocks
-    if (msg.type === 'user' && !msg.isMeta) {
+    if (msg.type === 'user' && (isHumanAuthoredUserTurn(msg) || isDisplayableTeammateProtocol(msg))) {
       const rawText =
         typeof msg.content === 'string'
           ? msg.content
@@ -411,7 +415,9 @@ export function buildDisplayItemsFromMessages(
                 .map((b) => b.text)
                 .join('')
             : '';
-      const parsedBlocks = parseAllTeammateMessages(rawText);
+      const parsedBlocks = isDisplayableTeammateProtocol(msg)
+        ? parseAllTeammateMessages(rawText)
+        : [];
       if (parsedBlocks.length > 0) {
         for (const parsed of parsedBlocks) {
           displayItems.push({
