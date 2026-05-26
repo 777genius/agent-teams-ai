@@ -59,7 +59,7 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       extraCliArgs,
       waitForReady,
     }) => {
-      assertConfiguredOrDraftTeam(teamName, claudeDir);
+      assertConfiguredTeam(teamName, claudeDir);
       return jsonTextContent(
         await getController(teamName, claudeDir).runtime.launchTeam({
           cwd,

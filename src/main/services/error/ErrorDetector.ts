@@ -74,7 +74,7 @@ class ErrorDetector {
     const cwdHint =
       messages.find((message) => typeof message.cwd === 'string' && message.cwd.trim().length > 0)
         ?.cwd ?? undefined;
-    await preResolveRepositoryIds([{ projectId, cwdHint }]);
+    await preResolveRepositoryIds([projectId]);
 
     // Build tool_use map for linking results to calls
     const toolUseMap = buildToolUseMap(messages);
