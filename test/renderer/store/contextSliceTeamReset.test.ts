@@ -144,6 +144,64 @@ describe('context slice team/task reset', () => {
     vi.restoreAllMocks();
   });
 
+  it('does not refetch context-scoped data when lazy initialization keeps the same context', async () => {
+    const store = createTestStore();
+    store.setState({
+      activeContextId: 'local',
+      projects: [
+        {
+          id: 'local-project',
+          name: 'Local Project',
+          path: '/local/project',
+          sessions: [],
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString(),
+        },
+      ],
+      projectsInitialized: true,
+      repositoryGroups: [
+        {
+          id: 'local-repo',
+          identity: null,
+          name: 'Local Repo',
+          totalSessions: 0,
+          worktrees: [],
+        },
+      ],
+      repositoryGroupsInitialized: true,
+      teams: [
+        {
+          teamName: 'local-team',
+          displayName: 'Local Team',
+          projectPath: '/local/project',
+        },
+      ],
+      globalTasks: [
+        {
+          id: 'local-task',
+          subject: 'Local task',
+          status: 'todo',
+          teamName: 'local-team',
+          teamDisplayName: 'Local Team',
+          projectPath: '/local/project',
+          comments: [],
+        },
+      ],
+      globalTasksInitialized: true,
+    } as never);
+
+    await store.getState().initializeContextSystem();
+
+    expect(store.getState().activeContextId).toBe('local');
+    expect(store.getState().projectsInitialized).toBe(true);
+    expect(store.getState().repositoryGroupsInitialized).toBe(true);
+    expect(apiMock.context.list).toHaveBeenCalledTimes(1);
+    expect(apiMock.getProjects).not.toHaveBeenCalled();
+    expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+    expect(apiMock.teams.list).not.toHaveBeenCalled();
+    expect(apiMock.teams.getAllTasks).not.toHaveBeenCalled();
+  });
+
   it('drops previous-context team and task caches before refreshing the target context', async () => {
     const store = createTestStore();
     store.setState({
