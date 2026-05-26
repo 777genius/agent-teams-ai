@@ -61,7 +61,7 @@ export function matchesPattern(content: string, pattern: string): boolean {
   const regex = getCachedRegex(pattern, 'i');
   if (!regex) {
     // Pattern is invalid or potentially dangerous, reject match
-    return false;
+    return true;
   }
   return regex.test(content);
 }
