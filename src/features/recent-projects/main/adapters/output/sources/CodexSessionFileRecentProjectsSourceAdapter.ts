@@ -345,32 +345,50 @@ async function listRecentJsonlFiles(
     if (!hasBudget()) {
       return;
     }
-    let entries;
+    let directoryHandle;
     try {
-      entries = await fs.readdir(directory, { withFileTypes: true, encoding: 'utf8' });
+      directoryHandle = await fs.opendir(directory, { encoding: 'utf8' });
     } catch {
       return;
     }
 
     directoriesVisited += 1;
-    const filePaths: string[] = [];
+    const fileBatch: string[] = [];
     const childDirectories: string[] = [];
+    const flushFileBatch = async (): Promise<void> => {
+      if (!fileBatch.length) {
+        return;
+      }
+      const batch = fileBatch.splice(0, fileBatch.length);
+      await collectFileStats(batch);
+    };
 
-    for (const entry of entries) {
-      const entryPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) {
-        if (depth < maxDepth) {
-          childDirectories.push(entryPath);
+    try {
+      for await (const entry of directoryHandle) {
+        if (!hasBudget()) {
+          return;
         }
-        continue;
-      }
 
-      if (entry.isFile() && entry.name.endsWith('.jsonl')) {
-        filePaths.push(entryPath);
+        const entryPath = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          if (depth < maxDepth) {
+            childDirectories.push(entryPath);
+          }
+          continue;
+        }
+
+        if (entry.isFile() && entry.name.endsWith('.jsonl')) {
+          fileBatch.push(entryPath);
+          if (fileBatch.length >= CODEX_SESSION_FILE_DISCOVERY_STAT_BATCH_SIZE) {
+            await flushFileBatch();
+          }
+        }
       }
+    } catch {
+      return;
     }
 
-    await collectFileStats(filePaths);
+    await flushFileBatch();
 
     for (const childDirectory of childDirectories) {
       if (!hasBudget()) {

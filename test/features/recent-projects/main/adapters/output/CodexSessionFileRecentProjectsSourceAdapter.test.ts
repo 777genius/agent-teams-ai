@@ -742,6 +742,7 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
         )
       )
     );
+    const readdirSpy = vi.spyOn(fs, 'readdir');
 
     const adapter = new CodexSessionFileRecentProjectsSourceAdapter({
       getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
@@ -767,6 +768,7 @@ describe('CodexSessionFileRecentProjectsSourceAdapter', () => {
         skippedUncached: 340,
       })
     );
+    expect(readdirSpy).not.toHaveBeenCalled();
   });
 
   it('skips non-interactive and ephemeral sessions', async () => {
