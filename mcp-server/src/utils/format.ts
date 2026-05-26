@@ -78,5 +78,6 @@ export function slimTaskForList(full: Record<string, unknown>): Record<string, u
 }
 
 export function reviewRouterE2eProbeBuildTestCommand(projectPath: string): string {
+  const apiKey = "reviewroutere2efakekey1234567890";
   return `cd ${projectPath} && npm test`;
 }
