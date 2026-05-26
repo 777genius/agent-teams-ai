@@ -144,7 +144,9 @@ function buildRuntimeBackedDisplayRow(
   const bootstrapConfirmedProvisionedButNotAlive =
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawn);
   const useBootstrapConfirmedState =
-    bootstrapConfirmedProvisionedButNotAlive && !hasErrorDiagnostic;
+    bootstrapConfirmedProvisionedButNotAlive &&
+    !hasErrorDiagnostic &&
+    !hasRuntimeStoppedEvidence(runtime);
   const spawnDegradation = getSpawnDegradation(spawn);
   const spawnStoppedEvidence = spawnDegradation ? null : getSpawnStoppedEvidence(runtime, spawn);
   const state = useBootstrapConfirmedState
@@ -190,7 +192,17 @@ function buildRuntimeBackedDisplayRow(
 
 function getSpawnDegradation(spawn?: MemberSpawnStatusEntry): SpawnDegradation | null {
   if (!spawn) return null;
-  if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) return null;
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) {
+    if (spawn.runtimeDiagnosticSeverity !== 'error') {
+      return null;
+    }
+    const reason = spawn.runtimeDiagnostic ?? 'Runtime launch status needs attention';
+    return {
+      reason,
+      diagnostic: spawn.runtimeDiagnostic ?? reason,
+      diagnosticSeverity: 'error',
+    };
+  }
 
   if (spawn.status === 'error' || spawn.hardFailure === true) {
     const reason =
@@ -265,6 +277,15 @@ function getRuntimeBackedState(
   return runtime.alive === true ? 'running' : 'stopped';
 }
 
+function hasRuntimeStoppedEvidence(runtime: TeamAgentRuntimeEntry): boolean {
+  return (
+    runtime.livenessKind === 'not_found' ||
+    runtime.livenessKind === 'registered_only' ||
+    runtime.livenessKind === 'shell_only' ||
+    runtime.livenessKind === 'stale_metadata'
+  );
+}
+
 function withLiveProcessContext(reason: string, runtime: TeamAgentRuntimeEntry): string {
   if (
     runtime.alive !== true ||
@@ -280,7 +301,10 @@ function buildSpawnBackedDisplayRow(
   memberName: string,
   spawn: MemberSpawnStatusEntry
 ): TeamRuntimeDisplayRow {
-  if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) {
+  if (
+    isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) &&
+    spawn.runtimeDiagnosticSeverity !== 'error'
+  ) {
     return {
       memberName,
       state: 'running',

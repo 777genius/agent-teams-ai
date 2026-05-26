@@ -23952,6 +23952,58 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('does not let weak metadata undo confirmed bootstrap failure healing', async () => {
+    const svc = new TeamProvisioningService();
+    const harness = privateHarness(svc);
+    const processTableReason =
+      'runtime pid could not be verified because process table is unavailable';
+    const exitReason = 'CLI process exited (code 1) \u2014 team provisioned but not alive';
+    harness.getLiveTeamAgentRuntimeMetadata = vi.fn(
+      async () =>
+        new Map([
+          [
+            'tom',
+            {
+              alive: false,
+              model: 'sonnet',
+              livenessKind: 'registered_only',
+              pidSource: 'persisted_metadata',
+              runtimeDiagnostic: processTableReason,
+              runtimeDiagnosticSeverity: 'warning',
+            },
+          ],
+        ])
+    );
+
+    const result = await harness.attachLiveRuntimeMetadataToStatuses('signal-ops', {
+      tom: createMemberSpawnStatusEntry({
+        status: 'error',
+        launchState: 'confirmed_alive',
+        error: exitReason,
+        hardFailure: true,
+        hardFailureReason: exitReason,
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        runtimeDiagnostic: processTableReason,
+        runtimeDiagnosticSeverity: 'warning',
+        firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+        lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+      }),
+    });
+
+    expect(result.tom).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      runtimeModel: 'sonnet',
+    });
+  });
+
   it('does not clear OpenCode bridge launch failure from process-only liveness', async () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(

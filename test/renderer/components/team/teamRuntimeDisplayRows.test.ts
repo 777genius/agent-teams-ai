@@ -322,6 +322,68 @@ describe('buildTeamRuntimeDisplayRows', () => {
     });
   });
 
+  it('does not let provisioned-but-not-alive spawn evidence hide stopped runtime evidence', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      runtimeSnapshot: createRuntimeSnapshot({
+        alice: createRuntimeEntry({
+          alive: false,
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime metadata was not found',
+          runtimeDiagnosticSeverity: 'warning',
+        }),
+      }),
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+          livenessKind: 'confirmed_bootstrap',
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      state: 'stopped',
+      source: 'mixed',
+      stateReason: 'Runtime metadata was not found',
+      diagnosticSeverity: 'warning',
+      actionsAllowed: false,
+    });
+  });
+
+  it('keeps spawn-only runtime errors visible for provisioned-but-not-alive entries', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic: 'Runtime process crashed',
+          runtimeDiagnosticSeverity: 'error',
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      state: 'degraded',
+      source: 'spawn-status',
+      stateReason: 'Runtime process crashed',
+      diagnosticSeverity: 'error',
+      actionsAllowed: false,
+    });
+  });
+
   it('degrades spawn-only rows when online process evidence has stalled bootstrap', () => {
     const rows = buildTeamRuntimeDisplayRows({
       members: [{ name: 'alice' }],

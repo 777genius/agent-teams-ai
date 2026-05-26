@@ -937,7 +937,8 @@ export const MemberList = memo(function MemberList({
             : spawnEntry?.launchState;
           const useBootstrapConfirmedRuntimeAlive =
             bootstrapConfirmedProvisionedButNotAlive &&
-            runtimeEntry?.runtimeDiagnosticSeverity !== 'error';
+            runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
+            spawnEntry?.runtimeDiagnosticSeverity !== 'error';
           const effectiveSpawnRuntimeAlive = useBootstrapConfirmedRuntimeAlive
             ? true
             : spawnEntry?.runtimeAlive;

@@ -177,6 +177,22 @@ describe('memberHelpers spawn-aware presence', () => {
         },
       })
     ).toBe(false);
+
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: { ...member, currentTaskId: 'task-1' },
+        isTeamAlive: true,
+        spawnStatus: provisionedButNotAliveSpawn.status,
+        spawnLaunchState: provisionedButNotAliveSpawn.launchState,
+        spawnRuntimeAlive: provisionedButNotAliveSpawn.runtimeAlive,
+        spawnEntry: {
+          ...provisionedButNotAliveSpawn,
+          runtimeDiagnostic: 'Runtime process crashed',
+          runtimeDiagnosticSeverity: 'error',
+        },
+        runtimeEntry: processTableUnavailableRuntime,
+      })
+    ).toBe(false);
   });
 
   it('shows process-online teammates as online with a green dot', () => {

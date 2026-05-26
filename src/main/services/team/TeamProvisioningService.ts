@@ -24226,6 +24226,8 @@ export class TeamProvisioningService {
         livenessLastCheckedAt: nowIso(),
       };
       const failureReason = current.hardFailureReason ?? current.error;
+      const bootstrapProofClearableFailure =
+        isBootstrapProofClearableLaunchFailureReason(failureReason);
       const hasWeakEvidence =
         metadata.livenessKind != null && !hasStrongEvidence && current.bootstrapConfirmed !== true;
       if (
@@ -24269,7 +24271,7 @@ export class TeamProvisioningService {
       if (
         hasStrongEvidence &&
         current.launchState === 'failed_to_start' &&
-        isBootstrapProofClearableLaunchFailureReason(failureReason)
+        bootstrapProofClearableFailure
       ) {
         nextEntry.status = 'online';
         nextEntry.agentToolAccepted = true;
@@ -24280,11 +24282,7 @@ export class TeamProvisioningService {
         nextEntry.livenessSource = current.bootstrapConfirmed ? current.livenessSource : 'process';
         nextEntry.launchState = deriveMemberLaunchState(nextEntry);
       }
-      if (
-        hasConfirmedBootstrap &&
-        current.hardFailure === true &&
-        isBootstrapProofClearableLaunchFailureReason(failureReason)
-      ) {
+      if (hasConfirmedBootstrap && current.hardFailure === true && bootstrapProofClearableFailure) {
         nextEntry.status = 'online';
         nextEntry.agentToolAccepted = true;
         nextEntry.runtimeAlive = true;
@@ -24295,7 +24293,9 @@ export class TeamProvisioningService {
         nextEntry.bootstrapStalled = undefined;
         nextEntry.launchState = deriveMemberLaunchState(nextEntry);
       }
-      if (hasWeakEvidence) {
+      const healedConfirmedBootstrapFailure =
+        hasConfirmedBootstrap && current.hardFailure === true && bootstrapProofClearableFailure;
+      if (hasWeakEvidence && !healedConfirmedBootstrapFailure) {
         nextEntry.runtimeAlive = false;
         if (nextEntry.livenessSource === 'process') {
           nextEntry.livenessSource = undefined;

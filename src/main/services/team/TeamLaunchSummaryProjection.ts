@@ -16,6 +16,7 @@ import {
 import type {
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
+  PersistedTeamLaunchSummary,
   TeamProviderId,
   TeamSummary,
 } from '@shared/types';
@@ -320,6 +321,82 @@ function shouldIgnoreStalePendingLaunchSnapshotSummary(
   return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= STALE_PENDING_SUMMARY_GRACE_MS;
 }
 
+function reconcileSummaryProjectionWithBootstrap(
+  projection: PersistedTeamLaunchSummaryProjection,
+  bootstrapSnapshot: PersistedTeamLaunchSnapshot
+): PersistedTeamLaunchSummaryProjection {
+  const missingMembers = projection.missingMembers ?? [];
+  if (missingMembers.length === 0) {
+    return projection;
+  }
+
+  const projectionBoundary = projection.launchUpdatedAt ?? projection.updatedAt;
+  const healedMembers = missingMembers.filter((memberName) => {
+    const bootstrapMember = bootstrapSnapshot.members[memberName];
+    return (
+      bootstrapMember != null &&
+      hasBootstrapConfirmationProofForLaunchFailure(bootstrapMember) &&
+      isBootstrapMemberEvidenceCurrentForMember(
+        { firstSpawnAcceptedAt: projectionBoundary, lastEvaluatedAt: projectionBoundary },
+        bootstrapMember,
+        'confirmation'
+      )
+    );
+  });
+  if (healedMembers.length === 0) {
+    return projection;
+  }
+
+  const healedMemberNames = new Set(healedMembers);
+  const nextMissingMembers = missingMembers.filter(
+    (memberName) => !healedMemberNames.has(memberName)
+  );
+  const summary: PersistedTeamLaunchSummary = {
+    confirmedCount:
+      (projection.confirmedCount ?? projection.confirmedMemberCount ?? 0) + healedMembers.length,
+    pendingCount: projection.pendingCount ?? 0,
+    failedCount: Math.max(
+      0,
+      (projection.failedCount ?? missingMembers.length) - healedMembers.length
+    ),
+    skippedCount: projection.skippedCount ?? projection.skippedMembers?.length ?? 0,
+    runtimeAlivePendingCount: projection.runtimeAlivePendingCount ?? 0,
+    shellOnlyPendingCount: projection.shellOnlyPendingCount,
+    runtimeProcessPendingCount: projection.runtimeProcessPendingCount,
+    runtimeCandidatePendingCount: projection.runtimeCandidatePendingCount,
+    noRuntimePendingCount: projection.noRuntimePendingCount,
+    permissionPendingCount: projection.permissionPendingCount,
+  };
+  const teamLaunchState = deriveTeamLaunchAggregateState(summary);
+
+  const reconciled: PersistedTeamLaunchSummaryProjection = {
+    ...projection,
+    teamLaunchState,
+    confirmedMemberCount: summary.confirmedCount,
+    confirmedCount: summary.confirmedCount,
+    pendingCount: summary.pendingCount,
+    failedCount: summary.failedCount,
+    skippedCount: summary.skippedCount,
+    runtimeAlivePendingCount: summary.runtimeAlivePendingCount,
+    shellOnlyPendingCount: summary.shellOnlyPendingCount,
+    runtimeProcessPendingCount: summary.runtimeProcessPendingCount,
+    runtimeCandidatePendingCount: summary.runtimeCandidatePendingCount,
+    noRuntimePendingCount: summary.noRuntimePendingCount,
+    permissionPendingCount: summary.permissionPendingCount,
+  };
+  if (nextMissingMembers.length > 0) {
+    reconciled.missingMembers = nextMissingMembers;
+  } else {
+    delete reconciled.missingMembers;
+  }
+  if (teamLaunchState === 'partial_failure') {
+    reconciled.partialLaunchFailure = true;
+  } else {
+    delete reconciled.partialLaunchFailure;
+  }
+  return reconciled;
+}
+
 export function choosePreferredLaunchStateSummary(params: {
   bootstrapSnapshot?: PersistedTeamLaunchSnapshot | null;
   launchSnapshot?: PersistedTeamLaunchSnapshot | null;
@@ -351,22 +428,28 @@ export function choosePreferredLaunchStateSummary(params: {
     return createLaunchStateSummary(bootstrapSnapshot);
   }
 
+  const reconciledProjection = reconcileSummaryProjectionWithBootstrap(
+    projection,
+    bootstrapSnapshot
+  );
   const bootstrapMixedAware = hasMixedPersistedLaunchMetadata(bootstrapSnapshot);
-  const projectionMixedAware = projection.mixedAware === true;
+  const projectionMixedAware = reconciledProjection.mixedAware === true;
   if (projectionMixedAware !== bootstrapMixedAware) {
-    return projectionMixedAware ? projection : createLaunchStateSummary(bootstrapSnapshot);
+    return projectionMixedAware
+      ? reconciledProjection
+      : createLaunchStateSummary(bootstrapSnapshot);
   }
 
-  const projectionUpdatedAtMs = toMillis(projection.updatedAt);
+  const projectionUpdatedAtMs = toMillis(reconciledProjection.updatedAt);
   const bootstrapUpdatedAtMs = toMillis(bootstrapSnapshot.updatedAt);
   if (!Number.isFinite(bootstrapUpdatedAtMs)) {
-    return projection;
+    return reconciledProjection;
   }
   if (!Number.isFinite(projectionUpdatedAtMs)) {
     return createLaunchStateSummary(bootstrapSnapshot);
   }
   return projectionUpdatedAtMs >= bootstrapUpdatedAtMs
-    ? projection
+    ? reconciledProjection
     : createLaunchStateSummary(bootstrapSnapshot);
 }
 

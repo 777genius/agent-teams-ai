@@ -1128,6 +1128,9 @@ export function shouldDisplayMemberCurrentTask({
   if (runtimeEntry?.runtimeDiagnosticSeverity === 'error') {
     return false;
   }
+  if (spawnEntry?.runtimeDiagnosticSeverity === 'error') {
+    return false;
+  }
   if (runtimeEntry?.alive === false && !bootstrapConfirmedProvisionedButNotAlive) {
     return false;
   }
@@ -1349,6 +1352,8 @@ export function buildMemberLaunchPresentation({
     });
   const useBootstrapConfirmedRuntimeAlive =
     bootstrapConfirmedProvisionedButNotAlive && runtimeEntry?.runtimeDiagnosticSeverity !== 'error';
+  const suppressConfirmedLaunchRuntimeAlivePromotion =
+    bootstrapConfirmedProvisionedButNotAlive && runtimeEntry?.runtimeDiagnosticSeverity === 'error';
   const visualSpawnStatus = bootstrapConfirmedProvisionedButNotAlive ? 'online' : spawnStatus;
   const visualSpawnLaunchState = bootstrapConfirmedProvisionedButNotAlive
     ? 'confirmed_alive'
@@ -1404,7 +1409,7 @@ export function buildMemberLaunchPresentation({
   const effectiveSpawnRuntimeAlive =
     currentRuntimeOfflineVisualState != null
       ? false
-      : hasConfirmedSpawnLaunch
+      : hasConfirmedSpawnLaunch && !suppressConfirmedLaunchRuntimeAlivePromotion
         ? true
         : visualSpawnRuntimeAlive;
   const presenceLabel = getLaunchAwarePresenceLabel(

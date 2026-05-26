@@ -533,7 +533,14 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
   const bootstrapConfirmedProvisionedButNotAlive =
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
   const useBootstrapConfirmedRuntimeAlive =
-    bootstrapConfirmedProvisionedButNotAlive && runtimeEntry?.runtimeDiagnosticSeverity !== 'error';
+    bootstrapConfirmedProvisionedButNotAlive &&
+    runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
+    spawnEntry?.runtimeDiagnosticSeverity !== 'error';
+  const runtimeEntryDiagnostic = boundedString(runtimeEntry?.runtimeDiagnostic);
+  const hasRuntimeDiagnosticEvidence =
+    runtimeEntryDiagnostic != null || runtimeEntry?.runtimeDiagnosticSeverity != null;
+  const useSpawnDiagnosticsForHealedEntry =
+    bootstrapConfirmedProvisionedButNotAlive && !hasRuntimeDiagnosticEvidence;
   const launchState = bootstrapConfirmedProvisionedButNotAlive
     ? 'confirmed_alive'
     : (spawnEntry?.launchState ?? params.launchState);
@@ -567,12 +574,14 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
       ? (runtimeAdvisoryTitle ?? runtimeAdvisoryLabel ?? runtimeAdvisoryMessage)
       : undefined;
   const runtimeDiagnosticSeverity = bootstrapConfirmedProvisionedButNotAlive
-    ? runtimeEntry?.runtimeDiagnosticSeverity
+    ? (runtimeEntry?.runtimeDiagnosticSeverity ??
+      (useSpawnDiagnosticsForHealedEntry ? spawnEntry?.runtimeDiagnosticSeverity : undefined))
     : (spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity);
   const spawnRuntimeDiagnosticCardError = isRuntimeDiagnosticCardError({
-    runtimeDiagnostic: bootstrapConfirmedProvisionedButNotAlive
-      ? undefined
-      : spawnEntry?.runtimeDiagnostic,
+    runtimeDiagnostic:
+      bootstrapConfirmedProvisionedButNotAlive && !useSpawnDiagnosticsForHealedEntry
+        ? undefined
+        : spawnEntry?.runtimeDiagnostic,
     runtimeDiagnosticSeverity: spawnEntry?.runtimeDiagnosticSeverity,
     launchState: spawnEntry?.launchState,
     spawnStatus: spawnEntry?.status,
@@ -581,6 +590,10 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
   })
     ? spawnEntry?.runtimeDiagnostic
     : undefined;
+  const healedSpawnFailureCardError =
+    useSpawnDiagnosticsForHealedEntry && spawnEntry?.runtimeDiagnosticSeverity === 'error'
+      ? (spawnRuntimeDiagnosticCardError ?? spawnEntry?.error ?? spawnEntry?.hardFailureReason)
+      : undefined;
   const runtimeEntryDiagnosticCardError = isRuntimeDiagnosticCardError({
     runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
     runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
@@ -589,17 +602,17 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     ? runtimeEntry?.runtimeDiagnostic
     : undefined;
   const runtimeDiagnostic =
-    (bootstrapConfirmedProvisionedButNotAlive
+    (bootstrapConfirmedProvisionedButNotAlive && !useSpawnDiagnosticsForHealedEntry
       ? undefined
       : boundedString(spawnEntry?.runtimeDiagnostic)) ??
-    boundedString(runtimeEntry?.runtimeDiagnostic) ??
-    (bootstrapConfirmedProvisionedButNotAlive
+    runtimeEntryDiagnostic ??
+    (bootstrapConfirmedProvisionedButNotAlive && !useSpawnDiagnosticsForHealedEntry
       ? undefined
       : (boundedString(spawnEntry?.hardFailureReason) ?? boundedString(spawnEntry?.error))) ??
     runtimeAdvisoryMessage;
   const memberCardError = firstMemberCardFailureReason({
     candidates: bootstrapConfirmedProvisionedButNotAlive
-      ? [runtimeEntryDiagnosticCardError, runtimeAdvisoryCardError]
+      ? [healedSpawnFailureCardError, runtimeEntryDiagnosticCardError, runtimeAdvisoryCardError]
       : [
           spawnEntry?.error,
           spawnEntry?.hardFailureReason,
@@ -623,10 +636,16 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     runtimeAdvisoryTitle ? [runtimeAdvisoryTitle] : undefined,
     runtimeAdvisoryLabel ? [runtimeAdvisoryLabel] : undefined,
     runtimeAdvisoryMessage ? [runtimeAdvisoryMessage] : undefined,
-    !bootstrapConfirmedProvisionedButNotAlive && spawnEntry?.hardFailureReason
+    (!bootstrapConfirmedProvisionedButNotAlive ||
+      (useSpawnDiagnosticsForHealedEntry && spawnEntry?.runtimeDiagnosticSeverity === 'error')) &&
+      spawnEntry?.hardFailureReason
       ? [spawnEntry.hardFailureReason]
       : undefined,
-    !bootstrapConfirmedProvisionedButNotAlive && spawnEntry?.error ? [spawnEntry.error] : undefined,
+    (!bootstrapConfirmedProvisionedButNotAlive ||
+      (useSpawnDiagnosticsForHealedEntry && spawnEntry?.runtimeDiagnosticSeverity === 'error')) &&
+      spawnEntry?.error
+      ? [spawnEntry.error]
+      : undefined,
     runtimeEntry?.diagnostics
   );
   const runId = boundedString(params.runId ?? undefined);
