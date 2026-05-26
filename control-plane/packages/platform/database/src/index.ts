@@ -1,8 +1,19 @@
 export {
   DATABASE_READINESS_PROBE,
+  DISTRIBUTED_LOCK_PORT,
   PRISMA_DATABASE_CLIENT,
   TRANSACTION_RUNNER,
 } from "./tokens.js";
+export {
+  type DistributedLockAcquireInput,
+  type DistributedLockAcquireResult,
+  type DistributedLockLease,
+  type DistributedLockPort,
+  type DistributedLockReleaseInput,
+  type DistributedLockRenewInput,
+  type DistributedLockRenewResult,
+} from "./locks/distributed-lock.js";
+export { PrismaDistributedLockPort } from "./locks/prisma-distributed-lock.port.js";
 export {
   type DatabaseReadinessReport,
   type DatabaseReadinessStatus,
