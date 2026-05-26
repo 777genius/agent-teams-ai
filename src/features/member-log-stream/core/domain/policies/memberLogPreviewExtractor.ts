@@ -1,3 +1,5 @@
+import { isHumanAuthoredUserTurn, type MessageOriginLike } from '@shared/utils/userTurnProvenance';
+
 import type {
   MemberLogPreviewItem,
   MemberLogPreviewItemKind,
@@ -20,6 +22,10 @@ export interface MemberLogPreviewParsedMessage {
   timestamp: Date | string;
   content: string | MemberLogPreviewContentBlock[];
   isMeta?: boolean;
+  isSynthetic?: boolean;
+  isReplay?: boolean;
+  origin?: MessageOriginLike;
+  protocolKind?: string;
   toolCalls?: readonly {
     id?: string;
     name?: string;
@@ -2065,13 +2071,6 @@ function resolveMessageRole(message: MemberLogPreviewParsedMessage): string {
   return message.role ?? message.type ?? '';
 }
 
-function messageHasToolResult(message: MemberLogPreviewParsedMessage): boolean {
-  if ((message.toolResults?.length ?? 0) > 0) {
-    return true;
-  }
-  return Array.isArray(message.content) && message.content.some(isToolResultBlock);
-}
-
 function buildItemId(input: {
   provider: MemberLogStreamProvider;
   sourceId: string;
@@ -2419,7 +2418,7 @@ export function extractMemberLogPreviewItems(
       }
     }
 
-    if (role === 'user' && message.isMeta !== true && !messageHasToolResult(message)) {
+    if (role === 'user' && isHumanAuthoredUserTurn(message)) {
       const inboundPreview = extractInboundTextPreview(message.content, textLimit);
       if (inboundPreview) {
         candidates.push(

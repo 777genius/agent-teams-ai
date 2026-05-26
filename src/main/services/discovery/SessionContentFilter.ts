@@ -21,9 +21,17 @@
  * - synthetic assistant messages (model='<synthetic>')
  */
 
+import {
+  HARD_NOISE_TAGS,
+} from '@main/constants/messageTags';
 import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
 import { type ChatHistoryEntry, type ContentBlock } from '@main/types';
 import { createLogger } from '@shared/utils/logger';
+import {
+  classifyUserTurnProvenance,
+  isDisplayableTeammateProtocol,
+  isSyntheticReplayNoise,
+} from '@shared/utils/userTurnProvenance';
 import * as readline from 'readline';
 
 import type { FileSystemProvider } from '@main/services/infrastructure/FileSystemProvider';
@@ -39,11 +47,6 @@ const SESSION_SCAN_MAX_LINES = 2000;
 function byteLen(chunk: string): number {
   return Buffer.byteLength(chunk, 'utf8');
 }
-
-/**
- * Hard noise tags - user messages with ONLY these tags are filtered out.
- */
-const HARD_NOISE_TAGS = ['<local-command-caveat>', '<system-reminder>'];
 
 /**
  * Hard noise entry types - these types are always filtered out.
@@ -193,9 +196,29 @@ export class SessionContentFilter {
     const userEntry = entry as {
       message?: { content?: string | ContentBlock[] };
       isMeta?: boolean;
+      isSynthetic?: boolean;
+      isReplay?: boolean;
+      toolUseResult?: unknown;
+      sourceToolUseID?: unknown;
+      origin?: { kind?: string };
+      protocolKind?: string;
     };
     const content = userEntry.message?.content;
     const isMeta = userEntry.isMeta;
+
+    if (isSyntheticReplayNoise(userEntry)) {
+      return false;
+    }
+
+    const provenance = classifyUserTurnProvenance(userEntry);
+    if (
+      provenance !== 'human' &&
+      provenance !== 'tool-result' &&
+      provenance !== 'local-command-output' &&
+      !isDisplayableTeammateProtocol(userEntry)
+    ) {
+      return false;
+    }
 
     // Internal user messages (tool results) - part of AI response flow
     // These ARE displayable as they're part of AIChunks

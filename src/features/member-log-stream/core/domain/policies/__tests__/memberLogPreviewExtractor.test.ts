@@ -273,6 +273,37 @@ Reply to this comment using MCP tool task_add_comment.
     expect(result.items).toEqual([]);
   });
 
+  it('skips structured non-human user-role messages for inbound text extraction', () => {
+    const result = extractMemberLogPreviewItems({
+      provider: 'opencode_runtime',
+      maxItems: 3,
+      textLimit: 160,
+      messages: [
+        message({
+          uuid: 'teammate-protocol',
+          type: 'user',
+          role: 'user',
+          protocolKind: 'teammate-message',
+          origin: { kind: 'teammate' },
+          isSynthetic: true,
+          timestamp: '2026-04-01T10:00:00.000Z',
+          content: '<teammate-message teammate_id="alice">Looks good</teammate-message>',
+        }),
+        message({
+          uuid: 'coordinator',
+          type: 'user',
+          role: 'user',
+          origin: { kind: 'coordinator' },
+          isSynthetic: true,
+          timestamp: '2026-04-01T10:01:00.000Z',
+          content: 'Human: I tested the feature looks good',
+        }),
+      ],
+    });
+
+    expect(result.items).toEqual([]);
+  });
+
   it('extracts tool_use input and tool_result output without rendering huge payloads', () => {
     const hugeOutput = 'x'.repeat(10_000);
     const result = extractMemberLogPreviewItems({

@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ChunkBuilder } from '../../../../src/main/services/analysis/ChunkBuilder';
 import { isAIChunk, isCompactChunk, isSystemChunk, isUserChunk } from '../../../../src/main/types';
+
 import type { ParsedMessage, Process } from '../../../../src/main/types';
 
 // =============================================================================
@@ -344,6 +345,19 @@ describe('ChunkBuilder', () => {
           createMessage({
             type: 'user',
             content: '<local-command-caveat>This is a caveat</local-command-caveat>',
+          }),
+        ];
+
+        const chunks = builder.buildChunks(messages);
+        expect(chunks).toHaveLength(0);
+      });
+
+      it('should filter out structured coordinator user-role text', () => {
+        const messages = [
+          createMessage({
+            type: 'user',
+            content: 'Human: I tested the feature looks good',
+            origin: { kind: 'coordinator' },
           }),
         ];
 

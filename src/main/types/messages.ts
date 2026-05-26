@@ -7,6 +7,14 @@
  */
 
 import {
+  classifyUserTurnProvenance,
+  isDisplayableTeammateProtocol,
+  isHumanAuthoredUserTurn,
+  isSyntheticReplayNoise,
+  type MessageOriginLike,
+} from '@shared/utils/userTurnProvenance';
+
+import {
   EMPTY_STDERR,
   EMPTY_STDOUT,
   HARD_NOISE_TAGS,
@@ -92,6 +100,14 @@ export interface ParsedMessage {
   isSidechain: boolean;
   /** Whether this is a meta message */
   isMeta: boolean;
+  /** Whether this user-role row is a synthetic/replayed SDK event, not human-authored input */
+  isSynthetic?: boolean;
+  /** Whether this user-role row acknowledges a previously accepted turn */
+  isReplay?: boolean;
+  /** Structured source of a user-role row. Missing means legacy/human candidate. */
+  origin?: MessageOriginLike;
+  /** Structured protocol payload kind. Missing means legacy fallback. */
+  protocolKind?: string;
   /** User type ("external" for user input) */
   userType?: string;
   // Extracted tool information
@@ -140,8 +156,7 @@ export interface ParsedMessage {
  * be treated as system responses, not user input that starts new chunks.
  */
 export function isParsedRealUserMessage(msg: ParsedMessage): boolean {
-  if (msg.type !== 'user') return false;
-  if (msg.isMeta) return false;
+  if (!isHumanAuthoredParsedUserMessage(msg)) return false;
 
   const content = msg.content;
 
@@ -180,9 +195,7 @@ export function isParsedRealUserMessage(msg: ParsedMessage): boolean {
  * - "<system-reminder>...</system-reminder>" -> Hard noise
  */
 export function isParsedUserChunkMessage(msg: ParsedMessage): boolean {
-  if (msg.type !== 'user') return false;
-  if (msg.isMeta === true) return false;
-  if (isParsedTeammateMessage(msg)) return false;
+  if (!isHumanAuthoredParsedUserMessage(msg)) return false;
 
   const content = msg.content;
 
@@ -273,7 +286,10 @@ export function isParsedSystemChunkMessage(msg: ParsedMessage): boolean {
   // Array content - check text blocks
   if (Array.isArray(content)) {
     return content.some(
-      (block) => block.type === 'text' && block.text.startsWith(LOCAL_COMMAND_STDOUT_TAG)
+      (block) =>
+        block.type === 'text' &&
+        (block.text.startsWith(LOCAL_COMMAND_STDOUT_TAG) ||
+          block.text.startsWith(LOCAL_COMMAND_STDERR_TAG))
     );
   }
 
@@ -332,6 +348,24 @@ export function isParsedHardNoiseMessage(msg: ParsedMessage): boolean {
   // Filter user messages with ONLY system metadata tags (no real content)
   if (msg.type === 'user') {
     const content = msg.content;
+
+    if (msg.isCompactSummary === true) {
+      return false;
+    }
+
+    if (isSyntheticReplayNoise(msg)) {
+      return true;
+    }
+
+    const provenance = classifyUserTurnProvenance(msg);
+    if (
+      provenance !== 'human' &&
+      provenance !== 'tool-result' &&
+      provenance !== 'local-command-output' &&
+      !isDisplayableTeammateProtocol(msg)
+    ) {
+      return true;
+    }
 
     if (typeof content === 'string') {
       // Check if content contains ONLY noise tags (trim whitespace)
@@ -404,20 +438,6 @@ export function isParsedCompactMessage(msg: ParsedMessage): boolean {
   return msg.isCompactSummary === true;
 }
 
-/**
- * Detect teammate messages - messages from team member agents.
- * Format: <teammate-message teammate_id="name" ...>content</teammate-message>
- */
-const TEAMMATE_MESSAGE_REGEX = /^<teammate-message\s+teammate_id="([^"]+)"/;
-
-function isParsedTeammateMessage(msg: ParsedMessage): boolean {
-  if (msg.type !== 'user' || msg.isMeta) return false;
-  const content = msg.content;
-  if (typeof content === 'string') return TEAMMATE_MESSAGE_REGEX.test(content.trim());
-  if (Array.isArray(content)) {
-    return content.some(
-      (block) => block.type === 'text' && TEAMMATE_MESSAGE_REGEX.test(block.text.trim())
-    );
-  }
-  return false;
+export function isHumanAuthoredParsedUserMessage(msg: ParsedMessage): boolean {
+  return msg.type === 'user' && isHumanAuthoredUserTurn(msg);
 }

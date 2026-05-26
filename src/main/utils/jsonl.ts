@@ -341,6 +341,10 @@ function parseChatHistoryEntry(entry: ChatHistoryEntry): ParsedMessage | null {
   let codexNativeExecutableVersion: string | null | undefined;
   let isSidechain = false;
   let isMeta = false;
+  let isSynthetic: boolean | undefined;
+  let isReplay: boolean | undefined;
+  let origin: { kind?: string } | undefined;
+  let protocolKind: string | undefined;
   let userType: string | undefined;
   let sourceToolUseID: string | undefined;
   let sourceToolAssistantUUID: string | undefined;
@@ -364,7 +368,11 @@ function parseChatHistoryEntry(entry: ChatHistoryEntry): ParsedMessage | null {
       content = entry.message.content ?? '';
       role = entry.message.role;
       agentId = entry.agentId;
-      isMeta = entry.isMeta ?? false;
+      isSynthetic = entry.isSynthetic;
+      isReplay = entry.isReplay;
+      origin = entry.origin;
+      protocolKind = entry.protocolKind;
+      isMeta = (entry.isMeta ?? false) || entry.isSynthetic === true;
       sourceToolUseID = entry.sourceToolUseID;
       sourceToolAssistantUUID = entry.sourceToolAssistantUUID;
       toolUseResult = entry.toolUseResult;
@@ -415,6 +423,10 @@ function parseChatHistoryEntry(entry: ChatHistoryEntry): ParsedMessage | null {
     agentName,
     isSidechain,
     isMeta,
+    isSynthetic,
+    isReplay,
+    origin,
+    protocolKind,
     userType,
     isCompactSummary,
     level,
@@ -741,8 +753,8 @@ export async function analyzeSessionFileMetadata(
       model = parsed.model ?? model;
     }
 
-    if (!firstUserMessage && entry.type === 'user') {
-      const content = entry.message?.content;
+    if (!firstUserMessage && parsed.type === 'user' && isParsedUserChunkMessage(parsed)) {
+      const content = parsed.content;
       if (typeof content === 'string') {
         if (isCommandOutputContent(content)) {
           // Skip

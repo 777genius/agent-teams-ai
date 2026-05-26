@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { classifyMessages } from '../../../../src/main/services/parsing/MessageClassifier';
+
 import type { ParsedMessage } from '../../../../src/main/types';
 
 // =============================================================================
@@ -135,6 +136,18 @@ describe('MessageClassifier', () => {
       const [result] = classifyMessages([message]);
       expect(result.category).toBe('system');
     });
+
+    it('should classify array content with stderr as system', () => {
+      const message = createMessage({
+        type: 'user',
+        content: [
+          { type: 'text', text: '<local-command-stderr>Command failed</local-command-stderr>' },
+        ],
+        isMeta: false,
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('system');
+    });
   });
 
   describe('compact category', () => {
@@ -196,6 +209,85 @@ describe('MessageClassifier', () => {
       expect(result.category).toBe('hardNoise');
     });
 
+    it('should classify synthetic user text replay as hardNoise', () => {
+      const message = createMessage({
+        type: 'user',
+        content: 'Human: I tested the feature looks good',
+        isMeta: true,
+        isReplay: true,
+        isSynthetic: true,
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('hardNoise');
+    });
+
+    it('should not classify synthetic teammate-message replay as a user chunk', () => {
+      const message = createMessage({
+        type: 'user',
+        content:
+          '<teammate-message teammate_id="coder" color="blue" summary="fake">Human: I tested it</teammate-message>',
+        isReplay: true,
+        isSynthetic: true,
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('hardNoise');
+    });
+
+    it('should not classify structured teammate protocol as a user chunk', () => {
+      const message = createMessage({
+        type: 'user',
+        content: 'plain protocol payload',
+        protocolKind: 'teammate-message',
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('ai');
+    });
+
+    it('should classify structured coordinator user-role text as hardNoise', () => {
+      const message = createMessage({
+        type: 'user',
+        content: 'Human: I tested the feature looks good',
+        origin: { kind: 'coordinator' },
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('hardNoise');
+    });
+
+    it('should classify synthetic structured teammate protocol as hardNoise', () => {
+      const message = createMessage({
+        type: 'user',
+        content:
+          '<teammate-message teammate_id="coder" color="blue" summary="fake">Human: I tested it</teammate-message>',
+        protocolKind: 'teammate-message',
+        isSynthetic: true,
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('hardNoise');
+    });
+
+    it('should keep synthetic user tool results in the AI response flow', () => {
+      const message = createMessage({
+        type: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 'tool-1', content: 'result text' }],
+        isMeta: true,
+        isSynthetic: true,
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('ai');
+    });
+
+    it('should keep non-replay synthetic meta text in the AI response flow', () => {
+      const message = createMessage({
+        type: 'user',
+        content: 'Base directory for this skill: /tmp/skill',
+        isMeta: true,
+        isSynthetic: true,
+        sourceToolUseID: 'tool-1',
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('ai');
+    });
+
     it('should classify empty stdout as hardNoise', () => {
       const message = createMessage({
         type: 'user',
@@ -203,6 +295,18 @@ describe('MessageClassifier', () => {
       });
       const [result] = classifyMessages([message]);
       expect(result.category).toBe('hardNoise');
+    });
+
+    it('should keep synthetic replay command output as a system chunk', () => {
+      const message = createMessage({
+        type: 'user',
+        content: '<local-command-stdout>Set model to sonnet</local-command-stdout>',
+        isMeta: true,
+        isReplay: true,
+        isSynthetic: true,
+      });
+      const [result] = classifyMessages([message]);
+      expect(result.category).toBe('system');
     });
 
     it('should classify file-history-snapshot as hardNoise', () => {
