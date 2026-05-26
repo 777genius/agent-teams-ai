@@ -38,6 +38,7 @@ describe("WorkerRunner", () => {
           leaseSeconds: 300,
           maxAttempts: 10,
           pollIntervalMs: 1000,
+          shutdownTimeoutMs: 30_000,
           workerEnabled: false,
         },
         persistence: { enabled: false },
@@ -108,9 +109,35 @@ describe("WorkerRunner", () => {
     });
     expect(calls).toBe(2);
   });
+
+  it("bounds shutdown wait when in-flight work does not finish", async () => {
+    const logs: Array<{ level: string; message: string }> = [];
+    const outboxWorker = {
+      runOnce: async () => new Promise<never>(() => undefined),
+    } satisfies Pick<OutboxWorkerService, "runOnce">;
+    const runner = new WorkerRunner(
+      createConfigService({
+        pollIntervalMs: 1,
+        shutdownTimeoutMs: 1,
+      }) as ControlPlaneConfigService,
+      outboxWorker as unknown as OutboxWorkerService,
+      createSilentLogger(logs),
+    );
+
+    const runPromise = runner.run("serve");
+
+    await expect(runner.stop(runPromise)).resolves.toBeUndefined();
+    expect(logs).toContainEqual({
+      level: "warn",
+      message: "Worker shutdown timeout elapsed",
+    });
+  });
 });
 
-function createConfigService(input: { pollIntervalMs: number }) {
+function createConfigService(input: {
+  pollIntervalMs: number;
+  shutdownTimeoutMs?: number;
+}) {
   return {
     getSafeSummary: () => ({
       build: {
@@ -140,6 +167,7 @@ function createConfigService(input: { pollIntervalMs: number }) {
         leaseSeconds: 300,
         maxAttempts: 10,
         pollIntervalMs: input.pollIntervalMs,
+        shutdownTimeoutMs: input.shutdownTimeoutMs ?? 30_000,
         workerEnabled: false,
       },
       persistence: { enabled: false },
@@ -153,12 +181,14 @@ function createConfigService(input: { pollIntervalMs: number }) {
   } satisfies Pick<ControlPlaneConfigService, "getSafeSummary">;
 }
 
-function createSilentLogger(): ControlPlaneLogger {
+function createSilentLogger(
+  logs: Array<{ level: string; message: string }> = [],
+): ControlPlaneLogger {
   return {
-    child: () => createSilentLogger(),
-    debug: () => undefined,
-    error: () => undefined,
-    info: () => undefined,
-    warn: () => undefined,
+    child: () => createSilentLogger(logs),
+    debug: (message) => logs.push({ level: "debug", message }),
+    error: (message) => logs.push({ level: "error", message }),
+    info: (message) => logs.push({ level: "info", message }),
+    warn: (message) => logs.push({ level: "warn", message }),
   };
 }

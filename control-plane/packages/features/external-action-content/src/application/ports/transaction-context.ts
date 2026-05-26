@@ -1,3 +1,1 @@
-export type TransactionContext = Readonly<{
-  transactionId: string;
-}>;
+export type { TransactionContext } from "@agent-teams-control-plane/shared";

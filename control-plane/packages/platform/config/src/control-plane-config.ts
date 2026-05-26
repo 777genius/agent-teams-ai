@@ -34,6 +34,7 @@ export type ControlPlaneConfig = Readonly<{
     batchSize: number;
     leaseSeconds: number;
     pollIntervalMs: number;
+    shutdownTimeoutMs: number;
     maxAttempts: number;
   }>;
   retention: Readonly<{
@@ -79,6 +80,7 @@ export type SafeControlPlaneConfigSummary = Readonly<{
     batchSize: number;
     leaseSeconds: number;
     pollIntervalMs: number;
+    shutdownTimeoutMs: number;
     maxAttempts: number;
   }>;
   retention: Readonly<{
@@ -157,6 +159,12 @@ const rawConfigSchema = z.object({
   CONTROL_PLANE_OUTBOX_WORKER_ENABLED: optionalBoolean,
   CONTROL_PLANE_PERSISTENCE_ENABLED: optionalBoolean,
   CONTROL_PLANE_PUBLIC_BASE_URL: z.string().url().optional(),
+  CONTROL_PLANE_WORKER_SHUTDOWN_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(300_000)
+    .default(30_000),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
@@ -405,6 +413,7 @@ function buildOutboxConfig(
     leaseSeconds: raw.CONTROL_PLANE_OUTBOX_LEASE_SECONDS,
     maxAttempts: raw.CONTROL_PLANE_OUTBOX_MAX_ATTEMPTS,
     pollIntervalMs: raw.CONTROL_PLANE_OUTBOX_POLL_INTERVAL_MS,
+    shutdownTimeoutMs: raw.CONTROL_PLANE_WORKER_SHUTDOWN_TIMEOUT_MS,
     workerEnabled,
   };
 }

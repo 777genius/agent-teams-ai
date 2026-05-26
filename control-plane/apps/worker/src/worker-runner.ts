@@ -59,6 +59,19 @@ export class WorkerRunner {
     this.wakeDelay?.();
   }
 
+  public async stop(
+    runPromise: Promise<WorkerRunResult>,
+    input: { timeoutMs?: number } = {},
+  ): Promise<WorkerRunResult | undefined> {
+    this.requestStop();
+    const timeoutMs = input.timeoutMs ?? this.getShutdownTimeoutMs();
+    const result = await withTimeout(runPromise, timeoutMs);
+    if (result === undefined) {
+      this.logger.warn("Worker shutdown timeout elapsed", { timeoutMs });
+    }
+    return result;
+  }
+
   private async runServeLoop(): Promise<WorkerRunResult> {
     let processed = false;
     let outboxSkipped = false;
@@ -103,6 +116,10 @@ export class WorkerRunner {
     return this.configService.getSafeSummary().outbox.pollIntervalMs;
   }
 
+  private getShutdownTimeoutMs(): number {
+    return this.configService.getSafeSummary().outbox.shutdownTimeoutMs;
+  }
+
   private getBackoffMs(consecutiveFailures: number): number {
     const baseMs = Math.min(
       30_000,
@@ -128,6 +145,25 @@ export class WorkerRunner {
         resolve();
       };
     });
+  }
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T | undefined> {
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<undefined>((resolve) => {
+        timeout = setTimeout(() => resolve(undefined), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
   }
 }
 

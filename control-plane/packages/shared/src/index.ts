@@ -56,6 +56,7 @@ export {
   type Clock,
   type UnixMilliseconds,
 } from "./time/index.js";
+export { type TransactionContext } from "./transactions/index.js";
 export {
   validationFailed,
   validationOk,

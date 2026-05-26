@@ -9,9 +9,11 @@ billing side effects remain future phases.
 
 ```text
 CONTROL_PLANE_OUTBOX_WORKER_ENABLED=false
+CONTROL_PLANE_WORKER_SHUTDOWN_TIMEOUT_MS=30000
 ```
 
 Disables new outbox claims while leaving the API and DB available.
+Shutdown waits for in-flight fake handlers only up to the configured timeout.
 
 ## Claim Safety
 

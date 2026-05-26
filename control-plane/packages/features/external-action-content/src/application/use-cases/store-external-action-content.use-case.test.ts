@@ -4,6 +4,7 @@ import { parseExternalActionContentId } from "@agent-teams-control-plane/shared"
 
 import type { ExternalActionContentEncryptionPort } from "../ports/external-action-content-encryption.port.js";
 import type { ExternalActionContentRepository } from "../ports/external-action-content.repository.js";
+import type { TransactionContext } from "../ports/transaction-context.js";
 import { StoreExternalActionContentUseCase } from "./store-external-action-content.use-case.js";
 
 describe("StoreExternalActionContentUseCase", () => {
@@ -39,7 +40,7 @@ describe("StoreExternalActionContentUseCase", () => {
 
     const useCase = new StoreExternalActionContentUseCase(repository, encryption);
     const ref = await useCase.execute({
-      context: { transactionId: "tx-1" },
+      context: { transactionId: "tx-1" } as TransactionContext,
       expiresAt: new Date("2026-05-26T10:20:30.000Z"),
       id: id.value,
       kind: "github-comment",

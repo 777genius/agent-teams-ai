@@ -17,6 +17,7 @@ export {
   type DeadLetterOutboxEventInput,
   type OutboxRepository,
   type RecoverStaleOutboxInput,
+  type RetryClaimMutationResult,
   type RetryOutboxEventInput,
 } from "./application/ports/outbox.repository.js";
 export {

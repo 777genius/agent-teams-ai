@@ -1,6 +1,15 @@
-import { createSafeError, toSafeError } from "@agent-teams-control-plane/shared";
+import {
+  createSafeError,
+  isSafeError,
+  toSafeError,
+  type SafeError,
+} from "@agent-teams-control-plane/shared";
 
-import type { ClaimedOutboxEvent, OutboxRepository } from "../ports/outbox.repository.js";
+import type {
+  ClaimedOutboxEvent,
+  OutboxRepository,
+  RetryClaimMutationResult,
+} from "../ports/outbox.repository.js";
 import type { OutboxHandlerRegistry } from "../ports/outbox-handler.js";
 
 export type ProcessOutboxBatchInput = Readonly<{
@@ -80,14 +89,14 @@ export class ProcessOutboxBatchUseCase {
           : "stale-claim";
       }
       if (result.kind === "retry") {
-        return (await this.repository.markFailedForRetry({
-          claimToken: event.claimToken,
-          eventId: event.id,
-          safeError: toSafeError(result.error),
-          workerId: event.lockedBy,
-        })) === "updated"
-          ? "retried"
-          : "stale-claim";
+        return mapRetryMutationResult(
+          await this.repository.markFailedForRetry({
+            claimToken: event.claimToken,
+            eventId: event.id,
+            safeError: toSafeError(result.error),
+            workerId: event.lockedBy,
+          }),
+        );
       }
       return (await this.repository.markDeadLettered({
         event,
@@ -96,14 +105,46 @@ export class ProcessOutboxBatchUseCase {
         ? "dead-lettered"
         : "stale-claim";
     } catch (error) {
-      return (await this.repository.markFailedForRetry({
-        claimToken: event.claimToken,
-        eventId: event.id,
-        safeError: toSafeError(error),
-        workerId: event.lockedBy,
-      })) === "updated"
-        ? "retried"
-        : "stale-claim";
+      const safeError = toHandlerFailureSafeError(error);
+      if (!safeError.retryable) {
+        return (await this.repository.markDeadLettered({
+          event,
+          safeError,
+        })) === "updated"
+          ? "dead-lettered"
+          : "stale-claim";
+      }
+
+      return mapRetryMutationResult(
+        await this.repository.markFailedForRetry({
+          claimToken: event.claimToken,
+          eventId: event.id,
+          safeError,
+          workerId: event.lockedBy,
+        }),
+      );
     }
   }
+}
+
+function mapRetryMutationResult(
+  result: RetryClaimMutationResult,
+): "retried" | "dead-lettered" | "stale-claim" {
+  if (result === "updated") {
+    return "retried";
+  }
+  return result;
+}
+
+function toHandlerFailureSafeError(error: unknown): SafeError {
+  if (isSafeError(error)) {
+    return toSafeError(error);
+  }
+
+  return createSafeError({
+    category: "internal",
+    code: "CONTROL_PLANE_OUTBOX_HANDLER_FAILED",
+    message: "Outbox handler failed.",
+    retryable: true,
+  });
 }

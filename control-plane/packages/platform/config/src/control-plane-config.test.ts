@@ -16,8 +16,18 @@ describe("loadControlPlaneConfig", () => {
     expect(config.persistence.enabled).toBe(false);
     expect(config.database.url).toBeUndefined();
     expect(config.outbox.workerEnabled).toBe(false);
+    expect(config.outbox.shutdownTimeoutMs).toBe(30_000);
     expect(config.github).toEqual({});
     expect(config.secrets).toEqual({});
+  });
+
+  it("parses bounded worker shutdown timeout", () => {
+    const config = loadControlPlaneConfig({
+      CONTROL_PLANE_WORKER_SHUTDOWN_TIMEOUT_MS: "1500",
+      NODE_ENV: "test",
+    });
+
+    expect(config.outbox.shutdownTimeoutMs).toBe(1500);
   });
 
   it("fails closed when hosted mode is missing required GitHub settings", () => {

@@ -32,6 +32,7 @@ import type {
   CompleteOutboxEventInput,
   DeadLetterOutboxEventInput,
   OutboxRepository,
+  RetryClaimMutationResult,
   RetryOutboxEventInput,
 } from "../../application/ports/outbox.repository.js";
 import type { TransactionContext } from "../../application/ports/transaction-context.js";
@@ -174,7 +175,7 @@ export class PrismaOutboxRepository implements OutboxRepository {
 
   public async markFailedForRetry(
     input: RetryOutboxEventInput,
-  ): Promise<ClaimMutationResult> {
+  ): Promise<RetryClaimMutationResult> {
     return this.databaseClient.getClient().$transaction(async (client) => {
       const rows = await client.$queryRaw<OutboxRow[]>`
         UPDATE outbox_events
@@ -236,6 +237,7 @@ export class PrismaOutboxRepository implements OutboxRepository {
       }
       if (rows[0]?.status === "dead-lettered") {
         await this.insertDeadLetter(client, rows[0], input.safeError);
+        return "dead-lettered";
       }
       return "updated";
     });

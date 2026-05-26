@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 
+import type { TransactionContext } from "@agent-teams-control-plane/shared";
+
 import type {
   PrismaDatabaseClient,
   PrismaTransactionClientLike,
 } from "../prisma/prisma-database-client.js";
 
-export interface TransactionContext {
-  readonly transactionId: string;
-}
+export type { TransactionContext } from "@agent-teams-control-plane/shared";
 
 export interface TransactionRunner {
   runInTransaction<T>(work: (context: TransactionContext) => Promise<T>): Promise<T>;
@@ -70,5 +70,5 @@ function createPrismaTransactionContext(
       client,
     },
     transactionId: randomUUID(),
-  };
+  } as PrismaTransactionContext;
 }

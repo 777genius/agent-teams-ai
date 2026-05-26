@@ -22,8 +22,10 @@ if (workerMode === "smoke") {
 } else {
   const workerRun = runner.run(workerMode);
   await waitForShutdownSignal();
-  runner.requestStop();
-  await workerRun;
+  const result = await runner.stop(workerRun);
+  if (result === undefined) {
+    process.exitCode = 1;
+  }
   await app.close();
 }
 

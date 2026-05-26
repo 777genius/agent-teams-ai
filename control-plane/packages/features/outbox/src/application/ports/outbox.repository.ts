@@ -39,12 +39,13 @@ export type RecoverStaleOutboxInput = Readonly<{
 }>;
 
 export type ClaimMutationResult = "updated" | "stale-claim";
+export type RetryClaimMutationResult = ClaimMutationResult | "dead-lettered";
 
 export interface OutboxRepository {
   append(event: NewOutboxEvent, context: TransactionContext): Promise<OutboxEvent>;
   claimNextBatch(input: ClaimOutboxBatchInput): Promise<readonly ClaimedOutboxEvent[]>;
   markCompleted(input: CompleteOutboxEventInput): Promise<ClaimMutationResult>;
-  markFailedForRetry(input: RetryOutboxEventInput): Promise<ClaimMutationResult>;
+  markFailedForRetry(input: RetryOutboxEventInput): Promise<RetryClaimMutationResult>;
   markDeadLettered(input: DeadLetterOutboxEventInput): Promise<ClaimMutationResult>;
   recoverStaleProcessing(input: RecoverStaleOutboxInput): Promise<number>;
 }

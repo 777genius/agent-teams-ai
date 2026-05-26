@@ -35,6 +35,81 @@ describe("ProcessOutboxBatchUseCase", () => {
 
     expect(result).toMatchObject({ completed: 0, staleClaims: 1 });
   });
+
+  it("dead-letters thrown non-retryable safe errors", async () => {
+    const calls: string[] = [];
+    const repository = createRepository(calls);
+    const handlers: OutboxHandlerRegistry = {
+      getHandler: () => ({
+        handle: async () => {
+          throw createSafeError({
+            category: "validation",
+            code: "TEST_TERMINAL",
+            message: "terminal",
+            retryable: false,
+          });
+        },
+      }),
+    };
+    const useCase = new ProcessOutboxBatchUseCase(repository, handlers);
+
+    const result = await useCase.execute({ batch: [claimedEvent()] });
+
+    expect(result).toMatchObject({ deadLettered: 1, retried: 0 });
+    expect(calls).toEqual(["dead-letter"]);
+  });
+
+  it("retries unexpected thrown handler errors with a safe retryable error", async () => {
+    const calls: string[] = [];
+    const repository = createRepository(calls);
+    let storedError: unknown;
+    repository.markFailedForRetry = async (input) => {
+      calls.push("retry");
+      storedError = input.safeError;
+      return "updated";
+    };
+    const handlers: OutboxHandlerRegistry = {
+      getHandler: () => ({
+        handle: async () => {
+          throw new Error("raw failure with implementation detail");
+        },
+      }),
+    };
+    const useCase = new ProcessOutboxBatchUseCase(repository, handlers);
+
+    const result = await useCase.execute({ batch: [claimedEvent()] });
+
+    expect(result).toMatchObject({ deadLettered: 0, retried: 1 });
+    expect(calls).toEqual(["retry"]);
+    expect(storedError).toMatchObject({
+      code: "CONTROL_PLANE_OUTBOX_HANDLER_FAILED",
+      retryable: true,
+    });
+    expect(JSON.stringify(storedError)).not.toContain("implementation detail");
+  });
+
+  it("counts exhausted retry mutations as dead-lettered", async () => {
+    const repository = createRepository([]);
+    repository.markFailedForRetry = async () => "dead-lettered";
+    const handlers: OutboxHandlerRegistry = {
+      getHandler: () => ({
+        handle: async () => ({
+          error: createSafeError({
+            category: "external",
+            code: "TEST_RETRYABLE",
+            message: "retryable",
+            retryable: true,
+          }),
+          kind: "retry",
+        }),
+      }),
+    };
+    const useCase = new ProcessOutboxBatchUseCase(repository, handlers);
+
+    const result = await useCase.execute({ batch: [claimedEvent()] });
+
+    expect(result).toMatchObject({ deadLettered: 1, retried: 0 });
+  });
 });
 
 function createRepository(calls: string[]): OutboxRepository {
