@@ -1,8 +1,7 @@
+import { deriveSubagentDescription } from '@main/services/analysis/SubagentDetailBuilder';
 import { describe, expect, it } from 'vitest';
 
-import { deriveSubagentDescription } from '../../../../src/main/services/analysis/SubagentDetailBuilder';
-
-import type { ParsedMessage } from '../../../../src/main/types';
+import type { ParsedMessage } from '@main/types';
 
 function message(overrides: Partial<ParsedMessage>): ParsedMessage {
   return {

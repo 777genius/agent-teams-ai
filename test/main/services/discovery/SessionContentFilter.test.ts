@@ -1,11 +1,10 @@
+import { SessionContentFilter } from '@main/services/discovery/SessionContentFilter';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { SessionContentFilter } from '../../../../src/main/services/discovery/SessionContentFilter';
-
-import type { ChatHistoryEntry } from '../../../../src/main/types';
+import type { ChatHistoryEntry } from '@main/types';
 
 function userEntry(overrides: Partial<ChatHistoryEntry>): ChatHistoryEntry {
   return {
@@ -76,7 +75,7 @@ describe('SessionContentFilter', () => {
       ).toBe(false);
     });
 
-    it('does not treat synthetic user text replay with sourceToolUseID as displayable content', () => {
+    it('keeps synthetic tool-result rows with sourceToolUseID displayable', () => {
       expect(
         SessionContentFilter.isDisplayableEntry(
           userEntry({
@@ -86,7 +85,7 @@ describe('SessionContentFilter', () => {
             sourceToolUseID: 'tool-1',
           })
         )
-      ).toBe(false);
+      ).toBe(true);
     });
 
     it('keeps ordinary user text displayable even when it starts with Human', () => {

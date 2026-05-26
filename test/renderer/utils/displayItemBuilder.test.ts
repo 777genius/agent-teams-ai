@@ -1,13 +1,12 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildDisplayItems,
   buildDisplayItemsFromMessages,
-} from '../../../src/renderer/utils/displayItemBuilder';
+} from '@renderer/utils/displayItemBuilder';
+import { describe, expect, it } from 'vitest';
 
-import type { SemanticStep } from '../../../src/main/types/chunks';
-import type { ParsedMessage } from '../../../src/main/types/messages';
-import type { AIGroupLastOutput } from '../../../src/renderer/types/groups';
+import type { SemanticStep } from '@main/types/chunks';
+import type { ParsedMessage } from '@main/types/messages';
+import type { AIGroupLastOutput } from '@renderer/types/groups';
 
 /**
  * Helper to create a minimal ParsedMessage for testing.
@@ -107,7 +106,7 @@ describe('buildDisplayItemsFromMessages', () => {
       const userMsg = makeMessage({
         uuid: 'synthetic-replay-1',
         type: 'user',
-        isMeta: true,
+        isMeta: false,
         isReplay: true,
         isSynthetic: true,
         content: 'Human: I tested the feature looks good',

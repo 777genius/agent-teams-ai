@@ -82,6 +82,16 @@ describe('userTurnProvenance', () => {
         type: 'user',
         isReplay: true,
         isSynthetic: true,
+        sourceToolUseID: 'tool-1',
+        content: 'result',
+      })
+    ).toBe(false);
+
+    expect(
+      isSyntheticReplayNoise({
+        type: 'user',
+        isReplay: true,
+        isSynthetic: true,
         content: '<local-command-stdout>Set model to sonnet</local-command-stdout>',
       })
     ).toBe(false);

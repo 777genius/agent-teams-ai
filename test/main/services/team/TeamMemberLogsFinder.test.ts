@@ -1,10 +1,9 @@
+import { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFinder';
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { TeamMemberLogsFinder } from '../../../../src/main/services/team/TeamMemberLogsFinder';
-import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 describe('TeamMemberLogsFinder', () => {
   let tmpDir: string | null = null;

@@ -9,18 +9,17 @@
  * - Time range calculation
  */
 
+import { LocalFileSystemProvider } from '@main/services/infrastructure/LocalFileSystemProvider';
+import {
+  type ParsedSession,
+  SessionParser,
+} from '@main/services/parsing/SessionParser';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LocalFileSystemProvider } from '../../../../src/main/services/infrastructure/LocalFileSystemProvider';
-import {
-  type ParsedSession,
-  SessionParser,
-} from '../../../../src/main/services/parsing/SessionParser';
-
-import type { ParsedMessage } from '../../../../src/main/types';
+import type { ParsedMessage } from '@main/types';
 
 // =============================================================================
 // Mock ProjectScanner

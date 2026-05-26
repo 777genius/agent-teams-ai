@@ -192,6 +192,7 @@ function hasToolResultProvenance(message: UserTurnProvenanceInput): boolean {
 function hasToolResultPayload(message: UserTurnProvenanceInput): boolean {
   return (
     message.toolUseResult !== undefined ||
+    message.sourceToolUseID !== undefined ||
     (message.toolResults?.length ?? 0) > 0 ||
     hasToolResultContent(message)
   );

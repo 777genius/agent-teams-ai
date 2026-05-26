@@ -10,12 +10,11 @@
  * - Different description but same teammate_id still matches
  */
 
+import { SubagentResolver } from '@main/services/discovery/SubagentResolver';
 import { describe, expect, it } from 'vitest';
 
-import { SubagentResolver } from '../../../../src/main/services/discovery/SubagentResolver';
-
-import type { ProjectScanner } from '../../../../src/main/services/discovery/ProjectScanner';
-import type { ParsedMessage, Process, ToolCall } from '../../../../src/main/types';
+import type { ProjectScanner } from '@main/services/discovery/ProjectScanner';
+import type { ParsedMessage, Process, ToolCall } from '@main/types';
 
 // =============================================================================
 // Helpers

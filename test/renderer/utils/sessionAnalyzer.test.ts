@@ -1,5 +1,5 @@
 import { analyzeSession } from '@renderer/utils/sessionAnalyzer';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ParsedMessage, Process, Session, SessionDetail, SessionMetrics } from '@shared/types';
 
