@@ -388,7 +388,7 @@ export const CodeMirrorEditor = ({
           const draft = JSON.parse(draftJson) as { content: string; timestamp: number };
           const fileMtime = mtimeMs ?? 0;
 
-          if (fileMtime === 0 || draft.timestamp > fileMtime) {
+          if (fileMtime === 0 || draft.timestamp < fileMtime) {
             // Draft is newer than file (or file is new) — recover draft
             initialContent = draft.content;
             draftRecovered = true;

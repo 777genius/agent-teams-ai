@@ -1030,7 +1030,7 @@ async function classifyMissingTeamData(teamName: string): Promise<'provisioning'
     TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS,
     null
   );
-  if (configExists !== false) {
+  if (configExists === false) {
     return null;
   }
   if (getTeamProvisioningService().hasProvisioningRun?.(teamName) === true) {
@@ -5377,7 +5377,7 @@ async function handleDeleteDraft(
       await fs.promises.access(configPath, fs.constants.F_OK);
       throw new Error('Cannot delete draft: team has config.json (use deleteTeam instead)');
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
     }
     await getTeamDataService().permanentlyDeleteTeam(validated.value!);
   });
