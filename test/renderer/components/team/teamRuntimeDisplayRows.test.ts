@@ -384,6 +384,34 @@ describe('buildTeamRuntimeDisplayRows', () => {
     });
   });
 
+  it('keeps spawn-only stopped liveness visible for provisioned-but-not-alive entries', () => {
+    const rows = buildTeamRuntimeDisplayRows({
+      members: [{ name: 'alice' }],
+      spawnStatuses: {
+        alice: createSpawnStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime is no longer registered',
+          runtimeDiagnosticSeverity: 'warning',
+        }),
+      },
+    });
+
+    expect(rows[0]).toMatchObject({
+      memberName: 'alice',
+      state: 'degraded',
+      source: 'spawn-status',
+      stateReason: 'Runtime is no longer registered',
+      diagnosticSeverity: 'warning',
+      actionsAllowed: false,
+    });
+  });
+
   it('degrades spawn-only rows when online process evidence has stalled bootstrap', () => {
     const rows = buildTeamRuntimeDisplayRows({
       members: [{ name: 'alice' }],

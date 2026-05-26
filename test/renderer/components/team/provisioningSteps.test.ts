@@ -181,6 +181,30 @@ describe('getLaunchJoinMilestonesFromMembers', () => {
     expect(milestones.pendingSpawnCount).toBe(0);
   });
 
+  it('counts unsafe bootstrap-confirmed provisioned-but-not-alive entries as failed', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime is no longer registered',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(0);
+    expect(milestones.failedSpawnCount).toBe(1);
+    expect(milestones.pendingSpawnCount).toBe(0);
+  });
+
   it('does not let a stale clean snapshot hide live registered-only members', () => {
     const milestones = getLaunchJoinMilestonesFromMembers({
       members,

@@ -193,14 +193,17 @@ function buildRuntimeBackedDisplayRow(
 function getSpawnDegradation(spawn?: MemberSpawnStatusEntry): SpawnDegradation | null {
   if (!spawn) return null;
   if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) {
-    if (spawn.runtimeDiagnosticSeverity !== 'error') {
+    if (
+      spawn.runtimeDiagnosticSeverity !== 'error' &&
+      !hasStoppedSpawnLivenessKind(spawn.livenessKind)
+    ) {
       return null;
     }
     const reason = spawn.runtimeDiagnostic ?? 'Runtime launch status needs attention';
     return {
       reason,
       diagnostic: spawn.runtimeDiagnostic ?? reason,
-      diagnosticSeverity: 'error',
+      diagnosticSeverity: spawn.runtimeDiagnosticSeverity === 'error' ? 'error' : 'warning',
     };
   }
 
@@ -286,6 +289,17 @@ function hasRuntimeStoppedEvidence(runtime: TeamAgentRuntimeEntry): boolean {
   );
 }
 
+function hasStoppedSpawnLivenessKind(
+  livenessKind: MemberSpawnStatusEntry['livenessKind'] | undefined
+): boolean {
+  return (
+    livenessKind === 'not_found' ||
+    livenessKind === 'registered_only' ||
+    livenessKind === 'shell_only' ||
+    livenessKind === 'stale_metadata'
+  );
+}
+
 function withLiveProcessContext(reason: string, runtime: TeamAgentRuntimeEntry): string {
   if (
     runtime.alive !== true ||
@@ -303,7 +317,8 @@ function buildSpawnBackedDisplayRow(
 ): TeamRuntimeDisplayRow {
   if (
     isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) &&
-    spawn.runtimeDiagnosticSeverity !== 'error'
+    spawn.runtimeDiagnosticSeverity !== 'error' &&
+    !hasStoppedSpawnLivenessKind(spawn.livenessKind)
   ) {
     return {
       memberName,
