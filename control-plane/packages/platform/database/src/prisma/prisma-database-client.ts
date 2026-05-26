@@ -41,10 +41,13 @@ const requiredMigrationTables = [
   "github_setup_sessions",
   "github_unclaimed_installation_callbacks",
   "integration_connections",
+  "github_repository_target_bindings",
+  "integration_targets",
   "outbox_events",
   "provider_account_snapshots",
   "provider_repository_availability",
   "provider_repository_sync_cursors",
+  "target_policy_rules",
   "workspaces",
 ] as const;
 
@@ -192,7 +195,11 @@ export class PrismaDatabaseClient implements OnApplicationBootstrap, OnModuleDes
       UNION ALL
       SELECT to_regclass('public.github_unclaimed_installation_callbacks')::text AS table_name
       UNION ALL
+      SELECT to_regclass('public.github_repository_target_bindings')::text AS table_name
+      UNION ALL
       SELECT to_regclass('public.integration_connections')::text AS table_name
+      UNION ALL
+      SELECT to_regclass('public.integration_targets')::text AS table_name
       UNION ALL
       SELECT to_regclass('public.outbox_events')::text AS table_name
       UNION ALL
@@ -201,6 +208,8 @@ export class PrismaDatabaseClient implements OnApplicationBootstrap, OnModuleDes
       SELECT to_regclass('public.provider_repository_availability')::text AS table_name
       UNION ALL
       SELECT to_regclass('public.provider_repository_sync_cursors')::text AS table_name
+      UNION ALL
+      SELECT to_regclass('public.target_policy_rules')::text AS table_name
       UNION ALL
       SELECT to_regclass('public.workspaces')::text AS table_name
     `;

@@ -135,6 +135,8 @@ model Workspace {
   githubSetupSessions      GitHubSetupSession[]
   githubInstallationClaims GitHubInstallationClaim[]
   githubOAuthClaimSessions GitHubOAuthClaimSession[]
+  integrationTargets       IntegrationTarget[]
+  targetPolicyRules        TargetPolicyRule[]
 
   @@index([status, createdAt], map: "workspaces_status_created_at_idx")
   @@map("workspaces")
@@ -153,6 +155,7 @@ model DesktopClient {
   credentials              DesktopClientCredential[]
   requestedPairingSessions DesktopPairingSession[]   @relation("RequestedDesktopPairingSessions")
   consumedPairingSessions  DesktopPairingSession[]   @relation("ConsumedDesktopPairingSessions")
+  createdTargetPolicyRules TargetPolicyRule[]        @relation("CreatedTargetPolicyRules")
 
   @@index([workspaceId, status], map: "desktop_clients_workspace_status_idx")
   @@map("desktop_clients")
@@ -220,6 +223,7 @@ model IntegrationConnection {
   repositorySyncCursors       ProviderRepositorySyncCursor[]
   githubInstallationSnapshots GitHubInstallationSnapshot[]
   githubRepositorySnapshots   GitHubRepositorySnapshot[]
+  integrationTargets          IntegrationTarget[]
 
   @@index([workspaceId, provider, status], map: "integration_connections_workspace_provider_status_idx")
   @@map("integration_connections")
@@ -253,6 +257,7 @@ model ProviderRepositoryAvailability {
   lastVerifiedAt          DateTime @map("last_verified_at") @db.Timestamptz(6)
 
   integrationConnection IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Restrict)
+  repositoryTargetBindings GitHubRepositoryTargetBinding[]
 
   @@unique([integrationConnectionId, providerRepositoryId], map: "provider_repository_availability_connection_repo_key")
   @@index([integrationConnectionId, available], map: "provider_repository_availability_connection_available_idx")
@@ -387,4 +392,71 @@ model GitHubRepositorySnapshot {
 
   @@unique([integrationConnectionId, githubRepositoryId], map: "github_repository_snapshots_connection_repo_key")
   @@map("github_repository_snapshots")
+}
+
+model IntegrationTarget {
+  id                      String    @id @db.Uuid
+  workspaceId             String    @map("workspace_id") @db.Uuid
+  integrationConnectionId String    @map("integration_connection_id") @db.Uuid
+  provider                String
+  targetKind              String    @map("target_kind")
+  providerTargetId        String    @map("provider_target_id")
+  displayName             String    @map("display_name")
+  status                  String
+  policyVersion           Int       @default(1) @map("policy_version")
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  staleAt                 DateTime? @map("stale_at") @db.Timestamptz(6)
+  disabledAt              DateTime? @map("disabled_at") @db.Timestamptz(6)
+  deletedAt               DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  workspace                Workspace                         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  integrationConnection    IntegrationConnection             @relation(fields: [integrationConnectionId], references: [id], onDelete: Restrict)
+  githubRepositoryBinding  GitHubRepositoryTargetBinding?
+  targetPolicyRules        TargetPolicyRule[]
+
+  @@index([workspaceId, status], map: "integration_targets_workspace_status_idx")
+  @@index([workspaceId, integrationConnectionId, targetKind, providerTargetId], map: "integration_targets_workspace_connection_kind_provider_idx")
+  @@index([id, workspaceId, policyVersion], map: "integration_targets_policy_version_idx")
+  @@map("integration_targets")
+}
+
+model GitHubRepositoryTargetBinding {
+  id                               String   @id @db.Uuid
+  integrationTargetId              String   @unique(map: "github_repository_target_bindings_target_id_key") @map("integration_target_id") @db.Uuid
+  githubInstallationId             String   @map("github_installation_id")
+  githubRepositoryId               String   @map("github_repository_id")
+  githubNodeId                     String?  @map("github_node_id")
+  displayOwner                     String   @map("display_owner")
+  displayName                      String   @map("display_name")
+  displayFullName                  String   @map("display_full_name")
+  private                          Boolean
+  archived                         Boolean
+  lastVerifiedAt                   DateTime @map("last_verified_at") @db.Timestamptz(6)
+  repositoryAvailabilitySnapshotId String?  @map("repository_availability_snapshot_id") @db.Uuid
+
+  integrationTarget              IntegrationTarget              @relation(fields: [integrationTargetId], references: [id], onDelete: Restrict)
+  repositoryAvailabilitySnapshot ProviderRepositoryAvailability? @relation(fields: [repositoryAvailabilitySnapshotId], references: [id], onDelete: Restrict)
+
+  @@index([githubInstallationId, githubRepositoryId], map: "github_repository_target_bindings_installation_repo_idx")
+  @@map("github_repository_target_bindings")
+}
+
+model TargetPolicyRule {
+  id                       String   @id @db.Uuid
+  workspaceId              String   @map("workspace_id") @db.Uuid
+  integrationTargetId      String   @map("integration_target_id") @db.Uuid
+  subjectKind              String   @map("subject_kind")
+  subjectId                String   @map("subject_id")
+  capability               String
+  effect                   String
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdByDesktopClientId String   @map("created_by_desktop_client_id") @db.Uuid
+
+  integrationTarget       IntegrationTarget @relation(fields: [integrationTargetId], references: [id], onDelete: Restrict)
+  workspace               Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  createdByDesktopClient  DesktopClient     @relation("CreatedTargetPolicyRules", fields: [createdByDesktopClientId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId, integrationTargetId, subjectKind, subjectId, capability], map: "target_policy_rules_lookup_idx")
+  @@map("target_policy_rules")
 }

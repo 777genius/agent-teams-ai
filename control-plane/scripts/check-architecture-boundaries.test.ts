@@ -44,6 +44,22 @@ describe("check-architecture-boundaries", () => {
     });
   });
 
+  it("fails when feature application code imports platform adapters", async () => {
+    await mkdir(join(root, "packages/features/alpha/src/application"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(root, "packages/features/alpha/src/application/use-case.ts"),
+      'import { ControlPlaneConfigService } from "@agent-teams-control-plane/platform-config";\nexport const useCase = ControlPlaneConfigService;\n',
+    );
+
+    await expect(runArchitectureCheck()).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "Application/domain depend on ports and shared abstractions",
+      ),
+    });
+  });
+
   it("fails when one feature imports another feature infrastructure", async () => {
     await writeFeature("beta", {
       files: {

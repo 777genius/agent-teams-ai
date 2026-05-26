@@ -11,6 +11,7 @@
     "@agent-teams-control-plane/features-external-action-content": "workspace:*",
     "@agent-teams-control-plane/features-github-installation-setup": "workspace:*",
     "@agent-teams-control-plane/features-integration-connections": "workspace:*",
+    "@agent-teams-control-plane/features-integration-targets": "workspace:*",
     "@agent-teams-control-plane/features-outbox": "workspace:*",
     "@agent-teams-control-plane/features-workspace-identity": "workspace:*",
     "@agent-teams-control-plane/platform-api": "workspace:*",

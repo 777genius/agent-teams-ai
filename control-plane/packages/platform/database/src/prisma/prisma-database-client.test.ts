@@ -59,13 +59,16 @@ function requiredTableRows(): Array<{ table_name: string }> {
     { table_name: "github_installation_snapshots" },
     { table_name: "github_oauth_claim_sessions" },
     { table_name: "github_repository_snapshots" },
+    { table_name: "github_repository_target_bindings" },
     { table_name: "github_setup_sessions" },
     { table_name: "github_unclaimed_installation_callbacks" },
     { table_name: "integration_connections" },
+    { table_name: "integration_targets" },
     { table_name: "outbox_events" },
     { table_name: "provider_account_snapshots" },
     { table_name: "provider_repository_availability" },
     { table_name: "provider_repository_sync_cursors" },
+    { table_name: "target_policy_rules" },
     { table_name: "workspaces" },
   ];
 }

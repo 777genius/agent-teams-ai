@@ -23,6 +23,10 @@ describe("loadControlPlaneConfig", () => {
       githubClaimOAuthEnabled: false,
       githubSetupEnabled: false,
       githubUnclaimedCallbackRecordingEnabled: false,
+      integrationTargetsEnabled: false,
+    });
+    expect(config.integrationTargets).toEqual({
+      repositoryAvailabilityMaxAgeHours: 24,
     });
     expect(config.github).toEqual({});
     expect(config.secrets).toEqual({});
@@ -60,8 +64,10 @@ describe("loadControlPlaneConfig", () => {
       CONTROL_PLANE_GITHUB_REST_API_VERSION: "2099-01-01",
       CONTROL_PLANE_GITHUB_SETUP_ENABLED: "true",
       CONTROL_PLANE_GITHUB_WEBHOOK_SECRET: "webhook-secret",
+      CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED: "true",
       CONTROL_PLANE_MODE: "hosted-official-app",
       CONTROL_PLANE_PUBLIC_BASE_URL: "https://control-plane.example.test",
+      CONTROL_PLANE_REPOSITORY_AVAILABILITY_MAX_AGE_HOURS: "48",
       NODE_ENV: "test",
     });
 
@@ -79,6 +85,8 @@ describe("loadControlPlaneConfig", () => {
     expect(summary.database.urlConfigured).toBe(true);
     expect(summary.github.encryptionMasterKeyConfigured).toBe(true);
     expect(summary.featureGates.githubSetupEnabled).toBe(true);
+    expect(summary.featureGates.integrationTargetsEnabled).toBe(true);
+    expect(summary.integrationTargets.repositoryAvailabilityMaxAgeHours).toBe(48);
     expect(JSON.stringify(summary)).not.toContain("private-key");
     expect(JSON.stringify(summary)).not.toContain("webhook-secret");
     expect(JSON.stringify(summary)).not.toContain("oauth-secret");
@@ -147,6 +155,24 @@ describe("loadControlPlaneConfig", () => {
         CONTROL_PLANE_ENCRYPTION_MASTER_KEY: Buffer.alloc(32, 7).toString("base64"),
         CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED: "true",
         CONTROL_PLANE_PERSISTENCE_ENABLED: "true",
+        NODE_ENV: "test",
+      }),
+    ).toThrow(ControlPlaneConfigError);
+  });
+
+  it("fails fast when integration targets are enabled without persistence", () => {
+    expect(() =>
+      loadControlPlaneConfig({
+        CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED: "true",
+        NODE_ENV: "test",
+      }),
+    ).toThrow(ControlPlaneConfigError);
+  });
+
+  it("validates repository availability max age bounds", () => {
+    expect(() =>
+      loadControlPlaneConfig({
+        CONTROL_PLANE_REPOSITORY_AVAILABILITY_MAX_AGE_HOURS: "0",
         NODE_ENV: "test",
       }),
     ).toThrow(ControlPlaneConfigError);

@@ -28,6 +28,9 @@ describe("WorkerRunner", () => {
           webhookSecretConfigured: false,
         },
         http: { host: "127.0.0.1", port: 3030 },
+        integrationTargets: {
+          repositoryAvailabilityMaxAgeHours: 24,
+        },
         mode: "local-disabled",
         database: {
           poolMax: 5,
@@ -163,6 +166,9 @@ function createConfigService(input: {
         webhookSecretConfigured: false,
       },
       http: { host: "127.0.0.1", port: 3030 },
+      integrationTargets: {
+        repositoryAvailabilityMaxAgeHours: 24,
+      },
       mode: "local-disabled",
       outbox: {
         batchSize: 10,
@@ -190,6 +196,7 @@ function disabledFeatureGates() {
     githubClaimOAuthEnabled: false,
     githubSetupEnabled: false,
     githubUnclaimedCallbackRecordingEnabled: false,
+    integrationTargetsEnabled: false,
   };
 }
 

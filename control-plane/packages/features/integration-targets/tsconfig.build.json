@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "paths": {
+      "@agent-teams-control-plane/features-workspace-identity": [
+        "packages/features/workspace-identity/dist/index.d.ts"
+      ],
+      "@agent-teams-control-plane/features-workspace-identity/interface/nest": [
+        "packages/features/workspace-identity/dist/interface/nest/index.d.ts"
+      ],
+      "@agent-teams-control-plane/platform-config": [
+        "packages/platform/config/dist/index.d.ts"
+      ],
+      "@agent-teams-control-plane/platform-database": [
+        "packages/platform/database/dist/index.d.ts"
+      ],
+      "@agent-teams-control-plane/platform-database/nest": [
+        "packages/platform/database/dist/nest/index.d.ts"
+      ],
+      "@agent-teams-control-plane/shared": ["packages/shared/dist/index.d.ts"]
+    },
+    "rootDir": "src",
+    "sourceMap": true
+  },
+  "exclude": ["src/**/*.test.ts"]
+}

@@ -382,180 +382,99 @@ Approximate change size:
 ~2500-4000 lines
 ```
 
-## Phase 6 - integration-registry
+## Phase 6 - repository target binding and policy
+
+Detailed plan:
+[Phase 6 Repository Target Binding And Policy Plan](phase-6-repository-target-binding-policy-plan.md)
 
 Goals:
 
-- introduce generic integration capability and target binding model
-- define capabilities
-- define external targets
-- bind workspace targets to Phase 5 integration connections
+- turn repository availability snapshots into explicit workspace targets
+- add target state and policy rules
+- keep repository availability separate from authorization
+- provide the policy evaluator that later GitHub action dispatch must call
+- fail closed on partial/stale repository snapshots in V1, without GitHub HTTP
+- use a conservative repository availability max age before enabling targets
+- use SQL migration partial unique indexes for active target authorization
+  constraints
+- avoid GitHub writes and token issuance
 
-Feature package:
+Recommended package:
 
 ```text
-packages/features/integration-registry
+packages/features/integration-targets
 ```
-
-Concepts:
-
-```text
-IntegrationKind = github | telegram | slack | discord | runtime | billing
-ExternalActionKind = github_issue_comment | github_pull_request_top_level_comment | messenger_message | check_run
-ExternalTarget = github_repository | github_pull_request | messenger_channel
-```
-
-Use cases:
-
-- `SetIntegrationCapabilityState`
-- `BindExternalTarget`
-- `ResolveGitHubTargetBinding`
-- `ValidateExternalTarget`
-- `SyncIntegrationTargetAvailability`
-- `ResolveIntegrationCapability`
-- `ListWorkspaceIntegrations`
-
-Acceptance criteria:
-
-- integration-registry does not own or duplicate `IntegrationConnection` rows
-- connection state is read through `integration-connections` public ports
-- GitHub-specific data does not leak into generic registry model
-- capability resolver can answer "can this workspace post PR comments?"
-- capability states include unclaimed, pending_claim, connected, suspended, permission_missing, target_not_enabled
-- installing GitHub App on all repos does not automatically enable all repos for agent actions
-- local git remote, branch, `owner/name`, and PR URL are accepted only as target hints
-- GitHub repository authorization uses immutable repository id from verified installation repository access
-- top-level PR comment target validates that the PR base repository id equals the bound repository id
-- issue comment target validates whether the issue is allowed for the requested action kind
-- repository rename updates display snapshots without changing authority
-- issue/PR body and pull request diff content are not stored during target validation
-- tests cover missing integration, disabled capability, unbound target, fork PR, renamed repository, and PR number from another repository
 
 Approximate change size:
 
 ```text
-🎯 10   🛡️ 9   🧠 7
-~1000-1800 lines
+🎯 10   🛡️ 9   🧠 6
+~1500-2500 lines
 ```
 
-## Phase 7 - agent-actions
+## Phase 7 - GitHub installation token broker
+
+Detailed plan:
+[Phase 7 GitHub Installation Token Broker Plan](phase-7-github-installation-token-broker-plan.md)
 
 Goals:
 
-- implement generic external action request flow
-- include idempotency
-- include entitlement checks through port
-- include audit through port
-- write outbox event instead of direct side effect
+- mint GitHub App installation tokens server-side only
+- narrow tokens by enabled target repository and minimal permission set
+- keep tokens out of desktop, agents, runtime subprocesses, logs, and DB
+- use no token cache in V1 and always pass explicit `repository_ids`
+- keep token broker abuse controls active because no-cache V1 can otherwise
+  over-call GitHub token endpoints
+- keep readiness honest: config/key parseability only, not proof that every
+  installation has future action permissions
+- expose readiness/dry-run status, not token-returning APIs
+- provide the internal server-side broker port used by Phase 8
 
-Feature package:
-
-```text
-packages/features/agent-actions
-```
-
-Use cases:
-
-- `RequestExternalAction`
-- `GetExternalActionStatus`
-- `CancelExternalAction` later
-
-Ports:
-
-- `AgentActionRepository`
-- `ExternalActionContentStore`
-- `IntegrationCapabilityResolver`
-- `ExternalActionDispatcher`
-- `EntitlementPort`
-- `AuditLogPort`
-- `OutboxPort`
-
-Acceptance criteria:
-
-- duplicate idempotency key returns existing action
-- unauthorized target is rejected
-- disabled integration is rejected
-- allowed action creates outbox event
-- allowed comment action stores encrypted ExternalActionContent with content hash
-- audit/outbox metadata does not contain raw comment body
-- use case tests run without Nest
-
-Approximate change size:
+Recommended package:
 
 ```text
-🎯 10   🛡️ 9   🧠 8
-~1500-2600 lines
+packages/features/github-token-broker
 ```
-
-## Phase 8 - github-runtime Foundation
-
-Build on Phase 5 workspace-bound installation ownership. Do not reimplement
-setup callbacks, claim OAuth, or workspace binding here.
-
-Goals:
-
-- implement webhook signature verification
-- implement webhook normalization
-- implement installation/repository change sync for already-bound connections
-- implement installation token issuer
-- implement scoped token request policy by target repository and permission set
-- expose GitHub runtime health/readiness for bound installations
-- map GitHub installation suspension/deletion to connection state
-
-Feature package:
-
-```text
-packages/features/github-runtime
-```
-
-Platform package:
-
-```text
-packages/platform/github-sdk
-```
-
-Use cases:
-
-- `NormalizeGitHubWebhook`
-- `ProcessGitHubInstallationEvent`
-- `SyncGitHubInstallationRepositories`
-- `IssueGitHubRepositoryToken`
-- `GetGitHubRuntimeHealth`
-
-Security rules:
-
-- private key only read by server-side platform adapter
-- raw webhook payload is not persisted
-- repository authorization uses immutable GitHub repository id
-- app suspended/deleted blocks actions
-- webhook verification uses raw request body and `X-Hub-Signature-256`
-- installation tokens are not persisted and are scoped to exact target repository where possible
-- installation token issuer accepts only a verified Phase 5 connection id plus a
-  Phase 6 target binding
-- GitHub user access tokens remain out of this phase
-- webhook payload can update only an already-bound connection for the matching
-  installation id
-
-Acceptance criteria:
-
-- webhook duplicate delivery is idempotent
-- unsupported signed event returns accepted/ignored
-- installation deleted/suspended updates state
-- repo rename keeps immutable id authority
-- private key never appears in logs
-- missing webhook secret fails readiness/startup for hosted GitHub mode
-- missing private key fails readiness/startup for token issuer mode
-- expired installation token retry remints token without duplicating side effect
-- webhook for unknown/unbound installation cannot create a connection
-- installation token is narrowed to repository id and permission set when target
-  repository is known
-- token issuer does not run before Phase 6 target authorization succeeds
 
 Approximate change size:
 
 ```text
 🎯 9   🛡️ 10   🧠 7
-~1200-2400 lines
+~1200-2200 lines
+```
+
+## Phase 8 - Agent GitHub actions outbox
+
+Detailed plan:
+[Phase 8 Agent GitHub Actions Outbox Plan](phase-8-agent-github-actions-outbox-plan.md)
+
+Goals:
+
+- accept trusted agent action request envelopes
+- validate target policy before enqueue and before dispatch
+- store action body as encrypted short-retention external action content
+- enqueue GitHub writes through outbox
+- dispatch comments/reviews/checks through the GitHub App with visible agent
+  attribution
+- render safe agent avatar metadata when possible, while GitHub actor remains the
+  official App
+- use a default public agent avatar when a specific agent avatar is missing or
+  unsafe
+- honor GitHub retry-after/rate-limit backoff through an outbox retry extension
+- keep check-run names stable and put per-action correlation in `external_id`
+- keep retries/idempotency/dead-letter behavior explicit
+
+Recommended package:
+
+```text
+packages/features/agent-github-actions
+```
+
+Approximate change size:
+
+```text
+🎯 10   🛡️ 9   🧠 8
+~2000-3500 lines
 ```
 
 ## Phase 9 - GitHub Agent Comments V1

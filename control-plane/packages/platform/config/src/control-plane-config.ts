@@ -43,6 +43,10 @@ export type ControlPlaneConfig = Readonly<{
     githubSetupEnabled: boolean;
     githubClaimOAuthEnabled: boolean;
     githubUnclaimedCallbackRecordingEnabled: boolean;
+    integrationTargetsEnabled: boolean;
+  }>;
+  integrationTargets: Readonly<{
+    repositoryAvailabilityMaxAgeHours: number;
   }>;
   retention: Readonly<{
     completedOutboxDays?: number;
@@ -91,6 +95,7 @@ export type SafeControlPlaneConfigSummary = Readonly<{
     maxAttempts: number;
   }>;
   featureGates: ControlPlaneConfig["featureGates"];
+  integrationTargets: ControlPlaneConfig["integrationTargets"];
   retention: Readonly<{
     completedOutboxConfigured: boolean;
     deadLetterConfigured: boolean;
@@ -164,6 +169,7 @@ const rawConfigSchema = z.object({
   CONTROL_PLANE_GITHUB_WEBHOOK_SECRET: z.string().min(1).optional(),
   CONTROL_PLANE_HTTP_HOST: z.string().min(1).default("127.0.0.1"),
   CONTROL_PLANE_HTTP_PORT: z.coerce.number().int().min(1).max(65535).default(3030),
+  CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED: optionalBoolean,
   CONTROL_PLANE_MODE: z.enum(CONTROL_PLANE_MODES).default("local-disabled"),
   CONTROL_PLANE_OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(100).default(10),
   CONTROL_PLANE_OUTBOX_LEASE_SECONDS: z.coerce.number().int().min(1).default(300),
@@ -172,6 +178,12 @@ const rawConfigSchema = z.object({
   CONTROL_PLANE_OUTBOX_WORKER_ENABLED: optionalBoolean,
   CONTROL_PLANE_PERSISTENCE_ENABLED: optionalBoolean,
   CONTROL_PLANE_PUBLIC_BASE_URL: z.string().url().optional(),
+  CONTROL_PLANE_REPOSITORY_AVAILABILITY_MAX_AGE_HOURS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(720)
+    .default(24),
   CONTROL_PLANE_WORKER_SHUTDOWN_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -235,6 +247,7 @@ export function loadControlPlaneConfig(
   const database = buildDatabaseConfig(raw);
   const outbox = buildOutboxConfig(raw, outboxWorkerEnabled);
   const featureGates = buildFeatureGateConfig(raw);
+  const integrationTargets = buildIntegrationTargetsConfig(raw);
   const retention = buildRetentionConfig(raw);
 
   const configBase = {
@@ -247,6 +260,7 @@ export function loadControlPlaneConfig(
       host: raw.CONTROL_PLANE_HTTP_HOST,
       port: raw.CONTROL_PLANE_HTTP_PORT,
     },
+    integrationTargets,
     mode: raw.CONTROL_PLANE_MODE,
     outbox,
     persistence: {
@@ -281,6 +295,7 @@ export function getSafeConfigSummary(
     },
     environment: config.environment,
     featureGates: config.featureGates,
+    integrationTargets: config.integrationTargets,
     github: {
       appIdConfigured: config.github.appId !== undefined,
       appSlugConfigured: config.github.appSlug !== undefined,
@@ -384,6 +399,14 @@ function validateCrossFieldConfig(
     });
   }
 
+  if (integrationTargetsFeatureGateEnabled(raw) && !flags.persistenceEnabled) {
+    issues.push({
+      code: "invalid",
+      message: "Integration target feature gates require persistence.",
+      path: ["CONTROL_PLANE_PERSISTENCE_ENABLED"],
+    });
+  }
+
   if (
     raw.CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED === true &&
     raw.CONTROL_PLANE_GITHUB_SETUP_ENABLED !== true
@@ -431,6 +454,10 @@ function phase5FeatureGateEnabled(raw: RawConfig): boolean {
     raw.CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED === true ||
     raw.CONTROL_PLANE_GITHUB_UNCLAIMED_CALLBACK_RECORDING_ENABLED === true
   );
+}
+
+function integrationTargetsFeatureGateEnabled(raw: RawConfig): boolean {
+  return raw.CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED === true;
 }
 
 function decodeBase64(value: string): Buffer | undefined {
@@ -482,8 +509,18 @@ function buildFeatureGateConfig(raw: RawConfig): ControlPlaneConfig["featureGate
     desktopPairingEnabled: raw.CONTROL_PLANE_DESKTOP_PAIRING_ENABLED ?? false,
     githubClaimOAuthEnabled: raw.CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED ?? false,
     githubSetupEnabled: raw.CONTROL_PLANE_GITHUB_SETUP_ENABLED ?? false,
+    integrationTargetsEnabled: raw.CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED ?? false,
     githubUnclaimedCallbackRecordingEnabled:
       raw.CONTROL_PLANE_GITHUB_UNCLAIMED_CALLBACK_RECORDING_ENABLED ?? false,
+  };
+}
+
+function buildIntegrationTargetsConfig(
+  raw: RawConfig,
+): ControlPlaneConfig["integrationTargets"] {
+  return {
+    repositoryAvailabilityMaxAgeHours:
+      raw.CONTROL_PLANE_REPOSITORY_AVAILABILITY_MAX_AGE_HOURS,
   };
 }
 
