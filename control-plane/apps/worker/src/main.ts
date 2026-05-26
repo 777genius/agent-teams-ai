@@ -15,12 +15,15 @@ const app = await NestFactory.createApplicationContext(WorkerModule, {
 app.enableShutdownHooks();
 
 const runner = app.get(WorkerRunner);
-await runner.run(workerMode);
 
 if (workerMode === "smoke") {
+  await runner.run(workerMode);
   await app.close();
 } else {
+  const workerRun = runner.run(workerMode);
   await waitForShutdownSignal();
+  runner.requestStop();
+  await workerRun;
   await app.close();
 }
 

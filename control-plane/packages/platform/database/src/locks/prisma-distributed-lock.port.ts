@@ -85,7 +85,7 @@ export class PrismaDistributedLockPort implements DistributedLockPort {
     validateLockName(input.name);
     validateOwnerId(input.ownerId);
 
-    await this.databaseClient.getClient().$queryRaw<readonly unknown[]>`
+    await this.databaseClient.getClient().$executeRaw`
       DELETE FROM distributed_locks
       WHERE name = ${input.name}
         AND owner_id = ${input.ownerId}

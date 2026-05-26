@@ -98,6 +98,9 @@ importers:
       '@agent-teams-control-plane/platform-logger':
         specifier: workspace:*
         version: link:../../packages/platform/logger
+      '@agent-teams-control-plane/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@nestjs/common':
         specifier: 11.1.24
         version: 11.1.24(reflect-metadata@0.2.2)(rxjs@7.8.2)

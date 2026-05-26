@@ -11,6 +11,7 @@
     "@agent-teams-control-plane/platform-config": "workspace:*",
     "@agent-teams-control-plane/platform-database": "workspace:*",
     "@agent-teams-control-plane/platform-logger": "workspace:*",
+    "@agent-teams-control-plane/shared": "workspace:*",
     "@nestjs/common": "11.1.24",
     "@nestjs/core": "11.1.24",
     "reflect-metadata": "0.2.2",

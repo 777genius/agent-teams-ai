@@ -25,6 +25,10 @@ export {
   type PrismaTransactionClientLike,
 } from "./prisma/prisma-database-client.js";
 export {
+  buildPostgresPoolConfig,
+  type PostgresPoolConfig,
+} from "./prisma/postgres-pool-config.js";
+export {
   PrismaTransactionRunner,
   getPrismaTransactionClient,
   isPrismaTransactionContext,

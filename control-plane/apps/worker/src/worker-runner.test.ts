@@ -72,7 +72,86 @@ describe("WorkerRunner", () => {
       status: "idle",
     });
   });
+
+  it("polls in serve mode until stop is requested", async () => {
+    const logger = createSilentLogger();
+    const controls: { requestStop?: () => void } = {};
+    let calls = 0;
+    const outboxWorker = {
+      runOnce: async () => {
+        calls += 1;
+        if (calls === 2) {
+          controls.requestStop?.();
+        }
+        return {
+          claimed: calls === 1 ? 1 : 0,
+          completed: calls === 1 ? 1 : 0,
+          deadLettered: 0,
+          retried: 0,
+          skipped: false,
+          staleClaims: 0,
+        };
+      },
+    } satisfies Pick<OutboxWorkerService, "runOnce">;
+
+    const runner = new WorkerRunner(
+      createConfigService({ pollIntervalMs: 1 }) as ControlPlaneConfigService,
+      outboxWorker as OutboxWorkerService,
+      logger,
+    );
+    controls.requestStop = () => runner.requestStop();
+
+    await expect(runner.run("serve")).resolves.toEqual({
+      mode: "serve",
+      outboxSkipped: false,
+      status: "processed-once",
+    });
+    expect(calls).toBe(2);
+  });
 });
+
+function createConfigService(input: { pollIntervalMs: number }) {
+  return {
+    getSafeSummary: () => ({
+      build: {
+        createdAtConfigured: false,
+        revisionConfigured: false,
+      },
+      database: {
+        poolMax: 5,
+        sslMode: "disable",
+        urlConfigured: false,
+      },
+      environment: "test",
+      github: {
+        appIdConfigured: false,
+        appSlugConfigured: false,
+        encryptionMasterKeyConfigured: false,
+        oauthClientIdConfigured: false,
+        oauthClientSecretConfigured: false,
+        privateKeyConfigured: false,
+        restApiVersionConfigured: false,
+        webhookSecretConfigured: false,
+      },
+      http: { host: "127.0.0.1", port: 3030 },
+      mode: "local-disabled",
+      outbox: {
+        batchSize: 10,
+        leaseSeconds: 300,
+        maxAttempts: 10,
+        pollIntervalMs: input.pollIntervalMs,
+        workerEnabled: false,
+      },
+      persistence: { enabled: false },
+      publicBaseUrlConfigured: false,
+      retention: {
+        completedOutboxConfigured: false,
+        deadLetterConfigured: false,
+        externalContentConfigured: false,
+      },
+    }),
+  } satisfies Pick<ControlPlaneConfigService, "getSafeSummary">;
+}
 
 function createSilentLogger(): ControlPlaneLogger {
   return {

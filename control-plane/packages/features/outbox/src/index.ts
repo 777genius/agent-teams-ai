@@ -1,5 +1,6 @@
 export {
   calculateRetryDelayMs,
+  calculateRetryDelayWithJitterMs,
   validateNewOutboxEvent,
   type JsonObject,
   type JsonValue,

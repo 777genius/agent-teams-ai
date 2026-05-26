@@ -112,3 +112,17 @@ export function calculateRetryDelayMs(attempts: number): number {
   }
   return Math.min(3_600_000, 600_000 * 2 ** Math.max(0, attempts - 4));
 }
+
+export function calculateRetryDelayWithJitterMs(
+  attempts: number,
+  jitterMs: number,
+): number {
+  const baseDelayMs = calculateRetryDelayMs(attempts);
+  if (baseDelayMs === 0) {
+    return 0;
+  }
+  if (!Number.isFinite(jitterMs) || jitterMs < 0) {
+    throw new RangeError("Retry jitter must be a non-negative finite number.");
+  }
+  return baseDelayMs + Math.floor(jitterMs);
+}

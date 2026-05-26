@@ -5,7 +5,9 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   getPrismaTransactionClient,
   PRISMA_DATABASE_CLIENT,
+  type PrismaClientLike,
   type PrismaDatabaseClient,
+  type PrismaTransactionClientLike,
 } from "@agent-teams-control-plane/platform-database";
 import {
   createSafeError,
@@ -38,6 +40,7 @@ type OutboxRecord = Awaited<
 >;
 
 type OutboxRow = NonNullable<OutboxRecord>;
+type PrismaWriteClient = PrismaClientLike | PrismaTransactionClientLike;
 
 @Injectable()
 export class PrismaOutboxRepository implements OutboxRepository {
@@ -167,175 +170,187 @@ export class PrismaOutboxRepository implements OutboxRepository {
   public async markFailedForRetry(
     input: RetryOutboxEventInput,
   ): Promise<ClaimMutationResult> {
-    const rows = await this.databaseClient.getClient().$queryRaw<OutboxRow[]>`
-      UPDATE outbox_events
-      SET
-        status = CASE WHEN attempts >= max_attempts THEN 'dead-lettered' ELSE 'pending' END,
-        next_attempt_at = CASE
-          WHEN attempts >= max_attempts THEN next_attempt_at
-          WHEN attempts <= 1 THEN now()
-          WHEN attempts = 2 THEN now() + interval '30 seconds'
-          WHEN attempts = 3 THEN now() + interval '2 minutes'
-          WHEN attempts = 4 THEN now() + interval '10 minutes'
-          ELSE now() + interval '1 hour'
-        END,
-        locked_by = NULL,
-        locked_until = NULL,
-        claim_token = NULL,
-        last_error_code = ${input.safeError.code},
-        last_error_category = ${input.safeError.category},
-        last_error_message = ${input.safeError.message},
-        last_error_retryable = ${input.safeError.retryable},
-        dead_lettered_at = CASE WHEN attempts >= max_attempts THEN now() ELSE NULL END,
-        updated_at = now()
-      WHERE id = ${input.eventId}::uuid
-        AND status = 'processing'
-        AND locked_by = ${input.workerId}
-        AND claim_token = ${input.claimToken}
-      RETURNING
-        id,
-        event_type AS "eventType",
-        event_version AS "eventVersion",
-        status,
-        aggregate_kind AS "aggregateKind",
-        aggregate_id AS "aggregateId",
-        workspace_id AS "workspaceId",
-        idempotency_key AS "idempotencyKey",
-        payload_json AS "payloadJson",
-        content_ref_id AS "contentRefId",
-        content_integrity_hash AS "contentIntegrityHash",
-        attempts,
-        max_attempts AS "maxAttempts",
-        next_attempt_at AS "nextAttemptAt",
-        locked_by AS "lockedBy",
-        locked_until AS "lockedUntil",
-        claim_token AS "claimToken",
-        last_error_code AS "lastErrorCode",
-        last_error_category AS "lastErrorCategory",
-        last_error_message AS "lastErrorMessage",
-        last_error_retryable AS "lastErrorRetryable",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt",
-        completed_at AS "completedAt",
-        dead_lettered_at AS "deadLetteredAt"
-    `;
+    return this.databaseClient.getClient().$transaction(async (client) => {
+      const rows = await client.$queryRaw<OutboxRow[]>`
+        UPDATE outbox_events
+        SET
+          status = CASE WHEN attempts >= max_attempts THEN 'dead-lettered' ELSE 'pending' END,
+          next_attempt_at = CASE
+            WHEN attempts >= max_attempts THEN next_attempt_at
+            WHEN attempts <= 1 THEN now()
+            WHEN attempts = 2 THEN now() + interval '30 seconds' + (random() * interval '5 seconds')
+            WHEN attempts = 3 THEN now() + interval '2 minutes' + (random() * interval '5 seconds')
+            WHEN attempts = 4 THEN now() + interval '10 minutes' + (random() * interval '5 seconds')
+            WHEN attempts = 5 THEN now() + interval '20 minutes' + (random() * interval '5 seconds')
+            WHEN attempts = 6 THEN now() + interval '40 minutes' + (random() * interval '5 seconds')
+            ELSE now() + interval '1 hour' + (random() * interval '5 seconds')
+          END,
+          locked_by = NULL,
+          locked_until = NULL,
+          claim_token = NULL,
+          last_error_code = ${input.safeError.code},
+          last_error_category = ${input.safeError.category},
+          last_error_message = ${input.safeError.message},
+          last_error_retryable = ${input.safeError.retryable},
+          dead_lettered_at = CASE WHEN attempts >= max_attempts THEN now() ELSE NULL END,
+          updated_at = now()
+        WHERE id = ${input.eventId}::uuid
+          AND status = 'processing'
+          AND locked_by = ${input.workerId}
+          AND claim_token = ${input.claimToken}
+        RETURNING
+          id,
+          event_type AS "eventType",
+          event_version AS "eventVersion",
+          status,
+          aggregate_kind AS "aggregateKind",
+          aggregate_id AS "aggregateId",
+          workspace_id AS "workspaceId",
+          idempotency_key AS "idempotencyKey",
+          payload_json AS "payloadJson",
+          content_ref_id AS "contentRefId",
+          content_integrity_hash AS "contentIntegrityHash",
+          attempts,
+          max_attempts AS "maxAttempts",
+          next_attempt_at AS "nextAttemptAt",
+          locked_by AS "lockedBy",
+          locked_until AS "lockedUntil",
+          claim_token AS "claimToken",
+          last_error_code AS "lastErrorCode",
+          last_error_category AS "lastErrorCategory",
+          last_error_message AS "lastErrorMessage",
+          last_error_retryable AS "lastErrorRetryable",
+          created_at AS "createdAt",
+          updated_at AS "updatedAt",
+          completed_at AS "completedAt",
+          dead_lettered_at AS "deadLetteredAt"
+      `;
 
-    if (rows.length === 0) {
-      return "stale-claim";
-    }
-    if (rows[0]?.status === "dead-lettered") {
-      await this.insertDeadLetter(rows[0], input.safeError);
-    }
-    return "updated";
+      if (rows.length === 0) {
+        return "stale-claim";
+      }
+      if (rows[0]?.status === "dead-lettered") {
+        await this.insertDeadLetter(client, rows[0], input.safeError);
+      }
+      return "updated";
+    });
   }
 
   public async markDeadLettered(
     input: DeadLetterOutboxEventInput,
   ): Promise<ClaimMutationResult> {
-    const result = await this.databaseClient.getClient().outboxEvent.updateMany({
-      data: {
-        claimToken: null,
-        deadLetteredAt: new Date(),
-        lastErrorCategory: input.safeError.category,
-        lastErrorCode: input.safeError.code,
-        lastErrorMessage: input.safeError.message,
-        lastErrorRetryable: input.safeError.retryable,
-        lockedBy: null,
-        lockedUntil: null,
-        status: "dead-lettered",
-        updatedAt: new Date(),
-      },
-      where: claimWhere({
-        claimToken: input.event.claimToken,
-        eventId: input.event.id,
-        workerId: input.event.lockedBy,
-      }),
+    return this.databaseClient.getClient().$transaction(async (client) => {
+      const result = await client.outboxEvent.updateMany({
+        data: {
+          claimToken: null,
+          deadLetteredAt: new Date(),
+          lastErrorCategory: input.safeError.category,
+          lastErrorCode: input.safeError.code,
+          lastErrorMessage: input.safeError.message,
+          lastErrorRetryable: input.safeError.retryable,
+          lockedBy: null,
+          lockedUntil: null,
+          status: "dead-lettered",
+          updatedAt: new Date(),
+        },
+        where: claimWhere({
+          claimToken: input.event.claimToken,
+          eventId: input.event.id,
+          workerId: input.event.lockedBy,
+        }),
+      });
+
+      if (result.count !== 1) {
+        return "stale-claim";
+      }
+
+      await this.insertDeadLetterFromEvent(client, input.event, input.safeError);
+      return "updated";
     });
-
-    if (result.count !== 1) {
-      return "stale-claim";
-    }
-
-    await this.insertDeadLetterFromEvent(input.event, input.safeError);
-    return "updated";
   }
 
   public async recoverStaleProcessing(): Promise<number> {
-    const client = this.databaseClient.getClient();
-    const terminalRows = await client.$queryRaw<OutboxRow[]>`
-      UPDATE outbox_events
-      SET
-        status = 'dead-lettered',
-        locked_by = NULL,
-        locked_until = NULL,
-        claim_token = NULL,
-        last_error_code = 'CONTROL_PLANE_OUTBOX_STALE_MAX_ATTEMPTS',
-        last_error_category = 'internal',
-        last_error_message = 'Outbox event exhausted attempts after stale processing recovery.',
-        last_error_retryable = false,
-        dead_lettered_at = now(),
-        updated_at = now()
-      WHERE status = 'processing'
-        AND locked_until < now()
-        AND attempts >= max_attempts
-      RETURNING
-        id,
-        event_type AS "eventType",
-        event_version AS "eventVersion",
-        status,
-        aggregate_kind AS "aggregateKind",
-        aggregate_id AS "aggregateId",
-        workspace_id AS "workspaceId",
-        idempotency_key AS "idempotencyKey",
-        payload_json AS "payloadJson",
-        content_ref_id AS "contentRefId",
-        content_integrity_hash AS "contentIntegrityHash",
-        attempts,
-        max_attempts AS "maxAttempts",
-        next_attempt_at AS "nextAttemptAt",
-        locked_by AS "lockedBy",
-        locked_until AS "lockedUntil",
-        claim_token AS "claimToken",
-        last_error_code AS "lastErrorCode",
-        last_error_category AS "lastErrorCategory",
-        last_error_message AS "lastErrorMessage",
-        last_error_retryable AS "lastErrorRetryable",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt",
-        completed_at AS "completedAt",
-        dead_lettered_at AS "deadLetteredAt"
-    `;
+    return this.databaseClient.getClient().$transaction(async (client) => {
+      const terminalRows = await client.$queryRaw<OutboxRow[]>`
+        UPDATE outbox_events
+        SET
+          status = 'dead-lettered',
+          locked_by = NULL,
+          locked_until = NULL,
+          claim_token = NULL,
+          last_error_code = 'CONTROL_PLANE_OUTBOX_STALE_MAX_ATTEMPTS',
+          last_error_category = 'internal',
+          last_error_message = 'Outbox event exhausted attempts after stale processing recovery.',
+          last_error_retryable = false,
+          dead_lettered_at = now(),
+          updated_at = now()
+        WHERE status = 'processing'
+          AND locked_until < now()
+          AND attempts >= max_attempts
+        RETURNING
+          id,
+          event_type AS "eventType",
+          event_version AS "eventVersion",
+          status,
+          aggregate_kind AS "aggregateKind",
+          aggregate_id AS "aggregateId",
+          workspace_id AS "workspaceId",
+          idempotency_key AS "idempotencyKey",
+          payload_json AS "payloadJson",
+          content_ref_id AS "contentRefId",
+          content_integrity_hash AS "contentIntegrityHash",
+          attempts,
+          max_attempts AS "maxAttempts",
+          next_attempt_at AS "nextAttemptAt",
+          locked_by AS "lockedBy",
+          locked_until AS "lockedUntil",
+          claim_token AS "claimToken",
+          last_error_code AS "lastErrorCode",
+          last_error_category AS "lastErrorCategory",
+          last_error_message AS "lastErrorMessage",
+          last_error_retryable AS "lastErrorRetryable",
+          created_at AS "createdAt",
+          updated_at AS "updatedAt",
+          completed_at AS "completedAt",
+          dead_lettered_at AS "deadLetteredAt"
+      `;
 
-    for (const row of terminalRows) {
-      await this.insertDeadLetter(
-        row,
-        createSafeError({
-          category: "internal",
-          code: "CONTROL_PLANE_OUTBOX_STALE_MAX_ATTEMPTS",
-          message: "Outbox event exhausted attempts after stale processing recovery.",
-        }),
-      );
-    }
+      for (const row of terminalRows) {
+        await this.insertDeadLetter(
+          client,
+          row,
+          createSafeError({
+            category: "internal",
+            code: "CONTROL_PLANE_OUTBOX_STALE_MAX_ATTEMPTS",
+            message: "Outbox event exhausted attempts after stale processing recovery.",
+          }),
+        );
+      }
 
-    const recovered = await client.$queryRaw<readonly { id: string }[]>`
-      UPDATE outbox_events
-      SET
-        status = 'pending',
-        locked_by = NULL,
-        locked_until = NULL,
-        claim_token = NULL,
-        updated_at = now()
-      WHERE status = 'processing'
-        AND locked_until < now()
-        AND attempts < max_attempts
-      RETURNING id
-    `;
+      const recovered = await client.$queryRaw<readonly { id: string }[]>`
+        UPDATE outbox_events
+        SET
+          status = 'pending',
+          locked_by = NULL,
+          locked_until = NULL,
+          claim_token = NULL,
+          updated_at = now()
+        WHERE status = 'processing'
+          AND locked_until < now()
+          AND attempts < max_attempts
+        RETURNING id
+      `;
 
-    return terminalRows.length + recovered.length;
+      return terminalRows.length + recovered.length;
+    });
   }
 
-  private async insertDeadLetter(row: OutboxRow, safeError: SafeError): Promise<void> {
-    await this.databaseClient.getClient().deadLetterEvent.upsert({
+  private async insertDeadLetter(
+    client: PrismaWriteClient,
+    row: OutboxRow,
+    safeError: SafeError,
+  ): Promise<void> {
+    await client.deadLetterEvent.upsert({
       create: {
         attempts: row.attempts,
         eventType: row.eventType,
@@ -358,10 +373,11 @@ export class PrismaOutboxRepository implements OutboxRepository {
   }
 
   private async insertDeadLetterFromEvent(
+    client: PrismaWriteClient,
     event: OutboxEvent,
     safeError: SafeError,
   ): Promise<void> {
-    await this.databaseClient.getClient().deadLetterEvent.upsert({
+    await client.deadLetterEvent.upsert({
       create: {
         attempts: event.attempts,
         eventType: event.type,

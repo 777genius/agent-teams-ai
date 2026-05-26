@@ -14,6 +14,7 @@ import {
 
 import { PrismaClient } from "../generated/prisma/client.js";
 import type { DatabaseReadinessReport } from "../readiness/database-readiness.js";
+import { buildPostgresPoolConfig } from "./postgres-pool-config.js";
 
 export type PrismaClientLike = PrismaClient;
 export type PrismaTransactionClientLike = Omit<
@@ -47,14 +48,9 @@ export class PrismaDatabaseClient implements OnApplicationBootstrap, OnModuleDes
     }
 
     if (this.client === undefined) {
-      const databaseUrl = this.configService.getConfig().database.url;
-      if (databaseUrl === undefined) {
-        throw new Error("Database client requested without CONTROL_PLANE_DATABASE_URL.");
-      }
+      const database = this.configService.getConfig().database;
       this.client = new PrismaClient({
-        adapter: new PrismaPg({
-          connectionString: databaseUrl,
-        }),
+        adapter: new PrismaPg(buildPostgresPoolConfig(database)),
         errorFormat: "minimal",
       });
     }

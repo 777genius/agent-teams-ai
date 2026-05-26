@@ -6,6 +6,7 @@ import {
   CONTROL_PLANE_LOGGER,
   type ControlPlaneLogger,
 } from "@agent-teams-control-plane/platform-logger";
+import { toSafeError } from "@agent-teams-control-plane/shared";
 
 export type WorkerRunMode = "serve" | "smoke";
 
@@ -18,6 +19,8 @@ export type WorkerRunResult = Readonly<{
 @Injectable()
 export class WorkerRunner {
   private readonly logger: ControlPlaneLogger;
+  private stopRequested = false;
+  private wakeDelay: (() => void) | undefined;
 
   public constructor(
     @Inject(ControlPlaneConfigService)
@@ -30,12 +33,17 @@ export class WorkerRunner {
   }
 
   public async run(mode: WorkerRunMode): Promise<WorkerRunResult> {
+    this.stopRequested = false;
     const summary = this.configService.getSafeSummary();
 
     this.logger.info("Worker booted", {
       controlPlaneMode: summary.mode,
       workerMode: mode,
     });
+
+    if (mode === "serve") {
+      return this.runServeLoop();
+    }
 
     const outboxResult = await this.outboxWorker.runOnce();
 
@@ -45,4 +53,92 @@ export class WorkerRunner {
       status: outboxResult.skipped ? "idle" : "processed-once",
     };
   }
+
+  public requestStop(): void {
+    this.stopRequested = true;
+    this.wakeDelay?.();
+  }
+
+  private async runServeLoop(): Promise<WorkerRunResult> {
+    let processed = false;
+    let outboxSkipped = false;
+    let consecutiveFailures = 0;
+
+    while (!this.stopRequested) {
+      try {
+        const outboxResult = await this.outboxWorker.runOnce();
+        if (outboxResult.skipped) {
+          outboxSkipped = true;
+          break;
+        }
+        processed = processed || hasOutboxActivity(outboxResult);
+        consecutiveFailures = 0;
+
+        if (!this.stopRequested) {
+          await this.delay(this.getPollIntervalMs());
+        }
+      } catch (error) {
+        consecutiveFailures += 1;
+        const safeError = toSafeError(error);
+        this.logger.warn("Worker loop failed", {
+          errorCategory: safeError.category,
+          errorCode: safeError.code,
+          retryable: safeError.retryable,
+        });
+
+        if (!this.stopRequested) {
+          await this.delay(this.getBackoffMs(consecutiveFailures));
+        }
+      }
+    }
+
+    return {
+      mode: "serve",
+      outboxSkipped,
+      status: processed ? "processed-once" : "idle",
+    };
+  }
+
+  private getPollIntervalMs(): number {
+    return this.configService.getSafeSummary().outbox.pollIntervalMs;
+  }
+
+  private getBackoffMs(consecutiveFailures: number): number {
+    const baseMs = Math.min(
+      30_000,
+      this.getPollIntervalMs() * 2 ** Math.min(consecutiveFailures, 5),
+    );
+    return baseMs + Math.floor(Math.random() * 250);
+  }
+
+  private async delay(milliseconds: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      if (this.stopRequested) {
+        resolve();
+        return;
+      }
+
+      const timeout = setTimeout(() => {
+        this.wakeDelay = undefined;
+        resolve();
+      }, milliseconds);
+      this.wakeDelay = () => {
+        clearTimeout(timeout);
+        this.wakeDelay = undefined;
+        resolve();
+      };
+    });
+  }
+}
+
+function hasOutboxActivity(
+  result: Awaited<ReturnType<OutboxWorkerService["runOnce"]>>,
+): boolean {
+  return (
+    result.claimed > 0 ||
+    result.completed > 0 ||
+    result.deadLettered > 0 ||
+    result.retried > 0 ||
+    result.staleClaims > 0
+  );
 }

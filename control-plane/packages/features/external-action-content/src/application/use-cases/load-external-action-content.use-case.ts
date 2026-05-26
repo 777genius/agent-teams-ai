@@ -39,6 +39,13 @@ export class LoadExternalActionContentUseCase {
     if (invalid !== undefined) {
       throw invalid;
     }
+    if (content.ciphertextSha256 !== ref.ciphertextSha256) {
+      throw createSafeError({
+        category: "conflict",
+        code: "CONTROL_PLANE_EXTERNAL_CONTENT_INTEGRITY_MISMATCH",
+        message: "External action content integrity hash does not match.",
+      });
+    }
 
     const decrypted = await this.encryption.decrypt({
       contentAuthTag: content.contentAuthTag!,
