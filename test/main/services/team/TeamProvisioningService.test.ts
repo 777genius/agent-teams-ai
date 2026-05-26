@@ -4933,6 +4933,79 @@ describe('TeamProvisioningService', () => {
       expect(persisted.members.tom?.runtimeDiagnostic).not.toBe(staleDiagnostic);
     });
 
+    it('exposes confirmed runtime snapshot after CLI provisioned-but-not-alive launch cleanup', async () => {
+      const teamName = 'zz-runtime-snapshot-cli-provisioned-not-alive-heals';
+      const leadSessionId = 'lead-session';
+      const projectPath = '/Users/test/proj';
+      const bootstrapRunId = 'run-runtime-snapshot-cli-exit-after-bootstrap';
+      const reason = 'CLI process exited (code 1) \u2014 team provisioned but not alive';
+      writeLaunchConfig(teamName, projectPath, leadSessionId, ['tom']);
+      writeMemberBootstrapRunId(teamName, 'tom', bootstrapRunId);
+      writeLaunchState(
+        teamName,
+        leadSessionId,
+        {
+          tom: {
+            providerId: 'anthropic',
+            model: 'sonnet',
+            laneId: 'primary',
+            laneKind: 'primary',
+            laneOwnerProviderId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            runtimePid: 27_036,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: reason,
+            livenessKind: 'confirmed_bootstrap',
+            pidSource: 'persisted_metadata',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            runtimeLastSeenAt: '2026-05-25T20:13:46.326Z',
+            lastEvaluatedAt: '2026-05-25T20:14:05.411Z',
+          },
+        },
+        { launchPhase: 'finished', updatedAt: '2026-05-25T20:14:05.411Z' }
+      );
+      writeBootstrapState(
+        teamName,
+        [
+          {
+            name: 'tom',
+            status: 'bootstrap_confirmed',
+            lastAttemptAt: Date.parse('2026-05-25T20:13:46.326Z'),
+            lastObservedAt: Date.parse('2026-05-25T20:13:56.110Z'),
+          },
+        ],
+        '2026-05-25T20:14:03.317Z',
+        { runId: bootstrapRunId }
+      );
+
+      const svc = new TeamProvisioningService();
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+      const persisted = JSON.parse(fs.readFileSync(getTeamLaunchStatePath(teamName), 'utf8'));
+
+      expect(snapshot.members.tom).toMatchObject({
+        alive: true,
+        providerId: 'anthropic',
+        runtimeModel: 'sonnet',
+        livenessKind: 'confirmed_bootstrap',
+        historicalBootstrapConfirmed: true,
+        runtimeDiagnostic: 'bootstrap confirmed',
+        runtimeDiagnosticSeverity: 'info',
+      });
+      expect(persisted.members.tom).toMatchObject({
+        launchState: 'confirmed_alive',
+        bootstrapConfirmed: true,
+        hardFailure: false,
+      });
+      expect(persisted.members.tom?.hardFailureReason).toBeUndefined();
+    });
+
     it('does not treat a reused OpenCode runtime pid as live', async () => {
       const teamName = 'pure-opencode-reused-pid-team';
       const projectPath = '/Users/test/project';
