@@ -24198,6 +24198,10 @@ export class TeamProvisioningService {
             metadata.runtimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity,
           livenessKind: metadata.livenessKind ?? current.livenessKind,
         });
+      const shouldPreserveConfirmedBootstrapRuntimeError =
+        hasConfirmedBootstrap &&
+        metadata.alive === false &&
+        metadata.runtimeDiagnosticSeverity === 'error';
       const shouldPreserveUnsafeMetadataLivenessKind =
         hasUnsafeProvisionedButNotAliveFailure &&
         (metadata.livenessKind === 'not_found' ||
@@ -24237,6 +24241,7 @@ export class TeamProvisioningService {
       const metadataLivenessKind = hasConfirmedBootstrap
         ? metadata.livenessKind === 'runtime_process' ||
           metadata.livenessKind === 'confirmed_bootstrap' ||
+          shouldPreserveConfirmedBootstrapRuntimeError ||
           shouldPreserveUnsafeMetadataLivenessKind
           ? metadata.livenessKind
           : current.livenessKind === 'stale_metadata' || current.livenessKind === 'registered_only'
@@ -24333,6 +24338,12 @@ export class TeamProvisioningService {
         current.hardFailure === true &&
         bootstrapProofClearableFailure &&
         !hasUnsafeProvisionedButNotAliveFailure;
+      if (shouldPreserveConfirmedBootstrapRuntimeError) {
+        nextEntry.runtimeAlive = false;
+        if (nextEntry.livenessSource === 'process') {
+          nextEntry.livenessSource = undefined;
+        }
+      }
       if (hasWeakEvidence && !healedConfirmedBootstrapFailure) {
         nextEntry.runtimeAlive = false;
         if (nextEntry.livenessSource === 'process') {

@@ -52,6 +52,31 @@ describe('teamLaunchFailureReason', () => {
     ).toBe(false);
   });
 
+  it('treats missing liveness without process-table evidence as unsafe', () => {
+    expect(
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+        launchState: 'failed_to_start',
+        status: 'error',
+      })
+    ).toBe(true);
+  });
+
+  it('keeps missing liveness safe when process-table evidence is explicit', () => {
+    expect(
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence({
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason:
+          'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+        launchState: 'failed_to_start',
+        status: 'error',
+      })
+    ).toBe(false);
+  });
+
   it('recognizes runtime-diagnostic-only provisioned-but-not-alive failures', () => {
     expect(
       isBootstrapConfirmedProvisionedButNotAliveFailure({

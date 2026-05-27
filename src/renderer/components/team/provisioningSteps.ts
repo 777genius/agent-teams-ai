@@ -106,6 +106,31 @@ function isConfirmedSpawnEntry(entry: MemberSpawnStatusEntry): boolean {
   return entry.launchState === 'confirmed_alive' || entry.bootstrapConfirmed === true;
 }
 
+function spawnEntryContradictsConfirmedJoin(entry: MemberSpawnStatusEntry): boolean {
+  if (!isConfirmedSpawnEntry(entry) || entry.runtimeAlive !== false) {
+    return false;
+  }
+  if (entry.runtimeDiagnosticSeverity === 'error') {
+    return true;
+  }
+  if (
+    entry.livenessKind === 'not_found' ||
+    entry.livenessKind === 'shell_only' ||
+    entry.livenessKind === 'permission_blocked' ||
+    entry.livenessKind === 'runtime_process_candidate'
+  ) {
+    return true;
+  }
+  if (entry.livenessKind !== 'registered_only' && entry.livenessKind !== 'stale_metadata') {
+    return false;
+  }
+  return !(
+    mentionsProcessTableUnavailable(entry.runtimeDiagnostic) ||
+    mentionsProcessTableUnavailable(entry.hardFailureReason) ||
+    mentionsProcessTableUnavailable(entry.error)
+  );
+}
+
 function runtimeEntryContradictsConfirmedJoin(
   entry: MemberSpawnStatusEntry,
   runtimeEntry: TeamAgentRuntimeEntry | undefined
@@ -196,6 +221,10 @@ function summarizeLiveLaunchJoinMilestones(params: {
     }
     if (entry.launchState === 'skipped_for_launch' || entry.skippedForLaunch === true) {
       skippedSpawnCount += 1;
+      continue;
+    }
+    if (spawnEntryContradictsConfirmedJoin(entry)) {
+      pendingSpawnCount += 1;
       continue;
     }
     if (

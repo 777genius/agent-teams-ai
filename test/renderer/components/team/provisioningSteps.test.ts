@@ -378,4 +378,47 @@ describe('getLaunchJoinMilestonesFromMembers', () => {
     expect(milestones.pendingSpawnCount).toBe(1);
     expect(milestones.expectedTeammateCount).toBe(4);
   });
+
+  it('does not count confirmed spawn as joined when spawn metadata carries runtime error evidence', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members,
+      memberSpawnStatuses: {
+        alice: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        bob: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime process crashed',
+          runtimeDiagnosticSeverity: 'error',
+          updatedAt: '2026-04-24T12:00:01.000Z',
+        },
+        tom: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        jane: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(3);
+    expect(milestones.pendingSpawnCount).toBe(1);
+    expect(milestones.expectedTeammateCount).toBe(4);
+  });
 });

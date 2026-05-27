@@ -24095,6 +24095,55 @@ describe('TeamProvisioningService', () => {
     });
   });
 
+  it('does not keep healed confirmed-bootstrap status alive when refreshed runtime metadata is an error', async () => {
+    const svc = new TeamProvisioningService();
+    const harness = privateHarness(svc);
+    harness.getLiveTeamAgentRuntimeMetadata = vi.fn(
+      () =>
+        Promise.resolve(
+          new Map([
+            [
+              'tom',
+              {
+                alive: false,
+                model: 'sonnet',
+                livenessKind: 'not_found',
+                pidSource: 'process_table',
+                runtimeDiagnostic: 'Runtime process crashed',
+                runtimeDiagnosticSeverity: 'error',
+              },
+            ],
+          ])
+        )
+    );
+
+    const result = await harness.attachLiveRuntimeMetadataToStatuses('signal-ops', {
+      tom: createMemberSpawnStatusEntry({
+        status: 'online',
+        launchState: 'confirmed_alive',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        livenessKind: 'confirmed_bootstrap',
+        runtimeModel: 'sonnet',
+      }),
+    });
+
+    expect(result.tom).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: false,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      livenessKind: 'not_found',
+      runtimeDiagnostic: 'Runtime process crashed',
+      runtimeDiagnosticSeverity: 'error',
+      runtimeModel: 'sonnet',
+      livenessSource: undefined,
+    });
+  });
+
   it('does not clear OpenCode bridge launch failure from process-only liveness', async () => {
     const svc = new TeamProvisioningService();
     (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(

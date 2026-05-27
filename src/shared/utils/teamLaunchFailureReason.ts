@@ -84,23 +84,29 @@ export function isBootstrapConfirmedProvisionedButNotAliveFailure(
 export function hasUnsafeProvisionedButNotAliveRuntimeEvidence(
   entry: ProvisionedButNotAliveLaunchEntry | undefined
 ): boolean {
-  if (entry?.runtimeDiagnosticSeverity === 'error') {
+  if (!entry) {
+    return false;
+  }
+  if (entry.runtimeDiagnosticSeverity === 'error') {
     return true;
   }
   if (
-    entry?.livenessKind === 'not_found' ||
-    entry?.livenessKind === 'shell_only' ||
-    entry?.livenessKind === 'permission_blocked' ||
-    entry?.livenessKind === 'runtime_process_candidate'
+    entry.livenessKind === 'not_found' ||
+    entry.livenessKind === 'shell_only' ||
+    entry.livenessKind === 'permission_blocked' ||
+    entry.livenessKind === 'runtime_process_candidate'
   ) {
     return true;
   }
-  if (entry?.livenessKind !== 'registered_only' && entry?.livenessKind !== 'stale_metadata') {
-    return false;
-  }
-  return !(
+  const hasProcessTableUnavailableMarker =
     mentionsProcessTableUnavailable(entry.runtimeDiagnostic) ||
     mentionsProcessTableUnavailable(entry.hardFailureReason) ||
-    mentionsProcessTableUnavailable(entry.error)
-  );
+    mentionsProcessTableUnavailable(entry.error);
+  if (!entry.livenessKind) {
+    return !hasProcessTableUnavailableMarker;
+  }
+  if (entry.livenessKind !== 'registered_only' && entry.livenessKind !== 'stale_metadata') {
+    return false;
+  }
+  return !hasProcessTableUnavailableMarker;
 }
