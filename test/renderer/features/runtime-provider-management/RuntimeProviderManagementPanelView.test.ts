@@ -128,6 +128,20 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+async function selectOpenCodeTab(host: HTMLElement, label: 'Models' | 'Providers'): Promise<void> {
+  const trigger = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((button) =>
+    button.textContent?.trim().startsWith(label)
+  );
+  if (!trigger) {
+    throw new Error(`${label} tab trigger not found`);
+  }
+
+  await act(async () => {
+    trigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    await Promise.resolve();
+  });
+}
+
 describe('RuntimeProviderManagementPanelView', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -161,6 +175,11 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.textContent).toContain('Checking runtime');
     expect(host.textContent).toContain('Loading managed OpenCode runtime');
+    expect(host.textContent).toContain('Loading OpenCode providers');
+    expect(host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')).toBeNull();
+
+    await selectOpenCodeTab(host, 'Models');
+
     expect(host.textContent).toContain('Loading OpenCode model routes');
     expect(
       host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
@@ -603,6 +622,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
+    await selectOpenCodeTab(host, 'Models');
+
     expect(host.textContent).toContain('OpenCode defaults');
     expect(host.textContent).toContain('Validation context');
     expect(host.textContent).toContain('Tests use 321. Default applies unless');
@@ -649,6 +670,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       );
       await Promise.resolve();
     });
+
+    await selectOpenCodeTab(host, 'Models');
 
     const row = host.querySelector<HTMLElement>(
       '[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]'
@@ -719,6 +742,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
+    await selectOpenCodeTab(host, 'Models');
+
     await act(async () => {
       Array.from(host.querySelectorAll('button'))
         .find((button) => button.textContent?.includes('Set all-projects default'))
@@ -787,6 +812,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
+    await selectOpenCodeTab(host, 'Models');
+
     const searchInput = host.querySelector<HTMLInputElement>(
       'input[placeholder="Search model routes"]'
     );
@@ -811,7 +838,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('missing-route');
   });
 
-  it('opens launchable routes first when they exist and keeps providers in a separate tab', async () => {
+  it('opens providers first and keeps launchable routes in a separate tab', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -848,12 +875,17 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
+    expect(host.textContent).toContain('Providers');
+    expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]')).toBeNull();
+
+    await selectOpenCodeTab(host, 'Models');
+
     expect(host.textContent).toContain('OpenCode model routes');
     expect(host.textContent).toContain('llama.cpp/qwen-test:0.5b');
     expect(host.textContent).toContain(
       'Select a validation context above to enable Test and Set default'
     );
-    expect(host.textContent).toContain('Providers');
     expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).toBeNull();
 
     const row = host.querySelector<HTMLElement>(
@@ -909,6 +941,8 @@ describe('RuntimeProviderManagementPanelView', () => {
       );
       await Promise.resolve();
     });
+
+    await selectOpenCodeTab(host, 'Models');
 
     const row = host.querySelector<HTMLElement>(
       '[data-testid="configured-opencode-model-row-openrouter/moonshotai/kimi-k2"]'
