@@ -2288,7 +2288,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.ready).toBe(true);
     expect(execCliMock).toHaveBeenCalledWith(
       '/fake/claude',
-      ['runtime', 'status', '--json', '--provider', 'codex'],
+      ['runtime', 'status', '--json', '--summary', '--provider', 'codex'],
       expect.objectContaining({ cwd: tempRoot })
     );
     expect(spawnProbe).toHaveBeenCalledTimes(1);
@@ -2332,11 +2332,53 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         'runtime',
         'status',
         '--json',
+        '--summary',
         '--provider',
         'codex',
       ],
       expect.objectContaining({ cwd: tempRoot })
     );
+  });
+
+  it('accepts provider-specific auth status fallback payloads', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args.includes('runtime')) {
+        throw new Error(
+          'Timeout running: orchestrator-cli runtime status --json --summary --provider anthropic'
+        );
+      }
+      if (args.includes('auth')) {
+        return {
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            provider: 'anthropic',
+            status: {
+              supported: true,
+              authenticated: true,
+              capabilities: { teamLaunch: true, oneShot: true },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return { stdout: '', stderr: '', exitCode: 0 };
+    });
+
+    const svc = new TeamProvisioningService();
+    const result = await (svc as any).probeProviderRuntimeControlPlane({
+      claudePath: '/fake/claude',
+      cwd: tempRoot,
+      env: {
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      providerId: 'anthropic',
+      providerArgs: [],
+    });
+
+    expect(result.warning).toContain('runtime status was unavailable, but auth status passed');
+    expect(result.warning).not.toContain('auth status did not report Anthropic authentication');
   });
 
   it('falls back from runtime status timeout to auth status and still checks selected models', async () => {

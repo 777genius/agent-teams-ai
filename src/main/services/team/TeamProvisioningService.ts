@@ -1392,6 +1392,8 @@ interface RuntimeStatusCommandResponse {
 }
 
 interface AuthStatusCommandResponse {
+  provider?: string;
+  status?: Partial<CliProviderStatus>;
   loggedIn?: boolean;
   authMethod?: string | null;
   providers?: Record<string, Partial<CliProviderStatus>>;
@@ -4410,7 +4412,7 @@ export class TeamProvisioningService {
             {
               cwd: params.cwd,
               env: params.env,
-              timeout: 8_000,
+              timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
             }
           )
         : null;
@@ -36614,7 +36616,10 @@ export class TeamProvisioningService {
     authenticated: boolean | null;
     providerStatus: Partial<CliProviderStatus> | null;
   } {
-    const providerStatus = parsed.providers?.[providerId] ?? null;
+    const providerStatus =
+      parsed.providers?.[providerId] ??
+      (parsed.provider === providerId || !parsed.provider ? parsed.status : null) ??
+      null;
     if (typeof providerStatus?.authenticated === 'boolean') {
       return {
         authenticated: providerStatus.authenticated,
@@ -36656,13 +36661,14 @@ export class TeamProvisioningService {
           'runtime',
           'status',
           '--json',
+          '--summary',
           '--provider',
           providerId,
         ]),
         {
           cwd,
           env,
-          timeout: 8_000,
+          timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
         }
       );
       const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(runtimeStatus.stdout);
