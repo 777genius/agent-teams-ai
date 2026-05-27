@@ -26,6 +26,7 @@ const logger = createLogger('ClaudeMultimodelBridgeService');
 const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
 const LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 5_000;
+const OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 12_000;
 const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
@@ -891,10 +892,11 @@ export class ClaudeMultimodelBridgeService {
     options: { summary?: boolean; timeoutMs?: number }
   ): number {
     if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
-      return Math.min(
-        options.timeoutMs ?? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS,
-        LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
-      );
+      const fallbackTimeout =
+        providerId === 'opencode'
+          ? OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
+          : LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+      return Math.min(options.timeoutMs ?? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS, fallbackTimeout);
     }
     return (
       options.timeoutMs ??
