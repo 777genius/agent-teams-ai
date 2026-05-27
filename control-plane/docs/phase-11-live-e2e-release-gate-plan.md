@@ -137,6 +137,9 @@ Weak spots studied in current code:
 - Backend renders attribution, avatar fallback, footer, and hidden marker after
   raw payload validation. E2E must prove near-limit content and reserved marker
   input fail safely instead of producing ambiguous public markers.
+- Token broker requests installation tokens narrowed to the selected repository
+  id and minimum capability permissions. E2E must prove broader returned scope
+  and stale target authorization fail closed.
 
 ## E2E Environment
 
@@ -237,6 +240,8 @@ Assertions:
 - untrusted setup callback returns restart-required or equivalent safe state
 - desktop token is created and scoped
 - repository targets use immutable GitHub repository ids
+- token broker dry-run or mocked scope evidence shows one selected repository id
+  and capability-specific permissions
 - audit events exist
 - no token or OAuth code appears in logs
 - target list distinguishes connection id, target id, GitHub repository id, and
@@ -351,6 +356,10 @@ Critical failures:
   policy subject id
 - raw body fits payload cap but rendered body exceeds attribution/footer cap
 - user or agent body includes reserved `agent-teams-action` marker text
+- GitHub token response includes broader repository ids or broader permissions
+  than requested
+- repository availability becomes stale between target enablement and token
+  issuance
 
 Expected behavior:
 
@@ -384,6 +393,9 @@ Expected behavior:
   policy subject ids before submission
 - rendered-body-too-large and reserved marker collision fail before public
   GitHub mutation and without logging raw content
+- token scope mismatch, unsupported repository id, stale repository
+  authorization, or suspended connection blocks dispatch before provider action
+  mutation
 
 Failure injection guardrails:
 
@@ -598,6 +610,9 @@ Automated:
 - near-limit rendered body test covers attribution/footer overhead
 - reserved marker collision test proves agent-authored marker text is not used
   as cleanup/recovery evidence
+- token broker scope mismatch test proves broader returned repository or
+  permission scope fails closed
+- stale repository authorization test proves dispatch blocks before GitHub write
 - bounded polling timeout tests
 - duplicate callback tests through mocked public callback route
 - cleanup classification tests
@@ -652,6 +667,8 @@ Manual:
 - release evidence includes one agent/team policy subject mapping assertion
 - release evidence includes one rendered-body boundary assertion and one
   reserved marker collision assertion
+- release evidence includes one token-scope narrowing assertion for repository
+  id and permissions
 
 ## Rollout
 

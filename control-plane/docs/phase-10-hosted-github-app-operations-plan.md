@@ -139,6 +139,9 @@ Weak spots studied in current code:
 - Backend raw payload validation and final rendered-body validation are separate
   gates. Operations must classify raw size failures, rendered attribution/footer
   failures, and reserved marker collisions separately.
+- Token broker must request one-repository installation tokens and verify that
+  GitHub did not return broader repository or permission scope. Scope mismatch
+  is a security failure, not a retryable provider outage.
 
 ## Deployment Topology
 
@@ -464,6 +467,11 @@ Failure behavior:
   outage, and must not enter retry loops
 - reserved Agent Teams marker collision is a safety validation failure because
   cleanup and recovery depend on system-owned markers
+- GitHub token scope mismatch fails closed, emits a safe security event, and
+  does not expose the installation token to logs, operators, desktop, or worker
+  diagnostics
+- stale repository availability or suspended connection blocks token issuance
+  until target refresh/connection recovery succeeds
 
 ## API Operations
 
@@ -575,6 +583,7 @@ Critical alerts:
 - rendered-body validation failure spike after desktop release
 - unknown-result dead-letter count above zero for public comment/review actions
 - target policy subject id validation failures spike after desktop release
+- token broker scope mismatch or unsupported repository id count above zero
 - provider 401/403 spike after token broker success
 - production app registration drift detected
 
@@ -677,6 +686,9 @@ Automated tests:
 - request size limit tests for setup/action endpoints
 - rendered body boundary tests for attribution/footer overhead and reserved
   marker collision
+- token broker scope mismatch tests for broader repository ids and broader
+  permissions
+- stale repository availability blocks token issuance in staging/mocked smoke
 - provider 401/403/404 classification tests in GitHub action dispatcher
 - repository rename/transfer/archived-state runbook rehearsal in staging
 - ambiguous provider outcome runbook rehearsal using mocked post-write crash
@@ -727,6 +739,8 @@ Manual hosted smoke:
 - request size limits are documented and verified before public beta
 - rendered-body validation and reserved marker validation have safe diagnostics
   without raw content leakage
+- token broker proves one-repository scope and minimum permission mapping for
+  every enabled action type
 - repository identity runbooks use immutable ids and cover rename/transfer
   cases
 - unknown-result comment/review dead-letter cannot be retried by an operator

@@ -146,6 +146,9 @@ Weak spots studied in current code:
 - `requestedBy.agentId` and `requestedBy.teamId` are reused by backend policy
   checks as `agentSubjectId` and `teamSubjectId`. They must be normalized
   subject ids (`agent:...`, `team:...`), not raw runtime ids.
+- Token broker authorization narrows installation tokens to one numeric GitHub
+  repository id and minimum permissions for the requested capability. Desktop
+  must never treat repository display state as proof that token scope is valid.
 - Local teams can run from different project roots/worktrees while sharing one
   paired desktop token. The bridge must bind a local team/run to the intended
   hosted workspace and repository target before it can submit an action.
@@ -683,6 +686,9 @@ Binding rules:
   same
 - multiple GitHub installations containing similar repo names must remain
   distinguishable by connection id and target id
+- token-broker failures such as scope mismatch, unsupported repository id, stale
+  repository availability, or suspended connection are authoritative backend
+  failures, not desktop retry/refresh hints
 
 Binding snapshot:
 
@@ -788,6 +794,11 @@ Critical edge cases:
 - raw runtime `agentId` or `teamId` lacks the backend policy prefix
 - runtime member id contains characters that are valid locally but invalid for
   target policy subject ids
+- backend refuses token issuance because the GitHub repository id cannot be
+  safely converted to the provider JSON numeric id
+- GitHub returns a broader installation token scope than requested
+- repository availability snapshot expires between target refresh and worker
+  token issuance
 
 Expected decisions:
 
@@ -829,6 +840,9 @@ Expected decisions:
 - unknown provider outcome blocks local automatic retry unless backend recovery
   can prove the original mutation did not happen or can bind to the existing
   mutation
+- token scope mismatch, unsupported repository id, stale target authorization,
+  and suspended connection are surfaced as safe backend failures and do not
+  trigger local resubmission with a new `requestId`
 
 ## Architecture Guardrails
 
@@ -885,6 +899,8 @@ Unit tests:
 - ambiguous provider outcome maps to a non-auto-retry desktop state
 - check-run retry guard refuses create retry when no `githubCheckRunId` or
   backend `external_id` recovery proof is available
+- token broker scope failures are handled as authoritative backend state; no
+  desktop adapter may synthesize token scope or repository permissions locally
 
 Integration tests:
 
@@ -909,6 +925,8 @@ Integration tests:
   rejects invalid local ids
 - near-limit body test distinguishes raw payload limit from final rendered body
   limit
+- mocked token broker scope mismatch maps to a safe failed status without local
+  action resubmission
 
 Security tests:
 
