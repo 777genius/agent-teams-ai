@@ -718,9 +718,34 @@ describe('CLI status visibility during completed install state', () => {
       supportsSelfUpdate: false,
       showVersionDetails: false,
       showBinaryPath: false,
-      authLoggedIn: false,
+      authLoggedIn: true,
       authStatusChecking: false,
       providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'api_key',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: ['claude-haiku-4-5'],
+          modelAvailability: [],
+          canLoginFromUi: true,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          backend: null,
+          modelCatalog: null,
+          modelCatalogRefreshState: 'idle',
+          runtimeCapabilities: null,
+        },
+        createCodexNativeRolloutProvider({
+          state: 'ready',
+          statusMessage: 'ChatGPT account ready',
+          models: ['gpt-5.4'],
+        }),
         {
           providerId: 'opencode',
           displayName: 'OpenCode (200+ models)',
@@ -755,6 +780,7 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('Providers: 3/3 connected');
     expect(host.textContent).toContain('Models available');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).not.toContain('Checking...');
