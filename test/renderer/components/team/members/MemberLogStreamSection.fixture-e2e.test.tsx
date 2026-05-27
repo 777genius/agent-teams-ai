@@ -1,18 +1,17 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- Fixture E2E reads a repo fixture and writes temp JSONL. */
-import { readFile, rm, stat, writeFile, mkdtemp } from 'fs/promises';
-import os from 'os';
-import path from 'path';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
+import { mkdtemp, readFile, rm, stat, writeFile } from 'fs/promises';
+import os from 'os';
+import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GetMemberLogStreamUseCase } from '../../../../../src/features/member-log-stream/core/application/use-cases/GetMemberLogStreamUseCase';
 import {
   type MemberLogStreamRequestOptions,
   type MemberLogStreamResponse,
-  type MemberRuntimeLogTailOptions,
-  type MemberRuntimeLogTailResponse,
 } from '../../../../../src/features/member-log-stream/contracts';
+import { GetMemberLogStreamUseCase } from '../../../../../src/features/member-log-stream/core/application/use-cases/GetMemberLogStreamUseCase';
 import { ClaudeMemberTranscriptStreamSource } from '../../../../../src/features/member-log-stream/main/adapters/output/sources/ClaudeMemberTranscriptStreamSource';
 import { OpenCodeMemberRuntimeStreamSource } from '../../../../../src/features/member-log-stream/main/adapters/output/sources/OpenCodeMemberRuntimeStreamSource';
 import { BoardTaskExactLogChunkBuilder } from '../../../../../src/main/services/team/taskLogs/exact/BoardTaskExactLogChunkBuilder';
@@ -44,14 +43,6 @@ const apiState = {
       ) => Promise<MemberLogStreamResponse>
     >(),
   setMemberLogStreamTracking: vi.fn<(teamName: string, enabled: boolean) => Promise<void>>(),
-  getMemberRuntimeLogTail:
-    vi.fn<
-      (
-        teamName: string,
-        memberName: string,
-        options: MemberRuntimeLogTailOptions
-      ) => Promise<MemberRuntimeLogTailResponse>
-    >(),
   onTeamChange: vi.fn<(callback: (event: unknown, data: unknown) => void) => () => void>(),
 };
 
@@ -63,9 +54,6 @@ vi.mock('@renderer/api', () => ({
       setMemberLogStreamTracking: (
         ...args: Parameters<typeof apiState.setMemberLogStreamTracking>
       ) => apiState.setMemberLogStreamTracking(...args),
-      getMemberRuntimeLogTail: (
-        ...args: Parameters<typeof apiState.getMemberRuntimeLogTail>
-      ) => apiState.getMemberRuntimeLogTail(...args),
     },
     teams: {
       onTeamChange: (...args: Parameters<typeof apiState.onTeamChange>) =>
@@ -279,7 +267,6 @@ describe('MemberLogStreamSection real fixture e2e', () => {
     document.body.innerHTML = '';
     apiState.getMemberLogStream.mockReset();
     apiState.setMemberLogStreamTracking.mockReset();
-    apiState.getMemberRuntimeLogTail.mockReset();
     apiState.onTeamChange.mockReset();
     vi.unstubAllGlobals();
     await Promise.all(
@@ -294,13 +281,6 @@ describe('MemberLogStreamSection real fixture e2e', () => {
     stubMatchMedia();
     apiState.onTeamChange.mockImplementation(() => () => undefined);
     apiState.setMemberLogStreamTracking.mockResolvedValue(undefined);
-    apiState.getMemberRuntimeLogTail.mockResolvedValue({
-      kind: 'stdout',
-      content: 'process stdout line',
-      truncated: false,
-      bytesRead: 19,
-      missing: false,
-    });
 
     const { useCase, getOpenCodeTranscript, findRecentMemberLogFileRefsByMember } =
       await createFixtureUseCase();
@@ -339,8 +319,9 @@ describe('MemberLogStreamSection real fixture e2e', () => {
       content.includes('Member-wide Claude transcript final note for Jack.')
     );
 
-    expect(text).toContain('Logs');
-    expect(text).toContain('Member-scoped transcript and runtime logs');
+    expect(text).not.toContain('Member-scoped transcript and runtime logs');
+    expect(text).not.toContain('Execution');
+    expect(text).not.toContain('Process');
     expect(text).toContain('Claude transcript');
     expect(text).toContain('OpenCode runtime');
     expect(text).toContain('Calculator behavior');
@@ -395,76 +376,5 @@ describe('MemberLogStreamSection real fixture e2e', () => {
 
     expect(apiState.setMemberLogStreamTracking).toHaveBeenCalledWith(TEAM_NAME, true);
     expect(apiState.setMemberLogStreamTracking).toHaveBeenCalledWith(TEAM_NAME, false);
-  });
-
-  it('loads bounded process runtime logs after switching the Logs UI to Process', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    stubMatchMedia();
-    apiState.onTeamChange.mockImplementation(() => () => undefined);
-    apiState.setMemberLogStreamTracking.mockResolvedValue(undefined);
-    apiState.getMemberLogStream.mockResolvedValue({
-      participants: [],
-      defaultFilter: 'all',
-      segments: [],
-      source: 'member_empty',
-      coverage: [],
-      warnings: [],
-      truncated: false,
-      generatedAt: GENERATED_AT,
-      metadata: {
-        scannedTranscriptFileCount: 0,
-        includedTranscriptFileCount: 0,
-        droppedSegmentCount: 0,
-        droppedChunkCount: 0,
-        droppedMessageCount: 0,
-      },
-    });
-    apiState.getMemberRuntimeLogTail.mockResolvedValue({
-      kind: 'stdout',
-      content: 'process stdout line',
-      truncated: false,
-      bytesRead: 19,
-      missing: false,
-    });
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(
-          TooltipProvider,
-          null,
-          React.createElement(MemberLogStreamSection, {
-            teamName: TEAM_NAME,
-            member: createMember(),
-          })
-        )
-      );
-      await flushMicrotasks();
-    });
-
-    const processButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Process'
-    ) as HTMLButtonElement | undefined;
-    expect(processButton).toBeTruthy();
-
-    await act(async () => {
-      processButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await flushAsyncWork();
-    });
-
-    await waitForText(host, (content) => content.includes('process stdout line'));
-    expect(apiState.getMemberRuntimeLogTail).toHaveBeenCalledWith(TEAM_NAME, MEMBER_NAME, {
-      kind: 'stdout',
-      maxBytes: 128 * 1024,
-      forceRefresh: true,
-    });
-
-    await act(async () => {
-      root.unmount();
-      await flushMicrotasks();
-    });
   });
 });

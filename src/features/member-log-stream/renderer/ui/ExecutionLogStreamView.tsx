@@ -26,7 +26,7 @@ interface ParticipantVisual {
 
 export interface ExecutionLogStreamViewProps<TStream extends ExecutionLogStreamLike> {
   title: string;
-  description: string;
+  description?: string;
   stream: TStream | null;
   loading: boolean;
   error: string | null;
@@ -312,7 +312,9 @@ export const ExecutionLogStreamView = <TStream extends ExecutionLogStreamLike>({
           <h4 className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
             {title}
           </h4>
-          <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
+          {description ? (
+            <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
+          ) : null}
         </>
       ) : null}
       {boundedHistoryNote ? (
