@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-05-27T08:11:34.489Z",
+  "models": [
+    {
+      "model": "opencode/big-pickle",
+      "passed": true,
+      "score": 100,
+      "durationMs": 86233,
+      "stages": {
+        "launchBootstrap": true,
+        "directReply": true,
+        "peerRelay": true,
+        "taskRefs": true,
+        "longPrompt": true,
+        "latencyStable": true
+      },
+      "diagnostics": [
+        "runId=5a90cf2a-d00e-4e26-a514-5efecf1914af",
+        "directDelivery={\"delivered\":true,\"accepted\":true,\"responsePending\":false,\"responseState\":\"responded_visible_message\",\"ledgerStatus\":\"responded\",\"visibleReplyMessageId\":\"d4065728-b244-4e53-a8cf-d33d7de62a6f\",\"visibleReplyCorrelation\":\"relayOfMessageId\",\"diagnostics\":[\"OpenCode app MCP is connected for message delivery.\",\"OpenCode prompt_async accepted after a turn-settled guard; response observation remains delegated to durable app-side ledger reconciliation.\"]}",
+        "peerDelivery={\"delivered\":true,\"accepted\":true,\"responsePending\":false,\"responseState\":\"responded_visible_message\",\"ledgerStatus\":\"responded\",\"visibleReplyMessageId\":\"37187280-1220-44da-a5d3-a3fdf812cc3a\",\"visibleReplyCorrelation\":\"relayOfMessageId\",\"diagnostics\":[\"OpenCode app MCP is connected for message delivery.\",\"OpenCode prompt_async accepted after a turn-settled guard; response observation remains delegated to durable app-side ledger reconciliation.\"]}"
+      ]
+    }
+  ]
+}
