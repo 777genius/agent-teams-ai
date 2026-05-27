@@ -23,6 +23,9 @@ type GitHubRestSuccessBody = {
   html_url?: string;
 };
 
+const defaultRateLimitBackoffMs = 60_000;
+const minimumPositiveBackoffMs = 1_000;
+
 export class GitHubRestActionDispatcher implements GitHubActionDispatcher {
   public constructor(
     private readonly settings: AgentGitHubActionsSettings,
@@ -141,6 +144,7 @@ function buildCheckRunBody(
     name: payload.name,
     output: {
       summary: renderedBody,
+      ...(payload.text === undefined ? {} : { text: payload.text }),
       title: payload.title ?? payload.name,
     },
     status: payload.status,
@@ -166,7 +170,7 @@ async function mapFailureResponse(input: {
 }): Promise<GitHubActionDispatchResult> {
   const retryAfterMs = parseRetryAfterMs(input.response.headers);
   const rateLimitResetMs = parseRateLimitResetMs(input.response.headers);
-  const backoffMs = retryAfterMs ?? rateLimitResetMs;
+  const backoffMs = normalizeProviderBackoffMs(retryAfterMs ?? rateLimitResetMs);
   const status = input.response.status;
   const message = await readProviderMessage(input.response);
   const secondaryRateLimit =
@@ -179,7 +183,7 @@ async function mapFailureResponse(input: {
       code: "CONTROL_PLANE_GITHUB_ACTION_RATE_LIMITED",
       message: "GitHub action dispatch was rate limited.",
       requestId: input.requestId,
-      retryAfterMs: backoffMs ?? 60_000,
+      retryAfterMs: backoffMs ?? defaultRateLimitBackoffMs,
       retryable: true,
       status,
     });
@@ -338,4 +342,14 @@ function parseRateLimitResetMs(headers: Headers): number | undefined {
     return undefined;
   }
   return Math.max(0, seconds * 1000 - Date.now());
+}
+
+function normalizeProviderBackoffMs(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value)) {
+    return undefined;
+  }
+  if (value <= 0) {
+    return defaultRateLimitBackoffMs;
+  }
+  return Math.max(Math.ceil(value), minimumPositiveBackoffMs);
 }

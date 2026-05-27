@@ -254,7 +254,7 @@ export function validateGitHubActionPayload(input: {
 export function bodyFromActionPayload(payload: GitHubActionPayload): string | undefined {
   return "body" in payload
     ? payload.body
-    : (payload.text ?? payload.summary ?? payload.title ?? payload.name);
+    : (payload.summary ?? payload.title ?? payload.name);
 }
 
 function validateDisplayName(input: {

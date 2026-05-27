@@ -22,16 +22,17 @@ export class GitHubActionsController {
 
   @Post()
   public async requestAction(
-    @Body() body: Record<string, unknown>,
+    @Body() body: unknown,
     @Req() request: DesktopAuthRequestLike,
   ) {
     const actor = await this.authenticateDesktopClient.require(
       extractDesktopBearerToken(request),
     );
-    const requestedBy = readRecord(body.requestedBy);
-    const attribution = readRecord(body.attribution);
+    const requestBody = readRecord(body);
+    const requestedBy = readRecord(requestBody.requestedBy);
+    const attribution = readRecord(requestBody.attribution);
     return this.requestGitHubAction.execute({
-      actionType: readString(body.actionType),
+      actionType: readString(requestBody.actionType),
       actor,
       attribution: {
         agentDisplayName: readString(attribution.agentDisplayName),
@@ -42,8 +43,8 @@ export class GitHubActionsController {
           ? { teamDisplayName: attribution.teamDisplayName }
           : {}),
       },
-      payload: body.payload,
-      requestId: readString(body.requestId),
+      payload: requestBody.payload,
+      requestId: readString(requestBody.requestId),
       requestedBy: {
         subjectId: readString(requestedBy.subjectId),
         subjectKind: readString(requestedBy.subjectKind),
@@ -52,9 +53,9 @@ export class GitHubActionsController {
           : {}),
         ...(typeof requestedBy.teamId === "string" ? { teamId: requestedBy.teamId } : {}),
       },
-      targetId: readString(body.targetId),
-      ...(typeof body.correlationId === "string"
-        ? { correlationId: body.correlationId }
+      targetId: readString(requestBody.targetId),
+      ...(typeof requestBody.correlationId === "string"
+        ? { correlationId: requestBody.correlationId }
         : {}),
     });
   }

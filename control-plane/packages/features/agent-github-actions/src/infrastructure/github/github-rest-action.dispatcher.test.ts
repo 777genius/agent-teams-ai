@@ -85,6 +85,42 @@ describe("GitHubRestActionDispatcher", () => {
     });
   });
 
+  it("does not allow zero-delay rate limit retries", async () => {
+    const dispatcher = new GitHubRestActionDispatcher(
+      settings(),
+      async () =>
+        new Response(JSON.stringify({ message: "secondary rate limit" }), {
+          headers: {
+            "retry-after": "0",
+            "x-github-request-id": "request-2",
+          },
+          status: 403,
+        }),
+    );
+
+    await expect(
+      dispatcher.dispatch({
+        actionRequestId: "action-1",
+        actionType: "github.issue_comment.create",
+        payload: { body: "raw", issueNumber: 7 },
+        renderedBody: "rendered body",
+        target: { owner: "octo", repo: "repo" },
+        tokenLease: {
+          expiresAtMs: 1000,
+          githubInstallationId: "installation-1",
+          token: "secret-token",
+        },
+      }),
+    ).resolves.toMatchObject({
+      kind: "failure",
+      retryAfterMs: 60_000,
+      safeError: {
+        code: "CONTROL_PLANE_GITHUB_ACTION_RATE_LIMITED",
+        retryable: true,
+      },
+    });
+  });
+
   it("sends rendered attribution in check run output without unique names", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const dispatcher = new GitHubRestActionDispatcher(settings(), async (url, init) => {
@@ -130,6 +166,42 @@ describe("GitHubRestActionDispatcher", () => {
         title: "Agent Teams / review",
       },
       status: "queued",
+    });
+  });
+
+  it("preserves optional check run output text separately from rendered summary", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const dispatcher = new GitHubRestActionDispatcher(settings(), async (url, init) => {
+      calls.push({ init: init ?? {}, url: String(url) });
+      return new Response(JSON.stringify({ id: 9 }), {
+        status: 201,
+      });
+    });
+
+    await dispatcher.dispatch({
+      actionRequestId: "action-1",
+      actionType: "github.check_run.create_or_update",
+      payload: {
+        headSha: "a".repeat(40),
+        name: "Agent Teams / review",
+        status: "queued",
+        text: "Detailed check output",
+      },
+      renderedBody: "Summary with attribution",
+      target: { owner: "octo", repo: "repo" },
+      tokenLease: {
+        expiresAtMs: 1000,
+        githubInstallationId: "installation-1",
+        token: "secret-token",
+      },
+    });
+
+    expect(JSON.parse(String(calls[0]?.init.body))).toMatchObject({
+      output: {
+        summary: "Summary with attribution",
+        text: "Detailed check output",
+        title: "Agent Teams / review",
+      },
     });
   });
 

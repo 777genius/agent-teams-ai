@@ -127,4 +127,16 @@ describe("agent GitHub action domain", () => {
       }),
     ).toBe("Agent Teams / review");
   });
+
+  it("uses check run summary as attribution source when detailed text is present", () => {
+    expect(
+      bodyFromActionPayload({
+        headSha: "a".repeat(40),
+        name: "Agent Teams / review",
+        status: "queued",
+        summary: "Summary shown with attribution",
+        text: "Detailed check output",
+      }),
+    ).toBe("Summary shown with attribution");
+  });
 });
