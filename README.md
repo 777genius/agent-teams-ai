@@ -13,6 +13,8 @@
 
 <h1 align="center"><a href="https://777genius.github.io/agent-teams-ai/">Agent Teams</a></h1>
 
+<!-- ReviewRouter smoke check: action 1603215454b4c5cf3387b40ae674a46eeb7ee96b -->
+
 <p align="center">
   <strong><code>You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other. You just look at the kanban board and drink coffee.</code></strong>
 </p>
