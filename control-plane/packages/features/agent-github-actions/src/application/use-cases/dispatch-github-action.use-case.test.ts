@@ -32,6 +32,8 @@ describe("DispatchGitHubActionUseCase", () => {
     ]);
     expect(harness.operations).toContain("content:shred");
     expect(harness.operations).toContain("request:succeeded");
+    expect(harness.auditEvents).toContain("github_action.dispatch_started");
+    expect(harness.auditEvents).toContain("github_action.dispatch_succeeded");
   });
 
   it("keeps worker events retryable while the feature gate is disabled", async () => {
@@ -79,6 +81,7 @@ function createHarness(
   } = {},
 ) {
   const operations: string[] = [];
+  const auditEvents: string[] = [];
   const dispatchBodies: string[] = [];
   const tokenBrokerCalls: Array<{ capability: string; targetId: string }> = [];
   const request = {
@@ -152,9 +155,12 @@ function createHarness(
     },
   };
   const auditLog: AgentGitHubActionsAuditLog = {
-    record: async () => undefined,
+    record: async (event) => {
+      auditEvents.push(event.eventType);
+    },
   };
   return {
+    auditEvents,
     dispatchBodies,
     operations,
     tokenBrokerCalls,

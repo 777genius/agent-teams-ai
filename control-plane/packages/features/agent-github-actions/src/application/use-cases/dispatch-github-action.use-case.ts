@@ -108,6 +108,17 @@ export class DispatchGitHubActionUseCase {
         context,
       );
     });
+    await this.auditLog.record({
+      actionRequestId: view.request.id,
+      actorKind: "system",
+      eventType: "github_action.dispatch_started",
+      integrationTargetId: view.request.integrationTargetId,
+      status: "dispatching",
+      workspaceId: view.request.workspaceId,
+      ...(input.correlationId === undefined
+        ? {}
+        : { correlationId: input.correlationId }),
+    });
 
     try {
       const loaded = await this.contentStore.load({

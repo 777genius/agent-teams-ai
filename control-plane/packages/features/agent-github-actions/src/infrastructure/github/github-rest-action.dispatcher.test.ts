@@ -162,6 +162,56 @@ describe("GitHubRestActionDispatcher", () => {
     });
   });
 
+  it("updates check runs by stored id without create-only head sha", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const dispatcher = new GitHubRestActionDispatcher(settings(), async (url, init) => {
+      calls.push({ init: init ?? {}, url: String(url) });
+      return new Response(
+        JSON.stringify({ html_url: "https://github.com/octo/repo/runs/9", id: 9 }),
+        {
+          status: 200,
+        },
+      );
+    });
+
+    await expect(
+      dispatcher.dispatch({
+        actionRequestId: "action-1",
+        actionType: "github.check_run.create_or_update",
+        checkRunId: "9",
+        payload: {
+          conclusion: "success",
+          headSha: "a".repeat(40),
+          name: "Agent Teams / review",
+          status: "completed",
+        },
+        renderedBody: "Agent Teams / review\n\nAgent: Review Agent",
+        target: { owner: "octo", repo: "repo" },
+        tokenLease: {
+          expiresAtMs: 1000,
+          githubInstallationId: "installation-1",
+          token: "secret-token",
+        },
+      }),
+    ).resolves.toMatchObject({
+      githubCheckRunId: "9",
+      kind: "success",
+    });
+
+    expect(calls[0]?.url).toBe("https://api.github.com/repos/octo/repo/check-runs/9");
+    expect(calls[0]?.init.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+      conclusion: "success",
+      external_id: "action-1",
+      name: "Agent Teams / review",
+      output: {
+        summary: "Agent Teams / review\n\nAgent: Review Agent",
+        title: "Agent Teams / review",
+      },
+      status: "completed",
+    });
+  });
+
   it("dead-letters unknown check run create results to avoid duplicates", async () => {
     const dispatcher = new GitHubRestActionDispatcher(settings(), async () => {
       throw new Error("network reset");

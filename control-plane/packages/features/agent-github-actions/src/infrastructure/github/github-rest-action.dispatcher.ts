@@ -114,6 +114,7 @@ function buildRequest(input: Parameters<GitHubActionDispatcher["dispatch"]>[0]):
     payload,
     input.actionRequestId,
     requireRenderedBody(input.renderedBody),
+    input.checkRunId === undefined ? "create" : "update",
   );
   if (input.checkRunId !== undefined) {
     return {
@@ -133,16 +134,17 @@ function buildCheckRunBody(
   payload: GitHubCheckRunCreateOrUpdatePayload,
   actionRequestId: string,
   renderedBody: string,
+  mode: "create" | "update",
 ): Record<string, unknown> {
   return {
     external_id: actionRequestId,
-    head_sha: payload.headSha,
     name: payload.name,
     output: {
       summary: renderedBody,
       title: payload.title ?? payload.name,
     },
     status: payload.status,
+    ...(mode === "create" ? { head_sha: payload.headSha } : {}),
     ...(payload.conclusion === undefined ? {} : { conclusion: payload.conclusion }),
   };
 }
