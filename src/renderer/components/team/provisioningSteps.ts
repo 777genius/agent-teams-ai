@@ -2,6 +2,7 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidence,
   isBootstrapConfirmedProvisionedButNotAliveFailure,
+  mentionsProcessTableUnavailable,
 } from '@shared/utils/teamLaunchFailureReason';
 
 import type {
@@ -115,11 +116,11 @@ function runtimeEntryContradictsConfirmedJoin(
   if (
     isBootstrapConfirmedProvisionedButNotAliveFailure(entry) &&
     !hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry) &&
-    !hasUnsafeProvisionedButNotAliveRuntimeEvidence({
-      runtimeDiagnostic: runtimeEntry.runtimeDiagnostic,
-      runtimeDiagnosticSeverity: runtimeEntry.runtimeDiagnosticSeverity,
-      livenessKind: runtimeEntry.livenessKind,
-    })
+    (runtimeEntry.livenessKind === 'registered_only' ||
+      runtimeEntry.livenessKind === 'stale_metadata') &&
+    (mentionsProcessTableUnavailable(runtimeEntry.runtimeDiagnostic) ||
+      mentionsProcessTableUnavailable(entry.runtimeDiagnostic) ||
+      mentionsProcessTableUnavailable(entry.hardFailureReason))
   ) {
     return false;
   }

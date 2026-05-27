@@ -205,6 +205,42 @@ describe('getLaunchJoinMilestonesFromMembers', () => {
     expect(milestones.pendingSpawnCount).toBe(0);
   });
 
+  it('keeps ambiguous runtime-offline entries pending even when provisioned-but-not-alive spawn evidence is safe', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          livenessKind: 'registered_only',
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        tom: {
+          memberName: 'tom',
+          alive: false,
+          restartable: true,
+          runtimeDiagnostic: 'Runtime heartbeat is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(0);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(1);
+  });
+
   it('does not let a stale clean snapshot hide live registered-only members', () => {
     const milestones = getLaunchJoinMilestonesFromMembers({
       members,
