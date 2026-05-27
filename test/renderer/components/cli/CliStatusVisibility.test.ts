@@ -704,6 +704,68 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('renders OpenCode inventory fallback with model badges instead of unavailable text', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      authStatusChecking: false,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: null,
+          models: ['opencode/big-pickle'],
+          modelAvailability: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+          },
+          backend: null,
+          availableBackends: [],
+          modelCatalog: null,
+          modelCatalogRefreshState: 'idle',
+          runtimeCapabilities: null,
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).not.toContain('Provider status unavailable');
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps connected provider details visible while a refresh is in flight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';

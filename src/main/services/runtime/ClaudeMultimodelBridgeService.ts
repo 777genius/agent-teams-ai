@@ -883,7 +883,7 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private shouldUseLegacyProviderTimeoutFallback(providerId: CliProviderId): boolean {
-    return providerId === 'anthropic' || providerId === 'codex';
+    return providerId === 'anthropic' || providerId === 'codex' || providerId === 'opencode';
   }
 
   private getProviderStatusRuntimeTimeout(

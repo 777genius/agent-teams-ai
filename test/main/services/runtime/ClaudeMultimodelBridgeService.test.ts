@@ -421,7 +421,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     vi.mocked(console.warn).mockClear();
   });
 
-  it('explains OpenCode provider status timeouts as runtime inventory failures', async () => {
+  it('falls back to OpenCode model inventory when provider status times out', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
@@ -430,6 +430,19 @@ describe('ClaudeMultimodelBridgeService', () => {
             'Command timed out after 30000ms: /mock/agent_teams_orchestrator runtime status --json --provider opencode --summary'
           )
         );
+      }
+      if (normalizedArgs === 'model list --json --provider opencode') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providers: {
+              opencode: {
+                models: [{ id: 'opencode/big-pickle', label: 'Big Pickle' }],
+              },
+            },
+          }),
+          stderr: '',
+        });
       }
 
       return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
@@ -443,18 +456,18 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(provider).toMatchObject({
       providerId: 'opencode',
-      verificationState: 'error',
-      statusMessage: 'Provider status unavailable',
+      supported: false,
+      authenticated: false,
+      verificationState: 'unknown',
+      statusMessage: null,
+      models: ['opencode/big-pickle'],
     });
-    expect(provider.detailMessage).toContain(
-      'OpenCode runtime status did not return before the desktop timeout.'
-    );
-    expect(provider.detailMessage).toContain('not necessarily that OpenCode auth is missing');
-    expect(provider.detailMessage).toContain('provider/model inventory');
-    expect(provider.detailMessage).toContain('Raw timeout detail: Command timed out after 30000ms');
+    expect(provider.detailMessage ?? '').not.toContain('OpenCode runtime status did not return');
     expect(execCliMock.mock.calls.map((call) => call[1].join(' '))).toEqual([
       'runtime status --json --provider opencode --summary',
+      'model list --json --provider opencode',
     ]);
+    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5000);
     vi.mocked(console.warn).mockClear();
   });
 
@@ -521,7 +534,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
   });
 
-  it('falls back to scoped legacy probes for Anthropic and Codex aggregate summary timeouts', async () => {
+  it('falls back to scoped legacy probes for aggregate summary timeouts', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (
@@ -602,6 +615,19 @@ describe('ClaudeMultimodelBridgeService', () => {
           stderr: '',
         });
       }
+      if (normalizedArgs === 'model list --json --provider opencode') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providers: {
+              opencode: {
+                models: [{ id: 'opencode/big-pickle', label: 'Big Pickle' }],
+              },
+            },
+          }),
+          stderr: '',
+        });
+      }
 
       return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
     });
@@ -613,10 +639,10 @@ describe('ClaudeMultimodelBridgeService', () => {
     const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator');
     const calls = execCliMock.mock.calls.map((call) => call[1].join(' '));
 
-    expect(execCliMock).toHaveBeenCalledTimes(7);
+    expect(execCliMock).toHaveBeenCalledTimes(8);
     expect(
       execCliMock.mock.calls.map((call) => call[2]?.timeout as number).sort((a, b) => a - b)
-    ).toEqual([5000, 5000, 15000, 15000, 25000, 25000, 30000]);
+    ).toEqual([5000, 5000, 5000, 15000, 15000, 25000, 25000, 25000]);
     expect(calls).toEqual(
       expect.arrayContaining([
         'runtime status --json --provider anthropic --summary',
@@ -626,6 +652,7 @@ describe('ClaudeMultimodelBridgeService', () => {
         'model list --json --provider anthropic',
         'auth status --json --provider codex',
         'model list --json --provider codex',
+        'model list --json --provider opencode',
       ])
     );
     expect(providers.map((provider) => provider.providerId)).toEqual([
@@ -650,8 +677,11 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(providers[2]).toMatchObject({
       providerId: 'opencode',
-      verificationState: 'error',
-      statusMessage: 'Provider status unavailable',
+      supported: false,
+      authenticated: false,
+      verificationState: 'unknown',
+      statusMessage: null,
+      models: ['opencode/big-pickle'],
     });
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       expect.stringContaining(
