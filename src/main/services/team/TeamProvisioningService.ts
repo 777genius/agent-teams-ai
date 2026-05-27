@@ -24201,6 +24201,7 @@ export class TeamProvisioningService {
         hasUnsafeProvisionedButNotAliveFailure &&
         (metadata.livenessKind === 'not_found' ||
           metadata.livenessKind === 'shell_only' ||
+          metadata.livenessKind === 'runtime_process_candidate' ||
           ((metadata.livenessKind === 'registered_only' ||
             metadata.livenessKind === 'stale_metadata') &&
             (metadata.runtimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity) !== 'error' &&
@@ -29576,6 +29577,7 @@ export class TeamProvisioningService {
         hasUnsafeProvisionedButNotAliveFailure &&
         (metadataLivenessKind === 'not_found' ||
           metadataLivenessKind === 'shell_only' ||
+          metadataLivenessKind === 'runtime_process_candidate' ||
           ((metadataLivenessKind === 'registered_only' ||
             metadataLivenessKind === 'stale_metadata') &&
             (metadataRuntimeDiagnosticSeverity ?? current.runtimeDiagnosticSeverity) !== 'error' &&
