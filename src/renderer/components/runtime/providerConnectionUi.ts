@@ -425,8 +425,8 @@ export function formatProviderStatusText(
   if (isProviderInventoryOnlyFallback(provider)) {
     return translateProviderConnection(
       t,
-      'providerRuntime.connectionUi.status.checking',
-      'Checking...'
+      'providerRuntime.connectionUi.status.modelsAvailable',
+      'Models available'
     );
   }
 

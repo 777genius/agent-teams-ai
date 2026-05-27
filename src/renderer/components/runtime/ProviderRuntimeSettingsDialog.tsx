@@ -54,6 +54,7 @@ import {
 import {
   formatProviderAuthMethodLabelForProvider,
   formatProviderAuthModeLabelForProvider,
+  formatProviderStatusText,
   getProviderConnectLabel,
   getProviderCurrentRuntimeSummary,
   isConnectionManagedRuntimeProvider,
@@ -414,7 +415,7 @@ function getProviderUsageLabel(
           t
         ),
       })
-    : provider.statusMessage || t('providerRuntime.usage.notConnected');
+    : formatProviderStatusText(provider, t);
 }
 
 function getCompactOpenCodeProviderDetailMessage(detailMessage?: string | null): string | null {
@@ -1150,10 +1151,8 @@ export const ProviderRuntimeSettingsDialog = ({
 
   let connectionStatusLabel: string | null = null;
   if (selectedProvider) {
-    if (!hideConnectionMethodMeta && selectedProvider.authenticated) {
+    if (!hideConnectionMethodMeta) {
       connectionStatusLabel = getProviderUsageLabel(selectedProvider, t);
-    } else if (!hideConnectionMethodMeta) {
-      connectionStatusLabel = t('providerRuntime.usage.notConnected');
     }
   }
   const showSelectedProviderSummary = Boolean(selectedProvider) && !connectionManagedRuntime;

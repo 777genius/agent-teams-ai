@@ -1972,4 +1972,41 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).not.toContain('behavior abc123');
     expect(host.textContent).not.toContain('Desktop currently exposes status only.');
   });
+
+  it('shows OpenCode inventory fallback as models available instead of disconnected', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider: CliProviderStatus = {
+      ...createOpenCodeProvider(),
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage: null,
+      detailMessage: null,
+      models: ['opencode/big-pickle'],
+      backend: null,
+      availableBackends: [],
+      connection: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [provider],
+          initialProviderId: 'opencode',
+          projectPath: '/tmp/project-a',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Models available');
+    expect(host.textContent).not.toContain('Not connected');
+  });
 });

@@ -755,8 +755,9 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('OpenCode');
-    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).toContain('Models available');
     expect(host.textContent).toContain('big-pickle');
+    expect(host.textContent).not.toContain('Checking...');
     expect(host.textContent).not.toContain('Provider status unavailable');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
 

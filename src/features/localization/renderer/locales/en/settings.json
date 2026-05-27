@@ -884,6 +884,7 @@
       },
       "status": {
         "checking": "Checking...",
+        "modelsAvailable": "Models available",
         "checked": "Checked",
         "providerActivity": "Provider Activity",
         "notConnected": "Not connected",

@@ -2759,6 +2759,7 @@ export default interface Resources {
           chatGptVerificationDegraded: 'ChatGPT account detected - account verification is currently degraded.';
           checked: 'Checked';
           checking: 'Checking...';
+          modelsAvailable: 'Models available';
           codexLocalAccountNeedsReconnect: 'Codex has a locally selected ChatGPT account, but the current session needs reconnect.';
           codexNativeReady: 'Codex native ready';
           codexNativeUnavailable: 'Codex native unavailable';

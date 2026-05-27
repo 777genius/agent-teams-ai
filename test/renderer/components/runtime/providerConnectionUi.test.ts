@@ -80,21 +80,19 @@ function createCodexProvider(
     },
     selectedBackendId: overrides?.selectedBackendId ?? 'codex-native',
     resolvedBackendId: overrides?.resolvedBackendId ?? 'codex-native',
-    availableBackends:
-      overrides?.availableBackends ??
-      [
-        {
-          id: 'codex-native',
-          label: 'Codex native',
-          description: 'Use codex exec JSON mode.',
-          selectable: true,
-          recommended: true,
-          available: true,
-          state: 'ready',
-          audience: 'general',
-          statusMessage: 'Codex native ready',
-        },
-      ],
+    availableBackends: overrides?.availableBackends ?? [
+      {
+        id: 'codex-native',
+        label: 'Codex native',
+        description: 'Use codex exec JSON mode.',
+        selectable: true,
+        recommended: true,
+        available: true,
+        state: 'ready',
+        audience: 'general',
+        statusMessage: 'Codex native ready',
+      },
+    ],
     externalRuntimeDiagnostics: [],
     backend:
       overrides?.backend ??
@@ -123,7 +121,8 @@ function createCodexProvider(
           startedAt: null,
         },
         rateLimits: null,
-        launchAllowed: Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured),
+        launchAllowed:
+          Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured),
         launchIssueMessage: null,
         launchReadinessState:
           Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured)
@@ -135,9 +134,7 @@ function createCodexProvider(
   };
 }
 
-function createOpenCodeProvider(
-  overrides?: Partial<CliProviderStatus>
-): CliProviderStatus {
+function createOpenCodeProvider(overrides?: Partial<CliProviderStatus>): CliProviderStatus {
   return {
     providerId: 'opencode',
     displayName: 'OpenCode',
@@ -458,7 +455,7 @@ describe('providerConnectionUi', () => {
     expect(formatProviderStatusText(provider)).toBe('Codex native ready');
   });
 
-  it('treats OpenCode inventory-only fallback as still loading', () => {
+  it('treats OpenCode inventory-only fallback as models available', () => {
     const provider = createOpenCodeProvider({
       supported: false,
       authenticated: false,
@@ -483,7 +480,7 @@ describe('providerConnectionUi', () => {
     });
 
     expect(isProviderInventoryOnlyFallback(provider)).toBe(true);
-    expect(formatProviderStatusText(provider)).toBe('Checking...');
+    expect(formatProviderStatusText(provider)).toBe('Models available');
   });
 
   it('surfaces degraded ChatGPT verification warnings instead of flattening them to ready', () => {
@@ -508,7 +505,8 @@ describe('providerConnectionUi', () => {
         },
         rateLimits: null,
         launchAllowed: true,
-        launchIssueMessage: 'ChatGPT account detected, but account verification is currently degraded.',
+        launchIssueMessage:
+          'ChatGPT account detected, but account verification is currently degraded.',
         launchReadinessState: 'warning_degraded_but_launchable',
       },
     });

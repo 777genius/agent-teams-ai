@@ -884,6 +884,7 @@
       },
       "status": {
         "checking": "Проверка...",
+        "modelsAvailable": "Модели доступны",
         "checked": "Проверено",
         "providerActivity": "Активность провайдеров",
         "notConnected": "Не подключено",
