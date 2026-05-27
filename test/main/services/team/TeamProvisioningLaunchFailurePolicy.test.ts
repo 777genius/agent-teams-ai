@@ -3,6 +3,7 @@ import {
   isAutoClearableLaunchFailureReason,
   isBootstrapCheckInTimeoutFailureReason,
   isBootstrapInstructionPromptFailureReason,
+  isCliProvisionedButNotAliveFailureReason,
   isBootstrapMcpResourceReadFailureReason,
   isConfigRegistrationFailureReason,
   isLaunchCleanupBootstrapIncompleteFailureReason,
@@ -10,9 +11,11 @@ import {
   isNeverSpawnedDuringLaunchReason,
   isOpenCodeBridgeLaunchFailureReason,
   isProcessTableUnavailableFailureReason,
+  isProvisionedButNotAliveFailureReason,
   isRegisteredRuntimeMetadataFailureReason,
   stripProcessTableUnavailableDiagnosticSuffix,
 } from '@main/services/team/provisioning/TeamProvisioningLaunchFailurePolicy';
+import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
 import { describe, expect, it } from 'vitest';
 
 describe('TeamProvisioningLaunchFailurePolicy', () => {
@@ -28,11 +31,26 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
         'Teammate was not registered in config.json during launch. Persistent spawn failed.'
       )
     ).toBe(true);
-    expect(isOpenCodeBridgeLaunchFailureReason('OpenCode bridge reported member launch failure')).toBe(
-      true
-    );
+    expect(
+      isOpenCodeBridgeLaunchFailureReason('OpenCode bridge reported member launch failure')
+    ).toBe(true);
     expect(
       isRegisteredRuntimeMetadataFailureReason('registered runtime metadata without live process')
+    ).toBe(true);
+    expect(
+      isProvisionedButNotAliveFailureReason(
+        'CLI process exited (code 1) \u2014 team provisioned but not alive'
+      )
+    ).toBe(true);
+    expect(
+      isProvisionedButNotAliveFailureReason(
+        'CLI process exited (code unknown) - team provisioned but not alive; process table unavailable'
+      )
+    ).toBe(true);
+    expect(
+      isCliProvisionedButNotAliveFailureReason(
+        'CLI process exited (code ?) - team provisioned but not alive'
+      )
     ).toBe(true);
   });
 
@@ -42,9 +60,9 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
         'resources/read failed for member_briefing: MCP error method not found'
       )
     ).toBe(true);
-    expect(isBootstrapMcpResourceReadFailureReason('resources/read failed for other resource')).toBe(
-      false
-    );
+    expect(
+      isBootstrapMcpResourceReadFailureReason('resources/read failed for other resource')
+    ).toBe(false);
     expect(
       isBootstrapCheckInTimeoutFailureReason(
         'Teammate was registered but did not bootstrap-confirm before timeout.'
@@ -69,9 +87,9 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
         'runtime pid could not be verified because process table is unavailable'
       )
     ).toBe(true);
-    expect(isProcessTableUnavailableFailureReason('runtime failed; process table unavailable')).toBe(
-      false
-    );
+    expect(
+      isProcessTableUnavailableFailureReason('runtime failed; process table unavailable')
+    ).toBe(false);
     expect(
       stripProcessTableUnavailableDiagnosticSuffix(
         'Teammate did not join within the launch grace window.; process table unavailable'
@@ -80,9 +98,9 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
   });
 
   it('keeps auto-clear policy narrow but accepts known recoverable suffixes', () => {
-    expect(
-      isAutoClearableLaunchFailureReason('Teammate was never spawned during launch.')
-    ).toBe(true);
+    expect(isAutoClearableLaunchFailureReason('Teammate was never spawned during launch.')).toBe(
+      true
+    );
     expect(isAutoClearableLaunchFailureReason('process table is unavailable')).toBe(true);
     expect(
       isAutoClearableLaunchFailureReason(
@@ -91,11 +109,57 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
     ).toBe(true);
     expect(
       isAutoClearableLaunchFailureReason(
-        'CLI process exited (code 1) — team provisioned but not alive'
+        'CLI process exited (code 1) \u2014 team provisioned but not alive'
       )
-    ).toBe(true);
+    ).toBe(false);
     expect(isAutoClearableLaunchFailureReason('model not found')).toBe(false);
-    expect(isAutoClearableLaunchFailureReason(undefined)).toBe(false);
+    expect(isAutoClearableLaunchFailureReason()).toBe(false);
+  });
+
+  it('requires bootstrap proof before treating provisioned-but-not-alive as healed', () => {
+    const reason = 'CLI process exited (code 1) \u2014 team provisioned but not alive';
+
+    expect(
+      isBootstrapConfirmedProvisionedButNotAliveFailure({
+        status: 'error',
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        error: reason,
+        bootstrapConfirmed: true,
+      })
+    ).toBe(true);
+
+    expect(
+      isBootstrapConfirmedProvisionedButNotAliveFailure({
+        status: 'error',
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        hardFailureReason: 'model not found',
+        error: reason,
+        bootstrapConfirmed: true,
+      })
+    ).toBe(false);
+
+    expect(
+      isBootstrapConfirmedProvisionedButNotAliveFailure({
+        status: 'error',
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        hardFailureReason: reason,
+        bootstrapConfirmed: false,
+        livenessKind: 'registered_only',
+      })
+    ).toBe(false);
+
+    expect(
+      isBootstrapConfirmedProvisionedButNotAliveFailure({
+        status: 'error',
+        launchState: 'failed_to_start',
+        hardFailure: true,
+        runtimeDiagnostic: reason,
+        bootstrapConfirmed: true,
+      })
+    ).toBe(true);
   });
 
   it('derives member launch state by the existing precedence order', () => {
@@ -110,9 +174,7 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
       'runtime_pending_permission'
     );
     expect(deriveMemberLaunchState({ runtimeAlive: true })).toBe('runtime_pending_bootstrap');
-    expect(deriveMemberLaunchState({ agentToolAccepted: true })).toBe(
-      'runtime_pending_bootstrap'
-    );
+    expect(deriveMemberLaunchState({ agentToolAccepted: true })).toBe('runtime_pending_bootstrap');
     expect(deriveMemberLaunchState({})).toBe('starting');
   });
 });

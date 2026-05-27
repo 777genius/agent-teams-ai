@@ -3,6 +3,10 @@ import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN, wrapAgentBlock } from '@shared/con
 import { CROSS_TEAM_PREFIX_TAG } from '@shared/constants/crossTeam';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
+import {
   getTeamTaskWorkflowColumn,
   isTeamTaskActivelyWorked,
   isTeamTaskDeleted,
@@ -43,6 +47,57 @@ interface CanonicalSendMessageExample {
 
 const SEND_MESSAGE_CANONICAL_FIELDS = ['to', 'summary', 'message'] as const;
 const SEND_MESSAGE_FORBIDDEN_ALIAS_FIELDS = ['recipient', 'content'] as const;
+
+function isUnsafeProvisionedButNotAliveStatus(status: MemberSpawnStatusEntry | undefined) {
+  return (
+    isBootstrapConfirmedProvisionedButNotAliveFailure(status) &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(status)
+  );
+}
+
+function isSafelyHealedProvisionedButNotAliveStatus(status: MemberSpawnStatusEntry | undefined) {
+  return (
+    isBootstrapConfirmedProvisionedButNotAliveFailure(status) &&
+    !isUnsafeProvisionedButNotAliveStatus(status)
+  );
+}
+
+function formatFailedLaunchStatus(status: MemberSpawnStatusEntry): string {
+  return `failed to start${status.hardFailureReason ? ` - ${status.hardFailureReason}` : status.error ? ` - ${status.error}` : ''}`;
+}
+
+function buildTeammateLaunchStatusLabel(status: MemberSpawnStatusEntry | undefined): string {
+  if (!status) {
+    return 'runtime state unclear';
+  }
+  if (
+    status.launchState === 'failed_to_start' &&
+    !isSafelyHealedProvisionedButNotAliveStatus(status)
+  ) {
+    return formatFailedLaunchStatus(status);
+  }
+  if (
+    status.launchState === 'confirmed_alive' ||
+    isSafelyHealedProvisionedButNotAliveStatus(status)
+  ) {
+    return 'bootstrap confirmed';
+  }
+  if (status.launchState === 'runtime_pending_permission') {
+    return status.runtimeAlive
+      ? 'runtime online and waiting for permission approval'
+      : 'waiting for permission approval';
+  }
+  if (status.runtimeAlive) {
+    return 'runtime online and ready for instructions';
+  }
+  if (status.launchState === 'runtime_pending_bootstrap') {
+    return 'spawn accepted, runtime not confirmed yet';
+  }
+  if (status.status === 'spawning') {
+    return 'spawn in progress';
+  }
+  return 'runtime state unclear';
+}
 
 export function buildCanonicalSendMessageExample(example: CanonicalSendMessageExample): string {
   return `{ ${SEND_MESSAGE_CANONICAL_FIELDS.map((field) => `${field}: "${example[field]}"`).join(', ')} }`;
@@ -1037,22 +1092,7 @@ export function buildGeminiPostLaunchHydrationPrompt(
     ? `Current teammate launch status:\n${members
         .map((member) => {
           const status = run.memberSpawnStatuses.get(member.name);
-          const label =
-            status?.launchState === 'failed_to_start'
-              ? `failed to start${status.hardFailureReason ? ` - ${status.hardFailureReason}` : status.error ? ` - ${status.error}` : ''}`
-              : status?.launchState === 'confirmed_alive'
-                ? 'bootstrap confirmed'
-                : status?.launchState === 'runtime_pending_permission'
-                  ? status?.runtimeAlive
-                    ? 'runtime online and waiting for permission approval'
-                    : 'waiting for permission approval'
-                  : status?.runtimeAlive
-                    ? 'runtime online and ready for instructions'
-                    : status?.launchState === 'runtime_pending_bootstrap'
-                      ? 'spawn accepted, runtime not confirmed yet'
-                      : status?.status === 'spawning'
-                        ? 'spawn in progress'
-                        : 'runtime state unclear';
+          const label = buildTeammateLaunchStatusLabel(status);
           return `- @${member.name}: ${label}`;
         })
         .join('\n')}\n`

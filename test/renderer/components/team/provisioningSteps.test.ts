@@ -144,6 +144,208 @@ describe('getLaunchJoinMilestonesFromMembers', () => {
     expect(milestones.pendingSpawnCount).toBe(3);
   });
 
+  it('counts bootstrap-confirmed provisioned-but-not-alive entries as joined', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        tom: {
+          memberName: 'tom',
+          alive: false,
+          restartable: true,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(1);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(0);
+  });
+
+  it('uses spawn process-table proof when runtime registered metadata has no diagnostic text', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        tom: {
+          memberName: 'tom',
+          alive: false,
+          restartable: true,
+          livenessKind: 'registered_only',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(1);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(0);
+  });
+
+  it('uses spawn process-table proof when runtime metadata has no liveness or diagnostic text', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        tom: {
+          memberName: 'tom',
+          alive: false,
+          restartable: true,
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(1);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(0);
+  });
+
+  it('counts unsafe bootstrap-confirmed provisioned-but-not-alive entries as failed', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime is no longer registered',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(0);
+    expect(milestones.failedSpawnCount).toBe(1);
+    expect(milestones.pendingSpawnCount).toBe(0);
+  });
+
+  it('keeps ambiguous runtime-offline entries pending even when provisioned-but-not-alive spawn evidence is safe', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          livenessKind: 'registered_only',
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        tom: {
+          memberName: 'tom',
+          alive: false,
+          restartable: true,
+          runtimeDiagnostic: 'Runtime heartbeat is not alive',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(0);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(1);
+  });
+
+  it('does not count safe provisioned-but-not-alive spawn evidence as joined when live runtime evidence is an error', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members: [{ name: 'tom' }],
+      memberSpawnStatuses: {
+        tom: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      },
+      memberRuntimeEntries: {
+        tom: {
+          memberName: 'tom',
+          alive: false,
+          restartable: true,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic:
+            'runtime pid could not be verified because process table is unavailable',
+          runtimeDiagnosticSeverity: 'error',
+          updatedAt: '2026-05-25T20:14:03.317Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(0);
+    expect(milestones.failedSpawnCount).toBe(0);
+    expect(milestones.pendingSpawnCount).toBe(1);
+  });
+
   it('does not let a stale clean snapshot hide live registered-only members', () => {
     const milestones = getLaunchJoinMilestonesFromMembers({
       members,
@@ -241,6 +443,133 @@ describe('getLaunchJoinMilestonesFromMembers', () => {
 
     expect(milestones.heartbeatConfirmedCount).toBe(3);
     expect(milestones.pendingSpawnCount).toBe(1);
+    expect(milestones.expectedTeammateCount).toBe(4);
+  });
+
+  it('does not count confirmed spawn as joined when spawn metadata carries runtime error evidence', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members,
+      memberSpawnStatuses: {
+        alice: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        bob: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          livenessKind: 'not_found',
+          runtimeDiagnostic: 'Runtime process crashed',
+          runtimeDiagnosticSeverity: 'error',
+          updatedAt: '2026-04-24T12:00:01.000Z',
+        },
+        tom: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        jane: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(3);
+    expect(milestones.pendingSpawnCount).toBe(1);
+    expect(milestones.expectedTeammateCount).toBe(4);
+  });
+
+  it('does not count confirmed spawn as joined when stopped spawn metadata has no liveness kind', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members,
+      memberSpawnStatuses: {
+        alice: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        bob: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:01.000Z',
+        },
+        tom: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        jane: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(3);
+    expect(milestones.pendingSpawnCount).toBe(1);
+    expect(milestones.expectedTeammateCount).toBe(4);
+  });
+
+  it('counts process-table-unavailable provisioned-but-not-alive spawn without liveness kind as joined', () => {
+    const milestones = getLaunchJoinMilestonesFromMembers({
+      members,
+      memberSpawnStatuses: {
+        alice: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        bob: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          updatedAt: '2026-04-24T12:00:01.000Z',
+        },
+        tom: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+        jane: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          updatedAt: '2026-04-24T12:00:00.000Z',
+        },
+      },
+    });
+
+    expect(milestones.heartbeatConfirmedCount).toBe(4);
+    expect(milestones.pendingSpawnCount).toBe(0);
+    expect(milestones.failedSpawnCount).toBe(0);
     expect(milestones.expectedTeammateCount).toBe(4);
   });
 });

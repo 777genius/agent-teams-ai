@@ -1,4 +1,10 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+  mentionsProcessTableUnavailable,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import type {
   MemberSpawnStatusEntry,
@@ -80,6 +86,9 @@ function parseStatusUpdatedAtMs(value: string | undefined): number | null {
 }
 
 function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(entry)) {
+    return hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry);
+  }
   return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
 }
 
@@ -92,13 +101,62 @@ function isStrongRuntimeProcessSpawnEntry(entry: MemberSpawnStatusEntry): boolea
 }
 
 function isConfirmedSpawnEntry(entry: MemberSpawnStatusEntry): boolean {
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(entry)) {
+    return !isFailedSpawnEntry(entry);
+  }
   return entry.launchState === 'confirmed_alive' || entry.bootstrapConfirmed === true;
 }
 
+function spawnEntryContradictsConfirmedJoin(entry: MemberSpawnStatusEntry): boolean {
+  if (!isConfirmedSpawnEntry(entry) || entry.runtimeAlive !== false) {
+    return false;
+  }
+  if (entry.runtimeDiagnosticSeverity === 'error') {
+    return true;
+  }
+  if (
+    entry.livenessKind === 'not_found' ||
+    entry.livenessKind === 'shell_only' ||
+    entry.livenessKind === 'permission_blocked' ||
+    entry.livenessKind === 'runtime_process_candidate'
+  ) {
+    return true;
+  }
+  const hasProcessTableUnavailableMarker =
+    mentionsProcessTableUnavailable(entry.runtimeDiagnostic) ||
+    mentionsProcessTableUnavailable(entry.hardFailureReason) ||
+    mentionsProcessTableUnavailable(entry.error);
+  if (!entry.livenessKind) {
+    return !hasProcessTableUnavailableMarker;
+  }
+  if (entry.livenessKind !== 'registered_only' && entry.livenessKind !== 'stale_metadata') {
+    return false;
+  }
+  return !hasProcessTableUnavailableMarker;
+}
+
 function runtimeEntryContradictsConfirmedJoin(
+  entry: MemberSpawnStatusEntry,
   runtimeEntry: TeamAgentRuntimeEntry | undefined
 ): boolean {
-  return runtimeEntry?.alive === false;
+  if (runtimeEntry?.alive !== false || runtimeEntry.livenessKind === 'confirmed_bootstrap') {
+    return false;
+  }
+  if (
+    isBootstrapConfirmedProvisionedButNotAliveFailure(entry) &&
+    !hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry) &&
+    !hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(entry, runtimeEntry) &&
+    (runtimeEntry.livenessKind == null ||
+      runtimeEntry.livenessKind === 'registered_only' ||
+      runtimeEntry.livenessKind === 'stale_metadata') &&
+    (mentionsProcessTableUnavailable(runtimeEntry.runtimeDiagnostic) ||
+      mentionsProcessTableUnavailable(entry.runtimeDiagnostic) ||
+      mentionsProcessTableUnavailable(entry.hardFailureReason) ||
+      mentionsProcessTableUnavailable(entry.error))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function shouldPreferSnapshotEntryOverLive(
@@ -159,7 +217,7 @@ function summarizeLiveLaunchJoinMilestones(params: {
       continue;
     }
     observedTeammateCount += 1;
-    if (entry.launchState === 'failed_to_start') {
+    if (isFailedSpawnEntry(entry)) {
       failedSpawnCount += 1;
       continue;
     }
@@ -167,14 +225,21 @@ function summarizeLiveLaunchJoinMilestones(params: {
       skippedSpawnCount += 1;
       continue;
     }
+    if (spawnEntryContradictsConfirmedJoin(entry)) {
+      pendingSpawnCount += 1;
+      continue;
+    }
     if (
       isConfirmedSpawnEntry(entry) &&
-      runtimeEntryContradictsConfirmedJoin(getRuntimeEntry(params.memberRuntimeEntries, memberName))
+      runtimeEntryContradictsConfirmedJoin(
+        entry,
+        getRuntimeEntry(params.memberRuntimeEntries, memberName)
+      )
     ) {
       pendingSpawnCount += 1;
       continue;
     }
-    if (entry.launchState === 'confirmed_alive') {
+    if (isConfirmedSpawnEntry(entry)) {
       heartbeatConfirmedCount += 1;
       continue;
     }

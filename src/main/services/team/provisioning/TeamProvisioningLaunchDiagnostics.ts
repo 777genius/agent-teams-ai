@@ -1,5 +1,13 @@
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+  mentionsProcessTableUnavailable,
+} from '@shared/utils/teamLaunchFailureReason';
+
 import type { WorkspaceTrustExecutionResult } from '@features/workspace-trust/main';
 import type { MemberSpawnStatusEntry, TeamLaunchDiagnosticItem } from '@shared/types';
+
+export { mentionsProcessTableUnavailable };
 
 export interface TeamProvisioningLaunchDiagnosticsRun {
   isLaunch: boolean;
@@ -11,10 +19,6 @@ interface LaunchDiagnosticsClockOptions {
 }
 
 const defaultNowIso = (): string => new Date().toISOString();
-
-export function mentionsProcessTableUnavailable(value: string | undefined): boolean {
-  return /\bprocess table\b.*\bunavailable\b/i.test(value ?? '');
-}
 
 export function buildLaunchDiagnosticsFromRun(
   run: TeamProvisioningLaunchDiagnosticsRun,
@@ -28,7 +32,24 @@ export function buildLaunchDiagnosticsFromRun(
   const observedAt = (options.nowIso ?? defaultNowIso)();
   const items: TeamLaunchDiagnosticItem[] = [];
   for (const [memberName, entry] of memberSpawnStatuses.entries()) {
-    if (entry.launchState === 'confirmed_alive') {
+    const bootstrapConfirmedProvisionedButNotAlive =
+      isBootstrapConfirmedProvisionedButNotAliveFailure(entry);
+    if (
+      bootstrapConfirmedProvisionedButNotAlive &&
+      hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry)
+    ) {
+      items.push({
+        id: `${memberName}:bootstrap_stalled`,
+        memberName,
+        severity: 'error',
+        code: 'bootstrap_stalled',
+        label: `${memberName} - launch diagnostic error`,
+        detail: entry.runtimeDiagnostic ?? entry.hardFailureReason ?? entry.error,
+        observedAt,
+      });
+      continue;
+    }
+    if (entry.launchState === 'confirmed_alive' || bootstrapConfirmedProvisionedButNotAlive) {
       items.push({
         id: `${memberName}:bootstrap_confirmed`,
         memberName,

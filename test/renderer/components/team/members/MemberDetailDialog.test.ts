@@ -531,6 +531,67 @@ describe('MemberDetailDialog activity count', () => {
     });
   });
 
+  it('shows Relaunch OpenCode copy for unsafe provisioned-but-not-alive OpenCode teammates without runtime evidence', async () => {
+    const member: ResolvedTeamMember = {
+      name: 'jack',
+      status: 'active',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+      providerId: 'opencode',
+    };
+    const onRestartMember = vi.fn(() => Promise.resolve(undefined));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailDialog, {
+          open: true,
+          member,
+          teamName: 'demo-team',
+          members: [member],
+          tasks: [],
+          isTeamAlive: true,
+          spawnEntry: {
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+            agentToolAccepted: true,
+            livenessKind: 'not_found',
+            runtimeDiagnostic: 'Runtime is no longer registered',
+            runtimeDiagnosticSeverity: 'warning',
+            updatedAt: '2026-04-24T12:00:00.000Z',
+          },
+          onClose: () => undefined,
+          onSendMessage: () => undefined,
+          onAssignTask: () => undefined,
+          onTaskClick: () => undefined,
+          onRestartMember,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'No OpenCode runtime session was recorded. Relaunch this teammate to start a fresh OpenCode session.'
+    );
+    const relaunchButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Relaunch OpenCode')
+    );
+    expect(relaunchButton).not.toBeUndefined();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows Relaunch OpenCode copy for stalled OpenCode bootstrap', async () => {
     const member: ResolvedTeamMember = {
       name: 'tom',

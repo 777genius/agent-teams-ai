@@ -1217,6 +1217,55 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
+  it('keeps stopped provisioned-but-not-alive launches failed and retryable', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const reason = 'CLI process exited (code 1) - team provisioned but not alive';
+    const spawnEntry: MemberSpawnStatusEntry = {
+      status: 'error',
+      launchState: 'failed_to_start',
+      runtimeAlive: false,
+      bootstrapConfirmed: true,
+      hardFailure: true,
+      hardFailureReason: reason,
+      agentToolAccepted: true,
+      livenessKind: 'not_found',
+      runtimeDiagnostic: 'Runtime is no longer registered',
+      runtimeDiagnosticSeverity: 'warning',
+      updatedAt: '2026-05-25T20:14:02.147Z',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'error',
+          spawnLaunchState: 'failed_to_start',
+          spawnRuntimeAlive: false,
+          spawnError: reason,
+          spawnEntry,
+          onRestartMember: vi.fn(),
+          onSkipMemberForLaunch: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-launch-failure-reason"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="Retry teammate"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="Skip for this launch"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows a compact failed launch reason on the member row with clickable links', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

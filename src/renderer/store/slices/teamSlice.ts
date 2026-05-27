@@ -4117,6 +4117,27 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         operation: 'fetchTeams',
       });
       void get().fetchTeams();
+      const terminalRefreshState = get();
+      if (isVisibleInActiveTeamSurface(terminalRefreshState, progress.teamName)) {
+        noteTeamRefreshFanout({
+          teamName: progress.teamName,
+          surface: 'provisioning-progress',
+          phase: 'scheduled',
+          reason: terminalReason,
+          operation: 'fetchMemberSpawnStatuses',
+          visible: true,
+        });
+        void terminalRefreshState.fetchMemberSpawnStatuses(progress.teamName);
+        noteTeamRefreshFanout({
+          teamName: progress.teamName,
+          surface: 'provisioning-progress',
+          phase: 'scheduled',
+          reason: terminalReason,
+          operation: 'fetchTeamAgentRuntime',
+          visible: true,
+        });
+        void terminalRefreshState.fetchTeamAgentRuntime(progress.teamName);
+      }
       if (hydratedVisibleTeam) {
         noteTeamRefreshFanout({
           teamName: progress.teamName,

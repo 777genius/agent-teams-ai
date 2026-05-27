@@ -1,3 +1,9 @@
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
+
 import type {
   MemberSpawnStatusEntry,
   TeamAgentRuntimeDiagnosticSeverity,
@@ -139,15 +145,29 @@ function buildRuntimeBackedDisplayRow(
   spawn?: MemberSpawnStatusEntry
 ): TeamRuntimeDisplayRow {
   const hasErrorDiagnostic = runtime.runtimeDiagnosticSeverity === 'error';
+  const bootstrapConfirmedProvisionedButNotAlive =
+    isBootstrapConfirmedProvisionedButNotAliveFailure(spawn);
   const spawnDegradation = getSpawnDegradation(spawn);
+  const unsafeRuntimeEvidence = hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(
+    spawn,
+    runtime
+  );
+  const useBootstrapConfirmedState =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    !hasErrorDiagnostic &&
+    !unsafeRuntimeEvidence &&
+    spawnDegradation == null;
   const spawnStoppedEvidence = spawnDegradation ? null : getSpawnStoppedEvidence(runtime, spawn);
-  const state = spawnStoppedEvidence
-    ? 'stopped'
-    : getRuntimeBackedState(runtime, hasErrorDiagnostic, spawnDegradation != null);
+  const state = useBootstrapConfirmedState
+    ? 'running'
+    : spawnStoppedEvidence
+      ? 'stopped'
+      : getRuntimeBackedState(runtime, hasErrorDiagnostic, spawnDegradation != null);
   const degradedReason = spawnDegradation
     ? withLiveProcessContext(spawnDegradation.reason, runtime)
     : undefined;
   const stateReason =
+    (useBootstrapConfirmedState ? 'Bootstrap confirmed' : undefined) ??
     degradedReason ??
     spawnStoppedEvidence?.reason ??
     runtime.runtimeDiagnostic ??
@@ -181,6 +201,17 @@ function buildRuntimeBackedDisplayRow(
 
 function getSpawnDegradation(spawn?: MemberSpawnStatusEntry): SpawnDegradation | null {
   if (!spawn) return null;
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) {
+    if (!hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawn)) {
+      return null;
+    }
+    const reason = spawn.runtimeDiagnostic ?? 'Runtime launch status needs attention';
+    return {
+      reason,
+      diagnostic: spawn.runtimeDiagnostic ?? reason,
+      diagnosticSeverity: spawn.runtimeDiagnosticSeverity === 'error' ? 'error' : 'warning',
+    };
+  }
 
   if (spawn.status === 'error' || spawn.hardFailure === true) {
     const reason =
@@ -226,7 +257,10 @@ function getSpawnStoppedEvidence(
   runtime: TeamAgentRuntimeEntry,
   spawn?: MemberSpawnStatusEntry
 ): SpawnStoppedEvidence | null {
-  if (!spawn || spawn.runtimeAlive !== false || runtime.livenessKind !== 'confirmed_bootstrap') {
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) {
+    return null;
+  }
+  if (spawn?.runtimeAlive !== false || runtime.livenessKind !== 'confirmed_bootstrap') {
     return null;
   }
   if (spawn.status !== 'online' && spawn.launchState !== 'confirmed_alive') {
@@ -267,6 +301,23 @@ function buildSpawnBackedDisplayRow(
   memberName: string,
   spawn: MemberSpawnStatusEntry
 ): TeamRuntimeDisplayRow {
+  if (
+    isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) &&
+    !hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawn)
+  ) {
+    return {
+      memberName,
+      state: 'running',
+      stateReason: 'Bootstrap confirmed',
+      source: 'spawn-status',
+      updatedAt: spawn.livenessLastCheckedAt ?? spawn.lastHeartbeatAt ?? spawn.updatedAt,
+      runtimeModel: spawn.runtimeModel,
+      diagnostic: spawn.runtimeDiagnostic,
+      diagnosticSeverity: spawn.runtimeDiagnosticSeverity,
+      actionsAllowed: false,
+    };
+  }
+
   const spawnDegradation = getSpawnDegradation(spawn);
   if (spawnDegradation) {
     return {
@@ -359,6 +410,7 @@ function buildSpawnBackedDisplayRow(
 }
 
 function getSpawnOnlyStoppedEvidence(spawn: MemberSpawnStatusEntry): SpawnStoppedEvidence | null {
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(spawn)) return null;
   if (spawn.runtimeAlive !== false) return null;
   if (spawn.status !== 'online' && spawn.launchState !== 'confirmed_alive') return null;
 

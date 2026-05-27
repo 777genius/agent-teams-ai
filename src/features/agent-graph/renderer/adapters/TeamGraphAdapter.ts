@@ -39,6 +39,10 @@ import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { buildOrderedVisibleTeamGraphOwnerIds } from '@shared/utils/teamGraphDefaultLayout';
 import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
+import {
   isTeamTaskActivelyWorked,
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
@@ -560,6 +564,7 @@ export class TeamGraphAdapter {
         member.runtimeAdvisory,
         member.providerId,
         spawn,
+        runtimeEntry,
         pendingApprovalAgents?.has(member.name) ?? false
       );
       const currentTask = member.currentTaskId
@@ -581,7 +586,11 @@ export class TeamGraphAdapter {
         spawnBootstrapStalled: spawn?.bootstrapStalled,
         spawnAgentToolAccepted: spawn?.agentToolAccepted,
         spawnHardFailure: spawn?.hardFailure,
+        spawnHardFailureReason: spawn?.hardFailureReason,
+        spawnError: spawn?.error,
+        spawnRuntimeDiagnostic: spawn?.runtimeDiagnostic,
         spawnLivenessKind: spawn?.livenessKind,
+        spawnRuntimeDiagnosticSeverity: spawn?.runtimeDiagnosticSeverity,
         spawnFirstSpawnAcceptedAt: spawn?.firstSpawnAcceptedAt,
         spawnUpdatedAt: spawn?.updatedAt,
         runtimeEntry,
@@ -599,7 +608,7 @@ export class TeamGraphAdapter {
           ? 'terminated'
           : hasRunningTool
             ? 'tool_calling'
-            : TeamGraphAdapter.#mapMemberStatus(member.status, spawn),
+            : TeamGraphAdapter.#mapMemberStatus(member.status, spawn, runtimeEntry),
         color: isTeamVisualOnline ? (member.color ?? undefined) : undefined,
         role: member.role ?? undefined,
         runtimeLabel: TeamGraphAdapter.#getRuntimeLabel(
@@ -1269,9 +1278,15 @@ export class TeamGraphAdapter {
     runtimeAdvisory: ResolvedTeamMember['runtimeAdvisory'],
     providerId: ResolvedTeamMember['providerId'],
     spawn: MemberSpawnStatusEntry | undefined,
+    runtimeEntry: TeamAgentRuntimeEntry | undefined,
     pendingApproval: boolean
   ): Pick<GraphNode, 'exceptionTone' | 'exceptionLabel'> | undefined {
-    if (spawn?.launchState === 'failed_to_start' || spawn?.status === 'error') {
+    const hasUnsuppressedSpawnFailure =
+      TeamGraphAdapter.#hasUnsuppressedProvisionedButNotAliveFailure(spawn, runtimeEntry);
+    if (
+      hasUnsuppressedSpawnFailure &&
+      (spawn?.launchState === 'failed_to_start' || spawn?.status === 'error')
+    ) {
       return { exceptionTone: 'error', exceptionLabel: 'spawn failed' };
     }
     if (pendingApproval || spawn?.launchState === 'runtime_pending_permission') {
@@ -1290,10 +1305,19 @@ export class TeamGraphAdapter {
     return undefined;
   }
 
-  static #mapMemberStatus(status: string, spawn?: MemberSpawnStatusEntry): GraphNodeState {
+  static #mapMemberStatus(
+    status: string,
+    spawn?: MemberSpawnStatusEntry,
+    runtimeEntry?: TeamAgentRuntimeEntry
+  ): GraphNodeState {
     if (spawn?.launchState === 'runtime_pending_permission') return 'waiting';
     if (spawn?.status === 'spawning') return 'thinking';
-    if (spawn?.status === 'error') return 'error';
+    if (
+      spawn?.status === 'error' &&
+      TeamGraphAdapter.#hasUnsuppressedProvisionedButNotAliveFailure(spawn, runtimeEntry)
+    ) {
+      return 'error';
+    }
     if (spawn?.status === 'waiting') return 'waiting';
     switch (status) {
       case 'active':
@@ -1305,6 +1329,16 @@ export class TeamGraphAdapter {
       default:
         return 'idle';
     }
+  }
+
+  static #hasUnsuppressedProvisionedButNotAliveFailure(
+    spawn: MemberSpawnStatusEntry | undefined,
+    runtimeEntry: TeamAgentRuntimeEntry | undefined
+  ): boolean {
+    return (
+      !isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) ||
+      hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(spawn, runtimeEntry)
+    );
   }
 
   static #mapTaskStatus(status: string): GraphNodeState {

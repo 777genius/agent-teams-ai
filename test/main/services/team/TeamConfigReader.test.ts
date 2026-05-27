@@ -151,6 +151,74 @@ describe('TeamConfigReader', () => {
     });
   });
 
+  it('projects bootstrap-confirmed provisioned-but-not-alive launch state as settled', async () => {
+    const teamName = 'signal-ops';
+    const teamDir = path.join(tempDir, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Signal Ops',
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({
+        version: 2,
+        teamName,
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      }),
+      'utf8'
+    );
+
+    const reader = new TeamConfigReader();
+    const teams = await reader.listTeams();
+
+    expect(teams).toHaveLength(1);
+    expect(teams[0]).toMatchObject({
+      teamName,
+      displayName: 'Signal Ops',
+      teamLaunchState: 'clean_success',
+      confirmedMemberCount: 1,
+      confirmedCount: 1,
+      failedCount: 0,
+    });
+    expect(teams[0]).not.toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+    });
+  });
+
   it('does not invent a partial-failure summary from artifact counts for mixed-aware teams when canonical launch truth is unavailable', async () => {
     const teamName = 'mixed-aware-team';
     const teamDir = path.join(tempDir, teamName);
@@ -578,16 +646,19 @@ describe('TeamConfigReader', () => {
       'utf8'
     );
     let ctimeMs = 1000;
-    vi.spyOn(nodeFs.promises, 'stat').mockImplementation(async () => ({
-      size: BigInt(4096),
-      mode: BigInt(33188),
-      dev: BigInt(1),
-      ino: BigInt(2),
-      mtimeMs: 1000,
-      ctimeMs,
-      birthtimeMs: 1000,
-      isFile: () => true,
-    }) as never);
+    vi.spyOn(nodeFs.promises, 'stat').mockImplementation(
+      async () =>
+        ({
+          size: BigInt(4096),
+          mode: BigInt(33188),
+          dev: BigInt(1),
+          ino: BigInt(2),
+          mtimeMs: 1000,
+          ctimeMs,
+          birthtimeMs: 1000,
+          isFile: () => true,
+        }) as never
+    );
     const readFileSpy = vi.spyOn(nodeFs.promises, 'readFile');
 
     const reader = new TeamConfigReader();
@@ -682,15 +753,16 @@ describe('TeamConfigReader', () => {
     const readDeferred = createDeferred<string>();
     const realReadFile = nodeFs.promises.readFile.bind(nodeFs.promises);
     let intercepted = false;
-    vi.spyOn(nodeFs.promises, 'readFile').mockImplementation(
-      ((file: unknown, ...args: unknown[]) => {
-        if (!intercepted && String(file) === configPath) {
-          intercepted = true;
-          return readDeferred.promise as never;
-        }
-        return realReadFile(file as never, ...(args as never[])) as never;
-      }) as never
-    );
+    vi.spyOn(nodeFs.promises, 'readFile').mockImplementation(((
+      file: unknown,
+      ...args: unknown[]
+    ) => {
+      if (!intercepted && String(file) === configPath) {
+        intercepted = true;
+        return readDeferred.promise as never;
+      }
+      return realReadFile(file as never, ...(args as never[])) as never;
+    }) as never);
 
     const reader = new TeamConfigReader();
     const staleSnapshot = reader.getConfigSnapshot(teamName);
@@ -730,15 +802,16 @@ describe('TeamConfigReader', () => {
     const readDeferred = createDeferred<string>();
     const realReadFile = nodeFs.promises.readFile.bind(nodeFs.promises);
     let intercepted = false;
-    vi.spyOn(nodeFs.promises, 'readFile').mockImplementation(
-      ((file: unknown, ...args: unknown[]) => {
-        if (!intercepted && String(file) === configPath) {
-          intercepted = true;
-          return readDeferred.promise as never;
-        }
-        return realReadFile(file as never, ...(args as never[])) as never;
-      }) as never
-    );
+    vi.spyOn(nodeFs.promises, 'readFile').mockImplementation(((
+      file: unknown,
+      ...args: unknown[]
+    ) => {
+      if (!intercepted && String(file) === configPath) {
+        intercepted = true;
+        return readDeferred.promise as never;
+      }
+      return realReadFile(file as never, ...(args as never[])) as never;
+    }) as never);
 
     const reader = new TeamConfigReader();
     const staleVerified = reader.getConfig(teamName);
@@ -781,15 +854,16 @@ describe('TeamConfigReader', () => {
     const readDeferred = createDeferred<string>();
     const realReadFile = nodeFs.promises.readFile.bind(nodeFs.promises);
     let intercepted = false;
-    vi.spyOn(nodeFs.promises, 'readFile').mockImplementation(
-      ((file: unknown, ...args: unknown[]) => {
-        if (!intercepted && String(file) === configPath) {
-          intercepted = true;
-          return readDeferred.promise as never;
-        }
-        return realReadFile(file as never, ...(args as never[])) as never;
-      }) as never
-    );
+    vi.spyOn(nodeFs.promises, 'readFile').mockImplementation(((
+      file: unknown,
+      ...args: unknown[]
+    ) => {
+      if (!intercepted && String(file) === configPath) {
+        intercepted = true;
+        return readDeferred.promise as never;
+      }
+      return realReadFile(file as never, ...(args as never[])) as never;
+    }) as never);
 
     const reader = new TeamConfigReader();
     const staleSnapshot = reader.getConfigSnapshot(teamName);

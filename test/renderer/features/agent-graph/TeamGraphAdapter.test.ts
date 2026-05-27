@@ -1777,6 +1777,154 @@ describe('TeamGraphAdapter particles', () => {
     });
   });
 
+  it('keeps bootstrap-confirmed spawn diagnostic errors in graph error state', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(createBaseTeamData(), 'my-team', {
+      alice: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        runtimeAlive: false,
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+        livenessKind: 'confirmed_bootstrap',
+        runtimeDiagnostic: 'Runtime process crashed',
+        runtimeDiagnosticSeverity: 'error',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+      },
+    });
+
+    expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+      state: 'error',
+      spawnStatus: 'error',
+      launchVisualState: 'error',
+      launchStatusLabel: 'failed',
+      exceptionTone: 'error',
+      exceptionLabel: 'spawn failed',
+    });
+  });
+
+  it('keeps bootstrap-confirmed stopped runtime evidence in graph error state', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(createBaseTeamData(), 'my-team', {
+      alice: {
+        status: 'error',
+        launchState: 'failed_to_start',
+        runtimeAlive: false,
+        bootstrapConfirmed: true,
+        hardFailure: true,
+        hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+        livenessKind: 'not_found',
+        runtimeDiagnostic: 'Runtime is no longer registered',
+        runtimeDiagnosticSeverity: 'warning',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+      },
+    });
+
+    expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+      state: 'error',
+      spawnStatus: 'error',
+      launchVisualState: 'error',
+      launchStatusLabel: 'failed',
+      exceptionTone: 'error',
+      exceptionLabel: 'spawn failed',
+    });
+  });
+
+  it('uses spawn process-table proof when graph runtime metadata has no diagnostic text', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        runtimeEntriesByMember: {
+          alice: createLiveRuntimeEntry('alice', {
+            alive: false,
+            livenessKind: 'registered_only',
+            runtimeDiagnosticSeverity: 'warning',
+          }),
+        },
+      }),
+      'my-team',
+      {
+        alice: {
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: false,
+          bootstrapConfirmed: true,
+          hardFailure: true,
+          hardFailureReason:
+            'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+          livenessKind: 'confirmed_bootstrap',
+          runtimeDiagnosticSeverity: 'warning',
+          updatedAt: '2026-05-25T20:14:02.147Z',
+        },
+      }
+    );
+
+    expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+      state: 'active',
+      spawnStatus: 'error',
+      launchVisualState: undefined,
+      launchStatusLabel: undefined,
+      exceptionTone: undefined,
+      exceptionLabel: undefined,
+    });
+  });
+
+  it.each([
+    {
+      name: 'runtime diagnostic error',
+      runtime: {
+        alive: false,
+        livenessKind: 'runtime_process',
+        runtimeDiagnostic: 'Runtime process crashed',
+        runtimeDiagnosticSeverity: 'error',
+      },
+    },
+    {
+      name: 'stopped runtime liveness',
+      runtime: {
+        alive: false,
+        livenessKind: 'not_found',
+        runtimeDiagnostic: 'Runtime is no longer registered',
+        runtimeDiagnosticSeverity: 'warning',
+      },
+    },
+  ] as const)(
+    'keeps graph errors when live runtime has unsafe evidence for a safe bootstrap-confirmed spawn: $name',
+    ({ runtime }) => {
+      const adapter = TeamGraphAdapter.create();
+      const graph = adapter.adapt(
+        createBaseTeamData({
+          runtimeEntriesByMember: {
+            alice: createLiveRuntimeEntry('alice', runtime),
+          },
+        }),
+        'my-team',
+        {
+          alice: {
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+            updatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        }
+      );
+
+      expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+        state: 'error',
+        spawnStatus: 'error',
+        exceptionTone: 'error',
+        exceptionLabel: 'spawn failed',
+      });
+    }
+  );
+
   it('treats permission-blocked spawn state as awaiting approval even without pending approval feed', () => {
     const adapter = TeamGraphAdapter.create();
     const teamData = createBaseTeamData();

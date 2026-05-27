@@ -235,6 +235,428 @@ describe('TeamLaunchSummaryProjection', () => {
     });
   });
 
+  it('projects provisioned-but-not-alive failures with bootstrap proof as confirmed', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      teamLaunchState: 'clean_success',
+      confirmedMemberCount: 1,
+      confirmedCount: 1,
+      pendingCount: 0,
+      failedCount: 0,
+    });
+    expect(summary).not.toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+    });
+  });
+
+  it('projects Windows process-table-unavailable provisioned-but-not-alive metadata as confirmed', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason:
+              'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+            livenessKind: 'registered_only',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      teamLaunchState: 'clean_success',
+      confirmedMemberCount: 1,
+      confirmedCount: 1,
+      failedCount: 0,
+    });
+  });
+
+  it('keeps provisioned-but-not-alive failures with runtime error evidence as failed', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic: 'Runtime process crashed',
+            runtimeDiagnosticSeverity: 'error',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+      teamLaunchState: 'partial_failure',
+      confirmedCount: 0,
+      failedCount: 1,
+    });
+  });
+
+  it('reconciles unhealed launch-summary projections with bootstrap proof', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      bootstrapSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:13:56.110Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            livenessKind: 'confirmed_bootstrap',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastHeartbeatAt: '2026-05-25T20:13:56.110Z',
+            lastEvaluatedAt: '2026-05-25T20:13:56.110Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 0,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'clean_success',
+      } as never,
+      launchSummaryProjection: {
+        version: 1,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchUpdatedAt: '2026-05-25T20:14:02.147Z',
+        teamLaunchState: 'partial_failure',
+        partialLaunchFailure: true,
+        expectedMemberCount: 1,
+        confirmedMemberCount: 0,
+        missingMembers: ['tom'],
+        confirmedCount: 0,
+        pendingCount: 0,
+        failedCount: 1,
+        runtimeAlivePendingCount: 0,
+      },
+    });
+
+    expect(summary).toMatchObject({
+      teamLaunchState: 'clean_success',
+      confirmedMemberCount: 1,
+      confirmedCount: 1,
+      failedCount: 0,
+      pendingCount: 0,
+    });
+    expect(summary).not.toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+    });
+  });
+
+  it('does not reconcile launch-summary projections from stale bootstrap proof', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      bootstrapSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:10:10.000Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            livenessKind: 'confirmed_bootstrap',
+            firstSpawnAcceptedAt: '2026-05-25T20:10:00.000Z',
+            lastHeartbeatAt: '2026-05-25T20:10:05.000Z',
+            lastEvaluatedAt: '2026-05-25T20:10:10.000Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 0,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'clean_success',
+      } as never,
+      launchSummaryProjection: {
+        version: 1,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchUpdatedAt: '2026-05-25T20:14:02.147Z',
+        teamLaunchState: 'partial_failure',
+        partialLaunchFailure: true,
+        expectedMemberCount: 1,
+        confirmedMemberCount: 0,
+        missingMembers: ['tom'],
+        confirmedCount: 0,
+        pendingCount: 0,
+        failedCount: 1,
+        runtimeAlivePendingCount: 0,
+      },
+    });
+
+    expect(summary).toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+      teamLaunchState: 'partial_failure',
+      confirmedCount: 0,
+      failedCount: 1,
+    });
+  });
+
+  it('does not reconcile launch-summary projections from stopped bootstrap proof', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      bootstrapSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:13:56.110Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            livenessKind: 'not_found',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastEvaluatedAt: '2026-05-25T20:13:56.110Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 0,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'clean_success',
+      } as never,
+      launchSummaryProjection: {
+        version: 1,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchUpdatedAt: '2026-05-25T20:14:02.147Z',
+        teamLaunchState: 'partial_failure',
+        partialLaunchFailure: true,
+        expectedMemberCount: 1,
+        confirmedMemberCount: 0,
+        missingMembers: ['tom'],
+        confirmedCount: 0,
+        pendingCount: 0,
+        failedCount: 1,
+        runtimeAlivePendingCount: 0,
+      },
+    });
+
+    expect(summary).toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+      teamLaunchState: 'partial_failure',
+      confirmedCount: 0,
+      failedCount: 1,
+    });
+  });
+
+  it('keeps provisioned-but-not-alive failures without bootstrap proof as failed', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+      teamLaunchState: 'partial_failure',
+      confirmedCount: 0,
+      failedCount: 1,
+    });
+  });
+
+  it('does not project provisioned-but-not-alive from stale bootstrap proof before spawn acceptance', () => {
+    const summary = choosePreferredLaunchStateSummary({
+      bootstrapSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:10:10.000Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            firstSpawnAcceptedAt: '2026-05-25T20:10:00.000Z',
+            lastHeartbeatAt: '2026-05-25T20:10:05.000Z',
+            lastEvaluatedAt: '2026-05-25T20:10:10.000Z',
+          },
+        },
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 0,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'clean_success',
+      } as never,
+      launchSnapshot: {
+        version: 2,
+        teamName: 'signal-ops',
+        updatedAt: '2026-05-25T20:14:02.147Z',
+        launchPhase: 'finished',
+        expectedMembers: ['tom'],
+        members: {
+          tom: {
+            name: 'tom',
+            providerId: 'anthropic',
+            launchState: 'failed_to_start',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+            firstSpawnAcceptedAt: '2026-05-25T20:13:46.326Z',
+            lastEvaluatedAt: '2026-05-25T20:14:02.147Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_failure',
+      } as never,
+    });
+
+    expect(summary).toMatchObject({
+      partialLaunchFailure: true,
+      missingMembers: ['tom'],
+      teamLaunchState: 'partial_failure',
+      confirmedCount: 0,
+      failedCount: 1,
+    });
+  });
+
   it('prefers a mixed-aware persisted summary projection over a newer but poorer bootstrap snapshot', () => {
     const bootstrapSnapshot = {
       version: 2,

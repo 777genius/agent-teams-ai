@@ -147,6 +147,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
       spawnStatus: spawnEntry?.status,
       spawnLaunchState: spawnEntry?.launchState,
       spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+      spawnEntry,
       runtimeEntry,
     })
       ? currentTaskCandidate
@@ -168,7 +169,11 @@ export const MemberHoverCard = memo(function MemberHoverCard({
     spawnBootstrapStalled: spawnEntry?.bootstrapStalled,
     spawnAgentToolAccepted: spawnEntry?.agentToolAccepted,
     spawnHardFailure: spawnEntry?.hardFailure,
+    spawnHardFailureReason: spawnEntry?.hardFailureReason,
+    spawnError: spawnEntry?.error,
+    spawnRuntimeDiagnostic: spawnEntry?.runtimeDiagnostic,
     spawnLivenessKind: spawnEntry?.livenessKind,
+    spawnRuntimeDiagnosticSeverity: spawnEntry?.runtimeDiagnosticSeverity,
     spawnFirstSpawnAcceptedAt: spawnEntry?.firstSpawnAcceptedAt,
     spawnUpdatedAt: spawnEntry?.updatedAt,
     runtimeEntry,
@@ -226,6 +231,7 @@ export const MemberHoverCard = memo(function MemberHoverCard({
       spawnStatus: spawnEntry?.status,
       spawnLaunchState: spawnEntry?.launchState,
       spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+      spawnEntry,
       runtimeEntry,
     })
       ? reviewTaskCandidate

@@ -21,7 +21,7 @@ function spawnEntry(overrides: Partial<MemberSpawnStatusEntry>): MemberSpawnStat
   };
 }
 
-function buildRun(entries: Array<[string, Partial<MemberSpawnStatusEntry>]>, isLaunch = true) {
+function buildRun(entries: [string, Partial<MemberSpawnStatusEntry>][], isLaunch = true) {
   return {
     isLaunch,
     memberSpawnStatuses: new Map(
@@ -210,6 +210,139 @@ describe('TeamProvisioningLaunchDiagnostics', () => {
         code: 'spawn_accepted',
         label: 'WorkerK - spawn accepted',
         detail: 'spawn accepted',
+        observedAt: NOW,
+      },
+    ]);
+  });
+
+  it('classifies bootstrap-confirmed provisioned-but-not-alive entries as confirmed', () => {
+    const diagnostics = buildLaunchDiagnosticsFromRun(
+      buildRun([
+        [
+          'tom',
+          {
+            status: 'error',
+            launchState: 'failed_to_start',
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+          },
+        ],
+      ]),
+      { nowIso }
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        id: 'tom:bootstrap_confirmed',
+        memberName: 'tom',
+        severity: 'info',
+        code: 'bootstrap_confirmed',
+        label: 'tom - bootstrap confirmed',
+        observedAt: NOW,
+      },
+    ]);
+  });
+
+  it('classifies process-table-unavailable registered metadata as confirmed', () => {
+    const diagnostics = buildLaunchDiagnosticsFromRun(
+      buildRun([
+        [
+          'tom',
+          {
+            status: 'error',
+            launchState: 'failed_to_start',
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason:
+              'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+            livenessKind: 'registered_only',
+            runtimeDiagnostic:
+              'runtime pid could not be verified because process table is unavailable',
+            runtimeDiagnosticSeverity: 'warning',
+          },
+        ],
+      ]),
+      { nowIso }
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        id: 'tom:bootstrap_confirmed',
+        memberName: 'tom',
+        severity: 'info',
+        code: 'bootstrap_confirmed',
+        label: 'tom - bootstrap confirmed',
+        observedAt: NOW,
+      },
+    ]);
+  });
+
+  it('keeps error diagnostics for bootstrap-confirmed provisioned-but-not-alive entries', () => {
+    const diagnostics = buildLaunchDiagnosticsFromRun(
+      buildRun([
+        [
+          'tom',
+          {
+            status: 'error',
+            launchState: 'failed_to_start',
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+            livenessKind: 'confirmed_bootstrap',
+            runtimeDiagnostic: 'Runtime process crashed',
+            runtimeDiagnosticSeverity: 'error',
+          },
+        ],
+      ]),
+      { nowIso }
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        id: 'tom:bootstrap_stalled',
+        memberName: 'tom',
+        severity: 'error',
+        code: 'bootstrap_stalled',
+        label: 'tom - launch diagnostic error',
+        detail: 'Runtime process crashed',
+        observedAt: NOW,
+      },
+    ]);
+  });
+
+  it('keeps stopped liveness diagnostics for bootstrap-confirmed provisioned-but-not-alive entries', () => {
+    const diagnostics = buildLaunchDiagnosticsFromRun(
+      buildRun([
+        [
+          'tom',
+          {
+            status: 'error',
+            launchState: 'failed_to_start',
+            bootstrapConfirmed: true,
+            hardFailure: true,
+            hardFailureReason: 'CLI process exited (code 1) - team provisioned but not alive',
+            livenessKind: 'not_found',
+            runtimeDiagnostic: 'Runtime is no longer registered',
+            runtimeDiagnosticSeverity: 'warning',
+          },
+        ],
+      ]),
+      { nowIso }
+    );
+
+    expect(diagnostics).toEqual([
+      {
+        id: 'tom:bootstrap_stalled',
+        memberName: 'tom',
+        severity: 'error',
+        code: 'bootstrap_stalled',
+        label: 'tom - launch diagnostic error',
+        detail: 'Runtime is no longer registered',
         observedAt: NOW,
       },
     ]);

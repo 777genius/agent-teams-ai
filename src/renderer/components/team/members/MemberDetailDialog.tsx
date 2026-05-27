@@ -24,6 +24,10 @@ import {
 } from '@renderer/utils/memberRuntimeSummary';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
 import { isTeamTaskFinishedForDependency } from '@shared/utils/teamTaskState';
 import {
   BarChart3,
@@ -83,7 +87,14 @@ function isOpenCodeNoRuntimeEvidenceFailure(
   spawnEntry: MemberSpawnStatusEntry | undefined,
   runtimeEntry: TeamAgentRuntimeEntry | undefined
 ): boolean {
-  const failed = spawnEntry?.launchState === 'failed_to_start' || spawnEntry?.status === 'error';
+  const bootstrapConfirmedProvisionedButNotAlive =
+    isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
+  const unsafeProvisionedButNotAlive =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(spawnEntry, runtimeEntry);
+  const failed =
+    (!bootstrapConfirmedProvisionedButNotAlive || unsafeProvisionedButNotAlive) &&
+    (spawnEntry?.launchState === 'failed_to_start' || spawnEntry?.status === 'error');
   return member.providerId === 'opencode' && failed && !hasOpenCodeRuntimeEvidence(runtimeEntry);
 }
 
@@ -180,6 +191,7 @@ export const MemberDetailDialog = ({
       spawnStatus: spawnEntry?.status,
       spawnLaunchState: spawnEntry?.launchState,
       spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+      spawnEntry,
       runtimeEntry,
     });
   const displayableCurrentTask =
@@ -303,7 +315,11 @@ export const MemberDetailDialog = ({
               spawnBootstrapStalled={spawnEntry?.bootstrapStalled}
               spawnAgentToolAccepted={spawnEntry?.agentToolAccepted}
               spawnHardFailure={spawnEntry?.hardFailure}
+              spawnHardFailureReason={spawnEntry?.hardFailureReason}
+              spawnError={spawnEntry?.error}
+              spawnRuntimeDiagnostic={spawnEntry?.runtimeDiagnostic}
               spawnLivenessKind={spawnEntry?.livenessKind}
+              spawnRuntimeDiagnosticSeverity={spawnEntry?.runtimeDiagnosticSeverity}
               spawnFirstSpawnAcceptedAt={spawnEntry?.firstSpawnAcceptedAt}
               spawnUpdatedAt={spawnEntry?.updatedAt}
               runtimeEntry={runtimeEntry}

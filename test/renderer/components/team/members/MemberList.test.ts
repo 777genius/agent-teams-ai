@@ -3,7 +3,12 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { MemberSpawnStatusEntry, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  MemberSpawnStatusEntry,
+  ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 vi.mock('@renderer/components/team/members/MemberCard', () => ({
   MemberCard: ({
@@ -112,6 +117,19 @@ function offlineSpawnStatus(): MemberSpawnStatusEntry {
     updatedAt: '2026-04-23T10:00:00.000Z',
     runtimeAlive: false,
     bootstrapConfirmed: false,
+  };
+}
+
+function provisionedButNotAliveSpawnStatus(): MemberSpawnStatusEntry {
+  return {
+    status: 'error',
+    launchState: 'failed_to_start',
+    updatedAt: '2026-05-25T20:14:02.147Z',
+    runtimeAlive: false,
+    bootstrapConfirmed: true,
+    hardFailure: true,
+    hardFailureReason: 'CLI process exited (code 1) \u2014 team provisioned but not alive',
+    livenessKind: 'confirmed_bootstrap',
   };
 }
 
@@ -536,6 +554,142 @@ describe('MemberList spawn-status memoization', () => {
     });
 
     expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps tasks visible and suppresses launch actions for healed provisioned-but-not-alive status', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const task = activeTask();
+    const members: ResolvedTeamMember[] = [{ ...member, currentTaskId: task.id }];
+    const restart = vi.fn();
+    const skip = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: true,
+          taskMap: new Map([[task.id, task]]),
+          memberSpawnStatuses: new Map([['bob', provisionedButNotAliveSpawnStatus()]]),
+          memberRuntimeEntries: new Map<string, TeamAgentRuntimeEntry>([
+            [
+              'bob',
+              {
+                memberName: 'bob',
+                alive: false,
+                restartable: true,
+                livenessKind: 'confirmed_bootstrap',
+                runtimeDiagnostic:
+                  'runtime pid could not be verified because process table is unavailable',
+                runtimeDiagnosticSeverity: 'warning',
+                updatedAt: '2026-05-25T20:14:05.411Z',
+              },
+            ],
+          ]),
+          onRestartMember: restart,
+          onSkipMemberForLaunch: skip,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="current-bob"]')?.textContent).toBe(task.id);
+    expect(host.querySelector('[data-testid="retry-bob"]')).toBeNull();
+    expect(host.querySelector('[data-testid="skip-bob"]')).toBeNull();
+    expect(host.textContent).not.toContain('team provisioned but not alive');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps stopped provisioned-but-not-alive status failed and actionable', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const task = activeTask();
+    const members: ResolvedTeamMember[] = [{ ...member, currentTaskId: task.id }];
+    const restart = vi.fn();
+    const skip = vi.fn();
+    const spawnEntry = {
+      ...provisionedButNotAliveSpawnStatus(),
+      livenessKind: 'not_found',
+      runtimeDiagnostic: 'Runtime is no longer registered',
+      runtimeDiagnosticSeverity: 'warning',
+    } satisfies MemberSpawnStatusEntry;
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: true,
+          taskMap: new Map([[task.id, task]]),
+          memberSpawnStatuses: new Map([['bob', spawnEntry]]),
+          onRestartMember: restart,
+          onSkipMemberForLaunch: skip,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
+    expect(host.querySelector('[data-testid="retry-bob"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="skip-bob"]')).not.toBeNull();
+    expect(host.textContent).toContain('team provisioned but not alive');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('hides tasks for healed provisioned-but-not-alive status when runtime has an error', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const task = activeTask();
+    const members: ResolvedTeamMember[] = [{ ...member, currentTaskId: task.id }];
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: true,
+          taskMap: new Map([[task.id, task]]),
+          memberSpawnStatuses: new Map([['bob', provisionedButNotAliveSpawnStatus()]]),
+          memberRuntimeEntries: new Map<string, TeamAgentRuntimeEntry>([
+            [
+              'bob',
+              {
+                memberName: 'bob',
+                alive: false,
+                restartable: true,
+                livenessKind: 'confirmed_bootstrap',
+                runtimeDiagnostic: 'Runtime process crashed',
+                runtimeDiagnosticSeverity: 'error',
+                updatedAt: '2026-05-25T20:14:05.411Z',
+              },
+            ],
+          ]),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="current-bob"]')).toBeNull();
+    expect(host.querySelector('[data-testid="retry-bob"]')).toBeNull();
+    expect(host.querySelector('[data-testid="skip-bob"]')).toBeNull();
+    expect(host.textContent).toContain('team provisioned but not alive');
 
     await act(async () => {
       root.unmount();

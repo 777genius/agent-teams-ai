@@ -1,3 +1,9 @@
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidence,
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
+
 import { isHealthyOpenCodeAppMcpConnectivityAdvisory } from './openCodeAdvisoryHealth';
 
 import type {
@@ -87,6 +93,15 @@ const SECRET_ENV_KEY_PARTS = [
   'PASSWORD',
   'AUTHORIZATION',
 ];
+
+function hasStoppedRuntimeLivenessKind(livenessKind: TeamAgentRuntimeLivenessKind | undefined) {
+  return (
+    livenessKind === 'not_found' ||
+    livenessKind === 'registered_only' ||
+    livenessKind === 'shell_only' ||
+    livenessKind === 'stale_metadata'
+  );
+}
 const OPENCODE_SESSION_REFRESH_REASON_MARKERS = [
   'resolved_behavior_changed',
   'opencode_app_mcp_transport_changed',
@@ -94,7 +109,7 @@ const OPENCODE_SESSION_REFRESH_REASON_MARKERS = [
 const OPENCODE_SESSION_REFRESH_REASON_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789._~/=->';
 const OPENCODE_SESSION_REFRESH_FAILURE_PATTERN =
   // eslint-disable-next-line sonarjs/regex-complexity -- Keyword taxonomy is kept literal to preserve diagnostic behavior.
-  /(?:^|[_\s:;.\/()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;.\/(),-])/i;
+  /(?:^|[_\s:;./()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;./(),-])/i;
 const OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN =
   /\b(?:not_observed|pending|prompt_not_indexed|responded_tool_call|responded_visible_message|responded_non_visible_tool|responded_plain_text|permission_blocked|tool_error|empty_assistant_turn|prompt_delivered_no_assistant_message|session_stale|session_error|reconcile_failed)\b/g;
 
@@ -527,9 +542,48 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
   const providerBackendId = runtimeEntry?.providerBackendId ?? params.member?.providerBackendId;
   const laneId = runtimeEntry?.laneId ?? params.member?.laneId;
   const laneKind = runtimeEntry?.laneKind ?? params.member?.laneKind;
-  const livenessKind = spawnEntry?.livenessKind ?? runtimeEntry?.livenessKind;
-  const launchState = spawnEntry?.launchState ?? params.launchState;
-  const spawnStatus = spawnEntry?.status ?? params.spawnStatus;
+  const livenessKind = hasStoppedRuntimeLivenessKind(runtimeEntry?.livenessKind)
+    ? runtimeEntry?.livenessKind
+    : (spawnEntry?.livenessKind ?? runtimeEntry?.livenessKind);
+  const bootstrapConfirmedProvisionedButNotAlive =
+    isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
+  const hasUnsafeSpawnProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidence(spawnEntry);
+  const hasUnsafeRuntimeProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    !hasUnsafeSpawnProvisionedButNotAliveEvidence &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(spawnEntry, runtimeEntry);
+  const hasUnsafeProvisionedButNotAliveEvidence =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    (hasUnsafeSpawnProvisionedButNotAliveEvidence ||
+      hasUnsafeRuntimeProvisionedButNotAliveEvidence);
+  const useBootstrapConfirmedVisualState =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    spawnEntry?.runtimeDiagnosticSeverity !== 'error' &&
+    runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
+    !hasUnsafeProvisionedButNotAliveEvidence;
+  const useBootstrapConfirmedRuntimeAlive =
+    useBootstrapConfirmedVisualState &&
+    runtimeEntry?.runtimeDiagnosticSeverity !== 'error' &&
+    spawnEntry?.runtimeDiagnosticSeverity !== 'error';
+  const runtimeEntryDiagnostic = boundedString(runtimeEntry?.runtimeDiagnostic);
+  const hasRuntimeDiagnosticEvidence =
+    runtimeEntryDiagnostic != null || runtimeEntry?.runtimeDiagnosticSeverity != null;
+  const useSpawnDiagnosticsForHealedEntry =
+    bootstrapConfirmedProvisionedButNotAlive && !hasRuntimeDiagnosticEvidence;
+  const keepSpawnFailureDiagnostics =
+    useSpawnDiagnosticsForHealedEntry ||
+    hasUnsafeSpawnProvisionedButNotAliveEvidence ||
+    spawnEntry?.runtimeDiagnosticSeverity === 'error';
+  const launchState = useBootstrapConfirmedVisualState
+    ? 'confirmed_alive'
+    : (spawnEntry?.launchState ?? params.launchState);
+  const spawnStatus = useBootstrapConfirmedVisualState
+    ? 'online'
+    : (spawnEntry?.status ?? params.spawnStatus);
+  const spawnRuntimeAlive = useBootstrapConfirmedRuntimeAlive ? true : spawnEntry?.runtimeAlive;
+  const spawnHardFailure = useBootstrapConfirmedVisualState ? false : spawnEntry?.hardFailure;
   const runtimeAdvisoryTitle = boundedString(params.runtimeAdvisoryTitle);
   const runtimeAdvisoryLabel = boundedString(params.runtimeAdvisoryLabel ?? undefined);
   const runtimeAdvisoryMessage = boundedString(runtimeAdvisory?.message);
@@ -541,10 +595,10 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     runtimeAdvisoryMessage,
     spawnStatus,
     launchState,
-    runtimeAlive: spawnEntry?.runtimeAlive,
+    runtimeAlive: spawnRuntimeAlive,
     bootstrapConfirmed: spawnEntry?.bootstrapConfirmed,
     agentToolAccepted: spawnEntry?.agentToolAccepted,
-    hardFailure: spawnEntry?.hardFailure,
+    hardFailure: spawnHardFailure,
     livenessKind,
     runtimeEntry,
   });
@@ -553,9 +607,17 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
       ? (runtimeAdvisoryTitle ?? runtimeAdvisoryLabel ?? runtimeAdvisoryMessage)
       : undefined;
   const runtimeDiagnosticSeverity =
-    spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity;
+    spawnEntry?.runtimeDiagnosticSeverity === 'error'
+      ? spawnEntry.runtimeDiagnosticSeverity
+      : bootstrapConfirmedProvisionedButNotAlive
+        ? (runtimeEntry?.runtimeDiagnosticSeverity ??
+          (useSpawnDiagnosticsForHealedEntry ? spawnEntry?.runtimeDiagnosticSeverity : undefined))
+        : (spawnEntry?.runtimeDiagnosticSeverity ?? runtimeEntry?.runtimeDiagnosticSeverity);
   const spawnRuntimeDiagnosticCardError = isRuntimeDiagnosticCardError({
-    runtimeDiagnostic: spawnEntry?.runtimeDiagnostic,
+    runtimeDiagnostic:
+      bootstrapConfirmedProvisionedButNotAlive && !keepSpawnFailureDiagnostics
+        ? undefined
+        : spawnEntry?.runtimeDiagnostic,
     runtimeDiagnosticSeverity: spawnEntry?.runtimeDiagnosticSeverity,
     launchState: spawnEntry?.launchState,
     spawnStatus: spawnEntry?.status,
@@ -564,6 +626,10 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
   })
     ? spawnEntry?.runtimeDiagnostic
     : undefined;
+  const healedSpawnFailureCardError =
+    keepSpawnFailureDiagnostics && spawnEntry?.runtimeDiagnosticSeverity === 'error'
+      ? (spawnRuntimeDiagnosticCardError ?? spawnEntry?.error ?? spawnEntry?.hardFailureReason)
+      : undefined;
   const runtimeEntryDiagnosticCardError = isRuntimeDiagnosticCardError({
     runtimeDiagnostic: runtimeEntry?.runtimeDiagnostic,
     runtimeDiagnosticSeverity: runtimeEntry?.runtimeDiagnosticSeverity,
@@ -572,19 +638,24 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     ? runtimeEntry?.runtimeDiagnostic
     : undefined;
   const runtimeDiagnostic =
-    boundedString(spawnEntry?.runtimeDiagnostic) ??
-    boundedString(runtimeEntry?.runtimeDiagnostic) ??
-    boundedString(spawnEntry?.hardFailureReason) ??
-    boundedString(spawnEntry?.error) ??
+    (bootstrapConfirmedProvisionedButNotAlive && !keepSpawnFailureDiagnostics
+      ? undefined
+      : boundedString(spawnEntry?.runtimeDiagnostic)) ??
+    runtimeEntryDiagnostic ??
+    (bootstrapConfirmedProvisionedButNotAlive && !keepSpawnFailureDiagnostics
+      ? undefined
+      : (boundedString(spawnEntry?.hardFailureReason) ?? boundedString(spawnEntry?.error))) ??
     runtimeAdvisoryMessage;
   const memberCardError = firstMemberCardFailureReason({
-    candidates: [
-      spawnEntry?.error,
-      spawnEntry?.hardFailureReason,
-      spawnRuntimeDiagnosticCardError,
-      runtimeEntryDiagnosticCardError,
-      runtimeAdvisoryCardError,
-    ],
+    candidates: bootstrapConfirmedProvisionedButNotAlive
+      ? [healedSpawnFailureCardError, runtimeEntryDiagnosticCardError, runtimeAdvisoryCardError]
+      : [
+          spawnEntry?.error,
+          spawnEntry?.hardFailureReason,
+          spawnRuntimeDiagnosticCardError,
+          runtimeEntryDiagnosticCardError,
+          runtimeAdvisoryCardError,
+        ],
     evidence: [
       spawnEntry?.runtimeDiagnostic,
       runtimeEntry?.runtimeDiagnostic,
@@ -601,8 +672,13 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     runtimeAdvisoryTitle ? [runtimeAdvisoryTitle] : undefined,
     runtimeAdvisoryLabel ? [runtimeAdvisoryLabel] : undefined,
     runtimeAdvisoryMessage ? [runtimeAdvisoryMessage] : undefined,
-    spawnEntry?.hardFailureReason ? [spawnEntry.hardFailureReason] : undefined,
-    spawnEntry?.error ? [spawnEntry.error] : undefined,
+    (!bootstrapConfirmedProvisionedButNotAlive || keepSpawnFailureDiagnostics) &&
+      spawnEntry?.hardFailureReason
+      ? [spawnEntry.hardFailureReason]
+      : undefined,
+    (!bootstrapConfirmedProvisionedButNotAlive || keepSpawnFailureDiagnostics) && spawnEntry?.error
+      ? [spawnEntry.error]
+      : undefined,
     runtimeEntry?.diagnostics
   );
   const runId = boundedString(params.runId ?? undefined);
@@ -648,18 +724,14 @@ export function buildMemberLaunchDiagnosticsPayload(params: {
     ...(typeof runtimeEntry?.restartable === 'boolean'
       ? { restartable: runtimeEntry.restartable }
       : {}),
-    ...(typeof spawnEntry?.runtimeAlive === 'boolean'
-      ? { runtimeAlive: spawnEntry.runtimeAlive }
-      : {}),
+    ...(typeof spawnRuntimeAlive === 'boolean' ? { runtimeAlive: spawnRuntimeAlive } : {}),
     ...(typeof spawnEntry?.bootstrapConfirmed === 'boolean'
       ? { bootstrapConfirmed: spawnEntry.bootstrapConfirmed }
       : {}),
     ...(typeof spawnEntry?.agentToolAccepted === 'boolean'
       ? { agentToolAccepted: spawnEntry.agentToolAccepted }
       : {}),
-    ...(typeof spawnEntry?.hardFailure === 'boolean'
-      ? { hardFailure: spawnEntry.hardFailure }
-      : {}),
+    ...(typeof spawnHardFailure === 'boolean' ? { hardFailure: spawnHardFailure } : {}),
     ...(livenessKind ? { livenessKind } : {}),
     ...((spawnEntry?.livenessSource ?? params.livenessSource)
       ? { livenessSource: spawnEntry?.livenessSource ?? params.livenessSource }
@@ -751,6 +823,9 @@ function parseStatusUpdatedAtMs(value: string | undefined): number | null {
 }
 
 function isFailedSpawnEntry(entry: MemberSpawnStatusEntry | undefined): boolean {
+  if (isBootstrapConfirmedProvisionedButNotAliveFailure(entry)) {
+    return hasUnsafeProvisionedButNotAliveRuntimeEvidence(entry);
+  }
   return entry?.launchState === 'failed_to_start' || entry?.status === 'error';
 }
 

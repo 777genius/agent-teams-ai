@@ -1,5 +1,16 @@
+import {
+  isProvisionedButNotAliveFailureReason,
+  stripProcessTableUnavailableDiagnosticSuffix,
+} from '@shared/utils/teamLaunchFailureReason';
+
 import { mentionsProcessTableUnavailable } from './TeamProvisioningLaunchDiagnostics';
 import { isBootstrapInstructionPrompt } from './TeamProvisioningPromptBuilders';
+
+export {
+  isCliProvisionedButNotAliveFailureReason,
+  isProvisionedButNotAliveFailureReason,
+  stripProcessTableUnavailableDiagnosticSuffix,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import type { MemberLaunchState } from '@shared/types';
 
@@ -37,22 +48,6 @@ export function isProcessTableUnavailableFailureReason(reason?: string): boolean
   );
 }
 
-export function isCliProvisionedButNotAliveFailureReason(reason?: string): boolean {
-  const text = reason?.trim();
-  if (!text) {
-    return false;
-  }
-  return /^CLI process exited \(code (?:unknown|\d+|\?)\) [\u2014-] team provisioned but not alive$/i.test(
-    text
-  );
-}
-
-export function stripProcessTableUnavailableDiagnosticSuffix(reason: string): string | null {
-  const match = /^(.*?);\s*process table (?:is )?unavailable$/i.exec(reason.trim());
-  const baseReason = match?.[1]?.trim();
-  return baseReason && baseReason.length > 0 ? baseReason : null;
-}
-
 function isBaseAutoClearableLaunchFailureReason(reason?: string): boolean {
   return (
     isNeverSpawnedDuringLaunchReason(reason) ||
@@ -63,8 +58,7 @@ function isBaseAutoClearableLaunchFailureReason(reason?: string): boolean {
     isBootstrapMcpResourceReadFailureReason(reason) ||
     isBootstrapCheckInTimeoutFailureReason(reason) ||
     isBootstrapInstructionPromptFailureReason(reason) ||
-    isLaunchCleanupBootstrapIncompleteFailureReason(reason) ||
-    isCliProvisionedButNotAliveFailureReason(reason)
+    isLaunchCleanupBootstrapIncompleteFailureReason(reason)
   );
 }
 
