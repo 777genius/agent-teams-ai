@@ -13,6 +13,12 @@ export const CONTROL_PLANE_MODES = [
 ] as const;
 
 export type ControlPlaneMode = (typeof CONTROL_PLANE_MODES)[number];
+export type HostedOperationsProfile =
+  | "local-disabled"
+  | "setup-only"
+  | "target-management"
+  | "actions"
+  | "custom";
 
 export type ControlPlaneConfig = Readonly<{
   environment: "development" | "test" | "production";
@@ -84,6 +90,7 @@ export type SafeControlPlaneConfigSummary = Readonly<{
     revisionConfigured: boolean;
     createdAtConfigured: boolean;
   }>;
+  hostedProfile: HostedOperationsProfile;
   publicBaseUrlConfigured: boolean;
   persistence: Readonly<{
     enabled: boolean;
@@ -327,6 +334,7 @@ export function getSafeConfigSummary(
     },
     environment: config.environment,
     featureGates: config.featureGates,
+    hostedProfile: getHostedOperationsProfile(config),
     githubActions: {
       allowedOriginCount: config.githubActions.agentAvatarAllowedOrigins.length,
       defaultAgentAvatarConfigured:
@@ -355,6 +363,34 @@ export function getSafeConfigSummary(
       externalContentConfigured: config.retention.externalContentDays !== undefined,
     },
   };
+}
+
+export function getHostedOperationsProfile(
+  config: Pick<ControlPlaneConfig, "featureGates" | "mode">,
+): HostedOperationsProfile {
+  if (config.mode === "local-disabled") {
+    return "local-disabled";
+  }
+
+  const gates = config.featureGates;
+  if (gates.githubActionsEnabled) {
+    return "actions";
+  }
+  if (gates.integrationTargetsEnabled) {
+    return "target-management";
+  }
+  if (
+    gates.desktopBootstrapEnabled &&
+    gates.desktopPairingEnabled &&
+    gates.githubSetupEnabled &&
+    gates.githubClaimOAuthEnabled &&
+    !gates.githubTokenBrokerEnabled &&
+    !gates.githubActionsEnabled &&
+    !gates.integrationTargetsEnabled
+  ) {
+    return "setup-only";
+  }
+  return "custom";
 }
 
 function toValidationIssue(issue: z.core.$ZodIssue): ValidationIssue {

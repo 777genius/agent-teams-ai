@@ -38,6 +38,9 @@ export class WorkerRunner {
 
     this.logger.info("Worker booted", {
       controlPlaneMode: summary.mode,
+      buildCreatedAtConfigured: summary.build.createdAtConfigured,
+      buildRevisionConfigured: summary.build.revisionConfigured,
+      hostedProfile: summary.hostedProfile,
       workerMode: mode,
     });
 

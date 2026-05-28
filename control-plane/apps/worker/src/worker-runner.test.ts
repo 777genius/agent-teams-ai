@@ -33,6 +33,7 @@ describe("WorkerRunner", () => {
           allowedOriginCount: 0,
           defaultAgentAvatarConfigured: false,
         },
+        hostedProfile: "local-disabled",
         integrationTargets: {
           repositoryAvailabilityMaxAgeHours: 24,
         },
@@ -176,6 +177,7 @@ function createConfigService(input: {
         allowedOriginCount: 0,
         defaultAgentAvatarConfigured: false,
       },
+      hostedProfile: "local-disabled",
       integrationTargets: {
         repositoryAvailabilityMaxAgeHours: 24,
       },

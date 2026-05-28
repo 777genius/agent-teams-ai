@@ -317,6 +317,52 @@ describe("loadControlPlaneConfig", () => {
     expect(config.featureGates.githubTokenBrokerEnabled).toBe(true);
   });
 
+  it("classifies the documented hosted startup matrix profiles", () => {
+    const setupOnly = getSafeConfigSummary(
+      loadControlPlaneConfig({
+        ...hostedBaseEnv(),
+        CONTROL_PLANE_DESKTOP_BOOTSTRAP_ENABLED: "true",
+        CONTROL_PLANE_DESKTOP_PAIRING_ENABLED: "true",
+        CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED: "true",
+        CONTROL_PLANE_GITHUB_SETUP_ENABLED: "true",
+        CONTROL_PLANE_OUTBOX_WORKER_ENABLED: "false",
+      }),
+    );
+
+    const targetManagement = getSafeConfigSummary(
+      loadControlPlaneConfig({
+        ...hostedBaseEnv(),
+        CONTROL_PLANE_DESKTOP_BOOTSTRAP_ENABLED: "true",
+        CONTROL_PLANE_DESKTOP_PAIRING_ENABLED: "true",
+        CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED: "true",
+        CONTROL_PLANE_GITHUB_SETUP_ENABLED: "true",
+        CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED: "true",
+        CONTROL_PLANE_OUTBOX_WORKER_ENABLED: "false",
+      }),
+    );
+
+    const actions = getSafeConfigSummary(
+      loadControlPlaneConfig({
+        ...hostedBaseEnv(),
+        ...hostedActionEnv(),
+      }),
+    );
+
+    expect(setupOnly.hostedProfile).toBe("setup-only");
+    expect(targetManagement.hostedProfile).toBe("target-management");
+    expect(actions.hostedProfile).toBe("actions");
+  });
+
+  it("fails fast for actions mode when dispatch prerequisites are disabled", () => {
+    expect(() =>
+      loadControlPlaneConfig({
+        ...hostedBaseEnv(),
+        ...hostedActionEnv(),
+        CONTROL_PLANE_OUTBOX_WORKER_ENABLED: "false",
+      }),
+    ).toThrow(ControlPlaneConfigError);
+  });
+
   it("validates repository availability max age bounds", () => {
     expect(() =>
       loadControlPlaneConfig({
@@ -345,3 +391,37 @@ describe("loadControlPlaneConfig", () => {
     ).toThrow(ControlPlaneConfigError);
   });
 });
+
+function hostedBaseEnv(): NodeJS.ProcessEnv {
+  return {
+    CONTROL_PLANE_DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+    CONTROL_PLANE_ENCRYPTION_MASTER_KEY: Buffer.alloc(32, 7).toString("base64"),
+    CONTROL_PLANE_GITHUB_APP_ID: "123",
+    CONTROL_PLANE_GITHUB_APP_PRIVATE_KEY: "private-key",
+    CONTROL_PLANE_GITHUB_APP_SLUG: "agent-teams",
+    CONTROL_PLANE_GITHUB_OAUTH_CLIENT_ID: "client-id",
+    CONTROL_PLANE_GITHUB_OAUTH_CLIENT_SECRET: "oauth-secret",
+    CONTROL_PLANE_GITHUB_REST_API_VERSION: "2099-01-01",
+    CONTROL_PLANE_GITHUB_WEBHOOK_SECRET: "webhook-secret",
+    CONTROL_PLANE_MODE: "hosted-official-app",
+    CONTROL_PLANE_PUBLIC_BASE_URL: "https://control-plane.example.test",
+    NODE_ENV: "test",
+  };
+}
+
+function hostedActionEnv(): NodeJS.ProcessEnv {
+  return {
+    CONTROL_PLANE_AGENT_AVATAR_ALLOWED_ORIGINS: "https://cdn.example.test",
+    CONTROL_PLANE_DEFAULT_AGENT_AVATAR_URL:
+      "https://cdn.example.test/agent-teams/default-avatar.png",
+    CONTROL_PLANE_DESKTOP_BOOTSTRAP_ENABLED: "true",
+    CONTROL_PLANE_DESKTOP_PAIRING_ENABLED: "true",
+    CONTROL_PLANE_EXTERNAL_CONTENT_RETENTION_DAYS: "3",
+    CONTROL_PLANE_GITHUB_ACTIONS_ENABLED: "true",
+    CONTROL_PLANE_GITHUB_CLAIM_OAUTH_ENABLED: "true",
+    CONTROL_PLANE_GITHUB_SETUP_ENABLED: "true",
+    CONTROL_PLANE_GITHUB_TOKEN_BROKER_ENABLED: "true",
+    CONTROL_PLANE_INTEGRATION_TARGETS_ENABLED: "true",
+    CONTROL_PLANE_OUTBOX_WORKER_ENABLED: "true",
+  };
+}
