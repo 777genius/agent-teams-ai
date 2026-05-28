@@ -45,10 +45,12 @@ const resolvedMemberSelectorCache = new Map<
     result: ResolvedTeamMember | null;
   }
 >();
+let activeRawTeammateNameKeysCache = new WeakMap<TeamViewSnapshot['members'], string[]>();
 
 export function clearResolvedMemberSelectorCaches(): void {
   resolvedMembersSelectorCache.clear();
   resolvedMemberSelectorCache.clear();
+  activeRawTeammateNameKeysCache = new WeakMap<TeamViewSnapshot['members'], string[]>();
 }
 
 export function clearResolvedMemberSelectorCachesForTeam(teamName: string): void {
@@ -166,6 +168,10 @@ function getActiveRawTeammateNameKeys(snapshot: TeamViewSnapshot | null | undefi
   if (!snapshot) {
     return [];
   }
+  const cached = activeRawTeammateNameKeysCache.get(snapshot.members);
+  if (cached) {
+    return cached;
+  }
   const names = new Set<string>();
   for (const member of snapshot.members) {
     const name = member.name.trim();
@@ -175,7 +181,9 @@ function getActiveRawTeammateNameKeys(snapshot: TeamViewSnapshot | null | undefi
     }
     names.add(key);
   }
-  return Array.from(names).sort((left, right) => left.localeCompare(right));
+  const result = Array.from(names).sort((left, right) => left.localeCompare(right));
+  activeRawTeammateNameKeysCache.set(snapshot.members, result);
+  return result;
 }
 
 function hasActiveRawTeammateRoster(snapshot: TeamViewSnapshot | null | undefined): boolean {

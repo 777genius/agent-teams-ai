@@ -213,6 +213,29 @@ describe('changeReviewSlice task changes', () => {
     ).toBe('no_changes');
   });
 
+  it('records task change presence entries in one batch', () => {
+    const store = createSliceStore();
+    const keyA = buildTaskChangePresenceKey('team-a', 'task-a', OPTIONS_A);
+    const keyB = buildTaskChangePresenceKey('team-a', 'task-b', OPTIONS_B);
+
+    store.getState().recordTaskChangePresences([
+      { teamName: 'team-a', taskId: 'task-a', options: OPTIONS_A, presence: 'has_changes' },
+      { teamName: 'team-a', taskId: 'task-b', options: OPTIONS_B, presence: 'no_changes' },
+    ]);
+
+    expect(store.getState().taskChangePresenceByKey[keyA]).toBe('has_changes');
+    expect(store.getState().taskChangePresenceByKey[keyB]).toBe('no_changes');
+
+    store
+      .getState()
+      .recordTaskChangePresences([
+        { teamName: 'team-a', taskId: 'task-a', options: OPTIONS_A, presence: 'unknown' },
+      ]);
+
+    expect(store.getState().taskChangePresenceByKey[keyA]).toBeUndefined();
+    expect(store.getState().taskChangePresenceByKey[keyB]).toBe('no_changes');
+  });
+
   it('updates selected team task changePresence after a positive summary check', async () => {
     const store = createSliceStore();
     hoisted.getTaskChanges.mockResolvedValue(makeTaskChangeSet('presence-hit'));

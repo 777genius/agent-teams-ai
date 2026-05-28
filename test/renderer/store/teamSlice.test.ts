@@ -382,6 +382,48 @@ describe('teamSlice actions', () => {
     expect(window.localStorage.getItem('team:messagesPanelMode')).toBe('inline');
   });
 
+  it('updates selected team task change presence in one batch', () => {
+    const store = createSliceStore();
+    const existingData = createTeamSnapshot({
+      teamName: 'my-team',
+      tasks: [
+        { id: 'task-1', subject: 'One', changePresence: 'unknown' },
+        { id: 'task-2', subject: 'Two', changePresence: 'unknown' },
+      ],
+    });
+    store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: existingData,
+      teamDataCacheByName: { 'my-team': existingData },
+      globalTasks: [
+        { teamName: 'my-team', id: 'task-1', changePresence: 'unknown' },
+        { teamName: 'my-team', id: 'task-2', changePresence: 'unknown' },
+        { teamName: 'other-team', id: 'task-1', changePresence: 'unknown' },
+      ],
+    });
+
+    store.getState().setSelectedTeamTaskChangePresences('my-team', {
+      'task-1': 'no_changes',
+      'task-2': 'has_changes',
+    });
+
+    expect(
+      store
+        .getState()
+        .selectedTeamData.tasks.map((task: { changePresence?: string }) => task.changePresence)
+    ).toEqual(['no_changes', 'has_changes']);
+    expect(
+      store
+        .getState()
+        .teamDataCacheByName[
+          'my-team'
+        ].tasks.map((task: { changePresence?: string }) => task.changePresence)
+    ).toEqual(['no_changes', 'has_changes']);
+    expect(
+      store.getState().globalTasks.map((task: { changePresence?: string }) => task.changePresence)
+    ).toEqual(['no_changes', 'has_changes', 'unknown']);
+  });
+
   it('records terminal provisioning fanout diagnostics without changing visible graph hydrate behavior', () => {
     const store = createSliceStore();
     const fetchTeams = vi.fn(async () => undefined);

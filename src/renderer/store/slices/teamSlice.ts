@@ -1002,6 +1002,10 @@ export interface TeamSlice {
     taskId: string,
     presence: TaskChangePresenceState
   ) => void;
+  setSelectedTeamTaskChangePresences: (
+    teamName: string,
+    presencesByTaskId: Record<string, TaskChangePresenceState>
+  ) => void;
   refreshTeamChangePresence: (teamName: string) => Promise<void>;
   selectTeam: (
     teamName: string,
@@ -2065,14 +2069,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   setSelectedTeamTaskChangePresence: (teamName, taskId, presence) => {
+    get().setSelectedTeamTaskChangePresences(teamName, { [taskId]: presence });
+  },
+
+  setSelectedTeamTaskChangePresences: (teamName, presencesByTaskId) => {
     set((state) => {
+      const updates = Object.entries(presencesByTaskId);
+      if (updates.length === 0) {
+        return {};
+      }
+      const presenceByTaskId = new Map(updates);
       const currentTeamData = selectTeamDataForName(state, teamName);
       let cacheChanged = false;
       const nextTeamData = currentTeamData
         ? {
             ...currentTeamData,
             tasks: currentTeamData.tasks.map((task) => {
-              if (task.id !== taskId || task.changePresence === presence) {
+              const presence = presenceByTaskId.get(task.id);
+              if (!presence || task.changePresence === presence) {
                 return task;
               }
               cacheChanged = true;
@@ -2083,7 +2097,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
       let globalChanged = false;
       const nextGlobalTasks = state.globalTasks.map((task) => {
-        if (task.teamName !== teamName || task.id !== taskId || task.changePresence === presence) {
+        if (task.teamName !== teamName) {
+          return task;
+        }
+        const presence = presenceByTaskId.get(task.id);
+        if (!presence || task.changePresence === presence) {
           return task;
         }
         globalChanged = true;

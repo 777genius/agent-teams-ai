@@ -13,6 +13,7 @@ import {
   TEAM_CHANGES_MAX_REQUESTS,
 } from './teamChangesRequestPlan';
 
+import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import type {
   TaskChangePresenceState,
   TaskChangeSetV2,
@@ -63,6 +64,20 @@ interface UseTeamChangesSummariesInput {
   tasks: TeamTaskWithKanban[];
   sectionOpen: boolean;
 }
+
+type RecordTaskChangePresences = (
+  entries: {
+    teamName: string;
+    taskId: string;
+    options: TaskChangeRequestOptions;
+    presence: TaskChangePresenceState | null;
+  }[]
+) => void;
+
+type SetSelectedTeamTaskChangePresences = (
+  teamName: string,
+  presencesByTaskId: Record<string, TaskChangePresenceState>
+) => void;
 
 interface UseTeamChangesSummariesResult {
   summariesByTaskId: Record<string, TeamChangeSummaryState>;
@@ -262,7 +277,20 @@ export function useTeamChangesSummaries({
   sectionOpen,
 }: UseTeamChangesSummariesInput): UseTeamChangesSummariesResult {
   const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
+  const recordTaskChangePresences = useStore(
+    (s) =>
+      (s as unknown as { recordTaskChangePresences?: RecordTaskChangePresences })
+        .recordTaskChangePresences
+  );
   const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
+  const setSelectedTeamTaskChangePresences = useStore(
+    (s) =>
+      (
+        s as unknown as {
+          setSelectedTeamTaskChangePresences?: SetSelectedTeamTaskChangePresences;
+        }
+      ).setSelectedTeamTaskChangePresences
+  );
   const [summariesByTaskId, setSummariesByTaskId] = useState<
     Record<string, TeamChangeSummaryState>
   >({});
@@ -469,6 +497,14 @@ export function useTeamChangesSummaries({
         });
         setCounterLoaded(true);
 
+        const cachePresenceUpdates: {
+          teamName: string;
+          taskId: string;
+          options: TaskChangeRequestOptions;
+          presence: TaskChangePresenceState | null;
+        }[] = [];
+        const selectedPresenceUpdates: Record<string, TaskChangePresenceState> = {};
+
         for (const item of responseItems) {
           const changeSet = item.changeSet;
           const options = plan.requestOptionsByTaskId.get(item.taskId);
@@ -482,12 +518,41 @@ export function useTeamChangesSummaries({
               task.changePresence !== 'unknown' &&
               shouldClearSelectedTaskChangePresence(task, changeSet)
             ) {
-              setSelectedTeamTaskChangePresence(teamName, item.taskId, 'unknown');
+              selectedPresenceUpdates[item.taskId] = 'unknown';
             }
             continue;
           }
-          recordTaskChangePresence(teamName, item.taskId, options, nextPresence);
-          setSelectedTeamTaskChangePresence(teamName, item.taskId, nextPresence);
+          cachePresenceUpdates.push({
+            teamName,
+            taskId: item.taskId,
+            options,
+            presence: nextPresence,
+          });
+          selectedPresenceUpdates[item.taskId] = nextPresence;
+        }
+
+        if (cachePresenceUpdates.length > 0) {
+          if (recordTaskChangePresences) {
+            recordTaskChangePresences(cachePresenceUpdates);
+          } else {
+            for (const update of cachePresenceUpdates) {
+              recordTaskChangePresence(
+                update.teamName,
+                update.taskId,
+                update.options,
+                update.presence
+              );
+            }
+          }
+        }
+        if (Object.keys(selectedPresenceUpdates).length > 0) {
+          if (setSelectedTeamTaskChangePresences) {
+            setSelectedTeamTaskChangePresences(teamName, selectedPresenceUpdates);
+          } else {
+            for (const [taskId, presence] of Object.entries(selectedPresenceUpdates)) {
+              setSelectedTeamTaskChangePresence(teamName, taskId, presence);
+            }
+          }
         }
 
         if (storeSummaries) {
@@ -573,7 +638,14 @@ export function useTeamChangesSummaries({
         }
       }
     },
-    [recordTaskChangePresence, setSelectedTeamTaskChangePresence, tasks, teamName]
+    [
+      recordTaskChangePresence,
+      recordTaskChangePresences,
+      setSelectedTeamTaskChangePresence,
+      setSelectedTeamTaskChangePresences,
+      tasks,
+      teamName,
+    ]
   );
 
   useEffect(() => {
