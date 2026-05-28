@@ -35,6 +35,7 @@ import type {
   ControlPlaneGithubTargetsPort,
   ControlPlanePairingPort,
 } from '../../core/application';
+import type { NormalizedControlPlaneBaseUrl } from '../../core/domain';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_RESPONSE_LIMIT_BYTES = 512 * 1024;
@@ -175,13 +176,10 @@ export class ControlPlaneHttpClient
     if (input.pageSize) url.set('pageSize', String(input.pageSize));
     if (input.cursor) url.set('cursor', input.cursor);
     const query = url.toString();
-    const response = await this.request(
-      'GET',
-      `/api/desktop/v1/integrations/${encodeURIComponent(
-        input.connectionId
-      )}/repository-targets/available${query ? `?${query}` : ''}`,
-      { token }
-    );
+    const path = `/api/desktop/v1/integrations/${encodeURIComponent(
+      input.connectionId
+    )}/repository-targets/available`;
+    const response = await this.request('GET', query ? `${path}?${query}` : path, { token });
     const list = Array.isArray(response) ? response : asArray(asRecord(response).repositories);
     return list.map((item) => normalizeHostedGitHubAvailableRepository(item, input.connectionId));
   }
@@ -302,7 +300,7 @@ export class ControlPlaneHttpClient
     }
   }
 
-  private async getBaseUrl() {
+  private async getBaseUrl(): Promise<NormalizedControlPlaneBaseUrl> {
     const rawBaseUrl = await this.options.getBaseUrl();
     return normalizeControlPlaneBaseUrl(rawBaseUrl ?? '', {
       allowLocalhostHttp: this.options.allowLocalhostHttp === true,

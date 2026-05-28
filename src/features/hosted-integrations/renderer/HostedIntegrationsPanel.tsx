@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Github, KeyRound, Loader2, Plug, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { GitBranch, KeyRound, Loader2, Plug, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { useHostedIntegrationState } from './hooks/useHostedIntegrationState';
 
@@ -54,7 +54,7 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)]">
-            <Github className="size-4" />
+            <GitBranch className="size-4" />
             GitHub App
           </div>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -166,7 +166,7 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
               onClick={() => void actions.startGitHubSetup()}
               style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
             >
-              <Github className="size-3.5" />
+              <GitBranch className="size-3.5" />
               Start setup
             </button>
             {activeSetup?.setupUrl && (
@@ -234,7 +234,7 @@ export const HostedIntegrationsPanel = (): React.JSX.Element => {
                 onClick={() => void loadAvailableRepositories(firstConnection.connectionId)}
                 style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
               >
-                <Github className="size-3.5" />
+                <GitBranch className="size-3.5" />
                 Repositories
               </button>
             </div>

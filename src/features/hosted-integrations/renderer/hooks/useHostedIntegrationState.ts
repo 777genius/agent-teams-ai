@@ -9,9 +9,54 @@ interface HostedIntegrationHookState {
   readonly error: string | null;
 }
 
+type HostedIntegrationActionResult<K extends keyof HostedIntegrationsElectronApi> =
+  HostedIntegrationsElectronApi[K] extends (...args: never[]) => Promise<infer Result>
+    ? Promise<Result | null>
+    : never;
+
+interface HostedIntegrationActions {
+  readonly bootstrapWorkspace: (
+    workspaceDisplayName?: string
+  ) => HostedIntegrationActionResult<'bootstrapWorkspace'>;
+  readonly configure: (controlPlaneBaseUrl: string) => HostedIntegrationActionResult<'configure'>;
+  readonly completePairing: (
+    pairingCode: string
+  ) => HostedIntegrationActionResult<'completePairing'>;
+  readonly disableTarget: (targetId: string) => HostedIntegrationActionResult<'disableTarget'>;
+  readonly dismissSetup: (
+    setupSessionId: string
+  ) => HostedIntegrationActionResult<'dismissGitHubSetup'>;
+  readonly enableTarget: (
+    connectionId: string,
+    githubRepositoryId: string
+  ) => HostedIntegrationActionResult<'enableTarget'>;
+  readonly listAvailableRepositories: (
+    connectionId: string
+  ) => HostedIntegrationActionResult<'listAvailableRepositories'>;
+  readonly openSetupUrl: (
+    setupSessionId: string,
+    setupUrl: string
+  ) => HostedIntegrationActionResult<'openSetupUrl'>;
+  readonly refresh: () => Promise<void>;
+  readonly refreshConnections: () => HostedIntegrationActionResult<'refreshConnections'>;
+  readonly refreshSetup: (
+    setupSessionId: string
+  ) => HostedIntegrationActionResult<'refreshGitHubSetup'>;
+  readonly refreshTargets: () => HostedIntegrationActionResult<'listTargets'>;
+  readonly rotateSessionToken: () => HostedIntegrationActionResult<'rotateSessionToken'>;
+  readonly revokeSession: () => HostedIntegrationActionResult<'revokeSession'>;
+  readonly startGitHubSetup: () => HostedIntegrationActionResult<'startGitHubSetup'>;
+  readonly startPairing: () => HostedIntegrationActionResult<'startPairing'>;
+}
+
+interface HostedIntegrationHookValue extends HostedIntegrationHookState {
+  readonly actions: HostedIntegrationActions;
+  readonly available: boolean;
+}
+
 export function useHostedIntegrationState(
   api: HostedIntegrationsElectronApi | undefined = window.electronAPI?.hostedIntegrations
-) {
+): HostedIntegrationHookValue {
   const [state, setState] = useState<HostedIntegrationHookState>({
     busy: false,
     error: null,
@@ -85,44 +130,43 @@ export function useHostedIntegrationState(
     void refresh();
   }, [refresh]);
 
-  const actions = useMemo(
+  const actions = useMemo<HostedIntegrationActions>(
     () => ({
       bootstrapWorkspace: (workspaceDisplayName?: string) =>
         run(() =>
-          api!.bootstrapWorkspace({
+          api.bootstrapWorkspace({
             desktopDisplayName: 'Agent Teams Desktop',
             ...(workspaceDisplayName?.trim()
               ? { workspaceDisplayName: workspaceDisplayName.trim() }
               : {}),
           })
         ),
-      configure: (controlPlaneBaseUrl: string) =>
-        run(() => api!.configure({ controlPlaneBaseUrl })),
+      configure: (controlPlaneBaseUrl: string) => run(() => api.configure({ controlPlaneBaseUrl })),
       completePairing: (pairingCode: string) =>
         run(() =>
-          api!.completePairing({
+          api.completePairing({
             desktopDisplayName: 'Agent Teams Desktop',
             pairingCode,
           })
         ),
-      disableTarget: (targetId: string) => run(() => api!.disableTarget({ targetId })),
+      disableTarget: (targetId: string) => run(() => api.disableTarget({ targetId })),
       dismissSetup: (setupSessionId: string) =>
-        run(() => api!.dismissGitHubSetup({ setupSessionId })),
+        run(() => api.dismissGitHubSetup({ setupSessionId })),
       enableTarget: (connectionId: string, githubRepositoryId: string) =>
-        run(() => api!.enableTarget({ connectionId, githubRepositoryId })),
+        run(() => api.enableTarget({ connectionId, githubRepositoryId })),
       listAvailableRepositories: async (connectionId: string) =>
-        run(() => api!.listAvailableRepositories({ connectionId }), { refresh: false }),
+        run(() => api.listAvailableRepositories({ connectionId }), { refresh: false }),
       openSetupUrl: (setupSessionId: string, setupUrl: string) =>
-        run(() => api!.openSetupUrl({ setupSessionId, setupUrl }), { refresh: false }),
+        run(() => api.openSetupUrl({ setupSessionId, setupUrl }), { refresh: false }),
       refresh,
-      refreshConnections: () => run(() => api!.refreshConnections()),
+      refreshConnections: () => run(() => api.refreshConnections()),
       refreshSetup: (setupSessionId: string) =>
-        run(() => api!.refreshGitHubSetup({ setupSessionId })),
-      refreshTargets: () => run(() => api!.listTargets()),
-      rotateSessionToken: () => run(() => api!.rotateSessionToken()),
-      revokeSession: () => run(() => api!.revokeSession()),
-      startGitHubSetup: () => run(() => api!.startGitHubSetup()),
-      startPairing: () => run(() => api!.startPairing(), { refresh: false }),
+        run(() => api.refreshGitHubSetup({ setupSessionId })),
+      refreshTargets: () => run(() => api.listTargets()),
+      rotateSessionToken: () => run(() => api.rotateSessionToken()),
+      revokeSession: () => run(() => api.revokeSession()),
+      startGitHubSetup: () => run(() => api.startGitHubSetup()),
+      startPairing: () => run(() => api.startPairing(), { refresh: false }),
     }),
     [api, refresh, run]
   );

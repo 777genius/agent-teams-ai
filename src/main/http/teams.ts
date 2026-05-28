@@ -586,7 +586,7 @@ async function assertHostedGitHubActionRuntimeAllowed(
 ): Promise<{ activeMember: TeamMemberSnapshot; snapshot: TeamViewSnapshot }> {
   const teamName = command.runtimeMember.teamName;
   const runtimeState = await getTeamProvisioningService(services).getRuntimeState(teamName);
-  if (runtimeState.isAlive !== true || runtimeState.runId !== command.runId) {
+  if (!runtimeState.isAlive || runtimeState.runId !== (command.runId ?? null)) {
     throw new HttpBadRequestError('hosted GitHub action rejected for inactive or stale runtime');
   }
 
@@ -610,7 +610,7 @@ async function assertHostedGitHubActionTargetMatchesLocalProject(
 ): Promise<void> {
   const targets = await feature.listTargets();
   const target = targets.find((item) => item.targetId === command.targetId.trim());
-  if (!target || target.status !== 'enabled') {
+  if (target?.status !== 'enabled') {
     return;
   }
   const projectPath = context.activeMember.cwd ?? context.snapshot.config?.projectPath;
@@ -645,7 +645,7 @@ async function readLocalGitHubRemoteFullName(projectPath: string): Promise<strin
 
 function parseGitHubRemoteFullName(value: string): string | null {
   const remote = value.trim();
-  const sshMatch = remote.match(/^git@github\.com:(.+)$/i);
+  const sshMatch = /^git@github\.com:(.+)$/i.exec(remote);
   if (sshMatch?.[1]) {
     return normalizeGitHubFullName(stripGitSuffix(sshMatch[1]));
   }

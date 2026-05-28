@@ -103,13 +103,10 @@ export function toPolicySubjectId(kind: 'agent' | 'team', rawId: string | undefi
 
 export function redactHostedIntegrationSecrets(input: string): string {
   return input
-    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [redacted]')
-    .replace(/agtcp_[A-Za-z0-9._~+/=-]+/g, 'agtcp_[redacted]')
+    .replace(/Bearer\s+[^\s"']+/gi, 'Bearer [redacted]')
+    .replace(/agtcp_[^\s"']+/g, 'agtcp_[redacted]')
     .replace(/code=[^&\s]+/gi, 'code=[redacted]')
-    .replace(
-      /claimContinuationToken["'=:\s]+[A-Za-z0-9._~+/=-]+/gi,
-      'claimContinuationToken=[redacted]'
-    );
+    .replace(/claimContinuationToken["'=:\s]+[^\s"'<>]+/gi, 'claimContinuationToken=[redacted]');
 }
 
 function normalizeRuntimeMember(
@@ -216,9 +213,18 @@ function normalizeAvatarUrl(value: string | undefined): string | undefined {
 }
 
 function sanitizeIdPart(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_.:@-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  return trimHyphens(
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_.:@-]+/g, '-')
+  );
+}
+
+function trimHyphens(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === '-') start += 1;
+  while (end > start && value[end - 1] === '-') end -= 1;
+  return value.slice(start, end);
 }

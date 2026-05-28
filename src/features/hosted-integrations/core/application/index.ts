@@ -1,2 +1,2 @@
-export * from './HostedIntegrationUseCases';
-export * from './ports';
+export { HostedIntegrationUseCases } from './HostedIntegrationUseCases';
+export type * from './ports';
